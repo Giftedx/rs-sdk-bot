@@ -570,3 +570,18 @@ test('ground rows from another sender or with a bad row change nothing',async()=
  socket.message({t:'tick',k:2,ms:600});
  expect(zone()).toEqual([]);
 });
+test('a feed count change and del after a private pile keep the feed order: the surviving public pile stays',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ const at={x:3219,z:3242,l:0,id:995};
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3219,3242,0,995,10]]});socket.message({t:'tick',k:2,ms:600});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20]]});socket.message({t:'tick',k:3,ms:600,w:[{e:'oa',...at,n:20}]});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20],[3219,3242,0,995,10]]});socket.message({t:'tick',k:4,ms:600,w:[{e:'oa',...at,n:10}]});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20],[3219,3242,0,995,30]]});socket.message({t:'tick',k:5,ms:600,w:[{e:'oc',...at,n0:10,n:30}]});
+ expect(drawn()['3219,3242,0']!.map(p=>p[1]).sort((a,c)=>a-c)).toEqual([10,20,30]);
+ // The feed deletes its first pile, the 20.
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,30]]});socket.message({t:'tick',k:6,ms:600,w:[{e:'od',...at}]});
+ expect(drawn()['3219,3242,0']!.map(p=>p[1]).sort((a,c)=>a-c)).toEqual([10,30]);
+ page({botGround:[]});socket.message({t:'tick',k:7,ms:600});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,30]]});
+});

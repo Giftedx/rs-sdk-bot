@@ -178,14 +178,22 @@ export function installViewerBridge(host:any) {
                     return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
                 };
                 // The viewer keeps the objs of the zones in the held area (za): a reset (r) starts every zone again, and an
-                // area change keeps only the zones in both areas. `piles` holds the viewer's piles of each tile and type
-                // ("x,z,level,id"), in the viewer's order: f = sent by the feed, else added by the bridge. The viewer's od
-                // deletes the first pile of the type, and its oc changes the pile with the old count, else the first. The
-                // list does the same, so it stays equal to what the viewer draws. When the bridge's piles of a type
-                // change, it deletes every pile of that type on the tile and adds the feed's piles and its own again.
+                // area change keeps only the zones in both areas. For each tile and type ("x,z,level,id") the bridge keeps
+                // two lists of counts. `feed` is the feed's own piles in the feed's order: oa adds one at the end, od
+                // deletes the first, oc changes the first of the old count, else the first. `view` is what the viewer draws,
+                // in its order, by the viewer's own rules (rs-world WorldState): the same rules over the feed's records and
+                // the bridge's. The viewer should draw the feed's piles, then the bridge's. When `view` differs from that,
+                // the bridge deletes every pile of that type on the tile and adds them again in that order.
                 let area:{x:number;z:number;w:number;h:number}|null=null,seenVersion=-1;
-                const piles=new Map<string,{f:boolean;n:number}[]>();
+                const feedPiles=new Map<string,number[]>(),viewPiles=new Map<string,number[]>();
                 const inArea=(a:typeof area,x:number,z:number)=>!!a&&x>=a.x&&x<a.x+a.w&&z>=a.z&&z<a.z+a.h;
+                const apply=(map:Map<string,number[]>,g:string,r:any)=>{
+                    const list=map.get(g)??[];
+                    if(r.e==='oa'){if(r.id>=0&&r.n>=1)list.push(r.n);}
+                    else if(r.e==='od')list.shift();
+                    else if(r.n>=1&&list.length){const i=list.indexOf(r.n0);list[i>=0?i:0]=r.n;}
+                    list.length?map.set(g,list):map.delete(g);
+                };
                 const addGround=(event:any)=>{
                     if(typeof event?.data!=='string'||event.data.length>2_000_000||!event.data.includes('"tick"'))return event;
                     // With the same rows and no area or obj change, the result is the same as last tick: nothing to add.
@@ -193,27 +201,15 @@ export function installViewerBridge(host:any) {
                     let m:any;try{m=JSON.parse(event.data);}catch{return event;}
                     if(m?.t!=='tick')return event;
                     const w=Array.isArray(m.w)?m.w:[];
-                    if(m.reset)piles.clear();
+                    if(m.reset){feedPiles.clear();viewPiles.clear();}
                     for(const r of w){
                         if(r?.e==='za'&&[r.x,r.z,r.w,r.h].every(Number.isFinite)){
                             const next={x:r.x,z:r.z,w:r.w,h:r.h};
-                            if(r.r)piles.clear();
-                            else for(const g of [...piles.keys()]){const [x,z]=g.split(',').map(Number) as [number,number];if(!inArea(area,x,z)||!inArea(next,x,z))piles.delete(g);}
+                            if(r.r){feedPiles.clear();viewPiles.clear();}
+                            else for(const map of [feedPiles,viewPiles])for(const g of [...map.keys()]){const [x,z]=g.split(',').map(Number) as [number,number];if(!inArea(area,x,z)||!inArea(next,x,z))map.delete(g);}
                             area=next;
                         }else if((r?.e==='oa'||r?.e==='od'||r?.e==='oc')&&[r.x,r.z,r.l,r.id].every(Number.isSafeInteger)){
-                            const g=`${r.x},${r.z},${r.l},${r.id}`,list=piles.get(g)??[];
-                            if(r.e==='oa'){if(r.id>=0&&r.n>=1)list.push({f:true,n:r.n});}
-                            // The feed lost one of its piles. If the viewer deleted one of the bridge's, a feed pile that
-                            // the viewer keeps now stands for the bridge's.
-                            else if(r.e==='od'){const p=list.shift();if(p&&!p.f){const j=list.findIndex(q=>q.f);if(j>=0)list[j]!.f=false;}}
-                            else if(r.n>=1){
-                                const i=list.findIndex(p=>p.n===r.n0),p=list[i>=0?i:0];
-                                // The feed changed its own pile. If the viewer changed one of the bridge's piles of the old
-                                // count, the feed's pile of that count now stands for the bridge's.
-                                if(p&&!p.f){const j=list.findIndex(q=>q.f&&q.n===r.n0);if(j>=0){list[j]!.f=false;p.f=true;}}
-                                if(p)p.n=r.n;
-                            }
-                            list.length?piles.set(g,list):piles.delete(g);
+                            const g=`${r.x},${r.z},${r.l},${r.id}`;apply(feedPiles,g,r);apply(viewPiles,g,r);
                         }
                     }
                     seenVersion=groundVersion;
@@ -223,17 +219,17 @@ export function installViewerBridge(host:any) {
                         const g=row.slice(0,4).join(','),list=want.get(g)??[];list.push(row[4]!);want.set(g,list);
                     }
                     const add:any[]=[];
-                    for(const g of new Set([...piles.keys(),...want.keys()])){
-                        const list=piles.get(g)??[],feed=list.filter(p=>p.f).map(p=>p.n);
+                    for(const g of new Set([...viewPiles.keys(),...want.keys()])){
+                        const feed=feedPiles.get(g)??[],view=viewPiles.get(g)??[];
                         // A pile that the feed itself sends is not added again: each feed pile takes away one row of its count.
-                        const ours=[...want.get(g)??[]],now=list.filter(p=>!p.f).map(p=>p.n);
+                        const ours=[...want.get(g)??[]];
                         for(const n of feed){const i=ours.indexOf(n);if(i>=0)ours.splice(i,1);}
-                        if(now.length===ours.length&&now.every((n,i)=>n===ours[i]))continue;
+                        const next=[...feed,...ours];
+                        if(view.length===next.length&&view.every((n,i)=>n===next[i]))continue;
                         const [x,z,l,id]=g.split(',').map(Number);
-                        for(let i=0;i<list.length;i++)add.push({e:'od',x,z,l,id});
-                        const next=[...feed.map(n=>({f:true,n})),...ours.map(n=>({f:false,n}))];
-                        for(const p of next)add.push({e:'oa',x,z,l,id,n:p.n});
-                        next.length?piles.set(g,next):piles.delete(g);
+                        for(let i=0;i<view.length;i++)add.push({e:'od',x,z,l,id});
+                        for(const n of next)add.push({e:'oa',x,z,l,id,n});
+                        next.length?viewPiles.set(g,next):viewPiles.delete(g);
                     }
                     if(!add.length)return event;
                     m.w=[...w,...add];
