@@ -650,9 +650,9 @@ Gaps:
 
 Claim: every worker script that a template of the planner's catalogue starts has a bench case or an AIO route with
 one. Conditions: the 77 templates of `catalogue()`; 17 name an AIO route with a case, and the 60 others start 11
-worker scripts. Two of those scripts had no case: `scripts/alch-train.ts` (3 bands) and `scripts/splash-train.ts`
-(1 band). Evidence: the cases `extra:alch-train` (Magic 54 to 56, Low Alchemy then High Alchemy, 64 ticks) and
-`extra:splash-train` (Magic 19 to 21, 80 ticks) pass, one run each; `bun run bench --smoke` passes 15 of 15. Gap:
+worker scripts. `scripts/alch-train.ts` (3 bands) and `scripts/splash-train.ts` (1 band) are the AIO routes
+`skiller:magic:alch-train` and `skiller:magic:splash`. Evidence: their cases (Magic 54 to 56, Low Alchemy then High
+Alchemy, 63 ticks; Magic 19 to 21, 79 ticks) pass through the dispatcher, one run each at seed 1. Gap:
 a case for a worker is not a case for each band of that worker, and the `chain` bands run only their first step's
 worker in a case of their own.
 

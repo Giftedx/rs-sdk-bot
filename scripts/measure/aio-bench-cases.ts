@@ -579,10 +579,10 @@ const EXTRA_CASES: BenchCase[] = [
   // The two Magic trainers of the planner's army bands, from the Ardougne north bank. Alchemy: Magic 54 to 56 on
   // feathers with a staff of fire in the bank, so the run casts Low Alchemy and then High Alchemy. The curse trainer:
   // Magic 19 to 21 over the fence of the cow field.
-  {key: 'extra:alch-train', script: 'scripts/alch-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['56', '1500'], pass: ok,
-    presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}},
-  {key: 'extra:splash-train', script: 'scripts/splash-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['21', '1500'], pass: ok,
-    presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}},
+  skiller('magic', 'alch-train', 'fresh_lumbridge', ['56', '1500'],
+    {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}}),
+  skiller('magic', 'splash', 'fresh_lumbridge', ['21', '1500'],
+    {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}}),
   // Underground Pass and Regicide on the halberd pure (Ranged 99, Prayer 43, Defence 1): nothing worn, a magic
   // shortbow and RANGED_PACK rune arrows in the pack, so the quest scripts fight with the bow in the Ranged-only
   // style. Underground Pass starts at the levels before the route (Attack 11, Magic 52) with two prayer potions in
