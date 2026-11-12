@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794472808842,
+ "at": 1794472952935,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -234,6 +234,26 @@
    ]
   },
   {
+   "account": "mmthv2350",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
+   ]
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -317,25 +337,6 @@
    ]
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -416,25 +417,21 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "woodcutting",
-    "yews",
-    "1800",
-    "27",
-    "MAX_TRIPS=4"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "cut yew logs at Seers and bank them",
-   "role": "woodcutting",
-   "template": "aio-yews",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "aio:seers-yews"
+    "knight:2582,3297"
    ]
   },
   {
@@ -609,17 +606,17 @@
    ]
   },
   {
-   "account": "mmthv2350",
+   "account": "Pocketpython",
    "script": "scripts/session-check.ts",
    "args": [],
    "env": {
     "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-532d4fa9-401e-4245-9e22-01c3a72bcfee"
+    "COORDINATOR_RUN_ID": "task-d7bba46f-ac0e-4f99-abd8-a9bbf8508788"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-session-recovery-mmthv2350-relink-0838 [task-532d4fa9-401e-4245-9e22-01c3a72bcfee]",
-   "role": "helper"
+   "goal": "run-session-recovery-pocketpython-drop-rest-0654 [task-d7bba46f-ac0e-4f99-abd8-a9bbf8508788]",
+   "role": "thieving"
   }
  ]
 }
