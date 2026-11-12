@@ -151,6 +151,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     // 2 s of wall time and no tick (bench --profile, skiller:magic:splash and skiller:firemaking:order). Once the
     // dialog is open, the tick waits for the submit as before, so the tick count does not change.
     let actionPending = false;
+    // SIM_ACK_FILE only: the SDK calls in flight, named on each held tick, to find a wait that the ack does not see.
+    const inFlight = new Map<string, number>();
     const holdFlush = () => { if (!flushHeld && sendNow) { flushHeld = true; client.flush = () => {}; } };
     const releaseFlush = () => { if (flushHeld) { flushHeld = false; delete (client as { flush?: unknown }).flush; sendNow?.(); } };
     const acknowledgeTick = () => {
@@ -167,7 +169,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             if (busy && performance.now() - since < busyMs) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
             ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
-            if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
+            if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} sdk=${[...inFlight].map(([k, n]) => `${k}${n > 1 ? `x${n}` : ''}`).join(',') || '-'} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
             client.writeOpcode?.(ClientProt.NO_TIMEOUT);
             sendNow?.();
         };
@@ -260,6 +262,21 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             };
             const max = client.getMaxMessageLength?.();
             if (max) deliver({ type: 'sdk_info', maxMessageLength: max });
+            if (lockstep && ackFile) {
+                const sdk = s as unknown as Record<string, unknown>;
+                for (let proto = Object.getPrototypeOf(sdk); proto && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
+                    for (const name of Object.getOwnPropertyNames(proto)) {
+                        const fn = proto[name];
+                        if (name === 'constructor' || typeof fn !== 'function' || Object.prototype.hasOwnProperty.call(sdk, name)) continue;
+                        sdk[name] = function (this: unknown, ...args: unknown[]) {
+                            const out = (fn as (...a: unknown[]) => unknown).apply(this, args);
+                            if (!out || typeof (out as { then?: unknown }).then !== 'function') return out;
+                            inFlight.set(name, (inFlight.get(name) ?? 0) + 1);
+                            return Promise.resolve(out).finally(() => { const n = (inFlight.get(name) ?? 1) - 1; if (n) inFlight.set(name, n); else inFlight.delete(name); });
+                        };
+                    }
+                }
+            }
             if (lockstep && typeof s.onStateUpdate === 'function') {
                 const subscribe = s.onStateUpdate.bind(s);
                 s.onStateUpdate = (listener: unknown) => { stateWaiters++; const off = subscribe(listener); let live = true; return () => { if (live) { live = false; stateWaiters--; } return off(); }; };
