@@ -2,7 +2,24 @@ import {expect,test} from 'bun:test';
 import {existsSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {patchNewFiles,patchState,restorePinned} from './worktree-setup';
+import {hookSwitchText,patchNewFiles,patchState,restorePinned} from './worktree-setup';
+
+test('hookSwitchText carries only disableAllHooks from the main checkout and keeps the keys of the worktree',()=>{
+    const main=JSON.stringify({disableAllHooks:true,permissions:{allow:['Bash(bun *)']},enabledPlugins:{x:true}});
+    // No local file in the worktree: a file with the switch alone, no permissions or plugins of the main checkout.
+    expect(JSON.parse(hookSwitchText(main,null)!)).toEqual({disableAllHooks:true});
+    // A local file with other keys: the keys stay, the switch is added.
+    expect(JSON.parse(hookSwitchText(main,JSON.stringify({permissions:{allow:['Read']}}))!)).toEqual({permissions:{allow:['Read']},disableAllHooks:true});
+    // Nothing to do: the switch is there, the main checkout has no switch, no file, or a file that is not JSON.
+    expect(hookSwitchText(main,JSON.stringify({disableAllHooks:true}))).toBeNull();
+    expect(hookSwitchText(JSON.stringify({disableAllHooks:false}),null)).toBeNull();
+    expect(hookSwitchText(JSON.stringify({permissions:{}}),null)).toBeNull();
+    expect(hookSwitchText(null,null)).toBeNull();
+    expect(hookSwitchText('{not json',null)).toBeNull();
+    // A worktree file that is not a JSON object is reported, never overwritten.
+    expect(()=>hookSwitchText(main,'{not json')).toThrow('not JSON');
+    expect(()=>hookSwitchText(main,'[1]')).toThrow('not a JSON object');
+});
 
 test('a restore takes the changed files from the pinned commit and touches no file that the commit does not hold',()=>{
     const dir=mkdtempSync(join(tmpdir(),'worktree-setup-'));
