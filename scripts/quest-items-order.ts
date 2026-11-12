@@ -275,33 +275,37 @@ export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:
   // A held grain from an interrupted run is reusable. Saved hopper/flour vars are account state.
   if(!cnt(1933)&&!(start?.vars[202]??0)&&!(start?.vars[203]??0)&&total(s.bankObservation?.()?.items,r.grain)>0)await withdraw(r.grain);
   await closeBank();
-  if(!r.items.every(id=>cnt(id)===1))for(const p of corridor)await walk(p.x,p.z);
-  if(!cnt(1944)){
-   await walk(3226,3301);
-   let egg=await s.sdk.scanFindGroundItem(/^egg$/i,12);
-   if(!egg){await observe(()=>s.sdk.getState()?.groundItems.some(i=>i.id===1944)??false,'egg respawn',100);egg=s.sdk.findGroundItem(/^egg$/i);}
-   if(!egg)throw Error('egg unavailable');
-   const before=cnt(1944);await s.bot.pickupItem(egg);await observe(()=>cnt(1944)===before+1,'egg pickup');
-  }
-  if(!cnt(1927)){
-   await walk(3154,3325);
-   await observe(()=>s.sdk.getState()?.nearbyNpcs.some(n=>n.id===81)??false,'cow',20);
-   const cow=s.sdk.getState()?.nearbyNpcs.find(n=>n.id===81),bucket=inv().find(i=>i.id===1925);
-   if(!cow||!bucket)throw Error('cow/bucket missing');
-   await s.bot.useItemOnNpc(bucket,cow);
-   await observe(()=>cnt(1927)===1&&cnt(1925)===0,'milk conversion');
+  // From the bank the stops go west to east: the wheat field and the mill, the cow, then the egg, which is the
+  // nearest stop to the cook. One walk with three points goes from the bank to the west side of the wheat field,
+  // and the way from there to the mill crosses the field (x 3153-3164, z 3291-3304).
+  const gather=!r.items.every(id=>cnt(id)===1);
+  if(gather&&(s.sdk.getState()?.player?.worldX??0)<3131){
+   const result=await walkPath(await sessionWalker(s),[{x:3092,z:3250,tol:1},{x:3107,z:3279,tol:2},{x:3131,z:3293,tol:2}],{maxTicks:deadline-s.tick(),stop:stopped});
+   if(!result.ok)throw Error(`walk: ${result.detail}`);
   }
   if(!cnt(1933)){
+   // The grain comes first, because the field is on the way. A restart whose bin holds flour then has one grain
+   // too many, and the bank visit at the end deposits it.
+   if(!(start?.vars[203]??0)&&!(start?.vars[202]??0)&&!cnt(r.grain)){
+    await walk(3160,3295);
+    // The pick is a direct engine click on the nearest wheat, which can be the wheat under the player. The SDK
+    // action sends its own walk first, and the engine then answers "I can't reach that!". A refused click is sent
+    // again from the tile where the player then stands.
+    for(let tries=0;tries<3&&!cnt(r.grain);tries++){
+     const p=s.sdk.getState()?.player,far=(l:{x:number;z:number})=>p?Math.max(Math.abs(l.x-p.worldX),Math.abs(l.z-p.worldZ)):0;
+     const wheat=(s.sdk.getState()?.nearbyLocs??[]).filter(l=>/^wheat$/i.test(l.name)).sort((a,b)=>far(a)-far(b))[0];
+     if(!wheat)throw Error('wheat missing');
+     if(!(await s.sdk.sendInteractLoc(wheat.x,wheat.z,wheat.id,2)).success)throw Error('wheat click refused');
+     await waitUntil(s,()=>cnt(r.grain)===1,{timeoutTicks:8,signal:abort.signal});check();
+    }
+    if(cnt(r.grain)!==1)throw Error('wheat pickup: effect unobserved');
+   }
    // Live restart: probe the actor's bin, never infer private mill vars from zero defaults.
    if(!start){
     await walk(3166,3304,0);
     await probeQuestFlourBin(s,observe);
    }
    if(!cnt(1933)&&!(start?.vars[203]??0)){
-    if(!(start?.vars[202]??0)&&!cnt(r.grain)){
-     await walk(3156,3300);const wheat=s.sdk.findNearbyLoc(/^wheat$/i);if(!wheat)throw Error('wheat missing');
-     await s.bot.interactLoc(wheat,2);await observe(()=>cnt(r.grain)===1,'wheat pickup');
-    }
     await walk(3166,3304,2);
     await operateQuestHopper(s,!(start?.vars[202]??0),observe);
    }
@@ -311,9 +315,34 @@ export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:
    await s.bot.interactLoc(bin,1);await observe(()=>cnt(1933)===1&&cnt(1931)===0,'flour conversion');
    }
   }
-  await bank();
-  for(const id of new Set(inv().filter(i=>!(r.items as readonly number[]).includes(i.id)).map(i=>i.id))){check();const item=inv().find(i=>i.id===id);if(item)await depositObserved(s,item);}
-  await closeBank();
+  if(!cnt(1927)){
+   await walk(3154,3325);
+   await observe(()=>s.sdk.getState()?.nearbyNpcs.some(n=>n.id===81)??false,'cow',20);
+   const cow=s.sdk.getState()?.nearbyNpcs.find(n=>n.id===81),bucket=inv().find(i=>i.id===1925);
+   if(!cow||!bucket)throw Error('cow/bucket missing');
+   await s.bot.useItemOnNpc(bucket,cow);
+   await observe(()=>cnt(1927)===1&&cnt(1925)===0,'milk conversion');
+  }
+  if(!cnt(1944)){
+   await walk(3226,3301);
+   let egg=await s.sdk.scanFindGroundItem(/^egg$/i,12);
+   if(!egg){await observe(()=>s.sdk.getState()?.groundItems.some(i=>i.id===1944)??false,'egg respawn',100);egg=s.sdk.findGroundItem(/^egg$/i);}
+   if(!egg)throw Error('egg unavailable');
+   const before=cnt(1944);await s.bot.pickupItem(egg);await observe(()=>cnt(1944)===before+1,'egg pickup');
+  }
+  // A pack that holds only the quest items needs no second bank visit: the account goes to the east end of the
+  // corridor, where the walk to the kitchen starts.
+  if(inv().some(i=>!(r.items as readonly number[]).includes(i.id))){
+   await bank();
+   for(const id of new Set(inv().filter(i=>!(r.items as readonly number[]).includes(i.id)).map(i=>i.id))){check();const item=inv().find(i=>i.id===id);if(item)await depositObserved(s,item);}
+   await closeBank();
+  }else if(gather){
+   // Fixed points to the east end of the corridor: from the egg farm through its gate, from the mill or the cow
+   // along the road south of the mill. The trip planner refuses some of these walks for an account with 10 HP.
+   const west=(s.sdk.getState()?.player?.worldX??0)<3200;
+   const result=await walkPath(await sessionWalker(s),west?[{x:3189,z:3295,tol:2},{x:3194,z:3281,tol:2},{x:3208,z:3281,tol:2},{x:3218,z:3256,tol:2}]:[{x:3237,z:3294,tol:2},{x:3240,z:3270,tol:2},{x:3228,z:3262,tol:2},{x:3218,z:3256,tol:2}],{maxTicks:deadline-s.tick(),stop:stopped});
+   if(!result.ok)throw Error(`walk: ${result.detail}`);
+  }
   if(!r.items.every(id=>cnt(id)===1)||inv().some(i=>!(r.items as readonly number[]).includes(i.id)))throw Error('quest pack short/surplus');
   check();return {ok:true,ticks:cap-(deadline-s.tick()),pack:inv().map(i=>({id:i.id,count:i.count}))};
  }finally{off();}
@@ -327,7 +356,9 @@ export async function probeQuestFlourBin(s:Session,observe:Observe){
  const off=s.onTick(capture);
  try{
   const bin=s.sdk.findNearbyLoc(/^flour bin$/i);if(!bin)throw Error('flour bin missing');
-  await s.bot.interactLoc(bin,1);capture();
+  // The engine walks to the bin itself. The SDK action waits about 100 ticks on an empty bin, because a game message
+  // is the only effect.
+  const sent=await s.sdk.sendInteractLoc(bin.x,bin.z,bin.id,1);if(!sent.success)throw Error('flour bin probe refused');capture();
   await observe(()=>{capture();return empty||s.sdk.getState()?.inventory.some(i=>i.id===1933)===true;},'flour bin probe');
  }finally{off();}
 }
