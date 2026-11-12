@@ -62,8 +62,11 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // The method against the dagger gang, for the kit gang-hunter: the champion with its armour kept on for a bow shot
     // (the gang attacks with stab only, and the platebody is the largest part of the stab defence), no Protect Item
     // and a prayer flick each 2 ticks (the prayers then cost no points in a fight of 900 ticks), no run after a gang
-    // account (the gang comes to its target), and the way out once the food is gone at 60 HP or less.
-    'gang-hunter': { ...CHAMPION, castArmour: 'keep', escapeAt: 60, protectItem: false, flickEvery: 2, chase: false },
+    // account (the gang comes to its target), and the way out once the food is gone at 60 HP or less: a glory, or
+    // Camelot Teleport (5 air runes and 1 law rune, two pack slots) where the account has no glory.
+    // The gang prays against the weapon it sees, so bow and dagger in strict turns land each hit off its prayer; the
+    // special goes out from the first health bar, and a shark at 40 HP: 807 ticks a clear against 883, 6 meetings each.
+    'gang-hunter': { ...CHAMPION, adaptStyles: false, mixStyles: false, specBelow: 1, eatAt: 40, castArmour: 'keep', escapeAt: 60, escapeSpell: 1174, protectItem: false, flickEvery: 2, chase: false },
     ganker: { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false },
     'ganker-bare': { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false, overheadPrayer: false },
 };

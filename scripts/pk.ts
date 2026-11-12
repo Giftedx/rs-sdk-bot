@@ -466,7 +466,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             const id = m.observationId ?? m.tick;
             if (id <= seenMessage || m.tick < start) continue;
             if (id > maxMessage) maxMessage = id;
-            if (m.type === 0 && killMessage(m.text, targetName)) { result.outcome = 'kill'; log(`PK kill ${targetName} after ${result.ticks} ticks`); return result; }
+            // A dead player stands at its respawn point, and an attack click that is still in hand would walk our account
+            // after it: a walk to our own tile ends that click.
+            if (m.type === 0 && killMessage(m.text, targetName)) { if (typeof sdk.sendWalk === 'function') void sdk.sendWalk(at.x, at.z); result.outcome = 'kill'; log(`PK kill ${targetName} after ${result.ticks} ticks`); return result; }
             if (/magical force stops you from moving|you're stunned/i.test(m.text) && now >= selfFrozenUntil) selfFrozenUntil = now + 8;
             if (/already held by a magical force|currently immune to that spell/i.test(m.text)) {
                 freezeReady = Math.max(freezeReady, now + 4);

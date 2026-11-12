@@ -93,7 +93,7 @@ test('the ganker cases stand at the post: the spars in pairs, the gang on one ti
     expect([count('amulet_of_glory_4'), count('4dose2defense'), count('4dose2antipoison'), count('4doseprayerrestore'), count('shark'), hunter.inventory.length]).toEqual([0, 1, 1, 0, 21, 27]);
     expect(hunter.equipment.filter(e => [0, 2, 4, 5, 7].includes(e.slot)).map(e => e.id).sort((x, y) => x - y)).toEqual(['mithril_full_helm', 'amulet_of_glory_4', 'adamant_platebody', 'mithril_kiteshield', 'mithril_platelegs'].map(itemId).sort((x, y) => x - y));
     expect(kitCost('gang-hunter')).toBeLessThan(75_000);
-    expect(sparOptions('gang-hunter', undefined, kitSwitches('gang-hunter'), 900, kitOptions('gang-hunter'))).toMatchObject({ ...PROFILES.champion, castArmour: 'keep', escapeAt: 60, protectItem: false, flickEvery: 2, chase: false });
+    expect(sparOptions('gang-hunter', undefined, kitSwitches('gang-hunter'), 900, kitOptions('gang-hunter'))).toMatchObject({ ...PROFILES.champion, adaptStyles: false, mixStyles: false, eatAt: 40, castArmour: 'keep', escapeAt: 60, escapeSpell: 1174, protectItem: false, flickEvery: 2, chase: false, spec: { below: 1 } });
     for (const key of ['extra:gang-ganker-gang-hunter-x4', 'extra:gang-ganker-max-gang-hunter-x4', 'extra:gang-ganker-escape-worn-x4']) expect(cases.find(k => k.key === key)!.scriptArgs).toContain('SPAR_A=gang-hunter');
     // The worn-glory case starts our account with 3 sharks.
     expect(cases.find(k => k.key === 'extra:gang-ganker-escape-worn-x4')!.presetConfig!.inventory!.filter(i => i.id === itemId('shark')).length).toBe(3);

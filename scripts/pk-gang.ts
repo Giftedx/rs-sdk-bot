@@ -54,12 +54,14 @@ export const gangValid = (r: GangResult) => r.fights.some(f => attacksOf(f) > 0)
 // `food` slots of sharks and boosts and the `items` again (scripts/pk-hunt.ts restock), wield the arrows, walk back.
 export function bankTrip(at: { x: number; z: number }, back: { x: number; z: number }, pack: { food: number; items: readonly { id: number; count: number }[] }, kit: Kit, halt: () => boolean = () => false,
     bank: { eaten: number } = { eaten: 0 }) {
-    return async (a: Session): Promise<string | null> => {
+    // `fresh`: the pack is the full pack of the kit already (the trip before the first meeting), so nothing is banked
+    // but the boosts.
+    return async (a: Session, fresh = false): Promise<string | null> => {
         const deps = await sessionWalker(a);
         const go = (to: { x: number; z: number }) => walkPath(deps, [{ ...to, tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: halt });
         const out = await go(at);
         if (!out.ok) return `no walk to the bank: ${out.detail ?? 'stopped'}`;
-        const fault = await restock(a, pack.food, pack.items, kit);
+        const fault = fresh ? null : await restock(a, pack.food, pack.items, kit);
         if (fault) return fault;
         // At the bank no attack is lost to an eat or a drink: eat to within one shark of full Hitpoints, drink one dose
         // of each boost, then bank the boosts and fill the pack with sharks again.
@@ -97,10 +99,11 @@ export function packOf(inventory: readonly { id: number; count: number; optionsW
 }
 // `trips`: with more than one, an account that walked out of the Wilderness goes to the bank and comes back.
 export async function gang(a: Session, others: readonly Session[], optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false,
-    trips?: { count: number; resupply: (a: Session) => Promise<string | null>; bank?: { eaten: number } }): Promise<GangResult> {
+    trips?: { count: number; resupply: (a: Session, fresh?: boolean) => Promise<string | null>; bank?: { eaten: number } }): Promise<GangResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
     const start = a.tick(), cap = optionsA.cap ?? 900, self = () => a.sdk.getState()?.player;
+    const first = self(), spot = first ? { x: first.worldX, z: first.worldZ } : null;
     const alive = new Set(others.map(o => o.name.toLowerCase()));
     // A death gives the account a new life id, but the client counts a death only when it sees 0 Hitpoints, and the
     // server can give the Hitpoints back in the tick of the death. A dead account stands at the Lumbridge spawn, so an
@@ -168,6 +171,9 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
             && (a.sdk.getState()?.nearbyPlayers ?? []).some(p => p.index === lastHitBy && alive.has(p.name.toLowerCase())));
         const r = await fightPlayer(a, target.name, { ...optionsA, cap: Math.max(1, cap - (a.tick() - start)), stop: () => halt() || other(), log: l => log(`[${a.name}] ${l}`) });
         fights.push(r);
+        // An attack click on an account that died walks ours toward its respawn point: back to the meeting tile.
+        const here = self();
+        if (here && spot && r.outcome !== 'escaped' && r.outcome !== 'died' && Math.max(Math.abs(here.worldX - spot.x), Math.abs(here.worldZ - spot.z)) > 3) void a.sdk.sendWalk(spot.x, spot.z);
         // The next choice leaves out each account that the game refused, until one attack goes through.
         if (refusedAt > began) { refusedBy.add(target.name.toLowerCase()); if (lastHitBy === target.index) lastHitBy = null; if (refusedBy.size >= alive.size) refusedBy.clear(); } else refusedBy.clear();
         if (r.outcome === 'kill') { alive.delete(target.name.toLowerCase()); lastHitBy = null; continue; }
@@ -238,14 +244,18 @@ if (import.meta.main) {
             kitA ? kitSwitches(kitA) : TRIBRID_KIT, () => halted !== undefined, bank) } : undefined; });
     // The fight loop reads no loc and no ground item, and their scan is part of the state of every tick. An account
     // that goes to the bank needs both.
-    for (const s of groups.flatMap((g, i) => (resupplies[i] ? g.slice(1) : g))) {
+    const lean = (s: Session) => {
         (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
         const collector = (s.client as { collector?: Record<string, unknown> } | undefined)?.collector;
         if (collector && typeof collector.collectNearbyLocs === 'function') { collector.collectNearbyLocs = () => []; collector.collectGroundItems = () => []; }
-    }
+    };
+    for (const s of groups.flatMap((g, i) => (resupplies[i] ? g.slice(1) : g))) lean(s);
     // SPAR_PRETRIP=1: each account of ours goes to the bank before the first meeting, as an account that comes from
     // the bank does: it drinks its boosts there and carries sharks in their slots.
-    if (env.SPAR_PRETRIP === '1') { const faults = await Promise.all(groups.map(([a], i) => resupplies[i]?.resupply(a!) ?? null)); for (const fault of faults) if (fault) halted ??= `no trip before the meeting: ${fault}`; }
+    if (env.SPAR_PRETRIP === '1') {
+        const faults = await Promise.all(groups.map(([a], i) => resupplies[i]?.resupply(a!, true) ?? null)); for (const fault of faults) if (fault) halted ??= `no trip before the meeting: ${fault}`;
+        // With no later trip, our accounts need no loc and no ground item either.
+        if (tripCount <= 1) for (const [a] of groups) lean(a!); }
     const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), options(1, i), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 })));
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
