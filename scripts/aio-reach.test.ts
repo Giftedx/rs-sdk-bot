@@ -35,6 +35,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/generated/thieveknights.ts': 'practice measurement of 300 ticks from a preset; an example of packages/router/src/author-cli.ts',
  'scripts/goal-readiness.ts': 'report: the quest unlocks that an account holds',
  'scripts/haggis-gate.ts': 'the launch gate of the main account',
+ 'scripts/heavy-admission.ts': 'developer tool: sizes a test or type check job by the free memory',
  'scripts/learn.ts': 'report: reads the run records on disk',
  'scripts/loop-watch.ts': 'report: finds accounts that repeat work with no result',
  'scripts/market-snapshot.ts': 'report: fetches the supply prices',
