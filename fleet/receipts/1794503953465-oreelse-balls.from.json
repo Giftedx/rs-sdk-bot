@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794503953465-oreelse-balls",
  "account": "OreElse",
  "partner": "Balls",
@@ -12,6 +12,12 @@
  "claim": "fa68e357-adf5-4b4d-bf3c-37a7518f3af7",
  "count": 0,
  "ok": false,
- "at": 1794503963624,
- "detail": "trade claimed"
+ "at": 1794504119123,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1794503963632-0000028480-0000000001",
+  "at": 1794504119107,
+  "sha256": "1f64c6e02d6e2bcff26f4d36c4c4d8444edd20b78cee383e58bfd87c4cf35abf"
+ },
+ "screen": false
 }
