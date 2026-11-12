@@ -1,21 +1,24 @@
 {
  "side": "claude-cloud",
- "at": 1794460292517,
+ "at": 1794460348133,
  "jobs": [
   {
    "account": "UnderMyKilt",
-   "script": "scripts/aio.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "quester",
-    "chain",
-    "zanaris"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=undermykilt-kit9-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
-   "env": {},
-   "enabled": false,
-   "standing": false,
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
    "repeat": false,
-   "goal": "hand: finish Lost City from the Entrana dungeon",
-   "role": "hand"
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Quickhandjob",
@@ -126,28 +129,20 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "1500",
-    "trooper"
+    "quester",
+    "dusty-key"
    ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
+   "role": "quest",
+   "template": "army-dusty-key",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "Kiltlifter",
