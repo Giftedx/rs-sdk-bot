@@ -395,6 +395,53 @@ test('the controller releases only an exact expired held lease with a dead bound
   for(const [p,raw] of Object.entries(kept))expect(readFileSync(p,'utf8'),fault+' '+p).toBe(raw);
  }
 });
+test('the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect',()=>{
+ const reasons:Record<string,string>={'superseded-open':'producer logout not confirmed','superseded-same-run':'producer proof mismatched','not-connected-open':'producer logout not confirmed',
+  'not-connected-receipt-logout':'producer proof mismatched','no-attempt':'producer logout not confirmed'};
+ const other={pid:4321,coordinatorRunId:null,workerRelease:source,script:'scripts/other.ts',role:null,participants:null};
+ for(const fault of ['superseded','superseded-open','superseded-same-run','not-connected','not-connected-no-receipt','not-connected-open','not-connected-receipt-logout','no-attempt']){
+  const f=fixture(),root=join(f.base,'.practice/session-lifecycle'),connected=fault.startsWith('superseded'),identity={account:'Rod',server:f.request.server};
+  const owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
+  // An attempt takes the later of its own clock and the last attempt of this process, so the permit time follows the old attempt.
+  let issued=now;
+  if(!connected&&fault!=='no-attempt'){
+   const old=beginSessionAttempt(identity,{root,owner:other,now:()=>now-50});
+   if(fault!=='not-connected-open')old.record('ended','logged-out');
+   issued=listAttempts('Rod',f.request.server,{root})[0]!.receipt!.createdAt+1000;
+   f.put('.practice/swarm-state.json',{at:issued,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
+   f.options.now=()=>issued;
+  }
+  issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);consumeRecoveryPermit(f.request,f.base,f.options);
+  const paths=recoveryPermitPaths(f.request,f.base),marker=join(dirname(paths.permit),'released.json'),receiptFile=join(paths.output,'receipt.json');
+  const receipt:any={state:'held',request:f.request,failure:'cleanup failed or unresolved',startedAt:issued+5,endedAt:issued+10,runnerSha256:f.runnerHash,before:null,after:null,
+   scope:{gameplay:false,production:0,repairsFailure:false,qualifiesScript:false}};
+  if(connected){
+   // The child logged in and out. Then a session of a different run, or of the same run, began.
+   const own=beginSessionAttempt(identity,{root,owner,now:()=>issued+5});own.record('ended','logged-out');
+   const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
+   f.put(relative(f.base,receiptFile),{...receipt,logout:'logged-out',attemptId:own.attemptId,lifecycleSha256:proof.receiptSha256,proof});
+   const later=beginSessionAttempt(identity,{root,owner:fault==='superseded-same-run'?{...owner,pid:4321}:other,now:()=>issued+30});
+   if(fault!=='superseded-open')later.record('ended','logged-out');
+  }else if(fault!=='not-connected-no-receipt')f.put(relative(f.base,receiptFile),{...receipt,logout:fault==='not-connected-receipt-logout'?'logged-out':'not-attempted',attemptId:null,lifecycleSha256:null});
+  const checks={now:()=>issued+150000,matches:()=>true,childAlive:()=>false};
+  const kept=Object.fromEntries([paths.permit,paths.child,paths.used,receiptFile,join(f.base,'.practice/swarm-deaths.json'),join(f.base,'swarm.json')].filter(p=>existsSync(p)).map(p=>[p,readFileSync(p,'utf8')]));
+  if(reasons[fault]){
+   expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks),fault).toThrow(reasons[fault]);
+   expect(existsSync(paths.lease),fault).toBe(true);expect(existsSync(marker),fault).toBe(false);
+   expect(releaseExpiredRecoveryLeases(f.base,[],checks),fault).toEqual([{account:'rod',released:false,reason:expect.stringContaining(reasons[fault]!)}]);
+  }else{
+   const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
+   const released=releaseExpiredRecoveryLease('Rod',f.base,checks);
+   expect(released,fault).toMatchObject({account:'Rod',nonce:'one',childPid:process.pid,attemptId:proof.attemptId,lifecycleSha256:proof.receiptSha256,basis:connected?'superseded':'not-connected'});
+   expect(released.receiptSha256===null,fault).toBe(fault==='not-connected-no-receipt');
+   expect(existsSync(paths.lease),fault).toBe(false);expect(()=>assertNoRecoveryLease('Rod',f.base)).not.toThrow();
+   expect(JSON.parse(readFileSync(marker,'utf8'))).toEqual(released);
+   expect(existsSync(paths.completed)).toBe(false);expect(recoveredSessionForRun('Rod',f.request.server,f.request.runId,source,f.base)).toBe(false);
+   expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks)).toThrow('lease absent');
+  }
+  for(const [p,raw] of Object.entries(kept))expect(readFileSync(p,'utf8'),fault+' '+p).toBe(raw);
+ }
+});
 test('restart counts inherited children without replay, ignores dead children, and retains every lease',()=>{
  const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,1234,f.base,f.options);
  expect(heldRecoveryOwners(f.base,[],pid=>pid===1234,now)).toEqual([{account:'Rod',pid:1234,started:now,source}]);
