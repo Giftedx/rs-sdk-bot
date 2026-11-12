@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794459616464,
+ "at": 1794460462217,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -566,6 +566,19 @@
    "resources": [
     "knight:2653,3300"
    ]
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/walk-to.ts",
+   "args": [
+    "2655",
+    "3283",
+    "0"
+   ],
+   "enabled": true,
+   "repeat": false,
+   "goal": "owner walk: down from level 1 of the house at 2575,3269 to the Ardougne south bank",
+   "role": "helper"
   }
  ]
 }
