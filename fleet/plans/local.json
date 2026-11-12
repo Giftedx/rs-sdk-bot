@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794455873367,
+ "at": 1794457101257,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -21,6 +21,25 @@
    "role": "supply"
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
@@ -34,6 +53,32 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "TARGET_LEVEL": "45",
+    "GIANT_BURY": "0"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "Bigpackage",
@@ -514,25 +559,6 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Abracadickra",
    "script": "scripts/aio.ts",
    "args": [
@@ -553,27 +579,6 @@
    "resources": [
     "aio:seers-flax"
    ]
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "563",
-    "QUANTITY": "3",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "1140",
-    "CASH_RESERVE": "120000",
-    "ORDER_KEY": "bigchopper-law3-scorpion-r6",
-    "FILL_WAIT_TICKS": "80",
-    "ORDER_MS": "600000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3f4fbcb2-13d5-4978-9033-edd8771f5022"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-bigchopper-law3-scorpion-r6 [task-3f4fbcb2-13d5-4978-9033-edd8771f5022]",
-   "role": "combat"
   }
  ]
 }
