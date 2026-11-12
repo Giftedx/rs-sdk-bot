@@ -896,6 +896,68 @@ fights of this set.
   `low-ranger`. `low-addy`, with 8 to 13 more combat levels, won 4 of 9.
 - Gap: 3 fights for each pair outside the head-to-head case. The low bracket has 4 builds and 18 fights.
 
+## Rivals: the dagger gang
+
+Goondelf, Ligma and Sugma are accounts of another owner. They hunt every player in their combat range in the
+Wilderness with dragon daggers. Sources: the world feed (`wss://rs-sdk-demo.fly.dev/worldfeed`; a record of 63
+minutes is `.practice/rival-dds/trace-3.jsonl` in the main checkout), the hiscore pages (`hs-<name>.html` in that
+folder) and one earlier feed record of Goondelf (`goondelf-fordmine4.txt`). `scripts/measure/pk-rival-feed.ts`
+makes such a record (`record`) and prints its fights and the numbers that the bench copies (`digest`), so a longer
+record checks the copy again.
+
+What the sources show:
+
+- **Levels.** Attack, Strength, Defence and Hitpoints 99; Prayer 99 (Goondelf) or 90 (Ligma, Sugma); Magic 37 or 28;
+  no Ranged level. Combat 126 and 125.
+- **Worn items.** Black wizard hat, monk's robe top and bottom, dragon dagger (p). No other slot holds an item. The
+  robes give Prayer bonus 11 and no defence. Each account shows a skull after an attack.
+- **Post.** Between hunts the three stand on one tile, (3078, 3640), Wilderness level 16, a single-way tile. They leave
+  it together, run on the same tiles, and return to it after each hunt.
+- **Targets.** They ran 230 tiles to a combat 123 player at level 45 and to a combat 96 player at the runite rocks
+  (level 46). Players of combat 26 to 64 passed within 20 tiles of the post and no account moved. They also run to
+  (2934, 3516), where a combat 113 player stands 5 tiles outside the Wilderness, and return with no attack: 4 such
+  trips in the record.
+- **Attack.** The lunge of the dagger each 4 ticks (15 of 15 intervals), on a target that runs too. On a single-way
+  tile the first account to hit holds the target; a second one follows it and tries again each few ticks.
+- **Special.** Goondelf used 4 specials in its first 8 attacks on a miner: attack, special, attack, special, attack,
+  special, special, attack. Sugma used none in 15 attacks on a target under Protect from Melee; the record starts
+  inside that fight, so its special energy is not known.
+- **Food.** Goondelf ate once, at 74 HP, for 20 HP (a shark), and its next attack came 3 ticks late. It did not eat at
+  82 HP.
+- **Protect prayers.** Sugma turned Protect from Missiles on one tick after a hit from a player that held a magic
+  shortbow, and off 33 ticks later. Ligma turned Protect from Magic on in the tick before a spell landed on it, and
+  off 13 to 17 ticks later. In a hunt of a target that did not hit back, no protect prayer came on.
+- **Prayer points.** Ligma prayed at the Chaos Temple altar (2948, 3820) after a hunt, and Goondelf came into the
+  Wilderness from the Monastery (3045, 3489) at full Hitpoints.
+- **Damage.** On a target under Protect from Melee: 15 attacks, 7 hits, highest 10. On a target with no such prayer:
+  one hit of 13. With no Strength boost the dagger hits up to 18, and up to 10 under the prayer (`pvp_melee.rs2:31-33`).
+- **End of a hunt.** Each hunt in the record ended when the target left view or got away. No kill and no death is in
+  the record.
+
+The bench copies this (`scripts/pk-kits.ts`, `scripts/pk-spar.ts`, `scripts/pk-gang.ts`):
+
+- Kit `ganker-dds`: the worn items, the levels of Goondelf and 12 sharks. Profile `ganker`: melee only, a special on
+  each attack from the first health bar, a shark at 79 HP or less, no prayer flick, the protect prayer for the weapon
+  of the opponent. Profile `ganker-bare`: the same with no protect prayer.
+- Kit `ganker-max`: the same worn items and levels with a super attack, a super strength, two prayer potions and 23
+  sharks. It is the most the gang can be with the items the feed shows, so a method that clears it does not depend
+  on the gaps below.
+- `extra:spar-ganker-x12` and `extra:spar-ganker-bare-x12`: one of ours against one of the gang, 12 pairs, on the post
+  tile. `extra:gang-ganker-x4`, `extra:gang-ganker-bare-x4` and `pvp:gang`: one of ours against three on one tile; the
+  engine's single-way rule decides which of the three fights (`pvp_combat.rs2:104-131`). `extra:gang-ganker-<kit>-x4`
+  and `extra:gang-ganker-max-<kit>-x4` run the kits `hybrid` and `gang-hunter`, and each kit against `ganker-max`.
+  `extra:gang-ganker-escape-x4` is the way out with a glory.
+
+Gaps:
+
+- The pack of a gang account is not visible: the number of sharks, and whether it holds potions. `ganker-dds` has an
+  estimate; `ganker-max` is the upper limit.
+- Prayers with no head icon (Protect Item, the Strength, Attack and Defence prayers) are not visible. The bench
+  accounts use all of them.
+- The eat level is between 75 and 81 HP from one eat.
+- No record shows a gang account under a melee weapon, at low Hitpoints, or after its death: whether it prays against
+  melee, whether it runs, and how long it takes to return to the post are not known.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

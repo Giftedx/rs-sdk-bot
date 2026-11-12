@@ -460,6 +460,13 @@ const ROUTE_CASES: BenchCase[] = [
   sparMatrix('extra:spar-ganker-bare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker-bare'], GANKER_POST),
   gangCase('extra:gang-ganker-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker']),
   gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
+  // The same meeting for the kits with more food, and each kit against the most that the gang can be (`ganker-max`:
+  // potions and a full pack of sharks), with a cap that leaves time for the 1,677 HP of that gang.
+  ...(['hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-${kit}-x4`, kit, 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker'])),
+  ...(['tribrid-snare', 'hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-x4`, kit, 'ganker-max', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_CAP=2400'])),
+  // The way out: our account has 3 sharks and a glory in its pack; out of food at 60 HP or less it rubs the glory
+  // with the gang on it. The case passes when all four accounts get away.
+  {...gangCase('extra:gang-ganker-escape-x4', 'runner', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A_OPTS={"escapeAt":60}']), pass: s => ok(s) && / escaped=4 /.test(s)},
   // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
   // its kit in the bank; the target stands at the first hunt spot with no food.
   // `auto` has the snare stock and names no kit: at the first hunt spot (Wilderness level 3) the hunter must pick the

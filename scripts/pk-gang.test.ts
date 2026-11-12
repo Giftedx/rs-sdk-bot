@@ -42,7 +42,12 @@ test('the ganker kit is what the three accounts wear, at combat 126, and no buil
     expect(kitSwitches('ganker-dds')).toEqual({ melee: [itemId('dragon_dagger_p')] });
     expect(kitVarps('ganker-dds')).toEqual({ 147: 6, 300: 1000 });
     expect(kitRoute('ganker-dds')).toEqual({ quests: ['Lost City'], breaks: [] });
-    expect(Object.keys(KITS).filter(k => KITS[k]!.rival)).toEqual(['ganker-dds']);
+    expect(Object.keys(KITS).filter(k => KITS[k]!.rival).sort()).toEqual(['ganker-dds', 'ganker-max']);
+    // The most the gang can be: the same worn items and levels, with potions and a full pack.
+    expect(kitItems('ganker-max').equipment).toEqual(equipment);
+    expect(kitSkills('ganker-max')).toEqual(kitSkills('ganker-dds'));
+    expect(kitItems('ganker-max').inventory.length).toBe(27);
+    expect(kitItems('ganker-max').inventory.filter(i => i.id === itemId('shark')).length).toBe(23);
 });
 
 test('the ganker profiles: melee only, a special from the first health bar, a shark at 79, no flick, and no protect prayer on ganker-bare', () => {
@@ -72,4 +77,17 @@ test('the ganker cases stand at the post: the spars in pairs, the gang on one ti
     g.companions!.forEach((c, i) => expect(c.presetConfig).toMatchObject((i + 1) % 4 === 0 ? ours : theirs));
     expect(cases.find(k => k.key === 'extra:gang-ganker-bare-x4')!.scriptArgs).toContain('SPAR_B=ganker-bare');
     expect(cases.find(k => k.key === 'pvp:gang')!.scriptArgs).toContain('SPAR_B=ganker');
+    // Each kit of ours meets the gang as seen and the gang at its most, and the way out is a case of its own.
+    for (const kit of ['hybrid', 'gang-hunter']) expect(cases.find(k => k.key === `extra:gang-ganker-${kit}-x4`)!.presetConfig).toMatchObject(kitItems(kit));
+    for (const kit of ['tribrid-snare', 'hybrid', 'gang-hunter']) {
+        const max = cases.find(k => k.key === `extra:gang-ganker-max-${kit}-x4`)!;
+        expect(max.scriptArgs).toEqual(expect.arrayContaining([`SPAR_KITS=${kit}:ganker-max`, 'SPAR_CAP=2400']));
+        expect(max.companions![0]!.presetConfig).toMatchObject(kitItems('ganker-max'));
+    }
+    // The glory of the hunter kit is in its pack: the fight loop rubs a glory that it carries.
+    expect(kitItems('gang-hunter').inventory.some(i => i.id === itemId('amulet_of_glory_4'))).toBe(true);
+    const escape = cases.find(k => k.key === 'extra:gang-ganker-escape-x4')!;
+    expect(escape.scriptArgs).toContain('SPAR_A_OPTS={"escapeAt":60}');
+    expect(escape.pass('RESULT ok gang groups=4 cleared=0 died=0 escaped=4 away=0 cap=0 kills=0')).toBe(true);
+    expect(escape.pass('RESULT ok gang groups=4 cleared=1 died=0 escaped=3 away=0 cap=0 kills=3')).toBe(false);
 });

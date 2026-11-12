@@ -123,6 +123,11 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     hybrid: { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...PRAYER_POTS, ...BOOSTS], food: 21,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The hybrid for a meeting with the dagger gang: one shark less for a glory in the pack, the way out at the gang's
+    // post (amulet_of_glory.rs2 allows the rub up to Wilderness level 30).
+    'gang-hunter': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...PRAYER_POTS, ...BOOSTS, 'amulet_of_glory_4'], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },
@@ -277,6 +282,12 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     // fight; the count of 12 is an estimate.
     'ganker-dds': { worn: { hat: 'blackwizhat', torso: 'monkrobetop', legs: 'monkrobebottom', weapon: 'dragon_dagger_p' },
         carried: [], food: 12, switches: { melee: ['dragon_dagger_p'] }, options: { rotation: ['melee'] },
+        skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99, Magic: 37, Ranged: 1 }, rival: 'Goondelf, Ligma, Sugma' },
+    // The most that the dagger gang can be with the items the feed shows: the same worn items, the two melee potions,
+    // two prayer potions and a full pack of sharks. A method that clears this gang clears the real one whatever its
+    // pack holds.
+    'ganker-max': { worn: { hat: 'blackwizhat', torso: 'monkrobetop', legs: 'monkrobebottom', weapon: 'dragon_dagger_p' },
+        carried: ['4dose2attack', '4dose2strength', ...PRAYER_POTS], food: 23, switches: { melee: ['dragon_dagger_p'] }, options: { rotation: ['melee'] },
         skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99, Magic: 37, Ranged: 1 }, rival: 'Goondelf, Ligma, Sugma' },
     // The target of a pure: combat 3 with a pickaxe and a few lobsters.
     skiller: { worn: { weapon: 'bronze_pickaxe', feet: 'leather_boots' }, carried: [], food: 5, foodItem: 'lobster',
