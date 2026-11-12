@@ -668,7 +668,9 @@ export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // its JSON result (scripts/buy-owned-ge-item.ts). Without the second, a kit buy that ended ok after its long trip read
 // as tick waste and its pair was retired, so the account's next buy for that band never came (live claude-cloud: the
 // alchemy kit buys of KnightRider, Deeppockets and Fatstack, one of them after 1,000 nature runes bought).
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal|hides)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
+// A blood chest run reports "loots" in its JSON result (scripts/blood-chest.ts): it waits on the surface for the
+// chests to come back, so most of its ticks are idle.
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal|hides)=[1-9]\d*\b|"(?:acquired|loots)":[1-9]/.test(result);
 // A run that ended on a stop file is a drain as well: the owner paused the account or the controller removed the job,
 // which says nothing about whether the job works (live claude-cloud: a quest chain stopped for an open fleet order
 // logged two such fails, and the account's Lost City band was retired).
@@ -753,7 +755,7 @@ export function splashKit(magic: number): Record<string, number> {
     return magic < CURSE_LEVEL ? { ...SPLASH_KIT } : { 'body rune': casts, 'earth rune': 3 * casts, 'water rune': Math.max(SPLASH_START['water rune'], 2 * casts) };
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
-export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
+export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
@@ -873,17 +875,54 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 //   coins for the Al Kharid toll gate; it stages to the Varrock West anvils. The bench case smiths a bronze dagger;
 //   practice: 6 blades in 463 ticks, 337 of them the walk from Al Kharid. The PK army's fight loop wants rune weapons
 //   and the live market has no rune scimitar sellers (docs/plans/joined-plan.md, PK army).
+// Makers of route supply lines that are short on the Overall bill (packages/planner/src/supply-bill.ts). The item of
+// each `yields` is the bill line's name, which is also the item's name (knowledge/items.json), so unitValue matches
+// the line and finds its price.
+// - mithril, adamantite and iron bars (scripts/smelt-bars.ts, the route of the runite bars): the Smithing level of
+//   the bar (smelting.struct `levelrequired`: iron 15, mithril 50, adamantite 70), which scripts/smelt-batch.ts
+//   runSmeltBatch waits for and ends `smelt entry level/state unobserved` without; one ore a bar, with 4 coal for
+//   mithril and 6 for adamantite. `needs` asks one pack load: 5 mithril bars, 4 adamantite bars, 28 iron ore. Iron:
+//   the bench case itself, Smithing 50 at the Al Kharid furnace, 28 bars in 377 ticks; half the ore is lost
+//   (smelting.rs2), and a pack with 2 coal at Smithing 30 ends `iron entry requires coal banked`. Mithril and
+//   adamantite: estimates from the runite run above (3 bars a load, about 50 ticks a load), as the furnace takes the
+//   same time for each bar. Gap: no practice run smelts mithril or adamantite, and a start away from the Al Kharid
+//   bank is not run.
+// - cannonballs (scripts/microbot-a-cannonballs.ts): a members world and Smithing 35 (smelt-batch.ts cannonAdmission:
+//   `cannonballs need observed member and current Smithing35`), an ammo mould held or banked (`smelt owned reusable
+//   tool missing`) and CANNON_BARS steel bars banked: the order is exact, so a run with fewer bars fails. One bar
+//   makes 4 balls. CANNON_XP_RATE is the XP rate of the server (a dragon bone gives 1,800 Prayer XP, BOUGHT_BONE_XP);
+//   the worker ends on an XP gain that differs. Bench: Smithing 35 at the Al Kharid bank, 1 bar in 47 ticks. The rate
+//   is an estimate: 27 bars at about 8 ticks a bar (cannonballs.rs2) and the bench's 39 ticks of bank and walk give
+//   0.42 balls a tick, and the rate here is half of that. Gap: a run of more than 3 bars is not measured
+//   (research/microbot-ports.md: 3 bars to 12 banked balls).
+// - blood runes (scripts/blood-chest.ts): Thieving 59 and a start on the ground floor (bloodRefusal); it travels to
+//   the Ardougne north bank from any such start. Each of the two chests gives 2 blood runes and 500 coins and comes back in
+//   400 ticks at most (RESPAWN_TICKS). A run ends ok only with MAX_LOOTS loots. The ogres by the chests hit: under 60%
+//   of its Hitpoints the account leaves, eats banked food of BLOOD_FOOD (the worker's BANK_FOOD) and ends `stop=hp`
+//   with none, so `needs` asks BLOOD_MEALS pieces (an estimate: the worker's note gives 12 of 47 Hitpoints a trip).
+//   Bench: Thieving 99 and Hitpoints 56 by the tower, 2 loots in 165 ticks. The rate is an estimate from the respawn
+//   time: 4 runes and 1,000 coins in 400 ticks. Gap: no run of more than 2 loots is measured, and another player at
+//   the chests takes loots from the run.
 const PICKAXES = ['bronze pickaxe', 'iron pickaxe', 'steel pickaxe', 'mithril pickaxe', 'adamant pickaxe', 'rune pickaxe'] as const;
 const AXES = ['bronze axe', 'iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe'] as const;
 // scripts/quest-sweep.ts MEALS, by item name (scripts/autopilot.test.ts checks the two agree).
 export const SWEEP_MEALS = ['shark', 'swordfish', 'lobster', 'bass', 'tuna', 'trout', 'salmon', 'cake', '2/3 cake', 'slice of cake', 'bread'] as const;
 export const BOWSTRING_BATCH = 56, SHAFT_LOGS = 25;
+// One pack of steel bars beside the ammo mould, the loots of one blood chest run, and the food that run asks.
+export const CANNON_BARS = 27, BLOOD_LOOTS = 6, BLOOD_MEALS = 5;
+// scripts/blood-chest.ts BANK_FOOD, by item name (scripts/autopilot.test.ts checks the two agree).
+export const BLOOD_FOOD = ['shark', 'swordfish', 'lobster', 'tuna', 'salmon', 'trout', 'cake'] as const;
 export function aioTemplates(): Template[] {
     const aio = (id: string, key: string, worker: string, args: string[], rest: Omit<Template, 'id' | 'family' | 'script' | 'args' | 'aio' | 'worker' | 'pilot'>): Template =>
         ({ id, family: `aio:${key}`, script: 'scripts/aio.ts', args: [key.split(':')[0]!, ...args], aio: key, worker, pilot: true, ...rest });
     const essence = aio('aio-essence', 'skiller:mining:essence', 'scripts/gather-essence.ts', ['mining', 'essence', 'CAP=1800', 'BANK_AT=28'], {
         role: 'mining', goal: 'mine rune essence through Aubury and bank it at Varrock East', resources: [AIO_PLACES.essence],
         needs: { quests: ['Rune Mysteries Quest'], pieces: { of: PICKAXES, count: 1 } }, yields: () => [{ item: 'rune essence', perTick: 0.03 }] });
+    // `load`: the bars of one pack load, which `needs` asks the ore and the coal for.
+    const bars = (bar: string, level: number, ore: string, coal: number, load: number, perTick: number) =>
+        aio(`aio-${bar}-bars`, 'skiller:smithing:smelt', 'scripts/smelt-bars.ts', ['smithing', 'smelt', '1500', bar, 'MAX_MAKE=28', 'ORE_RESERVE=0'], {
+            role: 'smithing', goal: `smelt banked ${ore}${coal ? ' and coal' : ''} into ${bar} bars at Al Kharid`,
+            needs: { skills: { Smithing: level }, items: { [ore]: load, ...(coal ? { coal: coal * load } : {}) } }, yields: () => [{ item: `${bar} bar`, perTick }] });
     return [
         aio('aio-flax', 'skiller:foraging:flax', 'scripts/gather-flax.ts', ['foraging', 'flax', '1800', '28'], {
             role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.24 }] }),
@@ -905,12 +944,20 @@ export function aioTemplates(): Template[] {
         aio('aio-air-runes', 'skiller:runecraft:bank-craft', 'scripts/rune-bank-craft.ts', ['runecraft', 'bank-craft', '99', 'CAP=4000'], {
             role: 'magic', goal: 'craft banked rune essence into air runes', resources: [AIO_PLACES.air],
             needs: { items: { 'air talisman': 1, 'rune essence': 28 } }, yields: () => [{ item: 'air rune', perTick: 0.09 }] }),
-        aio('aio-runite-bars', 'skiller:smithing:smelt', 'scripts/smelt-bars.ts', ['smithing', 'smelt', '1500', 'runite', 'MAX_MAKE=28', 'ORE_RESERVE=0'], {
-            role: 'smithing', goal: 'smelt banked runite ore and coal into runite bars at Al Kharid',
-            needs: { skills: { Smithing: 85 }, items: { 'runite ore': 2, coal: 16 } }, yields: () => [{ item: 'runite bar', perTick: 0.06 }] }),
+        bars('runite', 85, 'runite ore', 8, 2, 0.06),
+        bars('adamantite', 70, 'adamantite ore', 6, 4, 0.07),
+        bars('mithril', 50, 'mithril ore', 4, 5, 0.08),
+        bars('iron', 15, 'iron ore', 0, 28, 0.074),
+        aio('aio-cannonballs', 'skiller:smithing:cannonballs', 'scripts/microbot-a-cannonballs.ts', ['smithing', 'cannonballs', String(CANNON_BARS), '1500', 'CANNON_XP_RATE=25'], {
+            role: 'smithing', goal: `cast ${CANNON_BARS} banked steel bars into cannonballs at Al Kharid`,
+            needs: { skills: { Smithing: 35 }, items: { 'ammo mould': 1, 'steel bar': CANNON_BARS } }, yields: () => [{ item: 'cannonball', perTick: 0.2 }] }),
         aio('aio-rune-scimitars', 'skiller:smithing:anvil', 'scripts/smelt-bars.ts', ['smithing', 'anvil', '1500', 'PRODUCT_ID=1333', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {
             role: 'smithing', goal: 'smith a rune scimitar from two banked runite bars at the Varrock West anvils',
             needs: { skills: { Smithing: 90 }, items: { hammer: 1, 'runite bar': 2, coins: 10 } }, yields: () => [{ item: 'rune scimitar', perTick: 0.003 }] }),
+        aio('aio-blood-chest', 'skiller:thieving:blood-chest', 'scripts/blood-chest.ts', ['thieving', 'blood-chest', '4000', `MAX_LOOTS=${BLOOD_LOOTS}`, 'CAP=4000'], {
+            role: 'thieving', goal: `loot the Ardougne blood rune chests ${BLOOD_LOOTS} times and bank the runes`, resources: [AIO_PLACES.blood],
+            needs: { skills: { Thieving: 59 }, pieces: { of: BLOOD_FOOD, count: BLOOD_MEALS } },
+            yields: () => [{ item: 'blood rune', perTick: 0.01 }, { item: 'coins', perTick: 2.5 }] }),
         aio('aio-quest-runemysteries', 'quester:mode:sweep', 'scripts/quest-sweep.ts', ['sweep', 'runemysteries'], {
             role: 'quest', goal: 'complete Rune Mysteries for the essence mine', quest: { name: 'Rune Mysteries Quest', unlocks: [essence.id] },
             needs: { items: { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1 }, pieces: { of: SWEEP_MEALS, count: 4 } }, yields: () => [] }),
