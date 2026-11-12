@@ -3,7 +3,7 @@ import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { aioTemplates, BOUGHT_BONE_XP, SWEEP_MEALS, catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { aioTemplates, BLOOD_FOOD, BLOOD_MEALS, BOUGHT_BONE_XP, CANNON_BARS, SWEEP_MEALS, catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { missionSignature, startable } from './swarm';
@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs';
 import { resolveAioStep } from './aio';
 import { benchCases } from './measure/aio-bench-cases';
 import { MEALS, presetFor } from './quest-sweep';
+import { BANK_FOOD } from './blood-chest';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -424,6 +425,40 @@ test('the Rune Mysteries template needs the pack the sweep takes: the preset run
     expect(Object.fromEntries(Object.entries(t.needs!.items!).map(([i, n]) => [norm(i), n]))).toEqual(pack);
     expect(t.needs!.pieces!.count).toBe(meals);
     expect([...SWEEP_MEALS].map(norm).sort()).toEqual(MEALS.map(name).sort());
+});
+
+test('a maker of a short bill line has the value of that line for an account that meets its needs, and none for another', () => {
+    // Prices as scripts/autopilot.ts builds them: the shop value of each item, by norm() name.
+    const items: { name?: string; debugname?: string; cost?: number }[] = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    const prices: Record<string, number> = {};
+    for (const i of items) if (typeof i.name === 'string' && !/^cert_/.test(i.debugname ?? '') && !(norm(i.name) in prices)) prices[norm(i.name)] = i.cost ?? 0;
+    // The line names of the saved Overall bill.
+    const line = (item: string, short: number) => ({ item, need: short, owned: 0, short, ids: [], holders: [] });
+    const bill = [line('cannonball', 1700), line('blood rune', 624), line('adamantite bar', 345), line('mithril bar', 280), line('iron bar', 2)];
+    const makers: Record<string, { item: string; perTick: number; meets: Acct; lacks: Acct }> = {
+        'aio-cannonballs': { item: 'cannonball', perTick: 0.2, meets: { name: 'A', side, skills: { Smithing: 35 }, items: { 'ammo mould': 1, 'steel bar': CANNON_BARS } },
+            lacks: { name: 'A', side, skills: { Smithing: 35 }, items: { 'steel bar': CANNON_BARS } } },
+        'aio-blood-chest': { item: 'blood rune', perTick: 0.01, meets: { name: 'A', side, skills: { Thieving: 59 }, items: { lobster: BLOOD_MEALS } },
+            lacks: { name: 'A', side, skills: { Thieving: 58 }, items: { lobster: BLOOD_MEALS } } },
+        'aio-adamantite-bars': { item: 'adamantite bar', perTick: 0.07, meets: { name: 'A', side, skills: { Smithing: 70 }, items: { 'adamantite ore': 4, coal: 24 } },
+            lacks: { name: 'A', side, skills: { Smithing: 70 }, items: { 'adamantite ore': 4, coal: 23 } } },
+        'aio-mithril-bars': { item: 'mithril bar', perTick: 0.08, meets: { name: 'A', side, skills: { Smithing: 50 }, items: { 'mithril ore': 5, coal: 20 } },
+            lacks: { name: 'A', side, skills: { Smithing: 49 }, items: { 'mithril ore': 5, coal: 20 } } },
+        'aio-iron-bars': { item: 'iron bar', perTick: 0.074, meets: { name: 'A', side, skills: { Smithing: 15 }, items: { 'iron ore': 28 } },
+            lacks: { name: 'A', side, skills: { Smithing: 15 }, items: { 'iron ore': 27 } } },
+    };
+    for (const [id, m] of Object.entries(makers)) {
+        const run = (a: Acct, rows = bill) => plan({ ...inputs(a), templates: aioTemplates(), bill: rows, prices, pilots: new Set([id]), coinValue: 0 })[0]!;
+        const price = prices[norm(m.item)]!;
+        expect(`${id} ${price > 0}`).toBe(`${id} true`);
+        expect(`${id} ${run(m.meets).template?.id}`).toBe(`${id} ${id}`);
+        // Twice the shop value while the line is short, half of it once the line is met.
+        expect(run(m.meets).value).toBeCloseTo(m.perTick * price * 2);
+        expect(run(m.meets, bill.map(r => ({ ...r, short: 0 }))).value).toBeCloseTo(m.perTick * price * 0.5);
+        expect(run(m.lacks)).toMatchObject({ value: 0 });
+        expect(run(m.lacks).template).toBeUndefined();
+    }
+    expect([...BLOOD_FOOD].map(norm).sort()).toEqual(BANK_FOOD.map(norm).sort());
 });
 
 test('the aio list of the plan admits pilot templates by id; anything else admits none', () => {

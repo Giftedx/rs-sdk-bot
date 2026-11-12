@@ -881,7 +881,7 @@ const sweepKit = { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1
 
 test('every AIO template is in the catalogue as a pilot that runs the dispatcher with its category first', () => {
     const all = new Map(catalogue().map(t => [t.id, t]));
-    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-runite-bars', 'aio-rune-scimitars', 'aio-quest-runemysteries']);
+    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-runite-bars', 'aio-adamantite-bars', 'aio-mithril-bars', 'aio-iron-bars', 'aio-cannonballs', 'aio-rune-scimitars', 'aio-blood-chest', 'aio-quest-runemysteries']);
     for (const t of aioTemplates()) {
         expect(all.get(t.id)).toBeDefined();
         expect(t.pilot).toBe(true);
@@ -1063,6 +1063,9 @@ test('an army account whose bow is short of arrows buys bronze arrows at the Ard
     const wait = 'LEDGER ticks=1000 xp=0 inventory=12 move=120 anim=0 dialog=0 stun=0 idle=868';
     expect(assess([wait, 'RESULT ok ticks=1000 boughtTotal=96 bankedTotal=96 stop=cap targetMet=0']).retire).toBe(false);
     expect(assess([wait, 'RESULT ok ticks=1000 boughtTotal=0 bankedTotal=0 stop=stock-wait targetMet=0']).reason).toMatch(/^tick waste 99%/);
+    // A blood chest run waits for the chests to come back: its loots are its progress.
+    expect(assess([wait, 'RESULT ok {"ok":true,"stop":"target","targetMet":true,"conserved":true,"loots":6,"runes":12,"coins":3000}']).retire).toBe(false);
+    expect(assess([wait, 'RESULT fail {"ok":false,"stop":"idle","targetMet":false,"conserved":true,"loots":0,"runes":0,"coins":0}']).reason).toMatch(/^tick waste 99%/);
 });
 
 test('a smith with runite ore and coal smelts bars, then smiths rune scimitars, once the plan admits the routes', () => {
