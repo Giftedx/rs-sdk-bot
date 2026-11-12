@@ -1091,7 +1091,18 @@ The bench copy of this gang: profile `ganker-live` (a shark at 74 HP or less; th
 0 to 3 with the weights 48, 35, 11, 5 on the bench's own wait; with no food a walk south at 30 HP or less) and
 `scripts/pk-gang.ts` `SPAR_B_TRIPS` (the bank trip and the return), `SPAR_B_FOLLOW=1` (the others go too),
 `SPAR_B_REST` (the wait of the one that ran) and `SPAR_WAIT` (our account waits on the tile). The case is
-`extra:gang-live-check-x2`. The levers for our side: `cureNow` (an antipoison in the first tick after the poison),
+`extra:gang-live-check-x2` (`-x1`: one group, for a PC with little memory free).
+
+- **Our prayer runs out.** In the live meeting our protect prayer went off for good at about tick 730 of the
+  meeting; the last 1,040 ticks had none. The flick each 2 ticks does not stop the drain: it flicks only on a
+  cooldown tick before the tick of our attack, and no fight loop flicks while our account waits between two fights.
+- **The bench against the live meeting** (`extra:gang-live-check-x1`, profile `gang-hunter`, seeds 1 and 2): seed 2
+  gave 1 kill, 22 sharks eaten, the food gone and the teleport out at 54 HP in 2,760 ticks, the prayer gone at tick
+  663; seed 1 gave 2 kills and 14 sharks in 1,514 ticks, the prayer gone at tick 891. Live: 1 kill, 23 sharks, the
+  prayer gone at about tick 730. In both seeds one gang account walked out at 26 to 29 HP and came back; it was not
+  killed. Gap: 2 seeds.
+
+The levers for our side: `cureNow` (an antipoison in the first tick after the poison),
 `chaseBelow` (a run after a target that flees with a low health bar), and `specBelow` (keep the special energy for a
 low target).
 
