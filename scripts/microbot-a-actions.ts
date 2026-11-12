@@ -92,17 +92,22 @@ export async function runActionGraph(io:{tick():number;stopped():boolean;read():
 }
 export function actionSessionOwner(raw:Session,stop:()=>boolean=()=>false,exists:(path:string)=>boolean=existsSync,options:{allowDamage?:boolean}={}){
  const allowDamage=options.allowDamage===true;
- const client=raw.client as {executeBotAction?:unknown;selfSlot?:number}|undefined,executor=client?.executeBotAction,sdk=raw.sdk,config=sdk.config,origin=JSON.stringify([config?.gatewayUrl,config?.host,config?.port]),p=raw.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,self=(client as {selfSlot?:number})?.selfSlot,hp0=raw.sdk.getSkill('Hitpoints')?.level??0;let ended=false;void raw.ended.then(()=>{ended=true;});
+ const client=raw.client as {executeBotAction?:unknown;selfSlot?:number}|undefined,sdk=raw.sdk,config=sdk.config,origin=JSON.stringify([config?.gatewayUrl,config?.host,config?.port]),p=raw.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,self=(client as {selfSlot?:number})?.selfSlot,hp0=raw.sdk.getSkill('Hitpoints')?.level??0;let ended=false,executor=client?.executeBotAction;void raw.ended.then(()=>{ended=true;});
  const identity=()=>!!client&&raw.client===client&&client.executeBotAction===executor&&client.selfSlot===self&&raw.sdk===sdk&&sdk.config===config&&JSON.stringify([config?.gatewayUrl,config?.host,config?.port])===origin;
  const own=()=>{const now=sdk.getState()?.player,hp=sdk.getSkill('Hitpoints')?.level??0;return(!allowDamage||Number.isFinite(hp0)&&hp0>0&&Number.isFinite(hp)&&hp>0)&&identity()&&!ended&&!!p&&Number.isSafeInteger(life)&&!!client&&typeof executor==='function'&&Number.isSafeInteger(self)&&raw.client===client&&client.executeBotAction===executor&&(client as {selfSlot?:number}).selfSlot===self&&raw.sdk===sdk&&sdk.config===config&&JSON.stringify([config?.gatewayUrl,config?.host,config?.port])===origin&&!!now&&!now.isDead&&now.lifeId===life&&(now.respawnCount??0)===respawns;};
  const stopped=()=>!own()||productionStopRequested(raw.name,stop,exists)||exists('.practice/stop-microbot-actions')||hp0<=0||(!allowDamage&&(sdk.getSkill('Hitpoints')?.level??0)<hp0);
  const view=(cleanup:boolean)=>{const guard=()=>{if(cleanup?!own():stopped())throw Error('action original session/input owner/life/stop unavailable');};const proxy=new Proxy(sdk,{get(target,key,receiver){const v=Reflect.get(target,key,receiver);return typeof v==='function'?function(...args:unknown[]){if(String(key).startsWith('send'))guard();return v.apply(receiver,args);}:v;}}),s=Object.create(raw)as Session;Object.defineProperties(s,{sdk:{value:proxy},bot:{value:new BotActions(proxy)},direct:{value:(a:Parameters<Session['direct']>[0])=>{guard();return raw.direct(a);}}});return s;};
- return{raw,identity,own,stopped,session:view(false),cleanup:view(true),sameLife:()=>{const now=sdk.getState()?.player;return !now||now.lifeId===life&&(now.respawnCount??0)===respawns;}};
+ // The prayer guard and the eat guard replace the client's executor at login, before the owner reads it, and each
+ // puts back the one it replaced when settlement stops it (packages/core/src/prayer-guard.ts and eat-guard.ts, stop).
+ // `settled` makes the executor of that moment the owner's.
+ return{raw,identity,own,stopped,session:view(false),cleanup:view(true),sameLife:()=>{const now=sdk.getState()?.player;return !now||now.lifeId===life&&(now.respawnCount??0)===respawns;},settled:()=>{executor=client?.executeBotAction;}};
 }
 export async function finishActionSession(owner:ReturnType<typeof actionSessionOwner>|undefined,ok:boolean,detail:string,settle:(sessions:Session[],ok:boolean,detail:string,opts?:{logout?:(raw:Session)=>Promise<string>})=>Promise<unknown>=finish,logout:(session:Session)=>Promise<string>=logoutSession){
  const defer=()=>{console.log('ACTION_SETTLEMENT_DEFERRED '+detail);process.exitCode=1;return{ok:false,recoveryDeferred:true};};
  if(!owner)return settle([],ok,detail);if(!owner.own())return defer();
- try{return await settle([owner.raw],ok,detail,{logout:async raw=>{if(raw!==owner.raw||!owner.own())throw Error('action original settlement owner unavailable');const out=await logout(owner.cleanup);if(out!=='logged-out'||!owner.identity()||!owner.sameLife())throw Error('action owned logout unconfirmed');return out;}});}catch{return defer();}
+ // packages/core/src/bot.ts settleOnce stops the guards and calls `logout` with no await after the owner check above,
+ // so only the guards can change the executor before `settled` reads it.
+ try{return await settle([owner.raw],ok,detail,{logout:async raw=>{owner.settled();if(raw!==owner.raw||!owner.own())throw Error('action original settlement owner unavailable');const out=await logout(owner.cleanup);if(out!=='logged-out'||!owner.identity()||!owner.sameLife())throw Error('action owned logout unconfirmed');return out;}});}catch{return defer();}
 }
 export function sessionGraphIO(raw:Session,stop:()=>boolean){
  const owner=actionSessionOwner(raw,stop),s=owner.session,stopped=owner.stopped;
