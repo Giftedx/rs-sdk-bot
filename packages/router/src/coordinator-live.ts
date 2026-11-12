@@ -188,7 +188,7 @@ export function replaceAssignments(jobs:any[],accounts:string[],replacement:any)
 // coordinator job when its run holds a terminal receipt for its task, the job is off, no swarm run holds any participant
 // and every participant has a confirmed logout. A failed receipt is terminal: the confirmed logout releases the account,
 // not the outcome of its work, so a dead job cannot shadow an account whose session is already settled. Other
-// participants keep a disabled job, so their owner jobs stay shadowed.
+// participants keep a disabled job, so their owner jobs stay shadowed until a call names them (releaseFinishedOwnJobs).
 // Any other job (active, missing receipt, held, owner or unproved) is returned unchanged.
 export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly string[],base=projectRoot):CoordinatorJobs{
  const wanted=new Set(accounts.map(n=>n.toLowerCase()));
@@ -218,6 +218,21 @@ export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly st
  });
  return{...own,jobs};
 }
+// The same release for each account in the coordinator's file, written to the file. An install releases only the
+// accounts of its own run, and it writes nothing when it then refuses. Without this pass a finished job keeps its
+// account for ever: the owner's standing job for that account stays out of the merged plan, and a later run on the
+// account is refused because that standing job is enabled.
+// Returns the accounts that no coordinator job holds now. A job that the release rule keeps is not changed: an active
+// job, a job with no terminal receipt, a participant in a swarm run, an unconfirmed logout, and an owner job that a
+// recovery parked.
+export async function releaseFinishedOwnJobs(base=projectRoot):Promise<string[]>{return withPlanWrite(()=>{
+ const own=readCoordinatorJobs(base),accounts=[...new Set(own.jobs.flatMap(jobAccounts))];
+ const next=releaseCompletedOwnJobs(own,accounts,base);
+ if(next.jobs.length===own.jobs.length&&next.jobs.every((job,i)=>job===own.jobs[i]))return[];
+ const held=new Set(next.jobs.flatMap(jobAccounts).map(n=>n.toLowerCase()));
+ writeCoordinatorJobs(base,next);
+ return accounts.filter(n=>!held.has(n.toLowerCase()));
+},join(base,'.practice/coordinator'));}
 type RetiredRecoveryCohort={accounts:string[];runId:string;taskId:string};
 function retiredRecoveryCohort(task:CoordTask,account:string,base:string):RetiredRecoveryCohort|undefined{
  if(task.sessionRecovery?.account!==account||!task.repairs?.some(r=>r.account===account&&r.endedAt===task.sessionRecovery!.endedAt))return;
