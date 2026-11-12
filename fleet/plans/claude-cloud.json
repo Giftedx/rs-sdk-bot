@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794444942246,
+ "at": 1794445007714,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -69,6 +69,28 @@
    ]
   },
   {
+   "account": "UnderMyKilt",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:sarim"
+   ]
+  },
+  {
    "account": "Deeppockets",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -91,6 +113,25 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
@@ -191,38 +232,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-213b9c76-0284-4f5a-89fa-a3af6c447757"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-undermykilt-20261112t005030z [task-213b9c76-0284-4f5a-89fa-a3af6c447757]",
-   "role": "bank"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
    ]
   }
  ]
