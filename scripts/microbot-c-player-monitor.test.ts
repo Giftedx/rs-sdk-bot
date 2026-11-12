@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import{BotSDK}from'../vendor/rs-sdk/sdk/index';import{actionSessionOwner}from'./microbot-a-actions';
+import{BotSDK}from'../vendor/rs-sdk/sdk/index';import{actionSessionOwner}from'./microbot-a-actions';import{startPrayerGuard}from'../packages/core/src/prayer-guard';
 import {monitorPlayers,settleMonitorSession,monitorWildernessLevel,monitorStopRequested,validateMonitorPolicy,type MonitorPolicy} from './microbot-c-player-monitor';
 function fixture(){
  let tick=0;const calls:number[][]=[],state:any={player:{lifeId:1,respawnCount:0,level:0},nearbyPlayers:[{name:'OwnedPeer',index:2,distance:2}],inventory:[{id:121,name:'Attack potion(3)',slot:4,count:1,optionsWithIndex:[{text:'Drink',opIndex:2}]}],interface:{isOpen:false},dialog:{isOpen:false},bank:{isOpen:false}};
@@ -108,6 +108,19 @@ test('monitor canonical settlement uses guarded logout then raw identity, and ne
  const old=process.exitCode;try{const f=fixture(),owner=actionSessionOwner(f.s);let exits=0,final=0;expect(await settleMonitorSession(owner,true,'done',async(rows,_ok,_detail,opts)=>{expect(rows[0]).toBe(f.s);await opts!.logout!(rows[0]!);final++;return true;},async view=>{exits++;expect(view).toBe(owner.cleanup);return'logged-out';})).toBe(true);expect(exits).toBe(1);expect(final).toBe(1);
  const g=fixture(),foreign=actionSessionOwner(g.s);g.s.client.executeBotAction=()=>({success:true});expect(await settleMonitorSession(foreign,true,'foreign',async()=>{final++;},async()=>{exits++;return'logged-out';})).toMatchObject({recoveryDeferred:true});expect(exits).toBe(1);expect(final).toBe(1);
  const ended=fixture();let resolve!:(value:{reason:string})=>void;ended.s.ended=new Promise(r=>{resolve=r;});const previous=actionSessionOwner(ended.s);resolve({reason:'logged-out'});await Promise.resolve();expect(await settleMonitorSession(previous,true,'policy logged out',async rows=>{expect(rows[0]).toBe(ended.s);return true;},async()=>{throw Error('second logout input');})).toBe(true);
+ }finally{process.exitCode=old??0;}
+});
+
+test('settlement after a policy logout keeps the entry owner when the prayer guard put the executor back',async()=>{
+ // packages/core/src/bot.ts: openBot starts the guard before the entry makes its owner. The settlement of the policy
+ // logout stops the guard, and the entry settles after that logout.
+ const old=process.exitCode;try{
+  const f=fixture();let resolve!:(value:{reason:string})=>void;f.s.ended=new Promise(r=>{resolve=r;});const login=f.s.client.executeBotAction,prayer=startPrayerGuard(f.s),entry=actionSessionOwner(f.s);expect(f.s.client.executeBotAction).not.toBe(login);
+  void prayer.release();resolve({reason:'logged-out'});await Promise.resolve();expect(f.s.client.executeBotAction).toBe(login);
+  expect(await settleMonitorSession(entry,true,'policy logged out',async rows=>{expect(rows[0]).toBe(f.s);return true;},async()=>{throw Error('second logout input');})).toBe(true);
+  // Another client after the policy logout is not the entry's session.
+  const g=fixture();g.s.ended=new Promise(r=>{resolve=r;});const guard=startPrayerGuard(g.s),foreign=actionSessionOwner(g.s);void guard.release();resolve({reason:'logged-out'});await Promise.resolve();g.s.client={...g.s.client};
+  let final=0;expect(await settleMonitorSession(foreign,true,'foreign',async()=>{final++;return true;},async()=>'logged-out')).toMatchObject({recoveryDeferred:true});expect(final).toBe(0);
  }finally{process.exitCode=old??0;}
 });
 

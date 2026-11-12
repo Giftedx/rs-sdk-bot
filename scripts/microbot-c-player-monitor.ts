@@ -114,7 +114,10 @@ export async function monitorPlayers(raw:Session,policy:MonitorPolicy,cap:number
 export async function settleMonitorSession(owner:ReturnType<typeof actionSessionOwner>,ok:boolean,detail:string,settler:(sessions:Session[],ok:boolean,detail:string,opts?:{logout?:(raw:Session)=>Promise<string>})=>Promise<unknown>=settle,logout:(session:Session)=>Promise<string>=logoutSession){
  if(owner.own())return finishActionSession(owner,ok,detail,settler,logout);
  // A policy logout already ended the original session. Retain its canonical Core bookkeeping key.
- const end=await Promise.race([owner.raw.ended,Promise.resolve({reason:''})]);if(end.reason==='logged-out'&&owner.identity()&&owner.sameLife())return settler([owner.raw],ok,detail);
+ // The settlement of that logout stopped the prayer guard and the eat guard, and each put back the executor it replaced
+ // at login (packages/core/src/prayer-guard.ts and eat-guard.ts, stop). `settled` makes the executor of the ended
+ // session the owner's; the client, its slot, the SDK and the endpoint must still be the owner's.
+ const end=await Promise.race([owner.raw.ended,Promise.resolve({reason:''})]);if(end.reason==='logged-out'){owner.settled();if(owner.identity()&&owner.sameLife())return settler([owner.raw],ok,detail);}
  return finishActionSession(owner,false,detail,settler,logout);
 }
 if(import.meta.main){
