@@ -9,18 +9,20 @@
 // one trade. Snapshots age: a giver whose bank is short fails its trade with "stock short".
 // Each side's fleet agent runs the first open order that names its account (scripts/fleet-trade.ts pickOrder, by
 // start). An account in another open order would wait there while its partner waits here, so such a giver is left
-// out, and a receiver in an open order refuses (the agent's own choice: pickOrder with its lead window). The orders of one call start 1 ms apart, so both sides of each pair
+// out, and a receiver in an open order refuses (the agent's own choice: pickOrder with its lead window). A held trade
+// claim of another order holds the account too: its login fails with "fleet trade claim held" until that claim ends. The orders of one call start 1 ms apart, so both sides of each pair
 // take them in the same sequence.
 // Usage: bun scripts/route-stage.ts <account> <bank name> "<count> <item>" ["<count> <item>" ...] [--dry] [--allow-busy]
 //   or:  bun scripts/route-stage.ts <account> --route <route.json> --step <step id> [--dry] [--allow-busy]
 // A route file step names its batch as "stage": {"bank": "draynor", "items": [{"item": "oak logs", "count": 125}]}.
 // Env: IN (minutes to the first window, default 10), MINUTES (window length, default 90).
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
 import { BANK_MEETS } from './coin-courier';
 import { makeOrder, orderMeet } from './fleet-order';
 import { pickOrder, swarmBusy, validOrder, type Order } from './fleet-trade';
+import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 
 export interface StageLine { item: string; count: number }
 // busy: an enabled autopilot job, which the autopilot frees for an open order. blocked: an enabled job that it does not own.
@@ -65,9 +67,9 @@ export function planStage(lines: readonly StageLine[], receiverHeld: (item: stri
 
 // The order that holds an account now: one it is trading (a prepared receipt in an open window, which pickOrder
 // skips), or the first one its fleet agent would pick.
-export function orderInWay(orders: readonly Order[], receipts: readonly any[], name: string, now: number): string | undefined {
+export function orderInWay(orders: readonly Order[], receipts: readonly any[], name: string, now: number, claims: readonly { account: string; orderId: string }[] = []): string | undefined {
     const end = new Map(orders.map(o => [o.id, o.end]));
-    return receipts.find(r => r?.state === 'prepared' && norm(String(r.account ?? '')) === norm(name) && (end.get(r.id) ?? 0) > now)?.id
+    return claims.find(c => norm(c.account) === norm(name))?.orderId ?? receipts.find(r => r?.state === 'prepared' && norm(String(r.account ?? '')) === norm(name) && (end.get(r.id) ?? 0) > now)?.id
         ?? pickOrder(orders, receipts, name, now)?.order.id;
 }
 
@@ -99,7 +101,8 @@ if (import.meta.main) {
     const files = (dir: string) => { try { return readdirSync(join(FLEET_DIR(), dir)).filter(f => f.endsWith('.json')).flatMap(f => { const j = readJson(join(FLEET_DIR(), dir, f)); return j ? [j] : []; }); } catch { return []; } };
     // The order that the fleet agent would run first for an account (its lead window included), as the agent picks it.
     const orders = files('orders').filter(validOrder), receipts = files('receipts');
-    const now0 = Date.now(), waiting = (name: string) => orderInWay(orders, receipts, name, now0);
+    const claims = readHeldFleetTradeClaims(resolve(import.meta.dir, '..'));
+    const now0 = Date.now(), waiting = (name: string) => orderInWay(orders, receipts, name, now0, claims);
     const mine = waiting(account);
     if (mine) throw Error(`${account} has open fleet order ${mine}: its agent takes that order first`);
     const staged = planStage(lines, item => heldCount(row(account), item), item => snapshot
