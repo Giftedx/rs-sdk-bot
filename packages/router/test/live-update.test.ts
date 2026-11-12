@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { applyUpdate, coordinatorHolds, gitIn, liveRuns, parseStatus, patchChangedFiles, planUpdate, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
+import { applyUpdate, coordinatorHolds, gitIn, liveRuns, parseStatus, patchChangedFiles, patchCollisions, planUpdate, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
 import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
 
 const base: UpdateInput = { branch: 'master', ahead: 0, behind: 2, incoming: ['scripts/swarm.ts', 'docs/a.md'], dirty: [], holds: [], heldFiles: [] };
@@ -176,6 +176,20 @@ test('the SDK folder gets a new patch only when it held exactly the old patch or
         expect(vendorExact(root)).toBe('applied');
         // The exact check uses index files of its own.
         expect(run('ls-files', '--stage')).toBe(index);
+
+        // A local file where the new patch creates one is in the way. A file that both patches create is not, and a
+        // file that the new patch creates and that is not there is not.
+        expect(patchCollisions(root, first, second)).toEqual([]);
+        writeFileSync(join(vendor, 'other.txt'), 'my notes\n');
+        expect(patchCollisions(root, first, second)).toEqual(['other.txt']);
+        expect(patchCollisions(root, first, first)).toEqual([]);
+        expect(patchCollisions(root, '', first)).toEqual(['made.txt']);
+        // A reset with that file there removes nothing of it: the apply fails, and the file holds its content.
+        writeFileSync(patch, second);
+        const blocked = resetVendor(root, first);
+        expect(blocked.ok).toBe(false); expect(file('other.txt')).toBe('my notes\n');
+        rmSync(join(vendor, 'other.txt')); writeFileSync(patch, first); run('apply', patch);
+        expect(vendorExact(root)).toBe('applied');
 
         // The update moved the patch file: the folder gets the new patch, and the file that only the old patch made goes.
         writeFileSync(patch, second);

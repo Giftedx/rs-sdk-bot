@@ -14,11 +14,12 @@
 //
 // The SDK patch (patches/rs-sdk-working.patch) is applied to vendor/rs-sdk, and git does not move those files. When an
 // update changes the patch, this script restores the tracked files of vendor/rs-sdk after the move and applies the new
-// patch. It does that only when vendor/rs-sdk held exactly the old patch, or no patch. Other edits there stay, and
-// the RESULT line says so. A patch change that alters a file of the worker release (runtimeTrees in worker-release.ts)
-// waits while a live coordinator run goes, as a change to any other release file does.
-// On a checkout that is current, an unpatched vendor/rs-sdk gets the patch, and a vendor/rs-sdk with other edits gets a
-// RESULT line that names it.
+// patch. It does that only when vendor/rs-sdk held exactly the old patch, or no patch, and no local file is where the
+// new patch creates one. Other edits and such a file stay, and the RESULT line says so. A patch change that alters a
+// file of the worker release (runtimeTrees in worker-release.ts) waits while a live coordinator run goes, as a change
+// to any other release file does.
+// On a checkout that is current, an unpatched vendor/rs-sdk gets the patch, with the same waits, and a vendor/rs-sdk
+// with other edits gets a RESULT line that names it.
 //
 // After the move it writes .practice/live-update.json (packages/core/src/live-reload.ts). The fleet agent and the
 // autopilot restart themselves from it. The coordinator gets its reload request (`coordinator-cli.ts --restart`,
@@ -113,15 +114,22 @@ export function vendorExact(root: string): PatchState | null {
         return actual === tree('pinned', []) ? 'clean' : 'other';
     } finally { rmSync(dir, { recursive: true, force: true }); }
 }
+// The files that `newPatch` creates and `oldPatch` does not, and that are in vendor/rs-sdk now. Each one is a local
+// file that the SDK does not track. The new patch cannot go on without the loss of it, so the folder stays.
+export function patchCollisions(root: string, oldPatch: string, newPatch: string): string[] {
+    const had = new Set(patchNewFiles(oldPatch));
+    return patchNewFiles(newPatch).filter(file => !had.has(file) && existsSync(join(root, SDK, file)));
+}
 // Puts the patch file of this checkout on vendor/rs-sdk: restores the tracked files, removes each file that the old
-// or the new patch creates (a restore leaves those, and an apply stops on them), and applies the patch.
+// patch created (a restore leaves those, and an apply stops on them), and applies the patch.
 // Call it only when vendorExact gave `applied` for `oldPatch`, or `clean`: the restore discards every other edit.
+// It removes no file that only the new patch creates. Such a file makes the apply fail, and the file stays.
 export function resetVendor(root: string, oldPatch: string): { ok: boolean; detail: string } {
     const vendor = join(root, SDK), patch = join(root, SDK_PATCH), git = gitIn(vendor);
     const restore = git('checkout', '--', '.');
     if (!restore.ok) return { ok: false, detail: `restore of ${SDK}: ${restore.out.slice(0, 160)}` };
     const newPatch = existsSync(patch) ? readFileSync(patch, 'utf8') : '';
-    for (const file of new Set([...patchNewFiles(oldPatch), ...patchNewFiles(newPatch)])) rmSync(join(vendor, file), { force: true });
+    for (const file of patchNewFiles(oldPatch)) rmSync(join(vendor, file), { force: true });
     if (!newPatch) return { ok: true, detail: '' };
     const apply = git('apply', patch);
     return apply.ok ? { ok: true, detail: '' } : { ok: false, detail: `apply of ${SDK_PATCH}: ${apply.out.slice(0, 160)}` };
@@ -245,16 +253,23 @@ if (import.meta.main) {
         // An update that changes the SDK patch: what vendor/rs-sdk holds before the move, and the worker release files
         // that the new patch changes. Only an exact `applied` or `clean` folder gets the new patch.
         const patchMoves = checkout.incoming.includes(SDK_PATCH);
-        const sdk = patchMoves ? vendorExact(root) : null, resets = sdk === 'applied' || sdk === 'clean';
+        const sdk = patchMoves ? vendorExact(root) : null;
         const oldPatch = sdk === 'applied' ? readFileSync(join(root, SDK_PATCH), 'utf8') : '';
-        const nextPatch = resets ? git('show', `${target}:${SDK_PATCH}`) : null;
-        const vendorRelease = resets ? vendorReleaseFiles(oldPatch, nextPatch?.ok ? nextPatch.out : '') : [];
-        const plan = planUpdate({ ...checkout, vendorRelease, ...(checkout.behind ? { ...holds(), liveRuns: liveRuns(root, LIVE_SERVER, entries => importClosure(entries, root)) } : { holds: [], heldFiles: [] }) });
+        const shown = sdk === 'applied' || sdk === 'clean' ? git('show', `${target}:${SDK_PATCH}`) : null, nextPatch = shown?.ok ? shown.out + '\n' : '';
+        // A local file where the new patch creates one: the folder stays, and that file with it.
+        const inTheWay = shown ? patchCollisions(root, oldPatch, nextPatch) : [];
+        const resets = shown !== null && !inTheWay.length;
+        const vendorRelease = resets ? vendorReleaseFiles(oldPatch, nextPatch) : [];
+        const runs = () => liveRuns(root, LIVE_SERVER, entries => importClosure(entries, root));
+        const plan = planUpdate({ ...checkout, vendorRelease, ...(checkout.behind ? { ...holds(), liveRuns: runs() } : { holds: [], heldFiles: [] }) });
         if (plan.action === 'none' && plan.reason === 'current') {
-            // A current checkout. An SDK folder with no patch gets it: an apply discards nothing. A folder with other
-            // edits is named and stays as it is.
+            // A current checkout. An SDK folder with no patch gets it: an apply discards nothing. It waits for the
+            // same things as a move: a coordinator hold, and a live run when the patch changes a worker release file.
+            // A folder with other edits is named and stays as it is.
             const state = vendorState(root);
             if (state === 'clean' && !dry && !holds().holds.length) {
+                const live = vendorReleaseFiles('', readFileSync(join(root, SDK_PATCH), 'utf8')).length ? runs() : [];
+                if (live.length) done(`RESULT ok live-update vendor: the SDK patch waits for the live run of ${live[0]!.name}`);
                 const apply = gitIn(join(root, SDK))('apply', join(root, SDK_PATCH));
                 done(apply.ok ? `RESULT ok live-update vendor: applied the SDK patch to ${SDK}` : `RESULT fail live-update vendor: ${apply.out.slice(0, 200)}`, apply.ok ? 0 : 1);
             }
@@ -278,7 +293,8 @@ if (import.meta.main) {
                 if (alive) Bun.spawnSync([process.execPath, 'packages/router/src/coordinator-cli.ts', '--restart'], { cwd: root, windowsHide: true, stdout: 'ignore', stderr: 'ignore' });
             }
             // The move changed the patch file. vendor/rs-sdk gets it now, unless it held edits that are not the old patch.
-            const vendor = !patchMoves || sdk === null ? null : resets ? resetVendor(root, oldPatch) : { ok: true, detail: `kept: ${SDK} has edits that are not the SDK patch` };
+            const vendor = !patchMoves || sdk === null ? null : resets ? resetVendor(root, oldPatch)
+                : { ok: true, detail: inTheWay.length ? `kept: ${few(inTheWay)} in ${SDK} is in the way of the new SDK patch` : `kept: ${SDK} has edits that are not the SDK patch` };
             const note = !vendor ? '' : !vendor.ok ? ` vendor=FAILED ${vendor.detail}` : ` vendor=${vendor.detail || 'patched'}`;
             done(`RESULT ${vendor && !vendor.ok ? 'fail' : 'ok'} live-update moved ${from}..${to} files=${checkout.incoming.length} adopted=${plan.adopt.length} reload=${reload.join(',') || 'none'}${note}`, vendor && !vendor.ok ? 1 : 0);
         }
