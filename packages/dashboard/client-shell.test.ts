@@ -756,3 +756,18 @@ test('the Quest Journal fleet view counts each quest over our accounts and colou
  expect(detail).toContain('<span style="color:#ffff00" title="started">Alpha</span><span style="color:#ff0000" title="not started">Bravo</span>');
  expect(run(null,'completed')).not.toContain('Imp Catcher');
 });
+test('PvP Tools: risk, the 3 kept items, and only the players the server lets attack',()=>{
+ const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
+ const S={itemValues:{'Rune scimitar':15000,'Shark':800,'Amulet of power':3000},bots:[{name:'Ours1'},{name:'Mate'}],
+  roster:[['Near',3100,3700,0,72],['Far',3100,3740,0,72],['Strong',3101,3701,0,95],['Mate',3100,3701,0,70],['Outside',3100,3500,0,70],['Upstairs',3100,3700,1,70]]};
+ const {pvpState}=new Function('S',`${code};return {pvpState};`)(S);
+ // Wilderness level at z 3700 is 23: combat 70 can fight 47-93.
+ const p=pvpState({name:'Ours1',inWorld:true,combat:70,pos:{x:3102,z:3702,level:0},equipment:[{name:'Rune scimitar',count:1},{name:'Amulet of power',count:1}],inventory:[{name:'Shark',count:20}]});
+ expect(p.wild).toBe(23);
+ expect(p.risk).toBe(15000+3000+16000);
+ expect(p.kept.map((k:any)=>k.name)).toEqual(['Rune scimitar','Amulet of power','Shark']);
+ expect(p.keptValue).toBe(18800);expect(p.lost).toBe(34000-18800);
+ // Far is 38 tiles away, Strong is 25 levels apart, Mate is ours, Outside is not in the Wilderness, Upstairs is on another floor.
+ expect(p.threats.map((t:any)=>t.name)).toEqual(['Near']);
+ expect(pvpState({name:'Ours1',inWorld:false})).toBeNull();
+});
