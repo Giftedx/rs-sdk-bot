@@ -117,7 +117,7 @@ export function refreshQualifications(state:CoordinatorState,fingerprints:Record
 }
 
 export function buildWorkOrder(task:CoordTask,dependencies:Record<string,unknown>,directory:string){
- return `Capability: ${task.capability}\nClaimed task: ${task.id}\nWork order: ${task.why}\nOwned run directory: ${directory}\nRead input.json there for the complete task and dependency receipts. Preserve before/ snapshots.\nDependency outcomes: ${JSON.stringify(Object.fromEntries(task.dependsOn.map(id=>[id,dependencies[id]??{missing:true}])))}\nFinish the named repair and consumer, not just the generic capability goal.`;
+ return `Capability: ${task.capability}\nClaimed task: ${task.id}\nWork order: ${task.why}\nOwned run directory: ${directory}\ninput.json there holds the complete task and the receipts of finished tasks. It is often over 1 MB, too large for one Read: Grep it for a task id or a key, or Read it with offset and limit. Preserve before/ snapshots.\nDependency outcomes: ${JSON.stringify(Object.fromEntries(task.dependsOn.map(id=>[id,dependencies[id]??{missing:true}])))}\nFinish the named repair and consumer, not just the generic capability goal.`;
 }
 export function initialState():CoordinatorState{
  return{version:1,sequence:0,tasks:[],goals:GOALS.map(id=>({id,lastStartedAt:0,lastSucceededAt:0,completedTasks:0})),lastPlanAt:0,lastPlanReason:'bootstrap'};
