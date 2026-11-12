@@ -1,0 +1,59 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794526231203-abracadickra-weequickie-sapphirering",
+ "account": "Abracadickra",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 40,
+ "claim": "a2c408e2-da6b-4591-90ab-0bf20bb0f494",
+ "count": 0,
+ "ok": false,
+ "at": 1794526329915,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Emerald ring",
+   "requested": 13,
+   "count": 0
+  },
+  {
+   "item": "Ruby ring",
+   "requested": 16,
+   "count": 0
+  },
+  {
+   "item": "Diamond ring",
+   "requested": 5,
+   "count": 0
+  },
+  {
+   "item": "Cosmic rune",
+   "requested": 74,
+   "count": 0
+  },
+  {
+   "item": "Water rune",
+   "requested": 40,
+   "count": 0
+  },
+  {
+   "item": "Air rune",
+   "requested": 16,
+   "count": 0
+  },
+  {
+   "item": "Fire rune",
+   "requested": 80,
+   "count": 0
+  },
+  {
+   "item": "Earth rune",
+   "requested": 50,
+   "count": 0
+  }
+ ]
+}
