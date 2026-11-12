@@ -187,6 +187,17 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 // does (taken when the bank holds it, never reported missing). Lost City's two prayer potions keep Protect from
 // Melee up against the tree spirit after the cave ladder drains Prayer (cave_monk.rs2:14); no shop sells them.
 export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
+// The pack of a build that fights a quest with the bow (scripts/pk-kits.ts; research/pvp-fight-loop.md, "Quest routes
+// of the builds"): a magic shortbow and rune arrows, so the quest script fights in the style that trains only Ranged
+// (quest-upass.ts RANGED_ARROWS), and for Underground Pass two prayer potions in the place of two sharks. Regicide
+// takes 8 sharks, not 10: the quest pack, the bow, the arrows and the coins for the shops fill the other 20 slots. An account
+// takes it when it cannot wear the rune armour of the quest presets (Defence under 40) and its Ranged is 50 or more
+// and over its Attack. These are needs: without the bow the fights would give Attack and Defence XP. The sweep banks
+// what such an account wears, as for a BARE quest: the practice cases ran with nothing worn.
+export const BUILD_PACK:Record<string,Item[]>={upass:[{id:861,count:1},{id:892,count:600},{id:2434,count:2}],regicide:[{id:861,count:1},{id:892,count:600}]};
+export const BUILD_MEALS:Record<string,number>={upass:12,regicide:8};
+export const buildPack=(quest:string,level:(skill:string)=>number):Item[]=>
+ level('Defence')<40&&level('Ranged')>=50&&level('Ranged')>level('Attack')?BUILD_PACK[quest]??[]:[];
 // Quests that board the Entrana ship: its monk carries nobody with a weapon or a piece of armour in the pack or worn
 // (monk_of_entrana.rs2 has_entrana_restricted_items; an arrow, a ring, an amulet and boots pass). The bank pass banks
 // everything the account wears and every pack item the quest does not use, and runs even with the pack complete.
@@ -1117,6 +1128,13 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const meal=[...food.keys()].find(f=>MEALS.includes(f));
   if(meal!==undefined)food.set(meal,Math.max(food.get(meal)!,STURDY_MEALS));
  }
+ const build=buildPack(quest,baseLevel);
+ for(const i of build)base.set(i.id,(base.get(i.id)??0)+i.count);
+ if(build.length){
+  const meal=[...food.keys()].find(f=>MEALS.includes(f));
+  if(meal!==undefined&&BUILD_MEALS[quest]!==undefined)food.set(meal,BUILD_MEALS[quest]!);
+  console.log(`QUEST_SWEEP_BUILD_PACK ${JSON.stringify({quest,pack:build,meals:BUILD_MEALS[quest]})}`);
+ }
  let wornKit=wornKitPlan(quest,base,st()?.inventory??[],[],s.sdk.getEquipment()),need=wornKit.need;
  const maxHp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel??10;
  const sustain=startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async action=>{
@@ -1203,7 +1221,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
  // A skill the quest wants and the account lacks sends the account through the bank pass too, with every supply held.
  const tradeableId=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
- const bare=BARE.has(quest)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0);
+ const bare=(BARE.has(quest)||build.length>0)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0);
  if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);

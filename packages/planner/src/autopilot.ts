@@ -76,6 +76,9 @@ export type Template = {
     // A band that serves one quest of a build's route: only an account with that quest on its route and not done
     // takes it (buildBand).
     route?: string;
+    // A quest band for builds: the combat skills that the rewards of its chain, and its fights with a set style,
+    // give XP in. Only these skills must be at or under the level before the route (buildBand). Absent: every skill.
+    gives?: readonly string[];
 };
 // One missing kit line: `count` more units of any one item of `of`.
 export type Lack = { of: readonly string[]; count: number };
@@ -156,6 +159,24 @@ export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 // The Fremennik Trials for a build with a Fremennik helm, just after Lost City. One account at a time: Koschei and
 // the Draugen are single fights. FREMENNIK_MEALS: the four sharks of the quest pack.
 export const FREMENNIK_BAND = QUEST_BAND + 0.05, FREMENNIK = 'quest:rellekka', FREMENNIK_PLACES = 1, FREMENNIK_MEALS = 4;
+// Underground Pass and Regicide for a build with the dragon halberd (BUILD_QUESTS; ROUTE_BEFORE). One account at a
+// time: the fights of the pass are single fights. UPASS_AGILITY: a bridge of the pass rolls stat_random(agility, 160,
+// 300) (upass_obstacles.rs2:374; PlayerOps.ts STAT_RANDOM: the value 256 of 256 from level 68, 255 at 67), so it
+// cannot fail from level 68, and a fall puts the account on the floor of the chasm, which the quest scripts do not
+// leave. UPASS_THIEVING: the two cage doors of the pass ask Thieving 50.
+// QUEST_BOW_ARROWS: the rune arrows of the practice cases. The meals are the sharks of the cases: 12 for the pass, and
+// for Regicide 10 in the pack with 20 in the bank for its second crossing.
+export const UPASS_BAND = QUEST_BAND + 0.06, REGICIDE_BAND = QUEST_BAND + 0.07, UPASS = 'quest:upass', UPASS_PLACES = 1;
+export const UPASS_AGILITY = 68, UPASS_THIEVING = 50, UPASS_MEALS = 12, REGICIDE_MEALS = 30, QUEST_BOW_ARROWS = 600;
+// The runes of Regicide: the Falador and the Ardougne teleport (the quest pack of quest_regicide).
+export const REGICIDE_RUNES: Readonly<Record<string, number>> = { 'law rune': 5, 'air rune': 3, 'water rune': 5 };
+// What the account holds for Regicide beside the bow pack, the items of the practice case
+// extra:sweep-regicide-pure-hally. The quest script takes the coal of the still, the rabbit and a second rope out of
+// the bank at Falador, and the sweep takes the first rope for the pack. No shop sells the limestone and the iron fire
+// arrows of the quest pack: without them the sweep ends "missing 2532:2,3211:1". For the pestle and mortar the sweep
+// goes to the ogre merchant, whose shop does not open. The Grand Exchange lists coal and ropes (a rope from 79,564
+// coins; a shop sells one for 23) and none of the others.
+export const REGICIDE_PACK: Readonly<Record<string, number>> = { coal: 8, 'cooked rabbit': 1, limestone: 1, 'iron fire arrow': 2, 'pestle and mortar': 1, rope: 2 };
 // Fletching 25 for the lyre of The Fremennik Trials: FLETCH_MAKE headless arrows give 25 XP each at the server's
 // rate, 5,250 XP against the 4,863 of level 25. The worker keeps FLETCH_KEEP shafts and feathers in the bank
 // (scripts/fletch-arrows.ts planHeadless), so the band asks both amounts of each.
@@ -195,6 +216,9 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     // The two prayer potions of Lost City for a Defence 1 build (LOST_CITY_BUILD). No shop sells them and the bank
     // snapshots of the sides hold none. Live read: 38 listed from 250,000, bids at 25,000.
     'prayer potion(4)': 260_000,
+    // The coal of Regicide's still (REGICIDE_PACK). Live read: 17,157 listed from 499, bids at 104, volume-weighted
+    // price 586.
+    coal: 600,
 };
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
@@ -332,6 +356,10 @@ export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
     'pure-knives': LOST, 'pure-pray31': LOST, 'pure-god': ['Mage Arena'], 'pure-max': LOST, 'addy-pure': LOST, def50: LOST, 'tank-range': TRIALS,
     'baby-pure': NONE, 'low-ranger': NONE, 'low-mage': NONE, 'low-addy': NONE, skiller: NONE,
 };
+// A quest of a route with the quests that it needs and that have a band of their own: a band for one of those is on
+// the route too (scripts/pk-kits.ts QUEST_CHAIN has the whole chain of each quest).
+export const ROUTE_BEFORE: Readonly<Record<string, readonly string[]>> = { Regicide: ['Underground Pass'] };
+const onRoute = (quests: readonly string[], name: string) => quests.some(q => norm(q) === norm(name) || (ROUTE_BEFORE[q] ?? []).some(b => norm(b) === norm(name)));
 // A goal band for an account with a PK build, or null when the account must not take it. A build is its levels: one
 // level over the Defence or Prayer of a build is a different build, and no account goes back. So such an account
 // takes only bands that train one skill, and a band stops at the level of the build:
@@ -345,7 +373,9 @@ export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
 // - a band of another script that ends above the level is refused: that script has no proved stop;
 // - a quest band is refused unless the quest is on the route of the build (BUILD_QUESTS): a quest reward gives XP in
 //   skills nobody chose. A quest of the route is refused too while a skill of the account is over its level before
-//   the route (`before`): the reward on top of that level ends over the build;
+//   the route (`before`): the reward on top of that level ends over the build. A band that names the skills its
+//   chain gives XP in (`gives`) checks only those: Regicide gives no Attack, so the Attack 61 that Underground Pass
+//   gave does not refuse it;
 // - while a quest of the route is open, a training band stops at the level before the route, not at the level of
 //   the build: the quest brings the rest;
 // - a stock band is refused: a fight for loot gives XP in skills nobody chose.
@@ -353,9 +383,9 @@ export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
 export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>, quests: readonly string[] = [], before?: Readonly<Record<string, number>>): Template | null {
     if (!build) return t.buildOnly ? null : t;
     if (t.tier !== 'goal') return t;
-    if (t.quest) return quests.some(q => norm(q) === norm(t.quest!.name)) && Object.entries(before ?? {}).every(([skill, level]) => skill === 'Hitpoints' || (a.skills[skill] ?? 1) <= level) ? t : null;
+    if (t.quest) return onRoute(quests, t.quest.name) && Object.entries(before ?? {}).every(([skill, level]) => skill === 'Hitpoints' || (t.gives && !t.gives.includes(skill)) || (a.skills[skill] ?? 1) <= level) ? t : null;
     if (!t.trains) return null;
-    if (t.route && !(quests.some(q => norm(q) === norm(t.route!)) && !questDone(a, t.route))) return null;
+    if (t.route && !(onRoute(quests, t.route) && !questDone(a, t.route))) return null;
     const open = quests.some(q => !questDone(a, q)), cap = build[t.trains.skill];
     const level = cap !== undefined && open && before?.[t.trains.skill] !== undefined ? Math.min(cap, before[t.trains.skill]!) : cap;
     const combat = t.script === 'scripts/gather-combat.ts';
@@ -638,7 +668,9 @@ export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // its JSON result (scripts/buy-owned-ge-item.ts). Without the second, a kit buy that ended ok after its long trip read
 // as tick waste and its pair was retired, so the account's next buy for that band never came (live claude-cloud: the
 // alchemy kit buys of KnightRider, Deeppockets and Fatstack, one of them after 1,000 nature runes bought).
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal|hides)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
+// A blood chest run reports "loots" in its JSON result (scripts/blood-chest.ts): it waits on the surface for the
+// chests to come back, so most of its ticks are idle.
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal|hides)=[1-9]\d*\b|"(?:acquired|loots)":[1-9]/.test(result);
 // A run that ended on a stop file is a drain as well: the owner paused the account or the controller removed the job,
 // which says nothing about whether the job works (live claude-cloud: a quest chain stopped for an open fleet order
 // logged two such fails, and the account's Lost City band was retired).
@@ -723,8 +755,8 @@ export function splashKit(magic: number): Record<string, number> {
     return magic < CURSE_LEVEL ? { ...SPLASH_KIT } : { 'body rune': casts, 'earth rune': 3 * casts, 'water rune': Math.max(SPLASH_START['water rune'], 2 * casts) };
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
-export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -843,17 +875,54 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 //   coins for the Al Kharid toll gate; it stages to the Varrock West anvils. The bench case smiths a bronze dagger;
 //   practice: 6 blades in 463 ticks, 337 of them the walk from Al Kharid. The PK army's fight loop wants rune weapons
 //   and the live market has no rune scimitar sellers (docs/plans/joined-plan.md, PK army).
+// Makers of route supply lines that are short on the Overall bill (packages/planner/src/supply-bill.ts). The item of
+// each `yields` is the bill line's name, which is also the item's name (knowledge/items.json), so unitValue matches
+// the line and finds its price.
+// - mithril, adamantite and iron bars (scripts/smelt-bars.ts, the route of the runite bars): the Smithing level of
+//   the bar (smelting.struct `levelrequired`: iron 15, mithril 50, adamantite 70), which scripts/smelt-batch.ts
+//   runSmeltBatch waits for and ends `smelt entry level/state unobserved` without; one ore a bar, with 4 coal for
+//   mithril and 6 for adamantite. `needs` asks one pack load: 5 mithril bars, 4 adamantite bars, 28 iron ore. Iron:
+//   the bench case itself, Smithing 50 at the Al Kharid furnace, 28 bars in 377 ticks; half the ore is lost
+//   (smelting.rs2), and a pack with 2 coal at Smithing 30 ends `iron entry requires coal banked`. Mithril and
+//   adamantite: estimates from the runite run above (3 bars a load, about 50 ticks a load), as the furnace takes the
+//   same time for each bar. Gap: no practice run smelts mithril or adamantite, and a start away from the Al Kharid
+//   bank is not run.
+// - cannonballs (scripts/microbot-a-cannonballs.ts): a members world and Smithing 35 (smelt-batch.ts cannonAdmission:
+//   `cannonballs need observed member and current Smithing35`), an ammo mould held or banked (`smelt owned reusable
+//   tool missing`) and CANNON_BARS steel bars banked: the order is exact, so a run with fewer bars fails. One bar
+//   makes 4 balls. CANNON_XP_RATE is the XP rate of the server (a dragon bone gives 1,800 Prayer XP, BOUGHT_BONE_XP);
+//   the worker ends on an XP gain that differs. Bench: Smithing 35 at the Al Kharid bank, 1 bar in 47 ticks. The rate
+//   is an estimate: 27 bars at about 8 ticks a bar (cannonballs.rs2) and the bench's 39 ticks of bank and walk give
+//   0.42 balls a tick, and the rate here is half of that. Gap: a run of more than 3 bars is not measured
+//   (research/microbot-ports.md: 3 bars to 12 banked balls).
+// - blood runes (scripts/blood-chest.ts): Thieving 59 and a start on the ground floor (bloodRefusal); it travels to
+//   the Ardougne north bank from any such start. Each of the two chests gives 2 blood runes and 500 coins and comes back in
+//   400 ticks at most (RESPAWN_TICKS). A run ends ok only with MAX_LOOTS loots. The ogres by the chests hit: under 60%
+//   of its Hitpoints the account leaves, eats banked food of BLOOD_FOOD (the worker's BANK_FOOD) and ends `stop=hp`
+//   with none, so `needs` asks BLOOD_MEALS pieces (an estimate: the worker's note gives 12 of 47 Hitpoints a trip).
+//   Bench: Thieving 99 and Hitpoints 56 by the tower, 2 loots in 165 ticks. The rate is an estimate from the respawn
+//   time: 4 runes and 1,000 coins in 400 ticks. Gap: no run of more than 2 loots is measured, and another player at
+//   the chests takes loots from the run.
 const PICKAXES = ['bronze pickaxe', 'iron pickaxe', 'steel pickaxe', 'mithril pickaxe', 'adamant pickaxe', 'rune pickaxe'] as const;
 const AXES = ['bronze axe', 'iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe'] as const;
 // scripts/quest-sweep.ts MEALS, by item name (scripts/autopilot.test.ts checks the two agree).
 export const SWEEP_MEALS = ['shark', 'swordfish', 'lobster', 'bass', 'tuna', 'trout', 'salmon', 'cake', '2/3 cake', 'slice of cake', 'bread'] as const;
 export const BOWSTRING_BATCH = 56, SHAFT_LOGS = 25;
+// One pack of steel bars beside the ammo mould, the loots of one blood chest run, and the food that run asks.
+export const CANNON_BARS = 27, BLOOD_LOOTS = 6, BLOOD_MEALS = 5;
+// scripts/blood-chest.ts BANK_FOOD, by item name (scripts/autopilot.test.ts checks the two agree).
+export const BLOOD_FOOD = ['shark', 'swordfish', 'lobster', 'tuna', 'salmon', 'trout', 'cake'] as const;
 export function aioTemplates(): Template[] {
     const aio = (id: string, key: string, worker: string, args: string[], rest: Omit<Template, 'id' | 'family' | 'script' | 'args' | 'aio' | 'worker' | 'pilot'>): Template =>
         ({ id, family: `aio:${key}`, script: 'scripts/aio.ts', args: [key.split(':')[0]!, ...args], aio: key, worker, pilot: true, ...rest });
     const essence = aio('aio-essence', 'skiller:mining:essence', 'scripts/gather-essence.ts', ['mining', 'essence', 'CAP=1800', 'BANK_AT=28'], {
         role: 'mining', goal: 'mine rune essence through Aubury and bank it at Varrock East', resources: [AIO_PLACES.essence],
         needs: { quests: ['Rune Mysteries Quest'], pieces: { of: PICKAXES, count: 1 } }, yields: () => [{ item: 'rune essence', perTick: 0.03 }] });
+    // `load`: the bars of one pack load, which `needs` asks the ore and the coal for.
+    const bars = (bar: string, level: number, ore: string, coal: number, load: number, perTick: number) =>
+        aio(`aio-${bar}-bars`, 'skiller:smithing:smelt', 'scripts/smelt-bars.ts', ['smithing', 'smelt', '1500', bar, 'MAX_MAKE=28', 'ORE_RESERVE=0'], {
+            role: 'smithing', goal: `smelt banked ${ore}${coal ? ' and coal' : ''} into ${bar} bars at Al Kharid`,
+            needs: { skills: { Smithing: level }, items: { [ore]: load, ...(coal ? { coal: coal * load } : {}) } }, yields: () => [{ item: `${bar} bar`, perTick }] });
     return [
         aio('aio-flax', 'skiller:foraging:flax', 'scripts/gather-flax.ts', ['foraging', 'flax', '1800', '28'], {
             role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.24 }] }),
@@ -875,12 +944,20 @@ export function aioTemplates(): Template[] {
         aio('aio-air-runes', 'skiller:runecraft:bank-craft', 'scripts/rune-bank-craft.ts', ['runecraft', 'bank-craft', '99', 'CAP=4000'], {
             role: 'magic', goal: 'craft banked rune essence into air runes', resources: [AIO_PLACES.air],
             needs: { items: { 'air talisman': 1, 'rune essence': 28 } }, yields: () => [{ item: 'air rune', perTick: 0.09 }] }),
-        aio('aio-runite-bars', 'skiller:smithing:smelt', 'scripts/smelt-bars.ts', ['smithing', 'smelt', '1500', 'runite', 'MAX_MAKE=28', 'ORE_RESERVE=0'], {
-            role: 'smithing', goal: 'smelt banked runite ore and coal into runite bars at Al Kharid',
-            needs: { skills: { Smithing: 85 }, items: { 'runite ore': 2, coal: 16 } }, yields: () => [{ item: 'runite bar', perTick: 0.06 }] }),
+        bars('runite', 85, 'runite ore', 8, 2, 0.06),
+        bars('adamantite', 70, 'adamantite ore', 6, 4, 0.07),
+        bars('mithril', 50, 'mithril ore', 4, 5, 0.08),
+        bars('iron', 15, 'iron ore', 0, 28, 0.074),
+        aio('aio-cannonballs', 'skiller:smithing:cannonballs', 'scripts/microbot-a-cannonballs.ts', ['smithing', 'cannonballs', String(CANNON_BARS), '1500', 'CANNON_XP_RATE=25'], {
+            role: 'smithing', goal: `cast ${CANNON_BARS} banked steel bars into cannonballs at Al Kharid`,
+            needs: { skills: { Smithing: 35 }, items: { 'ammo mould': 1, 'steel bar': CANNON_BARS } }, yields: () => [{ item: 'cannonball', perTick: 0.2 }] }),
         aio('aio-rune-scimitars', 'skiller:smithing:anvil', 'scripts/smelt-bars.ts', ['smithing', 'anvil', '1500', 'PRODUCT_ID=1333', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {
             role: 'smithing', goal: 'smith a rune scimitar from two banked runite bars at the Varrock West anvils',
             needs: { skills: { Smithing: 90 }, items: { hammer: 1, 'runite bar': 2, coins: 10 } }, yields: () => [{ item: 'rune scimitar', perTick: 0.003 }] }),
+        aio('aio-blood-chest', 'skiller:thieving:blood-chest', 'scripts/blood-chest.ts', ['thieving', 'blood-chest', '4000', `MAX_LOOTS=${BLOOD_LOOTS}`, 'CAP=4000'], {
+            role: 'thieving', goal: `loot the Ardougne blood rune chests ${BLOOD_LOOTS} times and bank the runes`, resources: [AIO_PLACES.blood],
+            needs: { skills: { Thieving: 59 }, pieces: { of: BLOOD_FOOD, count: BLOOD_MEALS } },
+            yields: () => [{ item: 'blood rune', perTick: 0.01 }, { item: 'coins', perTick: 2.5 }] }),
         aio('aio-quest-runemysteries', 'quester:mode:sweep', 'scripts/quest-sweep.ts', ['sweep', 'runemysteries'], {
             role: 'quest', goal: 'complete Rune Mysteries for the essence mine', quest: { name: 'Rune Mysteries Quest', unlocks: [essence.id] },
             needs: { items: { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1 }, pieces: { of: SWEEP_MEALS, count: 4 } }, yields: () => [] }),
@@ -1176,6 +1253,52 @@ export function catalogue(): Template[] {
         trains: { skill: 'Fletching', to: FLETCH_TO, unlocks: [fremennik.id] }, yields: () => [],
         needs: { items: { 'arrow shaft': FLETCH_MAKE + FLETCH_KEEP, feather: FLETCH_MAKE + FLETCH_KEEP } },
     };
+    // Underground Pass for a build with the dragon halberd, through the chain with Plague City and Biohazard, which
+    // the pass asks for (quest_upass.rs2:81) and which give no XP in a combat skill. The sweep banks what the account
+    // wears and takes the pack of the practice case (scripts/quest-sweep.ts BUILD_PACK): the quest pack, a magic
+    // shortbow, QUEST_BOW_ARROWS rune arrows and two prayer potions. The quest script fights with the bow in the
+    // style that trains only Ranged. Practice at the levels before the route with Thieving UPASS_THIEVING and Agility
+    // UPASS_AGILITY (bench case extra:upass-pure-hally): 3 seeds, 2,697 to 2,858 ticks, 4 to 8 sharks eaten, lowest
+    // Hitpoints 33 of 93, no death; the same through the sweep from the bank (extra:sweep-upass-pure-hally): 3 seeds
+    // (research/pvp-fight-loop.md, "Quest routes of the builds"). The reward gives Attack 61. A pilot.
+    const BOW_KIT = { 'magic shortbow': 1, 'rune arrow': QUEST_BOW_ARROWS };
+    const upass: Template = {
+        id: 'army-quest-upass', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'elena,biohazard,upass'],
+        aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, buildOnly: true, role: 'quest', gives: ['Attack'],
+        goal: 'complete Plague City, Biohazard and Underground Pass on the way to the dragon halberd', tier: 'goal', band: UPASS_BAND,
+        quest: { name: 'Underground Pass', unlocks: [] }, resources: [UPASS], yields: () => [],
+        needs: { skills: { Ranged: 99, Prayer: 43, Hitpoints: 90, Thieving: UPASS_THIEVING, Agility: UPASS_AGILITY }, items: { coins: 5000, ...BOW_KIT, 'prayer potion(4)': 2 },
+            pieces: { of: LOST_CITY_FOOD, count: UPASS_MEALS } }, kitFirst: true,
+    };
+    // Regicide after it, for the dragon halberd (tier60.rs2:10), through the chain with Murder Mystery: its reward
+    // gives the Crafting 10 that the loom of the quest asks. The quest crosses the pass twice more with the same bow
+    // pack and casts the Falador and the Ardougne teleport (Magic 51; REGICIDE_RUNES). Practice with Underground Pass
+    // done (bench case extra:regicide-pure-hally): 3 seeds, 3,229 to 3,250 ticks, 10 or 11 sharks eaten, lowest
+    // Hitpoints 38 of 93, no death; the same through the sweep (extra:sweep-regicide-pure-hally): 3 seeds.
+    // The band asks the items of REGICIDE_PACK; the sweep buys the rest of the quest pack in shops. A pilot.
+    const regicide: Template = {
+        id: 'army-quest-regicide', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'murder,regicide'],
+        aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, buildOnly: true, role: 'quest', gives: ['Magic'],
+        goal: 'complete Murder Mystery and Regicide to wield the dragon halberd', tier: 'goal', band: REGICIDE_BAND,
+        quest: { name: 'Regicide', unlocks: [] }, resources: [UPASS], yields: () => [],
+        needs: { quests: ['Underground Pass'], skills: { Ranged: 99, Magic: 51, Prayer: 43, Hitpoints: 90, Agility: UPASS_AGILITY }, items: { coins: 2000, ...BOW_KIT, ...REGICIDE_RUNES, ...REGICIDE_PACK },
+            pieces: { of: LOST_CITY_FOOD, count: REGICIDE_MEALS } }, kitFirst: true,
+    };
+    // Thieving UPASS_THIEVING and Agility UPASS_AGILITY for those quests, before them. Thieving: the trainer of the
+    // band thieving55 (men, warrior women and guards at Ardougne, bread from the baker) with a lower target. Agility:
+    // the Gnome Stronghold course through the course worker, which walks there from Ardougne. A lap gives 2,162 XP at
+    // the server's rate, and level 68 is 115,881 XP: 54 laps. Neither gives XP in a combat skill. Pilots.
+    const upassThieve: Template = {
+        id: 'army-thieve-50', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: String(UPASS_THIEVING), CAP: '2500', CLEAN_FOOD: '1' },
+        pilot: true, buildOnly: true, route: 'Underground Pass', role: 'thieving', goal: 'train Thieving to the 50 that the cage doors of Underground Pass ask',
+        tier: 'goal', band: UPASS_BAND - 0.02, repeats: true, trains: { skill: 'Thieving', to: UPASS_THIEVING, unlocks: [upass.id] }, yields: () => [],
+    };
+    const upassAgility: Template = {
+        id: 'army-agility-68', family: 'aio:skiller:agility:order', script: 'scripts/aio.ts', args: ['skiller', 'agility', 'order', 'gnome', String(UPASS_AGILITY)],
+        aio: 'skiller:agility:order', worker: 'scripts/agility-order.ts', pilot: true, buildOnly: true, route: 'Underground Pass', role: 'agility',
+        goal: 'run the Gnome Stronghold course to the Agility 68 from which no bridge of Underground Pass fails',
+        tier: 'goal', band: UPASS_BAND - 0.01, repeats: true, trains: { skill: 'Agility', to: UPASS_AGILITY, unlocks: [upass.id, regicide.id] }, yields: () => [],
+    };
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
@@ -1265,6 +1388,10 @@ export function catalogue(): Template[] {
         lostCity,
         fletch,
         fremennik,
+        upassThieve,
+        upassAgility,
+        upass,
+        regicide,
         holyGrail,
         dustyKey,
         hunt,

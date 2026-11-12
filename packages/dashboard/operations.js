@@ -36,7 +36,8 @@
    (metaError?'<div class="op-notice error">'+E(metaError)+'</div>':'')+(message?'<div class="op-notice">'+E(message)+'</div>':''));
  }
  // Why a new bot cannot start now, from the swarm's own admission rule (scripts/swarm.ts admissionDecision):
- // projected free RAM after the startup reserve must stay above max(8 GiB, minFreeGB).
+ // projected free RAM after the startup reserve must stay above the larger of FREE_FLOOR_GB (packages/core/src/memory.ts)
+ // and the plan's minFreeGB. capacityState (collection.ts) gives that floor.
  function startBlock(){
   const cap=S?.capacity;
   const line=(text,op,value)=>'<button class="op-block" data-op="'+op+'" data-value="'+E(value)+'"><b>Start blocked</b><span>'+E(text)+'</span></button>';
