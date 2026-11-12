@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794490191665,
+ "at": 1794490267948,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -575,23 +575,16 @@
   },
   {
    "account": "PickpockDick",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-88afd001-486f-4aa5-bf09-f780f0a7b94c"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-pickpockdick-stranded-1310 [task-88afd001-486f-4aa5-bf09-f780f0a7b94c]",
+   "role": "helper"
   }
  ]
 }
