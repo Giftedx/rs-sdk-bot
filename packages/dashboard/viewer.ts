@@ -149,6 +149,10 @@ export function installViewerBridge(host:any) {
     // change: {atlasDepleted:{tick, list:[[x, z, level, id, since]]}}. Only tiles inside the held area stay.
     let respawnWatch=new Set<number>(),mainFeed:any=null,depletedArea:{x:number;z:number;w:number;h:number}|null=null;
     const depleted=new Map<string,[number,number,number,number,number|null]>();
+    // depletedSent: the page holds a list that is not empty. A cleared list reaches the page as an empty one.
+    let depletedSent=false;
+    const publishDepleted=(tick:number)=>{if(privacyReady&&renderReady&&!failed&&host.parent!==host){host.parent.postMessage({atlasDepleted:{tick,list:[...depleted.values()]}},host.location.origin);depletedSent=depleted.size>0;}};
+    const clearDepleted=()=>{const had=depleted.size>0||depletedSent;depleted.clear();depletedArea=null;if(had)publishDepleted(0);};
     const trackDepleted=(m:any)=>{
         if(!respawnWatch.size||!Array.isArray(m.w)&&!m.reset)return;
         let changed=false;
@@ -164,7 +168,7 @@ export function installViewerBridge(host:any) {
             if(r.e==='la'&&respawnWatch.has(r.id)){if(!depleted.has(key)){depleted.set(key,[r.x,r.z,r.l,r.id,m.reset||Array.isArray(m.w)&&m.w[0]?.e==='za'?null:m.k]);changed=true;}}
             else if(depleted.delete(key))changed=true;
         }
-        if(changed&&privacyReady&&renderReady&&!failed&&host.parent!==host)host.parent.postMessage({atlasDepleted:{tick:m.k,list:[...depleted.values()]}},host.location.origin);
+        if(changed)publishDepleted(m.k);
     };
     const groundRow=(r:any)=>Array.isArray(r)&&r.length===5&&r.every(Number.isSafeInteger)&&r[0]>=0&&r[0]<16384&&r[1]>=0&&r[1]<16384&&r[2]>=0&&r[2]<4&&r[3]>=0&&r[3]<65536&&r[4]>=1&&r[4]<2**31;
     const Socket=host.WebSocket;
@@ -173,9 +177,9 @@ export function installViewerBridge(host:any) {
             super(address,protocols);
             try{if(new host.URL(String(address),host.location.href).pathname==='/worldfeed'){
                 // The first feed socket is the main view's: its area is the one the respawn timers follow.
-                if(!mainFeed){mainFeed=this;depleted.clear();depletedArea=null;}
+                if(!mainFeed){mainFeed=this;clearDepleted();}
                 this.addEventListener('open',()=>{feedConnected=true;emit();});
-                this.addEventListener('close',()=>{feedConnected=false;emit();if(mainFeed===this)mainFeed=null;});
+                this.addEventListener('close',()=>{feedConnected=false;emit();if(mainFeed===this){mainFeed=null;clearDepleted();}});
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
@@ -342,7 +346,7 @@ export function installViewerBridge(host:any) {
         }
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
         if('botGround' in event.data){const rows=event.data.botGround;if(Array.isArray(rows)&&rows.length<=1000&&rows.every(groundRow)){botGround=rows.map((r:number[])=>r.slice());groundVersion++;}}
-        if('respawnWatch' in event.data){const ids=event.data.respawnWatch;if(Array.isArray(ids)&&ids.length<=64&&ids.every((n:any)=>Number.isSafeInteger(n)&&n>=0&&n<65536)){const next=new Set<number>(ids);if(next.size!==respawnWatch.size||[...next].some(n=>!respawnWatch.has(n))){respawnWatch=next;depleted.clear();}}}
+        if('respawnWatch' in event.data){const ids=event.data.respawnWatch;if(Array.isArray(ids)&&ids.length<=64&&ids.every((n:any)=>Number.isSafeInteger(n)&&n>=0&&n<65536)){const next=new Set<number>(ids);if(next.size!==respawnWatch.size||[...next].some(n=>!respawnWatch.has(n))){respawnWatch=next;clearDepleted();}}}
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
         // The viewer writes its URL only when its camera rests. The name in the URL at a page follow is the old one.
