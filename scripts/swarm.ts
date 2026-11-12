@@ -30,6 +30,7 @@ import {assertNoRecoveryLease,heldRecoveryOwners,releaseExpiredRecoveryLeases} f
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
 import { jobLogStart } from '../packages/core/src/job-log';
+import { processStartTimes } from '../packages/practice/src/proc';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -43,6 +44,16 @@ type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
 type Run = { pid: number; started: number; accounts: string[]; revision: string; host?: boolean; log: string; offset: number };
 export type SavedRun = Run & { key: string };
 export type ParsedJob = { key: string; accounts: string[]; host: boolean; job: Job };
+
+// The system gives the process id of an ended supervisor to a later process, so a process that answers the id is the
+// run's supervisor only when it started before the run record. The supervisor starts before `started` is taken; the
+// slack covers a clock step between the two. `starts` is one read of the process table (processStartTimes): null, or
+// an id it does not list, proves nothing and leaves the signal check to decide.
+export const PID_START_SLACK_MS = 5000;
+export function adoptedRunAlive(run: { pid: number; started: number }, alive: (pid: number) => boolean, starts: ReadonlyMap<number, number> | null): boolean {
+    const processStart = starts?.get(run.pid);
+    return alive(run.pid) && !(processStart !== undefined && processStart > run.started + PID_START_SLACK_MS);
+}
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
 const START_BUDGET_GB = 1;
@@ -576,6 +587,11 @@ if (import.meta.main) {
     const pendingCount = () => pendingStartupCount([...runs.values()], Date.now())+(recoveryDispatch.active&&Date.now()-recoveryDispatch.active.started<30000?1:0)+inheritedRecoveries.filter(r=>Date.now()-r.started<30000).length;
 
     const runsFile = join(prac, 'swarm-runs.json');
+    // The runs with no child handle, and the start time of the process that holds each of their ids. The read starts a
+    // process, so it runs at adopt time and then once a minute, never in the 2 s follow timer.
+    const adopted = new Set<Run>();
+    let pidStarts: ReturnType<typeof processStartTimes> = null, pidStartsAt = 0;
+    const readPidStarts = () => { pidStartsAt = Date.now(); pidStarts = adopted.size ? processStartTimes([...adopted].map(r => r.pid)) : null; };
     const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
     const saveRuns = () => { try { const tmp = `${runsFile}.tmp-${process.pid}`; writeFileSync(tmp, JSON.stringify([...runs].map(([key, r]) => ({ key, ...r })), null, 1)); renameRetry(tmp, runsFile); } catch (e) { console.log(`SWARM runs file not saved: ${String(e)}`); } };
     // Follow a run's log from its saved offset: end lines become end records, and when the process is gone the
@@ -606,7 +622,7 @@ if (import.meta.main) {
             if (done) return;
             done = true; clearInterval(timer);
             read(); if (tail) consume(tail);
-            runs.delete(key); saveRuns();
+            runs.delete(key); adopted.delete(run); saveRuns();
             const code = exitCode === undefined ? 'unknown' : exitCode;
             if (!run.host) {
                 const reason = currentEnd ?? `exit ${code}`;
@@ -620,15 +636,19 @@ if (import.meta.main) {
                 }
             }
         };
-        const timer = setInterval(() => { const before = run.offset; read(); if (run.offset !== before) saveRuns(); if (!child && !pidAlive(run.pid)) finish(); }, 2000);
+        const timer = setInterval(() => { const before = run.offset; read(); if (run.offset !== before) saveRuns(); if (!child && !adoptedRunAlive(run, pidAlive, pidStarts)) finish(); }, 2000);
         child?.on('exit', code => { exitCode = code; finish(); });
     };
     // Adopt the runs a previous controller started: a live one is followed on, a finished one gets its end now.
     for (const saved of (() => { try { return JSON.parse(readFileSync(runsFile, 'utf8')) as SavedRun[]; } catch { return []; } })()) {
         if (!saved?.key || !Number.isSafeInteger(saved.pid) || !Array.isArray(saved.accounts) || runs.has(saved.key)) continue;
         const { key, ...run } = saved;
-        runs.set(key, run);
-        console.log(`SWARM adopt ${run.host ? `host ${run.accounts.join(',')}` : run.accounts[0]} pid ${run.pid}${pidAlive(run.pid) ? '' : ' (ended)'}`);
+        runs.set(key, run); adopted.add(run);
+    }
+    readPidStarts();
+    for (const [key, run] of runs) {
+        const state = !pidAlive(run.pid) ? ' (ended)' : adoptedRunAlive(run, pidAlive, pidStarts) ? '' : ' (ended: a later process holds the pid)';
+        console.log(`SWARM adopt ${run.host ? `host ${run.accounts.join(',')}` : run.accounts[0]} pid ${run.pid}${state}`);
         follow(key, run);
     }
     saveRuns();
@@ -662,6 +682,7 @@ if (import.meta.main) {
     });
 
     const tick = () => {
+        if (adopted.size && Date.now() - pidStartsAt >= 60_000) readPidStarts();
         if (performance.now() >= renewAt && lease.allows()) {
             // A renewal that did not land leaves the lease standing: it is tried again soon, not in three minutes.
             let landed = true;
