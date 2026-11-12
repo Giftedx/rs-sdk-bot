@@ -152,6 +152,8 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'magic',method:'orbs-at-site',script:'scripts/microbot-c-orbs.ts',description:'At-obelisk orb charging batch'},
  {skill:'magic',method:'bones',script:'scripts/microbot-bones.ts',description:'Bones to Bananas conversion'},
  {skill:'magic',method:'earth-production',script:'scripts/earth-production.ts',description:'Earth rune production for magic/superheat'},
+ {skill:'magic',method:'alch-train',script:'scripts/alch-train.ts',description:'Alchemy on a cheap stackable item at the Ardougne north bank: Low Alchemy to Magic 55, then High Alchemy to the target level'},
+ {skill:'magic',method:'splash',script:'scripts/splash-train.ts',description:'Curse casts over the fence of the Ardougne cow field to the target Magic level'},
  // Prayer
  {skill:'prayer',method:'bury',script:'scripts/train-prayer.ts',description:'Bury bones / big bones / dragon bones to target Prayer level'},
  {skill:'prayer',method:'flick',script:'scripts/microbot-prayer-flick.ts',description:'1-tick prayer flicking upkeep'},
