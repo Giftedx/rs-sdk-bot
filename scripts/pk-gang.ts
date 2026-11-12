@@ -281,7 +281,9 @@ if (import.meta.main) {
     const tripCount = Math.max(1, Number(env.SPAR_TRIPS ?? 1));
     const resupplies = groups.map(([a]) => { const st = a!.sdk.getState(), p = st?.player;
         const bank = { eaten: 0 };
-        return (tripCount > 1 || env.SPAR_PRETRIP === '1') && st && p ? { count: tripCount, bank, resupply: bankTrip(EDGEVILLE_BANK, { x: p.worldX, z: p.worldZ }, { ...packOf(st.inventory, st.equipment), ...(env.SPAR_TRIP_FOOD ? { food: Number(env.SPAR_TRIP_FOOD) } : {}) },
+        // SPAR_POST=<x>,<z>: the tile that the trip walks back to (default the start tile), for an account that starts at the bank.
+        const [px, pz] = (env.SPAR_POST ?? '').split(',').map(Number), back = Number.isFinite(px) && Number.isFinite(pz) && env.SPAR_POST ? { x: px!, z: pz! } : p ? { x: p.worldX, z: p.worldZ } : null;
+        return (tripCount > 1 || env.SPAR_PRETRIP === '1') && st && p && back ? { count: tripCount, bank, resupply: bankTrip(EDGEVILLE_BANK, back,{ ...packOf(st.inventory, st.equipment), ...(env.SPAR_TRIP_FOOD ? { food: Number(env.SPAR_TRIP_FOOD) } : {}) },
             kitA ? kitSwitches(kitA) : TRIBRID_KIT, () => halted !== undefined, bank) } : undefined; });
     // The fight loop reads no loc and no ground item, and their scan is part of the state of every tick. An account
     // that goes to the bank needs both.
