@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794470367635,
+ "at": 1794470967512,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -278,25 +278,22 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "crafting",
-    "bowstrings",
-    "1250",
-    "MAX_MAKE=56",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=4"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "spin 56 banked flax into bow strings at Seers",
-   "role": "crafting",
-   "template": "aio-bowstrings",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2653,3300"
+   ]
   },
   {
    "account": "NabTheKnob",
@@ -383,25 +380,22 @@
   },
   {
    "account": "Pocketrocket",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "crafting",
-    "bowstrings",
-    "1250",
-    "MAX_MAKE=56",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=4"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "spin 56 banked flax into bow strings at Seers",
-   "role": "crafting",
-   "template": "aio-bowstrings",
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2671,3313"
+   ]
   },
   {
    "account": "Shaftmaker",
@@ -598,25 +592,22 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "crafting",
-    "bowstrings",
-    "1250",
-    "MAX_MAKE=56",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=4"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "spin 56 banked flax into bow strings at Seers",
-   "role": "crafting",
-   "template": "aio-bowstrings",
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2671,3313"
+   ]
   },
   {
    "account": "SporranBulge",
@@ -626,7 +617,7 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true,
    "goal": "goldfarm knights at 2653,3300",
