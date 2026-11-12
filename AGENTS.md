@@ -24,6 +24,7 @@ Keep the loop fast:
 - A session that the coordinator or the swarm started does not write `~/.claude/memory/reflections.jsonl`. The permission check refuses that write, and no person is there to approve it. A session with a person adds the line with `py ~/.claude/scripts/reflect.py add`, which checks the fields.
 - When an action has no effect, read the saved output of the run (`.practice/aio-bench/output/<case>.log`) and the engine trace (`BENCH_TRACE=<dir>`) before you change the worker.
 - When the same wait repeats on each change, measure where the time goes and cut that first.
+- A bench batch ends within 10 minutes of wall time. Run the seeds of a set at once (`bun run bench <case> --seeds 1,2,3,4 --seed-jobs 4`), not one after another. When one run of a case takes over 2 minutes, run `bun scripts/measure/bench-speed.ts <case>` and cut the largest cost that it names before you add seeds or sets.
 
 Ask only for a decision that changes the result. Do not add design docs, approval rounds or task boards.
 

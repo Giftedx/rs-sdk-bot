@@ -44,7 +44,7 @@ export function engineCommand(opts: StackOptions, port: number): { cmd: string[]
         ACTION_TRACE_FILE: join(practiceDir(), 'action-trace.log'),
     };
     if (opts.lockstep) {
-        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: join(practiceDir(), 'logs', 'sim-stat.log') });
+        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: join(practiceDir(), 'logs', `sim-stat${suffix(opts.instance)}.log`) });
         if (opts.lockstep.seed !== undefined) env.SIM_SEED = String(opts.lockstep.seed);
         if (opts.lockstep.anchor) env.SIM_SEED_ANCHOR = opts.lockstep.anchor;
         if (opts.lockstep.traceFile) env.SIM_TRACE_FILE = opts.lockstep.traceFile;
