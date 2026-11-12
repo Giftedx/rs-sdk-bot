@@ -1018,15 +1018,52 @@ Rejected against `ganker-max`: rune knives with the shield kept on (2 deaths in 
 potions for three more sharks (11 of 12); a rune scimitar (370 HP lost a meeting against about 300); the freeze with
 3 tiles kept (`adapt`, one meeting of 8 not cleared against `ganker-dds`).
 
+### The walk-in: one pack, no step out of the Wilderness
+
+The account drinks its four boosts at the bank, banks them, takes sharks for their slots and walks to the gang
+(`SPAR_PRETRIP=1` of `scripts/pk-gang.ts`). No option lets it leave the Wilderness; its way out is a teleport. All
+results are against `ganker-max` with the profile `gang-hunter`.
+
+- **The boosts drunk at the bank.** The kit `gang-hunter` at the post: 2 to 12 sharks left of 21 with the potions in
+  its pack (32 meetings), 8 to 13 left of 25 after the bank (`extra:gang-ganker-max-gang-hunter-prepot-x2`, seeds 1
+  and 2, 4 meetings).
+- **Runes for the glory.** Camelot Teleport (5 air runes and 1 law rune, two pack slots, 120 coins) is the way out of
+  an account with no glory; one account of 16 in full steel used it and got away. The kit `gang-walker` (57,348 coins:
+  the `gang-hunter` armour, an amulet of power, the runes, 23 sharks after the bank) cleared 16 of 16 meetings with no
+  death and no use of the way out at the post: 13 sharks eaten a meeting, 3 to 14 left, 823 to 905 ticks
+  (`extra:gang-ganker-max-gang-walker-prepot-x2`, seeds 1 to 8). On a single-way tile 26 tiles from the bank it
+  cleared 16 of 16 more, with 1 to 13 sharks left (`extra:gang-ganker-max-gang-walker-prepot-near-x2`, seeds 1 to 8).
+- **Cheaper armour does not hold.** With the same runes: full mithril (49,748 coins) cleared 23 of 24 and left by
+  teleport once; full steel (42,708 coins) cleared 20 of 24 and left by teleport 4 times. No account died.
+- **The fight options**, 6 meetings each (seeds 1 to 3), ticks to clear and sharks eaten: the champion's style choice
+  883 and 13; bow and dagger in strict turns 859 and 13; the special from the first health bar 847 and 13; a shark at
+  40 HP 884 and 13, at 60 HP 852 and 14; strict turns with the early special 829 and 13; those two with the shark at
+  40 HP 807 and 12. The profile has the last set. Gap: 6 meetings a set, and a later batch of 16 gave 863 ticks.
+- **A dead target pulls the attacker.** An attack click that is in hand when the target dies walks our account
+  toward the target's respawn point in Lumbridge, out of the Wilderness. The fight loop ends the click with a walk to
+  its own tile when the kill message comes, and the meeting sends an account with no gang in view back to its tile.
+
+### The edge: a step south and a bank trip
+
+At Wilderness level 1 north of Edgeville our account walks south over the edge when its food is gone at 60 HP or
+less (`escapeWalk`), banks 25 tiles south and comes back (`SPAR_TRIPS`). The gang's food does not come back, and the
+bench gang waits at its tile. Against `ganker-max`, with no death in any run:
+
+- The kit `edge-hunter` (57,828 coins) with 8 sharks at the start: 4 of 4 accounts walked out at 53 to 58 HP, banked
+  and cleared on the second meeting (`extra:gang-ganker-max-edge-trips-x4`, seed 1).
+- Steel armour and an adamant scimitar with no amulet (18,223 coins): 4 of 4 cleared in 2 trips, about 1,340 ticks
+  and 27 sharks a clear. Steel armour with the dragon dagger (39,663 coins): 4 of 4, about 1,030 ticks, 22 sharks.
+- Gap: 4 meetings a kit. A real gang goes back to its post while its target is out, and it can stand 112 tiles away
+  when the target comes back; the bench gang stands at the edge.
+
 ### Options against the gang
 
 Each lever of a meeting, with what is measured. A lever with no result is a test to run on `ganker-max`.
 
 - **The tile.** The gang comes to its target, so our account picks the ground.
-  - Single-way or multi-way: single-way only. Measured on the post tile alone.
+  - Single-way or multi-way: single-way only. Measured on the post tile and on one tile at the edge.
   - The edge of the Wilderness north of Edgeville (level 1 to 3, single-way, bank 25 tiles south at (3092, 3496)): one
-    step south ends every attack, and the bank gives food that the gang does not get back. Not measured. It needs no
-    glory and no full pack: the cost of a kit falls to its weapons and armour.
+    step south ends every attack, and the bank gives food that the gang does not get back. Measured above.
   - A tile that a melee attacker cannot stand beside (all four side tiles blocked, a clear line for the bow): not
     searched in the map. One such tile makes the gang harmless.
   - The lines at level 20 (teleport spells) and 30 (glory): the post is under both.
@@ -1034,8 +1071,8 @@ Each lever of a meeting, with what is measured. A lever with no result is a test
   (2934, 3516)), and the world feed shows where each one is. A meeting with one or two of them is `SPAR_GANG=1` or
   `2` of `scripts/pk-gang.ts`. Not measured.
 - **Before the meeting.** The four boost potions drunk at the bank leave four pack slots for sharks. The server drops
-  a boost at logout (`PlayerLoading.ts:99`), so a bench start state cannot hold one; the bench needs a helper account
-  that hands the sharks over. Not measured.
+  a boost at logout (`PlayerLoading.ts:99`), so a bench start state cannot hold one: the bench account goes to the
+  bank first. Measured above.
 - **Movement.** Their steps are run steps, so no kite wins on run energy. A step under the attacker (finding 39) and
   a step out of the Wilderness and back between two shots are not measured. The freeze with distance kept (`adapt`)
   is rejected above.
@@ -1045,8 +1082,8 @@ Each lever of a meeting, with what is measured. A lever with no result is a test
   pizza heals 20 a slot in two bites, as a shark does in one (`consume_normal.dbrow`).
 - **Prayer.** Measured: Protect from Melee, the Defence prayer, the melee prayers on melee turns, the flick each 2
   ticks, no Protect Item. Smite in place of Protect from Melee is not measured: it gives up the 40% cut.
-- **The way out.** Measured: the worn glory and a glory in the pack. Teleport runes take 3 pack slots (Varrock) or 2
-  (Camelot: 5 air and 1 law, not measured).
+- **The way out.** Measured: the worn glory, a glory in the pack, Camelot Teleport (2 pack slots) and the walk over
+  the edge. Varrock Teleport takes 3 pack slots.
 - **A second account.** On a single-way tile an account that hits ours each 8 ticks keeps every other attacker off
   it, and ours then cannot attack either (`pvp_combat.rs2:104-131`). It protects and does not kill. Not measured.
 
