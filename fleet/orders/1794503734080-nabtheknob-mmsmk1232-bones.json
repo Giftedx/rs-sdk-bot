@@ -1,0 +1,22 @@
+{
+ "id": "1794503734080-nabtheknob-mmsmk1232-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "mmsmk1232",
+ "item": "Bones",
+ "count": 86,
+ "start": 1794503734080,
+ "end": 1794506134080,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
