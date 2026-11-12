@@ -793,3 +793,17 @@ test('the death recap is read again for a newer death, and while it waits for th
  t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
  expect(t.recapStale({name:'Alpha'})).toBe(false);expect(t.recapStale({...b,practice:true})).toBe(false);
 });
+test('Party: a card per PK account with hitpoints, prayer, run, food and a red edge when hurt',()=>{
+ const code=shell.slice(shell.indexOf('  const PK_GOAL='),shell.indexOf('  function worldPanel(){'));
+ const S={bots:[
+  {name:'Tribrid1',inWorld:true,combat:90,goal:'pk roam edgeville',pos:{x:3093,z:3500,level:0},hp:{now:30,max:99},runEnergy:55,skills:[{name:'Prayer',level:70,currentLevel:40}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Rune scimitar',count:1}]},
+  {name:'Fisher',inWorld:true,goal:'fish sharks',pos:{x:2600,z:3400,level:0}},
+  {name:'Offline',inWorld:false,goal:'pk'},
+ ]};
+ const {partyBox}=new Function('S','E','safeName','itemStats','wildLevel','pvpState',`${code};return {partyBox};`)(S,String,(s:any)=>s,{Shark:'heals 20'},()=>0,()=>null);
+ const html=partyBox();
+ expect(html).toContain('1 PK account');expect(html).toContain('Tribrid1');expect(html).not.toContain('Fisher');expect(html).not.toContain('Offline');
+ expect(html).toContain('party-card party-alert');
+ expect(html).toContain('<span>30 / 99</span>');expect(html).toContain('<span>40 / 70</span>');
+ expect(html).toContain('Run <b>55%</b>');expect(html).toContain('Food <b>2</b>');
+});

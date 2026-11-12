@@ -181,7 +181,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!e)return '<div class="xp-box"><div class="xp-head"><span>Tick efficiency</span></div><span class="xp-muted">No tick timeline reported.</span></div>';
     const c=b.counters||{},extra=[['walkTicks','walk ticks'],['shopTicks','shop ticks'],['stuns','stuns'],['eaten','eaten']].filter(([k])=>Number.isFinite(c[k])).map(([k,label])=>`<span>${E(label)} <b>${nf(c[k])}</b></span>`).join('');
     const stale=!b.fresh?'<span class="xp-muted">Status '+age(b.at)+' old: these ticks are not live.</span>':'';
-    return `<div class="xp-box xp-efficiency"><div class="xp-head"><span>Tick efficiency</span><span class="xp-gain${e.idle>=25?' xp-bad':''}">${Math.round(e.idle)}% idle</span></div>${tickStrip(b.timeline)}<div class="xp-meta"><span>Work <b>${Math.round(e.work)}%</b></span><span>${e.waste?'Most waste: '+TICK_LABEL[e.waste.kind]+' <b>'+Math.round(e.waste.share)+'%</b>':'No waste'}</span><span>${e.ticks} ticks</span></div>${extra?'<div class="xp-meta">'+extra+'</div>':''}${stale}</div>`;
+    // Session statistics: the status `ledger` counts each kind of tick since the session started, not only the last 300.
+    const L=b.ledger&&typeof b.ledger==='object'?b.ledger:null,all=L?Object.values(L).filter(Number.isFinite).reduce((n,v)=>n+v,0):0;
+    const session=all?`<div class="xp-meta" title="Every tick since the session started"><span>Session <b>${nf(all)}</b> ticks</span><span>idle <b>${Math.round(100*(L.idle||0)/all)}%</b></span><span>work <b>${Math.round(100*((L.xp||0)+(L.inventory||0))/all)}%</b></span></div>`:'';
+    return `<div class="xp-box xp-efficiency"><div class="xp-head"><span>Tick efficiency</span><span class="xp-gain${e.idle>=25?' xp-bad':''}">${Math.round(e.idle)}% idle</span></div>${tickStrip(b.timeline)}<div class="xp-meta"><span>Work <b>${Math.round(e.work)}%</b></span><span>${e.waste?'Most waste: '+TICK_LABEL[e.waste.kind]+' <b>'+Math.round(e.waste.share)+'%</b>':'No waste'}</span><span>${e.ticks} ticks</span></div>${session}${extra?'<div class="xp-meta">'+extra+'</div>':''}${stale}</div>`;
   }
   const XP_STORE='atlas-xp-baselines';
   const xpStore=()=>{try{return JSON.parse(localStorage.getItem(XP_STORE)||'{}')||{};}catch{return {};}},saveXpStore=store=>{try{localStorage.setItem(XP_STORE,JSON.stringify(store));}catch{/* private window */}};
@@ -330,14 +333,27 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return place?kind+' · '+place:kind+' spot';
   }
   const nameButtons=(names,max)=>names.slice(0,max).map(n=>`<button data-lookup="${E(n)}">${E(n)}</button>`).join('')+(names.length>max?`<span class="xp-muted">+${names.length-max} more</span>`:'');
+  // Party (RuneLite's Party panel) for the PK team: one card per playing account in the Wilderness or with a PK goal,
+  // with hitpoints, prayer, run energy, food left (pack items that heal, from item-stats.json), the Wilderness level and
+  // how many players can attack it. A card is red while someone can attack it or its hitpoints are below 40%.
+  const PK_GOAL=/\b(pk|pvp|pker|spar|tribrid|wilderness)\b/i;
+  function partyMembers(){return (S?.bots||[]).filter(x=>!x.practice&&!x.reserved&&x.inWorld&&(wildLevel(x.pos)||PK_GOAL.test(String(x.currentGoal||x.goal||''))||PK_GOAL.test(String(x.role||''))));}
+  function partyCard(x){
+    const sk=n=>x.skills?.find(s=>s.name===n),pr=sk('Prayer'),hp=x.hp,food=(x.inventory||[]).filter(i=>i&&/\bheals\b/i.test(itemStats[i.name]||'')).reduce((n,i)=>n+(i.count||1),0);
+    const w=wildLevel(x.pos),threats=w?pvpState(x)?.threats.length??0:0,low=hp&&hp.max?hp.now/hp.max<0.4:false;
+    const bar=(now,max,cls)=>`<div class="party-bar ${cls}"><i style="width:${max?Math.max(0,Math.min(100,Math.round(100*now/max))):0}%"></i><span>${now??'?'} / ${max??'?'}</span></div>`;
+    return `<button class="party-card${threats||low?' party-alert':''}" data-world-follow="${E(x.name)}" title="Watch ${E(safeName(x.name))}"><div class="xp-head"><span>${E(safeName(x.name))}</span><span class="xp-muted">combat ${x.combat??'?'}${w?' · wildy '+w:''}</span></div>${bar(hp?.now,hp?.max,'party-hp')}${bar(pr?.currentLevel??pr?.level,pr?.level,'party-prayer')}<div class="xp-meta"><span>Run <b>${x.runEnergy??'?'}%</b></span><span>Food <b>${food}</b></span><span class="${threats?'xp-bad':''}">${threats} can attack</span></div></button>`;
+  }
+  function partyBox(){const m=partyMembers();return m.length?`<div class="xp-box"><div class="xp-head"><span>Party</span><span class="xp-muted">${m.length} PK account${m.length===1?'':'s'}</span></div><div class="party-grid">${m.map(partyCard).join('')}</div></div>`:'';}
   function worldPanel(){
     if(!S)return '<p class="xp-muted">Waiting for world data…</p>';
     const owner=window.atlasOperator(),spots=worldSpots(),named=(S.contention||[]).filter(s=>s.x==null),roster=S.roster||[],fleet=new Set(S.bots.map(b=>b.name.toLowerCase()));
     const ours=roster.filter(r=>fleet.has(String(r[0]).toLowerCase())).length,most=Math.max(1,...spots.map(s=>s.others.length));
     // PvP Tools: each of our accounts in the Wilderness, with its risk and the players who can attack it now.
     const wild=S.bots.filter(x=>!x.practice&&!x.reserved&&x.inWorld&&wildLevel(x.pos)).map(x=>({b:x,p:pvpState(x)})).filter(v=>v.p);
+    const party=partyBox();
     const pvp=wild.length?`<div class="xp-box"><div class="xp-head"><span>Attackable now</span><span class="xp-muted">in the Wilderness</span></div>${wild.map(({b:x,p})=>`<details class="spot-row" data-k="pvp:${E(x.name)}"><summary title="${E('Wilderness '+p.wild+' · risk '+gp(p.risk)+' · kept '+gp(p.keptValue))}"><span class="xp-name">${E(safeName(x.name))} <i class="xp-muted">lvl ${p.wild}</i></span><span class="${p.threats.length?'xp-bad':'xp-muted'}">${p.threats.length} can attack · risk ${gp(p.risk)}</span></summary>${p.threats.map(t=>`<div class="xp-meta"><span>${E(t.name)}</span><span>combat ${t.combat} · ${t.dist} tiles</span></div>`).join('')||'<div class="xp-meta"><span>Nobody in attack range within 30 tiles.</span></div>'}</details>`).join('')}</div>`:'';
-    return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Online now</span><span class="xp-gain">${nf(roster.length)}</span></div><div class="xp-meta"><span>${ours} of them are ours</span>${owner?'<span>world feed, every 6 s</span>':''}</div></div>`+pvp+
+    return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Online now</span><span class="xp-gain">${nf(roster.length)}</span></div><div class="xp-meta"><span>${ours} of them are ours</span>${owner?'<span>world feed, every 6 s</span>':''}</div></div>`+party+pvp+
       `<div class="xp-box"><div class="xp-head" title="Other players within 10 tiles of a tile our accounts use, on the ground floor."><span>Our spots</span><span class="xp-muted">other players</span></div>${spots.map(s=>`<details class="spot-row" data-k="spot:${owner?s.x+','+s.z+':'+E(s.side):E(s.label)}"><summary title="${E(s.others.length+' other players, '+s.ours.length+' of ours'+(owner?' · '+s.x+', '+s.z:''))}"><span>${E(s.label)}</span><span class="spot-ours" title="${s.ours.length} of our accounts here">${'<i></i>'.repeat(Math.min(s.ours.length,6))}</span><span class="spot-bar"><i style="width:${Math.round(s.others.length/most*100)}%"></i></span><b>${s.others.length}</b></summary>${owner?`<div class="xp-meta"><span>claimed by ${E(s.side)}</span><span>${s.x}, ${s.z}</span></div>`:''}<div class="spot-names">${nameButtons(s.others,24)||'<span class="xp-muted">No other player is here.</span>'}</div></details>`).join('')||`<span class="xp-muted">${owner?'No claimed spot has a tile.':'No spot is in use.'}</span>`}${named.length&&owner?`<p class="xp-muted">Claimed without a tile: ${named.map(s=>E(s.resource)).join(', ')}</p>`:''}</div>`+
       farmsBox(spots)+'</div>';
   }
