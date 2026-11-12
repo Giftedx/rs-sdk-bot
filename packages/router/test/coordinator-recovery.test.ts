@@ -173,6 +173,65 @@ test('authenticated request timeout cancels only its unclaimed input and never c
  expect(existsSync(join(f.prac,'swarm-repair.json'))).toBe(false);expect(existsSync(join(f.prac,'swarm-repair.json.lease'))).toBe(false);
  expect(readFileSync(join(f.prac,'swarm-deaths.json'),'utf8')).toBe(before);
 });
+// A full fleet of one bot: `Busy` holds the only slot until its status shows a result.
+function fullFleetFixture(){
+ const f=authenticatedFixture(),file=join(f.prac,'swarm-repair.json'),busy=join(f.prac,'status/Busy.json'),plan=JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8'));
+ atomicJson(join(f.base,'swarm.json'),{...plan,maxBots:1});
+ atomicJson(busy,{name:'Busy',server:'rs-sdk-demo.fly.dev',at:Date.now()});
+ // The controller's part: it answers the request with a confirmed session cleanup.
+ const controller=()=>{
+  if(!existsSync(file))return false;
+  const raw=readFileSync(file,'utf8');unlinkSync(file);writeFileSync(file+'.results.jsonl',JSON.stringify({raw,result:{sessionRecovered:true}})+'\n');return true;
+ };
+ return{...f,file,controller,free:()=>atomicJson(busy,{name:'Busy',server:'rs-sdk-demo.fly.dev',at:Date.now(),result:'ok done'})};
+}
+test('an authenticated recovery waits at a full fleet under its lease and takes the bot slot that frees',async()=>{
+ const f=fullFleetFixture(),parked=readFileSync(join(f.base,'swarm.json'),'utf8');
+ expect(f.prepare).toThrow('live admission waiting: maxBots');
+ let waitedUnderLease=false,requestAtFullFleet=false,freed=false;
+ const started=Date.now(),timer=setInterval(()=>{
+  if(!freed&&existsSync(f.file))requestAtFullFleet=true;
+  if(!freed&&Date.now()-started>=150){waitedUnderLease=existsSync(f.file+'.lease')&&jobOf(f.base,'Mightyrod').enabled===true;f.free();freed=true;}
+  if(freed&&f.controller())clearInterval(timer);
+ },10);
+ try{
+  await requestAuthenticatedRecovery(f.task,f.deps,'new',f.run,f.base,3000,'new',async()=>{f.prepare();},3000);
+  // The lease, which holds the slot at the controller, stayed for the whole wait; no request went out before the slot.
+  expect(waitedUnderLease).toBe(true);expect(requestAtFullFleet).toBe(false);
+  expect(jobOf(f.base,'Mightyrod').enabled).toBe(false);expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(parked);
+  expect(existsSync(f.file+'.lease')).toBe(false);
+ }finally{clearInterval(timer);}
+},10000);
+test('the wait for a bot slot is bounded, and a memory refusal does not wait',async()=>{
+ const f=fullFleetFixture(),jobs=()=>existsSync(coordinatorJobsPath(f.base))?readFileSync(coordinatorJobsPath(f.base),'utf8'):null,before=jobs();
+ let attempts=0;
+ await expect(requestAuthenticatedRecovery(f.task,f.deps,'new',f.run,f.base,3000,'new',async()=>{attempts++;f.prepare();},60)).rejects.toThrow('live admission waiting: maxBots');
+ expect(attempts).toBeGreaterThan(1);
+ expect(existsSync(f.file)).toBe(false);expect(existsSync(f.file+'.lease')).toBe(false);expect(jobs()).toBe(before);
+ f.free();attempts=0;
+ const started=Date.now();
+ await expect(requestAuthenticatedRecovery(f.task,f.deps,'new',f.run,f.base,3000,'new',async()=>{attempts++;prepareLiveRecovery(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,f.base,'new',{freeGB:0});},3000)).rejects.toThrow('live admission waiting: memory');
+ expect(attempts).toBe(1);expect(Date.now()-started).toBeLessThan(1000);
+ expect(existsSync(f.file)).toBe(false);expect(existsSync(f.file+'.lease')).toBe(false);expect(jobs()).toBe(before);
+ // An owner stop ends the wait.
+ atomicJson(join(f.prac,'status/Busy.json'),{name:'Busy',server:'rs-sdk-demo.fly.dev',at:Date.now()});
+ writeFileSync(join(f.prac,'stop-Mightyrod'),'owner pause');
+ await expect(requestAuthenticatedRecovery(f.task,f.deps,'new',f.run,f.base,3000,'new',async()=>{f.prepare();},3000)).rejects.toThrow('recovery owner stopped');
+ expect(existsSync(f.file+'.lease')).toBe(false);
+});
+test('the wait reads the bot count of the controller, which has a bot that wrote no status yet',async()=>{
+ const f=fullFleetFixture(),state=join(f.prac,'swarm-state.json');
+ // The status rows show a free slot. The controller counts one bot that it started a moment before.
+ f.free();atomicJson(state,{at:Date.now(),running:1,externalRunning:0,maxBots:1});
+ let attempts=0;
+ await expect(requestAuthenticatedRecovery(f.task,f.deps,'new',f.run,f.base,3000,'new',async()=>{attempts++;f.prepare();},60)).rejects.toThrow('live admission waiting: maxBots');
+ expect(attempts).toBe(0);
+ // A state that the controller no longer writes decides nothing.
+ atomicJson(state,{at:Date.now()-60000,running:1,externalRunning:0,maxBots:1});
+ const timer=setInterval(()=>{if(f.controller())clearInterval(timer);},10);
+ try{await requestAuthenticatedRecovery(f.task,f.deps,'new',f.run,f.base,3000,'new',async()=>{attempts++;f.prepare();},3000);expect(attempts).toBe(1);}
+ finally{clearInterval(timer);}
+});
 test('rollout waits for a post-lock tick and never kills a child omitted by the old state',async()=>{
  for(const outcome of ['spawn','drained','changed','timeout']){
   const f=recoveryFixture(),owner={pid:123,nonce:'controller',source:'old'},fence=1000;let now=fence,kills=0;

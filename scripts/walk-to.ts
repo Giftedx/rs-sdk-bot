@@ -82,6 +82,20 @@ export function ferryWalk(s: Session, to: Tile, walk: (to: Tile, budgetMs?: numb
     }, () => accountOf(s).coins ?? 0, need => bankFare(s, need, walk));
 }
 
+// A worker that walks on one floor (walkPath, bot.walkTo) cannot leave another floor, and its long walks cross no
+// ferry. `awayFrom` is true for a start on another floor than `to` or more than `tiles` from it; `approach` is the
+// walk from such a start: the planned walk with the stairs, the doors and the ferries, cancelled when `stop` is true.
+export function awayFrom(p: { worldX: number; worldZ: number; level?: number } | null | undefined, to: Tile, tiles: number): boolean {
+    return !!p && ((p.level ?? 0) !== to.level || Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) > tiles);
+}
+export async function approach(s: Session, to: Tile, stop: () => boolean = () => false): Promise<Outcome> {
+    const cancel = new AbortController(), off = s.onTick(() => { if (stop()) cancel.abort('stop requested'); });
+    try {
+        const world = await getWorld();
+        return await ferryWalk(s, to, (tile, planBudgetMs) => goTo(s, world, tile, accountOf(s), { maxRetriesPerLeg: 2, legTimeoutTicks: 150, signal: cancel.signal, planBudgetMs }));
+    } finally { off(); }
+}
+
 // A long planned walk can stop on one leg (live: Varrock West to the Ardougne north bank failed twice after about 114
 // ticks, then a third run arrived). Each try starts where the last stopped; it stops when a try ends no closer.
 export async function walkTargetPersist(s: Session, to: Tile, tries = 4,
@@ -133,7 +147,11 @@ export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Til
         if (!out.ok) return { ...out, ticks };
         from = ZANARIS_SHED;
     }
-    if (!inArdougne(from) && inKandarin(from) && inEast(to)) {
+    // A floor above East Ardougne starts the same way, so the fare is staged at that bank. With no fare the planner
+    // gives no route east from such a floor, or one along level 1 that cannot be walked (live: from level 1 of a house
+    // at 2575,3269, "far walk to 2834,3334,1: no progress: walk rejected 3 times").
+    const upstairs = from.level > 0 && inArdougne({ ...from, level: 0 });
+    if ((upstairs || !inArdougne(from) && inKandarin(from)) && inEast(to)) {
         const home = await walk(ARDOUGNE_NORTH, FERRY_LEG_PLAN_MS); ticks += home.ticks;
         if (!home.ok) return { ...home, ticks };
         from = ARDOUGNE_NORTH;

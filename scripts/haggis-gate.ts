@@ -54,7 +54,7 @@ export function evaluateLaunch(root:string,snapshot:string,now=Date.now(),author
  check('machine clear',()=>{
   // Monitor is volatile: do not hash it into the token. Limit token lifetime to this observation.
   const m=JSON.parse(readFileSync(join(root,'.practice/monitor.json'),'utf8'));
-  if(!fresh(m.at,now,120000)||!Array.isArray(m.alerts)||m.alerts.some((a:any)=>a.level!=='fixed')||!Number.isFinite(m.freeGB)||m.freeGB<FREE_FLOOR_GB)throw Error('Need recent monitor, no open alerts and 8 GiB free');
+  if(!fresh(m.at,now,120000)||!Array.isArray(m.alerts)||m.alerts.some((a:any)=>a.level!=='fixed')||!Number.isFinite(m.freeGB)||m.freeGB<FREE_FLOOR_GB)throw Error(`Need recent monitor, no open alerts and ${FREE_FLOOR_GB} GiB free`);
   expiresAt=Math.min(expiresAt,m.at+120000);return 'Recent monitor, no alerts, memory floor met';
  });
  const ready=gates.every(g=>g.pass);

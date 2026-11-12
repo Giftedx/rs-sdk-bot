@@ -228,8 +228,9 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
 // is worth half, the price a sale would fetch. A share of a job a training run unlocks counts for the training.
 export const BILL_PREMIUM = 2, SURPLUS = 0.5, TRAIN_SHARE = 0.25;
 // Inputs that feed a bill line: a feather is needed while headless arrows are short, even with the feather line met.
+// A steel bar is on no line of the bill: it is needed while cannonballs are short (one bar casts 4, cannonballs.rs2).
 export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'],
-    log: ['arrow shaft', 'headless arrow'], flax: ['bow string'], 'rune essence': ['air rune'] };
+    log: ['arrow shaft', 'headless arrow'], flax: ['bow string'], 'rune essence': ['air rune'], 'steel bar': ['cannonball'] };
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
 // HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
@@ -910,6 +911,12 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 //   adamantite: estimates from the runite run above (3 bars a load, about 50 ticks a load), as the furnace takes the
 //   same time for each bar. Gap: no practice run smelts mithril or adamantite, and a start away from the Al Kharid
 //   bank is not run.
+// - steel bars (scripts/smelt-bars.ts steel, the same route): Smithing 30, one iron ore and 2 coal a bar
+//   (smelting.struct smelting_steel_bar), so a pack load is 9 bars and `needs` asks 9 iron ore and 18 coal. No bill
+//   line names the bar: it has the value of the cannonball line while that line is short (FEEDS). Bench case
+//   extra:smelt-steel: Smithing 30 at the Al Kharid bank with 28 iron ore and 56 coal banked, 28 bars banked in 279
+//   ticks, four loads. The rate is that run's, 0.1 bars a tick: an estimate, as one run on practice. Gap: a start
+//   away from the Al Kharid bank is not run, and no job brings the coal (aio-ore mines iron ore at Varrock East).
 // - cannonballs (scripts/microbot-a-cannonballs.ts): a members world and Smithing 35 (smelt-batch.ts cannonAdmission:
 //   `cannonballs need observed member and current Smithing35`), an ammo mould held or banked (`smelt owned reusable
 //   tool missing`) and CANNON_BARS steel bars banked: the order is exact, so a run with fewer bars fails. One bar
@@ -918,6 +925,15 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 //   is an estimate: 27 bars at about 8 ticks a bar (cannonballs.rs2) and the bench's 39 ticks of bank and walk give
 //   0.42 balls a tick, and the rate here is half of that. Gap: a run of more than 3 bars is not measured
 //   (research/microbot-ports.md: 3 bars to 12 banked balls).
+//   The ammo mould: Dwarf Cannon leaves the account with none. Nulodion gives one with his notes
+//   (quest_mcannon/scripts/npcs/nulodion.rs2:22-23) and the Dwarf Commander takes both at the end (lawgof2.rs2:201-202;
+//   scripts/generated/dwarfcannon.ts:361-368). With the quest complete, Nulodion's Trade option (nulodion.rs2:1-6) opens
+//   his shop, which stocks 5 moulds at a shop value of 5 coins (area_falador/configs/dwarven_workshop.inv:14,
+//   quest_mcannon.obj:62); his cannon for 750,000 coins comes with one too (nulodion.rs2:148-157). The mould is not
+//   tradeable (quest_mcannon.obj:65), so no fleet order moves it: the account that casts does the quest and buys its
+//   own. Gap: no template runs Dwarf Cannon and no job buys the mould. The quest script starts from the preset
+//   quest_dwarfcannon, beside the commander with the levels of the main account, and Nulodion stands behind a quest
+//   door that no planned walk opens (dwarfcannon.ts:358-360).
 // - blood runes (scripts/blood-chest.ts): Thieving 59 and a start on the ground floor (bloodRefusal); it travels to
 //   the Ardougne north bank from any such start. Each of the two chests gives 2 blood runes and 500 coins and comes back in
 //   400 ticks at most (RESPAWN_TICKS). A run ends ok only with MAX_LOOTS loots. The ogres by the chests hit: under 60%
@@ -971,6 +987,7 @@ export function aioTemplates(): Template[] {
         bars('adamantite', 70, 'adamantite ore', 6, 4, 0.07),
         bars('mithril', 50, 'mithril ore', 4, 5, 0.08),
         bars('iron', 15, 'iron ore', 0, 28, 0.074),
+        bars('steel', 30, 'iron ore', 2, 9, 0.1),
         aio('aio-cannonballs', 'skiller:smithing:cannonballs', 'scripts/microbot-a-cannonballs.ts', ['smithing', 'cannonballs', String(CANNON_BARS), '1500', 'CANNON_XP_RATE=25'], {
             role: 'smithing', goal: `cast ${CANNON_BARS} banked steel bars into cannonballs at Al Kharid`,
             needs: { skills: { Smithing: 35 }, items: { 'ammo mould': 1, 'steel bar': CANNON_BARS } }, yields: () => [{ item: 'cannonball', perTick: 0.2 }] }),

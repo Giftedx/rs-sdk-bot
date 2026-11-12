@@ -30,7 +30,7 @@ import {assertNoRecoveryLease,heldRecoveryOwners,releaseExpiredRecoveryLeases} f
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { processStartTimes } from '../packages/practice/src/proc';
+import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../packages/practice/src/proc';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -46,13 +46,12 @@ export type SavedRun = Run & { key: string };
 export type ParsedJob = { key: string; accounts: string[]; host: boolean; job: Job };
 
 // The system gives the process id of an ended supervisor to a later process, so a process that answers the id is the
-// run's supervisor only when it started before the run record. The supervisor starts before `started` is taken; the
-// slack covers a clock step between the two. `starts` is one read of the process table (processStartTimes): null, or
-// an id it does not list, proves nothing and leaves the signal check to decide.
-export const PID_START_SLACK_MS = 5000;
+// run's supervisor only when it started before the run record (laterProcessHolds). The supervisor starts before
+// `started` is taken. `starts` is one read of the process table (processStartTimes): null, or an id it does not list,
+// proves nothing and leaves the signal check to decide.
+export { PID_START_SLACK_MS };
 export function adoptedRunAlive(run: { pid: number; started: number }, alive: (pid: number) => boolean, starts: ReadonlyMap<number, number> | null): boolean {
-    const processStart = starts?.get(run.pid);
-    return alive(run.pid) && !(processStart !== undefined && processStart > run.started + PID_START_SLACK_MS);
+    return alive(run.pid) && !laterProcessHolds(run.pid, run.started, starts);
 }
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
@@ -133,6 +132,34 @@ export function admitRecovery(v:{account:string;active:readonly string[];running
  const decision=admissionDecision({running:v.running,external:v.external,pending:v.pending,starting:1,startingReserve:1,freeGB:v.freeGB,minFreeGB:v.minFreeGB,maxBots:v.maxBots});
  if(!decision.allowed)throw Error('recovery admission waiting: '+decision.reason);
  release();
+}
+
+// An open recovery keeps one bot slot. Jobs get a free slot in plan order, the owner's jobs first, and a recovery is
+// in no job until its cleanup is done, so without the hold a waiting job takes each slot that frees. The recovery is
+// open while the coordinator holds the repair lease (.practice/swarm-repair.json.lease: from before its admission
+// check to the report of the session cleanup, and for the end repair) and while the cleanup child runs. The hold
+// stays RECOVERY_SLOT_HOLD_MS after the last of those, which covers the install of the recovered account's job, and
+// it ends when that job starts. The cleanup child counts in the running bots, so it uses the slot while it runs. The
+// job of the recovered account takes the slot. Each other job counts one more starting bot against maxBots; the
+// memory reserve does not change. RECOVERY_SLOT_WAIT_MS is the longest time the coordinator waits for the slot. A
+// controller rollout holds the same lease, so a new controller holds one slot for its first RECOVERY_SLOT_HOLD_MS.
+export const RECOVERY_SLOT_HOLD_MS = 30_000;
+export const RECOVERY_SLOT_WAIT_MS = 600_000;
+// A lease file older than the longest recovery request is one that a dead process left: it holds no slot.
+export const RECOVERY_LEASE_MAX_MS = RECOVERY_SLOT_WAIT_MS + 300_000;
+export type RecoverySlot = { until: number; account?: string };
+export function recoveryLeaseHeld(file: string, now: number): boolean {
+    try { return now - statSync(file).mtimeMs < RECOVERY_LEASE_MAX_MS; } catch { return false; }
+}
+export function recoverySlot(slot: RecoverySlot, v: { leaseHeld: boolean; recovering?: string; started: readonly string[]; now: number }): RecoverySlot {
+    const prior = v.recovering ?? slot.account;
+    const jobStarted = prior !== undefined && !v.recovering && v.started.some(a => a.toLowerCase() === prior.toLowerCase());
+    if (v.leaseHeld || v.recovering) return { until: v.now + RECOVERY_SLOT_HOLD_MS, ...(prior !== undefined && !jobStarted ? { account: prior } : {}) };
+    return slot.until > v.now && !jobStarted ? slot : { until: 0 };
+}
+export function recoverySlotReserve(slot: RecoverySlot, v: { recovering: boolean; accounts: readonly string[]; now: number }): number {
+    if (v.recovering || slot.until <= v.now) return 0;
+    return slot.account !== undefined && v.accounts.some(a => a.toLowerCase() === slot.account!.toLowerCase()) ? 0 : 1;
 }
 
 // An entry with an account and no script is a reservation (the main account waits for its own run): the swarm never
@@ -255,6 +282,12 @@ export function standingRetryable(reason: string, result?: string): boolean {
     if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && !/^(?:RESULT )?fail no food\b/.test(result);
     return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
 }
+// Whether the account of a retryable end is offline. `settled` is a confirmed logout on the live server. An account
+// with no status file has only that proof: without this rule its end stays for good.
+export function standingRetryDue(status: { server?: string; result?: string; at?: number } | undefined, settled: boolean, now: number): boolean {
+    if (!status) return settled;
+    return status.server === LIVE_SERVER && (settled || (!!status.result && Number.isFinite(status.at) && now - status.at! >= BOOTSTRAP_STATUS_AGE_MS));
+}
 export function endedForGood(end: { reason: string } | undefined, repeat: boolean | undefined): boolean {
     return !!end && (!repeat || !successfulEnd(end.reason));
 }
@@ -362,9 +395,13 @@ export function lifecycleAccounts(dir: string): string[] {
 }
 // A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
 // held attempt, so no repair can name it until the owner is gone and its end is recorded.
+// The owner wrote the receipt, so a process that holds the owner id and started after `createdAt` is a later process
+// and the owner is gone (laterProcessHolds). `starts` is called one time at most, with the owner ids that answer a
+// signal and whose end this scan can record.
 export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
-    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; createdAt: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
-    const out: [string, string][] = [], seen = new Set<string>();
+    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; createdAt: number; updatedAt: number } | undefined, alive: (pid: number) => boolean,
+    starts: (pids: readonly number[]) => ReadonlyMap<number, number> | null = () => null): [string, string][] {
+    const found: { end: [string, string]; pid: number; createdAt: number; answers: boolean }[] = [], seen = new Set<string>();
     for (const a of accounts) {
         const key = a.toLowerCase();
         if (PROTECTED_ACCOUNTS.includes(key)) continue;
@@ -373,15 +410,16 @@ export function orphanedSessionEnds(accounts: readonly string[], ended: Readonly
         let p: LogoutProof; try { p = proof(a); } catch { continue; }
         if (p.state !== 'held') continue;
         const receipt = producer(a, p.attemptId);
-        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
+        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt)) continue;
         const prior = [...ended].find(([name]) => name.toLowerCase() === key);
         // An older orphan end yields to a later update. A successful end yields to an attempt that started after it: that
         // end cannot describe the attempt and holds nothing. Every other end stays, because a repair reads its reason.
         const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt ');
         if (prior && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
-        out.push([prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`]);
+        found.push({ end: [prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`], pid: receipt.pid, createdAt: receipt.createdAt, answers: alive(receipt.pid) });
     }
-    return out;
+    const answering = found.filter(f => f.answers).map(f => f.pid), table = answering.length ? starts(answering) : null;
+    return found.filter(f => !f.answers || laterProcessHolds(f.pid, f.createdAt, table)).map(f => f.end);
 }
 // Retained caller-receipt format is diagnostic only. There is no producer-bound work-result
 // contract yet, so a fishing/recovery logout cannot qualify an old combat script.
@@ -555,6 +593,7 @@ if (import.meta.main) {
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
     let inheritedRecoveries: ReturnType<typeof heldRecoveryOwners> = [];
+    let heldSlot: RecoverySlot = { until: 0 };
     let orphanScanAt = 0;
     const leaseRefusals = new Map<string, string>();
     const previousEnabled = new Map<string, boolean>();
@@ -729,7 +768,7 @@ if (import.meta.main) {
                 return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
             };
             const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
-            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive)) {
+            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive, processStartTimes)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }
@@ -781,6 +820,8 @@ if (import.meta.main) {
             }
         } catch (e) { endStateOk = false; console.log(`SWARM repair unavailable; new starts paused: ${String(e)}`); }
         const externalCount = () => activeExternalLive(statuses, [...runs.values()].flatMap(r => r.accounts).concat(recoveryDispatch.active?[recoveryDispatch.active.account]:[],inheritedRecoveries.map(r=>r.account)), Date.now()).length;
+        heldSlot = recoverySlot(heldSlot, { leaseHeld: recoveryLeaseHeld(`${repairFile}.lease`, Date.now()), recovering: recoveryDispatch.active?.account,
+            started: [...runs.values()].flatMap(r => r.accounts), now: Date.now() });
         const state: Record<string, unknown>[] = [];
         let owners: Map<string, Owner>;
         try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
@@ -835,12 +876,12 @@ if (import.meta.main) {
                 if ((job as Job & {standing?:boolean}).standing) for (const a of p.accounts) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
                     if (!end) continue;
-                    let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { continue; }
+                    let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { /* no status file: the logout proof decides */ }
                     if (!standingRetryable(end.reason, s?.result)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }
-                    if (s?.server !== LIVE_SERVER || (!settled && (!s.result || !Number.isFinite(s.at) || Date.now() - s.at < BOOTSTRAP_STATUS_AGE_MS))) continue;
+                    if (!standingRetryDue(s, settled, Date.now())) continue;
                     ended.delete(key!);
                     for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
                     persistEnded(deathsFile, ended); persistHolds(holdsFile, holds);
@@ -851,7 +892,8 @@ if (import.meta.main) {
                     :job.whenCargoFrom&&!courierDeliveryWaiting(job.whenCargoFrom,job.demandNear,plan.jobs)&&!ownedPayoutWaiting(statuses,job.demandNear)?'waiting offline: no nearby owned cargo or payout':null));
                 Object.assign(st, blocked);
                 if (go.length > 0) {
-                    const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length, startingReserve: startReserve(p, go.length),
+                    const held = recoverySlotReserve(heldSlot, { recovering: !!recoveryDispatch.active, accounts: p.accounts, now: Date.now() });
+                    const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length + held, startingReserve: startReserve(p, go.length),
                         pending: pendingCount(), freeGB: freemem() / 2 ** 30, minFreeGB: plan.minFreeGB, maxBots: plan.maxBots });
                     if (!admission.allowed) for (const a of go) st[a] = admission.reason === 'maxBots' ? 'waiting: maxBots'
                         : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;
@@ -872,7 +914,7 @@ if (import.meta.main) {
         }
         const pendingStartup = pendingCount();
         writeFileSync(join(prac, 'swarm-state.json'), JSON.stringify({ at: Date.now(), controllerPid:process.pid,coordinatorOwner,release:process.env.WORKER_RELEASE,freeGB: freemem() / 2 ** 30,
-            running: botsRunning(), recovery:recoveryDispatch.active??null,inheritedRecoveries, externalRunning: externalCount(), pendingStartup, pendingReserveGB: pendingStartup * START_BUDGET_GB,
+            running: botsRunning(), recovery:recoveryDispatch.active??null,recoverySlot:heldSlot.until>Date.now()?heldSlot:null,inheritedRecoveries, externalRunning: externalCount(), pendingStartup, pendingReserveGB: pendingStartup * START_BUDGET_GB,
             minFreeGB: Math.max(FREE_FLOOR_GB, plan.minFreeGB), maxBots: plan.maxBots, jobs: state }));
         if (stopAll && runs.size === 0&&!recoveryDispatch.active&&!inheritedRecoveries.length) { console.log('SWARM stopped (stop-swarm)'); process.exit(0); }
     };

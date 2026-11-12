@@ -43,7 +43,7 @@ test('no demand cannot hide a retained failure, stop marker or release hold',()=
  // A release pause starts again; the swarm checks the release pin itself before a non-standing start.
  expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).start).toEqual(['Courier']);
 });
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
@@ -342,6 +342,63 @@ test('admission reserves pending heaps and a new account before enforcing the fr
     expect(admissionDecision({...base,freeGB:NaN}).allowed).toBe(false);
 });
 
+test('an open recovery gets the bot slot that frees at a full fleet, before a waiting planner job', async () => {
+    const { recoverySlot, recoverySlotReserve, recoveryLeaseHeld, admitRecovery, RECOVERY_SLOT_HOLD_MS, RECOVERY_LEASE_MAX_MS } = await import('./swarm');
+    const cap = { external: 0, pending: 0, freeGB: 64, minFreeGB: 0, maxBots: 25 };
+    let slot = { until: 0 } as ReturnType<typeof recoverySlot>, now = 1_000_000;
+    // The admission of one account of a job, as the controller's tick calls it.
+    const job = (account: string, running: number, freeGB = cap.freeGB) => admissionDecision({ ...cap, freeGB, running,
+        starting: 1 + recoverySlotReserve(slot, { recovering: false, accounts: [account], now }), startingReserve: 1 });
+    const recovery = (running: number, freeGB = cap.freeGB) => admitRecovery({ account: 'Rod', active: [], ...cap, freeGB, running }, () => {});
+    // The fleet is full and a planner job waits.
+    expect(job('Planner', 25).reason).toBe('maxBots');
+    // A recovery request opens: the coordinator holds the repair lease. No slot is free, so each side waits.
+    slot = recoverySlot(slot, { leaseHeld: true, started: [], now });
+    expect(() => recovery(25)).toThrow('recovery admission waiting: maxBots');
+    // One bot ends. The planner job does not get the slot; the recovery does.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: true, started: [], now });
+    expect(job('Planner', 24).reason).toBe('maxBots');
+    expect(() => recovery(24)).not.toThrow();
+    // The cleanup child counts in the running bots: it uses the slot, and nothing more is held.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: true, recovering: 'Rod', started: [], now });
+    expect(recoverySlotReserve(slot, { recovering: true, accounts: ['Planner'], now })).toBe(0);
+    // The child ends and the coordinator releases the lease. The job of the recovered account is not installed yet.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: false, started: [], now });
+    expect(job('Planner', 24).reason).toBe('maxBots');
+    expect(job('rod', 24).allowed).toBe(true);
+    // Its job starts: the hold ends and the fleet is full again.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: false, started: ['Rod'], now });
+    expect(slot.until).toBe(0);
+    expect(job('Planner', 25).reason).toBe('maxBots');
+    expect(job('Planner', 24).allowed).toBe(true);
+
+    // A recovery whose job never starts keeps the slot for RECOVERY_SLOT_HOLD_MS after its last sign, no longer.
+    slot = recoverySlot({ until: 0 }, { leaseHeld: false, recovering: 'Rod', started: [], now });
+    slot = recoverySlot(slot, { leaseHeld: false, started: [], now: now + 2000 });
+    expect(recoverySlotReserve(slot, { recovering: false, accounts: ['Planner'], now: now + RECOVERY_SLOT_HOLD_MS - 1 })).toBe(1);
+    expect(recoverySlotReserve(slot, { recovering: false, accounts: ['Planner'], now: now + RECOVERY_SLOT_HOLD_MS })).toBe(0);
+    expect(recoverySlot(slot, { leaseHeld: false, started: [], now: now + RECOVERY_SLOT_HOLD_MS })).toEqual({ until: 0 });
+    // The next recovery opens its lease while the job of the one before starts: the hold stays, for the new request.
+    slot = recoverySlot({ until: now + 1, account: 'Rod' }, { leaseHeld: true, started: ['Rod'], now });
+    expect(slot).toEqual({ until: now + RECOVERY_SLOT_HOLD_MS });
+    expect(job('Planner', 24).reason).toBe('maxBots');
+
+    // The held slot changes the bot count only. A memory refusal stays a memory refusal, for the job and the recovery.
+    slot = recoverySlot({ until: 0 }, { leaseHeld: true, started: [], now });
+    const held = job('Planner', 10, FREE_FLOOR_GB + 1), free = admissionDecision({ ...cap, freeGB: FREE_FLOOR_GB + 1, running: 10, starting: 1, startingReserve: 1 });
+    expect(held.allowed).toBe(true); expect(held.projectedFreeGB).toBe(free.projectedFreeGB);
+    expect(job('Planner', 10, FREE_FLOOR_GB + 0.9).reason).toBe('memory');
+    expect(() => recovery(24, FREE_FLOOR_GB + 0.9)).toThrow('recovery admission waiting: memory');
+
+    // The lease counts while its file is younger than RECOVERY_LEASE_MAX_MS: a lease that a dead process left holds no slot.
+    const dir = mkdtempSync(join(tmpdir(), 'recovery-lease-')), lease = join(dir, 'swarm-repair.json.lease');
+    expect(recoveryLeaseHeld(lease, Date.now())).toBe(false);
+    writeFileSync(lease, '{}');
+    const written = statSync(lease).mtimeMs;
+    expect(recoveryLeaseHeld(lease, written + RECOVERY_LEASE_MAX_MS - 1)).toBe(true);
+    expect(recoveryLeaseHeld(lease, written + RECOVERY_LEASE_MAX_MS)).toBe(false);
+});
+
 test('own successful completed run bypasses fresh-status wait only for its old session epoch', () => {
     const ended=new Map([['Moneyshot',{at:10_000,reason:'done after 1 runs'}]]);
     expect(startable(['moneyshot'],true,ended,()=>1,()=>9_000).start).toEqual(['moneyshot']);
@@ -606,6 +663,23 @@ test('a held session whose owner pid is gone gets an end record; live, busy or a
         (_a, id) => pids[id] ? { pid: pids[id]!, createdAt: 1, updatedAt: 2 } : undefined, pid => pid === 12);
     expect(out).toEqual([['Dead', 'exit orphaned: attempt id-Dead owner 11 gone']]);
 });
+test('a held session whose owner pid a later process holds gets an end record, from one read of the process table', async () => {
+    const { orphanedSessionEnds } = await import('./swarm');
+    const held = (a: string) => ({ state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: 'id-' + a, reason: 'session active or outcome unknown' });
+    const pids: Record<string, number> = { 'id-Reused': 21, 'id-Owner': 22, 'id-Unlisted': 23, 'id-Dead': 24, 'id-Ended': 25 };
+    const producer = (_a: string, id: string) => ({ pid: pids[id]!, createdAt: 1_000_000, updatedAt: 1_000_500 });
+    const ended = new Map([['Ended', { at: 1, reason: 'exit 1' }]]), answers = (pid: number) => pid !== 24, reads: number[][] = [];
+    // 21 started after its receipt: a different process. 22 started before its receipt: the owner. 23 is not in the table.
+    const starts = (asked: readonly number[]) => { reads.push([...asked]); return new Map([[21, 1_000_000 + PID_START_SLACK_MS + 1], [22, 999_960], [25, 2_000_000]]); };
+    expect(orphanedSessionEnds(['Reused', 'Owner', 'Unlisted', 'Dead', 'Ended'], ended, [], held, producer, answers, starts))
+        .toEqual([['Reused', 'exit orphaned: attempt id-Reused owner 21 gone'], ['Dead', 'exit orphaned: attempt id-Dead owner 24 gone']]);
+    // One read, and only for the ids that answer a signal and whose end the scan can record.
+    expect(reads).toEqual([[21, 22, 23]]);
+    // A failed read proves nothing: the signal check decides alone. No id answers: no read.
+    expect(orphanedSessionEnds(['Reused'], new Map(), [], held, producer, answers, () => null)).toEqual([]);
+    expect(orphanedSessionEnds(['Dead'], new Map(), [], held, producer, answers, starts).length).toBe(1);
+    expect(reads.length).toBe(1);
+});
 test('the orphan scan replaces only a successful end, and only for an attempt that started after it', async () => {
     const { orphanedSessionEnds } = await import('./swarm');
     const ended = new Map([
@@ -695,7 +769,20 @@ test('a run another job of the account started is foreign to a job that is off o
     expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });
 
-import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, writeSwarmStop } from './swarm';
+import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, standingRetryDue, writeSwarmStop } from './swarm';
+test('a standing retry needs proof that the account is offline; a confirmed logout is enough with no status file', () => {
+    const live = 'rs-sdk-demo.fly.dev', now = 10_000_000, old = now - 16 * 60_000;
+    // No status file: the confirmed logout decides alone.
+    expect(standingRetryDue(undefined, true, now)).toBe(true);
+    expect(standingRetryDue(undefined, false, now)).toBe(false);
+    // A status of another server never starts a live retry.
+    expect(standingRetryDue({ server: 'localhost', result: 'fail x', at: old }, true, now)).toBe(false);
+    // A live status: a confirmed logout, or a finished result that is 15 minutes old.
+    expect(standingRetryDue({ server: live, result: '', at: old }, true, now)).toBe(true);
+    expect(standingRetryDue({ server: live, result: 'fail x', at: old }, false, now)).toBe(true);
+    expect(standingRetryDue({ server: live, result: 'fail x', at: now - 60_000 }, false, now)).toBe(false);
+    expect(standingRetryDue({ server: live, result: '', at: old }, false, now)).toBe(false);
+});
 test('the controller knows its own stop files, and a standing job retries the ends a plan removal or a lost process leaves', () => {
     for (const t of Object.values(SWARM_STOP)) expect(swarmWroteStop(t)).toBe(true);
     // A lost lease logs the runs out with the worker's own refusal text; the next controller's planner clears it.
