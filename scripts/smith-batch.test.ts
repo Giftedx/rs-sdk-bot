@@ -1,6 +1,10 @@
-import {expect,test} from 'bun:test';
+import {beforeAll,expect,test} from 'bun:test';
 import {smithRecipe,planSmithLoad,smithEffect,runSmithBatch,HAMMER} from './smith-batch';
 import {smithStageRoute} from '../packages/planner/src/travel';
+import {loadPathfinding} from '../packages/core/src/pathcache';
+// initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts). The snapshot loader makes
+// the same grid first, so the call in the test returns at once.
+beforeAll(async()=>{await loadPathfinding();},120_000);
 
 test('pinned iron platebody: level 33, five bars, 3125 XP at 25x, floor-smithing column/slot',()=>{
  const r=smithRecipe(1115);
