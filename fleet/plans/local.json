@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794466680524,
+ "at": 1794467292034,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -58,6 +58,25 @@
    ]
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
    "account": "Bigchopper",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -103,26 +122,6 @@
    "autopilot": "local",
    "resources": [
     "aio:seers-flax"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
-   "autopilot": "local",
-   "resources": [
-    "pen:3187,3277"
    ]
   },
   {
@@ -333,25 +332,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
    ]
   },
   {
@@ -595,6 +575,19 @@
    "resources": [
     "knight:2653,3300"
    ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-20aed268-f1da-4a0f-8e71-4bec10ff7d33"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-bowbeforeme-drop-fresh-0653 [task-20aed268-f1da-4a0f-8e71-4bec10ff7d33]",
+   "role": "helper"
   }
  ]
 }
