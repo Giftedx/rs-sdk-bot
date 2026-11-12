@@ -145,6 +145,15 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         weapon: 'dragon_dagger_p', ammo: ['steel_arrow', 150] },
         carried: ['magic_shortbow', ...BOOSTS, '4dose2defense', '4dose2antipoison', ['lawrune', 2], ['airrune', 10]], food: 19,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'mithril_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The gang-walker kit as the live market lets Mightyrod fill it: adamant helm, body and legs, no shield (the GE has
+    // no kiteshield for sale), the plain dragon dagger, no ranging potion, super defence and antipoison of three doses.
+    'live-walker': { worn: { hat: 'adamant_full_helm', torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['steel_arrow', 150] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The live kit with what the shops and the GE had: no helm, iron arrows.
+    'live-walker-iron': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },
