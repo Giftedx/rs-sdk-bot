@@ -27,7 +27,7 @@ Acceptance for workers, shared helpers and accounts. Authority, pauses and accou
 | Coverage scoreboard | `packages/router/src/coverage.ts`, `knowledge/actions.json` |
 | Practice server and presets | `packages/practice/src/` |
 
-Every game script is in the catalog: `bun scripts/aio.ts --list` prints it. Give a new worker a route in its `scripts/aio-<category>.ts` file. `scripts/aio-reach.test.ts` fails for a script under `scripts/`, `scripts/generated/` or `scripts/pk-live/` that no route reaches. A script that is not game work (a tool, a report, fleet control) goes in `OUTSIDE_CATALOG` of that test with its cause.
+Every game script is in the catalog: `bun scripts/aio.ts --list` prints it. Give a new worker a route in its `scripts/aio-<category>.ts` file. `scripts/aio-reach.test.ts` fails for a script under `scripts/`, `scripts/generated/` or `scripts/pk-live/` that no route reaches. A script that is not game work (a tool, a report, fleet control) goes in `OUTSIDE_CATALOG` of `scripts/script-index.ts` with its cause. To find a script by what it does, run `bun scripts/script-index.ts [word ...]`: it prints one line for each file under `scripts/` and each command file under `packages/`, with its group and its description (the route description, the `OUTSIDE_CATALOG` cause, the header comment, or last a line in `scripts/script-descriptions.ts`).
 
 ## Define each worker
 

@@ -282,6 +282,12 @@ export function standingRetryable(reason: string, result?: string): boolean {
     if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && !/^(?:RESULT )?fail no food\b/.test(result);
     return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
 }
+// Whether the account of a retryable end is offline. `settled` is a confirmed logout on the live server. An account
+// with no status file has only that proof: without this rule its end stays for good.
+export function standingRetryDue(status: { server?: string; result?: string; at?: number } | undefined, settled: boolean, now: number): boolean {
+    if (!status) return settled;
+    return status.server === LIVE_SERVER && (settled || (!!status.result && Number.isFinite(status.at) && now - status.at! >= BOOTSTRAP_STATUS_AGE_MS));
+}
 export function endedForGood(end: { reason: string } | undefined, repeat: boolean | undefined): boolean {
     return !!end && (!repeat || !successfulEnd(end.reason));
 }
@@ -870,12 +876,12 @@ if (import.meta.main) {
                 if ((job as Job & {standing?:boolean}).standing) for (const a of p.accounts) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
                     if (!end) continue;
-                    let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { continue; }
+                    let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { /* no status file: the logout proof decides */ }
                     if (!standingRetryable(end.reason, s?.result)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }
-                    if (s?.server !== LIVE_SERVER || (!settled && (!s.result || !Number.isFinite(s.at) || Date.now() - s.at < BOOTSTRAP_STATUS_AGE_MS))) continue;
+                    if (!standingRetryDue(s, settled, Date.now())) continue;
                     ended.delete(key!);
                     for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
                     persistEnded(deathsFile, ended); persistHolds(holdsFile, holds);

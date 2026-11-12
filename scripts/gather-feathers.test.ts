@@ -1,5 +1,12 @@
 import { expect, test } from 'bun:test';
-import { parsePen, finishPenEntry } from './gather-feathers';
+import { parsePen, finishPenEntry, featherRunOk } from './gather-feathers';
+
+test('a run is good when it gained feathers or the pack holds the target', () => {
+    expect(featherRunOk(220, 2005, 2000)).toBe(true);
+    expect(featherRunOk(0, 2005, 2000)).toBe(true);
+    expect(featherRunOk(0, 2000, 2000)).toBe(true);
+    expect(featherRunOk(0, 1845, 2000)).toBe(false);
+});
 
 test('the chicken pen comes from PEN, Lumbridge by default', () => {
     expect(parsePen('3017,3288')).toEqual({ x: 3017, z: 3288 });

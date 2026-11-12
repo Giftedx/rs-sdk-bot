@@ -276,6 +276,10 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('foraging', 'qol', 'fresh_lumbridge', ['prayer', '0', '10', '40'], {presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Prayer: 43}}}),
   skiller('runecraft', 'air', 'rc_air_inside'),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
+  // The stall trip of the same worker: no food in the pack or the bank, and no coins for the Baker's shop. The thief
+  // has 40 Hitpoints, because one under 20 ends the run when it has no food (goldfarm.ts, FRAIL_HP).
+  {...skiller('thieving', 'knights', 'goldfarm_nofood', ['TICKS=600'], {output: /stolen=(\d+)/}), key: 'extra:goldfarm-stall',
+    presetConfig: {position: {x: 2654, z: 3304, level: 0}, skills: {Thieving: 99, Hitpoints: 40}}},
   skiller('foraging', 'flax', 'gather_flax', ['1500'], {output: /banked=(\d+)/}),
   skiller('foraging', 'grapes', 'grapes_cooksguild'),
   {key: 'fighter:chicken', script: 'scripts/aio-fighter.ts', preset: 'bank_draynor', presetConfig: CHICKEN_FIXTURE, scriptArgs: ['chicken', 'TARGET_LEVEL=25', 'CAP=1500'], pass: s => ok(s) && s.includes('chicken-qualification'), timeoutMs: 300_000},
@@ -499,6 +503,14 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}]}},
   {key: 'quester:mode:cook-job', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // The same job on a new account: the starter kit is in the Draynor bank and the pack is empty, so the job gets
+  // the egg, the milk and the flour itself (the chicken farm, the dairy cow, the wheat field and the mill).
+  {key: 'extra:cook-job-gather', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 995, count: 25}, {id: 1351, count: 1}, {id: 590, count: 1}, {id: 303, count: 1}, {id: 1925, count: 1}, {id: 1931, count: 1}, {id: 1265, count: 1}, {id: 1205, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // The same job from the Lumbridge spawn with the starter kit in the pack, as a new account has it after the
+  // tutorial: no bank visit before the quest, then the walk to the Draynor bank for the last check.
+  {key: 'extra:cook-job-spawn', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
+    presetConfig: {position: {x: 3222, z: 3218, level: 0}, coins: 25, inventory: [1351, 590, 303, 315, 1925, 1931, 2309, 1265, 1205, 1277, 1171, 841].map(id => ({id, count: 1})), varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
   // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
   {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},

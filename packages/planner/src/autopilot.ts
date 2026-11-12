@@ -27,8 +27,9 @@ export type Flow = { item: string; perTick: number };
 // bought or sent for them.
 // `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
 // `questPoints`: the least quest points (a place behind a door that counts them).
+// `frail`: an account with fewer Hitpoints than `hitpoints` must hold `count` items of `of`; any other account needs none.
 export type Needs = {
-    combat?: number; quests?: readonly string[]; questPoints?: number;
+    combat?: number; quests?: readonly string[]; questPoints?: number; frail?: { hitpoints: number; of: readonly string[]; count: number };
     skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
@@ -265,10 +266,14 @@ export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to
     : t.quest ? (a.quests && !questDone(a, t.quest.name) ? 1 : 0) : t.stock ? Math.max(0, t.stock.to - (a.items[norm(t.stock.item)] ?? 0)) : 0;
 const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n))
     && Object.entries(needs?.holds ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+// The items a frail account is short of for these needs: 0 for an account with the Hitpoints, or with no such need.
+const frailShort = (a: Acct, needs: Template['needs']) => !needs?.frail || (a.skills.Hitpoints ?? 10) >= needs.frail.hitpoints ? 0
+    : Math.max(0, needs.frail.count - needs.frail.of.reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0));
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && (needs?.quests ?? []).every(q => questDone(a, q))
     && (a.questPoints ?? 0) >= (needs?.questPoints ?? 0)
+    && frailShort(a, needs) === 0
     && Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
@@ -300,6 +305,8 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) 
     if (hp > 0) out.push({ of: ['trout'], count: Math.ceil(hp / FOOD_HEAL.trout!) });
     const pieces = (needs?.pieces?.count ?? 0) - (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0);
     if (pieces > 0) out.push({ of: needs!.pieces!.of.map(norm), count: pieces });
+    const frail = frailShort(a, needs);
+    if (frail > 0) out.push({ of: needs!.frail!.of.map(norm), count: frail });
     if (needs?.anyOf) {
         const units = (lacks: readonly Lack[]) => lacks.reduce((n, l) => n + l.count, 0), blocked = (lacks: readonly Lack[]) => lacks.filter(l => !l.of.some(can)).length;
         const kits = needs.anyOf.map(alt => kitLacks(a, alt, can)).filter((k): k is Lack[] => k !== null).sort((x, y) => blocked(x) - blocked(y) || units(x) - units(y));
@@ -458,7 +465,8 @@ export function plan(inp: Inputs): Assignment[] {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to || !meets(a, t.needs)) continue;
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } };
             for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
-                if (!meets(a, u.needs, t.trains)) continue;
+                // The frail rule counts what the account holds when the unlocked job starts, which is not known yet.
+                if (!meets(a, { ...u.needs, frail: undefined }, t.trains)) continue;
                 const value = TRAIN_SHARE * jobValue(u, trained, inp);
                 if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `trains ${t.trains.skill} ${t.trains.to} for ${u.id}` });
             }
@@ -468,6 +476,17 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
+        } else if (t.needs?.frail && frailShort(a, t.needs) > 0 && meets(a, { ...t.needs, frail: undefined })) {
+            // The account lacks only the food of the frail rule. It buys FRAIL_FOOD_BUY units with its own coins: the
+            // cheapest food of the job that the market lists. One buy id serves each spot of the job, so two failed
+            // buys retire the buy and not one spot. The job's worth orders the buy, at the share of a trainer. The buy
+            // holds the spot of the job that it is for: with each spot full there is no buy, and the spot stays free
+            // for the buyer until the food is in its bank.
+            const pick = t.needs.frail.of.map(norm).filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0];
+            const m = pick ? inp.market![pick]! : undefined, value = TRAIN_SHARE * jobValue(t, a, inp), buyer = { ...t, id: FRAIL_FOOD_BUY_ID };
+            if (m && value > 0 && (a.items.coin ?? 0) >= FRAIL_FOOD_BUY * m.limit + KIT_CASH_RESERVE && !inp.retired?.has(pairKey(a.name, KIT_BUY + FRAIL_FOOD_BUY_ID)))
+                cands.push({ account: a.name, template: kitBuyTemplate(buyer, a.name, [{ item: m.name, id: m.id, held: a.items[pick!] ?? 0, limit: m.limit, quantity: FRAIL_FOOD_BUY }], inp.kitSeq?.get(a.name.toLowerCase()) ?? 0),
+                    value, resources: t.resources ?? [], reason: `buys ${FRAIL_FOOD_BUY} ${m.name} for ${t.family}, at most ${FRAIL_FOOD_BUY * m.limit} coins` });
         }
     }
     // The weapon buy (WEAPON): a kit buy made for the account, offered as a goal candidate so it comes before the melee
@@ -702,12 +721,23 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
 // goldfarm model of 18.8 coins per tick at 99 (scripts/goldfarm.ts header). Estimate.
 export const knightCoinsPerTick = (thieving: number) => thieving < 55 ? 0 : 18.8 * (50 + 190 * (Math.min(99, thieving) - 1) / 98) / 240;
 export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'];
+// The food that scripts/goldfarm.ts eats, and its rule for a thief with few Hitpoints (FRAIL_HP and FRAIL_FLOOR there;
+// scripts/goldfarm.test.ts keeps the numbers equal): with fewer food items than the floor in its pack and its bank,
+// that worker ends the run at once, so such an account gets no knight spot.
+export const GOLDFARM_FOOD = ['slice of cake', '2/3 cake', 'cake', 'chocolate slice', 'bread', 'trout', 'salmon', 'lobster', 'shark'] as const;
+export const GOLDFARM_FRAIL = { hitpoints: 20, of: GOLDFARM_FOOD, count: 2 } as const;
+// The food buy of a frail thief that has coins and no food (plan): 200 units feed about one 9,000 tick run of an
+// account with 99 Thieving (16 of 256 picks fail for 3 damage, about 0.19 damage a pick; estimate, not measured).
+export const FRAIL_FOOD_BUY = 200, FRAIL_FOOD_BUY_ID = 'goldfarm-food';
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
 // The pen at 3197,3353 is the yard of the Champions' Guild. Its door lets in an account with 32 quest points
 // (championdoor in knowledge/doors.json), and the route search refuses the pen to any other account.
 export const PEN_QUEST_POINTS: Readonly<Record<string, number>> = { '3197,3353': 32 };
 // scripts/gather-feathers.ts stops when its pack holds TARGET feathers.
 export const FEATHER_TARGET = 2000;
+// scripts/shop-buyer.ts buys each item up to STOCK_TARGET (default 500), pack and bank. A run for an account that
+// holds that many of every item buys nothing.
+export const SHOP_STOCK = 500;
 // Claim: four farmers can share one knight spot. A pickpocket does not hold the knight. Practice: 4 bots at one spot
 // each earned 13.3-15.1 coins per tick (mean 14.7) against the 18.8 model, every run RESULT ok and logged out
 // (goldfarm.ts at its default spot 2653,3302, 3 runs of 600 ticks and one of 9,000; research/bot-host.md section 3).
@@ -995,7 +1025,7 @@ export function aioTemplates(): Template[] {
 export function catalogue(): Template[] {
     const goldfarm = KNIGHT_SPOTS.map((spot): Template => ({
         id: `goldfarm@${spot}`, family: 'goldfarm', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: spot, TICKS: '9000' }, role: 'thieving',
-        goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 } }, resources: [`knight:${spot}`],
+        goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 }, frail: GOLDFARM_FRAIL }, resources: [`knight:${spot}`],
         yields: a => [{ item: 'coins', perTick: knightCoinsPerTick(a.skills.Thieving ?? 1) }],
     }));
     const cows = COW_BANDS.map(({ skill, band, to }): Template => ({
@@ -1441,13 +1471,13 @@ export function catalogue(): Template[] {
             goal: 'Catherby lobsters, caught and cooked', needs: { skills: { Fishing: 40, Cooking: 40 }, items: { 'lobster pot': 1 } }, resources: ['catherby:lobster'],
             yields: a => [{ item: 'lobster', perTick: 0.04 + 0.001 * Math.min(59, (a.skills.Fishing ?? 1) - 40) }] },
         { id: 'shop-runes', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['betty'], env: { ITEMS: 'fire rune|air rune|earth rune', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
-            goal: 'buy elemental runes at Betty', needs: { items: { coins: 3000 } }, resources: ['shop:betty'],
+            goal: 'buy elemental runes at Betty', needs: { items: { coins: 3000 }, shortOf: { 'fire rune': SHOP_STOCK, 'air rune': SHOP_STOCK, 'earth rune': SHOP_STOCK } }, resources: ['shop:betty'],
             yields: () => [{ item: 'fire rune', perTick: 0.7 }, { item: 'air rune', perTick: 0.7 }, { item: 'earth rune', perTick: 0.7 }], spends: () => [{ item: 'coins', perTick: 2.1 * 5 }] },
         { id: 'shop-feathers', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['sarim'], env: { ITEMS: 'feather', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
-            goal: 'buy feathers at Gerrant', needs: { items: { coins: 2000 } }, resources: ['shop:sarim'],
+            goal: 'buy feathers at Gerrant', needs: { items: { coins: 2000 }, shortOf: { feather: SHOP_STOCK } }, resources: ['shop:sarim'],
             yields: () => [{ item: 'feather', perTick: 3 }], spends: () => [{ item: 'coins', perTick: 3 * 3 }] },
         { id: 'shop-arrowtips', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['catherby'], env: { ITEMS: 'rune arrowtips|adamant arrowtips', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
-            goal: 'buy rune and adamant arrowtips at Catherby', needs: { items: { coins: 20000 } }, resources: ['shop:catherby'],
+            goal: 'buy rune and adamant arrowtips at Catherby', needs: { items: { coins: 20000 }, shortOf: { 'rune arrowtips': SHOP_STOCK, 'adamant arrowtips': SHOP_STOCK } }, resources: ['shop:catherby'],
             yields: () => [{ item: 'rune arrowtips', perTick: 0.05 }, { item: 'adamant arrowtips', perTick: 0.05 }], spends: () => [{ item: 'coins', perTick: 0.05 * 260 + 0.05 * 104 }] },
         { id: 'fletch-headless', family: 'fletch', script: 'scripts/fletch-arrows.ts', args: ['15000', 'headless'], env: { BANK_PACK: '1', MAX_MAKE: '390' }, role: 'fletching',
             goal: 'headless arrows from owned shafts and feathers', needs: { items: { 'arrow shaft': 215, feather: 215 } },

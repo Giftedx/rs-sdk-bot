@@ -94,6 +94,13 @@ export async function runQuestCookJob(name:string,cap:number){
   return ok();
  };
  try{
+  // A new account starts on Tutorial Island: skip it first (the same call as scripts/arrive-draynor.ts).
+  await wait(()=>!!s.sdk.getState()?.player,20);
+  const first=s.sdk.getState()?.player;
+  if(first&&first.worldX<3160&&first.worldZ<3130){
+   await wait(()=>(s.sdk.getState()?.nearbyNpcs?.length??0)>0,30);
+   const skipped=await s.bot.skipTutorial();if(!skipped.success)throw Error(`tutorial: ${skipped.message}`);
+  }
   if(!await wait(()=>{const st=s.sdk.getState(),p=st?.player;return !!p&&flag(s)!=='unknown'&&Array.isArray(st?.inventory)&&Array.isArray(st?.equipment)&&equipmentReady(s)&&Number.isSafeInteger(qp(s))&&s.sdk.getSkillXp('Cooking')!==null;},20))throw Error('Cook entry unobserved within deadline');
   const p=s.sdk.getState()!.player!;life=p.lifeId;respawns=p.respawnCount;
   if(p.name.toLowerCase()!==name.toLowerCase())throw Error('Cook account identity mismatch');
@@ -101,12 +108,18 @@ export async function runQuestCookJob(name:string,cap:number){
   if(flag(s)==='complete')throw Error('quest already complete');
   const entry=observeCookJobSnapshot(s,false);
   console.log('QUEST_COOK_JOB_OBSERVED_ENTRY '+JSON.stringify(entry));
-  gather=await gatherQuestItems(s,'cook',null,deadline-s.tick(),{stop:()=>ended||dead,onBank:bank=>{
+  // An account that stands east of Draynor with the bucket and the pot (or the milk and the flour) in its pack
+  // and two free slots gathers from the pack: it opens no bank before the last check, and it keeps the other items
+  // that it carries.
+  const held=(id:number)=>sum(entry.pack,id)>0;
+  // The egg and the grain each need a free slot. A fuller pack takes the bank way, which deposits the other items.
+  const fromPack=entry.position.x>3150&&(held(1927)||held(1925))&&(held(1933)||held(1931))&&entry.pack.length<=26;
+  gather=await gatherQuestItems(s,'cook',null,deadline-s.tick(),{fromPack,stop:()=>ended||dead,onBank:bank=>{
    before={...entry,bank:bank.items.map(i=>({id:i.id,count:i.count})),bankGeneration:bank.generation};
    for(const [product,container] of [[1927,1925],[1933,1931]])if(!assets(before,product!)&&!assets(before,container!))throw Error(`missing container ${container}`);
    console.log('QUEST_COOK_JOB_ENTRY '+JSON.stringify(before));
   }});
-  if(!gather.ok||!before)throw Error('Cook gather did not complete');
+  if(!gather.ok||!fromPack&&!before)throw Error('Cook gather did not complete');
   const pos=()=>s.sdk.getState()!.player!;
   quest=await completeCook({pos,lvl:()=>pos().level,near:(x,z,r)=>Math.max(Math.abs(pos().worldX-x),Math.abs(pos().worldZ-z))<=r,
    cnt:id=>sum(s.sdk.getState()?.inventory??[],id),questState:()=>flag(s),packReady:()=>Array.isArray(s.sdk.getState()?.inventory),
@@ -126,7 +139,11 @@ export async function runQuestCookJob(name:string,cap:number){
   await walk('Cook retained stock',[{x:3207,z:3216,tol:0},{x:3207,z:3218,tol:0},{x:3217,z:3220,tol:1},...questSpec('cook').bank]);
   const generation=s.bankObservation?.()?.generation??0;
   if(!(await s.bot.openBank()).success||!await wait(()=>(s.bankObservation?.()?.generation??0)>generation,12))throw Error('Cook final bank unobserved');
-  after=observeCookJobSnapshot(s);checks=cookJobChecks(before,after);
+  after=observeCookJobSnapshot(s);
+  // A run from the pack opened no bank before this point, so the bank took no part in it. Its check compares the
+  // pack and the worn items only: stock in the bank, also a banked egg, milk or flour, stays as it is.
+  if(!before){before={...entry,bank:[],bankGeneration:-1};checks=cookJobChecks(before,{...after,bank:[]});}
+  else checks=cookJobChecks(before,after);
   if(!(await s.bot.closeBank()).success)throw Error('Cook final bank close refused');
   guard();if(!Object.values(checks).every(Boolean))throw Error('Cook final checks failed');
   detail='Cook complete; observed QP, Cooking XP, input costs and retained assets';

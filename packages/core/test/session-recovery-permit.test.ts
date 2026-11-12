@@ -195,6 +195,9 @@ test('only this consumed child may own its new partial session during the cleanu
  const own={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
  beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:own});expect(()=>guard()).not.toThrow();
  beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:{...own,coordinatorRunId:'other-run'}});expect(()=>guard()).toThrow('still alive');
+ // A process that started after that attempt holds the owner's id: it is not the owner, so nothing is alive.
+ (f.options as {processStarts?:(pids:readonly number[])=>Map<number,number>}).processStarts=()=>new Map([[process.pid,Date.now()+60_000]]);
+ expect(()=>guard()).not.toThrow();
 });
 test('completion indexes only the exact child/producer, releases its lease, and never clears the old failure',()=>{
  for(const fault of ['none','exit','state-loss','source','new-intent','hash']){
@@ -396,17 +399,19 @@ test('the controller releases only an exact expired held lease with a dead bound
  }
 });
 test('the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect',()=>{
- const reasons:Record<string,string>={'superseded-open':'producer logout not confirmed','superseded-same-run':'producer proof mismatched','not-connected-open':'producer logout not confirmed',
+ // 'not-connected-open': the old session is still held and the child began none. The lease then refuses each new
+ // recovery of that session, so it is released. 'not-connected-open-logout': a receipt that names a logout keeps it.
+ const reasons:Record<string,string>={'superseded-open':'producer logout not confirmed','superseded-same-run':'producer proof mismatched','not-connected-open-logout':'producer logout not confirmed',
   'not-connected-receipt-logout':'producer proof mismatched','no-attempt':'producer logout not confirmed'};
  const other={pid:4321,coordinatorRunId:null,workerRelease:source,script:'scripts/other.ts',role:null,participants:null};
- for(const fault of ['superseded','superseded-open','superseded-same-run','not-connected','not-connected-no-receipt','not-connected-open','not-connected-receipt-logout','no-attempt']){
+ for(const fault of ['superseded','superseded-open','superseded-same-run','not-connected','not-connected-no-receipt','not-connected-open','not-connected-open-logout','not-connected-receipt-logout','no-attempt']){
   const f=fixture(),root=join(f.base,'.practice/session-lifecycle'),connected=fault.startsWith('superseded'),identity={account:'Rod',server:f.request.server};
   const owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
   // An attempt takes the later of its own clock and the last attempt of this process, so the permit time follows the old attempt.
   let issued=now;
   if(!connected&&fault!=='no-attempt'){
    const old=beginSessionAttempt(identity,{root,owner:other,now:()=>now-50});
-   if(fault!=='not-connected-open')old.record('ended','logged-out');
+   if(!fault.startsWith('not-connected-open'))old.record('ended','logged-out');
    issued=listAttempts('Rod',f.request.server,{root})[0]!.receipt!.createdAt+1000;
    f.put('.practice/swarm-state.json',{at:issued,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
    f.options.now=()=>issued;
@@ -422,7 +427,7 @@ test('the controller also releases a held lease that a later session of a differ
    f.put(relative(f.base,receiptFile),{...receipt,logout:'logged-out',attemptId:own.attemptId,lifecycleSha256:proof.receiptSha256,proof});
    const later=beginSessionAttempt(identity,{root,owner:fault==='superseded-same-run'?{...owner,pid:4321}:other,now:()=>issued+30});
    if(fault!=='superseded-open')later.record('ended','logged-out');
-  }else if(fault!=='not-connected-no-receipt')f.put(relative(f.base,receiptFile),{...receipt,logout:fault==='not-connected-receipt-logout'?'logged-out':'not-attempted',attemptId:null,lifecycleSha256:null});
+  }else if(fault!=='not-connected-no-receipt')f.put(relative(f.base,receiptFile),{...receipt,logout:fault==='not-connected-receipt-logout'||fault==='not-connected-open-logout'?'logged-out':'not-attempted',attemptId:null,lifecycleSha256:null});
   const checks={now:()=>issued+150000,matches:()=>true,childAlive:()=>false};
   const kept=Object.fromEntries([paths.permit,paths.child,paths.used,receiptFile,join(f.base,'.practice/swarm-deaths.json'),join(f.base,'swarm.json')].filter(p=>existsSync(p)).map(p=>[p,readFileSync(p,'utf8')]));
   if(reasons[fault]){
@@ -430,9 +435,10 @@ test('the controller also releases a held lease that a later session of a differ
    expect(existsSync(paths.lease),fault).toBe(true);expect(existsSync(marker),fault).toBe(false);
    expect(releaseExpiredRecoveryLeases(f.base,[],checks),fault).toEqual([{account:'rod',released:false,reason:expect.stringContaining(reasons[fault]!)}]);
   }else{
-   const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
+   const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!==(fault==='not-connected-open'?'held':'confirmed'))throw Error('fixture');
+   const lifecycleSha256=proof.state==='confirmed'?proof.receiptSha256:listAttempts('Rod',f.request.server,{root}).find(a=>a.attemptId===(proof as {attemptId:string}).attemptId)!.sha256;
    const released=releaseExpiredRecoveryLease('Rod',f.base,checks);
-   expect(released,fault).toMatchObject({account:'Rod',nonce:'one',childPid:process.pid,attemptId:proof.attemptId,lifecycleSha256:proof.receiptSha256,basis:connected?'superseded':'not-connected'});
+   expect(released,fault).toMatchObject({account:'Rod',nonce:'one',childPid:process.pid,attemptId:(proof as {attemptId:string}).attemptId,lifecycleSha256,basis:connected?'superseded':'not-connected'});
    expect(released.receiptSha256===null,fault).toBe(fault==='not-connected-no-receipt');
    expect(existsSync(paths.lease),fault).toBe(false);expect(()=>assertNoRecoveryLease('Rod',f.base)).not.toThrow();
    expect(JSON.parse(readFileSync(marker,'utf8'))).toEqual(released);

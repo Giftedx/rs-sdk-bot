@@ -24,6 +24,7 @@ import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
 import { receiveHandoff } from './courier-handoff';
+import { stallRecipes, stallSight, stallWatched, type StallRecipe, type StallSight } from './microbot-c-stalls';
 
 const COOKED_IDS=new Set([329,333,379,330,334,380,385,386]),NOTED_COOKED_IDS=new Set([330,334,380,386]);
 export function incomingCookedFood(before:readonly {id:number;count:number}[],after:readonly {id:number;count:number}[]){
@@ -58,8 +59,9 @@ const BANK_SPOT: Tile = { x: 2654, z: 3283 };
 const KNIGHT = /^knight of ardougne$/i;
 const RANGE = 16;
 const LOBSTER = /^lobster$/i;
-// Bank food in withdraw order: the food chain's cooked fish first (research/food-chain.md), then lobsters.
-const BANK_FOOD = [/^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
+// Bank food in withdraw order: the food chain's cooked fish first (research/food-chain.md), then lobsters and sharks,
+// then the stall food that an earlier run banked. The bank is out of food only when it holds none of these.
+const BANK_FOOD = [/^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i, /^cake$/i, /^2\/3 cake$/i, /^slice of cake$/i, /^bread$/i, /^chocolate slice$/i];
 const BIG = /^(trout|salmon|lobster|shark)$/i;
 const FOOD_ONLY_TRADE = process.env.FOOD_ONLY_TRADE === '1';
 const COINS = /^coins$/i;
@@ -68,15 +70,46 @@ const BANK_AT = Number(process.env.BANK_AT ?? 25000);
 const FOOD_FROM = process.env.FOOD_FROM?.trim() || '';
 const KEEP_FREE = 2;
 const STALL_FILL = Number(process.env.STALL_FILL ?? 10);
+// STALL_SIGHT=0 turns the owner's sight rule of the stall trip off: the bench measures the trip with and without it.
+const STALL_SIGHT = process.env.STALL_SIGHT !== '0';
 const STALL_SPOT: Tile = { x: 2655, z: 3310 };
 const STALL = /^baker'?s stall$/i;
 const GUARD = /^guard$/i;
 const BAKER = /^baker$/i;
 const GUARD_SAFE = 6;
 // Food types and HP per bite (cake pieces 4, chocolate slice 2, bread 5, trout 7, salmon 9, lobster 12).
-const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
+export const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
 const HEAL = [4, 4, 4, 2, 5, 7, 9, 12, 20];
 const DMG = 3;
+// A thief with fewer than FRAIL_HP Hitpoints cannot take a guard's attack or a run of failed picks. Each goldfarm death
+// in the run logs is an account with 10 or 11 Hitpoints that had no food at a stall or shop trip. Such a thief
+// restocks while it still holds FRAIL_RESERVE food items, leaves the stall when a guard hits it, and ends the run
+// when it holds fewer than FRAIL_FLOOR and the bank has none: no stall trip and no pick with no food.
+export const FRAIL_HP = 20, FRAIL_RESERVE = 6, FRAIL_FLOOR = 2;
+// The food count under which a thief restocks.
+export const foodReserve = (maxHp: number) => maxHp < FRAIL_HP ? FRAIL_RESERVE : FRAIL_FLOOR;
+// Whether the thief goes to the Baker's shop or stall for food. FOOD_ONLY_TRADE never does, also while a frail
+// thief is under its reserve: the guards at the stall are the reason for that setting.
+export const foodTripDue = (v: { low: boolean; bankEmpty: boolean; tradeOnly: boolean; rested: boolean; shopOk: boolean; emptyTrips: number }) =>
+    !v.tradeOnly && v.low && v.bankEmpty && v.rested && (v.shopOk || v.emptyTrips < 3);
+// Hitpoints fell in a pass with no pick of the thief's own: a guard hit it.
+export const guardHit = (before: number, after: number, picked: boolean) => after < before && !picked;
+// Ticks a frail thief stays away from the stall after a guard hit it.
+const STALL_REST = 200;
+// Whether the stall's owner stops a steal from this tile now (stalls/stealing.rs2, stealing_check_for_owner): he is
+// within 5 tiles of the thief with line of sight. Guards have their own rule in the stall trip.
+export const ownerSeesTile = (recipe: StallRecipe, tile: { x: number; z: number }, level: number, npcs: readonly { id: number; x: number; z: number; inCombat: boolean }[], sight: StallSight) =>
+    stallWatched({ ...recipe, guards: [] }, { worldX: tile.x, worldZ: tile.z, level }, npcs, sight);
+// Why no knight can be picked in a pass, for the idle counters of the RESULT line: none in view, none in range, none
+// that the client can reach, each one resting after dropped clicks, or each one held by a random event.
+export type KnightView = { inRange: boolean; reachable: boolean; banned: boolean; avoided: boolean };
+export type NoKnight = 'none' | 'far' | 'unreachable' | 'banned' | 'avoided';
+export function noKnightReason(knights: readonly KnightView[]): NoKnight {
+    if (!knights.length) return 'none';
+    const near = knights.filter(k => k.inRange); if (!near.length) return 'far';
+    const open = near.filter(k => k.reachable); if (!open.length) return 'unreachable';
+    return open.some(k => !k.banned) ? 'avoided' : 'banned';
+}
 // Click cadence in ticks. A click inside the pick's action delay is queued again by the server (p_opnpc(3),
 // pickpocket.rs2:134-137), so a 1-tick cadence costs nothing and re-paths to a knight that stepped away a tick sooner.
 const PICK_TICKS = Number(process.env.PICK_TICKS ?? 2);
@@ -111,15 +144,20 @@ try {
     const cheb = (a: Tile, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
     // Eat with two failed picks of margin (a 10 HP thief at HP 3 has none); the bigger loss is a death, not a bite.
     const eatAt = () => Math.max(2 * DMG, maxHp() - 12);
+    const frail = () => maxHp() < FRAIL_HP, reserve = () => foodReserve(maxHp());
+    let stallRestUntil = 0, stallFled = false;
     const t0 = s.tick();
     const now = () => s.tick() - t0;
     const coins0 = coins();
     const stopFile = `.practice/stop-${process.argv[2]}`;
 
     let picks = 0, noops = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
-    let bankFails = 0, emptyTrips = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0;
+    let bankFails = 0, emptyTrips = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0, stallOwnerWaits = 0;
     const banned = new Map<number, number>();
     let noopRun = 0, noopTarget = -1, bans = 0, stunUntil = 0;
+    // The split of idleTicks and of noops by cause, and the knights in view: the RESULT line says where the ticks went.
+    const idleWhy = { none: 0, far: 0, unreachable: 0, banned: 0, avoided: 0, option: 0, hp: 0, stall: 0 };
+    let noopStun = 0, noopFar = 0, noopNear = 0, knightPasses = 0, knightsSeen = 0;
     let shopTrips = 0, shopTicks = 0, bought = 0, shopRetryAt = 0, lastSteal = -1_000_000;
     const stealFile = join(import.meta.dir, '..', '.practice', 'goldfarm', `steal-${process.argv[2]}.json`);
     let lastStealAt = 0;
@@ -146,9 +184,11 @@ try {
         const gained = banked + coins() - coins0;
         const p = pos();
         const detail = `ticks=${ticks} picks=${picks} fails=${fails} noops=${noops} bans=${bans} coinsGained=${gained} coinsPerTick=${(gained / Math.max(1, ticks)).toFixed(2)} `
-            + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} stallTrips=${stallTrips} stallTicks=${stallTicks} stallPickTicks=${stallPickTicks} stolen=${stolen} refused=${refused} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
+            + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} stallTrips=${stallTrips} stallTicks=${stallTicks} stallPickTicks=${stallPickTicks} stolen=${stolen} refused=${refused} stallOwnerWaits=${stallOwnerWaits} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
             + `foodTicksPct=${(100 * (bankTicks + stallTicks + shopTicks + eatTicks) / Math.max(1, ticks)).toFixed(1)} `
-            + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} tradesIn=${tradesIn} tradeTicks=${tradeTicks} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level}`;
+            + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} tradesIn=${tradesIn} tradeTicks=${tradeTicks} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level} `
+            + `idleNone=${idleWhy.none} idleFar=${idleWhy.far} idleUnreach=${idleWhy.unreachable} idleBanned=${idleWhy.banned} idleAvoid=${idleWhy.avoided} idleOption=${idleWhy.option} idleHp=${idleWhy.hp} idleStall=${idleWhy.stall} `
+            + `noopStun=${noopStun} noopFar=${noopFar} noopNear=${noopNear} knightsInView=${(knightsSeen / Math.max(1, knightPasses)).toFixed(2)}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
 
@@ -182,7 +222,7 @@ try {
     };
 
     // Bank trip: deposit every coin and every lobster note, withdraw unnoted lobsters to fill the pack less KEEP_FREE.
-    // Sets bankEmpty when the bank holds no lobsters.
+    // Sets bankEmpty when the bank holds no food of BANK_FOOD.
     const refill = async () => {
         bankTrips++;
         await walk(BANK_SPOT, 2);
@@ -243,7 +283,8 @@ try {
     };
 
     // Stall trip: steal from a baker's stall from a side tile with no guard within GUARD_SAFE tiles (line of sight
-    // ignored, one tile of margin). Tiles more than 5 tiles from the Baker go first; a refused tile rests for 6 ticks.
+    // ignored, one tile of margin) and that the Baker does not see. The nearest such tile goes first; a refused tile
+    // rests for 6 ticks.
     const stallTrip = async () => {
         stallTrips++;
         const f0 = food();
@@ -253,9 +294,31 @@ try {
         const pick0 = stallPickTicks;
         const key = (t: Tile) => `${t.x},${t.z}`;
         const d = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+        let seen = hp(), picked = false;
+        // The owner's rule is exact for a tile, and the stall blocks his sight, so a tile that he sees is never
+        // clicked: the refusal is certain. With no stall data or no client the distance score below stands in.
+        const watch = new Map<number, { recipe: StallRecipe; sight: StallSight } | null>();
+        const watchOf = async (locId: number) => {
+            if (!watch.has(locId)) {
+                let found: { recipe: StallRecipe; sight: StallSight } | null = null;
+                if (STALL_SIGHT) try { const recipe = stallRecipes().find(r => r.loc === locId), sight = recipe && await stallSight(s, recipe); if (recipe && sight) found = { recipe, sight }; }
+                catch (e) { console.log(`WARN stall sight unavailable: ${String((e as Error)?.message ?? e).slice(0, 120)}`); }
+                watch.set(locId, found);
+            }
+            return watch.get(locId)!;
+        };
         try {
             while (food() < STALL_FILL && 28 - inv().length > 0 && s.tick() - s0 < 400 && !died && now() < TICKS) {
                 if (existsSync(stopFile)) return;
+                // A guard that sees a steal attacks, and this loop does not fight or run. A frail thief takes one bite
+                // when it is low, leaves at once and stays away for STALL_REST ticks; the main loop walks it to the bank.
+                const hurt = guardHit(seen, hp(), picked); seen = hp(); picked = false;
+                if (frail() && hurt) {
+                    console.log(`STALL left: a guard hit, hp=${hp()} food=${food()} t=${now()}`);
+                    if (hp() <= eatAt() && food() > 0) await eat();
+                    stallRestUntil = s.tick() + STALL_REST; stallFled = true;
+                    break;
+                }
                 if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
                 if (hp() <= eatAt() && food() > 0) { await eat(); continue; }
                 const npcs = (st()?.nearbyNpcs ?? []) as any[];
@@ -268,25 +331,30 @@ try {
                 if (!me) { await waitTicks(s, 1); continue; }
                 const here = { x: me.worldX, z: me.worldZ };
                 const opts: { tile: Tile; loc: any; score: number }[] = [];
+                let ownerSees = 0;
                 for (const l of locs) {
                     if (!STALL.test(l.name) || !(l.options ?? []).some((o: string) => /steal/i.test(o))) continue;
-                    const o = { x: l.x, z: l.z };
+                    const o = { x: l.x, z: l.z }, w = await watchOf(l.id);
                     const sides = [{ x: o.x - 1, z: o.z }, { x: o.x - 1, z: o.z + 1 }, { x: o.x + 2, z: o.z }, { x: o.x + 2, z: o.z + 1 },
                         { x: o.x, z: o.z - 1 }, { x: o.x + 1, z: o.z - 1 }, { x: o.x, z: o.z + 2 }, { x: o.x + 1, z: o.z + 2 }];
                     for (const t of sides) {
                         if (blocked.has(key(t)) || (badUntil.get(key(t)) ?? 0) > s.tick()) continue;
                         if (guards.some(g => d(g, t) <= GUARD_SAFE)) continue;
+                        const sees = w ? ownerSeesTile(w.recipe, t, me.level ?? 0, npcs, w.sight) : null;
+                        if (sees) { ownerSees++; continue; }
                         const bakerD = Math.min(99, ...bakers.map(b => d(b, t)));
-                        opts.push({ tile: t, loc: l, score: (bakerD > 5 ? 0 : 100 - bakerD * 10) + d(t, here) });
+                        opts.push({ tile: t, loc: l, score: (sees === false || bakerD > 5 ? 0 : 100 - bakerD * 10) + d(t, here) });
                     }
                 }
+                if (opts.length === 0 && ownerSees > 0) stallOwnerWaits++;
                 // No safe tile (guards wander the market): pickpocket a knight close by instead of waiting.
                 if (opts.length === 0) {
                     const k = npcs.some(n => KNIGHT.test(n.name) && d({ x: n.x, z: n.z }, here) <= 6);
                     // Keep two failed picks of margin: with no food, a pick at HP 4 left mmtha0205 at 1 and it died
                     // (live 09:05, after the shop and the stall both gave 0). The main loop's floor is 6 too.
-                    if (k && hp() > 2 * DMG) { const k0 = s.tick(); await steal(6); stallPickTicks += s.tick() - k0; }
-                    else { idleTicks++; await waitTicks(s, 1); }
+                    // A frail thief does not pick with its food under the floor: a failed pick then has no bite to answer it.
+                    if (k && hp() > 2 * DMG && !(frail() && food() < FRAIL_FLOOR)) { const k0 = s.tick(); picked = true; await steal(6); stallPickTicks += s.tick() - k0; }
+                    else { idleTicks++; idleWhy.stall++; await waitTicks(s, 1); }
                     continue;
                 }
                 opts.sort((a, b) => a.score - b.score);
@@ -369,29 +437,32 @@ try {
     const steal = async (range = RANGE) => {
         const p = pos();
         const avoid = randomEventsOf(s)?.avoid().npcs;
-        const npc = (st()?.nearbyNpcs ?? [])
-            // An unreachable target gets no packet at all (vendor/rs-sdk/CLAUDE.md "Everything succeeds and nothing
-            // happens"): seen as 93-tick runs of noops at (2650,3300). Skip it, and rest a knight 15 ticks
-            // after 3 noops in a row on it.
-            .filter((n: any) => KNIGHT.test(n.name) && n.reachable !== false && (banned.get(n.index) ?? 0) <= s.tick()
-                && !avoid?.has(n.index) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= range))
-            .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
+        const away = (n: any) => p ? Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) : 0;
+        const knights = ((st()?.nearbyNpcs ?? []) as any[]).filter(n => KNIGHT.test(n.name));
+        knightPasses++; knightsSeen += knights.length;
+        // An unreachable target gets no packet at all (vendor/rs-sdk/CLAUDE.md "Everything succeeds and nothing
+        // happens"): seen as 93-tick runs of noops at (2650,3300). Skip it, and rest a knight 15 ticks
+        // after 3 noops in a row on it.
+        const view = (n: any): KnightView => ({ inRange: away(n) <= range, reachable: n.reachable !== false, banned: (banned.get(n.index) ?? 0) > s.tick(), avoided: !!avoid?.has(n.index) });
+        const npc = knights.filter(n => { const v = view(n); return v.inRange && v.reachable && !v.banned && !v.avoided; }).sort((a, b) => a.distance - b.distance)[0];
         if (!npc) {
             if (range === RANGE && p && cheb(KNIGHT_SPOT, p) > RANGE) await walk(KNIGHT_SPOT, 3);
-            else { idleTicks++; await waitTicks(s, 1); }
+            else { idleTicks++; idleWhy[noKnightReason(knights.map(view))]++; await waitTicks(s, 1); }
             return;
         }
         const op = npc.optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))?.opIndex;
-        if (op === undefined) { idleTicks++; await waitTicks(s, 1); return; }
-        const hp0 = hp(), c0 = coins();
+        if (op === undefined) { idleTicks++; idleWhy.option++; await waitTicks(s, 1); return; }
+        const hp0 = hp(), c0 = coins(), gap = away(npc);
         await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' } as any);
         await waitTicks(s, PICK_TICKS);
         // picks = attempts the server ran (coins or a hit); a click it dropped (inside a stun, or still walking) is a noop.
         if (hp() < hp0) { picks++; fails++; noopRun = 0; stunUntil = s.tick() + 8; await onStun(); }
         else if (coins() > c0) { picks++; noopRun = 0; }
-        else if (s.tick() <= stunUntil) noops++;
+        else if (s.tick() <= stunUntil) { noops++; noopStun++; }
         else {
             noops++;
+            // The knight was more than one tile away at the click, so the thief was still on its way.
+            if (gap > 1) noopFar++; else noopNear++;
             noopRun = noopTarget === npc.index ? noopRun + 1 : 1;
             noopTarget = npc.index;
             if (noopRun >= 3) { banned.set(npc.index, s.tick() + 15); noopRun = 0; bans++; }
@@ -410,7 +481,7 @@ try {
         if (existsSync(stopFile)) await end(false, 'stop file');
         if (now() >= nextMark) { console.log(`MILESTONE t=${now()} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} picks=${picks} fails=${fails} eaten=${eaten}`); nextMark += 1000; }
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
-        const l = food();
+        const l = food(), low = l < reserve();
         if (hp() <= eatAt() && l > 0) { if (!(await eat())) await waitTicks(s, 1); continue; }
         if(foodWake&&/^[A-Za-z0-9_ -]{1,12}$/.test(FOOD_FROM)&&(l>=2||!bankEmpty)){
             let courier:any;try{courier=JSON.parse(readFileSync(join(import.meta.dir,'../.practice/status',`${FOOD_FROM}.json`),'utf8'));}catch{/* no current courier observation */}
@@ -418,29 +489,32 @@ try {
                 lastCourierAttempt=s.tick();await foodByTrade(20_000);await walk(KNIGHT_SPOT,3);continue;
             }
         }
-        if ((bigFood() < 2 && l < 2 && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
+        if ((bigFood() < 2 && low && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
             await refill();
             await walk(KNIGHT_SPOT, 3);
             continue;
         }
         // FOOD_ONLY_TRADE: no stall, no shop (both killed farmers live). Out of food, serve one more trade
-        // from FOOD_FROM when the last one brought food; else log out with HP to spare.
-        if (l < 2 && bankEmpty && FOOD_ONLY_TRADE) {
+        // from FOOD_FROM when the last one brought food; else log out with HP to spare. A frail thief does the same
+        // with its food under the floor, whatever the setting.
+        if (l < FRAIL_FLOOR && bankEmpty && (FOOD_ONLY_TRADE || frail())) {
             if (FOOD_FROM && lastTradeOk && (await foodByTrade())) { await walk(KNIGHT_SPOT, 3); continue; }
-            await end(false, 'no food (FOOD_ONLY_TRADE)');
+            await end(false, FOOD_ONLY_TRADE ? 'no food (FOOD_ONLY_TRADE)' : `no food (frail: ${maxHp()} Hitpoints)`);
         }
-        // Bank out of lobsters: the Baker's shop when allowed, else the stall unless 3 trips in a row brought nothing.
-        if (l < 2 && bankEmpty && (shopOk() || stallEmptyTrips < 3)) {
+        // Bank out of food: the Baker's shop when allowed, else the stall unless 3 trips in a row brought nothing. A
+        // frail thief goes while it still holds food (its reserve), and not while it rests after a guard hit.
+        if (foodTripDue({ low, bankEmpty, tradeOnly: FOOD_ONLY_TRADE, rested: s.tick() >= stallRestUntil, shopOk: shopOk(), emptyTrips: stallEmptyTrips })) {
             if (shopOk()) await shopTrip();
-            if (food() < 2 && stallEmptyTrips < 3) await stallTrip();
-            await walk(KNIGHT_SPOT, 3);
+            if (food() < reserve() && stallEmptyTrips < 3) await stallTrip();
+            await walk(stallFled ? BANK_SPOT : KNIGHT_SPOT, 3);
+            stallFled = false;
             continue;
         }
         if (l === 0) {
             if (!warned) { console.log(`WARN no food in the pack, the bank or the stall; picking on while HP > 6`); warned = true; }
             if (hp() <= 6) await end(false, 'no food');
         }
-        if (hp() <= DMG) { idleTicks++; await waitTicks(s, 1); continue; }
+        if (hp() <= DMG) { idleTicks++; idleWhy.hp++; await waitTicks(s, 1); continue; }
         await steal();
     }
     await end(!died && !ended, died ? 'died' : ended ? `session ended: ${ended}` : 'ticks');

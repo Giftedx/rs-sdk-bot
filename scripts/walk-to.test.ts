@@ -1,7 +1,25 @@
 import { expect, test } from 'bun:test';
-import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom } from './walk-to';
+import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom, onTutorialIsland, leaveTutorial } from './walk-to';
 import { loadTravel } from '../packages/core/src/travel';
 import type { Outcome } from '../packages/core/src/act';
+
+test('a walk that starts on Tutorial Island skips the tutorial first; no other start does', async () => {
+    const at = (worldX: number, worldZ: number) => ({ worldX, worldZ, level: 0 });
+    // The first tile of a new live account, and the far ends of the island.
+    for (const p of [at(3094, 3106), at(3056, 3060), at(3155, 3136)]) expect(onTutorialIsland(p)).toBe(true);
+    // Lumbridge, the Wizards' Tower, Yanille and Tai Bwo Wannai are not the island.
+    for (const p of [at(3222, 3218), at(3109, 3162), at(2606, 3093), at(2790, 3066), null, undefined]) expect(onTutorialIsland(p)).toBe(false);
+    const session = (p: ReturnType<typeof at>) => ({ sdk: { getState: () => ({ player: p }) } }) as never;
+    const calls: string[] = [];
+    const skip = (success: boolean) => async () => { calls.push('skip'); return { success, message: 'guide absent' }; };
+    const ready = async () => { calls.push('ready'); };
+    expect(await leaveTutorial(session(at(3094, 3106)), skip(true), ready)).toBeNull();
+    expect(calls).toEqual(['ready', 'skip']);
+    expect(await leaveTutorial(session(at(3094, 3106)), skip(false), ready)).toEqual({ ok: false, reason: 'precondition', detail: 'tutorial skip failed: guide absent', ticks: 0 });
+    calls.length = 0;
+    expect(await leaveTutorial(session(at(3222, 3218)), skip(true), ready)).toBeNull();
+    expect(calls).toEqual([]);
+});
 
 test('the target is account, x, z and an optional level', () => {
     expect(parseTarget(['Pocketpython', '3165', '3487'])).toEqual({ account: 'Pocketpython', to: { x: 3165, z: 3487, level: 0 } });
@@ -46,6 +64,24 @@ test('an explicit boat retains fare, departure and arrival checks', () => {
     expect(() => stagedBoat(boat, { ...from, x: from.x + 9 }, to, account)).toThrow('departure');
     expect(() => stagedBoat(boat, from, { ...to, x: to.x + 1 }, account)).toThrow('arrival');
     expect(() => stagedBoat({ ...boat, kind: 'teleport' }, from, to, account)).toThrow('boat');
+});
+
+test('a start at Taverley, at the east foot of White Wolf Mountain, takes the ferries to Ardougne', async () => {
+    const from = { x: 2877, z: 3501, level: 0 }, to = { x: 2654, z: 3283, level: 0 };
+    const calls: string[] = [];
+    let coins = 60;
+    const walk = async ({ x, z }: { x: number; z: number }): Promise<Outcome> => {
+        calls.push(x + ',' + z);
+        return calls.length === 1 ? { ok: false, reason: 'precondition', detail: 'no route to 2654,3283,0', ticks: 0 } : { ok: true, ticks: 1 };
+    };
+    const sail = async (boat: ReturnType<typeof loadTravel>[number]): Promise<Outcome> => { calls.push(boat.id); coins -= boat.coins; return { ok: true, ticks: 1 }; };
+    expect(await walkWithFerryFallback(from, to, walk, sail, () => coins)).toMatchObject({ ok: true });
+    // No leg through Lumbridge or Draynor: the start is west of Draynor, so it walks straight to the Port Sarim dock.
+    expect(calls).toEqual(['2654,3283', '3028,3216', 'npc:captain_tobias:karamja-musa-point@3028,3216', '2772,3225', 'npc:customs_officer:ardougne@2772,3225', '2654,3283']);
+    expect(coins).toBe(0);
+    // With no fare the result names the fare. It is not "no route".
+    calls.length = 0; coins = 1;
+    expect(await walkWithFerryFallback(from, to, walk, sail, () => coins)).toMatchObject({ ok: false, reason: 'precondition', detail: 'westbound ferry needs 60 coins in the pack' });
 });
 
 test('a failed east-to-Ardougne plan uses the funded corridor and stops when funds change', async () => {
@@ -215,4 +251,17 @@ test('a trip east from a floor above Ardougne goes to the north bank and takes t
     calls.length = 0;
     expect(await walkWithFerryFallback(house, { x: 2654, z: 3304, level: 0 }, walk, sail, () => 0, async () => { calls.push('fare'); return { ok: true, ticks: 1 }; })).toEqual({ ok: true, ticks: 3 });
     expect(calls).toEqual(['2654,3304']);
+});
+
+import { fareFault } from './walk-to';
+import { isPrerequisiteFailure } from '../packages/practice/src/supervise';
+test('a bank with too few coins is a missing fare; a bank that holds the fare had a failed withdrawal', () => {
+    const result = (fault: string) => `RESULT fail travel to Ardougne from 3092,3242 failed: precondition ${fault}`;
+    expect(fareFault(60, 59, 0)).toBe('ferry needs 60 coins and the bank holds 0');
+    expect(fareFault(60, 60, 59)).toBe('ferry needs 60 coins and the bank holds 59');
+    expect(isPrerequisiteFailure(result(fareFault(60, 59, 0)))).toBe(true);
+    // The bank holds the coins: the withdrawal or its confirmation failed, and the supervisor may start the run again.
+    expect(fareFault(60, 59, 11000)).toBe('ferry fare: the withdrawal of 59 coins failed, the bank holds 11000');
+    expect(fareFault(60, 60, 60)).toBe('ferry fare: the withdrawal of 60 coins failed, the bank holds 60');
+    expect(isPrerequisiteFailure(result(fareFault(60, 59, 11000)))).toBe(false);
 });
