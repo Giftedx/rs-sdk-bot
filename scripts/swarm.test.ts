@@ -663,6 +663,23 @@ test('a held session whose owner pid is gone gets an end record; live, busy or a
         (_a, id) => pids[id] ? { pid: pids[id]!, createdAt: 1, updatedAt: 2 } : undefined, pid => pid === 12);
     expect(out).toEqual([['Dead', 'exit orphaned: attempt id-Dead owner 11 gone']]);
 });
+test('a held session whose owner pid a later process holds gets an end record, from one read of the process table', async () => {
+    const { orphanedSessionEnds } = await import('./swarm');
+    const held = (a: string) => ({ state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: 'id-' + a, reason: 'session active or outcome unknown' });
+    const pids: Record<string, number> = { 'id-Reused': 21, 'id-Owner': 22, 'id-Unlisted': 23, 'id-Dead': 24, 'id-Ended': 25 };
+    const producer = (_a: string, id: string) => ({ pid: pids[id]!, createdAt: 1_000_000, updatedAt: 1_000_500 });
+    const ended = new Map([['Ended', { at: 1, reason: 'exit 1' }]]), answers = (pid: number) => pid !== 24, reads: number[][] = [];
+    // 21 started after its receipt: a different process. 22 started before its receipt: the owner. 23 is not in the table.
+    const starts = (asked: readonly number[]) => { reads.push([...asked]); return new Map([[21, 1_000_000 + PID_START_SLACK_MS + 1], [22, 999_960], [25, 2_000_000]]); };
+    expect(orphanedSessionEnds(['Reused', 'Owner', 'Unlisted', 'Dead', 'Ended'], ended, [], held, producer, answers, starts))
+        .toEqual([['Reused', 'exit orphaned: attempt id-Reused owner 21 gone'], ['Dead', 'exit orphaned: attempt id-Dead owner 24 gone']]);
+    // One read, and only for the ids that answer a signal and whose end the scan can record.
+    expect(reads).toEqual([[21, 22, 23]]);
+    // A failed read proves nothing: the signal check decides alone. No id answers: no read.
+    expect(orphanedSessionEnds(['Reused'], new Map(), [], held, producer, answers, () => null)).toEqual([]);
+    expect(orphanedSessionEnds(['Dead'], new Map(), [], held, producer, answers, starts).length).toBe(1);
+    expect(reads.length).toBe(1);
+});
 test('the orphan scan replaces only a successful end, and only for an attempt that started after it', async () => {
     const { orphanedSessionEnds } = await import('./swarm');
     const ended = new Map([

@@ -858,7 +858,10 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 // a `pilot`: the bench proves the route on practice from the start state of its case, and a live account starts
 // elsewhere with less. Rates are estimates from one bench run (`.practice/aio-bench/baseline-seed7.json`) or the
 // live trial named. The requirement of each route is the entry check its worker makes:
-// - flax (scripts/gather-flax.ts): none; the bench preset is a bare account in the field. 364 flax in 1,524 ticks.
+// - flax (scripts/gather-flax.ts): none. The worker goes to the field with the shared walker from another floor or a
+//   far start (bench case extra:flax-from-ardougne-upstairs). Live trial: one account from the Seers bank, four runs
+//   that ended ok, 1,320 flax banked in 7,317 ticks (0.18 a tick), lowest Hitpoints 46. The bench preset is a bare
+//   account in the field: 364 flax in 1,524 ticks. Gap: one account in the field; two at once are not run.
 // - bow strings (scripts/spin-bowstrings.ts): Crafting 10 (`flax requires Crafting 10`); it ends ok only with
 //   MAX_MAKE made, so it needs that much flax banked at Seers. Bench: Crafting 13, 56 made in 457 ticks.
 // - yew logs (scripts/gather-yews.ts): Woodcutting 60 for a yew, and an axe. Bench: Woodcutting 99 with a rune axe,
@@ -932,7 +935,7 @@ export function aioTemplates(): Template[] {
             needs: { skills: { Smithing: level }, items: { [ore]: load, ...(coal ? { coal: coal * load } : {}) } }, yields: () => [{ item: `${bar} bar`, perTick }] });
     return [
         aio('aio-flax', 'skiller:foraging:flax', 'scripts/gather-flax.ts', ['foraging', 'flax', '1800', '28'], {
-            role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.24 }] }),
+            role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.18 }] }),
         aio('aio-bowstrings', 'skiller:crafting:bowstrings', 'scripts/spin-bowstrings.ts', ['crafting', 'bowstrings', '1250', `MAX_MAKE=${BOWSTRING_BATCH}`, 'RAW_RESERVE=0', 'MAX_TRIPS=4'], {
             role: 'crafting', goal: `spin ${BOWSTRING_BATCH} banked flax into bow strings at Seers`, needs: { skills: { Crafting: 10 }, items: { flax: BOWSTRING_BATCH } },
             yields: () => [{ item: 'bow string', perTick: 0.12 }] }),
