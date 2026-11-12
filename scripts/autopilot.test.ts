@@ -633,3 +633,117 @@ test('the plan gives a build account the quest route of its kit; a kit with no r
     expect(routes.get('wrong')).toEqual([]);
     expect(buildQuests({ builds: ['pure-pray'] }).size).toBe(0);
 });
+
+import { mountainWalk, offlinePlace, MOUNTAIN } from './autopilot';
+import { accountFrom, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
+import { walkWithFerryFallback } from './walk-to';
+import { PROFILES } from './shop-buyer';
+import { loadHunters } from '../packages/core/src/danger';
+import { loadTravel } from '../packages/core/src/travel';
+
+// Status files as the live accounts wrote them: a thief east of the mountain with 1 coin, a rich thief with 10
+// Hitpoints at Draynor, and a thief at the Ardougne south bank with no coins.
+const levels = (skills: Record<string, number>) => Object.entries({ Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1, Hitpoints: 10, ...skills }).map(([name, level]) => ({ name, level }));
+const statusAt = (name: string, pos: { x: number; z: number; level: number }, skills: Record<string, number>, coins: number, bank = 0) => ({
+    name, server: 'rs-sdk-demo.fly.dev', at: 1_000, result: 'RESULT ok', pos, skills: levels(skills),
+    inventory: coins ? [{ id: 995, name: 'Coins', count: coins }] : [], bank: bank ? [{ id: 995, name: 'Coins', count: bank }] : [], equipment: [],
+});
+const fromStatus = (s: ReturnType<typeof statusAt>) => offlinePlace(accountFrom(s.name, side, s, () => undefined), s, 60_000_000);
+const reach = (a: Acct, templates: string[], extra: Partial<Inputs> = {}) => plan({ ...inputs(a), templates: catalogue().filter(t => templates.includes(t.id)), prices: { flax: 5, feather: 2 },
+    bill: [{ item: 'feathers', need: 800, owned: 0, short: 800, ids: [314], holders: [] }], mountain: mountainWalk(), pilots: new Set(['aio-flax']), ...extra })[0]!;
+const strongThief = { Thieving: 89, Hitpoints: 54, Attack: 40, Strength: 40, Defence: 30 };
+
+test('a status file gives the account its place, and a live session gives none', () => {
+    const s = statusAt('Abracadickra', { x: 2877, z: 3501, level: 0 }, strongThief, 1);
+    expect(accountFrom('Abracadickra', side, s, () => undefined).pos).toEqual({ x: 2877, z: 3501, level: 0 });
+    expect(accountFrom('Abracadickra', side, { ...s, pos: null }, () => undefined).pos).toBeUndefined();
+    expect(accountFrom('Abracadickra', side, null, () => undefined).pos).toBeUndefined();
+    // A session that is live now (a fresh row with no result) is on its way: its place does not count.
+    const live = { ...s, result: undefined, at: 60_000_000 - 5_000 };
+    expect(offlinePlace(accountFrom('Abracadickra', side, live, () => undefined), live, 60_000_000).pos).toBeUndefined();
+    expect(fromStatus(s).pos).toEqual({ x: 2877, z: 3501, level: 0 });
+});
+
+test('the walker lets a strong account over White Wolf Mountain and refuses an account with 10 Hitpoints', () => {
+    const walks = mountainWalk();
+    const acct = (skills: Record<string, number>): Acct => ({ name: 'A', side, skills: { Hitpoints: 10, ...skills }, items: {} });
+    expect(walks(acct({ Thieving: 99 }))).toBe(false);
+    expect(walks(acct(strongThief))).toBe(true);
+    // The rule is the walker's own: the wolves of the mountain are among the hunters it closes ground for.
+    const onPass = loadHunters().filter(h => h.spawns.some(s => s.level === 0 && s.x >= MOUNTAIN.minX && s.x <= MOUNTAIN.maxX && s.z >= MOUNTAIN.minZ && s.z <= MOUNTAIN.maxZ)).map(h => h.name);
+    expect(onPass).toContain('White wolf');
+    // With no hunter on the pass every account walks it.
+    expect(mountainWalk([])(acct({}))).toBe(true);
+});
+
+test('an account at Taverley with 1 coin gets a coin order for the ferry fare, then the knight spot', () => {
+    const thief = fromStatus(statusAt('Abracadickra', { x: 2877, z: 3501, level: 0 }, strongThief, 1));
+    const donors = [{ name: 'Billionaire', coins: 2_000_000 }];
+    const out = reach(thief, ['goldfarm@2652,3318'], { donors });
+    expect(out.fund).toEqual({ from: 'Billionaire', to: 'Abracadickra', coins: 59, template: 'goldfarm@2652,3318' });
+    // The order is for 59 coins and names no meeting place: scripts/fleet-trade.ts then meets at Varrock West.
+    const placed = fundOrders([out], new Set(), (from, to, coins, meet) => coinOrder(from, to, coins, 'rs-sdk-demo.fly.dev', 1_000, meet === 'ardougne' ? ARMY_MEET : undefined));
+    expect(placed.orders).toEqual([{ id: '901000-billionaire-abracadickra', server: 'rs-sdk-demo.fly.dev', from: 'Billionaire', to: 'Abracadickra', item: 'coins', count: 59, start: 901_000, end: 901_000 + 40 * 60_000 }]);
+    expect(placed.assignments[0]!.reason).toBe('vacant: awaits 59 coins from Billionaire for goldfarm@2652,3318');
+    // The coins arrived: the next pass gives the spot with no order.
+    const paid = fromStatus(statusAt('Abracadickra', { x: 3182, z: 3440, level: 0 }, strongThief, 60));
+    expect(reach(paid, ['goldfarm@2652,3318'], { donors })).toMatchObject({ template: { id: 'goldfarm@2652,3318' }, reason: 'coins' });
+    // With no donor it takes a job on its own side.
+    expect(reach(thief, ['goldfarm@2652,3318', 'feathers@3017,3288']).template?.id).toBe('feathers@3017,3288');
+});
+
+test('an account with 10 Hitpoints east of the mountain is not offered the flax field at Seers', () => {
+    const weak = fromStatus(statusAt('Billionaire', { x: 3087, z: 3250, level: 0 }, { Thieving: 99 }, 1_508, 2_195_386));
+    expect(reach(weak, ['aio-flax']).template).toBeUndefined();
+    expect(reach(weak, ['aio-flax', 'feathers@3017,3288']).template?.id).toBe('feathers@3017,3288');
+    // The strong thief is offered it: the walk over the mountain costs no fare.
+    expect(reach(fromStatus(statusAt('Abracadickra', { x: 3092, z: 3242, level: 0 }, strongThief, 1)), ['aio-flax']).template?.id).toBe('aio-flax');
+});
+
+test('an account at Ardougne with no coins needs no fare for a knight spot', () => {
+    const there = fromStatus(statusAt('Hocuspokeus', { x: 2654, z: 3283, level: 0 }, strongThief, 0));
+    const out = reach(there, ['goldfarm@2652,3318'], { donors: [{ name: 'Billionaire', coins: 2_000_000 }] });
+    expect(out).toMatchObject({ template: { id: 'goldfarm@2652,3318' }, reason: 'coins' });
+    expect(out.fund).toBeUndefined();
+});
+
+test('a coin order for an account in Kandarin meets at the Ardougne north bank', () => {
+    const west = fromStatus(statusAt('Hocuspokeus', { x: 2727, z: 3493, level: 0 }, {}, 0));
+    const out = reach(west, ['feathers@3017,3288'], { donors: [{ name: 'Billionaire', coins: 2_000_000 }] });
+    expect(out.fund).toEqual({ from: 'Billionaire', to: 'Hocuspokeus', coins: 60, template: 'feathers@3017,3288', meet: 'ardougne' });
+    const placed = fundOrders([out], new Set(), (from, to, coins, meet) => coinOrder(from, to, coins, 'rs-sdk-demo.fly.dev', 1_000, meet === 'ardougne' ? ARMY_MEET : undefined));
+    expect(placed.orders[0]).toMatchObject({ count: 60, meet: ARMY_MEET });
+    expect(validOrder(placed.orders[0]!)).toBe(true);
+});
+
+test('the fare of the reach rule is the fare the shared walker asks for', async () => {
+    // The walker asks `stageFare` for its need before the first plan. Each walk arrives, so no ferry sails here.
+    const asked = async (from: { x: number; z: number; level: number }, to: { x: number; z: number; level: number }) => {
+        let need = 0;
+        await walkWithFerryFallback(from, to, async () => ({ ok: true, ticks: 1 }), async () => ({ ok: true, ticks: 1 }), () => 0, async n => { need = n; return { ok: true, ticks: 1 }; });
+        return need;
+    };
+    const T = (x: number, z: number) => ({ x, z, level: 0 });
+    const trips: [ReturnType<typeof T>, ReturnType<typeof T>][] = [
+        [T(2877, 3501), T(2652, 3318)], [T(3092, 3242), T(2615, 3332)], [T(3269, 3164), T(2615, 3332)], [T(3222, 3218), T(2654, 3283)],
+        [T(2727, 3493), T(3017, 3288)], [T(2654, 3283), T(3185, 3436)], [T(2525, 3242), T(3092, 3243)], [T(2809, 3441), T(3253, 3420)],
+        [T(2877, 3501), T(3185, 3436)], [T(2809, 3441), T(2615, 3332)], [T(3092, 3242), T(2744, 3445)], [T(3092, 3242), T(2582, 3297)], [T(3092, 3242), T(2809, 3441)],
+    ];
+    for (const [from, to] of trips) expect([from, to, wayCost(from, to, true)]).toEqual([from, to, await asked(from, to)]);
+    expect(wayCost(T(2877, 3501), T(2652, 3318), true)).toBe(60);
+    expect(wayCost(T(3269, 3164), T(2615, 3332), true)).toBe(70);
+    // The planner's constants are the fares of the two ferries and the toll in the travel table.
+    const fare = (id: string) => loadTravel().find(t => t.id === id)!.coins;
+    expect([fare('npc:captain_tobias:karamja-musa-point@3028,3216'), fare('npc:customs_officer:ardougne@2772,3225'), fare('npc:captain_barnaby:brimhaven@2679,3275'), fare('npc:customs_officer:port-sarim@2953,3147')])
+        .toEqual([FERRY_FARE, FERRY_FARE, FERRY_FARE, FERRY_FARE]);
+    expect(fare('npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226')).toBe(TOLL);
+});
+
+test('the place of each shop job is the bank of its shop profile, and the reach rule covers 53 of the 88 templates', () => {
+    for (const [resource, spot] of Object.entries(PLACES)) if (resource.startsWith('shop:')) expect([resource, spot]).toEqual([resource, PROFILES[resource.slice(5)]!.bankSpot]);
+    // The templates the reach rule covers, of the whole catalogue.
+    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([53, 88]);
+    // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
+    const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
+    expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
+});

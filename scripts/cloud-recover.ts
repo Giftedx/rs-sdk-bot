@@ -1,14 +1,20 @@
-// Recovers this side's held live sessions through the side's running coordinator, one account per call, so the
-// swarm and the other farmers keep running. A cloud watchdog calls it; it never guesses: an account whose end record is
-// gone, or a side whose coordinator is not running, is refused with a logged reason.
+// Recovers this side's held live sessions through the side's running coordinator, so the swarm and the other farmers
+// keep running. A held session is one whose logout the server did not confirm: a logout that timed out, a dropped
+// socket, a killed worker. Its fleet claim stays held and each later login fails `fleet account claim held by swarm`.
+// The side's watchdog calls this script; it never guesses: an account whose end record is gone, or a side whose
+// coordinator is not running, is refused with a logged reason.
 // Usage: FLEET_SIDE=<side> bun scripts/cloud-recover.ts [--dry] [--root=<checkout>]   (root defaults to this checkout)
-// The coordinator it restarts inherits this process's environment without SWARM_PLAN, so the caller's PATH must carry
-// the model stub (README "Claude Code cloud fleet side").
+// A cloud side waits for the recovery runs and then restarts its coordinator to release the parked jobs. That
+// coordinator inherits this process's environment without SWARM_PLAN, so the caller's PATH must carry the model stub
+// (README "Claude Code cloud fleet side"). The local side (packages/router/src/watchdog.ts) submits and returns: its
+// coordinator holds real work in jobs.json and releases its parked jobs itself (coordinator-live.ts
+// releaseFinishedOwnJobs), so this script never stops it.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import { loadOwners, mySide } from '../packages/core/src/fleet';
+import { BOOTSTRAP_STATUS_AGE_MS } from '../packages/core/src/session-admission';
 import { readFleetAccountClaim } from '../packages/core/src/fleet-trade-claim';
 import { readLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { heldRecoveryOwners } from '../packages/core/src/session-recovery-permit';
@@ -195,23 +201,49 @@ export function archiveStaleLease(root: string, account: string, now: number): s
     return to;
 }
 
-// The local side's coordinator owns real work in its jobs.json; only a cloud side runs this script.
+// The local side's coordinator owns real work in its jobs.json; only a cloud side waits for the runs and restarts its
+// coordinator to release the parked jobs.
 export const cloudSide = (side: string) => side !== 'local';
+
+// The accounts that stay offline (scripts/swarm.ts PROTECTED_ACCOUNTS; the coordinator refuses a recovery of the
+// first three, packages/router/src/coordinator.ts). The swarm records no end for them, so eligibility refuses them
+// already; this list keeps them out of a proposal even with an end record written by hand.
+export const NEVER_RECOVERED = ['haggis', 'shaftshooter', 'polevaulter', 'afknight'];
+
+// A recovery run names the exact time of its end record, and its qualify takes about 9 minutes. The local swarm's
+// standing retry deletes a blocked, gave-up or stopped end once the account's status is BOOTSTRAP_STATUS_AGE_MS old
+// (scripts/swarm.ts standingRetryDue); the retry fails on the held claim and a later end gets a new time, so a run
+// that names the deleted end fails `exact failure changed`. The retry never takes an orphan end, so that time holds.
+// Any other end is taken once the retry window is over.
+export const END_SETTLE_MS = BOOTSTRAP_STATUS_AGE_MS + 5 * 60_000;
+export function endSettled(end: Pick<EndRecord, 'at' | 'reason'>, now: number): boolean {
+    return end.reason.startsWith('exit orphaned: attempt ') || now - end.at >= END_SETTLE_MS;
+}
+
+// A submitted proposal is a `.request.json` file until the coordinator takes it into its state (coordinator-cli.ts
+// intakeRequests). Until then state.json shows no recovery in flight, and a second call would submit the same
+// accounts again. A file that cannot be read counts as waiting.
+export function recoveryRequestWaiting(requests: string): boolean {
+    let files: string[]; try { files = readdirSync(requests); } catch { return false; }
+    return files.filter(f => f.endsWith('.request.json')).some(f => {
+        try { return (JSON.parse(readFileSync(join(requests, f), 'utf8'))?.tasks ?? []).some((t: any) => t?.sessionRecovery); } catch { return true; }
+    });
+}
 
 const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code === 'EPERM'; } };
 const readJson = (file: string, fallback: any) => { try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return fallback; } };
 const log = (line: string) => console.log(`CLOUD_RECOVER ${line}`);
 
 async function main(root: string, dry: boolean): Promise<number> {
-    const side = mySide(), coord = join(root, '.practice', 'coordinator'), stopCoordinator = join(root, '.practice', 'stop-coordinator');
-    if (!cloudSide(side)) { log('refused: cloud sides only (FLEET_SIDE unset or local); the local coordinator owns its jobs.json'); return 1; }
+    const side = mySide(), cloud = cloudSide(side), coord = join(root, '.practice', 'coordinator'), stopCoordinator = join(root, '.practice', 'stop-coordinator');
     const coordinatorRunning = () => { const o = readJson(join(coord, 'owner.json'), null); return !!o && Number.isSafeInteger(o.pid) && pidAlive(o.pid) && !existsSync(stopCoordinator); };
     if (!coordinatorRunning()) { log('refused: coordinator is not running'); return 1; }
     const tasksNow = () => readJson(join(coord, 'state.json'), { tasks: [] }).tasks ?? [];
     const before = tasksNow(), dead = deadTasks(before), inFlight = recoveriesInFlight(before, dead);
     if (inFlight.length) { log(`recovery in flight for ${inFlight.map((t: any) => t.spec.sessionRecovery.account).join(', ')}; waiting`); return 0; }
+    if (recoveryRequestWaiting(join(coord, 'requests'))) { log('a submitted recovery waits for the coordinator to take it; waiting'); return 0; }
     const ended = loadEnded(join(root, '.practice', 'swarm-deaths.json'));
-    const accounts = [...loadOwners()].filter(([, o]) => o.side === side && o.server === LIVE_SERVER).map(([n]) => n);
+    const accounts = [...loadOwners()].filter(([n, o]) => o.side === side && o.server === LIVE_SERVER && !NEVER_RECOVERED.includes(n.toLowerCase())).map(([n]) => n);
     const targets: Target[] = [];
     for (const lower of accounts) {
         const name = [...ended.keys()].find(n => n.toLowerCase() === lower) ?? lower;
@@ -226,6 +258,7 @@ async function main(root: string, dry: boolean): Promise<number> {
         const end = ended.get(name);
         const e = eligibility({ proof, claim, end, stopText, pidAlive, host: hostname(), retried: !!end && spentAttempts(before, { account: name, endedAt: end.at }) > 0 });
         if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
+        if (!cloud && !endSettled(end!, Date.now())) continue;
         const target = { account: name, endedAt: e.endedAt };
         if (spentAttempts(before, target) >= MAX_ATTEMPTS) { log(`${name}: refused: ${MAX_ATTEMPTS} recoveries of end ${e.endedAt} failed; recover by hand`); continue; }
         if (recoveryLeaseState(root, name) === 'held') { log(`${name}: refused: a recovery child still holds the account's lease, or the lease is unreadable`); continue; }
@@ -245,6 +278,8 @@ async function main(root: string, dry: boolean): Promise<number> {
         const file = join(root, '.practice', 'cloud-recover', `${proposal.tasks[0]!.id}.json`);
         mkdirSync(resolve(file, '..'), { recursive: true }); writeFileSync(file, JSON.stringify(proposal, null, 1) + '\n');
         if (!(await run(root, ['--submit', file]))) { log('submit failed'); return 1; }
+        // The local coordinator runs the tasks and releases the parked jobs itself; the next call sees them in flight.
+        if (!cloud) return 0;
         // One qualify, then about a minute per recovery run.
         const deadline = Date.now() + (15 + 2 * runs.length) * 60_000;
         for (;;) {
@@ -261,6 +296,7 @@ async function main(root: string, dry: boolean): Promise<number> {
             if (!ok || proof.state !== 'confirmed') failed = true;
         }
     }
+    if (!cloud) return 0;
     // A finished recovery leaves a parked coordinator job that keeps the account from its owner job; release them all
     // once no recovery is still in flight, so each has parked its session check first.
     const flying = recoveriesInFlight(tasksNow());
@@ -278,7 +314,8 @@ async function main(root: string, dry: boolean): Promise<number> {
 }
 
 async function run(root: string, args: string[]): Promise<boolean> {
-    const p = Bun.spawn(['bun', 'packages/router/src/coordinator-cli.ts', ...args], { cwd: root, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
+    // This process's own runtime: the PATH of a scheduled caller (the local watchdog task) can hold no `bun`.
+    const p = Bun.spawn([process.execPath, 'packages/router/src/coordinator-cli.ts', ...args], { cwd: root, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
     return (await p.exited) === 0;
 }
 

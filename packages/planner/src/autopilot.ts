@@ -15,8 +15,9 @@ import { xpForLevel } from './curve';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
-// reports (absent: none known, which counts as 0).
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; combat?: number; quests?: ReadonlySet<string>; questPoints?: number };
+// reports (absent: none known, which counts as 0). `pos`: the tile where the account stands while it is offline
+// (absent: not known, and the reach rule does not apply).
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -93,8 +94,9 @@ export type Stock = { name: string; side: string; items: Record<string, number> 
 // Items a kit buy may order on the Grand Exchange, by norm() name: the item id, its display name and the unit price cap.
 export type Market = Readonly<Record<string, { id: number; name: string; limit: number }>>;
 // `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
-// places the fleet order), and the account takes the job on the pass after the coins arrive.
-export type Funding = { from: string; to: string; coins: number; template: string };
+// places the fleet order), and the account takes the job on the pass after the coins arrive. `meet`: the order
+// meets at the Ardougne north bank, for an account that stands in Kandarin (absent: at Varrock West).
+export type Funding = { from: string; to: string; coins: number; template: string; meet?: 'ardougne' };
 export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[]; fund?: Funding; send?: ItemFunding };
 export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
@@ -134,6 +136,9 @@ export type Inputs = {
     noSend?: ReadonlySet<string>;
     // The ids of the `pilot` templates this plan admits (its `aio` list). Absent: none.
     pilots?: ReadonlySet<string>;
+    // Whether the walker lets the account walk over White Wolf Mountain (scripts/autopilot.ts mountainWalk). Absent:
+    // every account walks it.
+    mountain?: (a: Acct) => boolean;
 };
 export const FUND_RESERVE = 50_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
@@ -427,13 +432,25 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number }; lacks?: Lack[] };
+    // `fare`: the ferry fare inside the coin need of the candidate's template.
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; fare?: number; goal?: { band: number; left: number }; lacks?: Lack[] };
     const cands: Cand[] = [];
     const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
+    // A donor can fund the account: it has no enabled job, and a meeting place that it can reach (meetFor).
+    const meetOf = new Map(mine.map(a => [a.name, meetFor(a.pos)]));
+    const fundable = (a: Acct) => !!inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && meetOf.get(a.name) !== null;
+    // The jobs an account could start but for coins of a ferry fare: the constraint of a slot that ends vacant.
+    const fareShort = new Map<string, { id: string; coins: number; fare: number; resources: string[] }[]>();
+    const lacksFare = (a: Acct, t: Template, fare: number) => { fareShort.set(a.name, [...(fareShort.get(a.name) ?? []), { id: t.id, coins: coinShort(a, t.needs), fare, resources: t.resources ?? [] }]); };
     for (const a of mine) for (const listed of inp.templates) {
-        const t = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
-        if (!t || inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
+        const band = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
+        if (!band || inp.retired?.has(pairKey(a.name, band.id)) || !admitted(band)) continue;
+        // The reach rule (wayCost): no candidate for a place with no way from where the account stands. The ferry fare
+        // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
+        const fare = wayCost(a.pos, placeOf(band), inp.mountain?.(a) ?? true);
+        if (fare === null) continue;
+        const t = fare ? withFare(band, fare) : band;
         if (t.quest && t.tier !== 'goal') {
             if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };
@@ -451,9 +468,10 @@ export function plan(inp: Inputs): Assignment[] {
             const left = bandLeft(t, a);
             if (!inp.army?.has(a.name.toLowerCase()) || left <= 0) continue;
             const goal = { band: t.band ?? 0, left }, reason = t.trains ? `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}` : t.quest ? `army band ${goal.band}: ${t.quest.name}` : `army band ${goal.band}: ${t.stock!.to} ${t.stock!.item}`;
+            if (fare && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) lacksFare(a, t, fare);
             if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
-            else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
-                cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
+            else if (fundable(a) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
+                cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs), fare });
             else if (coinShort(a, t.needs) === 0) {
                 // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
                 // A line no market sells and a shop job brings (shopLine) is left to that job.
@@ -484,9 +502,10 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (meets(a, t.needs)) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+') });
-        } else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
+        } else if (coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
             const value = jobValue(t, a, inp);
-            if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
+            if (value > 0 && fare) lacksFare(a, t, fare);
+            if (value > 0 && fundable(a)) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs), fare });
         } else if (t.needs?.frail && frailShort(a, t.needs) > 0 && meets(a, { ...t.needs, frail: undefined })) {
             // The account lacks only the food of the frail rule. It buys FRAIL_FOOD_BUY units with its own coins: the
             // cheapest food of the job that the market lists. One buy id serves each spot of the job, so two failed
@@ -533,11 +552,11 @@ export function plan(inp: Inputs): Assignment[] {
             const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
             if (!from) return;
             pool.set(from, pool.get(from)! - c.coins); gave.add(from);
-            fund = { from, to: c.account, coins: c.coins, template: c.template.id };
+            fund = { from, to: c.account, coins: c.coins, template: c.template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) };
         }
         pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
-        done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
+        done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}${c.fare ? `, ferry fare ${c.fare}` : ''}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
     };
     // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
     // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
@@ -597,7 +616,7 @@ export function plan(inp: Inputs): Assignment[] {
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); return; }
-            if (!busy) {
+            if (!busy && meetOf.get(c.account) !== null) {
                 // A coin donor of this side, else a free account of another side with coins above the reserve.
                 const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
                 const own = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && !gaveItems.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
@@ -606,17 +625,21 @@ export function plan(inp: Inputs): Assignment[] {
                 if (from) {
                     if (own) pool.set(own, pool.get(own)! - short);
                     gave.add(from); pool.delete(c.account);
-                    done.set(c.account, { account: c.account, template, value: 0, reason: `${c.reason}, funded ${short} coins by ${from} to buy ${what}`, resources: [], fund: { from, to: c.account, coins: short, template: template.id } });
+                    done.set(c.account, { account: c.account, template, value: 0, reason: `${c.reason}, funded ${short} coins by ${from} to buy ${what}`, resources: [], fund: { from, to: c.account, coins: short, template: template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) } });
                     return;
                 }
             }
         }
         if (step === 'buy') return;
+        // An item order meets at the Ardougne north bank (scripts/autopilot.ts itemOrder). A party of this side whose
+        // place is known must have a way there and hold the fare of that way. A party with no known place has no rule.
+        const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
+        if (!reachesMeet(c.account)) return;
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
         for (const l of [...c.lacks!].filter(l => !own(l)).sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
             const from = stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
-                && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()));
+                && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
             if (!from) continue;
             // A donor of this side sends the band's batch, as a buy would bring it, as far as its spare stock goes: one
             // trade, not one for every start amount. Another side's donor sends what the band needs to start.
@@ -647,8 +670,11 @@ export function plan(inp: Inputs): Assignment[] {
         const c = rest.shift()!;
         take(c, worth(c));
     }
+    // A vacant slot names its constraint: the fare it lacks for a job whose place is still free, when that is all it lacks.
+    const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
+        return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass'
-        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? 'vacant: no template meets its skills and holdings with a free resource' });
+        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? 'vacant: no template meets its skills and holdings with a free resource' });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
@@ -807,6 +833,75 @@ export function splashKit(magic: number): Record<string, number> {
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
+// The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
+// side and Kandarin runs for more than 30 s (research/walking.md, Planner reach rule), so the planner asks none. It
+// uses the regions of the shared walker's ferry rule (scripts/walk-to.ts walkWithFerryFallback; scripts/autopilot.test.ts
+// keeps the fares equal):
+// - From the east side to Ardougne the walker takes two ferries, and it wants the fare before it plans: 60 coins, or
+//   70 from the Al Kharid side of the toll gate. It takes the coins from a bank, so the pack and the bank count.
+// - From Kandarin to the east side it walks to the Ardougne north bank and takes the two ferries: 60 coins.
+// - From the east side to the rest of Kandarin it walks over White Wolf Mountain. It refuses that walk to an account
+//   that a wolf there can kill (Inputs.mountain), and such an account has no way.
+// - An account on Karamja leaves by one ferry: 30 coins. No donor can meet it there (meetFor).
+// A start on Tutorial Island counts as Lumbridge: the walker skips the tutorial first. A floor above the ground counts
+// as the ground under it. An unknown start (no status, a live session, a cave) has no rule, and neither has a place
+// outside these regions or a template with no place.
+export type Spot = { x: number; z: number; level?: number };
+export const FERRY_FARE = 30, TOLL = 10;
+const LUMBRIDGE: Spot = { x: 3222, z: 3218 };
+const onTutorialIsland = (p: Spot) => p.x >= 3050 && p.x <= 3160 && p.z >= 3050 && p.z <= 3140;
+// The ground of Karamja, in three steps so that Rimmington stays out. Measured on the collision map: the steps hold
+// 26,315 of the 26,625 tiles of the island's connected ground and no tile of the mainland.
+export const onKaramja = (p: Spot) => p.x >= 2704 && p.z >= 2939 && p.x <= (p.z <= 3149 ? 2959 : p.z <= 3193 ? 2948 : p.z <= 3247 ? 2812 : 0);
+const inEast = (p: Spot) => !onKaramja(p) && p.x >= 2870 && p.x <= 3280 && p.z >= 3150 && p.z <= 3510;
+const inKandarin = (p: Spot) => !onKaramja(p) && p.x >= 2440 && p.x < 2870 && p.z >= 3040 && p.z <= 3530;
+const ardougneTarget = (p: Spot) => p.x >= 2600 && p.x <= 2690 && p.z >= 3260 && p.z <= 3360;
+// The tile a job's worker walks to first, by resource: the Ardougne north bank for the cow field, its two Magic tiles
+// and the troopers; the bank of each shop (scripts/shop-buyer.ts PROFILES bankSpot; scripts/autopilot.test.ts keeps
+// them equal); the Catherby and Seers' Village banks; the flax field. Left out: a place that the worker reaches by its
+// own travel (the black dragons by teleport, Jakut in Zanaris, a quest) and a place outside the regions.
+// A knight spot is not its own first walk: scripts/goldfarm.ts takes an account from far away to the Ardougne south
+// bank and walks to the knight from there (scripts/autopilot.test.ts keeps the tile equal), so each spot has the ferry
+// rule of Ardougne, the spot west of the rule's Ardougne box too.
+export const KNIGHT_BANK: Spot = { x: 2654, z: 3283 };
+const SEERS_BANK: Spot = { x: 2727, z: 3492 }, CATHERBY_BANK: Spot = { x: 2809, z: 3441 }, DRAYNOR_BANK: Spot = { x: 3092, z: 3243 }, VARROCK_EAST_BANK: Spot = { x: 3253, z: 3420 };
+export const PLACES: Readonly<Record<string, Spot>> = {
+    [COW_FIELD]: ARMY_BANK, [STRIKE_TILE]: ARMY_BANK, [SPLASH_FENCE]: ARMY_BANK, [TROOPER_FIELD]: ARMY_BANK,
+    'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
+    'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
+    'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
+};
+// A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
+export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
+    for (const r of t.resources ?? []) {
+        if (r.startsWith('knight:')) return KNIGHT_BANK;
+        const m = r.match(/^pen:(\d+),(\d+)$/);
+        if (m) return { x: Number(m[1]), z: Number(m[2]) };
+        if (PLACES[r]) return PLACES[r];
+    }
+    return undefined;
+}
+// The coins the way from `pos` to `place` costs in ferry fares and the toll: 0 for a way with no fare or with no rule,
+// null for no way. `mountain`: the account may walk over White Wolf Mountain.
+export function wayCost(pos: Spot | undefined, place: Spot | undefined, mountain: boolean): number | null {
+    if (!pos || !place) return 0;
+    const at = onTutorialIsland(pos) ? LUMBRIDGE : pos;
+    if (onKaramja(at)) return onKaramja(place) ? 0 : FERRY_FARE;
+    if (inEast(at) && ardougneTarget(place)) return 2 * FERRY_FARE + (at.x >= 3250 && at.z <= 3230 ? TOLL : 0);
+    if (inEast(at) && inKandarin(place)) return mountain ? 0 : null;
+    if (inKandarin(at) && inEast(place)) return 2 * FERRY_FARE;
+    return 0;
+}
+// Where a coin order meets an account that stands at `pos`: the Ardougne north bank for a start in Kandarin, which
+// has no way east without the fare; null on Karamja, where no order can reach the account; else Varrock West (undefined).
+export function meetFor(pos: Spot | undefined): 'ardougne' | null | undefined {
+    return !pos ? undefined : onKaramja(pos) ? null : inKandarin(pos) ? 'ardougne' : undefined;
+}
+// The template with `fare` more coins in its coin need.
+function withFare(t: Template, fare: number): Template {
+    const key = Object.keys(t.needs?.items ?? {}).find(i => norm(i) === 'coin') ?? 'coins';
+    return { ...t, needs: { ...t.needs, items: { ...t.needs?.items, [key]: (t.needs?.items?.[key] ?? 0) + fare } } };
+}
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
 // RESULT ok at 15.7 Strength XP per tick from Strength 1 to 46 (research/combat-measure.md, live cow training);
@@ -1643,7 +1738,8 @@ export function freshest(...observations: readonly any[]): any {
 
 // An account as the planner sees it, from its status file (.practice/status/<name>.json) or a fleet snapshot row:
 // base levels, pack, bank and worn counts by item name, and its complete quests (a status lists every quest with a
-// state, a snapshot row the complete ones by name). No status: a fresh account at level 1 (Hitpoints 10).
+// state, a snapshot row the complete ones by name), and the tile it stands on (a status only). No status: a fresh
+// account at level 1 (Hitpoints 10).
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
     const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
@@ -1653,8 +1749,9 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     }
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
-    const questPoints = status?.guildFacts?.varps?.qp;
-    return { name, side, skills, items, ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}) };
+    const questPoints = status?.guildFacts?.varps?.qp, p = status?.pos;
+    return { name, side, skills, items, ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
+        ...(Number.isFinite(p?.x) && Number.isFinite(p?.z) ? { pos: { x: p.x, z: p.z, level: Number.isFinite(p.level) ? p.level : 0 } } : {}) };
 }
 
 // This side's new swarm job list: every job without this side's marker stays as it is; a planner job whose account

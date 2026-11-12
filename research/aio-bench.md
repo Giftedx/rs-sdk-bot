@@ -84,6 +84,35 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 **Claim:** each of the 69 quest cases passes at seeds 7, 8 and 9. A run of all 69 at seeds 8 and 9 found four that passed at seed 7 and failed at seed 9. Each had a cause in the game rules, not in the roll alone: `fluffs` (a route through a crate npc that the engine refuses), `eadgar` (thrower trolls on the plateau path, 99 to 47 hp with no prayer), `legends` (the bowl blessing fails 98 in 100 at 99 prayer points and 59 in 100 at 42, `gujuo.rs2`), `mm` (the monkey minder walks away from the cage for more than 100 ticks). **Conditions:** lockstep, a new engine for each case. **Evidence:** `bun run bench '^quester:quest:' --all --seeds 8,9`; then each of the four at `--seeds 7,8,9` after its change: `fluffs` 327, 322, 374 ticks; `eadgar` 1987, 2049, 1988; `legends` 4330, 3708, 4202; `mm` 4620, 4571, 4371. **Gap:** the other 65 quests ran at seeds 8 and 9 before these four changes and at seed 7 for the baseline, not in one run of three seeds; three seeds do not prove a quest safe at every roll.
 
+## Planner quest rows
+
+**Claim:** 20 single-quest rows of the planner (`packages/planner/src/haggis-boards.json`) hold the lockstep ticks of their bench case: the floor is the best of seeds 7, 8 and 9, and the realistic value is the worst. With these rows the modelled Overall finish is 38,086 ticks at floor rates and 40,842 at realistic rates (`bun packages/planner/src/haggis-cli.ts`, scenario a). **Conditions:** lockstep, a new engine for each case, three engines at a time; each case starts from the preset that its row names. **Evidence:** `bun run bench '^quester:quest:(<the cases below>)$' --parallel 3 --seed <7, 8 or 9>`; rows in `.practice/aio-bench/planner-rows-s7.json`, `planner-rows-s8.json` and `planner-rows-s9.json`:
+
+| Row | Case | Seed 7 | Seed 8 | Seed 9 |
+|---|---|---|---|---|
+| `cooks-assistant` | `cook` | 8 | 8 | 8 |
+| `crest` | `crest` | 1,040 | 1,078 | 1,036 |
+| `waterfall` | `waterfall` | 1,112 | 1,101 | 1,103 |
+| `tree` | `tree` | 734 | 639 | 653 |
+| `grandtree` | `grandtree` | 1,739 | 1,720 | 1,715 |
+| `druid` | `druid` | 208 | 208 | 208 |
+| `gobdip` | `gobdip` | 124 | 126 | 126 |
+| `rj` | `rj` | 256 | 265 | 262 |
+| `witch` | `ball` | 434 | 382 | 435 |
+| `dragon` | `dragon` | 1,330 | 1,355 | 1,305 |
+| `barcrawl` | `barcrawl` | 1,385 | 1,384 | 1,386 |
+| `cannon` | `dwarfcannon` | 754 | 756 | 763 |
+| `merlin` | `merlin` | 712 | 703 | 718 |
+| `grail` | `grail` | 1,316 | 1,233 | 1,264 |
+| `dig` | `dig` | 1,374 | 1,968 | 1,477 |
+| `quest-zanaris` | `zanaris` | 700 | 624 | 810 |
+| `rival-fight-arena` | `arena` | 502 | 526 | 500 |
+| `rival-mm` | `mm` | 4,347 | 4,539 | 4,588 |
+| `rival-seaslug` | `seaslug` | 348 | 344 | 346 |
+| `scorpion` | `scorpion` | 886 | 891 | 910 |
+
+**Gap:** `extra:scorpion-with-barcrawl` (no Barcrawl: the guard talks at the outpost gate, and the Barcrawl runs first) passes at seeds 7 and 8 in 2,304 and 2,278 ticks. At seed 9 scorpion C stands at 3059,3486 upstairs in the Monastery for more than 200 ticks, the SDK marks it unreachable, and the cage gets "I can't reach that!" (`RESULT fail step catch c`). The `arrav` case runs one account, and the `quest-arrav` row is the pair run, so that row is not changed. `dig` spreads from 1,374 to 1,968 ticks and `zanaris` from 624 to 810. A wall-clock engine at 400 ms a tick read 1.7% above lockstep on two quests (Lockstep engine, above); the rows do not add that.
+
 ## The Flamtaer temple repair
 
 **Claim:** one Repair click repeats by itself every 3 ticks (`p_oploc(3)`), and a wall goes up one level for each attempt that succeeds once the build total is past the step for its level. A bot that stays on one wall until level 10 and buys its building sets in one trip rebuilds the temple faster than a bot that clicks the lowest wall after each level: `mortton` takes 1124, 1041 and 1118 ticks at seeds 7, 8 and 9, against 1506 at seed 7 with the lowest-wall order and three trips of two sets. Swamp paste stacks, so a set takes two pack slots. **Conditions:** lockstep, `quester:quest:mortton`, Crafting 99. **Evidence:** `flamtaer_temple.rs2:18-158`; `scripts/generated/quest-mortton.ts`; `bun run bench '^quester:quest:mortton$' --all --seeds 7,8,9`. **Gap:** the pack holds seven sets and the temple needs about eight, so one late trip remains (about 60 ticks); the rival states 944 ticks; no shade attacked the walls in these runs.

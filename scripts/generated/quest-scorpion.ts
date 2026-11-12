@@ -96,9 +96,17 @@ try {
     if (FROM < 3) {
         if (!inOutpost()) {
             await q.walk('to outpost gate', [{ x: 2544, z: 3569, tol: 1 }]);
-            const barcrawlState = () => (q.s.client as any).var?.[77] as number | undefined;
-            await establishBarcrawlGate(barcrawlState, async () => { await runBarcrawl(q); });
-            await q.step('outpost gate', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, inOutpost, 8, 4);
+            // The gate takes the player through, or the guard talks (Barcrawl not done). The guard's talk stays open
+            // for the Barcrawl, whose first step is that talk.
+            const tryGate = async (): Promise<boolean> => {
+                for (let i = 0; i < 4 && !inOutpost() && !q.dialogOpen(); i++) {
+                    const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0);
+                    if (g) await q.opLoc(g, 1);
+                    await q.waitUntil(() => inOutpost() || q.dialogOpen(), 8);
+                }
+                return inOutpost();
+            };
+            await establishBarcrawlGate(tryGate, async () => { await runBarcrawl(q); });
         }
         await q.openDoor('hut door', 2551, 3570);
         await q.openDoor('hut door 2', 2551, 3569);

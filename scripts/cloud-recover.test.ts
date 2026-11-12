@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SWARM_STOP } from './swarm';
-import { archiveDir, archiveStaleLease, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryLeaseState, recoveryProposal, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
+import { archiveDir, archiveStaleLease, clearSwarmStops, cloudSide, deadTasks, eligibility, END_SETTLE_MS, endSettled, lifecycleRoot, NEVER_RECOVERED, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryLeaseState, recoveryProposal, recoveryRequestWaiting, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -132,10 +132,59 @@ test('logout proofs are read from the session-lifecycle directory under the chec
     expect(lifecycleRoot('/r')).toBe(join('/r', '.practice', 'session-lifecycle'));
 });
 
-test('only a cloud side runs recovery; the local side and an unset FLEET_SIDE are refused', () => {
+test('only a cloud side waits for its runs and restarts its coordinator; the local side submits and returns', () => {
     expect(cloudSide('local')).toBe(false);
     expect(cloudSide('claude-cloud-3')).toBe(true);
     expect(cloudSide('cloud')).toBe(true);
+});
+
+test('the local side takes an end only when the standing retry can no longer change its time', () => {
+    const now = 1794487000000;
+    // Bigpackage: a logout timed out, the supervisor gave up after 4 runs. The standing retry deletes that end.
+    expect(endSettled({ at: now - 60_000, reason: 'gave-up after 4 runs' }, now)).toBe(false);
+    expect(endSettled({ at: now - END_SETTLE_MS + 1, reason: 'gave-up after 4 runs' }, now)).toBe(false);
+    // The orphan end that follows is not retried: its time holds from the first second.
+    expect(endSettled({ at: now - 1000, reason: 'exit orphaned: attempt 1794487442414-0000029304-0000000001 owner 29304 gone' }, now)).toBe(true);
+    // An end the retry has passed by (a job that is not standing) is taken too.
+    expect(endSettled({ at: now - END_SETTLE_MS, reason: 'gave-up after 4 runs' }, now)).toBe(true);
+    expect(END_SETTLE_MS).toBeGreaterThan(15 * 60_000);
+});
+
+test('the accounts that stay offline are never recovery targets', () => {
+    for (const name of ['haggis', 'shaftshooter', 'polevaulter', 'afknight']) expect(NEVER_RECOVERED).toContain(name);
+});
+
+test('a submitted recovery that the coordinator has not taken yet holds the next call', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'recover-requests-'));
+    try {
+        expect(recoveryRequestWaiting(join(dir, 'missing'))).toBe(false);
+        expect(recoveryRequestWaiting(dir)).toBe(false);
+        // Another session's proposal with no recovery in it does not hold the call.
+        writeFileSync(join(dir, 'a.request.json'), JSON.stringify({ tasks: [{ id: 'x', kind: 'run', capability: 'shop-buyer' }] }));
+        expect(recoveryRequestWaiting(dir)).toBe(false);
+        // A taken or rejected recovery proposal is in the coordinator's state or settled: state.json decides.
+        const proposal = JSON.stringify(recoveryProposal('local', [{ account: 'Bigpackage', endedAt: 5 }], 1794487000000));
+        writeFileSync(join(dir, 'b.request.json.accepted'), proposal);
+        writeFileSync(join(dir, 'c.request.json.rejected'), proposal);
+        expect(recoveryRequestWaiting(dir)).toBe(false);
+        writeFileSync(join(dir, 'd.request.json'), proposal);
+        expect(recoveryRequestWaiting(dir)).toBe(true);
+        rmSync(join(dir, 'd.request.json'));
+        // A request file that cannot be read may be a recovery: wait.
+        writeFileSync(join(dir, 'e.request.json'), '{');
+        expect(recoveryRequestWaiting(dir)).toBe(true);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a local proposal has the shape of a hand recovery: one qualify, then serial runs that name the exact end', () => {
+    const p = recoveryProposal('local', [{ account: 'Bigpackage', endedAt: 11 }, { account: 'Billionaire', endedAt: 12 }], 1794487000000);
+    expect(p.tasks.map(t => t.kind)).toEqual(['qualify', 'run', 'run']);
+    expect(p.tasks.every(t => t.capability === 'session-recovery-only')).toBe(true);
+    const [qualify, first, second] = p.tasks as any[];
+    expect(first.sessionRecovery).toEqual({ account: 'Bigpackage', endedAt: 11 });
+    expect(first.repairs).toEqual([{ account: 'Bigpackage', endedAt: 11 }]);
+    expect(first.dependsOn).toEqual([qualify.id]);
+    expect(second.dependsOn).toEqual([qualify.id, first.id]);
 });
 
 test('a release frees accounts only when every coordinator-owned job is a parked session check', () => {
