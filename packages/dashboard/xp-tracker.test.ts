@@ -86,3 +86,12 @@ test('a skill that the baseline did not hold is counted from its first reading',
  expect(base.xp.Mining).toBe(1000);
  expect(xp.rows(bot([{name:'Mining',xp:1400}]),base,120_000,null)[0].gained).toBe(400);
 });
+test('tick efficiency counts each kind of tick and names the biggest waste',()=>{
+ const e=xp.efficiency('xxxxmmmiiv'+'?');
+ expect(e.ticks).toBe(10);
+ expect(e.counts).toEqual({xp:4,inventory:1,move:3,anim:0,dialog:0,stun:0,idle:2});
+ expect(e.work).toBe(50);expect(e.idle).toBe(20);
+ expect(e.waste).toEqual({kind:'move',share:30});
+ expect(xp.efficiency('')).toBeNull();expect(xp.efficiency(undefined)).toBeNull();
+ expect(xp.efficiency('xxxx').waste).toBeNull();
+});

@@ -79,8 +79,8 @@ test('an open bank redraws newer observations and closes when its account change
 });
 
 function questPanel(bot:any,filter='all'){
- const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'){"),shell.indexOf("    if(selectedTab==='friends')"));
- return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='';let html='';${code};return html;`)(bot,filter,String,String);
+ const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'&&questScope==='fleet')"),shell.indexOf("    if(selectedTab==='friends')"));
+ return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String);
 }
 
 test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
@@ -742,4 +742,65 @@ test('a line with key=value pairs keeps the words between them, and a marked nam
  const {pretty,mention}=new Function('S','safeName','E',`${code};return {pretty,mention};`)({bots:[{name:'Woodenstaff'}]},(n:string)=>n,E);
  expect(pretty('t=1200 mined iron ore total=57 done')).toBe('<span title="t=1200 mined iron ore total=57 done">tick 1,200 mined iron ore · total 57 done</span>');
  expect(mention(pretty('Woodenstaff hp=10 str=20'))).toBe('<span title="Woodenstaff hp=10 str=20"><span class="chat-hl">Woodenstaff</span> hp 10 · str 20</span>');
+});
+test('the Quest Journal fleet view counts each quest over our accounts and colours it',()=>{
+ const src=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
+ const code=src.slice(src.indexOf("  let questScope='account';"),src.indexOf('  function gamePanel(){'));
+ const bots=[{name:'Alpha',quests:[{name:'Cook\'s Assistant',state:'complete'},{name:'Imp Catcher',state:'started'}]},{name:'Bravo',quests:[{name:'Cook\'s Assistant',state:'complete'},{name:'Imp Catcher',state:'not started'}]},{name:'Prac',practice:true,quests:[{name:'Imp Catcher',state:'complete'}]}];
+ const run=(detail:string|null,filter='all')=>new Function('S','E','safeName',`let questDetail=${JSON.stringify(detail)},questFilter=${JSON.stringify(filter)},questQuery='';${code};return fleetQuests();`)({bots},(s:any)=>String(s),(s:any)=>s);
+ const list=run(null);
+ expect(list).toContain('1 of 2 done by an account · 1 by all 2');
+ expect(list).toMatch(/color:#00ff00" data-quest="Cook's Assistant"[^>]*><span>Cook's Assistant<\/span><span>2\/2/);
+ expect(list).toMatch(/color:#ffff00" data-quest="Imp Catcher"[^>]*><span>Imp Catcher<\/span><span>0\/2/);
+ const detail=run('Imp Catcher');
+ expect(detail).toContain('<span style="color:#ffff00" title="started">Alpha</span><span style="color:#ff0000" title="not started">Bravo</span>');
+ expect(run(null,'completed')).not.toContain('Imp Catcher');
+});
+test('PvP Tools: risk, the 3 kept items, and only the players the server lets attack',()=>{
+ const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
+ const S={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Amulet of power':3000}},bots:[{name:'Ours1'},{name:'Mate'}],
+  roster:[['Near',3100,3700,0,72],['Far',3100,3740,0,72],['Strong',3101,3701,0,95],['Mate',3100,3701,0,70],['Outside',3100,3500,0,70],['Upstairs',3100,3700,1,70]]};
+ const {pvpState}=new Function('S',`${code};return {pvpState};`)(S);
+ // Wilderness level at z 3700 is 23: combat 70 can fight 47-93.
+ const p=pvpState({name:'Ours1',inWorld:true,combat:70,pos:{x:3102,z:3702,level:0},equipment:[{name:'Rune scimitar',count:1},{name:'Amulet of power',count:1}],inventory:[{name:'Shark',count:20}]});
+ expect(p.wild).toBe(23);
+ expect(p.risk).toBe(15000+3000+16000);
+ expect(p.kept.map((k:any)=>k.name)).toEqual(['Rune scimitar','Amulet of power','Shark']);
+ expect(p.keptValue).toBe(18800);expect(p.lost).toBe(34000-18800);
+ // Far is 38 tiles away, Strong is 25 levels apart, Mate is ours, Outside is not in the Wilderness, Upstairs is on another floor.
+ expect(p.threats.map((t:any)=>t.name)).toEqual(['Near']);
+ expect(pvpState({name:'Ours1',inWorld:false})).toBeNull();
+});
+test('the death recap card shows the tile, the last hit, hitsplats and what the death took',()=>{
+ const code=shell.slice(shell.indexOf('  let recap={name:null'),shell.indexOf('  // Quest Journal, Fleet view'));
+ const wild=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  const canAttack='));
+ const {recapHtml}=new Function('E','safeName','age','icon','qty','document','window','put','minimap',`${wild};${code};return {recapHtml};`)(String,(s:any)=>s,()=>'5m',(n:string)=>`[${n}]`,(n:number)=>`(${n})`,{createElement:()=>({})},{atlasOperator:()=>true},()=>{},()=>{});
+ const html=recapHtml({name:'Alpha',state:'ok',data:{at:1,pos:{x:3100,z:3700,level:0},killer:'Goondelf (level 80)',hits:[{tick:11,damage:6,source:'Goondelf (level 80)'},{tick:12,damage:0,source:'Goondelf (level 80)'}],hp:[[10,10],[11,4],[12,0]],actions:[{tick:11,type:'eatFood'}],carried:[{name:'Shark',count:5}],kept:[],lost:[{name:'Shark',count:5}],script:'scripts/pk.ts',tick:12}});
+ expect(html).toContain('Tile 3100, 3700');expect(html).toContain('Wilderness 23');
+ expect(html).toContain('Last hit: <b>Goondelf (level 80)</b>');
+ expect(html).toContain('<span class="hitsplat" title="tick 11 · Goondelf (level 80)">6</span><span class="hitsplat zero"');
+ expect(html).toContain('Lost</div><div class="recap-items"><span class="recap-item" title="Shark × 5">[Shark](5)</span>');
+ expect(html).toContain('pk.ts · tick 12');
+ expect(recapHtml({name:'Alpha',state:'none'})).toContain('No death in the newest tick records');
+});
+test('the death recap is read again for a newer death, and while it waits for the respawn after 30 s',()=>{
+ const code=shell.slice(shell.indexOf('  // A recap belongs to one reported death'),shell.indexOf('  function recapHtml(r){'));
+ const t=new Function('window','S','paintRecap','minimap','fetch',`${code};return {recapStale,set:(r)=>{recap=r;}};`)({atlasOperator:()=>true},{bots:[]},()=>{},()=>{},()=>new Promise(()=>{}));
+ const b={name:'Alpha',death:{at:100}};
+ t.set({name:'Alpha',state:'ok',data:{kept:[]},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
+ const D=1_000_000_000,b2={name:'Alpha',death:{at:D}};
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-60_000},deathAt:D,at:Date.now()-31_000});expect(t.recapStale(b2)).toBe(false);
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-20*60_000},deathAt:D,at:Date.now()-31_000});expect(t.recapStale(b2)).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-20*60_000},deathAt:D,at:Date.now()});expect(t.recapStale(b2)).toBe(false);
+ expect(t.recapStale({...b,death:{at:200}})).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()-31_000});expect(t.recapStale(b)).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
+ for(const state of ['none','error']){t.set({name:'Alpha',state,data:null,deathAt:100,at:Date.now()-31_000});expect(t.recapStale(b)).toBe(true);t.set({name:'Alpha',state,data:null,deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);}
+ expect(t.recapStale({name:'Alpha'})).toBe(false);expect(t.recapStale({...b,practice:true})).toBe(false);
+});
+test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
+ const line=shell.split('\n').find(l=>l.includes("live.sort(xpSort==='waste'"))!.trim();
+ const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
+ const window:any={efficiency:(t:string)=>t.split('').filter(c=>c==='i').length};
+ expect(run('rate')).toBe('BAC');expect(run('waste')).toBe('BCA');
 });
