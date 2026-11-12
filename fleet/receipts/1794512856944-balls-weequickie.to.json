@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794512856944-balls-weequickie",
  "account": "WeeQuickie",
  "partner": "Balls",
@@ -10,8 +10,22 @@
  "item": "logs",
  "requested": 2,
  "claim": "d2eed95b-b6d7-439f-90b3-d6e58ff14d17",
- "count": 0,
- "ok": false,
- "at": 1794512868128,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1794512932027,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1794512930703
+ },
+ "logout": {
+  "attemptId": "1794512868139-0000031184-0000000001",
+  "at": 1794512932018,
+  "sha256": "1f22c82b3cbff7f9ac06a89a5b8cdf1043d4536e37030a0f23a103f2a1524de5"
+ },
+ "screen": true
 }
