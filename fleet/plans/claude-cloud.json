@@ -1,24 +1,27 @@
 {
  "side": "claude-cloud",
- "at": 1794488306237,
+ "at": 1794489815153,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2669,3298"
+    "shop:betty"
    ]
   },
   {
@@ -108,25 +111,20 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "betty"
+    "99",
+    "5000"
    ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "shop:betty"
-   ]
+   "resources": []
   },
   {
    "account": "Fingerblastr",
@@ -177,20 +175,28 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/aio.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "quester",
-    "dusty-key"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
-   "role": "quest",
-   "template": "army-dusty-key",
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Dipstick",
