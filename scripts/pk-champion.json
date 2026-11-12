@@ -1,1 +1,12 @@
-{"predictPrayer":true,"snapPrayer":true,"counterRead":true,"mixStyles":true,"adaptStyles":true,"rotation":["ranged","melee"]}
+{
+  "predictPrayer": true,
+  "snapPrayer": true,
+  "counterRead": true,
+  "mixStyles": true,
+  "adaptStyles": true,
+  "rotation": [
+    "ranged",
+    "melee"
+  ],
+  "castArmour": "keep"
+}

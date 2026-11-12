@@ -41,6 +41,9 @@ export const KNOBS: readonly Knob[] = [
     { name: 'prayerFlick', candidates: [{ prayerFlick: false }] },
     { name: 'freeFood', candidates: [{ freeFood: true }] },
     { name: 'bowBurst', candidates: [{ bowBurst: 0.6 }, { bowBurst: 0.45 }, { bowBurst: 0.8 }] },
+    { name: 'cureNow', candidates: [{ cureNow: true }] },
+    { name: 'diagonalFrozen', candidates: [{ freeze: true, diagonalFrozen: true }, { freeze: 'low', diagonalFrozen: true }] },
+    { name: 'cutOff', candidates: [{ chase: true, cutOff: 3 }, { chaseBelow: 0.4, cutOff: 3 }] },
 ];
 
 // Mean, standard deviation and t statistic of the paired samples: positive means that the candidate is better.
