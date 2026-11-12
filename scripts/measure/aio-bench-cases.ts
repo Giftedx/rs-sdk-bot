@@ -276,6 +276,10 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('foraging', 'qol', 'fresh_lumbridge', ['prayer', '0', '10', '40'], {presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Prayer: 43}}}),
   skiller('runecraft', 'air', 'rc_air_inside'),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
+  // The stall trip of the same worker: no food in the pack or the bank, and no coins for the Baker's shop. The thief
+  // has 40 Hitpoints, because one under 20 ends the run when it has no food (goldfarm.ts, FRAIL_HP).
+  {...skiller('thieving', 'knights', 'goldfarm_nofood', ['TICKS=600'], {output: /stolen=(\d+)/}), key: 'extra:goldfarm-stall',
+    presetConfig: {position: {x: 2654, z: 3304, level: 0}, skills: {Thieving: 99, Hitpoints: 40}}},
   skiller('foraging', 'flax', 'gather_flax', ['1500'], {output: /banked=(\d+)/}),
   skiller('foraging', 'grapes', 'grapes_cooksguild'),
   {key: 'fighter:chicken', script: 'scripts/aio-fighter.ts', preset: 'bank_draynor', presetConfig: CHICKEN_FIXTURE, scriptArgs: ['chicken', 'TARGET_LEVEL=25', 'CAP=1500'], pass: s => ok(s) && s.includes('chicken-qualification'), timeoutMs: 300_000},
