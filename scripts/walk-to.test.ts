@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare } from './walk-to';
+import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom } from './walk-to';
 import { loadTravel } from '../packages/core/src/travel';
 import type { Outcome } from '../packages/core/src/act';
 
@@ -193,4 +193,26 @@ test('a full pack with no coins gives one item to the bank for the fare\'s slot'
     // A free slot, or a coin stack the fare joins: nothing to bank.
     expect(fareSpare(rows(...Array(27).fill(1779)))).toBeNull();
     expect(fareSpare(rows(...Array(27).fill(1779), 995))).toBeNull();
+});
+
+test('a start on another floor or far from the place is away from it', () => {
+    const market = { x: 2654, z: 3304, level: 0 };
+    expect(awayFrom({ worldX: 2575, worldZ: 3269, level: 1 }, market, 80)).toBe(true);
+    expect(awayFrom({ worldX: 2575, worldZ: 3269, level: 0 }, market, 80)).toBe(false);
+    expect(awayFrom({ worldX: 2573, worldZ: 3269 }, market, 80)).toBe(true);
+    expect(awayFrom(null, market, 80)).toBe(false);
+});
+
+test('a trip east from a floor above Ardougne goes to the north bank and takes the fare before the first plan', async () => {
+    const house = { x: 2575, z: 3269, level: 1 }, pen = { x: 3017, z: 3288, level: 0 };
+    const calls: string[] = [];
+    let coins = 0;
+    const walk = async ({ x, z }: { x: number; z: number }): Promise<Outcome> => { calls.push(x + ',' + z); return { ok: true, ticks: 3 }; };
+    const sail = async (): Promise<Outcome> => ({ ok: true, ticks: 1 });
+    expect(await walkWithFerryFallback(house, pen, walk, sail, () => coins, async need => { calls.push('fare ' + need); coins = need; return { ok: true, ticks: 4 }; })).toEqual({ ok: true, ticks: 10 });
+    expect(calls).toEqual(['2619,3332', 'fare 60', '3017,3288']);
+    // A walk inside Ardougne from that floor is one plan: the planner has the stairs.
+    calls.length = 0;
+    expect(await walkWithFerryFallback(house, { x: 2654, z: 3304, level: 0 }, walk, sail, () => 0, async () => { calls.push('fare'); return { ok: true, ticks: 1 }; })).toEqual({ ok: true, ticks: 3 });
+    expect(calls).toEqual(['2654,3304']);
 });
