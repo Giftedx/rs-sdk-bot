@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794507641408,
+ "at": 1794507863948,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -300,23 +300,25 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/fletch-arrows.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "15000",
-    "headless"
+    "sarim"
    ],
    "env": {
+    "ITEMS": "feather",
     "BANK_PACK": "1",
-    "MAX_MAKE": "390"
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "shop:sarim"
+   ]
   },
   {
    "account": "Swordinhand",
