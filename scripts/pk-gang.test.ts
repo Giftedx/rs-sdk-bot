@@ -121,3 +121,20 @@ test('a bank trip takes the pack again: each item that is no food and no boost, 
     // Bow, super defence, antipoison and the arrows are named; the three boosts and the two sharks are five slots.
     expect(pack).toEqual({ food: 5, items: [{ id: 861, count: 1 }, { id: 2442, count: 1 }, { id: 2448, count: 1 }, { id: 886, count: 150 }] });
 });
+
+test('the walk-in kit has no glory: an amulet of power, the runes of Camelot Teleport, and cases that go to the bank first', () => {
+    const walker = kitItems('gang-walker'), count = (name: string) => walker.inventory.filter(i => i.id === itemId(name)).reduce((n, i) => n + i.count, 0);
+    expect([count('lawrune'), count('airrune'), count('shark'), count('amulet_of_glory_4'), walker.inventory.length]).toEqual([2, 10, 19, 0, 27]);
+    expect(walker.equipment.find(e => e.slot === 2)!.id).toBe(itemId('amulet_of_power'));
+    expect(kitCost('gang-walker')).toBeLessThan(58_000);
+    // Camelot Teleport is the way out of the profile for an account with no glory.
+    expect(PROFILES['gang-hunter']!.escapeSpell).toBe(1174);
+    const cases = benchCases();
+    for (const [key, tile] of [['extra:gang-ganker-max-gang-walker-prepot-x2', GANKER_POST], ['extra:gang-ganker-max-gang-walker-prepot-near-x2', null]] as const) {
+        const c = cases.find(k => k.key === key)!;
+        expect(c.scriptArgs).toEqual(expect.arrayContaining(['SPAR_PRETRIP=1', 'SPAR_A=gang-hunter', 'SPAR_KITS=gang-walker:ganker-max']));
+        expect(c.scriptArgs.some(a => a.startsWith('SPAR_TRIPS') || a.includes('escapeWalk'))).toBe(false);
+        expect(c.presetConfig!.bank!.some(b => b.id === itemId('shark'))).toBe(true);
+        if (tile) expect(c.presetConfig!.position).toEqual({ x: tile.x + 2, z: tile.z, level: 0 });
+    }
+});
