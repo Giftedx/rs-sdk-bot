@@ -49,6 +49,9 @@ export async function enterPen(s: Parameters<typeof finishPenEntry>[0], pen: { x
     return fault;
 }
 
+// A run that starts with TARGET feathers in the pack has nothing to gather: the order is met, so the run is good.
+export const featherRunOk = (gained: number, held: number, target: number): boolean => gained > 0 || held >= target;
+
 if (import.meta.main) {
     const name = process.argv[2]!, PEN = parsePen(process.env.PEN);
     const TICKS = Number(process.env.TICKS ?? 3000), TARGET = Number(process.env.TARGET ?? 2000);
@@ -86,7 +89,7 @@ if (import.meta.main) {
         }
         // A pickup can meet the order while the previous chicken still retaliates.
         await waitUntil(s, x => x?.player?.combat?.inCombat === false, { timeoutTicks: 30 });
-        const got = countItems(s, FEATHER) - f0;
-        await finish([s], got > 0, `feathers=${countItems(s, FEATHER)} gained=${got} kills=${kills} idle=${idle} ticks=${s.tick() - start}`);
+        const held = countItems(s, FEATHER), got = held - f0;
+        await finish([s], featherRunOk(got, held, TARGET), `feathers=${held} gained=${got} kills=${kills} idle=${idle} ticks=${s.tick() - start}`);
     } catch (e) { await finish([s], false, String(e)); }
 }
