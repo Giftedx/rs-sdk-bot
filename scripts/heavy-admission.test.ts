@@ -6,18 +6,21 @@ import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { MIN_HEAP_MB, SWARM_FRESH_MS, TEST_SHARD_GB, TOOL_FLOOR_GB, floorGB, heapThatFits, sizedNote, swarmRuns, unitsThatFit } from './heavy-admission';
 
 test('a job takes the memory above the floor, the wanted size at most and one unit at least', () => {
-    // 12 shards of 0.3 GiB want 3.6 GiB above the floor.
-    expect(unitsThatFit(12, TEST_SHARD_GB, 16, 4)).toBe(12);
-    expect(unitsThatFit(12, TEST_SHARD_GB, 7.7, 4)).toBe(12);
-    expect(unitsThatFit(12, TEST_SHARD_GB, 7.5, 4)).toBe(11);
-    expect(unitsThatFit(12, TEST_SHARD_GB, 6.4, 4)).toBe(8);
-    expect(unitsThatFit(12, TEST_SHARD_GB, 4.3, 4)).toBe(1);
+    // 12 shards of 0.75 GiB want 9 GiB above the floor: 13 GiB free with the fleet floor of 4.
+    expect(TEST_SHARD_GB).toBe(0.75);
+    expect(unitsThatFit(12, 0.75, 16, 4)).toBe(12);
+    expect(unitsThatFit(12, 0.75, 13, 4)).toBe(12);
+    expect(unitsThatFit(12, 0.75, 12.9, 4)).toBe(11);
+    expect(unitsThatFit(12, 0.75, 7.6, 4)).toBe(4);
+    expect(unitsThatFit(12, 0.75, 6.4, 4)).toBe(3);
+    expect(unitsThatFit(12, 0.75, 4.7, 4)).toBe(1);
     // Under the floor, and with a number that is not a number: one unit still starts.
-    expect(unitsThatFit(12, TEST_SHARD_GB, 2.8, 4)).toBe(1);
-    expect(unitsThatFit(12, TEST_SHARD_GB, NaN, 4)).toBe(1);
-    expect(unitsThatFit(3, TEST_SHARD_GB, 64, 4)).toBe(3);
+    expect(unitsThatFit(12, 0.75, 2.8, 4)).toBe(1);
+    expect(unitsThatFit(12, 0.75, NaN, 4)).toBe(1);
+    expect(unitsThatFit(3, 0.75, 64, 4)).toBe(3);
     // The same memory on a machine with no swarm.
-    expect(unitsThatFit(12, TEST_SHARD_GB, 2.8, TOOL_FLOOR_GB)).toBe(6);
+    expect(unitsThatFit(12, 0.75, 2.8, TOOL_FLOOR_GB)).toBe(2);
+    expect(unitsThatFit(12, 0.75, 10, TOOL_FLOOR_GB)).toBe(12);
 });
 
 test('the compiler heap is the wanted size, less when memory is short, and never under the least heap of use', () => {
