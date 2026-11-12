@@ -69,9 +69,24 @@ export async function bankFare(s: Session, need: number, walk: (to: Tile, budget
     return took ? done(true, '') : done(false, `ferry needs ${need} coins and the bank holds ${row?.count ?? 0}`);
 }
 
+// Tutorial Island, where a new live account starts (seen: START 3094 3106 0 on the demo server). The sea is on each
+// side of this box, and no route leaves the island: the skip puts the account in Lumbridge.
+export const onTutorialIsland = (p: { worldX: number; worldZ: number; level?: number } | null | undefined): boolean =>
+    !!p && p.worldX >= 3050 && p.worldX <= 3160 && p.worldZ >= 3050 && p.worldZ <= 3140;
+export async function leaveTutorial(s: Session, skip: () => Promise<{ success: boolean; message?: string }> = () => s.bot.skipTutorial(),
+    ready: () => Promise<unknown> = () => waitUntil(s, st => (st?.nearbyNpcs?.length ?? 0) > 0, { timeoutTicks: 30 })): Promise<Outcome | null> {
+    if (!onTutorialIsland(s.sdk.getState()?.player)) return null;
+    await ready();
+    const r = await skip();
+    console.log(`MILESTONE tutorial ${r.success ? 'ok' : 'fail'}`);
+    return r.success ? null : { ok: false, reason: 'precondition', detail: `tutorial skip failed: ${r.message ?? ''}`, ticks: 0 };
+}
+
 // A planned walk that takes the Ardougne ferries when the planner has no route, with the fare from the bank. `walk`
-// is the caller's planned walk for one leg.
-export function ferryWalk(s: Session, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>): Promise<Outcome> {
+// is the caller's planned walk for one leg. A start on Tutorial Island leaves the island first.
+export async function ferryWalk(s: Session, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>): Promise<Outcome> {
+    const stuck = await leaveTutorial(s);
+    if (stuck) return stuck;
     const p = s.sdk.getState()?.player;
     if (!p) return walk(to);
     return walkWithFerryFallback({ x: p.worldX, z: p.worldZ, level: p.level }, to, walk, boat => {
@@ -120,9 +135,10 @@ const MUSA_POINT_FERRY = 'npc:customs_officer:port-sarim@2953,3147';
 const AL_KHARID_TOLL = 'npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226';
 const LUMBRIDGE: Tile = { x: 3222, z: 3218, level: 0 }, DRAYNOR: Tile = { x: 3092, z: 3243, level: 0 };
 const FERRY_LEG_PLAN_MS = 15_000;
-// Falador, Port Sarim, Draynor, Lumbridge and Varrock (z up to 3510), and East Ardougne with its north bank and cow
-// field.
-const inEast = (t: Tile) => t.level === 0 && t.x >= 2930 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
+// Taverley, Falador, Port Sarim, Draynor, Lumbridge and Varrock (z up to 3510), and East Ardougne with its north bank
+// and cow field. The west edge is the east foot of White Wolf Mountain, where Kandarin (inKandarin) ends, so each
+// start between Ardougne and Varrock is in one of the two regions and the ferry rule below applies to it.
+const inEast = (t: Tile) => t.level === 0 && t.x >= 2870 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
 const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t.z >= 3240 && t.z <= 3400;
 // The rest of Kandarin west of White Wolf Mountain: Catherby, Seers' Village, the Ranging Guild, Yanille and the Gnome
 // battlefield. A trip east from there starts with a walk to the Ardougne north bank: the fare bank and the first dock

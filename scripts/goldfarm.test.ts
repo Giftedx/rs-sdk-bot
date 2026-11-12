@@ -1,8 +1,54 @@
 import {test,expect} from 'bun:test';
-import {courierFoodReady,incomingCookedFood,receiveFoodAtBank} from './goldfarm';
+import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,ownerSeesTile} from './goldfarm';
 import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
+import {GOLDFARM_FOOD,GOLDFARM_FRAIL} from '../packages/planner/src/autopilot';
+import {foodTripDue} from './goldfarm';
+test('an idle pass names the first thing that keeps every knight from a pick',()=>{
+    const k=(inRange:boolean,reachable=true,banned=false,avoided=false)=>({inRange,reachable,banned,avoided});
+    expect(noKnightReason([])).toBe('none');
+    expect(noKnightReason([k(false),k(false)])).toBe('far');
+    expect(noKnightReason([k(true,false),k(false)])).toBe('unreachable');
+    expect(noKnightReason([k(true,true,true),k(true,false)])).toBe('banned');
+    expect(noKnightReason([k(true,true,false,true),k(true,true,true)])).toBe('avoided');
+});
 test('incoming sharks and shark notes count as food, raw and burnt do not',()=>{
     expect(incomingCookedFood([{id:385,count:5}],[{id:385,count:8},{id:386,count:20},{id:383,count:30},{id:387,count:3}])).toBe(23);
+});
+test('a thief with few Hitpoints restocks while it still holds a reserve, and any other thief at the floor',()=>{
+    expect(foodReserve(10)).toBe(FRAIL_RESERVE);
+    expect(foodReserve(FRAIL_HP-1)).toBe(FRAIL_RESERVE);
+    expect(foodReserve(FRAIL_HP)).toBe(FRAIL_FLOOR);
+    expect(foodReserve(99)).toBe(FRAIL_FLOOR);
+    expect(FRAIL_RESERVE).toBeGreaterThan(FRAIL_FLOOR);
+});
+test('a trade-only thief never goes to the shop or the stall, also while it is under a frail reserve',()=>{
+    const due={low:true,bankEmpty:true,tradeOnly:false,rested:true,shopOk:false,emptyTrips:0};
+    expect(foodTripDue(due)).toBe(true);
+    // A frail thief with 2 to 5 food items is low; the trade-only setting still keeps it away.
+    expect(foodTripDue({...due,tradeOnly:true})).toBe(false);
+    expect(foodTripDue({...due,tradeOnly:true,shopOk:true})).toBe(false);
+    expect(foodTripDue({...due,low:false})).toBe(false);
+    expect(foodTripDue({...due,bankEmpty:false})).toBe(false);
+    // A frail thief rests after a guard hit; three empty trips end the stall, and the shop still counts.
+    expect(foodTripDue({...due,rested:false})).toBe(false);
+    expect(foodTripDue({...due,emptyTrips:3})).toBe(false);
+    expect(foodTripDue({...due,emptyTrips:3,shopOk:true})).toBe(true);
+});
+test('a fall in Hitpoints with no pick of its own is a guard hit',()=>{
+    expect(guardHit(10,7,false)).toBe(true);
+    // A failed pick in the pass explains the fall.
+    expect(guardHit(10,7,true)).toBe(false);
+    expect(guardHit(7,7,false)).toBe(false);
+    // A bite raised it.
+    expect(guardHit(6,10,false)).toBe(false);
+});
+test('the planner keeps a frail thief off the knights by the numbers and the foods of this worker',()=>{
+    expect(GOLDFARM_FRAIL.hitpoints).toBe(FRAIL_HP);
+    expect(GOLDFARM_FRAIL.count).toBe(FRAIL_FLOOR);
+    expect(GOLDFARM_FRAIL.of).toBe(GOLDFARM_FOOD);
+    // Each food of the planner's list is one food that the worker eats, and each food of the worker is on the list.
+    expect(GOLDFARM_FOOD.every(name=>FOOD_ORDER.filter(re=>re.test(name)).length===1)).toBe(true);
+    expect(FOOD_ORDER.every(re=>GOLDFARM_FOOD.filter(name=>re.test(name)).length===1)).toBe(true);
 });
 import type {Session} from '../packages/core/src/inprocess';
 const now=100000,owners=new Set(['courier']),live={name:'Courier',server:'rs-sdk-demo.fly.dev',at:now-1000,result:'',pos:{x:2654,z:3283,level:0},inventory:[{id:330,name:'Salmon',count:50}]};
@@ -101,3 +147,19 @@ test('calcEatAt guarantees never dying from Knight fail damage (DMG=3) while max
     expect(calcEatAt(50)).toBe(20);
 });
 
+
+test('the Baker stops a steal only from a tile within 5 tiles that he sees; a guard is not his rule', () => {
+    const recipe = { name: 'stealing_bakery_stall', loc: 1, level: 5, respawn: 8, loot: [1], questGate: false, owners: [50], guards: [60] };
+    const baker = { id: 50, x: 10, z: 10, inCombat: false }, guard = { id: 60, x: 10, z: 10, inCombat: false };
+    const open = () => true, shut = () => false;
+    expect(ownerSeesTile(recipe, { x: 13, z: 12 }, 0, [baker], open)).toBe(true);
+    expect(ownerSeesTile(recipe, { x: 15, z: 10 }, 0, [baker], open)).toBe(true);
+    expect(ownerSeesTile(recipe, { x: 16, z: 10 }, 0, [baker], open)).toBe(false);
+    // The stall stands between them.
+    expect(ownerSeesTile(recipe, { x: 12, z: 10 }, 0, [baker], shut)).toBe(false);
+    expect(ownerSeesTile(recipe, { x: 12, z: 10 }, 0, [guard], open)).toBe(false);
+    // The sight question goes from the owner to the tile, on the thief's floor.
+    const asked: number[][] = [];
+    ownerSeesTile(recipe, { x: 12, z: 11 }, 0, [baker], (x, z, toX, toZ, level) => { asked.push([x, z, toX, toZ, level]); return true; });
+    expect(asked).toEqual([[10, 10, 12, 11, 0]]);
+});

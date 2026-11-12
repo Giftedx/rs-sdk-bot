@@ -179,11 +179,16 @@ test('a recovery run waits in the queue while the swarm would refuse it for memo
  // 4 + 1 for the recovery + the margin is the least free memory with no pending start.
  expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,pendingStartup:0,freeGB:5+RECOVERY_MEMORY_MARGIN_GB})).toBe(false);
  expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,pendingStartup:0,freeGB:4.9+RECOVERY_MEMORY_MARGIN_GB})).toBe(true);
- expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,freeGB:10.2,pendingStartup:3})).toBe(false);
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,freeGB:8+RECOVERY_MEMORY_MARGIN_GB,pendingStartup:3})).toBe(false);
+ // The live refusal: dispatched at 10.55 GiB free with 4 pending starts, refused 11 s later at 8.78 GiB.
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,freeGB:10.55,pendingStartup:4})).toBe(true);
  // No other run waits for this rule; an unknown controller state holds nothing.
  expect(recoveryWaitsForMemory({},capacity)).toBe(false);
  expect(recoveryWaitsForMemory({sessionRecovery},null)).toBe(false);
  expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,freeGB:null})).toBe(false);
- // A full fleet is the slot rule's case, not this one.
+ // A full fleet with memory to spare is the slot rule's case, not this one.
  expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,running:25,freeGB:20})).toBe(false);
+ // A full fleet with short memory waits too. The live refusal: 25 of 25 bots, 8.1 GiB free and 3 pending starts at the
+ // dispatch, and the swarm refused for memory 25 s later.
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,running:25,freeGB:8.1,pendingStartup:3})).toBe(true);
 });

@@ -102,6 +102,13 @@ test('a standing rollout pauses and resumes jobs through the coordinator file; s
  expect(readCoordinatorJobs(base).paused).toBeUndefined();
  expect(readMergedPlan(base).jobs[1].enabled).toBe(true);
  expect(readFileSync(path,'utf8')).toBe(raw);
+ // A name left in the list with no pause file is from a pause that did not finish: the next resume clears it.
+ writeCoordinatorJobs(base,{...readCoordinatorJobs(base),paused:['b']});
+ expect(readMergedPlan(base).jobs[1].enabled).toBe(false);
+ await ensureSwarm('new',deps as any,false);
+ expect(readCoordinatorJobs(base).paused).toBeUndefined();
+ expect(readMergedPlan(base).jobs[1].enabled).toBe(true);
+ expect(readFileSync(path,'utf8')).toBe(raw);
 });
 test('the runtime revision is computed once per freshness window',()=>{
  let computed=0;const compute=()=>{computed++;return 'r'+computed;};
