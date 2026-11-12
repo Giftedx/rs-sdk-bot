@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { digest, model } from './pk-rival-feed';
+import { decodeAppearance as reference } from '../../packages/dashboard/appearance';
+import { decodeAppearance, digest, model } from './pk-rival-feed';
 
 // The appearance block of the feed: gender, head icons, 12 wear slots (0x200 + object id, or one 0 byte), 5 colours,
 // 7 animation ids, the base-37 name, the combat level.
@@ -66,4 +67,11 @@ test('a socket that connects again resets the players of its own region only', (
     const resent = digest([...start, JSON.stringify({ t: 'hello', r: 0, tick: 14 }),
         tick(15, { i: 1, f: 1, x: 3000, z: 3600, fe: 32768 + 2, ap: appearance('ligma', 125, 0, 5698) }, { i: 2, f: 1, x: 3001, z: 3600, ap: appearance('runner', 120, 0, 861) }), second], names);
     expect(resent.fights.map(f => f.order)).toEqual(['LL']);
+});
+
+test('the feed tool reads an appearance block as the dashboard does, and imports no dashboard code', () => {
+    const block = appearance('sugma', 125, 9, 5698);
+    expect(decodeAppearance(block)).toEqual(reference(block));
+    expect(decodeAppearance('')).toBeNull();
+    expect(require('node:fs').readFileSync(require('node:path').join(import.meta.dir, 'pk-rival-feed.ts'), 'utf8')).not.toMatch(/from '[./]*packages\/(dashboard|router)/);
 });

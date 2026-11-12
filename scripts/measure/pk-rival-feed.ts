@@ -9,9 +9,31 @@
 // entity (32768 + player slot), `hm` hit splats with `hp`, `ap` appearance (worn items and head icons), `m` steps.
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { decodeAppearance } from '../../packages/dashboard/appearance';
 import { RosterFeed } from '../../packages/core/src/roster-feed';
 
+// The name, combat level and worn objects of a feed appearance block (the server's player_info appearance,
+// engine/entity/Player.ts generateAppearance): a worn item is 0x200 + its obj id in its wear slot, an empty slot one 0
+// byte, a body part a smaller two-byte value; then 5 colours, 7 animation ids, the base-37 name and the combat level.
+// The same reader is packages/dashboard/appearance.ts decodeAppearance. A worker release may not import the dashboard
+// (packages/core/src/worker-release.ts toolingRoots), and every file under scripts/ is part of the release.
+const BASE37 = ' abcdefghijklmnopqrstuvwxyz0123456789';
+export function decodeAppearance(b64: string): { name: string; combat: number; worn: { slot: number; obj: number }[] } | null {
+    let b: Uint8Array; try { b = Uint8Array.from(atob(b64), c => c.charCodeAt(0)); } catch { return null; }
+    if (b.length < 2) return null;
+    let p = 2; const worn: { slot: number; obj: number }[] = [], u1 = () => b[p++]!, u2 = () => (b[p++]! << 8) | b[p++]!;
+    for (let slot = 0; slot < 12; slot++) {
+        if (p >= b.length) return null;
+        if (b[p] === 0) { p++; continue; }
+        const v = u2();
+        if (v === 0xffff) { p += 2; break; }
+        if (v >= 0x200) worn.push({ slot, obj: v - 0x200 });
+    }
+    p += 5 + 14;
+    if (p + 9 > b.length) return null;
+    let v = 0n; for (let i = 0; i < 8; i++) v = (v << 8n) | BigInt(u1());
+    let name = ''; while (v > 0n) { name = BASE37[Number(v % 37n)] + name; v /= 37n; }
+    return { name, combat: u1(), worn };
+}
 const DEFAULT_NAMES = 'goondelf,ligma,sugma';
 // Animations (content pack/seq.pack): the dagger's lunge and hack, its special, an eat, a death.
 const SEQ = { lunge: 376, hack: 377, puncture: 1062, eat: 829, death: 836 } as const;
