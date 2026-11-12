@@ -8,7 +8,7 @@ test('loot is what the pack gains and supplies what it loses, within one session
     trackFlow(flows, status(100, [{ name: 'Shark', count: 10 }, { name: 'Coins', count: 100 }]));
     trackFlow(flows, status(103, [{ name: 'Shark', count: 8 }, { name: 'Coins', count: 160 }, { name: 'Bones', count: 1 }]));
     trackFlow(flows, status(106, [{ name: 'Shark', count: 7 }, { name: 'Coins', count: 160 }, { name: 'Bones', count: 2 }]));
-    expect(flowView(flows, 'Alpha')).toEqual({ since: 100, loot: [{ name: 'Coins', count: 60 }, { name: 'Bones', count: 2 }], used: [{ name: 'Shark', count: 3 }] });
+    expect(flowView(flows, 'Alpha')).toEqual({ since: 100, at: 106, loot: [{ name: 'Coins', count: 60 }, { name: 'Bones', count: 2 }], used: [{ name: 'Shark', count: 3 }] });
 });
 
 test('a bank visit, a death, a mass loss and an equip are not loot or supplies', () => {
