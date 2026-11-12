@@ -210,6 +210,9 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             guildFacts: guildActorFacts(s.client, st),
             doorStates: s.client && typeof s.client === 'object' && (s.client as {ingame?:unknown}).ingame !== true ? {} : observedDoorStates(st),
             inventory: (st?.inventory ?? []).map((i: any) => ({ id:i.id,baseId:baseId(i.id),name: i.name, count: i.count })),
+            // What this account sees on the floor, its own private drops too, as [x, z, level, id, count]: the
+            // dashboard's 3D view draws them, because the world feed never sends a private obj.
+            ground: groundStatus(st?.groundItems, p?.level),
             equipment: equipmentStatus(st?.equipment),
             equipmentObserved: !!s.client&&typeof s.client==='object'&&equipmentObserved(s.client),
             // Passive journal observations only. Older running sessions remain untouched.
@@ -241,4 +244,16 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     const beat = setInterval(write, statusHeartbeatMs());
     return { stop: () => { clearInterval(beat); write(); off(); } };
 }
-export const statusHeartbeatMs = () => Math.max(20, Number(process.env.STATUS_HEARTBEAT_MS ?? 5_000));
+export const GROUND_STATUS_MAX = 50;
+// The SDK lists the ground items of the player's own level, nearest first.
+export function groundStatus(items: unknown, level: unknown): [number, number, number, number, number][] {
+    if (!Array.isArray(items) || !Number.isInteger(level)) return [];
+    const out: [number, number, number, number, number][] = [];
+    for (const i of items as any[]) {
+        if (out.length >= GROUND_STATUS_MAX) break;
+        const row: [number, number, number, number, number] = [i?.x, i?.z, level as number, i?.id, i?.count];
+        if (row.every(Number.isSafeInteger) && i.id >= 0 && i.count >= 1) out.push(row);
+    }
+    return out;
+}
+export const statusHeartbeatMs =() => Math.max(20, Number(process.env.STATUS_HEARTBEAT_MS ?? 5_000));

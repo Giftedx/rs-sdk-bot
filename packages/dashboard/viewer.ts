@@ -136,6 +136,13 @@ export function installViewerBridge(host:any) {
         }
         return ext;
     });
+    // Ground items (RuneLite ground items). The live feed sends no obj, and no feed sends a private drop such as the loot
+    // of an npc that one of our accounts killed. The page sends what our accounts see on the floor:
+    // {botGround:[[x,z,level,id,count],...]}, at most 1000 rows. Each feed socket adds the change since its last tick to
+    // the tick's zone records (w) as oa and od records, after the feed's own. An obj that the feed itself sends counts
+    // first, so one pile shows once.
+    let botGround:number[][]=[],groundVersion=0;
+    const groundRow=(r:any)=>Array.isArray(r)&&r.length===5&&r.every(Number.isSafeInteger)&&r[0]>=0&&r[0]<16384&&r[1]>=0&&r[1]<16384&&r[2]>=0&&r[2]<4&&r[3]>=0&&r[3]<65536&&r[4]>=1&&r[4]<2**31;
     const Socket=host.WebSocket;
     if(Socket)host.WebSocket=class extends Socket {
         constructor(address:any,protocols?:any){
@@ -170,7 +177,51 @@ export function installViewerBridge(host:any) {
                     for(const name of learned)data=data.replace(new RegExp('\\b'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),HIDDEN_ALIAS);
                     return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
                 };
-                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>{if(!filterLoaded){if(held.length<5000)held.push(()=>fn.call(this,rename(event)));return;}fn.call(this,rename(event));}:fn);}});}
+                // The viewer keeps the objs of the zones in the held area (za): a reset (r) starts every zone again, and an
+                // area change keeps only the zones in both areas. Keys: "x,z,level,id" for the feed's own objs (a count),
+                // "x,z,level,id,n" for the n-th obj of that type on the tile that the bridge added.
+                let area:{x:number;z:number;w:number;h:number}|null=null,seenVersion=-1;
+                const feedObjs=new Map<string,number>(),shown=new Map<string,number[]>();
+                const inArea=(a:typeof area,x:number,z:number)=>!!a&&x>=a.x&&x<a.x+a.w&&z>=a.z&&z<a.z+a.h;
+                const addGround=(event:any)=>{
+                    if(typeof event?.data!=='string'||event.data.length>2_000_000||!event.data.includes('"tick"'))return event;
+                    // With the same rows and no area or obj change, the result is the same as last tick: nothing to add.
+                    if(seenVersion===groundVersion&&!/"(?:za|oa|od|reset)"/.test(event.data))return event;
+                    let m:any;try{m=JSON.parse(event.data);}catch{return event;}
+                    if(m?.t!=='tick')return event;
+                    const w=Array.isArray(m.w)?m.w:[];
+                    if(m.reset){feedObjs.clear();shown.clear();}
+                    for(const r of w){
+                        if(r?.e==='za'&&[r.x,r.z,r.w,r.h].every(Number.isFinite)){
+                            const next={x:r.x,z:r.z,w:r.w,h:r.h};
+                            if(r.r){feedObjs.clear();shown.clear();}
+                            else for(const map of [feedObjs,shown] as Map<string,unknown>[])for(const k of [...map.keys()]){const [x,z]=k.split(',').map(Number) as [number,number];if(!inArea(area,x,z)||!inArea(next,x,z))map.delete(k);}
+                            area=next;
+                        }else if(r?.e==='oa'||r?.e==='od'){
+                            const g=`${r.x},${r.z},${r.l},${r.id}`,n=feedObjs.get(g)??0;
+                            if(r.e==='oa')feedObjs.set(g,n+1);
+                            else if(n>1)feedObjs.set(g,n-1);
+                            else if(n===1)feedObjs.delete(g);
+                            // A del with no feed obj of that type left took one that the bridge added.
+                            else for(const k of shown.keys())if(k.startsWith(g+',')){shown.delete(k);break;}
+                        }
+                    }
+                    seenVersion=groundVersion;
+                    const want=new Map<string,number[]>(),nth=new Map<string,number>();
+                    if(area)for(const row of botGround){
+                        if(!inArea(area,row[0]!,row[1]!))continue;
+                        const g=row.slice(0,4).join(','),i=(nth.get(g)??0)+1;nth.set(g,i);
+                        if(i>(feedObjs.get(g)??0))want.set(g+','+i,row);
+                    }
+                    const add:any[]=[];
+                    for(const [k,row] of shown){const next=want.get(k);if(!next||next[4]!==row[4]){add.push({e:'od',x:row[0],z:row[1],l:row[2],id:row[3]});shown.delete(k);}}
+                    for(const [k,row] of want)if(!shown.has(k)){add.push({e:'oa',x:row[0],z:row[1],l:row[2],id:row[3],n:row[4]});shown.set(k,row);}
+                    if(!add.length)return event;
+                    m.w=[...w,...add];
+                    return new host.MessageEvent('message',{data:JSON.stringify(m),origin:event.origin});
+                };
+                const forViewer=(event:any)=>addGround(rename(event));
+                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>{if(!filterLoaded){if(held.length<5000)held.push(()=>fn.call(this,forViewer(event)));return;}fn.call(this,forViewer(event));}:fn);}});}
                 const names=new Map<number,string>(),seenChat=new Set<string>();
                 // Opponent information (RuneLite opponentinfo): what the followed player faces (fe: an npc nid, or
                 // 32768 + a player slot) and that entity's hitpoints, which the feed sends with each hitmark.
@@ -248,6 +299,7 @@ export function installViewerBridge(host:any) {
             if('multiOrder' in data){const left=multiAsked.slice(),first:string[]=[];for(const n of data.multiOrder){const i=left.findIndex(a=>a.toLowerCase()===n.toLowerCase());if(i>=0)first.push(left.splice(i,1)[0]!);}multiAsked=[...first,...left];}
         }
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
+        if('botGround' in event.data){const rows=event.data.botGround;if(Array.isArray(rows)&&rows.length<=1000&&rows.every(groundRow)){botGround=rows.map((r:number[])=>r.slice());groundVersion++;}}
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
         // The viewer writes its URL only when its camera rests. The name in the URL at a page follow is the old one.
