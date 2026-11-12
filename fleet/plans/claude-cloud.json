@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794467853921,
+ "at": 1794468461649,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -63,6 +63,25 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
@@ -227,19 +246,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-09695f8a-ef04-4926-b4f7-da309c9985d4"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-undermykilt-20261112t071213z [task-09695f8a-ef04-4926-b4f7-da309c9985d4]",
-   "role": "thieving"
   }
  ]
 }
