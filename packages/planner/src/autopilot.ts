@@ -257,6 +257,17 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
     const short = new Set(bill.filter(r => r.short > 0).flatMap(r => [r.item, ...(r.aliases ?? [])].map(norm)));
     return (prices[k] ?? 0) * (short.has(k) || (FEEDS[k] ?? []).some(f => short.has(f)) ? BILL_PREMIUM : SURPLUS);
 }
+// The shop values that unitValue reads, by norm() name: the cost of the first item with each name. A bill line whose
+// name is no item's name takes the highest cost of the item ids of the line (supply-bill.ts idsFor): every unfinished
+// potion is the item "Unfinished potion", and the line "mort myre fungus" is the item "Mort myre fungi". Without the
+// entry a maker of such a line has no value.
+export function priceTable(items: readonly { id: number; name?: string; debugname?: string; cost?: number }[], bill: readonly BillRow[]): Record<string, number> {
+    const prices: Record<string, number> = {}, cost = new Map(items.map(i => [i.id, i.cost ?? 0]));
+    for (const i of items) if (typeof i.name === 'string' && !/^cert_/.test(i.debugname ?? '') && !(norm(i.name) in prices)) prices[norm(i.name)] = i.cost ?? 0;
+    for (const r of bill) for (const name of [r.item, ...(r.aliases ?? [])])
+        if (r.ids.length && !(norm(name) in prices)) prices[norm(name)] = Math.max(...r.ids.map(id => cost.get(id) ?? 0));
+    return prices;
+}
 
 // The combat level of the 2004 game, from base levels. Used when a status row carries no `combat`.
 export function combatLevel(skills: Readonly<Record<string, number>>): number {
@@ -966,6 +977,10 @@ export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire st
 export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'dusty key', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
+// ARROW_LOW rune arrows off the full shelf of the Ranging Guild shop: the base cost of 400 coins, and 1% of it more
+// for each arrow bought before (59,800 coins). The buy script reserves six times the base cost for each unit it
+// asks for (scripts/shop-buyer.ts maximumUnitCost), so the spend limit adds that for the last arrow.
+export const RUNE_ARROW_COST = 59_800, RUNE_ARROW_SPEND = RUNE_ARROW_COST + 2_400;
 export const ZAFF_WAIT = 1100;
 // What the alchemy supply jobs bring an account up to: feathers for every cast to 99, fire runes for Magic 21 to 66.
 export const FEATHER_STOCK = 700, FIRE_STOCK = 500;
@@ -987,19 +1002,28 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 // - flax (scripts/gather-flax.ts): none. The worker goes to the field with the shared walker from another floor or a
 //   far start (bench case extra:flax-from-ardougne-upstairs). Live trial: one account from the Seers bank, four runs
 //   that ended ok, 1,320 flax banked in 7,317 ticks (0.18 a tick), lowest Hitpoints 46. The bench preset is a bare
-//   account in the field: 364 flax in 1,524 ticks. Gap: one account in the field; two at once are not run.
+//   account in the field: 364 flax in 1,524 ticks. Gap: one account in the field; two at once are not run. Gap: an
+//   account with 10 Hitpoints got no route to the field (`no flax progress: no route`, 357 ticks); the template
+//   asks no Hitpoints.
 // - bow strings (scripts/spin-bowstrings.ts): Crafting 10 (`flax requires Crafting 10`); it ends ok only with
-//   MAX_MAKE made, so it needs that much flax banked at Seers. Bench: Crafting 13, 56 made in 457 ticks.
+//   MAX_MAKE made, so it needs that much flax banked at Seers. Bench: Crafting 13, 56 made in 457 ticks. Live
+//   trial: two accounts made 56 and then sent no logout (`ACTION_SETTLEMENT_DEFERRED`, `RESULT fail no result`,
+//   then `fleet account claim held by swarm`); the worker's own session owner refused the logout step.
 // - yew logs (scripts/gather-yews.ts): Woodcutting 60 for a yew, and an axe. Bench: Woodcutting 99 with a rune axe,
 //   37 logs in 1,023 ticks; the rate here is half of that. BANK_AT is the worker's default 27, not the bench's 200.
+//   Gap: no live run.
 // - arrow shafts (scripts/fletch-arrows.ts, MODE=shafts): a knife and MAX_MAKE logs. Bench: a bare account at the
-//   Draynor bank, one log in 15 ticks. Gap: a start away from a bank is not run.
+//   Draynor bank, one log in 15 ticks. Gap: a start away from a bank is not run. Live trial: one account away from
+//   a bank ended at tick 0 with `shafts bank unavailable`; the template does not take the account to a bank.
 // - ore (scripts/gather-ore.ts mixedOreCombatProblem): combat 13 (rats at the Varrock East mine hunt below it) and a
 //   pickaxe. Live trial: 75 ores banked in 1,169 ticks at combat 13 (scripts/fleet.ts, OreElse). Bench: Mining 50.
+//   Live trial through the AIO route: two accounts ended `no ore progress: bounded safety retreat failed`, and one
+//   of them then timed out at logout. Gap: the cause of the retreat is not read.
 // - rune essence (scripts/gather-essence.ts): Rune Mysteries complete (Aubury refuses the teleport without it) and a
 //   pickaxe. Bench: a bare account with the quest done, 6 essence in 189 ticks.
 // - air runes (scripts/rune-bank-craft.ts): an air talisman and banked essence. Bench: Runecraft 1, 30 essence
-//   crafted in 324 ticks.
+//   crafted in 324 ticks. Live trial: an account with Runecraft 99 ended `RESULT ok runecraft=99 trips=0 consumed=0
+//   crafted=0`: the argument 99 is a target level, so the worker makes nothing at 99 and reports ok.
 // - Rune Mysteries (scripts/quest-sweep.ts with scripts/generated/quest-runemysteries.ts): the sweep takes the
 //   preset's pack from the bank and ends `missing id:count` without it: 2 law, 6 air, 1 fire and 1 earth rune and 4
 //   meals. The quest has no fight and no level check, and walks where a teleport fails. Gap: the bench runs the sweep
@@ -1052,8 +1076,35 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 //   of its Hitpoints the account leaves, eats banked food of BLOOD_FOOD (the worker's BANK_FOOD) and ends `stop=hp`
 //   with none, so `needs` asks BLOOD_MEALS pieces (an estimate: the worker's note gives 12 of 47 Hitpoints a trip).
 //   Bench: Thieving 99 and Hitpoints 56 by the tower, 2 loots in 165 ticks. The rate is an estimate from the respawn
-//   time: 4 runes and 1,000 coins in 400 ticks. Gap: no run of more than 2 loots is measured, and another player at
-//   the chests takes loots from the run.
+//   time: 4 runes and 1,000 coins in 400 ticks. Live trial: one account from the Draynor bank, three runs that
+//   ended ok, 6 loots each, 36 blood runes and 9,000 coins banked in 3,739 ticks (0.0096 runes a tick), lowest
+//   Hitpoints 23. Gap: another player at the chests takes loots from the run.
+// - unfinished potions (scripts/microbot-production.ts, recipe `brew:unf_<herb>_potion`): a members world (MEMBERS=1;
+//   `production recipe requires confirmed members world`), the Herblore level of the potion (brew_potion.struct
+//   `brew_potion_level`; `production level missing`), and the clean herb and a vial of water in the bank. The worker
+//   stands at a bank and opens it for each unit: it takes one of each input, makes the unit and banks it. With
+//   ORDER_MODE=best-effort MAX_MAKE is a limit: the run ends ok when the bank has no more inputs after one unit or
+//   more. The item of `yields` is the bill line (`torstol potion (unf)`); every such item is named "Unfinished
+//   potion", so priceTable gives the line its price. Bench case skiller:crafting:inventory: the recipe
+//   cut-dragonstone, 180 gems in 941 ticks, 0.19 a tick. The rate here is half of that: an estimate, as a brew takes
+//   two items from the bank for each unit. Gap: no practice run brews an unfinished potion with this worker, a start
+//   away from a bank is not run (`production bank unavailable`), and no job brings the herbs.
+// - unicorn horn dust and dragon scale dust (the same worker, recipes `grind:unicorn_horn` and
+//   `grind:blue_dragon_scale`): a members world, a pestle and mortar and the horn or the scale in the bank. Evidence,
+//   rate and gaps as for the unfinished potions. No job brings the horns or the scales.
+// - rune axe (scripts/smelt-bars.ts, the anvil order of the rune scimitars with PRODUCT_ID=1359): Smithing 86 and one
+//   runite bar (scripts/smith-batch.ts smithRecipe reads both from smithing.dbrow), a hammer and the 10 coins of the
+//   toll gate. One axe: the job does not repeat, and an account that holds a rune axe takes no run. The rate is that
+//   of the rune scimitar.
+// - sapphire, emerald, ruby and diamond rings (scripts/microbot-jewellery-trip.ts with the order in its environment):
+//   the Crafting level of the ring (jewellery.struct `levelrequired`: 20, 27, 34, 43), a ring mould, and RING_BATCH
+//   gold bars and RING_BATCH cut gems. The order is exact: with fewer bars the run fails, and with fewer cut gems the
+//   worker cuts uncut ones (planJewelleryOrder), which are lines of the bill themselves, so `needs` asks the cut
+//   gems. The worker starts at the Al Kharid bank (`jewellery fresh bank position/budget absent` from another start).
+//   Bench case skiller:crafting:jewellery-trip: 1 gold ring in 56 ticks, bank to furnace and back. The rate is an
+//   estimate: 13 rings a trip at about 5 ticks a ring after the first (runJewellery: one furnace use, one menu click
+//   and one wait for each ring) give 0.11 a tick, and the rate here is half of that. Gap: no practice run makes a gem
+//   ring or more than one ring, and no job brings the gold bars or the gems.
 const PICKAXES = ['bronze pickaxe', 'iron pickaxe', 'steel pickaxe', 'mithril pickaxe', 'adamant pickaxe', 'rune pickaxe'] as const;
 const AXES = ['bronze axe', 'iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe'] as const;
 // scripts/quest-sweep.ts MEALS, by item name (scripts/autopilot.test.ts checks the two agree).
@@ -1063,6 +1114,17 @@ export const BOWSTRING_BATCH = 56, SHAFT_LOGS = 25;
 export const CANNON_BARS = 27, BLOOD_LOOTS = 6, BLOOD_MEALS = 5;
 // scripts/blood-chest.ts BANK_FOOD, by item name (scripts/autopilot.test.ts checks the two agree).
 export const BLOOD_FOOD = ['shark', 'swordfish', 'lobster', 'tuna', 'salmon', 'trout', 'cake'] as const;
+// The most units one run at the bank makes (scripts/microbot-production.ts MAX_MAKE), and the rings of one furnace
+// trip: 13 gold bars and 13 gems fit beside the mould.
+export const MAKE_BATCH = 100, RING_BATCH = 13, STEW_BATCH = 3;
+// The unfinished potions of the route bill: the herb of the bill line (`<herb> potion (unf)`), the item the bank
+// holds, and the Herblore level (brew_potion.struct; scripts/autopilot.test.ts checks each against the worker's recipe).
+export const UNF_POTIONS: readonly (readonly [herb: string, item: string, level: number])[] = [
+    ['guam', 'guam leaf', 3], ['marrentill', 'marrentill', 5], ['tarromin', 'tarromin', 12], ['harralander', 'harralander', 22], ['ranarr', 'ranarr weed', 30],
+    ['toadflax', 'toadflax', 34], ['irit', 'irit leaf', 45], ['avantoe', 'avantoe', 50], ['kwuarm', 'kwuarm', 55], ['snapdragon', 'snapdragon', 63],
+    ['cadantine', 'cadantine', 66], ['lantadyme', 'lantadyme', 69], ['dwarf weed', 'dwarf weed', 72], ['torstol', 'torstol', 78]];
+// The gem rings of the route bill: the gem and the Crafting level (jewellery.struct).
+export const GEM_RINGS: readonly (readonly [gem: string, level: number])[] = [['sapphire', 20], ['emerald', 27], ['ruby', 34], ['diamond', 43]];
 export function aioTemplates(): Template[] {
     const aio = (id: string, key: string, worker: string, args: string[], rest: Omit<Template, 'id' | 'family' | 'script' | 'args' | 'aio' | 'worker' | 'pilot'>): Template =>
         ({ id, family: `aio:${key}`, script: 'scripts/aio.ts', args: [key.split(':')[0]!, ...args], aio: key, worker, pilot: true, ...rest });
@@ -1074,6 +1136,18 @@ export function aioTemplates(): Template[] {
         aio(`aio-${bar}-bars`, 'skiller:smithing:smelt', 'scripts/smelt-bars.ts', ['smithing', 'smelt', '1500', bar, 'MAX_MAKE=28', 'ORE_RESERVE=0'], {
             role: 'smithing', goal: `smelt banked ${ore}${coal ? ' and coal' : ''} into ${bar} bars at Al Kharid`,
             needs: { skills: { Smithing: level }, items: { [ore]: load, ...(coal ? { coal: coal * load } : {}) } }, yields: () => [{ item: `${bar} bar`, perTick }] });
+    // One recipe of the bank-standing worker, up to MAKE_BATCH units of what the bank holds.
+    const make = (id: string, recipe: string, goal: string, role: string, needs: Needs, item: string) =>
+        aio(id, 'skiller:crafting:inventory', 'scripts/microbot-production.ts', ['crafting', 'inventory', recipe, `MAX_MAKE=${MAKE_BATCH}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'], {
+            role, goal, needs, yields: () => [{ item, perTick: 0.1 }] });
+    const potions = UNF_POTIONS.map(([herb, item, level]) => make(`aio-unf-${herb.replace(' ', '-')}`, `brew:unf_${herb.replace(' ', '_')}_potion`,
+        `mix banked ${item} and vials of water into unfinished ${herb} potions`, 'herblore', { skills: { Herblore: level }, items: { [item]: 1, 'vial of water': 1 } }, `${herb} potion (unf)`));
+    const dust = (id: string, raw: string, item: string) => make(id, `grind:${raw.replace(/ /g, '_')}`, `grind banked ${raw}s into ${item}`, 'herblore', { items: { 'pestle and mortar': 1, [raw]: 1 } }, item);
+    const rings = GEM_RINGS.map(([gem, level]) => aio(`aio-${gem}-rings`, 'skiller:crafting:jewellery-trip', 'scripts/microbot-jewellery-trip.ts',
+        ['crafting', 'jewellery-trip', `RECIPE=${gem}_ring`, `TARGET=${RING_BATCH}`, `BATCH=${RING_BATCH}`, 'CAP=1500'], {
+            role: 'crafting', goal: `make ${RING_BATCH} ${gem} rings from banked gold bars and gems at the Al Kharid furnace`,
+            needs: { skills: { Crafting: level }, items: { 'ring mould': 1, 'gold bar': RING_BATCH, [gem]: RING_BATCH } },
+            yields: () => [{ item: `${gem} ring`, perTick: 0.05 }] }));
     return [
         aio('aio-flax', 'skiller:foraging:flax', 'scripts/gather-flax.ts', ['foraging', 'flax', '1800', '28'], {
             role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.18 }] }),
@@ -1106,6 +1180,13 @@ export function aioTemplates(): Template[] {
         aio('aio-rune-scimitars', 'skiller:smithing:anvil', 'scripts/smelt-bars.ts', ['smithing', 'anvil', '1500', 'PRODUCT_ID=1333', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {
             role: 'smithing', goal: 'smith a rune scimitar from two banked runite bars at the Varrock West anvils',
             needs: { skills: { Smithing: 90 }, items: { hammer: 1, 'runite bar': 2, coins: 10 } }, yields: () => [{ item: 'rune scimitar', perTick: 0.003 }] }),
+        aio('aio-rune-axe', 'skiller:smithing:anvil', 'scripts/smelt-bars.ts', ['smithing', 'anvil', '1500', 'PRODUCT_ID=1359', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {
+            role: 'smithing', goal: 'smith a rune axe from a banked runite bar at the Varrock West anvils',
+            repeats: false, needs: { skills: { Smithing: 86 }, items: { hammer: 1, 'runite bar': 1, coins: 10 }, holdsUnder: { 'rune axe': 1 } }, yields: () => [{ item: 'rune axe', perTick: 0.003 }] }),
+        ...potions,
+        dust('aio-unicorn-horn-dust', 'unicorn horn', 'unicorn horn dust'),
+        dust('aio-dragon-scale-dust', 'blue dragon scale', 'dragon scale dust'),
+        ...rings,
         aio('aio-blood-chest', 'skiller:thieving:blood-chest', 'scripts/blood-chest.ts', ['thieving', 'blood-chest', '4000', `MAX_LOOTS=${BLOOD_LOOTS}`, 'CAP=4000'], {
             role: 'thieving', goal: `loot the Ardougne blood rune chests ${BLOOD_LOOTS} times and bank the runes`, resources: [AIO_PLACES.blood],
             needs: { skills: { Thieving: 59 }, pieces: { of: BLOOD_FOOD, count: BLOOD_MEALS } },
@@ -1113,6 +1194,36 @@ export function aioTemplates(): Template[] {
         aio('aio-quest-runemysteries', 'quester:mode:sweep', 'scripts/quest-sweep.ts', ['sweep', 'runemysteries'], {
             role: 'quest', goal: 'complete Rune Mysteries for the essence mine', quest: { name: 'Rune Mysteries Quest', unlocks: [essence.id] },
             needs: { items: { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1 }, pieces: { of: SWEEP_MEALS, count: 4 } }, yields: () => [] }),
+    ];
+}
+
+// Makers of a bill line that take two recipes of the bank-standing worker in a row, as one swarm job
+// (scripts/chain.ts). Each step is the AIO route skiller:crafting:inventory with ORDER_MODE=best-effort, so the
+// evidence, the rate and the gaps are those of the unfinished potions (aioTemplates). A chain ends at its first
+// failed step. Pilots.
+// - yew shortbow: Fletching 65 for the cut and for the string (cut_logs.dbrow, bows.dbrow), a knife, a yew log and a
+//   bow string in the bank. One bow: the job does not repeat. The unstrung bow has the name of the strung one, so the
+//   bill and `holdsUnder` count both: an account that holds either takes no run. Bench case skiller:fletching:worker
+//   cuts a shortbow from normal logs with the same worker. The rate is an estimate: one bow for two logins, taken as
+//   100 ticks. Gap: no practice run strings a bow in this chain.
+// - uncooked stew: Cooking 25 (stew.rs2), and a potato, a bowl of water and a cooked meat in the bank for each stew:
+//   the potato goes in first, then the meat. One run makes STEW_BATCH stews (the route bill asks for 3), and `needs`
+//   asks for STEW_BATCH of each input: the first step then makes no incomplete stew that the second step has no meat
+//   for. The rate is half that of one recipe, as a stew takes two. Gaps: no practice run makes a stew, no job brings
+//   the three inputs, and no template finishes an incomplete stew that a failed second step leaves in the bank.
+export function makerChains(): Template[] {
+    const step = (recipe: string, max: number, cap = 1500) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${max} CAP=${cap} MEMBERS=1 ORDER_MODE=best-effort`;
+    const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'>): Template =>
+        ({ id, pilot: true, family: 'aio:skiller:crafting:inventory', script: 'scripts/chain.ts', args: steps, env: { ROUNDS: '1' }, worker: 'scripts/microbot-production.ts', ...rest });
+    return [
+        chain('make-yew-shortbow', [step('cut-bow:unstrung_yew_shortbow', 1, 600), step('bow-string:yew_shortbow', 1, 600)], {
+            role: 'fletching', goal: 'cut a banked yew log into a shortbow and string it', repeats: false,
+            needs: { skills: { Fletching: 65 }, items: { knife: 1, 'yew logs': 1, 'bow string': 1 }, holdsUnder: { 'yew shortbow': 1 } },
+            yields: () => [{ item: 'yew shortbow', perTick: 0.01 }] }),
+        chain('make-uncooked-stew', [step('prepare:potato-stew', STEW_BATCH), step('prepare:uncooked-stew', STEW_BATCH)], {
+            role: 'cooking', goal: 'make uncooked stews from banked potatoes, bowls of water and cooked meat',
+            needs: { skills: { Cooking: 25 }, items: { potato: STEW_BATCH, 'bowl of water': STEW_BATCH, 'cooked meat': STEW_BATCH } },
+            yields: () => [{ item: 'uncooked stew', perTick: 0.05 }] }),
     ];
 }
 
@@ -1577,7 +1688,20 @@ export function catalogue(): Template[] {
         { id: 'fletch-headless', family: 'fletch', script: 'scripts/fletch-arrows.ts', args: ['15000', 'headless'], env: { BANK_PACK: '1', MAX_MAKE: '390' }, role: 'fletching',
             goal: 'headless arrows from owned shafts and feathers', needs: { items: { 'arrow shaft': 215, feather: 215 } },
             yields: () => [{ item: 'headless arrow', perTick: 5 }] },
+        // Rune arrows for the route bill at Dargaud's shop in the Ranging Guild, the profile of army-arrows-guild
+        // (ranging.inv ranging_guild_bowshop: 400 in stock, one back every 130 ticks, base cost 400; ranging.npc
+        // shop_delta 10, so each unit under the full shelf adds 1% of the base cost). The guild door asks Ranged 40
+        // (ranging_guild_door.rs2). The run tops the account up to ARROW_LOW rune arrows, pack and bank, and banks
+        // them at Seers' Village; an account that holds that many takes no run. RUNE_ARROW_SPEND covers a top-up from
+        // none off a full shelf. The rate is an estimate: one top-up in the 800 ticks of the run's cap. Gap: no run
+        // buys the rune arrow line of the profile. A pilot.
+        { id: 'shop-rune-arrows', pilot: true, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dargaud', '800'],
+            env: { ITEMS: 'rune arrow', STOCK_TARGET: String(ARROW_LOW), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RUNE_ARROW_SPEND + 1000), COIN_RESERVE: '500', MAX_SPEND: String(RUNE_ARROW_SPEND) },
+            role: 'bank', goal: "buy rune arrows at Dargaud's shop in the Ranging Guild", resources: ['shop:dargaud'],
+            needs: { skills: { Ranged: 40 }, items: { coins: RUNE_ARROW_SPEND + 2000 }, holdsUnder: { 'rune arrow': ARROW_LOW } },
+            yields: () => [{ item: 'rune arrow', perTick: ARROW_LOW / 800 }], spends: () => [{ item: 'coins', perTick: RUNE_ARROW_COST / 800 }] },
         ...aioTemplates(),
+        ...makerChains(),
     ];
 }
 

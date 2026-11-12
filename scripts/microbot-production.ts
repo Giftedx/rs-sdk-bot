@@ -6,7 +6,7 @@ export type InventoryRecipe={name:string;inputs:{id:number;units:number}[];tools
 export type ProductionSnapshot={items:Record<number,number>;xp:number};
 export interface ProductionIO {
  tick():number;stopped():boolean;level():number;read():ProductionSnapshot;
- prepare():Promise<boolean>;use():Promise<unknown>;wait(done:()=>boolean):Promise<unknown>;
+ prepare():Promise<boolean|'spent'>;use():Promise<unknown>;wait(done:()=>boolean):Promise<unknown>;
  deposit(id:number):Promise<number>;close():Promise<void>;
 }
 let cachedInventoryRecipes:InventoryRecipe[]|undefined;
@@ -132,15 +132,20 @@ export function productionEffect(r:InventoryRecipe,b:ProductionSnapshot,a:Produc
  }
  return 'invalid';
 }
-export async function runInventoryProduction(io:ProductionIO,r:InventoryRecipe,o:{maximum:number;cap:number;maxAttempts:number}){
+// `partial`: the maximum is a limit, not an exact count. When `prepare` reports 'spent' (the bank has no more of an
+// input) after one unit or more, the run ends ok with what it made. Without it the run ends ok only with `maximum`
+// made. `prepare` returns false for a fault (a withdrawal or a bank close that is not confirmed): that fails the run
+// in both modes, because the bank can still hold inputs.
+export async function runInventoryProduction(io:ProductionIO,r:InventoryRecipe,o:{maximum:number;cap:number;maxAttempts:number;partial?:boolean}){
  const units=r.productUnits??1;
  if(![o.maximum,o.cap,o.maxAttempts].every(n=>Number.isSafeInteger(n)&&n>0)||o.maximum%units||o.maxAttempts<o.maximum/units)throw Error('invalid production limits or output batch multiple');
  const start=io.tick(),over=()=>io.stopped()||io.tick()-start>=o.cap;
- let made=0,banked=0,losses=0,attempts=0,failure='';
+ let made=0,banked=0,losses=0,attempts=0,failure='',spent=false;
  try{
   if(io.level()<r.level)throw Error('production level missing');
   while(made<o.maximum&&attempts<o.maxAttempts&&!over()){
-   if(!await io.prepare())throw Error('production inputs unavailable');
+   const ready=await io.prepare();
+   if(ready!==true){if(ready==='spent'&&o.partial&&made>0){spent=true;break;}throw Error('production inputs unavailable');}
    if(over())break;
    const before=io.read();
    if(r.inputs.some(i=>(before.items[i.id]??0)<i.units)||[...r.tools,...r.optionalInputs??[]].some(id=>(before.items[id]??0)<1))throw Error('production input observation missing');
@@ -152,7 +157,7 @@ export async function runInventoryProduction(io:ProductionIO,r:InventoryRecipe,o
    else if(effect==='loss'){losses++;if(await io.deposit(r.lossProduct!)!==1)throw Error('production loss bank credit mismatch');}
    else throw Error('production action receipt '+effect);
   }
-  if(made!==o.maximum||banked!==made||over())throw Error('production target incomplete');
+  if(made!==o.maximum&&!spent||banked!==made||over())throw Error('production target incomplete');
  }catch(e){failure=String(e);}
  finally{try{await io.close();}catch(e){failure||=String(e);}}
  return{ok:!failure,recipe:r.name,made,banked,losses,attempts,ticks:io.tick()-start,failure:failure||'-'};
@@ -161,7 +166,7 @@ export function productionInputReserves(r:InventoryRecipe,reserve=0,overrides:Re
  if(!Number.isSafeInteger(reserve)||reserve<0||!overrides||typeof overrides!=='object'||Array.isArray(overrides)||Object.entries(overrides).some(([id,n])=>!Number.isSafeInteger(+id)||!r.inputs.some(i=>i.id===+id)||!Number.isSafeInteger(n)||n<0))throw Error('invalid production input reserves');
  return Object.fromEntries(r.inputs.map(i=>[i.id,overrides[i.id]??reserve]));
 }
-export async function runInventoryBank(s:import('../packages/core/src/inprocess').Session,r:InventoryRecipe,o:{maximum:number;cap:number;maxAttempts:number;reserve?:number;inputReserves?:Readonly<Record<number,number>>;members?:boolean;stop?:()=>boolean}){
+export async function runInventoryBank(s:import('../packages/core/src/inprocess').Session,r:InventoryRecipe,o:{maximum:number;cap:number;maxAttempts:number;partial?:boolean;reserve?:number;inputReserves?:Readonly<Record<number,number>>;members?:boolean;stop?:()=>boolean}){
  const reserves=productionInputReserves(r,o.reserve,o.inputReserves);
  const {waitUntil}=await import('../packages/core/src/ticks');
  const {depositObserved}=await import('../packages/core/src/deposit');
@@ -189,10 +194,11 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
  const result=await runInventoryProduction({tick:()=>s.tick(),stopped,level:()=>s.sdk.getSkill(r.skill)?.level??0,read,
   prepare:async()=>{
    await open();
-   for(const need of [...[...r.tools,...r.optionalInputs??[]].map(id=>({id,units:1})),...r.inputs]){
+   // 'spent' only for an input that the fresh bank observation does not hold above its reserve. A missing tool is a fault.
+   for(const need of [...[...r.tools,...r.optionalInputs??[]].map(id=>({id,units:1,input:false})),...r.inputs.map(i=>({...i,input:true}))]){
     const missing=Math.max(0,need.units-count(need.id));if(!missing)continue;
     const item=s.bankObservation?.()?.items.find(i=>i.id===need.id);
-    if(!item||item.count-missing<(reserves[need.id]??0))return false;
+    if(!item||item.count-missing<(reserves[need.id]??0))return need.input?'spent':false;
     const target=s.sdk.getState()?.bank?.items.find(i=>i.id===need.id);
     if(!target||!Number.isSafeInteger(target.slot))return false;
     const before=count(need.id);const response=await s.bot.withdrawItem(target,missing,{asNote:false});
@@ -229,6 +235,6 @@ if(import.meta.main){
  const inputReserves=process.env.INPUT_RESERVES?JSON.parse(process.env.INPUT_RESERVES):undefined;productionInputReserves(r,Number(process.env.RAW_RESERVE??0),inputReserves);
  const {openBot,finish}=await import('../packages/core/src/bot');let stop=false;
  const s=await openBot(process.argv[2]!,{onStop:async()=>{stop=true;}});
- try{const result=await runInventoryBank(s,r,{maximum,cap,maxAttempts,reserve:Number(process.env.RAW_RESERVE??0),inputReserves,members:process.env.MEMBERS==='1',stop:()=>stop});await finish([s],result.ok,JSON.stringify(result));}
+ try{const result=await runInventoryBank(s,r,{maximum,cap,maxAttempts,partial:process.env.ORDER_MODE==='best-effort',reserve:Number(process.env.RAW_RESERVE??0),inputReserves,members:process.env.MEMBERS==='1',stop:()=>stop});await finish([s],result.ok,JSON.stringify(result));}
  catch(e){await finish([s],false,String(e));}
 }

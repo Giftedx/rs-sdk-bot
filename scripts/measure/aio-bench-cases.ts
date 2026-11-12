@@ -235,6 +235,13 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('woodcutting', 'edgeville', 'fresh_lumbridge', ['STALL_TICKS=0'], {presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 67, Strength: 25, Defence: 24, Hitpoints: 52, Woodcutting: 15}, inventory: Array.from({length: 8}, () => ({id: 385, count: 1})), bank: [{id: 1351, count: 1}, {id: 1521, count: 5}, {id: 995, count: 216372}]}}),
   // packages/practice/src/firemaking-order-proof.ts
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=15', 'LOG=normal', 'TOOL_BUDGET=0', 'CASH_RESERVE=0', 'CAP=2000', 'MAX_LOGS=2'], {presetConfig: firemakingFixture('entry')}),
+  // The record route's fires with helpers that drop the logs (scripts/firemaking-line.ts): two helpers at the Draynor
+  // bank drop two batches on the burn line, and the runner logs in when the first batch shows. Firemaking 1 to 62.
+  {key: 'extra:firemaking-line', script: 'scripts/firemaking-line.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', '{bot:c}', 'TARGET_LEVEL=62', 'CAP=1500'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, varps: {173: 1}, inventory: [{id: 590, count: 1}]},
+    companions: [
+      {suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3092, z: 3243, level: 0}, varps: {173: 1}, bank: [{id: 1511, count: 2}, {id: 1521, count: 30}]}},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3093, z: 3244, level: 0}, varps: {173: 1}, bank: [{id: 1521, count: 30}]}}]},
   // The mock Haggis run's fires (PROGRESSIVE=stock, CLEAR_PACK=1) at the two tier steps of its stock: logs to oak
   // with the 17-slot starter kit in the pack, and oak to magic at 74 to 76. From the Draynor bank.
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=20', 'PROGRESSIVE=stock', 'CLEAR_PACK=1', 'TOOL_BUDGET=0', 'CAP=1500'], {key: 'extra:firemaking-stock-low',
@@ -700,6 +707,15 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:direct-quest-cook', script: 'scripts/generated/quest-cook.ts', preset: 'quest_cook', scriptArgs: [], pass: s => ok(s) && s.includes('Cook flag=complete')},
   {key: 'extra:master-quest-cook', script: 'scripts/aio.ts', preset: 'quest_cook', scriptArgs: ['quester', 'sweep', 'cook'], pass: ok},
   {key: 'extra:bank-job-cook-lobster', script: 'scripts/aio-skiller.ts', preset: 'cook_food_catherby', scriptArgs: ['bank-job', COOK_JOB_PATH], pass: s => ok(s) && s.includes('cooking_generic_lobster')},
+  // The two order forms of the planner's maker templates (packages/planner/src/autopilot.ts). A best-effort order of
+  // the bank-standing worker: the bank holds 5 uncut dragonstones for an order of 180, so the run ends ok with 5 cut
+  // and banked. A jewellery trip with no order file: RECIPE and TARGET name the order.
+  {key: 'extra:inventory-best-effort', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', 'cut-dragonstone', 'MAX_MAKE=180', 'CAP=1100', 'MEMBERS=1', 'ORDER_MODE=best-effort'],
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Crafting: 55}, inventory: [{id: 1755, count: 1}], bank: [{id: 1631, count: 5}]},
+    pass: s => ok(s) && /"made":5,"banked":5\b/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'extra:jewellery-trip-env-order', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['crafting', 'jewellery-trip', 'RECIPE=gold_ring', 'TARGET=1', 'BATCH=1', 'CAP=800'],
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 10}, bank: [{id: 2357, count: 1}, {id: 1592, count: 1}]},
+    pass: s => ok(s) && s.includes('LOGOUT logged-out')},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
   // third sword, the ladder out, the rune scimitar it wore wielded again and the Al Kharid bank.

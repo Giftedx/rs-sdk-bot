@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable } from '../src/autopilot';
 
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
@@ -25,6 +26,26 @@ test('a bill line still short, or one it feeds, is worth the premium; coins are 
     expect(unitValue('Steel bar', [row('cannonball', 0)], bars)).toBe(50);
     expect(unitValue('Steel bar', [row('cannonball', 0), row('iron bar', 2)], bars)).toBe(50);
     expect(unitValue('Steel bar', [], bars)).toBe(50);
+});
+
+test('a bill line that no item is named after takes the price of its item ids, so its maker has the value of the line', () => {
+    const items = [{ id: 91, name: 'Unfinished potion', debugname: 'guamvial', cost: 3 }, { id: 111, name: 'Unfinished potion', debugname: 'torstolvial', cost: 25 },
+        { id: 2970, name: 'Mort myre fungi', debugname: 'mortmyremushroom', cost: 7 }, { id: 314, name: 'Feather', debugname: 'feather', cost: 2 },
+        { id: 315, name: 'Feather', debugname: 'cert_feather', cost: 9 }, { id: 68, name: 'Yew shortbow', debugname: 'unstrung_yew_shortbow', cost: 400 },
+        { id: 857, name: 'Yew shortbow', debugname: 'yew_shortbow', cost: 800 }];
+    const line = (item: string, ids: number[], short = 1) => ({ item, need: short, owned: 0, short, ids, holders: [] });
+    const lines = [line('torstol potion (unf)', [111], 176), line('guam potion (unf)', [91]), line('mort myre fungus', [2970], 4), line('feathers', [314]), line('yew shortbow', [68, 857]),
+        line('no such thing', [])];
+    const table = priceTable(items, lines);
+    // An item name keeps the cost of its first item that is not a note; a line with no item id gets no price.
+    expect(table).toEqual({ 'unfinished potion': 3, 'mort myre fungi': 7, feather: 2, 'yew shortbow': 400, 'torstol potion (unf)': 25, 'guam potion (unf)': 3, 'mort myre fungu': 7 });
+    expect(unitValue('torstol potion (unf)', lines, table)).toBe(50);
+    expect(unitValue('torstol potion (unf)', [line('torstol potion (unf)', [111], 0)], table)).toBe(12.5);
+    expect(unitValue('Mort myre fungus', lines, table)).toBe(14);
+    // Without the line's own entry the lookup finds no price: the name of the item is "Unfinished potion".
+    expect(unitValue('torstol potion (unf)', lines, priceTable(items, []))).toBe(0);
+    // A second name of a line gets the same price.
+    expect(priceTable(items, [{ ...line('unf torstol', [111]), aliases: ['torstol potion (unf)'] }])['torstol potion (unf)']).toBe(25);
 });
 
 test('knight coins scale with Thieving and are zero below 55', () => {
@@ -953,7 +974,9 @@ const sweepKit = { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1
 
 test('every AIO template is in the catalogue as a pilot that runs the dispatcher with its category first', () => {
     const all = new Map(catalogue().map(t => [t.id, t]));
-    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-runite-bars', 'aio-adamantite-bars', 'aio-mithril-bars', 'aio-iron-bars', 'aio-steel-bars', 'aio-cannonballs', 'aio-rune-scimitars', 'aio-blood-chest', 'aio-quest-runemysteries']);
+    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-runite-bars', 'aio-adamantite-bars', 'aio-mithril-bars', 'aio-iron-bars', 'aio-steel-bars', 'aio-cannonballs', 'aio-rune-scimitars', 'aio-rune-axe',
+        ...UNF_POTIONS.map(([herb]) => `aio-unf-${herb.replace(' ', '-')}`), 'aio-unicorn-horn-dust', 'aio-dragon-scale-dust', ...GEM_RINGS.map(([gem]) => `aio-${gem}-rings`),
+        'aio-blood-chest', 'aio-quest-runemysteries']);
     for (const t of aioTemplates()) {
         expect(all.get(t.id)).toBeDefined();
         expect(t.pilot).toBe(true);
@@ -962,6 +985,103 @@ test('every AIO template is in the catalogue as a pilot that runs the dispatcher
         expect(t.worker).toMatch(/^scripts\/[a-z-]+\.ts$/);
         for (const r of t.resources ?? []) expect(CAPACITY[r]).toBe(1);
     }
+});
+
+test('an unfinished potion is mixed at its Herblore level from one herb and one vial, and has the value of its bill line', () => {
+    const run = (a: Acct, id: string, extra: Partial<Inputs> = {}) => plan(aioInputs([a], [id], extra))[0]!;
+    const potionPrices = priceTable([{ id: 111, name: 'Unfinished potion', cost: 25 }, { id: 109, name: 'Unfinished potion', cost: 70 }], [row('torstol potion (unf)', 176), row('dwarf weed potion (unf)', 13)].map((r, k) => ({ ...r, ids: [[111], [109]][k]! })));
+    const short = [row('torstol potion (unf)', 176)];
+    const brewer = acct('A', { Herblore: 78 }, { torstol: 1, 'vial of water': 1, 'dwarf weed': 5 });
+    expect(UNF_POTIONS.map(([herb]) => herb)).toEqual(['guam', 'marrentill', 'tarromin', 'harralander', 'ranarr', 'toadflax', 'irit', 'avantoe', 'kwuarm', 'snapdragon', 'cadantine', 'lantadyme', 'dwarf weed', 'torstol']);
+    expect(run(brewer, 'aio-unf-torstol', { bill: short, prices: potionPrices }).template?.id).toBe('aio-unf-torstol');
+    // Twice the price of the line while it is short, half of it after.
+    expect(run(brewer, 'aio-unf-torstol', { bill: short, prices: potionPrices }).value).toBeCloseTo(0.1 * 25 * 2);
+    expect(run(brewer, 'aio-unf-torstol', { bill: [row('torstol potion (unf)', 0)], prices: potionPrices }).value).toBeCloseTo(0.1 * 25 * 0.5);
+    expect(run(brewer, 'aio-unf-dwarf-weed', { bill: short, prices: potionPrices }).value).toBeCloseTo(0.1 * 70 * 0.5);
+    // A level under the potion, no herb, or no vial: no job.
+    for (const a of [acct('A', { Herblore: 77 }, { torstol: 1, 'vial of water': 1 }), acct('A', { Herblore: 78 }, { 'vial of water': 1 }), acct('A', { Herblore: 78 }, { torstol: 1 })])
+        expect(run(a, 'aio-unf-torstol', { bill: short, prices: potionPrices }).template).toBeUndefined();
+    expect(jobFor(run(brewer, 'aio-unf-dwarf-weed', { bill: short, prices: potionPrices }), side)).toMatchObject({ script: 'scripts/aio.ts',
+        args: ['skiller', 'crafting', 'inventory', 'brew:unf_dwarf_weed_potion', `MAX_MAKE=${MAKE_BATCH}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'], repeat: true });
+    // The dusts: a pestle and mortar and one horn or scale.
+    const dustPrices = { 'unicorn horn dust': 20, 'dragon scale dust': 52 };
+    expect(run(acct('A', {}, { 'pestle and mortar': 1, 'unicorn horn': 1 }), 'aio-unicorn-horn-dust', { prices: dustPrices }).template?.args).toContain('grind:unicorn_horn');
+    expect(run(acct('A', {}, { 'pestle and mortar': 1, 'blue dragon scale': 1 }), 'aio-dragon-scale-dust', { prices: dustPrices }).template?.args).toContain('grind:blue_dragon_scale');
+    expect(run(acct('A', {}, { 'unicorn horn': 1 }), 'aio-unicorn-horn-dust', { prices: dustPrices }).template).toBeUndefined();
+});
+
+test('a ring trip needs its Crafting level, the mould and a whole batch of gold bars and cut gems; one rune axe needs Smithing 86', () => {
+    const run = (a: Acct, id: string) => plan(aioInputs([a], [id], { prices: { 'sapphire ring': 900, 'emerald ring': 1275, 'ruby ring': 2025, 'diamond ring': 3525, 'rune axe': 12800 } }))[0]!;
+    for (const [gem, level] of GEM_RINGS) {
+        const id = `aio-${gem}-rings`, kit = { 'ring mould': 1, 'gold bar': RING_BATCH, [gem]: RING_BATCH };
+        expect(`${id} ${run(acct('A', { Crafting: level }, kit), id).template?.id}`).toBe(`${id} ${id}`);
+        for (const a of [acct('A', { Crafting: level - 1 }, kit), acct('A', { Crafting: level }, { ...kit, 'ring mould': 0 }), acct('A', { Crafting: level }, { ...kit, 'gold bar': RING_BATCH - 1 }),
+            acct('A', { Crafting: level }, { ...kit, [gem]: RING_BATCH - 1 }), acct('A', { Crafting: level }, { ...kit, [gem]: 0, [`uncut ${gem}`]: RING_BATCH, chisel: 1 })])
+            expect(run(a, id).template).toBeUndefined();
+    }
+    expect(GEM_RINGS.map(([gem, level]) => `${gem} ${level}`)).toEqual(['sapphire 20', 'emerald 27', 'ruby 34', 'diamond 43']);
+    expect(jobFor(run(acct('A', { Crafting: 43 }, { 'ring mould': 1, 'gold bar': 13, diamond: 13 }), 'aio-diamond-rings'), side).args)
+        .toEqual(['skiller', 'crafting', 'jewellery-trip', 'RECIPE=diamond_ring', 'TARGET=13', 'BATCH=13', 'CAP=1500']);
+    const smith = (level: number, items: Record<string, number>) => acct('A', { Smithing: level }, { hammer: 1, 'runite bar': 1, coin: 10, ...items });
+    expect(run(smith(86, {}), 'aio-rune-axe').template?.args).toEqual(['skiller', 'smithing', 'anvil', '1500', 'PRODUCT_ID=1359', 'MAX_MAKE=1', 'BAR_RESERVE=0']);
+    expect(run(smith(86, {}), 'aio-rune-axe').value).toBeCloseTo(0.003 * 12800 * 0.5);
+    // A level under the axe, no bar, no hammer, or an axe already held: no job.
+    for (const a of [smith(85, {}), smith(86, { 'runite bar': 0 }), smith(86, { hammer: 0 }), smith(86, { 'rune axe': 1 })]) expect(run(a, 'aio-rune-axe').template).toBeUndefined();
+});
+
+test('the two-recipe makers are pilots that run the bank-standing worker twice in one chain', () => {
+    const all = new Map(catalogue().map(t => [t.id, t]));
+    expect(makerChains().map(t => t.id)).toEqual(['make-yew-shortbow', 'make-uncooked-stew']);
+    for (const t of makerChains()) {
+        expect(all.get(t.id)).toBeDefined();
+        expect(t.pilot).toBe(true);
+        expect(t.script).toBe('scripts/chain.ts');
+        expect(t.env).toEqual({ ROUNDS: '1' });
+        expect(t.args).toHaveLength(2);
+        for (const step of t.args!) expect(step).toMatch(/^scripts\/aio\.ts skiller crafting inventory \S+ MAX_MAKE=\d+ CAP=\d+ MEMBERS=1 ORDER_MODE=best-effort$/);
+    }
+    const run = (a: Acct, id: string, pilots = [id]) => plan(inputs([a], { templates: makerChains(), bill: [], prices: { 'yew shortbow': 400, 'uncooked stew': 10 }, pilots: new Set(pilots) }))[0]!;
+    const fletcher = (level: number, items: Record<string, number>) => acct('A', { Fletching: level }, { knife: 1, 'yew log': 1, 'bow string': 1, ...items });
+    expect(run(fletcher(65, {}), 'make-yew-shortbow').template?.id).toBe('make-yew-shortbow');
+    expect(run(fletcher(65, {}), 'make-yew-shortbow', []).template).toBeUndefined();
+    // A level under the bow, a missing input, or a yew shortbow already held (strung or not: one name): no job.
+    for (const a of [fletcher(64, {}), fletcher(65, { knife: 0 }), fletcher(65, { 'yew log': 0 }), fletcher(65, { 'bow string': 0 }), fletcher(65, { 'yew shortbow': 1 })])
+        expect(run(a, 'make-yew-shortbow').template).toBeUndefined();
+    expect(jobFor(run(fletcher(65, {}), 'make-yew-shortbow'), side)).toMatchObject({ script: 'scripts/chain.ts', repeat: false, args: [
+        'scripts/aio.ts skiller crafting inventory cut-bow:unstrung_yew_shortbow MAX_MAKE=1 CAP=600 MEMBERS=1 ORDER_MODE=best-effort',
+        'scripts/aio.ts skiller crafting inventory bow-string:yew_shortbow MAX_MAKE=1 CAP=600 MEMBERS=1 ORDER_MODE=best-effort'] });
+    const cook = (level: number, items: Record<string, number>) => acct('A', { Cooking: level }, { potato: STEW_BATCH, 'bowl of water': STEW_BATCH, 'cooked meat': STEW_BATCH, ...items });
+    expect(run(cook(25, {}), 'make-uncooked-stew').template?.args).toEqual([
+        `scripts/aio.ts skiller crafting inventory prepare:potato-stew MAX_MAKE=${STEW_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`,
+        `scripts/aio.ts skiller crafting inventory prepare:uncooked-stew MAX_MAKE=${STEW_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`]);
+    for (const a of [cook(24, {}), cook(25, { potato: 0 }), cook(25, { 'bowl of water': 0 }), cook(25, { 'cooked meat': 0 })]) expect(run(a, 'make-uncooked-stew').template).toBeUndefined();
+    // One run makes STEW_BATCH stews and needs STEW_BATCH of each input. 100 potatoes and 100 bowls of water with one
+    // cooked meat give no job: the first step would leave incomplete stews that the second step has no meat for.
+    expect(run(cook(25, { potato: 100, 'bowl of water': 100, 'cooked meat': 1 }), 'make-uncooked-stew').template).toBeUndefined();
+    expect(run(cook(25, { potato: 100, 'bowl of water': 100, 'cooked meat': STEW_BATCH - 1 }), 'make-uncooked-stew').template).toBeUndefined();
+    expect(run(cook(25, { potato: 100, 'bowl of water': 100 }), 'make-uncooked-stew').template?.id).toBe('make-uncooked-stew');
+});
+
+test('an account under a top-up of rune arrows buys them at the Ranging Guild shop, as a pilot, while the bill is short', () => {
+    const shop = catalogue().filter(t => t.id === 'shop-rune-arrows' || t.id === 'army-arrows-guild');
+    const line = [row('rune arrow', 38)], arrowPrices = { 'rune arrow': 400 };
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { templates: shop, bill: line, prices: arrowPrices, pilots: new Set(['shop-rune-arrows']), ...extra }));
+    const buyer = (name: string, ranged: number, items: Record<string, number>) => acct(name, { Ranged: ranged }, { coin: RUNE_ARROW_SPEND + 2000, ...items });
+    const [x] = run([buyer('A', 40, {})]);
+    expect(x!.template!.id).toBe('shop-rune-arrows');
+    // ARROW_LOW arrows in the 800 ticks of the cap at twice the shop value, less the coins of a top-up off a full shelf.
+    expect(RUNE_ARROW_COST).toBe(Array.from({ length: ARROW_LOW }, (_, k) => 400 + 4 * k).reduce((a, b) => a + b, 0));
+    expect(x!.value).toBeCloseTo(ARROW_LOW / 800 * 400 * 2 - RUNE_ARROW_COST / 800);
+    expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['dargaud', '800'], resources: ['shop:dargaud'],
+        env: { ITEMS: 'rune arrow', STOCK_TARGET: String(ARROW_LOW), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', MAX_SPEND: String(RUNE_ARROW_SPEND), COIN_RESERVE: '500' } });
+    // Not admitted, under the level of the guild door, with the top-up held, or with the line met and coins at full worth: no run.
+    expect(ids(run([buyer('A', 40, {})], { pilots: new Set() }))).toEqual({ A: 'vacant' });
+    expect(ids(run([buyer('A', 39, {})]))).toEqual({ A: 'vacant' });
+    expect(ids(run([buyer('A', 40, { 'rune arrow': ARROW_LOW })]))).toEqual({ A: 'vacant' });
+    expect(ids(run([buyer('A', 40, {})], { bill: [row('rune arrow', 0)] }))).toEqual({ A: 'vacant' });
+    // Short of coins with no donor: no run. One account at the shop at a time.
+    expect(ids(run([buyer('A', 40, { coin: 1000 })]))).toEqual({ A: 'vacant' });
+    expect(ids(run([buyer('A', 40, {}), buyer('B', 40, {})]))).toEqual({ A: 'shop-rune-arrows', B: 'vacant' });
 });
 
 test('no AIO route is planned until the plan admits its id', () => {

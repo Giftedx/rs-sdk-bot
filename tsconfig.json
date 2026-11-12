@@ -8,5 +8,7 @@
     "skipLibCheck": true,
     "types": ["bun"]
   },
-  "include": ["scripts/**/*.ts", "packages/*/src/**/*.ts", "packages/*/test/**/*.ts"]
+  "include": ["scripts/**/*.ts", "packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "packages/dashboard/*.ts", "packages/dashboard/tools/*.ts"],
+  // These two exporters import vendor sources that resolve only with the path aliases of their own projects.
+  "exclude": ["**/node_modules", "packages/dashboard/tools/export-item-icons.ts", "packages/dashboard/tools/export-world-map.ts"]
 }

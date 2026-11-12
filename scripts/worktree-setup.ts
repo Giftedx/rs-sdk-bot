@@ -72,7 +72,7 @@ if(import.meta.main){
     // 3. The installs. The root packages go in this worktree itself: a worktree under the main checkout can resolve the
     // packages of the main checkout, but the gate needs node_modules in the checkout that it tests (scripts/ci-gate.ts).
     if(existsSync(join(root,'node_modules','typescript')))step('root packages','present');
-    else act('root packages',root,['bun','install','--no-save']);
+    else act('root packages',root,['bun','install','--frozen-lockfile']);
     const installs:[string,string,string[]][]=[
         ['SDK packages',vendor,['bun','install','--frozen-lockfile','--production']],
         ['web client packages',join(vendor,'server','webclient'),['bun','install','--frozen-lockfile']],
