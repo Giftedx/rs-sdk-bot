@@ -1,0 +1,22 @@
+{
+ "id": "1794521144408-mmthv2350-abracadickra",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "Abracadickra",
+ "item": "coins",
+ "count": 4000000,
+ "start": 1794521144408,
+ "end": 1794524744408,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ]
+}
