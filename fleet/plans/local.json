@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794475867901,
+ "at": 1794475878335,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -123,24 +123,21 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "aio:seers-flax"
+    "knight:2652,3318"
    ]
   },
   {
@@ -534,21 +531,24 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "aio:seers-flax"
    ]
   },
   {
