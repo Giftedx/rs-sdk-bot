@@ -386,12 +386,19 @@ export function recoveredSessionForRun(account:string,server:string,runId:string
  return false;
 }
 
-// A child that logged out but could not confirm preserved state leaves its lease held (finishRecoveryPermit), and
-// assertNoRecoveryLease then refuses every later recovery of the account. The controller removes only that exact lease:
-// its permit has expired, its bound child is gone, and the child's own producer attempt is the account's latest
-// confirmed logout. It writes released.json and keeps the permit, child, used, output, end, assignments and stops.
-// It never writes completed.json, so recoveredSessionForRun still refuses this run. A later call completes a release
-// that stopped after it wrote released.json.
+// A child that did not confirm preserved cleanup leaves its lease held (finishRecoveryPermit), and assertNoRecoveryLease
+// then refuses every later session and recovery of the account. The controller removes only that exact lease: its
+// permit has expired, its bound child is gone, and the newest session attempt of the account ends in a confirmed
+// logout (readLogoutProof). That attempt must show one of three things:
+// - It is the child's own attempt, and the child's receipt names it.
+// - `superseded`: a different run made it after the permit was issued. That session got into the account and left it,
+//   so the dead child holds nothing.
+// - `not-connected`: it is older than the permit, so the account has no attempt from the permit's time. Each session
+//   writes its attempt before it connects (openBot), so the child did not connect. The child's receipt, if it wrote
+//   one, must say that it did not try to log out.
+// Any other evidence keeps the lease. The release writes released.json and keeps the permit, child, used, output, end,
+// assignments and stops. It never writes completed.json, so recoveredSessionForRun still refuses this run. A later
+// call completes a release that stopped after it wrote released.json.
 export type LeaseReleaseChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;childAlive?:(pid:number,nonce:string)=>boolean};
 const childRunning=(pid:number,nonce:string)=>{
  try{process.kill(pid,0);}catch(e){if((e as NodeJS.ErrnoException).code==='ESRCH')return false;}
@@ -420,13 +427,17 @@ export function releaseExpiredRecoveryLease(account:string,base:string,options:L
  if(proof.state!=='confirmed')throw Error('recovery lease producer logout not confirmed');
  const attempt=listAttempts(r.account,r.server,{root}).find(a=>a.attemptId===proof.attemptId),a=attempt?.receipt;
  const receiptPath=join(paths.output,'receipt.json'),receipt=existsSync(receiptPath)?json(receiptPath):null;
- if(proof.ownerRun!==r.runId||!a||attempt?.sha256!==proof.receiptSha256||a.owner.pid!==child.pid||a.owner.coordinatorRunId!==r.runId
-  ||a.owner.workerRelease!==r.source||a.owner.script!==RECOVERY_SCRIPT||a.createdAt<p.issuedAt||proof.loggedOutAt<p.issuedAt
-  ||!receipt||receipt.logout!=='logged-out'||!isDeepStrictEqual(receipt.request,r)||receipt.runnerSha256!==p.runnerSha256
-  ||receipt.attemptId!==proof.attemptId||receipt.lifecycleSha256!==proof.receiptSha256||receipt.scope?.gameplay!==false||receipt.scope.production!==0)
-  throw Error('recovery lease producer proof mismatched');
+ if(!a||attempt?.sha256!==proof.receiptSha256)throw Error('recovery lease producer proof mismatched');
+ const own=proof.ownerRun===r.runId&&a.owner.pid===child.pid&&a.owner.coordinatorRunId===r.runId
+  &&a.owner.workerRelease===r.source&&a.owner.script===RECOVERY_SCRIPT&&a.createdAt>=p.issuedAt&&proof.loggedOutAt>=p.issuedAt
+  &&!!receipt&&receipt.logout==='logged-out'&&isDeepStrictEqual(receipt.request,r)&&receipt.runnerSha256===p.runnerSha256
+  &&receipt.attemptId===proof.attemptId&&receipt.lifecycleSha256===proof.receiptSha256&&receipt.scope?.gameplay===false&&receipt.scope.production===0;
+ const basis=own?null:a.owner.coordinatorRunId!==r.runId&&a.createdAt>=p.issuedAt&&proof.loggedOutAt>=p.issuedAt?'superseded'
+  :a.createdAt<p.issuedAt&&proof.loggedOutAt<p.issuedAt&&(!receipt||receipt.logout==='not-attempted')?'not-connected':undefined;
+ if(basis===undefined)throw Error('recovery lease producer proof mismatched');
  const released={schema:'session-recovery-release/1',at:now,account:r.account,nonce:r.nonce,runId:r.runId,leaseSha256,childPid:child.pid,
-  attemptId:proof.attemptId,lifecycleSha256:proof.receiptSha256,receiptSha256:sha(readFileSync(receiptPath)),controller:{pid:owner.pid,nonce:owner.nonce},scope:{repairsFailure:false,qualifiesScript:false,production:0}};
+  attemptId:proof.attemptId,lifecycleSha256:proof.receiptSha256,receiptSha256:receipt?sha(readFileSync(receiptPath)):null,...(basis?{basis}:{}),
+  controller:{pid:owner.pid,nonce:owner.nonce},scope:{repairsFailure:false,qualifiesScript:false,production:0}};
  // A release that stopped between the marker and the removal leaves released.json beside the lease. That marker must
  // name this exact lease, child and producer proof; only its time and its controller can differ. Then the removal
  // runs again and the first marker stays. A marker that does not parse or does not match keeps the lease.
