@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794510934236-oreelse-abracadickra",
  "account": "OreElse",
  "partner": "Abracadickra",
@@ -12,6 +12,16 @@
  "claim": "e8408a22-73c3-4df1-8ea3-41ff034df271",
  "count": 0,
  "ok": false,
- "at": 1794513304318,
- "detail": "trade claimed"
+ "at": 1794513406204,
+ "detail": "Error: order window ended before trade",
+ "bank": {
+  "count": 17559,
+  "at": 1794513404423
+ },
+ "logout": {
+  "attemptId": "1794513304328-0000023424-0000000001",
+  "at": 1794513406194,
+  "sha256": "ec86ad0800ad58f4e18572d0b5b178238592871067dfa203a22cf8e94bcd8565"
+ },
+ "screen": false
 }
