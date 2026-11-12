@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794512680361,
+ "at": 1794512952687,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -54,6 +54,18 @@
    "role": "rehearsal"
   },
   {
+   "account": "WeeQuickie",
+   "script": "scripts/firemaking-order.ts",
+   "env": {
+    "TARGET_LEVEL": "99",
+    "PROGRESSIVE": "stock",
+    "CLEAR_PACK": "1"
+   },
+   "enabled": false,
+   "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
+   "role": "rehearsal"
+  },
+  {
    "account": "Bigchopper",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -61,8 +73,8 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "68",
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "0",
     "TROOPER_COOK": "1"
@@ -70,9 +82,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
@@ -124,21 +136,25 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -416,25 +432,21 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2582,3297"
    ]
   },
   {
@@ -497,18 +509,6 @@
    "resources": [
     "pen:3187,3277"
    ]
-  },
-  {
-   "account": "WeeQuickie",
-   "script": "scripts/firemaking-order.ts",
-   "env": {
-    "TARGET_LEVEL": "99",
-    "PROGRESSIVE": "stock",
-    "CLEAR_PACK": "1"
-   },
-   "enabled": false,
-   "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
-   "role": "rehearsal"
   },
   {
    "account": "OreElse",

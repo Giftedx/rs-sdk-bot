@@ -1,0 +1,22 @@
+{
+ "id": "1794513830213-shaftmaker-wandwaver-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "Wandwaver",
+ "item": "Air rune",
+ "count": 21,
+ "start": 1794513830213,
+ "end": 1794516230213,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
