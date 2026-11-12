@@ -64,3 +64,21 @@ test('a confirmed logout still returns producer proof on a takeover server',()=>
  const f=fixture();const a=f.attempt('Rod',101);a.record('ended','logged-out');
  expect(liveLogoutRef('Rod',f.base,false,Date.now(),true,dead)).toEqual({kind:'producer',attemptId:a.attemptId});
 });
+
+import {savedProcessAlive} from '../src/session-takeover';
+import {PID_START_SLACK_MS} from '../../practice/src/proc';
+test('a live process id is the saved process only when its process started before the record',()=>{
+ const savedAt=1_000_000,alive=()=>true,gone=()=>false,starts=(at:number|null)=>()=>at===null?null:new Map([[77,at]]);
+ // The process started before the record was written: it is the saved process.
+ expect(savedProcessAlive(77,savedAt,starts(savedAt-60_000),alive)).toBe(true);
+ expect(savedProcessAlive(77,savedAt,starts(savedAt+PID_START_SLACK_MS),alive)).toBe(true);
+ // A later process holds the id: the saved process is gone.
+ expect(savedProcessAlive(77,savedAt,starts(savedAt+PID_START_SLACK_MS+1),alive)).toBe(false);
+ // A start-time read that failed, or that does not list the id, proves nothing.
+ expect(savedProcessAlive(77,savedAt,starts(null),alive)).toBe(true);
+ expect(savedProcessAlive(77,savedAt,()=>new Map(),alive)).toBe(true);
+ // No process has the id: no start-time read is needed.
+ let reads=0;
+ expect(savedProcessAlive(77,savedAt,()=>{reads++;return new Map();},gone)).toBe(false);
+ expect(reads).toBe(0);
+});

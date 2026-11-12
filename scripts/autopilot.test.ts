@@ -42,8 +42,9 @@ test('a trainer at its target stays ended for the swarm, and the next pass start
     expect(finishedTrainers([trainer], side, assigned, catalogue(), () => ['RESULT ok thieving=55 xp=16000 ticks=1736 died=false'])).toEqual(['TrouserSnake']);
 
     // That pass reads the status at the target level: the trainer is skipped, a knight spot replaces it, and the new
-    // mission starts although the account's last end is done.
-    const [next] = plan(inputs({ ...fresh, skills: { ...fresh.skills, Thieving: 55 } }));
+    // mission starts although the account's last end is done. The account has 20 Hitpoints here: the frail rule keeps
+    // a thief under that off the knights until it holds food (GOLDFARM_FRAIL, packages/planner/src/autopilot.ts).
+    const [next] = plan(inputs({ ...fresh, skills: { ...fresh.skills, Thieving: 55, Hitpoints: 20 } }));
     expect(next!.template!.id).toMatch(/^goldfarm@/);
     const merged = mergeJobs([trainer], side, [next!]);
     expect(merged.fresh).toEqual(['TrouserSnake']);

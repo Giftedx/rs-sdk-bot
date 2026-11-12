@@ -3,7 +3,9 @@ import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_ST
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, UNF_POTIONS, makerChains, priceTable } from '../src/autopilot';
 
 const side = 'claude-cloud';
-const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
+// A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
+// (GOLDFARM_FRAIL) does not apply to it. A test of that rule gives its own Hitpoints.
+const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: (skills.Thieving ?? 1) >= 55 ? 20 : 10, ...skills }, items });
 const row = (item: string, short: number) => ({ item, need: short, owned: 0, short, ids: [1], holders: [] });
 const prices = { feather: 2, 'headless arrow': 1, lobster: 150, 'fire rune': 4, 'air rune': 4, 'earth rune': 4, 'rune arrowtip': 200, 'adamant arrowtip': 80, 'arrow shaft': 1 };
 const bill = [row('feathers', 800), row('headless arrows', 3615), row('lobster', 610), row('fire rune', 2000)];
@@ -114,6 +116,50 @@ test('an account whose pack meets the feather target gets no feather job', () =>
     const knights = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 1]));
     expect(ids(plan(inputs([acct('Full', {}, { feather: FEATHER_TARGET })], { taken: knights }))).Full).not.toMatch(/^feathers@/);
     expect(ids(plan(inputs([acct('Room', {}, { feather: FEATHER_TARGET - 1 })], { taken: knights }))).Room).toMatch(/^feathers@/);
+});
+test('a thief with few Hitpoints gets a knight spot only when it holds food; a fresh account still trains toward one', () => {
+    const job = (a: Acct) => ids(plan(inputs([a])))[a.name];
+    const frail = (items: Record<string, number> = {}) => acct('Frail', { Thieving: 99, Hitpoints: 10 }, items);
+    expect(job(frail())).not.toMatch(/^goldfarm@/);
+    expect(job(frail({ 'slice of cake': 1 }))).not.toMatch(/^goldfarm@/);
+    // Food that the worker does not eat does not count.
+    expect(job(frail({ 'slice of cake': 1, 'raw lobster': 5 }))).not.toMatch(/^goldfarm@/);
+    expect(job(frail({ 'slice of cake': 1, lobster: 1 }))).toMatch(/^goldfarm@/);
+    expect(job(acct('Edge', { Thieving: 99, Hitpoints: 19 }))).not.toMatch(/^goldfarm@/);
+    expect(job(acct('Hale', { Thieving: 99, Hitpoints: 20 }))).toMatch(/^goldfarm@/);
+    // The worth of the trainer comes from the spot that the level unlocks. The food rule does not take that away.
+    expect(job(acct('New'))).toBe('thieving55');
+});
+test('a frail thief with coins and no food buys food with its own coins, then takes a knight spot', async () => {
+    const { FRAIL_FOOD_BUY, FRAIL_FOOD_BUY_ID, KIT_BUY, KIT_CASH_RESERVE, KIT_PRICE_CAPS } = await import('../src/autopilot');
+    const food = { trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! }, lobster: { id: 379, name: 'Lobster', limit: KIT_PRICE_CAPS.lobster! } };
+    const frail = (items: Record<string, number> = {}) => acct('Frail', { Thieving: 99, Hitpoints: 10 }, items);
+    const pick = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { market: food, ...extra })).find(x => x.account === a.name);
+    const cost = FRAIL_FOOD_BUY * KIT_PRICE_CAPS.trout!;
+    // The cheapest food of the job that the market lists, in one order with the price cap.
+    const buy = pick(frail({ coin: cost + KIT_CASH_RESERVE }))!;
+    expect(buy.template!.id).toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    expect(buy.template!.args).toHaveLength(1);
+    expect(buy.template!.args![0]).toContain(`ITEM_ID=333 QUANTITY=${FRAIL_FOOD_BUY} LIMIT_PRICE=${KIT_PRICE_CAPS.trout}`);
+    expect(buy.reason).toContain(`at most ${cost} coins`);
+    // The buy holds one knight spot, the one that the food is for. With each spot full there is no buy: the account
+    // would pay for food and then have no spot to use it on.
+    expect(buy.resources).toHaveLength(1);
+    expect(buy.resources![0]).toMatch(/^knight:/);
+    const full = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 99]));
+    expect(pick(frail({ coin: 1_000_000 }), { taken: full })?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    const oneFree = { ...full, [`knight:${KNIGHT_SPOTS[0]}`]: 0 };
+    expect(pick(frail({ coin: 1_000_000 }), { taken: oneFree })!.resources).toEqual([`knight:${KNIGHT_SPOTS[0]}`]);
+    // One coin short of the order and the reserve: no buy.
+    expect(pick(frail({ coin: cost + KIT_CASH_RESERVE - 1 }))?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    // No market, a retired buy, or an account that is not frail: no buy.
+    expect(plan(inputs([frail({ coin: 1_000_000 })])).find(x => x.account === 'Frail')?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    expect(pick(frail({ coin: 1_000_000 }), { retired: new Set([pairKey('Frail', KIT_BUY + FRAIL_FOOD_BUY_ID)]) })?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    expect(pick(acct('Hale', { Thieving: 99, Hitpoints: 20 }, { coin: 1_000_000 }))!.template!.id).toMatch(/^goldfarm@/);
+    // With the food in the bank the account takes the knights.
+    expect(pick(frail({ coin: 1_000_000, trout: FRAIL_FOOD_BUY }))!.template!.id).toMatch(/^goldfarm@/);
+    // A thief under the Thieving level of the job buys nothing: food does not fix that.
+    expect(pick(acct('Low', { Thieving: 40, Hitpoints: 10 }, { coin: 1_000_000 }))?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
 });
 test("the chicken pen in the Champions' Guild yard goes only to an account with 32 quest points", () => {
     const guild = Object.keys(PEN_QUEST_POINTS).map(p => `feathers@${p}`);
@@ -1792,4 +1838,19 @@ test('the halberd build trains Thieving and Agility, then takes Underground Pass
     // Short of the bow and the arrows: the band buys them.
     const market: Market = { 'magic shortbow': { id: 861, name: 'Magic shortbow', limit: KIT_PRICE_CAPS['magic shortbow']! }, 'rune arrow': { id: 892, name: 'Rune arrow', limit: KIT_PRICE_CAPS['rune arrow']! } };
     expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
+});
+
+import { SHOP_STOCK } from '../src/autopilot';
+test('a shop job needs an account that is short of an item the shop run buys', () => {
+    const shops = ['shop-feathers', 'shop-runes', 'shop-arrowtips'];
+    const wanted = [row('feathers', 800), row('fire rune', 2000), row('air rune', 2000), row('earth rune', 2000), row('rune arrowtips', 2000), row('adamant arrowtips', 2000)];
+    const job = (items: Record<string, number>, id: string) =>
+        ids(plan(inputs([acct('Rich', {}, { coin: 50_000, ...items })], { bill: wanted, templates: catalogue().filter(t => t.id === id) }))).Rich;
+    const pick = (items: Record<string, number>) => shops.filter(id => job(items, id) === id);
+    const full = { feather: SHOP_STOCK, 'fire rune': SHOP_STOCK, 'air rune': SHOP_STOCK, 'earth rune': SHOP_STOCK, 'rune arrowtip': SHOP_STOCK, 'adamant arrowtip': SHOP_STOCK };
+    expect(pick({})).toEqual(shops);
+    expect(pick(full)).toEqual([]);
+    // One rune under the stock keeps the rune run. The feather run and the arrowtip run stay shut.
+    expect(pick({ ...full, 'earth rune': SHOP_STOCK - 1 })).toEqual(['shop-runes']);
+    expect(pick({ ...full, feather: 760 })).toEqual([]);
 });
