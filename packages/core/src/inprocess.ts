@@ -153,6 +153,11 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     let actionPending = false;
     // SIM_ACK_FILE only: the SDK calls in flight, named on each held tick, to find a wait that the ack does not see.
     const inFlight = new Map<string, number>();
+    // SDK waits in progress (waitForObservation and the waits that subscribe by themselves). The listener count above
+    // its lowest value missed them: when a script's first wait was open at the first check, the lowest value was that
+    // wait, and each later single wait held its tick to SIM_BUSY_MS. Bench --profile, extra:firemaking-stock-low: 18
+    // held ticks, each with sdk=waitForObservation,waitForCondition and state=1/1.
+    let sdkWaits = 0;
     const holdFlush = () => { if (!flushHeld && sendNow) { flushHeld = true; client.flush = () => {}; } };
     const releaseFlush = () => { if (flushHeld) { flushHeld = false; delete (client as { flush?: unknown }).flush; sendNow?.(); } };
     const acknowledgeTick = () => {
@@ -164,7 +169,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             // A pending action waits for the server until its count dialog is open; then the executor submits within
             // its 50 ms poll and the tick waits for that, as before, so the submit stays in the same tick.
             const serverWait = actionPending && !(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
-            const waiting = tickWaits.active > 0 || waitLeft > 0 || serverWait || stateWaiters > stateWaitersLow;
+            const waiting = tickWaits.active > 0 || waitLeft > 0 || serverWait || sdkWaits > 0 || stateWaiters > stateWaitersLow;
             const busy = (running && waitLeft === 0 && !serverWait) || !waiting;
             if (busy && performance.now() - since < busyMs) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
@@ -262,6 +267,16 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             };
             const max = client.getMaxMessageLength?.();
             if (max) deliver({ type: 'sdk_info', maxMessageLength: max });
+            if (lockstep) for (const name of ['waitForObservation', 'waitForStateUpdate', 'waitForChat', 'waitForTradeRequest', 'waitForReady'] as const) {
+                const sdk = s as unknown as Record<string, unknown>, wait = sdk[name];
+                if (typeof wait !== 'function') continue;
+                sdk[name] = function (this: unknown, ...args: unknown[]) {
+                    sdkWaits++;
+                    let out: unknown;
+                    try { out = (wait as (...a: unknown[]) => unknown).apply(this, args); } catch (e) { sdkWaits--; throw e; }
+                    return Promise.resolve(out).finally(() => { sdkWaits--; });
+                };
+            }
             if (lockstep && ackFile) {
                 const sdk = s as unknown as Record<string, unknown>;
                 for (let proto = Object.getPrototypeOf(sdk); proto && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
