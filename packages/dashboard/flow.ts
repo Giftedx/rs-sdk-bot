@@ -25,6 +25,9 @@ export function trackFlow(flows: Map<string, Flow>, s: any): void {
     let f = flows.get(s.name);
     if (!f || f.session !== session) { f = { session, since: at, at, carried: null, bankAt: s.bankAt ?? null, loot: new Map(), used: new Map() }; flows.set(s.name, f); }
     if (at <= f.at && f.carried) return;
+    // Unknown worn gear (status.ts writes equipment: null when it is not observed) is not empty gear: no comparison
+    // crosses it, and the next file with known gear starts a new baseline.
+    if (!Array.isArray(s.equipment)) { f.carried = null; f.bankAt = s.bankAt ?? null; f.at = at; return; }
     const now = carriedOf(s), prev = f.carried, dead = s.hp?.now === 0;
     if (prev && !dead && (s.bankAt ?? null) === f.bankAt) {
         const gone = [...prev.keys()].filter(k => !now.has(k)).length;

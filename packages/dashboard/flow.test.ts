@@ -45,3 +45,11 @@ test('the flow keeps every item kind, so a valuable item past the 40 biggest sta
     expect(v.loot.length).toBe(42);
     expect(v.loot.some(i => i.name === 'Dragon chainbody')).toBe(true);
 });
+
+test('unknown worn gear is not empty gear: known, unknown, known counts nothing', () => {
+    const flows = new Map();
+    trackFlow(flows, status(100, [{ name: 'Shark', count: 5 }], { equipment: [{ name: 'Rune scimitar', count: 1 }] }));
+    trackFlow(flows, status(103, [{ name: 'Shark', count: 5 }], { equipment: null }));
+    trackFlow(flows, status(106, [{ name: 'Shark', count: 5 }], { equipment: [{ name: 'Rune scimitar', count: 1 }] }));
+    expect(flowView(flows, 'Alpha')).toBeNull();
+});
