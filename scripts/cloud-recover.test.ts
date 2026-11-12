@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SWARM_STOP } from './swarm';
-import { archiveDir, archiveStaleLease, clearSwarmStops, cloudSide, deadTasks, eligibility, END_SETTLE_MS, endSettled, lifecycleRoot, NEVER_RECOVERED, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryLeaseState, recoveryProposal, recoveryRequestWaiting, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
+import { archiveDir, archiveStaleLease, clearSwarmStops, cloudSide, deadTasks, eligibility, END_SETTLE_MS, endSettled, lifecycleRoot, NEVER_RECOVERED, MAX_ATTEMPTS, MAX_TARGETS, MAX_WAITS, waitedAttempts, waitRefusedRuns, recoveriesInFlight, recoveryBatch, recoveryLeaseState, recoveryProposal, recoveryRequestWaiting, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -254,6 +254,41 @@ test('a run that never started behind a failed earlier run of its chain spends n
     const tasks = [task('q', 'succeeded', []), task('a', 'failed', ['q'], { account: 'Quickhandjob', endedAt: 7 }), task('b', 'pending', ['q', 'a'], target)];
     expect(recoveriesInFlight(tasks)).toEqual([]);
     expect(spentAttempts([...tasks, ...tasks.map(t => ({ ...t, spec: { ...t.spec, id: t.spec.id + '2', dependsOn: t.spec.dependsOn.map(d => d + '2') } }))], target)).toBe(0);
+});
+
+// The shape of a dispatcher result line (packages/core/src/session-recovery-dispatch.ts emit).
+const resultLine = (runId: string, result: object) => JSON.stringify({ at: 1, raw: JSON.stringify({ kind: 'session-recovery', account: 'Sausagefest', runId }), result });
+const refused = (cause: string, reason = 'recovery setup refused; no lease issued; no retry') => ({ changed: false, sessionRecovered: false, reason, setup: { phase: 'admission', cause } });
+
+test('a run that the controller refused while it waited for memory or a bot slot spends no attempt', () => {
+    const target = { account: 'Sausagefest', endedAt: 1794509172759 };
+    const run = (id: string, runId: string, error: string) => ({ ...task(id, 'failed', [], target), runId, receipt: { ok: false, error } });
+    const held = 'Error: controller held authenticated recovery: recovery setup refused; no lease issued; no retry';
+    // The four live Sausagefest runs: three dispatcher refusals and one preflight refusal, all on memory.
+    const tasks = [run('a', 'task-1', held), run('b', 'task-2', held), run('c', 'task-3', 'Error: live admission waiting: memory'), run('d', 'task-4', held)];
+    const waits = waitRefusedRuns([resultLine('task-1', refused('recovery admission waiting: memory')), resultLine('task-2', refused('recovery admission waiting: maxBots')),
+        resultLine('task-4', { ...refused('recovery waits for runtime source owner'), setup: { phase: 'source-owner', cause: 'recovery waits for runtime source owner' } }), 'not json', ''].join('\n'));
+    expect([...waits].sort()).toEqual(['task-1', 'task-2', 'task-4']);
+    expect(spentAttempts(tasks, target, waits)).toBe(0);
+    expect(waitedAttempts(tasks, target, waits)).toBe(4);
+    // Without the result lines only the preflight refusal is known as a wait: the other three count.
+    expect(spentAttempts(tasks, target)).toBe(3);
+    expect(MAX_WAITS).toBeGreaterThan(MAX_ATTEMPTS);
+});
+
+test('a refusal for any other cause, or a setup failure after the lease, still spends an attempt', () => {
+    const waits = waitRefusedRuns([
+        resultLine('owner', refused('recovery previous session owner still alive')),
+        resultLine('unknown', refused('unclassified setup error')),
+        resultLine('leased', refused('recovery admission waiting: memory', 'recovery setup failed after issuance; account lease held; no retry')),
+        resultLine('child', { changed: false, sessionRecovered: false, reason: 'recovery child held; inspect fixed child output and retained account lease; no retry' }),
+        resultLine('ok', { changed: false, sessionRecovered: true, reason: 'confirmed session cleanup; old failure retained' }),
+    ].join('\n'));
+    expect(waits.size).toBe(0);
+    const target = { account: 'Sausagefest', endedAt: 5 };
+    const tasks = ['owner', 'unknown'].map(r => ({ ...task(r, 'failed', [], target), runId: r, receipt: { ok: false, error: 'Error: live admission waiting: invalid' } }));
+    expect(spentAttempts(tasks, target, waits)).toBe(MAX_ATTEMPTS);
+    expect(waitedAttempts(tasks, target, waits)).toBe(0);
 });
 
 test('the swarm\'s own stop file is removed before a recovery is submitted; an owner\'s stays, and so do all under stop-swarm', () => {
