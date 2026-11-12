@@ -5,7 +5,11 @@
 // 3. Restarts the fleet agent and the autopilot from their launch records when no live process holds the lease
 //    (packages/core/src/controllers.ts). A daemon writes its record when a person starts it, so a machine where
 //    none was started gets none. .practice/stop-fleet-agent and .practice/stop-autopilot keep each one stopped.
-// 4. Records the scoreboard progress numbers, and writes .practice/coordinator/stall.json when none rose for
+// 4. Submits an authenticated recovery for each account whose live session the server did not end (a logout that
+//    timed out, a dropped socket): scripts/cloud-recover.ts queues one proposal on the running coordinator and
+//    returns. Without it such an account fails each login with `fleet account claim held by swarm` until a person
+//    queues the recovery. .practice/stop-session-recovery keeps this step off.
+// 5. Records the scoreboard progress numbers, and writes .practice/coordinator/stall.json when none rose for
 //    STALL_MS; the planner reads it and must change lane or method. A gain removes the note.
 // Before the owner-stop check, it restarts the hosted dashboard's publisher (packages/dashboard/publish.ts) when the
 // publisher has a clone in .practice/fleet-command/repo and its lock names no live process. Nothing else starts it
@@ -42,6 +46,14 @@ export function restartCommand(name: Controller['name'], launch: Launch, exists:
     return ['scripts/autopilot.ts', plan, '--daemon'];
 }
 
+// The lines of one recovery call (scripts/cloud-recover.ts) for the watchdog log: what it submitted, what it refused
+// and why it waits. A call with nothing to recover prints nothing. A call that fails or does not end adds its exit.
+export function recoveryLog(stdout: string, stderr: string, exitCode: number | null): string[] {
+    const lines = stdout.split(/\r?\n/).filter(l => l.startsWith('CLOUD_RECOVER ')).map(l => `session recovery: ${l.slice('CLOUD_RECOVER '.length, 400)}`);
+    if (exitCode !== 0) lines.push(`session recovery call ${exitCode === null ? 'did not end in time' : `exit ${exitCode}`}: ${stderr.trim().slice(-200)}`);
+    return lines;
+}
+
 // owner/name of the hosted dashboard repository from the publisher clone's origin URL.
 export function publisherRepo(remote: string): string | null {
     const m = /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/.exec(remote.trim());
@@ -71,7 +83,8 @@ if (import.meta.main) {
     }
     if (['stop-coordinator', 'stop-swarm'].some(f => existsSync(join(root, '.practice', f)))) { log('owner stop present; nothing started'); process.exit(0); }
     const owner = existsSync(join(dir, 'owner.json')) ? JSON.parse(readFileSync(join(dir, 'owner.json'), 'utf8')) : null;
-    if (!owner?.pid || !alive(owner.pid)) {
+    const coordinatorUp = !!owner?.pid && alive(owner.pid);
+    if (!coordinatorUp) {
         const token = 'watchdog-' + randomUUID(), stamp = now;
         const pid = spawnDetached([process.execPath, 'packages/router/src/coordinator-cli.ts', '--run', token], root, join(dir, `daemon-${stamp}.out.log`), join(dir, `daemon-${stamp}.err.log`));
         log(`coordinator restarted pid=${pid} token=${token} (previous pid=${owner?.pid ?? 'none'})`);
@@ -95,6 +108,13 @@ if (import.meta.main) {
             const pid = spawnDetached([process.execPath, ...start], root, join(prac, 'autopilot', `daemon-${now}.out.log`), join(prac, 'autopilot', `daemon-${now}.err.log`), env);
             log(`autopilot restarted pid=${pid} plan=${start[1]}`);
         }
+    }
+    // Held live sessions. On the local side the call reads each account's logout proof, submits at most one proposal
+    // and returns; it does not wait for the runs. A cloud side's call waits for its runs, so its own watchdog makes it.
+    // A coordinator that this pass started has no owner record yet, so the next pass calls.
+    if (coordinatorUp && (process.env.FLEET_SIDE || 'local') === 'local' && !existsSync(join(prac, 'stop-session-recovery'))) {
+        const r = Bun.spawnSync([process.execPath, 'scripts/cloud-recover.ts'], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 120_000, windowsHide: true });
+        for (const line of recoveryLog(r.stdout.toString(), r.stderr.toString(), r.exitCode)) log(line);
     }
     // The planner reads the Overall route's supply bill against current banks (packages/planner/src/supply-bill.ts).
     const bill = Bun.spawnSync([process.execPath, 'packages/planner/src/supply-bill.ts'], { cwd: root, stdout: 'ignore', stderr: 'pipe', windowsHide: true });
