@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794511637490-shaftmaker-balls",
+ "account": "Balls",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "logs",
+ "requested": 1,
+ "claim": "2190ca34-aa0c-4544-ba43-e86b95c834e4",
+ "count": 0,
+ "ok": false,
+ "at": 1794511719996,
+ "detail": "trade claimed"
+}
