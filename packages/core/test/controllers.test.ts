@@ -75,6 +75,10 @@ test('a different live process at the gate stops a take, and the ticket of an en
         expect(takeLease(file, 12, { now, alive: () => true })).toBe(true);
         // No ticket, temporary file or moved file stays.
         expect(readdirSync(dir)).toEqual(['x.lock']);
+        // A new checkout has no folder for the lease: the take makes it.
+        const fresh = join(dir, 'new', '.practice', 'autopilot.lock');
+        expect(takeLease(fresh, 13, { now, alive: () => true })).toBe(true);
+        expect(readdirSync(join(dir, 'new', '.practice'))).toEqual(['autopilot.lock']);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 

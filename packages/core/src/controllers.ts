@@ -73,6 +73,7 @@ export function leaseHolder(file: string, deps: LeaseDeps = {}): number | null {
 // of an ended process can be removed without a risk to a live one.
 function atGate<T>(file: string, pid: number, alive: (pid: number) => boolean, body: () => T): T | null {
     const dir = dirname(file), prefix = `${basename(file)}.take.`, mine = `${prefix}${pid}.${randomUUID()}`;
+    mkdirSync(dir, { recursive: true });        // a new checkout has no .practice folder before its first daemon
     writeFileSync(join(dir, mine), '', { flag: 'wx' });
     try {
         for (const name of readdirSync(dir)) {
