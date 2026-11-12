@@ -109,9 +109,11 @@ export async function runQuestCookJob(name:string,cap:number){
   const entry=observeCookJobSnapshot(s,false);
   console.log('QUEST_COOK_JOB_OBSERVED_ENTRY '+JSON.stringify(entry));
   // An account that stands east of Draynor with the bucket and the pot (or the milk and the flour) in its pack
-  // gathers from the pack: it opens no bank before the last check, and it keeps the other items that it carries.
+  // and two free slots gathers from the pack: it opens no bank before the last check, and it keeps the other items
+  // that it carries.
   const held=(id:number)=>sum(entry.pack,id)>0;
-  const fromPack=entry.position.x>3150&&(held(1927)||held(1925))&&(held(1933)||held(1931));
+  // The egg and the grain each need a free slot. A fuller pack takes the bank way, which deposits the other items.
+  const fromPack=entry.position.x>3150&&(held(1927)||held(1925))&&(held(1933)||held(1931))&&entry.pack.length<=26;
   gather=await gatherQuestItems(s,'cook',null,deadline-s.tick(),{fromPack,stop:()=>ended||dead,onBank:bank=>{
    before={...entry,bank:bank.items.map(i=>({id:i.id,count:i.count})),bankGeneration:bank.generation};
    for(const [product,container] of [[1927,1925],[1933,1931]])if(!assets(before,product!)&&!assets(before,container!))throw Error(`missing container ${container}`);
@@ -138,9 +140,10 @@ export async function runQuestCookJob(name:string,cap:number){
   const generation=s.bankObservation?.()?.generation??0;
   if(!(await s.bot.openBank()).success||!await wait(()=>(s.bankObservation?.()?.generation??0)>generation,12))throw Error('Cook final bank unobserved');
   after=observeCookJobSnapshot(s);
-  // A run from the pack opened no bank before this point, so its bank at the start is the bank seen here.
-  if(!before)before={...entry,bank:after.bank,bankGeneration:-1};
-  checks=cookJobChecks(before,after);
+  // A run from the pack opened no bank before this point, so the bank took no part in it. Its check compares the
+  // pack and the worn items only: stock in the bank, also a banked egg, milk or flour, stays as it is.
+  if(!before){before={...entry,bank:[],bankGeneration:-1};checks=cookJobChecks(before,{...after,bank:[]});}
+  else checks=cookJobChecks(before,after);
   if(!(await s.bot.closeBank()).success)throw Error('Cook final bank close refused');
   guard();if(!Object.values(checks).every(Boolean))throw Error('Cook final checks failed');
   detail='Cook complete; observed QP, Cooking XP, input costs and retained assets';
