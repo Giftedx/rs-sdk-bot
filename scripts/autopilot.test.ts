@@ -637,7 +637,6 @@ test('the plan gives a build account the quest route of its kit; a kit with no r
 import { mountainWalk, offlinePlace, MOUNTAIN } from './autopilot';
 import { accountFrom, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
 import { walkWithFerryFallback } from './walk-to';
-import { PROFILES } from './shop-buyer';
 import { loadHunters } from '../packages/core/src/danger';
 import { loadTravel } from '../packages/core/src/travel';
 
