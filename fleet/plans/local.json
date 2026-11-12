@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794454761536,
+ "at": 1794455270989,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -340,26 +340,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
-   "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
    ]
   },
   {
