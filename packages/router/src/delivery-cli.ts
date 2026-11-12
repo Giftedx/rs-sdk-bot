@@ -10,7 +10,7 @@ import {PRACTICE_TURN_WAIT_EXPIRED,recoverProofLock,withPracticeTurn} from '../.
 import {deliver,validateDelivery,type DeliveryTask,type DeliveryCheck} from './delivery';
 
 const root=resolve(import.meta.dir,'../../..');
-// Source preparation keeps an estimated 3 GiB reserve over the free-memory floor (packages/core/src/memory.ts).
+// Source preparation needs SOURCE_STARTUP_GB free: the free-memory floor and a reserve (packages/core/src/memory.ts).
 // Native launch requires PRACTICE_STARTUP_GB; this is checked at the actual child boundary.
 import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB} from '../../core/src/memory';
 export {SOURCE_STARTUP_GB,NATIVE_STARTUP_GB};
