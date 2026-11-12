@@ -1,6 +1,8 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
-import {HETTY_MATCHED_ENTRY,hettyCarriedEntry,hettyLiveJobSavedChecks,hettyMainlandReady,hettyRegisteredEntry,hettyTutorialJobSavedChecks,tutorialGrantedSave,HETTY_TUTORIAL_GRANT,questItemsConsumerChecks,parseItemResult,cookLiveJobSavedChecks,cookLiveRepeatSavedChecks,COOK_JOB_NATIVE_NULL_VARPS} from '../src/quest-items-order-proof';
+import {HETTY_MATCHED_ENTRY,hettyCarriedEntry,hettyLiveJobSavedChecks,hettyMainlandReady,hettyRegisteredEntry,hettyTutorialJobSavedChecks,tutorialGrantedSave,HETTY_TUTORIAL_GRANT,questItemsConsumerChecks,parseItemResult,cookLiveJobSavedChecks,cookLiveRepeatSavedChecks,COOK_JOB_NATIVE_NULL_VARPS,bindHettyFixtureIpv4} from '../src/quest-items-order-proof';
+import {practiceProfile} from '../src/register-proof-account';
+import {runBotName} from '../src/prove';
 const save=(pack:{id:number;count:number}[],bank:{id:number;count:number}[],vars:Record<number,number>={})=>({version:9,position:{x:3092,z:3243,level:0},skills:[{index:3,level:10,rawExperience:11540,xp:1154}],vars,inventories:{93:pack.map((i,slot)=>({...i,slot})),95:bank.map((i,slot)=>({...i,slot}))}});
 const products=[{id:1944,count:1},{id:1927,count:1},{id:1933,count:1}],asset={id:1351,count:1};
 const before=save([asset],[{id:1925,count:1},{id:1931,count:1}]),gathered=save(products,[asset]),after=save([],[asset],{29:2,101:1});
@@ -179,4 +181,27 @@ test('registered Tutorial Island entry is not mainland readiness; the grant is r
  expect(hettyTutorialJobSavedChecks(registered,{...after,inventories:{...after.inventories,93:after.inventories[93].filter(i=>i.id!==1277)}},r).assets).toBe(false);
  expect(hettyTutorialJobSavedChecks(registered,{...after,inventories:{...after.inventories,95:[{slot:0,id:995,count:20}]}},r).coins).toBe(false);
  expect(hettyTutorialJobSavedChecks({...registered,vars:{281:1000}},after,r).tutorialEntry).toBe(false);
+});
+test('only the fresh Hetty fixture binds and registers on exact IPv4 loopback',()=>{
+ const name=runBotName('flqhjob',1);
+ const fresh=`USERNAME=${name}\nPASSWORD=x\nSERVER=localhost:8888\nGATEWAY_URL=ws://localhost:7780\nTELEMETRY=false\n`;
+ const bound=bindHettyFixtureIpv4(fresh)!;
+ expect(bound).toBe(`USERNAME=${name}\nPASSWORD=x\nSERVER=127.0.0.1:8888\nGATEWAY_URL=ws://127.0.0.1:7780\nTELEMETRY=false\n`);
+ for(const env of [fresh.replace('localhost:8888','rs-sdk-demo.fly.dev'),fresh.replace('ws://localhost:7780','ws://localhost:7781'),
+  fresh+'SERVER=localhost:8888\n',fresh+'GATEWAY_URL=ws://localhost:7780\n',fresh.replace('GATEWAY_URL=ws://localhost:7780\n','')])expect(bindHettyFixtureIpv4(env)).toBeNull();
+ const receipt={name,saveAbsent:true,credentialsAbsent:true};
+ expect(practiceProfile(name,bound,receipt)).toBe('ipv4');
+ // Default localhost fixtures (fresh-rune callers) need no receipt.
+ expect(practiceProfile('frshxab3c1',fresh,null)).toBe('localhost');
+ const rejected:[string,string,object|null][]=[
+  [name,bound,null],[name,bound,{...receipt,saveAbsent:false}],[name,bound,{...receipt,credentialsAbsent:false}],[name,bound,{...receipt,name:name+'1'}],
+  ['Moneyshot',bound,{...receipt,name:'Moneyshot'}],['Magicwanda',bound,{...receipt,name:'Magicwanda'}],['flqhjoxab3c2',bound,{...receipt,name:'flqhjoxab3c2'}],
+  [name,bound.replace('127.0.0.1:8888','127.0.0.1:8889'),receipt],[name,bound.replace('127.0.0.1:8888','127.0.0.10:8888'),receipt],
+  [name,bound.replace('127.0.0.1:8888','127.0.0.1.evil.io:8888'),receipt],[name,bound.replace('127.0.0.1:8888','[::1]:8888'),receipt],
+  [name,bound.replace('127.0.0.1:8888','rs-sdk-demo.fly.dev'),receipt],[name,bound.replace('ws://127.0.0.1:7780','ws://127.0.0.1:7781'),receipt],
+  [name,bound.replace('GATEWAY_URL=ws://127.0.0.1:7780\n',''),receipt],[name,bound+'GATEWAY_URL=ws://127.0.0.1:7780\n',receipt],
+  [name,bound+'SERVER=127.0.0.1:8888\n',receipt],[name,bound+'SERVER=rs-sdk-demo.fly.dev\n',receipt],
+  [name,bound.replace('SERVER=127.0.0.1:8888','SERVER=http://127.0.0.1:8888'),receipt],
+ ];
+ for(const [n,env,r] of rejected)expect(practiceProfile(n,env,r)).toBeNull();
 });

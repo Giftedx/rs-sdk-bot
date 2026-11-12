@@ -13,6 +13,7 @@ import {questSpec,questSavedChecks} from '../../../scripts/quest-order';
 import {itemSaveChecks,hettyTravelChecks,type HettyTravelDebit} from '../../../scripts/quest-items-order';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import {applyPreset,type SaveConfig} from './presets';
+import {PRACTICE_IPV4} from './register-proof-account';
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
 export function parseItemResult(log:string){try{return JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('QUEST_ITEMS_ORDER_RESULT ')).at(-1)?.slice(25)??'null');}catch{return null;}}
@@ -142,7 +143,7 @@ export function hettyTutorialJobSavedChecks(before:Save,after:Save,worker:Run){
  return {tutorialEntry:(before.vars[281]??0)<1000,tutorial:after.vars[281]===1000,...hettyLiveJobSavedChecks(tutorialGrantedSave(before),after,worker)};
 }
 // Western entry: observed80 carried coins and three pots of flour. Staging is
-// confined to a fresh localhost fixture; the worker receives only account + hetty.
+// confined to a fresh IPv4 loopback fixture; the worker receives only account + hetty.
 export const HETTY_MATCHED_ENTRY:SaveConfig={
  position:{x:2863,z:3428,level:0},
  inventory:[[995,80],[1933,1],[1933,1],[1933,1]].map(([id,count])=>({id:id!,count:count!})),
@@ -166,6 +167,12 @@ export function hettyCarriedEntry(s:Save){
   exact(ordered(s.inventories[95]),items(HETTY_MATCHED_ENTRY.bank!))&&
   exact(ordered(s.inventories[94]),ordered(HETTY_MATCHED_ENTRY.equipment));
 }
+// createBot gives a fresh fixture the default localhost profile. Rebind only that exact profile to the IPv4 stack.
+export function bindHettyFixtureIpv4(env:string):string|null{
+ const lines=env.split(/\r?\n/),server=lines.filter(l=>l.startsWith('SERVER=')),gateway=lines.filter(l=>l.startsWith('GATEWAY_URL='));
+ if(server.length!==1||server[0]!=='SERVER=localhost:8888'||gateway.length!==1||gateway[0]!=='GATEWAY_URL=ws://localhost:7780')return null;
+ return lines.map(l=>l==='SERVER=localhost:8888'?`SERVER=${PRACTICE_IPV4.server}`:l==='GATEWAY_URL=ws://localhost:7780'?`GATEWAY_URL=${PRACTICE_IPV4.gateway}`:l).join('\n');
+}
 function verify(dir:string){
  const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8'));
  const run=(label:string):Run=>({code:meta.codes[label],log:readFileSync(join(dir,label+'.log'),'utf8')+readFileSync(join(dir,label+'.err'),'utf8')});
@@ -175,6 +182,7 @@ function verify(dir:string){
  const entry=save('carried-entry');
  const deposits=r.log.split(/\r?\n/).filter(l=>l.startsWith('DEPOSIT_RECEIPT ')).map(l=>JSON.parse(l.slice('DEPOSIT_RECEIPT '.length)));
  const checks={...hettyLiveJobSavedChecks(b,a,r),ordinary:meta.saveAbsent===true&&meta.credentialsAbsent===true&&meta.codes.registration===0&&logout(run('registration')),
+  endpoint:JSON.stringify(meta.endpoint)===JSON.stringify(PRACTICE_IPV4),
   carriedEntry:hettyCarriedEntry(b)&&hettyCarriedEntry(entry),
   carriedDeposit:deposits.some(d=>d.account.toLowerCase()===meta.name.toLowerCase()&&d.itemId===995&&d.amount===20&&d.packBefore===20&&d.packAfter===0&&d.bankBefore===19895&&d.bankAfter===19915&&d.generationAfter>d.generationBefore),
   refusal:refusal.code!==0&&refused?.ok===false&&refused?.logout===true&&/quest already complete/.test(refused?.detail??'')&&logout(refusal),
@@ -195,20 +203,22 @@ async function run(dir:string){
  const codes:Record<string,number>={};
  const command=async(args:string[],label:string)=>{
   if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice memory floor reached');
-  const child=Bun.spawn(['bun',...args],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'6000'},stdout:Bun.file(join(dir,label+'.log')),stderr:Bun.file(join(dir,label+'.err')),windowsHide:true});
+  const child=Bun.spawn(['bun',...args],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir,DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'6000'},stdout:Bun.file(join(dir,label+'.log')),stderr:Bun.file(join(dir,label+'.err')),windowsHide:true});
   let expired=false,termination:Promise<void>|undefined;
   const timer=setTimeout(()=>{expired=true;termination=killTree(child.pid);},1080000);
   try{codes[label]=await child.exited;if(expired)codes[label]=-1;}finally{clearTimeout(timer);await termination;}
  };
  try{
-  const source=workerSourceRevision();stack=await startStack({tickMs:150,readyTimeoutMs:60000});
+  const source=workerSourceRevision();stack=await startStack({tickMs:150,readyTimeoutMs:60000,ports:{engine:8888,gateway:7780}});
   const name=runBotName('flqhjob',1),botDir=resolve(import.meta.dir,'../../../vendor/rs-sdk/bots',name);
   const path=resolve(import.meta.dir,'../../../vendor/rs-sdk/server/engine/data/players/main',name.toLowerCase()+'.sav');
   const saveAbsent=!existsSync(path),credentialsAbsent=!existsSync(botDir);
   if(!saveAbsent||!credentialsAbsent)throw Error('fresh ordinary unprotected fixture required');
   writeFileSync(join(dir,'fixture.json'),JSON.stringify({name,saveAbsent,credentialsAbsent}),{flag:'wx'});
   await createBot(name);
-  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+  const bound=bindHettyFixtureIpv4(readFileSync(join(botDir,'bot.env'),'utf8'));
+  if(bound===null)throw Error('local fixture required');
+  writeFileSync(join(botDir,'bot.env'),bound);
   const stagedPath=await applyPreset(name,HETTY_MATCHED_ENTRY);
   if(resolve(stagedPath)!==path)throw Error('fixture save path mismatch');
   const staged=readPracticeSave(path);
@@ -230,7 +240,7 @@ async function run(dir:string){
   await command(['scripts/quest-cook-job.ts',name,'hetty'],'refusal');
   const flushed=await waitPracticeSave(path,s=>(s.vars[134]??0)>(saved.save.vars[134]??0),{timeoutMs:15000});copyFileSync(path,join(dir,'refusal-after.sav'));
   if(!flushed.matched)throw Error('refusal post-logout save unobserved');
-  writeFileSync(join(dir,'native.json'),JSON.stringify({at:Date.now(),source,name,codes,saveAbsent,credentialsAbsent,
+  writeFileSync(join(dir,'native.json'),JSON.stringify({at:Date.now(),source,name,codes,saveAbsent,credentialsAbsent,endpoint:PRACTICE_IPV4,
    hashes:Object.fromEntries(['before.sav','carried-entry.sav','after.sav','refusal-after.sav','staged-entry.sav','registration.log','registration.err','job.log','job.err','refusal.log','refusal.err'].map(p=>[p,hash(join(dir,p))]))},null,2));return verify(dir);
  }finally{try{await stack?.stop();}finally{closeSync(fd);unlinkSync(lock);}}
 }
