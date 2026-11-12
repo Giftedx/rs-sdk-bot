@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794503541598-bigchopper-balls",
  "account": "Bigchopper",
  "partner": "Balls",
@@ -10,8 +10,22 @@
  "item": "logs",
  "requested": 1,
  "claim": "406962d5-2f7a-45b8-b317-59d0b9e349bb",
- "count": 0,
- "ok": false,
- "at": 1794504134017,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794504221515,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794504145446
+ },
+ "logout": {
+  "attemptId": "1794504134029-0000028948-0000000001",
+  "at": 1794504221501,
+  "sha256": "0cb3ecb2f49a53572ac9e40d4af6f286fc9231e7f19a9262910f668172d1b561"
+ },
+ "screen": true
 }

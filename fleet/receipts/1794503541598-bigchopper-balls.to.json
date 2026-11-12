@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794503541598-bigchopper-balls",
+ "account": "Balls",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "logs",
+ "requested": 1,
+ "claim": "16f0ccb9-a5c0-4b7a-ad9e-ecb8cc5372cc",
+ "count": 1,
+ "ok": true,
+ "at": 1794504223497,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794504222457
+ },
+ "logout": {
+  "attemptId": "1794504206724-0000032928-0000000001",
+  "at": 1794504223489,
+  "sha256": "8014a6b3d3deb5575ee2bb7de0992a2f33104b247aed2aab9ada80c5fbb2e776"
+ },
+ "screen": true
+}
