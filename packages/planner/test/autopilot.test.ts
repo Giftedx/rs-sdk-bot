@@ -1724,3 +1724,127 @@ test('the halberd build trains Thieving and Agility, then takes Underground Pass
     const market: Market = { 'magic shortbow': { id: 861, name: 'Magic shortbow', limit: KIT_PRICE_CAPS['magic shortbow']! }, 'rune arrow': { id: 892, name: 'Rune arrow', limit: KIT_PRICE_CAPS['rune arrow']! } };
     expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
 });
+
+import { FERRY_FARE, PLACES, TOLL, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
+
+const TAVERLEY = { x: 2877, z: 3501, level: 0 }, DRAYNOR = { x: 3092, z: 3242, level: 0 }, ARDOUGNE = { x: 2654, z: 3283, level: 0 }, SEERS = { x: 2727, z: 3493, level: 0 };
+const MUSA_POINT = { x: 2920, z: 3160, level: 0 }, TUTORIAL = { x: 3094, z: 3106, level: 0 }, TOLL_SIDE = { x: 3269, z: 3164, level: 0 };
+const at = (a: Acct, pos: NonNullable<Acct['pos']>): Acct => ({ ...a, pos });
+const only = (...wanted: string[]) => catalogue().filter(t => wanted.includes(t.id));
+const big = [{ name: 'Big', coins: 900_000 }];
+
+test('the way to a place costs the ferry fares the shared walker asks, or has no way', () => {
+    const knight = { x: 2652, z: 3318 }, flax = { x: 2744, z: 3445 }, pen = { x: 3017, z: 3288 };
+    // East side to Ardougne: two ferries, and the toll from the Al Kharid side of the gate.
+    expect(wayCost(TAVERLEY, knight, true)).toBe(2 * FERRY_FARE);
+    expect(wayCost(TOLL_SIDE, knight, true)).toBe(2 * FERRY_FARE + TOLL);
+    // East side to the rest of Kandarin: the walk over White Wolf Mountain, for an account the walker lets over.
+    expect(wayCost(DRAYNOR, flax, true)).toBe(0);
+    expect(wayCost(DRAYNOR, flax, false)).toBeNull();
+    // Kandarin to the east side: two ferries from Ardougne. Inside one region: no fare.
+    expect(wayCost(SEERS, pen, false)).toBe(2 * FERRY_FARE);
+    expect(wayCost(ARDOUGNE, knight, false)).toBe(0);
+    expect(wayCost(SEERS, knight, false)).toBe(0);
+    expect(wayCost(DRAYNOR, pen, false)).toBe(0);
+    // Karamja: one ferry off the island. Tutorial Island counts as Lumbridge. A floor above counts as its ground.
+    expect(wayCost(MUSA_POINT, pen, true)).toBe(FERRY_FARE);
+    expect(wayCost(TUTORIAL, pen, false)).toBe(0);
+    expect(wayCost(TUTORIAL, knight, false)).toBe(2 * FERRY_FARE);
+    expect(wayCost({ ...ARDOUGNE, level: 1 }, pen, true)).toBe(2 * FERRY_FARE);
+    // No place, no start, a cave or a place outside the regions: no rule.
+    expect(wayCost(undefined, knight, false)).toBe(0);
+    expect(wayCost(DRAYNOR, undefined, false)).toBe(0);
+    expect(wayCost({ x: 2884, z: 9797, level: 0 }, knight, false)).toBe(0);
+    expect(wayCost(DRAYNOR, { x: 3285, z: 3365 }, false)).toBe(0);
+    // Karamja holds both docks and Brimhaven, and not Rimmington, Ardougne, Draynor or Yanille.
+    expect([{ x: 2953, z: 3147 }, { x: 2772, z: 3225 }, { x: 2760, z: 3180 }].every(onKaramja)).toBe(true);
+    expect([{ x: 2956, z: 3214 }, ARDOUGNE, DRAYNOR, { x: 2612, z: 3093 }].some(onKaramja)).toBe(false);
+    // A coin order meets a Kandarin account at the Ardougne north bank, and no account on Karamja.
+    expect([meetFor(SEERS), meetFor(ARDOUGNE), meetFor(DRAYNOR), meetFor(TUTORIAL), meetFor(MUSA_POINT), meetFor(undefined)]).toEqual(['ardougne', 'ardougne', undefined, undefined, null, undefined]);
+});
+
+test('each known place belongs to a template, and a knight spot and a pen carry their own tile', () => {
+    const all = catalogue(), used = new Set(all.flatMap(t => t.resources ?? []));
+    expect(Object.keys(PLACES).filter(r => !used.has(r))).toEqual([]);
+    expect(placeOf(all.find(t => t.id === 'goldfarm@2582,3297')!)).toEqual({ x: 2582, z: 3297 });
+    expect(placeOf(all.find(t => t.id === 'feathers@3017,3288')!)).toEqual({ x: 3017, z: 3288 });
+    expect(placeOf(all.find(t => t.id === 'army-cow-strength-45')!)).toEqual({ x: 2615, z: 3332 });
+    expect(placeOf(all.find(t => t.id === 'thieving55')!)).toBeUndefined();
+});
+
+test('an account at Taverley with 1 coin gets the ferry fare for a knight spot from a donor, or a job on its own side', () => {
+    const thief = at(acct('Thief', { Thieving: 89, Hitpoints: 54 }, { coin: 1 }), TAVERLEY), spot = only('goldfarm@2652,3318');
+    // No donor: the spot behind the ferries is not offered, and the vacant slot names the fare. A full spot is no
+    // reason to name it.
+    expect(plan(inputs([thief], { templates: spot }))[0]).toEqual({ account: 'Thief', value: 0, resources: [],
+        reason: 'vacant: lacks 59 coins for the way to goldfarm@2652,3318 (ferry fare 60), and no free account can give them' });
+    expect(plan(inputs([thief], { templates: spot, taken: { 'knight:2652,3318': 1 } }))[0]!.reason).toMatch(/^vacant: no template/);
+    // A free donor sends the 59 coins it lacks. The order meets at Varrock West, which the account can walk to.
+    const funded = plan(inputs([thief], { templates: spot, donors: big }))[0]!;
+    expect(funded.template?.id).toBe('goldfarm@2652,3318');
+    expect(funded.fund).toEqual({ from: 'Big', to: 'Thief', coins: 59, template: 'goldfarm@2652,3318' });
+    expect(funded.reason).toBe('coins, funded 59 coins by Big, ferry fare 60');
+    // From the Al Kharid side of the toll gate the need is 70.
+    expect(plan(inputs([at(thief, TOLL_SIDE)], { templates: spot, donors: big }))[0]!.fund?.coins).toBe(69);
+    // An account with a running job is never funded: it takes the job on its own side.
+    const both = only('goldfarm@2652,3318', 'feathers@3017,3288');
+    expect(ids(plan(inputs([thief], { templates: both, donors: big, unfundable: new Set(['thief']) })))).toEqual({ Thief: 'feathers@3017,3288' });
+    expect(ids(plan(inputs([thief], { templates: both })))).toEqual({ Thief: 'feathers@3017,3288' });
+    // The fare in its pack or its bank: the spot with no fund. No known place: the rule is off.
+    expect(plan(inputs([{ ...thief, items: { coin: 60 } }], { templates: spot, donors: big }))[0]).toMatchObject({ template: { id: 'goldfarm@2652,3318' }, reason: 'coins' });
+    const { pos: _none, ...unplaced } = thief;
+    expect(plan(inputs([unplaced], { templates: spot }))[0]!.template?.id).toBe('goldfarm@2652,3318');
+});
+
+test('an account with 10 Hitpoints gets no job behind White Wolf Mountain', () => {
+    const flax = { templates: only('aio-flax'), pilots: new Set(['aio-flax']), prices: { ...prices, flax: 5 } };
+    const weak = at(acct('Weak', { Thieving: 99, Hitpoints: 10 }, { coin: 2_000_000, cake: 2 }), DRAYNOR);
+    expect(plan(inputs([weak], { ...flax, mountain: () => false, donors: big }))[0]!.template).toBeUndefined();
+    // An account the walker lets over the mountain gets the job, and so does the weak account once it stands in Kandarin.
+    expect(plan(inputs([weak], { ...flax, mountain: () => true }))[0]!.template?.id).toBe('aio-flax');
+    expect(plan(inputs([at(weak, SEERS)], { ...flax, mountain: () => false }))[0]!.template?.id).toBe('aio-flax');
+    // The ferries to Ardougne stay open to it, and it holds the fare. The knight spot west of the ferry rule's Ardougne
+    // box is a walk over the mountain, so it is not offered.
+    expect(plan(inputs([weak], { templates: only('goldfarm@2652,3318'), mountain: () => false }))[0]!.template?.id).toBe('goldfarm@2652,3318');
+    expect(plan(inputs([weak], { templates: only('goldfarm@2582,3297'), mountain: () => false }))[0]!.template).toBeUndefined();
+});
+
+test('an account at Ardougne with no coins has no fare need for a knight spot', () => {
+    const there = at(acct('There', { Thieving: 89, Hitpoints: 54 }), ARDOUGNE);
+    const [x] = plan(inputs([there], { templates: only('goldfarm@2652,3318'), donors: big, mountain: () => false }));
+    expect(x).toMatchObject({ template: { id: 'goldfarm@2652,3318' }, reason: 'coins' });
+    expect(x!.fund).toBeUndefined();
+    // With no fare the candidate carries the catalogue's template as it is.
+    expect(x!.template!.needs?.items).toBeUndefined();
+});
+
+test('a Kandarin account with no fare meets its donor at the Ardougne north bank; an account on Karamja is not funded', () => {
+    // A feather job on the east side: the fare east is the whole need.
+    const pen = plan(inputs([at(acct('West'), SEERS)], { templates: only('feathers@3017,3288'), donors: big }))[0]!;
+    expect(pen.fund).toEqual({ from: 'Big', to: 'West', coins: 60, template: 'feathers@3017,3288', meet: 'ardougne' });
+    // A shop's own coin need and the fare are one need, and one order.
+    const shop = plan(inputs([at(acct('West', {}, { coin: 500 }), ARDOUGNE)], { templates: only('shop-feathers'), donors: big }))[0]!;
+    expect(shop.fund).toEqual({ from: 'Big', to: 'West', coins: 1_560, template: 'shop-feathers', meet: 'ardougne' });
+    // On Karamja no order can reach the account: with fewer coins than one fare it gets no job off the island.
+    const island = at(acct('Island', {}, { coin: 29 }), MUSA_POINT);
+    expect(plan(inputs([island], { templates: only('feathers@3017,3288'), donors: big }))[0]!.template).toBeUndefined();
+    expect(plan(inputs([{ ...island, items: { coin: 30 } }], { templates: only('feathers@3017,3288'), donors: big }))[0]).toMatchObject({ template: { id: 'feathers@3017,3288' } });
+    // A new account on Tutorial Island counts as Lumbridge: an east pen with no fare.
+    expect(plan(inputs([at(acct('New'), TUTORIAL)], { templates: only('feathers@3017,3288') }))[0]!.template?.id).toBe('feathers@3017,3288');
+});
+
+test('an item order asks only a party of this side that can reach the Ardougne north bank', () => {
+    const army = new Set(['needy']), needy = mage('Needy', { 'mind rune': 15, 'air rune': 35 });
+    const stock: Stock[] = [{ name: 'Near', side, items: { 'mind rune': 60 } }, { name: 'Next', side, items: { 'mind rune': 60 } }];
+    const giver = (pos: NonNullable<Acct['pos']>, coin: number) => at(acct('Near', {}, { 'mind rune': 60, coin }), pos);
+    const run = (accounts: Acct[]) => plan(inputs(accounts, { templates: bandOnly(), army, stock })).find(x => x.account === 'Needy')!;
+    // Near stands at Draynor with 1 coin: the two ferries to Ardougne cost 60, so the next donor gives.
+    expect(run([at(needy, ARDOUGNE), giver(DRAYNOR, 1)]).send?.from).toBe('Next');
+    // With the fare, or in Ardougne, or with no known place, Near gives.
+    expect(run([at(needy, ARDOUGNE), giver(DRAYNOR, 60)]).send?.from).toBe('Near');
+    expect(run([at(needy, ARDOUGNE), giver(ARDOUGNE, 0)]).send?.from).toBe('Near');
+    expect(run([needy]).send?.from).toBe('Near');
+    // A taker east of the ferries with no fare gets no item order.
+    expect(run([at(needy, DRAYNOR)]).send).toBeUndefined();
+    expect(run([at({ ...needy, items: { ...needy.items, coin: 60 } }, DRAYNOR)]).send?.from).toBe('Near');
+});
