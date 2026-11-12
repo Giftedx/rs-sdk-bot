@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794468911547,
+ "at": 1794469026325,
  "jobs": [
-  {
-   "account": "Deeppockets",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=29 EXPECTED_OWNED=1 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit11-555-1to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 29 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Fatstack",
    "script": "scripts/chain.ts",
@@ -118,6 +100,25 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "splash:ardougne-cow-fence"
    ]
   },
   {
