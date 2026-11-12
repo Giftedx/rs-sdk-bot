@@ -153,6 +153,8 @@ export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
 // A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
 // tiles of a player (patches/rs-sdk.md, item 10).
 const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
+// The tile where the dagger gang stands between hunts.
+export const GANKER_POST = {x: 3078, z: 3640};
 // `at` moves the spot: side A at x, side B two tiles east.
 const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = [], at: {x: number; z: number} = {x: 3094, z: 3555}): BenchCase => {
   // One character for each account after the first: up to 18 pairs.
@@ -167,6 +169,15 @@ const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, arg
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, pairs * 2 - 1).split('');
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i % 2 ? a : b}))};
+};
+// One of our accounts against a gang that all attack it (scripts/pk-gang.ts), `groups` meetings at once: the gang
+// stands on one tile, as the dagger gang does at its post, and our account two tiles east.
+const gangCase = (key: string, kit: string, gangKit: string, groups: number, at: {x: number; z: number}, args: string[] = [], size = 3): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * (size + 1) - 1).split('');
+  const ours = (i: number) => i % (size + 1) === 0;
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kit, at.x + 2, at.z), output: /kills=(d+)/,
+    scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? kitFixture(kit, at.x + 2, at.z) : kitFixture(gangKit, at.x, at.z)}))};
 };
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
@@ -348,6 +359,8 @@ const ROUTE_CASES: BenchCase[] = [
   // tribrid switches, Fire Wave and freeze runes, 2 prayer potions, 18 sharks and full special energy. SPAR_A and SPAR_B
   // (--set) choose the profile of each side.
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
+  // The gang (scripts/pk-gang.ts): the snare kit against three dagger gang on their post tile.
+  gangCase('pvp:gang', 'tribrid-snare', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker']),
   // The mirror with Dragon Slayer not done: the loop must leave the rune platebody on, because the game does not let
   // such an account put it back.
   // Hill giants with Prayer 60: the prayer guard (packages/core/src/prayer-guard.ts) shows its counts in the
@@ -440,6 +453,13 @@ const ROUTE_CASES: BenchCase[] = [
   // The league for a fighter with three more sharks and no freeze runes.
   // The builds that beat the tribrid on food: four spars each against the melee build, the hybrid and the ranger.
   sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
+  // The dagger gang (research/pvp-fight-loop.md, "Rivals: the dagger gang") at its post, a single-way tile at
+  // Wilderness level 16: the snare kit against one of the gang, with its protect prayer and with none, and against
+  // the three at once. Side A takes its profile from the run (`--set SPAR_A=champion`).
+  sparMatrix('extra:spar-ganker-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker'], GANKER_POST),
+  sparMatrix('extra:spar-ganker-bare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker-bare'], GANKER_POST),
+  gangCase('extra:gang-ganker-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker']),
+  gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
   // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
   // its kit in the bank; the target stands at the first hunt spot with no food.
   // `auto` has the snare stock and names no kit: at the first hunt spot (Wilderness level 3) the hunter must pick the

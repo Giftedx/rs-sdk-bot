@@ -55,6 +55,12 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     'melee-first': { rotation: ['melee', 'ranged', 'magic'] },
     'ranged-melee': { rotation: ['ranged', 'melee'] },
     'magic-ranged': { rotation: ['magic', 'ranged'] },
+    // The dagger gang on the kit ganker-dds (research/pvp-fight-loop.md, "Rivals: the dagger gang"): a special on each
+    // attack from the first health bar while the energy lasts, whatever the target prays; a shark at 79 HP or less;
+    // prayer points that drain; the protect prayer for the weapon of the opponent. `ganker-bare` is the same with no
+    // protect prayer, as they hunt a target that does not hit back.
+    ganker: { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false },
+    'ganker-bare': { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false, overheadPrayer: false },
 };
 const GOD_HUNTER: Profile = { kit: { ...TRIBRID_KIT, magic: [2417] }, damageSpell: 1192, charge: true };
 // Options a scenario gives a side under its profile. In `escape` side B is the runner: with its food gone at 60 HP or

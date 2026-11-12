@@ -39,6 +39,8 @@ export type KitSpec = {
     varps?: Record<number, number>;
     // Why no account can reach the kit: it stays for a bench comparison, and the planner gives it no quest.
     noRoute?: string;
+    // The accounts of another owner that the kit copies: an opponent for the bench, and the planner gives it no quest.
+    rival?: string;
 };
 // Defence 1 and Hitpoints 10 with Prayer 1: the base of every pure, 2.75 combat levels (Player.ts getCombatLevel).
 const PURE = { Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1, Hitpoints: 10 } as const;
@@ -270,6 +272,12 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['staff_of_fire', 'maple_shortbow', ['airrune', 600], ['deathrune', 200], ...FREEZE], food: 19, foodItem: 'lobster',
         switches: { magic: ['staff_of_fire'], ranged: ['maple_shortbow'], melee: ['rune_scimitar', 'adamant_kiteshield'] }, options: { damageSpell: SPELLS.fireBlast },
         skills: trained({ Attack: 40, Strength: 70, Defence: 30, Ranged: 70, Magic: 70 }) },
+    // The dagger gang of the Wilderness (research/pvp-fight-loop.md, "Rivals: the dagger gang"): what the world feed
+    // shows the three accounts wear, at the hiscore levels of the strongest of them. One of them ate a shark in a
+    // fight; the count of 12 is an estimate.
+    'ganker-dds': { worn: { hat: 'blackwizhat', torso: 'monkrobetop', legs: 'monkrobebottom', weapon: 'dragon_dagger_p' },
+        carried: [], food: 12, switches: { melee: ['dragon_dagger_p'] }, options: { rotation: ['melee'] },
+        skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99, Magic: 37, Ranged: 1 }, rival: 'Goondelf, Ligma, Sugma' },
     // The target of a pure: combat 3 with a pickaxe and a few lobsters.
     skiller: { worn: { weapon: 'bronze_pickaxe', feet: 'leather_boots' }, carried: [], food: 5, foodItem: 'lobster',
         switches: { melee: ['bronze_pickaxe'] }, options: { rotation: ['melee'] }, skills: { ...PURE } },

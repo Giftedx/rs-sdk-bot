@@ -128,8 +128,9 @@ test('every kit has a quest route, and the planner holds the route of every buil
     expect(kitRoute('pure-god')).toEqual({ quests: ['Mage Arena'], breaks: [] });
     expect(kitRoute('pure-iban').breaks).toEqual(['no skill at 99 for the 53,400 fight XP of quest_upass']);
     expect(kitRoute('pure-hally').breaks).toEqual([]);
-    // The planner's table is the route of each kit with levels of its own.
-    const builds = Object.fromEntries(Object.entries(KITS).filter(([, kit]) => kit.skills && !kit.noRoute).map(([name]) => [name, kitRoute(name).quests]));
+    // The planner's table is the route of each kit with levels of its own. A kit that copies the accounts of another
+    // owner (`rival`) is no build of ours.
+    const builds = Object.fromEntries(Object.entries(KITS).filter(([, kit]) => kit.skills && !kit.noRoute && !kit.rival).map(([name]) => [name, kitRoute(name).quests]));
     expect(Object.fromEntries(Object.entries(BUILD_QUESTS).map(([kit, quests]) => [kit, [...quests].sort()]))).toEqual(builds);
     for (const quest of Object.values(BUILD_QUESTS).flat()) expect(QUEST_CHAIN[quest]).toBeDefined();
     expect(kitRoute('tribrid').quests).toEqual(['Dragon Slayer', 'Lost City']);

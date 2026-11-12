@@ -127,6 +127,8 @@ export type FightOptions = {
     fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
+    // false: no protect prayer over the head, whatever the opponent holds.
+    overheadPrayer?: boolean;
     // A melee or ranged special with this kit and combat-tab bar once the target's health bar is at or under `below`:
     // the dragon dagger is { kit: [dagger, shield], bar: 'combat_stabsword:specbar', cost: 250, below: 0.5 }.
     spec?: SpecConfig;
@@ -617,7 +619,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const left = [...predictor.seen()].filter(st => st !== shownGuard);
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
-        const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        const overhead = o.overheadPrayer === false ? null : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         // An opponent that only has melee: hold it and stay out of its reach.
         // Only with a freeze that the carried runes can cast: with none, the loop would spend turns on a spell that
         // does not go out and kite an opponent that is not held.
