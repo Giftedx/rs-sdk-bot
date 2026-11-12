@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794521911410,
+ "at": 1794521972156,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -64,6 +64,13 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "enabled": false,
+   "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
+   "role": "crafter"
   },
   {
    "account": "Bigchopper",
@@ -195,25 +202,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
    ]
   },
   {
@@ -434,21 +422,25 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -491,25 +483,21 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2582,3297"
    ]
   },
   {
@@ -552,13 +540,6 @@
    "resources": [
     "knight:2653,3300"
    ]
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "enabled": false,
-   "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
-   "role": "crafter"
   },
   {
    "account": "Sausagefest",
