@@ -24,6 +24,7 @@ import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
 import { receiveHandoff } from './courier-handoff';
+import { stallRecipes, stallSight, stallWatched, type StallRecipe, type StallSight } from './microbot-c-stalls';
 
 const COOKED_IDS=new Set([329,333,379,330,334,380,385,386]),NOTED_COOKED_IDS=new Set([330,334,380,386]);
 export function incomingCookedFood(before:readonly {id:number;count:number}[],after:readonly {id:number;count:number}[]){
@@ -69,6 +70,8 @@ const BANK_AT = Number(process.env.BANK_AT ?? 25000);
 const FOOD_FROM = process.env.FOOD_FROM?.trim() || '';
 const KEEP_FREE = 2;
 const STALL_FILL = Number(process.env.STALL_FILL ?? 10);
+// STALL_SIGHT=0 turns the owner's sight rule of the stall trip off: the bench measures the trip with and without it.
+const STALL_SIGHT = process.env.STALL_SIGHT !== '0';
 const STALL_SPOT: Tile = { x: 2655, z: 3310 };
 const STALL = /^baker'?s stall$/i;
 const GUARD = /^guard$/i;
@@ -93,6 +96,10 @@ export const foodTripDue = (v: { low: boolean; bankEmpty: boolean; tradeOnly: bo
 export const guardHit = (before: number, after: number, picked: boolean) => after < before && !picked;
 // Ticks a frail thief stays away from the stall after a guard hit it.
 const STALL_REST = 200;
+// Whether the stall's owner stops a steal from this tile now (stalls/stealing.rs2, stealing_check_for_owner): he is
+// within 5 tiles of the thief with line of sight. Guards have their own rule in the stall trip.
+export const ownerSeesTile = (recipe: StallRecipe, tile: { x: number; z: number }, level: number, npcs: readonly { id: number; x: number; z: number; inCombat: boolean }[], sight: StallSight) =>
+    stallWatched({ ...recipe, guards: [] }, { worldX: tile.x, worldZ: tile.z, level }, npcs, sight);
 // Why no knight can be picked in a pass, for the idle counters of the RESULT line: none in view, none in range, none
 // that the client can reach, each one resting after dropped clicks, or each one held by a random event.
 export type KnightView = { inRange: boolean; reachable: boolean; banned: boolean; avoided: boolean };
@@ -158,7 +165,7 @@ try {
     const stopFile = `.practice/stop-${process.argv[2]}`;
 
     let picks = 0, noops = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
-    let bankFails = 0, emptyTrips = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0;
+    let bankFails = 0, emptyTrips = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0, stallOwnerWaits = 0;
     const banned = new Map<number, number>();
     let noopRun = 0, noopTarget = -1, bans = 0, stunUntil = 0;
     // The split of idleTicks and of noops by cause, and the knights in view: the RESULT line says where the ticks went.
@@ -190,7 +197,7 @@ try {
         const gained = banked + coins() - coins0;
         const p = pos();
         const detail = `ticks=${ticks} picks=${picks} fails=${fails} noops=${noops} bans=${bans} coinsGained=${gained} coinsPerTick=${(gained / Math.max(1, ticks)).toFixed(2)} `
-            + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} stallTrips=${stallTrips} stallTicks=${stallTicks} stallPickTicks=${stallPickTicks} stolen=${stolen} refused=${refused} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
+            + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} stallTrips=${stallTrips} stallTicks=${stallTicks} stallPickTicks=${stallPickTicks} stolen=${stolen} refused=${refused} stallOwnerWaits=${stallOwnerWaits} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
             + `foodTicksPct=${(100 * (bankTicks + stallTicks + shopTicks + eatTicks) / Math.max(1, ticks)).toFixed(1)} `
             + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} tradesIn=${tradesIn} tradeTicks=${tradeTicks} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level} `
             + `idleNone=${idleWhy.none} idleFar=${idleWhy.far} idleUnreach=${idleWhy.unreachable} idleBanned=${idleWhy.banned} idleAvoid=${idleWhy.avoided} idleOption=${idleWhy.option} idleHp=${idleWhy.hp} idleStall=${idleWhy.stall} `
@@ -289,7 +296,8 @@ try {
     };
 
     // Stall trip: steal from a baker's stall from a side tile with no guard within GUARD_SAFE tiles (line of sight
-    // ignored, one tile of margin). Tiles more than 5 tiles from the Baker go first; a refused tile rests for 6 ticks.
+    // ignored, one tile of margin) and that the Baker does not see. The nearest such tile goes first; a refused tile
+    // rests for 6 ticks.
     const stallTrip = async () => {
         stallTrips++;
         const f0 = food();
@@ -300,6 +308,18 @@ try {
         const key = (t: Tile) => `${t.x},${t.z}`;
         const d = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
         let seen = hp(), picked = false;
+        // The owner's rule is exact for a tile, and the stall blocks his sight, so a tile that he sees is never
+        // clicked: the refusal is certain. With no stall data or no client the distance score below stands in.
+        const watch = new Map<number, { recipe: StallRecipe; sight: StallSight } | null>();
+        const watchOf = async (locId: number) => {
+            if (!watch.has(locId)) {
+                let found: { recipe: StallRecipe; sight: StallSight } | null = null;
+                if (STALL_SIGHT) try { const recipe = stallRecipes().find(r => r.loc === locId), sight = recipe && await stallSight(s, recipe); if (recipe && sight) found = { recipe, sight }; }
+                catch (e) { console.log(`WARN stall sight unavailable: ${String((e as Error)?.message ?? e).slice(0, 120)}`); }
+                watch.set(locId, found);
+            }
+            return watch.get(locId)!;
+        };
         try {
             while (food() < STALL_FILL && 28 - inv().length > 0 && s.tick() - s0 < 400 && !died && now() < TICKS) {
                 if (existsSync(stopFile)) return;
@@ -324,18 +344,22 @@ try {
                 if (!me) { await waitTicks(s, 1); continue; }
                 const here = { x: me.worldX, z: me.worldZ };
                 const opts: { tile: Tile; loc: any; score: number }[] = [];
+                let ownerSees = 0;
                 for (const l of locs) {
                     if (!STALL.test(l.name) || !(l.options ?? []).some((o: string) => /steal/i.test(o))) continue;
-                    const o = { x: l.x, z: l.z };
+                    const o = { x: l.x, z: l.z }, w = await watchOf(l.id);
                     const sides = [{ x: o.x - 1, z: o.z }, { x: o.x - 1, z: o.z + 1 }, { x: o.x + 2, z: o.z }, { x: o.x + 2, z: o.z + 1 },
                         { x: o.x, z: o.z - 1 }, { x: o.x + 1, z: o.z - 1 }, { x: o.x, z: o.z + 2 }, { x: o.x + 1, z: o.z + 2 }];
                     for (const t of sides) {
                         if (blocked.has(key(t)) || (badUntil.get(key(t)) ?? 0) > s.tick()) continue;
                         if (guards.some(g => d(g, t) <= GUARD_SAFE)) continue;
+                        const sees = w ? ownerSeesTile(w.recipe, t, me.level ?? 0, npcs, w.sight) : null;
+                        if (sees) { ownerSees++; continue; }
                         const bakerD = Math.min(99, ...bakers.map(b => d(b, t)));
-                        opts.push({ tile: t, loc: l, score: (bakerD > 5 ? 0 : 100 - bakerD * 10) + d(t, here) });
+                        opts.push({ tile: t, loc: l, score: (sees === false || bakerD > 5 ? 0 : 100 - bakerD * 10) + d(t, here) });
                     }
                 }
+                if (opts.length === 0 && ownerSees > 0) stallOwnerWaits++;
                 // No safe tile (guards wander the market): pickpocket a knight close by instead of waiting.
                 if (opts.length === 0) {
                     const k = npcs.some(n => KNIGHT.test(n.name) && d({ x: n.x, z: n.z }, here) <= 6);

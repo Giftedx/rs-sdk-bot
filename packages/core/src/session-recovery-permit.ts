@@ -5,6 +5,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {capabilityRevision,cachedLaunchRevision} from './worker-release';
 import {processMatchesRecent,safeKill,commandLine} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
+import {savedProcessAlive,type ProcessStarts} from './session-takeover';
 import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
 import {readMergedPlan} from './coordinator-jobs';
@@ -20,7 +21,7 @@ export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
 type EvidenceRef={path:string;sha256:string};
 export type ControlledRecoveryRequest=RecoveryRequest&{kind:'session-recovery';qualification:{delivery:EvidenceRef;proof:EvidenceRef}};
-export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;capability?:(capability:unknown)=>string|undefined;nativeFixture?:boolean};
+export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;capability?:(capability:unknown)=>string|undefined;nativeFixture?:boolean;processStarts?:ProcessStarts;pidAlive?:(pid:number)=>boolean};
 type Checks=RecoveryPermitChecks;
 type ProducerRef={attemptId:string;sha256:string|null};
 type Permit={schema:'session-recovery-permit/1';request:ControlledRecoveryRequest;controller:{pid:number;nonce:string;source:string};issuedAt:number;expiresAt:number;runnerSha256:string;nativeFixture:boolean;completedEnd?:unknown;missionRevision?:string;producerHistory?:ProducerRef[]};
@@ -155,8 +156,9 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
   const attempt=listAttempts(r.account,r.server,{root:lifecycleRoot}).find(a=>a.attemptId===latest.attemptId)?.receipt;
   if(!Number.isSafeInteger(attempt?.owner.pid)||attempt!.owner.pid<1)throw Error('recovery orphan owner unknown');
   const own=ownedChild&&attempt!.owner.pid===process.pid&&attempt!.owner.coordinatorRunId===r.runId&&attempt!.owner.workerRelease===r.source&&attempt!.owner.script===RECOVERY_SCRIPT;
-  if(!own)try{process.kill(attempt!.owner.pid,0);throw Error('recovery previous session owner still alive');}
-  catch(error){if((error as NodeJS.ErrnoException).code!=='ESRCH')throw error;}
+  // A live id proves an owner only when its process started before the attempt (savedProcessAlive): the system
+  // gives the id of an ended worker to a later process, and that process is not the owner.
+  if(!own&&savedProcessAlive(attempt!.owner.pid,attempt!.createdAt,options.processStarts,options.pidAlive))throw Error('recovery previous session owner still alive');
  }
  const runnerSha256=sha(readFileSync(join(base,RECOVERY_SCRIPT)));
  if(!options.nativeFixture){
@@ -424,19 +426,31 @@ export function releaseExpiredRecoveryLease(account:string,base:string,options:L
   ||!used||used.pid!==child.pid||used.nonce!==r.nonce||used.permitSha256!==leaseSha256)throw Error('recovery lease child not bound');
  if(alive(child.pid,r.nonce))throw Error('recovery lease child still alive');
  const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(r.account,r.server,{root});
- if(proof.state!=='confirmed')throw Error('recovery lease producer logout not confirmed');
- const attempt=listAttempts(r.account,r.server,{root}).find(a=>a.attemptId===proof.attemptId),a=attempt?.receipt;
+ const attempts=listAttempts(r.account,r.server,{root});
  const receiptPath=join(paths.output,'receipt.json'),receipt=existsSync(receiptPath)?json(receiptPath):null;
- if(!a||attempt?.sha256!==proof.receiptSha256)throw Error('recovery lease producer proof mismatched');
- const own=proof.ownerRun===r.runId&&a.owner.pid===child.pid&&a.owner.coordinatorRunId===r.runId
-  &&a.owner.workerRelease===r.source&&a.owner.script===RECOVERY_SCRIPT&&a.createdAt>=p.issuedAt&&proof.loggedOutAt>=p.issuedAt
-  &&!!receipt&&receipt.logout==='logged-out'&&isDeepStrictEqual(receipt.request,r)&&receipt.runnerSha256===p.runnerSha256
-  &&receipt.attemptId===proof.attemptId&&receipt.lifecycleSha256===proof.receiptSha256&&receipt.scope?.gameplay===false&&receipt.scope.production===0;
- const basis=own?null:a.owner.coordinatorRunId!==r.runId&&a.createdAt>=p.issuedAt&&proof.loggedOutAt>=p.issuedAt?'superseded'
-  :a.createdAt<p.issuedAt&&proof.loggedOutAt<p.issuedAt&&(!receipt||receipt.logout==='not-attempted')?'not-connected':undefined;
- if(basis===undefined)throw Error('recovery lease producer proof mismatched');
+ let basis:null|'superseded'|'not-connected'|undefined,lifecycleSha256:string;
+ if(proof.state==='held'){
+  // The newest session is still the one that the child came to recover, and the child began none of its own: the
+  // child changed nothing. Only another recovery can end that session, and this lease refuses each one.
+  const held=attempts.find(x=>x.attemptId===proof.attemptId);
+  const heldSha256=held?.sha256;
+  if(!held?.receipt||!heldSha256||held.receipt.createdAt>=p.issuedAt||receipt&&(receipt.logout!=='not-attempted'||receipt.attemptId!==null))throw Error('recovery lease producer logout not confirmed');
+  basis='not-connected';lifecycleSha256=heldSha256;
+ }else{
+  if(proof.state!=='confirmed')throw Error('recovery lease producer logout not confirmed');
+  const attempt=attempts.find(x=>x.attemptId===proof.attemptId),a=attempt?.receipt;
+  if(!a||attempt?.sha256!==proof.receiptSha256)throw Error('recovery lease producer proof mismatched');
+  const own=proof.ownerRun===r.runId&&a.owner.pid===child.pid&&a.owner.coordinatorRunId===r.runId
+   &&a.owner.workerRelease===r.source&&a.owner.script===RECOVERY_SCRIPT&&a.createdAt>=p.issuedAt&&proof.loggedOutAt>=p.issuedAt
+   &&!!receipt&&receipt.logout==='logged-out'&&isDeepStrictEqual(receipt.request,r)&&receipt.runnerSha256===p.runnerSha256
+   &&receipt.attemptId===proof.attemptId&&receipt.lifecycleSha256===proof.receiptSha256&&receipt.scope?.gameplay===false&&receipt.scope.production===0;
+  basis=own?null:a.owner.coordinatorRunId!==r.runId&&a.createdAt>=p.issuedAt&&proof.loggedOutAt>=p.issuedAt?'superseded'
+   :a.createdAt<p.issuedAt&&proof.loggedOutAt<p.issuedAt&&(!receipt||receipt.logout==='not-attempted')?'not-connected':undefined;
+  if(basis===undefined)throw Error('recovery lease producer proof mismatched');
+  lifecycleSha256=proof.receiptSha256;
+ }
  const released={schema:'session-recovery-release/1',at:now,account:r.account,nonce:r.nonce,runId:r.runId,leaseSha256,childPid:child.pid,
-  attemptId:proof.attemptId,lifecycleSha256:proof.receiptSha256,receiptSha256:receipt?sha(readFileSync(receiptPath)):null,...(basis?{basis}:{}),
+  attemptId:proof.attemptId,lifecycleSha256,receiptSha256:receipt?sha(readFileSync(receiptPath)):null,...(basis?{basis}:{}),
   controller:{pid:owner.pid,nonce:owner.nonce},scope:{repairsFailure:false,qualifiesScript:false,production:0}};
  // A release that stopped between the marker and the removal leaves released.json beside the lease. That marker must
  // name this exact lease, child and producer proof; only its time and its controller can differ. Then the removal

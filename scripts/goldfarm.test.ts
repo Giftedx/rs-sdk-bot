@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,deadClick,pickKnight} from './goldfarm';
+import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,deadClick,pickKnight,ownerSeesTile} from './goldfarm';
 import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
 import {GOLDFARM_FOOD,GOLDFARM_FRAIL} from '../packages/planner/src/autopilot';
 import {foodTripDue} from './goldfarm';
@@ -169,3 +169,19 @@ test('calcEatAt guarantees never dying from Knight fail damage (DMG=3) while max
     expect(calcEatAt(50)).toBe(20);
 });
 
+
+test('the Baker stops a steal only from a tile within 5 tiles that he sees; a guard is not his rule', () => {
+    const recipe = { name: 'stealing_bakery_stall', loc: 1, level: 5, respawn: 8, loot: [1], questGate: false, owners: [50], guards: [60] };
+    const baker = { id: 50, x: 10, z: 10, inCombat: false }, guard = { id: 60, x: 10, z: 10, inCombat: false };
+    const open = () => true, shut = () => false;
+    expect(ownerSeesTile(recipe, { x: 13, z: 12 }, 0, [baker], open)).toBe(true);
+    expect(ownerSeesTile(recipe, { x: 15, z: 10 }, 0, [baker], open)).toBe(true);
+    expect(ownerSeesTile(recipe, { x: 16, z: 10 }, 0, [baker], open)).toBe(false);
+    // The stall stands between them.
+    expect(ownerSeesTile(recipe, { x: 12, z: 10 }, 0, [baker], shut)).toBe(false);
+    expect(ownerSeesTile(recipe, { x: 12, z: 10 }, 0, [guard], open)).toBe(false);
+    // The sight question goes from the owner to the tile, on the thief's floor.
+    const asked: number[][] = [];
+    ownerSeesTile(recipe, { x: 12, z: 11 }, 0, [baker], (x, z, toX, toZ, level) => { asked.push([x, z, toX, toZ, level]); return true; });
+    expect(asked).toEqual([[10, 10, 12, 11, 0]]);
+});

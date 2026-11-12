@@ -20,9 +20,10 @@ import {readLogoutProof} from '../../core/src/session-lifecycle';
 
 // The swarm refuses a session recovery when memory is short (admitRecovery in scripts/swarm.ts). That refusal is
 // final for the run, and each run chained behind it then waits for a new proposal. So a recovery run stays in the
-// queue while the controller's last state shows that refusal. The margin covers the seconds between this read and
-// the admission, in which a bot can start.
-export const RECOVERY_MEMORY_MARGIN_GB=1;
+// queue while the controller's last state shows that refusal. The margin covers what the swarm counts after this
+// read: the dispatched recovery is one more pending start (pendingCount in scripts/swarm.ts), and the processes of
+// the run take memory before the admission (live: free fell from 10.55 to 8.78 GiB in the 11 s of one dispatch).
+export const RECOVERY_MEMORY_MARGIN_GB=3;
 export function recoveryWaitsForMemory(task:Pick<CoordTask,'sessionRecovery'>,capacity:{running:number|null;externalRunning:number|null;pendingStartup:number|null;freeGB:number|null;minFreeGB:number|null;maxBots:number|null}|null):boolean{
  if(!task.sessionRecovery||!capacity||capacity.freeGB===null||capacity.minFreeGB===null)return false;
  return admissionDecision({running:capacity.running??0,external:capacity.externalRunning??0,pending:capacity.pendingStartup??0,starting:1,startingReserve:1,
