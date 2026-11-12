@@ -12,7 +12,7 @@
 //                  with no partner receipt, or a `reconcile` receipt)
 //   needs-recovery an end record or a login failure that only an authenticated session recovery clears
 // Usage: bun scripts/loop-watch.ts [--watch] [--stop]
-// --watch: a pass every 30 s; new findings also go to .practice/alerts.jsonl (the dashboard reads it). Pacing needs
+// --watch: a pass every 30 s; new findings also go to .practice/alerts.jsonl (scripts/learn.ts reads it). Pacing needs
 //          --watch, because one pass has one position sample.
 // --stop:  for a fail-loop, an empty-loop or a retry-loop of this side, write the account's stop file with the finding as its text.
 //          The file is an owner pause: the planner and the controller leave the account alone until a person removes it.
