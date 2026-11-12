@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794494900182,
+ "at": 1794495524096,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -353,6 +353,26 @@
   },
   {
    "account": "Pocketrocket",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "local",
+   "resources": [
+    "pen:3017,3288"
+   ]
+  },
+  {
+   "account": "Shaftmaker",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "sarim"
@@ -371,26 +391,6 @@
    "autopilot": "local",
    "resources": [
     "shop:sarim"
-   ]
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
    ]
   },
   {
