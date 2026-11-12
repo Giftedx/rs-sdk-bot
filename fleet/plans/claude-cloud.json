@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794443859513,
+ "at": 1794444543865,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -221,7 +221,7 @@
     "BONE_RESERVE": "6",
     "CAP": "4000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "train Prayer to 99 burying bought dragon bones",
