@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794504090980,
+ "at": 1794504643378,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -52,6 +52,32 @@
    "enabled": false,
    "goal": "Haggis route rehearsal; hand-run legs by .practice/balls-alpha",
    "role": "rehearsal"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "TARGET_LEVEL": "45",
+    "GIANT_BURY": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "Bigpackage",
