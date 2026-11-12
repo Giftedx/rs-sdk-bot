@@ -1,0 +1,22 @@
+{
+ "id": "1794512856944-balls-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Balls",
+ "to": "WeeQuickie",
+ "item": "logs",
+ "count": 2,
+ "start": 1794512856944,
+ "end": 1794516456944,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ]
+}
