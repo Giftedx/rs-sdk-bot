@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794512440456,
+ "at": 1794512680361,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -497,6 +497,18 @@
    "resources": [
     "pen:3187,3277"
    ]
+  },
+  {
+   "account": "WeeQuickie",
+   "script": "scripts/firemaking-order.ts",
+   "env": {
+    "TARGET_LEVEL": "99",
+    "PROGRESSIVE": "stock",
+    "CLEAR_PACK": "1"
+   },
+   "enabled": false,
+   "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
+   "role": "rehearsal"
   },
   {
    "account": "OreElse",
