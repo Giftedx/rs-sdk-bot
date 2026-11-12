@@ -1,7 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794460472147,
+ "at": 1794461140563,
  "jobs": [
+  {
+   "account": "PocketPool",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=5 EXPECTED_OWNED=41 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit14-556-41to46 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 5 Air rune on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
+   "role": "supply",
+   "template": "kit-buy:army-quest-holygrail",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
   {
    "account": "Quickhandjob",
    "script": "scripts/shop-buyer.ts",
@@ -169,24 +187,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=2 EXPECTED_OWNED=44 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit14-556-44to46 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 2 Air rune on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "Dipstick",
