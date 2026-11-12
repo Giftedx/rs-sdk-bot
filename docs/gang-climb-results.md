@@ -58,4 +58,4 @@ It ties `cure` and `cure-chase50` on 3 kills in 8 meetings with 0 deaths, and wi
 
 ## Raw lines
 
-`docs/gang-climb-results.txt` has one entry per run: set, seed, options, `elapsedMs`, `ledgerTicks`, the walk-out counts, and the `RESULT` line.
+The raw log `.practice/gang-climb/results.txt` (on the local PC) has one entry per run: set, seed, options, `elapsedMs`, `ledgerTicks`, the walk-out counts, and the `RESULT` line.

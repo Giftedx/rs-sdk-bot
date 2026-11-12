@@ -79,7 +79,8 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
         if (fault) return fault;
         // At the bank no attack is lost to an eat or a drink: eat to within one shark of full Hitpoints, drink one dose
         // of each boost, then bank the boosts and fill the pack with sharks again.
-        const pause = async (ticks: number) => { for (let i = 0; i < ticks; i++) if (!await nextTick(a)) return; };
+        // A stop ends the wait at once: the rest can be 1,000 ticks.
+        const pause = async (ticks: number) => { for (let i = 0; i < ticks && !halt(); i++) if (!await nextTick(a)) return; };
         const edible = (i: { optionsWithIndex: { text: string }[] }) => i.optionsWithIndex.some(o => /^eat$/i.test(o.text));
         for (let i = 0; i < 6; i++) {
             const me = a.sdk.getState()?.player, food = a.sdk.getInventory().find(edible), op = food?.optionsWithIndex.find(o => /^eat$/i.test(o.text));
@@ -95,6 +96,7 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
         if (sharks && room > 0) await a.bot.withdrawItem(sharks, Math.min(room, sharks.count), { asNote: false });
         await a.bot.closeBank();
         await pause(more.rest ?? 0);
+        if (halt()) return 'no walk back: stopped';
         for (const item of a.sdk.getInventory()) { const op = /arrow/i.test(item.name) ? item.optionsWithIndex.find(o => /^wield$/i.test(o.text)) : undefined; if (op) await a.sdk.sendUseItem(item.slot, op.opIndex); }
         const home = await go(back);
         return home.ok ? null : `no walk back: ${home.detail ?? 'stopped'}`;
