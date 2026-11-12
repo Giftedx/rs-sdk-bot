@@ -4,8 +4,8 @@
 // Usage: bun scripts/gather-feathers.ts <account>
 // Env: PEN=x,z chicken pen centre (default Lumbridge 3229,3298; others 3017,3288 3187,3277 3197,3353 from
 // npcs.json); TICKS (default 3000); TARGET feathers in the pack (default 2000).
-import { openBot, finish, getWorld, accountOf, countItems, randomEventsOf } from '../packages/core/src/bot';
-import { goTo } from '../packages/core/src/walk';
+import { openBot, finish, countItems, randomEventsOf } from '../packages/core/src/bot';
+import { approach } from './walk-to';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -30,6 +30,25 @@ export async function finishPenEntry(s: { sdk: { getState(): any }; bot: { walkT
     return inside();
 }
 
+// The walk into the pen: `walk` to each tile in turn until one exact arrival, and null then. The later tiles are other
+// ways past the fence, and a new try of a long walk that stopped on one leg. A failed walk that ends more than 15 tiles
+// from the pen and no closer than the try before ends the travel with its cause: no route and no ferry fare are the
+// same for every tile.
+export async function enterPen(s: Parameters<typeof finishPenEntry>[0], pen: { x: number; z: number }, tiles: { x: number; z: number }[],
+    walk: (to: { x: number; z: number; level: number }) => Promise<{ ok: boolean; reason?: string; detail?: string }>): Promise<string | null> {
+    const far = () => { const p = s.sdk.getState()?.player; return p ? Math.max(Math.abs(p.worldX - pen.x), Math.abs(p.worldZ - pen.z)) : Infinity; };
+    let fault = 'exact pen entry unobserved', best = far();
+    for (const t of tiles) {
+        const there = await walk({ ...t, level: 0 });
+        if (there.ok && await finishPenEntry(s, t)) return null;
+        fault = there.ok ? 'exact pen entry unobserved' : `${there.reason} ${there.detail}`;
+        const d = far();
+        if (!there.ok && d > 15 && d >= best) break;
+        best = Math.min(best, d);
+    }
+    return fault;
+}
+
 if (import.meta.main) {
     const name = process.argv[2]!, PEN = parsePen(process.env.PEN);
     const TICKS = Number(process.env.TICKS ?? 3000), TARGET = Number(process.env.TARGET ?? 2000);
@@ -42,12 +61,11 @@ if (import.meta.main) {
     try {
         const spawns = (JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/npcs.json'), 'utf8')) as { name: string; spawns?: { x: number; z: number; level: number }[] }[])
             .filter(n => n.name === 'Chicken').flatMap(n => n.spawns ?? []);
-        let there: Awaited<ReturnType<typeof goTo>> | undefined, entered=false;
-        for (const t of [...penTiles(PEN, spawns).slice(0, 4), PEN]) {
-            there = await goTo(s, await getWorld(), { ...t, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
-            if (there.ok && await finishPenEntry(s,t)) { entered=true; break; }
-        }
-        if (!entered) await finish([s], false, `travel to chickens ${PEN.x},${PEN.z} failed: ${there&&!there.ok?there.reason+' '+there.detail:'exact pen entry unobserved'}`);
+        // The shared walker with the ferries: a pen across the sea from the start needs the fare from a bank, and a
+        // start on another floor needs the stairs.
+        const fault = await enterPen(s, PEN, [...penTiles(PEN, spawns).slice(0, 4), PEN], to => approach(s, to));
+        if (fault) await finish([s], false, `travel to chickens ${PEN.x},${PEN.z} failed: ${fault}`);
+        console.log(`MILESTONE pen t=${s.tick() - start} at=${st()?.player?.worldX},${st()?.player?.worldZ},${st()?.player?.level ?? 0}`);
         while (!over()) {
             if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
             const loot = (st()?.groundItems ?? []).filter((g: any) => g.distance <= 8 && g.reachable !== false && FEATHER.test(g.name))

@@ -586,6 +586,15 @@ const EXTRA_CASES: BenchCase[] = [
   // then picks and banks at Seers.
   {key: 'extra:flax-from-ardougne-upstairs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['foraging', 'flax', '900', '28'],
     pass: s => ok(s) && / banked=[1-9]\d* /.test(s), output: /banked=(\d+)/, presetConfig: {position: {x: 2575, z: 3269, level: 1}, skills: {Hitpoints: 32}}},
+  // The same start for two more workers of the planner. The Thieving trainer goes to the Ardougne market by those
+  // stairs, then pickpockets to its target and banks. The feather job starts with no ferry fare in the pack: it goes
+  // down to the Ardougne north bank, takes the fare, sails by Brimhaven and Musa Point, and kills chickens at the pen
+  // south of Falador.
+  {key: 'extra:thieve-from-ardougne-upstairs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['thieving', 'bootstrap55', 'TARGET=5', 'CAP=900'],
+    pass: s => ok(s) && / died=false/.test(s) && /^MILESTONE approach /m.test(s), presetConfig: {position: {x: 2575, z: 3269, level: 1}, skills: {Thieving: 1, Hitpoints: 32}}},
+  {key: 'extra:feathers-from-ardougne-upstairs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['foraging', 'feathers', 'PEN=3017,3288', 'TARGET=5', 'TICKS=900'],
+    pass: s => ok(s) && /^MILESTONE pen /m.test(s), output: /gained=(\d+)/,
+    presetConfig: {position: {x: 2575, z: 3269, level: 1}, skills: {Attack: 30, Strength: 30, Hitpoints: 20}, bank: [{id: 995, count: 200}]}},
   // The two Magic trainers of the planner's army bands, from the Ardougne north bank. Alchemy: Magic 54 to 56 on
   // feathers with a staff of fire in the bank, so the run casts Low Alchemy and then High Alchemy. The curse trainer:
   // Magic 19 to 21 over the fence of the cow field.
