@@ -26,8 +26,11 @@ import {readLogoutProof} from '../../core/src/session-lifecycle';
 export const RECOVERY_MEMORY_MARGIN_GB=3;
 export function recoveryWaitsForMemory(task:Pick<CoordTask,'sessionRecovery'>,capacity:{running:number|null;externalRunning:number|null;pendingStartup:number|null;freeGB:number|null;minFreeGB:number|null;maxBots:number|null}|null):boolean{
  if(!task.sessionRecovery||!capacity||capacity.freeGB===null||capacity.minFreeGB===null)return false;
- return admissionDecision({running:capacity.running??0,external:capacity.externalRunning??0,pending:capacity.pendingStartup??0,starting:1,startingReserve:1,
-  freeGB:Math.max(0,capacity.freeGB-RECOVERY_MEMORY_MARGIN_GB),minFreeGB:capacity.minFreeGB,maxBots:capacity.maxBots??Number.MAX_SAFE_INTEGER}).reason==='memory';
+ // The memory numbers decide, not the reason: with every bot slot taken the decision names the slot first, and the
+ // swarm, which keeps a slot for a recovery, still refuses on memory.
+ const d=admissionDecision({running:capacity.running??0,external:capacity.externalRunning??0,pending:capacity.pendingStartup??0,starting:1,startingReserve:1,
+  freeGB:Math.max(0,capacity.freeGB-RECOVERY_MEMORY_MARGIN_GB),minFreeGB:capacity.minFreeGB,maxBots:capacity.maxBots??Number.MAX_SAFE_INTEGER});
+ return d.reason!=='invalid'&&d.projectedFreeGB<d.floorGB;
 }
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
 // controller: no PowerShell command-line probe is needed while its pid is alive.
