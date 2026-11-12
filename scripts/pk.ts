@@ -142,6 +142,9 @@ export type FightOptions = {
     // to Wilderness level 30; there is no Teleblock in the content), or with no glory cast `escapeSpell` (level 20).
     escapeAt?: number;
     escapeSpell?: number;
+    // At this Wilderness level or under, the way out is a walk south over the edge of the Wilderness: no player can
+    // attack a player outside it (pvp_combat.rs2:32-48). It needs no item.
+    escapeWalk?: number;
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
@@ -557,6 +560,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
         }
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
+        if (o.escapeAt !== undefined && o.escapeWalk !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= o.escapeWalk) {
+            if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 8 * wildernessLevel(at.z) - 2); ranAt = now; }
+            continue;
+        }
         // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option), so a worn one comes off first:
         // the amulet that an account wears is then its way out, and its pack needs no second one.
         const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));

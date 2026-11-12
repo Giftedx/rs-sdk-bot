@@ -153,6 +153,10 @@ export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
 // A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
 // tiles of a player (patches/rs-sdk.md, item 10).
 const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
+// A tile at Wilderness level 1 north of Edgeville, and the bank of an account that fights there: sharks, the four
+// boosts, antipoison and steel arrows for six trips.
+export const GANG_EDGE = {x: 3087, z: 3522};
+const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count: 8}, {id: 2444, count: 8}, {id: 2442, count: 8}, {id: 2448, count: 8}, {id: 886, count: 2000}];
 // The tile where the dagger gang stands between hunts.
 export const GANKER_POST = {x: 3078, z: 3640};
 // `at` moves the spot: side A at x, side B two tiles east.
@@ -172,11 +176,12 @@ const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, arg
 };
 // One of our accounts against a gang that all attack it (scripts/pk-gang.ts), `groups` meetings at once: the gang
 // stands on one tile, as the dagger gang does at its post, and our account two tiles east.
-const gangCase = (key: string, kit: string, gangKit: string, groups: number, at: {x: number; z: number}, args: string[] = [], size = 3, food?: number): BenchCase => {
+const gangCase = (key: string, kit: string, gangKit: string, groups: number, at: {x: number; z: number}, args: string[] = [], size = 3, food?: number, bank?: {id: number; count: number}[]): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * (size + 1) - 1).split('');
   const ours = (i: number) => i % (size + 1) === 0;
   // `food` cuts the sharks of our account: the start of a meeting that it must leave.
-  const fixture = (): SaveConfig => { const c = kitFixture(kit, at.x + 2, at.z); return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
+  // `bank` is what our account holds in its bank, for the trips between two meetings.
+  const fixture = (): SaveConfig => { const c = {...kitFixture(kit, at.x + 2, at.z), ...(bank ? {bank} : {})}; return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: fixture(), output: /kills=(\d+)/,
     scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : kitFixture(gangKit, at.x, at.z)}))};
@@ -467,6 +472,14 @@ const ROUTE_CASES: BenchCase[] = [
   // The kit gang-hunter fights on its own profile.
   ...(['hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-${kit}-x4`, kit, 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', ...(kit === 'gang-hunter' ? ['SPAR_A=gang-hunter'] : [])])),
   ...(['tribrid-snare', 'hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-x4`, kit, 'ganker-max', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_CAP=2400', ...(kit === 'gang-hunter' ? ['SPAR_A=gang-hunter'] : [])])),
+  // The edge of the Wilderness north of Edgeville (level 1, single-way): our account walks south over the edge when
+  // its food is gone, banks 25 tiles south and comes back, up to 6 meetings. The gang's food does not come back.
+  ...(['ganker-dds', 'ganker-max'] as const).map(gangKit => gangCase(`extra:gang-${gangKit === 'ganker-max' ? 'ganker-max' : 'ganker'}-edge-x4`, 'edge-hunter', gangKit, 4, GANG_EDGE,
+    ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeWalk":4}', 'SPAR_TRIPS=6', 'SPAR_CAP=6000'], 3, undefined, EDGE_BANK)),
+  // The same against the gang at its most with 8 sharks at the start: our account must go to the bank, where it takes a
+  // full pack.
+  gangCase('extra:gang-ganker-max-edge-trips-x4', 'edge-hunter', 'ganker-max', 4, GANG_EDGE,
+    ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeWalk":4}', 'SPAR_TRIPS=6', 'SPAR_TRIP_FOOD=24', 'SPAR_CAP=6000'], 3, 8, EDGE_BANK),
   // The way out, with the gang on our account. `escape`: 3 sharks and a glory in the pack; out of food at 60 HP or
   // less it rubs the glory. `escape-worn`: the kit gang-hunter with 3 sharks against the gang at its most; it takes
   // the glory off its neck and rubs it. A case passes when all four accounts get away.

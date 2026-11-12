@@ -131,6 +131,12 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         weapon: 'dragon_dagger_p', ammo: ['steel_arrow', 150] },
         carried: ['magic_shortbow', ...BOOSTS, '4dose2defense', '4dose2antipoison'], food: 21,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'mithril_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The gang-hunter kit for a meeting at the edge of the Wilderness: an amulet of power for the glory. Its way out is
+    // a walk south over the edge.
+    'edge-hunter': { worn: { hat: 'mithril_full_helm', torso: 'adamant_platebody', legs: 'mithril_platelegs', shield: 'mithril_kiteshield', amulet: 'amulet_of_power', cape: 'black_cape', feet: 'leather_boots',
+        weapon: 'dragon_dagger_p', ammo: ['steel_arrow', 150] },
+        carried: ['magic_shortbow', ...BOOSTS, '4dose2defense', '4dose2antipoison'], food: 21,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'mithril_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },

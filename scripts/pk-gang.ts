@@ -14,8 +14,9 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
-import { fightPlayer, ITEMS, nextTick, wildernessLevel, type FightOptions, type FightResult } from './pk';
-import { hitByPlayer, TRIBRID_KIT } from './pk-hunt';
+import { fightPlayer, ITEMS, nextTick, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
+import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT } from './pk-hunt';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
 
@@ -32,8 +33,8 @@ export function startsAttack(entity: { primaryAnim?: number; primaryAnimCycle?: 
 // `cleared`: every account of the gang is dead. `away`: our account lost sight of every one that lives.
 // `refused` counts the attacks of our account that the game refused ("I'm already under attack."); `foodLeft` and
 // `prayerLeft` are what our account had at the end, and `prayerDoses` the doses of prayer potion in its pack: the
-// margin of the method.
-export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; kills: number; ticks: number; taken: number; eaten: number; specs: number; refused: number; foodLeft: number; prayerLeft: number; prayerDoses: number;
+// margin of the method. `trips` counts the meetings: one, and one more after each trip to the bank.
+export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; kills: number; ticks: number; taken: number; eaten: number; specs: number; refused: number; foodLeft: number; prayerLeft: number; prayerDoses: number; trips: number;
     fights: FightResult[]; gang: FightResult[] };
 
 // The account of the gang to fight now: the one that hit us last, else the nearest in view that the game has not
@@ -49,17 +50,45 @@ const attacksOf = (f: FightResult) => f.attacks.magic + f.attacks.ranged + f.att
 export const gangValid = (r: GangResult) => r.fights.some(f => attacksOf(f) > 0) && r.gang.some(f => attacksOf(f) > 0)
     && [...r.fights, ...r.gang].every(f => f.outcome !== 'session ended' && f.outcome !== 'danger');
 
-export async function gang(a: Session, others: readonly Session[], optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false): Promise<GangResult> {
+// The trip to the bank between two meetings at the edge of the Wilderness: walk to the bank, bank the pack, take
+// `food` slots of sharks and boosts and the `items` again (scripts/pk-hunt.ts restock), wield the arrows, walk back.
+export function bankTrip(bank: { x: number; z: number }, back: { x: number; z: number }, pack: { food: number; items: readonly { id: number; count: number }[] }, kit: Kit, halt: () => boolean = () => false) {
+    return async (a: Session): Promise<string | null> => {
+        const deps = await sessionWalker(a);
+        const go = (to: { x: number; z: number }) => walkPath(deps, [{ ...to, tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: halt });
+        const out = await go(bank);
+        if (!out.ok) return `no walk to the bank: ${out.detail ?? 'stopped'}`;
+        const fault = await restock(a, pack.food, pack.items, kit);
+        if (fault) return fault;
+        for (const item of a.sdk.getInventory()) { const op = /arrow/i.test(item.name) ? item.optionsWithIndex.find(o => /^wield$/i.test(o.text)) : undefined; if (op) await a.sdk.sendUseItem(item.slot, op.opIndex); }
+        const home = await go(back);
+        return home.ok ? null : `no walk back: ${home.detail ?? 'stopped'}`;
+    };
+}
+// What a bank trip takes again, from the pack and the quiver of an account at its start: every item that is no food
+// and no boost, the arrows at their count, and one slot for each shark and each boost.
+export function packOf(inventory: readonly { id: number; count: number; optionsWithIndex: { text: string }[] }[], equipment: readonly { id: number; count: number; slot: number }[]): { food: number; items: { id: number; count: number }[] } {
+    const boost = (id: number) => BOOST_POTIONS.some(doses => (doses as readonly number[]).includes(id)), edible = (i: { optionsWithIndex: { text: string }[] }) => i.optionsWithIndex.some(o => /^eat$/i.test(o.text));
+    const items = new Map<number, number>();
+    for (const i of inventory) if (!edible(i) && !boost(i.id)) items.set(i.id, (items.get(i.id) ?? 0) + i.count);
+    for (const e of equipment) if (e.slot === 13) items.set(e.id, e.count);
+    return { food: inventory.filter(i => edible(i) || boost(i.id)).length, items: [...items].map(([id, count]) => ({ id, count })) };
+}
+// `trips`: with more than one, an account that walked out of the Wilderness goes to the bank and comes back.
+export async function gang(a: Session, others: readonly Session[], optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false,
+    trips?: { count: number; resupply: (a: Session) => Promise<string | null> }): Promise<GangResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
     const start = a.tick(), cap = optionsA.cap ?? 900, self = () => a.sdk.getState()?.player;
     const alive = new Set(others.map(o => o.name.toLowerCase()));
     // A death gives the account a new life id, but the client counts a death only when it sees 0 Hitpoints, and the
-    // server can give the Hitpoints back in the tick of the death. A dead account stands in Lumbridge, so an account
-    // outside the Wilderness is dead too: no account of a meeting leaves it on foot.
+    // server can give the Hitpoints back in the tick of the death. A dead account stands at the Lumbridge spawn, so an
+    // account within 40 tiles of it is dead too: no meeting is near it.
     const life = (s: Session) => s.sdk.getState()?.player?.lifeId, lives = new Map(others.map(o => [o, life(o)] as const));
-    const outside = (s: Session) => { const p = s.sdk.getState()?.player; return !!p && wildernessLevel(p.worldZ) === 0; };
-    const reap = () => { for (const [g, first] of lives) if (outside(g) || (first !== undefined && life(g) !== undefined && life(g) !== first)) alive.delete(g.name.toLowerCase()); };
+    const respawned = (s: Session) => { const p = s.sdk.getState()?.player; return !!p && Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40; };
+    const reap = () => { for (const [g, first] of lives) if (respawned(g) || (first !== undefined && life(g) !== undefined && life(g) !== first)) alive.delete(g.name.toLowerCase()); };
+    // Where each gang account stood at the start: it waits there while our account is outside the Wilderness.
+    const homes = new Map(others.map(o => { const p = o.sdk.getState()?.player; return [o, p ? { x: p.worldX, z: p.worldZ } : null] as const; }));
     let over = false, taken = 0, lastHp = self()?.hp ?? 0, lastHitBy: number | null = null, lastHitAt = -100, seenEvent = 0, seenMessage = 0, refusals = 0, refusedAt = -100, seenAnim = false;
     const refusedBy = new Set<string>();
     // The damage our account took is the sum of its HP drops (as in the spar). The account of the gang that fights it
@@ -87,15 +116,18 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
             if (!alive.has(g.name.toLowerCase())) { total.outcome = 'died'; break; }
             if (r.outcome !== 'lost' || g.tick() - start >= cap) break;
             // The gang runs to a target that the world feed shows: an account that lost sight of ours goes back to it.
-            const at = self();
-            if (at) void g.sdk.sendWalk(at.worldX, at.worldZ);
+            // It attacks nobody outside the Wilderness: while ours is out, it goes to where it stood.
+            const at = self(), home = homes.get(g);
+            if (at && wildernessLevel(at.worldZ) > 0) void g.sdk.sendWalk(at.worldX, at.worldZ);
+            else if (home) void g.sdk.sendWalk(home.x, home.z);
             if (!await nextTick(g)) { total.outcome = 'session ended'; break; }
         }
         if (total.outcome === 'died') alive.delete(g.name.toLowerCase());
         return total;
     });
     const fights: FightResult[] = [];
-    let end: GangResult['end'] = 'cap', unseen = 0;
+    let end: GangResult['end'] = 'cap', unseen = 0, trip = 1;
+    for (;;) {
     while (alive.size && a.tick() - start < cap && !halt()) {
         reap();
         if (!alive.size) break;
@@ -124,9 +156,16 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         if (r.outcome !== 'lost') break;
     }
     reap();
+    if (!alive.size || end !== 'escaped' || !trips || trip >= trips.count || a.tick() - start >= cap || halt()) break;
+    // Out of the Wilderness with the gang alive: to the bank and back for the next meeting.
+    const fault = await trips.resupply(a);
+    if (fault) { log(`[${a.name}] GANG no resupply: ${fault}`); break; }
+    trip++; end = 'cap'; unseen = 0; lastHitBy = null; refusedBy.clear();
+    }
+    reap();
     if (!alive.size) end = 'cleared';
-    // Our account outside the Wilderness with no glory rubbed is dead, whatever its fight loop saw.
-    else if (end !== 'escaped' && outside(a)) end = 'died';
+    // Our account at the Lumbridge spawn is dead, whatever its fight loop saw.
+    else if (respawned(a)) end = 'died';
     over = true;
     const gangResults = await Promise.all(sides);
     unwatch();
@@ -134,7 +173,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     const kills = others.length - alive.size;
     const state = a.sdk.getState(), foodLeft = (state?.inventory ?? []).filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text))).reduce((n, i) => n + i.count, 0);
     return { end, kills, ticks: a.tick() - start, taken, eaten: fights.reduce((n, f) => n + f.eaten, 0), specs: fights.reduce((n, f) => n + f.specs, 0), refused: refusals, foodLeft,
-        prayerLeft: state?.prayers.prayerPoints ?? 0, prayerDoses: (state?.inventory ?? []).reduce((n, i) => n + (PRAYER_DOSES.get(i.id) ?? 0) * i.count, 0), fights, gang: gangResults };
+        trips: trip, prayerLeft: state?.prayers.prayerPoints ?? 0, prayerDoses: (state?.inventory ?? []).reduce((n, i) => n + (PRAYER_DOSES.get(i.id) ?? 0) * i.count, 0), fights, gang: gangResults };
 }
 
 // The counts of several meetings that ran at once.
@@ -169,16 +208,22 @@ if (import.meta.main) {
     try {
         for (let at = 0; at < bots.length; at += size + 1) groups.push(await Promise.all(bots.slice(at, at + size + 1).map((name, i) => (at === 0 && i === 0 ? first : openBot(name, { onStop })))));
     } finally { tickWaits.active--; }
-    // The fight loop reads no loc and no ground item, and their scan is part of the state of every tick.
-    for (const s of groups.flat()) {
+    // SPAR_TRIPS meetings at most for each account of ours, with a trip to the Edgeville bank between two of them.
+    // SPAR_TRIP_FOOD is the number of slots for sharks and boosts that a trip takes (default: as the pack at the start).
+    const tripCount = Math.max(1, Number(env.SPAR_TRIPS ?? 1));
+    const resupplies = groups.map(([a]) => { const st = a!.sdk.getState(), p = st?.player;
+        return tripCount > 1 && st && p ? { count: tripCount, resupply: bankTrip(EDGEVILLE_BANK, { x: p.worldX, z: p.worldZ }, { ...packOf(st.inventory, st.equipment), ...(env.SPAR_TRIP_FOOD ? { food: Number(env.SPAR_TRIP_FOOD) } : {}) }, kitA ? kitSwitches(kitA) : TRIBRID_KIT, () => halted !== undefined) } : undefined; });
+    // The fight loop reads no loc and no ground item, and their scan is part of the state of every tick. An account
+    // that goes to the bank needs both.
+    for (const s of groups.flatMap((g, i) => (resupplies[i] ? g.slice(1) : g))) {
         (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
         const collector = (s.client as { collector?: Record<string, unknown> } | undefined)?.collector;
         if (collector && typeof collector.collectNearbyLocs === 'function') { collector.collectNearbyLocs = () => []; collector.collectGroundItems = () => []; }
     }
-    const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), options(1, i), undefined, () => halted !== undefined)));
+    const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), options(1, i), undefined, () => halted !== undefined, resupplies[i])));
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
         + `valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
-        + `food=${results.map(r => r.foodLeft).join(',')} prayer=${results.map(r => r.prayerLeft).join(',')} doses=${results.map(r => r.prayerDoses).join(',')} refused=${results.map(r => r.refused).join(',')}${halted ? ` halted=${halted}` : ''}`);
+        + `food=${results.map(r => r.foodLeft).join(',')} prayer=${results.map(r => r.prayerLeft).join(',')} doses=${results.map(r => r.prayerDoses).join(',')} trips=${results.map(r => r.trips).join(',')} refused=${results.map(r => r.refused).join(',')}${halted ? ` halted=${halted}` : ''}`);
 }

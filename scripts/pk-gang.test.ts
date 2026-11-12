@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { gangSummary, gangValid, pickAttacker, startsAttack, type GangResult } from './pk-gang';
+import { gangSummary, gangValid, packOf, pickAttacker, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -7,7 +7,7 @@ import { wildernessLevel, type FightResult } from './pk';
 
 const fight = (outcome: FightResult['outcome'], attacks = 10): FightResult =>
     ({ outcome, ticks: 200, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: attacks }, freezes: 0, specs: 0 });
-const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, prayerDoses: 3, fights, gang });
+const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, prayerDoses: 3, trips: 1, fights, gang });
 
 test('our account fights the one of the gang that hit it last, else the nearest that lives', () => {
     const near = [{ name: 'Sugma', index: 5, distance: 3 }, { name: 'Ligma', index: 6, distance: 1 }, { name: 'Goondelf', index: 7, distance: 2 }, { name: 'Passerby', index: 8, distance: 0 }];
@@ -110,4 +110,14 @@ test('an attack of the gang shows as a dagger animation in its first frame', () 
     // A later frame of the same animation is no new attack.
     expect(startsAttack({ primaryAnim: 376, primaryAnimCycle: 7, primaryAnimFrame: 3 })).toBe(false);
     expect(startsAttack(null)).toBe(false);
+});
+
+test('a bank trip takes the pack again: each item that is no food and no boost, the arrows, and a slot for each shark and boost', () => {
+    const eat = [{ text: 'Eat' }], drink = [{ text: 'Drink' }], use = [{ text: 'Wield' }];
+    const pack = packOf([
+        { id: 861, count: 1, optionsWithIndex: use }, { id: 2436, count: 1, optionsWithIndex: drink }, { id: 2440, count: 1, optionsWithIndex: drink }, { id: 2444, count: 1, optionsWithIndex: drink },
+        { id: 2442, count: 1, optionsWithIndex: drink }, { id: 2448, count: 1, optionsWithIndex: drink }, { id: 385, count: 1, optionsWithIndex: eat }, { id: 385, count: 1, optionsWithIndex: eat },
+    ], [{ id: 886, count: 150, slot: 13 }, { id: 1231, count: 1, slot: 3 }]);
+    // Bow, super defence, antipoison and the arrows are named; the three boosts and the two sharks are five slots.
+    expect(pack).toEqual({ food: 5, items: [{ id: 861, count: 1 }, { id: 2442, count: 1 }, { id: 2448, count: 1 }, { id: 886, count: 150 }] });
 });
