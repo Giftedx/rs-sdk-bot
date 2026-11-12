@@ -1,27 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794495247711,
+ "at": 1794495547436,
  "jobs": [
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=6 EXPECTED_OWNED=6 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit14-563-6to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit14-555-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=12 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit14-379-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 6 Law rune, 6 Water rune, 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
@@ -56,27 +36,6 @@
    "goal": "buy 6 Lobster on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
    "role": "supply",
    "template": "kit-buy:army-quest-lostcity",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=3 EXPECTED_OWNED=9 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit22-563-9to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=2 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit22-555-4to6 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=1 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit22-554-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=11 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit22-379-0to11 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 3 Law rune, 2 Water rune, 1 Fire rune, 11 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -118,25 +77,80 @@
    "resources": []
   },
   {
-   "account": "TrouserSnake",
-   "script": "scripts/shop-buyer.ts",
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
    "args": [
-    "betty"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=3 EXPECTED_OWNED=9 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit14-563-9to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=1 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit14-554-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=12 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit14-379-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 3 Law rune, 1 Fire rune, 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
+   "role": "supply",
+   "template": "kit-buy:army-quest-holygrail",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit22-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=7 EXPECTED_OWNED=5 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit14-563-5to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit14-555-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=12 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit14-379-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 7 Law rune, 6 Water rune, 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
+   "role": "supply",
+   "template": "kit-buy:army-quest-holygrail",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:betty"
+    "knight:2582,3297"
    ]
   },
   {
@@ -162,31 +176,9 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=3 EXPECTED_OWNED=9 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit14-563-9to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=1 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit14-554-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=12 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit14-379-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 3 Law rune, 1 Fire rune, 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Knightstick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=8 EXPECTED_OWNED=38 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit15-556-38to46 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=1 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit15-554-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
     "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=12 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit15-379-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
@@ -195,7 +187,7 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 8 Air rune, 1 Fire rune, 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
+   "goal": "buy 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
    "role": "supply",
    "template": "kit-buy:army-quest-holygrail",
    "autopilot": "claude-cloud",
