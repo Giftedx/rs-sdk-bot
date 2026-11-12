@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { heldCount, orderInWay, parseLine, planStage } from './route-stage';
+import { heldBack, heldCount, orderInWay, parseLine, planStage } from './route-stage';
 
 test('free holders give first, then the largest busy stock; the held count is not ordered', () => {
     const holders = (item: string) => item === 'magic logs'
@@ -54,4 +54,20 @@ test('a held trade claim of another order holds the account', () => {
     expect(orderInWay([], [], 'mmsmk1232', 1, claims)).toBe('1794503734080-nabtheknob-mmsmk1232-bones');
     expect(orderInWay([], [], 'MMSMK1232', 1, claims)).toBe('1794503734080-nabtheknob-mmsmk1232-bones');
     expect(orderInWay([], [], 'Shaftmaker', 1, claims)).toBeUndefined();
+});
+
+test('an owner stop file, a reservation or a hand job holds an account back from giving', () => {
+    const jobs = [
+        { account: 'Mightyrod', script: '', enabled: false },
+        { account: 'WeeQuickie', script: 'scripts/firemaking-order.ts', enabled: false },
+        { account: 'OreElse', script: 'scripts/goldfarm.ts', enabled: true, autopilot: 'local' },
+        { account: 'Shaftmaker', script: 'scripts/shop-buyer.ts', enabled: false, autopilot: 'local' },
+    ];
+    expect(heldBack('Mightyrod', jobs, undefined)).toBe('reserved (a job with no script)');
+    expect(heldBack('WeeQuickie', jobs, undefined)).toBe('hand job (disabled, not an autopilot job)');
+    expect(heldBack('OreElse', jobs, undefined)).toBeUndefined();
+    expect(heldBack('Shaftmaker', jobs, undefined)).toBeUndefined();
+    expect(heldBack('Bigchopper', jobs, 'session: owner pause for a dagger gang pilot\n')).toBe('owner stop file');
+    expect(heldBack('Bigchopper', jobs, 'swarm')).toBeUndefined();
+    expect(heldBack('Bigchopper', jobs, undefined)).toBeUndefined();
 });
