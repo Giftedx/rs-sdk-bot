@@ -2,9 +2,17 @@ import { expect, test } from 'bun:test';
 import {
     attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
-    kitRotation, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, seededRandom, skulled, SPELLS,
+    kitRotation, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickWeighted, PRAYER, protectedStyles, seededRandom, skulled, SPELLS,
     weaponStyle, wildernessLevel,
 } from './pk';
+
+test('a weighted draw gives each index in the share of its weight', () => {
+    const r = seededRandom(3), counts = [0, 0, 0, 0];
+    for (let i = 0; i < 9900; i++) counts[pickWeighted([48, 35, 11, 5], r)]!++;
+    expect(counts.map(n => Math.round(n / 100))).toEqual([48, 35, 11, 5]);
+    expect(pickWeighted([0, 1], () => 0)).toBe(1);
+    expect(pickWeighted([], () => 0.5)).toBe(0);
+});
 
 test('a seeded random source repeats for one seed and differs for another', () => {
     const draw = (seed: number) => { const r = seededRandom(seed); return [r(), r(), r()]; };
