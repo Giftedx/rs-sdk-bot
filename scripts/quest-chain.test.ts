@@ -41,6 +41,9 @@ test('a quest whose skill check the account fails is named with the shortfall', 
     expect(questShortfall('elemental', monty)).toEqual(['mining 1/20', 'smithing 1/20']);
     expect(questShortfall('elemental', [{ name: 'Mining', level: 20 }, { name: 'Smithing', level: 20 }, { name: 'Crafting', level: 20 }])).toEqual([]);
     expect(questShortfall('sheep', [])).toEqual([]);
+    expect(questShortfall('upass', [{ name: 'Thieving', level: 49 }])).toEqual(['thieving 49/50']);
+    expect(questShortfall('regicide', [{ name: 'Agility', level: 69 }, { name: 'Crafting', level: 1 }, { name: 'Magic', level: 53 }])).toEqual(['crafting 1/10']);
+    expect(questShortfall('regicide', [{ name: 'Agility', level: 56 }, { name: 'Crafting', level: 51 }, { name: 'Magic', level: 51 }])).toEqual([]);
 });
 
 test('a stop before the first quest prevents the worker from opening', async () => {
