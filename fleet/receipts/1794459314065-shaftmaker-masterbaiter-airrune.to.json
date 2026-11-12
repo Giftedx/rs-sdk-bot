@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794459314065-shaftmaker-masterbaiter-airrune",
+ "account": "Masterbaiter",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "bddadbd2-fe38-44c9-a744-73d41f642b4b",
+ "count": 0,
+ "ok": false,
+ "at": 1794459326692,
+ "detail": "trade claimed"
+}
