@@ -1,27 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794488090206,
+ "at": 1794488306237,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "knight:2669,3298"
+   ]
   },
   {
    "account": "TrouserSnake",
