@@ -2,7 +2,9 @@ import { expect, test } from 'bun:test';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
-const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
+// A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
+// (GOLDFARM_FRAIL) does not apply to it. A test of that rule gives its own Hitpoints.
+const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: (skills.Thieving ?? 1) >= 55 ? 20 : 10, ...skills }, items });
 const row = (item: string, short: number) => ({ item, need: short, owned: 0, short, ids: [1], holders: [] });
 const prices = { feather: 2, 'headless arrow': 1, lobster: 150, 'fire rune': 4, 'air rune': 4, 'earth rune': 4, 'rune arrowtip': 200, 'adamant arrowtip': 80, 'arrow shaft': 1 };
 const bill = [row('feathers', 800), row('headless arrows', 3615), row('lobster', 610), row('fire rune', 2000)];
@@ -86,6 +88,19 @@ test('an account whose pack meets the feather target gets no feather job', () =>
     const knights = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 1]));
     expect(ids(plan(inputs([acct('Full', {}, { feather: FEATHER_TARGET })], { taken: knights }))).Full).not.toMatch(/^feathers@/);
     expect(ids(plan(inputs([acct('Room', {}, { feather: FEATHER_TARGET - 1 })], { taken: knights }))).Room).toMatch(/^feathers@/);
+});
+test('a thief with few Hitpoints gets a knight spot only when it holds food; a fresh account still trains toward one', () => {
+    const job = (a: Acct) => ids(plan(inputs([a])))[a.name];
+    const frail = (items: Record<string, number> = {}) => acct('Frail', { Thieving: 99, Hitpoints: 10 }, items);
+    expect(job(frail())).not.toMatch(/^goldfarm@/);
+    expect(job(frail({ 'slice of cake': 1 }))).not.toMatch(/^goldfarm@/);
+    // Food that the worker does not eat does not count.
+    expect(job(frail({ 'slice of cake': 1, 'raw lobster': 5 }))).not.toMatch(/^goldfarm@/);
+    expect(job(frail({ 'slice of cake': 1, lobster: 1 }))).toMatch(/^goldfarm@/);
+    expect(job(acct('Edge', { Thieving: 99, Hitpoints: 19 }))).not.toMatch(/^goldfarm@/);
+    expect(job(acct('Hale', { Thieving: 99, Hitpoints: 20 }))).toMatch(/^goldfarm@/);
+    // The worth of the trainer comes from the spot that the level unlocks. The food rule does not take that away.
+    expect(job(acct('New'))).toBe('thieving55');
 });
 test("the chicken pen in the Champions' Guild yard goes only to an account with 32 quest points", () => {
     const guild = Object.keys(PEN_QUEST_POINTS).map(p => `feathers@${p}`);

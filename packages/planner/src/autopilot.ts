@@ -27,8 +27,9 @@ export type Flow = { item: string; perTick: number };
 // bought or sent for them.
 // `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
 // `questPoints`: the least quest points (a place behind a door that counts them).
+// `frail`: an account with fewer Hitpoints than `hitpoints` must hold `count` items of `of`; any other account needs none.
 export type Needs = {
-    combat?: number; quests?: readonly string[]; questPoints?: number;
+    combat?: number; quests?: readonly string[]; questPoints?: number; frail?: { hitpoints: number; of: readonly string[]; count: number };
     skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
@@ -264,10 +265,14 @@ export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to
     : t.quest ? (a.quests && !questDone(a, t.quest.name) ? 1 : 0) : t.stock ? Math.max(0, t.stock.to - (a.items[norm(t.stock.item)] ?? 0)) : 0;
 const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n))
     && Object.entries(needs?.holds ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+// The items a frail account is short of for these needs: 0 for an account with the Hitpoints, or with no such need.
+const frailShort = (a: Acct, needs: Template['needs']) => !needs?.frail || (a.skills.Hitpoints ?? 10) >= needs.frail.hitpoints ? 0
+    : Math.max(0, needs.frail.count - needs.frail.of.reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0));
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && (needs?.quests ?? []).every(q => questDone(a, q))
     && (a.questPoints ?? 0) >= (needs?.questPoints ?? 0)
+    && frailShort(a, needs) === 0
     && Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
@@ -299,6 +304,8 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) 
     if (hp > 0) out.push({ of: ['trout'], count: Math.ceil(hp / FOOD_HEAL.trout!) });
     const pieces = (needs?.pieces?.count ?? 0) - (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0);
     if (pieces > 0) out.push({ of: needs!.pieces!.of.map(norm), count: pieces });
+    const frail = frailShort(a, needs);
+    if (frail > 0) out.push({ of: needs!.frail!.of.map(norm), count: frail });
     if (needs?.anyOf) {
         const units = (lacks: readonly Lack[]) => lacks.reduce((n, l) => n + l.count, 0), blocked = (lacks: readonly Lack[]) => lacks.filter(l => !l.of.some(can)).length;
         const kits = needs.anyOf.map(alt => kitLacks(a, alt, can)).filter((k): k is Lack[] => k !== null).sort((x, y) => blocked(x) - blocked(y) || units(x) - units(y));
@@ -457,7 +464,8 @@ export function plan(inp: Inputs): Assignment[] {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to || !meets(a, t.needs)) continue;
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } };
             for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
-                if (!meets(a, u.needs, t.trains)) continue;
+                // The frail rule counts what the account holds when the unlocked job starts, which is not known yet.
+                if (!meets(a, { ...u.needs, frail: undefined }, t.trains)) continue;
                 const value = TRAIN_SHARE * jobValue(u, trained, inp);
                 if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `trains ${t.trains.skill} ${t.trains.to} for ${u.id}` });
             }
@@ -701,6 +709,11 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
 // goldfarm model of 18.8 coins per tick at 99 (scripts/goldfarm.ts header). Estimate.
 export const knightCoinsPerTick = (thieving: number) => thieving < 55 ? 0 : 18.8 * (50 + 190 * (Math.min(99, thieving) - 1) / 98) / 240;
 export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'];
+// The food that scripts/goldfarm.ts eats, and its rule for a thief with few Hitpoints (FRAIL_HP and FRAIL_FLOOR there;
+// scripts/goldfarm.test.ts keeps the numbers equal): with fewer food items than the floor in its pack and its bank,
+// that worker ends the run at once, so such an account gets no knight spot.
+export const GOLDFARM_FOOD = ['slice of cake', '2/3 cake', 'cake', 'chocolate slice', 'bread', 'trout', 'salmon', 'lobster', 'shark'] as const;
+export const GOLDFARM_FRAIL = { hitpoints: 20, of: GOLDFARM_FOOD, count: 2 } as const;
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
 // The pen at 3197,3353 is the yard of the Champions' Guild. Its door lets in an account with 32 quest points
 // (championdoor in knowledge/doors.json), and the route search refuses the pen to any other account.
@@ -978,7 +991,7 @@ export function aioTemplates(): Template[] {
 export function catalogue(): Template[] {
     const goldfarm = KNIGHT_SPOTS.map((spot): Template => ({
         id: `goldfarm@${spot}`, family: 'goldfarm', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: spot, TICKS: '9000' }, role: 'thieving',
-        goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 } }, resources: [`knight:${spot}`],
+        goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 }, frail: GOLDFARM_FRAIL }, resources: [`knight:${spot}`],
         yields: a => [{ item: 'coins', perTick: knightCoinsPerTick(a.skills.Thieving ?? 1) }],
     }));
     const cows = COW_BANDS.map(({ skill, band, to }): Template => ({

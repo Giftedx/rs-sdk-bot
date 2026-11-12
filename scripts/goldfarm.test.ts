@@ -1,8 +1,32 @@
 import {test,expect} from 'bun:test';
-import {courierFoodReady,incomingCookedFood,receiveFoodAtBank} from './goldfarm';
+import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit} from './goldfarm';
 import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
+import {GOLDFARM_FOOD,GOLDFARM_FRAIL} from '../packages/planner/src/autopilot';
 test('incoming sharks and shark notes count as food, raw and burnt do not',()=>{
     expect(incomingCookedFood([{id:385,count:5}],[{id:385,count:8},{id:386,count:20},{id:383,count:30},{id:387,count:3}])).toBe(23);
+});
+test('a thief with few Hitpoints restocks while it still holds a reserve, and any other thief at the floor',()=>{
+    expect(foodReserve(10)).toBe(FRAIL_RESERVE);
+    expect(foodReserve(FRAIL_HP-1)).toBe(FRAIL_RESERVE);
+    expect(foodReserve(FRAIL_HP)).toBe(FRAIL_FLOOR);
+    expect(foodReserve(99)).toBe(FRAIL_FLOOR);
+    expect(FRAIL_RESERVE).toBeGreaterThan(FRAIL_FLOOR);
+});
+test('a fall in Hitpoints with no pick of its own is a guard hit',()=>{
+    expect(guardHit(10,7,false)).toBe(true);
+    // A failed pick in the pass explains the fall.
+    expect(guardHit(10,7,true)).toBe(false);
+    expect(guardHit(7,7,false)).toBe(false);
+    // A bite raised it.
+    expect(guardHit(6,10,false)).toBe(false);
+});
+test('the planner keeps a frail thief off the knights by the numbers and the foods of this worker',()=>{
+    expect(GOLDFARM_FRAIL.hitpoints).toBe(FRAIL_HP);
+    expect(GOLDFARM_FRAIL.count).toBe(FRAIL_FLOOR);
+    expect(GOLDFARM_FRAIL.of).toBe(GOLDFARM_FOOD);
+    // Each food of the planner's list is one food that the worker eats, and each food of the worker is on the list.
+    expect(GOLDFARM_FOOD.every(name=>FOOD_ORDER.filter(re=>re.test(name)).length===1)).toBe(true);
+    expect(FOOD_ORDER.every(re=>GOLDFARM_FOOD.filter(name=>re.test(name)).length===1)).toBe(true);
 });
 import type {Session} from '../packages/core/src/inprocess';
 const now=100000,owners=new Set(['courier']),live={name:'Courier',server:'rs-sdk-demo.fly.dev',at:now-1000,result:'',pos:{x:2654,z:3283,level:0},inventory:[{id:330,name:'Salmon',count:50}]};

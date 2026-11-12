@@ -58,8 +58,9 @@ const BANK_SPOT: Tile = { x: 2654, z: 3283 };
 const KNIGHT = /^knight of ardougne$/i;
 const RANGE = 16;
 const LOBSTER = /^lobster$/i;
-// Bank food in withdraw order: the food chain's cooked fish first (research/food-chain.md), then lobsters.
-const BANK_FOOD = [/^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
+// Bank food in withdraw order: the food chain's cooked fish first (research/food-chain.md), then lobsters and sharks,
+// then the stall food that an earlier run banked. The bank is out of food only when it holds none of these.
+const BANK_FOOD = [/^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i, /^cake$/i, /^2\/3 cake$/i, /^slice of cake$/i, /^bread$/i, /^chocolate slice$/i];
 const BIG = /^(trout|salmon|lobster|shark)$/i;
 const FOOD_ONLY_TRADE = process.env.FOOD_ONLY_TRADE === '1';
 const COINS = /^coins$/i;
@@ -74,9 +75,20 @@ const GUARD = /^guard$/i;
 const BAKER = /^baker$/i;
 const GUARD_SAFE = 6;
 // Food types and HP per bite (cake pieces 4, chocolate slice 2, bread 5, trout 7, salmon 9, lobster 12).
-const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
+export const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
 const HEAL = [4, 4, 4, 2, 5, 7, 9, 12, 20];
 const DMG = 3;
+// A thief with fewer than FRAIL_HP Hitpoints cannot take a guard's attack or a run of failed picks. Each goldfarm death
+// in the run logs is an account with 10 or 11 Hitpoints that had no food at a stall or shop trip. Such a thief
+// restocks while it still holds FRAIL_RESERVE food items, leaves the stall when a guard hits it, and ends the run
+// when it holds fewer than FRAIL_FLOOR and the bank has none: no stall trip and no pick with no food.
+export const FRAIL_HP = 20, FRAIL_RESERVE = 6, FRAIL_FLOOR = 2;
+// The food count under which a thief restocks.
+export const foodReserve = (maxHp: number) => maxHp < FRAIL_HP ? FRAIL_RESERVE : FRAIL_FLOOR;
+// Hitpoints fell in a pass with no pick of the thief's own: a guard hit it.
+export const guardHit = (before: number, after: number, picked: boolean) => after < before && !picked;
+// Ticks a frail thief stays away from the stall after a guard hit it.
+const STALL_REST = 200;
 // Click cadence in ticks. A click inside the pick's action delay is queued again by the server (p_opnpc(3),
 // pickpocket.rs2:134-137), so a 1-tick cadence costs nothing and re-paths to a knight that stepped away a tick sooner.
 const PICK_TICKS = Number(process.env.PICK_TICKS ?? 2);
@@ -111,6 +123,8 @@ try {
     const cheb = (a: Tile, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
     // Eat with two failed picks of margin (a 10 HP thief at HP 3 has none); the bigger loss is a death, not a bite.
     const eatAt = () => Math.max(2 * DMG, maxHp() - 12);
+    const frail = () => maxHp() < FRAIL_HP, reserve = () => foodReserve(maxHp());
+    let stallRestUntil = 0, stallFled = false;
     const t0 = s.tick();
     const now = () => s.tick() - t0;
     const coins0 = coins();
@@ -182,7 +196,7 @@ try {
     };
 
     // Bank trip: deposit every coin and every lobster note, withdraw unnoted lobsters to fill the pack less KEEP_FREE.
-    // Sets bankEmpty when the bank holds no lobsters.
+    // Sets bankEmpty when the bank holds no food of BANK_FOOD.
     const refill = async () => {
         bankTrips++;
         await walk(BANK_SPOT, 2);
@@ -253,9 +267,19 @@ try {
         const pick0 = stallPickTicks;
         const key = (t: Tile) => `${t.x},${t.z}`;
         const d = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+        let seen = hp(), picked = false;
         try {
             while (food() < STALL_FILL && 28 - inv().length > 0 && s.tick() - s0 < 400 && !died && now() < TICKS) {
                 if (existsSync(stopFile)) return;
+                // A guard that sees a steal attacks, and this loop does not fight or run. A frail thief takes one bite
+                // when it is low, leaves at once and stays away for STALL_REST ticks; the main loop walks it to the bank.
+                const hurt = guardHit(seen, hp(), picked); seen = hp(); picked = false;
+                if (frail() && hurt) {
+                    console.log(`STALL left: a guard hit, hp=${hp()} food=${food()} t=${now()}`);
+                    if (hp() <= eatAt() && food() > 0) await eat();
+                    stallRestUntil = s.tick() + STALL_REST; stallFled = true;
+                    break;
+                }
                 if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
                 if (hp() <= eatAt() && food() > 0) { await eat(); continue; }
                 const npcs = (st()?.nearbyNpcs ?? []) as any[];
@@ -285,7 +309,8 @@ try {
                     const k = npcs.some(n => KNIGHT.test(n.name) && d({ x: n.x, z: n.z }, here) <= 6);
                     // Keep two failed picks of margin: with no food, a pick at HP 4 left mmtha0205 at 1 and it died
                     // (live 09:05, after the shop and the stall both gave 0). The main loop's floor is 6 too.
-                    if (k && hp() > 2 * DMG) { const k0 = s.tick(); await steal(6); stallPickTicks += s.tick() - k0; }
+                    // A frail thief does not pick with its food under the floor: a failed pick then has no bite to answer it.
+                    if (k && hp() > 2 * DMG && !(frail() && food() < FRAIL_FLOOR)) { const k0 = s.tick(); picked = true; await steal(6); stallPickTicks += s.tick() - k0; }
                     else { idleTicks++; await waitTicks(s, 1); }
                     continue;
                 }
@@ -410,7 +435,7 @@ try {
         if (existsSync(stopFile)) await end(false, 'stop file');
         if (now() >= nextMark) { console.log(`MILESTONE t=${now()} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} picks=${picks} fails=${fails} eaten=${eaten}`); nextMark += 1000; }
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
-        const l = food();
+        const l = food(), low = l < reserve();
         if (hp() <= eatAt() && l > 0) { if (!(await eat())) await waitTicks(s, 1); continue; }
         if(foodWake&&/^[A-Za-z0-9_ -]{1,12}$/.test(FOOD_FROM)&&(l>=2||!bankEmpty)){
             let courier:any;try{courier=JSON.parse(readFileSync(join(import.meta.dir,'../.practice/status',`${FOOD_FROM}.json`),'utf8'));}catch{/* no current courier observation */}
@@ -418,22 +443,25 @@ try {
                 lastCourierAttempt=s.tick();await foodByTrade(20_000);await walk(KNIGHT_SPOT,3);continue;
             }
         }
-        if ((bigFood() < 2 && l < 2 && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
+        if ((bigFood() < 2 && low && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
             await refill();
             await walk(KNIGHT_SPOT, 3);
             continue;
         }
         // FOOD_ONLY_TRADE: no stall, no shop (both killed farmers live). Out of food, serve one more trade
-        // from FOOD_FROM when the last one brought food; else log out with HP to spare.
-        if (l < 2 && bankEmpty && FOOD_ONLY_TRADE) {
+        // from FOOD_FROM when the last one brought food; else log out with HP to spare. A frail thief does the same
+        // with its food under the floor, whatever the setting.
+        if (l < FRAIL_FLOOR && bankEmpty && (FOOD_ONLY_TRADE || frail())) {
             if (FOOD_FROM && lastTradeOk && (await foodByTrade())) { await walk(KNIGHT_SPOT, 3); continue; }
-            await end(false, 'no food (FOOD_ONLY_TRADE)');
+            await end(false, FOOD_ONLY_TRADE ? 'no food (FOOD_ONLY_TRADE)' : `no food (frail: ${maxHp()} Hitpoints)`);
         }
-        // Bank out of lobsters: the Baker's shop when allowed, else the stall unless 3 trips in a row brought nothing.
-        if (l < 2 && bankEmpty && (shopOk() || stallEmptyTrips < 3)) {
+        // Bank out of food: the Baker's shop when allowed, else the stall unless 3 trips in a row brought nothing. A
+        // frail thief goes while it still holds food (its reserve), and not while it rests after a guard hit.
+        if (low && bankEmpty && s.tick() >= stallRestUntil && (shopOk() || stallEmptyTrips < 3)) {
             if (shopOk()) await shopTrip();
-            if (food() < 2 && stallEmptyTrips < 3) await stallTrip();
-            await walk(KNIGHT_SPOT, 3);
+            if (food() < reserve() && stallEmptyTrips < 3) await stallTrip();
+            await walk(stallFled ? BANK_SPOT : KNIGHT_SPOT, 3);
+            stallFled = false;
             continue;
         }
         if (l === 0) {
