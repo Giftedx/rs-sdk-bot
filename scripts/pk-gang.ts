@@ -150,19 +150,27 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         return total;
     });
     const fights: FightResult[] = [];
-    let end: GangResult['end'] = 'cap', unseen = 0, trip = 1;
+    let end: GangResult['end'] = 'cap', unseen = 0, returns = 0, trip = 1;
     for (;;) {
     while (alive.size && a.tick() - start < cap && !halt()) {
         reap();
         if (!alive.size) break;
         const target: NearbyPlayer | null = pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy, refusedBy);
         if (!target) {
+            // An attack click on an account that died can walk ours toward its respawn point. Away from its tile with
+            // none of the gang in view, it walks back before the ticks count.
+            const here = self();
+            if (here && spot && Math.max(Math.abs(here.worldX - spot.x), Math.abs(here.worldZ - spot.z)) > 3 && returns < 60) {
+                if (returns++ % 4 === 0) void a.sdk.sendWalk(spot.x, spot.z);
+                if (!await nextTick(a)) break;
+                continue;
+            }
             // None of the living gang in view for 20 ticks: our account got away from it.
             if (++unseen > 20) { end = 'away'; break; }
             if (!await nextTick(a)) break;
             continue;
         }
-        unseen = 0;
+        unseen = 0; returns = 0;
         // Another of the gang hit us in the last 8 ticks: the game now refuses our attacks on this one
         // (pvp_combat.rs2:104-112), so the fight turns to the one that hit.
         // A refused attack on this one says the same before the other has hit.
@@ -171,9 +179,10 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
             && (a.sdk.getState()?.nearbyPlayers ?? []).some(p => p.index === lastHitBy && alive.has(p.name.toLowerCase())));
         const r = await fightPlayer(a, target.name, { ...optionsA, cap: Math.max(1, cap - (a.tick() - start)), stop: () => halt() || other(), log: l => log(`[${a.name}] ${l}`) });
         fights.push(r);
-        // An attack click on an account that died walks ours toward its respawn point: back to the meeting tile.
+        // An attack click on an account that died can walk ours toward its respawn point: after a kill, back to the
+        // meeting tile from more than 6 tiles.
         const here = self();
-        if (here && spot && r.outcome !== 'escaped' && r.outcome !== 'died' && Math.max(Math.abs(here.worldX - spot.x), Math.abs(here.worldZ - spot.z)) > 3) void a.sdk.sendWalk(spot.x, spot.z);
+        if (here && spot && r.outcome === 'kill' && Math.max(Math.abs(here.worldX - spot.x), Math.abs(here.worldZ - spot.z)) > 6) void a.sdk.sendWalk(spot.x, spot.z);
         // The next choice leaves out each account that the game refused, until one attack goes through.
         if (refusedAt > began) { refusedBy.add(target.name.toLowerCase()); if (lastHitBy === target.index) lastHitBy = null; if (refusedBy.size >= alive.size) refusedBy.clear(); } else refusedBy.clear();
         if (r.outcome === 'kill') { alive.delete(target.name.toLowerCase()); lastHitBy = null; continue; }
