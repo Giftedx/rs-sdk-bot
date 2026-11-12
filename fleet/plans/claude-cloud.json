@@ -1,49 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794476980398,
+ "at": 1794477362426,
  "jobs": [
   {
-   "account": "Kiltlifter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "account": "Quickhandjob",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "knight:2653,3300"
    ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=22 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit12-532-0to22 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 22 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "TrouserSnake",
@@ -172,7 +148,7 @@
    ]
   },
   {
-   "account": "PocketPool",
+   "account": "Kiltlifter",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -245,6 +221,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-06aecf68-c452-4a78-b9a9-40c39271f0e8"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-pocketpool-20261112t095040z [task-06aecf68-c452-4a78-b9a9-40c39271f0e8]",
+   "role": "combat"
   }
  ]
 }
