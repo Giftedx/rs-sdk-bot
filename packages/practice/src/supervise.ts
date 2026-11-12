@@ -46,6 +46,9 @@ export function isNoProgressFailure(result: string): boolean {
 // the same command logs in again without repairing any of those prerequisites.
 export function isPrerequisiteFailure(result: string): boolean {
     if (!/^RESULT fail\b/.test(result)) return false;
+    // The shared walker found no route from where the account stands (scripts/walk-to.ts, reason `precondition`). The
+    // route tables and the account's place do not change between two logins, so a restart fails the same way.
+    if (/\bprecondition no route to \d+,\d+,\d+/.test(result)) return true;
     // A finite combat pilot that retreats or refuses a target needs review;
     // twenty fresh logins do not change its route, food, gear or attribution.
     return result.startsWith('RESULT fail Fire-pilot ')

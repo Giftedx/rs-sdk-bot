@@ -210,3 +210,14 @@ test('a run the connection ended after real work restarts the streak toward gave
     const s = await supervise({ run: () => { m++; return drained(); }, stopped: () => m >= 6, pause: async () => {}, maxRestarts: 1 });
     expect(s).toEqual({ reason: 'stopped', runs: 6 });
 });
+
+test('a walker result with no route ends the session as blocked at the first run', async () => {
+    const noRoute = 'RESULT fail travel to chickens 3017,3288 failed: precondition no route to 3018,3289,0';
+    expect(isPrerequisiteFailure(noRoute)).toBe(true);
+    expect(isPrerequisiteFailure('RESULT ok travel to chickens 3017,3288')).toBe(false);
+    expect(isPrerequisiteFailure('RESULT fail travel to chickens 3017,3288 failed: precondition ferry needs 30 coins in the pack')).toBe(false);
+    let runs = 0;
+    const end = await supervise({ run: async () => { runs++; return { exitCode: 1, stdout: ['LEDGER ticks=4', noRoute].join(String.fromCharCode(10)) }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(end).toEqual({ reason: 'blocked', runs: 1 });
+    expect(runs).toBe(1);
+});
