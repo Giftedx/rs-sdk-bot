@@ -32,6 +32,9 @@ export interface StackOptions {
     enginePreload?: { module: string; env: Record<string, string> };
     // A second stack beside the shared one: its own pids-<instance>.json, <service>-<instance>.log and stop.
     instance?: string;
+    // How long a busy port may take to come free before the start fails (default 0: fail at once). A bench slot starts
+    // its next case as soon as the last engine's process ended, and the port can stay bound a moment longer.
+    portWaitMs?: number;
 }
 
 // The engine command line keeps MARKERS.engine, so safeKill still identifies the server.
@@ -101,6 +104,7 @@ export function pidsFile(instance?: string): string {
 export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const ports = opts.ports ?? DEFAULT_PORTS;
     for (const port of opts.gateway === false ? [ports.engine] : [ports.engine, ports.gateway]) {
+        for (let waited = 0; waited < (opts.portWaitMs ?? 0) && !canBind(port); waited += 100) await Bun.sleep(100);
         if (!canBind(port)) throw new Error(`port ${port} in use`);
     }
     const root = rsSdkRoot();

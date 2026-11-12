@@ -402,7 +402,7 @@ async function main() {
   // A fresh-engine slot owns ports SLOT_PORT+10k .. +3 and its own market database, beside the shared stack's 8888.
   const slotPort = (slot: number) => SLOT_PORT + slot * 10;
   const start = (label?: string, slot?: number, caseEnv: Record<string, string> = {}) => startStack({ tickMs: Number(process.env.BENCH_TICK_MS ?? 150), xpRate: 25, readyTimeoutMs: 120_000,
-    ...(slot === undefined ? {} : { instance: `aiobench-${slot}`, gateway: false as const, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
+    ...(slot === undefined ? {} : { instance: `aiobench-${slot}`, gateway: false as const, portWaitMs: 10_000, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
       engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite`, ...caseEnv } }),
     ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
   if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
