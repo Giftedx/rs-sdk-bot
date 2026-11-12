@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794513280697,
+ "at": 1794513338447,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -489,27 +489,6 @@
    "resources": [
     "knight:2653,3300"
    ]
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "2",
-    "QUANTITY": "1700",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "375",
-    "CASH_RESERVE": "400000",
-    "ORDER_KEY": "oreelse-overall-cannonballs1700",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "600000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-ee4f55ab-5f7a-4d83-9562-d8f6ccc90f0b"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-oreelse-cannonballs1700-overall [task-ee4f55ab-5f7a-4d83-9562-d8f6ccc90f0b]",
-   "role": "helper"
   },
   {
    "account": "Sausagefest",
