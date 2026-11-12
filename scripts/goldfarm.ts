@@ -85,6 +85,10 @@ const DMG = 3;
 export const FRAIL_HP = 20, FRAIL_RESERVE = 6, FRAIL_FLOOR = 2;
 // The food count under which a thief restocks.
 export const foodReserve = (maxHp: number) => maxHp < FRAIL_HP ? FRAIL_RESERVE : FRAIL_FLOOR;
+// Whether the thief goes to the Baker's shop or stall for food. FOOD_ONLY_TRADE never does, also while a frail
+// thief is under its reserve: the guards at the stall are the reason for that setting.
+export const foodTripDue = (v: { low: boolean; bankEmpty: boolean; tradeOnly: boolean; rested: boolean; shopOk: boolean; emptyTrips: number }) =>
+    !v.tradeOnly && v.low && v.bankEmpty && v.rested && (v.shopOk || v.emptyTrips < 3);
 // Hitpoints fell in a pass with no pick of the thief's own: a guard hit it.
 export const guardHit = (before: number, after: number, picked: boolean) => after < before && !picked;
 // Ticks a frail thief stays away from the stall after a guard hit it.
@@ -502,7 +506,7 @@ try {
         }
         // Bank out of food: the Baker's shop when allowed, else the stall unless 3 trips in a row brought nothing. A
         // frail thief goes while it still holds food (its reserve), and not while it rests after a guard hit.
-        if (low && bankEmpty && s.tick() >= stallRestUntil && (shopOk() || stallEmptyTrips < 3)) {
+        if (foodTripDue({ low, bankEmpty, tradeOnly: FOOD_ONLY_TRADE, rested: s.tick() >= stallRestUntil, shopOk: shopOk(), emptyTrips: stallEmptyTrips })) {
             if (shopOk()) await shopTrip();
             if (food() < reserve() && stallEmptyTrips < 3) await stallTrip();
             await walk(stallFled ? BANK_SPOT : KNIGHT_SPOT, 3);
