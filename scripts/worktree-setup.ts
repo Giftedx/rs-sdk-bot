@@ -1,12 +1,13 @@
 // Makes a new git worktree of this repository ready for tests, the type check and the local gate, as the CI setup
-// steps do (.github/workflows/ci.yml): the SDK submodule, the SDK patch and the installs.
+// steps do (.github/workflows/ci.yml): the SDK submodule, the SDK patch and the installs. It also carries the owner's
+// hook switch (disableAllHooks) of the main checkout's local settings into the worktree.
 // Usage: bun scripts/worktree-setup.ts [--bench] [--reset-vendor] [--check]
 //   --bench         also install the engine packages, which a practice bench needs
 //   --reset-vendor  when vendor/rs-sdk has the patch of a different commit, restore its tracked files and apply the
 //                   patch of this commit. Without the flag the script reports the mismatch and changes nothing there.
 //   --check         print what each step would do and change nothing
 // Each step is skipped when its result is there already, so the script is safe to run again.
-import {existsSync,readFileSync,rmSync} from 'node:fs';
+import {existsSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
 
 export type PatchState='applied'|'clean'|'other';
@@ -27,6 +28,21 @@ export function restorePinned(vendor:string,run:(cwd:string,cmd:string[])=>{exit
     const files=differs.stdout.toString().split('\0').filter(Boolean);
     for(let at=0;at<files.length;at+=100)if(run(vendor,['git','restore','--source=HEAD','--worktree','--',...files.slice(at,at+100)]).exitCode!==0)return false;
     return true;
+}
+
+// The new text of the worktree's .claude/settings.local.json, or null when it needs no change. On Windows a worktree
+// session does not read the main checkout's local settings file, so the owner's `disableAllHooks` stays behind and
+// the user hooks run in the worktree. Only that one key is carried over; the main checkout's permissions are not.
+export function hookSwitchText(mainLocal:string|null,worktreeLocal:string|null):string|null{
+    let main:unknown;
+    try{main=mainLocal===null?null:JSON.parse(mainLocal);}catch{return null;}
+    if(!main||typeof main!=='object'||(main as Record<string,unknown>).disableAllHooks!==true)return null;
+    if(worktreeLocal===null)return JSON.stringify({disableAllHooks:true},null,2)+'\n';
+    let mine:unknown;
+    try{mine=JSON.parse(worktreeLocal);}catch{throw Error('the .claude/settings.local.json of this worktree is not JSON');}
+    if(!mine||typeof mine!=='object'||Array.isArray(mine))throw Error('the .claude/settings.local.json of this worktree is not a JSON object');
+    if((mine as Record<string,unknown>).disableAllHooks===true)return null;
+    return JSON.stringify({...mine as Record<string,unknown>,disableAllHooks:true},null,2)+'\n';
 }
 
 if(import.meta.main){
@@ -82,6 +98,19 @@ if(import.meta.main){
         if(existsSync(join(cwd,'node_modules')))step(name,'present');
         else if(!existsSync(cwd))step(name,dry?'would install after the submodule step':'FAILED: '+cwd+' is missing');
         else act(name,cwd,cmd);
+    }
+
+    // 4. The owner's hook switch (disableAllHooks) of the main checkout's .claude/settings.local.json.
+    if(resolve(main)===resolve(root))step('hook switch','main checkout, nothing to copy');
+    else{
+        const local=(dir:string)=>join(dir,'.claude','settings.local.json');
+        const read=(dir:string)=>existsSync(local(dir))?readFileSync(local(dir),'utf8'):null;
+        try{
+            const text=hookSwitchText(read(main),read(root));
+            if(text===null)step('hook switch','present, or not set in the main checkout');
+            else if(dry)step('hook switch','would set disableAllHooks in .claude/settings.local.json');
+            else{mkdirSync(join(root,'.claude'),{recursive:true});writeFileSync(local(root),text);step('hook switch','done');}
+        }catch(e){step('hook switch','FAILED: '+(e as Error).message);failed=true;}
     }
     console.log('worktree-setup: '+(failed?'NOT ready':dry?'check only, nothing changed':'ready'));
     process.exit(failed?1:0);
