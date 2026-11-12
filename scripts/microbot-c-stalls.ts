@@ -29,18 +29,24 @@ export function withStallSightBlocker<T>(grid:{isFlagged(x:number,z:number,level
  for(let x=loc.x;x<loc.x+loc.width;x++)for(let z=loc.z;z<loc.z+loc.length;z++){let mask=0;for(let bit=0;bit<32;bit++)if(grid.isFlagged(x,z,loc.level,1<<bit))mask|=1<<bit;saved.push({x,z,mask});grid.__set(x,z,loc.level,mask|131072);}
  try{return query();}finally{for(const t of saved)grid.__set(t.x,t.z,loc.level,t.mask);}
 }
+// The same scope for each listed stall: the engine counts every one of them in a sight check. Two baker's stalls of
+// one type stand in the Ardougne market, so a blocker on one of them gives a wrong answer for a tile beside the other.
+export function withStallSightBlockers<T>(grid:Parameters<typeof withStallSightBlocker>[0],locs:readonly Parameters<typeof withStallSightBlocker>[1][],query:()=>T):T{
+ return locs.reduce<()=>T>((inner,loc)=>()=>withStallSightBlocker(grid,loc,inner),query)();
+}
 export type StallSight=(x:number,z:number,toX:number,toZ:number,level:number)=>boolean;
-// Line of sight as the native stall check has it: the stall is a sight blocker when its type has blockrange.
-// A session with no client has no loc types, so it gets no answer.
+// Line of sight as the native stall check has it: each stall of the type in view is a sight blocker when the type has
+// blockrange. A session with no client has no loc types, so it gets no answer.
 export async function stallSight(s:Session,r:StallRecipe):Promise<StallSight|undefined>{
  if(!s.client)return undefined;
  const {loadPathfinding}=await import('../packages/core/src/pathcache');await loadPathfinding();
  const pf=await import('../vendor/rs-sdk/sdk/pathfinding'),grid=await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
  return (x,z,toX,toZ,level)=>{
   for(const a of [x,toX])for(const b of [z,toZ])pf.isTileWalkable(level,a,b);
-  const loc=s.sdk.getState()?.nearbyLocs.find(l=>l.id===r.loc),type=(s.client as {locTypeOf(id:number):{width:number;length:number;blockrange:boolean}}).locTypeOf(r.loc),query=()=>grid.hasLineOfSight(level,x,z,toX,toZ,1,1,1,1,0);
+  const type=(s.client as {locTypeOf(id:number):{width:number;length:number;blockrange:boolean}}).locTypeOf(r.loc),query=()=>grid.hasLineOfSight(level,x,z,toX,toZ,1,1,1,1,0);
+  const stalls=type.blockrange?(s.sdk.getState()?.nearbyLocs??[]).filter(l=>l.id===r.loc).map(l=>({...l,width:type.width,length:type.length})):[];
   // Scope the native LOC_PROJ_BLOCKER to this synchronous sight query. Movement keeps its original flags.
-  return loc&&type.blockrange?withStallSightBlocker(grid,{...loc,width:type.width,length:type.length},query):query();
+  return withStallSightBlockers(grid,stalls,query);
  };
 }
 type Stock=readonly {id:number;count:number}[];
