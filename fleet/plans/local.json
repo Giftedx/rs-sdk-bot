@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794517839858,
+ "at": 1794518440368,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -336,24 +336,22 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "PEN": "3229,3298",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "feathers at the chicken pen 3229,3298",
+   "role": "helper",
+   "template": "feathers@3229,3298",
    "autopilot": "local",
    "resources": [
-    "shop:sarim"
+    "pen:3229,3298"
    ]
   },
   {
