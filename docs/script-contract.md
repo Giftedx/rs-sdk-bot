@@ -116,6 +116,12 @@ Bind results to source, server, tick speed and starting state. Speed claims need
 
 - **Cases.** `scripts/measure/aio-bench-cases.ts` holds one case for each AIO catalog route that has one: the dispatcher, its arguments and the start preset. A case marked `known` cannot pass and names the cause; a default run skips it and coverage does not count it. `bun run bench --coverage` lists the routes with no case.
 - **Engine.** A run uses the lockstep engine ([patches/rs-sdk.md](../patches/rs-sdk.md) item 10) with one seed and a new engine for each case. With these conditions a case gives the same tick count on each run, so one run for each condition is a comparison. The three-run rule above applies to a wall-clock engine (`--wall-clock`; `BENCH_TICK_MS` sets its tick length, 150 by default and 400 for the live length).
+- **Start check.** Before its first engine a run checks that the start is safe (`scripts/measure/bench-start-check.ts`). The run stops with one line and exit code 2 for each of three causes. The line names the cause.
+  - A different heavy job runs on the machine: a `bun` process outside this run that runs `aio-practice-bench.ts`, `ci-gate.ts` or `test-shards.ts`. The line gives each pid and script.
+  - An engine port of the run has a listener. The first engine uses `BENCH_PORT_BASE` (21000 by default), and each further engine uses a port 10 higher.
+  - The free memory is under the floor of `scripts/heavy-admission.ts` plus 0.9 GiB for each engine of the run.
+
+  Of two benches that start at one time, the first runs. `--wait <minutes>` checks again each 10 s. It starts the run when the start is safe, and it stops with the same line when the time is over. `--force` skips the check. A run that has a kept result for each case starts no engine and does no check.
 - **Trace.** `BENCH_TRACE=<dir>` writes two engine files for each case: `<case>.trace`, a hash of the world for each tick, and `<case>.actions`, what the engine did with each message from a bot and which NPC could hunt it. Read `<case>.actions` first when an action has no effect.
 - **Selection.** A pattern is a regular expression on the case key (`cook`, `^quester:quest:`). `--smoke` runs the short set that touches each category. `--all` includes the `known` cases.
 - **A change.** Run the cases the change touches. `--set KEY=value` sets one worker environment value for the run. A change is accepted for a case when the case passes and its ticks are not above the baseline. `--save-baseline` stores the results of the run as the baseline for its seed.

@@ -39,8 +39,10 @@ import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type
 import {rsSdkRoot} from '../../packages/practice/src/paths';
 import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {freemem} from 'node:os';
 import {dirname, join, resolve} from 'node:path';
+import {FREE_FLOOR_GB} from '../../packages/core/src/memory';
+import {freeGB, unitsThatFit} from '../heavy-admission';
+import {BENCH_CASE_GB, START_REFUSED_EXIT, admitStart} from './bench-start-check';
 import {
   discoverBankedProduction,
   planProgressiveSkiller,
@@ -58,11 +60,14 @@ import {
 const root = resolve(import.meta.dir, '..', '..');
 
 // Command line: `bun run bench [pattern] [--smoke] [--all] [--seed n] [--parallel n] [--set KEY=value]... [--save-baseline]
-// [--no-keep] [--wall-clock]`. A pattern is a regular expression on the case key ("cook", "^quester:quest:").
+// [--no-keep] [--wall-clock] [--wait minutes] [--force]`. A pattern is a regular expression on the case key ("cook", "^quester:quest:").
 // The defaults give comparable numbers with nothing to remember: the lockstep engine, a fresh engine per case, seed 7,
 // kept results, and one engine per 1.5 GiB of free memory above the 4 GiB reserve (at most 6).
 // --set changes one environment setting for the workers (an A/B run); the table at the end shows each case against
 // the stored baseline. --wall-clock runs the 150 ms engine with one shared world instead.
+// Before its first engine the run does the start check (bench-start-check.ts): it stops with one line and exit code 2
+// beside another heavy job, on a used engine port, or with too little free memory. --wait <minutes> waits for a safe
+// start for that long at most, and --force skips the check.
 const SET_KEYS: string[] = [];
 if (import.meta.main) {
   const argv = process.argv.slice(2), env = process.env;
@@ -74,9 +79,16 @@ if (import.meta.main) {
     env[set.slice(0, at)] = set.slice(at + 1);
     SET_KEYS.push(set.slice(0, at));
   }
+  // The start check reads these in each run, and a run that --watch or --seeds starts gets them with the environment.
+  if (argv.includes('--wait')) {
+    const wait = value('--wait');
+    if (!(Number(wait) >= 0)) throw new Error(`--wait needs minutes, got ${wait}`);
+    env.BENCH_WAIT_MIN = wait;
+  }
+  if (has('--force')) env.BENCH_FORCE = '1';
   // --watch runs the selection, then runs it again each time a file under scripts/ or packages/ changes.
   if (has('--watch')) {
-    const run = () => Bun.spawnSync(['bun', import.meta.path, ...argv, ...process.argv.slice(2).filter(a => a.startsWith('--') && a !== '--watch')], { cwd: root, env, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
+    const run = () => Bun.spawnSync(['bun', import.meta.path, ...process.argv.slice(2).filter(a => a !== '--watch')], { cwd: root, env, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
     for (;;) {
       run();
       console.log('\nwatching scripts/ and packages/ for a change (Ctrl+C ends)');
@@ -130,7 +142,7 @@ if (import.meta.main) {
     env.BENCH_LOCKSTEP = '1';
     env.BENCH_FRESH ??= '1';
     env.BENCH_SEED = seed ?? env.BENCH_SEED ?? '7';
-    if (env.BENCH_FRESH === '1') env.BENCH_PARALLEL = parallel ?? env.BENCH_PARALLEL ?? String(Math.max(1, Math.min(6, Math.floor((freemem() / 2 ** 30 - 4) / 1.5))));
+    if (env.BENCH_FRESH === '1') env.BENCH_PARALLEL = parallel ?? env.BENCH_PARALLEL ?? String(unitsThatFit(6, BENCH_CASE_GB, freeGB(), FREE_FLOOR_GB));
   }
 }
 
@@ -171,7 +183,14 @@ function importClosure(entry: string, seen = new Set<string>()): Set<string> {
   }
   return seen;
 }
+// The start check and the run both ask for the hash of a case, so one run computes it once.
+const caseHashes = new Map<string, string>();
 function caseHash(c: BenchCase): string {
+  let hash = caseHashes.get(c.key);
+  if (!hash) caseHashes.set(c.key, hash = computeCaseHash(c));
+  return hash;
+}
+function computeCaseHash(c: BenchCase): string {
   let worker = c.script;
   const category = /aio-([a-z]+)\.ts$/.exec(c.script)?.[1];
   if (category) { try { worker = resolveAioStep(category, c.scriptArgs).script; } catch { /* a dispatcher-only case hashes the dispatcher */ } }
@@ -373,6 +392,14 @@ async function main() {
   if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
   if (FRESH && CONCURRENCY !== 1) throw new Error('BENCH_FRESH=1 uses BENCH_PARALLEL, not BENCH_CONCURRENCY');
   if (!FRESH && PARALLEL !== 1) throw new Error('BENCH_PARALLEL needs BENCH_FRESH=1');
+  // The start check (bench-start-check.ts), before the first engine. A case with a kept result starts no engine, so
+  // a run of kept results only has no check. The shared stack of a --wall-clock run checks its own two ports at its start.
+  const toRun = cases.filter(c => !(CACHE && existsSync(join(CACHE_DIR, `${caseHash(c)}.json`)))).length;
+  const engines = FRESH ? Math.min(PARALLEL, toRun) : Math.min(1, toRun);
+  if (engines > 0 && process.env.BENCH_FORCE !== '1') {
+    const refusal = await admitStart({ root, engines, ports: FRESH ? Array.from({ length: engines }, (_, slot) => slotPort(slot)) : [] }, Number(process.env.BENCH_WAIT_MIN ?? 0) * 60_000);
+    if (refusal) { console.error(refusal); process.exit(START_REFUSED_EXIT); }
+  }
   let stack = FRESH ? null : await start();
   const rows: Awaited<ReturnType<typeof runCase>>[] = [];
   try {
