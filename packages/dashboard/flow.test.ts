@@ -35,3 +35,13 @@ test('a new session starts the counts again', () => {
     trackFlow(flows, status(200, [{ name: 'Shark', count: 9 }], { started: 2 }));
     expect(flowView(flows, 'Alpha')).toBeNull();
 });
+
+test('the flow keeps every item kind, so a valuable item past the 40 biggest stacks still counts', () => {
+    const flows = new Map();
+    const many = Array.from({ length: 41 }, (_, i) => ({ name: 'Cheap' + i, count: 100 }));
+    trackFlow(flows, status(100, []));
+    trackFlow(flows, status(103, [...many, { name: 'Dragon chainbody', count: 1 }]));
+    const v = flowView(flows, 'Alpha')!;
+    expect(v.loot.length).toBe(42);
+    expect(v.loot.some(i => i.name === 'Dragon chainbody')).toBe(true);
+});

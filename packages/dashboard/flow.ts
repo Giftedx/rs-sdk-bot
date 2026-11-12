@@ -39,10 +39,11 @@ export function trackFlow(flows: Map<string, Flow>, s: any): void {
     f.carried = dead ? null : now; f.bankAt = s.bankAt ?? null; f.at = at;
 }
 
-// The flow of one account for the page: the 40 biggest items each way, and the time the counts started.
+// The flow of one account for the page: every item each way, and the time the counts started. The page draws the most
+// valuable ones and adds up all of them.
 export function flowView(flows: Map<string, Flow>, name: string): { since: number; loot: FlowItem[]; used: FlowItem[] } | null {
     const f = flows.get(name);
     if (!f || (!f.loot.size && !f.used.size)) return null;
-    const top = (m: Map<string, number>) => [...m].map(([n, count]) => ({ name: n, count })).sort((a, b) => b.count - a.count).slice(0, 40);
+    const top = (m: Map<string, number>) => [...m].map(([n, count]) => ({ name: n, count })).sort((a, b) => b.count - a.count);
     return { since: f.since, loot: top(f.loot), used: top(f.used) };
 }
