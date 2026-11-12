@@ -1,9 +1,11 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,readFileSync,rmSync,statSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,readFileSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {beginSessionAttempt} from '../../core/src/session-lifecycle';
+import {RECOVERY_SCHEMA} from '../../core/src/session-recovery-permit';
 import {atomicJson} from '../src/coordinator-store';
+import {recoveryRuns} from '../src/coordinator-cli';
 import {installJob,releaseCompletedOwnJobs,releaseFinishedOwnJobs} from '../src/coordinator-live';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs} from '../../core/src/coordinator-jobs';
 import type {CoordTask} from '../src/coordinator';
@@ -101,8 +103,8 @@ test('the release pass keeps each job that is not finished and settled, and the 
  beginSessionAttempt({account:'OpenSession',server},{root});
  atomicJson(join(f.prac,'swarm-runs.json'),[{key:'k',accounts:['InSwarm'],log:'x',offset:0}]);
  const kept=[own('Active','run-active',{enabled:true}),own('NoReceipt','run-none'),own('InSwarm','run-swarm'),own('OpenSession','run-session'),
-  // An owner job that a recovery parked: it names no coordinator task.
-  {account:'Parked',script:'goldfarm.ts',enabled:false,standing:true,coordinatorOwner:'coordinator'}];
+  // An owner job that a recovery parked. The caller does not say that no recovery task runs, so it stays.
+  {account:'Parked',script:'goldfarm.ts',enabled:false,standing:true,repeat:true}];
  writeCoordinatorJobs(f.base,{jobs:[own('Done','run-done'),...kept.slice(0,2),own('Failed','run-failed'),...kept.slice(2)],coordination:{focusCapability:'cap'},paused:['Swordinhand'],expansion:{maxBots:18,over:17}});
  expect(await releaseFinishedOwnJobs(f.base)).toEqual(['Done','Failed']);
  expect(readCoordinatorJobs(f.base)).toEqual({jobs:kept,coordination:{focusCapability:'cap'},paused:['Swordinhand'],expansion:{maxBots:18,over:17}});
@@ -111,4 +113,61 @@ test('the release pass keeps each job that is not finished and settled, and the 
  atomicJson(join(f.prac,'swarm-runs.json'),{not:'a list'});
  expect(await releaseFinishedOwnJobs(f.base)).toEqual([]);
  expect(readCoordinatorJobs(f.base).jobs).toEqual([own('Done','run-done')]);
+});
+
+const parkedBow={account:'BowBeforeMe',script:'bow.ts',enabled:false,repeat:true,standing:true};
+const leaseDirectory=(base:string,account:string)=>join(base,'.practice/coordinator/session-recovery/accounts',account.toLowerCase());
+function lease(base:string,account:string,expiresAt:number){
+ mkdirSync(leaseDirectory(base,account),{recursive:true});
+ atomicJson(join(leaseDirectory(base,account),'lease.json'),{schema:'session-recovery-permit/1',issuedAt:expiresAt-150000,expiresAt,
+  request:{schema:RECOVERY_SCHEMA,kind:'session-recovery',account,server,runId:'task-recovery',nonce:'nonce-1',endedAt:1,source:'a'.repeat(64)}});
+}
+
+test('with no recovery task running, the release pass removes an owner job that a recovery parked',async()=>{
+ const f=fixture();
+ writeCoordinatorJobs(f.base,{jobs:[handoff,parkedBow],coordination:{}});
+ expect(readMergedPlan(f.base).jobs.find((j:any)=>j.script==='bow.ts')).toEqual(parkedBow);
+ // A recovery task can run: the finished job goes and the parked job stays.
+ expect(await releaseFinishedOwnJobs(f.base)).toEqual(['Shaftmaker']);
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([parkedBow]);
+ expect(await releaseFinishedOwnJobs(f.base,true)).toEqual(['BowBeforeMe']);
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+ expect(readMergedPlan(f.base).jobs).toEqual([{account:'BowBeforeMe',script:'bow.ts',enabled:true,repeat:true}]);
+ // One pass removes a finished job and a parked job.
+ writeCoordinatorJobs(f.base,{jobs:[handoff,parkedBow],coordination:{}});
+ expect(await releaseFinishedOwnJobs(f.base,true)).toEqual(['BowBeforeMe','Shaftmaker']);
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+});
+
+test('a parked owner job stays while a swarm run, an open session or a held recovery lease has one of its accounts',async()=>{
+ for(const cause of ['running','runs-unreadable','logout','lease','lease-unreadable','partner']){
+  const f=fixture();
+  // The partner of this parked pair has no session record, so it has no confirmed logout.
+  const parked=cause==='partner'?{accounts:['BowBeforeMe','Unseen'],orchestrate:true,script:'pair.ts',enabled:false}:parkedBow;
+  writeCoordinatorJobs(f.base,{jobs:[parked],coordination:{}});
+  if(cause==='running')atomicJson(join(f.prac,'swarm-runs.json'),[{key:'k',accounts:['bowbeforeme'],log:'x',offset:0}]);
+  if(cause==='runs-unreadable')atomicJson(join(f.prac,'swarm-runs.json'),{not:'a list'});
+  if(cause==='logout')beginSessionAttempt({account:'BowBeforeMe',server},{root:join(f.prac,'session-lifecycle')});
+  if(cause==='lease')lease(f.base,'BowBeforeMe',Date.now()+60_000);
+  if(cause==='lease-unreadable'){mkdirSync(leaseDirectory(f.base,'BowBeforeMe'),{recursive:true});writeFileSync(join(leaseDirectory(f.base,'BowBeforeMe'),'lease.json'),'{');}
+  expect(await releaseFinishedOwnJobs(f.base,true)).toEqual([]);
+  expect(readCoordinatorJobs(f.base).jobs).toEqual([parked]);
+ }
+});
+
+test('a recovery lease with an expired permit and no child does not keep the parked job',async()=>{
+ const f=fixture();
+ writeCoordinatorJobs(f.base,{jobs:[parkedBow],coordination:{}});
+ lease(f.base,'BowBeforeMe',Date.now()-1);
+ expect(await releaseFinishedOwnJobs(f.base,true)).toEqual(['BowBeforeMe']);
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+});
+
+test('a running run task with a repair or a session recovery is a recovery; no other task is',()=>{
+ const task=(status:string,spec:object={})=>({status,createdAt:0,attempts:0,spec:{...magic,...spec}}) as any;
+ const repairs=[{account:'Shaftmaker',endedAt:1}],sessionRecovery={account:'Shaftmaker',endedAt:1};
+ expect(recoveryRuns({tasks:[]})).toBe(false);
+ expect(recoveryRuns({tasks:[task('running'),task('running',{repairs:[]}),task('pending',{repairs}),task('failed',{repairs,sessionRecovery}),task('running',{kind:'qualify',repairs})]})).toBe(false);
+ expect(recoveryRuns({tasks:[task('running'),task('running',{repairs})]})).toBe(true);
+ expect(recoveryRuns({tasks:[task('running',{sessionRecovery})]})).toBe(true);
 });
