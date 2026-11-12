@@ -160,7 +160,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
  }
  if(task.kind==='qualify'){const delivery=await runDeliveryTask(definition);return{ok:delivery.ok,delivery,evidence:'native'};}
  const lock=join(coordinationDir,'build-lock.json'),request=join(coordinationDir,'publish-request.json');
- // The source lock and a drained fleet guard every write to the main checkout that live workers run from.
+ // The source lock guards every write to the main checkout that live workers run from.
  const takeSourceLock=async()=>{
   if(existsSync(lock)){
    const owner=JSON.parse(readFileSync(lock,'utf8'));let alive=true;try{process.kill(owner.pid,0);}catch{alive=false;}
@@ -170,7 +170,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
   // publish changes only later starts. The lock holds new starts for the moment the files are copied.
   if(!existsSync(lock))writeFileSync(lock,JSON.stringify({pid:process.pid,runId,at:Date.now()}),{flag:'wx'});
  };
- // An isolated build (build-workspace.ts) edits its own copy: it takes the lock and the drain only to publish.
+ // An isolated build (build-workspace.ts) edits its own copy: it takes the lock only to publish.
  const mainRoot=process.env.COORDINATOR_MAIN_ROOT,isolated=!!mainRoot&&mainRoot!==projectRoot&&isWorkspace(projectRoot);
  const publish=async(result:any)=>{
   atomicJson(request,{runId,capability:definition.id,at:Date.now()});
