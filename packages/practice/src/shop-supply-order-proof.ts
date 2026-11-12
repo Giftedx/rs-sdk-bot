@@ -11,7 +11,7 @@ import{killTree}from'./proc';
 import{stopStack}from'./stack';
 import{selectGeProofEndpoints,startGeProofStack,geProofAccountEnv,assertGeProofAccount}from'./ge-bulk-order-proof';
 import{readPracticeSave,waitPracticeSave}from'../../../scripts/measure/fleet-player-save';
-import{capabilityRevision}from'../../core/src/worker-release';
+import{capabilityRevision,type ReleaseMemo}from'../../core/src/worker-release';
 import{readLogoutProof}from'../../core/src/session-lifecycle';
 import{orderPaths}from'../../../scripts/buy-owned-ge-item';
 import{FREE_FLOOR_GB,PRACTICE_STARTUP_GB}from'../../core/src/memory';
@@ -61,8 +61,8 @@ const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex'
 const artifactPaths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json','betty-before.sav','betty-after.sav','betty.log','betty-empty-ge.log','refill-before.sav','refill-after.sav','refill-repeat.sav','refill.log','refill-repeat.log','refill-empty-ge.log','refill-ledger.json','hunt-before.sav','hunt-after.sav','craft-before.sav','craft-after.sav','owned-hunt.log','owned-craft.log'];
 const ownedTotals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
 const productionSaved=(before:Save,after:Save,v:any)=>productionConserved(ownedTotals(before),ownedTotals(after),{consumed:v.consumed,crafted:v.crafted,air:v.air,eaten:v.eaten,found:v.found})&&JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]);
-const source=()=>({runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
-export function verifyShopSupply(directory:string){
+const source=(memo:ReleaseMemo=new Map())=>({runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root,memo),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
+export function verifyShopSupply(directory:string,memo:ReleaseMemo=new Map()){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const now=Date.now(),ageMs=now-meta.at;
  const saved=(p:string)=>readPracticeSave(join(directory,p+'.sav'));
@@ -70,7 +70,7 @@ export function verifyShopSupply(directory:string){
  const checks={...shopSupplyChecks(saved('before'),saved('after'),run('buy')),
   repeat:Object.values(shopRepeatChecks(saved('after'),saved('repeat'),run('repeat'))).every(Boolean),
   refusal:Object.values(shopRefusalChecks(saved('refuse-before'),saved('refused'),run('refuse'))).every(Boolean),
-  source:JSON.stringify(meta.source)===JSON.stringify(source()),
+  source:JSON.stringify(meta.source)===JSON.stringify(source(memo)),
   lifecycle:Object.values(meta.runs).every((r:any)=>r.logout?.state==='confirmed'),
   artifacts:artifactPaths.every(f=>typeof meta.hashes?.[f]==='string'&&hash(join(directory,f))===meta.hashes[f])&&Object.entries(meta.hashes).every(([f,h])=>hash(join(directory,f))===h),
   nativeRun:typeof meta.directory==='string'&&meta.directory===resolve(directory),

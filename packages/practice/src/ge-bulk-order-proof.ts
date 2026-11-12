@@ -11,8 +11,9 @@ import {runBotName} from './prove';
 import {killTree,commandLine} from './proc';
 import {rsSdkRoot,practiceDir} from './paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
-import {capabilityRevision} from '../../core/src/worker-release';
-export const geProofRuntime=()=>capabilityRevision(['scripts/buy-owned-ge-item.ts'],resolve(import.meta.dir,'../../..'));
+import {capabilityRevision,type ReleaseMemo} from '../../core/src/worker-release';
+// One --verify shares a memo: each fresh closure hash costs seconds under load and four of them overran the 30 s check.
+export const geProofRuntime=(memo:ReleaseMemo=new Map())=>capabilityRevision(['scripts/buy-owned-ge-item.ts'],resolve(import.meta.dir,'../../..'),memo);
 import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
 import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
@@ -102,7 +103,7 @@ export function bulkOrderChecks(p:{before:Save;after:Save;repeat:Save;journal:It
  };
 }
 
-export function verifyCase(directory:string,remote=false){
+export function verifyCase(directory:string,remote=false,memo:ReleaseMemo=new Map()){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const now=Date.now(),ageMs=now-meta.at;
  const endpoints=savedEndpoints(meta);
@@ -115,7 +116,7 @@ export function verifyCase(directory:string,remote=false){
    refusal:duplicateRefusalCheck(repeat,readPracticeSave(join(directory,'refused.sav')),{code:meta.refuseCode,log:log('refuse')},NORTH_CASE.order.item)}:{}),
   identity:journal?.request.actor===meta.buyer&&journal?.request.goal===meta.orderKey&&journal?.request.server===endpoints.server,
   // Saved effects have no age limit. This timestamp check does not grant live admission.
-  source:meta.source===geProofRuntime(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
+  source:meta.source===geProofRuntime(memo),fresh:Number.isFinite(meta.at)&&meta.at<=now};
  return{ok:Object.values(checks).every(Boolean),at:now,ageMs,checks,endpoints:{ports:endpoints.ports,instance:endpoints.instance},source:meta.source,order:remote?NORTH_CASE.order:ORDER,
   scope:'Native150ms/25x: one owned buyer, one owned seller at a lower ask; exact noted fill banked; rerun resumes. No live price, liquidity or wine-throughput claim.'};
 }
@@ -132,9 +133,9 @@ export function duplicateRefusalCheck(before:Save,after:Save,run:Run,item:number
   &&r.newItemsThisSession===0&&r.cashDeltaThisSession===0&&held(after,95,id=>id===item)>0&&rows(after)===rows(before)
   &&run.log.split(/\r?\n/).includes('LOGOUT logged-out');
 }
-function verify(directory:string){
- const bank=verifyCase(directory),north=verifyCase(join(directory,'north'),true);
- const magic=verifyMagic(join(directory,'magic'));
+function verify(directory:string,memo:ReleaseMemo=new Map()){
+ const bank=verifyCase(directory,false,memo),north=verifyCase(join(directory,'north'),true,memo);
+ const magic=verifyMagic(join(directory,'magic'),memo);
  const endpoints=['','north','magic'].map(part=>JSON.parse(readFileSync(join(directory,part,'native.json'),'utf8')).endpoints);
  const sameEndpoints=endpoints.every(p=>JSON.stringify(p)===JSON.stringify(endpoints[0]));
  const report={...bank,ok:bank.ok&&north.ok&&magic.ok&&sameEndpoints,checks:{...bank.checks,north:north.ok,magic:magic.ok,sameEndpoints},north,magic};
@@ -171,7 +172,7 @@ export function magicOrderChecks(p:{before:Save;law:Save;earth:Save;repeat:Save;
   healthy:[law,earth,repeat].every(s=>s.skills[3]?.level===10&&s.position.level===0&&s.position.x>=3180&&s.position.x<=3188&&s.position.z>=3433&&s.position.z<=3447),
  };
 }
-function verifyMagic(directory:string){
+function verifyMagic(directory:string,memo:ReleaseMemo=new Map()){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const now=Date.now(),ageMs=now-meta.at;
  const endpoints=savedEndpoints(meta);
@@ -181,7 +182,7 @@ function verifyMagic(directory:string){
  const checks={...magicOrderChecks({before:read('before'),law:read('law'),earth:read('earth'),repeat:read('repeat'),refuseBefore:read('refuse-before'),refused:read('refused'),lawJournal:l,earthJournal:e,buy:run('buy'),topup:run('topup'),again:run('again'),refuse:run('refuse')}),
   identity:l?.request.actor===meta.buyer&&e?.request.actor===meta.buyer&&l?.request.server===endpoints.server&&e?.request.server===endpoints.server&&l?.request.goal===meta.lawKey&&e?.request.goal===meta.earthKey,
   sellers:['sell-law','sell-earth'].every(label=>{const r=run(label);return r.code===0&&resultLine(r.log,'GE_SELL_RESULT')?.ok===true&&r.log.split(/\r?\n/).includes('LOGOUT logged-out');}),
-  source:meta.source===geProofRuntime(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
+  source:meta.source===geProofRuntime(memo),fresh:Number.isFinite(meta.at)&&meta.at<=now};
  return{ok:Object.values(checks).every(Boolean),at:now,ageMs,checks,scope:'Native practice rescue and finite law/earth acquisitions for unchanged Magic37 consumer; no Magic levels or live credit claimed.'};
 }
 
@@ -371,8 +372,8 @@ if(import.meta.main){
   }else{
    if(!process.env.DELIVERY_DIR)throw Error('run through bun run deliver ge-bulk-order');
    const directory=resolve(process.env.DELIVERY_DIR);
-   const ge=process.argv[2]==='--verify'?verify(directory):await run(directory);
-   const shop=ge.ok?(process.argv[2]==='--verify'?verifyShopSupply(join(directory,'shop')):await runShopSupplyNative(join(directory,'shop'))):null;
+   const memo:ReleaseMemo=new Map(),ge=process.argv[2]==='--verify'?verify(directory,memo):await run(directory);
+   const shop=ge.ok?(process.argv[2]==='--verify'?verifyShopSupply(join(directory,'shop'),memo):await runShopSupplyNative(join(directory,'shop'))):null;
    const report={ok:ge.ok&&shop?.ok===true,ge,shop};console.log(JSON.stringify(report));process.exitCode=report.ok?0:1;
   }
  }catch(error){console.error(String(error));process.exitCode=1;}
