@@ -1,5 +1,6 @@
 // Watchdog: every 30 s checks the machine and the swarm, and writes .practice/monitor.json (latest state) plus
-// .practice/alerts.jsonl (one line per new alert) for the dashboard and the lead session.
+// .practice/alerts.jsonl (one line per new alert). The launch gate (packages/core/src/haggisgate.ts) reads
+// monitor.json. scripts/learn.ts and the lead session read alerts.jsonl. The dashboard reads neither file.
 // Fixes on its own only what is always safe: headless Edge left by a screenshot (profile folder shot-<port>) older
 // than 2 minutes is killed (leaks of 5, 11 and 16 Edge processes, up to 70% CPU).
 // Alerts: low RAM, stray `python -` processes, live bots that died, stalled (no status for 2 min without a RESULT)
