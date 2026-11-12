@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794466042221,
+ "at": 1794467844000,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -26,22 +26,21 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts jukat 9000 BLIND_BUY=1 STOCK_TARGET=2 STOP_AT_TARGET=1 BANK_AT=0 NO_BUY_TICKS=3000 STALL_TICKS=0 COIN_RESERVE=5000 FLOAT=211000"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy dragon longswords from Jakut in the Zanaris market",
-   "role": "supply",
-   "template": "army-jakut-swords",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:jukat"
+    "knight:2582,3297"
    ]
   },
   {
@@ -64,25 +63,6 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {
@@ -246,6 +226,25 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
    ]
   }
  ]
