@@ -247,8 +247,8 @@ export function offlinePlace(a: Acct, status: any, now: number): Acct {
     return rest;
 }
 // Whether the shared walker lets an account walk over White Wolf Mountain, between Taverley and Catherby: no hunter
-// with a spawn on the mountain is deadly to it (packages/core/src/danger.ts, the walker's own rule). Live: an account
-// with 10 Hitpoints got "no route" to the flax field from the east side.
+// with a spawn on the mountain is deadly to it (packages/core/src/danger.ts, the walker's own rule). An account with
+// 10 Hitpoints has no route over it.
 export const MOUNTAIN = { minX: 2790, maxX: 2880, minZ: 3420, maxZ: 3530 } as const;
 export function mountainWalk(hunters: readonly Hunter[] = loadHunters()): (a: Acct) => boolean {
     const pass = hunters.filter(h => h.spawns.some(s => s.level === 0 && s.x >= MOUNTAIN.minX && s.x <= MOUNTAIN.maxX && s.z >= MOUNTAIN.minZ && s.z <= MOUNTAIN.maxZ));

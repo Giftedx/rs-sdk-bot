@@ -621,8 +621,7 @@ export function plan(inp: Inputs): Assignment[] {
         }
         if (step === 'buy') return;
         // An item order meets at the Ardougne north bank (scripts/autopilot.ts itemOrder). A party of this side whose
-        // place is known must have a way there and the fare of it (live: an account at Draynor with 1 coin was asked
-        // to give 21 air runes there). A party with no known place has no rule.
+        // place is known must have a way there and hold the fare of that way. A party with no known place has no rule.
         const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
         if (!reachesMeet(c.account)) return;
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
@@ -850,6 +849,10 @@ const ardougneTarget = (p: Spot) => p.x >= 2600 && p.x <= 2690 && p.z >= 3260 &&
 // and the troopers; the bank of each shop (scripts/shop-buyer.ts PROFILES bankSpot; scripts/autopilot.test.ts keeps
 // them equal); the Catherby and Seers' Village banks; the flax field. Left out: a place that the worker reaches by its
 // own travel (the black dragons by teleport, Jakut in Zanaris, a quest) and a place outside the regions.
+// A knight spot is not its own first walk: scripts/goldfarm.ts takes an account from far away to the Ardougne south
+// bank and walks to the knight from there (scripts/autopilot.test.ts keeps the tile equal), so each spot has the ferry
+// rule of Ardougne, the spot west of the rule's Ardougne box too.
+export const KNIGHT_BANK: Spot = { x: 2654, z: 3283 };
 const SEERS_BANK: Spot = { x: 2727, z: 3492 }, CATHERBY_BANK: Spot = { x: 2809, z: 3441 }, DRAYNOR_BANK: Spot = { x: 3092, z: 3243 }, VARROCK_EAST_BANK: Spot = { x: 3253, z: 3420 };
 export const PLACES: Readonly<Record<string, Spot>> = {
     [COW_FIELD]: ARMY_BANK, [STRIKE_TILE]: ARMY_BANK, [SPLASH_FENCE]: ARMY_BANK, [TROOPER_FIELD]: ARMY_BANK,
@@ -857,10 +860,11 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
 };
-// A template's place: its first resource with a tile (a knight spot and a chicken pen carry theirs) or a known place.
+// A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
     for (const r of t.resources ?? []) {
-        const m = r.match(/^(?:knight|pen):(\d+),(\d+)$/);
+        if (r.startsWith('knight:')) return KNIGHT_BANK;
+        const m = r.match(/^pen:(\d+),(\d+)$/);
         if (m) return { x: Number(m[1]), z: Number(m[2]) };
         if (PLACES[r]) return PLACES[r];
     }

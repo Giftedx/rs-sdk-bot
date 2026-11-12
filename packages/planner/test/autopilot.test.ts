@@ -1725,7 +1725,7 @@ test('the halberd build trains Thieving and Agility, then takes Underground Pass
     expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
 });
 
-import { FERRY_FARE, PLACES, TOLL, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
+import { FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
 
 const TAVERLEY = { x: 2877, z: 3501, level: 0 }, DRAYNOR = { x: 3092, z: 3242, level: 0 }, ARDOUGNE = { x: 2654, z: 3283, level: 0 }, SEERS = { x: 2727, z: 3493, level: 0 };
 const MUSA_POINT = { x: 2920, z: 3160, level: 0 }, TUTORIAL = { x: 3094, z: 3106, level: 0 }, TOLL_SIDE = { x: 3269, z: 3164, level: 0 };
@@ -1763,10 +1763,10 @@ test('the way to a place costs the ferry fares the shared walker asks, or has no
     expect([meetFor(SEERS), meetFor(ARDOUGNE), meetFor(DRAYNOR), meetFor(TUTORIAL), meetFor(MUSA_POINT), meetFor(undefined)]).toEqual(['ardougne', 'ardougne', undefined, undefined, null, undefined]);
 });
 
-test('each known place belongs to a template, and a knight spot and a pen carry their own tile', () => {
+test('each known place belongs to a template; a pen carries its own tile, and each knight spot has the Ardougne south bank', () => {
     const all = catalogue(), used = new Set(all.flatMap(t => t.resources ?? []));
     expect(Object.keys(PLACES).filter(r => !used.has(r))).toEqual([]);
-    expect(placeOf(all.find(t => t.id === 'goldfarm@2582,3297')!)).toEqual({ x: 2582, z: 3297 });
+    expect(all.filter(t => t.family === 'goldfarm').map(placeOf)).toEqual([KNIGHT_BANK, KNIGHT_BANK, KNIGHT_BANK, KNIGHT_BANK, KNIGHT_BANK]);
     expect(placeOf(all.find(t => t.id === 'feathers@3017,3288')!)).toEqual({ x: 3017, z: 3288 });
     expect(placeOf(all.find(t => t.id === 'army-cow-strength-45')!)).toEqual({ x: 2615, z: 3332 });
     expect(placeOf(all.find(t => t.id === 'thieving55')!)).toBeUndefined();
@@ -1803,10 +1803,14 @@ test('an account with 10 Hitpoints gets no job behind White Wolf Mountain', () =
     // An account the walker lets over the mountain gets the job, and so does the weak account once it stands in Kandarin.
     expect(plan(inputs([weak], { ...flax, mountain: () => true }))[0]!.template?.id).toBe('aio-flax');
     expect(plan(inputs([at(weak, SEERS)], { ...flax, mountain: () => false }))[0]!.template?.id).toBe('aio-flax');
-    // The ferries to Ardougne stay open to it, and it holds the fare. The knight spot west of the ferry rule's Ardougne
-    // box is a walk over the mountain, so it is not offered.
-    expect(plan(inputs([weak], { templates: only('goldfarm@2652,3318'), mountain: () => false }))[0]!.template?.id).toBe('goldfarm@2652,3318');
-    expect(plan(inputs([weak], { templates: only('goldfarm@2582,3297'), mountain: () => false }))[0]!.template).toBeUndefined();
+    // The ferries to Ardougne stay open to it, and it holds the fare. That is so for each knight spot, the one west of
+    // the ferry rule's Ardougne box too: the worker goes to the south bank first.
+    for (const spot of ['goldfarm@2652,3318', 'goldfarm@2582,3297'])
+        expect(plan(inputs([weak], { templates: only(spot), mountain: () => false }))[0]!.template?.id).toBe(spot);
+    // With no fare that west spot is a funded job as the others are, for a strong account too: not a free walk.
+    const poor = at(acct('Poor', { Thieving: 89, Hitpoints: 54 }, { coin: 1 }), DRAYNOR);
+    expect(plan(inputs([poor], { templates: only('goldfarm@2582,3297'), mountain: () => true }))[0]!.template).toBeUndefined();
+    expect(plan(inputs([poor], { templates: only('goldfarm@2582,3297'), mountain: () => true, donors: big }))[0]!.fund).toEqual({ from: 'Big', to: 'Poor', coins: 59, template: 'goldfarm@2582,3297' });
 });
 
 test('an account at Ardougne with no coins has no fare need for a knight spot', () => {

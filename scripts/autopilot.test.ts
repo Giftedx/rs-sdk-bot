@@ -536,7 +536,7 @@ test('the plan gives a build account the quest route of its kit; a kit with no r
 });
 
 import { mountainWalk, offlinePlace, MOUNTAIN } from './autopilot';
-import { accountFrom, FERRY_FARE, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
+import { accountFrom, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
 import { walkWithFerryFallback } from './walk-to';
 import { PROFILES } from './shop-buyer';
 import { loadHunters } from '../packages/core/src/danger';
@@ -644,4 +644,7 @@ test('the place of each shop job is the bank of its shop profile, and the reach 
     for (const [resource, spot] of Object.entries(PLACES)) if (resource.startsWith('shop:')) expect([resource, spot]).toEqual([resource, PROFILES[resource.slice(5)]!.bankSpot]);
     // The templates the reach rule covers, of the whole catalogue.
     expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([53, 88]);
+    // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
+    const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
+    expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
 });
