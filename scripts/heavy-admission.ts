@@ -14,9 +14,11 @@ import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 export const TOOL_FLOOR_GB = 1;
 // The swarm writes its state each 2 s (scripts/swarm.ts). A state that is older than this is of a swarm that stopped.
 export const SWARM_FRESH_MS = 30_000;
-// One `bun test` process, measured on the PC with tasklist: 85 MB for 1 file, 142 MB for the 38 dashboard files,
-// 277 MB for the 32 router files. A shard of the full set holds about 34 files.
-export const TEST_SHARD_GB = 0.3;
+// The memory of one shard of the full test set, with the processes that its tests start. Measured on the PC: 12
+// shards over ./scripts and ./packages (459 files) had a peak working set of 8.82 GiB for the whole process tree,
+// with 46 processes at one time. That is 0.74 GiB for each shard. One `bun test` process alone is far less (85 MB
+// for 1 file, 277 MB for the 32 router files): the child processes of the tests are the larger part.
+export const TEST_SHARD_GB = 0.75;
 // The smallest compiler heap that is of use. A check that needs more fails with a heap error and takes no more.
 export const MIN_HEAP_MB = 768;
 
