@@ -197,13 +197,13 @@ export function headerSentence(source: string): string {
 export type ScriptGroup = AioCategory | 'helpers' | 'tools' | 'quests' | 'measure' | 'packages';
 export const SCRIPT_GROUPS: readonly ScriptGroup[] = [...AIO_CATEGORIES, 'helpers', 'tools', 'quests', 'measure', 'packages'];
 export const SCRIPT_GROUP_TITLES: Readonly<Record<ScriptGroup, string>> = {
- skiller: 'scripts that a skiller route starts',
- fighter: 'scripts that a fighter route starts',
- boss: 'scripts that a boss route starts',
- pvp: 'scripts that a pvp route starts',
- quester: 'scripts that a quester route starts',
- market: 'scripts that a market route starts',
- logistics: 'scripts that a logistics route starts',
+ skiller: 'the skiller entry and the scripts that its routes start',
+ fighter: 'the fighter entry and the scripts that its routes start',
+ boss: 'the boss entry and the scripts that its routes start',
+ pvp: 'the pvp entry and the scripts that its routes start',
+ quester: 'the quester entry and the scripts that its routes start',
+ market: 'the market entry and the scripts that its routes start',
+ logistics: 'the logistics entry and the scripts that its routes start',
  helpers: 'helpers that a route reaches',
  tools: 'tools, reports and fleet control',
  quests: 'generated quest scripts (quester sweep, order and chain run them)',
