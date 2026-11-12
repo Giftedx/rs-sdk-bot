@@ -3,6 +3,7 @@ import{test,expect}from 'bun:test';
 import{readFileSync}from 'node:fs';
 import{WATCH_CAVES,WATCH_ENTRY,WATCH_SUPPLIES,watchtowerEntry,watchtowerNativeBindings,madSkavidReply,runWatchtower,watchtowerOwnContext,finishWatchtowerOwned,watchtowerTowerEntry,watchtowerCakeOpening,watchtowerBridgeLoc,watchtowerCityExit,watchtowerShamanEffect,watchtowerEnchantPotion,WATCH_SHAMAN_ORDINALS}from './quest-itwatchtower-owned';
 import{questDefinitions}from '../../packages/core/src/quest-status';
+import{startPrayerGuard}from '../../packages/core/src/prayer-guard';
 import type{Session}from '../../packages/core/src/inprocess';
 const base='vendor/rs-sdk/server/content/';
 test('surface return uses reachable native wall then wizard ladder, never the enclosed ground ladder',async()=>{
@@ -37,6 +38,21 @@ test('actual consumer failure settles only the login owner, never a replacement 
   f.client.executeBotAction=()=>{};f.client.selfSlot=1;Object.assign(f.s,{name:'watchtest',tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),direct:async()=>{inputs++;throw Error('first owned failure');}});Object.assign(f.s.sdk,{getStateAge:()=>0,getSkillXp:()=>0});f.state.inventory=f.inventory;
   const owns=watchtowerOwnContext(f.s),timer=setInterval(()=>{tick++;if(tick===1){if(mode==='executor')f.client.executeBotAction=()=>{};if(mode==='client')(f.s as any).client={...f.client};if(mode==='life')f.state.player.lifeId++;if(mode==='respawn')f.state.player.respawnCount++;}for(const cb of listeners)cb();},1);
   try{let failure='';try{await runWatchtower(f.s);}catch(e){failure=String(e);}expect(failure).not.toBe('');const settled=await finishWatchtowerOwned(f.s,owns,false,failure,async(sessions,ok)=>{expect(sessions).toEqual([f.s]);expect(ok).toBe(false);logouts++;});expect(settled).toBe(mode==='unchanged');expect(inputs).toBe(mode==='unchanged'?1:0);expect(logouts).toBe(mode==='unchanged'?1:0);}finally{clearInterval(timer);}
+ }
+});
+
+test('the login owner follows the release of the prayer guard in the run, and no other executor change',async()=>{
+ // packages/core/src/bot.ts: openBot starts the prayer guard, which replaces the client's executor, before the entry
+ // makes its owner. runWatchtower releases the guard, and the release puts the executor back. bot.ts holds no guard
+ // for a test session, so the release of the run does nothing here: the test releases the real guard before the run.
+ for(const mode of ['kept','replaced']as const){const f=fixture(),login=()=>{};let tick=0,inputs=0,logouts=0,calls=0,early=-1;const listeners=new Set<()=>void>();
+  f.client.executeBotAction=login;f.client.selfSlot=1;Object.assign(f.s,{name:'watchtest',tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),direct:async()=>{inputs++;throw Error('first owned failure');}});Object.assign(f.s.sdk,{getStateAge:()=>0,getSkillXp:()=>0});f.state.inventory=f.inventory;
+  const guard=startPrayerGuard(f.s),owns=watchtowerOwnContext(f.s);expect(f.client.executeBotAction).not.toBe(login);await guard.release();expect(f.client.executeBotAction).toBe(login);
+  const timer=setInterval(()=>{tick++;for(const cb of listeners)cb();},1);
+  try{let failure='';try{await runWatchtower(f.s,{settled:()=>{calls++;early=inputs;owns.settled();}});}catch(e){failure=String(e);}expect(failure).toContain('first owned failure');
+   // Another executor after the release is not the owner's, and a second `settled` does not take it.
+   if(mode==='replaced'){f.client.executeBotAction=()=>{};owns.settled();}
+   const settled=await finishWatchtowerOwned(f.s,owns,false,failure,async()=>{logouts++;});expect({settled,logouts,calls,early}).toEqual({settled:mode==='kept',logouts:mode==='kept'?1:0,calls:1,early:0});}finally{clearInterval(timer);}
  }
 });
 
