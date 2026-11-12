@@ -26,6 +26,9 @@ test('MEET puts the trade at a known bank pair: the Ardougne north bank for the 
     expect(orderMeet(undefined)).toBeUndefined();
     expect(orderMeet('2619,3332')).toEqual([{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }]);
     expect(() => orderMeet('2654,3283')).toThrow('MEET must be a bank tile');
+    expect(orderMeet('draynor')).toEqual([{ x: 3093, z: 3243, level: 0 }, { x: 3093, z: 3244, level: 0 }]);
+    expect(orderMeet('Ardougne-North')).toEqual(orderMeet('2619,3332'));
+    expect(() => orderMeet('lumbridge')).toThrow('a bank name');
     const home = makeOrder('TheFullMonty', 'UnderMyKilt', 1, 'Staff of fire', 1_000_000, 0, 60, owners, orderMeet('2619,3332'));
     expect(home.meet).toEqual([{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }]);
     expect(validOrder(home)).toBe(true);

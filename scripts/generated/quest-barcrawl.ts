@@ -13,10 +13,14 @@ import { openQuest } from './quest-lib';
 
 type Quest = Awaited<ReturnType<typeof openQuest>>;
 
-export async function establishBarcrawlGate(readState: () => number | undefined, run: () => Promise<void>): Promise<void> {
-    if (readState() === 2) return;
+// The server does not send %barcrawl to the client (quest_barcrawl.varp has no transmit), so the client cannot read
+// it. The gate shows it: it lets the player through when %barcrawl is ^barcrawl_complete, and before that a
+// Barbarian guard within 5 tiles talks instead (outpost_gate.rs2:1-5). `tryGate` opens the gate and tells if the player
+// went through. When it did not, the Barcrawl runs, and the gate must then let the player through.
+export async function establishBarcrawlGate(tryGate: () => Promise<boolean>, run: () => Promise<void>): Promise<void> {
+    if (await tryGate()) return;
     await run();
-    if (readState() !== 2) throw Error('Barcrawl gate state 2 unobserved');
+    if (!(await tryGate())) throw Error('Barcrawl gate shut after the Barcrawl');
 }
 
 const CARD = 455;

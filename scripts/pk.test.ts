@@ -401,3 +401,11 @@ test('kitRotation keeps an order the kit can use and falls back to the full orde
     expect(kitRotation(['ranged', 'melee'], { magic: [1401] })).toEqual(['magic', 'ranged', 'melee']);
     expect(kitRotation(undefined, { melee: [1231] })).toEqual(['magic', 'ranged', 'melee']);
 });
+
+test('a thrown weapon attacks one tick sooner than a shortbow, and Rapid takes one tick off each', async () => {
+    const { rangedWeaponDelay } = await import('./pk');
+    const names = new Map([[861, 'magic_shortbow'], [868, 'rune_knife'], [811, 'rune_dart'], [5667, 'rune_knife_p']]);
+    expect([rangedWeaponDelay([861], false, names), rangedWeaponDelay([861], true, names)]).toEqual([4, 3]);
+    expect([rangedWeaponDelay([868, 1201], false, names), rangedWeaponDelay([868, 1201], true, names)]).toEqual([3, 2]);
+    expect([rangedWeaponDelay([811], true, names), rangedWeaponDelay([5667], true, names), rangedWeaponDelay(undefined, true, names)]).toEqual([2, 2, 3]);
+});

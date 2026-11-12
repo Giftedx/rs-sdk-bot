@@ -153,6 +153,12 @@ export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
 // A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
 // tiles of a player (patches/rs-sdk.md, item 10).
 const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
+// A tile at Wilderness level 1 north of Edgeville, and the bank of an account that fights there: sharks, the four
+// boosts, antipoison and steel arrows for six trips.
+export const GANG_EDGE = {x: 3087, z: 3522};
+const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count: 8}, {id: 2444, count: 8}, {id: 2442, count: 8}, {id: 2448, count: 8}, {id: 886, count: 2000}, {id: 563, count: 40}, {id: 556, count: 200}];
+// The tile where the dagger gang stands between hunts.
+export const GANKER_POST = {x: 3078, z: 3640};
 // `at` moves the spot: side A at x, side B two tiles east.
 const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = [], at: {x: number; z: number} = {x: 3094, z: 3555}): BenchCase => {
   // One character for each account after the first: up to 18 pairs.
@@ -167,6 +173,18 @@ const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, arg
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, pairs * 2 - 1).split('');
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i % 2 ? a : b}))};
+};
+// One of our accounts against a gang that all attack it (scripts/pk-gang.ts), `groups` meetings at once: the gang
+// stands on one tile, as the dagger gang does at its post, and our account two tiles east.
+const gangCase = (key: string, kit: string, gangKit: string, groups: number, at: {x: number; z: number}, args: string[] = [], size = 3, food?: number, bank?: {id: number; count: number}[]): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * (size + 1) - 1).split('');
+  const ours = (i: number) => i % (size + 1) === 0;
+  // `food` cuts the sharks of our account: the start of a meeting that it must leave.
+  // `bank` is what our account holds in its bank, for the trips between two meetings.
+  const fixture = (): SaveConfig => { const c = {...kitFixture(kit, at.x + 2, at.z), ...(bank ? {bank} : {})}; return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: fixture(), output: /kills=(\d+)/,
+    scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : kitFixture(gangKit, at.x, at.z)}))};
 };
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
@@ -206,6 +224,14 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('woodcutting', 'edgeville', 'fresh_lumbridge', ['STALL_TICKS=0'], {presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 67, Strength: 25, Defence: 24, Hitpoints: 52, Woodcutting: 15}, inventory: Array.from({length: 8}, () => ({id: 385, count: 1})), bank: [{id: 1351, count: 1}, {id: 1521, count: 5}, {id: 995, count: 216372}]}}),
   // packages/practice/src/firemaking-order-proof.ts
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=15', 'LOG=normal', 'TOOL_BUDGET=0', 'CASH_RESERVE=0', 'CAP=2000', 'MAX_LOGS=2'], {presetConfig: firemakingFixture('entry')}),
+  // The mock Haggis run's fires (PROGRESSIVE=stock, CLEAR_PACK=1) at the two tier steps of its stock: logs to oak
+  // with the 17-slot starter kit in the pack, and oak to magic at 74 to 76. From the Draynor bank.
+  skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=20', 'PROGRESSIVE=stock', 'CLEAR_PACK=1', 'TOOL_BUDGET=0', 'CAP=1500'], {key: 'extra:firemaking-stock-low',
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, inventory: [590, 1351, 303, 1265, 1205, 1277, 1171, 841, 315, 2309].map(id => ({id, count: 1}))
+      .concat([{id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}, {id: 995, count: 25}]),
+      bank: [{id: 1511, count: 2}, {id: 1521, count: 3}]}}),
+  skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=76', 'PROGRESSIVE=stock', 'CLEAR_PACK=1', 'TOOL_BUDGET=0', 'CAP=1500'], {key: 'extra:firemaking-stock-high',
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Firemaking: 74}, inventory: [{id: 590, count: 1}], bank: [{id: 1521, count: 10}, {id: 1513, count: 3}]}}),
   // packages/practice/src/glass-supply-proof.ts `owned`
   skiller('crafting', 'glass', 'fresh_lumbridge', ['SUPPLY_MODE=1', 'MEMBERS=1', 'MAX_MAKE=1', 'MAX_SPEND=0', 'CASH_RESERVE=1000', 'CAP=4000'], {timeoutMs: 900_000, presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Crafting: 51, Hitpoints: 39}, varps: {160: 2}, inventory: [{id: 995, count: 17}, {id: 590, count: 1}, {id: 1775, count: 1}], equipment: [{id: 1205, count: 1, slot: 3}], bank: [{id: 995, count: 2000}, {id: 314, count: 23}, {id: 1775, count: 2}]}}),
   skiller('crafting', 'inventory', 'bank_gems', ['cut-dragonstone', 'MAX_MAKE=180', 'CAP=1100', 'MEMBERS=1']),
@@ -352,6 +378,8 @@ const ROUTE_CASES: BenchCase[] = [
   // tribrid switches, Fire Wave and freeze runes, 2 prayer potions, 18 sharks and full special energy. SPAR_A and SPAR_B
   // (--set) choose the profile of each side.
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
+  // The gang (scripts/pk-gang.ts): the snare kit against three dagger gang on their post tile.
+  gangCase('pvp:gang', 'tribrid-snare', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker']),
   // The mirror with Dragon Slayer not done: the loop must leave the rune platebody on, because the game does not let
   // such an account put it back.
   // Hill giants with Prayer 60: the prayer guard (packages/core/src/prayer-guard.ts) shows its counts in the
@@ -444,6 +472,42 @@ const ROUTE_CASES: BenchCase[] = [
   // The league for a fighter with three more sharks and no freeze runes.
   // The builds that beat the tribrid on food: four spars each against the melee build, the hybrid and the ranger.
   sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
+  // The dagger gang (research/pvp-fight-loop.md, "Rivals: the dagger gang") at its post, a single-way tile at
+  // Wilderness level 16: the snare kit against one of the gang, with its protect prayer and with none, and against
+  // the three at once. Side A takes its profile from the run (`--set SPAR_A=champion`).
+  sparMatrix('extra:spar-ganker-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker'], GANKER_POST),
+  sparMatrix('extra:spar-ganker-bare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker-bare'], GANKER_POST),
+  gangCase('extra:gang-ganker-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker']),
+  gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
+  // The same meeting for the kits with more food, and each kit against the most that the gang can be (`ganker-max`:
+  // potions and a full pack of sharks), with a cap that leaves time for the 1,677 HP of that gang.
+  // The kit gang-hunter fights on its own profile.
+  ...(['hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-${kit}-x4`, kit, 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', ...(kit === 'gang-hunter' ? ['SPAR_A=gang-hunter'] : [])])),
+  ...(['tribrid-snare', 'hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-x4`, kit, 'ganker-max', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_CAP=2400', ...(kit === 'gang-hunter' ? ['SPAR_A=gang-hunter'] : [])])),
+  // The edge of the Wilderness north of Edgeville (level 1, single-way): our account walks south over the edge when
+  // its food is gone, banks 25 tiles south and comes back, up to 6 meetings. The gang's food does not come back.
+  ...(['ganker-dds', 'ganker-max'] as const).map(gangKit => gangCase(`extra:gang-${gangKit === 'ganker-max' ? 'ganker-max' : 'ganker'}-edge-x4`, 'edge-hunter', gangKit, 4, GANG_EDGE,
+    ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeWalk":4}', 'SPAR_TRIPS=6', 'SPAR_CAP=6000'], 3, undefined, EDGE_BANK)),
+  // The same against the gang at its most with 8 sharks at the start: our account must go to the bank, where it takes a
+  // full pack.
+  gangCase('extra:gang-ganker-max-edge-trips-x4', 'edge-hunter', 'ganker-max', 4, GANG_EDGE,
+    ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeWalk":4}', 'SPAR_TRIPS=6', 'SPAR_TRIP_FOOD=24', 'SPAR_CAP=6000'], 3, 8, EDGE_BANK),
+  ...(['edge-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-x2`, kit, 'ganker-max', 2, GANG_EDGE,
+    ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeWalk":4}', 'SPAR_TRIPS=8', 'SPAR_TRIP_FOOD=24', 'SPAR_PRETRIP=1', 'SPAR_CAP=9000'], 3, undefined, EDGE_BANK)),
+  // The meeting at the post after a trip to the bank: the boosts drunk there, 25 sharks, one pack and no way back to the bank.
+  ...(['gang-hunter', 'gang-walker'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-prepot-x2`, kit, 'ganker-max', 2, GANKER_POST,
+    ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK)),
+  // The same meeting on a single-way tile 26 tiles from the bank, for a short walk: the fight is the same, and no
+  // option lets our account leave the Wilderness.
+  ...(['gang-hunter', 'gang-walker'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-prepot-near-x2`, kit, 'ganker-max', 2, GANG_EDGE,
+    ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK)),
+  // The same against the gang that holds its protect prayer.
+  gangCase('extra:gang-ganker-max-gang-walker-sticky-near-x2', 'gang-walker', 'ganker-max', 2, GANG_EDGE, ['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
+  // The way out, with the gang on our account. `escape`: 3 sharks and a glory in the pack; out of food at 60 HP or
+  // less it rubs the glory. `escape-worn`: the kit gang-hunter with 3 sharks against the gang at its most; it takes
+  // the glory off its neck and rubs it. A case passes when all four accounts get away.
+  {...gangCase('extra:gang-ganker-escape-x4', 'runner', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A_OPTS={"escapeAt":60}']), pass: s => ok(s) && / escaped=4 /.test(s)},
+  {...gangCase('extra:gang-ganker-escape-worn-x4', 'gang-hunter', 'ganker-max', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter'], 3, 3), pass: s => ok(s) && / escaped=4 /.test(s)},
   // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
   // its kit in the bank; the target stands at the first hunt spot with no food.
   // `auto` has the snare stock and names no kit: at the first hunt spot (Wilderness level 3) the hunter must pick the
@@ -511,6 +575,16 @@ const ROUTE_CASES: BenchCase[] = [
   // tutorial: no bank visit before the quest, then the walk to the Draynor bank for the last check.
   {key: 'extra:cook-job-spawn', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3222, z: 3218, level: 0}, coins: 25, inventory: [1351, 590, 303, 315, 1925, 1931, 2309, 1265, 1205, 1277, 1171, 841].map(id => ({id, count: 1})), varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // Scorpion Catcher on an account with no Barcrawl (%barcrawl 0), with the coins and runes that the sweep stages for
+  // it (scripts/quest-sweep.ts SCORPION_BARCRAWL): the guard talks at the outpost gate, and the Barcrawl runs first.
+  // Seed 9 fails at scorpion C, which stands on a tile that the player cannot reach (research/aio-bench.md).
+  {key: 'extra:scorpion-with-barcrawl', script: 'scripts/aio-quester.ts', preset: 'quest_scorpion', scriptArgs: ['scorpion', 'CAP=4000'], pass: ok, timeoutMs: 900_000,
+    presetConfig: (() => {
+      const p = PRESETS.quest_scorpion!, extra = new Map([[995, 268], [563, 3], [556, 11], [555, 1], [554, 1]]);
+      const inventory = (p.inventory ?? []).map(i => ({...i, count: i.count + (extra.get(i.id) ?? 0)}));
+      for (const [id, count] of extra) if (!inventory.some(i => i.id === id)) inventory.push({id, count});
+      return {...p, varps: {...p.varps, 77: 0}, inventory};
+    })()},
   // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
   {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},
@@ -541,6 +615,52 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'quester:mode:sweep', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['sweep', 'cook'], pass: ok},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
+];
+
+// Routes that do the same job, each from one start state (research/aio-bench.md, "Routes that do the same job").
+// A route that ends at a unit count shows its speed in its ticks. A route with no unit count ends at a tick cap and
+// shows its amount in `output`. A group needs seeds 1, 2 and 3. Beside the live fleet, run one case for each call:
+// `bun scripts/measure/same-job-bench.ts extra:same-cook-food 1`.
+const SAME_COOK = (bank: {x: number; z: number}): SaveConfig => ({position: {...bank, level: 0}, skills: {Cooking: 70}, bank: [{id: 335, count: 250}]});
+const SAME_JEWEL: SaveConfig = {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 50}, bank: [{id: 1592, count: 1}, {id: 2357, count: 26}, {id: 1607, count: 26}]};
+const SAME_FISH: SaveConfig = {position: {x: 2840, z: 3432, level: 0}, skills: {Fishing: 70}, inventory: [{id: 301, count: 1}]};
+const SAME_MINE = (x: number, z: number): SaveConfig => ({position: {x, z, level: 0}, skills: {Mining: 20, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1269, count: 1}]});
+const VARROCK_EAST = {bank: {x: 3253, z: 3420, level: 0}, site: {x: 3286, z: 3368, level: 0}};
+const sameJob = (name: string, args: string[], presetConfig: SaveConfig, output: RegExp, extra: Partial<BenchCase> = {}): BenchCase =>
+  ({key: `extra:same-${name}`, script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: args, pass: ok, presetConfig, output, ...extra});
+const SAME_JOB_CASES: BenchCase[] = [
+  // Cook raw trout from the bank at Cooking 70: 250 raw trout banked, an empty pack, the start at the bank of the
+  // route. `food` (Catherby range) has no unit count and runs to a cap of 450 ticks. `stock` (Draynor fireplace) and
+  // the bank job of the `batch` worker (Catherby range) cook 84, three packs, and end.
+  sameJob('cook-food', ['cooking', 'food', '450', 'trout'], SAME_COOK({x: 2809, z: 3441}), /cookedTotal=(\d+)/),
+  sameJob('cook-stock', ['cooking', 'stock', '1500', 'COOK_ROUTE=near', 'RAW_RESERVE=50', 'MAX_COOK=84'], SAME_COOK({x: 3092, z: 3243}), / banked=(\d+)/, {pass: s => ok(s) && / processed=84 banked=84 /.test(s)}),
+  sameJob('cook-bankjob', ['bank-job', '.practice/aio-bench/jobs/{bot}-same-cook.json'], SAME_COOK({x: 2809, z: 3441}), /"completed":(\d+)/, {pass: s => ok(s) && /"completed":84/.test(s),
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-same-cook.json': {family: 'cooking', recipe: 'cooking_generic_trout', target: 84, batch: 28, cap: 1500, returnTicks: 300, members: true, bank: {x: 2809, z: 3441, level: 0}, site: {x: 2816, z: 3443, level: 0}, heat: 'range'}}}),
+  // 26 sapphire rings from the Al Kharid bank at Crafting 50: a ring mould, 26 gold bars and 26 sapphires banked,
+  // 13 rings a pack. `legacy-jewelry` has no unit count and runs to a cap of 400 ticks; `jewellery-trip` makes 26 and ends.
+  sameJob('jewel-legacy', ['crafting', 'legacy-jewelry', '400', 'smelt', 'sapphire'], SAME_JEWEL, /crafted=(\d+)/, {timeoutMs: 60_000,
+    known: 'the smelt action of scripts/craft-jewelry.ts does not end: the furnace distance test at line 117 is always true, and the loop holds about 1 GB until the time limit'}),
+  sameJob('jewel-trip', ['crafting', 'jewellery-trip', '.practice/aio-bench/jobs/{bot}-same-jewel.json'], SAME_JEWEL, /"made":(\d+)/, {pass: s => ok(s) && /"made":26,"banked":26/.test(s),
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-same-jewel.json': {recipe: 'sapphire_ring', target: 26, batch: 13, cap: 1500, returnTicks: 200, reserve: 0, members: false, stringAmulet: false, bank: {x: 3269, z: 3167, level: 0}, furnace: {x: 3275, z: 3186, level: 0}}}}),
+  // Lobsters at the Catherby cage spots at Fishing 70, from the beach with a lobster pot and an empty pack, no bank
+  // trip. `cage` has no unit count and runs to a cap of 150 ticks; `staged` catches 15 and ends.
+  // The harpoon pair is the same start with a harpoon: tuna and swordfish from the same spots.
+  ...([['cage', 301], ['harpoon', 311]] as const).flatMap(([method, tool]) => {
+    const start = {...SAME_FISH, inventory: [{id: tool, count: 1}]};
+    return [sameJob(`fish-${method}-gather`, ['fishing', method, method, '150'], start, /totalCaught=(\d+)/),
+      sameJob(`fish-${method}-staged`, ['fishing', 'staged', method, '15', '600'], start, /"caught":(\d+)/, {pass: s => ok(s) && /"caught":15/.test(s)})];
+  }),
+  // 26 ores from the Varrock east mine to its bank at Mining 20 with a steel pickaxe, the start at the bank. `ore`
+  // mines copper, tin and iron in turn and banks one pack of 26. `progressive` mines iron and keeps two pack slots
+  // for each ore, so it banks two packs of 13. `at-site` is the mining step of `progressive` alone: 26 iron ores from
+  // a start at the rocks, with no bank trip.
+  sameJob('mine-ore', ['mining', 'ore', '1500', '26', 'MAX_TRIPS=1'], SAME_MINE(VARROCK_EAST.bank.x, VARROCK_EAST.bank.z), / banked=(\d+)/, {pass: s => ok(s) && / banked=26 /.test(s)}),
+  sameJob('mine-progressive', ['mining', 'progressive', '.practice/aio-bench/jobs/{bot}-same-mine.json'], SAME_MINE(VARROCK_EAST.bank.x, VARROCK_EAST.bank.z), /"made":(\d+)/, {pass: s => ok(s) && /"made":26/.test(s),
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-same-mine.json': {maximum: 26, batch: 26, cap: 1500, returnTicks: 200, travelTicks: 200, members: false, mode: 'bank', routes: [{profile: 'iron_rock_table', ...VARROCK_EAST, tool: 1269}]}}}),
+  sameJob('mine-at-site', ['mining', 'at-site', 'iron_rock_table', '26', '1000'], SAME_MINE(VARROCK_EAST.site.x, VARROCK_EAST.site.z), /"made":(\d+)/, {pass: s => ok(s) && /"made":26/.test(s)}),
+  // Knights of Ardougne for 600 ticks at Thieving 99 and Hitpoints 10, with 20 lobsters in the pack (preset
+  // goldfarm_knights) and a bank trip only at 50,000 coins.
+  ...(['knights', 'knights-stable'] as const).map(method => sameJob(method, ['thieving', method, 'TICKS=600', 'BANK_AT=50000'], PRESETS.goldfarm_knights!, /coinsGained=(\d+)/)),
 ];
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
@@ -616,6 +736,10 @@ const EXTRA_CASES: BenchCase[] = [
   // Magic 19 to 21 over the fence of the cow field.
   skiller('magic', 'alch-train', 'fresh_lumbridge', ['56', '1500'],
     {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}}),
+  // The record route opening (rune.fast step 1, 135 ticks with the tutorial and a trade): Magic 1 to 8 from the
+  // starter runes at the Lumbridge coop, from the Lumbridge spawn.
+  skiller('magic', 'splash-coop', 'fresh_lumbridge', ['8', '600'],
+    {presetConfig: {inventory: [{id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}]}}),
   skiller('magic', 'splash', 'fresh_lumbridge', ['21', '1500'],
     {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}}),
   // Underground Pass and Regicide on the halberd pure (Ranged 99, Prayer 43, Defence 1): nothing worn, a magic
@@ -668,6 +792,7 @@ const EXTRA_CASES: BenchCase[] = [
       ...(KITS[kit]!.noRoute ? {known: KITS[kit]!.noRoute, scriptArgs: ['magearena', 'MA_MODE=leash']} : {}),
       presetConfig: {...preset, skills: before, ...(KITS[kit]!.noRoute ? {inventory: sharks} : {})}};
   }),
+  ...SAME_JOB_CASES,
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {

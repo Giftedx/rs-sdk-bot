@@ -127,7 +127,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'crafting',method:'bowstrings',script:'scripts/spin-bowstrings.ts',description:'Spin flax into bowstrings at Seers/Lumbridge wheel'},
  {skill:'crafting',method:'jewellery',script:'scripts/microbot-b-jewellery.ts',description:'Craft rings, necklaces, and amulets at furnace'},
  {skill:'crafting',method:'jewellery-trip',script:'scripts/microbot-jewellery-trip.ts',description:'Full bank-to-furnace jewellery crafting trip'},
- {skill:'crafting',method:'legacy-jewelry',script:'scripts/craft-jewelry.ts',description:'Legacy furnace jewelry crafting'},
+ {skill:'crafting',method:'legacy-jewelry',script:'scripts/craft-jewelry.ts',description:'Gem cutting at the Al Kharid bank (action cut). The smelt action does not end (bench case extra:same-jewel-legacy): use jewellery-trip for furnace jewellery'},
  {skill:'crafting',method:'glass',script:'scripts/microbot-glass.ts',description:'Smelt soda ash + sand into molten glass and blow glass items'},
  {skill:'crafting',method:'tanning',script:'scripts/microbot-c-tanner.ts',description:'Tan cowhide and dragonhides at Al Kharid tanner'},
  {skill:'crafting',method:'black-dhide-sets',script:'scripts/black-dhide-sets.ts',description:'Tan banked black dragonhide at Al Kharid and craft body, chaps and vambraces sets at the bank'},
@@ -154,6 +154,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'magic',method:'earth-production',script:'scripts/earth-production.ts',description:'Earth rune production for magic/superheat'},
  {skill:'magic',method:'alch-train',script:'scripts/alch-train.ts',description:'Alchemy on a cheap stackable item at the Ardougne north bank: Low Alchemy to Magic 55, then High Alchemy to the target level'},
  {skill:'magic',method:'splash',script:'scripts/splash-train.ts',description:'Curse casts over the fence of the Ardougne cow field to the target Magic level'},
+ {skill:'magic',method:'splash-coop',script:'scripts/splash-train.ts',defaultEnv:{SPLASH_SITE:'coop'},description:'The record route opening: Wind Strike and Confuse from the starter pack at the Lumbridge coop, no bank'},
  // Prayer
  {skill:'prayer',method:'bury',script:'scripts/train-prayer.ts',description:'Bury bones / big bones / dragon bones to target Prayer level'},
  {skill:'prayer',method:'flick',script:'scripts/microbot-prayer-flick.ts',description:'1-tick prayer flicking upkeep'},

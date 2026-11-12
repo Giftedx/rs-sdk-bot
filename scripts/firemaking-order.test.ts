@@ -5,7 +5,7 @@ import * as ticks from '../packages/core/src/ticks';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {firemakingOptions,firemakingPreflight,xpForLevel,levelForXp,logShortfall,lineTiles,nextFreeTile,rowStart,packWant,
  tinderboxPlan,tinderboxUnitMax,runFiremaking,freeRouteAccount,routeDebits,entryBudget,BURN_ROWS,DRAYNOR_BANK,TINDERBOX,
- firemakingSite,CATHERBY_SITE,DRAYNOR_SITE,LOGS,progressiveFiremakingLog} from './firemaking-order';
+ firemakingSite,CATHERBY_SITE,DRAYNOR_SITE,LOGS,progressiveFiremakingLog,progressiveStockLog} from './firemaking-order';
 import type {Leg} from '../packages/core/src/world';
 import type {Travel} from '../packages/core/src/travel';
 
@@ -29,11 +29,11 @@ test('all six native logs have exact level admission, while progressive selects 
  expect(()=>firemakingOptions({TARGET_LEVEL:'99',PROGRESSIVE:'1',BATCH:'28'})).toThrow();
 });
 test('actual progressive burn loop reselects after the bounded paid batch; unavailable next tier never burns a lower log',async()=>{
- const run=async(maple:number,replace=false,bad:'none'|'stock'|'unknown'='none',burnOnly=false)=>{
+ const run=async(maple:number,replace=false,bad:'none'|'stock'|'unknown'='none',burnOnly=false,stock?:{willow:number;maxLogs:number})=>{
   let tick=0,generation=0,open=false,pending=0;const burns:number[]=[],withdrawals:number[]=[];
   const player={worldX:2809,worldZ:3441,level:0,lifeId:1,respawnCount:0,isDead:false};
   const skill={name:'Firemaking',level:burnOnly?99:44,baseLevel:burnOnly?99:44,experience:xpForLevel(burnOnly?99:45)-1},health={name:'Hitpoints',level:99,baseLevel:99,experience:10000};
-  const bank=[{id:1519,count:2,name:'Willow logs'},...maple?[{id:1517,count:maple,name:'Maple logs'}]:[]],inv:any[]=[{id:590,count:1,slot:0,name:'Tinderbox'}];
+  const bank=[{id:1519,count:stock?.willow??2,name:'Willow logs'},...maple?[{id:1517,count:maple,name:'Maple logs'}]:[]],inv:any[]=[{id:590,count:1,slot:0,name:'Tinderbox'}];
   const client={executeBotAction:async()=>{},membersAccount:true};
   const state=()=>({player,inventory:inv,equipment:[],skills:[skill,health],gameMessages:[],nearbyLocs:[],bank:{isOpen:open,items:bank},dialog:{isOpen:false},interface:{isOpen:false}});
   const s:any={name:'progressivefixture',client,tick:()=>tick,onTick:()=>()=>{},ended:new Promise(()=>{}),bankObservation:()=>({generation,items:bank}),
@@ -42,7 +42,7 @@ test('actual progressive burn loop reselects after the bounded paid batch; unava
    bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};},withdrawItem:async(row:any,n:number)=>{withdrawals.push(row.id);row.count-=n;for(let i=0;i<n;i++)inv.push({id:row.id,count:1,name:row.name,slot:inv.length});generation++;return{success:true};}}};
   const advance=()=>{tick++;if(pending&&bad!=='unknown'){const index=inv.findIndex(i=>i.id===pending);inv.splice(index,1);skill.experience+=pending===1519?90:135;skill.baseLevel=skill.level=burnOnly?99:45;pending=0;if(bad==='stock')inv.push({id:995,count:1,name:'Coins',slot:2});if(replace)client.executeBotAction=async()=>{};}};
   const spies=[spyOn(BotActions.prototype,'openBank').mockImplementation(s.bot.openBank),spyOn(BotActions.prototype,'closeBank').mockImplementation(s.bot.closeBank),spyOn(BotActions.prototype,'withdrawItem').mockImplementation(s.bot.withdrawItem),spyOn(ticks,'waitTicks').mockImplementation(async()=>{advance();}),spyOn(ticks,'waitUntil').mockImplementation(async(_s,test)=>{for(let i=0;i<4;i++){if(test(undefined))return true;advance();}return false;}),spyOn(walking,'sessionWalker').mockResolvedValue({}as any),spyOn(walking,'walkPath').mockImplementation(async(_d,points)=>{const p=points.at(-1)!;player.worldX=p.x;player.worldZ=p.z;return{ok:true}as any;})];
-  try{return{result:await runFiremaking(s,firemakingOptions({TARGET_LEVEL:'99',MAX_LOGS:'2',PROGRESSIVE:burnOnly?'0':'1',LOG:burnOnly?'willow':'normal',BURN_ONLY:burnOnly?'1':'0',BATCH:'1',TOOL_BUDGET:'0'})),burns,withdrawals,bank};}finally{for(const spy of spies)spy.mockRestore();}
+  try{return{result:await runFiremaking(s,firemakingOptions({TARGET_LEVEL:'99',MAX_LOGS:String(stock?.maxLogs??2),PROGRESSIVE:burnOnly?'0':stock?'stock':'1',LOG:burnOnly?'willow':'normal',BURN_ONLY:burnOnly?'1':'0',BATCH:'1',TOOL_BUDGET:'0'})),burns,withdrawals,bank};}finally{for(const spy of spies)spy.mockRestore();}
  };
  const at99=await run(0,false,'none',true);expect(at99.result.ok).toBe(true);expect(at99.burns).toEqual([1519,1519]);expect(at99.result.level).toBe(99);
  const good=await run(1);expect(good.result.ok).toBe(true);expect(good.burns).toEqual([1519,1517]);expect(good.withdrawals).toEqual([1519,1517]);expect(good.result.ticks).toBe(6);
@@ -50,6 +50,8 @@ test('actual progressive burn loop reselects after the bounded paid batch; unava
  const foreign=await run(1,true);expect(foreign.result.ok).toBe(false);expect(foreign.burns).toEqual([1519]);expect(foreign.withdrawals).toEqual([1519]);
  const drift=await run(1,false,'stock');expect(drift.result.ok).toBe(false);expect(drift.result.failure).toContain('whole-pack');expect(drift.burns).toEqual([1519]);
  const unknown=await run(1,false,'unknown');expect(unknown.result.ok).toBe(false);expect(unknown.result.failure).toContain('light effect unobserved');expect(unknown.burns).toEqual([1519]);
+ // PROGRESSIVE=stock with exactly the stock the work needs: the last log meets MAX_LOGS, and the empty stock that follows is not a failure.
+ const exact=await run(0,false,'none',false,{willow:1,maxLogs:1});expect(exact.result.ok).toBe(true);expect(exact.result.stop).toBe('max-logs');expect(exact.burns).toEqual([1519]);
 });
 test('XP table matches the server curve (Player.ts levelExperience)',()=>{
  expect([2,10,30,48].map(xpForLevel)).toEqual([80,980,7345,28266]);
@@ -199,4 +201,32 @@ test('the default distant entry walks a zero-fare route inside the CAP remainder
  const slow=await run({legs:free,cost:1921});
  expect(slow.calls).toEqual([]);
  expect(slow.r).toMatchObject({stop:'refused',refused:'route to Draynor bank estimates 1921 ticks, entry budget 1920',bankTrips:0});
+});
+
+test('PROGRESSIVE=stock burns the highest held tier the level allows: logs to 15, oak to 75, then magic', () => {
+    const stock = (have: Record<number, number>) => (id: number) => have[id] ?? 0;
+    const rehearsal = stock({[LOGS.normal.id]: 2, [LOGS.oak.id]: 130, [LOGS.magic.id]: 107});
+    expect(progressiveStockLog(1, rehearsal)).toBe('normal');
+    expect(progressiveStockLog(15, rehearsal)).toBe('oak');
+    expect(progressiveStockLog(30, rehearsal)).toBe('oak');
+    expect(progressiveFiremakingLog(30)).toBe('willow');
+    expect(progressiveStockLog(74, rehearsal)).toBe('oak');
+    expect(progressiveStockLog(75, rehearsal)).toBe('magic');
+    // Magic logs gone below 99: the run falls back to the oak that is left.
+    expect(progressiveStockLog(98, stock({[LOGS.oak.id]: 3}))).toBe('oak');
+    expect(progressiveStockLog(10, stock({[LOGS.oak.id]: 3}))).toBeUndefined();
+    expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'stock'})).toMatchObject({progressive: true, stock: true, batch: 27});
+    expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: '1'}).stock).toBeUndefined();
+    expect(() => firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'yes'})).toThrow('invalid PROGRESSIVE');
+    expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'stock', CLEAR_PACK: '1'}).clearPack).toBe(true);
+    expect(firemakingOptions({TARGET_LEVEL: '99'}).clearPack).toBeUndefined();
+    expect(() => firemakingOptions({TARGET_LEVEL: '99', CLEAR_PACK: 'yes'})).toThrow('invalid CLEAR_PACK');
+});
+
+test('the rehearsal stock reaches Firemaking 99 with one spare magic log of XP (25 times rates)', () => {
+    const xp = 2 * 1000 + 130 * 1500 + 107 * 7595;
+    expect(xp).toBeGreaterThanOrEqual(xpForLevel(99));
+    expect(xp - 7595).toBeGreaterThanOrEqual(xpForLevel(99));
+    expect(2 * 1000).toBeGreaterThanOrEqual(xpForLevel(15));
+    expect(2 * 1000 + 125 * 1500).toBeGreaterThanOrEqual(xpForLevel(75));
 });

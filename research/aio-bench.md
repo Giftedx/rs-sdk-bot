@@ -84,6 +84,35 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 **Claim:** each of the 69 quest cases passes at seeds 7, 8 and 9. A run of all 69 at seeds 8 and 9 found four that passed at seed 7 and failed at seed 9. Each had a cause in the game rules, not in the roll alone: `fluffs` (a route through a crate npc that the engine refuses), `eadgar` (thrower trolls on the plateau path, 99 to 47 hp with no prayer), `legends` (the bowl blessing fails 98 in 100 at 99 prayer points and 59 in 100 at 42, `gujuo.rs2`), `mm` (the monkey minder walks away from the cage for more than 100 ticks). **Conditions:** lockstep, a new engine for each case. **Evidence:** `bun run bench '^quester:quest:' --all --seeds 8,9`; then each of the four at `--seeds 7,8,9` after its change: `fluffs` 327, 322, 374 ticks; `eadgar` 1987, 2049, 1988; `legends` 4330, 3708, 4202; `mm` 4620, 4571, 4371. **Gap:** the other 65 quests ran at seeds 8 and 9 before these four changes and at seed 7 for the baseline, not in one run of three seeds; three seeds do not prove a quest safe at every roll.
 
+## Planner quest rows
+
+**Claim:** 20 single-quest rows of the planner (`packages/planner/src/haggis-boards.json`) hold the lockstep ticks of their bench case: the floor is the best of seeds 7, 8 and 9, and the realistic value is the worst. With these rows the modelled Overall finish is 38,086 ticks at floor rates and 40,842 at realistic rates (`bun packages/planner/src/haggis-cli.ts`, scenario a). **Conditions:** lockstep, a new engine for each case, three engines at a time; each case starts from the preset that its row names. **Evidence:** `bun run bench '^quester:quest:(<the cases below>)$' --parallel 3 --seed <7, 8 or 9>`; rows in `.practice/aio-bench/planner-rows-s7.json`, `planner-rows-s8.json` and `planner-rows-s9.json`:
+
+| Row | Case | Seed 7 | Seed 8 | Seed 9 |
+|---|---|---|---|---|
+| `cooks-assistant` | `cook` | 8 | 8 | 8 |
+| `crest` | `crest` | 1,040 | 1,078 | 1,036 |
+| `waterfall` | `waterfall` | 1,112 | 1,101 | 1,103 |
+| `tree` | `tree` | 734 | 639 | 653 |
+| `grandtree` | `grandtree` | 1,739 | 1,720 | 1,715 |
+| `druid` | `druid` | 208 | 208 | 208 |
+| `gobdip` | `gobdip` | 124 | 126 | 126 |
+| `rj` | `rj` | 256 | 265 | 262 |
+| `witch` | `ball` | 434 | 382 | 435 |
+| `dragon` | `dragon` | 1,330 | 1,355 | 1,305 |
+| `barcrawl` | `barcrawl` | 1,385 | 1,384 | 1,386 |
+| `cannon` | `dwarfcannon` | 754 | 756 | 763 |
+| `merlin` | `merlin` | 712 | 703 | 718 |
+| `grail` | `grail` | 1,316 | 1,233 | 1,264 |
+| `dig` | `dig` | 1,374 | 1,968 | 1,477 |
+| `quest-zanaris` | `zanaris` | 700 | 624 | 810 |
+| `rival-fight-arena` | `arena` | 502 | 526 | 500 |
+| `rival-mm` | `mm` | 4,347 | 4,539 | 4,588 |
+| `rival-seaslug` | `seaslug` | 348 | 344 | 346 |
+| `scorpion` | `scorpion` | 886 | 891 | 910 |
+
+**Gap:** `extra:scorpion-with-barcrawl` (no Barcrawl: the guard talks at the outpost gate, and the Barcrawl runs first) passes at seeds 7 and 8 in 2,304 and 2,278 ticks. At seed 9 scorpion C stands at 3059,3486 upstairs in the Monastery for more than 200 ticks, the SDK marks it unreachable, and the cage gets "I can't reach that!" (`RESULT fail step catch c`). The `arrav` case runs one account, and the `quest-arrav` row is the pair run, so that row is not changed. `dig` spreads from 1,374 to 1,968 ticks and `zanaris` from 624 to 810. A wall-clock engine at 400 ms a tick read 1.7% above lockstep on two quests (Lockstep engine, above); the rows do not add that.
+
 ## The Flamtaer temple repair
 
 **Claim:** one Repair click repeats by itself every 3 ticks (`p_oploc(3)`), and a wall goes up one level for each attempt that succeeds once the build total is past the step for its level. A bot that stays on one wall until level 10 and buys its building sets in one trip rebuilds the temple faster than a bot that clicks the lowest wall after each level: `mortton` takes 1124, 1041 and 1118 ticks at seeds 7, 8 and 9, against 1506 at seed 7 with the lowest-wall order and three trips of two sets. Swamp paste stacks, so a set takes two pack slots. **Conditions:** lockstep, `quester:quest:mortton`, Crafting 99. **Evidence:** `flamtaer_temple.rs2:18-158`; `scripts/generated/quest-mortton.ts`; `bun run bench '^quester:quest:mortton$' --all --seeds 7,8,9`. **Gap:** the pack holds seven sets and the temple needs about eight, so one late trip remains (about 60 ticks); the rival states 944 ticks; no shade attacked the walls in these runs.
@@ -103,7 +132,6 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 ## A skill case must run long enough to be a rate
 
 **Claim:** a skill case that does one unit of work gives an XP figure for each 1,000 ticks that is not a rate: `cooking:wine` shows 82500000 from a run of 20 ticks. A case of about 1,000 ticks gives a rate that a change to the route can be judged against. Five default routes run that long with a target that the worker reaches before its cap: `woodcutting:yews` 1023 ticks, 37 logs, 158236 XP for each 1,000 ticks; `crafting:inventory` 941 ticks, 180 gems, 657545; `herblore:potions` 598 ticks, 92 potions, 336538; `prayer:bury` 128 ticks, 55 bones, 48336. **Conditions:** lockstep, seed 7, XP rate 25, the level and stock of each case's start state. **Evidence:** `scripts/measure/aio-bench-cases.ts`; the `RESULT` line of each run. `mining:ore` runs three full trips: 669 ticks, 81 ores. **Gap:** `firemaking:order`, `magic:order` and `agility:order` are short; a worker reports a fail when its cap ends before its target, so a rate case needs a target inside the cap; one seed.
-||||||| c6df874f8
 
 ## A level-up window cost the miner 60 ticks each time
 
@@ -120,3 +148,21 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 ## A preset food entry with a count is one slot
 
 **Claim:** an inventory entry `{id: 379, count: 20}` in a preset is one slot that holds 20 lobsters. The server eats with `inv_delslot` (`consume_effects.rs2`), so one eat deletes all 20. A trace of the hill giant fight shows `hp=11 food=20` and then `hp=22 food=0`, and the bot dies. Food that a bot eats needs one entry for each piece. A script that uses `inv_del(inv, obj, 1)`, as cooking does, takes one piece from such a slot, so a preset with 28 raw fish in one entry is not affected. **Conditions:** lockstep, seed 1, `extra:giant-eat-guard`, `EAT_TRACE=1`. **Evidence:** the `EAT_TRACE` lines of the case with one entry of count 20. **Gap:** quest presets keep their entries with a count: a quest that needs more than 28 slots when each piece has its own slot was not checked.
+
+## Routes that do the same job
+
+Seven groups of catalog routes look like one job. The cases `extra:same-*` in `scripts/measure/aio-bench-cases.ts` give the routes of a group one start state: the same levels, pack and bank, and the start at the bank or the site of the route. A route that ends at a unit count shows its speed in its ticks. A route with no unit count runs to a tick cap and shows its amount. `bun scripts/measure/same-job-bench.ts <case> <seed>` runs one case when the PC has room for a practice engine. Each result below is one run at seed 1. No group has the three seeds that a winner needs, so no route is named the best.
+
+**Claim:** `cooking:food`, `cooking:stock` and the bank job of the `cooking:batch` worker all cook banked raw fish, at 201 to 248 trout for each 1,000 ticks. `food` cooks at the Catherby range and has no unit count. `stock` cooks trout and salmon only, at the Draynor fireplace. `batch` alone cooks one pack at the heat and does not bank; `aio-skiller bank-job` with `family: cooking` gives it the bank trip. **Conditions:** lockstep, seed 1, one run, Cooking 70, 250 raw trout banked, an empty pack, the start at the bank of the route; `stock` and the bank job cook 84 (three packs), `food` runs to a cap of 450 ticks. **Evidence:** `extra:same-cook-food` 112 trout in 451 ticks (four packs, 248 for each 1,000 ticks); `extra:same-cook-stock` 84 in 354 ticks (237); `extra:same-cook-bankjob` 84 in 417 ticks (201). A pack takes 117 ticks with `stock` and 138 with the bank job (`MILESTONE` and `BANK_JOB_PHASE` lines, `.practice/same-job/logs/extra_same-cook-*-s1.log`). **Gap:** seeds 2 and 3 are not run. The `food` run ends at a cap and the other two at a count. The two places differ, so the 5% between `food` and `stock` is the place and the worker together. Lobster, swordfish and shark are not measured: `stock` does not cook them.
+
+**Claim:** `thieving:knights` and `thieving:knights-stable` are one job, and one run does not separate them: 15.9 against 15.6 coins a tick. **Conditions:** lockstep, seed 1, one run, preset `goldfarm_knights` (Thieving 99, Hitpoints 10, 20 lobsters in the pack, 40 banked), `TICKS=600`, `BANK_AT=50000`. **Evidence:** `extra:same-knights` 9,550 coins in 600 ticks, 203 picks, 12 fails, 6 lobsters eaten, no bank trip; `extra:same-knights-stable` 9,900 coins in 636 ticks, 211 picks, 13 fails, 5 eaten, and one bank trip at the end that banks the coins (`.practice/same-job/logs/extra_same-knights*-s1.log`). **Gap:** seeds 2 and 3 are not run. One run for each route does not show whether the 8 picks of difference are the worker or the rolls. The 36 ticks that `knights-stable` runs past `TICKS` are its bank trip; `knights` ends with the coins in the pack.
+
+**Claim:** the `smelt` action of `crafting:legacy-jewelry` does not end. `scripts/craft-jewelry.ts:117` tests `pos()?.worldX ?? 0 - FURNACE_SPOT.x`. `??` binds after `-`, so the value is the x coordinate itself and the test "far from the furnace" is always true. At the furnace the walk returns at once with no tick wait, and the loop turns with no pause: the script reads no more ticks, so its cap does not end it. Its `cut` action cuts gems at the bank and uses no furnace. `crafting:jewellery-trip` is the route for banked furnace jewellery; `crafting:jewellery` is its furnace step with the bars, gems and mould staged in the pack. **Conditions:** lockstep, seed 1, one run, Crafting 50, a ring mould, 26 gold bars and 26 sapphires banked at Al Kharid, `legacy-jewelry 400 smelt sapphire`, a 60 s limit. **Evidence:** `extra:same-jewel-legacy` fails with no `RESULT` line; its output ends at `START jewelry crafter ... action=smelt` (`.practice/same-job/logs/extra_same-jewel-legacy-s1.log`), and the worker process held about 1 GB while the loop turned. **Gap:** `extra:same-jewel-trip` (26 sapphire rings from the same bank) is not run, so `jewellery-trip` has no tick count here. The legacy case is not run at seeds 2 and 3: the cause is not a roll, and each run holds about 1 GB for its 60 s.
+
+**Claim:** `fishing:cage` and `fishing:harpoon` (`scripts/gather-fish.ts`) and `fishing:staged` share the catch at a spot and differ in the click. `gather-fish` sends the spot click again after each catch and banks a full pack. `staged` sends one click for each spot, keeps it while the spot stays, and does not bank. **Conditions:** the cases `extra:same-fish-cage-gather`, `-cage-staged`, `-harpoon-gather` and `-harpoon-staged`: Fishing 70, the Catherby beach, the tool and an empty pack; `gather-fish` runs to a cap of 150 ticks, `staged` catches 15. **Evidence:** `scripts/gather-fish.ts:239-254`; `scripts/microbot-b-fishing.ts:120-122`. **Gap:** none of the four cases is run, so the cost of the repeated click is not known.
+
+**Claim:** `mining:ore` and `mining:progressive` in `bank` mode are one job with two differences. `ore` mines copper, tin and iron in turn and banks a pack of up to 27. `progressive` mines the best rock of the Mining level, and its bank job keeps two pack slots for each ore (`capacityOutputs`, `scripts/microbot-bank-jobs.ts:70`), so it banks 13 ores a trip. `mining:at-site` is the mining step of `progressive` with no bank trip. **Conditions:** the cases `extra:same-mine-ore`, `-progressive` and `-at-site`: Mining 20, a steel pickaxe, 26 ores from the Varrock east mine, the start at its bank (`at-site`: at the rocks). **Evidence:** `scripts/gather-ore.ts:22-30`, `:300-304`; `scripts/microbot-mining-progressive.ts:24-27`. **Gap:** none of the three cases is run, so the ticks of the second trip are not measured.
+
+**Claim:** `cooking:wine` and `cooking:mixed-wine` are not one job, and no start state runs both. `scripts/cook-wine.ts` ferments jugs of unfermented wine that the account holds: raw in the bank and as notes in the pack. `scripts/microbot-wine.ts` makes the jugs from grapes and jugs of water, and refuses to start when the bank or the pack holds a jug of unfermented wine. **Evidence:** `scripts/cook-wine.ts:12-42`; `scripts/microbot-wine.ts:26-31`. **Gap:** the two have no matched case.
+
+**Claim:** `magic:items` and `magic:alch-train` are not rivals. The cast loop of `alch-train` is `runItemMagic` of `scripts/microbot-magic-items.ts`. `alch-train` adds the bank stage at Ardougne north, the Wind Strike start below Magic 21 and the level target. `items` casts a count on staged inputs and does not bank. **Evidence:** `scripts/alch-train.ts:14`, `:154`. **Gap:** the ticks of the bank stage are not measured.

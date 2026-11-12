@@ -896,6 +896,219 @@ fights of this set.
   `low-ranger`. `low-addy`, with 8 to 13 more combat levels, won 4 of 9.
 - Gap: 3 fights for each pair outside the head-to-head case. The low bracket has 4 builds and 18 fights.
 
+## Rivals: the dagger gang
+
+Goondelf, Ligma and Sugma are accounts of another owner. They hunt every player in their combat range in the
+Wilderness with dragon daggers. Sources: the world feed (`wss://rs-sdk-demo.fly.dev/worldfeed`; a record of 63
+minutes is `.practice/rival-dds/trace-3.jsonl` in the main checkout), the hiscore pages (`hs-<name>.html` in that
+folder) and one earlier feed record of Goondelf (`goondelf-fordmine4.txt`). `scripts/measure/pk-rival-feed.ts`
+makes such a record (`record`) and prints its fights and the numbers that the bench copies (`digest`), so a longer
+record checks the copy again.
+
+What the sources show:
+
+- **Levels.** Attack, Strength, Defence and Hitpoints 99; Prayer 99 (Goondelf) or 90 (Ligma, Sugma); Magic 37 or 28;
+  no Ranged level. Combat 126 and 125.
+- **Worn items.** Black wizard hat, monk's robe top and bottom, dragon dagger (p). No other slot holds an item. The
+  robes give Prayer bonus 11 and no defence. Each account shows a skull after an attack.
+- **Post.** Between hunts the three stand on one tile, (3078, 3640), Wilderness level 16, a single-way tile. They leave
+  it together, run on the same tiles, and return to it after each hunt.
+- **Targets.** They ran 230 tiles to a combat 123 player at level 45 and to a combat 96 player at the runite rocks
+  (level 46). Players of combat 26 to 64 passed within 20 tiles of the post and no account moved. They also run to
+  (2934, 3516), where a combat 113 player stands 5 tiles outside the Wilderness, and return with no attack: 4 such
+  trips in the record.
+- **Attack.** The lunge of the dagger each 4 ticks (630 of 667 intervals in the long record), on a target that runs too. On a single-way
+  tile the first account to hit holds the target; a second one follows it and tries again each few ticks.
+- **Special.** 113 of 725 attacks in a record of 23,000 ticks (`trace-long-1.jsonl`, 48 fights) are specials. The
+  first special is the second attack in 24 of 40 fights that have one, and the first attack in 7. A fight often opens
+  with attack and special in turns (attack, special, attack, special, attack, special, special, attack) until the
+  energy is gone. They use the special on a target under Protect from Melee too.
+- **Food.** Goondelf ate once, at 74 HP, for 20 HP (a shark), and its next attack came 3 ticks late. It did not eat at
+  82 HP.
+- **Protect prayers.** Sugma turned Protect from Missiles on one tick after a hit from a player that held a magic
+  shortbow, and off 33 ticks later. Ligma turned Protect from Magic on in the tick before a spell landed on it, and
+  off 13 to 17 ticks later. In a hunt of a target that did not hit back, no protect prayer came on.
+- **Prayer points.** Ligma prayed at the Chaos Temple altar (2948, 3820) after a hunt, and Goondelf came into the
+  Wilderness from the Monastery (3045, 3489) at full Hitpoints.
+- **Damage.** In the long record: 227 splats on targets under Protect from Melee, highest 12; 45 on targets with no
+  such prayer, highest 22 (a special). With no Strength boost the dagger hits up to 18, and up to 10 under the prayer
+  (`pvp_melee.rs2:31-33`); with Ultimate Strength up to 21 and 12, and a special 15% more. So they use a Strength
+  prayer. With a super strength too a hit goes up to 25 and 15 under the prayer, and no such splat is in the record.
+- **Two or three at once.** On a multi-way tile they hit one target together: a combat 126 player with no armour
+  died 18 ticks after the first hit at (3219, 3629), Wilderness level 14, and a combat 96 player at the runite rocks
+  in 12 ticks. On a single-way tile one of them fights.
+- **Where the time goes.** In 24,150 ticks each account stands on the post for 62% to 67% of the roster frames and is
+  out in the Wilderness for the rest; under 2% is outside it. 96% of their steps are run steps: a chase does not end
+  on run energy. They left the post 100 times.
+- **How fast they come.** From the first roster frame with a target in range to the first attack: 61, 81, 107 and
+  133 ticks, for targets 112 to 250 tiles from the post. They come to a target, so the target chooses the tile.
+- **The edge.** A combat 126 player at Wilderness level 1 or 2 north of Edgeville, 112 tiles south of the post, drew
+  21 fights of up to 320 ticks and left each one alive; it died in 64 ticks at level 52. The Wilderness north of
+  Edgeville is single-way from x 3008 to 3135 (`multiway.csv` has no zone of map squares 47_55 and 48_55).
+- **Nobody hits back.** The 28 splats on the gang in the record are 1 to 8 damage with no player facing it. What a
+  gang account does under a real attack is not in any record but one eat of Goondelf.
+- **End of a hunt.** In the long record 3 targets died (two of them on multi-way tiles), 14 fights ended when the
+  target left view, and the others when the attacks stopped. A combat 109 player in rune armour under Protect from
+  Melee stood 380 ticks of attacks and left. No gang account died or ate; the lowest Hitpoints of one was 76.
+
+The bench copies this (`scripts/pk-kits.ts`, `scripts/pk-spar.ts`, `scripts/pk-gang.ts`):
+
+- Kit `ganker-dds`: the worn items, the levels of Goondelf and 12 sharks. Profile `ganker`: melee only, a special on
+  each attack from the first health bar, a shark at 79 HP or less, no prayer flick, the protect prayer for the weapon
+  of the opponent. Profile `ganker-bare`: the same with no protect prayer.
+- Kit `ganker-max`: the same worn items and levels with a super attack, a super strength, two prayer potions and 23
+  sharks. It is the most the gang can be with the items the feed shows, so a method that clears it does not depend
+  on the gaps below.
+- `extra:spar-ganker-x12` and `extra:spar-ganker-bare-x12`: one of ours against one of the gang, 12 pairs, on the post
+  tile. `extra:gang-ganker-x4`, `extra:gang-ganker-bare-x4` and `pvp:gang`: one of ours against three on one tile; the
+  engine's single-way rule decides which of the three fights (`pvp_combat.rs2:104-131`). `extra:gang-ganker-<kit>-x4`
+  and `extra:gang-ganker-max-<kit>-x4` run the kits `hybrid` and `gang-hunter`, and each kit against `ganker-max`.
+  `extra:gang-ganker-escape-x4` and `extra:gang-ganker-escape-worn-x4` are the way out with a glory.
+
+### One account against the gang
+
+A meeting is one of ours against the three on the post tile (`scripts/pk-gang.ts`), 4 meetings a run. `ganker-max`
+holds 1,677 HP in its three packs. On a single-way tile one gang account fights at a time; the others take over when it
+does not attack for 8 ticks (two eats in a row), so the three eat their packs at the same rate and die close together.
+
+The kit `gang-hunter` on the profile `gang-hunter` clears `ganker-max` in 32 of 32 meetings, with no death and no use
+of its way out (`extra:gang-ganker-max-gang-hunter-x4`, seeds 1 to 8): 96 kills, 849 to 964 ticks a run, 228 to 417 HP
+lost, 2 to 12 of its 21 sharks left, no prayer potion carried. It clears the gang as the feed shows it (`ganker-dds`)
+in 12 of 12 meetings with 12 or more sharks left (`extra:gang-ganker-gang-hunter-x4`, seeds 1 to 3). The kit costs
+71,928 coins at shop value (`kitCost`): dragon dagger (p) 24,000, amulet of glory 17,625, adamant platebody 12,800,
+21 sharks 6,300, mithril helm, legs and shield 6,240, 150 steel arrows 1,800, magic shortbow 1,600, five potions 1,550.
+
+What decided it, each measured against `ganker-max`:
+
+- **A super defence and the armour kept on for a bow shot.** The champion on the snare kit, the hybrid and a hybrid
+  with a glory died in 6 of 12 meetings. With the armour kept on (`castArmour: 'keep'`) and no super defence: 5 deaths
+  in 8. With both: no death in 8. The gang attacks with stab only, and the platebody is the largest part of the stab
+  defence.
+- **The account that fights.** A gang account that takes over shows no hit until it lands one, and the game refuses
+  each attack on the account that fought before ("I'm already under attack."). Our account turns to the gang account
+  that starts an attack animation, and to another one after a refused attack. Runs went from 1,159 and 1,205 ticks
+  to 741 through 859.
+- **A super antipoison.** The gang's daggers are poisoned. In full adamant our account lost 337 HP a meeting with no
+  antipoison (6 of 8 cleared, 2 left by glory) and 257 HP with one (8 of 8).
+- **A prayer flick each 2 ticks, with no Protect Item** (`flickEvery: 2`, `protectItem: false`). The drain timer fires
+  5 ticks after the prayers came on, and a bow on Rapid gives one cooldown tick each 3 ticks. With a flick each 4
+  ticks the account drank 4 or 5 doses of prayer potion a meeting; with a flick each 2 ticks none, with 44 or more
+  prayer points left. The two potion slots hold sharks.
+- **The worn glory is the way out.** The loop takes it off and rubs it (the game rubs a glory only from the pack), so
+  the pack holds no second one: 8 of 8 got away from `ganker-max` with 3 sharks at the start
+  (`extra:gang-ganker-escape-worn-x4`).
+
+The cost of the kit against the result on `ganker-max` (meetings cleared; the rest left by the way out, none died):
+
+| Kit | Coins | Cleared | Least sharks left |
+| --- | --- | --- | --- |
+| Rune armour with dragon med helm and platelegs, rune arrows, 3 prayer potions | 678,060 | 64 of 64 | 2 |
+| Rune armour, rune arrows | 347,260 | 8 of 8 | 4 |
+| Rune platebody, adamant helm, legs and shield | 161,020 | 8 of 8 | 1 |
+| Adamant armour, no antipoison | 108,820 | 6 of 8 | 0 |
+| Adamant armour, antipoison, worn glory, 2 prayer potions | 84,465 | 16 of 16 | 2 |
+| Adamant platebody, mithril helm, legs and shield, mithril arrows, no prayer potion | 75,565 | 32 of 32 | 3 |
+| The same with steel arrows, cape of legends, ranger boots | 72,565 | 32 of 32 | 2 |
+| `gang-hunter`: the same with a plain cape and leather boots | 71,928 | 32 of 32 | 2 |
+| Mithril armour | 67,965 | 30 of 32 | 0 |
+| Teleport runes for the glory (3 pack slots), adamant armour | 69,797 | 7 of 8 | 0 |
+| Adamant scimitar for the dragon dagger | 54,125 | 8 of 12 | 0 |
+
+Rejected against `ganker-max`: rune knives with the shield kept on (2 deaths in 8, runs of 1,400 ticks); no boost
+potions for three more sharks (11 of 12); a rune scimitar (370 HP lost a meeting against about 300); the freeze with
+3 tiles kept (`adapt`, one meeting of 8 not cleared against `ganker-dds`).
+
+### The walk-in: one pack, no step out of the Wilderness
+
+The account drinks its four boosts at the bank, banks them, takes sharks for their slots and walks to the gang
+(`SPAR_PRETRIP=1` of `scripts/pk-gang.ts`). No option lets it leave the Wilderness; its way out is a teleport. All
+results are against `ganker-max` with the profile `gang-hunter`.
+
+- **The boosts drunk at the bank.** The kit `gang-hunter` at the post: 2 to 12 sharks left of 21 with the potions in
+  its pack (32 meetings), 8 to 13 left of 25 after the bank (`extra:gang-ganker-max-gang-hunter-prepot-x2`, seeds 1
+  and 2, 4 meetings).
+- **Runes for the glory.** Camelot Teleport (5 air runes and 1 law rune, two pack slots, 120 coins) is the way out of
+  an account with no glory; one account of 16 in full steel used it and got away. The kit `gang-walker` (57,348 coins:
+  the `gang-hunter` armour, an amulet of power, the runes, 23 sharks after the bank) cleared 16 of 16 meetings with no
+  death and no use of the way out at the post: 13 sharks eaten a meeting, 3 to 14 left, 823 to 905 ticks
+  (`extra:gang-ganker-max-gang-walker-prepot-x2`, seeds 1 to 8). On a single-way tile 26 tiles from the bank it
+  cleared 16 of 16 more, with 1 to 13 sharks left (`extra:gang-ganker-max-gang-walker-prepot-near-x2`, seeds 1 to 8).
+- **Cheaper armour does not hold.** With the same runes: full mithril (49,748 coins) cleared 23 of 24 and left by
+  teleport once; full steel (42,708 coins) cleared 20 of 24 and left by teleport 4 times. No account died.
+- **The fight options**, 6 meetings each (seeds 1 to 3), ticks to clear and sharks eaten: the champion's style choice
+  883 and 13; bow and dagger in strict turns 859 and 13; the special from the first health bar 847 and 13; a shark at
+  40 HP 884 and 13, at 60 HP 852 and 14; strict turns with the early special 829 and 13; those two with the shark at
+  40 HP 807 and 12. The profile has the last set. Gap: 6 meetings a set, and a later batch of 16 gave 863 ticks.
+- **Strict turns hold against a gang that keeps its prayer.** The profile `ganker-sticky` keeps a protect prayer for
+  20 ticks (in the feed a gang account kept one for 13 to 33 ticks; its rule against two styles is in no record).
+  Against it, 6 meetings each (`extra:gang-ganker-max-gang-walker-sticky-near-x2`, seeds 1 to 3): strict turns 857
+  ticks and 13 sharks, the champion's learnt style choice 942 and 14, the learnt choice with no random pick 898 and
+  15. Against `ganker` the learnt choice has 863 ticks and 15 sharks where strict turns have 811 and 13 (4 meetings).
+- **Karambwans give no gain.** 19 cooked karambwans for the sharks with `freeFood`: 838 ticks and 16 eaten in 4
+  meetings, 4 left at the least.
+- **A dead target pulls the attacker.** An attack click that is in hand when the target dies walks our account
+  toward the target's respawn point in Lumbridge, out of the Wilderness. The fight loop ends the click with a walk to
+  its own tile when the kill message comes, and the meeting sends an account with no gang in view back to its tile.
+
+### The edge: a step south and a bank trip
+
+At Wilderness level 1 north of Edgeville our account walks south over the edge when its food is gone at 60 HP or
+less (`escapeWalk`), banks 25 tiles south and comes back (`SPAR_TRIPS`). The gang's food does not come back, and the
+bench gang waits at its tile. Against `ganker-max`, with no death in any run:
+
+- The kit `edge-hunter` (57,828 coins) with 8 sharks at the start: 4 of 4 accounts walked out at 53 to 58 HP, banked
+  and cleared on the second meeting (`extra:gang-ganker-max-edge-trips-x4`, seed 1).
+- Steel armour and an adamant scimitar with no amulet (18,223 coins): 4 of 4 cleared in 2 trips, about 1,340 ticks
+  and 27 sharks a clear. Steel armour with the dragon dagger (39,663 coins): 4 of 4, about 1,030 ticks, 22 sharks.
+- Gap: 4 meetings a kit. A real gang goes back to its post while its target is out, and it can stand 112 tiles away
+  when the target comes back; the bench gang stands at the edge.
+
+### Options against the gang
+
+Each lever of a meeting, with what is measured. A lever with no result is a test to run on `ganker-max`.
+
+- **The tile.** The gang comes to its target, so our account picks the ground.
+  - Single-way or multi-way: single-way only. Measured on the post tile and on one tile at the edge.
+  - The edge of the Wilderness north of Edgeville (level 1 to 3, single-way, bank 25 tiles south at (3092, 3496)): one
+    step south ends every attack, and the bank gives food that the gang does not get back. Measured above.
+  - A tile that a melee attacker cannot stand beside (all four side tiles blocked, a clear line for the bow): not
+    searched in the map. One such tile makes the gang harmless.
+  - The lines at level 20 (teleport spells) and 30 (glory): the post is under both.
+- **The time.** One or two of the three are away at times (the Chaos Temple altar, the Monastery, the tile at
+  (2934, 3516)), and the world feed shows where each one is. A meeting with one or two of them is `SPAR_GANG=1` or
+  `2` of `scripts/pk-gang.ts`. Not measured.
+- **Before the meeting.** The four boost potions drunk at the bank leave four pack slots for sharks. The server drops
+  a boost at logout (`PlayerLoading.ts:99`), so a bench start state cannot hold one: the bench account goes to the
+  bank first. Measured above.
+- **Movement.** Their steps are run steps, so no kite wins on run energy. A step under the attacker (finding 39) and
+  a step out of the Wilderness and back between two shots are not measured. The freeze with distance kept (`adapt`)
+  is rejected above.
+- **Which account to fight.** Measured: the one that starts an attack animation.
+- **Armour and weapons.** Measured in the cost table above.
+- **Supplies.** Measured: super defence, super antipoison, the three boosts, no prayer potion, sharks. A pineapple
+  pizza heals 20 a slot in two bites, as a shark does in one (`consume_normal.dbrow`).
+- **Prayer.** Measured: Protect from Melee, the Defence prayer, the melee prayers on melee turns, the flick each 2
+  ticks, no Protect Item. Smite in place of Protect from Melee is not measured: it gives up the 40% cut.
+- **The way out.** Measured: the worn glory, a glory in the pack, Camelot Teleport (2 pack slots) and the walk over
+  the edge. Varrock Teleport takes 3 pack slots.
+- **A second account.** On a single-way tile an account that hits ours each 8 ticks keeps every other attacker off
+  it, and ours then cannot attack either (`pvp_combat.rs2:104-131`). It protects and does not kill. Not measured.
+
+Gaps:
+
+- The pack of a gang account is not visible: the number of sharks, and whether it holds potions. `ganker-dds` has an
+  estimate; `ganker-max` is the upper limit.
+- Prayers with no head icon (Protect Item, the Strength, Attack and Defence prayers) are not visible. The bench
+  accounts use all of them.
+- The eat level is between 75 and 81 HP from one eat.
+- No record shows a gang account under a melee weapon, at low Hitpoints, or after its death: whether it prays against
+  melee, whether it runs, and how long it takes to return to the post are not known.
+- Practice only: no live meeting. The margin against `ganker-max` is 2 sharks in the worst of 32 meetings; the way out
+  covers a meeting that needs more.
+- The post is a single-way tile. A meeting on a multi-way tile, where the three hit at once, is not measured: our
+  account must meet the gang on single-way tiles only.
+- `ganker-max` has no antipoison and casts no spell (Magic 37 allows Bind). A gang that cures our poison lives longer.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

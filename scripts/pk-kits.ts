@@ -39,6 +39,8 @@ export type KitSpec = {
     varps?: Record<number, number>;
     // Why no account can reach the kit: it stays for a bench comparison, and the planner gives it no quest.
     noRoute?: string;
+    // The accounts of another owner that the kit copies: an opponent for the bench, and the planner gives it no quest.
+    rival?: string;
 };
 // Defence 1 and Hitpoints 10 with Prayer 1: the base of every pure, 2.75 combat levels (Player.ts getCombatLevel).
 const PURE = { Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1, Hitpoints: 10 } as const;
@@ -121,6 +123,28 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     hybrid: { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...PRAYER_POTS, ...BOOSTS], food: 21,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The cheapest kit that clears the dagger gang at its most (research/pvp-fight-loop.md, "Rivals: the dagger gang"):
+    // bow and dagger, an adamant platebody with mithril helm, legs and shield, steel arrows, the three boosts, a super
+    // defence and a super antipoison (the gang's daggers are poisoned). It carries no prayer potion: its profile holds
+    // the prayers with a flick each 2 ticks. Its way out is the glory that it wears.
+    'gang-hunter': { worn: { hat: 'mithril_full_helm', torso: 'adamant_platebody', legs: 'mithril_platelegs', shield: 'mithril_kiteshield', amulet: 'amulet_of_glory_4', cape: 'black_cape', feet: 'leather_boots',
+        weapon: 'dragon_dagger_p', ammo: ['steel_arrow', 150] },
+        carried: ['magic_shortbow', ...BOOSTS, '4dose2defense', '4dose2antipoison'], food: 21,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'mithril_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The gang-hunter kit for a meeting at the edge of the Wilderness: an amulet of power for the glory. Its way out is
+    // a walk south over the edge.
+    'edge-hunter': { worn: { hat: 'mithril_full_helm', torso: 'adamant_platebody', legs: 'mithril_platelegs', shield: 'mithril_kiteshield', amulet: 'amulet_of_power', cape: 'black_cape', feet: 'leather_boots',
+        weapon: 'dragon_dagger_p', ammo: ['steel_arrow', 150] },
+        carried: ['magic_shortbow', ...BOOSTS, '4dose2defense', '4dose2antipoison'], food: 21,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'mithril_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The cheapest kit that clears the dagger gang at its most with one pack and no step out of the Wilderness: the
+    // gang-hunter kit with an amulet of power for the glory and the runes of Camelot Teleport for the way out. The
+    // account drinks the four boosts at the bank and takes sharks for their slots (scripts/pk-gang.ts SPAR_PRETRIP):
+    // it walks in with 23 sharks.
+    'gang-walker': { worn: { hat: 'mithril_full_helm', torso: 'adamant_platebody', legs: 'mithril_platelegs', shield: 'mithril_kiteshield', amulet: 'amulet_of_power', cape: 'black_cape', feet: 'leather_boots',
+        weapon: 'dragon_dagger_p', ammo: ['steel_arrow', 150] },
+        carried: ['magic_shortbow', ...BOOSTS, '4dose2defense', '4dose2antipoison', ['lawrune', 2], ['airrune', 10]], food: 19,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'mithril_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },
@@ -270,6 +294,18 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['staff_of_fire', 'maple_shortbow', ['airrune', 600], ['deathrune', 200], ...FREEZE], food: 19, foodItem: 'lobster',
         switches: { magic: ['staff_of_fire'], ranged: ['maple_shortbow'], melee: ['rune_scimitar', 'adamant_kiteshield'] }, options: { damageSpell: SPELLS.fireBlast },
         skills: trained({ Attack: 40, Strength: 70, Defence: 30, Ranged: 70, Magic: 70 }) },
+    // The dagger gang of the Wilderness (research/pvp-fight-loop.md, "Rivals: the dagger gang"): what the world feed
+    // shows the three accounts wear, at the hiscore levels of the strongest of them. One of them ate a shark in a
+    // fight; the count of 12 is an estimate.
+    'ganker-dds': { worn: { hat: 'blackwizhat', torso: 'monkrobetop', legs: 'monkrobebottom', weapon: 'dragon_dagger_p' },
+        carried: [], food: 12, switches: { melee: ['dragon_dagger_p'] }, options: { rotation: ['melee'] },
+        skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99, Magic: 37, Ranged: 1 }, rival: 'Goondelf, Ligma, Sugma' },
+    // The most that the dagger gang can be with the items the feed shows: the same worn items, the two melee potions,
+    // two prayer potions and a full pack of sharks. A method that clears this gang clears the real one whatever its
+    // pack holds.
+    'ganker-max': { worn: { hat: 'blackwizhat', torso: 'monkrobetop', legs: 'monkrobebottom', weapon: 'dragon_dagger_p' },
+        carried: ['4dose2attack', '4dose2strength', ...PRAYER_POTS], food: 23, switches: { melee: ['dragon_dagger_p'] }, options: { rotation: ['melee'] },
+        skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99, Magic: 37, Ranged: 1 }, rival: 'Goondelf, Ligma, Sugma' },
     // The target of a pure: combat 3 with a pickaxe and a few lobsters.
     skiller: { worn: { weapon: 'bronze_pickaxe', feet: 'leather_boots' }, carried: [], food: 5, foodItem: 'lobster',
         switches: { melee: ['bronze_pickaxe'] }, options: { rotation: ['melee'] }, skills: { ...PURE } },
