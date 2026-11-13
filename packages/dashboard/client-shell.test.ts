@@ -721,7 +721,7 @@ test('the Wilderness level counts 8 tiles for each level from the south edge of 
 });
 
 test('the inventory value is the sum of the item values, and the tooltip counts the items with no value',()=>{
- const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf("  // Equipment Stats (the game's"));
  const vals:any={Coins:1,Lobster:150};
  const invWorth=new Function('price','gp',`${code};return invWorth;`)((n:string)=>vals[n]!=null?{value:vals[n]}:null,(n:number)=>String(n));
  expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp</p>');
@@ -921,7 +921,7 @@ test('agility obstacles, Ground markers, failure markers and the NPC finder in t
  expect(spot).toEqual([{x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'2 accounts: travel to Ardougne failed · tick stream stalled'}]);
 });
 test('Inventory Tags: food, potions, teleports and runes get their group class; the switch turns them off',()=>{
- const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Equipment Stats (the game's"));
  const hl:any={invTags:true};
  const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
  expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
@@ -1008,6 +1008,22 @@ test('best training spot: the best rock the account can mine now, and the neares
  expect(t2.bestSpot(b,'Mining',12)).toMatchObject({name:'Limestone rock',level:10,near:{x:3005,d:5}});
  expect(t.bestSpot(b,'Fishing',35)).toBe(null);
  expect(t.bestSpotLine(b,20)).toContain('Best now: <b>Iron rock</b> (level 15) · nearest 10 tiles');
+});
+test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from the pack',()=>{
+ const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const t=new Function('asset','fetch','E',`${code};return {wornBonuses,maxHit,equipStats,teleCasts,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String);
+ t.set({'Rune scimitar':[7,45,-2,0,0,0,1,0,0,0,44,0,0],'Amulet of strength':[0,0,0,0,0,0,0,0,0,0,10,0,0]},
+  {spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]],['Falador teleport',37,[['Water rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']}});
+ const b:any={skills:[{name:'Strength',level:99,currentLevel:99},{name:'Magic',level:30}],equipment:[{slot:3,name:'Rune scimitar'},{slot:2,name:'Amulet of strength'}],
+  inventory:[{name:'Air rune',count:30},{name:'Law rune',count:4},{name:'Fire rune',count:2},{name:'Water rune',count:9}]};
+ expect(t.wornBonuses(b)).toEqual([7,45,-2,0,0,0,1,0,0,0,54,0,0]);
+ // The server's formula: floor(((99 + 8 + style) × (54 + 64) + 320) / 640).
+ expect([t.maxHit(99,54,0),t.maxHit(99,54,3),t.maxHit(99,0,3)]).toEqual([20,20,11]);
+ const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20');
+ // Varrock: min(2 fire, 30/3 air, 4 law) = 2; Falador: 4 law, Magic 30 is below 37.
+ expect(t.teleCasts(b)).toEqual([{name:'Varrock teleport',lv:25,casts:2,can:true},{name:'Falador teleport',lv:37,casts:4,can:false}]);
+ // A wielded Staff of fire gives fire runes without limit.
+ b.equipment[0]={slot:3,name:'Staff of fire'};expect(t.teleCasts(b)[0].casts).toBe(4);
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
