@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794535713899,
+ "at": 1794535782248,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -555,25 +555,16 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-f965942a-0d9a-4eb1-964b-9d596a2af5f1"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-shaftmaker-20261113t020004z [task-f965942a-0d9a-4eb1-964b-9d596a2af5f1]",
+   "role": "bank"
   }
  ]
 }
