@@ -3,7 +3,10 @@
 //
 // It moves the checkout only when all of these hold:
 //   - the checkout is on master and has no commit that origin/master lacks;
-//   - no qualification runs, no build waits to publish and no build lock is held (a source change fails those);
+//   - no build waits to publish and no build lock is held (a source change fails those);
+//   - no qualification runs while the update changes a file it can check (qualificationSource: the worker source,
+//     the coordinator, knowledge data, the SDK patch and the root manifests). A dashboard, docs or test-only update
+//     does not wait for a qualification;
 //   - no running coordinator build owns a file that the update changes (its publish would refuse);
 //   - no live coordinator run loads a file that the update changes. Such a run keeps the release it started on, and
 //     every new coordinator run then refuses to start until it ends (assertCompatibleWorkers, worker-release.ts);
@@ -31,12 +34,14 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { liveUpdateFile, type LiveUpdateMark } from '../../core/src/live-reload';
-import { releaseEntries, runtimeTrees, standingAccounts, standingPeer } from '../../core/src/worker-release';
+import { releaseEntries, runtimeTrees, standingAccounts, standingPeer, workerSourceRoots } from '../../core/src/worker-release';
 import { patchNewFiles, patchState, type PatchState } from '../../../scripts/worktree-setup';
 
 export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean };
 // `vendorRelease`: the worker release files that the update changes through the SDK patch (vendorReleaseFiles).
-export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[]; liveRuns?: readonly LiveRun[]; vendorRelease?: readonly string[] };
+// `qualifications`: the running qualifications (`qualification <id> runs`); they hold only an update that changes a
+// file they can check (qualificationSource).
+export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[]; qualifications?: readonly string[]; liveRuns?: readonly LiveRun[]; vendorRelease?: readonly string[] };
 export type LiveRun = { name: string; files: readonly string[] };
 export type UpdatePlan = { action: 'none' | 'wait'; reason: string } | { action: 'update'; adopt: Dirty[] };
 
@@ -48,6 +53,8 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
     if (!i.behind) return { action: 'none', reason: 'current' };
     if (i.ahead) return { action: 'wait', reason: `${i.ahead} local commits are not on origin/master` };
     if (i.holds.length) return { action: 'wait', reason: i.holds[0]! };
+    const checked = i.qualifications?.length ? i.incoming.filter(qualificationSource) : [];
+    if (checked.length) return { action: 'wait', reason: `${i.qualifications![0]} and checks ${few(checked)}` };
     const incoming = new Set(i.incoming);
     const manifests = i.incoming.filter(f => MANIFEST.test(f));
     if (manifests.length) return { action: 'wait', reason: `dependency change needs bun install: ${few(manifests)}` };
@@ -66,6 +73,18 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
 }
 
 export const SDK = 'vendor/rs-sdk', SDK_PATCH = 'patches/rs-sdk-working.patch';
+// The files a running qualification can check. Its proof hashes the worker source (worker-release.ts
+// workerSourceRevision: workerSourceRoots without packages/dashboard and packages/router, test files not counted, and
+// the root manifests) or a release reached from its entries, which can name knowledge data. The coordinator that runs
+// it (packages/router) and the SDK patch count too. Any other file (packages/dashboard, docs, research, a test file)
+// cannot fail a qualification, so an update of only such files does not wait for one.
+const QUALIFICATION_ROOTS = [...workerSourceRoots, 'knowledge'];
+export function qualificationSource(path: string): boolean {
+    if (path.endsWith('.test.ts')) return false;
+    if (path === SDK_PATCH || ['package.json', 'bun.lock', 'tsconfig.json', 'bunfig.toml'].includes(path)) return true;
+    if (path.startsWith('packages/dashboard/')) return false;
+    return QUALIFICATION_ROOTS.some(r => path.startsWith(r + '/'));
+}
 // The part of a patch for each file that it changes, by the file's path in the SDK.
 export function patchSections(text: string): Map<string, string> {
     const out = new Map<string, string>();
@@ -199,21 +218,21 @@ const ownedFiles = (workspace: string): string[] => {
 
 // What the coordinator holds now: a source change fails a running qualification and a pending publish, and a running
 // build refuses to publish over a file that changed under it.
-export function coordinatorHolds(root: string, workspace: (capability: string) => string): { holds: string[]; heldFiles: string[] } {
-    const dir = join(root, '.practice', 'coordinator'), holds: string[] = [], heldFiles: string[] = [];
+export function coordinatorHolds(root: string, workspace: (capability: string) => string): { holds: string[]; heldFiles: string[]; qualifications: string[] } {
+    const dir = join(root, '.practice', 'coordinator'), holds: string[] = [], heldFiles: string[] = [], qualifications: string[] = [];
     if (existsSync(join(dir, 'build-lock.json'))) holds.push('the runtime build lock is held');
     if (existsSync(join(dir, 'publish-request.json'))) holds.push('a build waits to publish');
     const file = join(dir, 'state.json');
     if (existsSync(file)) {
         let tasks: any[];
-        try { tasks = JSON.parse(readFileSync(file, 'utf8')).tasks ?? []; } catch { return { holds: [...holds, 'coordinator state is not readable'], heldFiles }; }
+        try { tasks = JSON.parse(readFileSync(file, 'utf8')).tasks ?? []; } catch { return { holds: [...holds, 'coordinator state is not readable'], heldFiles, qualifications }; }
         for (const t of tasks) {
             if (t?.status !== 'running') continue;
-            if (t.spec?.kind === 'qualify') holds.push(`qualification ${t.spec.id} runs`);
+            if (t.spec?.kind === 'qualify') qualifications.push(`qualification ${t.spec.id} runs`);
             if (t.spec?.kind === 'build' && typeof t.spec.capability === 'string') heldFiles.push(...ownedFiles(workspace(t.spec.capability)));
         }
     }
-    return { holds, heldFiles };
+    return { holds, heldFiles, qualifications };
 }
 
 // The unfinished live sessions that are not standing jobs, each with the files its entry loads. A standing job is
@@ -270,8 +289,9 @@ if (import.meta.main) {
             // A current checkout. An SDK folder with no patch gets it: an apply discards nothing. It waits for the
             // same things as a move: a coordinator hold, and a live run when the patch changes a worker release file.
             // A folder with other edits is named and stays as it is.
-            const state = vendorState(root);
-            if (state === 'clean' && !dry && !holds().holds.length) {
+            const state = vendorState(root), held = holds();
+            // The patch changes SDK release files, which every qualification checks: it waits for any of them.
+            if (state === 'clean' && !dry && !held.holds.length && !held.qualifications.length) {
                 const live = vendorReleaseFiles('', readFileSync(join(root, SDK_PATCH), 'utf8')).length ? runs() : [];
                 if (live.length) done(`RESULT ok live-update vendor: the SDK patch waits for the live run of ${live[0]!.name}`);
                 const apply = gitIn(join(root, SDK))('apply', join(root, SDK_PATCH));
