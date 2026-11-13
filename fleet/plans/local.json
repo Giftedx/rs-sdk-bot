@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794545530731,
+ "at": 1794545781883,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -56,24 +56,6 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit3-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 20 Mind rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Bigchopper",
@@ -154,6 +136,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "21",
+    "1500"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-strike-magic-21",
+   "autopilot": "local",
+   "resources": [
+    "strike:ardougne-guard-dog"
    ]
   },
   {
@@ -240,21 +241,25 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -392,25 +397,21 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2582,3297"
    ]
   },
   {
