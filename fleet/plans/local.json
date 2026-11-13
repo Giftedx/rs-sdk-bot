@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794545331793,
+ "at": 1794545530731,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -77,22 +77,21 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit4-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "repeat": false,
+   "goal": "buy 50 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "resources": []
   },
   {
    "account": "Bigpackage",
