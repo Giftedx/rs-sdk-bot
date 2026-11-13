@@ -1498,3 +1498,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (about 450 damage taken). The champion's three accounts read the same health bar, so their specials go out on
     the same tick. Evidence: `.practice/climb/set-army-*`, `set-armym-*`. Gap: the batch tick is the slowest group;
     one run per seed; no army option of its own (a style for each member, a special stack held for a knock-out).
+47. **A dragon spear stunner does not speed the army's kill; waiting to stack the specials does a little.** In the
+    multi-way army case the target eats 17.1 of its sharks on average before it dies (16 meetings, seeds 1-4, the
+    repeatable setup, army on the champion). With the army's specials from 35% target health (`specBelow: 0.35`)
+    it eats 14.9, from 45% 15.9. With one army account on `tribrid-snare-spear` (`extra:army-spear-multi-x4`,
+    `SPAR_KITS` naming a kit for each account) the target eats 19.1 when the spear's special goes out at once and
+    18.2 when it goes out from 55% health: the special holds the target 5 ticks with no input
+    (`pvp_dragon_spear.rs2` `p_delay(4)`), and the spear account gives up the dagger's specials and hits every 6
+    ticks. No meeting lost an army account. Evidence: `.practice/climb/set-army-*`. Gap: the
+    stun is not timed with the others' specials; one run per seed.

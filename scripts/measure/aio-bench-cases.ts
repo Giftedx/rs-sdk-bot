@@ -188,7 +188,9 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
   const fixture = (): SaveConfig => { const c = {...kitFixture(kit, at.x + 2, at.z), ...(bank ? {bank} : {})}; return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: fixture(), output: /kills=(\d+)/,
     scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : {...kitFixture(gangKit, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
+    // gangKit may name one kit for each account of a group (kit+kit+kit, scripts/pk-gang.ts SPAR_KITS).
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture()
+      : {...kitFixture(gangKit.split('+')[((i + 1) % (size + 1) - 1) % gangKit.split('+').length]!, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
 };
 // Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
 // (SPAR_POST): one walk of 150 tiles, not two.
@@ -540,6 +542,8 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:army-tribrid-x4', 'tribrid-snare', 'tribrid-snare', 4, GANKER_POST),
   // The same in multi-way combat east of Edgeville (Wilderness level 6), where all three can hit at once.
   gangCase('extra:army-tribrid-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // The same army with a stunner: one dragon spear and two daggers in each group.
+  gangCase('extra:army-spear-multi-x4', 'tribrid-snare', 'tribrid-snare-spear+tribrid-snare+tribrid-snare', 4, {x: 3150, z: 3560}),
   gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
   // The same meeting for the kits with more food, and each kit against the most that the gang can be (`ganker-max`:
   // potions and a full pack of sharks), with a cap that leaves time for the 1,677 HP of that gang.

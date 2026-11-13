@@ -122,7 +122,7 @@ export type GangTrips = { count: number; resupply: (g: Session, ran: boolean) =>
 // `trips`: with more than one, an account that walked out of the Wilderness goes to the bank and comes back.
 // `wait`: the ticks that our account waits on its tile with none of the gang in view (default 20); `idlePrayerOff`
 // (SPAR_IDLE_PRAYER_OFF=1): it turns its prayers off while it waits.
-export async function gang(a: Session, others: readonly Session[], optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false,
+export async function gang(a: Session, others: readonly Session[], optionsA: FightOptions, optionsB: FightOptions | ((member: number) => FightOptions), log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false,
     trips?: { count: number; resupply: (a: Session, fresh?: boolean) => Promise<string | null>; bank?: { eaten: number } }, more: { wait?: number; gangTrips?: GangTrips; idlePrayerOff?: boolean } = {}): Promise<GangResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
@@ -159,13 +159,14 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     const gangTrips = more.gangTrips;
     // The tick at which an account of the gang started its walk out, and that account: the others go when it starts.
     let retreatAt = -1, retreater: Session | null = null, gangBanked = 0;
-    const sides = others.map(async g => {
+    const sides = others.map(async (g, member) => {
+        const own = typeof optionsB === 'function' ? optionsB(member) : optionsB;
         const total: FightResult = { outcome: 'timeout', ticks: 0, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: 0 }, freezes: 0, specs: 0 };
         let tripsLeft = gangTrips?.count ?? 0;
         while (!over && !halt()) {
             const began = g.tick();
             const called = () => !!gangTrips?.follow && retreatAt > began && retreater !== g;
-            const r = await fightPlayer(g, a.name, { ...optionsB, cap: Math.max(1, cap - (g.tick() - start)), stop: () => over || halt() || called(),
+            const r = await fightPlayer(g, a.name, { ...own, cap: Math.max(1, cap - (g.tick() - start)), stop: () => over || halt() || called(),
                 log: l => { if (/walks out of the Wilderness/.test(l) && gangTrips && tripsLeft > 0) { retreatAt = g.tick(); retreater = g; } log(`[${g.name}] ${l}`); } });
             sum(total, r);
             reap();
@@ -279,9 +280,11 @@ if (import.meta.main) {
     if (!bots.length || bots.length % (size + 1)) { console.log(`RESULT fail usage: bun scripts/pk-gang.ts <bot> <${size} gang bots> [CAP ticks] [<bot> <${size} gang bots> ...]`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base';
-    const [kitA, kitB] = (env.SPAR_KITS ?? '').split(',')[0]!.split(':');
-    const options = (side: 0 | 1, group: number): FightOptions => {
-        const kit = side === 0 ? kitA : kitB;
+    // The gang side may name one kit for each account of a group: <ours>:<kit>+<kit>+<kit> (the army: one spear).
+    const [kitA, kitList] = (env.SPAR_KITS ?? '').split(',')[0]!.split(':');
+    const gangKits = (kitList ?? '').split('+'), kitB = gangKits[0];
+    const options = (side: 0 | 1, group: number, member = 0): FightOptions => {
+        const kit = side === 0 ? kitA : gangKits[member % gangKits.length] || undefined;
         // A random style choice (mixStyles) repeats with the bench seed, as in the spar.
         const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + group * 2 + side };
         return { ...sparOptions(side === 0 ? nameA : nameB, side === 0 ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}), ...seed };
@@ -332,9 +335,9 @@ if (import.meta.main) {
         const faults = await Promise.all(groups.map(([a], i) => resupplies[i]?.resupply(a!, true) ?? null)); for (const fault of faults) if (fault) halted ??= `no trip before the meeting: ${fault}`;
         // With no later trip, our accounts need no loc and no ground item either.
         if (tripCount <= 1) for (const [a] of groups) lean(a!); }
-    const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), options(1, i), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 },
+    const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), (member: number) => options(1, i, member), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 },
         { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1' })));
-    for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
+    for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
         + `valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
