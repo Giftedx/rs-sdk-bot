@@ -108,12 +108,25 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const t=wornBonuses(b);if(!t)return '';
     const sg=v=>(v>0?'+':'')+v,cells=(from,names)=>names.map((n,i)=>'<i title="'+n+'">'+sg(t[from+i])+'</i>').join('');
     const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),weapon=b.equipment.find(e=>e.slot===3),ranged=(itemBonusData[weapon?.name]?.[4]||0)>0;
-    const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' ('+maxHit(str,t[10],3,115)+' with +15% prayer)':'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
+    const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' · prayer '+maxHit(str,t[10],3,115):'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
+    {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+' ×'+sp.casts);}
     const names=['Stab','Slash','Crush','Magic','Range'];
-    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join(' · ')+'</b></div>':'')+'</div>';
+    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join('<br>')+'</b></div>':'')+'</div>';
   }
   // Teleport casts: how many casts of each teleport spell the pack's runes give (a wielded staff gives its rune without
   // limit; client-assets/spellbook.json); a spell above the account's current Magic level is dim.
+  // How many casts the pack's runes give for a rune list ([[rune, count], ...]); a wielded staff gives its rune without limit.
+  function runeCasts(b,runes){const have=n=>(b.inventory||[]).filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipment?.find(e=>e.slot===3)?.name;const free=new Set(Object.entries(spellbookData?.staffs||{}).filter(([,s])=>Array.isArray(s)&&s.includes(weapon)).map(([r])=>r));return Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c)));}
+  // Magic max hit (Equipment Stats): the combat spell with the highest max hit (spellbook.json, the server's
+  // magic_combat_spells.dbrow) that the account can cast now: its current Magic level, the runes for one cast, the staff
+  // a spell needs worn. A spell's max hit is fixed in this game (no magic damage bonus).
+  function bestSpell(b){
+    if(!spellbookData?.combat?.length||!Array.isArray(b?.inventory))return null;
+    const mg=curLevel(b,'Magic');if(!Number.isFinite(mg))return null;
+    const worn=new Set((b.equipment||[]).map(e=>e?.name));
+    let best=null;for(const [name,lv,max,runes,staff] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max))best={name,max,casts};}
+    return best;
+  }
   function teleCasts(b){
     if(!spellbookData||!Array.isArray(b?.inventory))return [];
     const have=n=>b.inventory.filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipment?.find(e=>e.slot===3)?.name;
@@ -134,7 +147,21 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(take>0)return ' death-part';
     return (S?.economy?.itemValues?.[item.name]??(item.name==='Coins'?1:0))>0?' death-lost':'';
   }
-  function itemCell(item,i,extra=''){return `<button class="inventory-cell${invTag(item)}${extra}" data-item="${i}" title="${item?E(item.name)+' × '+E(item.count)+E(statTip(item)+priceTip(item)):'Empty slot'}" aria-label="${item?E(item.name)+' × '+E(item.count):'Empty inventory slot '+(i+1)}">${item?icon(item.name,32)+(item.count>1?qty(item.count):'')+chargeTag(item):''}</button>`;}
+  // Item identification (RuneLite's Item Identification): the game names every unidentified herb "Herb" (obj.pack
+  // unidentified_*), so the item id gives its short name; a potion (a name ending in its doses, "(3)") shows its type:
+  // Str, Pra, SAtt for a super attack.
+  const HERB_IDS={199:'Gua',201:'Mar',203:'Tar',205:'Har',207:'Ran',209:'Iri',211:'Ava',213:'Kwu',215:'Cad',217:'Dwa',219:'Tor',2485:'Lan',3049:'Toa',3051:'Sna'};
+  const POTION_IDS={attack:'Att',strength:'Str',defence:'Def',prayer:'Pra',restore:'Res',energy:'Ene',ranging:'Rng',magic:'Mag',antipoison:'AP',superantipoison:'SAP',fishing:'Fsh',agility:'Agi',combat:'Cmb',zamorak:'Zam',saradomin:'Sar',antifire:'AF',weapon:'WP'};
+  function idLabel(item){
+    if(!item||typeof hl==='undefined'||hl.itemIds===false)return '';
+    const id=item.baseId??item.id,n=String(item.name||'');
+    if(n==='Herb'&&HERB_IDS[id])return HERB_IDS[id];
+    const p=n.match(/^(super ?)?([a-z]+)\b[^()]*\(\d\)$/i);
+    if(p&&POTION_IDS[p[2].toLowerCase()])return (p[1]?'S':'')+POTION_IDS[p[2].toLowerCase()];
+    return '';
+  }
+  const idTag=item=>{const l=idLabel(item);return l?'<span class="item-id">'+E(l)+'</span>':'';};
+  function itemCell(item,i,extra=''){return `<button class="inventory-cell${invTag(item)}${extra}" data-item="${i}" title="${item?E(item.name)+' × '+E(item.count)+E(statTip(item)+priceTip(item)):'Empty slot'}" aria-label="${item?E(item.name)+' × '+E(item.count):'Empty inventory slot '+(i+1)}">${item?icon(item.name,32)+(item.count>1?qty(item.count):'')+chargeTag(item)+idTag(item):''}</button>`;}
   // The combat level line under the Skills tab, with the levels each style needs for the next one on hover.
   function combatLine(b){const X=window.atlasXp;if(!b?.skills?.length||!X?.combat)return '';const lv=Object.fromEntries(b.skills.map(s=>[s.name,s.level])),c=X.combat(lv);
     const n=c.next,parts=n?[['Attack/Strength',n.melee],['Defence/Hitpoints',n.defence],['Prayer',n.prayer],['Ranged',n.ranged],['Magic',n.magic]].filter(([,v])=>v!=null).map(([k,v])=>v+' '+k):[];
@@ -200,9 +227,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(selectedTab==='quests'&&questScope==='fleet')html=fleetQuests();
     else if(selectedTab==='quests'){
       const quests=b?.quests||[];
-      const qp=b?.ranks?.find(r=>r.board==='Quest Points')?.level??null;const done=q=>q.state==='complete'||q.state==='completed',kind=q=>done(q)?'completed':q.state==='not started'?'not started':q.state==='started'?'in progress':'unknown',shown=quests.filter(q=>(questFilter==='all'||kind(q)===questFilter)&&q.name.toLowerCase().includes(questQuery.toLowerCase()));html='<h3>Quest Journal</h3>'+questScopeBar()+'<p style="text-align:center">Quest Points: '+(qp==null?'—':E(qp))+'</p><p class="game-muted" style="text-align:center">'+(b?.questsAt?(window.atlasOperator()?'Observed ':'Updated ')+''+age(b.questsAt)+' ago':'No quest snapshot')+'</p>'+(quests.length?'<div class="quest-filter">'+[['all','All'],['completed','Done'],['in progress','Started'],['not started','To do'],['unknown','Unknown']].map(([id,label])=>`<button data-quest-filter="${id}" class="${questFilter===id?'on':''}">${label} ${id==='all'?quests.length:quests.filter(q=>kind(q)===id).length}</button>`).join('')+'</div><input class="quest-search" data-quest-search placeholder="Find a quest…" aria-label="Search quests" value="'+E(questQuery)+'">':'')+'<div class="game-list">'+shown.map(q=>`<button style="color:${q.state==='complete'||q.state==='completed'?'#00ff00':q.state==='not started'?'#ff0000':q.state==='started'?'#ffff00':'#aaa'}" data-quest="${E(q.name)}">${E(q.name)}</button>`).join('')+'</div>';
+      const qp=b?.ranks?.find(r=>r.board==='Quest Points')?.level??null;const done=q=>q.state==='complete'||q.state==='completed',kind=q=>done(q)?'completed':q.state==='not started'?'not started':q.state==='started'?'in progress':'unknown',shown=quests.filter(q=>(questFilter==='all'||kind(q)===questFilter)&&q.name.toLowerCase().includes(questQuery.toLowerCase()));html='<h3>Quest Journal</h3>'+questScopeBar()+'<p style="text-align:center">Quest Points: '+(qp==null?'—':E(qp))+(typeof questRewardData!=='undefined'&&questRewardData&&quests.length?' · '+quests.filter(q=>!done(q)).reduce((n,q)=>n+(questRewardData[q.name]?.[0]||0),0)+' left':'')+'</p><p class="game-muted" style="text-align:center">'+(b?.questsAt?(window.atlasOperator()?'Observed ':'Updated ')+''+age(b.questsAt)+' ago':'No quest snapshot')+'</p>'+(quests.length?'<div class="quest-filter">'+[['all','All'],['completed','Done'],['in progress','Started'],['not started','To do'],['unknown','Unknown']].map(([id,label])=>`<button data-quest-filter="${id}" class="${questFilter===id?'on':''}">${label} ${id==='all'?quests.length:quests.filter(q=>kind(q)===id).length}</button>`).join('')+'</div><input class="quest-search" data-quest-search placeholder="Find a quest…" aria-label="Search quests" value="'+E(questQuery)+'">':'')+'<div class="game-list">'+shown.map(q=>`<button style="color:${q.state==='complete'||q.state==='completed'?'#00ff00':q.state==='not started'?'#ff0000':q.state==='started'?'#ffff00':'#aaa'}" data-quest="${E(q.name)}" title="${E(typeof rewardText==='function'?rewardText(q.name):'')}">${E(q.name)}</button>`).join('')+'</div>';
       if(!quests.length)html+='<p class="game-muted">Quest progress has not been reported for this account.</p>';
-      if(questDetail){const q=quests.find(q=>q.name===questDetail);html='<h3>'+E(questDetail)+'</h3><p style="text-align:center">'+E(q?.state||'Not reported')+'</p><p class="game-muted">'+(b?.questsAt?'Last observed '+age(b.questsAt)+' ago.':'No quest snapshot.')+'</p><button class="game-control" data-quest-back>Back to quest list</button>';}
+      if(questDetail){const q=quests.find(q=>q.name===questDetail);html='<h3>'+E(questDetail)+'</h3><p style="text-align:center">'+E(q?.state||'Not reported')+'</p>'+(typeof rewardText==='function'&&rewardText(questDetail)?'<p class="quest-reward">Reward: '+E(rewardText(questDetail))+'</p>':'')+'<p class="game-muted">'+(b?.questsAt?'Last observed '+age(b.questsAt)+' ago.':'No quest snapshot.')+'</p><button class="game-control" data-quest-back>Back to quest list</button>';}
     }
     if(selectedTab==='friends'){
       if(!S)html='<h3>Friends List</h3><p class="game-muted" role="status">Waiting for fleet data…</p>';
@@ -221,6 +248,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(selectedTab==='settings')$('#game-quality').value=String(window.atlasQuality||1);
   }
   // The XP Tracker plugin (RuneLite's): gains since the account's login, XP an hour, level progress, time to level.
+  // Quest rewards (Quest Journal): each quest's quest points and XP on this server (client-assets/quest-rewards.json, the
+  // base XP times the XP rate), as the tooltip of its row and on its page; the header counts the quest points left.
+  let questRewardData=null;
+  fetch(asset('quest-rewards.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')questRewardData=j;},()=>{});
+  // The third list is XP that is one of several outcomes (a random reward): "one of".
+  const rewardText=name=>{const r=questRewardData?.[name];if(!r)return '';const alt=r[2]||[];return [r[0]?r[0]+(r[0]===1?' quest point':' quest points'):'',...r[1].map(([s,x])=>nf(x)+' '+s+' XP'),alt.length?'one of: '+alt.map(([s,x])=>nf(x)+' '+s).join(', ')+' XP':''].filter(Boolean).join(' · ');};
   // Inventory Setups (RuneLite's) in the Equipment tab: choose a PvP kit (client-assets/pk-kits.json, from
   // scripts/pk-kits.ts). The doll marks each slot green when the account wears the kit's item, red when it does not, and
   // yellow when it wears something the kit leaves empty; the list below shows what the kit carries against the pack.
@@ -240,6 +273,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       const differ=Object.entries(k.worn).filter(([id,w])=>!sameItem(b.equipment?.find(e=>e.slot===Number(id)),w)).length;
       rows='<p class="game-muted">'+(b.equipment?differ?differ+' worn slot'+(differ===1?'':'s')+' differ from the kit':'Every worn slot matches the kit':'Equipment is not reported.')+'</p>'+k.carried.map(([n,c])=>{const h=have(n),bk=banked(n);return `<div class="setup-row ${h>=c?'setup-have':'setup-short'}" title="${E(n)}: ${nf(h)} held, ${nf(c)} in the kit${bk==null?'':', '+nf(bk)+' in the bank'}">${icon(n,24)}<span>${E(n)}</span><span>${nf(h)} / ${nf(c)}${bk==null?'':` <small class="setup-bank${h+bk<c?' setup-bank-short':''}">bank ${nf(bk)}</small>`}</span></div>`;}).join('');
     }
+    // Restock: what the pack and the bank together miss for the kit, with the cost at the GE price (itemValues).
+    if(k&&b&&Array.isArray(b.bank)){const price=n=>(typeof S!=='undefined'&&S?.economy?.itemValues?.[n])||0,miss=k.carried.map(([n,c])=>{const own=(b.inventory||[]).filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0)+b.bank.filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0);return [n,Math.max(0,c-own)];}).filter(([,m])=>m>0);
+      if(miss.length){const cost=miss.reduce((t,[n,m])=>t+price(n)*m,0),unpriced=miss.filter(([n])=>!price(n)).length;rows+='<p class="setup-restock" title="'+E(miss.map(([n,m])=>nf(m)+' '+n+(price(n)?' at '+nf(Math.round(price(n)))+' gp':' (no GE price)')).join(', '))+'">Restock: '+E(miss.slice(0,3).map(([n,m])=>nf(m)+' '+n).join(', '))+(miss.length>3?' +'+(miss.length-3):'')+' · ≈ '+nf(Math.round(cost))+' gp'+(unpriced?' + '+unpriced+' unpriced':'')+'</p>';}}
     return `<div class="setup"><label>Setup <select data-setup-kit aria-label="Inventory setup">${opts}</select></label>${rows}</div>`;
   }
   // Screenshot (RuneLite's Screenshot plugin): the 3D view of the watched account is captured on a level-up, a death and
@@ -486,7 +522,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   //   tiles    red: the death tile of the open recap; pies: the respawn timers
   //   marks    the Ground markers that the viewer placed; fails: orange, where an account's last run failed
   //   finder   pink: the spawns of the NPC that the NPC finder shows
-  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true,skilling:true,trail:true,marks:true,fails:true,icons:true,items:true,invTags:true,idle:true,busy:true};
+  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true,skilling:true,trail:true,marks:true,fails:true,icons:true,items:true,invTags:true,idle:true,busy:true,itemIds:true};
   const hl=(()=>{try{return {...HL_DEFAULT,...JSON.parse(localStorage.getItem(HL_KEY)||'{}')};}catch{return {...HL_DEFAULT};}})();
   const saveHl=()=>{try{localStorage.setItem(HL_KEY,JSON.stringify(hl));}catch{/* private window */}};
   // recentTargets belong to one watched account (targetsFor); another account starts an empty list.
@@ -619,7 +655,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function highlightsBox(){
     const box=(k,label)=>`<label class="hl-row"><input type="checkbox" data-hl="${k}" ${hl[k]?'checked':''}> ${label}</label>`;
-    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('tiles','Death tile and respawn pies')}${box('skilling','Trees, rocks, fishing spots and agility obstacles of the account')}${box('trail','Walked path')}${box('marks','Ground markers')}${box('fails','Where runs failed (orange)')}${box('idle','Idle 3+ minutes (yellow)')}${box('icons','Minimap: teleports, shortcuts, shop names')}${box('items','Minimap: floor items (red)')}${box('busy','Minimap: busy areas (5+ players)')}${box('invTags','Inventory tags: food, potions, teleports, runes')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
+    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('tiles','Death tile and respawn pies')}${box('skilling','Trees, rocks, fishing spots and agility obstacles of the account')}${box('trail','Walked path')}${box('marks','Ground markers')}${box('fails','Where runs failed (orange)')}${box('idle','Idle 3+ minutes (yellow)')}${box('icons','Minimap: teleports, shortcuts, shop names')}${box('items','Minimap: floor items (red)')}${box('busy','Minimap: busy areas (5+ players)')}${box('invTags','Inventory tags: food, potions, teleports, runes')}${box('itemIds','Item labels: herbs and potions')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
   }
   function markersBox(){
     const b=account(),p=b?.live||b?.pos||null,colours=MARK_COLOURS.map(([c,n])=>'<option value="'+c+'" '+(c===markColour?'selected':'')+'>'+n+'</option>').join('');
@@ -858,7 +894,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       value.textContent=gp(v.value)+(v.unpriced?' + '+v.unpriced+' unpriced':'');
       value.title='Bank value at the vault prices (7-day market average, else the shop price)'+(v.unpriced?'; '+v.unpriced+' item kinds have no price':'');
       const query=modal.querySelector('input').value.toLowerCase(),items=b?.bank?.filter(i=>i.name.toLowerCase().includes(query));
-      modal.querySelector('.bank-items').innerHTML=items?items.map(it=>'<button class="inventory-cell" title="'+E(it.name)+' × '+it.count+E(statTip(it)+priceTip(it))+'">'+icon(it.name,32)+(it.count>1?qty(it.count):'')+'</button>').join(''):'<p class="game-muted">No bank inventory has been reported for this account.</p>';
+      modal.querySelector('.bank-items').innerHTML=items?items.map(it=>'<button class="inventory-cell" title="'+E(it.name)+' × '+it.count+E(statTip(it)+priceTip(it))+'">'+icon(it.name,32)+(it.count>1?qty(it.count):'')+(typeof idTag==='function'?idTag(it):'')+'</button>').join(''):'<p class="game-muted">No bank inventory has been reported for this account.</p>';
     };
     modal.refreshObservation=draw;
     modal.querySelector('[aria-label="Close bank"]').onclick=()=>modal.remove();modal.querySelector('input').oninput=draw;modal.querySelector('.bank-tabs').onclick=()=>toast('Only the combined bank inventory is reported.');hud.append(modal);draw();
