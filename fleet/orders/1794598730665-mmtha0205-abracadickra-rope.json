@@ -1,0 +1,23 @@
+{
+ "id": "1794598730665-mmtha0205-abracadickra-rope",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Abracadickra",
+ "item": "Rope",
+ "count": 1,
+ "start": 1794598730665,
+ "end": 1794604130665,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

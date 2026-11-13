@@ -1,0 +1,29 @@
+{
+ "id": "1794598730664-bigpackage-abracadickra-spade",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "Abracadickra",
+ "item": "Spade",
+ "count": 1,
+ "start": 1794598730664,
+ "end": 1794604130664,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Bucket of milk",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
