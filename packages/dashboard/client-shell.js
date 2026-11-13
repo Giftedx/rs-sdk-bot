@@ -785,6 +785,20 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   // Grand Exchange plugin (RuneLite's): the route supplies with the live market's buy and sell prices and stock.
   // geOpen: the item id whose sources are open; geOpenName: its display name, for the map pin.
+  // GE price change: the server keeps no price history, so this browser keeps two snapshots of the buy price by item id
+  // (the ask, else the average): the base, at least 20 hours old, which the change is measured from, and the next one,
+  // which becomes the base when it is 24 hours old. A change under 1% shows nothing.
+  const GE_TREND_KEY='atlas-ge-prices';
+  function geTrend(rows,now=Date.now()){
+    let st;try{st=JSON.parse(localStorage.getItem(GE_TREND_KEY)||'null');}catch{st=null;}
+    const cur=Object.fromEntries((rows||[]).map(i=>[i.id,i.ask??i.vwap]).filter(([,v])=>Number.isFinite(v)&&v>0));
+    if(!st||!st.next){st={base:null,next:{at:now,p:cur}};}
+    else if(now-st.next.at>=86_400_000){st={base:st.next,next:{at:now,p:cur}};}
+    try{localStorage.setItem(GE_TREND_KEY,JSON.stringify(st));}catch{/* private window */}
+    const base=st.base&&now-st.base.at>=72_000_000?st.base:null,out=new Map();
+    if(base)for(const [id,v] of Object.entries(cur)){const b=base.p[id];if(b>0){const pct=Math.round((v-b)/b*100);if(Math.abs(pct)>=1)out.set(String(id),pct);}}
+    return {at:base?.at??null,change:out};
+  }
   let geQuery='',geOpen=null,geOpenName='';
   let geAll=false;
   function gePanel(){
@@ -816,9 +830,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const all=(S?.economy?.supplies||[]).filter(i=>i.name&&geName(i).toLowerCase().includes(query)),hidden=all.filter(i=>!offered(i)).length;
     const rows=all.filter(i=>geAll||offered(i)).sort((a,b)=>Number(b.ask!=null||b.bid!=null)-Number(a.ask!=null||a.bid!=null)||(b.stock||0)-(a.stock||0)||a.name.localeCompare(b.name));
     // One header names the columns, so a row holds numbers only. A long number is cut short; the row's tooltip has it whole.
+    const trend=typeof geTrend==='function'?geTrend(S?.economy?.supplies||[]):{at:null,change:new Map()},arrow=i=>{const p=trend.change.get(String(i.id));return p==null?'':'<small class="'+(p>0?'ge-up':'ge-down')+'" title="'+(p>0?'+':'')+p+'% since '+age(trend.at)+' ago">'+(p>0?'▲':'▼')+Math.abs(p)+'%</small>';};
     const exact=v=>v==null?'—':nf(Math.round(v))+' gp',short=v=>v==null?'—':v>=1e6?+(v/1e6).toFixed(2)+'M':v>=1e5?Math.round(v/1e3)+'k':nf(Math.round(v));
     return [`<div class="xp-meta"><span>${all.length-hidden} ${owner?'route supplies':'items'}</span><span>prices ${S.economy?.pricesAt?age(S.economy.pricesAt)+' old':'unknown'}</span></div>${hidden?`<button class="game-control" data-ge-all>${geAll?'Hide':'Show'} the ${hidden} with no offer</button>`:''}${rows.length?`<div class="ge-row ge-cols${owner?' ge-owner':''}"><span></span><span>Item</span><span title="The price to buy one, in gp">Buy</span><span title="The price to sell one, in gp">Sell</span><span>Stock</span>${owner?'<span title="Held in our banks">Ours</span>':''}</div>`:''}`,
-      rows.slice(0,80).map(i=>`<div class="ge-row${owner?' ge-owner':''}${geOpen===String(i.id)?' ge-open':''}" data-ge-src="${E(i.id)}" data-ge-name="${E(geName(i))}" title="${E(geName(i))}: buy ${exact(i.ask)}, sell ${exact(i.bid)}, stock ${nf(i.stock||0)}, average ${exact(i.vwap)}, shop ${exact(i.base)}"><span class="ge-icon">${icon(i.name,24)}</span><span class="ge-name">${E(geName(i))}</span><b>${short(i.ask)}</b><b>${short(i.bid)}</b><span>${short(i.stock||0)}</span>${owner?`<span class="ge-ours">${heldCount(i)}</span>`:''}</div>`+(geOpen===String(i.id)?geSources(String(i.id)):'')).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>')];
+      rows.slice(0,80).map(i=>`<div class="ge-row${owner?' ge-owner':''}${geOpen===String(i.id)?' ge-open':''}" data-ge-src="${E(i.id)}" data-ge-name="${E(geName(i))}" title="${E(geName(i))}: buy ${exact(i.ask)}, sell ${exact(i.bid)}, stock ${nf(i.stock||0)}, average ${exact(i.vwap)}, shop ${exact(i.base)}"><span class="ge-icon">${icon(i.name,24)}</span><span class="ge-name">${E(geName(i))}${arrow(i)}</span><b>${short(i.ask)}</b><b>${short(i.bid)}</b><span>${short(i.stock||0)}</span>${owner?`<span class="ge-ours">${heldCount(i)}</span>`:''}</div>`+(geOpen===String(i.id)?geSources(String(i.id)):'')).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>')];
   }
   // Pull requests plugin: the bot repository's open and lately merged pull requests, by the agent whose branch they are.
   const AGENT_OF=b=>/^claude-cloud\//.test(b)?'Claude cloud':/^cloud\//.test(b)?'Codex cloud':/^claude\//.test(b)?'Claude on the PC':/^codex\//.test(b)?'Codex on the PC':'Other';

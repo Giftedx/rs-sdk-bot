@@ -247,3 +247,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .tele-casts{margin:2px 4px;font:11px Arial;color:#9fc3ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tele-casts .tele-low{color:#5a6a80}
 /* Quest rewards and the restock line. */
 .quest-reward{text-align:center;color:#ff981f;font:12px Arial;margin:4px 6px}.setup-restock{margin:4px;font:11px Arial;color:#ff6b6b}
+/* GE price change. */
+.ge-up,.ge-down{margin-left:4px;font:10px Arial}.ge-up{color:#2bd32b}.ge-down{color:#ff4b4b}

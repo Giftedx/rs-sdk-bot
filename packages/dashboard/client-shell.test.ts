@@ -1029,6 +1029,22 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  // A wielded Staff of fire gives fire runes without limit.
  b.equipment[0]={slot:3,name:'Staff of fire'};expect(t.teleCasts(b)[0].casts).toBe(4);
 });
+test('GE price change: no change before a base snapshot is 20 hours old, then the change from it; snapshots rotate daily',()=>{
+ const start=shell.indexOf('  // GE price change:'),code=shell.slice(start,shell.indexOf("  let geQuery=",start));
+ const store:Record<string,string>={},ls={getItem:(k:string)=>store[k]??null,setItem:(k:string,v:string)=>{store[k]=v;}};
+ const geTrend=new Function('localStorage',`${code};return geTrend;`)(ls);
+ const H=3_600_000;
+ expect(geTrend([{id:1,ask:100}],0).change.size).toBe(0);
+ // Before 24 hours there is no base yet.
+ expect(geTrend([{id:1,ask:105}],10*H).change.size).toBe(0);
+ // At 24 hours the first snapshot becomes the base (24 hours old): +10%.
+ expect(geTrend([{id:1,ask:110}],24*H).change.get('1')).toBe(10);
+ // The base stays until the next snapshot is 24 hours old.
+ const r=geTrend([{id:1,ask:150},{id:2,vwap:50}],46*H);
+ expect(r.change.get('1')).toBe(50);expect(r.at).toBe(0);
+ // Under 1% shows nothing.
+ expect(geTrend([{id:1,ask:100.4}],46*H).change.has('1')).toBe(false);
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
