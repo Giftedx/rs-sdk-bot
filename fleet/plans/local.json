@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794588967192,
+ "at": 1794589024037,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -109,6 +109,31 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
@@ -526,19 +551,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2fb308af-b87b-46da-a0b4-6bf6b61dea39"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-masterbaiter-20261113t164525z [task-2fb308af-b87b-46da-a0b4-6bf6b61dea39]",
-   "role": "combat"
   },
   {
    "account": "MineYourBiz",
