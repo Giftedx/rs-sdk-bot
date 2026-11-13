@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794530534502,
+ "at": 1794531131698,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -74,22 +74,21 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
-   "role": "supply",
-   "template": "army-fire-aubury",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "shop:aubury"
+    "knight:2582,3297"
    ]
   },
   {
@@ -153,6 +152,26 @@
    ]
   },
   {
+   "account": "Masterbaiter",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -173,27 +192,22 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-fire-aubury",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "shop:aubury"
    ]
   },
   {
@@ -372,31 +386,6 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -455,6 +444,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
