@@ -321,6 +321,14 @@ const ROUTE_CASES: BenchCase[] = [
     return {...skiller('mining', mode === 'drop' ? 'drop' : 'at-site', 'fresh_lumbridge', args, {output: /"made":(\d+)/,
       presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 64, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: `extra:mining-zoo-${mode}`};
   }),
+  // The knife rotation from Mining 49, 66 ores (57,255 XP at 875 each) to Mining 64: the ticks Plague City's 2,425 x 25
+  // XP would save in the record route (591 ticks).
+  {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '66', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
+    presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 49, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-49'},
+  // The same with an adamant pickaxe (1271): the knife reset sets %action_delay, so the pickaxe's mining_rate
+  // (mining.rs2:118-119) does not pace the rolls, and success is stat_random(mining) alone (mining.rs2:155).
+  {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '66', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
+    presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 49, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1271, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-49-addy'},
   skiller('mining', 'loot', 'fresh_lumbridge', ['LOOT_MODE=list', 'LOOT_IDS=1511', 'RADIUS=2', 'MAX_UNITS=1', 'CAP=200', 'IDLE_TICKS=150'], {presetConfig: {position: {x: 3089, z: 3266, level: 0}, skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}}}),
   skiller('smithing', 'anvil', 'fresh_lumbridge', ['600', 'PRODUCT_ID=1205', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 2347, count: 1}], bank: [{id: 2349, count: 1}]}}),
   skiller('smithing', 'cannonballs', 'fresh_lumbridge', ['1', '600', 'CANNON_XP_RATE=25'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 35}, bank: [{id: 2353, count: 1}, {id: 4, count: 1}]}}),
@@ -744,6 +752,37 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:sweep-elena-draynor-partial', script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
     presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
       bank: [...(PRESETS.quest_elena!.inventory ?? []).filter(i => ![2126, 1975, 231].includes(i.id)), {id: 563, count: 1}, {id: 556, count: 5}, {id: 995, count: 5000}]}},
+  // Tree Gnome Village through the quest sweep from the Ardougne south bank (block 8 of the mock Haggis run starts where
+  // block 7's zoo mining banks), at the runner's state there (Prayer 99, Magic 59, 10 HP): the quest pack and the staff
+  // of fire banked, no prayer potions (prayerCovers takes them as food), then the walk into the village.
+  {key: 'extra:sweep-tree-ardougne', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_tree!, position: {x: 2655, z: 3283, level: 0}, inventory: [], equipment: [], skills: {...PRESETS.quest_tree!.skills, Magic: 59, Prayer: 99},
+      bank: [...(PRESETS.quest_tree!.inventory ?? []).filter(i => i.id !== 2434), {id: 1387, count: 1}]}},
+  // Block 9 of the mock Haggis run, at the runner's state after Tree Gnome Village (Attack 80, Hitpoints 29, Prayer 99,
+  // Magic 59, varp 111 = 9): the Gnome course to Agility 25 from King Bolren, then The Grand Tree through the sweep from
+  // the course's end with what Tree Gnome Village leaves in the pack (block 8 packs both quests: 160 chaos, 500 air,
+  // 2 law, 8 sharks for the 4 lobsters of each preset; the warlord takes about 33 casts), so the sweep needs no bank.
+  {key: 'extra:agility-gnome-25-from-village', script: 'scripts/aio-skiller.ts', preset: 'agility_gnome_1', scriptArgs: ['agility', 'order', 'gnome', '25', 'AGI_POTION=0', 'AGI_MAX_TICKS=4000', 'AGI_PROGRESS_TICKS=150', 'AGI_ENTRY_TICKS=1200'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...agilityFixturePreset(PRESETS.agility_gnome_1!), position: {x: 2542, z: 3170, level: 0}, varps: {111: 9}, skills: {Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Mining: 99, Woodcutting: 99, Firemaking: 99}}},
+  {key: 'extra:sweep-grandtree-course', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['sweep', 'grandtree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Agility: 25},
+      inventory: [{id: 562, count: 127}, {id: 556, count: 401}, {id: 563, count: 2}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // Blocks 8 and 9 as the live run stages them: both quests' packs held from the start, plus death runes for Fire Blast
+  // (Magic 59; max 16 against Fire Bolt's 12). `-blast` against the cases above measures the spell alone.
+  {key: 'extra:sweep-tree-kit-blast', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_tree!, position: {x: 2655, z: 3283, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}], skills: {...PRESETS.quest_tree!.skills, Magic: 59, Prayer: 99},
+      inventory: [{id: 562, count: 160}, {id: 556, count: 500}, {id: 563, count: 2}, {id: 560, count: 60}, ...Array.from({length: 6}, () => ({id: 1511, count: 1})), ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  {key: 'extra:sweep-grandtree-course-blast', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['sweep', 'grandtree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 60, Agility: 25},
+      inventory: [{id: 562, count: 127}, {id: 556, count: 400}, {id: 563, count: 2}, {id: 560, count: 35}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // Block 10: Fight Arena through the sweep from where The Grand Tree ends (under the tree), at the runner's state then
+  // (Attack 94, Magic 73, Hitpoints 36, Prayer 99): Fire Blast with death runes in place of the preset's Fire Wave.
+  {key: 'extra:sweep-arena-after-grandtree', script: 'scripts/aio-quester.ts', preset: 'quest_arena', scriptArgs: ['sweep', 'arena'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_arena!, position: {x: 2464, z: 9895, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_arena!.skills, Attack: 94, Magic: 73, Hitpoints: 36, Prayer: 99, Agility: 25},
+      inventory: [{id: 560, count: 60}, {id: 556, count: 300}, {id: 562, count: 160}, {id: 995, count: 20}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];

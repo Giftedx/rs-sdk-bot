@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Account, Tile } from './world';
+import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const HUNTS_WEAKER = new Set(['cowardly', 'ranged']), HUNTS_ALL = new Set(['aggressive_melee']);
@@ -57,6 +58,17 @@ export const hunts = (h: Hunter, combat: number) => HUNTS_ALL.has(h.mode) || com
 // A hunter is a danger when it hunts the account and is strong enough to kill it: its combat level is above
 // the account's combat level and at least 1.5 times the account's hitpoints. Rats and muggers stay walkable.
 export const deadly = (h: Hunter, combat: number, hitpoints: number) => hunts(h, combat) && h.combat > combat && h.combat >= 1.5 * hitpoints;
+// Protect from Melee (Prayer 43, vendor/rs-sdk/sdk/types.ts PRAYER_LEVELS) sets an NPC's melee damage to 0
+// (skill_combat/scripts/npc/npc_combat_melee.rs2:44-46). Every bot session runs the prayer guard (bot.ts; PRAYER_GUARD=0
+// turns it off), which turns protection on when a hunter can reach the player and flicks it free of point cost
+// (prayer-guard.ts). So a hunter that attacks with melee only (no row in npc-attack-styles, or a melee-only row) is
+// not deadly to an account with Prayer 43 or more. The guard needs prayer points above 0; the base level stands for them.
+export const PROTECT_MELEE_LEVEL = 43;
+export const meleeOnly = (h: Hunter, styles: ReadonlyMap<number, readonly string[]> = npcAttackStyles()) =>
+    h.id !== undefined && (styles.get(h.id) ?? ['melee']).every(s => s === 'melee');
+const guardProtects = () => process.env.PRAYER_GUARD !== '0';
+export const deadlyTo = (h: Hunter, skills: Record<string, number>, styles?: ReadonlyMap<number, readonly string[]>) =>
+    deadly(h, combatLevel(skills), skills.hitpoints ?? 10) && !((skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && guardProtects() && meleeOnly(h, styles));
 
 // Visible monsters that hunt this account, deadly or not, each with the square a walk keeps out of: its huntrange
 // from the tile it stands on now, plus its size and `margin` tiles. A Karamja scorpion (combat 14, huntrange 2) is
@@ -82,9 +94,9 @@ export const unpack = (k: number): Tile => ({ x: (k >>> 14) & 0x3fff, z: k & 0x3
 
 // Danger tiles (deadly hunters) for this account inside a box, one margin tile past each monster's reach, packed.
 export function dangerSet(acct: Account, level: number, box: { minX: number; maxX: number; minZ: number; maxZ: number }, list = loadHunters()): Int32Array {
-    const combat = combatLevel(acct.skills), hp = acct.skills.hitpoints ?? 10, out = new Set<number>();
+    const styles = npcAttackStyles(), out = new Set<number>();
     for (const h of list) {
-        if (!deadly(h, combat, hp)) continue;
+        if (!deadlyTo(h, acct.skills, styles)) continue;
         const r = h.reach + 1;
         for (const s of h.spawns) {
             if (s.level !== level || s.x + r < box.minX || s.x - r > box.maxX || s.z + r < box.minZ || s.z - r > box.maxZ) continue;
@@ -125,16 +137,16 @@ export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Arr
 
 // Names the account's deadly hunters; accounts with the same key get the same closed tiles.
 export function dangerKey(acct: Account, list = loadHunters()): string {
-    const combat = combatLevel(acct.skills), hp = acct.skills.hitpoints ?? 10;
-    return list.flatMap((h, i) => deadly(h, combat, hp) ? [i] : []).join('.') || 'none';
+    const styles = npcAttackStyles();
+    return list.flatMap((h, i) => deadlyTo(h, acct.skills, styles) ? [i] : []).join('.') || 'none';
 }
 
 // The deadly ground around `at`: every danger square that holds it. An account that already stands there may walk
 // out through it (a hunter spawn inside Catherby otherwise closes every walk from the beach).
 export function escapeTiles(acct: Account, at: Tile, list = loadHunters()): Tile[] {
-    const combat = combatLevel(acct.skills), hp = acct.skills.hitpoints ?? 10, out = new Map<string, Tile>();
+    const styles = npcAttackStyles(), out = new Map<string, Tile>();
     for (const h of list) {
-        if (!deadly(h, combat, hp)) continue;
+        if (!deadlyTo(h, acct.skills, styles)) continue;
         const r = h.reach + 1;
         for (const s of h.spawns) {
             if (s.level !== at.level || Math.abs(s.x - at.x) > r || Math.abs(s.z - at.z) > r) continue;

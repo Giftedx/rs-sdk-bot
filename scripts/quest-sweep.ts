@@ -12,13 +12,14 @@ import {openBot,finish,getWorld,accountOf,finishHooks,sessionDied} from '../pack
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
-import type {World,Transport,Account} from '../packages/core/src/world';
-import {combatLevel,deadly,loadHunters} from '../packages/core/src/danger';
+import {rsPathLength,type World,type Transport,type Account,type PathLength} from '../packages/core/src/world';
+import {deadlyTo,loadHunters} from '../packages/core/src/danger';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance,locsByDistance} from '../packages/core/src/spawn-index';
 import {gatherPlan,gatherItems,rangedKit,magicKit,arrowsFor,castsFor,ARROWS,BOWS,NPC_SOURCES,PICK_SOURCES} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
+import {fireRunesFor} from './fire-spells';
 import {QUEST_NAMES} from './quest-chain';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -109,7 +110,10 @@ export function scorpionBarcrawlNeeds(base:ReadonlyMap<number,number>,barcrawlSt
  return staged;
 }
 const count=(rows:readonly Item[],id:number)=>rows.filter(r=>r.id===id).reduce((n,r)=>n+r.count,0);
-const WORN_KIT:Record<string,readonly {id:number;required:boolean}[]>={ball:[{id:1059,required:true},{id:1331,required:false}]};
+// Tree Gnome Village and The Grand Tree cast Fire Bolt with the staff of fire worn (the presets wear it; the packs carry
+// no fire runes), so the staff is a required worn item.
+const WORN_KIT:Record<string,readonly {id:number;required:boolean}[]>={ball:[{id:1059,required:true},{id:1331,required:false}],
+ tree:[{id:1387,required:true}],grandtree:[{id:1387,required:true}]};
 export function wornKitPlan(quest:string,base:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[],equipment:readonly Item[]){
  const wear=(WORN_KIT[quest]??[]).filter(i=>i.required||count(bank,i.id)>0||count(pack,i.id)>0||count(equipment,i.id)>0);
  const need=new Map(base);
@@ -162,6 +166,14 @@ export function mealPlan(food:ReadonlyMap<number,number>,pack:readonly Item[],ba
  }
  return withdraw;
 }
+// Whether the pack lacks a food row and so needs the bank. The meal rows (MEALS) are met by any meals the pack holds
+// beyond the quest's own needs, as mealPlan withdraws them: 8 sharks meet a preset's 4 lobsters (no GE seller held
+// lobsters; sharks sell). The other rows (teleport runes) are met by their own ids.
+export function foodShort(food:ReadonlyMap<number,number>,pack:readonly Item[],need:ReadonlyMap<number,number>=new Map()):boolean{
+ const meals=[...food].filter(([id])=>MEALS.includes(id)).reduce((n,[,c])=>n+c,0);
+ const held=MEALS.reduce((n,id)=>n+Math.max(0,count(pack,id)-(need.get(id)??0)),0);
+ return held<meals||plan(new Map([...food].filter(([id])=>!MEALS.includes(id))),pack,[]).missing.length>0;
+}
 // The gather's tools, planned after the quest plan's withdrawals: a rune the quest itself needs (Goblin Diplomacy's 3 air
 // beside the casts' hundreds) is wanted on top of the quest's count, the quest's withdrawals count as held, and the bank
 // is read less them. Otherwise both plans take the same bank stock and the second withdrawal fails, or the quest's runes
@@ -187,6 +199,12 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 // does (taken when the bank holds it, never reported missing). Lost City's two prayer potions keep Protect from
 // Melee up against the tree spirit after the cave ladder drains Prayer (cave_monk.rs2:14); no shop sells them.
 export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
+// The prayer points a quest's fights used in its bench case (quester_quest_<quest>): the preset's Prayer 43, plus 17 for
+// each sip (7 + 25% of 43, consume_effects.dbrow prayer_potion_effect), less the points left. Tree Gnome Village
+// 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47; Fight Arena 43 - 36 = 7. An account whose base Prayer covers that by PRAYER_MARGIN
+// leaves the preset's prayer potions out of its pack. No shop sells them.
+export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
+export const prayerCovers=(quest:string,prayer:number)=>PRAYER_USED[quest]!==undefined&&prayer>=PRAYER_USED[quest]!+PRAYER_MARGIN;
 // The pack of a build that fights a quest with the bow (scripts/pk-kits.ts; research/pvp-fight-loop.md, "Quest routes
 // of the builds"): a magic shortbow and rune arrows, so the quest script fights in the style that trains only Ranged
 // (quest-upass.ts RANGED_ARROWS), and for Underground Pass two prayer potions in the place of two sharks. Regicide
@@ -672,6 +690,15 @@ export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150,
  return r;
 }
 const at=(s:Session):Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+// A ground corridor ends within 3 tiles of its goal. A tile behind a wall is not there: the corridor stopped at 2544,3174,
+// outside Tree Gnome Village's fence, 3 tiles from King Bolren (bench extra:sweep-tree-ardougne). A different connected
+// area (components.ts; -1 is not floor and counts as unknown) sends the walk to the world router, which knows the railing.
+let grid:Promise<PathLength>|undefined;
+export const sameArea=async(a:Tile,b:Tile,load=()=>rsPathLength())=>{
+ if(a.level!==b.level)return false;
+ const area=(await(grid??=load())).areaOf;if(!area)return true;
+ const x=area(a),y=area(b);return x<0||y<0||x===y;
+};
 const STOPPED:Walked={ok:false,reason:'stopped',detail:'quest guard'};
 async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,signal?:AbortSignal):Promise<Walked>{
  const stopped=()=>signal?.aborted===true;
@@ -689,7 +716,7 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
  const ground=async(t:Tile):Promise<Walked>=>{
   if(stopped())return STOPPED;
   const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]],(d,pts)=>walkPath(d,pts,{signal})):{ok:false};
-  return r.ok?{ok:true}:router(t);
+  return r.ok&&(cheb(at(s),t)<=1||await sameArea(at(s),t))?{ok:true}:router(t);
  };
  if(stopped())return STOPPED;
  // A far walk that starts upstairs (Hudo's shop on the Grand Tree's first floor, bound for Port Sarim) first comes down by
@@ -737,7 +764,7 @@ export function wayUp(transports:readonly Transport[],to:Tile,depth=3):Tile{
 // boats, then the Port Sarim to Falador road. A stronger account walks the pass.
 export const TAVERLEY_SIDE=(to:Tile)=>to.level===0&&to.x>=2880&&to.x<2960&&to.z>=3400;
 const BIG_WOLF:Tile={x:2840,z:3497,level:0};
-export const mountainClosed=(acct:Pick<Account,'skills'>,hunters=loadHunters())=>hunters.filter(h=>h.spawns.some(s=>s.x===BIG_WOLF.x&&s.z===BIG_WOLF.z&&s.level===BIG_WOLF.level)).some(h=>deadly(h,combatLevel(acct.skills),acct.skills.hitpoints??10));
+export const mountainClosed=(acct:Pick<Account,'skills'>,hunters=loadHunters())=>hunters.filter(h=>h.spawns.some(s=>s.x===BIG_WOLF.x&&s.z===BIG_WOLF.z&&s.level===BIG_WOLF.level)).some(h=>deadlyTo(h,acct.skills));
 // Catherby (x 2800 to 2860) is on the Ardougne side too for an account the pass is closed to: its only way east is
 // back through Ardougne and the boats. A stronger account at Catherby walks the pass.
 export const eastOfArdougne=(from:Tile,to:Tile,acct?:Pick<Account,'skills'>)=>from.level===0&&from.z>=3270&&(from.x<2800||from.x<2860&&!!acct&&mountainClosed(acct))&&(to.x>=2950||!!acct&&TAVERLEY_SIDE(to)&&mountainClosed(acct));
@@ -1158,6 +1185,10 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const meal=[...food.keys()].find(f=>MEALS.includes(f));
   if(meal!==undefined)food.set(meal,Math.max(food.get(meal)!,STURDY_MEALS));
  }
+ // Not food either: a food row the pack lacks sends the sweep to a bank (bench extra:sweep-grandtree-course walked from
+ // the Gnome course to the Ardougne north bank for the three potions alone).
+ if(prayerCovers(quest,baseLevel('Prayer')))for(const id of PRAYER_POTIONS)base.delete(id);
+ base=fireRunesFor(base,baseLevel('Magic'));
  const build=buildPack(quest,baseLevel);
  for(const i of build)base.set(i.id,(base.get(i.id)??0)+i.count);
  if(build.length){
@@ -1252,7 +1283,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  // A skill the quest wants and the account lacks sends the account through the bank pass too, with every supply held.
  const tradeableId=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
  const bare=(BARE.has(quest)||build.length>0)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0);
- if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
+ if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||foodShort(food,pack(),need)||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
   // The nearest bank may be out of reach: try the next three.
