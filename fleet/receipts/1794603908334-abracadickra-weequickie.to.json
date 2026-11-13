@@ -1,0 +1,49 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794603908334-abracadickra-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bucket of water",
+ "requested": 4,
+ "claim": "d9413946-b3c6-42a6-bdd9-0a755ab02e76",
+ "count": 0,
+ "ok": false,
+ "at": 1794603947068,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Spade",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Rope",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Bucket of milk",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Snape grass",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Air rune",
+   "requested": 5,
+   "count": 0
+  }
+ ]
+}
