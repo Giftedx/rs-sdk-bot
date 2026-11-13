@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794533002975,
+ "at": 1794533071775,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -557,25 +557,16 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-a2b0a92e-33ed-4d63-b512-c745a7d829a6"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
+   "repeat": false,
+   "goal": "local-recover-bigchopper-20261113t011505z [task-a2b0a92e-33ed-4d63-b512-c745a7d829a6]",
+   "role": "bank"
   }
  ]
 }
