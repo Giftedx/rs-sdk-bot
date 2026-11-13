@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794591003051-bigpackage-nabtheknob-bucketofmilk",
+ "account": "Bigpackage",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bucket of milk",
+ "requested": 1,
+ "claim": "8489effe-89f5-4cf4-8780-936a54cf7040",
+ "count": 0,
+ "ok": false,
+ "at": 1794591057019,
+ "detail": "trade claimed"
+}
