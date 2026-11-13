@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794589624229-nabtheknob-abracadickra",
  "account": "NabTheKnob",
  "partner": "Abracadickra",
@@ -12,6 +12,12 @@
  "claim": "e900cdb8-de19-4f94-b54e-e72851caa63d",
  "count": 0,
  "ok": false,
- "at": 1794589630492,
- "detail": "trade claimed"
+ "at": 1794589800185,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1794589630500-0000021388-0000000001",
+  "at": 1794589800173,
+  "sha256": "915e2e46397867773adf85b185b1f5fb6d60edeb2fe374482a4b41ecdcc41b7e"
+ },
+ "screen": false
 }
