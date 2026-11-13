@@ -1357,4 +1357,5 @@ Bun.serve({
         return new Response('not found', { status: 404 });
     },
 });
-console.log(`dashboard: http://localhost:${PORT} (listening on ${HOST})`);
+// The listening host, not "localhost": that name can resolve to ::1 first on this PC, and HOST is IPv4.
+console.log(`dashboard: http://${HOST}:${PORT} (listening on ${HOST})`);
