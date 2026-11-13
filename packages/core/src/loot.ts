@@ -177,9 +177,16 @@ export const releasePile = (key: string, by: string) => { if (claims.get(key)?.b
 let shared: LootTables | null = null;
 export const sharedLootTables = (): LootTables => (shared ??= fileTables());
 
-// The tables from disk: knowledge/items.json, the GE file and the supply bill (.practice/coordinator). The two
-// .practice files are read again when they change, at most each RELOAD_MS. A missing file gives no prices or no bill.
+// The tables from disk: knowledge/items.json, the market (.practice/market-all.json, scripts/market-cache.ts), the
+// older GE file and the supply bill (.practice/coordinator). The .practice files are read again when they change, at
+// most each RELOAD_MS. A missing file gives no prices or no bill.
+// The market value of an item is the lower of its 7-day VWAP (when it traded at least 3 times) and its current bid:
+// the market is thin, and the bid is what a buyer pays now.
 const RELOAD_MS = 600_000;
+export const marketValue = (m: { price?: number | null; bid?: number | null } | undefined): number => {
+    const price = typeof m?.price === 'number' && m.price > 0 ? m.price : null, bid = typeof m?.bid === 'number' && m.bid > 0 ? m.bid : null;
+    return price === null ? 0 : Math.floor(bid === null ? price : Math.min(price, bid));
+};
 export function fileTables(root = resolve(import.meta.dir, '..', '..', '..')): LootTables {
     const items = new Map<number, ItemInfo>();
     try {
@@ -188,6 +195,7 @@ export function fileTables(root = resolve(import.meta.dir, '..', '..', '..')): L
     } catch { /* no item file: every item is worth 0 */ }
     const byDebug = new Map([...items].map(([id, i]) => [i.debugname, id]));
     const pricesFile = join(root, '.practice', 'coordinator', 'market-prices.json');
+    const marketFile = join(root, '.practice', 'market-all.json');
     const billFile = join(root, '.practice', 'coordinator', 'supply-bill.json');
     let bids = new Map<number, number>(), wanted = new Set<number>(), checked = 0, stamp = '';
     const load = () => {
@@ -195,7 +203,7 @@ export function fileTables(root = resolve(import.meta.dir, '..', '..', '..')): L
         if (now - checked < RELOAD_MS && checked) return;
         checked = now;
         const mtime = (f: string) => { try { return String(statSync(f).mtimeMs); } catch { return '-'; } };
-        const next = `${mtime(pricesFile)}|${mtime(billFile)}`;
+        const next = `${mtime(pricesFile)}|${mtime(marketFile)}|${mtime(billFile)}`;
         if (next === stamp) return;
         stamp = next;
         const b = new Map<number, number>(), w = new Set<number>();
@@ -205,6 +213,12 @@ export function fileTables(root = resolve(import.meta.dir, '..', '..', '..')): L
                 if (id !== undefined && typeof p?.bid === 'number' && p.bid > 0) b.set(id, p.bid);
             }
         } catch { /* no prices */ }
+        try {
+            for (const [id, m] of Object.entries(JSON.parse(readFileSync(marketFile, 'utf8')).items ?? {}) as [string, any][]) {
+                const v = marketValue(m);
+                if (v > (b.get(Number(id)) ?? 0)) b.set(Number(id), v);
+            }
+        } catch { /* no market file */ }
         try {
             for (const row of (JSON.parse(readFileSync(billFile, 'utf8')).rows ?? []) as any[])
                 if ((row?.short ?? 0) > 0) for (const id of row.ids ?? []) w.add(id);
