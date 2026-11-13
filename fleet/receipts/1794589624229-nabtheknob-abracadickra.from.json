@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794589624229-nabtheknob-abracadickra",
+ "account": "NabTheKnob",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune axe",
+ "requested": 1,
+ "claim": "e900cdb8-de19-4f94-b54e-e72851caa63d",
+ "count": 0,
+ "ok": false,
+ "at": 1794589630492,
+ "detail": "trade claimed"
+}
