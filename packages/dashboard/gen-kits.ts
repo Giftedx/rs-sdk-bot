@@ -14,6 +14,8 @@ export function kitList(kits: Record<string, any>, names: Map<string, string>): 
     return Object.entries(kits).map(([kit, spec]) => {
         const worn: Record<number, [string, number]> = {};
         for (const [slot, item] of Object.entries(spec.worn ?? {})) if (slot in SLOT_IDS && item) worn[SLOT_IDS[slot]!] = count(item as any);
+        // A thrown weapon is a stack in the weapon slot: worn.weaponCount (scripts/pk-kits.ts kitItems).
+        if (worn[3] && spec.worn?.weaponCount > 0) worn[3] = [worn[3][0], spec.worn.weaponCount];
         const carried = new Map<string, number>();
         for (const c of spec.carried ?? []) { const [n, k] = count(c); carried.set(n, (carried.get(n) ?? 0) + k); }
         if (spec.food > 0) { const f = name(spec.foodItem ?? 'shark'); carried.set(f, (carried.get(f) ?? 0) + spec.food); }

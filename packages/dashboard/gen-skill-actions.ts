@@ -1,6 +1,7 @@
 // Writes client-assets/skill-actions.json for the XP Tracker's Skill Calculator (RuneLite's Skill Calculator): the
 // actions of each skill that the pinned server's tables define (knowledge/skills.json), as {skill: [[name, level, xp,
-// inputs, outputs], ...]} with item display names (knowledge/items.json). The XP is the XP that one action gives on this
+// inputs, outputs], ...]} with item display names. An action is named after its first output, or after its table row
+// when several rows of the skill give the same first output (each pickpocket target gives Coins). (knowledge/items.json). The XP is the XP that one action gives on this
 // server: the table's base XP times the server's XP rate (XP_RATE, 25).
 // Run: bun packages/dashboard/gen-skill-actions.ts
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -15,10 +16,13 @@ const label = (row: string) => row.replace(/_table$/, '').replace(/_/g, ' ').rep
 export function skillActions(rows: SkillRow[], names: Map<string, string>, rate = XP_RATE): Record<string, Action[]> {
     const name = (debug: string) => names.get(debug) ?? debug.replace(/_/g, ' ');
     const out: Record<string, Action[]> = {};
+    const firstOut = (r: SkillRow) => r.skill + '|' + (r.outputs?.[0] ?? '');
+    const uses = new Map<string, number>();
+    for (const r of rows) if (r.outputs?.[0]) uses.set(firstOut(r), (uses.get(firstOut(r)) ?? 0) + 1);
     for (const r of rows) {
         if (!r.skill || !Number.isFinite(r.level) || !(r.xp > 0)) continue;
         const outputs = (r.outputs ?? []).map(name), inputs = (r.inputs ?? []).map(name);
-        (out[r.skill] ??= []).push([outputs[0] ?? label(r.row), Math.max(1, r.level), Math.round(r.xp * rate * 10) / 10, inputs, outputs]);
+        (out[r.skill] ??= []).push([outputs[0] && uses.get(firstOut(r)) === 1 ? outputs[0] : label(r.row), Math.max(1, r.level), Math.round(r.xp * rate * 10) / 10, inputs, outputs]);
     }
     for (const list of Object.values(out)) list.sort((a, b) => a[1] - b[1] || a[2] - b[2] || a[0].localeCompare(b[0]));
     return out;
