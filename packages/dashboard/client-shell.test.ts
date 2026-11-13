@@ -716,6 +716,19 @@ test('!price answers from the market, then from the item value',()=>{
  expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
 });
 
+test('pickpocket: the followed account\'s chance, the XP a try and the stun, or the level it needs',()=>{
+ const code=shell.slice(shell.indexOf("  // Pickpocket (RuneLite's Thieving overlay"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ let lv:any=40;
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>({Man:[1,200,180,240,8,1],Hero:[80,6832.5,6,100,10,4]})}),account:()=>({}),curLevel:()=>lv,nf:(n:number)=>n.toLocaleString('en-GB')};
+ const t=new Function(...Object.keys(env),`${code};return thieveText;`)(...Object.values(env));
+ // Man at 40: floor(180*59/98) + floor(240*39/98) + 1 = 108 + 95 + 1 = 204 of 256: 80%, 159 XP a try.
+ expect(t('Man')).toBe('Pickpocket at Thieving 40: 80% · 159 XP a try · a fail stuns 8 ticks and hits 1');
+ expect(t('Hero')).toBe('Pickpocket: Thieving 80 needed (has 40)');
+ lv=null;expect(t('Man')).toBe('Pickpocket: Thieving 1 · 200 XP');
+ expect(t('Goblin')).toBe('');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
