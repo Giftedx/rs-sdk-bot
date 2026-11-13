@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='BD93C1DF94770509EBA2361C7C936B9039CF70B2C90A3EAB29EDF9663124251F';
+export const VIEWER_MANIFEST_SHA256='29707E838412004280F540AA9EE78F89FD95F65460F4C8F6EDC4153678DE4C6D';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -39,7 +39,9 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['moves at the display rate', 'needsEveryFrame('],                      // no frame limit while views move
     ['way back to the single view', 'onClosed'],                            // the kept view grows to the full frame
     ['markers message', 'setOverlay('],                                     // {overlay:{tiles,pies,lines,players,npcs,ground}}: RuneLite-style highlights
-    ['markers layer', 'drawMarkers('],                                      // drawn under the names at the ground height of each tile
+    ['markers layer', 'drawMarkers('],
+    ['capture message', 'requestCapture('],                                 // {capture:{id}}: the next frame as a JPEG
+    ['capture reply', 'viewerCapture'],                                     // {viewerCapture:{id,url}} to the page                                      // drawn under the names at the ground height of each tile
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);

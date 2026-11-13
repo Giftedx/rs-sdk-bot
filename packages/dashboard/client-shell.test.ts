@@ -883,7 +883,7 @@ test('skilling highlights and the trail: the resource of the top loot item near 
  expect(o.npcs).toContainEqual({types:[233,309],colour:'#00ffff'});
 });
 test('Inventory Setups: worn slots green, red or yellow against the kit, and the pack list against the kit',()=>{
- const code=shell.slice(shell.indexOf("  // Inventory Setups (RuneLite's) in the Equipment tab:"),shell.indexOf('  // Tick efficiency (one box under Overall'));
+ const code=shell.slice(shell.indexOf("  // Inventory Setups (RuneLite's) in the Equipment tab:"),shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"));
  const t=new Function('localStorage','fetch','asset','E','icon','nf',`${code};return {setupSlot,setupPanel,set:(k,s)=>{pkKits=k;setupKit=s;}};`)({getItem:()=>null},()=>new Promise(()=>{}),(n:string)=>n,String,(n:string)=>`[${n}]`,String);
  t.set([{name:'tribrid',worn:{0:['Rune full helm',1],13:['Rune arrow',300]},carried:[['Shark',18],['Blood rune',100]]}],'tribrid');
  const b={equipment:[{slot:0,name:'Rune full helm',count:1},{slot:13,name:'Rune arrow',count:120},{slot:5,name:'Wooden shield',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Blood rune',count:100}]};
@@ -894,4 +894,17 @@ test('Inventory Setups: worn slots green, red or yellow against the kit, and the
  expect(html).toContain('1 worn slot differs from the kit'.replace('differs','differ'));
  expect(html).toContain('setup-row setup-short');expect(html).toContain('<span>2 / 18</span>');
  expect(html).toContain('setup-row setup-have');expect(html).toContain('<span>100 / 100</span>');
+});
+test('Screenshot: a level-up, a death or valuable loot of the watched account asks the viewer for a picture and keeps it',()=>{
+ const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));
+ const posted:any[]=[];const b:any={name:'Alpha',flow:{loot:[{name:'Rune scimitar',count:1}]}};
+ const env:any={localStorage:{getItem:()=>null,setItem:()=>{}},indexedDB:{open:()=>{throw new Error('none');}},VIEWER:{state:'ready'},$:()=>({contentWindow:{postMessage:(m:any)=>posted.push(m)}}),location:{origin:''},account:()=>b,S:{economy:{itemValues:{'Rune scimitar':15000,'Dragon chainbody':500000}}},gp:(n:number)=>String(n),selectedPlugin:'xp',window:{},body:{}};
+ const t=new Function(...Object.keys(env),`${code};return {shotFor,shotReply,lootShots,list:()=>shots};`)(...Object.values(env));
+ t.shotFor(b,'level','Level 70 Woodcutting');t.shotFor({name:'Other'},'death','Death');
+ expect(posted.length).toBe(1);expect(posted[0].capture.id).toMatch(/^[a-z0-9]+$/);
+ t.shotReply({id:posted[0].capture.id,url:'data:image/jpeg;base64,AAAA'});
+ expect(t.list()).toMatchObject([{name:'Alpha',kind:'level',text:'Level 70 Woodcutting',url:'data:image/jpeg;base64,AAAA'}]);
+ t.shotReply({id:'unknown',url:'data:image/jpeg;base64,BBBB'});expect(t.list().length).toBe(1);
+ t.lootShots();b.flow={loot:[{name:'Rune scimitar',count:2},{name:'Dragon chainbody',count:1}]};t.lootShots();
+ expect(posted.length).toBe(2);
 });
