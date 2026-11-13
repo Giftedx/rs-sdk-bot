@@ -1,0 +1,28 @@
+{
+ "id": "1794530497118-magicwanda-weequickie-runeessence",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "WeeQuickie",
+ "item": "Rune essence",
+ "count": 170,
+ "start": 1794530497118,
+ "end": 1794535897118,
+ "meet": [
+  {
+   "x": 3013,
+   "z": 3356,
+   "level": 0
+  },
+  {
+   "x": 3014,
+   "z": 3356,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Air talisman",
+   "count": 1
+  }
+ ]
+}

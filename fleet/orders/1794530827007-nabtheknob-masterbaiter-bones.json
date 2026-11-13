@@ -1,0 +1,22 @@
+{
+ "id": "1794530827007-nabtheknob-masterbaiter-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Masterbaiter",
+ "item": "Bones",
+ "count": 6,
+ "start": 1794530827007,
+ "end": 1794533227007,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

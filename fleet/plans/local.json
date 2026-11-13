@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794529333870,
+ "at": 1794529931533,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -94,24 +94,24 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/aio.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "catherby"
    ],
-   "env": {},
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "local",
    "resources": [
-    "aio:seers-flax"
+    "shop:catherby"
    ]
   },
   {
@@ -169,31 +169,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
@@ -438,25 +413,6 @@
    ]
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -499,24 +455,24 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "catherby"
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
    ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
    "autopilot": "local",
    "resources": [
-    "shop:catherby"
+    "aio:seers-flax"
    ]
   },
   {
