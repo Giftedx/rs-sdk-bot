@@ -126,7 +126,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     trips?: { count: number; resupply: (a: Session, fresh?: boolean) => Promise<string | null>; bank?: { eaten: number } }, more: { wait?: number; gangTrips?: GangTrips; idlePrayerOff?: boolean } = {}): Promise<GangResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
-    const start = a.tick(), cap = optionsA.cap ?? 900, self = () => a.sdk.getState()?.player;
+    const start = a.tick(), cap = optionsA.cap ?? 900, self = () => a.sdk.getState()?.player, latch = { outnumbered: false };
     const first = self(), spot = first ? { x: first.worldX, z: first.worldZ } : null;
     const alive = new Set(others.map(o => o.name.toLowerCase()));
     // A death gives the account a new life id, but the client counts a death only when it sees 0 Hitpoints, and the
@@ -232,7 +232,8 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
             && (a.sdk.getState()?.nearbyPlayers ?? []).some(p => p.index === lastHitBy && alive.has(p.name.toLowerCase())))
             || lowerRunner(target);
         if (focus !== undefined && (health(target.index) ?? 1) <= focus) log(`[${a.name}] GANG focus ${target.name} at ${Math.round((health(target.index) ?? 0) * 100)}%`);
-        const r = await fightPlayer(a, target.name, { ...optionsA, cap: Math.max(1, cap - (a.tick() - start)), stop: () => halt() || other(), log: l => log(`[${a.name}] ${l}`) });
+        // One escape for the meeting: once our account leaves a crowd it keeps leaving, whoever it faces next.
+        const r = await fightPlayer(a, target.name, { ...optionsA, escapeLatch: latch, cap: Math.max(1, cap - (a.tick() - start)), stop: () => halt() || (!latch.outnumbered && other()), log: l => log(`[${a.name}] ${l}`) });
         fights.push(r);
         // An attack click on an account that died can walk ours toward its respawn point: after a kill, back to the
         // meeting tile from more than 6 tiles.

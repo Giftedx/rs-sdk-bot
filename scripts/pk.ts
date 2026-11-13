@@ -154,6 +154,9 @@ export type FightOptions = {
     // Our own accounts in this fight (lower case): each one within 10 tiles takes one attacker off the count of
     // escapeOutnumbered, so an account does not leave an ally that stands with it.
     allies?: readonly string[];
+    // An escape that outlives one call of the loop: a harness that starts a new fight for each attacker passes the
+    // same object, so an escape begun against one attacker goes on against the next.
+    escapeLatch?: { outnumbered: boolean };
     // One freeze for a group of our accounts on one target: `clock` is a tick count they share, `at` the tick of the
     // last freeze one of them cast and `until` the tick to which it holds the target and keeps it immune (the hold,
     // then 5 ticks). An account casts no freeze before `until`, and the caster sets `until` back to now when it sees
@@ -520,7 +523,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
-    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10, outnumbered = false;
+    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10, outnumbered = o.escapeLatch?.outnumbered ?? false;
     // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.
     let lagWant: number | null | undefined, lagAt = start, lagHas: number | null | undefined;
     let lastStyle: Style | null = null, arm: StyleArm = 'avoid', lastArm: StyleArm = 'avoid';
@@ -578,7 +581,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const facers = hostile.filter(x => !visibleIdx.has(x.f) || allyIdx.has(x.f)).map(x => x.p);
         const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
         if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
-            outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
+            outnumbered = true; if (o.escapeLatch) o.escapeLatch.outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
         }
         const escapeNow = (pack: typeof state.inventory) => outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));
         let maxMessage = seenMessage;

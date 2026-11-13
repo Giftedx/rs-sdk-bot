@@ -1580,21 +1580,21 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     The opening still spreads over about 20 ticks: the leader's chase froze before the hold took hold, and the
     followers' first specials, armed out of melee reach, went out 7 ticks later. Gap: more accounts; the leader's
     first freeze (pk-roam's chase) does not use the shared freeze.
-55. **Five accounts catch the target that three let go.** `extra:army-deep-x3` and `extra:army-deep-x5` (gang mode
-    at 3166,3784, Wilderness level 34, multi-way; our account on the champion with 18 sharks, a glory and its
-    escape from a crowd, a run south to level 30; the army on `army`; two groups; seeds 1-4): three accounts kill
-    the target in 2 of 8 meetings (5 escapes, 1 away), four in 4 of 8 (4 escapes), five in 6 of 8 (2 escapes),
-    with the target counting its attackers by hit source alone; with the count of finding 57 five kill it in 4 of 8.
-    The army lost no account. Gap: one run per seed.
-56. **In the army route five accounts still lose the running target; gang mode's start on the target's tile is
-    the easy case.** `extra:army-route-defend-deep-x5` (the route of finding 52 with a leader and four followers
+55. **Three, four or five maxed tribrids all let the target go that leaves a crowd at level 34.**
+    `extra:army-deep-x3`, `-x4` and `-x5` (gang mode at 3166,3784, Wilderness level 34, multi-way; our account on
+    the champion with 18 sharks, a glory and its escape from a crowd, a run south to level 30; the army on `army`;
+    two groups; seeds 1-4): each size kills the target in 1 of 8 meetings, and it escapes in 7. Gang mode starts a
+    new fight of the loop for our account whenever another of the gang hits it (`pvp_combat.rs2` single-way rule),
+    and an escape begun in one call was lost in the next: with that, the sizes killed it in 2, 4 and 6 of 8. The
+    loop takes `escapeLatch`, and gang mode passes one for each meeting and stops no fight once the escape has
+    begun. The army lost no account. Gap: one run per seed.
+56. **In the army route five accounts lose the running target as well.** `extra:army-route-defend-deep-x5` (the route of finding 52 with a leader and four followers
     from level 28 against the target of finding 54 at level 34, multi-way; seeds 1-4): the target escapes in every
     run, 21 to 23 ticks after the first hit, with 56 to 68 HP. With `OPEN_TOGETHER=1` the hold releases when all
     five stand within 3 tiles (14 to 15 ticks after the leader first sees the target) and the target still escapes
     with 39 to 79 HP; with the gang target's kit (`TARGET_KIT=tribrid-snare`: glory worn, 18 sharks) it escapes 31
-    to 37 ticks in with 53 to 67 HP. Finding 55's five accounts start on the target's tile in gang mode. Gap: the
-    cause of the gap between the two harnesses (approach direction, the leader's roam fight options) is not
-    measured.
+    to 37 ticks in with 53 to 67 HP, and with the army started next to the target (`ARMY_AT=near`) with 41 to 87.
+    Gang mode agrees once the target's escape outlives a fight restart (finding 55).
 57. **A crowd's attackers are counted by facing, not by hit source: the client names a hit's source by the entity we
     face.** `StateCollector` gives each damage splat the player we face as its source, so in a crowd every hit
     counted for one player: `escapeOutnumbered` fired at 49 to 65 HP against five, and the overhead protected
@@ -1607,5 +1607,5 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`extra:team-3v3-multi-x3`, seeds 1-8): 8, 11, 5, with 10 dead and 17 of side B's; without it 5, 14, 5, with 11
     dead and 12. Against five at level 34
     (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 99 HP in half the meetings and leaves alive in
-    4 of 8 where the hit count let it leave in 2. The army case of finding 46 holds: 16 kills, no losses, the target
+    4 of 8 where the hit count let it leave in 2 (both without the escape latch of finding 55). The army case of finding 46 holds: 16 kills, no losses, the target
     eats 15.5 sharks. Gap: a target out of view counts as us; no run on the live server.
