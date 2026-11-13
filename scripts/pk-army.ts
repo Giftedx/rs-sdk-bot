@@ -103,6 +103,13 @@ if (import.meta.main) {
     let sessions: Session[];
     try { sessions = await Promise.all(names.map(n => openBot(n))); } finally { tickWaits.active--; }
     const [leader, ...followers] = sessions;
+    // The leader's fights take the champion's options for a maxed leader, as the roam's do (ROAM_PROFILE auto,
+    // research/pvp-fight-loop.md finding 58).
+    if ((leader!.sdk.getState()?.player?.combatLevel ?? 0) >= 115) {
+        const { PROFILES } = await import('./pk-spar');
+        const { specBelow: _below, ...champion } = PROFILES.champion!;
+        cfg.fight = { ...champion, ...cfg.fight };
+    }
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: leader!.tick(), ...e }));
     // The army's kills: each target that any of its accounts saw die, once.
     const shared = { target: null as string | null, over: false, killed: new Set<string>() };

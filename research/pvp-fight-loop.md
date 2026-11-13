@@ -1617,4 +1617,4 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     deal 307 and take 404 in the first fight, summed over the six seeds; with the champion's (`ROAM_PROFILE=champion`)
     379 and 360. No fight ends in a kill within the roam's 120-tick cap: two maxed accounts with food need longer.
     `ROAM_PROFILE` defaults to `auto`: the champion for an account of combat 115 or more, the roam's own options
-    below that (finding 37). Gap: six seeds; the army leader's hunt keeps the roam's own options.
+    below that (finding 37); the army leader (`scripts/pk-army.ts`) takes the same rule. Gap: six seeds.
