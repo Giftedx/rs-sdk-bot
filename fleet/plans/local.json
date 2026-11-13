@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794538932561,
+ "at": 1794539422454,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -59,24 +59,44 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit2-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99",
+    "5000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
    "autopilot": "local",
    "resources": []
   },
   {
    "account": "Bigpackage",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "catherby"
@@ -95,29 +115,6 @@
    "autopilot": "local",
    "resources": [
     "shop:catherby"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -327,25 +324,6 @@
    ]
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Shaftmaker",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -462,21 +440,25 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -572,6 +554,19 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3e34d231-e80d-4f7f-9380-2ddbb7326953"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-pocketrocket-20261113t025511z [task-3e34d231-e80d-4f7f-9380-2ddbb7326953]",
+   "role": "thieving"
   }
  ]
 }
