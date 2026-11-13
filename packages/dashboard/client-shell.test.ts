@@ -1019,7 +1019,9 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  expect(t.wornBonuses(b)).toEqual([7,45,-2,0,0,0,1,0,0,0,54,0,0]);
  // The server's formula: floor(((99 + 8 + style) × (54 + 64) + 320) / 640).
  expect([t.maxHit(99,54,0),t.maxHit(99,54,3),t.maxHit(99,0,3)]).toEqual([20,20,11]);
- const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20');
+ // With the +15% prayer: floor(99 × 115 / 100) = 113, so floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
+ expect(t.maxHit(99,54,3,115)).toBe(23);
+ const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20 (23 with +15% prayer)');
  // Varrock: min(2 fire, 30/3 air, 4 law) = 2; Falador: 4 law, Magic 30 is below 37.
  expect(t.teleCasts(b)).toEqual([{name:'Varrock teleport',lv:25,casts:2,can:true},{name:'Falador teleport',lv:37,casts:4,can:false}]);
  // A wielded Staff of fire gives fire runes without limit.
