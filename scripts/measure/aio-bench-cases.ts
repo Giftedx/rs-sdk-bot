@@ -438,6 +438,14 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
       {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {glory: true, ...(process.env.TARGET_STRONG === '1' ? {potions: true, food: 24} : {})})}]},
+    // Two targets that defend on the champion at the first hunt spot: one in rune with 18 sharks and a glory next to
+  // the spot, one in monk robes (kit ganker-dds) four tiles on. HUNT_PICK=soft sends the hunter to the softer one.
+  {key: 'extra:hunt-pick', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b},{bot:c}', 'hunt', '900', 'TARGET_PROFILE=champion'],
+    pass: ok, output: /kills (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: kitFixture('ganker-dds', 3098, 3543)}]},
   // roam: scripts/pk-roam.ts reads the world feed roster (WORLD_FEED=true on the engine) and goes to the target at
   // Wilderness level 8 from just south of the Wilderness (roam takes no target within 40 tiles of its escape,
   // MIN_ESCAPE_TILES); 18 s of wall time at most.

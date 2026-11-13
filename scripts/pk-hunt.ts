@@ -15,7 +15,8 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { armourDefence } from './pk-read';
 import { itemCost } from './pk-roam';
 
 // HUNT_PROFILE=<profile of scripts/pk-spar.ts>: that profile's fight options for each fight of the hunt (the kit,
@@ -71,10 +72,13 @@ export function verdict(me: { z: number; combatLevel: number }, p: Seen, ours: S
     return 'attackable';
 }
 // The player to fight: whoever is hitting us first, else the nearest attackable stranger who is not fighting someone else.
-export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null): P | undefined {
+// The hunt's choice (HUNT_PICK, default soft): of the attackable players, the one whose worn armour gives the least
+// melee defence (read from what the client shows it wearing), then the nearest; HUNT_PICK=near takes the nearest.
+export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null,
+    armour?: (p: P) => number): P | undefined {
     const attacker = attackerIndex === null ? undefined : players.find(p => p.index === attackerIndex);
     if (attacker) return attacker;
-    return [...players].filter(p => verdict(me, p, ours) === 'attackable').sort((a, b) => a.distance - b.distance)[0];
+    return [...players].filter(p => verdict(me, p, ours) === 'attackable').sort((a, b) => (armour ? armour(a) - armour(b) : 0) || a.distance - b.distance)[0];
 }
 
 // A hit we took from another player. The SDK also reports an NPC's damage from someone else as damage_taken, with
@@ -218,8 +222,12 @@ export async function hunt(s: Session, o: HuntOptions) {
                 sighted.set(p.name, v);
                 log(`HUNT seen ${p.name} combat ${p.combatLevel} at ${p.x},${p.z} wild ${wildernessLevel(p.z)} ${v}${p.inCombat ? ` fighting ${p.combatTargetType}` : ''}`);
             }
-            if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20)) continue;
-            const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex);
+            // HUNT_MIN_FOOD=<n>: no new fight of our own choosing with fewer than n pieces of food (an attacker is still
+            // fought): a hunter that has spent its food on one kill does not take on the next target.
+            const foodLeft = state.inventory.filter(i => i.optionsWithIndex?.some(op => /^eat$/i.test(op.text))).reduce((n, i) => n + i.count, 0);
+            if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20 || foodLeft < Number(process.env.HUNT_MIN_FOOD ?? 0))) continue;
+            const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex, process.env.HUNT_PICK !== 'near'
+                ? p => { const o = observePlayer(s.client, p.index); return o ? armourDefence(o.worn.map(id => objNames().get(id) ?? '')).melee : 0; } : undefined);
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
@@ -249,6 +257,16 @@ export async function hunt(s: Session, o: HuntOptions) {
             if (r.outcome === 'kill') {
                 tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
                 log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
+            }
+            // A danger exit (no food, two attackers) leaves the fight but not the place: the escape (glory, teleport or a
+            // run, the fight loop's own) goes at once, or each hit starts a new fight that stops at the danger check
+            // again and the hunter stands until it dies (extra:hunt-pick).
+            if (r.outcome === 'danger') {
+                const e = await fightPlayer(s, target.name, { kit, exitOnDanger: false, escapeAt: me.maxHp, escapeSpell: o.teleSpell, cap: 200, stop: over, log,
+                    predictPrayer: true, snapPrayer: true });
+                log(`HUNT escape after danger: ${e.outcome}`);
+                if (e.outcome === 'escaped') tally.escapes++;
+                if (e.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
             }
             if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
             if (r.outcome === 'session ended') return { ...tally, end: 'session ended' };

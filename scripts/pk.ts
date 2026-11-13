@@ -243,7 +243,7 @@ export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1)
 
 // The style a worn weapon attacks with, from its object name (content pack/obj.pack). No weapon is melee (fists).
 let objNames: Map<number, string> | undefined;
-const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
+export const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
     .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })));
 // The style of a weapon by its name: a bow or a thrown weapon is ranged, a staff magic. The simulator
 // (scripts/pk-sim.ts) and the prayer guard use the same rule (packages/core/src/opponent.ts).
