@@ -923,7 +923,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The pointer on the minimap names the tile under it, and the players whose dots it touches.
   miniCanvas?.addEventListener('mousemove',e=>{const t=miniAt(e),tip=hud.querySelector('.game-tip'),names=[...new Set((minimap.hits||[]).filter(h=>Math.abs(h[0]-t.x)<=3&&Math.abs(h[1]-t.y)<=3).map(h=>safeName(h[2])))];
     tip.textContent=(names.length?names.slice(0,4).join(', ')+(names.length>4?' +'+(names.length-4):'')+' · ':'')+t.tx+', '+t.tz;tip.hidden=false;const h=hud.getBoundingClientRect();tip.style.left=Math.max(0,e.clientX-h.left-tip.offsetWidth-10)+'px';tip.style.top=(e.clientY-h.top+12)+'px';});
-  miniCanvas?.addEventListener('contextmenu',e=>{const t=miniAt(e),h=(minimap.hits||[]).filter(h=>Math.abs(h[0]-t.x)<=3&&Math.abs(h[1]-t.y)<=3&&/^[A-Za-z0-9_ -]{1,12}$/.test(h[2]))[0];if(!h)return;e.preventDefault();lookup(h[2]);});
+  // Only a player dot looks up: the hits also hold floor items, markers and icons, whose labels can look like a name.
+  const playerNames=()=>new Set([...(S?.roster||[]).map(r=>String(r[0]).toLowerCase()),...(S?.bots||[]).map(b=>String(b.name).toLowerCase())]);
+  miniCanvas?.addEventListener('contextmenu',e=>{const t=miniAt(e),players=playerNames(),h=(minimap.hits||[]).filter(h=>Math.abs(h[0]-t.x)<=3&&Math.abs(h[1]-t.y)<=3&&/^[A-Za-z0-9_ -]{1,12}$/.test(h[2])&&players.has(String(h[2]).toLowerCase()))[0];if(!h)return;e.preventDefault();lookup(h[2]);});
   miniCanvas?.addEventListener('mouseleave',()=>{hud.querySelector('.game-tip').hidden=true;});
   // A narrow view has no room for the orbs beside the minimap: they go in a row under it, and the XP button goes to
   // the top right of the ring (client-shell.css, hud-narrow).

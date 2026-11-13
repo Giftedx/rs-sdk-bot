@@ -968,6 +968,13 @@ test('idle markers and the closest teleport',()=>{
  // Farther than 80 tiles: no hint.
  expect(t.nearestTeleport([{x:3000,z:3000,l:0}])).toBe(null);
 });
+test('minimap right-click: only the names of players look up, not floor items or markers',()=>{
+ const line=shell.split('\n').find(l=>l.includes('const playerNames=()=>'))!;
+ const playerNames=new Function('S',`${line};return playerNames;`)({roster:[['Goondelf',1,2,0]],bots:[{name:'Alpha'}]});
+ const names=playerNames();
+ expect(['goondelf','alpha'].every(n=>names.has(n))).toBe(true);
+ expect(names.has('floor item')).toBe(false);expect(names.has('death tile')).toBe(false);
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
