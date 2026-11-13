@@ -1657,7 +1657,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     attacker, and each new hit started a fight that stopped at the same check, so it died there. The hunt now runs
     the fight loop's escape at once after a danger exit (glory, teleport or a run; the glory took it out in 7 ticks).
     Taking the softest armour first (`HUNT_PICK`, default `soft`) kills 10 targets of 12 (all six soft ones) for one
-    death of the hunter; the nearest first 9 for one. `HUNT_MIN_FOOD` (no fight of the hunter's own choosing below
+    death of the hunter; the nearest first 9 for one. That death came after the hunt's own tick cap ended a fight
+    (`timeout`): the hunt stopped beside its attacker. The hunt now also escapes after a timeout in the Wilderness,
+    with `flee` (the fight loop only escapes, whatever the food) and its own 200-tick cap: 8 targets of 12 (all six
+    soft ones) and no death. `HUNT_MIN_FOOD` (no fight of the hunter's own choosing below
     that much food) changes nothing here, because the first kill costs little food. Pure builds: in the
     `pure-dds` mirror (`extra:spar-kit-pure-dds-x8`, seeds 1-8, against `base`) `base` and `snap` give 32 kills and
     30 deaths in 64, the champion 30 and 32, `specBelow` 1 or 0.5 31 to 33 kills, and `hunter` (a freeze on flight

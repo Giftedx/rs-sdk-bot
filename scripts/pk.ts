@@ -157,6 +157,8 @@ export type FightOptions = {
     // An escape that outlives one call of the loop: a harness that starts a new fight for each attacker passes the
     // same object, so an escape begun against one attacker goes on against the next.
     escapeLatch?: { outnumbered: boolean };
+    // The loop only escapes: glory, escapeSpell or a run south (escapeWalk), from the first tick, whatever the food.
+    flee?: boolean;
     // One freeze for a group of our accounts on one target: `clock` is a tick count they share, `at` the tick of the
     // last freeze one of them cast and `until` the tick to which it holds the target and keeps it immune (the hold,
     // then 5 ticks). An account casts no freeze before `until`, and the caster sets `until` back to now when it sees
@@ -599,7 +601,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
             outnumbered = true; if (o.escapeLatch) o.escapeLatch.outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
         }
-        const escapeNow = (pack: typeof state.inventory) => outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));
+        const escapeNow = (pack: typeof state.inventory) => o.flee === true || outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));
         let maxMessage = seenMessage;
         for (const m of state.gameMessages) {
             const id = m.observationId ?? m.tick;

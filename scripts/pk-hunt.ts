@@ -261,9 +261,12 @@ export async function hunt(s: Session, o: HuntOptions) {
             // A danger exit (no food, two attackers) leaves the fight but not the place: the escape (glory, teleport or a
             // run, the fight loop's own) goes at once, or each hit starts a new fight that stops at the danger check
             // again and the hunter stands until it dies (extra:hunt-pick).
-            if (r.outcome === 'danger') {
-                const e = await fightPlayer(s, target.name, { kit, exitOnDanger: false, escapeAt: me.maxHp, escapeSpell: o.teleSpell, cap: 200, stop: over, log,
-                    predictPrayer: true, snapPrayer: true });
+            // So does a fight that the hunt's tick cap or stop ended (timeout): the hunt ends, and an account left
+            // standing beside its attacker dies there. This escape has its own 200-tick cap and stops only out of the
+            // Wilderness.
+            if (r.outcome === 'danger' || (r.outcome === 'timeout' && wildernessLevel(s.sdk.getState()?.player?.worldZ ?? 0) > 0)) {
+                const e = await fightPlayer(s, target.name, { kit, exitOnDanger: false, escapeSpell: o.teleSpell, cap: 200, log,
+                    predictPrayer: true, snapPrayer: true, flee: true });
                 log(`HUNT escape after danger: ${e.outcome}`);
                 if (e.outcome === 'escaped') tally.escapes++;
                 if (e.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
