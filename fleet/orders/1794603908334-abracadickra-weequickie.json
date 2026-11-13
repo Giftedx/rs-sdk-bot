@@ -1,0 +1,49 @@
+{
+ "id": "1794603908334-abracadickra-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "WeeQuickie",
+ "item": "Bucket of water",
+ "count": 4,
+ "start": 1794603908334,
+ "end": 1794607508334,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Spade",
+   "count": 1
+  },
+  {
+   "item": "Rope",
+   "count": 1
+  },
+  {
+   "item": "Bucket of milk",
+   "count": 1
+  },
+  {
+   "item": "Snape grass",
+   "count": 1
+  },
+  {
+   "item": "Law rune",
+   "count": 1
+  },
+  {
+   "item": "Air rune",
+   "count": 5
+  }
+ ],
+ "takerWaits": true
+}
