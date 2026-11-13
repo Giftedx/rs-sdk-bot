@@ -18,7 +18,8 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
-import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, isMulti, type FightOptions, type Kit } from './pk';
+import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, getObjNames, isMulti, observePlayer, type FightOptions, type Kit } from './pk';
+import { armourDefence } from './pk-read';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
 export function wildLevel(x: number, z: number): number {
@@ -391,7 +392,14 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     };
 
     // Fight one target until it dies, logs out, leaves the Wilderness, or the chase stalls.
-    const chase = async (name: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
+    // The feed shows no armour, so the first pick is by reach. Once the target is in view, the chase moves, before its
+    // first fight, to an idle player in view whose melee armour is at least ROAM_SOFTER (40) stab defence lower
+    // (research/pvp-fight-loop.md finding 62). ROAM_SWITCH=0 keeps the first pick.
+    const switchOn = process.env.ROAM_SWITCH !== '0', softer = Number(process.env.ROAM_SOFTER ?? 40);
+    const stabOf = (index: number) => { const o = observePlayer(session.client, index); return o ? armourDefence(o.worn.map(id => getObjNames().get(id) ?? '')).melee : null; };
+    let chasing = '';
+    const chase = async (first: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
+        let name = chasing = first, fought = false;
         stats.chases++;
         let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, contactAt = session.tick();
         let held = false, freezeReady = 0, lastSeenAt: { x: number; z: number } | null = null;
@@ -425,6 +433,18 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             if (wildLevel(pos.x, pos.z) > cfg.maxWild || wildLevel(m.x, m.z) > cfg.maxWild) { emit({ e: 'too-deep', target: name, wild: wildLevel(m.x, m.z) }); return 'left'; }
             lastTile = { x: pos.x, z: pos.z };
 
+            if (near && near.distance <= 15 && switchOn && !fought) {
+                const mine = stabOf(near.index);
+                const soft = mine === null ? undefined : (sdk.getState()?.nearbyPlayers ?? [])
+                    .filter(p => p.index !== near.index && !friends.has(p.name.toLowerCase()) && !skip.has(p.name.toLowerCase()) && p.distance <= 15 && !p.inCombat && canAttack(m, p))
+                    .map(p => ({ p, stab: stabOf(p.index) })).filter(x => x.stab !== null && x.stab + softer <= mine)
+                    .sort((a, b) => a.stab! - b.stab! || a.p.distance - b.p.distance)[0];
+                if (soft) {
+                    emit({ e: 'switch', from: name, to: soft.p.name, stab: [mine, soft.stab] });
+                    release(name); name = chasing = soft.p.name; claim(name); stats.targets.push(name);
+                    lastDist = Infinity; held = false; lastSeenAt = null; continue;
+                }
+            }
             if (near && near.distance <= 15) {
                 contactAt = session.tick();
                 const fleeing = near.distance > lastDist && near.distance >= 2;
@@ -457,7 +477,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // The tribrid fight itself: scripts/pk.ts fightPlayer (style off the overhead, gear switch per turn,
                 // special, food, prayer, glory escape). It exits immediately if the target leaves range or the
                 // Wilderness, exceeds maxWild, or a stop condition fires.
-                stats.attacks++;
+                stats.attacks++; fought = true;
                 const fight = await fightPlayer(session, name, {
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
@@ -524,11 +544,11 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             stats.targets.push(name);
             emit({ e: 'target', target: name, combat: pick.track.combatLevel, wild: wildLevel(pick.track.x, pick.track.z), meetIn: Math.round(pick.at.ticks), at: [pick.track.x, pick.track.z] });
             claim(name);
-            const outcome = await chase(name).finally(() => release(name));
-            emit({ e: 'chase-end', target: name, outcome });
+            const outcome = await chase(name).finally(() => release(chasing));
+            emit({ e: 'chase-end', target: chasing, outcome });
             if (outcome === 'dead' || outcome === 'stop') break;
             if (outcome === 'flee') break;
-            if (outcome === 'stall' || outcome === 'left') skip.add(name.toLowerCase());
+            if (outcome === 'stall' || outcome === 'left') skip.add(chasing.toLowerCase());
             if (needBank() && !(await bank(carried >= bankAt ? 'loot value' : 'pack full'))) break;
         }
         // Bank whatever loot is carried before logging out; with none, just leave the Wilderness.

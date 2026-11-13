@@ -492,7 +492,8 @@ const ROUTE_CASES: BenchCase[] = [
     scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})}]},
   // Two targets that defend on the champion at Wilderness level 8: one in rune with 18 sharks and a glory, one in monk
-  // robes (kit ganker-dds) six tiles on. ROAM_SOFT (environment) weighs the softer one.
+  // robes (kit ganker-dds) six tiles on. The roam takes the rune one by reach and switches to the robes once both are
+  // in view; `--set ROAM_SWITCH=0` keeps the first pick.
   {key: 'extra:roam-pick', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b},{bot:c}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})},

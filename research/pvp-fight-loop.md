@@ -1672,3 +1672,13 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     whether a tick's frame is read before or after that tick's game packets follows the machine, and the game socket
     carries no engine tick to align them by. Gap: six seeds; one pair of targets; a repeatable roam needs the feed
     frames tied to the game tick.
+62. **The roam takes the softer of two targets once both are in view: 6 kills in 6 seeds, against 1 in 6.**
+    `extra:roam-pick` (two targets defending on the champion at Wilderness level 8: one in rune with 18 sharks and a
+    glory, 219 stab defence; one in monk robes with a dragon dagger, 0; seeds 1-6, `.practice/roam-switch/`): the
+    roam picks the rune one from the feed by reach in every seed. With the switch (`scripts/pk-roam.ts` chase: before
+    its first fight, an idle attackable player in view with at least `ROAM_SOFTER` (40) less stab defence takes the
+    chase) it kills the robed one in all six and dies in none; with `ROAM_SWITCH=0`, 1 kill and no death. The
+    single-target roam cases, the hunt cases and the army routes pass at seed 1 and none of them switches. Six seeds
+    run in 55 to 59 s on `--seeds 1,2,3,4,5,6 --seed-jobs 6`, so a roam change is measured over seeds although one
+    seed does not repeat (finding 61). Gap: one pair of targets; a softer target that fights back harder than its
+    armour shows (a pure with a godsword) is not in a case.
