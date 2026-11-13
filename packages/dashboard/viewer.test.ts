@@ -585,3 +585,44 @@ test('a feed count change and del after a private pile keep the feed order: the 
  page({botGround:[]});socket.message({t:'tick',k:7,ms:600});
  expect(drawn()).toEqual({'3219,3242,0':[[995,30]]});
 });
+test('respawn timers: a loc change to a watched depleted form marks the tile, a del ends it, and the page gets the list',async()=>{
+ const {b,socket,page}=groundBrowser();await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const lists=()=>b.messages.filter(m=>m.data.atlasDepleted).map(m=>m.data.atlasDepleted);
+ page({respawnWatch:[450]});
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ socket.message({t:'tick',k:5,ms:600,w:[{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0},{e:'la',x:3211,z:3220,l:0,id:1276,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:5,list:[[3210,3220,0,450,5]]});
+ socket.message({t:'tick',k:9,ms:600,w:[{e:'ld',x:3210,z:3220,l:0,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:9,list:[]});
+ // A depleted loc in the snapshot of a newly held zone has no start tick.
+ socket.message({t:'tick',k:12,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'la',x:3230,z:3230,l:0,id:450,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:12,list:[[3230,3230,0,450,null]]});
+ page({respawnWatch:[-1]});
+ expect(lists().length).toBe(3);
+});
+test('respawn timers: a closed main feed and a new watch list send the page an empty list',async()=>{
+ const b=browser(),hostListeners:Function[]=[];
+ b.host.addEventListener=(t:string,fn:Function)=>{if(t==='message')hostListeners.push(fn);};
+ class Socket {
+  on:Record<string,Function[]>={};handler:any=null;constructor(..._args:any[]){}
+  addEventListener(t:string,fn:Function){(this.on[t]??=[]).push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.on.message??[])f(e);this.handler?.(e);}
+  close(){for(const f of this.on.close??[])f({});}}
+ b.host.WebSocket=Socket;b.host.MessageEvent??=class{data:any;origin:any;constructor(_t:string,i:any){this.data=i.data;this.origin=i.origin;}};
+ installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const page=(data:any)=>{for(const f of hostListeners)f({data,origin:b.host.location.origin,source:b.host.parent,stopImmediatePropagation(){}});};
+ const last=()=>b.messages.filter(m=>m.data.atlasDepleted).at(-1)?.data.atlasDepleted;
+ const s1:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');s1.onmessage=()=>{};
+ page({respawnWatch:[450]});
+ s1.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ s1.message({t:'tick',k:5,ms:600,w:[{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0}]});
+ expect(last().list.length).toBe(1);
+ s1.close();
+ expect(last().list).toEqual([]);
+ const s2:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');s2.onmessage=()=>{};
+ s2.message({t:'tick',k:9,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0}]});
+ expect(last().list.length).toBe(1);
+ page({respawnWatch:[451]});
+ expect(last().list).toEqual([]);
+});

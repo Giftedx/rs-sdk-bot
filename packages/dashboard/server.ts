@@ -17,6 +17,7 @@ import {requestEvidence,gateView} from './evidence';
 import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { GEAR_TARGETS } from './goal-details';
 import { deathRecap, type DeathRecap } from './death-recap';
+import { flowView, trackFlow } from './flow';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerEntry } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
@@ -154,6 +155,7 @@ function liveAccounts(): string[] {
 // A status file is parsed again only when its mtime changes; track() runs once per new version. The scan names
 // the files to stat, so a build does not stat the thousands of old practice files.
 const statusScan = folderScan(statusDir), statusCache = new Map<string, { mtime: number; doc: Status }>();
+const flows = new Map<string, any>(); // loot and supplies per account and session (flow.ts)
 function readStatuses(): Map<string, Status> {
     const { check, gone } = statusScan();
     for (const f of gone) statusCache.delete(join(statusDir, f));
@@ -201,6 +203,7 @@ const lastPhase = new Map<string, string>();
 const phaseSince = new Map<string, { at: number; exact: boolean }>();
 for (const e of [...events].reverse()) phaseSince.set(e.name + NL + e.text, { at: e.at, exact: true });
 function track(s: Status) {
+    trackFlow(flows, s);
     const session = JSON.stringify([s.server, s.started ?? null]);
     if (sampleSessions.get(s.name) !== session) {
         samples.delete(s.name);
@@ -1072,7 +1075,7 @@ function buildState() {
         const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
         return {
-            ...s, ground: name === MAIN ? [] : s.ground ?? [], name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
+            ...s, ground: name === MAIN ? [] : s.ground ?? [], flow: name === MAIN ? null : flowView(flows, name), name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
             practice: isLocalServer(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
@@ -1133,7 +1136,8 @@ function buildState() {
         // else the shop base price), for the page's item prices and bank value.
         // The game's examine text of each held item (obj configs), for the page's Examine option.
         itemExamine: (() => { const out: Record<string, string> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const d = Number.isInteger(i?.id) ? OBJS.get(i.id)?.desc : undefined; if (d && i.name) out[i.name] = d; } return out; })(),
-        itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } return out; })(),
+        // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
+        itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } for (const f of flows.values()) for (const m of [f.loot, f.used]) for (const name of m?.keys?.() ?? []) { const p = prices.get(String(name).toLowerCase()); if (p != null) out[name] = p; } return out; })(),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
         gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
     };
@@ -1287,7 +1291,7 @@ Bun.serve({
         if(['/map-shell.css','/map-shell.js','/client-shell.css','/client-shell.js','/client-viewer.css','/operations.css','/operations.js','/xp-tracker.js'].includes(url.pathname))return new Response(Bun.file(join(import.meta.dir,url.pathname.slice(1))),{headers:{'content-type':url.pathname.endsWith('.css')?'text/css':'text/javascript','cache-control':'no-store'}});
         if(url.pathname.startsWith('/client-assets/')) {
             const name=url.pathname.slice('/client-assets/'.length);
-            if(!['npc-names.json','item-stats.json'].includes(name)&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
+            if(!['npc-names.json','item-stats.json','item-list.json','resources.json'].includes(name)&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
             const file=Bun.file(join(import.meta.dir,'client-assets',name));
             return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
         }

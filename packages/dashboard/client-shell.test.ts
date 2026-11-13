@@ -798,6 +798,33 @@ test('the death recap is read again for a newer death, and while it waits for th
  for(const state of ['none','error']){t.set({name:'Alpha',state,data:null,deathAt:100,at:Date.now()-31_000});expect(t.recapStale(b)).toBe(true);t.set({name:'Alpha',state,data:null,deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);}
  expect(t.recapStale({name:'Alpha'})).toBe(false);expect(t.recapStale({...b,practice:true})).toBe(false);
 });
+test('Party: a card per PK account with hitpoints, prayer, run, food and a red edge when hurt',()=>{
+ const code=shell.slice(shell.indexOf('  const PK_GOAL='),shell.indexOf('  function worldPanel(){'));
+ const S={bots:[
+  {name:'Tribrid1',inWorld:true,combat:90,goal:'pk roam edgeville',pos:{x:3093,z:3500,level:0},hp:{now:30,max:99},runEnergy:55,skills:[{name:'Prayer',level:70,currentLevel:40}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Rune scimitar',count:1}]},
+  {name:'Fisher',inWorld:true,goal:'fish sharks',pos:{x:2600,z:3400,level:0}},
+  {name:'Offline',inWorld:false,goal:'pk'},
+ ]};
+ const {partyBox}=new Function('S','E','safeName','itemStats','wildLevel','pvpState',`${code};return {partyBox};`)(S,String,(s:any)=>s,{Shark:'heals 20'},()=>0,()=>null);
+ const html=partyBox();
+ expect(html).toContain('1 PK account');expect(html).toContain('Tribrid1');expect(html).not.toContain('Fisher');expect(html).not.toContain('Offline');
+ expect(html).toContain('party-card party-alert');
+ expect(html).toContain('<span>30 / 99</span>');expect(html).toContain('<span>40 / 70</span>');
+ expect(html).toContain('Run <b>55%</b>');expect(html).toContain('Food <b>2</b>');
+});
+test('respawn timers: the time left is the base scaled by the players online, less the time since the rock was taken',()=>{
+ const code=shell.slice(shell.indexOf("  // Respawn timers (RuneLite's Mining"),shell.indexOf("  // Party (RuneLite's Party panel)"));
+ const S={world:{tickMs:400},roster:Array.from({length:2000},(_,i)=>['p'+i,0,0,0,3])};
+ const t=new Function('S','asset','fetch','setInterval','E','$','location',`${code};return {respawnRows,set:(d,r)=>{depletedNow=d;resources=r;}};`)(S,(n:string)=>n,()=>new Promise(()=>{}),()=>0,String,()=>null,{origin:''});
+ const res={kinds:{2106:{name:'Runite rock',base:1200,min:null,max:null},1281:{name:'Oak tree',base:null,min:120,max:199}},depleted:[450],byTile:new Map([['3059,3884,0',2106],['3000,3000,0',1281]])};
+ t.set({tick:110,at:1000,list:[[3059,3884,0,450,100],[3000,3000,0,1342,null],[1,1,0,450,100]]},res);
+ const rows=t.respawnRows(1000);
+ // 2,000 players halve the base: 600 ticks of 0.4 s = 240 s, less 10 ticks = 4 s.
+ expect(rows[0]).toEqual({name:'Runite rock',x:3059,z:3884,left:236,range:null,total:240});
+ // A start the view did not see has no countdown; a tile with no resource is left out.
+ expect(rows[1]).toMatchObject({name:'Oak tree',left:null,range:null});
+ expect(rows.length).toBe(2);
+});
 test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
  const line=shell.split('\n').find(l=>l.includes("live.sort(xpSort==='waste'"))!.trim();
  const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
