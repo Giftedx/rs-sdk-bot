@@ -109,6 +109,12 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-snare': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit with a Saradomin cape (Mage Arena) in place of the Legends cape: magic attack +10 for each freeze,
+    // magic defence +10, the other defences 6 lower. The magic roll of a freeze is (Magic + 9) x (bonus + 64)
+    // (player_combat_stat.rs2), and the snare kit casts with the glory's +10 alone once its plate is off.
+    'tribrid-snare-sara': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
     // The snare kit with adamant arrows: 300 rune arrows are 120,000 of the kit's 392,715 coins, 300 adamant arrows 24,000.
     'tribrid-snare-addy': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['adamant_arrow', 300] },
         carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,

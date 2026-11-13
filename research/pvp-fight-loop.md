@@ -1474,3 +1474,16 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     68 deaths in 128 fights where the champion has 49 and 67, so it stays out of the champion (finding 43 rule).
     Evidence: `.practice/climb/still2.out`, `save.out`, `reserve.out`, `reserve2.out`, `mirror-res.out`,
     `.practice/climb/fix-logs/`, `.practice/climb/held-escape.ts`. Gap: finding 41's noise; one run per seed.
+45. **A Saradomin cape in the snare kit catches more runners at no cost elsewhere.** The snare kit freezes with the
+    glory's +10 magic attack alone once its plate is off; the Saradomin cape (Mage Arena) adds +10 magic attack and
+    +10 magic defence for the Legends cape's +7 to each defence. `tribrid-snare-sara` against the runner
+    (`extra:spar-escape-tribrid-snare-sara-x8`, champion against `base`, `SPAR_CAP=900`, seeds 1-8, the repeatable
+    setup of finding 41): 26 of 64 where `tribrid-snare` has 19; against the rival builds 92 kills, 4 deaths in 96
+    where `tribrid-snare` has 93 and 3; head to head (`extra:spar-head-snare-sara-x12`, both champion, sides swapped
+    every two pairs) 46 wins and 50 losses in 96. The same kit with a mystic fire staff in hand for each freeze
+    (`freezeWithStaff`, one shark less) gives 22 of 64 runners and 88 kills, 8 deaths against the rivals. The game
+    has no mystic robes; the wearables with magic attack of 5 or more are the staves, the glory, the amulet of magic
+    and the god capes (+10 each), the splitbark body (+9), the Zamorak book (+8) and the splitbark legs (+6).
+    Poisoned dagger(p) carries 255 in every bonus but is a staff item (`appearance.rs2` checks `staffmodlevel >= 3`)
+    with no drop or shop. Evidence: `.practice/climb/kit-esc.out`, `kit-riv.out`, `set-head-sara-*`. Gap: one run
+    per seed; the god cape needs the Mage Arena (Magic 60, Kolodion), a supply step outside this test.
