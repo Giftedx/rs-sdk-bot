@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794529042996,
+ "at": 1794529111085,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -66,11 +66,51 @@
    "role": "rehearsal"
   },
   {
+   "account": "Sausagefest",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
+   ]
+  },
+  {
    "account": "Abracadickra",
    "script": "scripts/aio-skiller.ts",
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "15000",
+    "headless"
+   ],
+   "env": {
+    "BANK_PACK": "1",
+    "MAX_MAKE": "390"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Bigchopper",
@@ -498,26 +538,6 @@
    ]
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
-   "autopilot": "local",
-   "resources": [
-    "pen:3187,3277"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -535,19 +555,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-9bf10671-36ea-4433-85c2-d96ec6d2cf7a"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-shaftmaker-20261112t233007z [task-9bf10671-36ea-4433-85c2-d96ec6d2cf7a]",
-   "role": "fletching"
   }
  ]
 }
