@@ -792,6 +792,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function geTrend(rows,now=Date.now()){
     let st;try{st=JSON.parse(localStorage.getItem(GE_TREND_KEY)||'null');}catch{st=null;}
     const cur=Object.fromEntries((rows||[]).map(i=>[i.id,i.ask??i.vwap]).filter(([,v])=>Number.isFinite(v)&&v>0));
+    // No usable price yet (the market not fetched): keep the history as it is, so the next full refresh starts it.
+    if(!Object.keys(cur).length){const base=st?.base&&now-st.base.at>=72_000_000?st.base:null;return {at:base?.at??null,change:new Map()};}
     if(!st||!st.next){st={base:null,next:{at:now,p:cur}};}
     else if(now-st.next.at>=86_400_000){st={base:st.next,next:{at:now,p:cur}};}
     try{localStorage.setItem(GE_TREND_KEY,JSON.stringify(st));}catch{/* private window */}

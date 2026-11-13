@@ -1034,7 +1034,11 @@ test('GE price change: no change before a base snapshot is 20 hours old, then th
  const store:Record<string,string>={},ls={getItem:(k:string)=>store[k]??null,setItem:(k:string,v:string)=>{store[k]=v;}};
  const geTrend=new Function('localStorage',`${code};return geTrend;`)(ls);
  const H=3_600_000;
+ // A refresh before the market is fetched (no price) saves nothing.
+ expect(geTrend([],0).change.size).toBe(0);expect(store['atlas-ge-prices']).toBe(undefined);
  expect(geTrend([{id:1,ask:100}],0).change.size).toBe(0);
+ // An empty refresh later does not replace the history.
+ geTrend([],1*H);expect(JSON.parse(store['atlas-ge-prices']).next.p['1']).toBe(100);
  // Before 24 hours there is no base yet.
  expect(geTrend([{id:1,ask:105}],10*H).change.size).toBe(0);
  // At 24 hours the first snapshot becomes the base (24 hours old): +10%.
