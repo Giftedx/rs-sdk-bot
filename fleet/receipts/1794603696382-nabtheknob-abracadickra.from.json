@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794603696382-nabtheknob-abracadickra",
  "account": "NabTheKnob",
  "partner": "Abracadickra",
@@ -10,30 +10,60 @@
  "item": "Bucket of water",
  "requested": 4,
  "claim": "83e43679-ef19-409a-8e77-f0377f79c124",
- "count": 0,
- "ok": false,
- "at": 1794603714719,
- "detail": "trade claimed",
+ "count": 4,
+ "ok": true,
+ "at": 1794603810235,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Snape grass",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   }
   },
   {
    "item": "Law rune",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   }
   },
   {
    "item": "Air rune",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 5,
+    "after": 0
+   }
   },
   {
    "item": "Rope",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794603782450
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794603714725-0000003276-0000000001",
+  "at": 1794603810224,
+  "sha256": "ec7fa99bf08bde1ccc49c50368d6c0d2cf765132108fd9a99c8cbd3433c15de2"
+ },
+ "screen": true
 }
