@@ -49,9 +49,12 @@ export function serverQuestPoints(scripts: string[], constants: Map<string, numb
 
 // The other quests whose completion a folder's scripts test as a gate: %varp < ^name_complete. A quest that only
 // mentions a later quest's progress in dialogue uses other tests, so it is not counted.
-export function serverPrereqs(scripts: string[], varpFolder: Map<string, string>, self: string): Set<string> {
-    const out = new Set<string>();
-    for (const t of scripts) for (const m of t.matchAll(/%([a-z0-9_]+)\s*<\s*\^[a-z0-9_]+_complete\b/g)) { const f = varpFolder.get(m[1]!); if (f && f !== self) out.add(f); }
+// The quest's journal scripts (*_journal.rs2) state its start conditions, so any completion test there counts
+// (Regicide's journal: %upass = ^upass_complete).
+export function serverPrereqs(scripts: string[], varpFolder: Map<string, string>, self: string, journals: string[] = []): Set<string> {
+    const out = new Set<string>(), add = (v: string) => { const f = varpFolder.get(v); if (f && f !== self) out.add(f); };
+    for (const t of scripts) for (const m of t.matchAll(/%([a-z0-9_]+)\s*<\s*\^[a-z0-9_]+_complete\b/g)) add(m[1]!);
+    for (const t of journals) for (const m of t.matchAll(/%([a-z0-9_]+)\s*(?:=|>=|<|!)\s*\^[a-z0-9_]+_complete\b/g)) add(m[1]!);
     return out;
 }
 
@@ -137,8 +140,9 @@ if (import.meta.main) {
     const out: Record<string, Reqs> = {}, report: string[] = [], mark = (s: number) => s === 0 ? '?' : s === 2 ? '*' : '';
     for (const [folder, name] of names) {
         let scripts: string[] = [];
-        try { scripts = files(join(questDir, folder), '.rs2'); } catch { /* no folder */ }
-        const quests = new Set([...serverPrereqs(scripts, varpFolder, folder)].filter(f => names.has(f)).map(f => names.get(f)!));
+        let journals: string[] = [];
+        try { scripts = files(join(questDir, folder), '.rs2'); journals = files(join(questDir, folder), '_journal.rs2'); } catch { /* no folder */ }
+        const quests = new Set([...serverPrereqs(scripts, varpFolder, folder, journals)].filter(f => names.has(f)).map(f => names.get(f)!));
         const page = wiki.get(norm(name)) ?? null, w = page ? wikiReqs(page, journal.filter(n => n !== name)) : null;
         const levels = serverLevels(scripts, constants), r = joinReqs(levels, serverQp, quests, w, serverQuestPoints(scripts, constants));
         // Items: src 1 when the quest's scripts name the item (its debugname as a word), 0 when only the wiki lists it.

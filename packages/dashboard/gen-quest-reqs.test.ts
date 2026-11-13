@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { dropCycles, joinReqs, parseConstants, serverLevels, serverPrereqs, serverQuestPoints, wikiItems, wikiReqs, type Reqs } from './gen-quest-reqs';
 
 test('the server checks: the highest level of each skill, quest points and completion gates, with ^constants', () => {
@@ -9,6 +10,18 @@ test('the server checks: the highest level of each skill, quest points and compl
     expect(serverQuestPoints(scripts, constants)).toEqual(new Set([55]));
     // The quest's own varp and a varp that is not compared to a completion value are not prerequisites.
     expect(serverPrereqs(scripts, new Map([['zanaris', 'quest_zanaris'], ['hero', 'quest_hero'], ['regicide_progress', 'quest_regicide']]), 'quest_hero')).toEqual(new Set(['quest_zanaris']));
+});
+
+test('a journal script states the start conditions: any completion test there is a prerequisite', () => {
+    const varps = new Map([['upass', 'quest_upass'], ['regicide', 'quest_regicide']]);
+    expect(serverPrereqs([], varps, 'quest_regicide', ['if(%upass = ^upass_complete) {'])).toEqual(new Set(['quest_upass']));
+    expect(serverPrereqs(['if(%upass = ^upass_complete) {'], varps, 'quest_regicide')).toEqual(new Set());
+});
+
+test('the asset holds every quest prerequisite that the planner enforces (autopilot.ts ROUTE_BEFORE)', async () => {
+    const { ROUTE_BEFORE } = await import('../planner/src/autopilot');
+    const asset = JSON.parse(readFileSync(new URL('./client-assets/quest-reqs.json', import.meta.url), 'utf8')) as Record<string, Reqs>;
+    for (const [quest, before] of Object.entries(ROUTE_BEFORE)) expect(asset[quest]?.q.map(([n]) => n)).toEqual(expect.arrayContaining([...before]));
 });
 
 test('the wiki requirements: skills, quest points and quest names; recommended and optional lines are left out', () => {
