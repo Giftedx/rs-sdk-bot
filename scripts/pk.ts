@@ -172,6 +172,8 @@ export type FightOptions = {
     raceWindow?: number;
     // false: exitOnDanger leaves on no food, two attackers and no prayer, not on a lost damage race.
     raceExit?: boolean;
+    // exitOnDanger's no-food exit waits while the target's health bar shows this fraction or lower.
+    pressLow?: number;
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
     // keeps 500: research/pvp-fight-loop.md finding 50).
     specReserve?: number;
@@ -651,7 +653,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
         const oppMax = estMaxHit(oppCombat || me.combatLevel);
         const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now, window: o.raceWindow, race: o.raceExit });
-        if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
+        // pressLow: a danger with food gone waits while the target's health bar shows this fraction or lower and the
+        // target is the only one hitting us: one more hit or special may end it.
+        const pressing = o.pressLow !== undefined && !!target && !!danger && /^no food/.test(danger) && lowHealth(observePlayer(s.client, target.index), o.pressLow)
+            && !hits.some(h => now - h.tick <= 10 && h.src >= 0 && h.src !== target?.index);
+        if (danger && o.exitOnDanger && !pressing) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
         // While suspended by p_delay (DDS spec p_delay(0), potion p_delay(1), karambwan p_delay(2)), processClientsIn
         // drops OpHeld/InvButton/OpPlayer/MoveClick and protected scripts fail p_finduid(uid); wait until un-delayed.
         if (now < delayedUntil) continue;

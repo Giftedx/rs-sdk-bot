@@ -1636,5 +1636,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     A kill drops the target's kit (about 250,000 coins of loot in `pvp:army`), a death costs ours. The champion
     takes `raceExit: false`, so the hunt, the roam and the army leader (champion options for combat 115 or more)
     fight on past a lost race; with it from the profile the hunter kills the even target in 3 of 6 and leaves on no
-    food in 3 (route cases run several processes and repeat less exactly than spar batches). Gap: six seeds a target;
-    no target stronger than potions and food.
+    food in 3 (route cases run several processes and repeat less exactly than spar batches); a later run of the same
+    setup, counting the target's outcome too, gives 5 kills and no death against the even target and 4 kills and no
+    death against the stronger one. `pressLow: 0.3` (the no-food exit waits while the target's bar shows 30% or
+    less and no one else hits us) gives 5 kills against the even target and 2 kills, 2 deaths against the stronger
+    one, and stays off. Gap: six seeds a run, and runs of one setup differ by two kills; no target stronger than
+    potions and food.

@@ -240,6 +240,8 @@ export async function hunt(s: Session, o: HuntOptions) {
                 ...(process.env.HUNT_EXIT === '0' ? { exitOnDanger: false } : {}),
                 // HUNT_RACE=0: the danger exit keeps its food, crowd and prayer rules and leaves the damage race out.
                 ...(process.env.HUNT_RACE === '0' ? { raceExit: false } : {}),
+                // HUNT_PRESS=<fraction>: the no-food exit waits while the target's health bar is at that or lower.
+                ...(process.env.HUNT_PRESS ? { pressLow: Number(process.env.HUNT_PRESS) } : {}),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
