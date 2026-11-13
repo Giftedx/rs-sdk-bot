@@ -706,6 +706,37 @@ test('!price answers from the market, then from the item value',()=>{
  expect(priceLine('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · no market offer.');
  expect(priceLine('nothing')).toBe('No price for nothing.');
  expect(priceLine(' ')).toContain('Usage: !price');
+ // With the alchemy table: the high alch value on each answer, and an item that only has an alch value.
+ const itemAlch={'Cannonball':5,'Rune scimitar':25600,'Rune platebody':65000};
+ const alchOf=(n:string)=>itemAlch[n as keyof typeof itemAlch]?Math.max(Math.floor(itemAlch[n as keyof typeof itemAlch]*6/10),1):null;
+ const withHa=new Function('S','nf','alchOf','itemAlch',`${code};return priceLine;`)(S,(n:number)=>n.toLocaleString('en-US'),alchOf,itemAlch);
+ expect(withHa('cannon')).toBe('Cannonball: ask 7,320 gp · bid none · 18,118 in stock · high alch 3 gp.');
+ expect(withHa('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · high alch 15,360 gp · no market offer.');
+ expect(withHa('RUNE PLATEBODY')).toBe('Rune platebody: high alch 39,000 gp · no market offer.');
+ expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
+});
+
+test('high alch: the server value, the profit of a cast after the market buy and a nature rune, no coins',()=>{
+ const code=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const data={'Rune platebody':65000,'Coins':1,'Steel arrow':12,'Cabbage':1};
+ const sync=(v:any)=>({then(f:any){const r=f(v);return sync(r);}});
+ const prices:Record<string,any>={'Rune platebody':{value:38000,ask:37000,bid:36000},'Nature rune':{value:250,ask:260,bid:240},'Steel arrow':{value:5,ask:null,bid:null}};
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:(n:string)=>/^coins$/i.test(n)?{value:1}:prices[n]??null,nf:(n:number)=>n.toLocaleString('en-US'),gp:(n:number)=>n.toLocaleString('en-US')+' gp'};
+ const t=new Function(...Object.keys(env),`${code};return {alchOf,alchTip,priceTip};`)(...Object.values(env));
+ expect(t.alchOf('Rune platebody')).toBe(39000);
+ expect(t.alchOf('Cabbage')).toBe(1);
+ expect(t.alchOf('Coins')).toBe(null);
+ expect(t.alchOf('Unknown')).toBe(null);
+ // 39,000 - 37,000 - 260 = 1,740 profit a cast.
+ expect(t.alchTip({name:'Rune platebody',count:1})).toBe(' · high alch 39,000 · alch profit +1,740 a cast after the market buy and a nature rune');
+ // No market ask: the alch value against the item value.
+ expect(t.alchTip({name:'Steel arrow',count:100})).toBe(' · high alch 7 (700 gp for 100) · alch pays 2 more than the value');
+ // A loss shows no profit text.
+ prices['Rune platebody']={value:40000,ask:39500,bid:39000};
+ expect(t.alchTip({name:'Rune platebody',count:1})).toBe(' · high alch 39,000');
+ expect(t.priceTip({name:'Coins',count:5})).toBe('');
+ expect(t.priceTip({name:'Cabbage',count:1})).toBe(' · high alch 1');
+ expect(t.priceTip({name:'Rune platebody',count:1})).toContain('market buy 39,500 / sell 39,000 · high alch 39,000');
 });
 
 test('the Wilderness level counts 8 tiles for each level from the south edge of each zone',()=>{
