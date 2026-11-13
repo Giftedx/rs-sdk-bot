@@ -7,6 +7,8 @@
 // Usage: bun scripts/pk-army.ts <leader> <follower ...> [MAX_MINUTES=20] [MAX_WILD=20] [FOLLOW=3] [FRIENDS=name,...]
 // and the other KEY=value arguments of scripts/pk-roam.ts for the leader. Prints one RESULT with the leader's hunt and
 // each follower's fights.
+// With two or more followers on the dragon spear the army opens with the spear lock (ARMY_PROFILE army-alpha,
+// OPEN_TOGETHER=1, OPEN_RANGE=1; research/pvp-fight-loop.md finding 67) unless those settings are given.
 import { existsSync } from 'node:fs';
 import { openBot, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
@@ -124,7 +126,10 @@ if (import.meta.main) {
     // OPEN_TICKS of the leader's ticks at most (default 20), then all open in one tick.
     // OPEN_RANGE: the tiles from the target at which an account counts as near and holds (default 3; 1 puts each
     // account on a melee tile, for a spear's opening special).
-    const openTogether = arg(args, 'OPEN_TOGETHER', '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20')), openRange = Number(arg(args, 'OPEN_RANGE', '3'));
+    // Two or more followers on the dragon spear: the spear lock is the default (finding 67), each setting still its own.
+    const spears = followers.filter(f => f.sdk.getEquipment().some(i => /^dragon spear/i.test(i.name))).length, lock = spears >= 2;
+    if (lock) emit({ e: 'spear-lock', spears });
+    const openTogether = arg(args, 'OPEN_TOGETHER', lock ? '1' : '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20')), openRange = Number(arg(args, 'OPEN_RANGE', lock ? '1' : '3'));
     const opened = new Map<string, number>();
     const hold = () => {
         const t = shared.target?.toLowerCase();
@@ -166,7 +171,7 @@ if (import.meta.main) {
         emit(e);
     };
     // ARMY_PROFILE: the followers' profile of scripts/pk-spar.ts (default army; army-alpha opens with every special).
-    const armyProfile = arg(args, 'ARMY_PROFILE', 'army');
+    const armyProfile = arg(args, 'ARMY_PROFILE', lock ? 'army-alpha' : 'army');
     // ARMY_OPTS: fight options (JSON) on top of that profile, such as {"freeze":false} for followers that only hit while
     // the leader freezes.
     const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
