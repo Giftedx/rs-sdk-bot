@@ -920,6 +920,54 @@ test('agility obstacles, Ground markers, failure markers and the NPC finder in t
  const spot=t.overlayMessage().tiles.filter((x:any)=>x.colour==='#ff9900');
  expect(spot).toEqual([{x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'2 accounts: travel to Ardougne failed · tick stream stalled'}]);
 });
+test('Inventory Tags: food, potions, teleports and runes get their group class; the switch turns them off',()=>{
+ const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf('  function itemCell(item,i){'));
+ const hl:any={invTags:true};
+ const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
+ expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
+  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-rune','']);
+ hl.invTags=false;expect(invTag({name:'Shark'})).toBe('');expect(invTag(null)).toBe('');
+});
+test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
+ const code=shell.slice(shell.indexOf('  function gePanel(){'),shell.indexOf('  // Pull requests plugin'));
+ const state:any={bots:[],economy:{supplies:[{id:1,name:'Coal',ask:150}]}};
+ const run=new Function('S','window','E','nf','icon','loadItemSources','data',`const geTele=()=>'';let geQuery='',geAll=true,geOpen='1',geOpenName='Coal',sourcePin=null,itemSourcesData=data;const age=()=>'';${code};return gePanel();`);
+ const html=run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{1:[['gather','Mining 30: Coal rock',[3000,3000,0,3001,3001,0]],['drop','Drop: Giant (level 28) · always',[]]]});
+ expect(html).toContain('class="ge-row ge-open" data-ge-src="1" data-ge-name="Coal"');
+ expect(html).toContain('<span class="ge-label">Mining 30: Coal rock</span><button class="xp-reset" data-src-pin="0" title="2 places">Show on map</button>');
+ expect(html).not.toContain('data-src-pin="1"');
+ expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{})).toContain('Loading sources');
+ expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{2:[]})).toContain('No source on record');
+});
+test('skill guide: the best action now with its count to the next level, and the next unlocks',()=>{
+ const code=shell.slice(shell.indexOf("  // Skill guide (RuneLite's Skill Calculator"),shell.indexOf('  function calcBox(b,row){'));
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const acts={woodcutting:[['Logs',1,625,[],['Logs']],['Oak logs',15,937.5,[],['Oak logs']],['Willow logs',30,1687.5,[],['Willow logs']],['Maple logs',45,2500,[],['Maple logs']],['Yew logs',60,4375,[],['Yew logs']]]};
+ const t=new Function('window','nf',`let skillActions=${JSON.stringify(acts)};${code};return {skillGuide,guideText};`)({atlasXp:X},String);
+ const xp=X.xpForLevel(31),left=X.xpForLevel(32)-xp,g=t.skillGuide('Woodcutting',xp);
+ expect(g).toEqual({best:{name:'Willow logs',count:Math.ceil(left/1687.5)},next:[{name:'Maple logs',level:45},{name:'Yew logs',level:60}]});
+ expect(t.guideText(g)).toBe(' · '+Math.ceil(left/1687.5)+' × Willow logs to level · next: Maple logs at 45');
+ expect(t.skillGuide('Cooking',xp)).toBe(null);
+});
+test('idle markers and the closest teleport',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ let now=1_000_000;const b:any={name:'Alpha',inWorld:true,pos:{x:3200,z:3200,level:0},action:'idle'};
+ const S:any={economy:{itemValues:{}},bots:[b]};
+ const env:any={S,D:{rival:new Set()},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,E:String,location:{origin:''},resources:null,safeName:String,miniView:{cx:3200,cz:3200,PX:4},Date:{now:()=>now}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,trackTrails,nearestTeleport,setIcons:(i)=>{mapIcons=i;}};`)(...Object.values(env));
+ t.trackTrails();now+=170_000;t.trackTrails();
+ expect(t.overlayMessage().tiles.filter((x:any)=>x.colour==='#ffff00')).toEqual([]);
+ now+=20_000;t.trackTrails();
+ expect(t.overlayMessage().tiles).toContainEqual({x:3200,z:3200,l:0,colour:'#ffff00',label:'Alpha: idle 3m'});
+ // A step or a non-idle action starts the clock again.
+ b.pos={x:3201,z:3200,level:0};t.trackTrails();expect(t.overlayMessage().tiles.some((x:any)=>x.colour==='#ffff00')).toBe(false);
+ t.setIcons([[3213,3424,0,'t','Varrock teleport'],[3221,3218,0,'t','Lumbridge teleport'],[3222,3218,1,'t','Upstairs'],[3200,3205,0,'a','Shortcut']]);
+ expect(t.nearestTeleport([{x:3200,z:3200,l:0}])).toEqual({label:'Lumbridge teleport',d:21});
+ expect(t.nearestTeleport([{x:3200,z:9600,l:0}])).toBe(null);
+ // Farther than 80 tiles: no hint.
+ expect(t.nearestTeleport([{x:3000,z:3000,l:0}])).toBe(null);
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
@@ -945,8 +993,11 @@ test('Inventory Setups: worn slots green, red or yellow against the kit, and the
 test('Screenshot: a level-up, a death or valuable loot of the watched account asks the viewer for a picture and keeps it',()=>{
  const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));
  const posted:any[]=[];const b:any={name:'Alpha',flow:{loot:[{name:'Rune scimitar',count:1}]}};
- const env:any={localStorage:{getItem:()=>null,setItem:()=>{}},indexedDB:{open:()=>{throw new Error('none');}},VIEWER:{state:'ready'},$:()=>({contentWindow:{postMessage:(m:any)=>posted.push(m)}}),location:{origin:''},account:()=>b,S:{economy:{itemValues:{'Rune scimitar':15000,'Dragon chainbody':500000}}},gp:(n:number)=>String(n),selectedPlugin:'xp',window:{},body:{}};
+ const env:any={localStorage:{getItem:()=>null,setItem:()=>{}},indexedDB:{open:()=>{throw new Error('none');}},VIEWER:{state:'ready'},$:()=>({contentWindow:{postMessage:(m:any)=>posted.push(m)}}),location:{origin:''},account:()=>b,S:{economy:{itemValues:{'Rune scimitar':15000,'Dragon chainbody':500000}}},gp:(n:number)=>String(n),selectedPlugin:'xp',window:{atlasOperator:()=>false},body:{}};
  const t=new Function(...Object.keys(env),`${code};return {shotFor,shotReply,lootShots,list:()=>shots};`)(...Object.values(env));
+ // A signed-out viewer takes no picture: it has no Activity plugin to see them.
+ t.shotFor(b,'level','Level 70 Woodcutting');expect(posted.length).toBe(0);
+ env.window.atlasOperator=()=>true;
  t.shotFor(b,'level','Level 70 Woodcutting');t.shotFor({name:'Other'},'death','Death');
  expect(posted.length).toBe(1);expect(posted[0].capture.id).toMatch(/^[a-z0-9]+$/);
  t.shotReply({id:posted[0].capture.id,url:'data:image/jpeg;base64,AAAA'});

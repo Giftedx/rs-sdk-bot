@@ -11,6 +11,11 @@ test('skill actions give the XP of one action on this server: base XP times the 
     expect(out.woodcutting).toEqual([['Logs', 1, 625, [], ['Logs']], ['Oak logs', 15, 937.5, [], ['Oak logs']]]);
 });
 
+test('map variants of one rock give one action without the number', () => {
+    const out = skillActions([1, 2, 3].map(n => ({ skill: 'mining', row: `limestone_rock${n}_table`, level: 10, xp: 26.5 })), new Map(), 1);
+    expect(out.mining).toEqual([['Limestone rock', 10, 26.5, [], []]]);
+});
+
 test('an action is named after its table row when several rows of the skill give the same first output', () => {
     const out = skillActions([
         { skill: 'thieving', row: 'pickpocket_man', level: 1, xp: 8, outputs: ['coins'] },
