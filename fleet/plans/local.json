@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794553338796,
+ "at": 1794554785337,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -512,28 +512,6 @@
    ]
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
-   "autopilot": "local",
-   "resources": [
-    "aio:seers-flax"
-   ]
-  },
-  {
    "account": "SporranBulge",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -569,6 +547,28 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
+   "autopilot": "local",
+   "resources": [
+    "aio:seers-flax"
    ]
   }
  ]
