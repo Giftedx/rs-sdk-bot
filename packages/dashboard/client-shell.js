@@ -274,7 +274,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(typeof resources==='undefined'||!resources||!/^(woodcutting|mining)$/i.test(String(skill||'')))return null;
     const kinds=resources.kinds||{},p=b?.live||b?.pos||null;
     for(const a of (skillActions?.[String(skill).toLowerCase()]||[]).filter(a=>a[1]<=lvl).sort((x,y)=>y[2]-x[2])){
-      const want=resourceOf(a[0]);if(!want)continue;
+      // The action's name, else its first output item, names the resource; a name that already ends in rock or tree is one
+      // ("Limestone rock": skill-actions.json names some actions after their table row).
+      const want=resourceOf(a[0])||resourceOf(a[4]?.[0]||'')||(/ (rock|tree)$/i.test(a[0])?a[0]:null);if(!want)continue;
       const ids=new Set(Object.keys(kinds).filter(id=>String(kinds[id]?.name||'').toLowerCase()===want.toLowerCase()).map(Number));
       const tiles=resources.tiles.filter(t=>ids.has(t[3])).map(t=>({x:t[0],z:t[1],l:t[2]}));if(!tiles.length)continue;
       const near=p?tiles.filter(t=>t.l===(p.level||0)&&(t.z>6400)===(p.z>6400)).map(t=>({...t,d:Math.max(Math.abs(t.x-p.x),Math.abs(t.z-p.z))})).sort((x,y)=>x.d-y.d)[0]||null:null;
