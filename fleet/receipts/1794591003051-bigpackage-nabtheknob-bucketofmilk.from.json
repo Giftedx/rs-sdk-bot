@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794591003051-bigpackage-nabtheknob-bucketofmilk",
  "account": "Bigpackage",
  "partner": "NabTheKnob",
@@ -12,6 +12,16 @@
  "claim": "8489effe-89f5-4cf4-8780-936a54cf7040",
  "count": 0,
  "ok": false,
- "at": 1794591057019,
- "detail": "trade claimed"
+ "at": 1794595121210,
+ "detail": "stop file",
+ "bank": {
+  "count": 1,
+  "at": 1794591234559
+ },
+ "logout": {
+  "attemptId": "1794591057033-0000004648-0000000001",
+  "at": 1794595121195,
+  "sha256": "f4a175c4a7432ae6ec7292fc6db15cd059c27886dea5f4d8bd11cdd1bf5a7fda"
+ },
+ "screen": false
 }
