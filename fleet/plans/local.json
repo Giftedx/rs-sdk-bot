@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794539422454,
+ "at": 1794539584564,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -324,6 +324,25 @@
    ]
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
    "account": "Shaftmaker",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -360,25 +379,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
    ]
   },
   {
@@ -556,17 +556,23 @@
    "role": "pk-trainee"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/session-check.ts",
+   "account": "YewFirst",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3e34d231-e80d-4f7f-9380-2ddbb7326953"
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-pocketrocket-20261113t025511z [task-3e34d231-e80d-4f7f-9380-2ddbb7326953]",
-   "role": "thieving"
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
   }
  ]
 }
