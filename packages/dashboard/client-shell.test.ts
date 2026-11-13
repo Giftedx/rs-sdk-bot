@@ -716,6 +716,25 @@ test('!price answers from the market, then from the item value',()=>{
  expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
 });
 
+test('quest requirements: met, missing with the level held, unknown, and the Ready test',()=>{
+ const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
+ const data={"Hero's Quest":{s:[['Mining',52,1],['Cooking',53,0]],qp:[55,1],q:[['Lost City',1],['Dragon Slayer',0]]},'Lost City':{s:[['Woodcutting',36,1]],q:[]}};
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),E:(x:string)=>x};
+ const t=new Function(...Object.keys(env),`${code};return {questReqs,questReady,reqHtml};`)(...Object.values(env));
+ const b:any={skills:[{name:'Mining',level:60},{name:'Cooking',level:40},{name:'Woodcutting',level:36}],ranks:[{board:'Quest Points',level:60}],
+  quests:[{name:'Lost City',state:'complete'},{name:"Hero's Quest",state:'not started'}]};
+ expect(t.questReqs(b,"Hero's Quest").map((x:any)=>[x.text,x.ok])).toEqual([['52 Mining',true],['53 Cooking',false],['55 quest points',true],['Lost City',true],['Dragon Slayer',null]]);
+ expect(t.reqHtml(b,"Hero's Quest")).toContain('<span class="req-miss req-soft" title="only the wiki lists this · has 40">53 Cooking (40)</span>');
+ expect(t.questReady(b,b.quests[1])).toBe(false);
+ // Done quests are never ready; a quest with no listed requirement is ready.
+ expect(t.questReady(b,b.quests[0])).toBe(false);
+ expect(t.questReady(b,{name:"Cook's Assistant",state:'not started'})).toBe(true);
+ b.skills[1].level=53;b.quests.push({name:'Dragon Slayer',state:'complete'});
+ expect(t.questReady(b,b.quests[1])).toBe(true);
+ expect(t.reqHtml(b,'Nothing')).toBe('');
+});
+
 test('cooking: the burn chance of the followed account on a fire, a range and with gauntlets, and the no-burn level',()=>{
  const code=shell.slice(shell.indexOf('  // Cooking burn chance (RuneLite'),shell.indexOf("  // High alchemy (RuneLite's item prices"));
  const data={'Raw shark':{c:'Shark',lv:80,f:[1,202],r:[1,232],g:[15,270]},'Raw lobster':{c:'Lobster',lv:40,f:[38,332],g:[55,368]}};
