@@ -1069,6 +1069,26 @@ test('item identification: unidentified herbs by id, potions by type; other item
   .toEqual(['Ran','Gua','','Str','SAtt','Pra','SAP','Rng','','']);
  hl.itemIds=false;expect(idLabel({name:'Herb',id:207})).toBe('');
 });
+test('GE price change: no change before a base snapshot is 20 hours old, then the change from it; snapshots rotate daily',()=>{
+ const start=shell.indexOf('  // GE price change:'),code=shell.slice(start,shell.indexOf("  let geQuery=",start));
+ const store:Record<string,string>={},ls={getItem:(k:string)=>store[k]??null,setItem:(k:string,v:string)=>{store[k]=v;}};
+ const geTrend=new Function('localStorage',`${code};return geTrend;`)(ls);
+ const H=3_600_000;
+ // A refresh before the market is fetched (no price) saves nothing.
+ expect(geTrend([],0).change.size).toBe(0);expect(store['atlas-ge-prices']).toBeUndefined();
+ expect(geTrend([{id:1,ask:100}],0).change.size).toBe(0);
+ // An empty refresh later does not replace the history.
+ geTrend([],1*H);expect(JSON.parse(store['atlas-ge-prices']).next.p['1']).toBe(100);
+ // Before 24 hours there is no base yet.
+ expect(geTrend([{id:1,ask:105}],10*H).change.size).toBe(0);
+ // At 24 hours the first snapshot becomes the base (24 hours old): +10%.
+ expect(geTrend([{id:1,ask:110}],24*H).change.get('1')).toBe(10);
+ // The base stays until the next snapshot is 24 hours old.
+ const r=geTrend([{id:1,ask:150},{id:2,vwap:50}],46*H);
+ expect(r.change.get('1')).toBe(50);expect(r.at).toBe(0);
+ // Under 1% shows nothing.
+ expect(geTrend([{id:1,ask:100.4}],46*H).change.has('1')).toBe(false);
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
