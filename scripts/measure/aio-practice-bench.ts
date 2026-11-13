@@ -36,6 +36,7 @@ import {proveInProcess} from '../../packages/practice/src/prove';
 import {createBot} from '../../packages/practice/src/bots';
 import {applyPreset, PRESETS} from '../../packages/practice/src/presets';
 import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type BenchCase} from './aio-bench-cases';
+import {FISHING_BENCH_CASES} from './fishing-bench-cases';
 import {practiceDir, rsSdkRoot} from '../../packages/practice/src/paths';
 import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -397,7 +398,7 @@ async function main() {
 
   // BENCH_SMOKE=1 runs the short smoke set. BENCH_ALL=1 also runs the cases marked `known` (they cannot pass today).
   const smoke = process.env.BENCH_SMOKE === '1' ? new Set(SMOKE_KEYS) : undefined;
-  const cases = benchCases().filter(c => (!ONLY || ONLY.test(c.key)) && (!smoke || smoke.has(c.key)) && (process.env.BENCH_ALL === '1' || !c.known));
+  const cases = [...benchCases(), ...FISHING_BENCH_CASES].filter(c => (!ONLY || ONLY.test(c.key)) && (!smoke || smoke.has(c.key)) && (process.env.BENCH_ALL === '1' || !c.known));
   console.log(`AIO_BENCH start cases=${cases.length} runs=${RUNS} concurrency=${CONCURRENCY} timeoutMs=${TIMEOUT} ${LOCKSTEP ? `lockstep seed=${SEED}` : 'tickMs=150'} xpRate=25`);
   if (LOCKSTEP) process.env.SIM_LOCKSTEP = '1'; // bench bots inherit it and acknowledge each tick
   // A fresh-engine slot owns ports SLOT_PORT+10k .. +3 and its own market database, beside the shared stack's 8888.

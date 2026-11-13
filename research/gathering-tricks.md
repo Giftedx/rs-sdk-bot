@@ -160,3 +160,38 @@ alternative, if its inputs land on time (check: logs stay constant).
   `clickComponent(skill_multi3:make1_a)`; T+1 `dropItem(fish)` or `closeModal`; T+2 `interactNpc(spot, visible op)`.
 - Count logs as a health check. If logs drop, the inputs are splitting across ticks: cut load or stop.
 - Level-up dialogs need no handling: the knife and the spot click close them.
+
+## The knife reset in the staged fishing library
+
+`scripts/microbot-b-fishing.ts` `runStagedFishing` with `knife: {make1, drop}` (env `FISH_KNIFE=1`, `FISH_DROP=1`;
+the helper is `scripts/knife-reset.ts`). `FISH_KNIFE_RESET` gives each method its cycle from its attempt label:
+`same` (fly, river bait, lava: drop, knife, Make 1, click and a close in tick T, roll in T+2) or `delayed` (net, sea
+bait, cage, harpoon, karambwanji, big net: knife in T, drop or close in T+1, click in T+2). Karambwan has none (it
+waits `p_delay(5)`, `fishing_spots/tbwt.rs2:123`). The worker never clicks the spot without a cut, walks to a tile
+beside the spot (not a corner), and looks for a spot within 15 tiles. The protected-kit check stops the batch if a log
+is cut. `microbot-b-fishing.test.ts` checks the family of each method against the server label.
+
+Claim: the knife reset gives one roll each 3.0-3.1 ticks at the Lumbridge river and at Catherby. Conditions: bench
+`extra:fishing-lumbridge-fly-knife` (Fishing 78, 60 catches, one dropped in each cycle) and
+`extra:fishing-catherby-cage-knife` (Fishing 70, 30 lobsters), lockstep seeds 7/8/9. Evidence (FISH_RATE, from the
+first catch to the last; RESULT `attempts` is the cycles):
+
+| Case | Seed 7 | Seed 8 | Seed 9 |
+|---|---|---|---|
+| fly knife: ticks per catch, XP per tick, cycles in run ticks | 4.68, 308.9, 94 in 286 | 4.27, 328.4, 85 in 263 | 4.12, 352.9, 82 in 251 |
+| fly default batch (`extra:fishing-lumbridge-fly-plain`, 20 catches) | 24.95, 62.8 | fails: the spot moves 10 tiles off, past radius 8 | 20.26, 70.8 |
+| cage knife: ticks per catch, XP per tick, cycles in run ticks | 11.79, 190.8, 117 in 358 | 14.07, 159.9, 148 in 452 | 16.41, 137.1, 158 in 483 |
+
+The default batch clicks once and waits up to 40 ticks for each catch; its LEDGER shows a dialog open for 347 of 497
+ticks at seed 7 (cause not traced). The engine trace of the cage knife run at seed 9 (`BENCH_FRESH=1 BENCH_TRACE`,
+`.practice/fish-knife/trace`) has the knife and Make 1 in T, the close or drop in T+1 and the click in T+2 for each
+cycle, and 156 of 157 clicks ran (one refused at t=446, a spot about to move). Catches per cycle against
+`stat_random` (`engine/engine/script/handlers/PlayerOps.ts:591-600`; trout 32/192, salmon 16/96, lobster 6/95 in
+`skill_fishing/configs/fishing.struct:25-53`): fly 0.64/0.71/0.73 against 0.73 at Fishing 78; cage 0.26/0.20/0.19
+against 0.27 at Fishing 70. The low cage seeds are luck of the lockstep random seed or a cause not found: every
+click in the trace ran.
+
+Fishing 78-99 at Lumbridge (765,957 XP, `packages/planner/src/curve.ts`): with one roll each 3 ticks, `stat_random`
+gives 1,957 ticks (652 rolls); at the measured 3.06 ticks a cycle, about 2,000. The record route plans 2,054 and took
+2,257. Gap: practice preset runs to Fishing 80, not a live run from 78 to 99; spot moves over 2,000 ticks are in the
+3.06 only as far as these runs saw them.
