@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794534080422,
+ "at": 1794534099669,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -56,6 +56,25 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
   },
   {
    "account": "Bigchopper",
@@ -544,19 +563,6 @@
    "resources": [
     "knight:2671,3313"
    ]
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-7c8d6425-47c2-438d-8ec6-a67e792d8724"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-woodenstaff-20261113t013004z [task-7c8d6425-47c2-438d-8ec6-a67e792d8724]",
-   "role": "thieving"
   },
   {
    "account": "Woodpecker",
