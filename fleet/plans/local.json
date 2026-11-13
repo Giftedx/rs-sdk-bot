@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794590455994,
+ "at": 1794591402758,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -500,25 +500,6 @@
    "resources": []
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "CoinCock",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -557,6 +538,19 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-113e4e4a-2304-4343-a758-1a498661f527"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-completion-recovery-held-child [task-113e4e4a-2304-4343-a758-1a498661f527]",
+   "role": "thieving"
   }
  ]
 }
