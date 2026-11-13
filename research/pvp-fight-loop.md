@@ -1768,3 +1768,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     glory is a new item, so the bank trip deposited it as loot and the next trip had none. They wear it again after
     the teleport (`wearGlory`). The roam's 120-tick fight cap costs nothing here: `LEADER_CAP=400` kills 8 of 12.
     Gap: 6 seeds.
+69. **The spear lock catches a target that runs at its first hit, and nothing catches one that leaves on sight.**
+    The spear army of finding 67 (`extra:army-route-spear-x5` at level 34 and `-low-x5` at level 6, seeds 1-6)
+    against its target set to escape only (`TARGET_OPTS={"flee":true}`): 6 of 6 at each level and no glory rub,
+    since the first contact is a spear's hold and a held target cannot run or rub. With the target leaving as soon
+    as any other player is within 12 tiles (`TARGET_SIGHT=12`, `scripts/measure/pvp-with-targets.ts`): 0 of 6 at
+    each level, with or without the opening hold (`OPEN_TOGETHER=0`). At level 6 it rubs its glory at full health
+    and is gone 6 ticks after it sees the army, before any account is within the 10 tiles of a freeze; at level 34
+    it runs to level 30 and rubs there. The army's prey is a target that is busy (skilling, fighting) or slow to
+    see it. Gap: a target that reacts after a human's delay (2 to 5 ticks) is not in a case.

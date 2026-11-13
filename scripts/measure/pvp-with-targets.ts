@@ -10,7 +10,7 @@ import { tickWaits } from '../../packages/core/src/tick-stream';
 import { nextTick } from '../pk';
 
 const [bot, targetList, mode, ...given] = process.argv.slice(2);
-// TARGET_*=value arguments are this harness's settings (TARGET_PROFILE, TARGET_OPTS, TARGET_PRAYER_GUARD), not the route's.
+// TARGET_*=value arguments are this harness's settings (TARGET_PROFILE, TARGET_OPTS, TARGET_PRAYER_GUARD, TARGET_SIGHT), not the route's.
 const rest = given.filter(a => { const m = a.match(/^(TARGET_[A-Z_]+)=(.*)$/); if (m) process.env[m[1]!] = m[2]!; return !m; });
 if (!bot || !targetList || !mode) { console.log('RESULT fail usage: bun scripts/measure/pvp-with-targets.ts <bot> <target,...> <mode> [arg ...]'); process.exit(2); }
 const names = targetList.split(',').filter(Boolean);
@@ -36,7 +36,11 @@ const defend = targetProfile ? await (async () => {
     return async (t: typeof targets[number]) => {
         const st = t.sdk.getState();
         const hit = (st?.combatEvents ?? []).find(e => e.type === 'damage_taken' && e.sourceType === 'other_player');
-        const by = hit && st?.nearbyPlayers.find(p => p.index === hit.sourceIndex);
+        // TARGET_SIGHT=<tiles>: a target also takes the nearest other player within that many tiles for its attacker
+        // before any hit (a wary target that leaves on sight, with TARGET_OPTS={"flee":true}).
+        const sight = Number(process.env.TARGET_SIGHT ?? 0), mates = new Set(names.map(n => n.toLowerCase()));
+        const seen = sight > 0 ? (st?.nearbyPlayers ?? []).filter(p => !mates.has(p.name.toLowerCase()) && p.distance <= sight).sort((a, b) => a.distance - b.distance)[0] : undefined;
+        const by = (hit && st?.nearbyPlayers.find(p => p.index === hit.sourceIndex)) || seen;
         if (!by) return false;
         const o = sparOptions(targetProfile, process.env.TARGET_OPTS, kitFrom(t.sdk.getEquipment(), t.sdk.getInventory()), 900);
         const r = await fightPlayer(t, by.name, { ...o, stop: () => done, log: l => console.log(`[${t.name}] ${l}`) });
