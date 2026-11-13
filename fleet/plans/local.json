@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794599387326,
+ "at": 1794599457397,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -262,28 +262,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
    ]
   },
   {
