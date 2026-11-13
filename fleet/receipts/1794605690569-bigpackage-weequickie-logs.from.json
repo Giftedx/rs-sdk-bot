@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794605690569-bigpackage-weequickie-logs",
+ "account": "Bigpackage",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 1,
+ "claim": "ff945455-815f-4c3e-90cc-70f1b5a27ce8",
+ "count": 0,
+ "ok": false,
+ "at": 1794605800097,
+ "detail": "trade claimed"
+}
