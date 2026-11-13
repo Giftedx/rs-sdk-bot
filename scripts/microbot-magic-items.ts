@@ -83,7 +83,11 @@ export async function runItemMagic(s:Session,recipe:Recipe,o:{count:number;cap:n
  while(casts<o.count){
   if(over()){stop=ended?'session ended':life.stopped()?'stopped':'cap';break;}
   const p=state()?.player;if(!p||p.worldX!==p0.worldX||p.worldZ!==p0.worldZ||p.lifeId!==p0.lifeId||p.isDead)throw Error('unsafe player change');
-  await s.bot.dismissBlockingUI();if(over()){stop='stopped';break;}
+  // A "continue" dialog (a level-up) does not block the cast: the server closes it. Clicking it first cost a tick or
+  // more on most casts at a 25x rate: bench extra:same-enchant-sapphire 185 ticks with the click, 146 without, one
+  // cast each 3 ticks. Anything else open (a choice, an interface) still goes through dismissBlockingUI.
+  const ui=state(),onlyContinue=!!ui?.dialog?.isOpen&&(ui.dialog.options?.length??0)<=1&&!ui.interface?.isOpen;
+  if(process.env.ITEM_MAGIC_DISMISS==='1'||!onlyContinue&&(ui?.dialog?.isOpen||ui?.interface?.isOpen))await s.bot.dismissBlockingUI();if(over()){stop='stopped';break;}
   const before=counts(),x0=xp(),costs=itemSpellCosts(recipe,state()?.equipment??[],o.members??false);
   if(Object.entries(costs).some(([id,n])=>(before[Number(id)]??0)<n)){stop='supplies';break;}
   // Iron with spare coal becomes steel on this server; reject a staged ambiguous batch.

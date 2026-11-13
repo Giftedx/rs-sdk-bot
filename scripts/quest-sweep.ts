@@ -676,6 +676,16 @@ const STOPPED:Walked={ok:false,reason:'stopped',detail:'quest guard'};
 async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,signal?:AbortSignal):Promise<Walked>{
  const stopped=()=>signal?.aborted===true;
  const router=async(t:Tile):Promise<Walked>=>stopped()?STOPPED:goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS,signal});
+ // The hubs below walk the ground. An account that holds a law rune takes the world router's plan when that plan casts
+ // a teleport: from the Draynor bank to Doric's house the ground walk took 153 ticks (bench extra:sweep-doric-draynor-
+ // walk). goTo plans again on foot when the cast fails.
+ const acct=accountOf(s);
+ if(at(s).level===0&&to.level===0&&cheb(at(s),to)>30&&(acct.counts?.lawrune??0)>0){
+  const plan=world.route(at(s),to,acct,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS});
+  const spell=plan.ok?plan.legs.find(l=>l.kind==='travel'&&l.travel.kind==='spell'):undefined;
+  console.log(`QUEST_SWEEP_SPELL ${JSON.stringify({from:at(s),to,planned:plan.ok,spell:spell?.kind==='travel'?(spell.travel as {name?:string}).name??true:false})}`);
+  if(spell)return router(to);
+ }
  const ground=async(t:Tile):Promise<Walked>=>{
   if(stopped())return STOPPED;
   const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]],(d,pts)=>walkPath(d,pts,{signal})):{ok:false};

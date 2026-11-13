@@ -688,6 +688,21 @@ const SAME_JOB_CASES: BenchCase[] = [
       {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: magic}, bank: [{id: ring, count: n}, {id: 564, count: n}, {id: rune, count: n * per}]},
       /"completed":(\d+)/, {pass: s => ok(s) && new RegExp(`"completed":${n},`).test(s),
         jobFiles: {[`.practice/aio-bench/jobs/{bot}-same-enchant-${gem}.json`]: {family: 'magic', recipe: `enchant:${gem}_ring`, target: n, batch: Math.min(n, 26), cap: 1500, returnTicks: 300, members: true, bank: {x: 3092, z: 3243, level: 0}, site: {x: 3092, z: 3243, level: 0}}}})),
+  // The whole block in one login: the four jobs above in order from Magic 10, all supplies banked. A preset sets a
+  // level, not XP: from Magic 9 (838 XP) ruby misses Magic 49 by 4 XP; the live runner started block 2 with 925 XP.
+  ((jobs: [string, number][]) => sameJob('enchant-block2', ['bank-job', ...jobs.map(([gem]) => `.practice/aio-bench/jobs/{bot}-same-enchant2-${gem}.json`)],
+    {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 10}, bank: [{id: 1637, count: 40}, {id: 1639, count: 13}, {id: 1641, count: 16}, {id: 1643, count: 5},
+      {id: 564, count: 74}, {id: 555, count: 40}, {id: 556, count: 39}, {id: 554, count: 80}, {id: 557, count: 50}]},
+    /"completed":(\d+),"trips/, {pass: s => ok(s) && /"ok":true,"jobs":\[/.test(s) && jobs.every(([gem, n]) => new RegExp(`"recipe":"enchant:${gem}_ring","completed":${n},`).test(s)),
+      jobFiles: Object.fromEntries(jobs.map(([gem, n]) => [`.practice/aio-bench/jobs/{bot}-same-enchant2-${gem}.json`, {family: 'magic', recipe: `enchant:${gem}_ring`, target: n, batch: Math.min(n, 26), cap: 1500, returnTicks: 300, members: true, bank: {x: 3092, z: 3243, level: 0}, site: {x: 3092, z: 3243, level: 0}}]))}))(
+    [['sapphire', 40], ['emerald', 13], ['ruby', 16], ['diamond', 5]]),
+  // Block 3 of the mock Haggis run: Doric's Quest through the quest sweep from the Draynor bank, where block 2 ends,
+  // at Magic 59 with 6 clay, 4 copper ore, 2 iron ore banked. `tele` adds the runes of a Falador Teleport (1 law,
+  // 3 air, 1 water), which the sweep takes and the walker may cast; `walk` has none.
+  ...([['tele', [{id: 563, count: 1}, {id: 556, count: 3}, {id: 555, count: 1}], []], ['walk', [], []], ['pack', [], [{id: 563, count: 1}, {id: 556, count: 3}, {id: 555, count: 1}]]] as const).map(([mode, runes, pack]) =>
+    ({key: `extra:sweep-doric-draynor-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_doric', scriptArgs: ['sweep', 'doric'], pass: ok,
+      presetConfig: {...PRESETS.quest_doric!, position: {x: 3092, z: 3243, level: 0}, inventory: [...pack], skills: {Magic: 59},
+        bank: [{id: 434, count: 6}, {id: 436, count: 4}, {id: 440, count: 2}, ...runes]}} as BenchCase)),
   // Lobsters at the Catherby cage spots at Fishing 70, from the beach with a lobster pot and an empty pack, no bank
   // trip. `cage` has no unit count and runs to a cap of 150 ticks; `staged` catches 15 and ends.
   // The harpoon pair is the same start with a harpoon: tuna and swordfish from the same spots.
