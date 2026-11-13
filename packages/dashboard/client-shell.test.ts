@@ -920,6 +920,25 @@ test('agility obstacles, Ground markers, failure markers and the NPC finder in t
  const spot=t.overlayMessage().tiles.filter((x:any)=>x.colour==='#ff9900');
  expect(spot).toEqual([{x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'2 accounts: travel to Ardougne failed · tick stream stalled'}]);
 });
+test('Inventory Tags: food, potions, teleports and runes get their group class; the switch turns them off',()=>{
+ const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf('  function itemCell(item,i){'));
+ const hl:any={invTags:true};
+ const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
+ expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
+  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-rune','']);
+ hl.invTags=false;expect(invTag({name:'Shark'})).toBe('');expect(invTag(null)).toBe('');
+});
+test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
+ const code=shell.slice(shell.indexOf('  function gePanel(){'),shell.indexOf('  // Pull requests plugin'));
+ const state:any={bots:[],economy:{supplies:[{id:1,name:'Coal',ask:150}]}};
+ const run=new Function('S','window','E','nf','icon','loadItemSources','data',`let geQuery='',geAll=true,geOpen='Coal',sourcePin=null,itemSourcesData=data;const age=()=>'';${code};return gePanel();`);
+ const html=run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{Coal:[['gather','Mining 30: Coal rock',[3000,3000,0,3001,3001,0]],['drop','Drop: Giant (level 28) · always',[]]]});
+ expect(html).toContain('class="ge-row ge-open" data-ge-src="Coal"');
+ expect(html).toContain('<span class="ge-label">Mining 30: Coal rock</span><button class="xp-reset" data-src-pin="0" title="2 places">Show on map</button>');
+ expect(html).not.toContain('data-src-pin="1"');
+ expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{})).toContain('Loading sources');
+ expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{Iron:[]})).toContain('No source on record');
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});

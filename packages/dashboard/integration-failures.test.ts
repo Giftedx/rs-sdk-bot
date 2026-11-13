@@ -55,7 +55,7 @@ test('a complete market refresh replaces removed listings and publishes its time
 test('market holdings keep different item IDs with the same display name separate',()=>{
  const code=shell.slice(shell.indexOf('  function gePanel(){'),shell.indexOf('  // Pull requests plugin'));
  const state:any={bots:[{bank:[{id:200,baseId:199,name:'Herb (noted)',count:2},{id:201,name:'Herb',count:9}]}],economy:{supplies:[{id:199,name:'Herb',ask:1},{id:201,name:'Herb',ask:2}]}};
- const run=new Function('S','window','E','nf','icon',`let geQuery='',geAll=true;const age=()=>'';${code};return gePanel();`);
+ const run=new Function('S','window','E','nf','icon',`let geQuery='',geAll=true,geOpen=null;const age=()=>'';${code};return gePanel();`);
  const result=run(state,{atlasOperator:()=>true},String,String,()=>'<i/>');
  expect(result).toContain('class="ge-ours">2<');expect(result).toContain('class="ge-ours">9<');expect(result).not.toContain('class="ge-ours">11<');
  state.bots[0].bank=[{name:'Herb',count:4}];expect(run(state,{atlasOperator:()=>true},String,String,()=>'<i/>')).toContain('class="ge-ours">?<');

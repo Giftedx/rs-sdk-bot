@@ -1,0 +1,72 @@
+// Writes two client assets from the knowledge files of the pinned server:
+// - client-assets/map-icons.json for the minimap's World Map icons (RuneLite's World Map plugin): each teleport
+//   destination (knowledge/teleports.json), agility shortcut with its level (knowledge/shortcuts.json, kind shortcut)
+//   and shop keeper (knowledge/item-sources.json shop owners), as [x, z, level, kind, label]; kind t, a or s.
+// - client-assets/item-sources.json for the Grand Exchange plugin's item sources: for each route item of
+//   knowledge/item-sources.json, by display name, up to 12 sources as [kind, label, [x, z, level, ...]].
+// Run: bun packages/dashboard/gen-map-data.ts
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+type Tile = { x: number; z: number; level?: number };
+export type Icon = [number, number, number, 't' | 'a' | 's', string];
+export type Source = [string, string, number[]];
+type Names = { npc: (d: string) => string; item: (d: string) => string };
+
+const cap = (s: string) => s.replace(/^./, c => c.toUpperCase());
+// A debug name as words: "coalrock1" is "Coal rock", "magic_tree" is "Magic tree".
+export const pretty = (d: string) => cap(String(d).replace(/\d+$/, '').replace(/_/g, ' ').replace(/([a-z])(rock|tree)$/, '$1 $2').trim());
+// Shops, skills, floor spawns and actions first, then drops by chance (most likely first).
+const ORDER: Record<string, number> = { shop: 0, gather: 1, make: 2, pickup: 3, action: 4, drop: 5 };
+const flat = (tiles: Tile[]) => tiles.filter(t => Number.isInteger(t?.x) && Number.isInteger(t?.z)).flatMap(t => [t.x, t.z, t.level ?? 0]);
+
+export function mapIcons(teleports: any[], edges: any[], items: any[], names: Names): Icon[] {
+    const out = new Map<string, Icon>();
+    const add = (t: Tile | undefined, kind: Icon[3], label: string) => {
+        if (!t || !Number.isInteger(t.x) || !Number.isInteger(t.z)) return;
+        const key = `${t.x},${t.z},${t.level ?? 0},${kind}`;
+        if (!out.has(key)) out.set(key, [t.x, t.z, t.level ?? 0, kind, label]);
+    };
+    for (const tp of teleports) add(tp.to?.[0]?.candidates?.[0], 't', String(tp.name ?? 'Teleport'));
+    for (const e of edges) if (e.kind === 'shortcut') {
+        const lv = e.requires?.skill?.level;
+        add(e.from, 'a', `Agility shortcut${lv ? ' (level ' + lv + ')' : ''}: ${cap(String(e.optionText ?? 'use'))}`);
+    }
+    for (const it of items) for (const s of it.sources ?? []) if (s.kind === 'shop') for (const o of s.owners ?? []) for (const t of o.tiles ?? []) add(t, 's', `Shop: ${names.npc(o.npc)}`);
+    return [...out.values()].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+}
+
+export function itemSources(items: any[], names: Names): Record<string, Source[]> {
+    const out: Record<string, Source[]> = {};
+    const places = (ps: any[]) => flat((ps ?? []).flatMap((p: any) => p.tiles ?? []));
+    for (const it of items) {
+        const rows: Source[] = [];
+        const sorted = (it.sources ?? []).filter((s: any) => !s.blocked).sort((a: any, b: any) => (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) || (b.chance ?? 0) - (a.chance ?? 0));
+        for (const s of sorted) {
+            if (s.kind === 'shop') rows.push(['shop', `Shop: ${(s.owners ?? []).map((o: any) => names.npc(o.npc)).join(', ') || pretty(s.shop)} · ${s.basePrice} gp`, places(s.owners)]);
+            else if (s.kind === 'drop') rows.push(['drop', `Drop: ${names.npc(s.npc)}${s.combat ? ' (level ' + s.combat + ')' : ''} · ${s.chance >= 1 ? 'always' : '1/' + Math.round(1 / s.chance)}`, places(s.places)]);
+            else if (s.kind === 'gather') rows.push(['gather', `${cap(s.skill)} ${s.level}: ${(s.places ?? []).filter((p: any) => !/^macro_|dummy/.test(p.loc ?? '')).map((p: any) => pretty(p.loc ?? p.npc ?? '')).filter((v: string, i: number, a: string[]) => v && v !== 'Loc' && a.indexOf(v) === i).slice(0, 2).join(', ') || pretty(s.rung.split('/')[1] ?? '')}`, places(s.places)]);
+            else if (s.kind === 'make') rows.push(['make', `${cap(s.skill)} ${s.level}: from ${(s.inputs ?? []).map((i: any) => (i.count > 1 ? i.count + ' ' : '') + names.item(i.item)).join(', ') || 'nothing'}`, []]);
+            else if (s.kind === 'pickup') rows.push(['pickup', `Floor spawn${s.spawns > 1 ? 's (' + s.spawns + ')' : ''}`, flat(s.tiles ?? [])]);
+            else if (s.kind === 'action') rows.push(['action', `${names.npc(s.subject)}: ${String(s.trigger).startsWith('opnpc') ? 'talk' : 'use'}`, places(s.places)]);
+        }
+        // Two NPC variants of one name give one row, with the places of both.
+        const byLabel = new Map<string, Source>();
+        for (const r of rows) { const seen = byLabel.get(r[1]); if (seen) seen[2].push(...r[2]); else byLabel.set(r[1], [r[0], r[1], [...r[2]]]); }
+        if (byLabel.size) out[names.item(it.item)] = [...byLabel.values()].slice(0, 12);
+    }
+    return out;
+}
+
+if (import.meta.main) {
+    const root = join(import.meta.dir, '..', '..'), k = (f: string) => JSON.parse(readFileSync(join(root, 'knowledge', f), 'utf8'));
+    const npcName = new Map<string, string>((k('npcs.json') as any[]).map(n => [n.debugname, n.name]));
+    const itemName = new Map<string, string>((k('items.json') as any[]).filter(i => i.debugname && i.name).map(i => [i.debugname, i.name]));
+    const names: Names = { npc: d => npcName.get(d) ?? pretty(d), item: d => itemName.get(d) ?? pretty(d) };
+    const items = k('item-sources.json').items;
+    const icons = mapIcons(k('teleports.json').teleports, k('shortcuts.json').edges, items, names), sources = itemSources(items, names);
+    writeFileSync(join(import.meta.dir, 'client-assets', 'map-icons.json'), JSON.stringify(icons));
+    writeFileSync(join(import.meta.dir, 'client-assets', 'item-sources.json'), JSON.stringify(sources));
+    const by = (kind: string) => icons.filter(i => i[3] === kind).length;
+    console.log(`map-icons.json: ${by('t')} teleports, ${by('a')} shortcuts, ${by('s')} shops; item-sources.json: ${Object.keys(sources).length} items`);
+}
