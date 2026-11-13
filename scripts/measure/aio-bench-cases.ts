@@ -867,7 +867,12 @@ const EXTRA_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3233, z: 3219, level: 0}, skills: {Hitpoints: 2},
       equipment: [{id: 1155, count: 1, slot: 0}, {id: 1171, count: 1, slot: 5}, {id: 1061, count: 1, slot: 10}],
       inventory: [{id: 1127, count: 1}, {id: 436, count: 1}, {id: 438, count: 1}, {id: 440, count: 1}]},
-    pass: s => /^DEATH_RECOVERY ok .* worn=3/m.test(s)},
+    pass: s => /^DEATH_RECOVERY ok .* worn=3/m.test(s) && /^DEATH at=\S+ wild=0 hp=\S+ by=Man#\d+ /m.test(s)},
+  // The flee guard (randomevents.ts `flee`): unarmed, with no food, the bot fights a Guard (combat 21) in Varrock square
+  // and must run out of its reach at FLEE_HP of its Hitpoints, ending the session alive (scripts/measure/flee-probe.ts).
+  {key: 'extra:flee-guard', script: 'scripts/measure/flee-probe.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3210, z: 3460, level: 0}},
+    pass: s => ok(s) && /^FLEE_GUARD safe flee_guard id=9 /m.test(s)},
   // The loot job (packages/core/src/loot.ts): partner `b` drops a rune platebody 3 tiles away in Draynor bank; the bot
   // picks it up while its walk is held, finishes the walk and banks the platebody (scripts/measure/loot-probe.ts).
   {key: 'extra:loot-pickup', script: 'scripts/measure/loot-probe.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}'], engineEnv: {NODE_OBJ_REVEAL_TICKS: '1'},

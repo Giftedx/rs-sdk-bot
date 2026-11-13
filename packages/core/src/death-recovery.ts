@@ -121,3 +121,51 @@ export async function recoverDeath(s: RecoverySession, d: DeathSnapshot, o: Reco
     const worn = await wearBack(s, d.worn);
     return done(picked === piles.length ? 'ok' : 'partial', ` picked=${picked} of=${piles.length} worn=${worn}`);
 }
+
+// The flee guard (randomevents.ts `flee`) starts at this share of the maximum Hitpoints, with no food in the pack.
+// An estimate: a 30 Hitpoints account flees at 9, above one hit of most NPCs that a low account fights.
+export const FLEE_HP = 0.3;
+
+// ---- death cause ----
+// The damage the player took in the last CAUSE_TICKS ticks, by source, from the state's combat events. On a death
+// openBot logs `DEATH at=x,z,level wild=N hp=h/max by=<source> taken=<damage> hits=<n> script=<file>`: the source
+// that did the most damage, so each death can be fixed by its cause.
+export const CAUSE_TICKS = 20;
+export type Hit = { tick: number; damage: number; source: string };
+
+// The name of a damage source: an NPC as `name#id`, a player as `player:name`.
+export function sourceName(st: any, type: string, index: number): string {
+    if (type === 'npc') { const n = (st?.nearbyNpcs ?? []).find((x: any) => x.index === index); return n ? `${String(n.name ?? 'npc').replace(/\s+/g, '_')}#${n.id}` : `npc@${index}`; }
+    if (type === 'other_player') { const q = (st?.nearbyPlayers ?? []).find((x: any) => x.index === index); return `player:${q?.name ?? index}`; }
+    return type;
+}
+
+export function damageLog() {
+    const hits: Hit[] = [];
+    const seen = new Set<string>();
+    return {
+        // Reads the new damage_taken events of a tick.
+        read(st: any) {
+            for (const e of st?.combatEvents ?? []) {
+                if (e?.type !== 'damage_taken') continue;
+                const key = e.observationId !== undefined ? `o${e.observationId}` : `${e.tick}:${e.sourceType}:${e.sourceIndex}:${e.damage}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                hits.push({ tick: e.tick ?? st.tick ?? 0, damage: e.damage ?? 0, source: sourceName(st, e.sourceType, e.sourceIndex) });
+            }
+            const now = st?.tick ?? 0;
+            while (hits.length && now - hits[0]!.tick > CAUSE_TICKS) hits.shift();
+            if (seen.size > 500) seen.clear();
+        },
+        // The death line's cause fields.
+        cause(): string {
+            const by = new Map<string, number>();
+            for (const h of hits) by.set(h.source, (by.get(h.source) ?? 0) + h.damage);
+            const top = [...by].sort((a, b) => b[1] - a[1])[0];
+            return `by=${top?.[0] ?? 'unknown'} taken=${hits.reduce((n, h) => n + h.damage, 0)} hits=${hits.length}`;
+        },
+    };
+}
+
+export const deathLine = (d: DeathSnapshot | null, hp: string, cause: string, script: string) =>
+    `DEATH at=${d ? `${d.at.x},${d.at.z},${d.at.level}` : 'unknown'} wild=${d ? wildernessLevel(d.at.x, d.at.z) : 0} hp=${hp} ${cause} script=${script.split(/[\\/]/).at(-1) ?? script}`;
