@@ -1,0 +1,20 @@
+{
+ "id": "1794528295671-oreelse-abracadickra",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Abracadickra",
+ "item": "Copper ore",
+ "count": 4,
+ "start": 1794528295671,
+ "end": 1794531895671,
+ "extra": [
+  {
+   "item": "Iron ore",
+   "count": 1
+  },
+  {
+   "item": "Law rune",
+   "count": 1
+  }
+ ]
+}
