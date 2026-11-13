@@ -530,7 +530,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let target: NearbyPlayer | undefined, rubbed = -1, gloryOffAt = -10, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
-    const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
+    // A bench run (BENCH_SEED) with no mixSeed seeds its random choices from the seed and the account name, so a route
+    // case (hunt, roam, army) repeats on its seed; a live run keeps Math.random.
+    const benchSeed = o.mixSeed === undefined && process.env.BENCH_SEED !== undefined
+        // A bench name is aiob…x<4-character token><role>; the role (1, 1b, …) is the same on every run.
+        ? Number(process.env.BENCH_SEED) * 100_003 + [...(s.name.toLowerCase().match(/^aiob[a-z0-9]*x[a-z0-9]{4}(.+)$/)?.[1] ?? s.name.toLowerCase())].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) : undefined;
+    const rand = o.mixSeed !== undefined ? seededRandom(o.mixSeed) : benchSeed !== undefined ? seededRandom(benchSeed) : Math.random;
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
     let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10, outnumbered = o.escapeLatch?.outnumbered ?? false;
     // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.

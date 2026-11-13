@@ -1439,8 +1439,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`patches/rs-sdk.md` item 10: a player's hitpoint regen and other timers ran from its own login tick, and
     `PK_TRACE=1` showed 83 and 84 HP at fight tick 71 with the same hits). Two runs of seed 1 then give the same
     fight trace line for line (12,157 lines, `PK_TRACE=1`); four seeds at once, run twice, give the same kills and
-    deaths and differ in two fights' scores of 48 (`.practice/climb/set-det2-*`). Gap: under the load of parallel
-    seeds a little remains.
+    deaths and differ in two fights' scores of 48 (`.practice/climb/set-det2-*`). The route cases (hunt, roam, army:
+    `pvp-with-targets.ts` with the route in a second process) repeat too once the fight loop seeds its random
+    choices from `BENCH_SEED` and the account's role when it has no `mixSeed` (it used `Math.random`), the bench
+    engine's `SIM_NPC_NEAR` is 1, and the count-dialog wait holds the tick from the dialog's opening to its submit:
+    two runs of `extra:hunt-defend` with seed 1 differ in 4 of 3,852 engine inputs, at the end. Gap: under the load
+    of parallel seeds a little remains.
 42. **Freezes need their own armour rule, and the champion freezes once from half health.** With `castArmour: 'keep'`
     the freeze kept plate on too, and the champion killed 0 of 64 runners (`extra:spar-escape-tribrid-snare-x8`, seeds
     1-8, runner on `base`). `freezeArmour` (default `'torso'`) now rules a freeze. Against the runner, seeds 1-4: freeze
