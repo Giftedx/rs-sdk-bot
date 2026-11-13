@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794528295671-oreelse-abracadickra",
  "account": "Abracadickra",
  "partner": "OreElse",
@@ -10,20 +10,50 @@
  "item": "Copper ore",
  "requested": 4,
  "claim": "64fa1eb8-83bf-4824-90c9-706cc45e8f0c",
- "count": 0,
- "ok": false,
- "at": 1794528350411,
- "detail": "trade claimed",
+ "count": 4,
+ "ok": true,
+ "at": 1794529026446,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Iron ore",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794529018253
+   }
   },
   {
    "item": "Law rune",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794529019063
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1794529017529
+ },
+ "logout": {
+  "attemptId": "1794528350420-0000025924-0000000001",
+  "at": 1794529026438,
+  "sha256": "f52f35ac4e435ac9a64acdda8cef15cdaa149d556f731dd46c726db485f62563"
+ },
+ "screen": true
 }
