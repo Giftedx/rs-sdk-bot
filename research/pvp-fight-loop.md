@@ -1787,5 +1787,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     The opening hold also ends when the target runs (its tile moves 2 tiles in a tick, `OPEN_ON_RUN`), and the pace
     holds only until the fight opens; above level 30 the target that leaves on sight still gets away (0 of 6, every
     hold at level 30): with 12 tiles' start at the army's speed it never comes within a freeze's 10 tiles before it
-    reaches level 30. Gap: a target that leaves within 6 ticks of the first sight; an army that comes at it from
-    the side it runs to.
+    reaches level 30. The army comes from the south, the side the target runs to, and the target runs past it: the
+    casts go out at 8, 12 and 14 tiles as it passes (`.practice/roam-switch/run-open34b`). Gap: a target that leaves
+    within 6 ticks of the first sight; an army that waits in the runner's path; the test target runs straight south
+    where a player picks its way round.
