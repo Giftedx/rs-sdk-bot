@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794603908334-abracadickra-weequickie",
  "account": "WeeQuickie",
  "partner": "Abracadickra",
@@ -10,40 +10,102 @@
  "item": "Bucket of water",
  "requested": 4,
  "claim": "d9413946-b3c6-42a6-bdd9-0a755ab02e76",
- "count": 0,
- "ok": false,
- "at": 1794603947068,
- "detail": "trade claimed",
+ "count": 4,
+ "ok": true,
+ "at": 1794603979396,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Spade",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794603974835
+   }
   },
   {
    "item": "Rope",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794603975610
+   }
   },
   {
    "item": "Bucket of milk",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794603976307
+   }
   },
   {
    "item": "Snape grass",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794603976957
+   }
   },
   {
    "item": "Law rune",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794603977643
+   }
   },
   {
    "item": "Air rune",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 0,
+    "after": 5
+   },
+   "bank": {
+    "count": 5,
+    "at": 1794603978419
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1794603973997
+ },
+ "logout": {
+  "attemptId": "1794603947073-0000017104-0000000001",
+  "at": 1794603979383,
+  "sha256": "cfe9d776b787bfd1b682ec1ccddaddfe8eb6a5be057c23c03d4eb1520600a452"
+ },
+ "screen": true
 }
