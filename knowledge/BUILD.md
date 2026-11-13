@@ -6,6 +6,7 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 ## Counts
 
 - items: 2756
+- gear: 708
 - certsExcluded: 1333
 - npcs: 1597
 - npcSpawns: 8142

@@ -50,6 +50,7 @@ Most of the game has a script, a bench case and a measured route, and many do no
 4. `bun packages/planner/src/cairn-cli.ts`: the record route (rune.fast), with our ticks, our script and the gap for each step. `bun packages/planner/src/haggis-cli.ts --order --supplies --evidence --levers`: our route, its supplies and its levers.
 5. `scripts/measure/`: the measurement of each planner row (`floor-*.ts`) and the hill climb tools (`pk-spar-climb.ts`; the bench flags `--set`, `--seeds` and `--watch`).
 6. The `Task lookup` table of [research/INDEX.md](research/INDEX.md) and the [project use map](research/project-use-map.md): what each topic file holds, and what we took from other projects.
+7. `bun scripts/gear.ts find|show|best|compare|kit`: every wearable item of the content (`knowledge/gear.json`, built by `bun packages/knowledge/src/build.ts` from the item configs): slot, every bonus, attack speed, special, wear levels and quest. Name a best-in-slot item, or say an item does not exist, only from it, and read a search's whole output (no `head`) before calling anything absent.
 
 Start from the fastest method that these show: for a route step, the method of the record route. Do not make a slower method faster when the record route does not use it. In the first report of a task, name the script, the bench case and the tool that you start from. Write that none exists only with the list of the searches that you ran.
 

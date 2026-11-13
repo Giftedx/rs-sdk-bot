@@ -1719,7 +1719,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     lands 13 specials, and it still leaves with 54 to 70 HP: three dragon dagger specials into Protect from Melee
     and rune armour deal less than the target heals from its sharks. Escape HP (three accounts, mean of 6): none 78,
     `OPEN_FREEZE` set 61, all five with the graphic read 76. The army's prey stays the target with no food or no
-    escape (findings 52 to 56). Gap: no kit with more burst than the dragon dagger; 6 seeds a setup.
+    escape (findings 52 to 56). Gap: no kit with another special weapon (`pvp_special_attack.rs2` also has the dragon longsword, dragon mace, rune claws and dragon halberd) was tried; 6 seeds a setup.
 66. **The roam and the army left the Wilderness on foot with their glory worn.** The game rubs a glory only from the
     pack (`amulet_of_glory.rs2` has no worn option). The roam's escape rubbed only a glory in the pack, so with the
     glory worn it ran south; on `extra:army-route-defend-deep` seed 1 a blocked walk stood 908 ticks at level 14 and the
