@@ -1060,6 +1060,13 @@ test('rank lines: a move of the same account, and another account taking the bes
  S.boards=[{board:'Overall',best:{name:'Alpha',rank:1500}}];moments();
  S.boards=[{board:'Overall',best:{name:'Beta',rank:616}}];moments();
  expect(chat.map(c=>c.text)).toEqual(['Alpha is now rank 1500 on Overall (up from 1619).','Beta now holds our best Overall rank: 616.']);
+test('item identification: unidentified herbs by id, potions by type; other items have no label',()=>{
+ const start=shell.indexOf("  // Item identification (RuneLite's"),code=shell.slice(start,shell.indexOf('  const idTag=',start));
+ const hl:any={itemIds:true};
+ const idLabel=new Function('hl',`${code};return idLabel;`)(hl);
+ expect([{name:'Herb',id:207},{name:'Herb',id:199},{name:'Herb',id:1},{name:'Strength potion(3)'},{name:'Super attack(4)'},{name:'Prayer potion(1)'},{name:'Superantipoison(2)'},{name:'Ranging potion(4)'},{name:'Amulet of glory(4)'},{name:'Shark'}].map(i=>idLabel(i)))
+  .toEqual(['Ran','Gua','','Str','SAtt','Pra','SAP','Rng','','']);
+ hl.itemIds=false;expect(idLabel({name:'Herb',id:207})).toBe('');
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));

@@ -4,6 +4,7 @@
 // (flee, talk, pick up, solve), busy() is true and the gate holds the script's actions until it is done.
 // With `loot` set, the same watcher picks up a valuable ground item near the player (rules in loot.ts), keeps it
 // from the script's drops and sales, and puts it in the bank when the script next opens one: `EVENT loot <action>`.
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from './inprocess';
@@ -124,6 +125,10 @@ export interface RandomEventWatch {
     busy(): boolean;
     // Item id -> count the loot job picked up and the pack still holds. The gate keeps these from a drop or a sale.
     kept(): Map<number, number>;
+    // Runs `work` with the player held from the script (death recovery): the gate passes the actions that `work`
+    // sends and the eat, drink and prayer inputs of the guards, and holds every other action; no event or loot job
+    // starts until `work` ends.
+    exclusive<T>(work: () => Promise<T>): Promise<T>;
     // Event NPC indices and loc tiles ("x,z") a script must not click (whirlpool, ent, gas rock, gas chest).
     avoid(): { npcs: Set<number>; locs: Set<string> };
 }
@@ -274,8 +279,23 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         return 'loot: the item is kept until a bank';
     };
 
+    // ---- exclusive work (death recovery) ----
+    const trusted = new AsyncLocalStorage<true>();
+    let exclusiveDepth = 0;
+    const SUSTAIN = /^(eat|drink)$/i;
+    // Passes the gate during exclusive work: the work's own actions, and the eat, drink and prayer inputs.
+    const passes = (a: any): boolean => {
+        if (trusted.getStore()) return true;
+        if (!exclusiveDepth || !a) return false;
+        if (a.type === 'togglePrayer') return true;
+        if (a.type !== 'useInventoryItem') return false;
+        const i = packNow().find(x => x.slot === a.slot);
+        return (i?.optionsWithIndex ?? []).some((o: any) => o.opIndex === a.optionIndex && SUSTAIN.test(o.text ?? ''));
+    };
+
     if (gateOn) {
         s.direct = (a: Act) => {
+            if (passes(a)) return rawDirect(a);
             noteScript(a);
             if (avoided(a)) return new Promise(r => later(r, fail('random event: target avoided')));
             const no = keptRefusal(a);
@@ -285,6 +305,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         };
         if (rawSend) sdkAny.send = (msg: any) => {
             if (msg?.type === 'sdk_action') {
+                if (passes(msg.action)) return rawSend.call(sdkAny, msg);
                 noteScript(msg.action);
                 if (avoided(msg.action)) { later(() => answer(msg, fail('random event: target avoided')), {}); return; }
                 const no = keptRefusal(msg.action);
@@ -349,7 +370,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // ---- jobs: one controls the player at a time; hostile flight comes first ----
     const jobs = new Map<string, Job>();
     let active: Job | null = null;
-    const holding = () => !!active?.hold;
+    const holding = () => exclusiveDepth > 0 || !!active?.hold;
     const want = (key: string, job: Omit<Job, 'started'>) => { if (!jobs.has(key)) jobs.set(key, { ...job, started: s.tick() }); };
 
     // Hostile NPC memory, by NPC index.
@@ -1011,6 +1032,10 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             lastStateTick = s.tick();
             if (xpStart.size === 0) for (const k of st.skills ?? []) xpStart.set(String(k.name).toLowerCase(), k.experience ?? 0);
             newMessages.update();
+            if (exclusiveDepth) {
+                for (let i = held.length - 1; i >= 0; i--) if (s.tick() - held[i]!.at > HOLD_LIMIT) held.splice(i, 1)[0]!.fail();
+                return;
+            }
             if (eventsOn) scanEvents();
             if (loot) scanLoot();
             // Pick the job to run this tick: the active one, unless a flight must preempt it.
@@ -1047,5 +1072,11 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         busy: () => holding(),
         avoid: () => ({ npcs: new Set(avoidNpcs), locs: new Set(avoidLocs) }),
         kept: () => new Map(kept),
+        async exclusive<T>(work: () => Promise<T>): Promise<T> {
+            exclusiveDepth++;
+            try { return await trusted.run(true, work); }
+            // The script's actions from before the work are stale after it: they fail rather than run.
+            finally { if (--exclusiveDepth === 0) for (const h of held.splice(0)) h.fail(); }
+        },
     };
 }

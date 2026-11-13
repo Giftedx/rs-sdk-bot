@@ -147,7 +147,21 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(take>0)return ' death-part';
     return (S?.economy?.itemValues?.[item.name]??(item.name==='Coins'?1:0))>0?' death-lost':'';
   }
-  function itemCell(item,i,extra=''){return `<button class="inventory-cell${invTag(item)}${extra}" data-item="${i}" title="${item?E(item.name)+' × '+E(item.count)+E(statTip(item)+priceTip(item)):'Empty slot'}" aria-label="${item?E(item.name)+' × '+E(item.count):'Empty inventory slot '+(i+1)}">${item?icon(item.name,32)+(item.count>1?qty(item.count):'')+chargeTag(item):''}</button>`;}
+  // Item identification (RuneLite's Item Identification): the game names every unidentified herb "Herb" (obj.pack
+  // unidentified_*), so the item id gives its short name; a potion (a name ending in its doses, "(3)") shows its type:
+  // Str, Pra, SAtt for a super attack.
+  const HERB_IDS={199:'Gua',201:'Mar',203:'Tar',205:'Har',207:'Ran',209:'Iri',211:'Ava',213:'Kwu',215:'Cad',217:'Dwa',219:'Tor',2485:'Lan',3049:'Toa',3051:'Sna'};
+  const POTION_IDS={attack:'Att',strength:'Str',defence:'Def',prayer:'Pra',restore:'Res',energy:'Ene',ranging:'Rng',magic:'Mag',antipoison:'AP',superantipoison:'SAP',fishing:'Fsh',agility:'Agi',combat:'Cmb',zamorak:'Zam',saradomin:'Sar',antifire:'AF',weapon:'WP'};
+  function idLabel(item){
+    if(!item||typeof hl==='undefined'||hl.itemIds===false)return '';
+    const id=item.baseId??item.id,n=String(item.name||'');
+    if(n==='Herb'&&HERB_IDS[id])return HERB_IDS[id];
+    const p=n.match(/^(super ?)?([a-z]+)\b[^()]*\(\d\)$/i);
+    if(p&&POTION_IDS[p[2].toLowerCase()])return (p[1]?'S':'')+POTION_IDS[p[2].toLowerCase()];
+    return '';
+  }
+  const idTag=item=>{const l=idLabel(item);return l?'<span class="item-id">'+E(l)+'</span>':'';};
+  function itemCell(item,i,extra=''){return `<button class="inventory-cell${invTag(item)}${extra}" data-item="${i}" title="${item?E(item.name)+' × '+E(item.count)+E(statTip(item)+priceTip(item)):'Empty slot'}" aria-label="${item?E(item.name)+' × '+E(item.count):'Empty inventory slot '+(i+1)}">${item?icon(item.name,32)+(item.count>1?qty(item.count):'')+chargeTag(item)+idTag(item):''}</button>`;}
   // The combat level line under the Skills tab, with the levels each style needs for the next one on hover.
   function combatLine(b){const X=window.atlasXp;if(!b?.skills?.length||!X?.combat)return '';const lv=Object.fromEntries(b.skills.map(s=>[s.name,s.level])),c=X.combat(lv);
     const n=c.next,parts=n?[['Attack/Strength',n.melee],['Defence/Hitpoints',n.defence],['Prayer',n.prayer],['Ranged',n.ranged],['Magic',n.magic]].filter(([,v])=>v!=null).map(([k,v])=>v+' '+k):[];
@@ -508,7 +522,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   //   tiles    red: the death tile of the open recap; pies: the respawn timers
   //   marks    the Ground markers that the viewer placed; fails: orange, where an account's last run failed
   //   finder   pink: the spawns of the NPC that the NPC finder shows
-  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true,skilling:true,trail:true,marks:true,fails:true,icons:true,items:true,invTags:true,idle:true,busy:true};
+  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true,skilling:true,trail:true,marks:true,fails:true,icons:true,items:true,invTags:true,idle:true,busy:true,itemIds:true};
   const hl=(()=>{try{return {...HL_DEFAULT,...JSON.parse(localStorage.getItem(HL_KEY)||'{}')};}catch{return {...HL_DEFAULT};}})();
   const saveHl=()=>{try{localStorage.setItem(HL_KEY,JSON.stringify(hl));}catch{/* private window */}};
   // recentTargets belong to one watched account (targetsFor); another account starts an empty list.
@@ -641,7 +655,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function highlightsBox(){
     const box=(k,label)=>`<label class="hl-row"><input type="checkbox" data-hl="${k}" ${hl[k]?'checked':''}> ${label}</label>`;
-    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('tiles','Death tile and respawn pies')}${box('skilling','Trees, rocks, fishing spots and agility obstacles of the account')}${box('trail','Walked path')}${box('marks','Ground markers')}${box('fails','Where runs failed (orange)')}${box('idle','Idle 3+ minutes (yellow)')}${box('icons','Minimap: teleports, shortcuts, shop names')}${box('items','Minimap: floor items (red)')}${box('busy','Minimap: busy areas (5+ players)')}${box('invTags','Inventory tags: food, potions, teleports, runes')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
+    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('tiles','Death tile and respawn pies')}${box('skilling','Trees, rocks, fishing spots and agility obstacles of the account')}${box('trail','Walked path')}${box('marks','Ground markers')}${box('fails','Where runs failed (orange)')}${box('idle','Idle 3+ minutes (yellow)')}${box('icons','Minimap: teleports, shortcuts, shop names')}${box('items','Minimap: floor items (red)')}${box('busy','Minimap: busy areas (5+ players)')}${box('invTags','Inventory tags: food, potions, teleports, runes')}${box('itemIds','Item labels: herbs and potions')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
   }
   function markersBox(){
     const b=account(),p=b?.live||b?.pos||null,colours=MARK_COLOURS.map(([c,n])=>'<option value="'+c+'" '+(c===markColour?'selected':'')+'>'+n+'</option>').join('');
@@ -880,7 +894,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       value.textContent=gp(v.value)+(v.unpriced?' + '+v.unpriced+' unpriced':'');
       value.title='Bank value at the vault prices (7-day market average, else the shop price)'+(v.unpriced?'; '+v.unpriced+' item kinds have no price':'');
       const query=modal.querySelector('input').value.toLowerCase(),items=b?.bank?.filter(i=>i.name.toLowerCase().includes(query));
-      modal.querySelector('.bank-items').innerHTML=items?items.map(it=>'<button class="inventory-cell" title="'+E(it.name)+' × '+it.count+E(statTip(it)+priceTip(it))+'">'+icon(it.name,32)+(it.count>1?qty(it.count):'')+'</button>').join(''):'<p class="game-muted">No bank inventory has been reported for this account.</p>';
+      modal.querySelector('.bank-items').innerHTML=items?items.map(it=>'<button class="inventory-cell" title="'+E(it.name)+' × '+it.count+E(statTip(it)+priceTip(it))+'">'+icon(it.name,32)+(it.count>1?qty(it.count):'')+(typeof idTag==='function'?idTag(it):'')+'</button>').join(''):'<p class="game-muted">No bank inventory has been reported for this account.</p>';
     };
     modal.refreshObservation=draw;
     modal.querySelector('[aria-label="Close bank"]').onclick=()=>modal.remove();modal.querySelector('input').oninput=draw;modal.querySelector('.bank-tabs').onclick=()=>toast('Only the combined bank inventory is reported.');hud.append(modal);draw();
