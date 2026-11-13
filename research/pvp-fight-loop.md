@@ -1487,3 +1487,14 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     Poisoned dagger(p) carries 255 in every bonus but is a staff item (`appearance.rs2` checks `staffmodlevel >= 3`)
     with no drop or shop. Evidence: `.practice/climb/kit-esc.out`, `kit-riv.out`, `set-head-sara-*`. Gap: one run
     per seed; the god cape needs the Mage Arena (Magic 60, Kolodion), a supply step outside this test.
+46. **Three maxed tribrids kill one maxed tribrid in multi-way combat at no loss; in single-way combat they lose
+    accounts and take three times as long.** `extra:army-tribrid-x4` (four groups of three `tribrid-snare` against
+    one `tribrid-snare` on the champion, `GANKER_POST`, Wilderness level 16, single-way) and
+    `extra:army-tribrid-multi-x4` (the same at 3150,3560, level 6, multi-way), seeds 1-4, the repeatable setup.
+    Single-way: on the `ganker` profile the army kills 13 of 16 and loses 8 accounts, the batch ends at the 900-tick
+    cap; on the champion it kills 16 and loses 7 in 515 to 836 ticks. Multi-way: 16 kills and no losses on both
+    profiles, the batch over in 252 to 370 ticks on `ganker` and 188 to 252 on the champion. In single-way combat
+    one attacker at a time can hit (`pvp_combat.rs2:103-133`), and the target eats all 18 sharks in every meeting
+    (about 450 damage taken). The champion's three accounts read the same health bar, so their specials go out on
+    the same tick. Evidence: `.practice/climb/set-army-*`, `set-armym-*`. Gap: the batch tick is the slowest group;
+    one run per seed; no army option of its own (a style for each member, a special stack held for a knock-out).

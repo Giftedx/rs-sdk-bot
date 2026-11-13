@@ -534,6 +534,12 @@ const ROUTE_CASES: BenchCase[] = [
   sparMatrix('extra:spar-ganker-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker'], GANKER_POST),
   sparMatrix('extra:spar-ganker-bare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker-bare'], GANKER_POST),
   gangCase('extra:gang-ganker-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker']),
+  // The PK army: three maxed snare tribrids (the gang side, SPAR_B) against one maxed snare tribrid, four groups.
+  // A meeting the gang wins ends with our side's account dead (died=), so died counts the army's kills. SPAR_B names
+  // the army's profile.
+  gangCase('extra:army-tribrid-x4', 'tribrid-snare', 'tribrid-snare', 4, GANKER_POST),
+  // The same in multi-way combat east of Edgeville (Wilderness level 6), where all three can hit at once.
+  gangCase('extra:army-tribrid-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
   gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
   // The same meeting for the kits with more food, and each kit against the most that the gang can be (`ganker-max`:
   // potions and a full pack of sharks), with a cap that leaves time for the 1,677 HP of that gang.
