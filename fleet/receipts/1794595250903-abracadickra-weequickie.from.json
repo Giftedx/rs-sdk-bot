@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794595250903-abracadickra-weequickie",
  "account": "Abracadickra",
  "partner": "WeeQuickie",
@@ -12,6 +12,20 @@
  "claim": "40b454e0-6468-4b7f-90a0-538a083f6ba5",
  "count": 0,
  "ok": false,
- "at": 1794595257666,
- "detail": "trade claimed"
+ "at": 1794595359212,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 347,
+  "after": 347
+ },
+ "bank": {
+  "count": 324,
+  "at": 1794595273816
+ },
+ "logout": {
+  "attemptId": "1794595257677-0000004236-0000000001",
+  "at": 1794595359201,
+  "sha256": "93da328c5be05e530dfdedb8f4cff65e6ec3271d06842fc143600514427c3399"
+ },
+ "screen": true
 }
