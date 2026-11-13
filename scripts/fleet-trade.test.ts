@@ -489,3 +489,20 @@ test('a waiting taker logs in when the giver is ready, when the giver failed, or
         expect(readFileSync(giverReadyFile(dir, 'o1'), 'utf8')).toMatch(/^\d+$/);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('a trade session ends its wait once its own release moves, checking at most every interval', async () => {
+    const { releaseWatch } = await import('./fleet-trade');
+    let t = 0, current = 'a', reads = 0;
+    const read = () => { reads++; return current; };
+    const moved = releaseWatch(read, 'a', { now: () => t, everyMs: 20_000 });
+    expect(moved()).toBe(false);
+    current = 'b'; t = 5_000;
+    expect(moved()).toBe(false);
+    expect(reads).toBe(1);
+    t = 20_000;
+    expect(moved()).toBe(true);
+    current = 'a'; t = 60_000;
+    expect(moved()).toBe(true);
+    expect(releaseWatch(read, undefined)()).toBe(false);
+    expect(releaseWatch(() => { throw Error('missing'); }, 'a')()).toBe(false);
+});

@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import type {Account,DoorBlock,Door} from './world';
-import {guildActorFacts} from './guild-observation';
+import {completedQuestUnlocks,guildActorFacts} from './guild-observation';
 import {equipmentObserved} from './container-observation';
 const clients=new WeakMap<object,unknown>();
 export function registerRouteActor(sdk:object,client:unknown):void {if(client&&typeof client==='object')clients.set(sdk,client);}
@@ -10,7 +10,7 @@ export function accountForSdk(sdk:any):Account {
         if(!equipmentObserved(client))delete actor.worn;
         if((client as {ingame?:boolean}).ingame!==true)delete actor.doorStates;
     }
-    const result={...actor,...guildActorFacts(client,state)};
+    const facts=guildActorFacts(client,state),result={...actor,...facts,unlocks:[...facts.unlocks,...completedQuestUnlocks(client)]};
     // A retained account object must not retain a vanished dynamic world object.
     Object.defineProperty(result,'visibleLocs',{enumerable:true,get:()=>{if(!client||typeof client!=='object')return undefined;const c=client as {ingame?:boolean;isInGame?:()=>boolean};return (typeof c.isInGame==='function'?c.isInGame()===true:c.ingame===true)?visibleLocs(sdk.getState()):undefined;}});
     return result;

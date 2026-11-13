@@ -1,4 +1,5 @@
-import { questFlags } from './quest-status';
+import { readFileSync } from 'node:fs';
+import { questDefinitions, questFlags } from './quest-status';
 import { waitUntil, waitTicks } from './ticks';
 import type { Session } from './inprocess';
 
@@ -10,6 +11,28 @@ export interface GuildActorFacts {
 }
 export interface GuildRefreshResult extends GuildActorFacts { admission?: { legendsEntry: 'crossed'|'refused'|'unknown' } }
 const evidence = new WeakMap<object, { stages: Record<string,number>; unlocks: Set<string> }>();
+// A green questlist entry adds the unlock `complete:<varp>` (never an exact stage): knowledge/quests.json holds each
+// quest's varp and completion value (scripts/general/scripts/quests.rs2). A questlist component is named after its quest
+// folder (quest_<name>); the one exception is fortress (quest_blackknight). travelAllowed (travel.ts) takes the unlock
+// for a need of exactly that completion value while the stage is unknown: the Tree Gnome Village spirit trees need
+// treequest = 9 (spirit_tree.rs2:26). The Grand Tree keeps its own glider admission.
+let finals: Map<string, { varp: string; complete: number }> | undefined;
+export const questFinals = () => finals ??= new Map((JSON.parse(readFileSync(new URL('../../../knowledge/quests.json', import.meta.url), 'utf8')) as { folder?: string | null; varp?: string; complete?: number }[])
+    .filter(q => q.folder && q.varp && Number.isInteger(q.complete)).map(q => [q.folder!, { varp: q.varp!, complete: q.complete! }]));
+export const questFolder = (key: string) => `quest_${key === 'fortress' ? 'blackknight' : key}`;let keys: Map<number, string> | undefined;
+const questKeys = () => keys ??= new Map(questDefinitions().map(q => [q.id, q.key]));
+// The completion unlocks of the client's green questlist entries, for the router's account (door-policy accountForSdk).
+// They stay out of guildActorFacts, which the status file publishes.
+export function completedQuestUnlocks(client: any): string[] {
+    if (!client || client.ingame !== true) return [];
+    const out: string[] = [];
+    for (const q of questFlags(client) ?? []) {
+        const key = q.state === 'complete' ? questKeys().get(q.id) : undefined;
+        const final = key && key !== 'grandtree' ? questFinals().get(questFolder(key)) : undefined;
+        if (final) out.push(`complete:${final.varp}`);
+    }
+    return out;
+}
 const clean = (v: unknown) => String(v ?? '').replace(/@[^@]{3}@/g, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
 function saved(client: object) {
     let value = evidence.get(client);

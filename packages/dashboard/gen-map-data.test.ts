@@ -16,13 +16,18 @@ test('map icons: teleport destinations, agility shortcuts with their level and s
         [{ kind: 'shortcut', optionText: 'walk-across', from: { x: 2580, z: 9513, level: 0 }, requires: { skill: { level: 40 } } }, { kind: 'course', from: { x: 1, z: 1, level: 0 } }],
         [{ sources: [{ kind: 'shop', owners: [{ npc: 'hickton', tiles: [{ x: 2822, z: 3442, level: 0 }, { x: 2822, z: 3442, level: 0 }] }] }] }],
         names);
-    expect(icons).toEqual([[2580, 9513, 0, 'a', 'Agility shortcut (level 40): Walk-across'], [2822, 3442, 0, 's', 'Shop: Hickton'], [3213, 3424, 0, 't', 'Varrock teleport']]);
+    expect(icons).toEqual([[2580, 9513, 0, 'a', 'Agility shortcut (level 40): Walk-across', ['agility', 40]], [2822, 3442, 0, 's', 'Shop: Hickton'], [3213, 3424, 0, 't', 'Varrock teleport']]);
 });
 
 test('map icons: a lever, a portal or the Ring of life is a fixed transport (p), not a teleport from anywhere (t)', () => {
     const to = (x: number) => [{ candidates: [{ x, z: 3000, level: 0 }] }];
     const icons = mapIcons([{ kind: 'lever', name: 'Ardougne lever to Wilderness', to: to(1) }, { kind: 'jewellery', name: 'Ring of life', to: to(2) }, { kind: 'spell', name: 'Falador teleport', to: to(3) }], [], [], names);
     expect(icons.map(i => i[3])).toEqual(['p', 'p', 't']);
+});
+
+test('map icons: a teleport spell carries its Magic level', () => {
+    const icons = mapIcons([{ kind: 'spell', name: 'Varrock teleport', requires: [{ type: 'skill', skill: 'magic', level: 25 }, { type: 'note', text: 'x' }], to: [{ candidates: [{ x: 3213, z: 3424, level: 0 }] }] }], [], [], names);
+    expect(icons).toEqual([[3213, 3424, 0, 't', 'Varrock teleport', ['magic', 25]]]);
 });
 
 test('action labels: talk, use an item on, interact, quest reward; debug and tutorial triggers are no action', () => {

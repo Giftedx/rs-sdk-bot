@@ -1638,3 +1638,39 @@ test('a Defence 1 build that fights with the bow takes the bow pack for Undergro
  expect(buildPack('upass',level({Attack:1,Ranged:49,Defence:1}))).toEqual([]);
  expect(Object.keys(BUILD_PACK).sort()).toEqual(['regicide','upass']);
 });
+
+import {prayerCovers,PRAYER_USED,PRAYER_MARGIN} from './quest-sweep';
+test('prayer potions ride as food when base Prayer covers the points the quest used in its bench', () => {
+ expect(prayerCovers('tree',99)).toBe(true);
+ expect(prayerCovers('tree',PRAYER_USED.tree!+PRAYER_MARGIN)).toBe(true);
+ expect(prayerCovers('tree',PRAYER_USED.tree!+PRAYER_MARGIN-1)).toBe(false);
+ expect(prayerCovers('tree',43)).toBe(false);
+ expect(prayerCovers('grandtree',62)).toBe(true);
+ expect(prayerCovers('zanaris',99)).toBe(false);
+});
+test('Tree Gnome Village and The Grand Tree need the staff of fire worn', () => {
+ for(const quest of ['tree','grandtree']){
+  const {need,wear}=wornKitPlan(quest,new Map([[562,80]]),[],[],[]);
+  expect(wear).toEqual([{id:1387,required:true}]);
+  expect(need.get(1387)).toBe(1);
+  expect(wornKitPlan(quest,new Map(),[],[],[{id:1387,count:1}]).need.has(1387)).toBe(false);
+ }
+});
+
+test('a corridor end in another connected area is not the goal', async () => {
+ const {sameArea}=await import('./quest-sweep');
+ const t=(x:number,z:number,level=0)=>({x,z,level});
+ expect(await sameArea(t(1,1),t(2,2,1))).toBe(false);
+ const fake=async()=>Object.assign(()=>0,{areaOf:(p:{x:number})=>p.x<10?21:p.x<20?8579:-1}) as any;
+ expect(await sameArea(t(15,0),t(12,0),fake)).toBe(true);
+});
+
+test('any meals in the pack meet the preset food rows; teleport runes need their own ids', async () => {
+ const {foodShort}=await import('./quest-sweep');
+ const food=new Map([[379,4],[563,2]]);
+ const pack=(rows:[number,number][])=>rows.map(([id,count])=>({id,count}));
+ expect(foodShort(food,pack([[385,8],[563,2]]))).toBe(false);
+ expect(foodShort(food,pack([[385,3],[563,2]]))).toBe(true);
+ expect(foodShort(food,pack([[385,8],[563,1]]))).toBe(true);
+ expect(foodShort(food,pack([[2309,5],[563,2]]),new Map([[2309,2]]))).toBe(true);
+});
