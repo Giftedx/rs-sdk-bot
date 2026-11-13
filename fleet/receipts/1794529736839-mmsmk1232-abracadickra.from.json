@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794529736839-mmsmk1232-abracadickra",
  "account": "mmsmk1232",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 5000000,
  "claim": "8c2d8d43-7f48-4a2c-95b0-7a07f8ff2a7a",
- "count": 0,
- "ok": false,
- "at": 1794530042337,
- "detail": "trade claimed"
+ "count": 5000000,
+ "ok": true,
+ "at": 1794530247903,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5000000,
+  "after": 0
+ },
+ "bank": {
+  "count": 5000000,
+  "at": 1794530240408
+ },
+ "logout": {
+  "attemptId": "1794530042345-0000028320-0000000001",
+  "at": 1794530247894,
+  "sha256": "32ba8ad9f740a9f16f49a7b7365fa26c03552ea49059eb35c00f2614c5ce10f8"
+ },
+ "screen": true
 }
