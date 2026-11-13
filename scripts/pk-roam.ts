@@ -637,7 +637,19 @@ if (import.meta.main) {
         // A practice run registers its accounts as owned (tradeguard.ts), so its target is a friend unless FRIENDS names the list.
         ...(args.some(a => a.startsWith('FRIENDS=')) ? { friends: arg(args, 'FRIENDS', '').split(',').filter(Boolean) } : {}),
     };
+    // ROAM_PROFILE=<profile of scripts/pk-spar.ts>: that profile's fight options (its reading, prayers, freezes,
+    // armour, reserve and crowd rules) for each fight of the hunt; the kit, spec weapon and caps stay the roam's.
+    // auto (default): the champion for a maxed account (combat 115 or more), whose fights against a target that
+    // defends on the champion went 379 dealt, 360 taken where the roam's own options went 307, 404 (research finding
+    // 58); the roam's own options for a lower build (finding 37). none: the roam's own options.
     const session = await openBot(name);
+    const roamProfile = arg(args, 'ROAM_PROFILE', 'auto'), combat = session.sdk.getState()?.player?.combatLevel ?? 0;
+    const chosen = roamProfile === 'auto' ? (combat >= 115 ? 'champion' : '') : roamProfile === 'none' ? '' : roamProfile;
+    if (chosen) {
+        const { PROFILES } = await import('./pk-spar');
+        const { specBelow: _below, ...profile } = PROFILES[chosen] ?? (() => { throw new Error(`unknown ROAM_PROFILE ${chosen}`); })();
+        cfg.fight = { ...cfg.fight, ...profile };
+    }
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: session.tick(), ...e }));
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     try { result = await huntOnce(session, cfg, stop, emit); }

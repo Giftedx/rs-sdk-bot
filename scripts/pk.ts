@@ -369,7 +369,8 @@ export const estMaxHit = (combatLevel: number) => Math.max(10, Math.round(combat
 export function dangerReason(o: { hp: number; maxHp: number; food: boolean; prayer: number; oppMax: number;
     hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number }): string | null {
     if (!o.food && o.hp <= o.oppMax * 1.5) return `no food at HP ${o.hp}`;
-    const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10).map(h => h.src));
+    // A hit's source is the entity the player faced (StateCollector); -1 is no one, not a second player.
+    const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10 && h.src >= 0).map(h => h.src));
     if (attackers.size >= 2) return `${attackers.size} players hitting`;
     const taken = o.hits.filter(h => o.now - h.tick <= 30).reduce((n, h) => n + h.damage, 0);
     const dealt = o.dealt.filter(h => o.now - h.tick <= 30).reduce((n, h) => n + h.damage, 0);
@@ -579,7 +580,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // Those that face us count for the escape; those that face us or an ally set the crowd's prayer.
         const facing = hostile.filter(x => !visibleIdx.has(x.f)).length;
         const facers = hostile.filter(x => !visibleIdx.has(x.f) || allyIdx.has(x.f)).map(x => x.p);
-        const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
+        const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8 && h.src >= 0).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
         if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
             outnumbered = true; if (o.escapeLatch) o.escapeLatch.outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
         }

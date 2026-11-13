@@ -1609,3 +1609,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 99 HP in half the meetings and leaves alive in
     4 of 8 where the hit count let it leave in 2 (both without the escape latch of finding 55). The army case of finding 46 holds: 16 kills, no losses, the target
     eats 15.5 sharks. Gap: a target out of view counts as us; no run on the live server.
+58. **A maxed roamer fights better on the champion's options, and an unknown hit source is not a second
+    attacker.** `extra:roam-defend` (the roam route against a target with 18 sharks and a glory on the champion's
+    fight loop, Wilderness level 8, single-way; seeds 1-6): every fight of the roam ended on `PK danger: 2 players
+    hitting`. A hit's source is the entity the player faces (finding 57), and -1, no one, counted as a second
+    player; `dangerReason` and the crowd escape now leave out a source below 0. The roam's own fight options then
+    deal 307 and take 404 in the first fight, summed over the six seeds; with the champion's (`ROAM_PROFILE=champion`)
+    379 and 360. No fight ends in a kill within the roam's 120-tick cap: two maxed accounts with food need longer.
+    `ROAM_PROFILE` defaults to `auto`: the champion for an account of combat 115 or more, the roam's own options
+    below that (finding 37). Gap: six seeds; the army leader's hunt keeps the roam's own options.
