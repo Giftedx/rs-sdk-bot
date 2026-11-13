@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794591497672,
+ "at": 1794591514550,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -71,25 +71,6 @@
    "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
   },
   {
    "account": "BowBeforeMe",
@@ -494,6 +475,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
