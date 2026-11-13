@@ -1029,6 +1029,14 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  // A wielded Staff of fire gives fire runes without limit.
  b.equipment[0]={slot:3,name:'Staff of fire'};expect(t.teleCasts(b)[0].casts).toBe(4);
 });
+test('item identification: unidentified herbs by id, potions by type; other items have no label',()=>{
+ const start=shell.indexOf("  // Item identification (RuneLite's"),code=shell.slice(start,shell.indexOf('  const idTag=',start));
+ const hl:any={itemIds:true};
+ const idLabel=new Function('hl',`${code};return idLabel;`)(hl);
+ expect([{name:'Herb',id:207},{name:'Herb',id:199},{name:'Herb',id:1},{name:'Strength potion(3)'},{name:'Super attack(4)'},{name:'Prayer potion(1)'},{name:'Superantipoison(2)'},{name:'Ranging potion(4)'},{name:'Amulet of glory(4)'},{name:'Shark'}].map(i=>idLabel(i)))
+  .toEqual(['Ran','Gua','','Str','SAtt','Pra','SAP','Rng','','']);
+ hl.itemIds=false;expect(idLabel({name:'Herb',id:207})).toBe('');
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
