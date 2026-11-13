@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794608038840,
+ "at": 1794608736957,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -56,6 +56,25 @@
   },
   {
    "account": "Bigchopper",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Bigpackage",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -247,24 +266,22 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "local",
    "resources": [
-    "shop:sarim"
+    "pen:3187,3277"
    ]
   },
   {
