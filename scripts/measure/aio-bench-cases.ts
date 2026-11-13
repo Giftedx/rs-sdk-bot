@@ -491,6 +491,12 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:roam-defend', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})}]},
+  // Two targets that defend on the champion at Wilderness level 8: one in rune with 18 sharks and a glory, one in monk
+  // robes (kit ganker-dds) six tiles on. ROAM_SOFT (environment) weighs the softer one.
+  {key: 'extra:roam-pick', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b},{bot:c}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: kitFixture('ganker-dds', 3100, 3584)}]},
   {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=0.3', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK hunt: [1-9]\d* kills/.test(s), output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {food: 0})}]},

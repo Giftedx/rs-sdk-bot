@@ -1664,4 +1664,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     that much food) changes nothing here, because the first kill costs little food. Pure builds: in the
     `pure-dds` mirror (`extra:spar-kit-pure-dds-x8`, seeds 1-8, against `base`) `base` and `snap` give 32 kills and
     30 deaths in 64, the champion 30 and 32, `specBelow` 1 or 0.5 31 to 33 kills, and `hunter` (a freeze on flight
-    with no freeze runes) 15 and 46. Gap: six seeds; one pair of targets.
+    with no freeze runes) 15 and 46. The roam picks its prey from the world feed's roster before the target is in
+    view, so the client shows no armour then: an armour term in `preyScore` left the first pick unchanged on
+    `extra:roam-pick` (the same two targets at level 8, seeds 1-6; the roam took the armoured one first in all six)
+    and is not kept. Gap: six seeds; one pair of targets; roam cases repeat less than hunt cases (the feed).
