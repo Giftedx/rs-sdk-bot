@@ -1604,7 +1604,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     neither. `crowdPrayer` (multi-way combat, two or more of those: the overhead covers the style most of them hold)
     joins the champion. Two against two, side B on the champion, seeds 1-8: side A on the champion wins 17, loses 11,
     draws 4, with 5 dead and 16 of side B's; without `crowdPrayer` 9, 17, 6, with 18 dead and 9. Three against three
-    with the earlier count: 13, 6, 5, 8 dead and 16, against 7, 7, 10, 18 and 12. Against five at level 34
+    (`extra:team-3v3-multi-x3`, seeds 1-8): 8, 11, 5, with 10 dead and 17 of side B's; without it 5, 14, 5, with 11
+    dead and 12. Against five at level 34
     (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 99 HP in half the meetings and leaves alive in
     4 of 8 where the hit count let it leave in 2. The army case of finding 46 holds: 16 kills, no losses, the target
     eats 15.5 sharks. Gap: a target out of view counts as us; no run on the live server.
