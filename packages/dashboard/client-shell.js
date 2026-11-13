@@ -79,7 +79,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Item stats (RuneLite's item stats): what a food or a potion does, from the server's consumption table (client-assets/item-stats.json, made by gen-item-stats.ts). The tooltip of an item shows it.
   let itemStats={};fetch(asset('item-stats.json')).then(r=>r.ok?r.json():{}).then(j=>{itemStats=j||{};},()=>{});
   window.atlasItemStats=()=>itemStats;
-  function statTip(item){const t=itemStats[item.name];return t?' · '+t:'';}
+  function statTip(item){const t=itemStats[item.name];return (t?' · '+t:'')+(typeof cookTip==='function'?cookTip(item):'');}
+  // Cooking burn chance (RuneLite's cooking plugin, with the server's roll): client-assets/cooking.json (gen-cooking.ts)
+  // has the [low, high] of each raw food on a fire, a range and with cooking gauntlets. The engine (STAT_RANDOM) cooks
+  // when floor(low*(99-L)/98) + floor(high*(L-1)/98) + 1 beats a roll of 0-255; L is the current Cooking level.
+  // The tooltip of a raw food gives the followed account's burn chance and the level where a range stops burning it.
+  let cookData={};fetch(asset('cooking.json')).then(r=>r.ok?r.json():{}).then(j=>{cookData=j||{};},()=>{});
+  function cookOk(p,L){const [lo,hi]=p;if(!lo&&!hi)return 0;if(lo===1&&hi===1)return 1;L=Math.min(L,99);return Math.min(Math.floor(lo*(99-L)/98)+Math.floor(hi*(L-1)/98)+1,256)/256;}
+  function cookTip(item){const r=cookData[item?.name];if(!r)return '';const b=typeof account==='function'?account():null,L=typeof curLevel==='function'?curLevel(b,'Cooking'):null;
+    if(!Number.isFinite(L))return ' · cooks to '+r.c+' at Cooking '+r.lv;if(L<r.lv)return ' · Cooking '+r.lv+' needed to cook';
+    const pct=p=>Math.round((1-cookOk(p,L))*100)+'%',range=r.r||r.f,parts=[r.r?'fire '+pct(r.f)+', range '+pct(r.r):'fire or range '+pct(r.f)];if(r.g)parts.push('gauntlets '+pct(r.g));
+    let stop=null;for(let l=r.lv;l<=99;l++)if(cookOk(range,l)>=1){stop=l;break;}
+    return ' · burn at Cooking '+L+': '+parts.join(', ')+' · '+(stop==null?'a range burns it even at 99':stop<=L?'no burns on a range':'no burns on a range from '+stop);}
   // High alchemy (RuneLite's item prices, the HA value): the server pays max(scale(6, 10, cost), 1) coins
   // (skill_magic/scripts/spells/alchemy.rs2), with the cost from client-assets/item-alch.json (gen-item-alch.ts). Coins cannot be alched.
   // The profit of one cast buys the item at the market ask and pays one nature rune; a fire staff gives the fire runes. Only a profit shows.
@@ -1101,7 +1112,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Skilling session (RuneLite's Woodcutting, Mining and Fishing session boxes): the account's top loot item since its
     // session started, with its count an hour (Loot tracker flow).
     const SESSION_VERB={woodcutting:'Logs cut',mining:'Ores mined',fishing:'Fish caught',cooking:'Food cooked',thieving:'Loot',smithing:'Made',crafting:'Made',fletching:'Made',firemaking:'Burned'};
-    const sessionLine=b=>{const t=(b.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0];if(!t)return '';const hours=Math.max(1/60,((b.flow.at??Date.now())-b.flow.since)/3.6e6);return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr');};
+    const sessionLine=b=>{const t=(b.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0];if(!t)return '';const hours=Math.max(1/60,((b.flow.at??Date.now())-b.flow.since)/3.6e6);const burnt=(b.flow?.loot||[]).filter(i=>/^burnt /i.test(i.name)).reduce((n,i)=>n+i.count,0),cooked=new Set(Object.values(typeof cookData==='object'?cookData:{}).map(r=>r.c)),made=burnt?(b.flow?.loot||[]).filter(i=>cooked.has(i.name)).reduce((n,i)=>n+i.count,0):0;
+      return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr')+(burnt&&made?line('Burnt',nf(burnt)+' · '+Math.round(burnt*100/(burnt+made))+'% burn rate'):'');};
     // PvP Tools lines: in the Wilderness, the risk, what a death keeps and loses, and the players who can attack now.
     const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):''))+line('Risk',gp(p.risk))+line('Kept · lost',gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
     const goalText=(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60);

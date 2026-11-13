@@ -716,6 +716,33 @@ test('!price answers from the market, then from the item value',()=>{
  expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
 });
 
+test('cooking: the burn chance of the followed account on a fire, a range and with gauntlets, and the no-burn level',()=>{
+ const code=shell.slice(shell.indexOf('  // Cooking burn chance (RuneLite'),shell.indexOf("  // High alchemy (RuneLite's item prices"));
+ const data={'Raw shark':{c:'Shark',lv:80,f:[1,202],r:[1,232],g:[15,270]},'Raw lobster':{c:'Lobster',lv:40,f:[38,332],g:[55,368]}};
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ let lv:any=85;
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),account:()=>({}),curLevel:()=>lv};
+ const t=new Function(...Object.keys(env),`${code};return {cookTip,cookOk};`)(...Object.values(env));
+ // Shark at 85: fire 174/256 cooks, range 199/256, gauntlets 234/256; a range burns it even at 99 (233/256).
+ expect(t.cookTip({name:'Raw shark'})).toBe(' · burn at Cooking 85: fire 32%, range 22%, gauntlets 9% · a range burns it even at 99');
+ lv=50;
+ expect(t.cookTip({name:'Raw lobster'})).toBe(' · burn at Cooking 50: fire or range 27%, gauntlets 17% · no burns on a range from 74');
+ lv=74;expect(t.cookTip({name:'Raw lobster'})).toContain('fire or range 0%, gauntlets 0% · no burns on a range');
+ lv=60;expect(t.cookTip({name:'Raw shark'})).toBe(' · Cooking 80 needed to cook');
+ lv=null;expect(t.cookTip({name:'Raw shark'})).toBe(' · cooks to Shark at Cooking 80');
+ expect(t.cookTip({name:'Shark'})).toBe('');
+});
+
+test('the skilling session box shows the burn rate of the cooked foods',()=>{
+ const start=shell.indexOf('    const sessionLine=b=>{'),code=shell.slice(start,shell.indexOf('\n',shell.indexOf('% burn rate',start)));
+ const cookData={'Raw shark':{c:'Shark'}};
+ const sessionLine=new Function('cookData','line','nf','SESSION_VERB',`${code};return sessionLine;`)(cookData,(k:string,v:string)=>k+': '+v+'\n',(n:number)=>String(n),{cooking:'Food cooked'});
+ const b:any={goalSkill:'Cooking',flow:{since:0,at:3.6e6,loot:[{name:'Raw shark',count:100},{name:'Shark',count:75},{name:'Burnt shark',count:25}]}};
+ expect(sessionLine(b)).toBe('Food cooked: Raw shark 100 · 100/hr\nBurnt: 25 · 25% burn rate\n');
+ b.flow.loot=[{name:'Shark',count:10}];
+ expect(sessionLine(b)).toBe('Food cooked: Shark 10 · 10/hr\n');
+});
+
 test('high alch: the server value, the profit of a cast after the market buy and a nature rune, no coins',()=>{
  const code=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
  const data={'Rune platebody':65000,'Coins':1,'Steel arrow':12,'Cabbage':1};
