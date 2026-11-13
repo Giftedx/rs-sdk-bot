@@ -716,6 +716,32 @@ test('!price answers from the market, then from the item value',()=>{
  expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
 });
 
+test('banked XP: bank items that are the one input of an action, at the best action the level allows',()=>{
+ const code=shell.slice(shell.indexOf("  // Banked XP (RuneLite's Banked Experience)"),shell.indexOf('  // Best training spot (Skill Calculator):'));
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const t=new Function('window',`let skillActions=null;${code};return {bankedXp,set:a=>{skillActions=a;}};`)({atlasXp:X});
+ t.set({prayer:[['Bones',1,112.5,['Bones'],[],[526]],['Dragon bones',1,1800,['Dragon bones'],[],[536]]],
+  fletching:[['Shortbow',5,125,['Shortbow'],['Shortbow'],[841]],['Bronze arrow',1,32.5,['Bronze arrowtips'],['Bronze arrow'],[39]]],
+  cooking:[['Shrimps',1,75,['Raw shrimps'],['Shrimps'],[317]],['Shark',80,5250,['Raw shark'],['Shark'],[383]]],
+  crafting:[['Dragonhide body',63,4650,['Dragon leather','Dragon leather','Dragon leather'],['Dragonhide body'],[1745,1745,1745]],['Dragon vambraces',57,1550,['Dragon leather'],['Dragon vambraces'],[1745]],
+   ['Black body',84,6450,['Dragon leather','Dragon leather','Dragon leather'],['Black body'],[2509,2509,2509]],['Black vambraces',79,2150,['Dragon leather'],['Black vambraces'],[2509]]]});
+ const b:any={skills:[{name:'Prayer',level:1,xp:0},{name:'Fletching',level:10,xp:X.xpForLevel(10)},{name:'Cooking',level:1,xp:0}],
+  bank:[{id:526,name:'Bones',count:10},{id:536,name:'Dragon bones',count:2},{id:841,name:'Shortbow',count:5},{id:383,name:'Raw shark',count:100},{id:317,name:'Raw shrimps',count:4}]};
+ const p=t.bankedXp(b,'Prayer');
+ expect(p).toEqual({xp:4725,items:12,level:X.levelForXp(4725)});
+ // A bow named as its own input is not banked XP; a raw shark at Cooking 1 is above the level.
+ expect(t.bankedXp(b,'Fletching')).toBe(null);
+ expect(t.bankedXp(b,'Cooking')).toEqual({xp:300,items:4,level:X.levelForXp(300)});
+ expect(t.bankedXp({skills:b.skills},'Prayer')).toBe(null);
+ // Dragon leather: matched by id, at the most XP per leather the level allows, in whole actions. At Crafting 84 green
+ // leather: 7 make 2 bodies (4,650 for 3, 1,550 a leather) and leave 1, as vambraces give 1,550 a leather too;
+ // black leather: 4 make 1 body (6,450) and leave 1. At Crafting 70 black leather counts nothing.
+ const c:any={skills:[{name:'Crafting',level:84,xp:X.xpForLevel(84)}],bank:[{id:1745,name:'Dragon leather',count:7},{id:2509,name:'Dragon leather',count:4}]};
+ expect(t.bankedXp(c,'Crafting')).toEqual({xp:2*4650+6450,items:9,level:X.levelForXp(X.xpForLevel(84)+2*4650+6450)});
+ c.skills[0]={name:'Crafting',level:70,xp:X.xpForLevel(70)};c.bank=[{id:2509,name:'Dragon leather',count:4}];
+ expect(t.bankedXp(c,'Crafting')).toBe(null);
+});
+
 test('quest requirements: met, missing with the level held, unknown, and the Ready test',()=>{
  const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
  const data={"Hero's Quest":{s:[['Mining',52,1],['Cooking',53,0]],qp:[55,1],q:[['Lost City',1],['Dragon Slayer',0]]},'Lost City':{s:[['Woodcutting',36,1]],q:[]}};
