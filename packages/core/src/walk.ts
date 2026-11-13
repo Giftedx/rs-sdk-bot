@@ -511,10 +511,27 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     const shutDoorAt = (from: number, to: number): { l: PathLoc; i: number } | null => {
         const ahead = new Map<string, number>();
         for (let i = Math.max(0, from); i <= Math.min(tiles.length - 1, to); i++) ahead.set(`${tiles[i]!.x},${tiles[i]!.z}`, i);
+        // A shut door on the tile the bot stands on blocks it as well, and the path's tiles leave that tile out. Live:
+        // Doric's Quest ends on his doorway (door 1530 at 2952,3453), and every walk click out was refused.
+        // It counts only when the client cannot reach the next path tile: the wall of a door is on one edge of its
+        // tile, and a bot past that edge is not blocked. The Karamja shipyard gate (2438 at 2945,3041) puts the
+        // player on the gate tile, inside the yard; an Open from there moves the player out again
+        // (quest_grandtree.rs2 open_shipyard_gate), away from the foreman.
+        const here = deps.pos();
+        const hereKey = here && here.level === level && !ahead.has(`${here.x},${here.z}`) ? `${here.x},${here.z}` : null;
+        if (hereKey) ahead.set(hereKey, Math.max(0, from));
+        let hereBlocks: boolean | undefined;
+        const blocksHere = (): boolean => {
+            if (hereBlocks === undefined) {
+                const next = tiles[Math.max(0, from)];
+                hereBlocks = !next || deps.reach?.({ x: next.x, z: next.z, level }) !== true;
+            }
+            return hereBlocks;
+        };
         let best: { l: PathLoc; i: number } | null = null;
         for (const l of deps.locs()) {
             const i = ahead.get(`${l.x},${l.z}`);
-            if (i !== undefined && openOp(l) && !blockedDoor(l) && (!best || i < best.i)) best = { l, i };
+            if (i !== undefined && openOp(l) && !blockedDoor(l) && (!best || i < best.i) && (`${l.x},${l.z}` !== hereKey || blocksHere())) best = { l, i };
         }
         return best;
     };

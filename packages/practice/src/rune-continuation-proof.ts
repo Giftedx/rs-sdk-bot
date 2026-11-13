@@ -19,7 +19,7 @@ export const runeContinuationHelpers=[
  [3092,3495,0,135],[3084,3464,0,135],[3077,3452,0,135],[3069,3431,0,135],
  [3058,3429,0,135],[2523,4833,27,135],[2523,4833,27,135],[2523,4833,27,135],
 ] as const;
-const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','packages/practice/src/rune-continuation-proof.ts'];
+const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','scripts/rune-carrier-altar.ts','packages/practice/src/rune-continuation-proof.ts'];
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 const total=(s:ReturnType<typeof readPracticeSave>,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const pack=(s:ReturnType<typeof readPracticeSave>,id?:number)=>(s.inventories[93]??[]).filter(i=>id===undefined||i.id===id).reduce((n,i)=>n+i.count,0);

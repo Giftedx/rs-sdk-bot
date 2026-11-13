@@ -150,7 +150,8 @@ if (import.meta.main) {
     for (const [i, o] of grouped.entries()) {
         const [first, ...extra] = o.lines;
         const base = makeOrder(o.from, account, first!.count, first!.item, now + i, inMin, minutes, owners, meet, extra);
-        const order: Order = { ...base, id: `${base.id}-${first!.item.replace(/[^A-Za-z0-9]+/g, '')}`.toLowerCase().slice(0, 64) };
+        // Givers are accounts of this side, so the route account stays offline until its giver is at the meet.
+        const order: Order = { ...base, id: `${base.id}-${first!.item.replace(/[^A-Za-z0-9]+/g, '')}`.toLowerCase().slice(0, 64), takerWaits: true };
         if (!flag('--dry')) {
             mkdirSync(join(FLEET_DIR(), 'orders'), { recursive: true });
             writeFileSync(join(FLEET_DIR(), 'orders', `${order.id}.json`), JSON.stringify(order, null, 1) + '\n');
