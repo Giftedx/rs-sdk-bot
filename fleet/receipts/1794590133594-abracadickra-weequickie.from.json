@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794590133594-abracadickra-weequickie",
  "account": "Abracadickra",
  "partner": "WeeQuickie",
@@ -10,15 +10,37 @@
  "item": "Rune axe",
  "requested": 1,
  "claim": "e35527f3-5fea-4c83-92c2-bb177dc842f8",
- "count": 0,
- "ok": false,
- "at": 1794590138905,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1794590225141,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Knife",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794590150529
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794590150012
+ },
+ "logout": {
+  "attemptId": "1794590138914-0000011104-0000000001",
+  "at": 1794590225129,
+  "sha256": "f73596a2a0d1e89c79480a248c5d5a6de237045de2331357da7b4f13bd976eaa"
+ },
+ "screen": true
 }
