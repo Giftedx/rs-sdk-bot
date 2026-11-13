@@ -87,8 +87,17 @@ export function isEntryRefusal(result: string): boolean {
 export const HELD_CLAIM_TRIES = 3;
 export const isHeldClaimRefusal = (result: string) => /^RESULT fail (?:login: )?(?:Error: )?fleet account claim held\b/.test(result);
 
+// The failure text of a run with its numbers masked. Two runs in a row that end with the same text, with no real work
+// in either, fail the same way on every next login, so the job ends as blocked after the second: a failure that no
+// rule above names (a "no route" or "feathers=2000 gained=0" result without its own rule) would otherwise log in
+// maxRestarts times. Failures that a later login can repair keep the retry streak: a login error, a dropped session,
+// a transport stall and a held claim (it has its own limit).
+export const failureShape = (result: string) => result.replace(/\d+/g, 'N').replace(/\s+/g, ' ').trim();
+export const repeatableFailure = (result: string) => /^RESULT fail\b/.test(result) && !isTransportStall(result) && !isHeldClaimRefusal(result)
+    && !/^RESULT fail (?:login:|session ended|.*TickStallError)/.test(result);
+
 export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
-    let fails = 0, held = 0;
+    let fails = 0, held = 0, lastShape: string | null = null;
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
         const r = await d.run();
@@ -106,8 +115,12 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (!isTransportStall(result) && (isNoProgressFailure(result) || isPrerequisiteFailure(result))) return { reason: 'blocked', runs };
         held = isHeldClaimRefusal(result) ? held + 1 : 0;
         if (held >= HELD_CLAIM_TRIES) return { reason: 'gave-up', runs };
+        const worked = madeProgress(r.stdout);
+        const shape = !worked && repeatableFailure(result) ? failureShape(result) : null;
+        if (shape !== null && shape === lastShape) return { reason: 'blocked', runs };
+        lastShape = shape;
         // A run with real work behind it is one failure, not one more: the streak toward gave-up restarts at it.
-        fails = madeProgress(r.stdout) ? 1 : fails + 1;
+        fails = worked ? 1 : fails + 1;
         if (fails > d.maxRestarts) return { reason: 'gave-up', runs };
         await d.pause(10_000);
     }

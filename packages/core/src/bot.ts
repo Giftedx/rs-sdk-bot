@@ -45,6 +45,9 @@ export function assertServerAllowed(server: string, env: Record<string, string |
     throw new Error(`refusing to connect to ${server}: not the local practice server; set DEMO_OK=1 to allow it on purpose`);
 }
 
+// `RELEASE <first 12 hex of the worker release>`, or `RELEASE unpinned` for a run that the swarm did not start.
+export const releaseLine = (release: string | undefined) => `RELEASE ${/^[0-9a-f]{12,}$/i.test(release ?? '') ? release!.slice(0, 12).toLowerCase() : 'unpinned'}`;
+
 export function sessionDied(initial: any, now: any): boolean {
     return !!now && (now.isDead === true || (now.respawnCount ?? 0) > (initial?.respawnCount ?? 0)
         || (initial?.lifeId !== undefined && now.lifeId !== undefined && now.lifeId !== initial.lifeId));
@@ -128,6 +131,10 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     let lastLife = born;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
+    // The worker release of this run (WORKER_RELEASE, which the swarm sets from the files the job runs): reports such as
+    // scripts/tick-waste.ts count each run under the code it ran, so a fixed bug stops counting. A line of its own,
+    // because proofs match the START line to its end.
+    log(releaseLine(process.env.WORKER_RELEASE));
     // On the lockstep practice engine: the time from the start of the worker process to its login, for the bench.
     if (process.env.SIM_LOCKSTEP === '1') log(`BOOT ${Math.round(performance.now())} ms from process start to login`);
     const record = createTickRecorder({ account: name, server, script: opts.record?.script ?? process.argv[1] ?? 'unknown',

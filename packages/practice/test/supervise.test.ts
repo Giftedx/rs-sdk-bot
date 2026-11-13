@@ -23,7 +23,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, HELD_CLAIM_TRIES } from '../src/supervise';
+import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -227,4 +227,32 @@ test('a walker result with no route ends the session as blocked at the first run
     const end = await supervise({ run: async () => { runs++; return { exitCode: 1, stdout: ['LEDGER ticks=4', noRoute].join(String.fromCharCode(10)) }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
     expect(end).toEqual({ reason: 'blocked', runs: 1 });
     expect(runs).toBe(1);
+});
+
+test('two runs in a row with the same failure and no work end as blocked; work, logins and stalls keep retrying', async () => {
+    expect(failureShape('RESULT fail feathers=2000 gained=0 kills=0 idle=0 ticks=2')).toBe(failureShape('RESULT fail feathers=2000 gained=0 kills=0 idle=0 ticks=3'));
+    const brief = (result: string) => out(['LEDGER ticks=3 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=3 idlePct=100.0 ', result], 1);
+    let n = 0;
+    const same = await supervise({ run: () => { n++; return brief(`RESULT fail feathers=2000 gained=0 kills=0 idle=0 ticks=${n}`)(); }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(same).toEqual({ reason: 'blocked', runs: 2 });
+    // Different failures in a row do not count as a repeat.
+    let m = 0;
+    const varied = ['RESULT fail bank did not open', 'RESULT fail shop closed', 'RESULT fail bank did not open', 'RESULT fail shop closed'];
+    const mixed = await supervise({ run: () => brief(varied[m++ % 4]!)(), stopped: () => false, pause: async () => {}, maxRestarts: 3 });
+    expect(mixed).toEqual({ reason: 'gave-up', runs: 4 });
+    // A run with real work between two equal failures resets the repeat.
+    const worked = out(['LEDGER ticks=900 xp=10 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=0 idlePct=0.0 ', 'RESULT fail bank did not open'], 1);
+    let w = 0;
+    const seq = [worked, brief('RESULT fail bank did not open'), worked, brief('RESULT fail bank did not open')];
+    const productive = await supervise({ run: () => seq[w++]!(), stopped: () => w >= 4, pause: async () => {}, maxRestarts: 20 });
+    expect(productive.reason).toBe('stopped');
+    // Login errors, dropped sessions and transport stalls still retry to the restart limit.
+    for (const result of ['RESULT fail login: Error: fleet swarm claim authority unavailable or changed', 'RESULT fail session ended: disconnected',
+        'RESULT fail tick stream stalled: no new game tick for 15000ms']) {
+        expect(repeatableFailure(result)).toBe(false);
+        let k = 0;
+        const r = await supervise({ run: () => { k++; return brief(result)(); }, stopped: () => false, pause: async () => {}, maxRestarts: 3 });
+        expect(r.reason).toBe('gave-up');
+        expect(k).toBe(4);
+    }
 });

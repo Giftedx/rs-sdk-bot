@@ -13,7 +13,9 @@
 //   - no dependency manifest changes (that needs `bun install` by a person);
 //   - each changed file that is edited or untracked here already holds the bytes of origin/master. A coordinator build
 //     publishes its files here before its pull request merges, so that state is usual. Such a file is adopted.
-// Any other local edit to a changed file stops the update, and the RESULT line names the file.
+// A changed file that holds the exact snapshot of a coordinator delivery whose PR merged is adopted too
+// (mergedDeliveryCopies): master holds its change. Any other local edit to a changed file stops the update, and the
+// RESULT line names the file.
 //
 // The SDK patch (patches/rs-sdk-working.patch) is applied to vendor/rs-sdk, and git does not move those files. When an
 // update changes the patch, this script takes the old patch off vendor/rs-sdk after the move and applies the new
@@ -37,7 +39,10 @@ import { liveUpdateFile, type LiveUpdateMark } from '../../core/src/live-reload'
 import { releaseEntries, runtimeTrees, standingAccounts, standingPeer, workerSourceRoots } from '../../core/src/worker-release';
 import { patchNewFiles, patchState, type PatchState } from '../../../scripts/worktree-setup';
 
-export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean };
+// `mergedDelivery`: the local bytes are the snapshot of a coordinator delivery whose pull request merged (or had nothing
+// to commit). The build published the file here before the merge; master now holds its change, so the copy is
+// obsolete and the update takes master's version (mergedDeliveryCopies).
+export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean; mergedDelivery?: boolean };
 // `vendorRelease`: the worker release files that the update changes through the SDK patch (vendorReleaseFiles).
 // `qualifications`: the running qualifications (`qualification <id> runs`); they hold only an update that changes a
 // file they can check (qualificationSource).
@@ -67,9 +72,33 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
     // Each worker runs on the SDK release trees, so each live run loads them.
     if (i.vendorRelease?.length && i.liveRuns?.length) return { action: 'wait', reason: `the live run of ${i.liveRuns[0]!.name} loads ${few(i.vendorRelease)} (changed by the SDK patch)` };
     const touched = i.dirty.filter(d => incoming.has(d.path));
-    const differs = touched.filter(d => !d.sameAsTarget).map(d => d.path);
+    const differs = touched.filter(d => !d.sameAsTarget && !d.mergedDelivery).map(d => d.path);
     if (differs.length) return { action: 'wait', reason: `local edit differs from master: ${few(differs)}` };
     return { action: 'update', adopt: touched };
+}
+
+// The local edits that are copies of merged coordinator deliveries. A coordinator build publishes its files into this
+// checkout before its pull request merges (delivery-pr.ts). Once that PR merged, master holds the change, and a master
+// commit that also changed the file left this copy different from master: the update waited on it for good. A copy
+// counts only when its bytes equal the delivery's snapshot exactly and the delivery merged (state `opened` and its PR
+// MERGED) or was `empty`. Any other local edit still stops the update. `merged(url)` asks GitHub; a merged PR stays
+// merged, so the caller caches a yes.
+export function mergedDeliveryCopies(root: string, dirty: readonly Dirty[], merged: (url: string) => boolean,
+    hash: (path: string) => string | null = path => { const p = Bun.spawnSync(['git', 'hash-object', '--', path], { stdout: 'pipe', stderr: 'pipe', windowsHide: true }); return p.exitCode === 0 ? p.stdout.toString().trim() : null; }): Set<string> {
+    const out = new Set<string>(), dir = join(root, '.practice', 'coordinator', 'delivery-prs');
+    const candidates = dirty.filter(d => !d.untracked && !d.sameAsTarget);
+    if (!candidates.length || !existsSync(dir)) return out;
+    const records = readdirSync(dir).filter(n => n.endsWith('.json')).flatMap(n => { try { return [JSON.parse(readFileSync(join(dir, n), 'utf8'))]; } catch { return []; } })
+        .filter(r => typeof r?.snapshot === 'string' && Array.isArray(r.files) && (r.state === 'empty' || (r.state === 'opened' && typeof r.url === 'string')));
+    for (const d of candidates) {
+        const local = hash(join(root, d.path));
+        if (!local) continue;
+        for (const r of records) {
+            if (!r.files.includes(d.path) || hash(join(r.snapshot, d.path)) !== local) continue;
+            if (r.state === 'empty' || merged(r.url)) { out.add(d.path); break; }
+        }
+    }
+    return out;
 }
 
 export const SDK = 'vendor/rs-sdk', SDK_PATCH = 'patches/rs-sdk-working.patch';
@@ -271,7 +300,20 @@ if (import.meta.main) {
     try {
         const { workspaceRoot } = await import('./build-workspace');
         const { importClosure } = await import('./delivery-cli');
-        const checkout = readCheckout(git, root, target);
+        const read = readCheckout(git, root, target);
+        // Copies of merged coordinator deliveries are adopted like files that equal master (mergedDeliveryCopies).
+        const mergedCache = join(root, '.practice', 'live-update-merged.json');
+        let cache: Record<string, true> = {};
+        try { cache = JSON.parse(readFileSync(mergedCache, 'utf8')); } catch { /* none yet */ }
+        const merged = (url: string) => {
+            if (cache[url]) return true;
+            const p = Bun.spawnSync(['gh', 'pr', 'view', url, '--json', 'state', '--jq', '.state'], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+            const yes = p.exitCode === 0 && p.stdout.toString().trim() === 'MERGED';
+            if (yes) { cache[url] = true; try { writeFileSync(mergedCache, JSON.stringify(cache)); } catch { /* the cache is a speed-up only */ } }
+            return yes;
+        };
+        const copies = read.behind ? mergedDeliveryCopies(root, read.dirty.filter(d => read.incoming.includes(d.path)), merged) : new Set<string>();
+        const checkout = { ...read, dirty: read.dirty.map(d => copies.has(d.path) ? { ...d, mergedDelivery: true } : d) };
         const holds = () => coordinatorHolds(root, c => workspaceRoot(root, c));
         // An update that changes the SDK patch: what vendor/rs-sdk holds before the move, and the worker release files
         // that the new patch changes. Only an exact `applied` or `clean` folder gets the new patch.
