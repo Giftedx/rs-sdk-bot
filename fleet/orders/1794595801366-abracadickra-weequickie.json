@@ -1,0 +1,23 @@
+{
+ "id": "1794595801366-abracadickra-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "WeeQuickie",
+ "item": "Dragon bones",
+ "count": 347,
+ "start": 1794595801366,
+ "end": 1794599401366,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
