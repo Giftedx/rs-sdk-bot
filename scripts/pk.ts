@@ -173,6 +173,7 @@ export type FightOptions = {
     burstOnHold?: boolean;
     // always: on every freeze, not only on a target that fled.
     dropForStrip?: { free: number; minFood: number; hpAbove: number; always?: boolean };
+    freezeWear?: string[];
     // One stun for a group on one target: a special that stuns (SpecConfig.stun) goes only once the last one's hold
     // ends (`until`, on the shared `clock`), so the group's spears hold the target in turn and hit between.
     stunShare?: { clock: () => number; until: number };
@@ -1160,7 +1161,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         let budget = 5 - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
         const keepWeapon = castFreeze && hasFreezeRunes && o.freezeWithStaff !== true;
-        for (const id of keepWeapon ? [] : [...(turn.style === 'ranged' ? shootingKit(o.kit, names) : o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
+        // freezeWear: items (debugnames) worn for a freeze cast, such as a god cape (magic attack +10); the other turns'
+        // switch lists put the usual ones back (pk-kits tribrid-dragon-capeswap).
+        const freezeWear = castFreeze && o.freezeWear ? inv.filter(i => o.freezeWear!.includes(names.get(i.id) ?? '')).map(i => i.id) : [];
+        for (const id of [...freezeWear, ...(keepWeapon ? [] : [...(turn.style === 'ranged' ? shootingKit(o.kit, names) : o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
             if (item && toWield.length < budget) toWield.push(item);

@@ -1832,5 +1832,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     runners 32 for both the Saradomin-cape kit and the dragon kit, but the rival fights fall to 68 kills and 25
     deaths, and 85 and 11. Dropping a food on a freeze cast at high health instead (`dropForStrip`: 5 free slots, 8
     or 10 food kept, health 70% or 80%; on a fled target or on every freeze) gives the dragon kit 19 runners and keeps
-    95 kills and 1 death: the slots come one a cast, after the first freezes. Gap: dragon armour for the rival fight
-    and a change to the Saradomin cape for the chase.
+    95 kills and 1 death: the slots come one a cast, after the first freezes. The dragon kit that wears the Saradomin
+    cape for each freeze and the Legends cape otherwise (`freezeWear`, `tribrid-dragon-capeswap`, 17 sharks) catches
+    17 runners and has 91 kills and 4 deaths: no gain. Gap: the runner case's freezes, cast by a kit whose pack has
+    room at the first one.

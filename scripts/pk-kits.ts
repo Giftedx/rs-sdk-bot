@@ -32,7 +32,7 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear'>;
     // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
     // Dragon Slayer and full special energy.
     skills?: Record<string, number>;
@@ -151,6 +151,11 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-dragon-f14': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 14,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The dragon kit that wears the Saradomin cape (magic attack +10) for each freeze and the Legends cape (+7 to every
+    // defence) for the other turns; the god cape in the pack, so 17 sharks (finding 72).
+    'tribrid-dragon-capeswap': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', 'saradomin_cape', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 17,
+        switches: { ranged: ['magic_shortbow', 'cape_of_legends'], melee: ['dragon_dagger_p', 'dragon_sq_shield', 'cape_of_legends'] }, options: { rotation: ['ranged', 'melee'], freezeWear: ['saradomin_cape'] } },
     // The army's stunner: the snare kit with a dragon spear (two-handed) in place of the dagger and shield. Its special
     // holds the target 5 ticks with no input, so in multi-way combat the others hit a target that cannot eat.
     'tribrid-snare-spear': { worn: { ...RUNE, weapon: 'dragon_spear', ammo: ['rune_arrow', 300] },
