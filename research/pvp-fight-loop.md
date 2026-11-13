@@ -1618,3 +1618,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     379 and 360. No fight ends in a kill within the roam's 120-tick cap: two maxed accounts with food need longer.
     `ROAM_PROFILE` defaults to `auto`: the champion for an account of combat 115 or more, the roam's own options
     below that (finding 37); the army leader (`scripts/pk-army.ts`) takes the same rule. Gap: six seeds.
+59. **The hunt route fights better on the champion's options too.** `extra:hunt-defend` (the hunt route from the
+    Edgeville bank against a target with 18 sharks and a glory on the champion's fight loop, Wilderness level 3,
+    single-way; seeds 1-6): on the hunt's own options the hunter's first fight deals 320 and takes 419, summed; on
+    the champion's (`HUNT_PROFILE`, default `auto`: the champion for combat 115 or more) 1,024 and 715. Every fight
+    ends with the hunter leaving on its danger check (`exitOnDanger`), and none ends in a kill. Gap: six seeds; the
+    danger check's thresholds against an even target are not climbed.

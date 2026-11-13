@@ -15,8 +15,24 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { itemCost } from './pk-roam';
+
+// HUNT_PROFILE=<profile of scripts/pk-spar.ts>: that profile's fight options for each fight of the hunt (the kit,
+// special weapon, escape and caps stay the hunt's). auto (default): the champion for a hunter of combat 115 or more,
+// as the roam (research/pvp-fight-loop.md finding 58); none: the hunt's own options.
+const huntProfileCache: Record<string, Partial<FightOptions>> = {};
+async function huntProfile(combat: number): Promise<Partial<FightOptions>> {
+    const want = process.env.HUNT_PROFILE ?? 'auto';
+    const name = want === 'auto' ? (combat >= 115 ? 'champion' : '') : want === 'none' ? '' : want;
+    if (!name) return {};
+    if (!huntProfileCache[name]) {
+        const { PROFILES } = await import('./pk-spar');
+        const { specBelow: _below, ...profile } = PROFILES[name] ?? (() => { throw new Error(`unknown HUNT_PROFILE ${name}`); })();
+        huntProfileCache[name] = profile;
+    }
+    return huntProfileCache[name]!;
+}
 
 export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
 // Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
@@ -217,6 +233,7 @@ export async function hunt(s: Session, o: HuntOptions) {
                 // A stand-up fight with bow and dagger only: a spell takes 5 ticks, the bow 3 and the dagger 4. Magic stays
                 // for the freeze. Random styles: an overhead that predicts cannot follow them.
                 rotation: o.rotation ?? (kit.ranged?.length && kit.melee?.length ? ['ranged', 'melee'] : undefined), mixStyles: true,
+                ...(await huntProfile(me.combatLevel)),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {

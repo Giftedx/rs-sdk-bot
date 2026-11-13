@@ -432,6 +432,17 @@ const ROUTE_CASES: BenchCase[] = [
   // MIN_ESCAPE_TILES); 18 s of wall time at most.
   // escort-ore: scripts/lava-maze-escorted-ore.ts, the archer escort and the miner of its practice proof
   // (packages/practice/src/lava-maze-escorted-ore-proof.ts) at the Edgeville bank, one runite ore, the world feed on.
+  // The hunt against a target that defends on the champion's fight loop (HUNT_PROFILE, environment, sets the hunter's options).
+  {key: 'extra:hunt-defend', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'hunt', '900', 'TARGET_PROFILE=champion'],
+    pass: ok, output: /kills (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {glory: true})}]},
+  // roam: scripts/pk-roam.ts reads the world feed roster (WORLD_FEED=true on the engine) and goes to the target at
+  // Wilderness level 8 from just south of the Wilderness (roam takes no target within 40 tiles of its escape,
+  // MIN_ESCAPE_TILES); 18 s of wall time at most.
+  // escort-ore: scripts/lava-maze-escorted-ore.ts, the archer escort and the miner of its practice proof
+  // (packages/practice/src/lava-maze-escorted-ore-proof.ts) at the Edgeville bank, one runite ore, the world feed on.,
   {key: 'pvp:escort-ore', engineEnv: {WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['escort-ore', '{bot:b}', 'CAP=1800', 'MAX_ORE=1', 'EXPECTED_BANK_ORE=0'], pass: ok,
     presetConfig: {position: {x: 3094, z: 3492, level: 0}, skills: {Attack: 65, Defence: 10, Strength: 11, Hitpoints: 69, Ranged: 99, Prayer: 65, Magic: 50},
       inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}], equipment: [{id: 861, count: 1, slot: 3}, {id: 1131, count: 1, slot: 4}]},
