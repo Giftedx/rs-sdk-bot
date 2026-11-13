@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794592266521,
+ "at": 1794592377330,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -536,28 +536,16 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-c4ca5b4f-4079-4263-9ab6-bac1aff934e7"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "repeat": false,
+   "goal": "local-recover-mmsmk1232-20261113t174026z [task-c4ca5b4f-4079-4263-9ab6-bac1aff934e7]",
+   "role": "combat"
   }
  ]
 }
