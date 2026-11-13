@@ -21,6 +21,18 @@ export const questFinals = () => finals ??= new Map((JSON.parse(readFileSync(new
     .filter(q => q.folder && q.varp && Number.isInteger(q.complete)).map(q => [q.folder!, { varp: q.varp!, complete: q.complete! }]));
 export const questFolder = (key: string) => `quest_${key === 'fortress' ? 'blackknight' : key}`;let keys: Map<number, string> | undefined;
 const questKeys = () => keys ??= new Map(questDefinitions().map(q => [q.id, q.key]));
+// The completion unlocks of the client's green questlist entries, for the router's account (door-policy accountForSdk).
+// They stay out of guildActorFacts, which the status file publishes.
+export function completedQuestUnlocks(client: any): string[] {
+    if (!client || client.ingame !== true) return [];
+    const out: string[] = [];
+    for (const q of questFlags(client) ?? []) {
+        const key = q.state === 'complete' ? questKeys().get(q.id) : undefined;
+        const final = key && key !== 'grandtree' ? questFinals().get(questFolder(key)) : undefined;
+        if (final) out.push(`complete:${final.varp}`);
+    }
+    return out;
+}
 const clean = (v: unknown) => String(v ?? '').replace(/@[^@]{3}@/g, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
 function saved(client: object) {
     let value = evidence.get(client);
@@ -42,9 +54,6 @@ export function guildActorFacts(client: any, state?: any): GuildActorFacts {
     for (const q of questFlags(client) ?? []) {
         // Green is completion, not an exact private stage. The native map is the final glider admission.
         if (q.id === 7361 && q.state === 'complete' && client.membersAccount === 1 && state?.inGame !== false) facts.unlocks.push('grandtree-glider');
-        const folderKey = q.state === 'complete' ? questKeys().get(q.id) : undefined;
-        const final = folderKey && folderKey !== 'grandtree' ? questFinals().get(questFolder(folderKey)) : undefined;
-        if (final && !facts.unlocks.includes(`complete:${final.varp}`)) facts.unlocks.push(`complete:${final.varp}`);
         const key = q.id === 7363 ? 'heroquest' : q.id === 7366 ? 'legendsquest' : q.id === 7356 ? 'mcannon' : undefined;
         if (!key) continue;
         const bound = q.state === 'complete' ? (key === 'heroquest' ? 15 : key === 'legendsquest' ? 75 : 11)

@@ -128,14 +128,14 @@ test('actual Monk referral approaches the observed Abbot and selects monastery a
 
 
 import {questDefinitions} from './quest-status';
-import {questFolder,questFinals} from './guild-observation';
+import {questFolder,questFinals,completedQuestUnlocks} from './guild-observation';
 test('a green questlist entry adds complete:<varp>, never an exact stage; the spirit tree need is met',()=>{
  const {c,table}=fixture();
  const tree=questDefinitions().find(q=>q.key==='tree')!,fortress=questDefinitions().find(q=>q.key==='fortress')!;
  table[tree.id]={colour:0x00f800};table[fortress.id]={colour:0xf8f800};
- expect(guildActorFacts(c).questStages).toEqual({});expect(guildActorFacts(c).unlocks).toEqual(['complete:treequest']);
+ expect(guildActorFacts(c).questStages).toEqual({});expect(guildActorFacts(c).unlocks).toEqual([]);expect(completedQuestUnlocks(c)).toEqual(['complete:treequest']);
  table[fortress.id]={colour:0x00f800};
- expect(guildActorFacts(c).unlocks).toContain('complete:spy');
+ expect(completedQuestUnlocks(c)).toContain('complete:spy');
  const missing=questDefinitions().filter(q=>!questFinals().has(questFolder(q.key))).map(q=>q.key);
  expect(missing.length).toBeLessThan(12);
 });
