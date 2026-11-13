@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794602616093-nabtheknob-abracadickra",
  "account": "Abracadickra",
  "partner": "NabTheKnob",
@@ -12,8 +12,8 @@
  "claim": "9e10b1bb-74ff-4d0c-874e-6746e3ae2dfa",
  "count": 0,
  "ok": false,
- "at": 1794603488924,
- "detail": "trade claimed",
+ "at": 1794603494939,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Snape grass",
@@ -30,5 +30,11 @@
    "requested": 5,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1794603489275-0000029064-0000000001",
+  "at": 1794603494928,
+  "sha256": "e008c1be6b2723c7ea302496564f8bee2a97b6de36b4871b90f99d412f278113"
+ },
+ "screen": false
 }
