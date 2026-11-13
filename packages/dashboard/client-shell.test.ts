@@ -721,7 +721,7 @@ test('the Wilderness level counts 8 tiles for each level from the south edge of 
 });
 
 test('the inventory value is the sum of the item values, and the tooltip counts the items with no value',()=>{
- const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf('  function itemCell(item,i){'));
+ const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf("  // Items kept on death (RuneLite's"));
  const vals:any={Coins:1,Lobster:150};
  const invWorth=new Function('price','gp',`${code};return invWorth;`)((n:string)=>vals[n]!=null?{value:vals[n]}:null,(n:number)=>String(n));
  expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp</p>');
@@ -921,7 +921,7 @@ test('agility obstacles, Ground markers, failure markers and the NPC finder in t
  expect(spot).toEqual([{x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'2 accounts: travel to Ardougne failed · tick stream stalled'}]);
 });
 test('Inventory Tags: food, potions, teleports and runes get their group class; the switch turns them off',()=>{
- const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf('  function itemCell(item,i){'));
+ const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Items kept on death (RuneLite's"));
  const hl:any={invTags:true};
  const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
  expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
@@ -974,6 +974,30 @@ test('minimap right-click: only the names of players look up, not floor items or
  const names=playerNames();
  expect(['goondelf','alpha'].every(n=>names.has(n))).toBe(true);
  expect(names.has('floor item')).toBe(false);expect(names.has('death tile')).toBe(false);
+});
+test('items kept on death: in the Wilderness the 3 kept items are green, other items of value red, worn items counted first',()=>{
+ const code=shell.slice(shell.indexOf("  // Items kept on death (RuneLite's"),shell.indexOf('  function itemCell(item,i,extra'));
+ const S:any={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Coins':1}}};
+ const b:any={inWorld:true,pos:{x:3100,z:3600},equipment:[{name:'Rune scimitar',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Shark',count:1},{name:'Bones',count:1}]};
+ const env:any={S,wildLevel:()=>5,pvpState:()=>({kept:[{name:'Rune scimitar'},{name:'Shark'},{name:'Shark'}]})};
+ const t=new Function(...Object.keys(env),`${code};return {deathMarks,deathCls};`)(...Object.values(env));
+ const m=t.deathMarks(b);
+ expect(t.deathCls(m,b.equipment[0])).toBe(' death-kept');
+ expect(b.inventory.map((i:any)=>t.deathCls(m,i))).toEqual([' death-kept',' death-kept',' death-lost','']);
+ expect(new Function('S','wildLevel','pvpState',`${code};return deathMarks;`)(S,()=>0,()=>null)(b)).toBe(null);
+});
+test('best training spot: the best rock the account can mine now, and the nearest one on its floor',()=>{
+ const code=shell.slice(shell.indexOf('  // Best training spot (Skill Calculator)'),shell.indexOf('  const guideText=g=>'));
+ const acts={mining:[['Copper ore',1,437.5,[],['Copper ore']],['Iron ore',15,875,[],['Iron ore']],['Coal',30,1250,[],['Coal']]]};
+ const resources={kinds:{1:{name:'Copper rock'},2:{name:'Iron rock'},3:{name:'Coal rock'}},tiles:[[3000,3000,0,1],[3010,3000,0,2],[3050,3000,0,2],[3011,3000,1,2],[3020,3000,0,3]]};
+ const resourceOf=(i:string)=>/ ore$/i.test(i)?i.replace(/ ore$/i,'')+' rock':/^coal$/i.test(i)?'Coal rock':null;
+ const t=new Function('resources','skillActions','resourceOf','calcSkill','E','nf','sourcePin',`${code};return {bestSpot,bestSpotLine};`)(resources,acts,resourceOf,'Mining',String,String,null);
+ const b={pos:{x:3000,z:3000,level:0}};
+ expect(t.bestSpot(b,'Mining',20)).toMatchObject({name:'Iron rock',level:15,near:{x:3010,z:3000,l:0,d:10}});
+ expect(t.bestSpot(b,'Mining',20).tiles.length).toBe(3);
+ expect(t.bestSpot(b,'Mining',35).name).toBe('Coal rock');
+ expect(t.bestSpot(b,'Fishing',35)).toBe(null);
+ expect(t.bestSpotLine(b,20)).toContain('Best now: <b>Iron rock</b> (level 15) · nearest 10 tiles');
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
