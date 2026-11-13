@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794534379751,
+ "at": 1794534732023,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -59,22 +59,21 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit2-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "repeat": false,
+   "goal": "buy 50 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
+   "resources": []
   },
   {
    "account": "Bigpackage",
@@ -525,22 +524,22 @@
   },
   {
    "account": "Sausagefest",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "knight:2671,3313"
    ]
   },
   {
