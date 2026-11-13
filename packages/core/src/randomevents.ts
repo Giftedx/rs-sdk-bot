@@ -733,8 +733,9 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // ---- loot jobs ----
     // Ticks after a pickup of the script in which the loot job starts nothing: the script loots for itself.
     const SCRIPT_LOOT_TICKS = 20;
-    // A pickup job ends after this many ticks; the walk back to the start tile has its own limit.
-    const LOOT_TICKS = 30, RETURN_TICKS = 20;
+    // A pickup job ends after this many ticks; the walk back to the start tile has its own limit. The two stay under
+    // HOLD_LIMIT, so no held script action fails during a pickup.
+    const LOOT_TICKS = 25, RETURN_TICKS = 15;
     // Ticks a pile the job skipped or gave up stays skipped.
     const SKIP_RISK = 10, SKIP_DONE = 100;
     const skipPiles = new Map<string, number>();
