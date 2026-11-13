@@ -26,9 +26,9 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
     champion: CHAMPION,
     // The PK army in multi-way combat: the champion with its specials held until the target is at 35% health, so the
-    // three accounts' specials land together where the target cannot eat back between them (finding 47). An army
-    // account stays when two enemies hit it: its allies are there (escapeOutnumbered is the champion's for a lone one).
-    army: { ...CHAMPION, specBelow: 0.35, escapeOutnumbered: undefined },
+    // three accounts' specials land together where the target cannot eat back between them (finding 47). Its escape
+    // is the champion's, which counts the allies in view (finding 49).
+    army: { ...CHAMPION, specBelow: 0.35 },
     freeze: { freeze: true },
     'freeze-flee': { freeze: 'flee' },
     // Keeps its special for a target at 40% health or one that has fled, and freezes a target that runs.

@@ -1516,8 +1516,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`extra:gang-ganker-x4`) the champion clears 16 of 16 groups (48 kills), and with the option escapes from them
     (1 kill at threshold 2, 19 at threshold 3); with the test it clears 16 of 16 again. In single-way combat one
     player at a time can hit (`pvp_combat.rs2:103-133`). The champion takes `escapeOutnumbered: 2`; of the bench
-    spots only the army spot (3150,3560) is multi-way (`scripts/pk.ts` `isMulti`, `maps/multiway.csv`). The `army`
-    profile leaves it off. Evidence: `.practice/climb/set-esc-out*`, `set-gk-out*`. Gap: no case of two of ours
+    spots only the army spot (3150,3560) is multi-way (`scripts/pk.ts` `isMulti`, `maps/multiway.csv`). The escape
+    counts the allies in view (finding 49), so the `army` profile keeps it. Evidence: `.practice/climb/set-esc-out*`, `set-gk-out*`. Gap: no case of two of ours
     against two, where a hit from both enemies sends an account away from its ally.
 49. **Two against two in multi-way combat: leaving once outnumbered halves the deaths for fewer kills.**
     `extra:team-2v2-multi-x4` (`scripts/pk-team.ts`: four groups of two `tribrid-snare` against two at 3150,3560,
