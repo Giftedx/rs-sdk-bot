@@ -1682,3 +1682,14 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     run in 55 to 59 s on `--seeds 1,2,3,4,5,6 --seed-jobs 6`, so a roam change is measured over seeds although one
     seed does not repeat (finding 61). Gap: one pair of targets; a softer target that fights back harder than its
     armour shows (a pure with a godsword) is not in a case.
+63. **The roam's danger exit walked out with no prayer, and its own check read every fight as a lost race.**
+    `extra:roam-defend-low` (the roam with 4 sharks and a worn glory against the rune target with 18 sharks and a
+    glory, defending on the champion at Wilderness level 8; seeds 1-6, `.practice/roam-switch/low-*`). The roam's
+    `escape` walks south and rubs only a glory in the pack, so with the glory worn it ran: on its no-food exits it lost
+    7 to 38 HP on the way out. The fight loop's escape (`flee`, as the hunt uses since finding 61: protect prayer, food,
+    the worn glory) loses 0 to 6 HP in five of six and 30 in one; `ROAM_FLEE=0` restores the walk. Between fights the
+    roam's `survive` passed no damage dealt to `dangerReason`, so the race check read `dealt 0` after any fight and
+    ended the hunt on `losing the race` at about HP 50 (three of six seeds); it no longer runs the race there
+    (`ROAM_RACE=1` restores it), and it takes the profile's `noFoodAt`. Then every exit is a no-food exit and every
+    roam escapes alive. Damage dealt before the exit is within noise: means of 120 (walk), 100 (flee) and 110 (flee,
+    no race) a seed. Gap: no kill in any of these runs (4 sharks against 18 and a glory); six seeds.

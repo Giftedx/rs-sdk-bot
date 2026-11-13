@@ -379,7 +379,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             stats.eats++; emit({ e: 'eat', hp: m.hp, ok: r.success });
         }
         const danger = wildLevel(m.x, m.z) > 0 ? dangerReason({ hp: m.hp, maxHp: m.maxHp, food: food().length > 0, prayer: sdk.getState()?.prayers?.prayerPoints ?? 1,
-            oppMax, hits, dealt: [], now: session.tick() }) : null;
+            // No race here: this check does not see the damage dealt, so every fight's hits read as a lost race
+            // (dealt 0) and ended the hunt after its first timeout (finding 63). The fight loop runs the race itself.
+            oppMax, hits, dealt: [], now: session.tick(), race: process.env.ROAM_RACE === '1', noFoodAt: cfg.fight?.noFoodAt }) : null;
         if (danger) { await escape(danger); return 'flee'; }
         if (wildLevel(m.x, m.z) > 0) {
             const seen = new Map(readOpponents(session.client).map(o => [o.name.toLowerCase(), o]));
@@ -498,7 +500,22 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 }
                 if (fight.outcome === "died") { stats.deaths++; return "dead"; }
                 if (fight.outcome === "escaped") return "flee";
-                if (fight.outcome === "danger") { await escape(fight.danger ?? "danger"); return "flee"; }
+                if (fight.outcome === "danger") {
+                    // The fight loop's own escape first (ROAM_FLEE, default on): protect prayer off the attacker's style,
+                    // food, glory or the teleport spell, else a run with freezes on a chaser; as the hunt does (finding 61).
+                    if (process.env.ROAM_FLEE !== '0') {
+                        stats.escapes++;
+                        emit({ e: 'escape', why: fight.danger ?? 'danger', hp: me()?.hp, wild: me() ? wildLevel(me()!.x, me()!.z) : 0, flee: true });
+                        const e = await fightPlayer(session, name, { kit, exitOnDanger: false, cap: 200, predictPrayer: true, snapPrayer: true, flee: true,
+                            eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), maxDistance: 15,
+                            escapeSpell: canTeleport() ? componentId('magic:varrock_teleport') : undefined, log: line => emit({ e: 'fight', line }) });
+                        emit({ e: 'flee-end', outcome: e.outcome, hp: me()?.hp });
+                        if (e.outcome === 'died') { stats.deaths++; return 'dead'; }
+                        const m2 = me();
+                        if (m2 && wildLevel(m2.x, m2.z) === 0) return 'flee';
+                    }
+                    await escape(fight.danger ?? "danger"); return "flee";
+                }
                 lastDist = Infinity;
                 continue;
             }
