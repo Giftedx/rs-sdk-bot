@@ -390,14 +390,16 @@ export function recoveredSessionForRun(account:string,server:string,runId:string
 
 // A child that did not confirm preserved cleanup leaves its lease held (finishRecoveryPermit), and assertNoRecoveryLease
 // then refuses every later session and recovery of the account. The controller removes only that exact lease: its
-// permit has expired, its bound child is gone, and the newest session attempt of the account ends in a confirmed
-// logout (readLogoutProof). That attempt must show one of three things:
+// permit has expired, its bound child is gone, and the newest session attempt of the account has matching producer
+// evidence. A confirmed logout (readLogoutProof) must show one of three things:
 // - It is the child's own attempt, and the child's receipt names it.
 // - `superseded`: a different run made it after the permit was issued. That session got into the account and left it,
 //   so the dead child holds nothing.
 // - `not-connected`: it is older than the permit, so the account has no attempt from the permit's time. Each session
 //   writes its attempt before it connects (openBot), so the child did not connect. The child's receipt, if it wrote
 //   one, must say that it did not try to log out.
+// A held attempt may instead be the child's exact connect-failed receipt, with matching failed output and no ready,
+// end or logout event. Archiving that lease permits another recovery request, never an ordinary repair or success.
 // Any other evidence keeps the lease. The release writes released.json and keeps the permit, child, used, output, end,
 // assignments and stops. It never writes completed.json, so recoveredSessionForRun still refuses this run. A later
 // call completes a release that stopped after it wrote released.json.
@@ -428,14 +430,31 @@ export function releaseExpiredRecoveryLease(account:string,base:string,options:L
  const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(r.account,r.server,{root});
  const attempts=listAttempts(r.account,r.server,{root});
  const receiptPath=join(paths.output,'receipt.json'),receipt=existsSync(receiptPath)?json(receiptPath):null;
- let basis:null|'superseded'|'not-connected'|undefined,lifecycleSha256:string;
+ let basis:null|'superseded'|'not-connected'|'connect-failed'|undefined,lifecycleSha256:string;
  if(proof.state==='held'){
   // The newest session is still the one that the child came to recover, and the child began none of its own: the
   // child changed nothing. Only another recovery can end that session, and this lease refuses each one.
   const held=attempts.find(x=>x.attemptId===proof.attemptId);
   const heldSha256=held?.sha256;
-  if(!held?.receipt||!heldSha256||held.receipt.createdAt>=p.issuedAt||receipt&&(receipt.logout!=='not-attempted'||receipt.attemptId!==null))throw Error('recovery lease producer logout not confirmed');
-  basis='not-connected';lifecycleSha256=heldSha256;
+  if(!held?.receipt||!heldSha256)throw Error('recovery lease producer logout not confirmed');
+  const a=held.receipt;
+  const failedConnect=proof.reason==='connect failed without an observed end'&&same(a.account,r.account)&&a.server===r.server&&a.domain===proof.domain
+   &&a.owner.pid===child.pid&&a.owner.coordinatorRunId===r.runId&&a.owner.workerRelease===r.source&&a.owner.script===RECOVERY_SCRIPT&&a.owner.role==='recovery'
+   &&a.events.length===2&&a.events[0]?.kind==='connecting'&&a.events[0].at===a.createdAt
+   &&a.events[1]?.kind==='connect-failed'&&a.events[1].at===a.updatedAt&&a.updatedAt>=a.createdAt
+   &&receipt?.schema===RECOVERY_SCHEMA&&receipt.state==='held'&&isDeepStrictEqual(receipt.request,r)&&receipt.runnerSha256===p.runnerSha256
+   &&receipt.attemptId===proof.attemptId&&receipt.lifecycleSha256===heldSha256&&isDeepStrictEqual(receipt.proof,proof)
+   &&Number.isFinite(receipt.startedAt)&&receipt.startedAt>=p.issuedAt&&a.createdAt>=receipt.startedAt
+   &&Number.isFinite(receipt.endedAt)&&receipt.endedAt>=a.updatedAt&&receipt.endedAt<=now
+   &&receipt.logout==='not-attempted'&&receipt.failure==='connect failed or unresolved'&&receipt.before===null&&receipt.after===null
+   &&receipt.scope?.gameplay===false&&receipt.scope.production===0&&receipt.scope.repairsFailure===false&&receipt.scope.qualifiesScript===false
+   &&receipt.scope.bankObservation==='unobserved'&&!existsSync(paths.completed);
+  if(failedConnect)basis='connect-failed';
+  else{
+   if(a.createdAt>=p.issuedAt||receipt&&(receipt.logout!=='not-attempted'||receipt.attemptId!==null))throw Error('recovery lease producer logout not confirmed');
+   basis='not-connected';
+  }
+  lifecycleSha256=heldSha256;
  }else{
   if(proof.state!=='confirmed')throw Error('recovery lease producer logout not confirmed');
   const attempt=attempts.find(x=>x.attemptId===proof.attemptId),a=attempt?.receipt;

@@ -168,6 +168,32 @@ for(const conflict of ['coordinator','swarm','stop'])test('main refuses '+confli
  }finally{await f.cleanup();}
 },10000);
 
+// The coordinator installs its assignment only in .practice/coordinator/jobs.json. The raw swarm.json
+// still names both accounts in enabled owner jobs, which the merged plan shadows.
+for(const overlayRun of ['task-ammo-own','task-ammo-other'])test('main reads the merged plan: overlay '+(overlayRun==='task-ammo-own'?'owns the transfer':'of another run refuses'),async()=>{
+ const f=cliFixture();try{
+  const runId='task-ammo-own';
+  writeFileSync(join(f.root,'swarm.json'),JSON.stringify({maxBots:4,jobs:[{id:'owner-donor',enabled:true,account:'Donor',goal:'bank'},{id:'owner-receiver',enabled:true,account:'Receiver',goal:'fish'}]}));
+  writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[{status:'running',runId,spec:{id:'ammo',participants:['Donor','Receiver']}}]}));
+  writeFileSync(join(f.root,'.practice/coordinator/jobs.json'),JSON.stringify({coordination:{},jobs:[{coordinatorOwner:'coordinator',coordinatorTask:'ammo',enabled:true,accounts:['Donor','Receiver'],orchestrate:true,goal:'handoff ['+overlayRun+']'}]}));
+  const p=f.start('',{COORDINATOR_RUN_ID:runId});
+  const holdings=()=>JSON.parse(readFileSync(join(f.root,'holdings.json'),'utf8'));
+  if(overlayRun==='task-ammo-own'){
+   expect(await p.done).toBe(0);
+   expect(holdings()).toEqual({donor:{bank:0,pack:0},receiver:{bank:90,pack:0},sends:1});
+   expect(p.output()).toContain('HANDOFF_RESULT {"ok":true');
+   expect(p.output().match(/LOGOUT /g)?.length).toBe(2);
+   for(const n of ['Donor','Receiver'])expect(JSON.parse(readFileSync(join(f.root,'.practice/status',n+'.json'),'utf8')).result).toBe('ended');
+  }else{
+   expect(await p.done).toBe(1);
+   expect(p.output()).toContain('account lease conflict: Donor; swarm ammo');
+   expect(p.output()).not.toContain('LOGIN ');
+   expect(holdings()).toEqual({donor:{bank:90,pack:0},receiver:{bank:0,pack:0},sends:0});
+  }
+  expect(existsSync(join(f.root,'.practice/account-leases/donor.lock'))).toBe(false);
+ }finally{await f.cleanup();}
+},10000);
+
 test('planned distant entry transfers exactly after travel; refusal, deadline and pause move nothing and log out',async()=>{
  const untouched={donor:{bank:90,pack:0},receiver:{bank:0,pack:0},sends:0};
  const holdings=(root:string)=>JSON.parse(readFileSync(join(root,'holdings.json'),'utf8'));

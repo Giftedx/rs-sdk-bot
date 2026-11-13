@@ -413,6 +413,26 @@ test('two failures across successive child-generated ends stop a third automatic
         tasks.push(...run('r2', 'run-2', e1.at, childHeld));
         expect(spentAttempts(tasks, { account, endedAt: e2.at })).toBe(0);
         expect(budgetRefusal(root, account, e2, tasks)).toBe(`${MAX_ATTEMPTS} recoveries of end ${e2.at} and the 2 earlier ends of its lineage (first ${e0.at}) failed; recover by hand`);
+        // Compaction retains full outcomes. A replayed archive row and a row still in state count only once.
+        const archive = join(root, '.practice/coordinator/archive/tasks.jsonl');
+        mkdirSync(join(archive, '..'), { recursive: true });
+        const archived = [...tasks, ...tasks];
+        writeFileSync(archive, archived.map(t => JSON.stringify(t)).join('\n') + '\n');
+        const exhausted = budgetRefusal(root, account, e2, tasks);
+        expect(budgetRefusal(root, account, e2, [])).toBe(exhausted);
+        expect(budgetRefusal(root, account, e1, tasks.slice(0, 4))).toMatch(/^2 recoveries /);
+        // Task ids may be reused after compaction. Unrelated executions cannot hold this account's budget.
+        const reused = ['task-1f733251-4e75-4fc2-8d92-06c81cee5303', 'task-2d04d57a-4b62-4ebf-b2f6-046ee44d7ff3']
+            .map(runId => ({ status: 'failed', runId, spec: { id: 'build-fishing-contest-trophy-gate-exit', kind: 'build' } }));
+        writeFileSync(archive, [...reused, ...archived].map(t => JSON.stringify(t)).join('\n') + '\n');
+        expect(budgetRefusal(root, account, e2, tasks)).toBe(exhausted);
+        // Six waits also survive compaction, without any child attempt to bound their number.
+        const waits = Array.from({ length: MAX_WAITS }, (_, i) => run(`w${i + 2}`, `run-w${i + 2}`, e2.at, 'Error: live admission waiting: memory')).flat();
+        writeFileSync(archive, [...tasks.slice(0, 2), ...waits, ...waits].map(t => JSON.stringify(t)).join('\n') + '\n');
+        expect(budgetRefusal(root, account, e2, waits.slice(0, 2))).toMatch(/^6 recoveries .* waited /);
+        writeFileSync(archive, JSON.stringify(tasks[1]) + '\n{');
+        expect(budgetRefusal(root, account, e2, tasks)).toMatch(/unknown .*archive/);
+        writeFileSync(archive, '');
         // A separate ordinary session after the lineage is a new lineage: its end has its full budget.
         const e3 = orphan(t0 + 560_000, attempt(t0 + 500_000, 300, ordinary));
         expect(budgetRefusal(root, account, e3, tasks)).toBeUndefined();
