@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794529177310-abracadickra-weequickie",
  "account": "WeeQuickie",
  "partner": "Abracadickra",
@@ -10,35 +10,89 @@
  "item": "Clay",
  "requested": 6,
  "claim": "8085ccaa-ce50-4dd1-bc76-c0cdba9fd332",
- "count": 0,
- "ok": false,
- "at": 1794529202624,
- "detail": "trade claimed",
+ "count": 6,
+ "ok": true,
+ "at": 1794529416910,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Copper ore",
    "requested": 4,
-   "count": 0
+   "count": 4,
+   "inventory": {
+    "before": 0,
+    "after": 4
+   },
+   "bank": {
+    "count": 4,
+    "at": 1794529412821
+   }
   },
   {
    "item": "Iron ore",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1794529413698
+   }
   },
   {
    "item": "Law rune",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794529414643
+   }
   },
   {
    "item": "Air rune",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 0,
+    "after": 3
+   },
+   "bank": {
+    "count": 3,
+    "at": 1794529415261
+   }
   },
   {
    "item": "Water rune",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794529415971
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1794529412190
+ },
+ "logout": {
+  "attemptId": "1794529202634-0000008484-0000000001",
+  "at": 1794529416899,
+  "sha256": "af93935195fffea54166bfea60646feb657c226e34871c21b208992618199405"
+ },
+ "screen": true
 }
