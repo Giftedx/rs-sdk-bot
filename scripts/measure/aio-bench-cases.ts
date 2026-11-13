@@ -192,6 +192,14 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture()
       : {...kitFixture(gangKit.split('+')[((i + 1) % (size + 1) - 1) % gangKit.split('+').length]!, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
 };
+// Teams of own accounts (scripts/pk-team.ts): `groups` groups of `size` against `size`, side A two tiles east.
+const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = []): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * 2 * size - 1).split('');
+  const sideA = (i: number) => i % (2 * size) < size;
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kitA, at.x + 2, at.z), output: /wins=(\d+)/,
+    scriptArgs: ['team', ...letters.map(l => `{bot:${l}}`), '900', `SPAR_TEAM=${size}`, `SPAR_KITS=${kitA}:${kitB}`, ...args],
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitA, at.x + 2, at.z) : kitFixture(kitB, at.x, at.z)}))};
+};
 // Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
 // (SPAR_POST): one walk of 150 tiles, not two.
 const atBank = (c: BenchCase, post: {x: number; z: number}): BenchCase => {
@@ -542,6 +550,10 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:army-tribrid-x4', 'tribrid-snare', 'tribrid-snare', 4, GANKER_POST),
   // The same in multi-way combat east of Edgeville (Wilderness level 6), where all three can hit at once.
   gangCase('extra:army-tribrid-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // The team route: one group of two against two, both sides on the champion.
+  teamCase('pvp:team', 'tribrid-snare', 'tribrid-snare', 1, {x: 3150, z: 3560}, 2, ['SPAR_A=champion', 'SPAR_B=champion']),
+  // Two of ours against two in multi-way combat, four groups: side A on SPAR_A, side B on SPAR_B.
+  teamCase('extra:team-2v2-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
   // The same army with a stunner: one dragon spear and two daggers in each group.
   gangCase('extra:army-spear-multi-x4', 'tribrid-snare', 'tribrid-snare-spear+tribrid-snare+tribrid-snare', 4, {x: 3150, z: 3560}),
   gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),

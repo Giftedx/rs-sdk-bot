@@ -151,6 +151,9 @@ export type FightOptions = {
     // In multi-way combat, hits from this many different players within 8 ticks start the escape (escapeWalk, glory,
     // escapeSpell) at once, whatever the food: a lone account against three cannot win (research finding 48).
     escapeOutnumbered?: number | null;
+    // Our own accounts in this fight (lower case): each one within 10 tiles takes one attacker off the count of
+    // escapeOutnumbered, so an account does not leave an ally that stands with it.
+    allies?: readonly string[];
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower. 500 catches more
     // runners and loses mirror fights (research/pvp-fight-loop.md finding 44).
     specReserve?: number;
@@ -548,7 +551,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         seenEvent = maxEvent;
         // escapeOutnumbered: in multi-way combat, hits from that many players in 8 ticks start the escape for good, food
         // or not. In single-way combat one player at a time can hit (pvp_combat.rs2:103-133), so a crowd is no danger.
-        if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size >= o.escapeOutnumbered) {
+        const alliesNear = o.allies?.length ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && p.distance <= 10).length : 0;
+        if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size - alliesNear >= o.escapeOutnumbered) {
             outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
         }
         const escapeNow = (pack: typeof state.inventory) => outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));

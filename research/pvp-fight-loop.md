@@ -1519,3 +1519,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     spots only the army spot (3150,3560) is multi-way (`scripts/pk.ts` `isMulti`, `maps/multiway.csv`). The `army`
     profile leaves it off. Evidence: `.practice/climb/set-esc-out*`, `set-gk-out*`. Gap: no case of two of ours
     against two, where a hit from both enemies sends an account away from its ally.
+49. **Two against two in multi-way combat: leaving once outnumbered halves the deaths for fewer kills.**
+    `extra:team-2v2-multi-x4` (`scripts/pk-team.ts`: four groups of two `tribrid-snare` against two at 3150,3560,
+    each account on the lowest health bar in view), side B on the champion, seeds 1-8, 64 accounts a side, the
+    repeatable setup. Side A on the champion: 17 wins, 15 losses, 15 of its accounts dead and 19 of side B's. Side A
+    with `escapeOutnumbered: null`: 16 wins, 14 losses, 2 draws, 35 dead and 31 of side B's. The champion's escape
+    counts its allies (`allies`: each own account within 10 tiles takes one attacker off the count), so an account
+    stays while its ally stands with it and leaves once the ally is down and two enemies hit it. Evidence:
+    `.practice/climb/set-team-*`. Gap: no run of the escape with the allies not counted.

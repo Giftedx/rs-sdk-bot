@@ -35,6 +35,7 @@ export const PVP_MODES: readonly PvpModeSpec[] = [
  {mode:'fight',script:'scripts/pk.ts',description:'1v1 tribrid PK fight loop (overhead prayer reading, 1-tick gear switch, MSB/DDS spec, entangle, glory escape)'},
  {mode:'spar',script:'scripts/pk-spar.ts',description:'Practice spar: two own accounts fight each other, each with a named fight profile; prints a score for side A'},
  {mode:'gang',script:'scripts/pk-gang.ts',description:'Practice meeting: one own account against a gang of own accounts that all attack it; prints the kills and the end'},
+ {mode:'team',script:'scripts/pk-team.ts',description:'Practice meeting: two teams of own accounts (SPAR_TEAM a side) fight in one place; prints the wins of side A'},
  {mode:'hunt',script:'scripts/pk-hunt.ts',description:'Wilderness hunter trip: bank restock, hotspot patrol, target engagement, loot banking, and escape'},
  {mode:'roam',script:'scripts/pk-roam.ts',description:'Wilderness multi-zone roam and target scout'},
  {mode:'pilot',script:'scripts/pk-live/live-pilot.ts',defaultArgs:['10','20'],description:'Bounded live Wilderness PK pilot with GE/shop rune restock'},
