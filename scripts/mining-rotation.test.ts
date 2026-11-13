@@ -25,7 +25,8 @@ test('the Ardougne zoo site has its six iron rocks from the map files, and every
 // A small copy of skill_mining/scripts/mining.rs2 and cut_logs.rs2 on an open floor: actions run in order at the
 // start of a tick, then the queues, then the interaction (in range, else 2 steps of run and the swing in the next
 // tick, as the bench trace shows), then respawns. A level-up window holds the swing until a click closes it.
-function sim(o:{rate:number;respawn:number;rocks:Tile[];start:{x:number;z:number}}){
+function sim(o:{rate:number;respawn:number;rocks:Tile[];start:{x:number;z:number};dropLag?:number}){
+ let lagged:{at:number;slot:number}[]=[];
  const rocks=o.rocks.map(r=>({...r,up:true,back:0}));
  let tick=0,delay=-1,xp=0,pending:MiningAction[]=[],fletches=0,dialog=false,close=false,levelUp=false,opensAt=-1,ores=0;
  let pos={...o.start},target:{x:number;z:number}|undefined,interaction:{rock:typeof rocks[number];first:boolean}|undefined,weak:number|undefined;
@@ -39,7 +40,7 @@ function sim(o:{rate:number;respawn:number;rocks:Tile[];start:{x:number;z:number
  const step=()=>{
   tick++;
   for(const a of pending){
-   if(a.type==='dropItem')inv[a.slot]=undefined;
+   if(a.type==='dropItem'){if(o.dropLag)lagged.push({at:tick+o.dropLag,slot:a.slot});else inv[a.slot]=undefined;}
    else if(a.type==='useItemOnItem'){clear();dialog=true;}
    else if(a.type==='clickComponent'&&dialog){dialog=false;if(delay<tick)delay=tick+2;weak=tick+2;}
    else if(a.type==='interactLoc'){clear();const r=rocks.find(r=>r.x===a.x&&r.z===a.z)!;interaction={rock:r,first:true};target=standTiles(r,rocks).sort((p,q)=>Math.max(Math.abs(p.x-pos.x),Math.abs(p.z-pos.z))-Math.max(Math.abs(q.x-pos.x),Math.abs(q.z-pos.z)))[0];}
@@ -47,6 +48,7 @@ function sim(o:{rate:number;respawn:number;rocks:Tile[];start:{x:number;z:number
    else if(a.type==='closeModal')close=true;
   }
   pending=[];
+  for(const l of lagged.filter(l=>l.at<=tick))inv[l.slot]=undefined;lagged=lagged.filter(l=>l.at>tick);
   if(close){weak=undefined;close=false;levelUp=false;}
   if(opensAt===tick)levelUp=true;
   if(weak===tick){weak=undefined;const l=inv.findIndex(i=>i?.id===NORMAL_LOGS);if(l>=0){inv[l]=undefined;fletches++;}}
@@ -63,8 +65,8 @@ function sim(o:{rate:number;respawn:number;rocks:Tile[];start:{x:number;z:number
 }
 // The zoo shape: two columns of three rocks, two tiles apart.
 const ZOO:Tile[]=[{x:0,z:0},{x:0,z:1},{x:0,z:3},{x:3,z:0},{x:3,z:2},{x:3,z:4}].map(t=>({...t,level:0}));
-const run=async(knife:boolean,rate:number,respawn:number,rocks=ZOO,maximum=60)=>{
- const s=sim({rate,respawn,rocks,start:{x:1,z:1}});
+const run=async(knife:boolean,rate:number,respawn:number,rocks=ZOO,maximum=60,dropLag=0)=>{
+ const s=sim({rate,respawn,rocks,start:{x:1,z:1},dropLag});
  const r=await runAtSiteMining(s.d,iron(),{maximum,cap:5000,idleTicks:500,rotation:{knife,drop:true,make1:MAKE1,players:1,rocks}}) as any;
  return{per:(r.rolls.at(-1)-r.rolls[0])/(r.rolls.length-1),r,fletches:s.fletches()};
 };
@@ -88,4 +90,10 @@ test('nine rocks with a 6-tick walk between the groups are no slower than six',a
  const NINE=[...ZOO,...[{x:-12,z:-3},{x:-11,z:-1},{x:-10,z:1}].map(t=>({...t,level:0}))];
  const six=await run(true,2,18,ZOO,90),nine=await run(true,2,18,NINE,90);
  expect(nine.per).toBeLessThanOrEqual(six.per+0.01);expect(nine.fletches).toBe(0);
+});
+
+// Live, a drop can show in the pack two ticks after it was sent (WeeQuickie: "mining item lost without a drop").
+test('a drop that shows two ticks late is a drop, not a lost item; each slot drops once while it is pending',async()=>{
+ const x=await run(true,2,4,ZOO,60,2);
+ expect(x.r.made).toBe(60);expect(x.r.dropped).toBeGreaterThan(30);expect(x.per).toBeLessThan(3.2);
 });

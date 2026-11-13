@@ -26,6 +26,8 @@ const CHEST = { x: 2506, z: 3259 };                        // chestclosed_khazar
 const ITEM = { logs: 1511, orb: 587, orbs: 588, amulet: 589, prayerPot: [2434, 139, 141, 143], food: 379 };
 const PFM = 14;                                            // protect_from_melee (sdk PRAYER_INDICES)
 const BOLT = componentId('magic:fire_bolt');
+// Fire Blast (Magic 59, max 16; Fire Bolt max 12, magic_combat_spells.dbrow) while the pack holds death runes (560).
+const BLAST = componentId('magic:fire_blast');
 
 const q = await openQuest({ cap: 3000, eatAt: 6, food: [ITEM.food] });
 try {
@@ -177,7 +179,7 @@ try {
             await keepPrayer();
             if (!pfmOn() && points() > 0) await setPfm(true);
             const n = wl();
-            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) { casts++; lastCast = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: BOLT, reason: 'SDK' }); }
+            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) { casts++; lastCast = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: (q.s.sdk.getSkill('Magic')?.level ?? 1) >= 59 && q.has(560) ? BLAST : BOLT, reason: 'SDK' }); }
             if (lastMsg(/do not have enough/i) > blocked0) await q.fail('out of runes');
             await q.waitTicks(1);
         }

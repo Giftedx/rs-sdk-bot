@@ -768,6 +768,15 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
       skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Agility: 25},
       inventory: [{id: 562, count: 127}, {id: 556, count: 401}, {id: 563, count: 2}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // Blocks 8 and 9 as the live run stages them: both quests' packs held from the start, plus death runes for Fire Blast
+  // (Magic 59; max 16 against Fire Bolt's 12). `-blast` against the cases above measures the spell alone.
+  {key: 'extra:sweep-tree-kit-blast', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_tree!, position: {x: 2655, z: 3283, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}], skills: {...PRESETS.quest_tree!.skills, Magic: 59, Prayer: 99},
+      inventory: [{id: 562, count: 160}, {id: 556, count: 500}, {id: 563, count: 2}, {id: 560, count: 60}, ...Array.from({length: 6}, () => ({id: 1511, count: 1})), ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  {key: 'extra:sweep-grandtree-course-blast', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['sweep', 'grandtree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 60, Agility: 25},
+      inventory: [{id: 562, count: 127}, {id: 556, count: 400}, {id: 563, count: 2}, {id: 560, count: 35}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];

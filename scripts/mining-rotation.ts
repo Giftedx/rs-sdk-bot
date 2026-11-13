@@ -138,9 +138,14 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
  // The rock in hand: clicked in tick `sent`; the first swing at `arrival`; the roll at `roll`.
  let active:{rock:Tile;loc:NearbyLoc;sent:number;arrival?:number;roll?:number}|undefined;
  let walkingTo:string|undefined,armedFor:number|undefined;
- // Receipts: the drops sent in the last tick may explain a loss of that item, and nothing else may.
+ // Receipts: a drop that is sent and not yet seen may explain a loss of that item, and nothing else may. A drop stays
+ // pending until the pack shows it: on the live server it can show two ticks after it was sent (WeeQuickie, block 7 of
+ // the mock run, ended "item lost without a drop" after 3 ores), where the lockstep bench shows it in the next tick.
  const side=gems.filter(id=>!p.products.includes(id)),watched=[...new Set([...p.products,...side])];
- const first=state();let prevXp=xpOf(first),prevInv=stockOf(first),sent:Record<number,number>={};
+ const pend=new Map<number,{id:number;count:number;tick:number}>(); // dropped slot -> item, count, tick sent
+ const pendingOf=(id:number)=>[...pend.values()].filter(v=>v.id===id).reduce((a,v)=>a+v.count,0);
+ const settle=(id:number,lost:number)=>{for(const [slot,v] of pend){if(lost<=0)break;if(v.id!==id)continue;const t=Math.min(lost,v.count);v.count-=t;lost-=t;if(!v.count)pend.delete(slot);}};
+ const first=state();let prevXp=xpOf(first),prevInv=stockOf(first);
  const locAt=(s:BotWorldState,t:Tile)=>s.nearbyLocs.find(l=>l.x===t.x&&l.z===t.z&&l.level===t.level&&p.rocks.includes(l.id)&&l.optionsWithIndex.some(v=>v.opIndex===1&&/^mine$/i.test(v.text)));
  for(;;){
   const s=state(),n=d.tick(),pos={x:s.player!.worldX,z:s.player!.worldZ};
@@ -149,7 +154,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
   if(delta(NORMAL_LOGS)<0)fletches-=delta(NORMAL_LOGS);
   let oreId:number|undefined;
   if(xp>prevXp){
-   oreId=p.products.find(id=>delta(id)===1)??p.products.find(id=>delta(id)<=1&&1-delta(id)<=(sent[id]??0));
+   oreId=p.products.find(id=>delta(id)===1)??p.products.find(id=>delta(id)<=1&&1-delta(id)<=pendingOf(id));
    if(oreId===undefined)throw Error('mining XP without one own ore');
    made++;rolls.push(n);outputs[oreId]=(outputs[oreId]??0)+1;
    progress=n;delay=n-oreLag(p,active?.loc.id);active=undefined;
@@ -157,10 +162,10 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
   for(const id of watched){
    const g=delta(id)-(id===oreId?1:0);
    if(g>0){if(!side.includes(id)||xp>prevXp&&id!==oreId&&p.products.includes(id))throw Error('mining ore without XP');sideGems+=g;outputs[id]=(outputs[id]??0)+g;}
-   else if(-g>(sent[id]??0))throw Error('mining item lost without a drop');
-   else dropped-=g;
+   else if(-g>pendingOf(id))throw Error('mining item lost without a drop');
+   else if(g<0){dropped-=g;settle(id,-g);}
   }
-  prevXp=xp;prevInv=inv;sent={};
+  prevXp=xp;prevInv=inv;
   if(made>=o.maximum)break;
   if(n-progress>=o.idleTicks)throw Error('mining no useful ore progress');
   // 2. Rock states: learn the respawn from each rock seen to deplete and come back.
@@ -178,7 +183,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
   const cut=()=>{actions.push({type:'useItemOnItem',sourceSlot:knifeSlots!.k!,targetSlot:knifeSlots!.l!},{type:'clickComponent',componentId:o.make1});delay=knifeDelay(delay,n+1);knifeCuts++;};
   // Drop: free slots so the next ore fits (mining.rs2:52, 95). One drop in a click tick keeps the tick inside the 5
   // user events a tick (E/network/game/client/ClientGameProtCategory.ts:6): drop, cut, Make 1, move, click.
-  const drops=(most:number)=>{if(!o.drop)return;for(const i of s.inventory.filter(i=>!keep.has(i.id)&&(p.products.includes(i.id)||gems.includes(i.id))).slice(0,most)){actions.push({type:'dropItem',slot:i.slot});sent[i.id]=(sent[i.id]??0)+i.count;}};
+  const drops=(most:number)=>{if(!o.drop)return;for(const i of s.inventory.filter(i=>!keep.has(i.id)&&(p.products.includes(i.id)||gems.includes(i.id))).filter(i=>{const v=pend.get(i.slot);return !v||v.id!==i.id||n-v.tick>=3;}).slice(0,most)){actions.push({type:'dropItem',slot:i.slot});const v=pend.get(i.slot);if(v&&v.id===i.id)v.tick=n;else pend.set(i.slot,{id:i.id,count:i.count,tick:n});}};
   if(!o.drop&&s.inventory.length>=28)throw Error('mining pack full; retain ore for owned bank route');
   if(active&&!locAt(s,active.rock))active=undefined;
   // A level-up window opens one tick after the ore and holds the swing (the interaction waits while a modal is open):

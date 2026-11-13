@@ -40,6 +40,8 @@ const ROOTS: [number, number][] = [[2467, 9896], [2473, 9897], [2481, 9904], [24
     [2456, 9886], [2457, 9881], [2455, 9874], [2467, 9872], [2443, 9878], [2439, 9881], [2444, 9893], [2452, 9893]];
 const PFM = 14;
 const BOLT = componentId('magic:fire_bolt');
+// Fire Blast (Magic 59, max 16; Fire Bolt max 12, magic_combat_spells.dbrow) while the pack holds death runes (560).
+const BLAST = componentId('magic:fire_blast');
 
 const q = await openQuest({ cap: 6000, eatAt: 6, food: [ITEM.food] });
 try {
@@ -421,7 +423,7 @@ try {
             if (!pfmOn() && points() > 0 && t % 2 === 0) void q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
             const n = demon();
             gone = n ? 0 : gone + 1;
-            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) { casts++; lastCast = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: BOLT, reason: 'SDK' }); }
+            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) { casts++; lastCast = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: (q.s.sdk.getSkill('Magic')?.level ?? 1) >= 59 && q.has(560) ? BLAST : BOLT, reason: 'SDK' }); }
             if (lastMsg(/do not have enough/i) > runes0) await q.fail('out of runes');
             await q.waitTicks(1);
         }
