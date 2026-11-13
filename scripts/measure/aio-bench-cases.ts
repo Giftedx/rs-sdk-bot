@@ -636,6 +636,8 @@ const ROUTE_CASES: BenchCase[] = [
   // Two of ours against two in multi-way combat, four groups: side A on SPAR_A, side B on SPAR_B.
   teamCase('extra:team-2v2-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
   // Three of ours against three, three groups.
+  // Side A on the dragon spear (its special holds the target 4 ticks, finding 67) against the snare kit.
+  teamCase('extra:team-2v2-spear-x4', 'tribrid-snare-spear', 'tribrid-snare', 4, {x: 3150, z: 3560}),
   teamCase('extra:team-3v3-multi-x3', 'tribrid-snare', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
