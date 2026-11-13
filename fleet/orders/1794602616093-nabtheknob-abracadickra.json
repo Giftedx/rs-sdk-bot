@@ -1,0 +1,37 @@
+{
+ "id": "1794602616093-nabtheknob-abracadickra",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Abracadickra",
+ "item": "Bucket of water",
+ "count": 4,
+ "start": 1794602616093,
+ "end": 1794606216093,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Snape grass",
+   "count": 1
+  },
+  {
+   "item": "Law rune",
+   "count": 1
+  },
+  {
+   "item": "Air rune",
+   "count": 5
+  }
+ ],
+ "takerWaits": true
+}
