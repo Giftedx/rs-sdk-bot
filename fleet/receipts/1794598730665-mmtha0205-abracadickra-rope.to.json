@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794598730665-mmtha0205-abracadickra-rope",
+ "account": "Abracadickra",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rope",
+ "requested": 1,
+ "claim": "d4f5555b-e392-4e6b-8d0b-130d98bee4e9",
+ "count": 0,
+ "ok": false,
+ "at": 1794602656507,
+ "detail": "trade claimed"
+}
