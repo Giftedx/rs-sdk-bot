@@ -8,7 +8,8 @@ import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
 import {recoveryHeldDiagnostic,recoveryBoundary,recoveryDiagnosticFromLog} from '../src/session-recovery';
-import {missionSignature} from '../src/session-admission';
+import {missionSignature,liveLogoutRef} from '../src/session-admission';
+import {budgetRefusal,MAX_WAITS,spentAttempts,waitedAttempts,retainedRecoveryTasks} from '../../../scripts/cloud-recover';
 const source='a'.repeat(64),runner='b'.repeat(64),now=1793258000000;
 const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
 mkdirSync(fixtureRoot,{recursive:true});
@@ -444,6 +445,73 @@ test('the controller also releases a held lease that a later session of a differ
    expect(JSON.parse(readFileSync(marker,'utf8'))).toEqual(released);
    expect(existsSync(paths.completed)).toBe(false);expect(recoveredSessionForRun('Rod',f.request.server,f.request.runId,source,f.base)).toBe(false);
    expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks)).toThrow('lease absent');
+  }
+  for(const [p,raw] of Object.entries(kept))expect(readFileSync(p,'utf8'),fault+' '+p).toBe(raw);
+ }
+});
+test('an exact pre-request lease refusal waits while the controller archives only its dead connect-failed child and retains lineage outcomes',()=>{
+ for(const fault of ['none','live-child','not-expired','stopped','unbound','request','source','hash','ready','logout','proof','newer','scope','times'] as const){
+  const f=fixture(),issued=Date.now(),root=join(f.base,'.practice/session-lifecycle');
+  f.request.server='rs-sdk-demo.fly.dev';f.options.now=()=>issued;
+  f.put('.practice/swarm-state.json',{at:issued,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
+  issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);consumeRecoveryPermit(f.request,f.base,f.options);
+  const owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
+  const attempt=beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner,now:()=>issued+5});
+  if(fault==='ready')attempt.record('ready');
+  attempt.record('connect-failed','fixture connection failed');
+  if(fault==='logout')attempt.record('logout','timeout');
+  const producer=listAttempts('Rod',f.request.server,{root}).find(a=>a.attemptId===attempt.attemptId)!;
+  const proof=readLogoutProof('Rod',f.request.server,{root});
+  const paths=recoveryPermitPaths(f.request,f.base),receipt:any={schema:'session-recovery/1',state:'held',request:structuredClone(f.request),
+   startedAt:issued,endedAt:issued+10,attemptId:attempt.attemptId,lifecycleSha256:producer.sha256,proof,before:null,after:null,
+   logout:'not-attempted',failure:'connect failed or unresolved',runnerSha256:f.runnerHash,
+   scope:{gameplay:false,production:0,repairsFailure:false,qualifiesScript:false,bankObservation:'unobserved'}};
+  if(fault==='request')receipt.request.nonce='crossed';
+  if(fault==='source')receipt.runnerSha256='f'.repeat(64);
+  if(fault==='hash')receipt.lifecycleSha256='f'.repeat(64);
+  if(fault==='proof')receipt.proof={...proof,attemptId:'crossed'};
+  if(fault==='scope')receipt.scope.production=1;
+  if(fault==='times')receipt.endedAt=issued+4;
+  f.put(relative(f.base,join(paths.output,'receipt.json')),receipt);
+  if(fault==='unbound')rmSync(paths.used);
+  if(fault==='stopped')f.put('.practice/stop-Rod','owner pause');
+  if(fault==='newer')beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:{...owner,pid:4321},now:()=>issued+20});
+  const end={at:issued+1000,reason:`exit orphaned: attempt ${attempt.attemptId} owner ${process.pid} gone`,revision:'unchanged-consumer'};
+  f.put('.practice/swarm-deaths.json',{Rod:end});
+  const kept=Object.fromEntries([paths.permit,paths.child,paths.used,join(paths.output,'receipt.json'),join(f.base,'.practice/swarm-deaths.json'),join(f.base,'swarm.json'),
+   join(accountDir('Rod',f.request.server,root),'attempts',attempt.attemptId+'.json')].filter(p=>existsSync(p)).map(p=>[p,readFileSync(p,'utf8')]));
+  const checks={now:()=>issued+(fault==='not-expired'?149999:150000),matches:()=>true,childAlive:()=>fault==='live-child'};
+  if(fault!=='none'){
+   expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks),fault).toThrow();expect(existsSync(paths.lease),fault).toBe(true);
+  }else{
+   const failed={status:'failed',runId:f.request.runId,receipt:{ok:false,error:'Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry'},
+    spec:{id:'child',kind:'run',capability:'session-recovery-only',account:'Rod',sessionRecovery:{account:'Rod',endedAt:100},repairs:[{account:'Rod',endedAt:100}]}};
+   const refused={status:'failed',runId:'preflight-run',receipt:{ok:false,output:null,error:'Error: account has an unresolved recovery lease: Rod'},
+    spec:{id:'preflight',kind:'run',capability:'session-recovery-only',account:'Rod',sessionRecovery:{account:'Rod',endedAt:end.at},repairs:[{account:'Rod',endedAt:end.at}]}};
+   expect(spentAttempts([refused],{account:'Rod',endedAt:end.at})).toBe(0);
+   expect(waitedAttempts([refused],{account:'Rod',endedAt:end.at})).toBe(1);
+   for(const error of ['Error: account has an unresolved recovery lease: Other','Error: recovery lease child still alive','Error: account has an unresolved recovery lease: Rod extra'])
+    expect(spentAttempts([{...refused,receipt:{...refused.receipt,error}}],{account:'Rod',endedAt:end.at})).toBe(1);
+   expect(releaseExpiredRecoveryLeases(f.base,['Rod'],checks)).toEqual([]);
+   expect(releaseExpiredRecoveryLeases(f.base,[],checks)).toEqual([{account:'rod',released:true,reason:'released'}]);
+   const marker=JSON.parse(readFileSync(join(dirname(paths.permit),'released.json'),'utf8'));
+   expect(marker).toMatchObject({basis:'connect-failed',attemptId:attempt.attemptId,lifecycleSha256:producer.sha256,receiptSha256:createHash('sha256').update(kept[join(paths.output,'receipt.json')]!).digest('hex')});
+   expect(existsSync(paths.completed)).toBe(false);expect(recoveredSessionForRun('Rod',f.request.server,f.request.runId,source,f.base)).toBe(false);
+   expect(readLogoutProof('Rod',f.request.server,{root})).toEqual(proof);
+   expect(()=>liveLogoutRef('Rod',f.base,true,issued+150000,false,()=>false)).toThrow('account logout is not confirmed');
+   const archive='.practice/coordinator/archive/tasks.jsonl';
+   f.put(archive,{});writeFileSync(join(f.base,archive),[failed,refused,failed,refused].map(t=>JSON.stringify(t)).join('\n')+'\n');
+   expect(retainedRecoveryTasks(f.base,[failed,refused])).toHaveLength(2);
+   expect(budgetRefusal(f.base,'Rod',end,[])).toBeUndefined();
+   for(const changed of [{...refused,receipt:{...refused.receipt,output:{}}},{...refused,receipt:{...refused.receipt,ok:true}},
+    ...[{account:'Other'},{capability:'other'},{repairs:[]}].map(fields=>({...refused,spec:{...refused.spec,...fields}}))])
+    expect(budgetRefusal(f.base,'Rod',end,[failed,changed])).toMatch(/unknown .*archive conflict/);
+   const waits=Array.from({length:MAX_WAITS},(_,i)=>({...refused,runId:'wait-'+i,spec:{...refused.spec,id:'wait-'+i}}));
+   writeFileSync(join(f.base,archive),[failed,...waits,...waits].map(t=>JSON.stringify(t)).join('\n')+'\n');
+   expect(budgetRefusal(f.base,'Rod',end,[waits[0]])).toMatch(/^6 recoveries .* waited /);
+   const second={...failed,runId:'second',spec:{...failed.spec,id:'second',sessionRecovery:{account:'Rod',endedAt:end.at}}};
+   writeFileSync(join(f.base,archive),[failed,second,refused,failed,second].map(t=>JSON.stringify(t)).join('\n')+'\n');
+   expect(budgetRefusal(f.base,'Rod',end,[second])).toMatch(/^2 recoveries .* failed/);
   }
   for(const [p,raw] of Object.entries(kept))expect(readFileSync(p,'utf8'),fault+' '+p).toBe(raw);
  }
