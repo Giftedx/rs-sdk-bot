@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794541640765,
+ "at": 1794542530479,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -228,25 +228,6 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Moneyshot",
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
@@ -266,6 +247,25 @@
    "autopilot": "local",
    "resources": [
     "aio:ardougne-blood-chests"
+   ]
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
    ]
   },
   {
@@ -349,19 +349,19 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
+    "PEN": "3017,3288",
     "TICKS": "3000",
     "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
+   "goal": "feathers at the chicken pen 3017,3288",
    "role": "helper",
-   "template": "feathers@3187,3277",
+   "template": "feathers@3017,3288",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "pen:3017,3288"
    ]
   },
   {
@@ -407,18 +407,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "knight:2582,3297"
    ]
   },
   {
@@ -571,27 +571,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "2",
-    "QUANTITY": "1700",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "375",
-    "CASH_RESERVE": "100000",
-    "ORDER_KEY": "nabtheknob-overall-cannonballs1700",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2a1b827a-9bfe-4803-a688-97ffc8f2c3f6"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-nabtheknob-cannonballs1700-headroom [task-2a1b827a-9bfe-4803-a688-97ffc8f2c3f6]",
-   "role": "helper"
   }
  ]
 }
