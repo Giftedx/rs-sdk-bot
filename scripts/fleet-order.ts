@@ -5,6 +5,7 @@
 // holds fewer coins than the order: an order that no agent can run lapses at the end of its window unnoticed.
 // Usage: bun scripts/fleet-order.ts <from> <to> <count> <item name...> [--with "<count> <item name>"]...
 // Env: IN (default 15), MINUTES (default 40). Each --with adds a line that moves in the same trade (up to 28 lines).
+// TAKER_WAITS=1 keeps the receiver offline until the giver is at the meet (both accounts on one side).
 // MEET=<bank x>,<bank z> or MEET=<bank name> meets at that bank's tile pair (scripts/coin-courier.ts BANK_MEETS) instead
 // of Varrock West: MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand; MEET=draynor.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -66,7 +67,11 @@ const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8'
 if (import.meta.main) {
     const { rest, extra } = parseWith(process.argv.slice(2));
     const [from, to, countText, ...name] = rest;
-    const order = makeOrder(from ?? '', to ?? '', Number(countText), name.join(' '), Date.now(), Number(process.env.IN ?? 15), Number(process.env.MINUTES ?? 40), undefined, orderMeet(process.env.MEET), extra);
+    const made = makeOrder(from ?? '', to ?? '', Number(countText), name.join(' '), Date.now(), Number(process.env.IN ?? 15), Number(process.env.MINUTES ?? 40), undefined, orderMeet(process.env.MEET), extra);
+    // TAKER_WAITS=1: the receiver stays offline until the giver is at the meet. The giver marks that on its own machine.
+    const partySides = new Set([made.from, made.to].map(n => loadOwners().get(n.toLowerCase())?.side ?? 'local'));
+    if (process.env.TAKER_WAITS === '1' && partySides.size !== 1) throw Error('TAKER_WAITS needs both accounts on one side');
+    const order: Order = process.env.TAKER_WAITS === '1' ? { ...made, takerWaits: true } : made;
     mkdirSync(join(FLEET_DIR(), 'orders'), { recursive: true });
     writeFileSync(join(FLEET_DIR(), 'orders', `${order.id}.json`), JSON.stringify(order, null, 1) + '\n');
     console.log(`FLEET_ORDER ${JSON.stringify(order)}`);
