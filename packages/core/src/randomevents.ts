@@ -135,6 +135,9 @@ export interface RandomEventWatch {
     // sends and the eat, drink and prayer inputs of the guards, and holds every other action; no event or loot job
     // starts until `work` ends.
     exclusive<T>(work: () => Promise<T>): Promise<T>;
+    // The type of the last action the script sent through the gate (prayer flicks not counted), for the ledger's
+    // idle reasons (ledger.ts idleWhy). Null before the first one.
+    lastAction(): string | null;
     // Event NPC indices and loc tiles ("x,z") a script must not click (whirlpool, ent, gas rock, gas chest).
     avoid(): { npcs: Set<number>; locs: Set<string> };
 }
@@ -301,6 +304,8 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
 
     // ---- exclusive work (death recovery) ----
     const trusted = new AsyncLocalStorage<true>();
+    let lastType: string | null = null;
+    const noteType = (a: any) => { if (typeof a?.type === 'string' && a.type !== 'togglePrayer') lastType = a.type; };
     let exclusiveDepth = 0;
     const SUSTAIN = /^(eat|drink)$/i;
     // Passes the gate during exclusive work: the work's own actions, and the eat, drink and prayer inputs.
@@ -316,6 +321,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     if (gateOn) {
         s.direct = (a: Act) => {
             if (passes(a)) return rawDirect(a);
+            noteType(a);
             noteScript(a);
             if (avoided(a)) return new Promise(r => later(r, fail('random event: target avoided')));
             const no = keptRefusal(a);
@@ -326,6 +332,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         if (rawSend) sdkAny.send = (msg: any) => {
             if (msg?.type === 'sdk_action') {
                 if (passes(msg.action)) return rawSend.call(sdkAny, msg);
+                noteType(msg.action);
                 noteScript(msg.action);
                 if (avoided(msg.action)) { later(() => answer(msg, fail('random event: target avoided')), {}); return; }
                 const no = keptRefusal(msg.action);
@@ -1125,6 +1132,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         busy: () => holding(),
         avoid: () => ({ npcs: new Set(avoidNpcs), locs: new Set(avoidLocs) }),
         kept: () => new Map(kept),
+        lastAction: () => lastType,
         async exclusive<T>(work: () => Promise<T>): Promise<T> {
             exclusiveDepth++;
             try { return await trusted.run(true, work); }

@@ -8,9 +8,25 @@
 //   stun    none of the above, inside the 8 ticks after "You've been stunned" (unavoidable wait)
 //   idle    none of the above
 // Attach with startLedger(session); call stop() to get the summary and print it with formatLedger.
+// Each idle tick also gets a reason (idleWhy), counted in the LEDGER line as `idleBy=`: a fight between two swings
+// (`combat`), damage in the last FIGHT_TICKS ticks with no fight (`hurt`: a failed pickpocket hurts the thief with no
+// fight, thieving.rs2 fail_pick_pocket), an open bank, shop or other window, or else the type of the last action the script sent (`after:<type>`,
+// `none` when it sent none). scripts/tick-waste.ts sums the reasons by script family.
 
 export type TickKind = 'xp' | 'inventory' | 'move' | 'anim' | 'dialog' | 'stun' | 'idle';
-export interface TickRow { tick: number; kind: TickKind; at: string }
+export interface TickRow { tick: number; kind: TickKind; at: string; why?: string }
+// Ticks after a hit on the player in which an idle tick with no fight counts as `hurt`.
+export const FIGHT_TICKS = 8;
+
+// The reason for one idle tick, from the state of that tick and the type of the script's last action.
+export function idleWhy(now: any, lastAction: string | null): string {
+    if (now?.fight) return 'combat';
+    if (now?.hurt) return 'hurt';
+    if (now?.bank) return 'bank';
+    if (now?.shop) return 'shop';
+    if (now?.window) return 'window';
+    return lastAction ? `after:${lastAction}` : 'none';
+}
 
 const xpSum = (st: any) => (st?.skills ?? []).reduce((n: number, k: any) => n + (k.experience ?? 0), 0);
 const inventoryKey = (items: any[]) => {
@@ -44,17 +60,26 @@ export function summarize(rows: TickRow[], xpGain = 0) {
         i = j;
     }
     streaks.sort((x, y) => y.length - x.length || x.start - y.start);
-    return { ticks: rows.length, counts, idlePct: rows.length ? (100 * counts.idle) / rows.length : 0, longestIdle: streaks.slice(0, 5), xpGain };
+    const why = new Map<string, number>();
+    for (const r of rows) if (r.kind === 'idle') why.set(r.why ?? 'none', (why.get(r.why ?? 'none') ?? 0) + 1);
+    const idleBy = [...why].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
+    return { ticks: rows.length, counts, idlePct: rows.length ? (100 * counts.idle) / rows.length : 0, longestIdle: streaks.slice(0, 5), xpGain, idleBy };
 }
 
-export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; onTick(cb: () => void): () => void; tick(): number }) {
+// `lastAction` returns the type of the last action the script sent, or null.
+export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; onTick(cb: () => void): () => void; tick(): number }, lastAction: () => string | null = () => null) {
     const rows: TickRow[] = [];
     // Copy the fields the classifier reads: the state object may be reused between ticks.
     const snap = () => {
-        const st = s.sdk.getState();
-        return { player: st?.player && { ...st.player }, skills: (st?.skills ?? []).map((k: any) => ({ experience: k.experience })),
+        const st = s.sdk.getState(), p = st?.player, hit = p?.combat?.lastDamageTick ?? -1, now = st?.tick ?? 0;
+        // A fight is a hit the player dealt (a miss included) in the last FIGHT_TICKS ticks. `combat.inCombat` is no
+        // proof: the SDK sets it for any target, and a pickpocket click targets the NPC.
+        const dealt = (st?.combatEvents ?? []).some((e: any) => e?.type === 'damage_dealt' && now - (e.tick ?? -Infinity) <= FIGHT_TICKS);
+        return { player: p && { ...p }, skills: (st?.skills ?? []).map((k: any) => ({ experience: k.experience })),
             inventory: Array.isArray(st?.inventory) ? st.inventory.map((i: any) => i && ({ id: i.id, count: i.count })) : undefined,
-            dialog: { isOpen: !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen) } };
+            dialog: { isOpen: !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen) },
+            fight: dealt, hurt: hit >= 0 && now - hit <= FIGHT_TICKS,
+            bank: !!st?.bank?.isOpen, shop: !!st?.shop?.isOpen, window: !!st?.interface?.isOpen || !!st?.modalOpen };
     };
     let last = snap();
     // Total XP over all skills at the start, so the summary can state the XP the run gained.
@@ -67,7 +92,8 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
         const msgs = s.sdk.getState()?.gameMessages ?? [];
         for (const m of msgs) if ((m.tick ?? -1) > seenTick && /stunned/i.test(m.text ?? '')) stunUntil = s.tick() + 8;
         seenTick = Math.max(seenTick, ...msgs.map((m: any) => m.tick ?? -1));
-        rows.push({ tick: s.tick(), kind: classifyTick(last, now, s.tick() <= stunUntil), at: `${now.player?.worldX},${now.player?.worldZ}` });
+        const kind = classifyTick(last, now, s.tick() <= stunUntil);
+        rows.push({ tick: s.tick(), kind, at: `${now.player?.worldX},${now.player?.worldZ}`, ...(kind === 'idle' ? { why: idleWhy(now, lastAction()) } : {}) });
         last = now;
     });
     return { stop: () => { off(); return summarize(rows, Math.max(0, xpSum(last) - xpStart)); }, rows };
@@ -76,7 +102,8 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
 export function formatLedger(sum: ReturnType<typeof summarize>): string {
     const c = sum.counts;
     return `LEDGER ticks=${sum.ticks} xp=${c.xp} inventory=${c.inventory} move=${c.move} anim=${c.anim} dialog=${c.dialog} stun=${c.stun} idle=${c.idle} idlePct=${sum.idlePct.toFixed(1)} xpGain=${sum.xpGain} `
-        + `longestIdle=${sum.longestIdle.map(x => `${x.length}@t${x.start}(${x.at})`).join(',')}`;
+        + `longestIdle=${sum.longestIdle.map(x => `${x.length}@t${x.start}(${x.at})`).join(',')}`
+        + ` idleBy=${sum.idleBy.map(([why, n]) => `${why}:${n}`).join(',')}`;
 }
 
 // A session is stalled when its last `window` ticks hold no xp, no inventory change and no dialog: walking,
