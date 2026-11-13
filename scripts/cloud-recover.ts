@@ -176,9 +176,8 @@ export function waitedAttempts(tasks: readonly any[], target: Target, waits: Rea
 
 // One unresolved recovery lineage: a failed recovery child stays held, the swarm writes a new orphan end for it with a
 // new time (scripts/swarm.ts orphanedSessionEnds), and the next recovery names that new time. The budget of each end
-// is then the budget of its whole lineage, or the retries never stop. Live local: Bigchopper's recovery of end
-// 1794561253846 (task-02750ca2-a504-4ceb-8b58-8b6b8872bcbc) left attempt 1794561783663-0000034648-0000000001 held,
-// and its orphan end 1794561868424 started a new count at zero.
+// is then the budget of its whole lineage, or the retries never stop: a per-end count restarts at zero on each new
+// orphan end of the same held child.
 // An end is child-generated when the attempt that it names (an orphan end) or, for an earlier end, the latest attempt
 // at its time is a recovery child: its producer receipt names RECOVERY_SCRIPT, role `recovery` and the coordinator run
 // id of a retained recovery request of the same account. The link goes back to the end that this request named. A
