@@ -1405,3 +1405,19 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `reachedEntity` to its target (`inOperableDistance` in the engine's `Player.ts`, `rsmod.reached` with shape -2).
     Gap: whether that rule refuses a target on the attacker's own tile is not measured; no fight option steps under
     a target, and no spar tests line of sight or two against one.
+40. **A dagger user that never gives up cannot be kept out of reach by freezes alone.** `kiteMelee` (freezes and
+    steps only: a freeze within 10 tiles with a line of sight, the account still until the hold shows, a run away
+    while the target is free or immune) takes 41 to 162 damage a meeting of 650 to 1,500 ticks; the champion kills
+    the same attacker in about 150 ticks for 20 to 107. Conditions: `extra:kite-chase-x4` (the gang meeting with a gang
+    of 1, `ganker` profile, so the attacker walks back to our tile each time it loses sight), seed 1, the lockstep
+    engine. The leak is the freeze hit rate: of the freezes cast, 22% hold in rune armour (`castArmour: 'keep'`), 40%
+    with the cast armour stripped and 46% in the mage kit (`extra:kite-chase-mage-x4`). The magic roll is
+    (Magic + 9) x (bonus + 64) against (0.7 Magic + 0.3 Defence + 8) x (bonus + 64), with no magic prayer
+    (`player_combat_stat.rs2`), so plate leaves the roll near 0. Each miss costs the 5-tick spell delay and a tick
+    stood still, and an attacker beside us at equal speed is not shaken by a run. Four faults that kept freezes from
+    going out are fixed in `scripts/pk.ts`: a walk click in the ticks after the cast clears the spell while the server
+    re-queues it for our attack delay (`pvp_magic.rs2` `pvp_combat_spell_checks`); the chase walked back to the
+    target; an eat or a potion click (`OpHeld`) cleared the spell; and a cast with no line of sight
+    (`GameMap.ts` `isApproached`) walks the account toward the target. Evidence: `.practice/climb/kite-*.log`, engine
+    traces `.practice/climb/ktrace*/`. Gap: seed 1 only; the hold rate varies from run to run (12% to 40% in rune);
+    no kit with a magic bonus and melee defence was tried.

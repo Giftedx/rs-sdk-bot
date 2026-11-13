@@ -419,6 +419,7 @@ const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.
 // collision map).
 const KITE_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 let kitePaths: typeof import('../vendor/rs-sdk/sdk/pathfinding') | null = null;
+let kiteLos: typeof import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder') | null = null;
 
 // A style is usable only with a non-empty kit: an empty list casts damage spells with whatever is wielded
 // (a dagger, a bow), which hits for a fraction of the staff's max hit and wastes the turn. kits built by
@@ -464,7 +465,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
-    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false;
+    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10;
     // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.
     let lagWant: number | null | undefined, lagAt = start, lagHas: number | null | undefined;
     let lastStyle: Style | null = null, arm: StyleArm = 'avoid', lastArm: StyleArm = 'avoid';
@@ -585,7 +586,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         // Food before anything, any food best first; eating adds 3 ticks to %action_delay on the server (consume.rs2:130).
         // An account with few Hitpoints is under every threshold at full health, so full health never eats.
-        if (me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
+        // kiteMelee: an inventory click (OpHeld) in the two ticks of a cast clears the spell before the server casts it,
+        // so food and potions wait unless the next hit could kill.
+        const castShield = o.kiteMelee !== undefined && now <= freezeCastAt + 2 && me.hp > oppMax;
+        if (!castShield && me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
             if (food) {
                 use(food, /^Eat$/i);
@@ -633,7 +637,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const prayers = state.prayers;
         // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
         // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
-        if (now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (o.cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
+        if (!castShield && now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (o.cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
             let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
             if (!potion && poisoned) {
                 potion = slotOf(ITEMS.antipoison);
@@ -660,7 +664,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // would cancel an approach that the server has in hand, so it is sent only while we stand still.
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
         if (o.chaseBelow !== undefined && target) chaseLow = lowHealth(observePlayer(s.client, target.index), o.chaseBelow);
-        if ((o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
+        if (o.kiteMelee === undefined && (o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
             const ahead = o.cutOff !== undefined && now < fleeingUntil;
             const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
@@ -763,21 +767,35 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             const gap = cheb(at, target), held = now < frozenUntil;
             const kiteRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
             const kiteMagic = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
-            kiteCast = !held && now >= freezeReady && now >= nextAttack && gap <= 10
+            kitePaths ??= await import('../vendor/rs-sdk/sdk/pathfinding');
+            kiteLos ??= await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+            kitePaths.initPathfinding();
+            const level = me.level ?? 0;
+            // The server casts only with a line of sight to the target (GameMap.ts isApproached); without one it walks the
+            // account toward the target to find one. CollisionFlag.PLAYER is the engine's BLOCK_NPC_AND_PLAYERS (0x100000).
+            const foe = target, sight = (from: { x: number; z: number }) => kiteLos!.hasLineOfSight(level, from.x, from.z, foe.x, foe.z, 1, 1, 1, 1, kiteLos!.CollisionFlag.PLAYER);
+            kiteCast = !held && now >= freezeReady && now >= nextAttack && gap <= 10 && sight(at)
                 && (kiteRunes ? castableFreeze(kiteMagic, inv) : hasStyle(o.kit, 'magic') ? freezeSpell(kiteMagic) : null) !== null;
+            // A spell click while the account still runs is re-pathed and mostly never cast (Player.ts tryInteract: the
+            // ap trigger runs only within the approach distance after movement). So the account stops first, and casts on
+            // the next tick, stood still.
+            if (kiteCast && !stoodStill) { void sdk.sendWalk(at.x, at.z); kiteCast = false; stepAt = now; kiteStopAt = now; }
             const want = held ? Math.min(o.kiteMelee!, 10) : 10;
-            if (!kiteCast && gap < want && now >= selfFrozenUntil) {
+            // After a cast the account holds still until the hold shows (the target stood a tick: held two ticks after the
+            // cast), 3 ticks at most: the server re-queues the spell while our attack delay runs (pvp_magic.rs2
+            // pvp_combat_spell_checks), and a walk click clears it.
+            const casting = now <= freezeCastAt + 3 && !(held && now >= freezeCastAt + 2);
+            if (!kiteCast && !casting && kiteStopAt !== now && gap < want && now >= selfFrozenUntil) {
                 // The step: of the tiles 6 out in the 8 directions, the one with a path whose end is farthest from the
                 // target. A tile behind a wall has no path, and the client sends no click for it.
-                kitePaths ??= await import('../vendor/rs-sdk/sdk/pathfinding');
-                const level = me.level ?? 0;
                 let best: { x: number; z: number } | null = null, bestScore = -Infinity;
                 for (const [ddx, ddz] of KITE_DIRS) {
                     const to = { x: at.x + ddx * 6, z: Math.max(3530, at.z + ddz * 6) };
                     const path = kitePaths.findLongPath(level, at.x, at.z, to.x, to.z, 40);
                     const end = path[path.length - 1];
                     if (!end) continue;
-                    const score = cheb(end, target) * 2 + (ddx * Math.sign(at.x - target.x) + ddz * Math.sign(at.z - target.z));
+                    // Farthest from the target, then a tile with a line of sight for the next cast, then straight away.
+                    const score = cheb(end, target) * 2 + (sight(end) ? 3 : 0) + (ddx * Math.sign(at.x - target.x) + ddz * Math.sign(at.z - target.z));
                     if (score > bestScore) { bestScore = score; best = { x: end.x, z: end.z }; }
                 }
                 if (best && cheb(best, target) > gap) { void sdk.sendWalk(best.x, best.z); stepAt = now; }
