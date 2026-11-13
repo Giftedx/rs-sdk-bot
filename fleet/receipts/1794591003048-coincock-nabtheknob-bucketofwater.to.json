@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794591003048-coincock-nabtheknob-bucketofwater",
+ "account": "NabTheKnob",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bucket of water",
+ "requested": 4,
+ "claim": "1cf2e644-82d8-4680-910a-cd1e05f49280",
+ "count": 0,
+ "ok": false,
+ "at": 1794596111315,
+ "detail": "trade claimed"
+}
