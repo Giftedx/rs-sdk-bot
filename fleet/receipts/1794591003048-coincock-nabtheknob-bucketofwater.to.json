@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794591003048-coincock-nabtheknob-bucketofwater",
  "account": "NabTheKnob",
  "partner": "CoinCock",
@@ -12,6 +12,16 @@
  "claim": "1cf2e644-82d8-4680-910a-cd1e05f49280",
  "count": 0,
  "ok": false,
- "at": 1794596111315,
- "detail": "trade claimed"
+ "at": 1794596403478,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794596111323-0000008828-0000000001",
+  "at": 1794596403467,
+  "sha256": "cb0d2a9263824c33e1eff4439f553cb89ed438c3246019070cc2c9df967d0919"
+ },
+ "screen": false
 }
