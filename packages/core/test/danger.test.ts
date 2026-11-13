@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAGED, combatLevel, dangerTiles, deadly, escapeTiles, loadHunters, parseHunter } from '../src/danger';
+import { CAGED, combatLevel, dangerTiles, deadly, escapeTiles, liveHunters, loadHunters, parseHunter } from '../src/danger';
 import { createWorld, type PathLength } from '../src/world';
 import type { Travel } from '../src/travel';
 
@@ -46,6 +46,18 @@ test('one boat needs one fare; two boats need both fares', () => {
     const two = createWorld({ transports: [], doors: [], travel: [boat, second], pathLength });
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 59 }).ok).toBe(false);
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 60 }).ok).toBe(true);
+});
+
+test('a live Karamja scorpion is a hunter to dodge for an HP 10 account, though not deadly', () => {
+    const scorpion = loadHunters().find(h => h.name === 'Scorpion' && h.combat === 14)!;
+    expect(scorpion.id).toBe(107);
+    expect(scorpion.hunt).toBe(2);
+    expect(deadly(scorpion, 3, 10)).toBe(false);
+    const seen = [{ id: 107, name: 'Scorpion', x: 2869, z: 3175, tileX: 2868, tileZ: 3174, size: 2, hp: 17 }, { id: 557, name: 'Wydin', x: 3014, z: 3204 }];
+    expect(liveHunters(seen, { skills: { hitpoints: 10 } })).toEqual([{ x: 2868, z: 3174, r: 5, name: 'Scorpion' }]);
+    expect(liveHunters([{ ...seen[0]!, hp: 0 }], { skills: { hitpoints: 10 } })).toEqual([]);
+    // A combat-46 account is more than twice the scorpion's level: a cowardly monster leaves it alone.
+    expect(liveHunters(seen, { skills: { attack: 40, strength: 40, defence: 40, hitpoints: 40 } })).toEqual([]);
 });
 
 import { deadlyTo, meleeOnly, PROTECT_MELEE_LEVEL } from '../src/danger';

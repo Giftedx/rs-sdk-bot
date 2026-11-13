@@ -10,7 +10,8 @@ import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const HUNTS_WEAKER = new Set(['cowardly', 'ranged']), HUNTS_ALL = new Set(['aggressive_melee']);
-export type Hunter = { name: string; combat: number; mode: string; reach: number; spawns: Tile[]; id?: number };
+// `hunt` is the huntrange alone: the square around the monster's current tile in which it picks a target.
+export type Hunter = { id?: number; name: string; combat: number; mode: string; reach: number; hunt?: number; spawns: Tile[] };
 
 export function combatLevel(skills: Record<string, number>): number {
     const s = (k: string, d = 1) => skills[k] ?? d;
@@ -20,12 +21,12 @@ export function combatLevel(skills: Record<string, number>): number {
 }
 
 // Reads hunt mode and ranges from each npc's own config block (npcs.json `src` is file:line).
-export function parseHunter(npc: { name: string; combat: number; spawns?: Tile[]; id?: number }, block: string): Hunter | null {
+export function parseHunter(npc: { id?: number; name: string; combat: number; spawns?: Tile[] }, block: string): Hunter | null {
     const field = (k: string) => block.match(new RegExp(`^${k}=(.+)$`, 'm'))?.[1]?.trim();
     const mode = field('huntmode');
     if (!mode || !(HUNTS_WEAKER.has(mode) || HUNTS_ALL.has(mode)) || !npc.spawns?.length) return null;
-    const reach = Number(field('wanderrange') ?? 5) + Number(field('huntrange') ?? 0);
-    return { name: npc.name, combat: npc.combat, mode, reach, spawns: npc.spawns, ...(npc.id !== undefined ? { id: npc.id } : {}) };
+    const hunt = Number(field('huntrange') ?? 0), reach = Number(field('wanderrange') ?? 5) + hunt;
+    return { ...(npc.id === undefined ? {} : { id: npc.id }), name: npc.name, combat: npc.combat, mode, reach, hunt, spawns: npc.spawns };
 }
 
 // Spawns the map walls in: the monster hunts, but no player tile is in its reach. The Wizards' Tower lesser demon
@@ -68,6 +69,23 @@ export const meleeOnly = (h: Hunter, styles: ReadonlyMap<number, readonly string
 const guardProtects = () => process.env.PRAYER_GUARD !== '0';
 export const deadlyTo = (h: Hunter, skills: Record<string, number>, styles?: ReadonlyMap<number, readonly string[]>) =>
     deadly(h, combatLevel(skills), skills.hitpoints ?? 10) && !((skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && guardProtects() && meleeOnly(h, styles));
+
+// Visible monsters that hunt this account, deadly or not, each with the square a walk keeps out of: its huntrange
+// from the tile it stands on now, plus its size and `margin` tiles. A Karamja scorpion (combat 14, huntrange 2) is
+// not deadly to an HP 10 account, yet a run past 2 tiles from it took 2 damage (pvp:stage-kit seed 6).
+export type LiveHunter = { x: number; z: number; r: number; name: string };
+type SeenNpc = { id: number; name: string; x: number; z: number; tileX?: number; tileZ?: number; size?: number; hp?: number | null };
+let huntersById: Map<number, Hunter> | undefined;
+export function liveHunters(npcs: readonly SeenNpc[], acct: Pick<Account, 'skills'>, margin = 2, list?: Hunter[]): LiveHunter[] {
+    const byId = list ? new Map(list.flatMap(h => h.id === undefined ? [] : [[h.id, h] as const])) : (huntersById ??= new Map(loadHunters().flatMap(h => h.id === undefined ? [] : [[h.id, h] as const])));
+    const combat = combatLevel(acct.skills), out: LiveHunter[] = [];
+    for (const n of npcs) {
+        const h = byId.get(n.id);
+        if (!h || n.hp === 0 || !hunts(h, combat)) continue;
+        out.push({ x: n.tileX ?? n.x, z: n.tileZ ?? n.z, r: (h.hunt ?? 0) + margin + Math.max(0, (n.size ?? 1) - 1), name: n.name });
+    }
+    return out;
+}
 
 // A tile packed into one number (level in bits 28-29, x in 14-27, z in 0-13). The whole-world danger set holds
 // about 390,000 tiles for a weak account; as {x,z,level} objects with string keys it cost 320 MB per process.
