@@ -931,13 +931,13 @@ test('Inventory Tags: food, potions, teleports and runes get their group class; 
 test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
  const code=shell.slice(shell.indexOf('  function gePanel(){'),shell.indexOf('  // Pull requests plugin'));
  const state:any={bots:[],economy:{supplies:[{id:1,name:'Coal',ask:150}]}};
- const run=new Function('S','window','E','nf','icon','loadItemSources','data',`let geQuery='',geAll=true,geOpen='Coal',sourcePin=null,itemSourcesData=data;const age=()=>'';${code};return gePanel();`);
- const html=run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{Coal:[['gather','Mining 30: Coal rock',[3000,3000,0,3001,3001,0]],['drop','Drop: Giant (level 28) · always',[]]]});
- expect(html).toContain('class="ge-row ge-open" data-ge-src="Coal"');
+ const run=new Function('S','window','E','nf','icon','loadItemSources','data',`let geQuery='',geAll=true,geOpen='1',geOpenName='Coal',sourcePin=null,itemSourcesData=data;const age=()=>'';${code};return gePanel();`);
+ const html=run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{1:[['gather','Mining 30: Coal rock',[3000,3000,0,3001,3001,0]],['drop','Drop: Giant (level 28) · always',[]]]});
+ expect(html).toContain('class="ge-row ge-open" data-ge-src="1" data-ge-name="Coal"');
  expect(html).toContain('<span class="ge-label">Mining 30: Coal rock</span><button class="xp-reset" data-src-pin="0" title="2 places">Show on map</button>');
  expect(html).not.toContain('data-src-pin="1"');
  expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{})).toContain('Loading sources');
- expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{Iron:[]})).toContain('No source on record');
+ expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{2:[]})).toContain('No source on record');
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));

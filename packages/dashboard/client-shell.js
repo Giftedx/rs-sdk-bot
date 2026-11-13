@@ -688,7 +688,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       `<div class="xp-box"><div class="xp-head"><span>Remaining</span><span class="xp-gain">${p.done?'done':p.remaining.length}</span></div><div class="progress-remaining">${p.remaining.map(r=>`<span>${E(r)}</span>`).join('')||'<span class="xp-muted">Nothing remains.</span>'}</div></div></div>`;
   }
   // Grand Exchange plugin (RuneLite's): the route supplies with the live market's buy and sell prices and stock.
-  let geQuery='',geOpen=null;
+  // geOpen: the item id whose sources are open; geOpenName: its display name, for the map pin.
+  let geQuery='',geOpen=null,geOpenName='';
   let geAll=false;
   function gePanel(){
     const [head,rows]=geResults();return `<div class="ge-panel"><input id="ge-search" class="rl-search" placeholder="Find an item…" value="${E(geQuery)}" aria-label="Search items"><div class="ge-results"><div class="ge-head">${head}</div><div class="ge-rows">${rows}</div></div></div>`;
@@ -701,11 +702,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(toggleFocused)results.querySelector('[data-ge-all]')?.focus({preventScroll:true});
   }
   // The sources of one item, under its row: each with "Show on map" when it has places.
-  function geSources(name){
-    loadItemSources();const list=itemSourcesData?.[name];
+  function geSources(id){
+    loadItemSources();const list=itemSourcesData?.[id];
     if(!itemSourcesData||!Object.keys(itemSourcesData).length&&list===undefined)return '<div class="ge-sources"><span class="xp-muted">Loading sources…</span></div>';
     if(!list?.length)return '<div class="ge-sources"><span class="xp-muted">No source on record: the route does not use this item.</span></div>';
-    return '<div class="ge-sources">'+list.map(([k,label,tiles],j)=>'<div class="ge-source"><span class="ge-kind ge-'+E(k)+'">'+E(k)+'</span><span class="ge-label">'+E(label)+'</span>'+(tiles.length?'<button class="xp-reset" data-src-pin="'+j+'" title="'+tiles.length/3+' places">'+(sourcePin?.key===name+'|'+j?'Shown':'Show on map')+'</button>':'')+'</div>').join('')+'</div>';
+    return '<div class="ge-sources">'+list.map(([k,label,tiles],j)=>'<div class="ge-source"><span class="ge-kind ge-'+E(k)+'">'+E(k)+'</span><span class="ge-label">'+E(label)+'</span>'+(tiles.length?'<button class="xp-reset" data-src-pin="'+j+'" title="'+tiles.length/3+' places">'+(sourcePin?.key===id+'|'+j?'Shown':'Show on map')+'</button>':'')+'</div>').join('')+'</div>';
   }
   // The head (counts and the price age) and the rows are written apart: a new age does not rebuild the rows.
   function geResults(){
@@ -721,7 +722,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // One header names the columns, so a row holds numbers only. A long number is cut short; the row's tooltip has it whole.
     const exact=v=>v==null?'—':nf(Math.round(v))+' gp',short=v=>v==null?'—':v>=1e6?+(v/1e6).toFixed(2)+'M':v>=1e5?Math.round(v/1e3)+'k':nf(Math.round(v));
     return [`<div class="xp-meta"><span>${all.length-hidden} ${owner?'route supplies':'items'}</span><span>prices ${S.economy?.pricesAt?age(S.economy.pricesAt)+' old':'unknown'}</span></div>${hidden?`<button class="game-control" data-ge-all>${geAll?'Hide':'Show'} the ${hidden} with no offer</button>`:''}${rows.length?`<div class="ge-row ge-cols${owner?' ge-owner':''}"><span></span><span>Item</span><span title="The price to buy one, in gp">Buy</span><span title="The price to sell one, in gp">Sell</span><span>Stock</span>${owner?'<span title="Held in our banks">Ours</span>':''}</div>`:''}`,
-      rows.slice(0,80).map(i=>`<div class="ge-row${owner?' ge-owner':''}${geOpen===i.name?' ge-open':''}" data-ge-src="${E(i.name)}" title="${E(geName(i))}: buy ${exact(i.ask)}, sell ${exact(i.bid)}, stock ${nf(i.stock||0)}, average ${exact(i.vwap)}, shop ${exact(i.base)}"><span class="ge-icon">${icon(i.name,24)}</span><span class="ge-name">${E(geName(i))}</span><b>${short(i.ask)}</b><b>${short(i.bid)}</b><span>${short(i.stock||0)}</span>${owner?`<span class="ge-ours">${heldCount(i)}</span>`:''}</div>`+(geOpen===i.name?geSources(i.name):'')).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>')];
+      rows.slice(0,80).map(i=>`<div class="ge-row${owner?' ge-owner':''}${geOpen===String(i.id)?' ge-open':''}" data-ge-src="${E(i.id)}" data-ge-name="${E(geName(i))}" title="${E(geName(i))}: buy ${exact(i.ask)}, sell ${exact(i.bid)}, stock ${nf(i.stock||0)}, average ${exact(i.vwap)}, shop ${exact(i.base)}"><span class="ge-icon">${icon(i.name,24)}</span><span class="ge-name">${E(geName(i))}</span><b>${short(i.ask)}</b><b>${short(i.bid)}</b><span>${short(i.stock||0)}</span>${owner?`<span class="ge-ours">${heldCount(i)}</span>`:''}</div>`+(geOpen===String(i.id)?geSources(String(i.id)):'')).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>')];
   }
   // Pull requests plugin: the bot repository's open and lately merged pull requests, by the agent whose branch they are.
   const AGENT_OF=b=>/^claude-cloud\//.test(b)?'Claude cloud':/^cloud\//.test(b)?'Codex cloud':/^claude\//.test(b)?'Claude on the PC':/^codex\//.test(b)?'Codex on the PC':'Other';
@@ -1715,8 +1716,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   hud.addEventListener('click',e=>{const dth=e.target.closest('.infobox[data-death]');if(dth){loadRecap(dth.dataset.death);showPlugin('activity');return;}const f=e.target.closest('.infobox[data-xp-focus]');if(f){pick(f.dataset.xpFocus);}});
   body.addEventListener('input',e=>{if(e.target.matches?.('[data-finder]')){finderQuery=e.target.value.slice(0,40);finderPick=null;loadSpawns();finderResults();overlaySync(true);minimap();}});
   body.addEventListener('focusin',e=>{if(e.target.matches?.('[data-finder]'))loadSpawns();});
-  body.addEventListener('click',e=>{const pin=e.target.closest('[data-src-pin]');if(pin&&geOpen){const j=Number(pin.dataset.srcPin),src=itemSourcesData?.[geOpen]?.[j];if(src){const key=geOpen+'|'+j;sourcePin=sourcePin?.key===key?null:{key,label:geOpen+': '+src[1].replace(/ ·.*$/,''),tip:geOpen+' · '+src[1],tiles:flatTiles(src[2])};finderPick=null;overlaySync(true);minimap();refreshGe();if(sourcePin)toast('Shown in pink on the minimap and in the 3D view.');}return;}
-    const gr=e.target.closest('[data-ge-src]');if(gr){geOpen=geOpen===gr.dataset.geSrc?null:gr.dataset.geSrc;refreshGe();return;}},true);
+  body.addEventListener('click',e=>{const pin=e.target.closest('[data-src-pin]');if(pin&&geOpen){const j=Number(pin.dataset.srcPin),src=itemSourcesData?.[geOpen]?.[j];if(src){const key=geOpen+'|'+j;sourcePin=sourcePin?.key===key?null:{key,label:geOpenName+': '+src[1].replace(/ ·.*$/,''),tip:geOpenName+' · '+src[1],tiles:flatTiles(src[2])};finderPick=null;overlaySync(true);minimap();refreshGe();if(sourcePin)toast('Shown in pink on the minimap and in the 3D view.');}return;}
+    const gr=e.target.closest('[data-ge-src]');if(gr){geOpen=geOpen===gr.dataset.geSrc?null:gr.dataset.geSrc;geOpenName=gr.dataset.geName||'';refreshGe();return;}},true);
   body.addEventListener('click',e=>{const mk=e.target.closest('[data-mark-here],[data-mark-del],[data-mark-go],[data-mark-clear],[data-finder-pick],[data-finder-clear],[data-finder-go]');if(mk){const d=mk.dataset,b=account(),p=b?.live||b?.pos;
       if('markHere' in d){if(p)toggleMark(p.x,p.z,p.level||0);}else if('markDel' in d){marks.splice(Number(d.markDel),1);saveMarks();marksChanged();}else if('markClear' in d){marks=[];saveMarks();marksChanged();}
       else if('markGo' in d||'finderGo' in d){const [x,z]='markGo' in d?[marks[Number(d.markGo)]?.x,marks[Number(d.markGo)]?.z]:d.finderGo.split(',').map(Number);if(Number.isInteger(x)&&Number.isInteger(z)){if(typeof mode!=='undefined'&&mode==='3d')toast('In 3D, drag the view to move the camera.');else window.atlasCamera.goto(x,z);}}

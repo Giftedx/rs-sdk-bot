@@ -3,7 +3,8 @@
 //   destination (knowledge/teleports.json), agility shortcut with its level (knowledge/shortcuts.json, kind shortcut)
 //   and shop keeper (knowledge/item-sources.json shop owners), as [x, z, level, kind, label]; kind t, a or s.
 // - client-assets/item-sources.json for the Grand Exchange plugin's item sources: for each route item of
-//   knowledge/item-sources.json, by display name, up to 12 sources as [kind, label, [x, z, level, ...]].
+//   knowledge/item-sources.json, by item id (items that share a display name, such as the four dragonhides, keep
+//   their own sources), up to 12 sources as [kind, label, [x, z, level, ...]].
 // Run: bun packages/dashboard/gen-map-data.ts
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -27,7 +28,8 @@ export function mapIcons(teleports: any[], edges: any[], items: any[], names: Na
         const key = `${t.x},${t.z},${t.level ?? 0},${kind}`;
         if (!out.has(key)) out.set(key, [t.x, t.z, t.level ?? 0, kind, label]);
     };
-    for (const tp of teleports) add(tp.to?.[0]?.candidates?.[0], 't', String(tp.name ?? 'Teleport'));
+    // Each destination option of a teleport (Amulet of glory: Edgeville, Karamja, Draynor Village, Al Kharid).
+    for (const tp of teleports) for (const o of tp.to ?? []) add(o?.candidates?.[0], 't', String(tp.name ?? 'Teleport') + (o?.option ? ': ' + o.option : ''));
     for (const e of edges) if (e.kind === 'shortcut') {
         const lv = e.requires?.skill?.level;
         add(e.from, 'a', `Agility shortcut${lv ? ' (level ' + lv + ')' : ''}: ${cap(String(e.optionText ?? 'use'))}`);
@@ -53,7 +55,7 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
         // Two NPC variants of one name give one row, with the places of both.
         const byLabel = new Map<string, Source>();
         for (const r of rows) { const seen = byLabel.get(r[1]); if (seen) seen[2].push(...r[2]); else byLabel.set(r[1], [r[0], r[1], [...r[2]]]); }
-        if (byLabel.size) out[names.item(it.item)] = [...byLabel.values()].slice(0, 12);
+        if (byLabel.size && Number.isInteger(it.id)) out[String(it.id)] = [...byLabel.values()].slice(0, 12);
     }
     return out;
 }
