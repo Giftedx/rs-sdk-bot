@@ -554,6 +554,8 @@ const ROUTE_CASES: BenchCase[] = [
   teamCase('pvp:team', 'tribrid-snare', 'tribrid-snare', 1, {x: 3150, z: 3560}, 2, ['SPAR_A=champion', 'SPAR_B=champion']),
   // Two of ours against two in multi-way combat, four groups: side A on SPAR_A, side B on SPAR_B.
   teamCase('extra:team-2v2-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // Three of ours against three, three groups.
+  teamCase('extra:team-3v3-multi-x3', 'tribrid-snare', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   // The same army with a stunner: one dragon spear and two daggers in each group.
   gangCase('extra:army-spear-multi-x4', 'tribrid-snare', 'tribrid-snare-spear+tribrid-snare+tribrid-snare', 4, {x: 3150, z: 3560}),
   gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
