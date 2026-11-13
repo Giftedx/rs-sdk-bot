@@ -1551,3 +1551,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`human_eat`, seq 829: it cannot eat again for 3 ticks), past `specBelow` and `specReserve`, while its health
     bar shows 70% or lower: 27; 84, 12. At 50%: 26; 89, 7. At 30%: 30; 91, 5, the champion's own result, since at
     30% its specials already go out. Gap: one knob at a time; 8 seeds.
+52. **The PK army runs as one route: a roaming leader and followers that fight its target.** `scripts/pk-army.ts`
+    (aio-pvp mode `army`): the leader runs the roam hunt (`scripts/pk-roam.ts` `huntOnce`, the army in its friends);
+    each follower keeps within `FOLLOW` tiles of it and, while the leader's target is in view, fights that target on
+    the `army` profile with the other accounts as allies; when the leader escapes, dies or ends its hunt the
+    followers leave by glory or a run south. `pvp:army` (leader and two followers at the Edgeville ditch, one target
+    with no food in multi-way combat at level 6): a kill and no death on seeds 1-5, 17 to 42 s a run; the first hit
+    is the leader's freeze, and the kill falls to the leader or a follower. Gap: practice only; one target; the
+    follower walks to the leader's tile with no formation, and `MAX_MINUTES` runs on the wall clock.

@@ -443,6 +443,12 @@ const ROUTE_CASES: BenchCase[] = [
       inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}], equipment: [{id: 861, count: 1, slot: 3}, {id: 1131, count: 1, slot: 4}]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 47, Hitpoints: 33, Prayer: 43, Mining: 99},
       inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}, {id: 1275, count: 1}], equipment: [{id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}]}}]},
+  // The army route: a leader and two followers from the Edgeville wilderness ditch against one target with no food in
+  // multi-way combat at Wilderness level 6 (east of x 3136), so all three can hit it.
+  {key: 'pvp:army', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=0.5', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK army: [1-9]\d* kills/.test(s), output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3150, 3560, {food: 0})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3095, 3515)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3093, 3515)}]},
   {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=0.3', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK hunt: [1-9]\d* kills/.test(s), output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {food: 0})}]},
