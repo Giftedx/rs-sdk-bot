@@ -171,6 +171,8 @@ export type FightOptions = {
     // While the shared freeze holds the target (freezeShare.heldUntil), every special goes as soon as it can, whatever
     // the target's health or the special reserve: the group's hits land while the target cannot run (pk-army BURST_HOLD).
     burstOnHold?: boolean;
+    // always: on every freeze, not only on a target that fled.
+    dropForStrip?: { free: number; minFood: number; hpAbove: number; always?: boolean };
     // One stun for a group on one target: a special that stuns (SpecConfig.stun) goes only once the last one's hold
     // ends (`until`, on the shared `clock`), so the group's spears hold the target in turn and hit between.
     stunShare?: { clock: () => number; until: number };
@@ -1164,6 +1166,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (item && toWield.length < budget) toWield.push(item);
         }
         budget -= toWield.length;
+        // dropForStrip: a freeze on a target that fled, at high health with food to spare, drops one food a tick until
+        // the pack has `free` slots, so the strip before the cast takes off more penalising armour (finding 72: the
+        // dragon kit catches 32 runners with 14 sharks and 17 with 18, but 14 sharks lose the rival fights).
+        const dfs = o.dropForStrip, foods = dfs ? inv.filter(i => i.optionsWithIndex.some(op => /^eat$/i.test(op.text))) : [];
+        if (dfs && castFreeze && (fled || dfs.always === true) && 28 - inv.length < dfs.free && foods.length > dfs.minFood && me.hp >= me.maxHp * dfs.hpAbove && budget > 1 && typeof sdk.sendDropItem === 'function') {
+            void sdk.sendDropItem(foods[foods.length - 1]!.slot); budget--; log(`PK drops a food for the strip, ${foods.length - 1} left`);
+        }
         const freeSlots = 28 - inv.length - (switching2H ? 1 : 0);
         const armourStrip = (castFreeze ? (o.freezeArmour ?? 'torso') : (o.castArmour ?? 'torso')) === 'strip';
         // A freeze on a target that has fled decides the chase, and the runner does not hit back: every piece that

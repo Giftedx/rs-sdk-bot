@@ -1828,5 +1828,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `pvp_magic_longbow.rs2`) 27, 89, 7. The runner is caught by freezes, and the freeze roll is set by what stays on:
     with 18 sharks the pack has one free slot, so the strip before a cast takes off one piece. The strip reads each
     worn item's own magic or ranged penalty from `knowledge/gear.json`, the largest first (a name list missed the
-    vambraces); with it the dragon kit catches 17 against 7. Gap: a kit with fewer sharks, so the strip takes off
-    more; dragon armour for the rival fight and a change to the Saradomin cape for the chase.
+    vambraces); with it the dragon kit catches 17 against 7. With 14 sharks (5 free slots) the strip takes off more:
+    runners 32 for both the Saradomin-cape kit and the dragon kit, but the rival fights fall to 68 kills and 25
+    deaths, and 85 and 11. Dropping a food on a freeze cast at high health instead (`dropForStrip`: 5 free slots, 8
+    or 10 food kept, health 70% or 80%; on a fled target or on every freeze) gives the dragon kit 19 runners and keeps
+    95 kills and 1 death: the slots come one a cast, after the first freezes. Gap: dragon armour for the rival fight
+    and a change to the Saradomin cape for the chase.

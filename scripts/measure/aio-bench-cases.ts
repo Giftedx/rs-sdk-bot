@@ -747,12 +747,12 @@ const ROUTE_CASES: BenchCase[] = [
       {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}, ...(kit === 'staff' ? [{id: 1401, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}] : [])]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),
   // A hunter in each kit against a target that leaves by its glory at 60 health, at Wilderness level 34.
-  ...['tribrid-pots', 'tribrid-snare', 'tribrid-snare-sara', 'tribrid-snare-dhide', 'tribrid-snare-swap', 'tribrid-dragon', 'tribrid-snare-sara-mlb', 'tribrid-dragon-sara'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
+  ...['tribrid-pots', 'tribrid-snare', 'tribrid-snare-sara', 'tribrid-snare-dhide', 'tribrid-snare-swap', 'tribrid-dragon', 'tribrid-snare-sara-mlb', 'tribrid-dragon-sara', 'tribrid-snare-sara-f14', 'tribrid-dragon-f14'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
   sparMatrix('extra:spar-escape-tribrid-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790}),
   // The Saradomin cape snare kit against the Legends cape snare kit, the sides swapped every two pairs.
   sparMatrix('extra:spar-head-snare-sara-x12', Array.from({length: 12}, (_, i) => ((i >> 1) % 2 ? ['tribrid-snare', 'tribrid-snare-sara'] : ['tribrid-snare-sara', 'tribrid-snare']) as [string, string])),
   // The same rivals against the kits with more food.
-  ...['tribrid-snare', 'tribrid-snare-addy', 'tribrid-snare-sara', 'tribrid-snare-dhide', 'tribrid-snare-swap', 'tribrid-dragon', 'tribrid-snare-sara-mlb', 'tribrid-dragon-sara', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
+  ...['tribrid-snare', 'tribrid-snare-addy', 'tribrid-snare-sara', 'tribrid-snare-dhide', 'tribrid-snare-swap', 'tribrid-dragon', 'tribrid-snare-sara-mlb', 'tribrid-dragon-sara', 'tribrid-snare-sara-f14', 'tribrid-dragon-f14', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
   sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
   ...Object.keys(KITS).filter(kit => kit !== 'melee' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => ((i >> 1) % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
