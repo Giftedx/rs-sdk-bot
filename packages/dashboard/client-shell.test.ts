@@ -985,6 +985,11 @@ test('items kept on death: in the Wilderness the 3 kept items are green, other i
  expect(t.deathCls(m,b.equipment[0])).toBe(' death-kept');
  expect(b.inventory.map((i:any)=>t.deathCls(m,i))).toEqual([' death-kept',' death-kept',' death-lost','']);
  expect(new Function('S','wildLevel','pvpState',`${code};return deathMarks;`)(S,()=>0,()=>null)(b)).toBe(null);
+ // A stack keeps only the counted units: 3 of 100,000 coins is part kept, and a second stack keeps nothing.
+ const coins:any={inWorld:true,pos:{x:3100,z:3600},equipment:[],inventory:[{name:'Coins',count:100000},{name:'Coins',count:5}]};
+ const c=new Function('S','wildLevel','pvpState',`${code};return {deathMarks,deathCls};`)(S,()=>5,()=>({kept:[{name:'Coins'},{name:'Coins'},{name:'Coins'}]}));
+ const cm=c.deathMarks(coins);
+ expect(coins.inventory.map((i:any)=>c.deathCls(cm,i))).toEqual([' death-part',' death-lost']);
 });
 test('best training spot: the best rock the account can mine now, and the nearest one on its floor',()=>{
  const code=shell.slice(shell.indexOf('  // Best training spot (Skill Calculator)'),shell.indexOf('  const guideText=g=>'));

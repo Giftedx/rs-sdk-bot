@@ -92,10 +92,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // teleports purple, runes orange (item-stats.json for food and potions).
   const invTag=item=>{if(!item||typeof hl==='undefined'||!hl.invTags)return '';const n=item.name||'',st=itemStats[n]||'';return /\bheals\b/i.test(st)?' tag-food':/\(\d\)$/.test(n)&&st?' tag-potion':/teleport|^Amulet of glory|^Ring of dueling|^Games necklace|^Skills necklace|^Combat bracelet/i.test(n)?' tag-tele':/ rune$/i.test(n)?' tag-rune':'';};
   // Items kept on death (RuneLite's Items Kept on Death): in the Wilderness, the 3 items the account keeps (pvpState,
-  // green) and the items of value it loses (red), on the worn items and the pack. deathMarks gives the kept counts by name;
-  // deathCls uses them up in the order the cells are drawn (worn items first, as pvpState counts them).
+  // green) and the items of value it loses (red), on the worn items and the pack. deathMarks gives the kept units by name
+  // (pvpState counts each unit of a stack once); deathCls uses them up by the stack's count, in the order the cells are
+  // drawn (worn items first). A stack with only some units kept is death-part: green border, red tint.
   function deathMarks(b){try{const p=b?.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null;if(!p)return null;const keep=new Map();for(const k of p.kept)keep.set(k.name,(keep.get(k.name)||0)+1);return keep;}catch{return null;}}
-  function deathCls(marks,item){if(!marks||!item?.name)return '';const left=marks.get(item.name)||0;if(left>0){marks.set(item.name,left-1);return ' death-kept';}return (S?.economy?.itemValues?.[item.name]??(item.name==='Coins'?1:0))>0?' death-lost':'';}
+  function deathCls(marks,item){
+    if(!marks||!item?.name)return '';
+    const count=Math.max(1,item.count||1),left=marks.get(item.name)||0,take=Math.min(left,count);
+    if(take>0)marks.set(item.name,left-take);
+    if(take>=count)return ' death-kept';
+    if(take>0)return ' death-part';
+    return (S?.economy?.itemValues?.[item.name]??(item.name==='Coins'?1:0))>0?' death-lost':'';
+  }
   function itemCell(item,i,extra=''){return `<button class="inventory-cell${invTag(item)}${extra}" data-item="${i}" title="${item?E(item.name)+' × '+E(item.count)+E(statTip(item)+priceTip(item)):'Empty slot'}" aria-label="${item?E(item.name)+' × '+E(item.count):'Empty inventory slot '+(i+1)}">${item?icon(item.name,32)+(item.count>1?qty(item.count):'')+chargeTag(item):''}</button>`;}
   // The combat level line under the Skills tab, with the levels each style needs for the next one on hover.
   function combatLine(b){const X=window.atlasXp;if(!b?.skills?.length||!X?.combat)return '';const lv=Object.fromEntries(b.skills.map(s=>[s.name,s.level])),c=X.combat(lv);
