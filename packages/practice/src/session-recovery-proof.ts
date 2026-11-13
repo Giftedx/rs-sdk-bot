@@ -704,6 +704,21 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     release:async()=>{const at=Date.now();writeFileSync(release,'release');const t=setTimeout(()=>void killTree(p.pid),60000);await p.exited;clearTimeout(t);return at;}};
   };
   const freshSave=async(f:Fixture,before:Save)=>(await waitPracticeSave(f.save,s=>(s.vars[134]??0)>(before.vars[134]??0),{timeoutMs:15000})).matched;
+  // The capability's actual entry after a confirmed recovery: scripts/session-check.ts <account> logs in, sees the
+  // account in game and logs out. Its producer attempt goes to the checkout's own lifecycle tree (the CLI has no root
+  // option), and a fresh save after its logout must hold the same items, skills and tile.
+  const sessionCheckCli=async(f:Fixture,dir:string,before:Save)=>{
+   const since=Date.now(),env:Record<string,string|undefined>={...process.env,WORKER_RELEASE:source};delete env.COORDINATOR_RUN_ID;
+   const cli=Bun.spawn([process.execPath,'scripts/session-check.ts',f.name],{cwd:root,env,stdout:Bun.file(join(dir,'session-check.out.log')),stderr:Bun.file(join(dir,'session-check.err.log')),windowsHide:true});
+   children.push(cli);const t=setTimeout(()=>void killTree(cli.pid),120000);const code=await cli.exited;clearTimeout(t);
+   const persisted=await freshSave(f,before);copyFileSync(f.save,join(dir,'session-check-after.sav'));
+   const after=readPracticeSave(join(dir,'session-check-after.sav')),rec=reconcileSaves(before,after),text=readFileSync(join(dir,'session-check.out.log'),'utf8');
+   const proof=readLogoutProof(f.name,f.server),session=recoverySessionAuth(authReplies(loginLog(),since,f.name),f.name);
+   writeFileSync(join(dir,'session-check.json'),JSON.stringify({code,proof,session},null,2));
+   return {sessionCheckExit:code===0,sessionCheckChecked:/^RESULT ok sessionChecked=1 /m.test(text),sessionCheckLogout:/^LOGOUT logged-out$/m.test(text),
+    sessionCheckProducerConfirmed:proof.state==='confirmed',sessionCheckLoginAcknowledged:session.loginAcknowledged,sessionCheckLogoutAcknowledged:session.logoutAcknowledged,
+    sessionCheckFreshSave:persisted,sessionCheckInventories:rec.inventories,sessionCheckSkills:rec.skills,sessionCheckPosition:rec.position};
+  };
   const preset={position:{x:2618,z:3332,level:0},skills:{Hitpoints:43,Fishing:99,Cooking:99},inventory:[{id:995,count:1200},{id:311,count:1},{id:329,count:4}],equipment:[{id:1275,count:1,slot:3}],bank:[{id:385,count:5},{id:436,count:17}],varps:{300:1000}};
   const d8890=dispatcher(HOST);
   // Positive confirmed cleanup through the actual dispatcher, launcher and CLI, reconciled from fresh saves.
@@ -754,7 +769,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    const repair=applyEndRepair({account:C.name,endedAt:C.endedAt,server:C.server,proof:{kind:'producer',attemptId:out.receipt?.attemptId}},retained,[],{
     readProof:()=>proof,verifyLegacy:()=>({state:'refused',reason:'unused'})},[]);
    writeFileSync(join(dir,'controller-after.json'),JSON.stringify({ends:[...retained],repair,revision,beforeProof,proof},null,2));
-   out.record('native-actual-controller-core-cli',{
+   const check=await sessionCheckCli(C,dir,out.after);
+   out.record('native-actual-controller-core-cli',{...check,
     noProducerBefore:beforeProof.state==='none',successfulEndRetained:retained.get(C.name)===end&&end.reason==='done after 1 runs',
     endRepairRefused:!repair.changed&&repair.reason==='completed work needs a new mission',
     oldMissionRefused:startable([C.name],false,retained,()=>Infinity,undefined,end.revision).start.length===0,

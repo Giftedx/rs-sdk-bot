@@ -16,8 +16,8 @@ import { join, resolve } from 'node:path';
 import { loadOwners, mySide } from '../packages/core/src/fleet';
 import { BOOTSTRAP_STATUS_AGE_MS } from '../packages/core/src/session-admission';
 import { readFleetAccountClaim } from '../packages/core/src/fleet-trade-claim';
-import { readLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
-import { heldRecoveryOwners } from '../packages/core/src/session-recovery-permit';
+import { attemptOutcome, listAttempts, readLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
+import { heldRecoveryOwners, RECOVERY_SCRIPT } from '../packages/core/src/session-recovery-permit';
 import { jobAccounts } from '../packages/core/src/coordinator-jobs';
 import { clearSwarmStop, loadEnded, swarmWroteStop, type EndRecord } from './swarm';
 
@@ -174,6 +174,80 @@ export function waitedAttempts(tasks: readonly any[], target: Target, waits: Rea
     return endRuns(tasks, target).filter(t => waitRefused(t, waits)).length;
 }
 
+// One unresolved recovery lineage: a failed recovery child stays held, the swarm writes a new orphan end for it with a
+// new time (scripts/swarm.ts orphanedSessionEnds), and the next recovery names that new time. The budget of each end
+// is then the budget of its whole lineage, or the retries never stop. Live local: Bigchopper's recovery of end
+// 1794561253846 (task-02750ca2-a504-4ceb-8b58-8b6b8872bcbc) left attempt 1794561783663-0000034648-0000000001 held,
+// and its orphan end 1794561868424 started a new count at zero.
+// An end is child-generated when the attempt that it names (an orphan end) or, for an earlier end, the latest attempt
+// at its time is a recovery child: its producer receipt names RECOVERY_SCRIPT, role `recovery` and the coordinator run
+// id of a retained recovery request of the same account. The link goes back to the end that this request named. A
+// confirmed logout or an ordinary session between that end and the child proves a new lineage, and so does an end
+// whose attempt is an ordinary session. A link that cannot be read is unknown, and an unknown link gets no budget.
+export type LineageAttempt = { attemptId: string; runId: string | null; script: string; role: string | null; confirmed: boolean } | { attemptId: string; unreadable: true };
+export type RecoveryRecord = { runId: string; endedAt: number };
+export type Lineage = { ends: number[] } | { unknown: string };
+export const MAX_LINEAGE = 64;
+const attemptTime = (id: string) => /^\d{13}-/.test(id) ? Number(id.slice(0, 13)) : NaN;
+const recoveryChild = (a: Exclude<LineageAttempt, { unreadable: true }>) => a.script === RECOVERY_SCRIPT && a.role === 'recovery';
+export function recoveryLineage(end: Pick<EndRecord, 'at' | 'reason'>, attempts: readonly LineageAttempt[], records: readonly RecoveryRecord[]): Lineage {
+    const sorted = [...attempts].sort((a, b) => a.attemptId < b.attemptId ? -1 : a.attemptId > b.attemptId ? 1 : 0), ends = [end.at];
+    let at = end.at, named = /^exit orphaned: attempt (\S+) /.exec(end.reason)?.[1];
+    for (let step = 0; step < MAX_LINEAGE; step++) {
+        const attempt = named ? sorted.find(a => a.attemptId === named) : sorted.filter(a => attemptTime(a.attemptId) <= at).at(-1);
+        if (!attempt) return named ? { unknown: `attempt ${named} of end ${at} has no lifecycle receipt` } : { ends };
+        if ('unreadable' in attempt) return { unknown: `lifecycle receipt ${attempt.attemptId} of end ${at} is unreadable` };
+        if (!recoveryChild(attempt)) return { ends };
+        const parents = new Set(records.filter(r => r.runId === attempt.runId).map(r => r.endedAt));
+        if (parents.size !== 1) return { unknown: `recovery child ${attempt.attemptId} names run ${attempt.runId}, which ${parents.size ? 'retained requests give different ends' : 'no retained recovery request names'}` };
+        const parent = [...parents][0]!, created = attemptTime(attempt.attemptId);
+        if (!(parent < created) || !(parent < at)) return { unknown: `recovery child ${attempt.attemptId} does not follow its end ${parent}` };
+        for (const a of sorted.filter(x => attemptTime(x.attemptId) > parent && attemptTime(x.attemptId) < created)) {
+            if ('unreadable' in a) return { unknown: `lifecycle receipt ${a.attemptId} after end ${parent} is unreadable` };
+            if (a.confirmed || !recoveryChild(a)) return { ends };
+        }
+        ends.push(parent); at = parent; named = undefined;
+    }
+    return { unknown: `lineage of end ${end.at} is longer than ${MAX_LINEAGE} ends` };
+}
+
+// The retained recovery requests of one account: the coordinator's run tasks, and every permit and output request
+// under the account's recovery folder, also those of a lease moved aside (archiveStaleLease).
+export function recoveryRecords(root: string, account: string, tasks: readonly any[]): RecoveryRecord[] {
+    const key = account.toLowerCase(), out: RecoveryRecord[] = [];
+    const add = (r: any) => { if (typeof r?.runId === 'string' && Number.isFinite(r.endedAt) && typeof r.account === 'string' && r.account.toLowerCase() === key) out.push({ runId: r.runId, endedAt: r.endedAt }); };
+    for (const t of tasks) if (t?.spec?.sessionRecovery) add({ runId: t.runId, ...t.spec.sessionRecovery });
+    const dir = join(root, '.practice', 'coordinator', 'session-recovery', 'accounts', key);
+    let entries: string[] = []; try { entries = readdirSync(dir); } catch { /* no recovery yet */ }
+    for (const e of entries) {
+        if (/^lease(?:-stale-.*)?\.json$/.test(e)) { add(readJson(join(dir, e), null)?.request); continue; }
+        add(readJson(join(dir, e, 'permit.json'), null)?.request);
+        add(readJson(join(dir, e, 'output', 'request.json'), null));
+        add(readJson(join(dir, e, 'output', 'receipt.json'), null)?.request);
+    }
+    return out;
+}
+
+export function lineageAttempts(root: string, account: string): LineageAttempt[] {
+    return listAttempts(account, LIVE_SERVER, { root: lifecycleRoot(root) }).map(({ attemptId, receipt }) => receipt
+        ? { attemptId, runId: receipt.owner.coordinatorRunId ?? null, script: receipt.owner.script, role: receipt.owner.role ?? null, confirmed: attemptOutcome(receipt).confirmed }
+        : { attemptId, unreadable: true as const });
+}
+
+// Why the end may not get another automatic recovery, or undefined. The proposal still names the exact current end;
+// only the count runs over the lineage. Waits keep their own budget.
+export function budgetRefusal(root: string, account: string, end: Pick<EndRecord, 'at' | 'reason'>, tasks: readonly any[], waits: ReadonlySet<string> = new Set()): string | undefined {
+    let lineage: Lineage;
+    try { lineage = recoveryLineage(end, lineageAttempts(root, account), recoveryRecords(root, account, tasks)); }
+    catch (e) { lineage = { unknown: `lifecycle unreadable: ${String(e).slice(0, 120)}` }; }
+    if ('unknown' in lineage) return `recovery lineage of end ${end.at} unknown (${lineage.unknown}); recover by hand`;
+    const sum = (f: typeof spentAttempts) => lineage.ends.reduce((n, endedAt) => n + f(tasks, { account, endedAt }, waits), 0);
+    const of = lineage.ends.length > 1 ? `end ${end.at} and the ${lineage.ends.length - 1} earlier ends of its lineage (first ${lineage.ends.at(-1)})` : `end ${end.at}`;
+    if (sum(spentAttempts) >= MAX_ATTEMPTS) return `${MAX_ATTEMPTS} recoveries of ${of} failed; recover by hand`;
+    if (sum(waitedAttempts) >= MAX_WAITS) return `${MAX_WAITS} recoveries of ${of} waited on memory, a bot slot or the source owner; recover by hand`;
+    return undefined;
+}
+
 // The folder that receives the coordinator's parked jobs and stop file after a release.
 // The session-lifecycle root that readLogoutProof reads (packages/core/src/session-lifecycle.ts DEFAULT_LIFECYCLE_ROOT).
 export const lifecycleRoot = (root: string) => join(root, '.practice', 'session-lifecycle');
@@ -291,8 +365,8 @@ async function main(root: string, dry: boolean): Promise<number> {
         if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
         if (!cloud && !endSettled(end!, Date.now())) continue;
         const target = { account: name, endedAt: e.endedAt };
-        if (spentAttempts(before, target, waits) >= MAX_ATTEMPTS) { log(`${name}: refused: ${MAX_ATTEMPTS} recoveries of end ${e.endedAt} failed; recover by hand`); continue; }
-        if (waitedAttempts(before, target, waits) >= MAX_WAITS) { log(`${name}: refused: ${MAX_WAITS} recoveries of end ${e.endedAt} waited on memory, a bot slot or the source owner; recover by hand`); continue; }
+        const refusal = budgetRefusal(root, name, end!, before, waits);
+        if (refusal) { log(`${name}: refused: ${refusal}`); continue; }
         if (recoveryLeaseState(root, name) === 'held') { log(`${name}: refused: a recovery child still holds the account's lease, or the lease is unreadable`); continue; }
         targets.push(target);
     }
