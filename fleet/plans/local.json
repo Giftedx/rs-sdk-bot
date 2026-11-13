@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794531131698,
+ "at": 1794531310817,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -367,25 +367,6 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -565,6 +546,25 @@
    "autopilot": "local",
    "resources": [
     "pen:3187,3277"
+   ]
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
    ]
   }
  ]
