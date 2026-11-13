@@ -12,6 +12,7 @@ import { assertSideOwns, loadOwners } from './fleet';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
+import { recordRun, sharedLootTables } from './loot';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { noGuardScript, startEatGuard } from './eat-guard';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
@@ -119,8 +120,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
     ledgers.set(s, led);
-    // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
-    if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
+    // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
+    // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
+    const events = process.env.RANDOM_EVENTS !== '0', lootOn = process.env.LOOT_WATCH !== '0' && !recordRun(name);
+    if (events || lootOn) randomEvents.set(s, watchRandomEvents(s, { events, loot: lootOn ? { tables: sharedLootTables(), name,
+        friends: new Set(loadOwners().keys()), reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {} } : null }));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
     // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.
     if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...(process.env.PRAYER_GUARD_TRACE === '1' ? { trace: log } : {}), ...guardTables,
