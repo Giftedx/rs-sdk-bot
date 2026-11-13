@@ -156,6 +156,14 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-dragon-capeswap': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', 'saradomin_cape', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 17,
         switches: { ranged: ['magic_shortbow', 'cape_of_legends'], melee: ['dragon_dagger_p', 'dragon_sq_shield', 'cape_of_legends'] }, options: { rotation: ['ranged', 'melee'], freezeWear: ['saradomin_cape'] } },
+    // The Saradomin-cape kit with another special weapon in place of the dragon dagger (pvp_dragon_mace.rs2: one hit,
+    // damage x1.5, accuracy x1.25, 5 ticks; pvp_dragon_longsword.rs2: one hit, damage x1.25, 5 ticks; both 25%).
+    'tribrid-sara-mace': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_mace', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_mace', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    'tribrid-sara-dls': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_longsword', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_longsword', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
     // The army's stunner: the snare kit with a dragon spear (two-handed) in place of the dagger and shield. Its special
     // holds the target 5 ticks with no input, so in multi-way combat the others hit a target that cannot eat.
     'tribrid-snare-spear': { worn: { ...RUNE, weapon: 'dragon_spear', ammo: ['rune_arrow', 300] },
@@ -400,12 +408,19 @@ export function combatLevel(s: Record<string, number>): number {
 }
 const MAXED = { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99 };
 export const kitSkills = (name: string): Record<string, number> => ({ ...(kitOf(name).skills ?? MAXED) });
-// Full special energy, Lost City and Dragon Slayer done when the route of the kit has them, then the varps of the
-// build. A kit gets no quest that its route does not have.
+// Full special energy and each quest of the kit's route done, then the varps of the build. A kit gets no quest that
+// its route does not have.
+// Each quest's varp and the value that completes it (pack/varp.pack; the quests' ^<quest>_complete constants), the
+// value the wear checks of levelrequire.rs2 compare: a kit worn at the start skips them, but a weapon or shield put
+// back on after a two-handed bow is checked, so a kit whose quest was not set fought with no dragon mace or square
+// shield after its first bow turn (finding 72).
+export const QUEST_VARP: Readonly<Record<string, readonly [number, number]>> = {
+    'Lost City': [147, 6], 'Dragon Slayer': [176, 10], "Heroes' Quest": [188, 15], "Legends' Quest": [139, 75], Regicide: [328, 15],
+    'The Fremennik Trials': [347, 10], 'Underground Pass': [161, 10],
+};
 export const kitVarps = (name: string): Record<number, number> => {
-    const quests = kitRoute(name).quests, varps: Record<number, number> = { 300: 1000 };
-    if (quests.includes('Lost City')) varps[147] = 6;
-    if (quests.includes('Dragon Slayer')) varps[176] = 10;
+    const varps: Record<number, number> = { 300: 1000 };
+    for (const q of kitRoute(name).quests) { const v = QUEST_VARP[q]; if (v) varps[v[0]] = v[1]; }
     return { ...varps, ...kitOf(name).varps };
 };
 

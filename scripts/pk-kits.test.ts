@@ -217,3 +217,9 @@ test('the build rank counts each pair for both kits and turns side B over', () =
     // The same kit on both sides is one row.
     expect(rankKits([line('dragon:dragon', 8, 5, 3, 10)])).toMatchObject([{ kit: 'dragon', fights: 8, wins: 5, losses: 3, against: { dragon: '5-3' } }]);
 });
+
+test('a kit gets the completion varp of each quest its items need (levelrequire.rs2 checks it on a re-wield)', () => {
+    expect(kitVarps('tribrid-sara-mace')).toMatchObject({ 188: 15 });
+    expect(kitVarps('tribrid-dragon')).toMatchObject({ 139: 75, 147: 6 });
+    expect(kitVarps('tribrid-snare')[139]).toBeUndefined();
+});
