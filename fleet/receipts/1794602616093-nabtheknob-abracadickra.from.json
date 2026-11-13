@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794602616093-nabtheknob-abracadickra",
+ "account": "NabTheKnob",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bucket of water",
+ "requested": 4,
+ "claim": "4f7a9aec-9aa5-4fcf-a0b8-b8930fffce2e",
+ "count": 0,
+ "ok": false,
+ "at": 1794602680097,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Snape grass",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Air rune",
+   "requested": 5,
+   "count": 0
+  }
+ ]
+}
