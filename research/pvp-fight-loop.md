@@ -1744,7 +1744,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     hit since `lowHealth` takes a fraction of 1 as any health; a check that needs the health bar to show makes the
     first special of the opening wait 5 ticks for the first hit. Case `extra:army-route-spear-x5` (four spears).
     `scripts/pk-army.ts` opens with the lock by default when two or more followers wield a dragon spear: four
-    spears with no settings given, 6 of 6. In an even fight the spear loses: two of ours against two on the snare
+    spears with no settings given, 6 of 6. A leader and three followers (`extra:army-route-spear-x4`, seeds 1-6):
+    three spears 2 of 6, two 1 of 6. Spears that stun in turn on one shared clock (`STUN_SHARE=1`: a spear specials
+    only once the last hold has ended, and hits between) kill 0 of 6 with four spears of five accounts and 1 of 6
+    with three of four: the next spear is often still in its attack delay when a hold ends, and the target eats
+    or runs in the gap; overlapping holds leave none. In an even fight the spear loses: two of ours against two on the snare
     kit in multi-way combat (`extra:team-2v2-multi-x4` and `extra:team-2v2-spear-x4`, seeds 1-4, side B on the
     champion), wins, losses and draws of 16 groups: dragon dagger on the champion 10, 4, 2; spear on the champion
     5, 8, 3; spear on `army-alpha` 4, 11, 1; one spear and one dagger (`extra:team-2v2-mixed-x4`, kits joined by `+`

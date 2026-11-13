@@ -48,7 +48,8 @@ const PRAYER_REQ: Record<number, number> = {
 
 export type Style = 'magic' | 'ranged' | 'melee';
 export type Kit = { [S in Style]?: number[] };
-export type SpecConfig = { kit: number[]; bar: string; cost: number; below: number; style?: Style };
+// stun: the ticks the special holds the target with no input (the dragon spear's, 4).
+export type SpecConfig = { kit: number[]; bar: string; cost: number; below: number; style?: Style; stun?: number };
 export type FightOptions = {
     kit: Kit;
     // Style turns in order; a style with no kit is skipped. Melee walks to the target.
@@ -170,6 +171,9 @@ export type FightOptions = {
     // While the shared freeze holds the target (freezeShare.heldUntil), every special goes as soon as it can, whatever
     // the target's health or the special reserve: the group's hits land while the target cannot run (pk-army BURST_HOLD).
     burstOnHold?: boolean;
+    // One stun for a group on one target: a special that stuns (SpecConfig.stun) goes only once the last one's hold
+    // ends (`until`, on the shared `clock`), so the group's spears hold the target in turn and hit between.
+    stunShare?: { clock: () => number; until: number };
     // The first turn of the fight is a freeze, whatever the freeze rule: a group's opening holds the target before it
     // sees itself outnumbered and runs (pk-army OPEN_FREEZE).
     openFreeze?: boolean;
@@ -301,7 +305,7 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
         // The dragon spear's special does no damage: it holds the target 5 ticks with no input (pvp_dragon_spear.rs2
         // p_delay(4)), so it cannot eat or change its prayer: it goes out when the target is low enough to want food.
-        if (n === 'dragon_spear') return { kit: kit.melee!, bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee' };
+        if (n === 'dragon_spear') return { kit: kit.melee!, bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 };
     }
     return bowSpec(kit, names);
 }
@@ -1068,8 +1072,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
             } else if (readyNow) continue;
         }
+        const stunWaits = !!spec?.stun && !!o.stunShare && o.stunShare.clock() < o.stunShare.until;
         const volleying = (!!vs?.fired && !vs.done.has(myKey)) || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1));
-        if (spec && !kiteTarget && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
+        if (spec && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
             && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
@@ -1090,6 +1095,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;
             if (vs) vs.done.add(myKey);
+            if (spec.stun && o.stunShare) o.stunShare.until = o.stunShare.clock() + spec.stun + (specStyle === 'melee' ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : 0);
             last = Math.max(0, rotation.indexOf(specStyle));
             const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
             // pvp_special_attack.rs2:35 always uses oc_param($weapon, attackrate) (4 for MSB/DDS/claws, 5 for longsword/mace), ignoring Rapid.

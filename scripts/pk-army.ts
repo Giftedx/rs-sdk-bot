@@ -129,6 +129,10 @@ if (import.meta.main) {
     // Two or more followers on the dragon spear: the spear lock is the default (finding 67), each setting still its own.
     const spears = followers.filter(f => f.sdk.getEquipment().some(i => /^dragon spear/i.test(i.name))).length, lock = spears >= 2;
     if (lock) emit({ e: 'spear-lock', spears });
+    // STUN_SHARE=1: the army's spears stun in turn, one hold at a time. Off: spears that stun as soon as they can
+    // overlap their holds and leave no gap to eat in (finding 67: 0 of 6 with it, 18 of 18 without).
+    const stunShare = arg(args, 'STUN_SHARE', '0') === '1' ? { clock: () => leader!.tick(), until: -1 } : undefined;
+    if (stunShare) cfg.fight = { ...cfg.fight, stunShare };
     const openTogether = arg(args, 'OPEN_TOGETHER', lock ? '1' : '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20')), openRange = Number(arg(args, 'OPEN_RANGE', lock ? '1' : '3'));
     const opened = new Map<string, number>();
     const hold = () => {
@@ -175,7 +179,7 @@ if (import.meta.main) {
     // ARMY_OPTS: fight options (JSON) on top of that profile, such as {"freeze":false} for followers that only hit while
     // the leader freezes.
     const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
-    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold, holdRange: openRange } : {}), ...(volley ? { volley } : {}), ...(burstOnHold ? { burstOnHold } : {}), ...(openFreeze ? { openFreeze } : {}) });
+    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold, holdRange: openRange } : {}), ...(volley ? { volley } : {}), ...(burstOnHold ? { burstOnHold } : {}), ...(openFreeze ? { openFreeze } : {}), ...(stunShare ? { stunShare } : {}) });
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     const runs = followers.map(f => follow(f, leader!, shared, army.filter(n => n !== f.name.toLowerCase()), options(f), followTiles, stop, emit));
     try { result = await huntOnce(leader!, cfg, stop, leaderEmit); }

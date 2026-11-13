@@ -93,7 +93,7 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // `god` is the potion kit with the Zamorak cape and staff, fire runes, and the Mage Arena done with Flames of
 // Zamorak learnt (varps 267 and 270), for one more shark.
 // The army route's settings from the environment (scripts/pk-army.ts): `--set VOLLEY=1` and the like reach the route.
-const armyEnv = () => ['ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE', 'BURST_HOLD', 'OPEN_FREEZE', 'OPEN_RANGE', 'OPEN_TICKS', 'LEADER_SPEC'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []));
+const armyEnv = () => ['ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE', 'BURST_HOLD', 'OPEN_FREEZE', 'OPEN_RANGE', 'OPEN_TICKS', 'LEADER_SPEC', 'STUN_SHARE'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []));
 export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean; noDragonSlayer?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
@@ -507,6 +507,15 @@ const ROUTE_CASES: BenchCase[] = [
       // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
       // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
       ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 4)
+        ? kitFixture('tribrid-snare-spear', process.env.ARMY_AT === 'near' ? 3164 + (i % 2) : 3160 + i, process.env.ARMY_AT === 'near' ? 3782 + (i >> 1) : 3746)
+        : process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
+  // The same with a leader and three followers (finding 67).
+  {key: 'extra:army-route-spear-x4', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', 'ARMY_PROFILE=army-alpha', 'OPEN_TOGETHER=1', 'OPEN_RANGE=1', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3168, 3784) : sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
+      ...(['c', 'd', 'e'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 3)
         ? kitFixture('tribrid-snare-spear', process.env.ARMY_AT === 'near' ? 3164 + (i % 2) : 3160 + i, process.env.ARMY_AT === 'near' ? 3782 + (i >> 1) : 3746)
         : process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
   // The roam against a target that defends: 18 sharks and the champion's fight loop when hit, at Wilderness level 8
