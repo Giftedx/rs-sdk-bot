@@ -321,6 +321,10 @@ const ROUTE_CASES: BenchCase[] = [
     return {...skiller('mining', mode === 'drop' ? 'drop' : 'at-site', 'fresh_lumbridge', args, {output: /"made":(\d+)/,
       presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 64, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: `extra:mining-zoo-${mode}`};
   }),
+  // The knife rotation from Mining 49, 66 ores (57,255 XP at 875 each) to Mining 64: the ticks Plague City's 2,425 x 25
+  // XP would save in the record route (591 ticks).
+  {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '66', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
+    presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 49, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-49'},
   skiller('mining', 'loot', 'fresh_lumbridge', ['LOOT_MODE=list', 'LOOT_IDS=1511', 'RADIUS=2', 'MAX_UNITS=1', 'CAP=200', 'IDLE_TICKS=150'], {presetConfig: {position: {x: 3089, z: 3266, level: 0}, skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}}}),
   skiller('smithing', 'anvil', 'fresh_lumbridge', ['600', 'PRODUCT_ID=1205', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 2347, count: 1}], bank: [{id: 2349, count: 1}]}}),
   skiller('smithing', 'cannonballs', 'fresh_lumbridge', ['1', '600', 'CANNON_XP_RATE=25'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 35}, bank: [{id: 2353, count: 1}, {id: 4, count: 1}]}}),
@@ -744,6 +748,12 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:sweep-elena-draynor-partial', script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
     presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
       bank: [...(PRESETS.quest_elena!.inventory ?? []).filter(i => ![2126, 1975, 231].includes(i.id)), {id: 563, count: 1}, {id: 556, count: 5}, {id: 995, count: 5000}]}},
+  // Tree Gnome Village through the quest sweep from the Ardougne south bank (block 8 of the mock Haggis run starts where
+  // block 7's zoo mining banks), at the runner's state there (Prayer 99, Magic 59, 10 HP): the quest pack and the staff
+  // of fire banked, no prayer potions (prayerCovers takes them as food), then the walk into the village.
+  {key: 'extra:sweep-tree-ardougne', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_tree!, position: {x: 2655, z: 3283, level: 0}, inventory: [], equipment: [], skills: {...PRESETS.quest_tree!.skills, Magic: 59, Prayer: 99},
+      bank: [...(PRESETS.quest_tree!.inventory ?? []).filter(i => i.id !== 2434), {id: 1387, count: 1}]}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];

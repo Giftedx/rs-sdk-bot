@@ -8,7 +8,7 @@ import {objSpawns} from '../packages/core/src/spawn-index';
 import {shopSellers} from '../packages/core/src/shop-index';
 import {loadPathfinding} from '../packages/core/src/pathcache';
 import {createWorld,rsPathLength,transportAllowed,type Account,type Tile,type World} from '../packages/core/src/world';
-import {deadly,combatLevel,loadHunters} from '../packages/core/src/danger';
+import {deadlyTo,loadHunters} from '../packages/core/src/danger';
 import {mapAreas} from '../packages/core/src/components';
 import {travelAllowed} from '../packages/core/src/travel';
 import {reachableComponents,labelledNeighbours,directedAreas,type ComponentEdge} from './route-audit-components';
@@ -91,7 +91,7 @@ if(import.meta.main){
  await loadPathfinding();const path=await rsPathLength(),world=createWorld({pathLength:path,goalTolerance:0});
  const explain=(from:Tile,to:Tile,a:Account)=>{
   const reasons=[`no route under account policy; area labels ${path.areaOf?.(from)} -> ${path.areaOf?.(to)}`];
-  for(const h of loadHunters())if(deadly(h,combatLevel(a.skills),a.skills.hitpoints??10)&&h.spawns.some(s=>s.level===to.level&&Math.max(Math.abs(s.x-to.x),Math.abs(s.z-to.z))<=h.reach+1))reasons.push('target danger rule: '+h.name);
+  for(const h of loadHunters())if(deadlyTo(h,a.skills)&&h.spawns.some(s=>s.level===to.level&&Math.max(Math.abs(s.x-to.x),Math.abs(s.z-to.z))<=h.reach+1))reasons.push('target danger rule: '+h.name);
   for(const d of world.blockedDoors(a))if(d.level===to.level&&Math.max(Math.abs(d.x-to.x),Math.abs(d.z-to.z))<=4)reasons.push(`nearby blocked door ${d.x},${d.z},${d.level}`);
   return reasons;
  };

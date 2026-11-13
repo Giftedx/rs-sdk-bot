@@ -26,7 +26,7 @@ import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
-import { combatLevel, deadly, loadHunters, type Hunter } from '../packages/core/src/danger';
+import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
@@ -254,7 +254,7 @@ export function mountainWalk(hunters: readonly Hunter[] = loadHunters()): (a: Ac
     const pass = hunters.filter(h => h.spawns.some(s => s.level === 0 && s.x >= MOUNTAIN.minX && s.x <= MOUNTAIN.maxX && s.z >= MOUNTAIN.minZ && s.z <= MOUNTAIN.maxZ));
     return a => {
         const skills = Object.fromEntries(Object.entries(a.skills).map(([k, v]) => [k.toLowerCase(), v]));
-        return !pass.some(h => deadly(h, combatLevel(skills), skills.hitpoints ?? 10));
+        return !pass.some(h => deadlyTo(h, skills));
     };
 }
 

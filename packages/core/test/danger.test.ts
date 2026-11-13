@@ -47,3 +47,20 @@ test('one boat needs one fare; two boats need both fares', () => {
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 59 }).ok).toBe(false);
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 60 }).ok).toBe(true);
 });
+
+import { deadlyTo, meleeOnly, PROTECT_MELEE_LEVEL } from '../src/danger';
+test('Protect from Melee opens the ground of melee-only hunters, not of ranged or magic ones', () => {
+    const dog = parseHunter({ id: 99001, name: 'Guard dog', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=cowardly')!;
+    const archer = parseHunter({ id: 99002, name: 'Archer', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=ranged')!;
+    const styles = new Map<number, readonly string[]>([[99002, ['ranged']]]);
+    expect(meleeOnly(dog, styles)).toBe(true);
+    expect(meleeOnly(archer, styles)).toBe(false);
+    expect(meleeOnly(wolf, styles)).toBe(false);
+    const runner = { hitpoints: 10, magic: 59, prayer: 99 }, low = { hitpoints: 10, magic: 59, prayer: PROTECT_MELEE_LEVEL - 1 };
+    expect(deadlyTo(dog, runner, styles)).toBe(false);
+    expect(deadlyTo(dog, low, styles)).toBe(true);
+    expect(deadlyTo(archer, runner, styles)).toBe(true);
+    const saved = process.env.PRAYER_GUARD;
+    process.env.PRAYER_GUARD = '0';
+    try { expect(deadlyTo(dog, runner, styles)).toBe(true); } finally { if (saved === undefined) delete process.env.PRAYER_GUARD; else process.env.PRAYER_GUARD = saved; }
+});
