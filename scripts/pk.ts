@@ -559,8 +559,17 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         seenEvent = maxEvent;
         // escapeOutnumbered: in multi-way combat, hits from that many players in 8 ticks start the escape for good, food
         // or not. In single-way combat one player at a time can hit (pvp_combat.rs2:103-133), so a crowd is no danger.
-        const alliesNear = o.allies?.length ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && p.distance <= 10).length : 0;
-        if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size - alliesNear >= o.escapeOutnumbered) {
+        const allyNear = o.allies?.length ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && p.distance <= 10) : [];
+        const alliesNear = allyNear.length;
+        // The attackers: the client names a hit's source by the entity we face, so in a crowd every hit counts for one
+        // player. A player within 10 tiles, not an ally, that faces a player who is not one of our allies, faces us.
+        const allyIdx = new Set(allyNear.map(p => p.index));
+        const facing = o.escapeOutnumbered != null ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase()) && (() => {
+            const f = (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players?.[p.index]?.faceEntity ?? -1;
+            return f >= 32768 && !allyIdx.has(f - 32768);
+        })()).length : 0;
+        const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
+        if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
             outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
         }
         const escapeNow = (pack: typeof state.inventory) => outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));

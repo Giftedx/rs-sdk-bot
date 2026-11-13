@@ -1583,9 +1583,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
 55. **Five accounts catch the target that three let go.** `extra:army-deep-x3` and `extra:army-deep-x5` (gang mode
     at 3166,3784, Wilderness level 34, multi-way; our account on the champion with 18 sharks, a glory and its
     escape from a crowd, a run south to level 30; the army on `army`; two groups; seeds 1-4): three accounts kill
-    the target in 2 of 8 meetings (5 escapes, 1 away), four in 4 of 8 (4 escapes), five in 6 of 8 (2 escapes).
-    The army lost no account. A target that leaves on the first two hits is the prey of five or more. Gap: one run
-    per seed.
+    the target in 2 of 8 meetings (5 escapes, 1 away), four in 4 of 8 (4 escapes), five in 6 of 8 (2 escapes),
+    with the target counting its attackers by hit source alone; with the count of finding 57 five kill it in 3 of 8.
+    The army lost no account. Gap: one run per seed.
 56. **In the army route five accounts still lose the running target; gang mode's start on the target's tile is
     the easy case.** `extra:army-route-defend-deep-x5` (the route of finding 52 with a leader and four followers
     from level 28 against the target of finding 54 at level 34, multi-way; seeds 1-4): the target escapes in every
@@ -1595,3 +1595,13 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     to 37 ticks in with 53 to 67 HP. Finding 55's five accounts start on the target's tile in gang mode. Gap: the
     cause of the gap between the two harnesses (approach direction, the leader's roam fight options) is not
     measured.
+57. **The escape from a crowd counts attackers by facing: the client names a hit's source by the entity we face.**
+    `StateCollector` gives each damage splat the player we face as its source, so in a crowd every hit counted for
+    one player and `escapeOutnumbered` fired late: at 49 to 65 HP in gang mode against five. The fight loop now also
+    counts the players within 10 tiles, not allies, that face a player who is not an ally (`faceEntity`), while a
+    hit has landed in the last 8 ticks, and takes the larger count. Against five maxed tribrids at level 34
+    (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 85 to 99 HP in most meetings and leaves alive
+    in 5 of 8 where it left in 2 of 8. Two against two (both sides on the champion, seeds 1-8): side A wins 12,
+    loses 8, draws 12, with 11 dead and 19 of side B's; 30 deaths in all where the hit count alone gave 42.
+    Evidence: `.practice/climb/set-ad5f`, `set-tv-face-*`. Gap: a player that faces a third party within 10 tiles
+    counts as ours; no run on the live server.

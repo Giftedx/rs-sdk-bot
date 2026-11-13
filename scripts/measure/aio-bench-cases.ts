@@ -464,8 +464,9 @@ const ROUTE_CASES: BenchCase[] = [
   // The deep defend case with five accounts: the leader and four followers.
   {key: 'extra:army-route-defend-deep-x5', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.OPEN_TOGETHER ? [`OPEN_TOGETHER=${process.env.OPEN_TOGETHER}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
-    presetConfig: sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
-      ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sparFixture(3160 + i, 3746)}))]},
+    presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3168, 3784) : sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
   {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=0.3', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK hunt: [1-9]\d* kills/.test(s), output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {food: 0})}]},
