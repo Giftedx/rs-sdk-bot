@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794528295671-oreelse-abracadickra",
+ "account": "OreElse",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 4,
+ "claim": "7051ee06-0798-484d-aba8-aa2bcbbd8191",
+ "count": 0,
+ "ok": false,
+ "at": 1794528770594,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Iron ore",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
