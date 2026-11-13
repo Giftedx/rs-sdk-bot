@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794595801366-abracadickra-weequickie",
  "account": "WeeQuickie",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 347,
  "claim": "15865f6c-9c01-45c8-85f3-9cce11d63b93",
- "count": 0,
- "ok": false,
- "at": 1794595827443,
- "detail": "trade claimed"
+ "count": 347,
+ "ok": true,
+ "at": 1794595844934,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 347
+ },
+ "bank": {
+  "count": 347,
+  "at": 1794595844144
+ },
+ "logout": {
+  "attemptId": "1794595827451-0000012380-0000000001",
+  "at": 1794595844928,
+  "sha256": "358bc2ab5a7d50b86e5e11a1301c480b821cc494ea938e17a1d79724b4cd1b62"
+ },
+ "screen": true
 }
