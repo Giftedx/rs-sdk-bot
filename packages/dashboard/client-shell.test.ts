@@ -882,6 +882,51 @@ test('skilling highlights and the trail: the resource of the top loot item near 
  b.goalSkill='Fishing';b.flow={since:0,at:1,loot:[]};t.setFish([233,309]);o=t.overlayMessage();
  expect(o.npcs).toContainEqual({types:[233,309],colour:'#00ffff'});
 });
+test('agility obstacles, Ground markers, failure markers and the NPC finder in the 3D view',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b:any={name:'Alpha',inWorld:true,pos:{x:2474,z:3436,level:0},goalSkill:'Agility'};
+ const failed:any={name:'Beta',inWorld:false,pos:{x:2480,z:3440,level:0},lastRes:{at:Date.now()-60_000,ok:false,died:false,text:'fail travel to Ardougne failed: timeout far walk: tick stream stalled'}};
+ const old:any={name:'Gamma',inWorld:false,pos:{x:2481,z:3441,level:0},lastRes:{at:Date.now()-2*86_400_000,ok:false,text:'fail x'}};
+ const S:any={economy:{itemValues:{}},bots:[b,failed,old]},saved:Record<string,string>={'atlas-ground-marks':JSON.stringify([{x:2470,z:3430,l:0,c:'#00ff00'},{x:2700,z:3430,l:0,c:'#00ff00'}])};
+ const env:any={S,D:{rival:new Set()},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:(k:string)=>saved[k]??null,setItem:(k:string,v:string)=>{saved[k]=v;}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,E:String,location:{origin:''},resources:null,safeName:String,miniView:{cx:2474,cz:3436,PX:4}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,toggleMark,finderMatches,finderList,failReason,set:(a,n,p)=>{agilityTiles=a;npcSpawns=n;finderPick=p;}};`)(...Object.values(env));
+ t.set([[2474,3435,0,'Walk-across'],[2474,3435,1,'Climb'],[2500,3435,0,'Climb-over']],[['Hill Giant',28,28,[2470,3440,0,3100,9840,0]],['Giant rat',3,3,[3200,3200,0]]],null);
+ let o=t.overlayMessage();
+ // The obstacle within 15 tiles on the account's floor; the near marker; the recent failure, not the 2-day-old one.
+ expect(o.tiles).toContainEqual({x:2474,z:3435,l:0,colour:'#00ff00',label:'Walk-across'});
+ expect(o.tiles.filter((x:any)=>x.label==='Climb'||x.label==='Climb-over')).toEqual([]);
+ expect(o.tiles).toContainEqual({x:2470,z:3430,l:0,colour:'#00ff00'});
+ expect(o.tiles.some((x:any)=>x.x===2700)).toBe(false);
+ expect(o.tiles).toContainEqual({x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'Beta: travel to Ardougne failed · tick stream stalled'});
+ expect(o.tiles.some((x:any)=>x.x===2481)).toBe(false);
+ // A marker toggles off and on, and stays in this browser.
+ expect(t.toggleMark(2470,3430,0)).toBe(false);expect(JSON.parse(saved['atlas-ground-marks']!).length).toBe(1);
+ expect(t.toggleMark(2471,3431,0)).toBe(true);expect(t.overlayMessage().tiles).toContainEqual({x:2471,z:3431,l:0,colour:'#ffff00'});
+ // The finder: names that start with the text first, then the pick's near spawns in pink.
+ expect(t.finderMatches('gi').map((r:any)=>r[0])).toEqual(['Giant rat','Hill Giant']);
+ expect(t.finderMatches('g')).toEqual([]);
+ t.set(null,[['Hill Giant',28,28,[2470,3440,0,3100,9840,0]]],'Hill Giant');
+ expect(t.overlayMessage().tiles).toContainEqual({x:2470,z:3440,l:0,colour:'#ff66ff',label:'Hill Giant (28)'});
+ expect(t.overlayMessage().tiles.some((x:any)=>x.z===9840)).toBe(false);
+ expect(t.finderList()).toContain('level 28 · 2 spawns');expect(t.finderList()).toContain('data-finder-go="2470,3440"');
+ expect(t.failReason('fail')).toBe('failed');
+ expect(t.failReason('fail TickStallError: tick stream stalled: no new game tick for 15000ms')).toBe('tick stream stalled');
+ expect(t.failReason('fail fleet-trade 17-a-b-bones reconcile 0/94: Error: transfer requires reconciliation')).toBe('fleet-trade: transfer requires reconciliation');
+ expect(t.failReason('fail mode=giant ok=false creditedKills=16 banked={"bigBones":0}')).toBe('giant: run ended, not ok');
+ expect(t.failReason('fail {"ok":false,"phase":"settled","targetMet":false,"banked":true')).toBe('target not met');
+ // Two accounts on one tile share one marker.
+ S.bots.push({name:'Delta',inWorld:false,pos:{x:2480,z:3440,level:0},lastRes:{at:Date.now(),ok:false,text:'fail TickStallError: tick stream stalled'}});
+ const spot=t.overlayMessage().tiles.filter((x:any)=>x.colour==='#ff9900');
+ expect(spot).toEqual([{x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'2 accounts: travel to Ardougne failed · tick stream stalled'}]);
+});
+test('food: the healing items in the pack, most first',()=>{
+ const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
+ const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Prayer potion(4)':'restores 7 + 25% Prayer'});
+ expect(foodOf({inventory:[{name:'Shark',count:1},{name:'Lobster',count:1},{name:'Shark',count:1},{name:'Prayer potion(4)',count:1},{name:'Coins',count:500}]}))
+  .toEqual({items:[{name:'Shark',count:2},{name:'Lobster',count:1}],total:3});
+ expect(foodOf({inventory:[]}).total).toBe(0);
+});
 test('Inventory Setups: worn slots green, red or yellow against the kit, and the pack list against the kit',()=>{
  const code=shell.slice(shell.indexOf("  // Inventory Setups (RuneLite's) in the Equipment tab:"),shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"));
  const t=new Function('localStorage','fetch','asset','E','icon','nf',`${code};return {setupSlot,setupPanel,set:(k,s)=>{pkKits=k;setupKit=s;}};`)({getItem:()=>null},()=>new Promise(()=>{}),(n:string)=>n,String,(n:string)=>`[${n}]`,String);

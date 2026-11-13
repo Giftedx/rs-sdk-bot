@@ -39,9 +39,9 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['moves at the display rate', 'needsEveryFrame('],                      // no frame limit while views move
     ['way back to the single view', 'onClosed'],                            // the kept view grows to the full frame
     ['markers message', 'setOverlay('],                                     // {overlay:{tiles,pies,lines,players,npcs,ground}}: RuneLite-style highlights
-    ['markers layer', 'drawMarkers('],
+    ['markers layer', 'drawMarkers('],                                      // drawn under the names at the ground height of each tile
     ['capture message', 'requestCapture('],                                 // {capture:{id}}: the next frame as a JPEG
-    ['capture reply', 'viewerCapture'],                                     // {viewerCapture:{id,url}} to the page                                      // drawn under the names at the ground height of each tile
+    ['capture reply', 'viewerCapture'],                                     // {viewerCapture:{id,url}} to the page that asked
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
