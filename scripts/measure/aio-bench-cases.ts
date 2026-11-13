@@ -671,6 +671,17 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'quester:mode:sweep', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['sweep', 'cook'], pass: ok},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
+  // Out of Doric's house to the Falador east bank, where Doric's Quest leaves the account (live: the first walk click,
+  // to 2949,3444, was refused 3 times by the client and the walk ended "no progress").
+  // Plague City through the quest sweep from the Draynor bank (block 6 of the mock Haggis run starts where block 5's
+  // woodcutting banks), at Magic 59 with the quest pack banked. `tele` adds a Camelot Teleport's runes (1 law, 5 air),
+  // which the sweep takes for the walk to Edmond's house (teleportRunes: the preset lists no runes).
+  ...([['tele', [{id: 563, count: 1}, {id: 556, count: 5}]], ['walk', []]] as const).map(([mode, runes]) =>
+    ({key: `extra:sweep-elena-draynor-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
+      presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
+        bank: [...(PRESETS.quest_elena!.inventory ?? []), ...runes]}} as BenchCase)),
+  {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
+    presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];
 
 // Routes that do the same job, each from one start state (research/aio-bench.md, "Routes that do the same job").

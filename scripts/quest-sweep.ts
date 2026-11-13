@@ -897,6 +897,26 @@ export function pickInstead(buys:readonly Buy[],from:Tile,end:Tile,fields:(id:nu
  }
  return{buys:left,picks};
 }
+// The runes of the teleport that the walk to the quest start casts when the pack also holds the bank's runes. Only when
+// the bank or the pack holds a law rune: the world router plans with the bank's runes added (Account.counts by debugname),
+// and a spell leg names its runes (packages/core/src/travel.ts Travel.runes). The far walk then casts it (walkFarLegs).
+// Bench extra:sweep-doric-draynor: 170 ticks walking, 72 with a Falador Teleport.
+export function teleportRunes(route:(acct:Account)=>ReturnType<World['route']>,acct:Account,bank:readonly Item[],
+ nameOf:(id:number)=>string|undefined,idOf:(name:string)=>number|undefined):Item[]{
+ const counts:Record<string,number>={...(acct.counts??{})},items=new Set(acct.items);
+ for(const b of bank){const n=nameOf(b.id);if(!n||!/rune$/.test(n)||b.count<=0)continue;counts[n]=(counts[n]??0)+b.count;items.add(n);}
+ if(!((counts.lawrune??0)>0))return[];
+ const plan=route({...acct,items:[...items],counts});
+ if(!plan.ok)return[];
+ const out:Item[]=[];
+ for(const l of plan.legs)if(l.kind==='travel'&&l.travel.kind==='spell')for(const r of l.travel.runes){
+  const id=idOf(r.item);if(id===undefined)continue;
+  const o=out.find(x=>x.id===id);if(o)o.count+=r.count;else out.push({id,count:r.count});
+ }
+ return out;
+}
+let itemIds:Map<string,number>|undefined;
+const itemIdOf=(debugname:string)=>(itemIds??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string}[]).map(i=>[i.debugname,i.id]))).get(debugname);
 let itemCatalog:Map<number,{debugname:string;name:string;cost:number}>|undefined;
 const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string;name:string;cost:number}[]).map(i=>[i.id,i])) ).get(id);
 
@@ -1347,6 +1367,15 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
   }
+  // Teleport runes for the walk to the quest start (teleportRunes), when the bank holds them.
+  const tele=teleportRunes(a=>world.route(here(),preset.position as Tile,a,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS}),
+   accountOf(s),rows(),id=>catalogItem(id)?.debugname,itemIdOf);
+  for(const r of tele){
+   const have=count(pack(),r.id)+(p.withdraw.find(w=>w.id===r.id)?.count??0),want=r.count-have;
+   if(want<=0||count(rows(),r.id)<want)continue;
+   const w=p.withdraw.find(x=>x.id===r.id);if(w)w.count+=want;else p.withdraw.push({id:r.id,count:want});
+  }
+  if(tele.length)console.log(`QUEST_SWEEP_TELE_RUNES ${JSON.stringify({to:preset.position,runes:tele})}`);
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
   const tradeable=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
