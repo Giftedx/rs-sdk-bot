@@ -1058,6 +1058,8 @@ test('Inventory Setups: worn slots green, red or yellow against the kit, and the
  const rewardText=new Function('nf',`let questRewardData={"Dragon Slayer":[2,[["Strength",466250],["Defence",466250]]],"Rune Mysteries Quest":[1,[]]};${rt};return rewardText;`)((n:number)=>n.toLocaleString('en-GB'));
  expect(rewardText('Dragon Slayer')).toBe('2 quest points · 466,250 Strength XP · 466,250 Defence XP');
  expect(rewardText('Rune Mysteries Quest')).toBe('1 quest point');expect(rewardText('Unknown')).toBe('');
+ const rewardText2=new Function('nf',`let questRewardData={"Observatory Quest":[2,[["Crafting",56250]],[["Strength",21875],["Defence",21875]]]};${rt};return rewardText;`)((n:number)=>n.toLocaleString('en-GB'));
+ expect(rewardText2('Observatory Quest')).toBe('2 quest points · 56,250 Crafting XP · one of: 21,875 Strength, 21,875 Defence XP');
 });
 test('map icons by requirement: true or false with the account level, null with no level',()=>{
  const line=shell.split('\n').find(l=>l.includes('const iconCan=(b,req)=>'))!;

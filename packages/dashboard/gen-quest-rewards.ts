@@ -9,8 +9,22 @@ import { join } from 'node:path';
 import { XP_RATE } from '../knowledge/src/method-model';
 import { QP_FALLBACK, VARP_FOLDER, questJournalNames } from '../router/src/coverage';
 
-export type Reward = [number, [string, number][]];
-type Row = { folder?: string | null; varp?: string; questPoints?: number; xp?: { skill: string; xp: number }[] };
+// [quest points, XP the quest always gives, XP that is one of several outcomes (Observatory Quest's random sign)].
+export type Reward = [number, [string, number][], [string, number][]];
+type Row = { folder?: string | null; varp?: string; questPoints?: number; xp?: { skill: string; xp: number; src?: string }[] };
+
+// A stat_advance inside an open switch_ block (under one of its cases) is one of several outcomes. lines is the script
+// file, n the 0-based line of the stat_advance; braces are counted back to the block header, so a line after the switch
+// closes is not inside it.
+export function insideSwitch(lines: string[], n: number): boolean {
+    let depth = 0;
+    for (let k = n - 1; k >= 0; k--) {
+        const t = lines[k]!.trim();
+        if (/^\[[a-z_]+,[^\]]+\]/.test(t)) return false;
+        for (const ch of [...t].reverse()) { if (ch === '}') depth++; else if (ch === '{') { if (depth === 0) { if (/switch_\w+\(/.test(t)) return true; } else depth--; } }
+    }
+    return false;
+}
 const cap = (s: string) => s.replace(/^./, c => c.toUpperCase());
 
 // The XP a quest's own scripts give on completion, for a quest whose knowledge/quests.json row has none (an extraction
@@ -28,7 +42,7 @@ export function completionXp(texts: string[]): { skill: string; xp: number }[] {
     return [...blocks.values()].filter(b => b.length <= 3).flat();
 }
 
-export function questRewards(folders: string[], rows: Row[], names: Map<string, string>, rate = XP_RATE, varpFolder = VARP_FOLDER, qpFallback = QP_FALLBACK, scriptsOf: (folder: string) => string[] = () => []): Record<string, Reward> {
+export function questRewards(folders: string[], rows: Row[], names: Map<string, string>, rate = XP_RATE, varpFolder = VARP_FOLDER, qpFallback = QP_FALLBACK, scriptsOf: (folder: string) => string[] = () => [], isChoice: (src: string) => boolean = () => false): Record<string, Reward> {
     const byFolder = new Map<string, Row>();
     for (const r of rows) { const f = r.folder ?? (r.varp ? varpFolder[r.varp] ?? null : null); if (f) byFolder.set(f, r); }
     const out: Record<string, Reward> = {};
@@ -36,8 +50,8 @@ export function questRewards(folders: string[], rows: Row[], names: Map<string, 
         const name = names.get(folder);
         if (!name) continue;
         const r = byFolder.get(folder);
-        const xp = r?.xp?.length ? r.xp : completionXp(scriptsOf(folder));
-        out[name] = [r ? Number(r.questPoints) || 0 : qpFallback[folder] ?? 0, xp.map(x => [cap(x.skill), Math.round(x.xp * rate)] as [string, number])];
+        const xp = r?.xp?.length ? r.xp : completionXp(scriptsOf(folder)), pair = (x: { skill: string; xp: number }) => [cap(x.skill), Math.round(x.xp * rate)] as [string, number];
+        out[name] = [r ? Number(r.questPoints) || 0 : qpFallback[folder] ?? 0, xp.filter(x => !(x as any).src || !isChoice((x as any).src)).map(pair), xp.filter(x => (x as any).src && isChoice((x as any).src)).map(pair)];
     }
     return out;
 }
@@ -47,7 +61,7 @@ if (import.meta.main) {
     const questDir = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts', 'quests');
     const folders = readdirSync(questDir).filter(f => f.startsWith('quest_'));
     const rs2 = (d: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? rs2(p) : f.endsWith('.rs2') ? [readFileSync(p, 'utf8')] : []; });
-    const rewards = questRewards(folders, JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')), questJournalNames(root), XP_RATE, VARP_FOLDER, QP_FALLBACK, folder => rs2(join(questDir, folder)));
+    const rewards = questRewards(folders, JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')), questJournalNames(root), XP_RATE, VARP_FOLDER, QP_FALLBACK, folder => rs2(join(questDir, folder)), src => { const i = src.lastIndexOf(':'); return insideSwitch(readFileSync(join(root, 'vendor', 'rs-sdk', 'server', 'content', src.slice(0, i)), 'utf8').split(/\r?\n/), Number(src.slice(i + 1)) - 1); });
     writeFileSync(join(import.meta.dir, 'client-assets', 'quest-rewards.json'), JSON.stringify(rewards));
     console.log(`quest-rewards.json: ${Object.keys(rewards).length} quests, ${Object.values(rewards).reduce((n, r) => n + r[0], 0)} quest points`);
 }
