@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794607590475-bigpackage-weequickie",
  "account": "Bigpackage",
  "partner": "WeeQuickie",
@@ -12,33 +12,59 @@
  "claim": "164509cb-d5db-42e9-afcc-b07e136c8b7e",
  "count": 0,
  "ok": false,
- "at": 1794608059545,
- "detail": "trade claimed",
+ "at": 1794608123763,
+ "detail": "release moved under the session: Error: partner failed: no trade",
  "lines": [
   {
    "item": "Logs",
    "requested": 7,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 7,
+    "at": 1794608087023
+   }
   },
   {
    "item": "Staff of fire",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1794608088281
+   }
   },
   {
    "item": "Chaos rune",
    "requested": 160,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 160,
+    "at": 1794608089998
+   }
   },
   {
    "item": "Law rune",
    "requested": 2,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 2,
+    "at": 1794608091032
+   }
   },
   {
    "item": "Shark",
    "requested": 8,
    "count": 0
   }
- ]
+ ],
+ "bank": {
+  "count": 1,
+  "at": 1794608084761
+ },
+ "logout": {
+  "attemptId": "1794608059550-0000025044-0000000001",
+  "at": 1794608123749,
+  "sha256": "b9d65b1aa972f2f5caa94f5cfc8955482921f6d35a3f7c4077abae0100a82fff"
+ },
+ "screen": false
 }
