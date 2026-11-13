@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794530827007-nabtheknob-masterbaiter-bones",
+ "account": "Masterbaiter",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 6,
+ "claim": "a4644674-bb4c-47c1-9349-79783afb514f",
+ "count": 0,
+ "ok": false,
+ "at": 1794530833334,
+ "detail": "trade claimed"
+}
