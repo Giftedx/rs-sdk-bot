@@ -1667,4 +1667,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     with no freeze runes) 15 and 46. The roam picks its prey from the world feed's roster before the target is in
     view, so the client shows no armour then: an armour term in `preyScore` left the first pick unchanged on
     `extra:roam-pick` (the same two targets at level 8, seeds 1-6; the roam took the armoured one first in all six)
-    and is not kept. Gap: six seeds; one pair of targets; roam cases repeat less than hunt cases (the feed).
+    and is not kept. Two runs of `extra:roam-pick` with seed 1 part at tick 8 after the last login, at the roam's
+    first walk: `scripts/pk-roam.ts` `Radar` holds the last world-feed frame, which comes on its own socket, so
+    whether a tick's frame is read before or after that tick's game packets follows the machine, and the game socket
+    carries no engine tick to align them by. Gap: six seeds; one pair of targets; a repeatable roam needs the feed
+    frames tied to the game tick.
