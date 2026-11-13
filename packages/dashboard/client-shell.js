@@ -265,8 +265,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Paused: the rows and the clock stay as they were at the pause (RuneLite xptracker pause).
     const at=base.paused?.at??now,seen=base.paused?{...b,skills:(b.skills||[]).map(k=>({...k,xp:base.paused.xp[k.name]??k.xp}))}:b;
     const all=X.rows(seen,base,at,b.goalSkill&&!base.paused?{skill:b.goalSkill,xpPerHour:b.xpPerHour}:null),rows=xpHideMaxed?all.filter(r=>r.level<99):all,total=X.total(all),hours=(at-base.at)/3.6e6;
-    put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Overall</span><span class="xp-account"></span></div><div class="xp-stats"></div><div class="xp-buttons"><button class="xp-reset" data-xp-pause>Pause</button><button class="xp-reset" data-xp-reset>Reset</button><label class="xp-hide"><input type="checkbox" data-xp-hide-maxed> Hide maxed</label></div></div>'+efficiencyBox(b)+'<div class="xp-calc"></div><div class="xp-results"></div></div>');
-    put(panel.querySelector('.xp-calc'),calcBox(b,all.find(r=>r.skill===calcSkill)));
+    // While the calculator's target input has focus, its draft is kept: the panel and the calculator are not replaced.
+    const calcEditing=document.activeElement?.matches?.('[data-calc-target]')&&panel.contains(document.activeElement);
+    if(!calcEditing)put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Overall</span><span class="xp-account"></span></div><div class="xp-stats"></div><div class="xp-buttons"><button class="xp-reset" data-xp-pause>Pause</button><button class="xp-reset" data-xp-reset>Reset</button><label class="xp-hide"><input type="checkbox" data-xp-hide-maxed> Hide maxed</label></div></div>'+efficiencyBox(b)+'<div class="xp-calc"></div><div class="xp-results"></div></div>');
+    if(!calcEditing)put(panel.querySelector('.xp-calc'),calcBox(b,all.find(r=>r.skill===calcSkill)));
     panel.querySelector('.xp-account').textContent=safeName(b.name);
     put(panel.querySelector('.xp-stats'),`<span>XP gained <b>${nf(total)}</b></span><span>XP/hr <b>${nf(Math.round(hours>0.001?total/hours:0))}</b></span><span>Tracked <b>${dur(at-base.at)}</b>${base.paused?' (paused)':''}</span>`);
     panel.querySelector('[data-xp-pause]').textContent=base.paused?'Resume':'Pause';
