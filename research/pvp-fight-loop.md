@@ -1816,23 +1816,22 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     third at 596; `BANK_AT=2000000` (bank only a big load) 19, the third at 860. The worn glory counts as kit too,
     so one that the escape rubbed is not banked. The quick sweep (20) and the gang cases (23) pass. Gap: the loot
     is the supply of arrows, runes and food that a long hunt needs; no case prices that against the kills.
-72. **Dragon armour wins the rival fights and loses the runner; no kit wins both.** The champion with each kit
-    (`.practice/kits/run.sh`, `extra:spar-escape-<kit>-x8` against a `base` runner and
-    `extra:spar-rivals-<kit>-x12`, seeds 1-8, the repeatable setup; bonuses from `bun scripts/gear.ts kit`),
-    runners caught of 64 and rival kills and deaths of 96: `tribrid-snare-sara` (rune, Saradomin cape) 28 to 30, 91,
-    5; `tribrid-dragon` (dragon med helm, chainbody, platelegs and square shield, Legends cape, black dragonhide
-    vambraces: every defence 31 to 56 higher, ranged attack +19 against -3) 17, 95, 1; the same with the Saradomin cape
-    and no vambraces 28, 88, 7; `tribrid-snare-dhide` (black dragonhide body and chaps: ranged attack +72, magic
-    defence +97) 23, 93, 3; `tribrid-snare-swap` (rune for a melee turn, dragonhide for a bow turn, 16 sharks) 17,
-    90, 5; `tribrid-snare-sara-mlb` (a magic longbow for the bow special: no hit roll, 10 tiles,
-    `pvp_magic_longbow.rs2`) 27, 89, 7. The runner is caught by freezes, and the freeze roll is set by what stays on:
-    with 18 sharks the pack has one free slot, so the strip before a cast takes off one piece. The strip reads each
-    worn item's own magic or ranged penalty from `knowledge/gear.json`, the largest first (a name list missed the
-    vambraces); with it the dragon kit catches 17 against 7. With 14 sharks (5 free slots) the strip takes off more:
-    runners 32 for both the Saradomin-cape kit and the dragon kit, but the rival fights fall to 68 kills and 25
-    deaths, and 85 and 11. Dropping a food on a freeze cast at high health instead (`dropForStrip`: 5 free slots, 8
-    or 10 food kept, health 70% or 80%; on a fled target or on every freeze) gives the dragon kit 19 runners and keeps
-    95 kills and 1 death: the slots come one a cast, after the first freezes. The dragon kit that wears the Saradomin
-    cape for each freeze and the Legends cape otherwise (`freezeWear`, `tribrid-dragon-capeswap`, 17 sharks) catches
-    17 runners and has 91 kills and 4 deaths: no gain. Gap: the runner case's freezes, cast by a kit whose pack has
-    room at the first one.
+72. **Dragon armour with the Saradomin cape beats the rune kit on the runner and the rivals at once.** The champion
+    with each kit (`.practice/kits/run.sh`, `extra:spar-escape-<kit>-x8` against a `base` runner and
+    `extra:spar-rivals-<kit>-x12`, seeds 1-8, the repeatable setup; bonuses from `bun scripts/gear.ts kit`), runners
+    caught of 64 and rival kills and deaths of 96: `tribrid-snare-sara` (rune, Saradomin cape) 28 to 30, 91, 5;
+    `tribrid-dragon-sara` (dragon med helm, chainbody, platelegs and square shield, Saradomin cape) 31, 94, 1;
+    `tribrid-dragon` (the same with the Legends cape and black dragonhide vambraces) 22, 95, 1; the dragon kit with
+    14 sharks 31, 88, 8; the dragon kit that wears the Saradomin cape for each freeze (`freezeWear`,
+    `tribrid-dragon-capeswap`) 26, 92, 4; `tribrid-snare-dhide` (black dragonhide body and chaps) 23, 93, 3;
+    `tribrid-snare-swap` (rune for melee, dragonhide for bow turns) 17, 90, 5; `tribrid-snare-sara-mlb` (magic
+    longbow special: no hit roll, 10 tiles, `pvp_magic_longbow.rs2`) 27, 89, 7; `tribrid-sara-mace` 21, 89, 7;
+    `tribrid-sara-dls` 24, 89, 7. A kit's fixture sets the completion varp of each quest its items need
+    (`kitVarps`, `QUEST_VARP`): a dragon mace or square shield put back on after the two-handed bow is checked by
+    `levelrequire.rs2`, and without Legends' Quest the dragon kits fought with no shield after their first bow turn
+    (dragon with the Saradomin cape then 28, 88, 7; the mace kit 1, 0, 81). The runner is caught by freezes, set by
+    what stays on at the cast: with 18 sharks the pack has one free slot, so the strip takes off one piece, the
+    largest penalty first (each item's own from `knowledge/gear.json`). `dropForStrip` (a freeze on a target that
+    fled, at 70% health or more with 8 food kept, drops a food until 5 slots are free) gives `tribrid-dragon-sara` 34,
+    94, 1 and `tribrid-snare-sara` 31, 91, 5; the champion takes it. Gap: 8 seeds; the hunt, roam and army routes
+    still stage the rune kit.

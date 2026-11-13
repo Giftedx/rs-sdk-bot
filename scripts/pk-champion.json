@@ -17,5 +17,10 @@
   "specReserve": 500,
   "crowdPrayer": true,
   "raceExit": false,
-  "noFoodAt": 2
+  "noFoodAt": 2,
+  "dropForStrip": {
+    "free": 5,
+    "minFood": 8,
+    "hpAbove": 0.7
+  }
 }
