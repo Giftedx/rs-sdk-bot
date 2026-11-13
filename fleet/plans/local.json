@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794601569588,
+ "at": 1794601597386,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -492,7 +492,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-128f03ff-d704-4c28-a4bb-673a9a8d97f2"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "local-recover-masterbaiter-20261113t201529z [task-128f03ff-d704-4c28-a4bb-673a9a8d97f2]",
    "role": "helper"
