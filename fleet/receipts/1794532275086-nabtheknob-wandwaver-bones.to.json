@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794532275086-nabtheknob-wandwaver-bones",
+ "account": "Wandwaver",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 94,
+ "claim": "e0060e5e-be14-410f-8a4a-a034ebddf7fb",
+ "count": 0,
+ "ok": false,
+ "at": 1794532282051,
+ "detail": "trade claimed"
+}
