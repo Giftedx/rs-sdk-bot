@@ -1293,7 +1293,12 @@ Bun.serve({
             const name=url.pathname.slice('/client-assets/'.length);
             if(!['npc-names.json','item-stats.json','item-list.json','resources.json','multiway.json','skill-actions.json','pk-kits.json','agility.json','npc-spawns.json','map-icons.json','item-sources.json','npc-drops.json','item-bonuses.json','spellbook.json','quest-rewards.json','item-alch.json','cooking.json','quest-reqs.json'].includes(name)&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
             const file=Bun.file(join(import.meta.dir,'client-assets',name));
-            return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
+            // A data file changes with each page round (a new field, a new skill); the browser asks again each time and
+            // gets a 304 when it is the same (a weak ETag of its size and time). Images and fonts keep the hour.
+            if(!name.endsWith('.json'))return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
+            const tag=`W/"${file.size.toString(36)}-${Math.floor(file.lastModified).toString(36)}"`;
+            if(req.headers.get('if-none-match')===tag)return new Response(null,{status:304,headers:{etag:tag,'cache-control':'no-cache'}});
+            return new Response(file,{headers:{etag:tag,'cache-control':'no-cache'}});
         }
         if (url.pathname === '/api/player') {
             const name = url.searchParams.get('name') ?? '';

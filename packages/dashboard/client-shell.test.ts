@@ -716,6 +716,17 @@ test('!price answers from the market, then from the item value',()=>{
  expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
 });
 
+test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
+ const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
+ const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
+ const b:any={bank:[{name:'Bones',count:1}],skills:[{name:'Prayer',level:1},{name:'Firemaking',level:22}]};
+ const line=new Function('skills','bankedXp','nf','E',`${code};return bankedLine;`)(['Prayer','Firemaking','Cooking'],(_b:any,n:string)=>banked[n],(n:number)=>n.toLocaleString('en-GB'),(x:string)=>x);
+ const html=line(b);
+ expect(html).toContain('Banked XP: 8,725 <small>Prayer +4,725 (+19 levels) · Firemaking +4,000</small>');
+ expect(html).toContain('title="Banked XP: Prayer +4,725 (+19 levels), Firemaking +4,000. The bank as last observed."');
+ expect(line({skills:b.skills})).toBe('');
+});
+
 test('GE sort: the flip margin after the 5% tax, and the high alch profit after a nature rune',()=>{
  const code=shell.slice(shell.indexOf('  // GE sort (RuneLite'),shell.indexOf("  function gePanel(){"));
  const S:any={economy:{supplies:[{name:'Nature rune',ask:260,bid:240}]}};
