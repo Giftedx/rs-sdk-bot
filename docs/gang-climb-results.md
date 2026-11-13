@@ -4,13 +4,17 @@ Hill climb of our side's fight options against the live-like dagger gang on the 
 
 - Cases: `extra:gang-live-fast-x2` (two meetings in one engine, each our account against three gang accounts at (3078, 3640)) and its kit variants (`scripts/measure/aio-bench-cases.ts`): `-snarep-x2` (kit `live-walker-iron-snarep`: the Entangle runes, the poisoned dagger and a super antipoison, 17 sharks; on `claude/gang-methods-2`), `-snare-x2` (kit `live-walker-iron-snare`: 17 sharks and the runes of 10 Entangles), `-p-x2` (kit `live-walker-iron-p`: the poisoned dragon dagger) and `-psuper-x2` (kit `live-walker-iron-psuper`: the poisoned dagger and a super antipoison). Our profile `gang-hunter`, kit `live-walker-iron` unless the case names another; gang profile `ganker-live`, kit `ganker-dds`.
 - Each set runs seeds 1 to 4 (8 meetings; `r6-snare-focus` and `r6-base` seeds 5 to 8, `r6-snarep-focus` seeds 1 to 8) with `--set SPAR_A=gang-hunter` and its options as `SPAR_A_OPTS`. Practice bench only, on a cloud container with 15 GB RAM and 4 cores, with `FLEET_SIDE=local`: the container sets `FLEET_SIDE=claude-cloud`, and the bench's generated `aiob*` accounts count as `local`, so `openBot` refuses them otherwise.
-- **Engine waits.** Sets marked `wall clock` ran before the lockstep fixes of `claude/bench-seed-jobs`: an SDK wait timed out in wall time, so a gang bank call that never came true ended its trip early (`food withdrawal short`, `no walk back`), and the ticks that cost depended on the speed of the machine. Sets marked `ticks` (labels `r5-` and `r6-`) ran with the fixes: SDK waits time out in game ticks, and the 4 seeds of a set ran at once (`--seeds 1,2,3,4 --seed-jobs 4`). Compare sets within one kind only: `cure-eat60` gives 3 kills in 8 meetings under wall-clock waits and 2 (`r5-base`) under tick waits.
+- **Engine waits.** Sets marked `wall clock` ran before the lockstep fixes of `claude/bench-seed-jobs`: an SDK wait timed out in wall time, so a gang bank call that never came true ended its trip early (`food withdrawal short`, `no walk back`), and the ticks that cost depended on the speed of the machine. Sets marked `ticks` (labels `r5-` to `r7-`) ran with the fixes: SDK waits time out in game ticks, and the 4 seeds of a set ran at once (`--seeds 1,2,3,4 --seed-jobs 4`). Compare sets within one kind only: `cure-eat60` gives 3 kills in 8 meetings under wall-clock waits and 2 (`r5-base`) under tick waits.
+- **Round 7** (`r7-`) ran after `freezeArmour` (Giftedx/rs-sdk-bot#804): a freeze takes the torso off by default, where `castArmour: 'keep'` had kept plate on for every freeze.
 - Columns: kills, deaths and sharks come from the `RESULT` line (`kills`, `died`, the sum of `eaten`). Ticks per run is the `RESULT` `ticks`. The three walk-out columns count distinct gang accounts in the case log: a `PK walks out of the Wilderness` line, followed by a `PK escaped` line or a `PK kill` of that account. Seconds per run is `elapsedMs` from the bench row. Sets are ranked by the kind of engine waits, then kills per meeting, then deaths, then sharks per meeting, then ticks.
 
 ## Results
 
 | label | case | engine waits | options | idle prayer off | runs (ok) | meetings | kills | kills/meeting | deaths | walked out | walked out, escaped | walked out, killed | sharks eaten mean / meeting | sharks / kill | ticks mean / run | ticks / kill | s per run (max) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| r7-snarep-focus | snarep-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 8 | 1.00 | 0 | 8 | 0 | 8 | 3.8 | 3.8 | 554 | 277 | 34 (36) |
+| r7-snare-focus | snare-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 8 | 1.00 | 0 | 8 | 0 | 8 | 3.9 | 3.9 | 576 | 288 | 37 (40) |
+| r7-snare-focus-s58 | snare-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 7 | 0.88 | 0 | 8 | 1 | 7 | 6.4 | 7.3 | 661 | 377 | 39 (40) |
 | r6-snare-focus | snare-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 6 | 0.75 | 0 | 10 | 4 | 6 | 5.0 | 6.7 | 846 | 564 | 47 (53) |
 | r6-snarep-focus | snarep-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 8 (8) | 16 | 12 | 0.75 | 0 | 21 | 9 | 12 | 5.1 | 6.8 | 793 | 529 | 86 (95) |
 | r5-snare-focus | snare-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 6 | 0.75 | 0 | 11 | 5 | 6 | 8.1 | 10.8 | 824 | 549 | 41 (47) |
@@ -49,17 +53,17 @@ Hill climb of our side's fight options against the live-like dagger gang on the 
 
 ## Best set
 
-`r6-snarep-focus`: case `extra:gang-live-fast-snarep-x2` (kit `live-walker-iron-snarep`), `SPAR_A=gang-hunter`, `SPAR_A_OPTS`:
+`r7-snare-focus`: case `extra:gang-live-fast-snare-x2` (kit `live-walker-iron-snare`), `SPAR_A=gang-hunter`, `SPAR_A_OPTS`:
 
 ```json
 {"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}
 ```
 
-12 kills in 16 meetings (seeds 1 to 8), 0 deaths, 5.1 sharks a meeting and 6.8 a kill. The same options on the snare kit without the poison (`r5-snare-focus` seeds 1 to 4 and `r6-snare-focus` seeds 5 to 8) also give 12 kills in 16, with 6.6 sharks a meeting; the base `cure-eat60` gives 4 in 16 (`r5-base`, `r6-base`). The freeze makes the kills; the poisoned dagger and the super antipoison save about 1.5 sharks a meeting.
+15 kills in 16 meetings (seeds 1 to 8), 0 deaths, with the freeze armour rule of #804 (the freeze takes the torso off). The same options and kit gave 12 in 16 before that rule (`r5-snare-focus`, `r6-snare-focus`). The snare + poison kit with these options gives 8 in 8 (`r7-snarep-focus`, seeds 1 to 4) and 12 in 16 before the rule (`r6-snarep-focus`). The base `cure-eat60` gives 4 in 16 (`r5-base`, `r6-base`).
 
 ## What the numbers say
 
-- **Deaths: 0 in all 288 meetings.** 143 of 144 runs end `RESULT ok`. `m-focus` seed 1 ends `RESULT fail` at 0 ticks with Prayer 1: its accounts logged in without their preset (the failure that a leftover `aiob*` save gives), so `m-focus` has 3 valid runs in its 4.
+- **Deaths: 0 in every meeting.** All runs but one end `RESULT ok`. `m-focus` seed 1 ends `RESULT fail` at 0 ticks with Prayer 1: its accounts logged in without their preset (the failure that a leftover `aiob*` save gives), so `m-focus` has 3 valid runs in its 4.
 - **Under tick waits, freezing the runner triples the kills, and seeds 5 to 8 repeat seeds 1 to 4:** 6 kills in 8 meetings for the snare set at both, 2 in 8 for the base at both. Poison alone gives 5 in 8 (`r5-p-dds`, `r5-p-super`). `focusRunner` alone gives 2: our account turns to the runner but cannot hold it with no freeze. `cutOff: 3` on the snare set gives 4, and `diagonalFrozen` gives 3, so neither adds to the freeze.
 - **Under wall-clock waits (192 meetings), no option of the existing fight loop moved kills much:** 0 to 3 a set. The cause of most escapes there is target choice: when a low gang account walked out, our account kept fighting the healthy account that had hit it last, which left with it (`SPAR_B_FOLLOW=1`), and took the runner only when it was nearly out of view (`PK lost ... after 11 ticks`). `focusRunner` (`scripts/pk-gang.ts`) fixes that choice.
 - **The single-way rule** (`vendor/rs-sdk/server/content/scripts/skill_combat/scripts/pvp/pvp_combat.rs2:103-133`): an account hit by another player in the last 8 ticks cannot attack anyone else. `focusRunner` takes the runner only when that rule lets the attack through.
