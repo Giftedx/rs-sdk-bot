@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794607048221,
+ "at": 1794607118317,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -328,6 +328,25 @@
    ]
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "Sausagefest",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -464,19 +483,6 @@
    "resources": [
     "knight:2671,3313"
    ]
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-57d21043-6abf-4382-9bc7-872c8cc60ed3"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-sporranbulge-20261113t214531z [task-57d21043-6abf-4382-9bc7-872c8cc60ed3]",
-   "role": "thieving"
   }
  ]
 }
