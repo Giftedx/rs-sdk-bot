@@ -215,6 +215,31 @@ try {
         return true;
     };
 
+    // ---- Step 0: at a site with a bank, a knife and a better axe that the bank holds come into the pack first. A fleet
+    // trade banks what it brings (scripts/fleet-trade.ts), so a staged account holds its tools in the bank: live,
+    // the worker saw no axe in the pack, pickpocketed and walked to the Lumbridge knife spawn for 313 ticks.
+    if (site.bank && (slotOf(/^knife$/i) === undefined || tier(axeHeld()) < tier('rune'))) {
+        const p = pos();
+        if (!p || cheb(site.bank, p) > 14) await walk(site.bank.x, site.bank.z, 3);
+        const o = await s.bot.openBank();
+        if (o.success) {
+            const items = () => (st()?.bank?.items ?? []) as any[];
+            const knife = slotOf(/^knife$/i) === undefined ? items().find(i => /^knife$/i.test(i.name) && i.count > 0) : undefined;
+            if (knife) { const w = await s.bot.withdrawItem(knife, 1, { asNote: false }); if (!w.success) lastFail = `withdraw knife: ${w.message}`; }
+            for (let k = AXES.length - 1; k >= 0 && tier(AXES[k]!) > tier(axeHeld()); k--) {
+                const a = items().find(i => new RegExp(`^${AXES[k]} axe$`, 'i').test(i.name) && i.count > 0);
+                if (!a) continue;
+                const w = await s.bot.withdrawItem(a, 1, { asNote: false });
+                if (!w.success) lastFail = `withdraw ${a.name}: ${w.message}`;
+                break;
+            }
+            await waitTicks(s, 1);
+            await s.bot.closeBank();
+        } else lastFail = `openBank: ${o.message}`;
+        axe = axeHeld();
+        console.log(`WC_TOOLS_FROM_BANK ${JSON.stringify({ axe, knife: slotOf(/^knife$/i) !== undefined })}`);
+    }
+
     // ---- Step 1: coins from Lumbridge men, one direct click every 2 ticks (thieving60.ts), only while the axe the
     // coins buy is better than the axe held. A fail costs 1 HP, so the bot only tries at HP 3 or more. Goal: 200
     // (steel) while the HP left can pay for it, else 56 (iron). About 3 coins per HP at 75% success: steel is in
