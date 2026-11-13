@@ -1526,4 +1526,6 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     with `escapeOutnumbered: null`: 16 wins, 14 losses, 2 draws, 35 dead and 31 of side B's. The champion's escape
     counts its allies (`allies`: each own account within 10 tiles takes one attacker off the count), so an account
     stays while its ally stands with it and leaves once the ally is down and two enemies hit it. Evidence:
-    `.practice/climb/set-team-*`. Gap: no run of the escape with the allies not counted.
+    `.practice/climb/set-team-*`. Side A on `army` (specials from 35% target health): 12 wins, 20 losses, 24 dead
+    and 15 of side B's, so the held specials pay only when the army outnumbers its target (finding 47). Gap: no run
+    of the escape with the allies not counted.

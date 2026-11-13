@@ -25,7 +25,8 @@ export const CHAMPION: Profile = JSON.parse(readFileSync(resolve(import.meta.dir
 export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
     champion: CHAMPION,
-    // The PK army in multi-way combat: the champion with its specials held until the target is at 35% health, so the
+    // The PK army in multi-way combat, for a fight where it outnumbers its target (two against two it loses to the
+    // champion, finding 49): the champion with its specials held until the target is at 35% health, so the
     // three accounts' specials land together where the target cannot eat back between them (finding 47). Its escape
     // is the champion's, which counts the allies in view (finding 49).
     army: { ...CHAMPION, specBelow: 0.35 },
