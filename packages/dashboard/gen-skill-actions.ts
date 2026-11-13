@@ -8,13 +8,21 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { XP_RATE } from '../knowledge/src/method-model';
 
-export type SkillRow = { skill: string; row: string; level: number; xp: number; inputs?: string[]; outputs?: string[] };
-export type Action = [string, number, number, string[], string[]];
+// counts: how many of each input one action uses (1 when absent), from the row's dbrow line (inputCounts).
+export type SkillRow = { skill: string; row: string; level: number; xp: number; inputs?: string[]; outputs?: string[]; counts?: number[] };
+// [name, level, XP, input names, output names, input item ids]: an input that one action uses several of is listed that
+// many times. The ids tell apart items that share a name (four dragon leathers are all "Dragon leather").
+export type Action = [string, number, number, string[], string[], number[]];
+
+// The count of each input in a row's dbrow block ("data=leather,dragon_leather,3": a body uses 3 leathers).
+export function inputCounts(inputs: string[], block: string): number[] {
+    return inputs.map(i => Number(block.match(new RegExp(`^data=[a-z0-9_]+,${i},(\\d+)\\s*$`, 'm'))?.[1]) || 1);
+}
 
 // "limestone_rock1_table" is "Limestone rock": a rock or tree number is a map variant, not a different action.
 const label = (row: string) => row.replace(/_table$/, '').replace(/(rock|tree)\d+$/, '$1').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
 
-export function skillActions(rows: SkillRow[], names: Map<string, string>, rate = XP_RATE): Record<string, Action[]> {
+export function skillActions(rows: SkillRow[], names: Map<string, string>, rate = XP_RATE, ids: Map<string, number> = new Map()): Record<string, Action[]> {
     const name = (debug: string) => names.get(debug) ?? debug.replace(/_/g, ' ');
     const out: Record<string, Action[]> = {};
     const firstOut = (r: SkillRow) => r.skill + '|' + (r.outputs?.[0] ?? '');
@@ -22,9 +30,10 @@ export function skillActions(rows: SkillRow[], names: Map<string, string>, rate 
     for (const r of rows) if (r.outputs?.[0]) uses.set(firstOut(r), (uses.get(firstOut(r)) ?? 0) + 1);
     for (const r of rows) {
         if (!r.skill || !Number.isFinite(r.level) || !(r.xp > 0)) continue;
-        const outputs = (r.outputs ?? []).map(name), inputs = (r.inputs ?? []).map(name);
+        const debugIn = (r.inputs ?? []).flatMap((d, k) => Array.from({ length: Math.max(1, r.counts?.[k] ?? 1) }, () => d));
+        const outputs = (r.outputs ?? []).map(name), inputs = debugIn.map(name), inputIds = debugIn.map(d => ids.get(d) ?? 0);
         // A row with no output (a bone buried, a log burnt) is named after its input.
-        const action: Action = [outputs[0] && uses.get(firstOut(r)) === 1 ? outputs[0] : !outputs.length && inputs[0] ? inputs[0] : label(r.row), Math.max(1, r.level), Math.round(r.xp * rate * 10) / 10, inputs, outputs];
+        const action: Action = [outputs[0] && uses.get(firstOut(r)) === 1 ? outputs[0] : !outputs.length && inputs[0] ? inputs[0] : label(r.row), Math.max(1, r.level), Math.round(r.xp * rate * 10) / 10, inputs, outputs, inputIds];
         // Map variants of one action (Limestone rock 1 to 3) give one row.
         const list = (out[r.skill] ??= []);
         if (!list.some(a => a[0] === action[0] && a[1] === action[1] && a[2] === action[2])) list.push(action);
@@ -105,13 +114,18 @@ if (import.meta.main) {
     const items: { debugname?: string; name?: string; tradeable?: boolean }[] = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'));
     const tradeable = new Set(items.filter(i => i.tradeable && i.debugname).map(i => i.debugname!));
     const names = new Map(items.filter(i => i.debugname && i.name).map(i => [i.debugname!, i.name!]));
+    const ids = new Map(items.filter(i => i.debugname && Number.isInteger((i as { id?: number }).id)).map(i => [i.debugname!, (i as { id: number }).id]));
+    // Each knowledge row points at its dbrow line (src.row); the block from there holds the input counts.
+    const content = join(root, 'vendor', 'rs-sdk', 'server', 'content'), fileCache = new Map<string, string[]>();
+    const block = (src?: string) => { const m = src?.match(/^(.*):(\d+)$/); if (!m) return ''; const lines = fileCache.get(m[1]!) ?? readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/); fileCache.set(m[1]!, lines); const from = Number(m[2]) - 1, end = lines.findIndex((l, k) => k > from && l.startsWith('[')); return lines.slice(from, end < 0 ? undefined : end).join('\n'); };
+    const knowledge = (JSON.parse(readFileSync(join(root, 'knowledge', 'skills.json'), 'utf8')) as (SkillRow & { src?: { row?: string } })[]).map(r => ({ ...r, counts: inputCounts(r.inputs ?? [], block(r.src?.row)) }));
     const scripts = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts'), read = (p: string) => readFileSync(join(scripts, p), 'utf8');
     const objs = (d: string): [string, string][] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? objs(p) : f.endsWith('.obj') ? [[p, readFileSync(p, 'utf8')] as [string, string]] : []; });
-    const actions = skillActions([...JSON.parse(readFileSync(join(root, 'knowledge', 'skills.json'), 'utf8')), ...objParamRows(objs(scripts), debug => tradeable.has(debug)),
+    const actions = skillActions([...knowledge, ...objParamRows(objs(scripts), debug => tradeable.has(debug)),
         ...contentRows({
             smelting: read('skill_smithing/configs/smelting/smelting.struct'), smithingStruct: read('skill_smithing/configs/smithing/smithing.struct'),
             smithingRows: read('skill_smithing/configs/smithing/smithing.dbrow'), brewing: read('skill_herblore/configs/brewing/brew_potion.struct'), herbs: read('skill_herblore/configs/herbs.obj'),
-        })], names);
+        })], names, XP_RATE, ids);
     writeFileSync(join(import.meta.dir, 'client-assets', 'skill-actions.json'), JSON.stringify(actions));
     console.log(`skill-actions.json: ${Object.values(actions).reduce((n, l) => n + l.length, 0)} actions in ${Object.keys(actions).length} skills`);
 }

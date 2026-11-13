@@ -373,14 +373,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const best=acts.filter(a=>a[1]<=lvl&&a[2]>0).sort((a,b)=>b[2]-a[2])[0]||null,next=acts.filter(a=>a[1]>lvl).sort((a,b)=>a[1]-b[1]||b[2]-a[2]).slice(0,3);
     return {best:best&&left?{name:best[0],count:Math.ceil(left/best[2])}:null,next:next.map(a=>({name:a[0],level:a[1]}))};
   }
-  // Banked XP (RuneLite's Banked Experience): the XP that the bank holds for a skill. Each bank item that is the one
-  // input of an action of the skill (a bone buried, a log burnt, a raw fish cooked, an uncut gem cut) counts at the best
-  // such action the account can do now; an action whose input is its own output (a bow named as its unstrung form) does
-  // not count. The level is where the account's XP plus the banked XP reaches.
+  // Banked XP (RuneLite's Banked Experience): the XP that the bank holds for a skill. Each bank item that is the only
+  // kind of input of an action of the skill (a bone buried, a log burnt, a raw fish cooked, 3 dragon leathers to a body)
+  // counts at the action the account can do now with the most XP per item, in whole actions. Items match by id (each
+  // action's last field), as the four dragon leathers share one name. An action whose input is its own output (a bow named as its unstrung form)
+  // does not count. The level is where the account's XP plus the banked XP reaches.
   function bankedXp(b,skill){const acts=skillActions?.[String(skill).toLowerCase()],X=window.atlasXp;if(!acts||!Array.isArray(b?.bank)||!X)return null;
     const s=(b.skills||[]).find(x=>x.name.toLowerCase()===String(skill).toLowerCase()),lvl=s?.xp!=null?X.levelForXp(s.xp):(s?.level??1),best=new Map();
-    for(const a of acts){if(a[3].length!==1||a[1]>lvl||!(a[2]>0)||a[4].includes(a[3][0]))continue;const k=a[3][0];if(!(best.get(k)>=a[2]))best.set(k,a[2]);}
-    let xp=0,items=0;for(const it of b.bank){const v=it&&best.get(it.name);if(v){xp+=v*(it.count||1);items+=it.count||1;}}
+    for(const a of acts){const ids=a[5]||[],id=ids[0];if(!id||!ids.every(x=>x===id)||a[1]>lvl||!(a[2]>0)||a[4].includes(a[3][0]))continue;const k=ids.length,cur=best.get(id);if(!cur||a[2]/k>cur.xp/cur.k)best.set(id,{k,xp:a[2]});}
+    let xp=0,items=0;for(const it of b.bank){const v=it&&best.get(it.baseId??it.id);if(v){const n=Math.floor((it.count||1)/v.k);xp+=n*v.xp;items+=n*v.k;}}
     return xp?{xp:Math.round(xp),items,level:s?.xp!=null?X.levelForXp(s.xp+xp):null}:null;}
   // Best training spot (Skill Calculator): for woodcutting or mining, the best tree or rock the account can use at its
   // level (skill-actions.json, resources.json; normal trees are not in resources.json) and the nearest one on its floor.
