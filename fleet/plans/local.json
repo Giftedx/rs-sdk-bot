@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794595047696,
+ "at": 1794595865647,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -79,6 +79,25 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
     "KNIGHT_SPOT": "2652,3318",
     "TICKS": "9000"
    },
@@ -94,7 +113,7 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
+   "account": "Masterbaiter",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -113,32 +132,65 @@
    ]
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "account": "MineYourBiz",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "knight:2671,3313"
    ]
   },
   {
-   "account": "MineYourBiz",
+   "account": "mmsmk1232",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "local",
+   "resources": [
+    "pen:3017,3288"
+   ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "mmthv2350",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -154,69 +206,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
    ]
   },
   {
@@ -281,18 +270,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2671,3313",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "knight:2671,3313"
    ]
   },
   {
@@ -335,27 +324,24 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "sarim"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "shop:sarim"
    ]
   },
   {
@@ -484,18 +470,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
+    "KNIGHT_SPOT": "2669,3298",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "knight:2669,3298"
    ]
   },
   {
