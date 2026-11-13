@@ -1438,3 +1438,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`extra:spar-rivals-tribrid-snare-x12`), 94 kills and 1 death in 96 fights against 87 and 5 without it; mirror
     neutral (mean +3.1, t 0.67). The gang set (snare kit, freeze flee, `focusRunner` 0.4) kills 15 of 16 over seeds
     1-8 with the torso rule, 12 of 16 before. Gap: finding 41's noise; the rival comparison is one run per seed.
+43. **A mirror winner can lose to every real opponent.** The mirror climb on the champion of finding 42 accepted
+    `standOff: 5` (mean +22.7, t 2.86, 16 samples, `extra:spar-x8`). Seeds 1-8 against the three rival builds it gave
+    12 kills and 39 deaths in 60 fights where the champion had 85 and 8 in 96, and against the runner 12 of 64 where
+    the champion had 26. The champion keeps no stand-off. Rule: a patch joins the champion only after the mirror and
+    the rival and runner cases (`.practice/climb/dual.sh`, 8 seeds) agree. Gap: one seed of the rival batch at
+    stand-off 5 gave no result (12 fights in the first half).
