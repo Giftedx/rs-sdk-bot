@@ -1,0 +1,23 @@
+{
+ "id": "1794589930428-nabtheknob-abracadickra",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Abracadickra",
+ "item": "Rune axe",
+ "count": 1,
+ "start": 1794589930428,
+ "end": 1794593530428,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
