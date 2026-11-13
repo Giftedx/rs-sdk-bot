@@ -1783,5 +1783,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     each account's distance on each tick of the hold). With the leader's chase waiting while a follower is more
     than 4 tiles from it (`PACE`, default 4 with the opening hold) and the followers running to the target's tile
     as the leader sees it (`FOLLOW_TARGET`), all five come into view together and stand on melee tiles 6 ticks later:
-    a delay of 10 ticks gives 4 of 6, 6 ticks 0 of 6, and the target that does not run 6 of 6. Gap: a target that
-    leaves within 6 ticks of the first sight.
+    a delay of 10 ticks gives 4 of 6, 16 ticks 6 of 6, 6 ticks 0 of 6, and the target that does not run 6 of 6.
+    The opening hold also ends when the target runs (its tile moves 2 tiles in a tick, `OPEN_ON_RUN`), and the pace
+    holds only until the fight opens; above level 30 the target that leaves on sight still gets away (0 of 6, every
+    hold at level 30): with 12 tiles' start at the army's speed it never comes within a freeze's 10 tiles before it
+    reaches level 30. Gap: a target that leaves within 6 ticks of the first sight; an army that comes at it from
+    the side it runs to.

@@ -147,7 +147,8 @@ if (import.meta.main) {
     if (stunShare) cfg.fight = { ...cfg.fight, stunShare };
     const openTogether = arg(args, 'OPEN_TOGETHER', lock ? '1' : '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20')), openRange = Number(arg(args, 'OPEN_RANGE', lock ? '1' : '3'));
     const opened = new Map<string, number>();
-    let traced = -1;
+    let traced = -1, lastTick = -1;
+    const lastAt = new Map<string, { x: number; z: number }>();
     const hold = () => {
         const t = shared.target?.toLowerCase();
         if (!openTogether || !t) return false;
@@ -156,14 +157,21 @@ if (import.meta.main) {
         const near = sessions.every(x => { const p = x.sdk.getState()?.nearbyPlayers.find(n => n.name.toLowerCase() === t); return !!p && p.distance <= openRange; });
         // ARMY_TRACE=1: each account's distance to the target on each tick of the hold (-1 out of view).
         if (process.env.ARMY_TRACE === '1' && leader!.tick() !== traced) { traced = leader!.tick(); console.log('PK_EVENT ' + JSON.stringify({ t: traced, e: 'hold', d: sessions.map(x => x.sdk.getState()?.nearbyPlayers.find(n => n.name.toLowerCase() === t)?.distance ?? -1) })); }
-        if (near || leader!.tick() - first >= openTicks) { opened.set(t, -1); console.log('PK_EVENT ' + JSON.stringify({ t: leader!.tick(), e: 'open', target: t, why: near ? 'all near' : 'waited', after: leader!.tick() - first })); return false; }
+        // A target that runs from the leader (its distance grows 2 tiles or more in a tick) opens the fight at once:
+        // held fire against a runner waits for melee tiles that never come (finding 69). OPEN_ON_RUN=0 keeps the wait.
+        // The target runs when its own tile moves 2 tiles in a tick (the leader's chase keeps the gap the same).
+        const lp = leader!.sdk.getState()?.nearbyPlayers.find(n => n.name.toLowerCase() === t), was = lastAt.get(t);
+        const runs = process.env.OPEN_ON_RUN !== '0' && !!lp && !!was && Math.max(Math.abs(lp.x - was.x), Math.abs(lp.z - was.z)) >= 2;
+        if (lp && lastTick !== leader!.tick()) { lastAt.set(t, { x: lp.x, z: lp.z }); lastTick = leader!.tick(); }
+        if (near || runs || leader!.tick() - first >= openTicks) { opened.set(t, -1); console.log('PK_EVENT ' + JSON.stringify({ t: leader!.tick(), e: 'open', target: t, why: near ? 'all near' : runs ? 'runs' : 'waited', after: leader!.tick() - first })); return false; }
         return true;
     };
     if (openTogether) { cfg.hold = hold; cfg.holdRange = openRange; }
     // PACE=<tiles>: the leader's chase waits while a follower is more than that many tiles from it (default 4 with the
     // opening hold; 0 for none), so the army reaches its target together.
     const pace = Number(arg(args, 'PACE', openTogether ? '4' : '0'));
-    if (pace > 0) cfg.pace = () => { const l = leader!.sdk.getState()?.player; return !!l && followers.some(f => { const p = f.sdk.getState()?.player; return !!p && p.level === l.level && Math.max(Math.abs(p.worldX - l.worldX), Math.abs(p.worldZ - l.worldZ)) > pace; }); };
+    // Only before the opening: once the fight is open (opened -1) the leader chases at its own speed.
+    if (pace > 0) cfg.pace = () => { const t = shared.target?.toLowerCase(); if (!t || opened.get(t) === -1) return false; const l = leader!.sdk.getState()?.player; return !!l && followers.some(f => { const p = f.sdk.getState()?.player; return !!p && p.level === l.level && Math.max(Math.abs(p.worldX - l.worldX), Math.abs(p.worldZ - l.worldZ)) > pace; }); };
     // LEADER_SPEC=all: the leader's specials go at any health and with no reserve, as the followers' on army-alpha.
     // LEADER_CAP: the ticks of one fight of the leader (the roam's own is 120).
     if (arg(args, 'LEADER_CAP', '')) cfg.fight = { ...cfg.fight, cap: Number(arg(args, 'LEADER_CAP', '')) };

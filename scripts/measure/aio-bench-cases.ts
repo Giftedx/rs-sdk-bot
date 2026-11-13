@@ -93,7 +93,7 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // `god` is the potion kit with the Zamorak cape and staff, fire runes, and the Mage Arena done with Flames of
 // Zamorak learnt (varps 267 and 270), for one more shark.
 // The army route's settings from the environment (scripts/pk-army.ts): `--set VOLLEY=1` and the like reach the route.
-const armyEnv = () => ['ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE', 'BURST_HOLD', 'OPEN_FREEZE', 'OPEN_RANGE', 'OPEN_TICKS', 'LEADER_SPEC', 'STUN_SHARE', 'LEADER_CAP', 'TARGET_PROFILE', 'TARGET_OPTS', 'TARGET_SIGHT', 'TARGET_SIGHT_DELAY', 'ARMY_TRACE', 'FOLLOW_TARGET', 'PACE'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []));
+const armyEnv = () => ['ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE', 'BURST_HOLD', 'OPEN_FREEZE', 'OPEN_RANGE', 'OPEN_TICKS', 'LEADER_SPEC', 'STUN_SHARE', 'LEADER_CAP', 'TARGET_PROFILE', 'TARGET_OPTS', 'TARGET_SIGHT', 'TARGET_SIGHT_DELAY', 'ARMY_TRACE', 'FOLLOW_TARGET', 'PACE', 'OPEN_ON_RUN'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []));
 export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean; noDragonSlayer?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
