@@ -33,7 +33,7 @@ export function controlView(state:any,controlMeta:any,main=MAIN_ACCOUNT){
 // the private repository and this PC's resources stay with the owner (control.json).
 const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','started','fresh','inWorld','operation','pos','live','hp','combat',
  'skills','quests','questsAt','equipment','equipmentObserved','inventory','ranks','ranksAt','role','goal','currentGoal','goalSkill','goalLevel',
- 'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt'] as const;
+ 'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt','ground'] as const;
 const PUBLIC_KEYS=['now','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
 // Goal texts can carry a coordinator task id ("run-x [task-1a2b]") and, after a colon or in brackets, stock counts
 // ("Smithing from banked ore: 1630 bronze and 571 iron", "cooked lobsters (607 short)"): the public keeps the headline.

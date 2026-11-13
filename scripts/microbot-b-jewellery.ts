@@ -48,7 +48,10 @@ export async function runJewellery(d:JewelleryDriver,r:JewelleryRecipe,o:{maximu
   const before=state(),snapshot=jewellerySnapshot(before);
   if(r.tools.some(tool=>(snapshot.items[tool]??0)<1)||r.inputs.some(input=>(snapshot.items[input.id]??0)<input.units))throw Error('jewellery staged inputs or mould exhausted');
   const bar=before.inventory.find(i=>i.id===r.bar)!;
-  await d.close();if(!await d.open(bar.slot))throw Error('jewellery furnace interface unobserved');
+  // A level-up dialog that is still open satisfies the driver's open check in the same tick, before the furnace
+  // interface opens: a menu click then goes nowhere. Live (Abracadickra, sapphire rings): dialog at tick 68, use and
+  // click at tick 69, interface at tick 71. So a gold or perfect-gold shape waits for the interface itself.
+  await d.close();if(!await d.open(bar.slot)||r.shape!=='silver'&&!await d.wait(()=>!!state().interface?.isOpen,Math.min(8,o.cap-(d.tick()-start))))throw Error('jewellery furnace interface unobserved');
   const menu=jewelleryMenu(r,snapshot.items,o.members);if(!await d.choose(menu))throw Error('jewellery menu refused');
   if(!await d.wait(()=>{const effect=productionEffect(r,snapshot,jewellerySnapshot(state()));if(effect==='invalid'||effect==='loss')throw Error('jewellery assets do not reconcile');return effect==='made';},Math.min(12,o.cap-(d.tick()-start))))throw Error('jewellery product unobserved');
   made++;if(made<o.maximum)await d.step();

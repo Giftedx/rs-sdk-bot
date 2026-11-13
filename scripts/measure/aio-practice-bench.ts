@@ -36,13 +36,14 @@ import {proveInProcess} from '../../packages/practice/src/prove';
 import {createBot} from '../../packages/practice/src/bots';
 import {applyPreset, PRESETS} from '../../packages/practice/src/presets';
 import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type BenchCase} from './aio-bench-cases';
-import {rsSdkRoot} from '../../packages/practice/src/paths';
+import {practiceDir, rsSdkRoot} from '../../packages/practice/src/paths';
 import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {dirname, join, resolve} from 'node:path';
 import {FREE_FLOOR_GB} from '../../packages/core/src/memory';
 import {freeGB, unitsThatFit} from '../heavy-admission';
 import {BENCH_CASE_GB, START_REFUSED_EXIT, admitStart} from './bench-start-check';
+import {BUDGET_EXIT, BUDGET_MIN, budgetRefusal, estimateRun, parseAckStats, parseSimStat, readElapsed, readSince, recordElapsed} from './bench-budget';
 import {
   discoverBankedProduction,
   planProgressiveSkiller,
@@ -68,6 +69,11 @@ const root = resolve(import.meta.dir, '..', '..');
 // Before its first engine the run does the start check (bench-start-check.ts): it stops with one line and exit code 2
 // beside another heavy job, on a used engine port, or with too little free memory. --wait <minutes> waits for a safe
 // start for that long at most, and --force skips the check.
+// Time budget (scripts/measure/bench-budget.ts): a run is at most --budget <minutes> (default 10). The run estimates
+// its wall time from the last time of each case, refuses a selection over the budget before its first engine (exit
+// code 3, with the heaviest cases), and starts no case after the deadline. --over-budget runs it anyway. --seeds gives
+// each seed an equal share. --profile runs one engine with no kept results and prints AIO_BENCH_PROFILE for each case: engine start,
+// startup and game wait of the engine, ticks the client held, ticks capped at SIM_BUSY_MS, and client time.
 const SET_KEYS: string[] = [];
 if (import.meta.main) {
   const argv = process.argv.slice(2), env = process.env;
@@ -86,6 +92,14 @@ if (import.meta.main) {
     env.BENCH_WAIT_MIN = wait;
   }
   if (has('--force')) env.BENCH_FORCE = '1';
+  if (argv.includes('--budget')) {
+    const budget = value('--budget');
+    if (!(Number(budget) > 0)) throw new Error(`--budget needs minutes, got ${budget}`);
+    env.BENCH_BUDGET_MIN = budget;
+  }
+  if (has('--over-budget')) env.BENCH_OVER_BUDGET = '1';
+  // A kept result runs nothing, so a profile reads no kept result.
+  if (has('--profile')) { env.BENCH_PROFILE = '1'; env.BENCH_PARALLEL = '1'; env.BENCH_CACHE = '0'; }
   // --watch runs the selection, then runs it again each time a file under scripts/ or packages/ changes.
   if (has('--watch')) {
     const run = () => Bun.spawnSync(['bun', import.meta.path, ...process.argv.slice(2).filter(a => a !== '--watch')], { cwd: root, env, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
@@ -115,16 +129,21 @@ if (import.meta.main) {
     const list = seeds.split(',').map(Number);
     if (!list.length || list.some(n => !Number.isSafeInteger(n))) throw new Error(`--seeds needs integers, got ${seeds}`);
     const table = new Map<string, string[]>();
+    // Each round of seeds at once gets an equal share of the budget.
+    env.BENCH_BUDGET_MIN = String(Number(env.BENCH_BUDGET_MIN ?? BUDGET_MIN) / Math.ceil(list.length / seedJobs));
     const outOf = (one: number) => join(env.BENCH_SEED_OUT ?? '.practice/aio-bench', `seed-${one}.json`);
+    let overBudget = false;
     const runSeed = async (one: number, job: number) => {
       mkdirSync(dirname(resolve(root, outOf(one))), { recursive: true });
       const own = seedJobs > 1 ? { BENCH_SLOT_BASE: String(job * 8), BENCH_PARALLEL: '1', BENCH_OUTPUT_DIR: `.practice/aio-bench/output-seed-${one}` } : {};
       const child = Bun.spawn(['bun', import.meta.path, ...argv, '--seed', String(one), ...SET_KEYS.flatMap(k => ['--set', `${k}=${env[k]}`])], { cwd: root, env: { ...env, BENCH_OUT: outOf(one), ...own }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
       const code = await child.exited;
+      if (code === BUDGET_EXIT) { overBudget = true; return; }
       if (code !== 0 && code !== 1) throw new Error(`seed ${one}: bench exited with code ${code}`);
     };
     let next = 0;
-    await Promise.all(Array.from({ length: Math.min(seedJobs, list.length) }, async (_, job) => { while (next < list.length) await runSeed(list[next++]!, job); }));
+    await Promise.all(Array.from({ length: Math.min(seedJobs, list.length) }, async (_, job) => { while (next < list.length && !overBudget) await runSeed(list[next++]!, job); }));
+    if (overBudget) process.exit(BUDGET_EXIT);
     for (const one of list) {
       for (const r of JSON.parse(readFileSync(resolve(root, outOf(one)), 'utf8')).rows as { case: string; ok: boolean; ledgerTicks: number[] }[]) {
         table.set(r.case, [...(table.get(r.case) ?? []), r.ok ? String(r.ledgerTicks.at(-1) ?? '?') : 'FAIL']);
@@ -416,6 +435,16 @@ async function main() {
     const refusal = await admitStart({ root, engines, ports: FRESH ? Array.from({ length: engines }, (_, slot) => slotPort(SLOT_BASE + slot)) : [] }, Number(process.env.BENCH_WAIT_MIN ?? 0) * 60_000);
     if (refusal) { console.error(refusal); process.exit(START_REFUSED_EXIT); }
   }
+  // The time budget: refuse a selection over it before the first engine, and start no case after the deadline.
+  const budgetMin = Number(process.env.BENCH_BUDGET_MIN ?? BUDGET_MIN), overBudget = process.env.BENCH_OVER_BUDGET === '1';
+  const estimate = estimateRun(cases.filter(c => !(CACHE && existsSync(join(CACHE_DIR, `${caseHash(c)}.json`)))).map(c => c.key), readElapsed(), Math.max(1, engines));
+  console.log(`AIO_BENCH_BUDGET ${JSON.stringify({ toRun: estimate.each.length, engines, estimateMin: +(estimate.ms / 60_000).toFixed(1), budgetMin, noRecord: estimate.unknown, over: overBudget })}`);
+  const refusedBudget = budgetRefusal(estimate, budgetMin, Math.max(1, engines));
+  if (refusedBudget && !overBudget) { console.error(refusedBudget); process.exit(BUDGET_EXIT); }
+  const deadline = Date.now() + budgetMin * 60_000;
+  const profile = process.env.BENCH_PROFILE === '1';
+  const simStatFile = join(practiceDir(), 'logs', 'sim-stat.log');
+  if (profile) mkdirSync(join(dirname(OUT), 'profile'), { recursive: true });
   let stack = FRESH ? null : await start();
   const rows: Awaited<ReturnType<typeof runCase>>[] = [];
   try {
@@ -430,13 +459,30 @@ async function main() {
         try {
           if (kept && existsSync(kept)) {
             const row = { ...JSON.parse(readFileSync(kept, 'utf8')), kept: true };
+            // A kept row gives the case a time record when it has none yet.
+            if (!(c.key in readElapsed()) && row.elapsedMs > 0) recordElapsed(c.key, row.elapsedMs);
+            console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
+            rows.push(row);
+          } else if (!overBudget && Date.now() > deadline) {
+            const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, output: null, xp: null, result: `skipped: past the ${budgetMin}-minute budget` };
             console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
             rows.push(row);
           } else {
             const engineAt = Date.now();
             if (FRESH) own = await start(c.key, slot, c.engineEnv);
             const engineStartMs = Date.now() - engineAt;
+            // --profile: the bots of this case write their ACK_STAT lines here; the engine's wait lines are read from
+            // the bytes its stat file gains during the case.
+            const ackFile = profile ? resolve(dirname(OUT), 'profile', `${c.key.replace(/[^a-z0-9-]/gi, '_')}.ack`) : '';
+            if (profile) { rmSync(ackFile, { force: true }); process.env.SIM_ACK_FILE = ackFile; }
+            const statFrom = profile && existsSync(simStatFile) ? readFileSync(simStatFile).length : 0;
             const row = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888);
+            if (profile) {
+              delete process.env.SIM_ACK_FILE;
+              const ack = parseAckStats(readSince(ackFile, 0)), sim = parseSimStat(readSince(simStatFile, statFrom));
+              console.log(`AIO_BENCH_PROFILE ${JSON.stringify({ case: c.key, wallMs: row.elapsedMs, engineStartMs, ...phase, engine: sim, client: ack, cappedCostMs: ack.capped * Number(process.env.SIM_BUSY_MS ?? 2000) })}`);
+            }
+            recordElapsed(c.key, Date.now() - engineAt);
             // One line for each case that ran: the time to start the engine, to write the account, to run the worker
             // script (login to logout) and to delete the account; `otherMs` is the rest of the case.
             if (PARALLEL === 1) console.log(`AIO_BENCH_TIMING ${JSON.stringify({ case: c.key, engineStartMs, ...phase, otherMs: row.elapsedMs - phase.prepareMs - phase.scriptMs - phase.cleanupMs })}`);

@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='462696BCAB4FB8F43B1B5DE9876B8FCF5E9A6300214B05F9DA6A372E30C5540C';
+export const VIEWER_MANIFEST_SHA256='BD93C1DF94770509EBA2361C7C936B9039CF70B2C90A3EAB29EDF9663124251F';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -38,6 +38,8 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['tiling report', 'layoutInfo('],                                       // {viewerMultiLayout}: the rectangles for the page's frames
     ['moves at the display rate', 'needsEveryFrame('],                      // no frame limit while views move
     ['way back to the single view', 'onClosed'],                            // the kept view grows to the full frame
+    ['markers message', 'setOverlay('],                                     // {overlay:{tiles,pies,lines,players,npcs,ground}}: RuneLite-style highlights
+    ['markers layer', 'drawMarkers('],                                      // drawn under the names at the ground height of each tile
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
@@ -136,13 +138,50 @@ export function installViewerBridge(host:any) {
         }
         return ext;
     });
+    // Ground items (RuneLite ground items). The live feed sends no obj, and no feed sends a private drop such as the loot
+    // of an npc that one of our accounts killed. The page sends what our accounts see on the floor:
+    // {botGround:[[x,z,level,id,count],...]}, at most 1000 rows. Each feed socket adds the change since its last tick to
+    // the tick's zone records (w) as oa and od records, after the feed's own. An obj that the feed itself sends counts
+    // first, so one pile shows once.
+    let botGround:number[][]=[],groundVersion=0;
+    // Respawn timers (RuneLite's Mining and Woodcutting plugins). The page sends the loc ids of depleted rocks and
+    // stumps ({respawnWatch:[id,...]}, client-assets/resources.json). On the main view's feed, a loc change (la) to one of
+    // them marks its tile depleted at that tick; a change to another loc, or a del (ld: back to the map's own loc), ends
+    // it. A depleted loc in the snapshot of a newly held zone has no start tick (null). The page gets the list on each
+    // change: {atlasDepleted:{tick, list:[[x, z, level, id, since]]}}. Only tiles inside the held area stay.
+    let respawnWatch=new Set<number>(),mainFeed:any=null,depletedArea:{x:number;z:number;w:number;h:number}|null=null;
+    const depleted=new Map<string,[number,number,number,number,number|null]>();
+    // depletedSent: the page holds a list that is not empty. A cleared list reaches the page as an empty one.
+    let depletedSent=false;
+    const publishDepleted=(tick:number)=>{if(privacyReady&&renderReady&&!failed&&host.parent!==host){host.parent.postMessage({atlasDepleted:{tick,list:[...depleted.values()]}},host.location.origin);depletedSent=depleted.size>0;}};
+    const clearDepleted=()=>{const had=depleted.size>0||depletedSent;depleted.clear();depletedArea=null;if(had)publishDepleted(0);};
+    const trackDepleted=(m:any)=>{
+        if(!respawnWatch.size||!Array.isArray(m.w)&&!m.reset)return;
+        let changed=false;
+        if(m.reset&&depleted.size){depleted.clear();changed=true;}
+        for(const r of Array.isArray(m.w)?m.w:[]){
+            if(r?.e==='za'&&[r.x,r.z,r.w,r.h].every(Number.isFinite)){
+                const fresh=!!r.r,old=depletedArea;depletedArea={x:r.x,z:r.z,w:r.w,h:r.h};
+                for(const [k,v] of [...depleted])if(fresh||!(v[0]>=r.x&&v[0]<r.x+r.w&&v[1]>=r.z&&v[1]<r.z+r.h)||!old){depleted.delete(k);changed=true;}
+                continue;
+            }
+            if((r?.e!=='la'&&r?.e!=='ld')||![r.x,r.z,r.l].every(Number.isSafeInteger))continue;
+            const key=r.x+','+r.z+','+r.l;
+            if(r.e==='la'&&respawnWatch.has(r.id)){if(!depleted.has(key)){depleted.set(key,[r.x,r.z,r.l,r.id,m.reset||Array.isArray(m.w)&&m.w[0]?.e==='za'?null:m.k]);changed=true;}}
+            else if(depleted.delete(key))changed=true;
+        }
+        if(changed)publishDepleted(m.k);
+    };
+    const groundRow=(r:any)=>Array.isArray(r)&&r.length===5&&r.every(Number.isSafeInteger)&&r[0]>=0&&r[0]<16384&&r[1]>=0&&r[1]<16384&&r[2]>=0&&r[2]<4&&r[3]>=0&&r[3]<65536&&r[4]>=1&&r[4]<2**31;
     const Socket=host.WebSocket;
     if(Socket)host.WebSocket=class extends Socket {
         constructor(address:any,protocols?:any){
             super(address,protocols);
             try{if(new host.URL(String(address),host.location.href).pathname==='/worldfeed'){
+                // The first feed socket is the main view's: its area is the one the respawn timers follow.
+                if(!mainFeed){mainFeed=this;clearDepleted();}
                 this.addEventListener('open',()=>{feedConnected=true;emit();});
-                this.addEventListener('close',()=>{feedConnected=false;emit();});
+                this.addEventListener('close',()=>{feedConnected=false;emit();if(mainFeed===this){mainFeed=null;clearDepleted();}});
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
@@ -170,7 +209,66 @@ export function installViewerBridge(host:any) {
                     for(const name of learned)data=data.replace(new RegExp('\\b'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),HIDDEN_ALIAS);
                     return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
                 };
-                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>{if(!filterLoaded){if(held.length<5000)held.push(()=>fn.call(this,rename(event)));return;}fn.call(this,rename(event));}:fn);}});}
+                // The viewer keeps the objs of the zones in the held area (za): a reset (r) starts every zone again, and an
+                // area change keeps only the zones in both areas. For each tile and type ("x,z,level,id") the bridge keeps
+                // two lists of counts. `feed` is the feed's own piles in the feed's order: oa adds one at the end, od
+                // deletes the first, oc changes the first of the old count, else the first. `view` is what the viewer draws,
+                // in its order, by the viewer's own rules (rs-world WorldState): the same rules over the feed's records and
+                // the bridge's. The viewer should draw the feed's piles, then the bridge's. When `view` differs from that,
+                // the bridge deletes every pile of that type on the tile and adds them again in that order.
+                let area:{x:number;z:number;w:number;h:number}|null=null,seenVersion=-1;
+                const feedPiles=new Map<string,number[]>(),viewPiles=new Map<string,number[]>();
+                const inArea=(a:typeof area,x:number,z:number)=>!!a&&x>=a.x&&x<a.x+a.w&&z>=a.z&&z<a.z+a.h;
+                const apply=(map:Map<string,number[]>,g:string,r:any)=>{
+                    const list=map.get(g)??[];
+                    if(r.e==='oa'){if(r.id>=0&&r.n>=1)list.push(r.n);}
+                    else if(r.e==='od')list.shift();
+                    else if(r.n>=1&&list.length){const i=list.indexOf(r.n0);list[i>=0?i:0]=r.n;}
+                    list.length?map.set(g,list):map.delete(g);
+                };
+                const addGround=(event:any)=>{
+                    if(typeof event?.data!=='string'||event.data.length>2_000_000||!event.data.includes('"tick"'))return event;
+                    // With the same rows and no area or obj change, the result is the same as last tick: nothing to add.
+                    if(seenVersion===groundVersion&&!/"(?:za|oa|od|oc|reset)"/.test(event.data))return event;
+                    let m:any;try{m=JSON.parse(event.data);}catch{return event;}
+                    if(m?.t!=='tick')return event;
+                    const w=Array.isArray(m.w)?m.w:[];
+                    if(m.reset){feedPiles.clear();viewPiles.clear();}
+                    for(const r of w){
+                        if(r?.e==='za'&&[r.x,r.z,r.w,r.h].every(Number.isFinite)){
+                            const next={x:r.x,z:r.z,w:r.w,h:r.h};
+                            if(r.r){feedPiles.clear();viewPiles.clear();}
+                            else for(const map of [feedPiles,viewPiles])for(const g of [...map.keys()]){const [x,z]=g.split(',').map(Number) as [number,number];if(!inArea(area,x,z)||!inArea(next,x,z))map.delete(g);}
+                            area=next;
+                        }else if((r?.e==='oa'||r?.e==='od'||r?.e==='oc')&&[r.x,r.z,r.l,r.id].every(Number.isSafeInteger)){
+                            const g=`${r.x},${r.z},${r.l},${r.id}`;apply(feedPiles,g,r);apply(viewPiles,g,r);
+                        }
+                    }
+                    seenVersion=groundVersion;
+                    const want=new Map<string,number[]>();
+                    if(area)for(const row of botGround){
+                        if(!inArea(area,row[0]!,row[1]!))continue;
+                        const g=row.slice(0,4).join(','),list=want.get(g)??[];list.push(row[4]!);want.set(g,list);
+                    }
+                    const add:any[]=[];
+                    for(const g of new Set([...viewPiles.keys(),...want.keys()])){
+                        const feed=feedPiles.get(g)??[],view=viewPiles.get(g)??[];
+                        // A pile that the feed itself sends is not added again: each feed pile takes away one row of its count.
+                        const ours=[...want.get(g)??[]];
+                        for(const n of feed){const i=ours.indexOf(n);if(i>=0)ours.splice(i,1);}
+                        const next=[...feed,...ours];
+                        if(view.length===next.length&&view.every((n,i)=>n===next[i]))continue;
+                        const [x,z,l,id]=g.split(',').map(Number);
+                        for(let i=0;i<view.length;i++)add.push({e:'od',x,z,l,id});
+                        for(const n of next)add.push({e:'oa',x,z,l,id,n});
+                        next.length?viewPiles.set(g,next):viewPiles.delete(g);
+                    }
+                    if(!add.length)return event;
+                    m.w=[...w,...add];
+                    return new host.MessageEvent('message',{data:JSON.stringify(m),origin:event.origin});
+                };
+                const forViewer=(event:any)=>addGround(rename(event));
+                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>{if(!filterLoaded){if(held.length<5000)held.push(()=>fn.call(this,forViewer(event)));return;}fn.call(this,forViewer(event));}:fn);}});}
                 const names=new Map<number,string>(),seenChat=new Set<string>();
                 // Opponent information (RuneLite opponentinfo): what the followed player faces (fe: an npc nid, or
                 // 32768 + a player slot) and that entity's hitpoints, which the feed sends with each hitmark.
@@ -187,6 +285,7 @@ export function installViewerBridge(host:any) {
                         const sendRoster=()=>host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
                         if(host.parent!==host&&!failed){if(privacyReady&&renderReady)sendRoster();else{heldRoster=sendRoster;heldRosterAt=Date.now();}}
                     }
+                    if(message.t==='tick'&&mainFeed===this)trackDepleted(message);
                     if(message.t==='tick'){
                         if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
                         for(const r of Array.isArray(message.p)?message.p:[]){if(typeof r?.i!=='number')continue;if(r.f){faces.delete(r.i);playerHp.delete(r.i);}if(typeof r.fe==='number')r.fe<0?faces.delete(r.i):faces.set(r.i,r.fe);const h=hp(r.hp);if(h)playerHp.set(r.i,h);}
@@ -248,6 +347,8 @@ export function installViewerBridge(host:any) {
             if('multiOrder' in data){const left=multiAsked.slice(),first:string[]=[];for(const n of data.multiOrder){const i=left.findIndex(a=>a.toLowerCase()===n.toLowerCase());if(i>=0)first.push(left.splice(i,1)[0]!);}multiAsked=[...first,...left];}
         }
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
+        if('botGround' in event.data){const rows=event.data.botGround;if(Array.isArray(rows)&&rows.length<=1000&&rows.every(groundRow)){botGround=rows.map((r:number[])=>r.slice());groundVersion++;}}
+        if('respawnWatch' in event.data){const ids=event.data.respawnWatch;if(Array.isArray(ids)&&ids.length<=64&&ids.every((n:any)=>Number.isSafeInteger(n)&&n>=0&&n<65536)){const next=new Set<number>(ids);if(next.size!==respawnWatch.size||[...next].some(n=>!respawnWatch.has(n))){respawnWatch=next;clearDepleted();}}}
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
         // The viewer writes its URL only when its camera rests. The name in the URL at a page follow is the old one.

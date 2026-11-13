@@ -332,7 +332,7 @@ window.addEventListener('message',e=>{
   const v=viewerMessage(e,frame,VIEWER.origin);
   if(v&&mode==='3d'){
     if(v.state==='error'){viewerUnavailable(v.detail||'viewer reported an error');return;}
-    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);VIEWER_RETRIES=0;const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(window.atlasFreeCamera&&!window.atlasFollowOther&&(first||!sel))frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
+    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);VIEWER_RETRIES=0;const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(first&&typeof groundReady==='function')groundReady();if(window.atlasFreeCamera&&!window.atlasFollowOther&&(first||!sel))frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
     else if(VIEWER.state==='loading'&&typeof v.detail==='string')VIEWER.detail=v.detail.slice(0,180);
     showViewerStatus();
   }
@@ -350,7 +350,26 @@ function syncWorld(){
     if(Q.get('flight')==='0')url.searchParams.set('flight','0');if(Q.get('cache')==='0')url.searchParams.set('cache','0');
     const target=window.atlasFollowOther||sel;if(target&&!window.atlasFreeCamera)url.searchParams.set('follow',target);rswFor=sel;sentMaxLevel=viewerMaxLevel();url.searchParams.set('ml',String(sentMaxLevel));f.src=url.href;
   }else if(rswFor!==sel&&sel&&!window.atlasFreeCamera&&!window.atlasFollowOther&&!window.atlasWallOn?.()){rswFor=sel;f.contentWindow?.postMessage({follow:sel},VIEWER.origin);}
+  syncGround(f);
 }
+// Ground items: the world feed sends no private drop (and the live server no obj at all), so the 3D view draws what our
+// fresh accounts see on the floor (status `ground`, [x, z, level, id, count]). Two accounts beside one pile see the same
+// objs: each tile keeps the most of each type that one account sees. A viewer that turns ready again gets the rows again.
+let sentGround='';
+function groundRows(bots){
+  const most=new Map();
+  for(const b of bots){if(!b?.fresh||b.practice||!Array.isArray(b.ground))continue;const own=new Map();
+    for(const r of b.ground){if(!Array.isArray(r)||r.length!==5)continue;const g=r.slice(0,4).join(','),k=g+','+r[4],n=(own.get(k)?.n??0)+1;own.set(k,{r,n});}
+    for(const [k,v] of own)if((most.get(k)?.n??0)<v.n)most.set(k,v);}
+  const rows=[];for(const {r,n} of most.values())for(let i=0;i<n&&rows.length<1000;i++)rows.push(r);
+  return rows;
+}
+function syncGround(f){
+  if(VIEWER.state!=='ready'||!f?.contentWindow){sentGround='';return;}
+  const rows=groundRows(S?.bots??[]),key=JSON.stringify(rows);if(key===sentGround)return;
+  sentGround=key;f.contentWindow.postMessage({botGround:rows},VIEWER.origin);
+}
+function groundReady(){sentGround='';syncGround($('#rsw'));}
 
 // Roof removal (RuneLite roofremoval): the 3D view draws floors up to the followed player's. Free camera draws them all.
 const ROOF_KEY='atlas-roof-removal';let sentMaxLevel=null;
@@ -393,7 +412,7 @@ function goalMetrics(){
  return [
   {title:'Fleet & wealth',metric:S.capacity?.fresh?`${S.capacity.active} / ${S.capacity.cap}`:'? active',meta:'active / live capacity',next:'Prove replenishment + recovery'},
   {title:'Collection & gear',metric:c?`${c.distinct} types`:'Unknown',meta:c?.missingIds?'name + ID observations':'observed bank item IDs',next:'Define missing items + best gear'},
-  {title:'Quests · unlocks · 99s',metric:obs.length?`${maxed.length} × 99`:'Unknown',meta:`${obs.length} accounts observed`,next:'Quest / unlock census missing'},
+  {title:'Quests · unlocks · 99s',metric:obs.length?`${maxed.length} × 99`:'Unknown',meta:(()=>{const done=new Set(bots.flatMap(b=>(b.quests||[]).filter(q=>q?.state==='complete'||q?.state==='completed').map(q=>q.name))),seen=new Set(bots.flatMap(b=>(b.quests||[]).map(q=>q?.name).filter(Boolean)));return `${obs.length} accounts observed`+(seen.size?` · ${done.size}/${seen.size} quests done by an account`:'');})(),next:'Quest Journal → Fleet lists each quest by account'},
   {title:'Specialist hiscores',metric:known.length?`${first.length} #1`:'Unknown',meta:`${known.length} boards with recent ranks`,next:'Verify ties; prove next contender'},
   {title:'Main Overall',metric:passes===null?'No check':`${passes} / 5`,meta:'launch checks · not completion',next:S.gates?.go?'Permission issued; check expiry':'Prove route + staging + rehearsals'},
   {title:'Tick efficiency',metric:idle===null?'Unknown':`${idle.toFixed(0)}%`,meta:'unchanged ticks · observed',next:'Measure net output per tick'}

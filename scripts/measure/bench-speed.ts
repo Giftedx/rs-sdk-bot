@@ -17,7 +17,7 @@ export type AckLine = { tick: number; held: number; capped: boolean; running: bo
 export function parseAck(text: string): { lines: AckLine[]; stats: Record<string, number>[] } {
     const lines: AckLine[] = [], stats: Record<string, number>[] = [];
     for (const l of text.split('\n')) {
-        const m = l.match(/^ACK tick=(\d+)(?: bot=\S+)? waits=(\d+) state=\S+ running=(\w+) held=(\d+)ms( CAPPED)?/);
+        const m = l.match(/^ACK tick=(\d+)(?: bot=\S+)? waits=(\d+) state=\S+ running=(\w+)(?: \S+=\S+)*? held=(\d+)ms( CAPPED)?/);
         if (m) lines.push({ tick: Number(m[1]), waits: Number(m[2]), running: m[3] === 'true', held: Number(m[4]), capped: !!m[5] });
         else if (l.startsWith('ACK_STAT ')) stats.push(JSON.parse(l.slice(9)));
     }

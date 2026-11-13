@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_GLOB_NO_IGNORE": "false"
+  },
   "permissions": {
     "allow": [
       "Bash(wc *)",
