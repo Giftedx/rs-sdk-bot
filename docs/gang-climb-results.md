@@ -59,7 +59,7 @@ Hill climb of our side's fight options against the live-like dagger gang on the 
 {"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}
 ```
 
-15 kills in 16 meetings (seeds 1 to 8), 0 deaths, with the freeze armour rule of #804 (the freeze takes the torso off). The same options and kit gave 12 in 16 before that rule (`r5-snare-focus`, `r6-snare-focus`). The snare + poison kit with these options gives 8 in 8 (`r7-snarep-focus`, seeds 1 to 4) and 12 in 16 before the rule (`r6-snarep-focus`). The base `cure-eat60` gives 4 in 16 (`r5-base`, `r6-base`).
+15 kills in 16 meetings (seeds 1 to 8), 0 deaths, with the freeze armour rule of #804 (the freeze takes the torso off). The same options and kit gave 12 in 16 before that rule (`r5-snare-focus`, `r6-snare-focus`). The snare + poison kit with these options gives 8 in 8 (`r7-snarep-focus`, seeds 1 to 4) and 12 in 16 before the rule (`r6-snarep-focus`). The base `cure-eat60` gives 4 in 16 (`r5-base`, `r6-base`). With the freeze hold read two ticks after the cast (#804, research finding 44) the same options give 16 in 16, 0 deaths, in 550 to 640 ticks a run where r7 took about 730 (`r8-snare-focus`, seeds 1 to 8).
 
 ## What the numbers say
 
