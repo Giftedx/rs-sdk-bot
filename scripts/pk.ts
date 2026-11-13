@@ -174,6 +174,7 @@ export type FightOptions = {
     // always: on every freeze, not only on a target that fled.
     dropForStrip?: { free: number; minFood: number; hpAbove: number; always?: boolean };
     freezeWear?: string[];
+    meleeStyle?: number;
     // One stun for a group on one target: a special that stuns (SpecConfig.stun) goes only once the last one's hold
     // ends (`until`, on the shared `clock`), so the group's spears hold the target in turn and hit between.
     stunShare?: { clock: () => number; until: number };
@@ -1118,6 +1119,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 if (item && toWield.length < budget) toWield.push(item);
             }
             budget -= toWield.length;
+            if (o.meleeStyle !== undefined && specStyle === 'melee' && state.combatStyle && state.combatStyle.currentStyle !== o.meleeStyle && budget > 0) { void sdk.sendSetCombatStyle?.(o.meleeStyle); budget--; }
             if (prayers.prayerPoints > 0 && budget > 0) {
                 const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting, o.protectItem !== false);
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
@@ -1170,6 +1172,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (item && toWield.length < budget) toWield.push(item);
         }
         budget -= toWield.length;
+        // meleeStyle: the combat style of a melee turn (dagger 0 Stab accurate +3 Attack, 1 Lunge aggressive +3
+        // Strength); a bow turn goes back to 1 (rapid). One index serves every weapon, so each change costs a packet.
+        if (o.meleeStyle !== undefined && state.combatStyle && state.combatStyle.styles.length > 1 && budget > 0) {
+            const want = turn.style === 'melee' ? o.meleeStyle : turn.style === 'ranged' ? 1 : state.combatStyle.currentStyle;
+            if (state.combatStyle.currentStyle !== want) { void sdk.sendSetCombatStyle?.(want); budget--; }
+        }
         // dropForStrip: a freeze on a target that fled, at high health with food to spare, drops one food a tick until
         // the pack has `free` slots, so the strip before the cast takes off more penalising armour (finding 72: the
         // dragon kit catches 32 runners with 14 sharks and 17 with 18, but 14 sharks lose the rival fights).

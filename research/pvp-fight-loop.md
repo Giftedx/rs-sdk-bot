@@ -1839,5 +1839,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     what stays on at the cast: with 18 sharks the pack has one free slot, so the strip takes off one piece, the
     largest penalty first (each item's own from `knowledge/gear.json`). `dropForStrip` (a freeze on a target that
     fled, at 70% health or more with 8 food kept, drops a food until 5 slots are free) gives `tribrid-dragon-sara` 34,
-    94, 1 and `tribrid-snare-sara` 31, 91, 5; the champion takes it. Gap: 8 seeds; the hunt, roam and army routes
-    still stage the rune kit.
+    94, 1 and `tribrid-snare-sara` 31, 91, 5; the champion takes it. The melee style: one combat style index serves
+    every weapon (index 1 is the bow's rapid and the dagger's aggressive stab, +3 Strength; `combat.dbrow`
+    `weapon_stab_table`); `meleeStyle: 0` (accurate stab, +3 Attack, on melee turns and specials, rapid on bow turns,
+    a packet for each change) gives `tribrid-dragon-sara` 33, 94, 2: no gain. Gap: 8 seeds; the hunt, roam and army
+    routes still stage the rune kit.
