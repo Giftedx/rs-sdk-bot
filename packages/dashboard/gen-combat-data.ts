@@ -37,14 +37,17 @@ export function itemBonuses(blocks: { debug: string; name: string | null; bonus:
 }
 
 // The combat spells of skill_combat/configs/magic/magic_combat_spells.dbrow: each row with a maxhit, as [name, level,
-// max hit, [[rune, count], ...], staff worn or null]. Crumble Undead is left out: it hits only undead, so it is no
-// general best spell.
+// max hit, [[rune, count], ...], staff worn or null]. A row with no data=name takes its name from its header
+// (magic_spell_iban_blast: Iban Blast; the staff spells have none). Crumble Undead is left out: it hits only undead,
+// so it is no general best spell.
 export function combatSpells(text: string, names: Map<string, string>): [string, number, number, [string, number][], string | null][] {
     const n = (d: string) => names.get(d) ?? d, out: [string, number, number, [string, number][], string | null][] = [];
     for (const block of text.split(/^\[/m).slice(1)) {
         const field = (k: string) => block.match(new RegExp(`^data=${k},(.*)$`, 'm'))?.[1]?.trim();
-        const name = field('name'), max = Number(field('maxhit')), lv = Number(field('levelrequired'));
-        if (!name || !(max > 0) || !Number.isFinite(lv) || /^crumble undead$/i.test(name)) continue;
+        const header = block.slice(0, block.indexOf(']')).replace(/^magic_spell_/, '').split('_').map((w, i) => i && w === 'of' ? w : w.replace(/^./, c => c.toUpperCase())).join(' ');
+        const name = field('name') ?? header, max = Number(field('maxhit')), lv = Number(field('levelrequired'));
+        // An NPC's spell (Nezikchened, the god spells an NPC casts) has no level requirement and no runes.
+        if (!name || !(max > 0) || !(lv >= 1) || !field('runesrequired') || /^crumble undead$/i.test(name)) continue;
         const parts = (field('runesrequired') ?? '').split(','), runes: [string, number][] = [];
         for (let i = 0; i + 1 < parts.length; i += 2) if (parts[i] && parts[i] !== 'null') runes.push([n(parts[i]!), Number(parts[i + 1])]);
         const worn = field('wornrequired');

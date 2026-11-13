@@ -1035,6 +1035,12 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
  expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6});
  expect(t2.equipStats(mage)).toContain('Magic Fire Bolt 12 ×6');
+ // Against the shipped spellbook: the pure-iban loadout (Magic 50, Staff of iban, death and fire runes, no air) casts Iban Blast.
+ const book=JSON.parse(readFileSync(new URL('./client-assets/spellbook.json',import.meta.url),'utf8'));
+ t2.set({},book);
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20});
+ // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
