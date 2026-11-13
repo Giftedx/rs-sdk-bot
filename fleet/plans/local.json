@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794591402758,
+ "at": 1794591475372,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -53,6 +53,25 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "BowBeforeMe",
@@ -482,24 +501,6 @@
    ]
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit5-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "CoinCock",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -540,17 +541,17 @@
    "role": "supply"
   },
   {
-   "account": "Sausagefest",
+   "account": "Bigchopper",
    "script": "scripts/session-check.ts",
    "args": [],
    "env": {
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-113e4e4a-2304-4343-a758-1a498661f527"
+    "COORDINATOR_RUN_ID": "task-36d41de1-6891-4d26-9d42-f46dc0f0cd5e"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-completion-recovery-held-child [task-113e4e4a-2304-4343-a758-1a498661f527]",
-   "role": "thieving"
+   "goal": "run-recover-bigchopper-held-child-r7 [task-36d41de1-6891-4d26-9d42-f46dc0f0cd5e]",
+   "role": "supply"
   }
  ]
 }
