@@ -165,6 +165,14 @@ export function mealPlan(food:ReadonlyMap<number,number>,pack:readonly Item[],ba
  }
  return withdraw;
 }
+// Whether the pack lacks a food row and so needs the bank. The meal rows (MEALS) are met by any meals the pack holds
+// beyond the quest's own needs, as mealPlan withdraws them: 8 sharks meet a preset's 4 lobsters (no GE seller held
+// lobsters; sharks sell). The other rows (teleport runes) are met by their own ids.
+export function foodShort(food:ReadonlyMap<number,number>,pack:readonly Item[],need:ReadonlyMap<number,number>=new Map()):boolean{
+ const meals=[...food].filter(([id])=>MEALS.includes(id)).reduce((n,[,c])=>n+c,0);
+ const held=MEALS.reduce((n,id)=>n+Math.max(0,count(pack,id)-(need.get(id)??0)),0);
+ return held<meals||plan(new Map([...food].filter(([id])=>!MEALS.includes(id))),pack,[]).missing.length>0;
+}
 // The gather's tools, planned after the quest plan's withdrawals: a rune the quest itself needs (Goblin Diplomacy's 3 air
 // beside the casts' hundreds) is wanted on top of the quest's count, the quest's withdrawals count as held, and the bank
 // is read less them. Otherwise both plans take the same bank stock and the second withdrawal fails, or the quest's runes
@@ -1273,7 +1281,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  // A skill the quest wants and the account lacks sends the account through the bank pass too, with every supply held.
  const tradeableId=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
  const bare=(BARE.has(quest)||build.length>0)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0);
- if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
+ if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||foodShort(food,pack(),need)||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
   // The nearest bank may be out of reach: try the next three.

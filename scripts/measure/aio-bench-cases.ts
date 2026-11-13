@@ -757,13 +757,13 @@ const ROUTE_CASES: BenchCase[] = [
   // Block 9 of the mock Haggis run, at the runner's state after Tree Gnome Village (Attack 80, Hitpoints 29, Prayer 99,
   // Magic 59, varp 111 = 9): the Gnome course to Agility 25 from King Bolren, then The Grand Tree through the sweep from
   // the course's end with what Tree Gnome Village leaves in the pack (block 8 packs both quests: 160 chaos, 500 air,
-  // 2 law, 8 lobsters; the warlord takes about 33 casts), so the sweep needs no bank.
+  // 2 law, 8 sharks for the 4 lobsters of each preset; the warlord takes about 33 casts), so the sweep needs no bank.
   {key: 'extra:agility-gnome-25-from-village', script: 'scripts/aio-skiller.ts', preset: 'agility_gnome_1', scriptArgs: ['agility', 'order', 'gnome', '25', 'AGI_POTION=0', 'AGI_MAX_TICKS=4000', 'AGI_PROGRESS_TICKS=150', 'AGI_ENTRY_TICKS=1200'], pass: ok, timeoutMs: 600_000,
     presetConfig: {...agilityFixturePreset(PRESETS.agility_gnome_1!), position: {x: 2542, z: 3170, level: 0}, varps: {111: 9}, skills: {Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Mining: 99, Woodcutting: 99, Firemaking: 99}}},
   {key: 'extra:sweep-grandtree-course', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['sweep', 'grandtree'], pass: ok, timeoutMs: 600_000,
     presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
       skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Agility: 25},
-      inventory: [{id: 562, count: 127}, {id: 556, count: 401}, {id: 563, count: 2}, ...Array.from({length: 8}, () => ({id: 379, count: 1}))]}},
+      inventory: [{id: 562, count: 127}, {id: 556, count: 401}, {id: 563, count: 2}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];

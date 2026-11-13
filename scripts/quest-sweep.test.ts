@@ -1664,3 +1664,13 @@ test('a corridor end in another connected area is not the goal', async () => {
  const fake=async()=>Object.assign(()=>0,{areaOf:(p:{x:number})=>p.x<10?21:p.x<20?8579:-1}) as any;
  expect(await sameArea(t(15,0),t(12,0),fake)).toBe(true);
 });
+
+test('any meals in the pack meet the preset food rows; teleport runes need their own ids', async () => {
+ const {foodShort}=await import('./quest-sweep');
+ const food=new Map([[379,4],[563,2]]);
+ const pack=(rows:[number,number][])=>rows.map(([id,count])=>({id,count}));
+ expect(foodShort(food,pack([[385,8],[563,2]]))).toBe(false);
+ expect(foodShort(food,pack([[385,3],[563,2]]))).toBe(true);
+ expect(foodShort(food,pack([[385,8],[563,1]]))).toBe(true);
+ expect(foodShort(food,pack([[2309,5],[563,2]]),new Map([[2309,2]]))).toBe(true);
+});
