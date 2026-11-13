@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794530243541,
+ "at": 1794530534502,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,25 +71,6 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
   },
   {
    "account": "Bigchopper",
@@ -191,6 +172,31 @@
    ]
   },
   {
+   "account": "mmsmk1232",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -264,6 +270,26 @@
    "autopilot": "local",
    "resources": [
     "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "local",
+   "resources": [
+    "pen:3017,3288"
    ]
   },
   {
