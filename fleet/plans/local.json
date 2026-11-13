@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794601664317,
+ "at": 1794601717214,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -473,7 +473,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-4f192c1c-b43c-47a1-92d7-253a1e716b68"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "local-recover-mineyourbiz-20261113t201529z [task-4f192c1c-b43c-47a1-92d7-253a1e716b68]",
    "role": "thieving"
