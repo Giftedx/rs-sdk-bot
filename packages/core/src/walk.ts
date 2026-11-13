@@ -511,6 +511,10 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     const shutDoorAt = (from: number, to: number): { l: PathLoc; i: number } | null => {
         const ahead = new Map<string, number>();
         for (let i = Math.max(0, from); i <= Math.min(tiles.length - 1, to); i++) ahead.set(`${tiles[i]!.x},${tiles[i]!.z}`, i);
+        // A shut door on the tile the bot stands on blocks it as well, and the path's tiles leave that tile out. Live:
+        // Doric's Quest ends on his doorway (door 1530 at 2952,3453), and every walk click out was refused.
+        const here = deps.pos();
+        if (here && here.level === level && !ahead.has(`${here.x},${here.z}`)) ahead.set(`${here.x},${here.z}`, Math.max(0, from));
         let best: { l: PathLoc; i: number } | null = null;
         for (const l of deps.locs()) {
             const i = ahead.get(`${l.x},${l.z}`);
