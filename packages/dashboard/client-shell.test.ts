@@ -880,3 +880,16 @@ test('skilling highlights and the trail: the resource of the top loot item near 
  b.goalSkill='Fishing';b.flow={since:0,at:1,loot:[]};t.setFish([233,309]);o=t.overlayMessage();
  expect(o.npcs).toContainEqual({types:[233,309],colour:'#00ffff'});
 });
+test('Inventory Setups: worn slots green, red or yellow against the kit, and the pack list against the kit',()=>{
+ const code=shell.slice(shell.indexOf("  // Inventory Setups (RuneLite's) in the Equipment tab:"),shell.indexOf('  // Tick efficiency (one box under Overall'));
+ const t=new Function('localStorage','fetch','asset','E','icon','nf',`${code};return {setupSlot,setupPanel,set:(k,s)=>{pkKits=k;setupKit=s;}};`)({getItem:()=>null},()=>new Promise(()=>{}),(n:string)=>n,String,(n:string)=>`[${n}]`,String);
+ t.set([{name:'tribrid',worn:{0:['Rune full helm',1],13:['Rune arrow',300]},carried:[['Shark',18],['Blood rune',100]]}],'tribrid');
+ const b={equipment:[{slot:0,name:'Rune full helm',count:1},{slot:13,name:'Rune arrow',count:120},{slot:5,name:'Wooden shield',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Blood rune',count:100}]};
+ expect(t.setupSlot(b,0,b.equipment[0]).cls).toBe(' setup-ok');
+ expect(t.setupSlot(b,13,b.equipment[1])).toEqual({cls:' setup-miss',tip:' · kit wants Rune arrow × 300'});
+ expect(t.setupSlot(b,5,b.equipment[2]).cls).toBe(' setup-extra');
+ const html=t.setupPanel(b);
+ expect(html).toContain('1 worn slot differs from the kit'.replace('differs','differ'));
+ expect(html).toContain('setup-row setup-short');expect(html).toContain('<span>2 / 18</span>');
+ expect(html).toContain('setup-row setup-have');expect(html).toContain('<span>100 / 100</span>');
+});
