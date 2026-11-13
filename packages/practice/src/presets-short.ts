@@ -23,7 +23,9 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     quest_sheep: short({ x: 3190, z: 3272 }, Array.from({ length: 20 }, () => 1759)),
     // Doric's Quest: inside Doric's house north of Falador (doric spawn 2952,3451, maps/m46_53.jm2); 6 clay (434),
     // 4 copper ore (436), 2 iron ore (440): the hand-in needs all 12 in the pack (quest_doric.rs2:70).
-    quest_doric: short({ x: 2951, z: 3450 }, [...Array(6).fill(434), ...Array(4).fill(436), 440, 440]),
+    // The runes of a Falador Teleport (1 law, 3 air, 1 water) are optional: the quest sweep takes them when the bank
+    // holds them, and its far walk casts the teleport (block 3 of the mock Haggis run starts at the Draynor bank).
+    quest_doric: short({ x: 2951, z: 3450 }, [...Array(6).fill(434), ...Array(4).fill(436), 440, 440, [563, 1], [556, 3], [555, 1]]),
     // Imp Catcher: top floor of the Wizards' Tower beside Wizard Mizgog (spawn 3103,3163,2, maps/m48_49.jm2); the
     // red, yellow, black and white beads (1470, 1472, 1474, 1476; imp drops, tradeable).
     quest_imp: short({ x: 3104, z: 3163, level: 2 }, [1470, 1472, 1474, 1476]),
