@@ -114,7 +114,9 @@ if (import.meta.main) {
         if (ev.e === 'escape' || ev.e === 'death') { shared.target = null; shared.over = true; }
         emit(e);
     };
-    const options = (s: Session): FightOptions => sparOptions('army', undefined, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600));
+    // ARMY_PROFILE: the followers' profile of scripts/pk-spar.ts (default army; army-alpha opens with every special).
+    const armyProfile = arg(args, 'ARMY_PROFILE', 'army');
+    const options = (s: Session): FightOptions => sparOptions(armyProfile, undefined, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600));
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     const runs = followers.map(f => follow(f, leader!, shared, army.filter(n => n !== f.name.toLowerCase()), options(f), followTiles, stop, emit));
     try { result = await huntOnce(leader!, cfg, stop, leaderEmit); }

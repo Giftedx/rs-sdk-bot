@@ -1559,3 +1559,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     with no food in multi-way combat at level 6): a kill and no death on seeds 1-5, 17 to 42 s a run; the first hit
     is the leader's freeze, and the kill falls to the leader or a follower. Gap: practice only; one target; the
     follower walks to the leader's tile with no formation, and `MAX_MINUTES` runs on the wall clock.
+53. **A target that leaves by its glory when two hit it escapes the army at low level.** `extra:army-route-defend`
+    (the army route of finding 52 against a target with 10 sharks and a glory on the champion's fight loop:
+    `pvp-with-targets.ts` `TARGET_PROFILE=champion`): the target escapes on seeds 1-3, rubbing its glory at 98 or 99
+    HP once the leader and a follower have hit it. With the followers on `army-alpha` (every special on contact) it
+    escapes on seeds 1-3 too: the followers walk in after the leader's first hit, and a teleport is not interrupted.
+    Gap: the army opens one account at a time; no run above level 30, where a glory does not work, or with all three
+    striking in one tick.

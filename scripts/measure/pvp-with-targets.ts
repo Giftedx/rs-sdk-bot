@@ -9,7 +9,9 @@ import { finish, openBot } from '../../packages/core/src/bot';
 import { tickWaits } from '../../packages/core/src/tick-stream';
 import { nextTick } from '../pk';
 
-const [bot, targetList, mode, ...rest] = process.argv.slice(2);
+const [bot, targetList, mode, ...given] = process.argv.slice(2);
+// TARGET_*=value arguments are this harness's settings (TARGET_PROFILE, TARGET_OPTS, TARGET_PRAYER_GUARD), not the route's.
+const rest = given.filter(a => { const m = a.match(/^(TARGET_[A-Z_]+)=(.*)$/); if (m) process.env[m[1]!] = m[2]!; return !m; });
 if (!bot || !targetList || !mode) { console.log('RESULT fail usage: bun scripts/measure/pvp-with-targets.ts <bot> <target,...> <mode> [arg ...]'); process.exit(2); }
 const names = targetList.split(',').filter(Boolean);
 // The wait for the logins counts as a tick wait: a lockstep engine holds each tick for an account with no waiter.
@@ -22,7 +24,29 @@ tickWaits.active++;
 const targets = await Promise.all(names.map(n => openBot(n, { onStop: async () => {} })));
 tickWaits.active--;
 let done = false;
-const idle = targets.map(t => (async () => { while (!done && await nextTick(t)) { /* stands on its tile */ } })());
+// TARGET_PROFILE=<profile of scripts/pk-spar.ts>: a target that takes a hit from a player fights that player with the
+// fight loop on that profile (its kit read from what it wears and carries), as a real target does: it eats, prays,
+// hits back and leaves by its glory when the profile says so. With no TARGET_PROFILE a target stands and hits back by
+// auto-retaliate. Each target prints `TARGET <name> <outcome>` when its fight ends.
+const targetProfile = process.env.TARGET_PROFILE;
+const defend = targetProfile ? await (async () => {
+    const { fightPlayer } = await import('../pk');
+    const { kitFrom } = await import('../pk-roam');
+    const { sparOptions } = await import('../pk-spar');
+    return async (t: typeof targets[number]) => {
+        const st = t.sdk.getState();
+        const hit = (st?.combatEvents ?? []).find(e => e.type === 'damage_taken' && e.sourceType === 'other_player');
+        const by = hit && st?.nearbyPlayers.find(p => p.index === hit.sourceIndex);
+        if (!by) return false;
+        const o = sparOptions(targetProfile, process.env.TARGET_OPTS, kitFrom(t.sdk.getEquipment(), t.sdk.getInventory()), 900);
+        const r = await fightPlayer(t, by.name, { ...o, stop: () => done, log: l => console.log(`[${t.name}] ${l}`) });
+        console.log(`TARGET ${t.name} ${r.outcome}`);
+        return r.outcome === 'died' || r.outcome === 'escaped';
+    };
+})() : null;
+const idle = targets.map(t => (async () => {
+    while (!done && await nextTick(t)) { if (defend && await defend(t)) break; }
+})());
 const root = resolve(import.meta.dir, '..', '..');
 const child = Bun.spawn(['bun', resolve(root, 'scripts/aio-pvp.ts'), bot, mode, ...rest.map(a => a.replaceAll('{targets}', names[0]!))],
     { cwd: root, env: childEnv, stdout: 'pipe', stderr: 'pipe', windowsHide: true });

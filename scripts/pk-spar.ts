@@ -30,6 +30,9 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // three accounts' specials land together where the target cannot eat back between them (finding 47). Its escape
     // is the champion's, which counts the allies in view (finding 49).
     army: { ...CHAMPION, specBelow: 0.35 },
+    // The army's opening strike: every special on contact, so the damage lands before a target that leaves by its
+    // glory (in 2004 a teleport is not interrupted) is gone.
+    'army-alpha': { ...CHAMPION, specBelow: 1, specReserve: 0 },
     freeze: { freeze: true },
     'freeze-flee': { freeze: 'flee' },
     // Keeps its special for a target at 40% health or one that has fled, and freezes a target that runs.

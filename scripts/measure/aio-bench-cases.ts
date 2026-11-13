@@ -449,6 +449,12 @@ const ROUTE_CASES: BenchCase[] = [
     scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=0.5', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK army: [1-9]\d* kills/.test(s), output: /PK army: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3150, 3560, {food: 0})},
       {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3095, 3515)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3093, 3515)}]},
+  // The army against a target that defends: 10 sharks and a glory, the champion's fight loop when hit (it eats, prays,
+  // hits back and leaves by its glory when two of the army hit it in multi-way combat).
+  {key: 'extra:army-route-defend', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ARMY_PROFILE ? [`ARMY_PROFILE=${process.env.ARMY_PROFILE}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3150, 3560, {food: 10, glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3095, 3515)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3093, 3515)}]},
   {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=0.3', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK hunt: [1-9]\d* kills/.test(s), output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {food: 0})}]},
