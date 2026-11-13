@@ -879,7 +879,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Ground markers, failure markers and the NPC finder's spawns on the minimap.
     const mp=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [Math.round(OX+dx*cos-dy*sin),Math.round(OY+dx*sin+dy*cos)];},sameSide=qz=>(qz>6400)===(cz>6400);
     if(typeof hl!=='undefined'&&hl.marks&&typeof marks!=='undefined'){const s=Math.max(3,Math.round(PX));const floor=bp?.level||0;for(const m of marks){if(!sameSide(m.z)||(m.l||0)!==floor)continue;const [x,y]=mp(m.x,m.z);if(x<-s||y<-s||x>W+s||y>H+s)continue;g.strokeStyle=m.c||'#ffff00';g.lineWidth=1;g.strokeRect(x-(s>>1)+0.5,y-(s>>1)+0.5,s,s);}}
-    if(typeof pinned==='function'){const pin=pinned();if(pin)for(const t of pin.tiles)if(sameSide(t.z))dot(t.x,t.z,'#ff66ff','#c040c0',pin.tip||pin.label,2);}
+    // A pin on another floor than the shown one is a darker pink, and its name says the floor.
+    if(typeof pinned==='function'){const pin=pinned(),shown=bp?.level||0;if(pin)for(const t of pin.tiles)if(sameSide(t.z)){const up=(t.l||0)!==shown;dot(t.x,t.z,up?'#9a3d9a':'#ff66ff',up?'#6a2a6a':'#c040c0',(pin.tip||pin.label)+(up?' · floor '+(t.l||0):''),2);}}
     // World Map icons and the watched account's floor items (the game's red minimap dots), on the shown floor, zoomed in.
     if(p&&typeof hl!=='undefined'){const floor=bp?.level||0,inView=(x,y)=>x>=-4&&y>=-4&&x<=W+4&&y<=H+4;
       if(hl.items&&Array.isArray(b?.ground))for(const it of b.ground){if(!Array.isArray(it)||it[2]!==floor||!sameSide(it[1]))continue;const [x,y]=mp(it[0],it[1]);if(!inView(x,y))continue;g.fillStyle='#000';g.fillRect(x-1,y,3,2);g.fillStyle='#ff0000';g.fillRect(x-1,y-1,2,2);hits.push([x,y,'Floor item'+(it[4]>1?' × '+it[4]:'')]);}
