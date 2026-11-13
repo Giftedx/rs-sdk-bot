@@ -860,6 +860,12 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:smelt-steel', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'smelt', '900', 'steel', 'MAX_MAKE=28', 'ORE_RESERVE=0'], pass: s => ok(s) && /"made":28,"banked":28/.test(s),
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 30}, bank: [{id: 440, count: 28}, {id: 453, count: 56}]}},
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
+  // The loot job (packages/core/src/loot.ts): partner `b` drops a rune platebody 3 tiles away in Draynor bank; the bot
+  // picks it up while its walk is held, finishes the walk and banks the platebody (scripts/measure/loot-probe.ts).
+  {key: 'extra:loot-pickup', script: 'scripts/measure/loot-probe.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}'], engineEnv: {NODE_OBJ_REVEAL_TICKS: '1'},
+    presetConfig: {position: {x: 3093, z: 3243, level: 0}},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3096, z: 3243, level: 0}, inventory: [{id: 1127, count: 1}]}}],
+    pass: s => ok(s) && /^EVENT loot pickup /m.test(s) && /^EVENT loot banked /m.test(s)},
   // Lost City on an account of the `pure-pray` build: the levels of the kit, the Woodcutting and Crafting that Monk's
   // Friend and Murder Mystery give before it in the chain, nothing worn and the pack of quest_zanaris. The build
   // stays: the run passes only when the quest is complete and no XP went to Attack, Defence, Ranged, Magic or Prayer.

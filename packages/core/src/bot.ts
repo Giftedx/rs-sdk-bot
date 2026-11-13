@@ -11,7 +11,8 @@ import { startTickStallWatch } from './tick-stall';
 import { assertSideOwns, loadOwners } from './fleet';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
-import { watchRandomEvents, type RandomEventWatch } from './randomevents';
+import { loadDanger, watchRandomEvents, type RandomEventWatch } from './randomevents';
+import { recordRun, sharedLootTables } from './loot';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { noGuardScript, startEatGuard } from './eat-guard';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
@@ -99,6 +100,10 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // The prayer guard reads two NPC tables, and the first read takes about 1 s. It runs before the connection: a
     // connected client that does not answer holds the tick of a lockstep world for every other client.
     const guardTables = process.env.PRAYER_GUARD !== '0' ? { protect: protectByStyle(npcAttackStyles()), hunters: npcHunters() } : null;
+    // The loot job reads the item tables and the hunting NPCs: read them here too, for the same reason.
+    const events = process.env.RANDOM_EVENTS !== '0', lootOn = process.env.LOOT_WATCH !== '0' && !recordRun(name);
+    const lootTables = lootOn ? sharedLootTables() : null;
+    if (lootOn) loadDanger();
     const s = await connectInProcess({ name, password, server, ...(trade ? {
         trade: {...trade, check: server => { assertSideOwns(name); trade.check(server); }},
     } : {}) });
@@ -119,8 +124,10 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
     ledgers.set(s, led);
-    // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
-    if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
+    // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
+    // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
+    if (events || lootTables) randomEvents.set(s, watchRandomEvents(s, { events, loot: lootTables ? { tables: lootTables, name,
+        friends: new Set(loadOwners().keys()), reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {} } : null }));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
     // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.
     if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...(process.env.PRAYER_GUARD_TRACE === '1' ? { trace: log } : {}), ...guardTables,
