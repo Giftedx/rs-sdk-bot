@@ -1,7 +1,10 @@
-// Writes two client assets from the knowledge files of the pinned server:
+// Writes three client assets from the knowledge files of the pinned server:
 // - client-assets/map-icons.json for the minimap's World Map icons (RuneLite's World Map plugin): each teleport
 //   destination (knowledge/teleports.json), agility shortcut with its level (knowledge/shortcuts.json, kind shortcut)
-//   and shop keeper (knowledge/item-sources.json shop owners), as [x, z, level, kind, label]; kind t, a or s.
+//   and shop keeper (knowledge/item-sources.json shop owners), as [x, z, level, kind, label]. Kind t is a teleport the
+//   player casts from anywhere (a spell, jewellery, an item; not the Ring of life, which fires by itself), p a transport
+//   used at a fixed spot (a lever, a portal, mysterious ruins, a spirit tree, an NPC), a an agility shortcut, s a shop.
+// - client-assets/npc-drops.json for the opponent box: the route items each NPC drops (npcDrops below).
 // - client-assets/item-sources.json for the Grand Exchange plugin's item sources: for each route item of
 //   knowledge/item-sources.json, by item id (items that share a display name, such as the four dragonhides, keep
 //   their own sources), up to 12 sources as [kind, label, [x, z, level, ...]].
@@ -10,7 +13,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 type Tile = { x: number; z: number; level?: number };
-export type Icon = [number, number, number, 't' | 'a' | 's', string];
+export type Icon = [number, number, number, 't' | 'p' | 'a' | 's', string];
+const ANYWHERE = new Set(['spell', 'jewellery', 'item']);
 export type Source = [string, string, number[]];
 type Names = { npc: (d: string) => string; item: (d: string) => string };
 
@@ -29,7 +33,7 @@ export function mapIcons(teleports: any[], edges: any[], items: any[], names: Na
         if (!out.has(key)) out.set(key, [t.x, t.z, t.level ?? 0, kind, label]);
     };
     // Each destination option of a teleport (Amulet of glory: Edgeville, Karamja, Draynor Village, Al Kharid).
-    for (const tp of teleports) for (const o of tp.to ?? []) add(o?.candidates?.[0], 't', String(tp.name ?? 'Teleport') + (o?.option ? ': ' + o.option : ''));
+    for (const tp of teleports) for (const o of tp.to ?? []) add(o?.candidates?.[0], ANYWHERE.has(tp.kind) && tp.name !== 'Ring of life' ? 't' : 'p', String(tp.name ?? 'Teleport') + (o?.option ? ': ' + o.option : ''));
     for (const e of edges) if (e.kind === 'shortcut') {
         const lv = e.requires?.skill?.level;
         add(e.from, 'a', `Agility shortcut${lv ? ' (level ' + lv + ')' : ''}: ${cap(String(e.optionText ?? 'use'))}`);
@@ -71,6 +75,21 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
     return out;
 }
 
+// The route items each NPC drops, for the opponent box: by NPC display name, up to 8 as [item name, chance text],
+// most likely first. Two NPCs of one name give the higher chance of each item.
+export function npcDrops(items: any[], names: Names): Record<string, [string, string][]> {
+    const by = new Map<string, Map<string, number>>();
+    for (const it of items) for (const s of it.sources ?? []) {
+        if (s.kind !== 'drop' || s.blocked || !(s.chance > 0)) continue;
+        const npc = names.npc(s.npc), item = names.item(it.item), m = by.get(npc) ?? new Map<string, number>();
+        m.set(item, Math.max(m.get(item) ?? 0, s.chance)); by.set(npc, m);
+    }
+    const out: Record<string, [string, string][]> = {};
+    for (const [npc, m] of [...by].sort((a, b) => a[0].localeCompare(b[0])))
+        out[npc] = [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 8).map(([item, c]) => [item, c >= 1 ? 'always' : '1/' + Math.round(1 / c)]);
+    return out;
+}
+
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..'), k = (f: string) => JSON.parse(readFileSync(join(root, 'knowledge', f), 'utf8'));
     const npcName = new Map<string, string>((k('npcs.json') as any[]).map(n => [n.debugname, n.name]));
@@ -80,6 +99,8 @@ if (import.meta.main) {
     const icons = mapIcons(k('teleports.json').teleports, k('shortcuts.json').edges, items, names), sources = itemSources(items, names);
     writeFileSync(join(import.meta.dir, 'client-assets', 'map-icons.json'), JSON.stringify(icons));
     writeFileSync(join(import.meta.dir, 'client-assets', 'item-sources.json'), JSON.stringify(sources));
+    const drops = npcDrops(items, names);
+    writeFileSync(join(import.meta.dir, 'client-assets', 'npc-drops.json'), JSON.stringify(drops));
     const by = (kind: string) => icons.filter(i => i[3] === kind).length;
-    console.log(`map-icons.json: ${by('t')} teleports, ${by('a')} shortcuts, ${by('s')} shops; item-sources.json: ${Object.keys(sources).length} items`);
+    console.log(`map-icons.json: ${by('t')} teleports, ${by('p')} fixed transports, ${by('a')} shortcuts, ${by('s')} shops; item-sources.json: ${Object.keys(sources).length} items; npc-drops.json: ${Object.keys(drops).length} npcs`);
 }

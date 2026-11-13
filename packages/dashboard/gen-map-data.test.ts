@@ -1,15 +1,28 @@
 import { expect, test } from 'bun:test';
-import { actionLabel, itemSources, mapIcons, pretty } from './gen-map-data';
+import { actionLabel, itemSources, mapIcons, npcDrops, pretty } from './gen-map-data';
+
+test('npc drops: the route items each NPC drops, most likely first, the higher chance for two NPCs of one name', () => {
+    expect(npcDrops([
+        { item: 'big_bones', sources: [{ kind: 'drop', npc: 'giant', chance: 1 }, { kind: 'shop', owners: [] }] },
+        { item: 'iron_bar', sources: [{ kind: 'drop', npc: 'giant', chance: 0.01 }, { kind: 'drop', npc: 'giant', chance: 0.02 }, { kind: 'drop', npc: 'hickton', chance: 0, blocked: null }] },
+    ], { npc: (d: string) => pretty(d), item: (d: string) => pretty(d) })).toEqual({ Giant: [['Big bones', 'always'], ['Iron bar', '1/50']] });
+});
 
 const names = { npc: (d: string) => ({ hickton: 'Hickton', giant: 'Giant' } as Record<string, string>)[d] ?? pretty(d), item: (d: string) => ({ iron_bar: 'Iron bar', rune_arrow: 'Rune arrow' } as Record<string, string>)[d] ?? pretty(d) };
 
 test('map icons: teleport destinations, agility shortcuts with their level and shop keepers, one row a tile and kind', () => {
     const icons = mapIcons(
-        [{ name: 'Varrock teleport', to: [{ candidates: [{ x: 3213, z: 3424, level: 0 }] }] }, { name: 'Broken', to: [] }],
+        [{ kind: 'spell', name: 'Varrock teleport', to: [{ candidates: [{ x: 3213, z: 3424, level: 0 }] }] }, { name: 'Broken', to: [] }],
         [{ kind: 'shortcut', optionText: 'walk-across', from: { x: 2580, z: 9513, level: 0 }, requires: { skill: { level: 40 } } }, { kind: 'course', from: { x: 1, z: 1, level: 0 } }],
         [{ sources: [{ kind: 'shop', owners: [{ npc: 'hickton', tiles: [{ x: 2822, z: 3442, level: 0 }, { x: 2822, z: 3442, level: 0 }] }] }] }],
         names);
     expect(icons).toEqual([[2580, 9513, 0, 'a', 'Agility shortcut (level 40): Walk-across'], [2822, 3442, 0, 's', 'Shop: Hickton'], [3213, 3424, 0, 't', 'Varrock teleport']]);
+});
+
+test('map icons: a lever, a portal or the Ring of life is a fixed transport (p), not a teleport from anywhere (t)', () => {
+    const to = (x: number) => [{ candidates: [{ x, z: 3000, level: 0 }] }];
+    const icons = mapIcons([{ kind: 'lever', name: 'Ardougne lever to Wilderness', to: to(1) }, { kind: 'jewellery', name: 'Ring of life', to: to(2) }, { kind: 'spell', name: 'Falador teleport', to: to(3) }], [], [], names);
+    expect(icons.map(i => i[3])).toEqual(['p', 'p', 't']);
 });
 
 test('action labels: talk, use an item on, interact, quest reward; debug and tutorial triggers are no action', () => {
@@ -21,7 +34,7 @@ test('action labels: talk, use an item on, interact, quest reward; debug and tut
 });
 
 test('map icons: one icon for each destination option of a teleport, named with the option', () => {
-    const icons = mapIcons([{ name: 'Amulet of glory', to: [{ option: 'Edgeville', candidates: [{ x: 3087, z: 3496, level: 0 }] }, { option: 'Karamja', candidates: [{ x: 2918, z: 3176, level: 0 }] }] }], [], [], names);
+    const icons = mapIcons([{ kind: 'jewellery', name: 'Amulet of glory', to: [{ option: 'Edgeville', candidates: [{ x: 3087, z: 3496, level: 0 }] }, { option: 'Karamja', candidates: [{ x: 2918, z: 3176, level: 0 }] }] }], [], [], names);
     expect(icons.map(i => i[4])).toEqual(['Amulet of glory: Karamja', 'Amulet of glory: Edgeville']);
 });
 
