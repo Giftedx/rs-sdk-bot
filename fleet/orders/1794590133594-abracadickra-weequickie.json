@@ -1,0 +1,29 @@
+{
+ "id": "1794590133594-abracadickra-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "WeeQuickie",
+ "item": "Rune axe",
+ "count": 1,
+ "start": 1794590133594,
+ "end": 1794593733594,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Knife",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
