@@ -79,7 +79,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Item stats (RuneLite's item stats): what a food or a potion does, from the server's consumption table (client-assets/item-stats.json, made by gen-item-stats.ts). The tooltip of an item shows it.
   let itemStats={};fetch(asset('item-stats.json')).then(r=>r.ok?r.json():{}).then(j=>{itemStats=j||{};},()=>{});
   window.atlasItemStats=()=>itemStats;
-  function statTip(item){const t=itemStats[item.name];return t?' · '+t:'';}
+  function statTip(item){const t=itemStats[item.name];return (t?' · '+t:'')+(typeof cookTip==='function'?cookTip(item):'');}
+  // Cooking burn chance (RuneLite's cooking plugin, with the server's roll): client-assets/cooking.json (gen-cooking.ts)
+  // has the [low, high] of each raw food on a fire, a range and with cooking gauntlets. The engine (STAT_RANDOM) cooks
+  // when floor(low*(99-L)/98) + floor(high*(L-1)/98) + 1 beats a roll of 0-255; L is the current Cooking level.
+  // The tooltip of a raw food gives the followed account's burn chance and the level where a range stops burning it.
+  let cookData={};fetch(asset('cooking.json')).then(r=>r.ok?r.json():{}).then(j=>{cookData=j||{};},()=>{});
+  function cookOk(p,L){const [lo,hi]=p;if(!lo&&!hi)return 0;if(lo===1&&hi===1)return 1;L=Math.min(L,99);return Math.min(Math.floor(lo*(99-L)/98)+Math.floor(hi*(L-1)/98)+1,256)/256;}
+  function cookTip(item){const r=cookData[item?.name];if(!r)return '';const b=typeof account==='function'?account():null,L=typeof curLevel==='function'?curLevel(b,'Cooking'):null;
+    if(!Number.isFinite(L))return ' · cooks to '+r.c+' at Cooking '+r.lv;if(L<r.lv)return ' · Cooking '+r.lv+' needed to cook';
+    const pct=p=>Math.round((1-cookOk(p,L))*100)+'%',range=r.r||r.f,parts=[r.r?'fire '+pct(r.f)+', range '+pct(r.r):'fire or range '+pct(r.f)];if(r.g)parts.push('gauntlets '+pct(r.g));
+    let stop=null;for(let l=r.lv;l<=99;l++)if(cookOk(range,l)>=1){stop=l;break;}
+    return ' · burn at Cooking '+L+': '+parts.join(', ')+' · '+(stop==null?'a range burns it even at 99':stop<=L?'no burns on a range':'no burns on a range from '+stop);}
   // High alchemy (RuneLite's item prices, the HA value): the server pays max(scale(6, 10, cost), 1) coins
   // (skill_magic/scripts/spells/alchemy.rs2), with the cost from client-assets/item-alch.json (gen-item-alch.ts). Coins cannot be alched.
   // The profit of one cast buys the item at the market ask and pays one nature rune; a fire staff gives the fire runes. Only a profit shows.
@@ -235,9 +246,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(selectedTab==='quests'&&questScope==='fleet')html=fleetQuests();
     else if(selectedTab==='quests'){
       const quests=b?.quests||[];
-      const qp=b?.ranks?.find(r=>r.board==='Quest Points')?.level??null;const done=q=>q.state==='complete'||q.state==='completed',kind=q=>done(q)?'completed':q.state==='not started'?'not started':q.state==='started'?'in progress':'unknown',shown=quests.filter(q=>(questFilter==='all'||kind(q)===questFilter)&&q.name.toLowerCase().includes(questQuery.toLowerCase()));html='<h3>Quest Journal</h3>'+questScopeBar()+'<p style="text-align:center">Quest Points: '+(qp==null?'—':E(qp))+(typeof questRewardData!=='undefined'&&questRewardData&&quests.length?' · '+quests.filter(q=>!done(q)).reduce((n,q)=>n+(questRewardData[q.name]?.[0]||0),0)+' left':'')+'</p><p class="game-muted" style="text-align:center">'+(b?.questsAt?(window.atlasOperator()?'Observed ':'Updated ')+''+age(b.questsAt)+' ago':'No quest snapshot')+'</p>'+(quests.length?'<div class="quest-filter">'+[['all','All'],['completed','Done'],['in progress','Started'],['not started','To do'],['unknown','Unknown']].map(([id,label])=>`<button data-quest-filter="${id}" class="${questFilter===id?'on':''}">${label} ${id==='all'?quests.length:quests.filter(q=>kind(q)===id).length}</button>`).join('')+'</div><input class="quest-search" data-quest-search placeholder="Find a quest…" aria-label="Search quests" value="'+E(questQuery)+'">':'')+'<div class="game-list">'+shown.map(q=>`<button style="color:${q.state==='complete'||q.state==='completed'?'#00ff00':q.state==='not started'?'#ff0000':q.state==='started'?'#ffff00':'#aaa'}" data-quest="${E(q.name)}" title="${E(typeof rewardText==='function'?rewardText(q.name):'')}">${E(q.name)}</button>`).join('')+'</div>';
+      const qp=b?.ranks?.find(r=>r.board==='Quest Points')?.level??null;const done=q=>q.state==='complete'||q.state==='completed',kind=q=>done(q)?'completed':q.state==='not started'?'not started':q.state==='started'?'in progress':'unknown',ready=q=>typeof questReady==='function'&&questReady(b,q),shown=quests.filter(q=>(questFilter==='all'||(questFilter==='ready'?ready(q):kind(q)===questFilter))&&q.name.toLowerCase().includes(questQuery.toLowerCase()));html='<h3>Quest Journal</h3>'+questScopeBar()+'<p style="text-align:center">Quest Points: '+(qp==null?'—':E(qp))+(typeof questRewardData!=='undefined'&&questRewardData&&quests.length?' · '+quests.filter(q=>!done(q)).reduce((n,q)=>n+(questRewardData[q.name]?.[0]||0),0)+' left':'')+'</p><p class="game-muted" style="text-align:center">'+(b?.questsAt?(window.atlasOperator()?'Observed ':'Updated ')+''+age(b.questsAt)+' ago':'No quest snapshot')+'</p>'+(quests.length?'<div class="quest-filter">'+[['all','All'],['completed','Done'],['in progress','Started'],['not started','To do'],['ready','Ready'],['unknown','Unknown']].filter(([id])=>id!=='ready'||(typeof questReqData!=='undefined'&&questReqData)).map(([id,label])=>`<button data-quest-filter="${id}" class="${questFilter===id?'on':''}"${id==='ready'?' title="Not done, and every requirement is met"':''}>${label} ${id==='all'?quests.length:quests.filter(q=>id==='ready'?ready(q):kind(q)===id).length}</button>`).join('')+'</div><input class="quest-search" data-quest-search placeholder="Find a quest…" aria-label="Search quests" value="'+E(questQuery)+'">':'')+'<div class="game-list">'+shown.map(q=>`<button style="color:${q.state==='complete'||q.state==='completed'?'#00ff00':q.state==='not started'?'#ff0000':q.state==='started'?'#ffff00':'#aaa'}" data-quest="${E(q.name)}" title="${E(typeof rewardText==='function'?rewardText(q.name):'')}">${E(q.name)}</button>`).join('')+'</div>';
       if(!quests.length)html+='<p class="game-muted">Quest progress has not been reported for this account.</p>';
-      if(questDetail){const q=quests.find(q=>q.name===questDetail);html='<h3>'+E(questDetail)+'</h3><p style="text-align:center">'+E(q?.state||'Not reported')+'</p>'+(typeof rewardText==='function'&&rewardText(questDetail)?'<p class="quest-reward">Reward: '+E(rewardText(questDetail))+'</p>':'')+'<p class="game-muted">'+(b?.questsAt?'Last observed '+age(b.questsAt)+' ago.':'No quest snapshot.')+'</p><button class="game-control" data-quest-back>Back to quest list</button>';}
+      if(questDetail){const q=quests.find(q=>q.name===questDetail);html='<h3>'+E(questDetail)+'</h3><p style="text-align:center">'+E(q?.state||'Not reported')+'</p>'+(typeof rewardText==='function'&&rewardText(questDetail)?'<p class="quest-reward">Reward: '+E(rewardText(questDetail))+'</p>':'')+(typeof reqHtml==='function'?reqHtml(b,questDetail)+itemHtml(b,questDetail):'')+'<p class="game-muted">'+(b?.questsAt?'Last observed '+age(b.questsAt)+' ago.':'No quest snapshot.')+'</p><button class="game-control" data-quest-back>Back to quest list</button>';}
     }
     if(selectedTab==='friends'){
       if(!S)html='<h3>Friends List</h3><p class="game-muted" role="status">Waiting for fleet data…</p>';
@@ -260,6 +271,26 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // base XP times the XP rate), as the tooltip of its row and on its page; the header counts the quest points left.
   let questRewardData=null;
   fetch(asset('quest-rewards.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')questRewardData=j;},()=>{});
+  // Quest requirements (RuneLite's Quest Helper): client-assets/quest-reqs.json (gen-quest-reqs.ts) has each quest's
+  // skills [skill, level, src], quest points [n, src] and quests [name, src]; src 1 the server checks it and the wiki
+  // lists it, 0 only the wiki lists it, 2 only the quest's scripts check it. A skill counts its base level.
+  let questReqData=null;
+  fetch(asset('quest-reqs.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')questReqData=j;},()=>{});
+  const REQ_SRC=['only the wiki lists this','the server checks this','the quest scripts check this; the wiki does not list it'];
+  function questReqs(b,name){const r=questReqData?.[name];if(!r)return [];const lv=n=>(b?.skills||[]).find(x=>x.name===n)?.level,qs=b?.quests||[],qp=b?.ranks?.find(x=>x.board==='Quest Points')?.level;
+    const done=n=>{const q=qs.find(x=>x.name===n);return q?q.state==='complete'||q.state==='completed':null;};
+    return [...r.s.map(([k,n,src])=>{const have=lv(k);return {text:n+' '+k,ok:Number.isFinite(have)?have>=n:null,have:Number.isFinite(have)?have:null,src};}),
+      ...(r.qp?[{text:r.qp[0]+' quest points',ok:Number.isFinite(qp)?qp>=r.qp[0]:null,have:Number.isFinite(qp)?qp:null,src:r.qp[1]}]:[]),
+      ...r.q.map(([n,src])=>({text:n,ok:done(n),have:null,src}))];}
+  // Ready: not done, and every requirement is met (a quest with no listed requirement is ready). Until the data loads,
+  // no quest is ready and the Ready filter is hidden.
+  const questReady=(b,q)=>!!questReqData&&!(q.state==='complete'||q.state==='completed')&&questReqs(b,q.name).every(x=>x.ok===true);
+  // Quest items: i [[item, count, src]] (src 1 the quest's scripts name the item, 0 only the wiki lists it), held across
+  // the pack, worn gear and the bank (the bank as last observed). Items do not count for Ready: they can be bought.
+  function questItems(b,name){const l=questReqData?.[name]?.i;if(!l)return [];const all=[...(b?.inventory||[]),...(b?.equipment||[]),...(b?.bank||[])].filter(Boolean);
+    return l.map(([n,c,src])=>{const have=all.filter(x=>x.name===n).reduce((t,x)=>t+(x.count||1),0);return {text:(c>1?c+' ':'')+n,ok:have>=c,have,src};});}
+  const itemHtml=(b,name)=>{const l=questItems(b,name);return l.length?'<p class="quest-reqs">Items: '+l.map(x=>'<span class="'+(x.ok?'req-ok':'req-miss')+(x.src===1?'':' req-soft')+'" title="'+E((x.src===1?'the quest scripts use this item':'only the wiki lists this')+' · holds '+x.have+(b?.bankAt?'':' (no bank snapshot)'))+'">'+E(x.text)+(!x.ok&&x.have?' ('+x.have+')':'')+'</span>').join(', ')+'</p>':'';};
+  const reqHtml=(b,name)=>{const l=questReqs(b,name);return l.length?'<p class="quest-reqs">Needs: '+l.map(x=>'<span class="'+(x.ok===true?'req-ok':x.ok===false?'req-miss':'req-unknown')+(x.src===1?'':' req-soft')+'" title="'+E(REQ_SRC[x.src]+(x.have!=null&&!x.ok?' · has '+x.have:''))+'">'+E(x.text)+(x.have!=null&&x.ok===false?' ('+x.have+')':'')+'</span>').join(', ')+'</p>':'';};
   // The third list is XP that is one of several outcomes (a random reward): "one of".
   const rewardText=name=>{const r=questRewardData?.[name];if(!r)return '';const alt=r[2]||[];return [r[0]?r[0]+(r[0]===1?' quest point':' quest points'):'',...r[1].map(([s,x])=>nf(x)+' '+s+' XP'),alt.length?'one of: '+alt.map(([s,x])=>nf(x)+' '+s).join(', ')+' XP':''].filter(Boolean).join(' · ');};
   // Inventory Setups (RuneLite's) in the Equipment tab: choose a PvP kit (client-assets/pk-kits.json, from
@@ -1101,7 +1132,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Skilling session (RuneLite's Woodcutting, Mining and Fishing session boxes): the account's top loot item since its
     // session started, with its count an hour (Loot tracker flow).
     const SESSION_VERB={woodcutting:'Logs cut',mining:'Ores mined',fishing:'Fish caught',cooking:'Food cooked',thieving:'Loot',smithing:'Made',crafting:'Made',fletching:'Made',firemaking:'Burned'};
-    const sessionLine=b=>{const t=(b.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0];if(!t)return '';const hours=Math.max(1/60,((b.flow.at??Date.now())-b.flow.since)/3.6e6);return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr');};
+    const sessionLine=b=>{const t=(b.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0];if(!t)return '';const hours=Math.max(1/60,((b.flow.at??Date.now())-b.flow.since)/3.6e6);const burnt=(b.flow?.loot||[]).filter(i=>/^burnt /i.test(i.name)).reduce((n,i)=>n+i.count,0),cooked=new Set(Object.values(typeof cookData==='object'?cookData:{}).map(r=>r.c)),made=burnt?(b.flow?.loot||[]).filter(i=>cooked.has(i.name)).reduce((n,i)=>n+i.count,0):0;
+      return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr')+(burnt&&made?line('Burnt',nf(burnt)+' · '+Math.round(burnt*100/(burnt+made))+'% burn rate'):'');};
     // PvP Tools lines: in the Wilderness, the risk, what a death keeps and loses, and the players who can attack now.
     const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):''))+line('Risk',gp(p.risk))+line('Kept · lost',gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
     const goalText=(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60);
