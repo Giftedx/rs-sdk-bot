@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794534031097,
+ "at": 1794534080422,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -19,21 +19,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
-   "role": "pk-trainee"
   },
   {
    "account": "Mightyrod",
@@ -74,20 +59,24 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "99",
-    "5000"
+    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
+   "goal": "buy nature and air runes at the Magic Guild in Yanille for the alchemy band",
+   "role": "supply",
+   "template": "army-nature-guild",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "shop:magic_guild"
+   ]
   },
   {
    "account": "Bigpackage",
@@ -568,6 +557,21 @@
    "repeat": false,
    "goal": "local-recover-woodenstaff-20261113t013004z [task-7c8d6425-47c2-438d-8ec6-a67e792d8724]",
    "role": "thieving"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
   }
  ]
 }
