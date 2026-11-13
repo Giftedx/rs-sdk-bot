@@ -716,6 +716,23 @@ test('!price answers from the market, then from the item value',()=>{
  expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
 });
 
+test('banked XP: bank items that are the one input of an action, at the best action the level allows',()=>{
+ const code=shell.slice(shell.indexOf("  // Banked XP (RuneLite's Banked Experience)"),shell.indexOf('  // Best training spot (Skill Calculator):'));
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const t=new Function('window',`let skillActions=null;${code};return {bankedXp,set:a=>{skillActions=a;}};`)({atlasXp:X});
+ t.set({prayer:[['Bones',1,112.5,['Bones'],[]],['Dragon bones',1,1800,['Dragon bones'],[]]],
+  fletching:[['Shortbow',5,125,['Shortbow'],['Shortbow']],['Bronze arrow',1,32.5,['Bronze arrowtips'],['Bronze arrow']]],
+  cooking:[['Shrimps',1,75,['Raw shrimps'],['Shrimps']],['Shark',80,5250,['Raw shark'],['Shark']]]});
+ const b:any={skills:[{name:'Prayer',level:1,xp:0},{name:'Fletching',level:10,xp:X.xpForLevel(10)},{name:'Cooking',level:1,xp:0}],
+  bank:[{name:'Bones',count:10},{name:'Dragon bones',count:2},{name:'Shortbow',count:5},{name:'Raw shark',count:100},{name:'Raw shrimps',count:4}]};
+ const p=t.bankedXp(b,'Prayer');
+ expect(p).toEqual({xp:4725,items:12,level:X.levelForXp(4725)});
+ // A bow named as its own input is not banked XP; a raw shark at Cooking 1 is above the level.
+ expect(t.bankedXp(b,'Fletching')).toBe(null);
+ expect(t.bankedXp(b,'Cooking')).toEqual({xp:300,items:4,level:X.levelForXp(300)});
+ expect(t.bankedXp({skills:b.skills},'Prayer')).toBe(null);
+});
+
 test('quest requirements: met, missing with the level held, unknown, and the Ready test',()=>{
  const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
  const data={"Hero's Quest":{s:[['Mining',52,1],['Cooking',53,0]],qp:[55,1],q:[['Lost City',1],['Dragon Slayer',0]]},'Lost City':{s:[['Woodcutting',36,1]],q:[]}};

@@ -373,6 +373,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const best=acts.filter(a=>a[1]<=lvl&&a[2]>0).sort((a,b)=>b[2]-a[2])[0]||null,next=acts.filter(a=>a[1]>lvl).sort((a,b)=>a[1]-b[1]||b[2]-a[2]).slice(0,3);
     return {best:best&&left?{name:best[0],count:Math.ceil(left/best[2])}:null,next:next.map(a=>({name:a[0],level:a[1]}))};
   }
+  // Banked XP (RuneLite's Banked Experience): the XP that the bank holds for a skill. Each bank item that is the one
+  // input of an action of the skill (a bone buried, a log burnt, a raw fish cooked, an uncut gem cut) counts at the best
+  // such action the account can do now; an action whose input is its own output (a bow named as its unstrung form) does
+  // not count. The level is where the account's XP plus the banked XP reaches.
+  function bankedXp(b,skill){const acts=skillActions?.[String(skill).toLowerCase()],X=window.atlasXp;if(!acts||!Array.isArray(b?.bank)||!X)return null;
+    const s=(b.skills||[]).find(x=>x.name.toLowerCase()===String(skill).toLowerCase()),lvl=s?.xp!=null?X.levelForXp(s.xp):(s?.level??1),best=new Map();
+    for(const a of acts){if(a[3].length!==1||a[1]>lvl||!(a[2]>0)||a[4].includes(a[3][0]))continue;const k=a[3][0];if(!(best.get(k)>=a[2]))best.set(k,a[2]);}
+    let xp=0,items=0;for(const it of b.bank){const v=it&&best.get(it.name);if(v){xp+=v*(it.count||1);items+=it.count||1;}}
+    return xp?{xp:Math.round(xp),items,level:s?.xp!=null?X.levelForXp(s.xp+xp):null}:null;}
   // Best training spot (Skill Calculator): for woodcutting or mining, the best tree or rock the account can use at its
   // level (skill-actions.json, resources.json; normal trees are not in resources.json) and the nearest one on its floor.
   function bestSpot(b,skill,lvl){
@@ -1142,7 +1151,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Skills tab tooltip (OSRS): XP, next level at, remaining.
   hud.addEventListener('mouseover',e=>{const sk=e.target.closest('[data-skill]');const tip=hud.querySelector('.game-tip');if(!sk){tip.hidden=true;return;}const s=level(sk.dataset.skill),X=window.atlasXp;if(!s||!X){tip.hidden=true;return;}const lvl=Math.min(99,s.level),next=X.xpForLevel(Math.min(99,lvl+1));
     if(s.xp==null){tip.innerHTML=`<div>${E(sk.dataset.skill)} level <b>${s.level}</b></div><div>XP is not reported for this side.</div>`;}else tip.innerHTML=`<div>${E(sk.dataset.skill)} XP: <b>${nf(s.xp)}</b></div>`+(lvl<99?`<div>Next level at: <b>${nf(next)}</b></div><div>Remaining XP: <b>${nf(Math.max(0,next-s.xp))}</b></div>`:X.virtualLevel(s.xp)>99?`<div>Virtual level: <b>${X.virtualLevel(s.xp)}</b></div>`:'');
-    {const g=s.xp!=null?skillGuide(sk.dataset.skill,s.xp):null;if(g){if(g.best)tip.innerHTML+=`<div>To level: <b>${nf(g.best.count)}</b> × ${E(g.best.name)}</div>`;if(g.next.length)tip.innerHTML+=`<div>Unlocks: ${g.next.map(n=>E(n.name)+' ('+n.level+')').join(', ')}</div>`;}}
+    {const g=s.xp!=null?skillGuide(sk.dataset.skill,s.xp):null;if(g){if(g.best)tip.innerHTML+=`<div>To level: <b>${nf(g.best.count)}</b> × ${E(g.best.name)}</div>`;if(g.next.length)tip.innerHTML+=`<div>Unlocks: ${g.next.map(n=>E(n.name)+' ('+n.level+')').join(', ')}</div>`;}
+     const bx=typeof bankedXp==='function'?bankedXp(account(),sk.dataset.skill):null;if(bx)tip.innerHTML+=`<div>Banked: <b>+${nf(bx.xp)}</b> XP from ${nf(bx.items)} items${bx.level&&bx.level>lvl?' → level '+bx.level:''}</div>`;}
     const r=sk.getBoundingClientRect(),h=hud.getBoundingClientRect();tip.hidden=false;tip.style.left=Math.max(0,r.left-h.left-tip.offsetWidth-4)+'px';tip.style.top=(r.top-h.top)+'px';});
   hud.addEventListener('mouseout',e=>{if(e.target.closest('[data-skill]')&&!e.relatedTarget?.closest?.('[data-skill]'))hud.querySelector('.game-tip').hidden=true;});
   let welcomed=false;

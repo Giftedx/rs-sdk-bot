@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { skillActions } from './gen-skill-actions';
+import { objParamRows, skillActions } from './gen-skill-actions';
 
 test('skill actions give the XP of one action on this server: base XP times the XP rate', () => {
     const names = new Map([['logs', 'Logs'], ['oak_logs', 'Oak logs']]);
@@ -24,4 +24,17 @@ test('an action is named after its table row when several rows of the skill give
     ], new Map([['coins', 'Coins'], ['cake', 'Cake']]), 1);
     expect(out.thieving!.map(a => a[0])).toEqual(['Pickpocket man', 'Cake', 'Pickpocket farmer']);
     expect(out.thieving![0]![4]).toEqual(['Coins']);
+});
+
+test('item params give Prayer and Firemaking actions: bone_exp and productexp in tenths, tradeable items only', () => {
+    const files: [string, string][] = [
+        ['scripts/skill_prayer/configs/bones.obj', '[bones]\nname=Bones\nparam=bone_exp,45\n\n[mm_skeleton_bones]\nname=Bones\nparam=bone_exp,30\n'],
+        ['scripts/skill_firemaking/configs/firemaking.obj', '[oak_logs]\nname=Oak logs\nparam=levelrequire,15\nparam=productexp,600\n'],
+        ['scripts/tutorial/configs/tutorial.obj', '[tut_bones]\nparam=bone_exp,45\n'],
+    ];
+    const rows = objParamRows(files, debug => debug !== 'mm_skeleton_bones');
+    expect(skillActions(rows, new Map([['bones', 'Bones'], ['oak_logs', 'Oak logs']]))).toEqual({
+        prayer: [['Bones', 1, 112.5, ['Bones'], []]],
+        firemaking: [['Oak logs', 15, 1500, ['Oak logs'], []]],
+    });
 });
