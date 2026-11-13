@@ -1530,8 +1530,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `.practice/climb/set-team-*`. Side A on `army` (specials from 35% target health): 12 wins, 20 losses, 24 dead
     and 15 of side B's, so the held specials pay only when the army outnumbers its target (finding 47). Three
     against three (`extra:team-3v3-multi-x3`, three groups, seeds 1-8, 72 accounts a side): with the escape 11 wins,
-    7 losses, 6 draws, 22 dead and 24 of side B's; with it off 11, 9, 4, 33 dead and 30. Gap: no run of the escape
-    with the allies not counted.
+    7 losses, 6 draws, 22 dead and 24 of side B's; with it off 11, 9, 4, 33 dead and 30. Focus fire pays: on the
+    repeatable runs two against two, side A taking the lowest health bar in view wins 20, loses 10, with 16 dead and
+    26 of side B's; taking the nearest enemy (`SPAR_A_PICK=near`) 14, 16, with 18 and 17 (side A stands two tiles
+    east, so the mirror is not even). Gap: no run of the escape with the allies not counted.
 50. **On repeatable runs two specials kept for a runner catch a third more runners for a fight or two elsewhere.**
     With the timer restart of finding 41, `specReserve: 500` on the champion with `tribrid-snare-sara`
     (`.practice/climb/dual-sara.sh`, seeds 1-8): 30 of 64 runners where the champion catches 22, 91 kills and 5

@@ -25,8 +25,10 @@ const out = (s: Session, life0: number | undefined) => {
     return !p || dead(s, life0) || wildernessLevel(p.worldZ) === 0;
 };
 
+// How an account takes its next enemy: `low` the lowest health bar in view (the nearest on a tie), `near` the nearest.
+export type TeamPick = 'low' | 'near';
 export async function team(a: readonly Session[], b: readonly Session[], optionsA: FightOptions, optionsB: FightOptions, cap: number,
-    log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false): Promise<TeamResult> {
+    log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false, picks: { a: TeamPick; b: TeamPick } = { a: 'low', b: 'low' }): Promise<TeamResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if ((await Promise.all([...a, ...b].map(s => nextTick(s)))).some(t => !t)) break;
     const lives = new Map([...a, ...b].map(s => [s, s.sdk.getState()?.player?.lifeId] as const));
@@ -41,7 +43,7 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const live = foes.filter(f => !isOut(f)).map(f => ({ f, p: view.find(v => v.name.toLowerCase() === f.name.toLowerCase()) })).filter(x => x.p);
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
-            const pick = live.sort((x, y) => health(x) - health(y) || x.p!.distance - y.p!.distance)[0];
+            const pick = live.sort((x, y) => (picks[key] === 'low' ? health(x) - health(y) : 0) || x.p!.distance - y.p!.distance)[0];
             if (!pick) { if (!await nextTick(s)) return; continue; }
             const r = await fightPlayer(s, pick.f.name, { ...options, allies, cap: Math.max(1, cap - (s.tick() - start)), stop: () => ended() || isOut(pick.f),
                 log: l => log(`[${s.name}] ${l}`) });
@@ -81,7 +83,10 @@ if (import.meta.main) {
         for (let at = 0; at < bots.length; at += 2 * size) groups.push(await Promise.all(bots.slice(at, at + 2 * size).map((name, i) => (at === 0 && i === 0 ? first : openBot(name, { onStop })))));
     } finally { tickWaits.active--; }
     for (const s of groups.flat()) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
-    const results = await Promise.all(groups.map((g, i) => team(g.slice(0, size), g.slice(size), options(false, i), options(true, i), cap, undefined, () => halted !== undefined)));
+    // SPAR_A_PICK, SPAR_B_PICK: low (default) or near.
+    const pickOf = (v?: string): TeamPick => (v === 'near' ? 'near' : 'low');
+    const results = await Promise.all(groups.map((g, i) => team(g.slice(0, size), g.slice(size), options(false, i), options(true, i), cap, undefined, () => halted !== undefined,
+        { a: pickOf(env.SPAR_A_PICK), b: pickOf(env.SPAR_B_PICK) })));
     for (const r of results) console.log(`TEAM ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
     const wins = results.filter(r => r.winner === 'a').length, losses = results.filter(r => r.winner === 'b').length;
     const ok = halted === undefined && results.every(r => r.attacks.a > 0 && r.attacks.b > 0);
