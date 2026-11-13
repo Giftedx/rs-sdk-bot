@@ -1,5 +1,13 @@
 import { expect, test } from 'bun:test';
-import { completionXp, insideSwitch, questRewards } from './gen-quest-rewards';
+import { completionXp, insideSwitch, questRewards, varpCompletionXp } from './gen-quest-rewards';
+
+test('varp completion XP: a block anywhere that sets the varp complete; not _test cheats, choices or small skill XP', () => {
+    expect(varpCompletionXp([
+        ['areas/area_ardougne_east/scripts/caroline.rs2', '[label,caroline_savedkennith]\n%seaslug = ^seaslug_complete;\nstat_advance(fishing, 71750);'],
+        ['_test/scripts/cheats/cheat_quest.rs2', '[label,debug_quests]\n%seaslug = ^seaslug_complete;\nstat_advance(fishing, 71750);'],
+        ['areas/area_x/scripts/weed.rs2', '[label,weed]\n%seaslug = ^seaslug_complete;\nstat_advance(herblore, 1);'],
+    ], 'seaslug')).toEqual([{ skill: 'fishing', xp: 7175 }]);
+});
 
 test('completion XP: stat_advance in a block named complete, base XP; not elsewhere, and not a choice of more than 3', () => {
     expect(completionXp([

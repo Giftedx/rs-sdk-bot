@@ -42,7 +42,27 @@ export function completionXp(texts: string[]): { skill: string; xp: number }[] {
     return [...blocks.values()].filter(b => b.length <= 3).flat();
 }
 
-export function questRewards(folders: string[], rows: Row[], names: Map<string, string>, rate = XP_RATE, varpFolder = VARP_FOLDER, qpFallback = QP_FALLBACK, scriptsOf: (folder: string) => string[] = () => [], isChoice: (src: string) => boolean = () => false): Record<string, Reward> {
+// XP given in a block anywhere in the content that sets the varp to a complete value (%seaslug = ^seaslug_complete):
+// for a reward defined outside the quest folder (Sea Slug: area_ardougne_east caroline.rs2). files are [path, text];
+// the _test cheat scripts are left out, and so is a block with more than 3 stat_advance (a choice) or one under 100
+// base XP (a skill action that happens to share the block, such as weeding). Base XP.
+export function varpCompletionXp(files: [string, string][], varp: string): { skill: string; xp: number }[] {
+    const sets = new RegExp(`%${varp}\\s*=\\s*\\^\\w*complete`), out: { skill: string; xp: number }[] = [];
+    for (const [path, text] of files) {
+        if (/(^|[\\/])_test[\\/]/.test(path)) continue;
+        let block: string[] = [];
+        const flush = () => {
+            if (!block.some(l => sets.test(l))) return;
+            const xp = block.map(l => l.match(/stat_advance\((\w+),\s*(\d+)\)/)).filter((m): m is RegExpMatchArray => !!m).map(m => ({ skill: m[1]!, xp: Number(m[2]) / 10 }));
+            if (xp.length && xp.length <= 3 && xp.every(x => x.xp >= 100)) out.push(...xp);
+        };
+        for (const line of text.split(/\r?\n/)) { if (/^\[[a-z_]+,[^\]]+\]/.test(line)) { flush(); block = []; } else block.push(line); }
+        flush();
+    }
+    return out;
+}
+
+export function questRewards(folders: string[], rows: Row[], names: Map<string, string>, rate = XP_RATE, varpFolder = VARP_FOLDER, qpFallback = QP_FALLBACK, scriptsOf: (folder: string) => string[] = () => [], isChoice: (src: string) => boolean = () => false, varpXp: (varp: string) => { skill: string; xp: number }[] = () => []): Record<string, Reward> {
     const byFolder = new Map<string, Row>();
     for (const r of rows) { const f = r.folder ?? (r.varp ? varpFolder[r.varp] ?? null : null); if (f) byFolder.set(f, r); }
     const out: Record<string, Reward> = {};
@@ -50,7 +70,7 @@ export function questRewards(folders: string[], rows: Row[], names: Map<string, 
         const name = names.get(folder);
         if (!name) continue;
         const r = byFolder.get(folder);
-        const xp = r?.xp?.length ? r.xp : completionXp(scriptsOf(folder)), pair = (x: { skill: string; xp: number }) => [cap(x.skill), Math.round(x.xp * rate)] as [string, number];
+        const own = r?.xp?.length ? r.xp : completionXp(scriptsOf(folder)), xp = own.length || !r?.varp ? own : varpXp(r.varp), pair = (x: { skill: string; xp: number }) => [cap(x.skill), Math.round(x.xp * rate)] as [string, number];
         out[name] = [r ? Number(r.questPoints) || 0 : qpFallback[folder] ?? 0, xp.filter(x => !(x as any).src || !isChoice((x as any).src)).map(pair), xp.filter(x => (x as any).src && isChoice((x as any).src)).map(pair)];
     }
     return out;
@@ -61,7 +81,11 @@ if (import.meta.main) {
     const questDir = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts', 'quests');
     const folders = readdirSync(questDir).filter(f => f.startsWith('quest_'));
     const rs2 = (d: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? rs2(p) : f.endsWith('.rs2') ? [readFileSync(p, 'utf8')] : []; });
-    const rewards = questRewards(folders, JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')), questJournalNames(root), XP_RATE, VARP_FOLDER, QP_FALLBACK, folder => rs2(join(questDir, folder)), src => { const i = src.lastIndexOf(':'); return insideSwitch(readFileSync(join(root, 'vendor', 'rs-sdk', 'server', 'content', src.slice(0, i)), 'utf8').split(/\r?\n/), Number(src.slice(i + 1)) - 1); });
+    // Every script of the content once, as [path, text], for rewards defined outside a quest folder.
+    const scriptsDir = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts');
+    const withPaths = (d: string): [string, string][] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? withPaths(p) : f.endsWith('.rs2') ? [[p.slice(scriptsDir.length + 1), readFileSync(p, 'utf8')] as [string, string]] : []; });
+    const allScripts = withPaths(scriptsDir);
+    const rewards = questRewards(folders, JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')), questJournalNames(root), XP_RATE, VARP_FOLDER, QP_FALLBACK, folder => rs2(join(questDir, folder)), src => { const i = src.lastIndexOf(':'); return insideSwitch(readFileSync(join(root, 'vendor', 'rs-sdk', 'server', 'content', src.slice(0, i)), 'utf8').split(/\r?\n/), Number(src.slice(i + 1)) - 1); }, varp => varpCompletionXp(allScripts, varp));
     writeFileSync(join(import.meta.dir, 'client-assets', 'quest-rewards.json'), JSON.stringify(rewards));
     console.log(`quest-rewards.json: ${Object.keys(rewards).length} quests, ${Object.values(rewards).reduce((n, r) => n + r[0], 0)} quest points`);
 }
