@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794597055412,
+ "at": 1794597157807,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -525,6 +525,21 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "imp"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-8be56522-cedf-46b7-bd17-1ad2d8e9bde1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-imp-nabtheknob-melee-r1 [task-8be56522-cedf-46b7-bd17-1ad2d8e9bde1]",
+   "role": "helper"
   }
  ]
 }
