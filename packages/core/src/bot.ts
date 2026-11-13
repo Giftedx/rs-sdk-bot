@@ -134,7 +134,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
         argv: opts.record?.argv ?? process.argv.slice(2), startedAt: Date.now() });
     if (record && s.record) { s.record(record); records.set(s, record); }
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
-    const led = startLedger(s as any);
+    // The ledger names the last script action of each idle tick: the watcher's gate sees them (started below).
+    const led = startLedger(s as any, () => randomEvents.get(s)?.lastAction() ?? null);
     ledgers.set(s, led);
     // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
     // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
