@@ -509,6 +509,16 @@ const ROUTE_CASES: BenchCase[] = [
       ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 4)
         ? kitFixture('tribrid-snare-spear', process.env.ARMY_AT === 'near' ? 3164 + (i % 2) : 3160 + i, process.env.ARMY_AT === 'near' ? 3782 + (i >> 1) : 3746)
         : process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
+  // The spear army at Wilderness level 6 in multi-way combat (3150,3560), where the target's glory works: the target of
+  // finding 53 left by its glory once two had hit it (finding 67).
+  {key: 'extra:army-route-spear-low-x5', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', 'ARMY_PROFILE=army-alpha', 'OPEN_TOGETHER=1', 'OPEN_RANGE=1', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3150, 3560) : sparFixture(3150, 3560, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
+      ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 4)
+        ? kitFixture('tribrid-snare-spear', 3095 + i, 3515)
+        : sparFixture(3095 + i, 3515)}))]},
   // The same with a leader and three followers (finding 67).
   {key: 'extra:army-route-spear-x4', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', 'ARMY_PROFILE=army-alpha', 'OPEN_TOGETHER=1', 'OPEN_RANGE=1', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
