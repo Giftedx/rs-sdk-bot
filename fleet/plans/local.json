@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794597157807,
+ "at": 1794598255869,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -75,25 +75,6 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "BowBeforeMe",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -148,25 +129,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {
