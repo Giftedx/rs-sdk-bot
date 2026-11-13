@@ -1135,6 +1135,10 @@ test('player finder: online players by name, a hidden name never offered, the li
  expect(t.finderList()).toContain('combat 87 · 3078, 3640 · 40 tiles away');
  // The pin follows the roster; an absent player is not online.
  S.roster=[];expect(t.pinned()).toBe(null);expect(t.finderList()).toContain('not online');
+ // A new query, a best-spot pin and a GE source pin each replace the target, so each drops the player pick.
+ expect(shell).toContain('finderQuery=e.target.value.slice(0,40);finderPick=null;finderPlayer=null;');
+ expect(shell).toContain('tiles:s.tiles};finderPick=null;finderPlayer=null;');
+ expect(shell).toContain('tiles:flatTiles(src[2])};finderPick=null;finderPlayer=null;');
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
