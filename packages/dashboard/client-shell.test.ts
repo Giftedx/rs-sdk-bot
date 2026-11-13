@@ -820,7 +820,7 @@ test('respawn timers: the time left is the base scaled by the players online, le
  t.set({tick:110,at:1000,list:[[3059,3884,0,450,100],[3000,3000,0,1342,null],[1,1,0,450,100]]},res);
  const rows=t.respawnRows(1000);
  // 2,000 players halve the base: 600 ticks of 0.4 s = 240 s, less 10 ticks = 4 s.
- expect(rows[0]).toEqual({name:'Runite rock',x:3059,z:3884,left:236,range:null,total:240});
+ expect(rows[0]).toEqual({name:'Runite rock',x:3059,z:3884,l:0,left:236,range:null,total:240});
  // A start the view did not see has no countdown; a tile with no resource is left out.
  expect(rows[1]).toMatchObject({name:'Oak tree',left:null,range:null});
  expect(rows.length).toBe(2);
@@ -830,4 +830,21 @@ test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
  const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
  const window:any={efficiency:(t:string)=>t.split('').filter(c=>c==='i').length};
  expect(run('rate')).toBe('BAC');expect(run('waste')).toBe('BCA');
+});
+test('3D highlights: one overlay message with threats, rivals, fought npcs, labels, lines, the death tile and pies',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b={name:'Alpha',inWorld:true,pos:{x:3100,z:3700,level:0},combat:70};
+ const env={S:{economy:{itemValues:{'Rune scimitar':15000}}},D:{rival:new Set(['goondelf','bad name!'])},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{atlasCam3d:{x:3100,z:3700,at:Date.now()}},
+  wildLevel:()=>23,pvpState:()=>({threats:[{name:'Near'}]}),recap:{state:'ok',name:'Alpha',data:{pos:{x:3101,z:3702,level:0}}},respawnRows:()=>[{x:3059,z:3884,l:0,left:30,total:120},{x:1,z:1,l:0,left:null,total:null}],VIEWER:{state:'loading'},$:()=>null,nf:String,location:{origin:''}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,setLines:(l)=>{multiLines=l;},setTargets:(t)=>{recentTargets=t;}};`)(...Object.values(env));
+ t.setLines([[3008,3712,3008,3720,0],[100,100,108,100,0]]);t.setTargets([2181]);
+ const o=t.overlayMessage();
+ expect(o.players).toEqual({goondelf:'#00ffff',near:'#ff0000'});
+ expect(o.npcs).toEqual([{types:[2181],colour:'#00ffff'}]);
+ expect(o.ground).toEqual({prices:{'Rune scimitar':15000},min:1000});
+ expect(o.lines).toContainEqual({x0:3008,z0:3712,x1:3008,z1:3720,l:0,colour:'#ff0000'});
+ expect(o.lines.some((l:any)=>l.x0===100)).toBe(false);
+ expect(o.lines).toContainEqual({x0:2944,z0:3672,x1:3392,z1:3672,l:0,colour:'#ffff00',label:'Level 20'});
+ expect(o.tiles).toEqual([{x:3101,z:3702,l:0,colour:'#ff0000',fill:true,label:'Death'}]);
+ expect(o.pies).toEqual([{x:3059,z:3884,l:0,p:0.75}]);
 });
