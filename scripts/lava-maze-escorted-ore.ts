@@ -265,11 +265,15 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
             ((l.x===3059&&l.z===3885)||(l.x===3060&&l.z===3884))&&l.reachable!==false&&l.optionsWithIndex.some(o=>/^mine$/i.test(o.text)));
         requireThat(await waitUntil(miner!,()=>checkOutbound()||!!rock(),{timeoutTicks:120})&&!checkOutbound()&&rock(),'Counted Runite rock unavailable');
         const startXp=miner!.sdk.getSkillXp('mining')??0,start=miner!.tick();
-        for(let i=0;i<8&&miner!.tick()-start<105&&held(miner!,ORE)===0;i++){
+        // MINE_TICKS (default 210) bounds the time at the rock. Runite succeeds 18 in 256 a swing at Mining 99
+        // (mine.dbrow rock_successchance 1,18; stat_random), a swing each 3 ticks: no ore in 105 ticks is 8% of
+        // trips, in 210 ticks 0.6%. A threat still ends the wait on any tick (checkOutbound).
+        const mineTicks=Math.max(25,Math.min(600,Number(process.env.MINE_TICKS??210)));
+        for(let i=0;i<Math.ceil(mineTicks/25)+1&&miner!.tick()-start<mineTicks&&held(miner!,ORE)===0;i++){
             requireThat(!checkOutbound(),abort??'Mining stopped');
             await heal(miner!);const loc=rock();if(!loc)break;
             report.rocks.push({tick:miner!.tick(),x:loc.x,z:loc.z,id:loc.id});
-            report.attempts.push(await mineRock(miner!,loc,()=>checkOutbound()||held(miner!,ORE)>=1,Math.min(25,105-(miner!.tick()-start)),/^runite ore$/i));
+            report.attempts.push(await mineRock(miner!,loc,()=>checkOutbound()||held(miner!,ORE)>=1,Math.min(25,mineTicks-(miner!.tick()-start)),/^runite ore$/i));
         }
         requireThat(await waitUntil(miner!,()=>held(miner!,ORE)===1&&(miner!.sdk.getSkillXp('mining')??0)>startXp,{timeoutTicks:2}),'Exactly one new ore and Mining XP required');
         report.mined=1;
