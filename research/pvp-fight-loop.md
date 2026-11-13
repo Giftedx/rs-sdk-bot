@@ -1543,4 +1543,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     and deaths of 96): `eatAt` 55: 28; 87, 9. `eatAt` 65: 35; 87, 8. `chaseBelow` 0.5: 30; 91, 5 (no change).
     `mixStyles: false`: 21; 91, 5. `adaptStyles: false`: 29; 87, 8. `freezeEarlyMax` 0: 19; 90, 6.
     `freezeBelow` 0.4: 18; 92, 4. `freezeBelow` 0.55: 28; 88, 8. `specReserve` 750: 34; 90, 6. The early freeze from
-    half health holds 11 of the 30 runner kills. Gap: one knob at a time; 8 seeds.
+    half health holds 11 of the 30 runner kills. A special in the tick after the target's eat animation
+    (`human_eat`, seq 829: it cannot eat again for 3 ticks), past `specBelow` and `specReserve`, while its health
+    bar shows 70% or lower: 27; 84, 12. At 50%: 26; 89, 7. At 30%: 30; 91, 5, the champion's own result, since at
+    30% its specials already go out. Gap: one knob at a time; 8 seeds.
