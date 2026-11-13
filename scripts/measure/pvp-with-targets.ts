@@ -13,6 +13,11 @@ const [bot, targetList, mode, ...rest] = process.argv.slice(2);
 if (!bot || !targetList || !mode) { console.log('RESULT fail usage: bun scripts/measure/pvp-with-targets.ts <bot> <target,...> <mode> [arg ...]'); process.exit(2); }
 const names = targetList.split(',').filter(Boolean);
 // The wait for the logins counts as a tick wait: a lockstep engine holds each tick for an account with no waiter.
+// The targets stand with no prayer guard (TARGET_PRAYER_GUARD=1 keeps it): a maxed target whose guard switches its
+// protection prayer is a duel that a route's short fight cap turns into a coin toss, and the case tests the route.
+// The route's child keeps the environment of this process.
+const childEnv = { ...process.env };
+if (process.env.TARGET_PRAYER_GUARD !== '1') process.env.PRAYER_GUARD = '0';
 tickWaits.active++;
 const targets = await Promise.all(names.map(n => openBot(n, { onStop: async () => {} })));
 tickWaits.active--;
@@ -20,7 +25,7 @@ let done = false;
 const idle = targets.map(t => (async () => { while (!done && await nextTick(t)) { /* stands on its tile */ } })());
 const root = resolve(import.meta.dir, '..', '..');
 const child = Bun.spawn(['bun', resolve(root, 'scripts/aio-pvp.ts'), bot, mode, ...rest.map(a => a.replaceAll('{targets}', names[0]!))],
-    { cwd: root, env: { ...process.env }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    { cwd: root, env: childEnv, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
 let last: string | null = null;
 const relay = async (stream: ReadableStream<Uint8Array>, write: (s: string) => void) => {
     let carry = '';
