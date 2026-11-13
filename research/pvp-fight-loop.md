@@ -80,16 +80,18 @@ climber and the ladder put each profile on both sides.
 ### What each build is worth
 
 Each build against the standard tribrid, 16 spars (8 on each side of the map), both sides on the base profile
-(`extra:spar-duel-<build>-x8`, seeds 1 and 2). Net is the build's net damage for each 100 ticks.
+(`extra:spar-duel-<build>-x8`, seeds 1 and 2). Net is the build's net damage for each 100 ticks. The two mace rows ran
+with Heroes' Quest set (`kitVarps`), so the mace goes back on after a bow turn; the other rows need no quest but
+Lost City and Dragon Slayer.
 
 | Build | Shop cost | Sharks | Wins of 16 | Net |
 |---|---|---|---|---|
 | `melee` (dagger, strength amulet, super attack and strength) | 252,755 | 22 | 13 | -8.5 |
 | `tribrid-pots` (three boost potions) | 441,315 | 15 | 11 | +13.6 |
 | `ranger` (d'hide, magic shortbow, ranging potion) | 241,915 | 23 | 10 | -21.4 |
+| `tribrid-mace-pots` | 467,315 | 15 | 6 | -9.1 |
 | `tribrid-dlong` (dragon longsword) | 517,355 | 18 | 5 | +6.3 |
-| `tribrid-mace-pots` | 467,315 | 15 | 2 | +1.8 |
-| `tribrid-mace` (dragon mace) | 467,355 | 18 | 1 | -7.3 |
+| `tribrid-mace` (dragon mace) | 467,355 | 18 | 1 | -19.3 |
 | `tribrid-bare` (no helm, body or legs) | 222,755 | 18 | 1 | -25.1 |
 | `tribrid-bare-pots` | 222,715 | 15 | 1 | -15.5 |
 | `mage` (splitbark, Fire Wave) | 177,555 | 20 | 0 | -5.1 |
