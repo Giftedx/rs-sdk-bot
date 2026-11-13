@@ -414,6 +414,28 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:cannon-spiders-r1', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h_sci', scriptArgs: ['cannon', 'SPOT=spiders', 'STYLE=0', 'STOP_LEVEL=50', 'CAP=900'], pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
     presetConfig: {...PRESETS.cannon_spiders_h_sci!, skills: {Attack: 99, Strength: 1, Defence: 1, Hitpoints: 42, Prayer: 99, Ranged: 1},
       equipment: [{id: 1731, count: 1, slot: 2}, {id: 1333, count: 1, slot: 3}, {id: 1061, count: 1, slot: 10}]}},
+  // Cairn segment 24 as a whole: Ranged 55-99, Defence 98-99 and Hitpoints 97-99 at the levels Cairn holds after Dragon
+  // Slayer (Attack 99, Strength 99, Defence 98, Hitpoints 97, Prayer 99), the cannon_spiders_h kit with a rune scimitar
+  // in place of one shark. `melee`: the scimitar on block (Defence XP, combat.rs2:149-150) until Defence 99, then the
+  // rapid bow; `long`: the bow on longrange (Ranged and Defence XP, combat.rs2:157-159) until Defence 99, then rapid.
+  // The worker uses the magic shortbow special by default; `--set SPECIAL=0` runs without it (research/combat-measure.md 6c).
+  ...(['melee', 'long'] as const).map((arm): BenchCase => ({key: `extra:cannon-step24-${arm}`, script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h',
+    scriptArgs: ['cannon', 'SPOT=spiders', 'STOP=Ranged=99,Defence=99,Hitpoints=99', `PHASES=${arm === 'melee' ? '1333:3:Defence=99;861:1' : '861:2:Defence=99;861:1'}`, 'CAP=3200'],
+    pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
+    presetConfig: {...PRESETS.cannon_spiders_h!, skills: {Attack: 99, Strength: 99, Defence: 98, Hitpoints: 97, Prayer: 99, Ranged: 55},
+      inventory: PRESETS.cannon_spiders_h!.inventory!.map((item, i, all) => i === all.findIndex(x => x.id === 385) ? {id: 1333, count: 1} : item)}})),
+  // Recovery: %ownedmcannon (varp 4) holds 3286,3809 (packed (x << 14) | z) and %dropcannon (varp 2) = 4 (full cannon,
+  // cannon.constant) with no cannon loc there, as after a decay. The worker talks to Nulodion beside him, who replaces a
+  // cannon whose loc is gone (nulodion.rs2:91-143).
+  {key: 'extra:cannon-reclaim-nulodion', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['cannon', 'MODE=reclaim'], pass: s => ok(s) && / how=nulodion /.test(s), timeoutMs: 300_000,
+    presetConfig: {position: {x: 3012, z: 3453, level: 0}, skills: {Hitpoints: 30}, varps: {0: 11, 2: 4, 4: (3286 << 14) | 3809}}},
+  // Recovery after a death at the spiders: Hitpoints 10, no prayer and no food, so the spiders and their poison kill the
+  // account (Attack, Strength, Defence 99 for the walker's danger rule). It respawns and walks back for the cannon, or waits for
+  // the loc to end and asks Nulodion. OK_ON_RECLAIM=1 ends the run ok when the cannon came back.
+  {key: 'extra:cannon-death-reclaim', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h', scriptArgs: ['cannon', 'SPOT=spiders', 'PRAYER=none', 'OK_ON_RECLAIM=1', 'CAP=600', 'STYLE=1'],
+    pass: s => ok(s) && /reclaimed=(picked|nulodion):true/.test(s), timeoutMs: 600_000,
+    presetConfig: {...PRESETS.cannon_spiders_h!, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 10, Prayer: 1, Ranged: 55},
+      inventory: [6, 8, 10, 12].map(id => ({id, count: 1})).concat([{id: 2, count: 300}])}},
   // The same fight with a 500 tick cap: the short run for a change to the guard.
   {key: 'extra:guard-giant-short', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},

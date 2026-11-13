@@ -1,5 +1,5 @@
 import {expect, test} from 'bun:test';
-import {CANNON_SPOTS, bandTicks, loadedBalls, pickTarget, reloadDue, type TargetNpc} from './cannon-fight';
+import {CANNON_LIFE, CANNON_REFRESH, CANNON_SPOTS, MSB, bandTicks, levelsMet, loadedBalls, parseLevels, parsePhases, pickTarget, reloadDue, specialDue, type TargetNpc} from './cannon-fight';
 import {FIGHTER_PROFILES, resolveFighterStep} from './aio-fighter';
 
 const npc = (index: number, x: number, z: number, more: Partial<TargetNpc> = {}): TargetNpc => ({
@@ -26,6 +26,29 @@ test('target: in reach and near the cannon, attackers first, then low hitpoints'
   expect(pickTarget([low, adjacent], base)?.index).toBe(4);
   expect(pickTarget([low, adjacent], {...base, skip: i => i === 4})?.index).toBe(3);
   expect(pickTarget([npc(5, 101, 98, {name: 'Black demon'}), npc(6, 101, 98, {hp: 0}), npc(7, 101, 98, {reachable: false})], base)).toBeUndefined();
+});
+
+test('phases and stop levels parse, and a phase ends when all its levels are met', () => {
+  expect(parseLevels('Ranged=99,defence=99, Hitpoints=99')).toEqual({Ranged: 99, Defence: 99, Hitpoints: 99});
+  expect(() => parseLevels('Ranged=100')).toThrow();
+  expect(parsePhases('1333:3:Defence=99;861:1')).toEqual([{weapon: 1333, style: 3, until: {Defence: 99}}, {weapon: 861, style: 1}]);
+  expect(parsePhases('::Defence=99;')).toEqual([{until: {Defence: 99}}]);
+  expect(() => parsePhases('x:1')).toThrow();
+  const lv = (k: string) => ({Defence: 99, Ranged: 80} as Record<string, number>)[k] ?? 1;
+  expect(levelsMet(lv, {Defence: 99})).toBe(true);
+  expect(levelsMet(lv, {Defence: 99, Ranged: 99})).toBe(false);
+  expect(levelsMet(lv, undefined)).toBe(false);
+});
+
+test('special only with the magic shortbow, the bar off, 350 energy and a fight on', () => {
+  const base = {special: true, weapon: MSB, energy: 350, enabled: 0, fighting: true};
+  expect(specialDue(base)).toBe(true);
+  expect(specialDue({...base, energy: 349})).toBe(false);
+  expect(specialDue({...base, enabled: 1})).toBe(false);
+  expect(specialDue({...base, weapon: 1333})).toBe(false);
+  expect(specialDue({...base, fighting: false})).toBe(false);
+  expect(specialDue({...base, special: false})).toBe(false);
+  expect(CANNON_REFRESH).toBeLessThan(CANNON_LIFE);
 });
 
 test('band ticks from first-seen level ticks', () => {

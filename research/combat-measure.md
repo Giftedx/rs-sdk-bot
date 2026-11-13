@@ -1167,14 +1167,51 @@ worktree (not in git).
   its rotation steps find no spider in reach and sight.
 - Hitpoints XP is 115,000-121,000, short of the 129,288 for Hitpoints 97 to 99 (`packages/planner/src/curve.ts`): the
   run ends at Hitpoints 98. Defence XP is 0 (rapid style).
-- Estimate (ESTIMATE) of segment 24 as Cairn plays it, with Defence 98 to 99 (66,883 XP) on longrange: 1,338 bow damage
-  at 50 Defence XP each, about 716 ticks at 1.87 bow damage a tick (Hitpoints XP 62 / 33.25), in which the bow gives half
-  its Ranged XP; that costs about 67,000 Ranged XP, 133 ticks at 506 a tick. Segment 24 is then about 2,040 ticks before
-  the slower longrange attack, against 2,152.
+- These rows have no magic shortbow special (`SPECIAL=0`); 6c measures it.
 
 Gap: the bench and the 6a runs use different engines (lockstep against 150 ms), so the gain over 6a (1,885 against
-1,997) has no matched A/B and no cause. No longrange or melee-then-bow run of segment 24 exists. The planner row for
-segment 24 (`ranged`, 309.4 Ranged XP a tick at the Gnome battlefield, plus the melee top-ups) is not changed here.
+1,997) has no matched A/B and no cause. The planner row for segment 24 (`ranged`, 309.4 Ranged XP a tick at the Gnome
+battlefield, plus the melee top-ups) is not changed here.
+
+### 6c. Segment 24 whole: Defence 98-99, Hitpoints 97-99 and Ranged 55-99
+
+Claim: a rune scimitar on block beside the cannon until Defence 99, then the rapid magic shortbow with its special,
+finishes all three skills in 1,973-2,053 ticks (mean 2,008, plus 11-12 ticks of set-up), 3 of 3 seeds under Cairn's
+2,152. Longrange for Defence is 186-266 ticks slower than melee on each seed, both without the special. The special saves 49-101 ticks on each seed.
+
+Conditions: bench, lockstep engine, seeds 7, 8, 9, one bot at the site, cases `extra:cannon-step24-melee` and
+`extra:cannon-step24-long`. Start: Attack 99, Strength 99, Defence 98, Hitpoints 97, Prayer 99, Ranged 55 (Cairn after
+Dragon Slayer), the `cannon_spiders_h` kit with a rune scimitar for one shark. Stop: Ranged, Defence and Hitpoints all 99.
+`melee` is `PHASES=1333:3:Defence=99;861:1`: block on the scimitar gives 4 Defence XP per damage
+(`skill_combat/scripts/combat.rs2:149-150`), and the cannon still rolls with the worn weapon. `long` is
+`PHASES=861:2:Defence=99;861:1`: longrange gives 2 Ranged and 2 Defence XP per damage (lines 157-159). The special
+(Snapshot) costs 350 of 1,000 energy (`skill_combat/configs/ranged/bows.obj` magic_shortbow `sa_energy`), shoots two
+arrows at Ranged + 10 and 10/7 accuracy (`pvm_magic_shortbow_sa`), and energy regains 100 every 50 ticks
+(`skill_combat/configs/combat.constant:1-3`). Raw rows: `.practice/cannon-spiders/c3-seed-*.json`, `c4-seed-*.json`
+and `c1.log`, `c2.log` in the measuring worktree (not in git).
+
+| Arm | Seed 7 | Seed 8 | Seed 9 | Mean | Done (Defence / Ranged / Hitpoints, seed 8) |
+|---|---|---|---|---|---|
+| Melee, then rapid bow with the special | 2,053 | 1,973 | 1,999 | **2,008** | 331 / 1,973 / 1,871 |
+| Melee, then rapid bow, no special | 2,121 | 2,074 | 2,048 | 2,081 | 357 / 2,068 / 2,074 |
+| Longrange, then rapid bow, no special | 2,362 | 2,340 | 2,234 | 2,312 | 991 / 2,229 / 2,340 |
+
+- Supplies, melee with the special: 1,063-1,100 balls after the first 30, 513-527 arrows, 4-5 sharks, 8 antipoison
+  doses, 11 specials, no prayer potion, no death, hpMin 35.
+- Without the special Hitpoints finishes last (6-74 ticks after Ranged): the bow's own damage is the limit, since the
+  cannon gives no Hitpoints XP. The special adds own damage, and Hitpoints finished first on seed 8.
+- Melee is faster for Defence than longrange: the scimitar takes Defence 98 to 99 in 331-438 ticks, where longrange
+  takes 991-1,100 ticks and gives half its XP to a Ranged that the cannon fills anyway.
+
+Recovery after a death (`extra:cannon-death-reclaim`, seed 7): the account died at tick 42 with no prayer and no food,
+respawned, walked back from Lumbridge with the shared walker and picked the cannon up at 3286,3809, 439 ticks in all.
+When the walk fails, the worker goes to Nulodion and waits there until the cannon loc's 2,500 ticks end
+(`cannon_setup.rs2:129-218`, `cannon.constant:1`), because he replaces a cannon only when its loc is gone
+(`npcs/nulodion.rs2:91-143`). `extra:cannon-reclaim-nulodion` checks that step: %ownedmcannon set with no loc,
+"The dwarf gives you a new cannon."
+
+Gap: the death case starts at Attack, Strength and Defence 99: with them at 1 the walker found no route back
+(`WALK_NO_ROUTE` from 3221,3220; cause not traced), and the Nulodion wait after a failed walk has no bench case. No other player at the site.
 
 ## 7. Why Defence finished last, and two levers that fix it
 
