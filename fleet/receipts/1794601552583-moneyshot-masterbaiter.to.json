@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794601552583-moneyshot-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 18186,
+ "claim": "0b958a50-3539-4eb7-8625-b432bde8ea43",
+ "count": 0,
+ "ok": false,
+ "at": 1794601655699,
+ "detail": "trade claimed"
+}
