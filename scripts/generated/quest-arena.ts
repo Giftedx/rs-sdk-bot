@@ -11,11 +11,12 @@
 // frees the Servils and attacks. Lady Servil at 12 queues the completion (lady_servil.rs2:14-19). Khazard himself
 // (13) is not needed.
 // Combat: the ogre, scorpion, Bouncer and Khazard are melee (configs/quest_arena.npc), so Protect from Melee (prayer
-// index 14) sets their damage to 0 (npc_combat_melee.rs2:44-45). Fire Wave (Magic 75, max 20, staff of fire) every 5 ticks.
+// index 14) sets their damage to 0 (npc_combat_melee.rs2:44-45). The strongest fire spell the pack allows (quest-lib fireSpell:
+// Fire Wave at Magic 75 with blood runes, else Fire Blast or Bolt), staff of fire, every 5 ticks.
 // The doors: fightarena_door1 (2617,3171 and 2585,3141) opens from the inside tile; from outside the guard lets a
 // player in Khazard armour through (quest_arena.rs2:33-52).
 // ARENA_FROM=<stage> starts later (debug presets with varp 17 set).
-import { openQuest } from './quest-lib';
+import { openQuest, fireSpell } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 
 const SERVIL = { x: 2566, z: 3199 };
@@ -30,7 +31,6 @@ const ARENA_DOOR = { x: 2606, z: 3152 };                    // fightarena_door2
 const ITEM = { helmet: 74, armour: 75, keys: 76, brew: 77, prayerPot: [2434, 139, 141, 143], food: 379, coins: 995 };
 const NPC = { guard2: 254 };
 const PFM = 14;                                             // protect_from_melee (sdk PRAYER_INDICES)
-const WAVE = componentId('magic:fire_wave');
 
 const q = await openQuest({ cap: 2500, eatAt: 6, food: [ITEM.food] });
 try {
@@ -141,7 +141,7 @@ try {
             if (!q.dialogOpen() && q.T() - lastCast >= 5) {
                 seen = true; casts++; lastCast = q.T(); if (firstCast < 0) firstCast = q.T();
                 lastTarget = n.index;
-                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: WAVE, reason: 'SDK' });
+                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId(fireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id))), reason: 'SDK' });
             }
             if (firstCast >= 0 && q.T() - firstCast > 60 && q.xp('Magic') === mxp0) await q.fail(`${label}: no cast landed`);
             if (lastMsg(/do not have enough/i) > runes0) await q.fail('out of runes');

@@ -4,11 +4,11 @@
 // 0003, 0005, quest_tree.rs2:10-24, so the trackers are skipped), 6 the orb from the chest, 7 Bolren, 8 the warlord's
 // death (khazard_warlord.rs2), then Bolren queues the completion (king_bolren.rs2:83-100).
 // Combat: every enemy is melee (quest_tree/configs/gnome_battlefield.npc), so Protect from Melee (prayer index 14)
-// sets their damage to 0 (npc_combat_melee.rs2:44-45). Fire Bolt (Magic 35, max 12) with a staff of fire kills the
+// sets their damage to 0 (npc_combat_melee.rs2:44-45). Fire Bolt (Magic 35, max 12; Fire Blast at 59 with death runes, quest-lib fireSpell) kills the
 // warlord (170 HP, no magic level). The prayer is on only near enemies: 43 points last 215 ticks (prayer.rs2:164-174).
 // Non-melee hazard: Montai's catapult hits 0-3 near 2524,3238 (commander_montai.rs2:74-90).
 // TREE_FROM=<stage> starts later (debug presets with varp 111 set).
-import { openQuest } from './quest-lib';
+import { openQuest, fireSpell } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 
 const BOLREN = { x: 2542, z: 3169 };
@@ -25,9 +25,6 @@ const LADDER = { x: 2503, z: 3252 };                       // ladder up inside t
 const CHEST = { x: 2506, z: 3259 };                        // chestclosed_khazard on level 1 (m39_50.jm2 1 10 59)
 const ITEM = { logs: 1511, orb: 587, orbs: 588, amulet: 589, prayerPot: [2434, 139, 141, 143], food: 379 };
 const PFM = 14;                                            // protect_from_melee (sdk PRAYER_INDICES)
-const BOLT = componentId('magic:fire_bolt');
-// Fire Blast (Magic 59, max 16; Fire Bolt max 12, magic_combat_spells.dbrow) while the pack holds death runes (560).
-const BLAST = componentId('magic:fire_blast');
 
 const q = await openQuest({ cap: 3000, eatAt: 6, food: [ITEM.food] });
 try {
@@ -154,7 +151,7 @@ try {
         q.milestone(7);
     }
 
-    // 8. The Khazard warlord: Protect from Melee, then Fire Bolt every 5 ticks until he falls and the orbs are in the pack.
+    // 8. The Khazard warlord: Protect from Melee, then the strongest fire spell every 5 ticks until he falls and the orbs are in the pack.
     if (stage() < 8) {
         // Prayer on from the south edge of the battlefield: a trooper hit the bot (HP 10 -> 8) at 2468,3270 in a test run.
         await q.walk('to battlefield', [{ x: 2504, z: 3226, tol: 3 }]);
@@ -179,7 +176,7 @@ try {
             await keepPrayer();
             if (!pfmOn() && points() > 0) await setPfm(true);
             const n = wl();
-            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) { casts++; lastCast = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: (q.s.sdk.getSkill('Magic')?.level ?? 1) >= 59 && q.has(560) ? BLAST : BOLT, reason: 'SDK' }); }
+            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) { casts++; lastCast = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId(fireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id))), reason: 'SDK' }); }
             if (lastMsg(/do not have enough/i) > blocked0) await q.fail('out of runes');
             await q.waitTicks(1);
         }

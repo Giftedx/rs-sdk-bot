@@ -777,6 +777,12 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
       skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 60, Agility: 25},
       inventory: [{id: 562, count: 127}, {id: 556, count: 400}, {id: 563, count: 2}, {id: 560, count: 35}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // Block 10: Fight Arena through the sweep from where The Grand Tree ends (under the tree), at the runner's state then
+  // (Attack 94, Magic 73, Hitpoints 36, Prayer 99): Fire Blast with death runes in place of the preset's Fire Wave.
+  {key: 'extra:sweep-arena-after-grandtree', script: 'scripts/aio-quester.ts', preset: 'quest_arena', scriptArgs: ['sweep', 'arena'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_arena!, position: {x: 2464, z: 9895, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_arena!.skills, Attack: 94, Magic: 73, Hitpoints: 36, Prayer: 99, Agility: 25},
+      inventory: [{id: 560, count: 60}, {id: 556, count: 300}, {id: 562, count: 160}, {id: 995, count: 20}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];

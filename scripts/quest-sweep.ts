@@ -19,6 +19,7 @@ import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance,locsByDistance} from '../packages/core/src/spawn-index';
 import {gatherPlan,gatherItems,rangedKit,magicKit,arrowsFor,castsFor,ARROWS,BOWS,NPC_SOURCES,PICK_SOURCES} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
+import {fireRunesFor} from './fire-spells';
 import {QUEST_NAMES} from './quest-chain';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -200,9 +201,9 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
 // The prayer points a quest's fights used in its bench case (quester_quest_<quest>): the preset's Prayer 43, plus 17 for
 // each sip (7 + 25% of 43, consume_effects.dbrow prayer_potion_effect), less the points left. Tree Gnome Village
-// 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47. An account whose base Prayer covers that by PRAYER_MARGIN
+// 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47; Fight Arena 43 - 36 = 7. An account whose base Prayer covers that by PRAYER_MARGIN
 // leaves the preset's prayer potions out of its pack. No shop sells them.
-export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
+export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
 export const prayerCovers=(quest:string,prayer:number)=>PRAYER_USED[quest]!==undefined&&prayer>=PRAYER_USED[quest]!+PRAYER_MARGIN;
 // The pack of a build that fights a quest with the bow (scripts/pk-kits.ts; research/pvp-fight-loop.md, "Quest routes
 // of the builds"): a magic shortbow and rune arrows, so the quest script fights in the style that trains only Ranged
@@ -1187,6 +1188,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  // Not food either: a food row the pack lacks sends the sweep to a bank (bench extra:sweep-grandtree-course walked from
  // the Gnome course to the Ardougne north bank for the three potions alone).
  if(prayerCovers(quest,baseLevel('Prayer')))for(const id of PRAYER_POTIONS)base.delete(id);
+ base=fireRunesFor(base,baseLevel('Magic'));
  const build=buildPack(quest,baseLevel);
  for(const i of build)base.set(i.id,(base.get(i.id)??0)+i.count);
  if(build.length){

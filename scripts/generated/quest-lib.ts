@@ -40,6 +40,7 @@ export const teleportRefusal = (comp: string, magic: number, laws: number, level
     if (laws < 1) return 'no law rune';
     return undefined;
 };
+export { fireSpell } from '../fire-spells';
 export let bursts = 0;
 // A planned conversation token: 'R' continue, 'F' fence to the next tick, or a choice component id.
 export type PlanToken = 'R' | 'F' | number;
