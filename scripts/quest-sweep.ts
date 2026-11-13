@@ -33,6 +33,7 @@ import {crossStrongholdGate,STRONGHOLD_GATE,type GateDeps} from './agility-order
 import {crossesSea} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
 import {holdSessionEater} from '../packages/core/src/sustain';
+import {selectGiantBow,selectGiantArrows} from './gather-combat';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
@@ -103,11 +104,18 @@ export function needs(preset:SaveConfig,food=false,quest=''):Map<number,number>{
  return m;
 }
 const SCORPION_BARCRAWL = new Map([[COINS,268],[563,3],[556,11],[555,1],[554,1]]);
-export function scorpionBarcrawlNeeds(base:ReadonlyMap<number,number>,barcrawlState:number):Map<number,number>{
+export function scorpionBarcrawlNeeds(base:ReadonlyMap<number,number>,barcrawlState:number|undefined):Map<number,number>{
  const staged=new Map(base);
  if(barcrawlState===2)return staged;
  for(const [id,n] of SCORPION_BARCRAWL)staged.set(id,(staged.get(id)??0)+n);
  return staged;
+}
+// The server does not send varp 76 to the client, so the quest journal colour is the entry observation. A transmitted
+// varp at scorpcatcher_complete (6, quest.constant) also refuses. Refusal comes before any staging.
+export function scorpionEntryRefusal(journal:string,clientVarp:unknown):string|null{
+ if(journal==='complete'||clientVarp===6)return 'invalid entry: Scorpion Catcher is complete';
+ if(journal==='unknown')return 'invalid entry: Scorpion Catcher journal state unavailable';
+ return null;
 }
 const count=(rows:readonly Item[],id:number)=>rows.filter(r=>r.id===id).reduce((n,r)=>n+r.count,0);
 // Tree Gnome Village and The Grand Tree cast Fire Bolt with the staff of fire worn (the presets wear it; the packs carry
@@ -270,6 +278,15 @@ export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:
 // Casts a quest's own fights take from an account that fights with strike spells (Magic above Attack, no bow): Alomone
 // (level 13) and Prince Ali's jail guard (26) fall to a few Fire Strikes; the Jailer (47) to about twenty.
 export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15,scorpion:30};
+// The Jailer's bow for an account whose bow the core ranged kit does not list (a Ranged-over-Attack account with a
+// magic shortbow and bronze arrows in the bank): the bow and the arrows it fires take QUEST_ARROWS. Scorpion Catcher
+// only, so the other quests' fights keep the core kit.
+export function jailerBowKit(quest:string,owned:readonly Item[],ranged:number,attack:number,coreKit:boolean):{bow:number;arrows:number}|null{
+ if(quest!=='scorpion'||coreKit||ranged<=attack||!QUEST_ARROWS[quest])return null;
+ const bow=selectGiantBow(owned,ranged);
+ const arrows=bow&&selectGiantArrows(owned,ranged,bow.level);
+ return bow&&arrows!==undefined?{bow:bow.id,arrows}:null;
+}
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
@@ -954,6 +971,28 @@ export function questGatherPlan(quest:string,missing:readonly Item[],at:Tile,sel
  return gatherPlan(missing,at,(id,tile)=>quest==='hunt'&&id===1005||WORN_KIT[quest]?.some(i=>i.required&&i.id===id)?[]:spawnsByDistance(id,tile),seller,...rest);
 }
 
+// Yanille Magic Guild (m40_48.jm2): the Magic Store owner (461, 2595,3087) keeps the first floor above the stairs (1722,
+// 2590,3089). The octagon's walls close x 2585-2596, z 3082-3093; its double doors (1600/1601, z 3087-3088) sit on the
+// outer tiles 2584 and 2597. Shut, they leave the stairs unroutable: from 2590,3094 the client rejected the walk to
+// 2590,3089 and the world router found no route. A door opens for an entering player only at Magic 66 and moves the
+// player through it (magic_guild.rs2, open_and_close_double_door2); inside, the far walk takes the stairs.
+export const MAGIC_GUILD={magic:66,doors:[{x:2584,z:3087,level:0},{x:2597,z:3087,level:0}] as Tile[],locs:[1600,1601]} as const;
+export const inMagicGuild=(t:Tile)=>t.x>=2585&&t.x<=2596&&t.z>=3082&&t.z<=3093;
+// The entry a seller tile needs: none outside the guild or from inside it, a refusal below Magic 66, else the nearest door.
+export function magicGuildApproach(to:Tile,at:Tile,magic:number):{door?:Tile;refused?:string}{
+ if(!inMagicGuild(to)||inMagicGuild(at))return{};
+ if(magic<MAGIC_GUILD.magic)return{refused:`Magic Guild entry needs Magic ${MAGIC_GUILD.magic}, have ${magic}`};
+ return{door:[...MAGIC_GUILD.doors].sort((a,b)=>cheb(at,a)-cheb(at,b))[0]!};
+}
+export async function enterMagicGuild(s:Session,world:World,door:Tile,walk:(s:Session,world:World,to:Tile,legTimeoutTicks?:number)=>Promise<Walked>=walkFar):Promise<Walked>{
+ const w=await walk(s,world,door,100);if(!w.ok)return w;
+ const loc=(s.sdk.getState()?.nearbyLocs??[]).filter(l=>(MAGIC_GUILD.locs as readonly number[]).includes(l.id)&&Math.abs(l.x-door.x)<=1&&Math.abs(l.z-door.z)<=1)[0];
+ if(!loc)return{ok:false,reason:'transition',detail:`Magic Guild door unobserved at ${door.x},${door.z}`};
+ await s.bot.openDoor(loc);
+ if(!await waitUntil(s,()=>inMagicGuild(at(s))&&at(s).level===0,{timeoutTicks:10}))return{ok:false,reason:'transition',detail:`Magic Guild door at ${door.x},${door.z} left the bot at ${at(s).x},${at(s).z},${at(s).level}`};
+ return{ok:true};
+}
+
 // Walk to each seller, open its shop and buy. Ok when the pack holds the bought counts.
 async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
@@ -971,6 +1010,12 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
    if(held(b.id)>=target)break;
    // A seller across the sea or the map is not worth the search: the sweep fails fast and the shortfall is acquisition work.
    if(travelDistance(here(),c.tile)>FAR_SELLER){console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({npc:c.npc,tile:c.tile,from:here()})}`);continue;}
+   const guild=magicGuildApproach(c.tile,here(),s.sdk.getSkill('Magic')?.level??1);
+   if(guild.refused||guild.door){
+    walked=guild.door?await enterMagicGuild(s,world,guild.door):{ok:false,reason:'precondition',detail:guild.refused};
+    console.log(`QUEST_SWEEP_GUILD ${JSON.stringify({npc:c.npc,door:guild.door,at:here(),...walked})}`);
+    if(!walked.ok)continue;
+   }
    walked=await walkFar(s,world,c.tile,100);
    if(!walked.ok)continue;
    tried++;
@@ -1174,9 +1219,15 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  const st=()=>s.sdk.getState();
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
  if(quest==='scorpion'){
-  const state=()=>Number((s.client as any).var?.[77]);
-  if(!await waitUntil(s,()=>Number.isSafeInteger(state()),{timeoutTicks:20}))return fail('Barcrawl gate state unavailable');
-  base=scorpionBarcrawlNeeds(base,state());
+  const flag=()=>questFlags(s.client)?.find(f=>f.name===QUEST_NAMES.scorpion)?.state??'unknown';
+  await waitUntil(s,()=>flag()!=='unknown',{timeoutTicks:20});
+  const journal=flag(),refusal=scorpionEntryRefusal(journal,(s.client as any).var?.[76]);
+  if(refusal)return fail(refusal);
+  const observed=(s.client as any).var?.[77],state=Number.isSafeInteger(observed)?Number(observed):undefined;
+  // A replay or a reconnect can expose the player before client varps. Stage the bounded Barcrawl pack in that
+  // unknown case. The generated quest reads the live varp again at the gate and skips Barcrawl when it is already 2.
+  base=scorpionBarcrawlNeeds(base,state);
+  console.log(`QUEST_SWEEP_SCORPION_ENTRY ${JSON.stringify({journal,barcrawl:state??'unknown',stagesBarcrawl:state!==2})}`);
  }
  const baseLevel=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
  for(const id of STURDY_OPTIONAL[quest]??[])if(base.has(id)&&baseLevel('Hitpoints')>=STURDY&&baseLevel('Defence')>=STURDY){
@@ -1354,6 +1405,8 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   // that merely owns a bow.
   const questArrows=kit&&skill('Ranged')>skill('Attack')?QUEST_ARROWS[quest]??0:0;
   if(kit&&(gather.gathers.some(g=>g.kit==='ranged')||questArrows))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)+questArrows});
+  const jailerBow=jailerBowKit(quest,owned,skill('Ranged'),skill('Attack'),!!kit);
+  if(jailerBow){gather.tools.push({id:jailerBow.bow,count:1},{id:jailerBow.arrows,count:QUEST_ARROWS[quest]!});console.log(`QUEST_SWEEP_JAILER_BOW ${JSON.stringify(jailerBow)}`);}
   // A magic kill takes the staff and the strike's runes for its casts (the staff's own rune costs nothing); so do the
   // quest's own fights for an account that fights with strike spells.
   const questCasts=mkit&&!questArrows&&skill('Magic')>skill('Attack')?QUEST_CASTS[quest]??0:0;
