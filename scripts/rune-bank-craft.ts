@@ -260,11 +260,14 @@ async function runeBankCli(){
  if(['--rune-carriers','--rune-opening'].includes(process.argv.at(-1)??'')){
   const {mainRuneStage}=await import('./rune-carrier-stage');await mainRuneStage(process.argv.slice(2));return;
  }
- if(process.argv.includes('--carriers')||process.argv.includes('--body-continuation')||process.argv.some(a=>a.startsWith('--body-measure'))){
+ if(process.argv.includes('--carriers')||process.argv.includes('--body-continuation')||process.argv.some(a=>a.startsWith('--body-measure')||a.startsWith('--staged'))){
   try{
-   const {runeCarrierRoster,runeCarrierMeasurePacks}=await import('./rune-carrier-roster');
+   const {runeCarrierRoster,runeCarrierMeasurePacks,runeCarrierStaged}=await import('./rune-carrier-roster');
    const {runRuneCarriers}=await import('./rune-carriers');
-   const roster=runeCarrierRoster(process.argv.slice(2)),r=await runRuneCarriers(roster,Number(process.env.CAP??2800),{bodyContinuation:process.argv.includes('--body-continuation'),measurePacks:runeCarrierMeasurePacks(process.argv.at(-1))});
+   const {carrierAltar}=await import('./rune-carrier-altar');
+   const roster=runeCarrierRoster(process.argv.slice(2)),staged=runeCarrierStaged(process.argv.at(-1));
+   const r=await runRuneCarriers(roster,Number(process.env.CAP??2800),{bodyContinuation:process.argv.includes('--body-continuation'),measurePacks:runeCarrierMeasurePacks(process.argv.at(-1)),
+    ...staged?{staged:{altar:carrierAltar(staged.altar),target:staged.target}}:{}});
    console.log('RUNE_CARRIERS_RESULT '+JSON.stringify(r));
    await finish([],r.ok,'failure' in r?r.failure??'carrier route failed':`runecraft=${r.level} batches=${r.batches}`);return;
   }catch(error){await finish([],false,String(error));}

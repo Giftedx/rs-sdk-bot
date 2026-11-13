@@ -465,3 +465,27 @@ test('a multi-item giver offers every line in one trade, and a failed line count
     const short = { ...progress, lines: [progress.lines![0]!, { ...progress.lines![1]!, count: 0 }] };
     expect(fleetTradeOutcome(ringReceipt('from'), short, true, giverLogout, attemptId, 2500, 'short').state).toBe('reconcile');
 });
+
+test('a waiting taker logs in when the giver is ready, when the giver failed, or at its deadline', async () => {
+    const { waitForGiver, markGiverReady, giverReadyFile } = await import('./fleet-trade');
+    let t = 0, readyAt = 6000, failedAt = Infinity;
+    const clock = { now: () => t, sleep: async (ms: number) => { t += ms; } };
+    const o = order({ start: 0, end: 60 * 60_000, takerWaits: true });
+    expect(await waitForGiver(o, { ...clock, ready: () => t >= readyAt, failed: () => t >= failedAt })).toBe('ready');
+    expect(t).toBe(6000);
+    t = 0; readyAt = Infinity; failedAt = 4000;
+    expect(await waitForGiver(o, { ...clock, ready: () => t >= readyAt, failed: () => t >= failedAt })).toBe('failed');
+    t = 0; failedAt = Infinity;
+    expect(await waitForGiver(o, { ...clock, ready: () => false, failed: () => false, maxMs: 10_000 })).toBe('deadline');
+    expect(t).toBe(10_000);
+    t = 0;
+    expect(await waitForGiver({ ...o, end: 6 * 60_000 }, { ...clock, ready: () => false, failed: () => false })).toBe('deadline');
+    expect(t).toBe(60_000);
+    expect(validOrder(o)).toBe(true);
+    expect(validOrder({ ...o, takerWaits: false as unknown as true })).toBe(false);
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-ready-'));
+    try {
+        markGiverReady(dir, 'o1');
+        expect(readFileSync(giverReadyFile(dir, 'o1'), 'utf8')).toMatch(/^\d+$/);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
