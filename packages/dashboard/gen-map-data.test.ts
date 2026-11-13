@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { itemSources, mapIcons, pretty } from './gen-map-data';
+import { actionLabel, itemSources, mapIcons, pretty } from './gen-map-data';
 
 const names = { npc: (d: string) => ({ hickton: 'Hickton', giant: 'Giant' } as Record<string, string>)[d] ?? pretty(d), item: (d: string) => ({ iron_bar: 'Iron bar', rune_arrow: 'Rune arrow' } as Record<string, string>)[d] ?? pretty(d) };
 
@@ -10,6 +10,14 @@ test('map icons: teleport destinations, agility shortcuts with their level and s
         [{ sources: [{ kind: 'shop', owners: [{ npc: 'hickton', tiles: [{ x: 2822, z: 3442, level: 0 }, { x: 2822, z: 3442, level: 0 }] }] }] }],
         names);
     expect(icons).toEqual([[2580, 9513, 0, 'a', 'Agility shortcut (level 40): Walk-across'], [2822, 3442, 0, 's', 'Shop: Hickton'], [3213, 3424, 0, 't', 'Varrock teleport']]);
+});
+
+test('action labels: talk, use an item on, interact, quest reward; debug and tutorial triggers are no action', () => {
+    expect([
+        actionLabel('opnpc1', 'head_wizard', names), actionLabel('opnpcu', 'sheep', names), actionLabel('oplocu', 'crystal_chestclosed', names),
+        actionLabel('opheldu', 'iron_bar', names), actionLabel('oploc2', 'flax', names), actionLabel('queue', 'waterfall_quest_complete', names),
+        actionLabel('debugproc', 'giverunes', names), actionLabel('tutorial', '_', names),
+    ]).toEqual(['Talk to Head wizard', 'Use an item on Sheep', 'Use an item on Crystal chestclosed', 'Use an item on Iron bar', 'Interact with Flax', 'Quest reward: Waterfall quest', null, null]);
 });
 
 test('map icons: one icon for each destination option of a teleport, named with the option', () => {

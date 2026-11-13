@@ -38,6 +38,17 @@ export function mapIcons(teleports: any[], edges: any[], items: any[], names: Na
     return [...out.values()].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 }
 
+// What the player does, by the script trigger: opnpc1 talks; opnpcu, oplocu and opheldu use an item on the subject;
+// another op is a menu option; queue is a quest reward. debugproc and tutorial are no player action, so null.
+export function actionLabel(trigger: string, subject: string, names: Names): string | null {
+    const held = trigger.startsWith('opheld'), what = held ? names.item(subject) : names.npc(subject);
+    if (trigger === 'opnpc1') return `Talk to ${what}`;
+    if (/^op(npc|loc|held)u$/.test(trigger)) return `Use an item on ${what}`;
+    if (/^op(npc|loc|held)\d$/.test(trigger)) return `Interact with ${what}`;
+    if (trigger === 'queue') return `Quest reward: ${pretty(subject.replace(/_complete$/, ''))}`;
+    return null;
+}
+
 export function itemSources(items: any[], names: Names): Record<string, Source[]> {
     const out: Record<string, Source[]> = {};
     const places = (ps: any[]) => flat((ps ?? []).flatMap((p: any) => p.tiles ?? []));
@@ -50,7 +61,7 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
             else if (s.kind === 'gather') rows.push(['gather', `${cap(s.skill)} ${s.level}: ${(s.places ?? []).filter((p: any) => !/^macro_|dummy/.test(p.loc ?? '')).map((p: any) => pretty(p.loc ?? p.npc ?? '')).filter((v: string, i: number, a: string[]) => v && v !== 'Loc' && a.indexOf(v) === i).slice(0, 2).join(', ') || pretty(s.rung.split('/')[1] ?? '')}`, places(s.places)]);
             else if (s.kind === 'make') rows.push(['make', `${cap(s.skill)} ${s.level}: from ${(s.inputs ?? []).map((i: any) => (i.count > 1 ? i.count + ' ' : '') + names.item(i.item)).join(', ') || 'nothing'}`, []]);
             else if (s.kind === 'pickup') rows.push(['pickup', `Floor spawn${s.spawns > 1 ? 's (' + s.spawns + ')' : ''}`, flat(s.tiles ?? [])]);
-            else if (s.kind === 'action') rows.push(['action', `${names.npc(s.subject)}: ${String(s.trigger).startsWith('opnpc') ? 'talk' : 'use'}`, places(s.places)]);
+            else if (s.kind === 'action') { const label = actionLabel(String(s.trigger), String(s.subject), names); if (label) rows.push(['action', label, places(s.places)]); }
         }
         // Two NPC variants of one name give one row, with the places of both.
         const byLabel = new Map<string, Source>();
