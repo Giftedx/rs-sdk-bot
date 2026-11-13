@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794530497118-magicwanda-weequickie-runeessence",
+ "account": "Magicwanda",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 170,
+ "claim": "cd9816fb-2eb3-4c34-ad8d-790139702921",
+ "count": 0,
+ "ok": false,
+ "at": 1794530503068,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Air talisman",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

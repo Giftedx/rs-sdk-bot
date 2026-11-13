@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794530497118-magicwanda-weequickie-runeessence",
+ "account": "WeeQuickie",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 170,
+ "claim": "7024adcf-c122-4cf6-b60b-f45b2fa9fb0a",
+ "count": 0,
+ "ok": false,
+ "at": 1794530515544,
+ "detail": "Error: route to 3014, 3356: timeout far walk to 3014,3356,0: no progress: walk rejected 3 times start=2952,3453,0 at=2952,3453,0 target=2949,3444 reply={\"phase\":\"validation\",\"reason\":\"client_rejected\",\"message\":\"Failed to walk\"}",
+ "lines": [
+  {
+   "item": "Air talisman",
+   "requested": 1,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1794530506522-0000035116-0000000001",
+  "at": 1794530515533,
+  "sha256": "112b0b74e56a66d5805e2f5e63446e88c2e029eb2e0ebfda38f45be817e40691"
+ },
+ "screen": false
+}
