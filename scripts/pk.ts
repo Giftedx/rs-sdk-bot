@@ -154,8 +154,8 @@ export type FightOptions = {
     // Our own accounts in this fight (lower case): each one within 10 tiles takes one attacker off the count of
     // escapeOutnumbered, so an account does not leave an ally that stands with it.
     allies?: readonly string[];
-    // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower. 500 catches more
-    // runners and loses mirror fights (research/pvp-fight-loop.md finding 44).
+    // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
+    // keeps 500: research/pvp-fight-loop.md finding 50).
     specReserve?: number;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;

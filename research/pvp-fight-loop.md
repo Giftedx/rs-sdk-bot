@@ -1530,3 +1530,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `.practice/climb/set-team-*`. Side A on `army` (specials from 35% target health): 12 wins, 20 losses, 24 dead
     and 15 of side B's, so the held specials pay only when the army outnumbers its target (finding 47). Gap: no run
     of the escape with the allies not counted.
+50. **On repeatable runs two specials kept for a runner catch a third more runners for a fight or two elsewhere.**
+    With the timer restart of finding 41, `specReserve: 500` on the champion with `tribrid-snare-sara`
+    (`.practice/climb/dual-sara.sh`, seeds 1-8): 30 of 64 runners where the champion catches 22, 91 kills and 5
+    deaths against the rival builds where it has 92 and 4, and in the mirror against the champion (`extra:spar-x8`)
+    35 kills and 29 deaths where the champion has 37 and 27. Finding 44's numbers for the same option came from runs
+    that did not repeat. The champion takes `specReserve: 500`. Gap: 8 seeds; the mirror and the rivals each lose 1
+    or 2 fights.
