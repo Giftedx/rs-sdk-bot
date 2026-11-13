@@ -1,11 +1,16 @@
 import { expect, test } from 'bun:test';
 import { questRewards } from './gen-quest-rewards';
 
-test('quest rewards: by journal name, quest points and the XP times the rate; a quest with no journal name is left out', () => {
-    const names = new Map([['quest_doric', "Doric's Quest"], ['quest_runemysteries', 'Rune Mysteries Quest']]);
-    expect(questRewards([
+test('quest rewards: every journal quest folder, by journal name, with the XP times the rate', () => {
+    const names = new Map([['quest_doric', "Doric's Quest"], ['quest_gobdip', 'Goblin Diplomacy'], ['quest_cog', 'Clock Tower']]);
+    expect(questRewards(['quest_doric', 'quest_gobdip', 'quest_cog', 'quest_barcrawl'], [
         { folder: 'quest_doric', questPoints: 1, xp: [{ skill: 'mining', xp: 1300 }] },
-        { folder: 'quest_runemysteries', questPoints: 1, xp: [] },
-        { folder: 'quest_barcrawl', questPoints: 0, xp: [] },
-    ], names, 25)).toEqual({ "Doric's Quest": [1, [['Mining', 32500]]], 'Rune Mysteries Quest': [1, []] });
+        // A row with no folder takes its folder from its varp.
+        { folder: null, varp: 'goblinquest', questPoints: 5, xp: [{ skill: 'crafting', xp: 200 }] },
+    ], names, 25, { goblinquest: 'quest_gobdip' }, { quest_cog: 1 })).toEqual({
+        "Doric's Quest": [1, [['Mining', 32500]]],
+        'Goblin Diplomacy': [5, [['Crafting', 5000]]],
+        // A folder with no row takes the fallback quest points; the barcrawl miniquest has no journal name.
+        'Clock Tower': [1, []],
+    });
 });
