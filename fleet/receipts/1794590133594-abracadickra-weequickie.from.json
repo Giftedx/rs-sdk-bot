@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794590133594-abracadickra-weequickie",
+ "account": "Abracadickra",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune axe",
+ "requested": 1,
+ "claim": "e35527f3-5fea-4c83-92c2-bb177dc842f8",
+ "count": 0,
+ "ok": false,
+ "at": 1794590138905,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Knife",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
