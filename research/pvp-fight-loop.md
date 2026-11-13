@@ -1586,3 +1586,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the target in 2 of 8 meetings (5 escapes, 1 away), four in 4 of 8 (4 escapes), five in 6 of 8 (2 escapes).
     The army lost no account. A target that leaves on the first two hits is the prey of five or more. Gap: one run
     per seed.
+56. **In the army route five accounts still lose the running target; gang mode's start on the target's tile is
+    the easy case.** `extra:army-route-defend-deep-x5` (the route of finding 52 with a leader and four followers
+    from level 28 against the target of finding 54 at level 34, multi-way; seeds 1-4): the target escapes in every
+    run, 21 to 23 ticks after the first hit, with 56 to 68 HP. With `OPEN_TOGETHER=1` the hold releases when all
+    five stand within 3 tiles (14 to 15 ticks after the leader first sees the target) and the target still escapes
+    with 39 to 79 HP; with the gang target's kit (`TARGET_KIT=tribrid-snare`: glory worn, 18 sharks) it escapes 31
+    to 37 ticks in with 53 to 67 HP. Finding 55's five accounts start on the target's tile in gang mode. Gap: the
+    cause of the gap between the two harnesses (approach direction, the leader's roam fight options) is not
+    measured.

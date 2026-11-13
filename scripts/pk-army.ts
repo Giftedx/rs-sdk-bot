@@ -106,9 +106,9 @@ if (import.meta.main) {
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: leader!.tick(), ...e }));
     // The army's kills: each target that any of its accounts saw die, once.
     const shared = { target: null as string | null, over: false, killed: new Set<string>() };
-    // OPEN_TOGETHER=1: the army holds its fire on a new target until every account stands within 3 tiles of it, 10
-    // of the leader's ticks at most, then all open in one tick.
-    const openTogether = arg(args, 'OPEN_TOGETHER', '0') === '1';
+    // OPEN_TOGETHER=1: the army holds its fire on a new target until every account stands within 3 tiles of it,
+    // OPEN_TICKS of the leader's ticks at most (default 20), then all open in one tick.
+    const openTogether = arg(args, 'OPEN_TOGETHER', '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20'));
     const opened = new Map<string, number>();
     const hold = () => {
         const t = shared.target?.toLowerCase();
@@ -116,7 +116,7 @@ if (import.meta.main) {
         const first = opened.get(t) ?? (opened.set(t, leader!.tick()), leader!.tick());
         if (first < 0) return false;
         const near = sessions.every(x => { const p = x.sdk.getState()?.nearbyPlayers.find(n => n.name.toLowerCase() === t); return !!p && p.distance <= 3; });
-        if (near || leader!.tick() - first >= 10) { opened.set(t, -1); return false; }
+        if (near || leader!.tick() - first >= openTicks) { opened.set(t, -1); console.log('PK_EVENT ' + JSON.stringify({ t: leader!.tick(), e: 'open', target: t, why: near ? 'all near' : 'waited', after: leader!.tick() - first })); return false; }
         return true;
     };
     if (openTogether) cfg.hold = hold;
