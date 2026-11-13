@@ -31,7 +31,7 @@
 // localhost quirk: in this Windows sandbox `localhost` resolves to ::1 first
 // while the practice engine listens on IPv4 only, so fetch('http://localhost:8888/crc')
 // resets. Bench bots are therefore pinned to 127.0.0.1 after createBot.
-import {startStack} from '../../packages/practice/src/stack';
+import {simStatFile, startStack} from '../../packages/practice/src/stack';
 import {proveInProcess} from '../../packages/practice/src/prove';
 import {createBot} from '../../packages/practice/src/bots';
 import {applyPreset, PRESETS} from '../../packages/practice/src/presets';
@@ -419,9 +419,9 @@ async function main() {
   console.log(`AIO_BENCH start cases=${cases.length} runs=${RUNS} concurrency=${CONCURRENCY} timeoutMs=${TIMEOUT} ${LOCKSTEP ? `lockstep seed=${SEED}` : 'tickMs=150'} xpRate=25`);
   if (LOCKSTEP) process.env.SIM_LOCKSTEP = '1'; // bench bots inherit it and acknowledge each tick
   // A fresh-engine slot owns ports SLOT_PORT+10k .. +3 and its own market database, beside the shared stack's 8888.
-  const slotPort = (slot: number) => SLOT_PORT + slot * 10;
+  const slotPort = (slot: number) => SLOT_PORT + slot * 10, instanceOf = (slot: number) => `aiobench-${slot}`;
   const start = (label?: string, slot?: number, caseEnv: Record<string, string> = {}) => startStack({ tickMs: Number(process.env.BENCH_TICK_MS ?? 150), xpRate: 25, readyTimeoutMs: 120_000,
-    ...(slot === undefined ? {} : { instance: `aiobench-${slot}`, gateway: false as const, portWaitMs: 10_000, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
+    ...(slot === undefined ? {} : { instance: instanceOf(slot), gateway: false as const, portWaitMs: 10_000, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
       engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite`, ...caseEnv } }),
     ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
   if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
@@ -443,7 +443,8 @@ async function main() {
   if (refusedBudget && !overBudget) { console.error(refusedBudget); process.exit(BUDGET_EXIT); }
   const deadline = Date.now() + budgetMin * 60_000;
   const profile = process.env.BENCH_PROFILE === '1';
-  const simStatFile = join(practiceDir(), 'logs', 'sim-stat.log');
+  // A fresh-engine slot's engine writes its own stat file (stack instance aiobench-<slot>); the shared stack has none.
+  const statFileOf = (slot: number) => simStatFile(FRESH ? instanceOf(slot) : undefined);
   if (profile) mkdirSync(join(dirname(OUT), 'profile'), { recursive: true });
   let stack = FRESH ? null : await start();
   const rows: Awaited<ReturnType<typeof runCase>>[] = [];
@@ -475,11 +476,11 @@ async function main() {
             // the bytes its stat file gains during the case.
             const ackFile = profile ? resolve(dirname(OUT), 'profile', `${c.key.replace(/[^a-z0-9-]/gi, '_')}.ack`) : '';
             if (profile) { rmSync(ackFile, { force: true }); process.env.SIM_ACK_FILE = ackFile; }
-            const statFrom = profile && existsSync(simStatFile) ? readFileSync(simStatFile).length : 0;
+            const statFile = statFileOf(slot), statFrom = profile && existsSync(statFile) ? readFileSync(statFile).length : 0;
             const row = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888);
             if (profile) {
               delete process.env.SIM_ACK_FILE;
-              const ack = parseAckStats(readSince(ackFile, 0)), sim = parseSimStat(readSince(simStatFile, statFrom));
+              const ack = parseAckStats(readSince(ackFile, 0)), sim = parseSimStat(readSince(statFile, statFrom));
               console.log(`AIO_BENCH_PROFILE ${JSON.stringify({ case: c.key, wallMs: row.elapsedMs, engineStartMs, ...phase, engine: sim, client: ack, cappedCostMs: ack.capped * Number(process.env.SIM_BUSY_MS ?? 2000) })}`);
             }
             recordElapsed(c.key, Date.now() - engineAt);

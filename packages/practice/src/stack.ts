@@ -47,7 +47,7 @@ export function engineCommand(opts: StackOptions, port: number): { cmd: string[]
         ACTION_TRACE_FILE: join(practiceDir(), 'action-trace.log'),
     };
     if (opts.lockstep) {
-        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: join(practiceDir(), 'logs', `sim-stat${suffix(opts.instance)}.log`) });
+        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: simStatFile(opts.instance) });
         if (opts.lockstep.seed !== undefined) env.SIM_SEED = String(opts.lockstep.seed);
         if (opts.lockstep.anchor) env.SIM_SEED_ANCHOR = opts.lockstep.anchor;
         if (opts.lockstep.traceFile) env.SIM_TRACE_FILE = opts.lockstep.traceFile;
@@ -90,6 +90,11 @@ export { killTree } from './proc';
 // Saved with each PID so a stale pids.json never kills an unrelated process (Windows reuses PIDs).
 export const MARKERS = { engine: 'src/app.ts', gateway: 'gateway.ts' } as const;
 type Saved = Record<string, { pid: number; marker: string }>;
+
+// The engine's lockstep stat file of a stack instance (SIM_STAT_FILE): aio-practice-bench --profile reads it.
+export function simStatFile(instance?: string): string {
+    return join(practiceDir(), 'logs', `sim-stat${suffix(instance)}.log`);
+}
 
 function suffix(instance?: string): string {
     if (instance === undefined) return '';
