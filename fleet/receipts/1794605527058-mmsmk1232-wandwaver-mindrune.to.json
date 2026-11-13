@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794605527058-mmsmk1232-wandwaver-mindrune",
  "account": "Wandwaver",
  "partner": "mmsmk1232",
@@ -12,6 +12,12 @@
  "claim": "bc984a7e-7ccb-4f1e-a281-909cc23dd4be",
  "count": 0,
  "ok": false,
- "at": 1794606996449,
- "detail": "trade claimed"
+ "at": 1794607293093,
+ "detail": "Error: route to 2617, 3333: timeout Customs officer to Ardougne: not at 2683,3271,0 (at {\"x\":2772,\"z\":3224,\"level\":0})",
+ "logout": {
+  "attemptId": "1794606996458-0000025288-0000000001",
+  "at": 1794607293081,
+  "sha256": "1a8ff9c4ed8487562cb21726e6f3d60b8c2f7660d4c977743a066db5b0cee00d"
+ },
+ "screen": false
 }
