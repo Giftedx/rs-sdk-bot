@@ -1,0 +1,44 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794607590475-bigpackage-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant pickaxe",
+ "requested": 1,
+ "claim": "649e8bb4-894f-4e6b-94dd-8ea73320e274",
+ "count": 0,
+ "ok": false,
+ "at": 1794608098507,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Logs",
+   "requested": 7,
+   "count": 0
+  },
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Chaos rune",
+   "requested": 160,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 0
+  },
+  {
+   "item": "Shark",
+   "requested": 8,
+   "count": 0
+  }
+ ]
+}
