@@ -1802,3 +1802,14 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     and keeps the kit's potions; the third kill comes at a mean of 911 ticks against 832 (four seeds of six reach
     it). Of the 300 ticks between kills, the loot takes 30 to 40 and the bank trip about 50. Gap: the targets stand
     still; 6 seeds.
+71. **The fight loop counted the last fight's hits as its own, and a roam that does not loot kills 28% faster.**
+    The loop read every combat event in the client's history at its first tick as new: the hits of a fight that had
+    just ended came in as damage taken now and as attackers. A fight that starts soon after another (the roam with
+    no loot pause, the army, gang mode's restarts) then met a false danger: in `extra:roam-field` with `LOOT=0` every
+    second fight ended in its third tick on `2 players hitting` with nothing taken, and the roam left after one
+    kill in each seed. The loop skips events from before its start, as it skips messages. The field case runs
+    1,000 game ticks (`MAX_TICKS`, `scripts/pk-roam.ts`; one minute of wall time gave 213 to 3,169 ticks). Kills
+    in 1,000 ticks, seeds 1-6: loot and bank (default) 18, the third kill at a mean of 826 ticks; `LOOT=0` 21, the
+    third at 596; `BANK_AT=2000000` (bank only a big load) 19, the third at 860. The worn glory counts as kit too,
+    so one that the escape rubbed is not banked. The quick sweep (20) and the gang cases (23) pass. Gap: the loot
+    is the supply of arrows, runes and food that a long hunt needs; no case prices that against the kills.

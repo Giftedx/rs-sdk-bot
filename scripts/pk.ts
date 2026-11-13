@@ -599,9 +599,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         prevSelf = { x: at.x, z: at.z };
         let maxEvent = seenEvent;
         const eventDealt: number[] = [];
+        // Events from before this fight are not its own: the history still holds the last fight's hits, and counted
+        // as new they ended the next fight at once on "2 players hitting" (extra:roam-field with LOOT=0, finding 71).
         for (const e of state.combatEvents) {
             const id = e.observationId ?? e.tick;
-            if (id <= seenEvent) continue;
+            if (id <= seenEvent || e.tick < start) continue;
             if (id > maxEvent) maxEvent = id;
             if (e.type === 'damage_dealt' && e.targetType === 'other_player') eventDealt.push(e.damage);
             if (e.type === 'damage_taken') { result.taken += e.damage; if (e.sourceType === 'other_player') hits.push({ tick: now, damage: e.damage, src: e.sourceIndex }); }

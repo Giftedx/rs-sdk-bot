@@ -204,6 +204,7 @@ export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: numbe
     // While true, the chase toward a target out of view waits (the army's pace, scripts/pk-army.ts PACE).
     pace?: () => boolean;
     specAll?: boolean;
+    maxTicks?: number;
     // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
     lootMin?: number; bankAt?: number };
 
@@ -274,6 +275,10 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const radar = new Radar();
     const closeRadar = connectRadar(server, radar);
     const end = Date.now() + cfg.maxMs;
+    // cfg.maxTicks: the hunt also ends after that many game ticks, so a practice run gets the same game time whatever
+    // the machine's speed (the wall clock gave 213 to 3,169 ticks to one minute, extra:roam-field).
+    const tickEnd = cfg.maxTicks ? session.tick() + cfg.maxTicks : Infinity;
+    const going = () => Date.now() < end && session.tick() < tickEnd;
     const food = () => sdk.getInventory().filter(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
     const magic = sdk.getSkill('Magic')?.baseLevel ?? 1;
     // The fight loop casts the freeze the level allows, so it freezes only when that one is castable.
@@ -326,8 +331,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const GLORY = /^amulet of glory\([1-4]\)$/i;
     const kitKey = (i: { id: number; name: string }) => i.name.replace(/\(\d\)$/, '').toLowerCase();
     const startPack = new Map<string, number>();
-    for (const i of sdk.getInventory()) startPack.set(kitKey(i), (startPack.get(kitKey(i)) ?? 0) + i.count);
-    const extraLoot = () => { const now = new Map<string, number>(); for (const i of sdk.getInventory()) now.set(kitKey(i), (now.get(kitKey(i)) ?? 0) + i.count); return [...now].some(([k, n]) => n > (startPack.get(k) ?? 0)); };
+    // Worn items count too: the fight loop's escape takes a worn glory off to rub it and leaves it in the pack.
+    for (const i of [...sdk.getInventory(), ...sdk.getEquipment()]) startPack.set(kitKey(i), (startPack.get(kitKey(i)) ?? 0) + i.count);
+    const extraLoot = () => { const now = new Map<string, number>(); for (const i of [...sdk.getInventory(), ...sdk.getEquipment()]) now.set(kitKey(i), (now.get(kitKey(i)) ?? 0) + i.count); return [...now].some(([k, n]) => n > (startPack.get(k) ?? 0)); };
     const startFood = food()[0];
     const foodCount = startFood ? sdk.getInventory().filter(i => i.id === startFood.id).length : 0;
     const valuer = makeValuer(server);
@@ -447,7 +453,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         stats.chases++;
         let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, contactAt = session.tick();
         let held = false, freezeReady = 0, lastSeenAt: { x: number; z: number } | null = null;
-        while (!stopped() && Date.now() < end) {
+        while (!stopped() && going()) {
             // A pass that used no game tick waits one, so the client and other sessions keep running.
             if (session.tick() === spun) await sdk.waitForTicks(1);
             spun = session.tick();
@@ -528,7 +534,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     // 3 ticks at full HP.
                     kit, spec: specAll(defaultSpec(kit)), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell),
-                    cap: 120, maxWild: cfg.maxWild, maxDistance: 15, ...cfg.fight, stop: () => stopped() || Date.now() >= end,
+                    cap: 120, maxWild: cfg.maxWild, maxDistance: 15, ...cfg.fight, stop: () => stopped() || !going(),
                     log: line => emit({ e: "fight", line }),
                 });
                 emit({ e: "fight-end", target: name, outcome: fight.outcome, ticks: fight.ticks, dealt: fight.dealt, taken: fight.taken, eaten: fight.eaten });
@@ -578,7 +584,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     };
 
     try {
-        while (!stopped() && Date.now() < end) {
+        while (!stopped() && going()) {
             // A pass that used no game tick waits one, so the client and other sessions keep running.
             if (session.tick() === spun) await sdk.waitForTicks(1);
             spun = session.tick();
@@ -691,6 +697,7 @@ async function bankTrip(session: Session, walker: Awaited<ReturnType<typeof sess
     const held = new Map<number, { item: ReturnType<typeof sdk.getInventory>[number]; count: number }>();
     for (const i of sdk.getInventory()) { const h = held.get(i.id); held.set(i.id, { item: h?.item ?? i, count: (h?.count ?? 0) + i.count }); }
     const kitLeft = new Map(startPack);
+    for (const w of sdk.getEquipment()) kitLeft.set(kitKey(w), (kitLeft.get(kitKey(w)) ?? 0) - w.count);
     for (const { item, count } of held.values()) {
         const k = kitKey(item), keepN = Math.min(count, kitLeft.get(k) ?? 0);
         kitLeft.set(k, (kitLeft.get(k) ?? 0) - keepN);
@@ -713,7 +720,7 @@ const arg = (args: string[], key: string, d: string) => args.find(a => a.startsW
 
 if (import.meta.main) {
     const [name, ...args] = process.argv.slice(2);
-    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000] [FRIENDS=name,name]');
+    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000] [MAX_TICKS=n] [FRIENDS=name,name]');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
     if (stop()) throw new Error('PK stop file present');
     const ranged = arg(args, 'RANGED', '');
@@ -723,6 +730,7 @@ if (import.meta.main) {
         spell: arg(args, 'SPELL', 'AUTO'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
         loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
         lootMin: Number(arg(args, 'LOOT_MIN', '1000')), bankAt: Number(arg(args, 'BANK_AT', '30000')),
+        ...(arg(args, 'MAX_TICKS', '') ? { maxTicks: Number(arg(args, 'MAX_TICKS', '')) } : {}),
         // A practice run registers its accounts as owned (tradeguard.ts), so its target is a friend unless FRIENDS names the list.
         ...(args.some(a => a.startsWith('FRIENDS=')) ? { friends: arg(args, 'FRIENDS', '').split(',').filter(Boolean) } : {}),
     };
