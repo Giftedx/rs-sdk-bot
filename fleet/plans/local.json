@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794588882567,
+ "at": 1794588896392,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -90,6 +90,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
@@ -526,19 +545,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-dac9c3a2-04af-473e-9d7c-2d9617a1eae7"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-hocuspokeus-20261113t164525z [task-dac9c3a2-04af-473e-9d7c-2d9617a1eae7]",
-   "role": "thieving"
   },
   {
    "account": "Masterbaiter",
