@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794606921512,
+ "at": 1794606976037,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -328,25 +328,6 @@
    ]
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
-  },
-  {
    "account": "Sausagefest",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -485,17 +466,23 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/session-check.ts",
+   "account": "SporranBulge",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-06b49f87-9c97-4b05-aca2-bebb99a66f68"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-wandwaver-20261113t214531z [task-06b49f87-9c97-4b05-aca2-bebb99a66f68]",
-   "role": "helper"
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
   }
  ]
 }
