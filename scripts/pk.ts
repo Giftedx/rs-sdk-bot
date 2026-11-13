@@ -154,6 +154,11 @@ export type FightOptions = {
     // Our own accounts in this fight (lower case): each one within 10 tiles takes one attacker off the count of
     // escapeOutnumbered, so an account does not leave an ally that stands with it.
     allies?: readonly string[];
+    // One freeze for a group of our accounts on one target: `clock` is a tick count they share, `at` the tick of the
+    // last freeze one of them cast and `until` the tick to which it holds the target and keeps it immune (the hold,
+    // then 5 ticks). An account casts no freeze before `until`, and the caster sets `until` back to now when it sees
+    // the freeze splash, so the others' turns go to damage in place of casts on a held or immune target.
+    freezeShare?: { clock: () => number; until: number };
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
     // keeps 500: research/pvp-fight-loop.md finding 50).
     specReserve?: number;
@@ -600,6 +605,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 // Target moved after the freeze cast: if it moved right away the spell splashed (no immunity); else it wore off (5-tick immunity).
                 const splashed = now <= freezeCastAt + 3;
                 if (splashed && fled) log(`PK freeze missed at distance ${gap}`);
+                if (splashed && o.freezeShare) o.freezeShare.until = o.freezeShare.clock();
                 frozenUntil = now;
                 freezeReady = splashed ? now : Math.min(freezeReady, now + 5);
                 frozenTile = null;
@@ -931,6 +937,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
         const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
             && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
+            && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until)
             && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
         // freezeStill: a moving account stops on this tick and casts from its stand on the next.
         if (castFreeze && o.freezeStill === true && !stoodStill && !kiteTarget) { void sdk.sendWalk(at.x, at.z); continue; }
@@ -1037,6 +1044,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 result.freezes++;
                 if (now >= fleeingUntil) earlyFreezes++;
                 const dur = freezeDuration(freeze!, guarded.has('magic'));
+                if (o.freezeShare) o.freezeShare.until = o.freezeShare.clock() + dur + 5;
                 frozenUntil = now + dur;
                 freezeReady = now + dur + 5;
                 freezeCastAt = now;

@@ -18,7 +18,7 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
-import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, isMulti, type Kit } from './pk';
+import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, isMulti, type FightOptions, type Kit } from './pk';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
 export function wildLevel(x: number, z: number): number {
@@ -186,6 +186,8 @@ export function freezeSpell(magic: number): number | null {
 
 // friends replaces the fleet list of accounts never to attack (practice passes its own target's absence).
 export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
+    // Fight options added to each fight of the hunt (the army's allies and shared freeze, scripts/pk-army.ts).
+    fight?: Partial<FightOptions>;
     // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
     lootMin?: number; bankAt?: number };
 
@@ -453,7 +455,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     // 3 ticks at full HP.
                     kit, spec: defaultSpec(kit), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell),
-                    cap: 120, maxWild: cfg.maxWild, maxDistance: 15, stop: () => stopped() || Date.now() >= end,
+                    cap: 120, maxWild: cfg.maxWild, maxDistance: 15, ...cfg.fight, stop: () => stopped() || Date.now() >= end,
                     log: line => emit({ e: "fight", line }),
                 });
                 emit({ e: "fight-end", target: name, outcome: fight.outcome, ticks: fight.ticks, dealt: fight.dealt, taken: fight.taken, eaten: fight.eaten });

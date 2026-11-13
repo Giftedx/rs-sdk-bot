@@ -1572,5 +1572,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     ticks after the first hit, with 52 to 66 HP on `army` followers, 56 to 94 on `army-alpha`, and 57 to 62 with
     followers that only hit (`ARMY_OPTS={"freeze":false}`, the leader's freeze alone). All three accounts cast a
     freeze at the same target on the same ticks, so two of three casts meet a held or immune target. The target's
-    10 sharks heal 200 HP, more than the army deals in a 16-tick hold. Gap: one shared freeze for the army; more
-    accounts; a target that does not leave at the first two hits.
+    10 sharks heal 200 HP, more than the army deals in a 16-tick hold. One freeze for the army (`freezeShare`, on
+    by default in `scripts/pk-army.ts`, `FREEZE_SHARE=0` turns it off: no cast before the last freeze and its
+    immunity end) changes little: escapes at 53, 83, 54 and 44 HP. The army's prey is a target that does not leave
+    at the first two hits or has no food. Gap: more accounts; the leader's first freeze (pk-roam's chase) does not
+    use the shared freeze.
