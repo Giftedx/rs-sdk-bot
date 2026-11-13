@@ -33,6 +33,14 @@ export function selectQuestSweepProofEndpoints(bind:typeof canBind=canBind,rando
  }
  throw Error('owned practice ports unavailable');
 }
+export function selectFreshQuestSweepProofName(caseIndex:number,occupied:(name:string)=>boolean=name=>existsSync(join(rsSdkRoot(),'bots',name)),
+ candidate:(attempt:number)=>string=()=>runBotName('qsw',caseIndex),maxCandidates=8){
+ for(let attempt=0;attempt<maxCandidates;attempt++){
+  const name=candidate(attempt);
+  if(!occupied(name))return name;
+ }
+ throw Error(`fresh quest-sweep practice account unavailable after ${maxCandidates} candidates`);
+}
 export function questSweepProofAccountEnv(text:string,p:ProofEndpoints){
  const servers=text.match(/^SERVER=.*$/gm)??[],gateways=text.match(/^GATEWAY_URL=.*$/gm)??[];
  if(servers.length!==1||!/^SERVER=localhost(?::8888)?\r?$/.test(servers[0]!)
@@ -50,7 +58,7 @@ export function questSweepChildConfiguration(name:string,quest:string,p:ProofEnd
   env:{...inherited,...p.env,GATEWAY_URL:p.gateway,QUEST_SWEEP_OBSERVE_BANK:'',RANDOM_EVENTS:'0'}};
 }
 // Refusal cases end with exit 1; every other case must exit 0. The checks below keep their own child rule.
-export const questSweepExpectedExit=(id:string)=>id==='ball-missing-gloves'||id==='doric-no-cash'?1:0;
+export const questSweepExpectedExit=(id:string)=>id==='ball-missing-gloves'||id==='doric-no-cash'||id==='scorpion-complete-refusal'?1:0;
 type ProofChild={pid:number;stdout:ReadableStream<Uint8Array>;stderr:ReadableStream<Uint8Array>;exited:Promise<number>};
 const delay=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 function collect(stream:ReadableStream<Uint8Array>){
@@ -121,6 +129,29 @@ function huntAssets(before:Save,after:Save,eaten:number){
  return cakes&&sameAssets(before,normalized,{995:358,1891:left[0]!-8,1893:left[1]!,1895:left[2]!,1005:1,433:1,1635:1,1605:1});
 }
 
+// quest.constant scorpcatcher_complete=6. The reward is stat_advance(strength, 66250) at 25x (rawExperience units).
+export const SCORPION_COMPLETE=6,SCORPION_STRENGTH=66250*25,SCORPION_TRAINED=[0,1,2,3,4,6];
+const SCORPION_BANK=[{id:995,count:268},{id:563,count:8},{id:556,count:31},{id:555,count:5},{id:554,count:1},{id:379,count:4}];
+// The staged consumables: Barcrawl and Scorpion runes, the Jailer's arrows and the meals. The run can use any part of
+// each, never more and never a gain. Meals used must equal the eats in RESULT. Thormac's cage and the Barcrawl card
+// leave the pack by the end (inv_del), so they have no net change. The two keys stay as gains.
+const SCORPION_SPENT=[554,555,556,557,558,562,563,882,884,886,888,890,892],SCORPION_MEALS=[379,385,373,361,333,329];
+export function scorpionAssets(before:Save,after:Save,eaten:number){
+ // Arrows move between the bank, the pack and the worn ammunition slot (13). Count them as carried; the rest of the worn
+ // gear must stay in place.
+ const carry=(s:Save)=>{
+  const copy=structuredClone(s),worn=copy.inventories[94]??[];
+  copy.inventories[93]=[...(copy.inventories[93]??[]),...worn.filter(i=>i.slot===13)];
+  copy.inventories[94]=worn.filter(i=>i.slot!==13);return copy;
+ };
+ const b=carry(before),a=carry(after),cost:Record<number,number>={995:-268};
+ for(const id of SCORPION_SPENT){const used=total(b,id)-total(a,id);if(used<0)return false;if(used)cost[id]=-used;}
+ const meals=SCORPION_MEALS.reduce((n,id)=>n+total(b,id)-total(a,id),0);
+ if(!Number.isSafeInteger(eaten)||eaten<0||meals!==eaten||SCORPION_MEALS.some(id=>total(a,id)>total(b,id)))return false;
+ for(const id of SCORPION_MEALS)if(total(b,id)!==total(a,id))cost[id]=total(a,id)-total(b,id);
+ return sameAssets(b,a,cost,[1590,1591])&&[1590,1591].every(id=>total(a,id)<=total(b,id)+1);
+}
+
 function elenaAssets(before:Save,after:Save){
  // The new gas mask occupies the head slot; all other worn and stored assets must match.
  const normalized=structuredClone(after),worn=normalized.inventories[94]??[];
@@ -135,13 +166,14 @@ const MINING_GEM_BYPRODUCTS=[1617,1619,1621,1623] as const;
 const IMP_BEADS=[1470,1472,1474,1476];
 const carried=(s:Save,id:number)=>(s.inventories[93]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const bankCount=(s:Save,id:number)=>(s.inventories[95]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
-export const QUEST_SWEEP_PROOF_CASE_IDS=['ball-worn-kit','ball-missing-gloves','bank-stage','doric-self-supply','doric-no-cash','retained-ghost','banked-ghost','fishing-stage','clock-stage','ernest-fortress','vampire-started','totem-started-cakes','hunt-crowded','rj-pirate-letter','rj-pirate-started','elena-heckel-dust','blackknight-finish','imp-surplus-beads','fluffs-yard-exit'] as const;
+export const QUEST_SWEEP_PROOF_CASE_IDS=['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal','ball-worn-kit','ball-missing-gloves','bank-stage','doric-self-supply','doric-no-cash','retained-ghost','banked-ghost','fishing-stage','clock-stage','ernest-fortress','vampire-started','totem-started-cakes','hunt-crowded','rj-pirate-letter','rj-pirate-started','elena-heckel-dust','blackknight-finish','imp-surplus-beads','fluffs-yard-exit'] as const;
 // Magicwanda's failed entry: Gertrude's Cat with the kitten given (%fluffs 5, varp 180), Magic 1, on the tile inside the
 // lumber yard where the walk ran out (3296,3497,0). Gertrude adds a chocolate cake 1897 and a stew 2003; the kitten is a
 // follower, not an item (gertrude.rs2:50-60, pet.rs2 cat_spawn).
 const FLUFFS_ENTRY={x:3296,z:3497,level:0},FLUFFS_FENCE_OUT={x:3305,z:3492,level:0};
 
 export function questSweepChecks(id:string,before:Save,after:Save,log:string,record:CaseRecord){
+ const scorpionMelee=id==='scorpion-barcrawl',scorpionRanged=id==='scorpion-ranged-barcrawl',scorpion=scorpionMelee||scorpionRanged,scorpionRefused=id==='scorpion-complete-refusal';
  const blackknight=id==='blackknight-finish',elena=id==='elena-heckel-dust',ball=id==='ball-worn-kit',ballMissing=id==='ball-missing-gloves';
  const doric=id==='doric-self-supply',imp=id==='imp-surplus-beads',fluffs=id==='fluffs-yard-exit';
  const rj=id==='rj-pirate-letter'||id==='rj-pirate-started';
@@ -154,11 +186,51 @@ export function questSweepChecks(id:string,before:Save,after:Save,log:string,rec
   oneLogin:(log.match(/^START /gm)??[]).length===1,
   logout:(log.match(/^LOGOUT logged-out$/gm)??[]).length===1&&!/^WARN .*?(?:logout|session close)/m.test(log),
   alive:after.skills[3]!.level>0&&!/\bdied=true\b|^RESULT fail .*died/m.test(log),
-  entryHp:before.skills[3]!.level===(ball||ballMissing?77:imp||elena||rj||clock||totem||hunt?40:ernest||vampire?75:ghost?26:fishing?47:10),
+  entryHp:before.skills[3]!.level===(scorpion||scorpionRefused?69:ball||ballMissing?77:imp||elena||rj||clock||totem||hunt?40:ernest||vampire?75:ghost?26:fishing?47:10),
   assets:blackknight?sameAssets(before,after,{995:2500}):elena?elenaAssets(before,after):ball?ballAssets(before,after,{1985:-1,2409:1,2411:1,379:-eaten}):hunt?huntAssets(before,after,eaten):sameAssets(before,after,rj?{753:-1}:totem?{995:-90,373:5,1891:-bites1,1893:bites1-bites2,1895:bites2-bites3}:clock?{995:440,1929:-1,1925:1,379:-eaten}:ernest?{995:300,273:-1,275:1,379:-eaten}:vampire?{1917:-1,379:-eaten}:ghost?{553:-1}:fishing?{995:-5,313:-2,1550:-1,27:1}:success?{1759:-20,995:0}:doric?{995:179,1265:1}:{},doric?MINING_GEM_BYPRODUCTS:[]),
   // The Count fight trains Attack (accurate style), Hitpoints, and Strength or Defence on another style.
   unrelatedXp:before.skills.every((s,i)=>(elena||doric)&&i===14||success&&i===12||fishing&&i===10||totem&&i===17||ghost&&i===5||(ball||vampire||hunt)&&i<=3||s.rawExperience===after.skills[i]!.rawExperience),
  };
+ if(scorpion||scorpionRefused){
+  const entry=before.position.x===3185&&before.position.z===3436&&before.position.level===0;
+  if(scorpionRefused)return{...checks,child:!record.timedOut&&record.exit===1,entry:entry&&before.vars[76]===SCORPION_COMPLETE,
+   result:/^RESULT fail quest-sweep scorpion invalid entry: Scorpion Catcher is complete$/m.test(log),
+   noInput:!/^QUEST_SWEEP_(?:BANK|BANK_WALK|BANK_PASS|KIT|WITHDRAW|BUY|FARE|GATHER|GATHER_PLAN|MINE|SHOP_PLAN) |^MILESTONE /m.test(log),
+   quest:after.vars[76]===before.vars[76]&&(after.vars[101]??0)===(before.vars[101]??0),assets:sameAssets(before,after,{}),
+   unrelatedXp:before.skills.every((s,i)=>s.rawExperience===after.skills[i]!.rawExperience),
+  };
+  // The bank pass withdraws Barcrawl's 3 Law runes and then Scorpion's 5: eight staged runes in observed steps.
+  const laws=lines(log,'QUEST_SWEEP_WITHDRAW').filter(r=>r.id===563);
+  const strength=after.skills[2]!.rawExperience-before.skills[2]!.rawExperience;
+  const weapon=scorpionMelee?1333:861,jailer=lines(log,'SCORP_JAILER');
+  // These complete fixture inventories contain teleport runes, food and the worn gear only. In the melee case
+  // there is no bow, ammunition, strike rune or staff in any container that could provide another combat method.
+  const kitItems=new Set([...SCORPION_BANK.map(i=>i.id),1169,552,weapon,1131,1097,1063,...(scorpionRanged?[882]:[])]);
+  return{...checks,child:!record.timedOut&&record.exit===0,entry:entry&&(before.vars[76]??0)===0&&(before.vars[77]??0)!==2,
+   kit:SCORPION_BANK.every(i=>total(before,i.id)===i.count)
+    &&Object.values(before.inventories).flatMap(rows=>rows??[]).every(i=>kitItems.has(i.id))
+    &&(before.inventories[94]??[]).some(i=>i.slot===3&&i.id===weapon&&i.count===1)
+    &&(after.inventories[94]??[]).some(i=>i.slot===3&&i.id===weapon&&i.count===1)
+    &&(!scorpionRanged||total(before,882)===40),
+   staged:laws.length>0&&laws.every(r=>r.observed&&r.after-r.before===r.count)&&laws[0].before===0
+    &&laws.reduce((n,r)=>n+r.count,0)===8&&laws.at(-1).after===8,
+   jailer:jailer.length===1&&jailer[0].ok===true
+    &&JSON.stringify(jailer[0].methods)===JSON.stringify([scorpionMelee?'melee':'ranged'])
+    &&total(before,1591)===0&&total(after,1591)===1&&/^MILESTONE jail key /m.test(log),
+   combatXp:scorpionMelee?after.skills[4]!.rawExperience===before.skills[4]!.rawExperience
+    &&(after.skills[0]!.rawExperience>before.skills[0]!.rawExperience||after.skills[1]!.rawExperience>before.skills[1]!.rawExperience||strength>SCORPION_STRENGTH)
+    :after.skills[4]!.rawExperience>before.skills[4]!.rawExperience,
+   barcrawl:after.vars[77]===2&&/^MILESTONE complete /m.test(log),
+   outpost:/^MILESTONE scorpion b /m.test(log),result:/^RESULT ok qp=1(?: |$)/m.test(log),
+   quest:after.vars[76]===SCORPION_COMPLETE&&(after.vars[101]??0)===(before.vars[101]??0)+1,
+   questList:lines(log,'QUEST_SWEEP_FLAG').some(q=>q.name==='Scorpion Catcher'&&q.state==='complete'),
+   assets:scorpionAssets(before,after,eaten),
+   // quest_scorpcatcher.rs2 stat_advance(strength, 66250) at 25x. A melee Jailer fight can add Strength XP.
+   reward:strength>=SCORPION_STRENGTH,
+   // The Jailer fight trains combat skills and Hitpoints; the teleports train Magic. Other skills keep their XP.
+   unrelatedXp:before.skills.every((s,i)=>SCORPION_TRAINED.includes(i)?after.skills[i]!.rawExperience>=s.rawExperience:s.rawExperience===after.skills[i]!.rawExperience),
+  };
+ }
  if(imp)return{...checks,
   child:!record.timedOut&&record.exit===0,
   entry:before.position.x===3104&&before.position.z===3163&&before.position.level===2&&(before.vars[160]??0)===0
@@ -374,22 +446,38 @@ export function questSweepChecks(id:string,before:Save,after:Save,log:string,rec
  };
 }
 
-function verify(dir:string){
+// Explicit `--case=<id>` arguments select cases for the run and the verifier. No argument selects every case.
+// The selected melee Scorpion acceptance also requires the ranged regression, for both native and saved checks.
+// An unknown, empty or repeated selection refuses before any stack or save is touched.
+export function selectQuestSweepProofCases(argv:readonly string[]):string[]{
+ const picked=argv.filter(a=>a.startsWith('--case')).map(a=>{
+  if(!a.startsWith('--case='))throw Error(`quest-sweep proof case selection must be --case=<id>: ${a}`);
+  return a.slice('--case='.length);
+ });
+ if(!picked.length)return [...QUEST_SWEEP_PROOF_CASE_IDS];
+ for(const id of picked)if(!(QUEST_SWEEP_PROOF_CASE_IDS as readonly string[]).includes(id))throw Error(`unknown quest-sweep proof case ${id||'(empty)'}`);
+ if(new Set(picked).size!==picked.length)throw Error('repeated quest-sweep proof case selection');
+ return QUEST_SWEEP_PROOF_CASE_IDS.filter(id=>picked.includes(id)||id==='scorpion-ranged-barcrawl'&&picked.includes('scorpion-barcrawl'));
+}
+
+function verify(dir:string,selected:readonly string[]=QUEST_SWEEP_PROOF_CASE_IDS){
  const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8')) as {source:string;cases:CaseRecord[];endpoints:ProofEndpoints};
  const endpoints=questSweepProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
  if(meta.endpoints.server!==endpoints.server||meta.endpoints.gateway!==endpoints.gateway)throw Error('retained practice endpoints mismatch');
- const results=QUEST_SWEEP_PROOF_CASE_IDS.map(id=>{
+ if(!selected.length)throw Error('no quest-sweep proof case selected');
+ const results=selected.map(id=>{
   const record=meta.cases.find(c=>c.id===id);
   if(!record)throw Error(`missing retained case ${id}`);
+  for(const file of [id+'-before.sav',id+'-after.sav',id+'.log'])if(!existsSync(join(dir,file)))throw Error(`missing retained evidence ${file}`);
   const checks=questSweepChecks(id,readPracticeSave(join(dir,id+'-before.sav')),readPracticeSave(join(dir,id+'-after.sav')),readFileSync(join(dir,id+'.log'),'utf8'),record);
   return{...record,ok:Object.values(checks).every(Boolean),checks};
  });
  const source=meta.source===workerSourceRevision();
- const report={ok:source&&results.every(r=>r.ok),source,results,scope:'Native practice at150ms/25xXP: Imp Catcher beside Mizgog3104,3163,2 at ordinary HP40/other skills1 with two carried black beads and three banked beads per colour: real imp CLI, exact one-per-colour carried debit, banked extras and all other assets retained, one amulet1478, oneQP, varp160=2,218750 raw Magic XP, alive and confirmed logout. Black Knight Fortress from3016,3512,0 at stage3/HP10/Magic1: real blackknight CLI, threeQP,2500coins, exact retained assets and logout.  Plague City from2615,3332,0 atHP40/Magic1 without chocolate dust: real elena CLI, bought one1975 from Heckel Funch, two-coin debit, staged quest, oneQP,60625Mining XP, exact assets and logout. Each Elena child is bounded to300000ms. Witch House ordinary HP77 entry with unworn banked gloves1059, banked adamant scimitar1331 and worn staff1381: real ball CLI, observed worn kit, completion, fourQP, at least158125 Hitpoints XP including combat, retained staff/amulet and exact assets, logout. No-gloves/no-coins entry refuses before quest handover and logs out.  existing HP10 Gnome Sheep Shearer/two boat fares. Doric self-supply from2965,3380,0 with362 coins and no pickaxe or ores: buy1265 for one coin, mine6 clay434/4 copper436/2 iron440, hand over all ores, net179 coins, oneQP, varp31=100,367500 raw Mining XP and logout. The same entry with no coins refuses with missing995:103 to buy1265, no gather or quest progress, unchanged assets and logout. Also HP26/Magic1 Ghost completion from held-cellar and banked-surface skull entries with no law rune. Fishing Contest from the western bank entry at Fishing20/Magic1/HP47 with five-coin cost and retained tools. Clock Tower from3239,3275,0 at Magic1/HP40 with an owned water bucket, two30coin fares, up to four lobsters, oneQP and500coin reward. Ernest the Chicken from the Black Knights\' Fortress level-1 box room3029,3505,1 at HP75/Magic1: secret wall, hall ladder and front exit observed before bank selection, fish food picked up at its Draynor Manor level-1 spawn with no banked food, fourQP and300coin reward. Vampire Slayer from the started-quest entry3097,3267,0 at HP75/Magic1 with law runes, worn Silverlight and owned beer, hammer and garlic: Morgan skipped, both Varrock trips walked, beer debited, stake used, threeQP and120625 Attack XP. Tribal Totem from started stage1 at2571,3250,0, Thieving99/HP40/Magic1 without law runes: owned cakes, three30coin fares, oneQP,44375 Thieving XP and five swordfish. Pirate\'s Treasure from the crowded Karamja entry2907,3147,0 with seven bananas, HP40/Attack55/Magic1, CAP6000: capacity staging, seven starting bananas retained in bank, ten plantation bananas shipped without purchase,1-24 cake bites reconciled against the carried cake forms, owned spade, bought apron, net358 coins, twoQP and exact treasure rewards. Romeo & Juliet from2999,3383,0 unstarted and3210,3423,0 at stage30, HP40/Attack55/Magic1 with Pirate message433 and cadava berries753: real CLI rj with CAP6000 and timeout5400000, one berry consumed, fiveQP, retained433 and all other assets. Gertrude\'s Cat from the varp180=5 entry3296,3497,0 inside the lumber yard at HP10/Magic1 without law runes: real fluffs CLI with CAP6000 and timeout5400000, no bank pass, exit over fence2618 at3305,3493 onto3305,3492,0, varp180=6, oneQP,381250 raw Cooking XP, chocolate cake1897 and stew2003. Exact quest rewards/assets and logout. No live or unattended claim.'};
+ const report={ok:source&&results.every(r=>r.ok),source,cases:[...selected],results,scope:'Native practice at150ms/25xXP. scorpion-barcrawl requires the real account-parameterized scorpion CLI with worn rune scimitar1333, teleport runes, no ranged or strike kit and an observed melee Jailer fight. scorpion-ranged-barcrawl retains the bow-and-arrows variant. Each completion case starts at the Varrock bank with Barcrawl incomplete, stages eight Law runes, completes Barcrawl and the outpost gate, reaches quest flag76=6 and QP+1, reconciles assets and confirms logout. A completed-quest entry refuses before input and confirms logout. Existing quest-sweep cases retain their own exact saved-state checks. No live or unattended claim.'};
  writeFileSync(join(dir,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 
-async function run(dir:string){
+async function run(dir:string,selected:readonly string[]=QUEST_SWEEP_PROOF_CASE_IDS){
  if(!process.env.DELIVERY_DIR||!existsSync(join(root,'.practice/delivery-native.lock')))throw Error('native turn required: run through delivery');
  // Reserve space for saves and logs before the stack can consume the remaining disk.
  // This is a storage reserve, not a measured size of a practice run.
@@ -412,33 +500,32 @@ async function run(dir:string){
  try{
   endpoints=selectQuestSweepProofEndpoints();
   stack=await startQuestSweepProofStack(endpoints);
-  for(const c of [{id:'imp-surplus-beads',quest:'imp',bank:[...IMP_BEADS.map(id=>({id,count:3})),{id:995,count:723},{id:1478,count:1}]},{id:'ball-worn-kit',quest:'ball',bank:[{id:995,count:183752},{id:1059,count:1},{id:1331,count:1}]},{id:'ball-missing-gloves',quest:'ball',bank:[]},...['rj-pirate-letter','rj-pirate-started'].map(id=>({id,quest:'rj',bank:[{id:995,count:183752},{id:1891,count:7},{id:373,count:5}]})),{id:'hunt-crowded',quest:'hunt',bank:[{id:995,count:183752},{id:1891,count:7}]},{id:'totem-started-cakes',quest:'totem',bank:[{id:995,count:183752},{id:1891,count:15},{id:1893,count:1},{id:1895,count:2}]},{id:'clock-stage',quest:'cog',bank:[{id:995,count:183752},{id:1436,count:243}]},{id:'ernest-fortress',quest:'haunted',bank:[{id:273,count:1},{id:952,count:1},{id:379,count:4}]},{id:'vampire-started',quest:'vampire',bank:[{id:379,count:6}]},{id:'fishing-stage',quest:'fishingcompo',bank:[{id:952,count:1},{id:307,count:1},{id:313,count:2},{id:1550,count:1},{id:556,count:5}]},{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},...['doric-self-supply','doric-no-cash'].map(id=>({id,quest:'doric',bank:[]})),...['retained-ghost','banked-ghost'].map(id=>({id,quest:'priest',bank:[{id:995,count:1127309},{id:1436,count:243},{id:1446,count:1},...(id==='banked-ghost'?[{id:553,count:1}]:[])]})),{id:'elena-heckel-dust',quest:'elena',bank:[{id:995,count:106}]},{id:'blackknight-finish',quest:'blackknight',bank:[]},{id:'fluffs-yard-exit',quest:'fluffs',bank:[]}]){
+  for(const c of ([{id:'scorpion-barcrawl',quest:'scorpion',bank:SCORPION_BANK},{id:'scorpion-ranged-barcrawl',quest:'scorpion',bank:[...SCORPION_BANK,{id:882,count:40}]},{id:'scorpion-complete-refusal',quest:'scorpion',bank:[]},{id:'imp-surplus-beads',quest:'imp',bank:[...IMP_BEADS.map(id=>({id,count:3})),{id:995,count:723},{id:1478,count:1}]},{id:'ball-worn-kit',quest:'ball',bank:[{id:995,count:183752},{id:1059,count:1},{id:1331,count:1}]},{id:'ball-missing-gloves',quest:'ball',bank:[]},...['rj-pirate-letter','rj-pirate-started'].map(id=>({id,quest:'rj',bank:[{id:995,count:183752},{id:1891,count:7},{id:373,count:5}]})),{id:'hunt-crowded',quest:'hunt',bank:[{id:995,count:183752},{id:1891,count:7}]},{id:'totem-started-cakes',quest:'totem',bank:[{id:995,count:183752},{id:1891,count:15},{id:1893,count:1},{id:1895,count:2}]},{id:'clock-stage',quest:'cog',bank:[{id:995,count:183752},{id:1436,count:243}]},{id:'ernest-fortress',quest:'haunted',bank:[{id:273,count:1},{id:952,count:1},{id:379,count:4}]},{id:'vampire-started',quest:'vampire',bank:[{id:379,count:6}]},{id:'fishing-stage',quest:'fishingcompo',bank:[{id:952,count:1},{id:307,count:1},{id:313,count:2},{id:1550,count:1},{id:556,count:5}]},{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},...['doric-self-supply','doric-no-cash'].map(id=>({id,quest:'doric',bank:[]})),...['retained-ghost','banked-ghost'].map(id=>({id,quest:'priest',bank:[{id:995,count:1127309},{id:1436,count:243},{id:1446,count:1},...(id==='banked-ghost'?[{id:553,count:1}]:[])]})),{id:'elena-heckel-dust',quest:'elena',bank:[{id:995,count:106}]},{id:'blackknight-finish',quest:'blackknight',bank:[]},{id:'fluffs-yard-exit',quest:'fluffs',bank:[]}] as {id:string;quest:string;bank:{id:number;count:number}[]}[]).filter(c=>selected.includes(c.id))){
    const before=join(dir,c.id+'-before.sav');
    if(existsSync(before))throw Error(`preserve before snapshot: ${before}`);
-   const name=runBotName('qsw',cases.length);
-   if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('fresh quest-sweep practice account required');
+   const name=selectFreshQuestSweepProofName(cases.length);
    const {envPath}=await createBot(name);
    writeFileSync(envPath,questSweepProofAccountEnv(readFileSync(envPath,'utf8'),endpoints));
-   const imp=c.quest==='imp',blackknight=c.quest==='blackknight',elena=c.quest==='elena',ball=c.quest==='ball',ballMissing=c.id==='ball-missing-gloves',rj=c.quest==='rj',hunt=c.quest==='hunt',ghost=c.quest==='priest',banked=c.id==='banked-ghost',fishing=c.quest==='fishingcompo',clock=c.quest==='cog',ernest=c.quest==='haunted',vampire=c.quest==='vampire',totem=c.quest==='totem',doric=c.id==='doric-self-supply',doricRefused=c.id==='doric-no-cash',fluffs=c.quest==='fluffs',long=fluffs||doric||ball||rj||fishing||clock||ernest||vampire||totem||hunt;
-   const save=await applyPreset(name,totem?{position:{x:2571,z:3250,level:0},skills:{Thieving:99,Hitpoints:40,Magic:1},varps:{200:1,10:8,101:1},bank:c.bank,inventory:[{id:995,count:552}]}:fluffs?{position:FLUFFS_ENTRY,skills:{Hitpoints:10,Magic:1},varps:{180:5},bank:c.bank,inventory:[{id:995,count:25}]}:imp?{position:{x:3104,z:3163,level:2},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[{id:1470,count:1},{id:1470,count:1},{id:1472,count:1},{id:1474,count:1},{id:1476,count:1},{id:995,count:91},{id:433,count:1},{id:1351,count:1}]}:blackknight?{position:{x:3016,z:3512,level:0},skills:{Hitpoints:10,Magic:1},varps:{130:3,101:12,144:100,226:7,178:3},bank:c.bank,inventory:[{id:995,count:490},{id:433,count:1}]}:elena?{position:{x:2615,z:3332,level:0},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[2126,1929,1929,1929,1929,952,954,1927,231].map(id=>({id,count:1}))}:ball?{position:{x:2947,z:3368,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:77,Magic:1},equipment:[{id:589,count:1,slot:2},{id:1381,count:1,slot:3}],bank:c.bank,inventory:[{id:1985,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:rj?{position:c.id==='rj-pirate-started'?{x:3210,z:3423,level:0}:{x:2999,z:3383,level:0},skills:{Attack:55,Hitpoints:40,Magic:1},varps:{144:c.id==='rj-pirate-started'?30:0},equipment:[{id:1005,count:1,slot:4}],bank:c.bank,inventory:[{id:995,count:754},{id:433,count:1},{id:753,count:1},{id:555,count:2},{id:556,count:6},{id:952,count:1},{id:1635,count:1},{id:1605,count:1},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},{id:1895,count:1},{id:1895,count:1}]}:hunt?{position:{x:2907,z:3147,level:0},skills:{Attack:55,Hitpoints:40,Magic:1,Thieving:99,Cooking:30,Fishing:20,Crafting:51},varps:{200:5,10:8,101:2},bank:c.bank,inventory:[{id:995,count:402},{id:1925,count:1},{id:555,count:2},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},...Array.from({length:2},()=>({id:1895,count:1})),...Array.from({length:5},()=>({id:373,count:1})),{id:952,count:1},{id:556,count:6},...Array.from({length:7},()=>({id:1963,count:1}))]}:vampire?{position:{x:3097,z:3267,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{178:1},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:1917,count:1},{id:2347,count:1},{id:1550,count:1},{id:563,count:2}]}:ernest?{position:{x:3029,z:3505,level:1},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{130:2},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:995,count:490}]}:clock?{position:{x:3239,z:3275,level:0},skills:{Magic:1,Hitpoints:40,Attack:55},bank:c.bank,inventory:[{id:995,count:112},{id:1929,count:1},{id:1351,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:fishing?{position:{x:2615,z:3332,level:0},skills:{Fishing:20,Magic:1,Hitpoints:47,Attack:62,Defence:10,Strength:12},bank:c.bank,inventory:[{id:995,count:7350},{id:1351,count:1}]}:ghost?{position:banked?{x:3094,z:3491,level:0}:{x:3113,z:9555,level:0},skills:{Hitpoints:26,Attack:37,Magic:1,Prayer:1},varps:{107:4},equipment:[{id:552,count:1,slot:2}],bank:c.bank,inventory:[...(!banked?[{id:553,count:1}]:[]),{id:556,count:3},{id:557,count:1}]}:{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[...(doricRefused?[]:[{id:995,count:362}]),{id:1351,count:1}]});
+   const scorpionMelee=c.id==='scorpion-barcrawl',scorpion=c.quest==='scorpion',scorpionRefused=c.id==='scorpion-complete-refusal',imp=c.quest==='imp',blackknight=c.quest==='blackknight',elena=c.quest==='elena',ball=c.quest==='ball',ballMissing=c.id==='ball-missing-gloves',rj=c.quest==='rj',hunt=c.quest==='hunt',ghost=c.quest==='priest',banked=c.id==='banked-ghost',fishing=c.quest==='fishingcompo',clock=c.quest==='cog',ernest=c.quest==='haunted',vampire=c.quest==='vampire',totem=c.quest==='totem',doric=c.id==='doric-self-supply',doricRefused=c.id==='doric-no-cash',fluffs=c.quest==='fluffs',long=scorpion||fluffs||doric||ball||rj||fishing||clock||ernest||vampire||totem||hunt;
+   const save=await applyPreset(name,scorpion?{position:{x:3185,z:3436,level:0},skills:{Attack:65,Defence:10,Strength:scorpionMelee?65:11,Hitpoints:69,Ranged:99,Prayer:65,Magic:50},varps:{76:scorpionRefused?SCORPION_COMPLETE:0,77:0,101:scorpionRefused?1:0},equipment:[{id:1169,count:1,slot:0},{id:552,count:1,slot:2},{id:scorpionMelee?1333:861,count:1,slot:3},{id:1131,count:1,slot:4},{id:1097,count:1,slot:7},{id:1063,count:1,slot:9}],bank:c.bank,inventory:[]}:totem?{position:{x:2571,z:3250,level:0},skills:{Thieving:99,Hitpoints:40,Magic:1},varps:{200:1,10:8,101:1},bank:c.bank,inventory:[{id:995,count:552}]}:fluffs?{position:FLUFFS_ENTRY,skills:{Hitpoints:10,Magic:1},varps:{180:5},bank:c.bank,inventory:[{id:995,count:25}]}:imp?{position:{x:3104,z:3163,level:2},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[{id:1470,count:1},{id:1470,count:1},{id:1472,count:1},{id:1474,count:1},{id:1476,count:1},{id:995,count:91},{id:433,count:1},{id:1351,count:1}]}:blackknight?{position:{x:3016,z:3512,level:0},skills:{Hitpoints:10,Magic:1},varps:{130:3,101:12,144:100,226:7,178:3},bank:c.bank,inventory:[{id:995,count:490},{id:433,count:1}]}:elena?{position:{x:2615,z:3332,level:0},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[2126,1929,1929,1929,1929,952,954,1927,231].map(id=>({id,count:1}))}:ball?{position:{x:2947,z:3368,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:77,Magic:1},equipment:[{id:589,count:1,slot:2},{id:1381,count:1,slot:3}],bank:c.bank,inventory:[{id:1985,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:rj?{position:c.id==='rj-pirate-started'?{x:3210,z:3423,level:0}:{x:2999,z:3383,level:0},skills:{Attack:55,Hitpoints:40,Magic:1},varps:{144:c.id==='rj-pirate-started'?30:0},equipment:[{id:1005,count:1,slot:4}],bank:c.bank,inventory:[{id:995,count:754},{id:433,count:1},{id:753,count:1},{id:555,count:2},{id:556,count:6},{id:952,count:1},{id:1635,count:1},{id:1605,count:1},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},{id:1895,count:1},{id:1895,count:1}]}:hunt?{position:{x:2907,z:3147,level:0},skills:{Attack:55,Hitpoints:40,Magic:1,Thieving:99,Cooking:30,Fishing:20,Crafting:51},varps:{200:5,10:8,101:2},bank:c.bank,inventory:[{id:995,count:402},{id:1925,count:1},{id:555,count:2},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},...Array.from({length:2},()=>({id:1895,count:1})),...Array.from({length:5},()=>({id:373,count:1})),{id:952,count:1},{id:556,count:6},...Array.from({length:7},()=>({id:1963,count:1}))]}:vampire?{position:{x:3097,z:3267,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{178:1},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:1917,count:1},{id:2347,count:1},{id:1550,count:1},{id:563,count:2}]}:ernest?{position:{x:3029,z:3505,level:1},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{130:2},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:995,count:490}]}:clock?{position:{x:3239,z:3275,level:0},skills:{Magic:1,Hitpoints:40,Attack:55},bank:c.bank,inventory:[{id:995,count:112},{id:1929,count:1},{id:1351,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:fishing?{position:{x:2615,z:3332,level:0},skills:{Fishing:20,Magic:1,Hitpoints:47,Attack:62,Defence:10,Strength:12},bank:c.bank,inventory:[{id:995,count:7350},{id:1351,count:1}]}:ghost?{position:banked?{x:3094,z:3491,level:0}:{x:3113,z:9555,level:0},skills:{Hitpoints:26,Attack:37,Magic:1,Prayer:1},varps:{107:4},equipment:[{id:552,count:1,slot:2}],bank:c.bank,inventory:[...(!banked?[{id:553,count:1}]:[]),{id:556,count:3},{id:557,count:1}]}:{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[...(doricRefused?[]:[{id:995,count:362}]),{id:1351,count:1}]});
    copyFileSync(save,before);
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice free memory below floor');
    const stamp=statSync(save).mtimeMs;
    const record:CaseRecord={id:c.id,exit:-1,timedOut:false,saveMatched:false,seconds:0};cases.push(record);retain();
    await runQuestSweepProofCase({dir,record,save,retain,
     // CAP 6000 ticks at 150 ms is 900 s: the Vampire child must reach its own tick-cap failure before this kill.
-    timeoutMs:elena?300000:fluffs||ball||rj||hunt?5400000:vampire||totem||doric?1200000:long?900000:300000,
+    timeoutMs:elena?300000:scorpion&&!scorpionRefused||fluffs||ball||rj||hunt?5400000:vampire||totem||doric?1200000:long?900000:300000,
     spawn:()=>Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints!,long||elena?{...process.env,CAP:'6000'}:process.env),windowsHide:true,stdout:'pipe',stderr:'pipe'}),
-    matched:async()=>(await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(doricRefused||ballMissing||(fluffs?s.vars[180]===6:imp?s.vars[160]===2:doric?s.vars[31]===100:blackknight?s.vars[130]===4:elena?s.vars[165]===29:ball?s.vars[226]===7:rj?s.vars[144]===100:hunt?s.vars[71]===4:totem?s.vars[200]===5:clock?((s.vars[10]??0)&15)===8:ernest?s.vars[32]===3:vampire?s.vars[178]===3:ghost?s.vars[107]===5:fishing?s.vars[11]===5:s.vars[179]===22)),{timeoutMs:6000})).matched});
+    matched:async()=>(await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(scorpionRefused||doricRefused||ballMissing||(scorpion?s.vars[76]===SCORPION_COMPLETE&&s.vars[77]===2:fluffs?s.vars[180]===6:imp?s.vars[160]===2:doric?s.vars[31]===100:blackknight?s.vars[130]===4:elena?s.vars[165]===29:ball?s.vars[226]===7:rj?s.vars[144]===100:hunt?s.vars[71]===4:totem?s.vars[200]===5:clock?((s.vars[10]??0)&15)===8:ernest?s.vars[32]===3:vampire?s.vars[178]===3:ghost?s.vars[107]===5:fishing?s.vars[11]===5:s.vars[179]===22)),{timeoutMs:6000})).matched});
   }
-  return verify(dir);
+  return verify(dir,selected);
  }finally{try{await stack?.stop();}finally{rmSync(lock,{force:true});retain();}}
 }
 
 if(import.meta.main){
  try{
   if(!process.env.DELIVERY_DIR)throw Error('run through delivery');
-  const dir=resolve(process.env.DELIVERY_DIR);
-  process.exitCode=(process.argv.includes('--verify')?verify(dir):await run(dir)).ok?0:1;
+  const dir=resolve(process.env.DELIVERY_DIR),selected=selectQuestSweepProofCases(process.argv.slice(2));
+  process.exitCode=(process.argv.includes('--verify')?verify(dir,selected):await run(dir,selected)).ok?0:1;
  }catch(error){console.error(String(error));process.exitCode=1;}
 }

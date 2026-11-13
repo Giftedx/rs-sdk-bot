@@ -246,6 +246,19 @@ test('a dispatched door that stays closed is bounded even without a refusal mess
     expect(r.detail).toContain('no progress: door');
 });
 
+// totem-started-cakes: the Clock Tower save (2571,3250) opened door 1530 at 2574,3250 on tick 1, and the client
+// answered no input until tick 43. Three unanswered Opens blocked the door, the room had no other exit, and every
+// bank walk then clicked the straight-line fallback 2583,3264 through the wall (client_rejected).
+test('Open clicks the client has not answered do not mark the only door blocked', async () => {
+    const w=road({doorX:3010,openDelay:1});let blocks=0,opens=0;const pending:{answer?:()=>void}={};
+    const open=w.deps.interactLoc;
+    w.deps.interactLoc=(l,op)=>{opens++;return new Promise(res=>{pending.answer=()=>{open(l,op);res({success:true});};});};
+    w.deps.blockDoor=()=>{blocks++;return true;};
+    const p=walkPath(w.deps,[{x:3060,z:3200,tol:1}]);let r:Awaited<typeof p>|undefined;p.then(v=>r=v);
+    for(let i=0;i<200&&!r;i++){if(w.tick()===40&&pending.answer){pending.answer();delete pending.answer;}w.step();await Promise.resolve();await Promise.resolve();}
+    expect(r?.ok).toBe(true);expect(opens).toBe(1);expect(blocks).toBe(0);expect(r?.doors).toBe(1);
+});
+
 test('door approach and delayed open remain valid; stop during an open never marks it blocked', async () => {
     const w=road({doorX:3030,openDelay:5});const r=await run(w,3060);
     expect(r.ok).toBe(true);expect(r.doors).toBe(1);

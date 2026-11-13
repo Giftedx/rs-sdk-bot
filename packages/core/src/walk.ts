@@ -541,7 +541,9 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
 
     let idx = -1;          // path tile nearest the bot
     let target = -1;       // path index of the last walk click
-    let door: { loc: PathLoc; sentAt: number; messages: Set<string> } | null = null;
+    // `acked`: the client has answered the Open dispatch. A client that takes no input (seen for 42 ticks after a
+    // practice login in the Clock Tower) leaves the door shut, which is not evidence that the door stays closed.
+    let door: { loc: PathLoc; sentAt: number; messages: Set<string>; acked: boolean } | null = null;
     const doorAttempts = new Map<string, number>();
     let last = { x: start.x, z: start.z };
     let still = 0;
@@ -735,7 +737,7 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
                 if (refusal) return failedDoor(d.loc, refusal.text, p);
                 // Open may first walk to the door, then wait for a delayed server
                 // action. Count unchanged ticks, not distance or accepted dispatches.
-                if (still >= 6 && ticks - d.sentAt >= 6) {
+                if (d.acked && still >= 6 && ticks - d.sentAt >= 6) {
                     if ((doorAttempts.get(doorKey(d.loc)) ?? 0) >= 3) return failedDoor(d.loc, 'no open effect observed', p);
                     door = null;
                 } else return;
@@ -744,8 +746,9 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             if (shut) {
                 const op = openOp(shut)!.opIndex;
                 const baseline = new Set((deps.messages?.() ?? []).map(messageKey));
-                if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op))) {
-                    door = { loc: shut, sentAt: ticks, messages: baseline };
+                const entry = { loc: shut, sentAt: ticks, messages: baseline, acked: false };
+                if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op), () => { if (!entry.acked) { entry.acked = true; entry.sentAt = ticks; } })) {
+                    door = entry;
                     doorAttempts.set(doorKey(shut), (doorAttempts.get(doorKey(shut)) ?? 0) + 1);
                     res.doors++; target = -1;
                 }
