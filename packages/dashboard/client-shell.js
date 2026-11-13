@@ -384,7 +384,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true,skilling:true,trail:true};
   const hl=(()=>{try{return {...HL_DEFAULT,...JSON.parse(localStorage.getItem(HL_KEY)||'{}')};}catch{return {...HL_DEFAULT};}})();
   const saveHl=()=>{try{localStorage.setItem(HL_KEY,JSON.stringify(hl));}catch{/* private window */}};
-  let multiLines=null,recentTargets=[],sentOverlay='',sentOverlayAt=0;
+  // recentTargets belong to one watched account (targetsFor); another account starts an empty list.
+  let multiLines=null,recentTargets=[],targetsFor=null,sentOverlay='',sentOverlayAt=0;
   // The part of a level or upright line inside the square of half-side r around (cx, cz), or null: a long line keeps
   // its part near the camera, so its middle is near too (the viewer and the minimap skip a line by its middle).
   const clipLine=(x0,z0,x1,z1,cx,cz,r)=>{const lx=Math.round(cx-r),hx=Math.round(cx+r),lz=Math.round(cz-r),hz=Math.round(cz+r);if(z0===z1){if(z0<lz||z0>hz)return null;const a=Math.max(Math.min(x0,x1),lx),b=Math.min(Math.max(x0,x1),hx);return a<b?[a,z0,b,z1]:null;}if(x0===x1){if(x0<lx||x0>hx)return null;const a=Math.max(Math.min(z0,z1),lz),b=Math.min(Math.max(z0,z1),hz);return a<b?[x0,a,x1,b]:null;}return null;};
@@ -411,12 +412,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function overlayMessage(){
     const b=account(),o={tiles:[],pies:[],lines:[],players:{},npcs:[]};
-    const at=window.atlasCam3d&&Date.now()-window.atlasCam3d.at<60_000?window.atlasCam3d:(b?.live||b?.pos||null),near=(x,z,d)=>!!at&&Math.abs(x-at.x)<=d&&Math.abs(z-at.z)<=d;
+    const at=window.atlasCam3d||b?.live||b?.pos||null,near=(x,z,d)=>!!at&&Math.abs(x-at.x)<=d&&Math.abs(z-at.z)<=d;
     if(hl.players){
-      if(typeof D!=='undefined'&&D.rival)for(const n of D.rival)if(/^[a-z0-9_ -]{1,12}$/.test(n))o.players[n]='#00ffff';
+      for(const r of S?.rivals||[])for(const x of r.rows||[]){const n=String(x.name||'').toLowerCase();if(!x.fleet&&/^[a-z0-9_ -]{1,12}$/.test(n))o.players[n]='#00ffff';}
       const p=b&&b.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null;
       for(const t of p?.threats||[]){const n=String(t.name).toLowerCase();if(/^[a-z0-9_ -]{1,12}$/.test(n))o.players[n]='#ff0000';}
     }
+    if((b?.name??null)!==targetsFor){targetsFor=b?.name??null;recentTargets=[];}
     if(hl.npcs&&recentTargets.length)o.npcs.push({types:recentTargets.slice(),colour:'#00ffff'});
     if(hl.ground)o.ground={prices:S?.economy?.itemValues||{},min:hl.groundMin};
     if(hl.multi&&at){
@@ -1648,7 +1650,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     let el=hud.querySelector('.game-opponent');if(!el){el=document.createElement('div');el.className='game-opponent';el.setAttribute('aria-live','polite');hud.append(el);}
     el.hidden=false;el.innerHTML='<b>'+E(name)+(lvl?' <small>(level-'+lvl+')</small>':'')+'</b><div class="opponent-hp"><i style="width:'+Math.max(0,Math.min(100,Math.round(cur/Math.max(1,max)*100)))+'%"></i><span>'+cur+' / '+max+'</span></div>';
   }
-  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);if(e.data.atlasDepleted&&Array.isArray(e.data.atlasDepleted.list)){depletedNow={tick:Number(e.data.atlasDepleted.tick)||0,list:e.data.atlasDepleted.list.slice(0,500),at:Date.now()};if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();}if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;if(o?.kind==='npc'&&Number.isInteger(o.type)&&!recentTargets.includes(o.type)){recentTargets=[o.type,...recentTargets].slice(0,3);overlaySync();}opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);if(e.data.atlasDepleted&&Array.isArray(e.data.atlasDepleted.list)){depletedNow={tick:Number(e.data.atlasDepleted.tick)||0,list:e.data.atlasDepleted.list.slice(0,500),at:Date.now()};if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();}if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;if(o?.kind==='npc'&&Number.isInteger(o.type)){const who=account()?.name??null;if(who!==targetsFor){targetsFor=who;recentTargets=[];}if(!recentTargets.includes(o.type)){recentTargets=[o.type,...recentTargets].slice(0,3);overlaySync();}}opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
   window.addEventListener('keydown',e=>{
     if(e.key==='Tab'&&e.target===document.body)e.stopPropagation();
     if((e.key==='['||e.key===']')&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();focusStep(e.key===']'?1:-1);}
