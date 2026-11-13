@@ -1511,8 +1511,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `SPAR_KITS` naming a kit for each account) the target eats 19.1 when the spear's special goes out at once and
     18.2 when it goes out from 55% health: the special holds the target 5 ticks with no input
     (`pvp_dragon_spear.rs2` `p_delay(4)`), and the spear account gives up the dagger's specials and hits every 6
-    ticks. No meeting lost an army account. Evidence: `.practice/climb/set-army-*`. Gap: the
-    stun is not timed with the others' specials; one run per seed.
+    ticks. No meeting lost an army account. Evidence: `.practice/climb/set-army-*`. Against a target that leaves,
+    three or four spears of five accounts are what kill (finding 67). Gap: one run per seed.
 48. **A lone account in multi-way combat survives three maxed attackers only by leaving at once.** On the champion
     our account dies in all 16 army meetings (`extra:army-tribrid-multi-x4`, army on `army`, seeds 1-4). With
     `escapeOutnumbered: 2` (in multi-way combat, hits from two players within 8 ticks start the escape whatever the
@@ -1755,7 +1755,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     champion), wins, losses and draws of 16 groups: dragon dagger on the champion 10, 4, 2; spear on the champion
     5, 8, 3; spear on `army-alpha` 4, 11, 1; one spear and one dagger (`extra:team-2v2-mixed-x4`, kits joined by `+`
     in `scripts/pk-team.ts`) on the champion 5, 11, 0. No account dies in these fights: each ends when one side
-    leaves, and a hold deals no damage. Gap: a
+    leaves, and a hold deals no damage. Supply: the only drop of a dragon spear is the mega-rare table, 3 of its 128
+    rolls (`shared_droptables.rs2` `megararetable`), so the army's four spears are a market purchase. Gap: a
     single-way spot (one attacker at a time) has no lock; the target's own escape does not answer the lock; four
     spears leave the army with one dagger.
 68. **Against two targets together the spear army kills 10 of 12, once its leader stops banking an empty pack.**
