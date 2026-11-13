@@ -141,7 +141,16 @@ export type FightOptions = {
     // immune (5 ticks after a hold) the account runs straight away from it. The test of a melee attacker kept out of
     // reach for good: a melee hit needs a side tile (RectangleBoundary.ts), and each cast costs one tick stood still.
     kiteMelee?: number;
+    // Any freeze goes out the way a kiteMelee freeze does: only within 10 tiles and with a line of sight to the target
+    // (GameMap.ts isApproached), from a stand (a moving account stops on one tick and casts on the next), and no walk,
+    // food or potion click until the hold shows or 3 ticks pass (a walk or item click clears the queued spell).
+    // It loses runners (research/pvp-fight-loop.md finding 44): past 10 tiles the server walks the account in and
+    // casts on arrival, a chase that costs no click.
+    freezeStill?: boolean;
     fledSpec?: boolean;
+    // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower. 500 catches more
+    // runners and loses mirror fights (research/pvp-fight-loop.md finding 44).
+    specReserve?: number;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
     // false: no protect prayer over the head, whatever the opponent holds.
@@ -422,6 +431,14 @@ const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.
 const KITE_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 let kitePaths: typeof import('../vendor/rs-sdk/sdk/pathfinding') | null = null;
 let kiteLos: typeof import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder') | null = null;
+// A spell goes out only with a line of sight to the target (GameMap.ts isApproached, rsmod hasLineOfSight with
+// CollisionFlag.PLAYER, the engine's BLOCK_NPC_AND_PLAYERS 0x100000).
+async function lineOfSight(level: number, from: { x: number; z: number }, to: { x: number; z: number }): Promise<boolean> {
+    kitePaths ??= await import('../vendor/rs-sdk/sdk/pathfinding');
+    kiteLos ??= await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+    kitePaths.initPathfinding();
+    return kiteLos.hasLineOfSight(level, from.x, from.z, to.x, to.z, 1, 1, 1, 1, kiteLos.CollisionFlag.PLAYER);
+}
 
 // A style is usable only with a non-empty kit: an empty list casts damage spells with whatever is wielded
 // (a dagger, a bow), which hits for a fraction of the staff's max hit and wastes the turn. kits built by
@@ -544,13 +561,17 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 heading = { x: Math.sign(target.x - prevTarget.x), z: Math.sign(target.z - prevTarget.z) };
             }
             prevTarget = { x: target.x, z: target.z }; prevGap = gap;
-            if (frozenTile && now > freezeCastAt + 1 && (target.x !== frozenTile.x || target.z !== frozenTile.z)) {
+            // The server casts in the tick after our click, and a target that runs can step once more before it: the tile
+            // of a hold is where the target stands two ticks after the cast.
+            if (frozenTile && now === freezeCastAt + 2) frozenTile = { x: target.x, z: target.z };
+            if (frozenTile && now > freezeCastAt + 2 && (target.x !== frozenTile.x || target.z !== frozenTile.z)) {
                 // Target moved after the freeze cast: if it moved right away the spell splashed (no immunity); else it wore off (5-tick immunity).
                 const splashed = now <= freezeCastAt + 3;
+                if (splashed && fled) log(`PK freeze missed at distance ${gap}`);
                 frozenUntil = now;
                 freezeReady = splashed ? now : Math.min(freezeReady, now + 5);
                 frozenTile = null;
-            }
+            } else if (frozenTile && fled && now === freezeCastAt + 3) log(`PK freeze held at distance ${gap}, wilderness level ${wildernessLevel(target.z)}`);
             if (o.maxDistance !== undefined && target.distance > o.maxDistance) { result.outcome = 'lost'; return result; }
             if (o.maxWild !== undefined && (wildernessLevel(at.z) > o.maxWild || wildernessLevel(target.z) > o.maxWild)) { result.outcome = 'lost'; return result; }
         } else if (now - lastSeen > 10 && !(o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(state.inventory))) {
@@ -590,7 +611,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // An account with few Hitpoints is under every threshold at full health, so full health never eats.
         // kiteMelee: an inventory click (OpHeld) in the two ticks of a cast clears the spell before the server casts it,
         // so food and potions wait unless the next hit could kill.
-        const castShield = o.kiteMelee !== undefined && now <= freezeCastAt + 2 && me.hp > oppMax;
+        const castShield = (o.kiteMelee !== undefined || o.freezeStill === true) && now <= freezeCastAt + 2 && me.hp > oppMax;
+        // freezeStill: the ticks after a cast until the hold shows (the target stood: held two ticks after the cast).
+        const freezeHolding = o.freezeStill === true && now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2 && !!frozenTile);
         if (!castShield && me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
             if (food) {
@@ -666,7 +689,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // would cancel an approach that the server has in hand, so it is sent only while we stand still.
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
         if (o.chaseBelow !== undefined && target) chaseLow = lowHealth(observePlayer(s.client, target.index), o.chaseBelow);
-        if (o.kiteMelee === undefined && (o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
+        if (o.kiteMelee === undefined && !freezeHolding && (o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
             const ahead = o.cutOff !== undefined && now < fleeingUntil;
             const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
@@ -873,7 +896,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
         const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
-            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)));
+            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
+            && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
+        // freezeStill: a moving account stops on this tick and casts from its stand on the next.
+        if (castFreeze && o.freezeStill === true && !stoodStill && !kiteTarget) { void sdk.sendWalk(at.x, at.z); continue; }
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
         const energy = special(s.client);
@@ -888,7 +914,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // special stays armed with its energy, and each such turn is lost.
         const running = now < fleeingUntil;
         const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > BOW_RANGE));
-        if (spec && !kiteTarget && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
+        if (spec && !kiteTarget && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || lowHealth(seen, spec.below))
+            && (fled || bursting || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];

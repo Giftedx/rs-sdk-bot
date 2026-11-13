@@ -1444,3 +1444,22 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the champion had 26. The champion keeps no stand-off. Rule: a patch joins the champion only after the mirror and
     the rival and runner cases (`.practice/climb/dual.sh`, 8 seeds) agree. Gap: one seed of the rival batch at
     stand-off 5 gave no result (12 fights in the first half).
+44. **A hold on a runner shows two ticks after the cast, and reading it one tick early halves the catches.** The
+    server casts in the tick after our click, and a runner can step once more before the freeze stops it
+    (`pvp_magic.rs2` `pvp_freeze_effect`: `p_walk` to its own tile and a 0-delay queue). The loop read a hold from the
+    target's tile at the cast, so a hold that landed read as a splash and the next turn went on a held target. With the
+    tile taken two ticks after the cast: 36 of 128 runners (`extra:spar-escape-tribrid-snare-x8`, seeds 1-16, runner
+    on `base`, `SPAR_CAP=900`) against 25, and 178 kills and 12 deaths in 192 rival fights
+    (`extra:spar-rivals-tribrid-snare-x12`) against 175 and 15. Of the freezes cast at a fled runner, about 45% hold.
+    A hold at level 30 or lower converts nothing (0 of 14, seeds 13-16): the runner rubs its glory while frozen;
+    above level 30, 4 of 14. The champion's 4 dragon dagger specials all go out near 53% health, before the runner
+    breaks, so a hold above 30 meets bow shots only. `freezeStill` (a freeze only within 10 tiles with a line of
+    sight, from a stand, no walk or item click until the hold shows) gives 13 of 128 runners and 179 and 13 against
+    the rivals: a cast past 10 tiles makes the server walk the account in and cast on arrival, a chase that costs no
+    click. Special energy kept for the runner costs the fights that need it: no special above 30% health unless the
+    target fled gives 43 of 128 runners and 168 kills, 23 deaths against the rivals; above 0%, 44 and 156, 32.
+    `specReserve` 250 gives 38 and 168, 21; `specReserve` 500 gives 83 of 248 runners (seeds 1-32) against 73 of 256,
+    178 and 13 against the rivals, and in the mirror (`extra:spar-x8`, `SPAR_B=champion`, seeds 1-16) 40 kills and
+    68 deaths in 128 fights where the champion has 49 and 67, so it stays out of the champion (finding 43 rule).
+    Evidence: `.practice/climb/still2.out`, `save.out`, `reserve.out`, `reserve2.out`, `mirror-res.out`,
+    `.practice/climb/fix-logs/`, `.practice/climb/held-escape.ts`. Gap: finding 41's noise; one run per seed.
