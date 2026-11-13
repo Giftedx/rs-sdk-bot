@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794586571036,
+ "at": 1794586640104,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -453,28 +453,6 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby"
-   ]
-  },
-  {
    "account": "SporranBulge",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -554,21 +532,37 @@
   },
   {
    "account": "Pocketrocket",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3cbb11a3-51e6-4f2b-a5c6-7f9074a843cc"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "local-recover-pocketrocket-20261113t160040z [task-3cbb11a3-51e6-4f2b-a5c6-7f9074a843cc]",
+   "role": "thieving"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "shop:catherby"
    ]
   }
  ]
