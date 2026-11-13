@@ -319,7 +319,15 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const kit = kitFrom(sdk.getEquipment(), sdk.getInventory(), cfg.ranged);
     emit({ e: 'kit', kit });
     // Loot and banking: everything staged at the start is kit; anything else carried is loot.
-    const keep = new Set([...sdk.getInventory(), ...sdk.getEquipment()].map(i => i.id));
+    // The kit is the pack's count of each item at the start: loot often is the same items (a maxed target drops rune
+    // arrows, a staff, rune armour, a dagger, a glory and runes), so an id kept as kit left all of it in the pack
+    // and each bank trip deposited nothing (extra:roam-field, finding 70). An item counts in any dose or charge (a
+    // drunk Prayer potion(2) or a rubbed glory is still kit): the key is its name without the "(n)".
+    const GLORY = /^amulet of glory\([1-4]\)$/i;
+    const kitKey = (i: { id: number; name: string }) => i.name.replace(/\(\d\)$/, '').toLowerCase();
+    const startPack = new Map<string, number>();
+    for (const i of sdk.getInventory()) startPack.set(kitKey(i), (startPack.get(kitKey(i)) ?? 0) + i.count);
+    const extraLoot = () => { const now = new Map<string, number>(); for (const i of sdk.getInventory()) now.set(kitKey(i), (now.get(kitKey(i)) ?? 0) + i.count); return [...now].some(([k, n]) => n > (startPack.get(k) ?? 0)); };
     const startFood = food()[0];
     const foodCount = startFood ? sdk.getInventory().filter(i => i.id === startFood.id).length : 0;
     const valuer = makeValuer(server);
@@ -332,7 +340,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const needBank = () => carried >= bankAt || (carried > 0 && 28 - sdk.getInventory().length <= 2);
     const bank = async (why: string) => {
         emit({ e: 'bank-trip', why, carried });
-        const ok = await bankTrip(session, walker, keep, startFood?.id, foodCount, stopped, emit);
+        const ok = await bankTrip(session, walker, startPack, kitKey, startFood?.id, foodCount, stopped, emit);
         if (ok) { stats.banked += carried; carried = 0; }
         return ok;
     };
@@ -350,7 +358,6 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         }
         seenHit = maxHit;
     };
-    const GLORY = /^amulet of glory\([1-4]\)$/i;
     const canTeleport = () => (sdk.getSkill('Magic')?.level ?? 1) >= 25 && sdk.getInventory().some(i => /^law rune$/i.test(i.name))
         && sdk.getInventory().some(i => /^air rune$/i.test(i.name) && i.count >= 3)
         && (sdk.getInventory().some(i => /^fire rune$/i.test(i.name)) || sdk.getEquipment().some(i => /staff of fire|fire battlestaff/i.test(i.name)));
@@ -611,7 +618,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         if (m && stats.deaths === 0) {
             // Out of the Wilderness first, whatever ended the hunt (a stop request included).
             if (wildLevel(m.x, m.z) > 0) await escape(stopped() ? 'stop requested' : 'end of hunt');
-            if (sdk.getInventory().some(i => !keep.has(i.id))) await bank('end of hunt');
+            if (extraLoot()) await bank('end of hunt');
         }
     } finally { closeRadar(); }
     return stats;
@@ -673,16 +680,23 @@ async function lootAt(session: Session, at: { x: number; z: number }, ctx: { val
 
 export const EDGEVILLE_BANK_TILE = { x: 3094, z: 3492 };
 // Walks to Edgeville bank, deposits everything that is not kit, takes food back to its staged count. True when banked.
-async function bankTrip(session: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, keep: ReadonlySet<number>, foodId: number | undefined, foodCount: number, stopped: () => boolean, emit: (e: object) => void): Promise<boolean> {
+async function bankTrip(session: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, startPack: ReadonlyMap<string, number>, kitKey: (i: { id: number; name: string }) => string,
+    foodId: number | undefined, foodCount: number, stopped: () => boolean, emit: (e: object) => void): Promise<boolean> {
     const { sdk, bot } = session;
     const walk = await walkPath(walker, [{ ...EDGEVILLE_BANK_TILE, tol: 3 }], { maxTicks: 900, idleMs: 9000, stop: stopped });
     if (!walk.ok) { emit({ e: 'bank-failed', why: 'walk', detail: walk.detail }); return false; }
     if (!(await bot.openBank()).success) { emit({ e: 'bank-failed', why: 'open' }); return false; }
+    // Each item beyond the pack's count at the start goes in the bank.
     const deposited: string[] = [];
-    for (const item of [...sdk.getInventory()]) {
-        if (keep.has(item.id) || deposited.includes(item.name)) continue;
-        const r = await bot.depositItem(item, -1);
-        if (r.success) deposited.push(item.name);
+    const held = new Map<number, { item: ReturnType<typeof sdk.getInventory>[number]; count: number }>();
+    for (const i of sdk.getInventory()) { const h = held.get(i.id); held.set(i.id, { item: h?.item ?? i, count: (h?.count ?? 0) + i.count }); }
+    const kitLeft = new Map(startPack);
+    for (const { item, count } of held.values()) {
+        const k = kitKey(item), keepN = Math.min(count, kitLeft.get(k) ?? 0);
+        kitLeft.set(k, (kitLeft.get(k) ?? 0) - keepN);
+        if (count - keepN <= 0) continue;
+        const r = await bot.depositItem(item, count - keepN);
+        if (r.success) deposited.push(`${item.name} x${count - keepN}`);
     }
     let restocked = 0;
     const have = foodId === undefined ? 0 : sdk.getInventory().filter(i => i.id === foodId).length;

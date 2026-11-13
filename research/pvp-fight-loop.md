@@ -1791,3 +1791,14 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     casts go out at 8, 12 and 14 tiles as it passes (`.practice/roam-switch/run-open34b`). Gap: a target that leaves
     within 6 ticks of the first sight; an army that waits in the runner's path; the test target runs straight south
     where a player picks its way round.
+70. **The roam's bank trips deposited nothing: its loot is the same items as its kit.** `extra:roam-field` (the
+    roam against four maxed targets with no food at levels 6, 6, 17 and 17, two single-way and two multi-way spots;
+    seeds 1-6, `.practice/roam-switch/field*`): 3 kills in its minute in every seed, no death, a kill about every
+    300 ticks (kills at ticks 183 to 283, 408 to 599, 668 to 927). Each kill's loot (rune arrows, a mystic staff,
+    rune armour, a dragon dagger, a glory, runes: about 256,000 gp) set off a bank trip that deposited nothing,
+    because the bank kept every item id of the kit, and the loot stayed in the pack. The kit is the pack's count of
+    each item at the start, by name without its dose or charge (a drunk Prayer potion(2) or a rubbed glory is
+    kit); the bank takes the rest. Then each trip deposits the loot (`Rune arrow x307`, `Dragon dagger(p) x1`, ...)
+    and keeps the kit's potions; the third kill comes at a mean of 911 ticks against 832 (four seeds of six reach
+    it). Of the 300 ticks between kills, the loot takes 30 to 40 and the bank trip about 50. Gap: the targets stand
+    still; 6 seeds.

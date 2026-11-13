@@ -551,6 +551,11 @@ const ROUTE_CASES: BenchCase[] = [
   // Two targets that defend on the champion at Wilderness level 8: one in rune with 18 sharks and a glory, one in monk
   // robes (kit ganker-dds) six tiles on. The roam takes the rune one by reach and switches to the robes once both are
   // in view; `--set ROAM_SWITCH=0` keeps the first pick.
+  // A field: four maxed targets with no food spread over Wilderness levels 6 to 17 (two single-way, two multi-way
+  // spots), standing and hitting back; the roam's kills in its minute and the ticks between them (finding 70).
+  {key: 'extra:roam-field', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b},{bot:c},{bot:d},{bot:e}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=20', 'FRIENDS='], pass: ok, output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [[3094, 3580], [3150, 3560], [3240, 3650], [3140, 3650]].map(([x, z], i) => ({suffix: 'bcde'[i]!, preset: 'fresh_lumbridge', presetConfig: sparFixture(x!, z!, {food: 0})}))},
   {key: 'extra:roam-pick', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b},{bot:c}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})},
