@@ -201,6 +201,8 @@ export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: numbe
     hold?: () => boolean;
     // The tiles the hold closes to (default 3).
     holdRange?: number;
+    // While true, the chase toward a target out of view waits (the army's pace, scripts/pk-army.ts PACE).
+    pace?: () => boolean;
     specAll?: boolean;
     // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
     lootMin?: number; bankAt?: number };
@@ -492,7 +494,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 const castable = freezeNow();
                 if (cfg.hold?.()) {
                     const range = cfg.holdRange ?? 3;
-                    if (near.distance > range) await walkPath(walker, [{ x: near.x, z: near.z, tol: range }], { maxTicks: 2, idleMs: 9000, stop: stopped });
+                    if (near.distance > range && !cfg.pace?.()) await walkPath(walker, [{ x: near.x, z: near.z, tol: range }], { maxTicks: 2, idleMs: 9000, stop: stopped });
                     else await sdk.waitForTicks(1);
                     continue;
                 }
@@ -555,11 +557,13 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             }
             // Out of view: run to the cut-off tile, re-aimed on each new roster frame.
             if (session.tick() - contactAt > 400) { emit({ e: 'stall', target: name }); return 'stall'; }
+            // A group's pace: while pace() is true (someone is behind) the chase waits a tick for it.
+            if (cfg.pace?.()) { await sdk.waitForTicks(1); continue; }
             const aim = track ? intercept(m, track) : { ...pos, ticks: 0 };
             const frame = radar.tick;
             await walkPath(walker, [{ x: aim.x, z: aim.z, tol: 2 }], {
                 maxTicks: 40, idleMs: 9000,
-                stop: () => stopped() || radar.tick !== frame ||
+                stop: () => stopped() || radar.tick !== frame || !!cfg.pace?.() ||
                     !!sdk.getState()?.nearbyPlayers.some(p => p.name.toLowerCase() === name.toLowerCase() && p.distance <= 15),
             });
         }

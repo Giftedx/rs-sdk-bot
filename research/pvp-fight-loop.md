@@ -1778,4 +1778,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     it runs to level 30 and rubs there. The army's prey is a target that is busy (skilling, fighting) or slow to
     see it. A delay before it leaves (`TARGET_SIGHT_DELAY`) of 3, 6 or 10 ticks still gives 0 of 6 at level 6: from
     the first sight at 12 tiles the army takes about 15 ticks to stand all on melee tiles (`"open"` at t61 after the
-    rub). Gap: an approach that closes the 12 tiles in the 6 ticks of a run.
+    rub); at 16 ticks 5 of 6, at 22 ticks 6 of 6. The time goes to the followers: they keep with the leader by
+    walks to its last tile, and when the leader stands at the target they are 15 tiles behind it (`ARMY_TRACE=1`,
+    each account's distance on each tick of the hold). With the leader's chase waiting while a follower is more
+    than 4 tiles from it (`PACE`, default 4 with the opening hold) and the followers running to the target's tile
+    as the leader sees it (`FOLLOW_TARGET`), all five come into view together and stand on melee tiles 6 ticks later:
+    a delay of 10 ticks gives 4 of 6, 6 ticks 0 of 6, and the target that does not run 6 of 6. Gap: a target that
+    leaves within 6 ticks of the first sight.
