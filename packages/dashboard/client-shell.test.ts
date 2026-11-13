@@ -850,3 +850,16 @@ test('3D highlights: one overlay message with threats, rivals, fought npcs, labe
  expect(o.tiles).toEqual([{x:3101,z:3702,l:0,colour:'#ff0000',fill:true,label:'Death'}]);
  expect(o.pies).toEqual([{x:3059,z:3884,l:0,p:0.75}]);
 });
+test('Skill Calculator: XP left to the target, the time at the rate, and each action with its count',()=>{
+ const code=shell.slice(shell.indexOf('  // Skill Calculator (RuneLite\'s)'),shell.indexOf("  const XP_STORE='atlas-xp-baselines';"));
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const t=new Function('window','asset','fetch','E','icon','nf','dur',`${code};return {calcBox,set:(s,t,a)=>{calcSkill=s;calcTarget=t;skillActions=a;}};`)({atlasXp:X},(n:string)=>n,()=>new Promise(()=>{}),String,(n:string)=>`[${n}]`,(n:number)=>String(n),(ms:number)=>Math.round(ms/60000)+'m');
+ const xp=X.xpForLevel(60)+10;
+ t.set('Woodcutting',61,{woodcutting:[['Willow logs',30,67.5,[],['Willow logs']],['Yew logs',60,175,[],['Yew logs']],['Magic logs',75,250,[],['Magic logs']]]});
+ const left=X.xpForLevel(61)-xp,html=t.calcBox({skills:[{name:'Woodcutting',xp}]},{rate:left});
+ expect(html).toContain('Current <b>60</b>');expect(html).toContain('value="61"');
+ expect(html).toContain(`<b>${left}</b> xp left`);expect(html).toContain('TTL 60m');
+ expect(html).toContain(`<span class="calc-count">${Math.ceil(left/175)}</span>`);
+ expect(html).toMatch(/calc-row calc-locked"[^>]*>\[Magic logs\]/);
+ t.set(null,null,null);expect(t.calcBox({skills:[]},null)).toBe('');
+});
