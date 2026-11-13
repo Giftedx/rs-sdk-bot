@@ -716,6 +716,24 @@ test('!price answers from the market, then from the item value',()=>{
  expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
 });
 
+test('GE sort: the flip margin after the 5% tax, and the high alch profit after a nature rune',()=>{
+ const code=shell.slice(shell.indexOf('  // GE sort (RuneLite'),shell.indexOf("  function gePanel(){"));
+ const S:any={economy:{supplies:[{name:'Nature rune',ask:260,bid:240}]}};
+ const alchOf=(n:string)=>({'Rune platebody':39000} as any)[n]??null;
+ const geProfit=new Function('S','alchOf','price',`${code};return geProfit;`)(S,alchOf,()=>null);
+ // Sell at 1,999: 99 tax, 1,900 net; buy at 1,501: 399 a flip.
+ expect(geProfit({ask:2000,bid:1500,vwap:2500},'flip')).toBe(399);
+ // A thin market: the sale is capped at the 7-day average (1,800: 90 tax), and no average gives no flip.
+ expect(geProfit({ask:9000,bid:1500,vwap:1800},'flip')).toBe(209);
+ expect(geProfit({ask:2000,bid:1500},'flip')).toBe(null);
+ expect(geProfit({ask:2000,bid:null,vwap:2000},'flip')).toBe(null);
+ // 39,000 - 37,000 - 260 = 1,740 a cast; no alch value or no ask gives none.
+ expect(geProfit({name:'Rune platebody',ask:37000},'alch')).toBe(1740);
+ expect(geProfit({name:'Cabbage',ask:5},'alch')).toBe(null);
+ expect(geProfit({name:'Rune platebody',ask:null},'alch')).toBe(null);
+ expect(geProfit({ask:2000,bid:1500},'stock')).toBe(null);
+});
+
 test('banked XP: bank items that are the one input of an action, at the best action the level allows',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP (RuneLite's Banked Experience)"),shell.indexOf('  // Best training spot (Skill Calculator):'));
  require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
