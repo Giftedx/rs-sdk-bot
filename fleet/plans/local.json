@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794589037818,
+ "at": 1794589095746,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -134,6 +134,25 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
    ]
   },
   {
@@ -551,19 +570,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-6c44f2bd-33d2-44cf-931d-9dd3483af97e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-mineyourbiz-20261113t164525z [task-6c44f2bd-33d2-44cf-931d-9dd3483af97e]",
-   "role": "thieving"
   }
  ]
 }
