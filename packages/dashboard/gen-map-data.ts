@@ -13,7 +13,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 type Tile = { x: number; z: number; level?: number };
-export type Icon = [number, number, number, 't' | 'p' | 'a' | 's', string];
+// An icon may end with its skill requirement [skill, level] (a teleport spell's Magic level, a shortcut's Agility level).
+export type Icon = [number, number, number, 't' | 'p' | 'a' | 's', string] | [number, number, number, 't' | 'p' | 'a' | 's', string, [string, number]];
 const ANYWHERE = new Set(['spell', 'jewellery', 'item']);
 export type Source = [string, string, number[]];
 type Names = { npc: (d: string) => string; item: (d: string) => string };
@@ -27,16 +28,19 @@ const flat = (tiles: Tile[]) => tiles.filter(t => Number.isInteger(t?.x) && Numb
 
 export function mapIcons(teleports: any[], edges: any[], items: any[], names: Names): Icon[] {
     const out = new Map<string, Icon>();
-    const add = (t: Tile | undefined, kind: Icon[3], label: string) => {
+    const add = (t: Tile | undefined, kind: Icon[3], label: string, req?: [string, number]) => {
         if (!t || !Number.isInteger(t.x) || !Number.isInteger(t.z)) return;
         const key = `${t.x},${t.z},${t.level ?? 0},${kind}`;
-        if (!out.has(key)) out.set(key, [t.x, t.z, t.level ?? 0, kind, label]);
+        if (!out.has(key)) out.set(key, req ? [t.x, t.z, t.level ?? 0, kind, label, req] : [t.x, t.z, t.level ?? 0, kind, label]);
     };
     // Each destination option of a teleport (Amulet of glory: Edgeville, Karamja, Draynor Village, Al Kharid).
-    for (const tp of teleports) for (const o of tp.to ?? []) add(o?.candidates?.[0], ANYWHERE.has(tp.kind) && tp.name !== 'Ring of life' ? 't' : 'p', String(tp.name ?? 'Teleport') + (o?.option ? ': ' + o.option : ''));
+    for (const tp of teleports) {
+        const sk = (tp.requires ?? []).find((r: any) => r.type === 'skill' && r.skill && Number.isFinite(r.level));
+        for (const o of tp.to ?? []) add(o?.candidates?.[0], ANYWHERE.has(tp.kind) && tp.name !== 'Ring of life' ? 't' : 'p', String(tp.name ?? 'Teleport') + (o?.option ? ': ' + o.option : ''), sk ? [String(sk.skill), Number(sk.level)] : undefined);
+    }
     for (const e of edges) if (e.kind === 'shortcut') {
         const lv = e.requires?.skill?.level;
-        add(e.from, 'a', `Agility shortcut${lv ? ' (level ' + lv + ')' : ''}: ${cap(String(e.optionText ?? 'use'))}`);
+        add(e.from, 'a', `Agility shortcut${lv ? ' (level ' + lv + ')' : ''}: ${cap(String(e.optionText ?? 'use'))}`, lv ? ['agility', Number(lv)] : undefined);
     }
     for (const it of items) for (const s of it.sources ?? []) if (s.kind === 'shop') for (const o of s.owners ?? []) for (const t of o.tiles ?? []) add(t, 's', `Shop: ${names.npc(o.npc)}`);
     return [...out.values()].sort((a, b) => a[0] - b[0] || a[1] - b[1]);

@@ -721,7 +721,7 @@ test('the Wilderness level counts 8 tiles for each level from the south edge of 
 });
 
 test('the inventory value is the sum of the item values, and the tooltip counts the items with no value',()=>{
- const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf('  function itemCell(item,i){'));
+ const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf("  // Items kept on death (RuneLite's"));
  const vals:any={Coins:1,Lobster:150};
  const invWorth=new Function('price','gp',`${code};return invWorth;`)((n:string)=>vals[n]!=null?{value:vals[n]}:null,(n:number)=>String(n));
  expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp</p>');
@@ -921,7 +921,7 @@ test('agility obstacles, Ground markers, failure markers and the NPC finder in t
  expect(spot).toEqual([{x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'2 accounts: travel to Ardougne failed · tick stream stalled'}]);
 });
 test('Inventory Tags: food, potions, teleports and runes get their group class; the switch turns them off',()=>{
- const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf('  function itemCell(item,i){'));
+ const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Items kept on death (RuneLite's"));
  const hl:any={invTags:true};
  const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
  expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
@@ -975,6 +975,40 @@ test('minimap right-click: only the names of players look up, not floor items or
  expect(['goondelf','alpha'].every(n=>names.has(n))).toBe(true);
  expect(names.has('floor item')).toBe(false);expect(names.has('death tile')).toBe(false);
 });
+test('items kept on death: in the Wilderness the 3 kept items are green, other items of value red, worn items counted first',()=>{
+ const code=shell.slice(shell.indexOf("  // Items kept on death (RuneLite's"),shell.indexOf('  function itemCell(item,i,extra'));
+ const S:any={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Coins':1}}};
+ const b:any={inWorld:true,pos:{x:3100,z:3600},equipment:[{name:'Rune scimitar',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Shark',count:1},{name:'Bones',count:1}]};
+ const env:any={S,wildLevel:()=>5,pvpState:()=>({kept:[{name:'Rune scimitar'},{name:'Shark'},{name:'Shark'}]})};
+ const t=new Function(...Object.keys(env),`${code};return {deathMarks,deathCls};`)(...Object.values(env));
+ const m=t.deathMarks(b);
+ expect(t.deathCls(m,b.equipment[0])).toBe(' death-kept');
+ expect(b.inventory.map((i:any)=>t.deathCls(m,i))).toEqual([' death-kept',' death-kept',' death-lost','']);
+ expect(new Function('S','wildLevel','pvpState',`${code};return deathMarks;`)(S,()=>0,()=>null)(b)).toBe(null);
+ // A stack keeps only the counted units: 3 of 100,000 coins is part kept, and a second stack keeps nothing.
+ const coins:any={inWorld:true,pos:{x:3100,z:3600},equipment:[],inventory:[{name:'Coins',count:100000},{name:'Coins',count:5}]};
+ const c=new Function('S','wildLevel','pvpState',`${code};return {deathMarks,deathCls};`)(S,()=>5,()=>({kept:[{name:'Coins'},{name:'Coins'},{name:'Coins'}]}));
+ const cm=c.deathMarks(coins);
+ expect(coins.inventory.map((i:any)=>c.deathCls(cm,i))).toEqual([' death-part',' death-lost']);
+});
+test('best training spot: the best rock the account can mine now, and the nearest one on its floor',()=>{
+ const code=shell.slice(shell.indexOf('  // Best training spot (Skill Calculator)'),shell.indexOf('  const guideText=g=>'));
+ const acts={mining:[['Copper ore',1,437.5,[],['Copper ore']],['Iron ore',15,875,[],['Iron ore']],['Coal',30,1250,[],['Coal']]]};
+ const resources={kinds:{1:{name:'Copper rock'},2:{name:'Iron rock'},3:{name:'Coal rock'}},tiles:[[3000,3000,0,1],[3010,3000,0,2],[3050,3000,0,2],[3011,3000,1,2],[3020,3000,0,3]]};
+ const resourceOf=(i:string)=>/ ore$/i.test(i)?i.replace(/ ore$/i,'')+' rock':/^coal$/i.test(i)?'Coal rock':null;
+ const t=new Function('resources','skillActions','resourceOf','calcSkill','E','nf','sourcePin',`${code};return {bestSpot,bestSpotLine};`)(resources,acts,resourceOf,'Mining',String,String,null);
+ const b={pos:{x:3000,z:3000,level:0}};
+ expect(t.bestSpot(b,'Mining',20)).toMatchObject({name:'Iron rock',level:15,near:{x:3010,z:3000,l:0,d:10}});
+ expect(t.bestSpot(b,'Mining',20).tiles.length).toBe(3);
+ expect(t.bestSpot(b,'Mining',35).name).toBe('Coal rock');
+ // An action named after its rock, or named for an output item, finds its rock too.
+ const acts2={mining:[['Copper ore',1,437.5,[],['Copper ore']],['Limestone rock',10,662.5,[],[]],['Gem rock',12,500,[],['Uncut gem']]]};
+ const res2={kinds:{1:{name:'Copper rock'},4:{name:'Limestone rock'}},tiles:[[3000,3000,0,1],[3005,3000,0,4]]};
+ const t2=new Function('resources','skillActions','resourceOf','calcSkill','E','nf','sourcePin',`${code};return {bestSpot};`)(res2,acts2,resourceOf,'Mining',String,String,null);
+ expect(t2.bestSpot(b,'Mining',12)).toMatchObject({name:'Limestone rock',level:10,near:{x:3005,d:5}});
+ expect(t.bestSpot(b,'Fishing',35)).toBe(null);
+ expect(t.bestSpotLine(b,20)).toContain('Best now: <b>Iron rock</b> (level 15) · nearest 10 tiles');
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
@@ -996,6 +1030,19 @@ test('Inventory Setups: worn slots green, red or yellow against the kit, and the
  expect(html).toContain('1 worn slot differs from the kit'.replace('differs','differ'));
  expect(html).toContain('setup-row setup-short');expect(html).toContain('<span>2 / 18</span>');
  expect(html).toContain('setup-row setup-have');expect(html).toContain('<span>100 / 100</span>');
+ // With an observed bank, each row gives the bank count; short when pack and bank together miss the kit.
+ const withBank=t.setupPanel({...b,bank:[{name:'Shark',count:10}]});
+ expect(withBank).toContain('2 / 18 <small class="setup-bank setup-bank-short">bank 10</small>');
+ expect(withBank).toContain('100 / 100 <small class="setup-bank">bank 0</small>');
+});
+test('map icons by requirement: true or false with the account level, null with no level',()=>{
+ const line=shell.split('\n').find(l=>l.includes('const iconCan=(b,req)=>'))!;
+ const iconCan=new Function(`${line};return iconCan;`)();
+ const b={skills:[{name:'Agility',level:40},{name:'Magic',level:20}]};
+ expect([iconCan(b,['agility',40]),iconCan(b,['agility',41]),iconCan(b,['magic',25]),iconCan(b,null),iconCan({},['agility',1]),iconCan(b,['mining',1])]).toEqual([true,false,false,null,null,null]);
+ // A boost or a drain counts: the game checks the current level.
+ expect(iconCan({skills:[{name:'Magic',level:22,currentLevel:25}]},['magic',25])).toBe(true);
+ expect(iconCan({skills:[{name:'Magic',level:25,currentLevel:22}]},['magic',25])).toBe(false);
 });
 test('Screenshot: a level-up, a death or valuable loot of the watched account asks the viewer for a picture and keeps it',()=>{
  const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));
