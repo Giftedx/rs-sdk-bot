@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794607590475-bigpackage-weequickie",
  "account": "WeeQuickie",
  "partner": "Bigpackage",
@@ -12,8 +12,8 @@
  "claim": "649e8bb4-894f-4e6b-94dd-8ea73320e274",
  "count": 0,
  "ok": false,
- "at": 1794608098507,
- "detail": "trade claimed",
+ "at": 1794608166956,
+ "detail": "release moved under the session: Error: partner failed: no trade",
  "lines": [
   {
    "item": "Logs",
@@ -40,5 +40,11 @@
    "requested": 8,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1794608098513-0000029700-0000000001",
+  "at": 1794608166942,
+  "sha256": "7e02c590a89193eba3f48bd1f6601f30f5ea87d50e736567316da59f109b40c9"
+ },
+ "screen": false
 }
