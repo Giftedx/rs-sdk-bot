@@ -1017,6 +1017,8 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  const b:any={skills:[{name:'Strength',level:99,currentLevel:99},{name:'Magic',level:30}],equipment:[{slot:3,name:'Rune scimitar'},{slot:2,name:'Amulet of strength'}],
   inventory:[{name:'Air rune',count:30},{name:'Law rune',count:4},{name:'Fire rune',count:2},{name:'Water rune',count:9}]};
  expect(t.wornBonuses(b)).toEqual([7,45,-2,0,0,0,1,0,0,0,54,0,0]);
+ // Unobserved equipment is unknown, not empty: no panel.
+ expect(t.wornBonuses({equipment:[],equipmentObserved:false})).toBe(null);expect(t.equipStats({equipment:[],equipmentObserved:false})).toBe('');
  // The server's formula: floor(((99 + 8 + style) × (54 + 64) + 320) / 640).
  expect([t.maxHit(99,54,0),t.maxHit(99,54,3),t.maxHit(99,0,3)]).toEqual([20,20,11]);
  // With the +15% prayer: floor(99 × 115 / 100) = 113, so floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
