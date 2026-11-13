@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794532275086-nabtheknob-wandwaver-bones",
  "account": "Wandwaver",
  "partner": "NabTheKnob",
@@ -12,6 +12,16 @@
  "claim": "e0060e5e-be14-410f-8a4a-a034ebddf7fb",
  "count": 0,
  "ok": false,
- "at": 1794532282051,
- "detail": "trade claimed"
+ "at": 1794532365972,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794532282060-0000036496-0000000001",
+  "at": 1794532365961,
+  "sha256": "7b35ec3e951cc98ba8a56bf59d765df5e278f42900ccc34734b91a122db8dc89"
+ },
+ "screen": true
 }
