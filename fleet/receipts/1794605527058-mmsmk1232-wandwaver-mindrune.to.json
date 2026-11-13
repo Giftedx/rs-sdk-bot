@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794605527058-mmsmk1232-wandwaver-mindrune",
+ "account": "Wandwaver",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 8,
+ "claim": "bc984a7e-7ccb-4f1e-a281-909cc23dd4be",
+ "count": 0,
+ "ok": false,
+ "at": 1794606996449,
+ "detail": "trade claimed"
+}
