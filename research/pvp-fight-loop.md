@@ -377,9 +377,9 @@ and `sim-def.txt` in the worktree that ran it). Mean is the mean win rate agains
 
 Bench ranking. Conditions: lockstep practice engine, Wilderness level 34 at (3125, 3790), both sides on the profile
 `snap` (`predictPrayer`, `snapPrayer`; it sets no rotation, so each kit attacks with its own styles), cap 600 ticks,
-each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`, the repeatable setup, each kit with the quests its
-items need set (`kitVarps`: `dragon`'s square shield needs Legends' Quest and `pure-hally`'s halberd Regicide; before
-that a kit fought with no shield or halberd after its first two-handed bow turn). Evidence:
+each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`, the repeatable setup, the fight loop with the
+event fix of finding 71. No kit of the bracket needs a quest that `kitVarps` did not set (`pure-hally` sets Regicide
+and the viking helm builds The Fremennik Trials in their own varps; `dragon` wears a rune kiteshield). Evidence:
 `.practice/kits/builds-matrix.log` (`.practice/kits/matrix-from-seeds.ts` from the seed rows, then
 `bun scripts/measure/pk-build-rank.ts`). A build of both brackets has 36 fights, the others 21. Net is the net damage
 for each 100 ticks.
@@ -406,16 +406,18 @@ for each 100 ticks.
 - **A pure against Defence 40 to 60.** `pure-pray` won 7 of 15 against those builds, 9 to 16 combat levels above it:
   3 of 3 against `mage-tank`, 2 of 3 against `rune-pure`, 1 of 3 against `zerker` and `range-tank`, 0 of 3 against
   `dragon`.
-- **Defence 40 to 60: `dragon` leads.** `dragon` won 18 of 21 (2 of 3 against `zerker`, 1 of 3 against
-  `range-tank`), `zerker` 15, `range-tank` 14, `rune-pure` 12.
+- **Defence 40 to 60: no build is clear.** In this run `dragon` won 18 of 21 (2 of 3 against `zerker`, 1 of 3
+  against `range-tank`), `zerker` 15, `range-tank` 14, `rune-pure` 12; an earlier loop gave `zerker` 18 and `dragon`
+  13, and a run before that both 16. The order inside this bracket swings between runs.
 - **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 2 of 21. `pure-ranger` won
   2 of 17 against the two Prayer 43 pures and the rune, zerker, dragon and range-tank builds (both from
   `pure-hally`), and every fight against the other builds.
 - **The two-handed sword loses.** `pure-r2h` won 4 of 21. The loop alternates the bow and the 7-tick weapon; a loop
   that keeps the slow weapon for the kill is not measured. The halberd has the same attack time, and its build
   wins 12 of 21 with Prayer 43.
-- The simulator and the bench agree on `pure-pray` at the top of the Defence 1 bracket, on the order `dragon`,
-  `zerker`, `range-tank`, `rune-pure` of the Defence 40 to 60 bracket, and on the last build of each bracket.
+- The simulator and the bench agree on `pure-pray` at the top of the Defence 1 bracket and on the last build of
+  each bracket; this run also has the simulator's order `dragon`, `zerker`, `range-tank`, `rune-pure`, which the
+  bench runs do not hold from run to run.
 - Control for the side of a pair: the same build on both sides (`extra:spar-kit-dragon-x8` and
   `extra:spar-kit-pure-pray-x8`, profile `snap`, seeds 1, 2, 3, 48 fights). Side A won 26, lost 21 and drew 1
   (`dragon` 11 to 13, `pure-pray` 15 to 8). 26 of 47 is inside the chance range of an even fight, so the table has
