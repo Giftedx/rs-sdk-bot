@@ -384,12 +384,13 @@ console.log('SAVES_DONE');`;
 }
 
 async function main() {
-  const prevRandom = process.env.RANDOM_EVENTS, prevLoot = process.env.LOOT_WATCH, prevDeath = process.env.DEATH_RECOVERY;
+  const prevRandom = process.env.RANDOM_EVENTS, prevLoot = process.env.LOOT_WATCH, prevDeath = process.env.DEATH_RECOVERY, prevGuard = process.env.VALUE_GUARD;
   process.env.RANDOM_EVENTS = '0';
-  // A ground-item pickup or a run back after a death would move a case's ticks: off unless the run sets LOOT_WATCH=1
-  // or DEATH_RECOVERY=1 (packages/core/src/loot.ts, packages/core/src/death-recovery.ts).
+  // A ground-item pickup, a run back after a death or a refused drop would move a case's ticks: off unless the run sets
+  // LOOT_WATCH=1, DEATH_RECOVERY=1 or VALUE_GUARD=1 (packages/core/src/loot.ts, packages/core/src/death-recovery.ts).
   process.env.LOOT_WATCH = prevLoot === '1' ? '1' : '0';
   process.env.DEATH_RECOVERY = prevDeath === '1' ? '1' : '0';
+  process.env.VALUE_GUARD = prevGuard === '1' ? '1' : '0';
   process.env.DEMO_OK = '';
 
   mkdirSync(dirname(OUT), { recursive: true });
@@ -491,6 +492,8 @@ async function main() {
     else process.env.LOOT_WATCH = prevLoot;
     if (prevDeath === undefined) delete process.env.DEATH_RECOVERY;
     else process.env.DEATH_RECOVERY = prevDeath;
+    if (prevGuard === undefined) delete process.env.VALUE_GUARD;
+    else process.env.VALUE_GUARD = prevGuard;
   }
   const passed = rows.filter(r => r.ok).length;
   console.log(`AIO_BENCH_SUMMARY ${JSON.stringify({ ok: passed === rows.length, cases: rows.length, passed, failed: rows.filter(r => !r.ok).map(r => r.case), routes: coverage.routes, covered: coverage.covered })}`);

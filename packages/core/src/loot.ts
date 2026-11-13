@@ -43,6 +43,11 @@ export const NEAR_WILD = 4;
 // for LURE_PAUSE ticks. And no pickup goes near the Wilderness edge or a stronger hunting NPC (lootRisk).
 export const ANCHOR_RESET = 100, LURE_PICKUPS = 3, LURE_TICKS = 100, LURE_PAUSE = 300;
 
+// The value guard (randomevents.ts `guard`): a held stack worth this much is kept from a drop or a sale.
+export const GUARD_VALUE = 10_000;
+// Scripts that sell, alch, trade or hand items over on purpose get no value guard.
+export const sellsItems = (script: string) => /sell|alch|merchant|market|trade|banker|courier|fan(out|in)|shop/i.test(script.split(/[\\/]/).at(-1) ?? '');
+
 // A record run: the main account, a specialist board account, or any run with HAGGIS_RUN=1.
 export const recordRun = (name: string, env: Record<string, string | undefined> = process.env): boolean =>
     name.toLowerCase() === MAIN_ACCOUNT || Object.hasOwn(SPECIALIST_BOARDS, name.toLowerCase()) || env.HAGGIS_RUN === '1';
