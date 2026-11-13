@@ -348,3 +348,57 @@ test(`a door that shuts ${reshut} ticks behind the bot is not opened again`, asy
     expect(r.doors).toBe(1);
     expect(h.inputs.filter(i => i.startsWith('open'))).toHaveLength(1);
 });
+
+// The bot stands on a gate tile (3000,3200) whose wall is on its west edge. `shipyard`: an Open from the east side
+// moves the player out to the west, as the Karamja shipyard gate does (quest_grandtree.rs2 open_shipyard_gate).
+function gateTile(shipyard: boolean) {
+    const pos = { x: 3000, z: 3200 };
+    let tick = 0, shut = true, openAt = -1, route: number[] = [];
+    const inputs: string[] = [], listeners = new Set<() => void>();
+    const gate: PathLoc = { id: 2438, x: 3000, z: 3200, name: 'Gate', optionsWithIndex: [{ text: 'Open', opIndex: 1 }] };
+    const crosses = (a: number, b: number) => (a >= 3000) !== (b >= 3000);
+    const deps: PathDeps = {
+        tick: () => tick, pos: () => ({ ...pos, level: 0 }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        plan: (_l, _f, to) => [to],
+        locs: () => shut ? [gate] : [],
+        reach: to => !(shut && crosses(pos.x, to.x)),
+        interactLoc: () => { inputs.push(`open@${tick}`); if (shipyard && pos.x >= 3000) { pos.x = 2999; route = []; } else openAt = tick + 1; },
+        walk: x => {
+            inputs.push(`walk ${x}@${tick}`);
+            if (shut && crosses(pos.x, x)) return { success: false, phase: 'validation', reason: 'client_rejected', message: 'Failed to walk' };
+            route = [];
+            for (let c = pos.x; c !== x;) { c += Math.sign(x - c); route.push(c); }
+            return { success: true };
+        },
+    };
+    const step = () => {
+        tick++;
+        if (openAt >= 0 && tick >= openAt) { shut = false; openAt = -1; }
+        for (let k = 0; k < 2 && route.length; k++) { if (shut && crosses(pos.x, route[0]!)) break; pos.x = route.shift()!; }
+        for (const l of [...listeners]) l();
+    };
+    return { deps, step, inputs, pos };
+}
+async function walkFromGate(g: ReturnType<typeof gateTile>, x: number) {
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const done = walkPath(g.deps, [{ x, z: 3200, tol: 0 }], { maxTicks: 40 }).then(r => result = r);
+    for (let i = 0; i < 50 && !result; i++) { await Promise.resolve(); g.step(); await Promise.resolve(); }
+    return done;
+}
+
+test('a shut gate on the bot\'s own tile with its wall behind the bot is not opened', async () => {
+    const g = gateTile(true);
+    const r = await walkFromGate(g, 3010);
+    expect(g.inputs.filter(i => i.startsWith('open'))).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(g.pos.x).toBe(3010);
+});
+
+test('a shut door on the bot\'s own tile that blocks the next path tile is opened', async () => {
+    const g = gateTile(false);
+    const r = await walkFromGate(g, 2990);
+    expect(g.inputs.filter(i => i.startsWith('open'))).toHaveLength(1);
+    expect(r.ok).toBe(true);
+    expect(g.pos.x).toBe(2990);
+});
