@@ -106,6 +106,20 @@ if (import.meta.main) {
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: leader!.tick(), ...e }));
     // The army's kills: each target that any of its accounts saw die, once.
     const shared = { target: null as string | null, over: false, killed: new Set<string>() };
+    // OPEN_TOGETHER=1: the army holds its fire on a new target until every account stands within 3 tiles of it, 10
+    // of the leader's ticks at most, then all open in one tick.
+    const openTogether = arg(args, 'OPEN_TOGETHER', '0') === '1';
+    const opened = new Map<string, number>();
+    const hold = () => {
+        const t = shared.target?.toLowerCase();
+        if (!openTogether || !t) return false;
+        const first = opened.get(t) ?? (opened.set(t, leader!.tick()), leader!.tick());
+        if (first < 0) return false;
+        const near = sessions.every(x => { const p = x.sdk.getState()?.nearbyPlayers.find(n => n.name.toLowerCase() === t); return !!p && p.distance <= 3; });
+        if (near || leader!.tick() - first >= 10) { opened.set(t, -1); return false; }
+        return true;
+    };
+    if (openTogether) cfg.hold = hold;
     // FREEZE_SHARE=1 (default): one freeze for the army, on the leader's tick count.
     const freezeShare = arg(args, 'FREEZE_SHARE', '1') === '1' ? { clock: () => leader!.tick(), until: -1 } : undefined;
     if (freezeShare) cfg.fight = { ...cfg.fight, freezeShare, allies: followers.map(f => f.name.toLowerCase()) };
@@ -122,7 +136,7 @@ if (import.meta.main) {
     // ARMY_OPTS: fight options (JSON) on top of that profile, such as {"freeze":false} for followers that only hit while
     // the leader freezes.
     const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
-    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}) });
+    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold } : {}) });
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     const runs = followers.map(f => follow(f, leader!, shared, army.filter(n => n !== f.name.toLowerCase()), options(f), followTiles, stop, emit));
     try { result = await huntOnce(leader!, cfg, stop, leaderEmit); }

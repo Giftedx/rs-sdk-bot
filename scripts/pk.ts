@@ -159,6 +159,9 @@ export type FightOptions = {
     // then 5 ticks). An account casts no freeze before `until`, and the caster sets `until` back to now when it sees
     // the freeze splash, so the others' turns go to damage in place of casts on a held or immune target.
     freezeShare?: { clock: () => number; until: number };
+    // While holdFire() is true the loop attacks and casts nothing; it walks to within 3 tiles of the target and eats
+    // and prays as usual (a group's opening in one tick).
+    holdFire?: () => boolean;
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
     // keeps 500: research/pvp-fight-loop.md finding 50).
     specReserve?: number;
@@ -734,6 +737,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
         }
         if (!target) continue;
+        if (o.holdFire?.()) {
+            if (cheb(at, target) > 3 && stoodStill && now - stepAt >= 2) {
+                const dx = Math.sign(at.x - target.x), dz = Math.sign(at.z - target.z);
+                void sdk.sendWalk(target.x + dx * 2, target.z + dz * 2); stepAt = now;
+            }
+            continue;
+        }
         if (!attackable({ z: at.z, combatLevel: me.combatLevel }, target)) {
             if (wildernessLevel(target.z) === 0) { result.outcome = 'lost'; return result; }
             if (unattackableSince < 0) unattackableSince = now;

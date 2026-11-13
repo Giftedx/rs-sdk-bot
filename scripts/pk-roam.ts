@@ -188,6 +188,9 @@ export function freezeSpell(magic: number): number | null {
 export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
     // Fight options added to each fight of the hunt (the army's allies and shared freeze, scripts/pk-army.ts).
     fight?: Partial<FightOptions>;
+    // While hold() is true the chase closes to 3 tiles of its target and casts and attacks nothing (the army's
+    // opening in one tick, scripts/pk-army.ts).
+    hold?: () => boolean;
     // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
     lootMin?: number; bankAt?: number };
 
@@ -432,6 +435,11 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 lastSeenAt = { x: near.x, z: near.z };
                 // Freeze first, at first reach, before the target can run; freeze again whenever it moves.
                 const castable = freezeNow();
+                if (cfg.hold?.()) {
+                    if (near.distance > 3) await walkPath(walker, [{ x: near.x, z: near.z, tol: 3 }], { maxTicks: 2, idleMs: 9000, stop: stopped });
+                    else await sdk.waitForTicks(1);
+                    continue;
+                }
                 if (castable && canAttack(m, near) && session.tick() >= freezeReady && !held) {
                     // A cast on an immune or held target gives no XP; the SDK then waits out its timeout, so keep it short:
                     // 2.4 s is 6 live ticks (400 ms). Live, 1 s (2.5 ticks) reported every Snare as unproved.

@@ -452,13 +452,13 @@ const ROUTE_CASES: BenchCase[] = [
   // The army against a target that defends: 10 sharks and a glory, the champion's fight loop when hit (it eats, prays,
   // hits back and leaves by its glory when two of the army hit it in multi-way combat).
   {key: 'extra:army-route-defend', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ARMY_PROFILE ? [`ARMY_PROFILE=${process.env.ARMY_PROFILE}`] : []), ...(process.env.ARMY_OPTS ? [`ARMY_OPTS=${process.env.ARMY_OPTS}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ARMY_PROFILE ? [`ARMY_PROFILE=${process.env.ARMY_PROFILE}`] : []), ...(process.env.ARMY_OPTS ? [`ARMY_OPTS=${process.env.ARMY_OPTS}`] : []), ...(process.env.OPEN_TOGETHER ? [`OPEN_TOGETHER=${process.env.OPEN_TOGETHER}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3150, 3560, {food: 10, glory: true})},
       {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3095, 3515)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3093, 3515)}]},
   // The same at Wilderness level 34 in multi-way combat (east of x 3158), where a glory does not work: the army starts
   // at level 28 a short walk away, and the target's escape is a run south.
   {key: 'extra:army-route-defend-deep', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ARMY_PROFILE ? [`ARMY_PROFILE=${process.env.ARMY_PROFILE}`] : []), ...(process.env.ARMY_OPTS ? [`ARMY_OPTS=${process.env.ARMY_OPTS}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ARMY_PROFILE ? [`ARMY_PROFILE=${process.env.ARMY_PROFILE}`] : []), ...(process.env.ARMY_OPTS ? [`ARMY_OPTS=${process.env.ARMY_OPTS}`] : []), ...(process.env.OPEN_TOGETHER ? [`OPEN_TOGETHER=${process.env.OPEN_TOGETHER}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
     presetConfig: sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3166, 3784, {food: 10, glory: true})},
       {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3163, 3745)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3161, 3745)}]},
   {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
