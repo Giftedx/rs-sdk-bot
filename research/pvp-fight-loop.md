@@ -1427,8 +1427,19 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     client ages animations on its 20 ms loop, not on game ticks (`patches/rs-sdk.md` item 10), and the attack and prayer
     reads use those animations. The 4-account gang case (`extra:gang-live-fast-x1`) repeated exactly in two runs.
     Consequence: a comparison of spar batches needs 8 seeds or more, or the paired statistics of
-    `scripts/measure/pk-spar-climb.ts`; a gap of 3 or 4 kills in 32 fights is within the noise. Gap: the cause is not
-    proved; no run pins the client's animation clock to the game tick.
+    `scripts/measure/pk-spar-climb.ts`; a gap of 3 or 4 kills in 32 fights is within the noise. Causes found with
+    the engine traces (`BENCH_TRACE`, two runs of seed 1 aligned on the last login): npcs wander and draw random
+    numbers through the login phase, whose length in ticks follows the machine (81 and 85 ticks); a session answers a
+    tick before its script acts when any other session of the process waits; a fight starts 11 to 14 ticks after the
+    last login; the prayer guard of each account flicks on a 3-tick cycle counted from its own login; and the
+    client's wall clock ages animations. The repeatable setup takes these out: `SPAR_NPC_NEAR=1` (the bench
+    engine's `SIM_NPC_NEAR`), `SPAR_SERIAL_LOGIN=1` (one login after another, and every fight starts when the last
+    account in has seen `SPAR_START_TICK` ticks), `PRAYER_GUARD=0` and `EAT_GUARD=0` (the fight loop does both), and
+    the tick clock of `packages/core/src/inprocess.ts` (`patches/rs-sdk.md` item 10). Two runs of seed 1 then match
+    for 13,788 engine inputs (about 200 fight ticks). Seeds 1-8 run twice: the per-seed differences of kills plus
+    deaths sum to 10 with the repeatable setup and 16 without (`.practice/climb/repeat.out`). Gap: the hitpoint regen
+    and other timers of a player run from its login tick, and that tick, counted from the seed anchor, still follows
+    the machine's speed (`PK_TRACE=1` shows 83 and 84 HP at fight tick 71 with the same hits).
 42. **Freezes need their own armour rule, and the champion freezes once from half health.** With `castArmour: 'keep'`
     the freeze kept plate on too, and the champion killed 0 of 64 runners (`extra:spar-escape-tribrid-snare-x8`, seeds
     1-8, runner on `base`). `freezeArmour` (default `'torso'`) now rules a freeze. Against the runner, seeds 1-4: freeze

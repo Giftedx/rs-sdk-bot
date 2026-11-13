@@ -152,7 +152,7 @@ export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
 // One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
 // A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
 // tiles of a player (patches/rs-sdk.md, item 10).
-const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
+const SPAR_ENGINE = {SIM_NPC_NEAR: process.env.SPAR_NPC_NEAR ?? '64'};
 // A tile at Wilderness level 1 north of Edgeville, and the bank of an account that fights there: sharks, the four
 // boosts, antipoison and steel arrows for six trips.
 export const GANG_EDGE = {x: 3087, z: 3522};
