@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { applyUpdate, coordinatorHolds, gitIn, liveRuns, parseStatus, patchChangedFiles, patchCollisions, planUpdate, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
+import { applyUpdate, coordinatorHolds, gitIn, liveRuns, parseStatus, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
 import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
 
 const base: UpdateInput = { branch: 'master', ahead: 0, behind: 2, incoming: ['scripts/swarm.ts', 'docs/a.md'], dirty: [], holds: [], heldFiles: [] };
@@ -17,6 +17,18 @@ test('an update moves only a clean master checkout that nothing holds', () => {
     expect(planUpdate({ ...base, heldFiles: ['scripts/other.ts'] }).action).toBe('update');
     expect(planUpdate({ ...base, incoming: ['tsconfig.json'] }).action).toBe('wait');
     expect(planUpdate({ ...base, incoming: ['packages/core/package.json'] })).toEqual({ action: 'wait', reason: 'dependency change needs bun install: packages/core/package.json' });
+});
+
+test('a running qualification holds only an update that changes a file it can check', () => {
+    const q = { ...base, qualifications: ['qualification q runs'] };
+    expect(planUpdate({ ...q, incoming: ['packages/dashboard/client-shell.js', 'packages/dashboard/server.ts', 'docs/a.md', 'scripts/x.test.ts', 'research/INDEX.md'] })).toEqual({ action: 'update', adopt: [] });
+    expect(planUpdate(q)).toEqual({ action: 'wait', reason: 'qualification q runs and checks scripts/swarm.ts' });
+    for (const f of ['packages/core/src/bot.ts', 'packages/router/src/coordinator.ts', 'knowledge/items.json', 'vendor/rs-sdk/sdk/actions.ts', 'patches/rs-sdk-working.patch', 'bun.lock'])
+        expect(planUpdate({ ...q, incoming: ['docs/a.md', f] }).action).toBe('wait');
+    expect(qualificationSource('packages/dashboard/gen-item-alch.ts')).toBe(false);
+    expect(qualificationSource('packages/core/test/ledger.test.ts')).toBe(false);
+    expect(qualificationSource('scripts/goldfarm.ts')).toBe(true);
+    expect(qualificationSource('vendor/rs-sdk/server/webclient/src/client.ts')).toBe(true);
 });
 
 test('a live coordinator run holds an update that changes a file it loads; a standing job does not', () => {
@@ -57,13 +69,13 @@ test('the coordinator holds an update for a running qualification and names the 
     scratch('rsbot-live-hold-', dir => {
         const coordination = join(dir, '.practice', 'coordinator'), workspace = join(dir, 'build', 'cap');
         mkdirSync(coordination, { recursive: true }); mkdirSync(workspace, { recursive: true });
-        expect(coordinatorHolds(dir, () => workspace)).toEqual({ holds: [], heldFiles: [] });
+        expect(coordinatorHolds(dir, () => workspace)).toEqual({ holds: [], heldFiles: [], qualifications: [] });
         writeFileSync(join(workspace, '.workspace.json'), JSON.stringify({ base: { 'scripts/owned.ts': 'h', 'scripts/new.ts': null } }));
         writeFileSync(join(coordination, 'state.json'), JSON.stringify({ tasks: [
             { status: 'running', spec: { id: 'qualify-a', kind: 'qualify' } }, { status: 'succeeded', spec: { id: 'qualify-b', kind: 'qualify' } },
             { status: 'running', spec: { id: 'build-c', kind: 'build', capability: 'cap' } }, { status: 'running', spec: { id: 'run-d', kind: 'run' } }] }));
         writeFileSync(join(coordination, 'publish-request.json'), '{}');
-        expect(coordinatorHolds(dir, () => workspace)).toEqual({ holds: ['a build waits to publish', 'qualification qualify-a runs'], heldFiles: ['scripts/owned.ts', 'scripts/new.ts'] });
+        expect(coordinatorHolds(dir, () => workspace)).toEqual({ holds: ['a build waits to publish'], heldFiles: ['scripts/owned.ts', 'scripts/new.ts'], qualifications: ['qualification qualify-a runs'] });
         writeFileSync(join(coordination, 'state.json'), '{');
         expect(coordinatorHolds(dir, () => workspace).holds).toContain('coordinator state is not readable');
     });
