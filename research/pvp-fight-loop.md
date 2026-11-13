@@ -1745,7 +1745,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     first special of the opening wait 5 ticks for the first hit. Case `extra:army-route-spear-x5` (four spears).
     `scripts/pk-army.ts` opens with the lock by default when two or more followers wield a dragon spear: four
     spears with no settings given, 6 of 6. A leader and three followers (`extra:army-route-spear-x4`, seeds 1-6):
-    three spears 2 of 6, two 1 of 6. Spears that stun in turn on one shared clock (`STUN_SHARE=1`: a spear specials
+    three spears 2 of 6, two 1 of 6, three with `LEADER_SPEC=all` 1 of 6: the lock needs five accounts. Spears that stun in turn on one shared clock (`STUN_SHARE=1`: a spear specials
     only once the last hold has ended, and hits between) kill 0 of 6 with four spears of five accounts and 1 of 6
     with three of four: the next spear is often still in its attack delay when a hold ends, and the target eats
     or runs in the gap; overlapping holds leave none. In an even fight the spear loses: two of ours against two on the snare
