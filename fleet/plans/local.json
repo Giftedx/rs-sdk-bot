@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794588953659,
+ "at": 1794588967192,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -109,25 +109,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
    ]
   },
   {
@@ -554,10 +535,29 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-2fb308af-b87b-46da-a0b4-6bf6b61dea39"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "local-recover-masterbaiter-20261113t164525z [task-2fb308af-b87b-46da-a0b4-6bf6b61dea39]",
    "role": "combat"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
   }
  ]
 }
