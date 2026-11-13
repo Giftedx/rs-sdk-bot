@@ -1,0 +1,45 @@
+{
+ "id": "1794607590475-bigpackage-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "WeeQuickie",
+ "item": "Adamant pickaxe",
+ "count": 1,
+ "start": 1794607590475,
+ "end": 1794612990475,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Logs",
+   "count": 7
+  },
+  {
+   "item": "Staff of fire",
+   "count": 1
+  },
+  {
+   "item": "Chaos rune",
+   "count": 160
+  },
+  {
+   "item": "Law rune",
+   "count": 2
+  },
+  {
+   "item": "Shark",
+   "count": 8
+  }
+ ],
+ "takerWaits": true
+}
