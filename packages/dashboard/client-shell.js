@@ -362,7 +362,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   //   ground   floor item labels with their GE value, hidden below the chosen value
   //   lines    red: multi-combat edges (client-assets/multiway.json); yellow: Wilderness levels 1, 10, 20, 30, 40, 50
   //   tiles    red: the death tile of the open recap; pies: the respawn timers
-  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true};
+  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true,skilling:true,trail:true};
   const hl=(()=>{try{return {...HL_DEFAULT,...JSON.parse(localStorage.getItem(HL_KEY)||'{}')};}catch{return {...HL_DEFAULT};}})();
   const saveHl=()=>{try{localStorage.setItem(HL_KEY,JSON.stringify(hl));}catch{/* private window */}};
   let multiLines=null,recentTargets=[],sentOverlay='',sentOverlayAt=0;
@@ -370,6 +370,26 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // its part near the camera, so its middle is near too (the viewer and the minimap skip a line by its middle).
   const clipLine=(x0,z0,x1,z1,cx,cz,r)=>{const lx=Math.round(cx-r),hx=Math.round(cx+r),lz=Math.round(cz-r),hz=Math.round(cz+r);if(z0===z1){if(z0<lz||z0>hz)return null;const a=Math.max(Math.min(x0,x1),lx),b=Math.min(Math.max(x0,x1),hx);return a<b?[a,z0,b,z1]:null;}if(x0===x1){if(x0<lx||x0>hx)return null;const a=Math.max(Math.min(z0,z1),lz),b=Math.min(Math.max(z0,z1),hz);return a<b?[x0,a,x1,b]:null;}return null;};
   fetch(asset('multiway.json')).then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j))multiLines=j;},()=>{});
+  // Skilling highlights (RuneLite's Woodcutting, Mining and Fishing plugins): the resource that the watched account works
+  // is outlined in cyan within 15 tiles of it. Which resource: its top loot item (Yew logs: Yew tree; Iron ore: Iron
+  // rock), else every tree or rock for a woodcutting or mining goal. A fishing goal marks the fishing spots
+  // (npc-names.json lists npc names by type).
+  let fishingTypes=[];
+  fetch(asset('npc-names.json')).then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j))fishingTypes=j.flatMap((v,i)=>v&&/^fishing spot$/i.test(Array.isArray(v)?v[0]:v)?[i]:[]).slice(0,200);},()=>{});
+  const resourceOf=item=>/ logs$/i.test(item)?item.replace(/ logs$/i,'').replace(/ tree$/i,'')+' tree':/ ore$/i.test(item)?item.replace(/ ore$/i,'')+' rock':/^(coal|clay|limestone)$/i.test(item)?item+' rock':null;
+  const topLoot=b=>(b?.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0]||null;
+  // Position trail: the last 60 places of each of our accounts, from the live roster and the status files. The watched
+  // account's trail is a line on the ground (yellow for its last 20 steps); every trail shows on the minimap.
+  const trails=new Map();
+  function trackTrails(){
+    for(const x of S?.bots||[]){
+      const p=x.live||x.pos;if(!x.inWorld||!p||!Number.isInteger(p.x)||!Number.isInteger(p.z))continue;
+      const t=trails.get(x.name)||[],last=t[t.length-1];
+      if(last&&last.x===p.x&&last.z===p.z)continue;
+      if(last&&(Math.abs(last.x-p.x)>40||Math.abs(last.z-p.z)>40||last.l!==(p.level||0)))t.length=0;
+      t.push({x:p.x,z:p.z,l:p.level||0});if(t.length>60)t.shift();trails.set(x.name,t);
+    }
+  }
   function overlayMessage(){
     const b=account(),o={tiles:[],pies:[],lines:[],players:{},npcs:[]};
     const at=window.atlasCam3d&&Date.now()-window.atlasCam3d.at<60_000?window.atlasCam3d:(b?.live||b?.pos||null),near=(x,z,d)=>!!at&&Math.abs(x-at.x)<=d&&Math.abs(z-at.z)<=d;
@@ -384,6 +404,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       for(const [x0,z0,x1,z1,l] of multiLines||[]){const c=clipLine(x0,z0,x1,z1,at.x,at.z,60);if(c)o.lines.push({x0:c[0],z0:c[1],x1:c[2],z1:c[3],l,colour:'#ff0000'});}
       for(const lv of [1,10,20,30,40,50]){const z=3520+8*(lv-1),c=clipLine(2944,z,3392,z,at.x,at.z,60);if(c)o.lines.push({x0:c[0],z0:c[1],x1:c[2],z1:c[3],l:0,colour:'#ffff00',label:'Level '+lv});}
     }
+    if(hl.skilling&&b?.inWorld&&b.pos&&typeof resources!=='undefined'&&resources){
+      const want=resourceOf(topLoot(b)?.name||''),skill=String(b.goalSkill||'').toLowerCase(),kinds=resources.kinds||{};
+      const fits=id=>{const n=kinds[id]?.name||'';return want?n.toLowerCase()===want.toLowerCase():skill==='woodcutting'?/ tree$/.test(n):skill==='mining'?/ rock$/.test(n):false;};
+      for(const [x,z,l,id] of resources.tiles)if(l===(b.pos.level||0)&&Math.abs(x-b.pos.x)<=15&&Math.abs(z-b.pos.z)<=15&&fits(id))o.tiles.push({x,z,l,colour:'#00ffff'});
+      if(skill==='fishing'&&fishingTypes.length)o.npcs.push({types:fishingTypes,colour:'#00ffff'});
+    }
+    if(hl.trail&&b){const t=trails.get(b.name)||[];for(let i=1;i<t.length;i++)if(t[i].l===t[i-1].l)o.lines.push({x0:t[i-1].x,z0:t[i-1].z,x1:t[i].x,z1:t[i].z,l:t[i].l,colour:t.length-i<=20?'#ffff00':'#9a9a00'});}
     if(hl.tiles){
       if(typeof recap!=='undefined'&&recap.state==='ok'&&recap.data?.pos&&b&&recap.name===b.name)o.tiles.push({x:recap.data.pos.x,z:recap.data.pos.z,l:recap.data.pos.level||0,colour:'#ff0000',fill:true,label:'Death'});
       for(const r of respawnRows())if(r.left!=null&&r.total)o.pies.push({x:r.x,z:r.z,l:r.l,p:Math.max(0,Math.min(1,1-r.left/r.total))});
@@ -398,7 +425,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function highlightsBox(){
     const box=(k,label)=>`<label class="hl-row"><input type="checkbox" data-hl="${k}" ${hl[k]?'checked':''}> ${label}</label>`;
-    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('tiles','Death tile and respawn pies')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
+    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('tiles','Death tile and respawn pies')}${box('skilling','Trees, rocks and fishing spots of the account')}${box('trail','Walked path')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
   }
   // Respawn timers (RuneLite's Mining and Woodcutting plugins), in World: the rocks and trees around the 3D view that
   // are depleted now, with the time to their respawn. client-assets/resources.json (gen-resources.ts) gives each
@@ -712,6 +739,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     for(const o of markers.bots){const q=o.live||o.pos;if(!q||(q.z>6400)!==(cz>6400)||o===b)continue;const[cl]=st(o);if(cl==='on')dot(q.x,q.z,'#2bff2b','#1fc21f',o.name,3);else dot(q.x,q.z,'#3d8a33','#2c6625',o.name,3);}
     // Death recap: the watched account's death tile, while its recap is open.
     const dt=typeof recap!=='undefined'&&recap.state==='ok'&&b&&recap.name===b.name?recap.data?.pos:null;if(dt&&(dt.z>6400)===(cz>6400))dot(dt.x,dt.z,'#ff2020','#a00000','Death tile',3);
+    // Position trail on the minimap: each of our accounts' last places, a thin green line.
+    if(p&&typeof hl!=='undefined'&&hl.trail&&typeof trails!=='undefined'){g.strokeStyle='#00c000';g.lineWidth=1;const tp=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const t of trails.values()){if(t.length<2)continue;g.beginPath();t.forEach((q,i)=>{const [x,y]=tp(q.x,q.z);if(i)g.lineTo(x,y);else g.moveTo(x,y);});g.stroke();}}
     // Multi-Lines on the minimap: the red multi-combat edges near the minimap's centre, turned and scaled as the dots are.
     if(p&&typeof hl!=='undefined'&&hl.multi&&typeof multiLines!=='undefined'&&multiLines){g.strokeStyle='#ff0000';g.lineWidth=1;const px=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const [x0,z0,x1,z1,l] of multiLines){if(l!==(b?.pos?.level||0))continue;const k=clipLine(x0,z0,x1,z1,cx,cz,80);if(!k)continue;const a=px(k[0],k[1]),c=px(k[2],k[3]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c[0],c[1]);g.stroke();}}
     if(p){g.fillStyle='#fff';g.fillRect(OX-1,OY-2,3,3);}
@@ -754,10 +783,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;set('<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&S.vault?.coins?line('Vault coins',gp(S.vault.coins)):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):'')+race);return;}
     const [,state]=st(b);
     // Attack range (RuneLite's combat level plugin): in the Wilderness, the combat levels that can fight the account (pvp_combat.rs2: the difference is at most the Wilderness level).
+    // Skilling session (RuneLite's Woodcutting, Mining and Fishing session boxes): the account's top loot item since its
+    // session started, with its count an hour (Loot tracker flow).
+    const SESSION_VERB={woodcutting:'Logs cut',mining:'Ores mined',fishing:'Fish caught',cooking:'Food cooked',thieving:'Loot',smithing:'Made',crafting:'Made',fletching:'Made',firemaking:'Burned'};
+    const sessionLine=b=>{const t=(b.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0];if(!t)return '';const hours=Math.max(1/60,((b.flow.at??Date.now())-b.flow.since)/3.6e6);return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr');};
     // PvP Tools lines: in the Wilderness, the risk, what a death keeps and loses, and the players who can attack now.
     const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):''))+line('Risk',gp(p.risk))+line('Kept · lost',gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
     const goalText=(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60);
-    set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+(goalText||window.atlasOperator()?line('Goal',goalText||'—'):'')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):'')+wildLine(b)+race);
+    set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+(goalText||window.atlasOperator()?line('Goal',goalText||'—'):'')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):'')+sessionLine(b)+wildLine(b)+race);
   }
   // Skills tab tooltip (OSRS): XP, next level at, remaining.
   hud.addEventListener('mouseover',e=>{const sk=e.target.closest('[data-skill]');const tip=hud.querySelector('.game-tip');if(!sk){tip.hidden=true;return;}const s=level(sk.dataset.skill),X=window.atlasXp;if(!s||!X){tip.hidden=true;return;}const lvl=Math.min(99,s.level),next=X.xpForLevel(Math.min(99,lvl+1));
@@ -924,7 +957,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function refresh(){if(!S)return;followLinkedAccount();wallSync();writeLink();
     const b=account(),name=b?.name??null;
     if(name!==questAccount){questAccount=name;questDetail=null;}
-    app.classList.toggle('public-view',!window.atlasOperator());if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();moments();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)put(head,boardSummary()+progressPanel());const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))put(rw,rivalsPanel());refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();infoboxes();setText(title.querySelector('.connection'),$('#connection').textContent);focusPaint();warmPlaces();respawnSync();overlaySync();welcomeCard();setText($('#chat-name'),(b?safeName(b.name):'Spectator')+':');
+    app.classList.toggle('public-view',!window.atlasOperator());if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();moments();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)put(head,boardSummary()+progressPanel());const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))put(rw,rivalsPanel());refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();infoboxes();setText(title.querySelector('.connection'),$('#connection').textContent);focusPaint();warmPlaces();respawnSync();trackTrails();overlaySync();welcomeCard();setText($('#chat-name'),(b?safeName(b.name):'Spectator')+':');
     const orbBox=hud.querySelector('.game-orbs'),orbHtml=!b?'':[['hp','Hitpoints',b.hp?.now,b.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','Run energy',b.runEnergy,100]].filter(o=>o[2]!=null).map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${Math.floor(value)} / ${max}"><canvas class="orb-art" width="60" height="34" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas><span class="orb-num" style="color:${orbColour(value,max)}">${Math.floor(value)}</span></div>`).join('');if(orbBox._h!==orbHtml){orbBox._h=orbHtml;orbBox.innerHTML=orbHtml;orbBox.querySelectorAll('canvas').forEach(drawOrb);}if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};

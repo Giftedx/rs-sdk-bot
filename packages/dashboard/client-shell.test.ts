@@ -863,3 +863,20 @@ test('Skill Calculator: XP left to the target, the time at the rate, and each ac
  expect(html).toMatch(/calc-row calc-locked"[^>]*>\[Magic logs\]/);
  t.set(null,null,null);expect(t.calcBox({skills:[]},null)).toBe('');
 });
+test('skilling highlights and the trail: the resource of the top loot item near the account, fishing spots, the walked path',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b:any={name:'Alpha',inWorld:true,pos:{x:3100,z:3400,level:0},goalSkill:'Woodcutting',flow:{since:0,at:3_600_000,loot:[{name:'Logs',count:3},{name:'Yew logs',count:40}]}};
+ const S:any={economy:{itemValues:{}},bots:[b]};
+ const env:any={S,D:{rival:new Set()},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,location:{origin:''},
+  resources:{kinds:{1:{name:'Yew tree'},2:{name:'Oak tree'},3:{name:'Iron rock'}},tiles:[[3105,3402,0,1],[3104,3400,0,2],[3130,3400,0,1],[3101,3401,0,3]]}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,trackTrails,resourceOf,setFish:(f)=>{fishingTypes=f;}};`)(...Object.values(env));
+ expect([t.resourceOf('Yew logs'),t.resourceOf('Achey tree logs'),t.resourceOf('Iron ore'),t.resourceOf('Coal'),t.resourceOf('Shark')]).toEqual(['Yew tree','Achey tree','Iron rock','Coal rock',null]);
+ t.trackTrails();b.pos={x:3101,z:3400,level:0};t.trackTrails();b.pos={x:3102,z:3401,level:0};t.trackTrails();
+ let o=t.overlayMessage();
+ // Only the yew within 15 tiles: not the oak, not the yew 30 tiles away, not the rock.
+ expect(o.tiles).toEqual([{x:3105,z:3402,l:0,colour:'#00ffff'}]);
+ expect(o.lines.filter((l:any)=>l.colour==='#ffff00').length).toBe(2);
+ b.goalSkill='Fishing';b.flow={since:0,at:1,loot:[]};t.setFish([233,309]);o=t.overlayMessage();
+ expect(o.npcs).toContainEqual({types:[233,309],colour:'#00ffff'});
+});
