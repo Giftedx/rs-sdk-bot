@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794585554307-abracadickra-weequickie",
+ "account": "Abracadickra",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 170,
+ "claim": "a6e36e30-766b-4193-959a-b0bcd81b349f",
+ "count": 0,
+ "ok": false,
+ "at": 1794585559754,
+ "detail": "trade claimed"
+}
