@@ -1025,6 +1025,16 @@ test('Inventory Setups: worn slots green, red or yellow against the kit, and the
  expect(html).toContain('1 worn slot differs from the kit'.replace('differs','differ'));
  expect(html).toContain('setup-row setup-short');expect(html).toContain('<span>2 / 18</span>');
  expect(html).toContain('setup-row setup-have');expect(html).toContain('<span>100 / 100</span>');
+ // With an observed bank, each row gives the bank count; short when pack and bank together miss the kit.
+ const withBank=t.setupPanel({...b,bank:[{name:'Shark',count:10}]});
+ expect(withBank).toContain('2 / 18 <small class="setup-bank setup-bank-short">bank 10</small>');
+ expect(withBank).toContain('100 / 100 <small class="setup-bank">bank 0</small>');
+});
+test('map icons by requirement: true or false with the account level, null with no level',()=>{
+ const line=shell.split('\n').find(l=>l.includes('const iconCan=(b,req)=>'))!;
+ const iconCan=new Function(`${line};return iconCan;`)();
+ const b={skills:[{name:'Agility',level:40},{name:'Magic',level:20}]};
+ expect([iconCan(b,['agility',40]),iconCan(b,['agility',41]),iconCan(b,['magic',25]),iconCan(b,null),iconCan({},['agility',1]),iconCan(b,['mining',1])]).toEqual([true,false,false,null,null,null]);
 });
 test('Screenshot: a level-up, a death or valuable loot of the watched account asks the viewer for a picture and keeps it',()=>{
  const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));
