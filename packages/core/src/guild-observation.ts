@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { questFlags } from './quest-status';
 import { waitUntil, waitTicks } from './ticks';
 import type { Session } from './inprocess';
@@ -10,6 +11,14 @@ export interface GuildActorFacts {
 }
 export interface GuildRefreshResult extends GuildActorFacts { admission?: { legendsEntry: 'crossed'|'refused'|'unknown' } }
 const evidence = new WeakMap<object, { stages: Record<string,number>; unlocks: Set<string> }>();
+// A green questlist entry is the quest's completion value: knowledge/quests.json holds each quest's varp and that value
+// (scripts/general/scripts/quests.rs2). A questlist component is named after its quest folder (quest_<name>); the one
+// exception is fortress (quest_blackknight). Travel that needs a finished quest (the Tree Gnome Village spirit trees:
+// treequest = 9, spirit_tree.rs2:26) is then allowed.
+let finals: Map<string, { varp: string; complete: number }> | undefined;
+export const questFinals = () => finals ??= new Map((JSON.parse(readFileSync(new URL('../../../knowledge/quests.json', import.meta.url), 'utf8')) as { folder?: string | null; varp?: string; complete?: number }[])
+    .filter(q => q.folder && q.varp && Number.isInteger(q.complete)).map(q => [q.folder!, { varp: q.varp!, complete: q.complete! }]));
+export const questFolder = (key: string) => `quest_${key === 'fortress' ? 'blackknight' : key}`;
 const clean = (v: unknown) => String(v ?? '').replace(/@[^@]{3}@/g, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
 function saved(client: object) {
     let value = evidence.get(client);
@@ -31,6 +40,8 @@ export function guildActorFacts(client: any, state?: any): GuildActorFacts {
     for (const q of questFlags(client) ?? []) {
         // Green is completion, not an exact private stage. The native map is the final glider admission.
         if (q.id === 7361 && q.state === 'complete' && client.membersAccount === 1 && state?.inGame !== false) facts.unlocks.push('grandtree-glider');
+        const final = q.state === 'complete' && q.key ? questFinals().get(questFolder(q.key)) : undefined;
+        if (final) facts.questStages[final.varp] = Math.max(facts.questStages[final.varp] ?? 0, final.complete);
         const key = q.id === 7363 ? 'heroquest' : q.id === 7366 ? 'legendsquest' : q.id === 7356 ? 'mcannon' : undefined;
         if (!key) continue;
         const bound = q.state === 'complete' ? (key === 'heroquest' ? 15 : key === 'legendsquest' ? 75 : 11)

@@ -193,7 +193,7 @@ export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={
 // The prayer points a quest's fights used in its bench case (quester_quest_<quest>): the preset's Prayer 43, plus 17 for
 // each sip (7 + 25% of 43, consume_effects.dbrow prayer_potion_effect), less the points left. Tree Gnome Village
 // 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47. An account whose base Prayer covers that by PRAYER_MARGIN
-// takes the preset's prayer potions as it takes food (from the bank when held, never reported missing). No shop sells them.
+// leaves the preset's prayer potions out of its pack. No shop sells them.
 export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
 export const prayerCovers=(quest:string,prayer:number)=>PRAYER_USED[quest]!==undefined&&prayer>=PRAYER_USED[quest]!+PRAYER_MARGIN;
 // The pack of a build that fights a quest with the bow (scripts/pk-kits.ts; research/pvp-fight-loop.md, "Quest routes
@@ -1176,7 +1176,9 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const meal=[...food.keys()].find(f=>MEALS.includes(f));
   if(meal!==undefined)food.set(meal,Math.max(food.get(meal)!,STURDY_MEALS));
  }
- if(prayerCovers(quest,baseLevel('Prayer')))for(const id of PRAYER_POTIONS)if(base.has(id)){food.set(id,base.get(id)!);base.delete(id);}
+ // Not food either: a food row the pack lacks sends the sweep to a bank (bench extra:sweep-grandtree-course walked from
+ // the Gnome course to the Ardougne north bank for the three potions alone).
+ if(prayerCovers(quest,baseLevel('Prayer')))for(const id of PRAYER_POTIONS)base.delete(id);
  const build=buildPack(quest,baseLevel);
  for(const i of build)base.set(i.id,(base.get(i.id)??0)+i.count);
  if(build.length){

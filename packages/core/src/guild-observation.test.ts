@@ -126,3 +126,16 @@ test('actual Monk referral approaches the observed Abbot and selects monastery a
  }
 });
 
+
+import {questDefinitions} from './quest-status';
+import {questFolder,questFinals} from './guild-observation';
+test('a green questlist entry gives its quest final stage, so the Tree Gnome Village spirit tree is allowed',()=>{
+ const {c,table}=fixture();
+ const tree=questDefinitions().find(q=>q.key==='tree')!,fortress=questDefinitions().find(q=>q.key==='fortress')!;
+ table[tree.id]={colour:0x00f800};table[fortress.id]={colour:0xf8f800};
+ expect(guildActorFacts(c).questStages).toEqual({treequest:9});
+ table[fortress.id]={colour:0x00f800};
+ expect(guildActorFacts(c).questStages.spy).toBe(4);
+ const missing=questDefinitions().filter(q=>!questFinals().has(questFolder(q.key))).map(q=>q.key);
+ expect(missing.length).toBeLessThan(12);
+});

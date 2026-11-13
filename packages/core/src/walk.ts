@@ -79,7 +79,10 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
     const here = () => { const p = st()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
     const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= 8; };
     const fail = (reason: 'rejected' | 'timeout' | 'precondition' | 'aborted', detail: string): Outcome => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
-    const choices = run.how === 'npc' ? run.options : run.how === 'gate' ? run.choices : run.how === 'rub' || run.how === 'loc' ? (run.option ? [run.option] : []) : [];
+    // A spirit tree with several destinations asks "Where can I go?" before its destination menu ([oploc1,stronghold_ent]
+    // and [oploc1,ent]); a young spirit tree with one asks "Yes please." ([oploc1,loc_1317]; spirit_tree.rs2).
+    const tree = t.kind === 'spirit_tree' ? (run.how === 'loc' && run.option ? ['Where can I go?'] : ['Yes please.']) : [];
+    const choices = run.how === 'npc' ? run.options : run.how === 'gate' ? run.choices : run.how === 'rub' || run.how === 'loc' ? [...(run.option ? [run.option] : []), ...tree] : [];
     const answer = async (until: () => boolean, ticks: number) => {
         for (let i = 0; i < ticks && !until() && !stop(); i++) {
             const d = b.sdk.getDialog();
@@ -177,7 +180,8 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
         for (let i = 0; i < 3 && !through() && !stop(); i++) { await b.direct({ type: 'walkTo', x: t.to.x, z: t.to.z, running: true, reason: 'SDK' }); await waitTicks(s, 4); }
         return through() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not through ${run.loc} (at ${JSON.stringify(here())})`);
     } else {
-        const name = run.loc.includes('spirit') ? /spirit tree/i : /lever|door/i, at = run.at;
+        // Spirit trees by kind: the Gnome Stronghold's and the village's are named ent and stronghold_ent (teleports.json).
+        const name = run.loc.includes('spirit') || t.kind === 'spirit_tree' ? /spirit tree/i : /lever|door/i, at = run.at;
         const loc = (st()?.nearbyLocs ?? []).filter((l: any) => at && run.id !== undefined ? l.id === run.id && l.x === at.x && l.z === at.z && l.level === at.level : name.test(l.name ?? ''))
             .sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
         if (!loc) return fail('precondition', `no ${run.loc} in sight`);
