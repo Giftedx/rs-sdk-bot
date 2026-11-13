@@ -1674,3 +1674,11 @@ test('any meals in the pack meet the preset food rows; teleport runes need their
  expect(foodShort(food,pack([[385,8],[563,1]]))).toBe(true);
  expect(foodShort(food,pack([[2309,5],[563,2]]),new Map([[2309,2]]))).toBe(true);
 });
+
+test('rune swaps only for the fire-spell quests', async () => {
+ const {FIRE_QUESTS}=await import('./quest-sweep');
+ const {readdirSync,readFileSync}=await import('node:fs');
+ const users=readdirSync(new URL('./generated',import.meta.url)).filter(f=>/^quest-.*\.ts$/.test(f)&&readFileSync(new URL(`./generated/${f}`,import.meta.url),'utf8').includes('fireSpell(')).map(f=>f.replace(/^quest-|\.ts$/g,'')).sort();
+ expect([...FIRE_QUESTS].sort()).toEqual(users);
+ expect(FIRE_QUESTS.has('magearena')).toBe(false);
+});

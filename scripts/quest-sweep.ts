@@ -205,6 +205,9 @@ export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={
 // leaves the preset's prayer potions out of its pack. No shop sells them.
 export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
 export const prayerCovers=(quest:string,prayer:number)=>PRAYER_USED[quest]!==undefined&&prayer>=PRAYER_USED[quest]!+PRAYER_MARGIN;
+// The quests whose scripts cast scripts/fire-spells.ts fireSpell: only their packs' cast runes follow the Magic level.
+// Other presets keep their runes (Mage Arena's blood runes cast Flames of Zamorak).
+export const FIRE_QUESTS=new Set(['tree','grandtree','arena']);
 // The pack of a build that fights a quest with the bow (scripts/pk-kits.ts; research/pvp-fight-loop.md, "Quest routes
 // of the builds"): a magic shortbow and rune arrows, so the quest script fights in the style that trains only Ranged
 // (quest-upass.ts RANGED_ARROWS), and for Underground Pass two prayer potions in the place of two sharks. Regicide
@@ -1179,6 +1182,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   base=scorpionBarcrawlNeeds(base,state());
  }
  const baseLevel=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
+ const prayerPoints=()=>st()?.skills?.find((k:any)=>k.name==='Prayer')?.level??0;
  for(const id of STURDY_OPTIONAL[quest]??[])if(base.has(id)&&baseLevel('Hitpoints')>=STURDY&&baseLevel('Defence')>=STURDY){
   food.set(id,base.get(id)!);base.delete(id);
   // Without the supply the fight is paid in food: the preset's meal count rises to STURDY_MEALS.
@@ -1187,8 +1191,9 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  }
  // Not food either: a food row the pack lacks sends the sweep to a bank (bench extra:sweep-grandtree-course walked from
  // the Gnome course to the Ardougne north bank for the three potions alone).
- if(prayerCovers(quest,baseLevel('Prayer')))for(const id of PRAYER_POTIONS)base.delete(id);
- base=fireRunesFor(base,baseLevel('Magic'));
+ // The current points decide, not the base level: a drained Prayer-99 account still takes the potions.
+ if(prayerCovers(quest,prayerPoints()))for(const id of PRAYER_POTIONS)base.delete(id);
+ if(FIRE_QUESTS.has(quest))base=fireRunesFor(base,baseLevel('Magic'));
  const build=buildPack(quest,baseLevel);
  for(const i of build)base.set(i.id,(base.get(i.id)??0)+i.count);
  if(build.length){
