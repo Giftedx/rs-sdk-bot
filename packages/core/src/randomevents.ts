@@ -4,6 +4,7 @@
 // (flee, talk, pick up, solve), busy() is true and the gate holds the script's actions until it is done.
 // With `loot` set, the same watcher picks up a valuable ground item near the player (rules in loot.ts), keeps it
 // from the script's drops and sales, and puts it in the bank when the script next opens one: `EVENT loot <action>`.
+// With `guard` set, the gate also refuses a drop or a sale of any held stack worth guard.minValue: `EVENT guard <action>`.
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -108,6 +109,8 @@ export interface RandomEventOptions {
     events?: boolean;
     // Ground-item pickup (loot.ts). Null or undefined: off.
     loot?: LootWatchOptions | null;
+    // The value guard: the gate refuses a drop, sale, spell or Drop option on a held stack worth minValue or more.
+    guard?: { tables: LootTables; minValue: number } | null;
 }
 export interface LootWatchOptions {
     tables: LootTables;
@@ -259,8 +262,14 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // the script wins: the item leaves the keep list, so a script that must empty its pack never stalls.
     const REFUSE_LIMIT = 3;
     const DESTROY = /^(drop|destroy)$/i;
+    // The value guard (opts.guard): the same refusal for any held item whose stack is worth guard.minValue or more, so
+    // a script bug (a drop rule that matches too much) cannot throw away gear. After REFUSE_LIMIT refusals the item id
+    // is released for the session, as a kept item is.
+    const guard = opts.guard ?? null;
+    const guardReleased = new Set<number>();
     const keptRefusal = (a: any): string | null => {
-        if (!loot || kept.size === 0 || !a) return null;
+        if ((!loot || kept.size === 0) && !guard) return null;
+        if (!a) return null;
         const pack = packNow();
         let slot: number | undefined;
         if (a.type === 'dropItem' || a.type === 'shopSell' || a.type === 'spellOnItem') slot = a.slot;
@@ -269,14 +278,22 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             if ((i?.optionsWithIndex ?? []).some((o: any) => o.opIndex === a.optionIndex && DESTROY.test(o.text ?? ''))) slot = a.slot;
         }
         const item = slot === undefined ? undefined : pack.find(i => i.slot === slot);
-        const keep = item ? kept.get(item.id) ?? 0 : 0;
-        if (!item || keep <= 0) return null;
+        if (!item) return null;
+        const keep = kept.get(item.id) ?? 0;
         const leaves = a.type === 'shopSell' ? Math.min(a.amount ?? 1, item.count ?? 1) : item.count ?? 1;
-        if (countOf(pack, item.id) - leaves >= keep) return null;
+        const keptHit = keep > 0 && countOf(pack, item.id) - leaves < keep;
+        const valueHit = !keptHit && !!guard && !guardReleased.has(item.id) && unitValue(item.id, guard.tables) * leaves >= guard.minValue;
+        if (!keptHit && !valueHit) return null;
+        const who = keptHit ? 'loot' : 'guard';
         const r = refusals.get(item.id) ?? { n: 0, at: -1 };
-        if (r.at !== s.tick()) { r.n++; r.at = s.tick(); refusals.set(item.id, r); say('loot', 'refused', `${a.type} id=${item.id} n=${r.n}`); }
-        if (r.n > REFUSE_LIMIT) { kept.delete(item.id); refusals.delete(item.id); say('loot', 'released', `id=${item.id}`); return null; }
-        return 'loot: the item is kept until a bank';
+        if (r.at !== s.tick()) { r.n++; r.at = s.tick(); refusals.set(item.id, r); say(who, 'refused', `${a.type} id=${item.id} n=${r.n}`); }
+        if (r.n > REFUSE_LIMIT) {
+            refusals.delete(item.id);
+            if (keptHit) kept.delete(item.id); else guardReleased.add(item.id);
+            say(who, 'released', `id=${item.id}`);
+            return null;
+        }
+        return keptHit ? 'loot: the item is kept until a bank' : `guard: item ${item.id} is worth ${guard!.minValue} or more`;
     };
 
     // ---- exclusive work (death recovery) ----

@@ -1042,6 +1042,25 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
 });
+test('logout line: the session length, the most XP gained and the top loot with its value',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ const chat:any[]=[],b:any={name:'Alpha',inWorld:true,uptime:600_000,skills:[{name:'Woodcutting',xp:1000},{name:'Firemaking',xp:50}],flow:{loot:[]}};
+ const env:any={S:{bots:[b],boards:[],economy:{itemValues:{'Yew logs':200}}},chat,renderChat:()=>{},safeName:String,nf:(n:number)=>n.toLocaleString('en-GB'),gp:(n:number)=>String(n),dur:(ms:number)=>Math.round(ms/60000)+'m'};
+ const moments=new Function(...Object.keys(env),`${code};return moments;`)(...Object.values(env));
+ moments();
+ b.uptime=4_200_000;b.skills=[{name:'Woodcutting',xp:46000},{name:'Firemaking',xp:150}];b.flow={loot:[{name:'Yew logs',count:412},{name:'Logs',count:3}]};moments();
+ b.inWorld=false;b.flow=null;moments();
+ expect(chat.map(c=>c.text)).toEqual(['Alpha has logged out after 70m: +45,000 Woodcutting XP, 412 Yew logs, ≈ 82400 gp of loot.']);
+});
+test('rank lines: a move of the same account, and another account taking the best rank, never "up from" another account',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ const chat:any[]=[],S:any={bots:[],boards:[{board:'Overall',best:{name:'Alpha',rank:1619}}]};
+ const moments=new Function('S','chat','renderChat','safeName','nf','gp','dur',`${code};return moments;`)(S,chat,()=>{},String,String,String,String);
+ moments();
+ S.boards=[{board:'Overall',best:{name:'Alpha',rank:1500}}];moments();
+ S.boards=[{board:'Overall',best:{name:'Beta',rank:616}}];moments();
+ expect(chat.map(c=>c.text)).toEqual(['Alpha is now rank 1500 on Overall (up from 1619).','Beta now holds our best Overall rank: 616.']);
+});
 test('item identification: unidentified herbs by id, potions by type; other items have no label',()=>{
  const start=shell.indexOf("  // Item identification (RuneLite's"),code=shell.slice(start,shell.indexOf('  const idTag=',start));
  const hl:any={itemIds:true};
