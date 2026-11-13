@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794585326338-abracadickra-weequickie-airtalisman",
  "account": "Abracadickra",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Air talisman",
  "requested": 1,
  "claim": "7a071858-1e3c-4f60-94e4-5f46b7de92ce",
- "count": 0,
- "ok": false,
- "at": 1794585332836,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794585468001,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794585448079
+ },
+ "logout": {
+  "attemptId": "1794585332846-0000016692-0000000001",
+  "at": 1794585467989,
+  "sha256": "18af4521ecacc82b13d8e8f7a0b07aa127e5e82e7881a6cf2bf5e6dfbfc0b83e"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794585326338-abracadickra-weequickie-airtalisman",
+ "account": "WeeQuickie",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air talisman",
+ "requested": 1,
+ "claim": "87c38727-25de-49c4-a48a-cca82b36ebc1",
+ "count": 0,
+ "ok": false,
+ "at": 1794585454349,
+ "detail": "trade claimed"
+}
