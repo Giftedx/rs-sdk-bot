@@ -6,7 +6,7 @@
 // Usage: bun scripts/fleet-trade.ts <account> [order id]
 // Run it with STALL_TICKS=0, as scripts/fleet-agent.ts does: the wait for the partner is bounded by the order window,
 // and the session's idle guard would end it after 900 ticks.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { walkTarget } from './walk-to';
@@ -119,6 +119,28 @@ export function partnerFailed(dir: string, order: Order, role: TradeRole): boole
         const receipt = JSON.parse(readFileSync(join(dir, `${order.id}.${role === 'from' ? 'to' : 'from'}.json`), 'utf8'));
         return receipt?.version === 2 && receipt.id === order.id && receipt.state === 'failed';
     } catch { return false; }
+}
+
+// An order with `takerWaits` keeps the receiver offline until the giver stands at the meet with every line out of its
+// bank. A route account's trade login counts on its board clock: live, WeeQuickie's staging sessions took 149 s and
+// 214 s while the giver walked to Draynor, 87% of block 3's board time. The giver marks its readiness in a file of
+// this machine, so the flag is for orders between accounts of one side (scripts/route-stage.ts).
+export const giverReadyFile = (base: string, id: string) => join(base, '.practice', 'fleet-ready', `${id}.ready`);
+export function markGiverReady(base: string, id: string) {
+    mkdirSync(join(base, '.practice', 'fleet-ready'), { recursive: true });
+    writeFileSync(giverReadyFile(base, id), String(Date.now()));
+}
+// The receiver waits for the giver's mark, the giver's failed receipt, or TAKER_WAIT_MS (default 30 minutes) before
+// the order's end, whichever comes first; then it logs in as before.
+export async function waitForGiver(order: Order, { ready, failed, now = Date.now, sleep = (ms: number) => Bun.sleep(ms), maxMs = Number(process.env.TAKER_WAIT_MS ?? 30 * 60_000) }:
+    { ready: () => boolean; failed: () => boolean; now?: () => number; sleep?: (ms: number) => Promise<unknown>; maxMs?: number }): Promise<'ready' | 'failed' | 'deadline'> {
+    const deadline = Math.min(now() + maxMs, order.end - 5 * 60_000);
+    for (;;) {
+        if (ready()) return 'ready';
+        if (failed()) return 'failed';
+        if (now() >= deadline) return 'deadline';
+        await sleep(2000);
+    }
 }
 
 export async function performFleetTransfer(s: Session, order: Order, role: TradeRole, progress: Progress, {
@@ -244,6 +266,10 @@ if (import.meta.main) {
         return `fleet-trade ${order.id} ${receipt.state} ${receipt.count}/${order.count}${extra}: ${detail}`;
     });
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
+    if (role === 'to' && order.takerWaits) {
+        const waited = await waitForGiver(order, { ready: () => existsSync(giverReadyFile(root, order.id)), failed: () => partnerFailed(receipts, order, role) });
+        console.log(`FLEET_TAKER_WAIT ${order.id} ${waited}`);
+    }
     const s = await openBot(account, {
         trade: {
             orderId: order.id, role,
@@ -297,6 +323,7 @@ if (import.meta.main) {
             await s.bot.closeBank();
             progress.uncertain = false;
         }
+        if (role === 'from' && order.takerWaits) markGiverReady(root, order.id);
         await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role) });
         ok = true;
         detail = 'transfer observed';
