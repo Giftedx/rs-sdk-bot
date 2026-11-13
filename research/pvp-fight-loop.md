@@ -1421,3 +1421,20 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`GameMap.ts` `isApproached`) walks the account toward the target. Evidence: `.practice/climb/kite-*.log`, engine
     traces `.practice/climb/ktrace*/`. Gap: seed 1 only; the hold rate varies from run to run (12% to 40% in rune);
     no kit with a magic bonus and melee defence was tried.
+41. **A spar batch with many accounts does not repeat exactly on one seed.** `extra:spar-rivals-tribrid-snare-x12`
+    (24 accounts in one process), seed 1, the same options: 9 kills and 3 deaths, then 10 and 2, run alone; 11 and 1,
+    then 10 and 2 with the lockstep client of `master`. The fight loop's own choices are seeded (`mixSeed`); the lite
+    client ages animations on its 20 ms loop, not on game ticks (`patches/rs-sdk.md` item 10), and the attack and prayer
+    reads use those animations. The 4-account gang case (`extra:gang-live-fast-x1`) repeated exactly in two runs.
+    Consequence: a comparison of spar batches needs 8 seeds or more, or the paired statistics of
+    `scripts/measure/pk-spar-climb.ts`; a gap of 3 or 4 kills in 32 fights is within the noise. Gap: the cause is not
+    proved; no run pins the client's animation clock to the game tick.
+42. **Freezes need their own armour rule, and the champion freezes once from half health.** With `castArmour: 'keep'`
+    the freeze kept plate on too, and the champion killed 0 of 64 runners (`extra:spar-escape-tribrid-snare-x8`, seeds
+    1-8, runner on `base`). `freezeArmour` (default `'torso'`) now rules a freeze. Against the runner, seeds 1-4: freeze
+    from 70% health with the armour off and at most 2 early freezes, 14 of 32 (12 of 32 on seeds 5-8); the same
+    without the cap, 11 and 7. The champion's rule (freeze from 50% health, at most 1 early freeze, armour off)
+    gives 7 of 32 against the runner and, seeds 1-8 against the three rival builds
+    (`extra:spar-rivals-tribrid-snare-x12`), 94 kills and 1 death in 96 fights against 87 and 5 without it; mirror
+    neutral (mean +3.1, t 0.67). The gang set (snare kit, freeze flee, `focusRunner` 0.4) kills 15 of 16 over seeds
+    1-8 with the torso rule, 12 of 16 before. Gap: finding 41's noise; the rival comparison is one run per seed.
