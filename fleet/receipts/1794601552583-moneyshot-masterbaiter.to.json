@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794601552583-moneyshot-masterbaiter",
  "account": "Masterbaiter",
  "partner": "Moneyshot",
@@ -12,6 +12,12 @@
  "claim": "0b958a50-3539-4eb7-8625-b432bde8ea43",
  "count": 0,
  "ok": false,
- "at": 1794601655699,
- "detail": "trade claimed"
+ "at": 1794603402560,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794601655710-0000028944-0000000001",
+  "at": 1794603402548,
+  "sha256": "5075ef68bddd64dd5b5980daec18dd30730f291778f2265e24ccc0e2c6f02598"
+ },
+ "screen": false
 }

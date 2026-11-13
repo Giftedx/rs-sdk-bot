@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794598730665-mmtha0205-abracadickra-rope",
  "account": "Abracadickra",
  "partner": "mmtha0205",
@@ -12,6 +12,12 @@
  "claim": "d4f5555b-e392-4e6b-8d0b-130d98bee4e9",
  "count": 0,
  "ok": false,
- "at": 1794602656507,
- "detail": "trade claimed"
+ "at": 1794603402905,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794602656515-0000032976-0000000001",
+  "at": 1794603402895,
+  "sha256": "21c1aa449efc49e221beed3910d279e48d9c3c77cb4ec05fb9f7aac15fc033c8"
+ },
+ "screen": false
 }
