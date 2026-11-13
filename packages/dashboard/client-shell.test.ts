@@ -1089,6 +1089,22 @@ test('GE price change: no change before a base snapshot is 20 hours old, then th
  // Under 1% shows nothing.
  expect(geTrend([{id:1,ask:100.4}],46*H).change.has('1')).toBe(false);
 });
+test('player finder: online players by name, a hidden name never offered, the live position pinned',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const S:any={economy:{itemValues:{}},bots:[],roster:[['Goondelf',3078,3640,0,87],['Goonie',3000,3000,0,40],['Secret',3100,3100,0,99]]};
+ const env:any={S,D:{rival:new Set()},account:()=>null,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,E:String,location:{origin:''},resources:null,
+  safeName:(n:string)=>n==='Secret'?'Hidden':n,miniView:{cx:3078,cz:3600,PX:4}};
+ const t=new Function(...Object.keys(env),`${code};return {playerMatches,pinned,finderList,setPlayer:(p)=>{finderPlayer=p;},setQuery:(q)=>{finderQuery=q;},setSpawns:(n)=>{npcSpawns=n;}};`)(...Object.values(env));
+ expect(t.playerMatches('goon').map((r:any)=>r[0])).toEqual(['Goondelf','Goonie']);
+ expect(t.playerMatches('secret')).toEqual([]);
+ t.setSpawns([]);t.setQuery('goon');expect(t.finderList()).toContain('data-finder-player="Goondelf"');
+ t.setPlayer('goondelf');
+ expect(t.pinned()).toEqual({label:'Goondelf (87)',tip:'Goondelf (combat 87)',tiles:[{x:3078,z:3640,l:0}]});
+ expect(t.finderList()).toContain('combat 87 · 3078, 3640 · 40 tiles away');
+ // The pin follows the roster; an absent player is not online.
+ S.roster=[];expect(t.pinned()).toBe(null);expect(t.finderList()).toContain('not online');
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
