@@ -1,6 +1,6 @@
 // Writes client-assets/quest-reqs.json for the Quest Journal: what each quest needs before an account can finish it,
 // by its journal name (questJournalNames in packages/router/src/coverage.ts), as {s: [[skill, level, src]],
-// qp: [points, src], q: [[quest, src]]}. src is 1 when the server scripts check it and 0 when only the wiki says it.
+// qp: [points, src], q: [[quest, src]], i: [[item, count, src]]}. src is 1 when the server scripts check it and 0 when only the wiki says it.
 //
 // Two sources, joined:
 // - The server: the level checks in the quest's folder (stat(skill) < N, stat_base(skill) >= N; the highest N of each
@@ -14,7 +14,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { VARP_FOLDER, questJournalNames } from '../router/src/coverage';
 
-export type Reqs = { s: [string, number, 0 | 1 | 2][]; qp?: [number, 0 | 1 | 2]; q: [string, 0 | 1 | 2][] };
+export type Reqs = { s: [string, number, 0 | 1 | 2][]; qp?: [number, 0 | 1 | 2]; q: [string, 0 | 1 | 2][]; i?: [string, number, 0 | 1][] };
 
 const SKILLS = ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing',
     'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
@@ -89,13 +89,31 @@ export function joinReqs(server: Map<string, number>, serverQp: Set<number>, ser
     return out;
 }
 
+// The items of a wiki page's "Items Needed" list that name a real item: [name, count, debugname]. The count is the
+// leading number (1 when there is none); a parenthesis and an "or" alternative are dropped; a plural name falls back to
+// the singular. A line about food, gear, coins or an item obtained in the quest is not a need.
+export function wikiItems(page: string, items: Map<string, { name: string; debugname: string }>): [string, number, string][] {
+    const sec = page.split(/^## Items Needed\s*$/m)[1]?.split(/^## /m)[0] ?? '';
+    const out: [string, number, string][] = [];
+    for (const raw of sec.split(/\r?\n/).filter(l => /^\s*-\s/.test(l))) {
+        const line = raw.replace(/\*\*/g, '').replace(/^\s*-\s*/, '');
+        if (/obtained|during the quest|given|recommended|optional|food|equipment|armou?r|\bgp\b|coins/i.test(line)) continue;
+        const m = line.match(/^(?:(\d[\d,]*)\s*x?\s+)?([^(]+)/i);
+        if (!m) continue;
+        const count = m[1] ? Number(m[1].replace(/,/g, '')) : 1, name = m[2]!.split(/\s+or\s+|,|\//i)[0]!.trim().toLowerCase();
+        const hit = items.get(name) ?? items.get(name.replace(/ies$/, 'y')) ?? items.get(name.replace(/es$/, '')) ?? items.get(name.replace(/s$/, ''));
+        if (hit && count > 0 && !out.some(([n]) => n === hit.name)) out.push([hit.name, count, hit.debugname]);
+    }
+    return out;
+}
+
 // A quest cannot need a quest that needs it: a server-only prerequisite B of A is dropped when B needs A (Death
 // Plateau tests Troll Stronghold's completion in dialogue; Troll Stronghold needs Death Plateau).
 export function dropCycles(out: Record<string, Reqs>) {
     const needs = (a: string, b: string) => out[a]?.q.some(([n]) => n === b) ?? false;
     const drop = Object.entries(out).flatMap(([a, r]) => r.q.filter(([b, src]) => src === 2 && needs(b, a)).map(([b]) => [a, b] as const));
     for (const [a, b] of drop) out[a]!.q = out[a]!.q.filter(([n]) => n !== b);
-    for (const [a, r] of Object.entries(out)) if (!r.s.length && !r.q.length && !r.qp) delete out[a];
+    for (const [a, r] of Object.entries(out)) if (!r.s.length && !r.q.length && !r.qp && !r.i) delete out[a];
 }
 
 if (import.meta.main) {
@@ -104,6 +122,9 @@ if (import.meta.main) {
     const files = (d: string, ext: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? files(p, ext) : f.endsWith(ext) ? [readFileSync(p, 'utf8')] : []; });
     const constants = parseConstants(files(scriptsDir, '.constant'));
     const names = questJournalNames(root), journal = [...names.values()];
+    const itemRows = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { name: string; debugname: string }[];
+    const items = new Map<string, { name: string; debugname: string }>();
+    for (const it of itemRows) if (it.name && it.debugname && !items.has(it.name.toLowerCase())) items.set(it.name.toLowerCase(), it);
     const rows = JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')) as { varp: string; folder?: string | null }[];
     const varpFolder = new Map<string, string>(Object.entries(VARP_FOLDER));
     for (const r of rows) if (r.folder && r.varp) varpFolder.set(r.varp, r.folder);
@@ -117,9 +138,12 @@ if (import.meta.main) {
         const quests = new Set([...serverPrereqs(scripts, varpFolder, folder)].filter(f => names.has(f)).map(f => names.get(f)!));
         const page = wiki.get(norm(name)) ?? null, w = page ? wikiReqs(page, journal.filter(n => n !== name)) : null;
         const levels = serverLevels(scripts, constants), r = joinReqs(levels, serverQp, quests, w, serverQuestPoints(scripts, constants));
-        if (r.s.length || r.q.length || r.qp) out[name] = r;
+        // Items: src 1 when the quest's scripts name the item (its debugname as a word), 0 when only the wiki lists it.
+        const text = scripts.join('\n'), its = page ? wikiItems(page, items) : [];
+        if (its.length) r.i = its.map(([n, c, d]) => [n, c, new RegExp(`\\b${d}\\b`).test(text) ? 1 : 0]);
+        if (r.s.length || r.q.length || r.qp || r.i) out[name] = r;
         const diff = [...(w?.s ?? [])].filter(([k, v]) => levels.has(k) && levels.get(k) !== v).map(([k, v]) => `${k} wiki ${v} server ${levels.get(k)}`);
-        report.push(`${name}${page ? '' : ' (no wiki page)'}: ${r.s.map(x => x[1] + ' ' + x[0] + mark(x[2])).join(', ')}${r.qp ? ' · ' + r.qp[0] + ' QP' + mark(r.qp[1]) : ''}${r.q.length ? ' · ' + r.q.map(x => x[0] + mark(x[1])).join(', ') : ''}${diff.length ? ' · DIFF ' + diff.join('; ') : ''}`);
+        report.push(`${name}${page ? '' : ' (no wiki page)'}: ${r.s.map(x => x[1] + ' ' + x[0] + mark(x[2])).join(', ')}${r.qp ? ' · ' + r.qp[0] + ' QP' + mark(r.qp[1]) : ''}${r.q.length ? ' · ' + r.q.map(x => x[0] + mark(x[1])).join(', ') : ''}${r.i ? ' · items ' + r.i.map(x => x[1] + ' ' + x[0] + mark(x[2])).join(', ') : ''}${diff.length ? ' · DIFF ' + diff.join('; ') : ''}`);
     }
     dropCycles(out);
     writeFileSync(join(import.meta.dir, 'client-assets', 'quest-reqs.json'), JSON.stringify(out));

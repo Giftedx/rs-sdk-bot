@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { dropCycles, joinReqs, parseConstants, serverLevels, serverPrereqs, serverQuestPoints, wikiReqs, type Reqs } from './gen-quest-reqs';
+import { dropCycles, joinReqs, parseConstants, serverLevels, serverPrereqs, serverQuestPoints, wikiItems, wikiReqs, type Reqs } from './gen-quest-reqs';
 
 test('the server checks: the highest level of each skill, quest points and completion gates, with ^constants', () => {
     const constants = parseConstants(['^hero_required_questpoints = 55\n^zanaris_complete = 6\n']);
@@ -19,6 +19,13 @@ test('the wiki requirements: skills, quest points and quest names; recommended a
     expect(joinReqs(new Map([['Mining', 52], ['Prayer', 10]]), new Set([55]), new Set(['Lost City']), w)).toEqual({
         s: [['Mining', 52, 1], ['Prayer', 10, 2]], qp: [55, 1], q: [['Shield of Arrav', 0], ['Lost City', 1]],
     });
+});
+
+test('the wiki items: real item names with counts; plurals fall back to the singular; quest-given items and coins are left out', () => {
+    const page = `# Dragon Slayer\n\n## Items Needed\n\n- Silk\n- Wizard's Mind Bomb (or 33 Magic)\n- 3 Planks\n- 2,000+ gp (for the ship)\n- Anti-dragon shield (obtained during quest)\n- Food and combat equipment\n- Unknown thing\n\n## Rewards\n\n- Silk\n`;
+    const items = new Map([['silk', { name: 'Silk', debugname: 'silk' }], ["wizard's mind bomb", { name: "Wizard's mind bomb", debugname: 'wizards_mind_bomb' }],
+        ['plank', { name: 'Plank', debugname: 'plank' }], ['anti-dragon shield', { name: 'Anti-dragon shield', debugname: 'antidragonbreathshield' }]]);
+    expect(wikiItems(page, items)).toEqual([['Silk', 1, 'silk'], ["Wizard's mind bomb", 1, 'wizards_mind_bomb'], ['Plank', 3, 'plank']]);
 });
 
 test('a server-only prerequisite that needs the quest back is dropped', () => {

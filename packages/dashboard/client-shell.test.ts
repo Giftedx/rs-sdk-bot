@@ -733,6 +733,12 @@ test('quest requirements: met, missing with the level held, unknown, and the Rea
  b.skills[1].level=53;b.quests.push({name:'Dragon Slayer',state:'complete'});
  expect(t.questReady(b,b.quests[1])).toBe(true);
  expect(t.reqHtml(b,'Nothing')).toBe('');
+ // Items: held across the pack, worn gear and the bank.
+ data['Lost City']={s:[],q:[],i:[['Knife',1,1],['Plank',3,0]]} as any;
+ const t2=new Function(...Object.keys(env),`${code};return {questItems,itemHtml};`)(...Object.values(env));
+ const c:any={inventory:[{name:'Plank',count:1}],equipment:[],bank:[{name:'Knife',count:1},{name:'Plank',count:1}],bankAt:1};
+ expect(t2.questItems(c,'Lost City').map((x:any)=>[x.text,x.ok,x.have])).toEqual([['Knife',true,1],['3 Plank',false,2]]);
+ expect(t2.itemHtml(c,'Lost City')).toContain('<span class="req-miss req-soft" title="only the wiki lists this · holds 2">3 Plank (2)</span>');
 });
 
 test('cooking: the burn chance of the followed account on a fire, a range and with gauntlets, and the no-burn level',()=>{
