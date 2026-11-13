@@ -1,13 +1,16 @@
 // Woodcutting to TARGET (default 45) with the 3-tick knife reset, under CAP game ticks (default 3000), without dying.
 // Preset wc_fresh: a fresh account (bronze axe, Hitpoints 10, Lumbridge 3222,3218). Bench extra:woodcut-bury-block5:
-// Woodcutting 1 and Prayer 1 at the Draynor bank with a rune axe, a knife and banked dragon bones.
+// Woodcutting 1 and Prayer 1 at the Draynor bank with a rune axe, a knife and banked dragon bones; extra:woodcut-givers-
+// block5: the same with a giver account that brings the bones.
 // Plan: coins from Lumbridge men, the knife (ground spawn 3224,3202) and a better axe from Bob (3232,3203), each only
 // when the account lacks it; then 3-tick woodcutting at the site (WC_SITE): the trees with the most XP a tick for the
 // held axe. With bones in the pack, one bone is buried in each 3-tick cycle with no roll lost. Each cycle drops one
-// spare log (an oak or better log, or a normal log above 4).
+// spare log (an oak or better log, or a normal log above 4; above 1 with givers).
 // Env: TARGET, CAP; WC_SITE=lumbridge (default) | draynor; PRAYER_TARGET (default 0: none); WC_BURY=0 never buries;
 // WC_BANK_BONES=1 takes more bones from the site bank when the pack has none (a site with a bank: draynor);
-// WC_KNIFE=0 chops with no knife reset; WC_QUICK=0 walks to each new tree before the next knife cycle.
+// WC_GIVERS=<name>[,<name>...] has helper accounts bring the bones to the trees by trade (scripts/site-givers.ts; the
+// helpers hold the bones in the site bank), WC_GIVER_PACK caps their pack; WC_KNIFE=0 chops with no knife reset;
+// WC_QUICK=0 walks to each new tree before the next knife cycle.
 // Code-read facts (vendor/rs-sdk/server/content/scripts):
 // - The server gives 25x XP: a normal log is 625 XP, oak 937.5, willow 1687.5 (skill_woodcutting/configs/trees.dbrow
 //   productexp, in tenths). A dragon bone is 1800 Prayer XP (skill_prayer/configs/bones.obj bone_exp 720).
@@ -34,19 +37,25 @@
 //   3109,3256 (maps/m48_50.jm2, locs 1308 and 1278). Dark wizards (young_dark_wizard, vislevel 7) at 3084,3236 and
 //   3085,3238 hunt an account of combat 14 or less outside the Wilderness (all.hunt [ranged] check_nottoostrong;
 //   engine Npc.ts: combat > 2 x vislevel is skipped), so the site needs combat 15. A jail guard (aggressive_melee
-//   with no nottoostrong check, all.hunt; huntrange 5, draynor.npc) stands at 3109,3237: the bot uses no tree within
-//   9 tiles of it, which leaves out the oak at 3102,3242 and the trees at 3104-3110,3228-3244.
+//   with no nottoostrong check, all.hunt; huntrange 5, draynor.npc) spawns at 3109,3237 and wanders to 3107,3241,
+//   where the bench engine trace shows it hunt the bot at a tree 6 tiles away and the giver on its path. The bot uses
+//   no tree within 12 tiles of the spawn: that leaves out both oaks (3102,3242, 3106,3247), the normal trees at
+//   3099,3242 and 3099,3247, and the trees at 3104-3110,3228-3244.
 import { openBot, finish, countItems, releasePrayerGuard } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
 import {runWoodSupply} from '../woodcut-supply';
 import { componentId } from '../../packages/core/src/logout';
 import { xpForLevel } from '../../packages/planner/src/curve';
+import { newGiver, stage, refollow, beside, handOver, staged, giverStats, type Giver } from '../site-givers';
 
 const CAP = Number(process.env.CAP ?? 3000);
 const TARGET = Number(process.env.TARGET ?? 45);
 const PRAYER_TARGET = Number(process.env.PRAYER_TARGET ?? 0);
 const BURY = process.env.WC_BURY !== '0';
 const BANK_BONES = process.env.WC_BANK_BONES === '1';
+const GIVERS = (process.env.WC_GIVERS ?? '').split(',').map(n => n.trim()).filter(Boolean);
+// The largest pack a giver brings (default: the free slots); a smaller pack means more trades of the same cost.
+const GIVER_PACK = Number(process.env.WC_GIVER_PACK ?? 28);
 const LUMBRIDGE = { x: 3222, z: 3218 };
 const KNIFE_AT = { x: 3224, z: 3202 };
 const BOB_AT = { x: 3230, z: 3203 };
@@ -55,10 +64,10 @@ const NORMAL_LOGS = /^logs$/i;
 const DROP_LOGS = /^(oak|willow|maple|yew|magic) logs$/i;
 
 type Pt = { x: number; z: number };
-type Site = { anchor: Pt; box: { x0: number; x1: number; z0: number; z1: number }; bank?: Pt; avoid: (Pt & { r: number })[]; minCombat: number };
+type Site = { anchor: Pt; more?: Pt[]; box: { x0: number; x1: number; z0: number; z1: number }; bank?: Pt; avoid: (Pt & { r: number })[]; minCombat: number };
 const SITES: Record<string, Site> = {
     lumbridge: { anchor: { x: 3226, z: 3237 }, box: { x0: 3214, x1: 3239, z0: 3226, z1: 3250 }, avoid: [], minCombat: 0 },
-    draynor: { anchor: { x: 3088, z: 3238 }, box: { x0: 3078, x1: 3110, z0: 3224, z1: 3258 }, bank: { x: 3092, z: 3243 }, avoid: [{ x: 3109, z: 3237, r: 9 }], minCombat: 15 },
+    draynor: { anchor: { x: 3088, z: 3238 }, more: [{ x: 3072, z: 3254 }, { x: 3080, z: 3266 }], box: { x0: 3060, x1: 3110, z0: 3224, z1: 3274 }, bank: { x: 3092, z: 3243 }, avoid: [{ x: 3109, z: 3237, r: 12 }], minCombat: 15 },
 };
 const siteName = process.env.WC_SITE ?? 'lumbridge';
 const SITE = SITES[siteName];
@@ -83,7 +92,15 @@ const TREES: { re: RegExp; kind: string; level: number; xp: number; logs: number
 const BONE_IDS = [536, 534, 532, 526, 528, 530, 2859];
 
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
+const givers: Giver[] = [];
+const sessions = () => [s, ...givers.map(g => g.s)];
 try {
+    // A giver waits by design (beside the trees, or once Prayer needs no more bones), so its no-progress stop is not a
+    // fault; a death, a stop file or a lost lease ends the run.
+    for (const name of GIVERS) {
+        const g: Giver = newGiver(await openBot(name, { onStop: async (_gs, why) => { if (!/^no progress/.test(why)) g.failure ??= why; } }));
+        givers.push(g);
+    }
     await waitTicks(s, 5);
     if(process.env.SUPPLY_LOGS!==undefined){const r=await runWoodSupply(s,Number(process.env.SUPPLY_LOGS),Number(process.env.SUPPLY_HEADLESS??0),CAP);await finish([s],r.ok,'wood-supply '+JSON.stringify(r));}
     if (!SITE) await finish([s], false, `unknown WC_SITE ${siteName}: ${Object.keys(SITES).join(', ')}`);
@@ -152,7 +169,7 @@ try {
     };
 
     let walkTicks = 0, thiefTicks = 0, shopTicks = 0, chopTicks = 0, dropTicks = 0, approachTicks = 0, bankTicks = 0, noTreeTicks = 0;
-    let tries = 0, stuns = 0, cycles = 0, buryCycles = 0, plainClicks = 0, approaches = 0, drops = 0, bans = 0, dialogs = 0, banks = 0, quick = 0, cycleDrops = 0;
+    let tries = 0, stuns = 0, cycles = 0, buryCycles = 0, plainClicks = 0, approaches = 0, drops = 0, bans = 0, dialogs = 0, banks = 0, quick = 0, cycleDrops = 0, modalCloses = 0, trades = 0, tradeTicks = 0;
     let axe: Axe | null = axeHeld();
     // Bones left in the site bank: -1 until the bank is seen.
     let bankBones = -1;
@@ -167,9 +184,9 @@ try {
         const p = pos();
         const detail = `woodcutting=${lvl()} target=${TARGET} xp=${gained} prayer=${plvl()} prayerXp=${pxp() - pxp0} buried=${buried} ticks=${ticks} site=${siteName} at=${p?.worldX},${p?.worldZ},${p?.level} hp=${hp()} hpMin=${hpMin} died=${died} axe=${axe} `
             + `walkTicks=${walkTicks} thiefTicks=${thiefTicks} shopTicks=${shopTicks} chopTicks=${chopTicks} approachTicks=${approachTicks} dropTicks=${dropTicks} bankTicks=${bankTicks} noTreeTicks=${noTreeTicks} `
-            + `tries=${tries} stuns=${stuns} cycles=${cycles} buryCycles=${buryCycles} plainClicks=${plainClicks} approaches=${approaches} quick=${quick} drops=${drops} cycleDrops=${cycleDrops} banks=${banks} bans=${bans} dialogs=${dialogs} `
-            + `trees=${JSON.stringify(kinds)} coins=${coins()} logs=${countItems(s, NORMAL_LOGS)} bankBones=${bankBones} milestones=${marks.join(',')}`;
-        return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
+            + `tries=${tries} stuns=${stuns} cycles=${cycles} buryCycles=${buryCycles} plainClicks=${plainClicks} approaches=${approaches} quick=${quick} drops=${drops} cycleDrops=${cycleDrops} modalCloses=${modalCloses} banks=${banks} bans=${bans} dialogs=${dialogs} `
+            + `trees=${JSON.stringify(kinds)} coins=${coins()} logs=${countItems(s, NORMAL_LOGS)} bankBones=${bankBones} trades=${trades} tradeTicks=${tradeTicks} givers=${JSON.stringify(giverStats(givers))} milestones=${marks.join(',')}`;
+        return finish(sessions(), ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
     const check = async (where: string) => {
         if (died) await end(false, `died ${where}`);
@@ -297,7 +314,9 @@ try {
     const choose = (): any => {
         const p = pos();
         if (!p) return null;
-        const fewLogs = countItems(s, NORMAL_LOGS) < 3 && slotOf(/^knife$/i) !== undefined;
+        // Spare normal logs first, up to the count the cycles keep: one with givers, KEEP_LOGS in a bank run (the bank
+        // takes the rest), three in a plain run. A higher mark makes the bot choose normal trees over willows.
+        const fewLogs = countItems(s, NORMAL_LOGS) < (givers.length ? 1 : BANK_BONES ? KEEP_LOGS : 3) && slotOf(/^knife$/i) !== undefined;
         let best: any = null, bestScore = 0;
         for (const l of (st()?.nearbyLocs ?? []) as any[]) {
             const t = typeOf(l);
@@ -394,17 +413,72 @@ try {
     };
     // Bones go in the ground until Prayer reaches PRAYER_TARGET (no target: every bone held).
     const buryOn = () => BURY && (PRAYER_TARGET <= 0 || plvl() < PRAYER_TARGET);
-    const prayerLeft = () => PRAYER_TARGET > 0 && buryOn() && (boneCount() > 0 || canBank());
+    // Givers (WC_GIVERS, scripts/site-givers.ts) bring the bones to the trees, so the bot never banks for them. A pack
+    // is the free slots of the bot's pack less two logs (the knife's normal log, held or to come, and the log of the
+    // roll before the trade, which arrives too late to drop), and no more than PRAYER_TARGET needs less the bones held
+    // and on the way. With givers the cycles keep one normal log, not four. When the pack has no bone, the bot trades with a ready
+    // giver that stands next to it, right after a roll: the trade window stops the tree, so each trade costs its
+    // ticks, and one full pack a trade gives the fewest trades.
+    const giverSite = site.bank ? { bank: site.bank, ids: BONE_IDS } : undefined;
+    if (givers.length && !giverSite) await end(false, `site ${siteName} has no bank for the givers`);
+    const isLog = (i: any) => NORMAL_LOGS.test(i.name) || DROP_LOGS.test(i.name);
+    const isBone = (i: any) => i.optionsWithIndex?.some((o: any) => /^bury$/i.test(o.text));
+    const packSlots = () => Math.min(GIVER_PACK, 28 - (s.sdk.getInventory() ?? []).filter((i: any) => !isLog(i) && !isBone(i)).length - 2);
+    const bonesLeft = () => {
+        if (buried > 0) boneXp = (pxp() - pxp0) / buried;
+        const need = PRAYER_TARGET > 0 && boneXp > 0 ? Math.ceil((xpForLevel(PRAYER_TARGET) - pxp()) / boneXp) : Infinity;
+        return need - boneCount() - staged(givers);
+    };
+    const giverLeft = () => givers.some(g => !g.empty && (g.ready || g.flight)) || givers.some(g => !g.empty) && bonesLeft() > 0;
+    const takeBones = async (g: Giver) => {
+        const t0 = now();
+        // Room for the whole pack: the logs go but one normal log (5 inputs a tick at most), and an open dialog closes.
+        for (let r = 0; r < 4 && 28 - invLen() < g.n; r++) {
+            const inv = (s.sdk.getInventory() ?? []) as any[];
+            const keep = inv.find(i => NORMAL_LOGS.test(i.name));
+            const slots = inv.filter(i => isLog(i) && i !== keep).map(i => i.slot).slice(0, 5);
+            if (!slots.length) break;
+            for (const sl of slots) await s.direct({ type: 'dropItem', slot: sl, reason: 'SDK' });
+            await waitTicks(s, 1);
+        }
+        if (28 - invLen() < g.n) await end(false, `no room for a giver pack of ${g.n}`);
+        // A dialog makes the bot busy, and the server holds its trade request until the dialog closes (engine trace:
+        // `act target=NetworkPlayer ... access=false modal=2` for 10 ticks, then a trade that did not reconcile). A
+        // Woodcutting level from the last roll can still have its dialog queued, and two levels queue two dialogs.
+        for (let r = 0; r < 4 && (s.sdk.getDialog()?.isOpen || lvl() > lastLvl); r++) {
+            lastLvl = lvl();
+            if (s.sdk.getDialog()?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
+            await waitTicks(s, 1);
+        }
+        await handOver(s, g, () => died || left() <= 0);
+        trades++;
+        tradeTicks += now() - t0;
+        bones = boneCount();
+    };
+    const prayerLeft = () => PRAYER_TARGET > 0 && buryOn() && (boneCount() > 0 || canBank() || giverLeft());
 
-    let cur: any = null, moved = false;
+    let cur: any = null, moved = false, lastLvl = lvl(), spot = 0;
+    const spots = [site.anchor, ...(site.more ?? [])];
     let lastXp = xp(), lastGain = now();
     for (let i = 0; i < 20000 && (lvl() < TARGET || prayerLeft()) && !died && left() > 0; i++) {
         checkLevels();
         const x = xp();
         if (x > lastXp) { lastXp = x; lastGain = now(); }
-        if (buryOn() && boneCount() === 0 && canBank()) { await restock(); cur = null; lastGain = now(); continue; }
-        // A full pack with bones to bury empties itself: each bury cycle takes a bone before its Chop.
-        if (invLen() >= 27 && !(buryOn() && boneCount() > 0 && slotOf(/^knife$/i) !== undefined && slotOf(NORMAL_LOGS) !== undefined)) {
+        const failed = givers.find(g => g.failure);
+        if (failed) await end(false, `giver ${failed.s.name}: ${failed.failure}`);
+        if (givers.length && buryOn()) {
+            for (const g of givers) if (!g.ready && !g.flight && !g.empty && bonesLeft() > 0) void stage(g, giverSite!, Math.min(packSlots(), bonesLeft()), s);
+            if (boneCount() === 0) {
+                const g = givers.find(g => g.ready);
+                if (g && beside(g, s)) { await takeBones(g); lastGain = now(); continue; }
+                if (g) refollow(g, s);
+            }
+        }
+        if (!givers.length && buryOn() && boneCount() === 0 && canBank()) { await restock(); cur = null; lastGain = now(); continue; }
+        // A full pack with bones to bury empties itself: each bury cycle takes a bone before its Chop. With one slot
+        // free and no normal log yet, the plain chain fills that slot with the knife's log.
+        const knifeAndLog = slotOf(/^knife$/i) !== undefined && slotOf(NORMAL_LOGS) !== undefined;
+        if (invLen() >= 27 && !(buryOn() && boneCount() > 0 && (knifeAndLog || invLen() < 28))) {
             // The bank when bones are wanted or held (past PRAYER_TARGET they go back in); else the logs go on the
             // ground, which takes fewer ticks than the walk to the bank.
             if (canBank() && (buryOn() || boneCount() > 0) && spareLogs() > 0) await restock(); else await dropLogs();
@@ -424,9 +498,19 @@ try {
         }
         if (!cur) {
             const t = choose();
+            // Away from the main spot, a tree kind better than the best in view sends the bot back to the main spot,
+            // which holds the site's best trees.
+            const unlocked = Math.max(...TREES.filter(k => k.level <= lvl()).map(k => k.level));
+            if (spot !== 0 && t && (TREES.find(k => k.kind === t.kind)?.level ?? 0) < unlocked) {
+                spot = 0;
+                await walk(site.anchor.x, site.anchor.z, 2);
+                continue;
+            }
             if (!t) {
-                const p = pos();
-                if (!p || cheb(site.anchor, p) > 4) await walk(site.anchor.x, site.anchor.z, 2);
+                // No tree in view: the next spot of the site (the trees respawn meanwhile), or a wait at a site of one.
+                const p = pos(), a = spots[spot]!;
+                if (!p || cheb(a, p) > 4) await walk(a.x, a.z, 2);
+                else if (spots.length > 1) { spot = (spot + 1) % spots.length; await walk(spots[spot]!.x, spots[spot]!.z, 2); }
                 else { await waitTicks(s, 1); noTreeTicks++; }
                 continue;
             }
@@ -461,13 +545,20 @@ try {
             continue;
         }
         const knife = process.env.WC_KNIFE === '0' ? undefined : slotOf(/^knife$/i), log = slotOf(NORMAL_LOGS);
-        const b = buryOn() && !moved ? bone() : undefined;
+        // A Woodcutting level from the last roll queues its level-up dialog (levelup.rs2, engine queue). The queue runs
+        // only when the player is not delayed and has no window open (Player.ts canAccess), so after a bury it runs in
+        // tick A+1 and holds back the Prayer level-up of the same bury to tick A+2, after the Chop's input: the dialog
+        // then blocks the roll. This cycle has no bury, and the dialog is closed in tick A+1 (CloseModal is read while
+        // delayed and acted on before the interaction, Player.ts processQueues), so the roll in A+2 runs.
+        const levelled = lvl() > lastLvl;
+        lastLvl = lvl();
+        const b = buryOn() && !moved && !levelled ? bone() : undefined;
         moved = false;
         // One spare log goes on the ground at the start of each cycle (drop.rs2 has no delay; the OpHeld drops only the
         // interaction, which the cycle sets again), so the pack never fills. The server reads 5 user inputs a tick
         // (ClientGameProtCategory USER_EVENT); a cycle sends 4 at most.
         const inv = (s.sdk.getInventory() ?? []) as any[];
-        const spare = (inv.find(i => DROP_LOGS.test(i.name)) ?? inv.filter(i => NORMAL_LOGS.test(i.name))[4])?.slot as number | undefined;
+        const spare = (inv.find(i => DROP_LOGS.test(i.name)) ?? inv.filter(i => NORMAL_LOGS.test(i.name))[givers.length ? 1 : 4])?.slot as number | undefined;
         const k0 = now();
         if (spare !== undefined && knife !== undefined && log !== undefined) { await s.direct({ type: 'dropItem', slot: spare, reason: 'SDK' }); cycleDrops++; }
         if (knife === undefined || log === undefined) {
@@ -493,7 +584,10 @@ try {
             await s.direct({ type: 'clickComponent', componentId: make1, reason: 'SDK' });
             await s.direct({ type: 'interactLoc', x: cur.x, z: cur.z, locId: cur.id, optionIndex: cur.op, reason: 'SDK' });
             cycles++;
-            await waitTicks(s, 3);
+            await waitTicks(s, 1);
+            // A level-up dialog that opened after the cycle's inputs blocks the tree until it closes.
+            if (s.sdk.getDialog()?.isOpen) { await s.direct({ type: 'closeModal', reason: 'SDK' }); modalCloses++; }
+            await waitTicks(s, 2);
         }
         chopTicks += now() - k0;
     }
@@ -501,4 +595,4 @@ try {
     checkLevels();
     const ok = lvl() >= TARGET && (PRAYER_TARGET <= 0 || plvl() >= PRAYER_TARGET) && !died;
     await end(ok, died ? 'died' : lvl() < TARGET ? `woodcutting ${lvl()} < ${TARGET}` : `prayer ${plvl()} < ${PRAYER_TARGET}`);
-} catch (e) { await finish([s], false, String(e)); }
+} catch (e) { await finish(sessions(), false, String(e)); }
