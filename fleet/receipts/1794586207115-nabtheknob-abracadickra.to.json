@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794586207115-nabtheknob-abracadickra",
  "account": "Abracadickra",
  "partner": "NabTheKnob",
@@ -12,6 +12,12 @@
  "claim": "02457f7c-8d00-4eff-b573-b91f833f6f47",
  "count": 0,
  "ok": false,
- "at": 1794588012448,
- "detail": "trade claimed"
+ "at": 1794589454191,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1794588012457-0000018572-0000000001",
+  "at": 1794589454175,
+  "sha256": "849802e1821c909ec857ce028fb0348947b7db1e3994824826291b37ab2f3290"
+ },
+ "screen": false
 }
