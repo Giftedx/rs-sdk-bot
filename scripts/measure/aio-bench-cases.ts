@@ -338,6 +338,10 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
   {key: 'fighter:ranged-gather', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged-gather', 'CAP=1500', 'MAX_KILLS=2', 'AMMO=90', 'FOOD=3', 'FOOD_ID=333'], pass: s => ok(s) && s.includes('RANGED_BANK'),
     presetConfig: {position: {x: 3253, z: 3421, level: 0}, skills: {Ranged: 30, Hitpoints: 30}, bank: [{id: 841, count: 1}, {id: 884, count: 90}, {id: 333, count: 5}]}},
+  // Cairn segment 24 (packages/planner/src/cairn-route.json): cannon and magic shortbow at the Wilderness poison spiders,
+  // Ranged 55 to 99 on Haggis at the Ranged row (preset cannon_spiders_h: Attack 99, Defence 89, Hitpoints 97, Prayer 99,
+  // rapid magic shortbow, 700 rune arrows, cannon, 1,500 cannonballs). `--set STOP_LEVEL=<n>` for a shorter run.
+  {key: 'fighter:cannon', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h', scriptArgs: ['cannon', 'SPOT=spiders', 'STYLE=1'], pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/},
   {key: 'pvp:monitor', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['monitor', '50', '12', 'stop'], pass: ok},
   {key: 'quester:mode:chain', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['chain', 'cook'], pass: ok,},
   // packages/practice/src/shop-supply-order-proof.ts
@@ -404,6 +408,12 @@ const ROUTE_CASES: BenchCase[] = [
   // PRAYER_GUARD line; `--set PRAYER_GUARD=0` runs the comparison without it.
   {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
+  // Cairn segment 13: the cannon at the poison spiders from Ranged 1 to 50, at the levels Cairn holds then (Attack 99
+  // from Fight Arena, Prayer 99, Hitpoints 42, Strength and Defence 1). A rune scimitar on accurate: the cannon roll
+  // uses the worn weapon's style (cannon_fire.rs2:116), so Attack 99 makes it hit while Ranged is 1.
+  {key: 'extra:cannon-spiders-r1', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h_sci', scriptArgs: ['cannon', 'SPOT=spiders', 'STYLE=0', 'STOP_LEVEL=50', 'CAP=900'], pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
+    presetConfig: {...PRESETS.cannon_spiders_h_sci!, skills: {Attack: 99, Strength: 1, Defence: 1, Hitpoints: 42, Prayer: 99, Ranged: 1},
+      equipment: [{id: 1731, count: 1, slot: 2}, {id: 1333, count: 1, slot: 3}, {id: 1061, count: 1, slot: 10}]}},
   // The same fight with a 500 tick cap: the short run for a change to the guard.
   {key: 'extra:guard-giant-short', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},

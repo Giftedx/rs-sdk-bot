@@ -1133,6 +1133,49 @@ set-up (bow only, 142.2 XP per tick). A death leaves `%ownedmcannon` set and the
 faster from Ranged 70, and the cause is not known. Our cannon loads 0.53 balls per tick. The archive does not show how
 many of the rival's 1,500 balls it fired.
 
+### 6b. The route worker: `scripts/cannon-fight.ts` (bench `fighter:cannon`, `extra:cannon-spiders-r1`)
+
+Claim: the worker takes Haggis from Ranged 55 to 99 at the poison spiders in 1,792-1,973 ticks (mean 1,885, plus 11-12
+ticks of set-up), 3 of 3 seeds, against Cairn's 2,152 planned for segment 24. Ranged 1 to 50 with a rune scimitar at
+Attack 99 takes 74-78 ticks, against Cairn's 488 for segment 13, which includes the walk from the Dwarf Cannon quest.
+
+Conditions: bench, lockstep engine, seeds 7, 8, 9, one bot at the site. `fighter:cannon` is preset `cannon_spiders_h`
+(Attack 99, Defence 89, Hitpoints 97, Prayer 99, rapid magic shortbow, 700 rune arrows) with `SPOT=spiders STYLE=1`.
+`extra:cannon-spiders-r1` is Attack 99, Strength 1, Defence 1, Hitpoints 42, Prayer 99, Ranged 1, rune scimitar on
+accurate, `STOP_LEVEL=50`. The worker closes each level-up message on the tick it sees it (the message is a chat modal,
+`levelup/scripts/levelup.rs2:54`, and a normal timer such as `[timer,cannon_rotate]` waits while one is open,
+`engine/src/engine/entity/Player.ts:1069`), stands on the set-up tile and shoots only targets within 7 tiles, tops up
+every 20 ticks, and picks up nothing. Raw rows: `.practice/aio-bench/seed-7.json` to `seed-9.json` in the measuring
+worktree (not in git).
+
+| Seed | Ticks 55-99 | Ranged XP/tick | HP XP/tick | Balls | Arrows | Sharks | Antipoison doses | Level-up messages |
+|---|---|---|---|---|---|---|---|---|
+| 7 | 1,973 | 482.9 | 59.0 | 1,052 | 622 | 4 | 8 | 44 |
+| 8 | 1,889 | 504.4 | 60.8 | 1,020 | 595 | 4 | 8 | 44 |
+| 9 | 1,792 | 531.5 | 67.3 | 1,033 | 561 | 3 | 8 | 44 |
+
+| Band | Ticks (seeds 7 / 8 / 9) | Mean | Ranged XP/tick | Rival XP/tick (6a) |
+|---|---|---|---|---|
+| 55-60 | 41 / 38 / 44 | 41 | 480 | 289.1 |
+| 60-70 | 140 / 163 / 127 | 143 | 468 | 345.6 |
+| 70-80 | 285 / 266 / 270 | 274 | 489 | 513.2 |
+| 80-90 | 597 / 510 / 514 | 540 | 496 | 561.3 |
+| 90-95 | 420 / 438 / 419 | 426 | 521 | 599.3 |
+| 95-99 | 490 / 474 / 418 | 461 | 525 | 548.4 |
+
+- Balls are the balls loaded after the first 30. The cannon fires 0.55 balls a tick (1,035 / 1,885), so about half of
+  its rotation steps find no spider in reach and sight.
+- Hitpoints XP is 115,000-121,000, short of the 129,288 for Hitpoints 97 to 99 (`packages/planner/src/curve.ts`): the
+  run ends at Hitpoints 98. Defence XP is 0 (rapid style).
+- Estimate (ESTIMATE) of segment 24 as Cairn plays it, with Defence 98 to 99 (66,883 XP) on longrange: 1,338 bow damage
+  at 50 Defence XP each, about 716 ticks at 1.87 bow damage a tick (Hitpoints XP 62 / 33.25), in which the bow gives half
+  its Ranged XP; that costs about 67,000 Ranged XP, 133 ticks at 506 a tick. Segment 24 is then about 2,040 ticks before
+  the slower longrange attack, against 2,152.
+
+Gap: the bench and the 6a runs use different engines (lockstep against 150 ms), so the gain over 6a (1,885 against
+1,997) has no matched A/B and no cause. No longrange or melee-then-bow run of segment 24 exists. The planner row for
+segment 24 (`ranged`, 309.4 Ranged XP a tick at the Gnome battlefield, plus the melee top-ups) is not changed here.
+
 ## 7. Why Defence finished last, and two levers that fix it
 
 Planner run: `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`, scenario a.
