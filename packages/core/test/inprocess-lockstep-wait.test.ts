@@ -52,3 +52,27 @@ test('on a lockstep engine an SDK wait still ends on the tick its condition come
   expect((await wait).player?.worldX).toBe(3095);
  }finally{shim.stop('fixture-ended');}
 });
+
+test('on a lockstep engine the client ages animations by game ticks, just before the next tick is read',async()=>{
+ process.env.SIM_LOCKSTEP='1';
+ const {client:base,sdk}=tickClient();
+ let cycles=0,available=0;
+ const client={...base,tickSpeedMultiplier:7,tickCycle(){cycles++;},pumpPackets:async()=>{},conn:{stream:{get available(){return available;}}}};
+ const shim=createShim(client,sdk);
+ shim.start();
+ try{
+  // The session loop's 20 ms pass no longer ages, and the speed is the one of a 300 ms server.
+  client.tickCycle();
+  expect(cycles).toBe(0);
+  expect(client.tickSpeedMultiplier).toBeCloseTo(1.4);
+  base.fire();base.fire();
+  await client.pumpPackets();
+  expect(cycles).toBe(0); // nothing to read: the cycles wait for the next tick's packets
+  available=10;
+  await client.pumpPackets();
+  expect(cycles).toBe(30); // two ticks of 15 cycles
+  await client.pumpPackets();
+  expect(cycles).toBe(30);
+ }finally{shim.stop('fixture-ended');}
+ expect(client.tickSpeedMultiplier).toBe(7);
+});

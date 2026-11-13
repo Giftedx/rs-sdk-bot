@@ -159,11 +159,12 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     // without a wait. SIM_ACK_FILE receives one line per held tick and a total at the end.
     const lockstep = process.env.SIM_LOCKSTEP === '1';
     const busyMs = Number(process.env.SIM_BUSY_MS ?? 2000);
+    const scriptMs = Math.min(busyMs, Number(process.env.SIM_SCRIPT_MS ?? 500));
     const ackFile = process.env.SIM_ACK_FILE;
     // pumpMs: the packet reads of the client; stateMs: the state of a tick; scriptMs: the tick listeners (the script).
     const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0, pumpMs: 0, stateMs: 0, scriptMs: 0 };
     const sendNow = client.flush?.bind(client);
-    let flushHeld = false, ackGeneration = 0, stateWaiters = 0, stateWaitersLow = Infinity;
+    let flushHeld = false, ackGeneration = 0, stateWaiters = 0, stateWaitersLow = Infinity, listenersLow = Infinity, scriptTick = false;
     // This session waits for a tick: a pending wait action, or an SDK state waiter above the lowest listener count seen.
     const inDialogWait = () => dialogWaiting((client as { executor?: object }).executor);
     const selfWaiting = () => waitLeft > 0 || stateWaiters > stateWaitersLow || inDialogWait();
@@ -178,9 +179,14 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             // Any session of the process that waits counts, as `tickWaits` counts for the whole process: a session
             // with no script of its own (a gang account between two fights, one whose part has ended) answers as soon
             // as another session waits, in place of holding each tick for SIM_BUSY_MS.
-            const waiting = tickWaits.active > 0 || selfWaiting() || [...waitingSessions].some(f => f());
+            // A session whose own script waited on its ticks when this tick came (a tick listener above the lowest
+            // count seen) answers only once that script waits again: the actions of the tick then go out with this
+            // acknowledgement and not, as the machine's speed decides, with the next.
+            const waiting = scriptTick ? listeners.size > listenersLow || selfWaiting()
+                : tickWaits.active > 0 || selfWaiting() || [...waitingSessions].some(f => f());
             const busy = (running && waitLeft === 0 && !inDialogWait()) || !waiting;
-            if (busy && performance.now() - since < busyMs) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
+            // A script that ended after its last tick wait leaves no wait: SIM_SCRIPT_MS (500) bounds that hold.
+            if (busy && performance.now() - since < (scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
             ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
             if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} bot=${(client as { loginUser?: string }).loginUser ?? "?"} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
@@ -191,6 +197,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     };
     const publishTick = () => {
         if (stopped) return;
+        if (animTick) owedCycles += cyclesPerTick;
+        const listenersBefore = listeners.size;
         try {
             tick++;
             const t0 = performance.now();
@@ -200,6 +208,9 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             // Like SDL_DispatchEventWatchList: freeze this dispatch's membership,
             // but respect removals. A new wait must start on the next game tick.
             for (const l of [...listeners]) if (listeners.has(l)) l();
+            // A one-time tick wait (nextTick, a tick stream's step) leaves the set as it fires.
+            listenersLow = Math.min(listenersLow, listeners.size);
+            scriptTick = lockstep && listenersBefore > listenersLow;
             ackStat.stateMs += t1 - t0; ackStat.scriptMs += performance.now() - t1;
         } catch (e) {
             console.error('[inprocess] tick handler error', e);
@@ -212,9 +223,29 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         if (pumpingPackets) pendingTicks++;
         else publishTick();
     };
+    // Lockstep: the lite client ages animations once for each 20 ms pass of its session loop (LiteClient.tickCycle), at
+    // a speed taken from the measured tick length (notifyGameTick). Both run on the wall clock, so on a lockstep engine an
+    // animation lasted a number of ticks that changed with the machine's load, and a spar batch did not repeat on one
+    // seed. With the tick clock each game tick gives SIM_TICK_MS / 20 cycles at the speed of a SIM_TICK_MS server
+    // (default 300, the live server's tick), aged just before the packets of the next tick are read: the engine sends
+    // a tick's packets in one message (simBatchAll), so bytes waiting mean a new tick. SIM_ANIM_CLOCK=wall keeps the
+    // wall clock.
+    const animTick = lockstep && process.env.SIM_ANIM_CLOCK !== 'wall';
+    const animTickMs = Number(process.env.SIM_TICK_MS ?? 300);
+    const cyclesPerTick = Math.max(1, Math.round(animTickMs / 20));
+    const liteCycle = (client as { tickCycle?: () => void }).tickCycle?.bind(client);
+    let owedCycles = 0, wallSpeed: number | undefined;
+    const ageOwed = () => {
+        if (!owedCycles || !liteCycle) return;
+        const stream = (transportParts(client).conn as { stream?: { available?: number } } | undefined)?.stream;
+        if (!(Number(stream?.available) > 0)) return;
+        for (let i = 0; i < owedCycles; i++) liteCycle();
+        owedCycles = 0;
+    };
     const drainOnce = originalPacketPump ? async () => {
         pumpingPackets = true;
         const t0 = performance.now();
+        if (animTick) ageOwed();
         try { await originalPacketPump.call(client); }
         catch (error) { pendingTicks = 0; throw error; }
         finally { pumpingPackets = false; ackStat.pumpMs += performance.now() - t0; }
@@ -292,6 +323,12 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             }
             if (lockstep) waitingSessions.add(selfWaiting);
             if (drainPacketBatch) client.pumpPackets = drainPacketBatch;
+            if (animTick && liteCycle) {
+                // The session loop's pass no longer ages; the speed is the one of a SIM_TICK_MS server (LiteClient ageEntityAnim).
+                (client as { tickCycle?: () => void }).tickCycle = () => {};
+                wallSpeed = (client as { tickSpeedMultiplier?: number }).tickSpeedMultiplier;
+                Object.defineProperty(client, 'tickSpeedMultiplier', { configurable: true, get: () => Math.max(1, 420 / animTickMs), set: () => {} });
+            }
             client.setOnGameTickCallback(onGameTick);
             if (lockstep && drainPacketBatch && process.env.SIM_EAGER_READ !== '0') {
                 const socket = transportParts(client).socket as { addEventListener?(type: string, l: () => void): void; removeEventListener?(type: string, l: () => void): void } | undefined;
@@ -311,6 +348,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             eagerSocket?.removeEventListener?.('message', eagerRead);
             pendingTicks = 0;
             if (drainPacketBatch && client.pumpPackets === drainPacketBatch) client.pumpPackets = originalPacketPump;
+            if (animTick && liteCycle) { delete (client as { tickCycle?: unknown }).tickCycle; Object.defineProperty(client, 'tickSpeedMultiplier', { configurable: true, writable: true, value: wallSpeed ?? 1 }); }
             queue.length = 0;
             recorder?.end(tick, reason);
             recorder = null;
