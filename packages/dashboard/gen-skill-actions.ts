@@ -82,32 +82,38 @@ const times = (debug: string | undefined, n: number) => debug && n > 0 ? Array.f
 //   xpperbar of the bar's smithing.struct (skill_smithing/scripts/smithing/smithing.rs2:283).
 // - brew_potion.struct: brew_potion_ingredient and brew_potion_solvent make brew_potion_mixture at brew_potion_level
 //   for brew_potion_exp (an unfinished potion gives none).
-// - herbs.obj: identifying a herb gives identified_herb_exp at identified_herb_level (identify.param: default 3). The
-//   input is the unidentified herb that identify.rs2 turns into it ([opheld1,unidentified_guam] calls
-//   ~attempt_identify_herb(guam_leaf, ...)). Every unidentified herb is named "Herb": the item ids tell them apart.
-export function contentRows(c: { smelting: string; smithingStruct: string; smithingRows: string; brewing: string; herbs: string; identify?: string; identifyParams?: string }): SkillRow[] {
-    const rows: SkillRow[] = [];
+// - herbs.obj: identifying a herb gives identified_herb_exp at identified_herb_level. The input is the unidentified
+//   herb that identify.rs2 turns into it ([opheld1,unidentified_guam] calls ~attempt_identify_herb(guam_leaf, ...)).
+//   Every unidentified herb is named "Herb": the item ids tell them apart.
+// A field that a struct or obj leaves out takes the default of its .param file (params is every .param file of the
+// content: params share one namespace). Attack potion has no brew_potion_level, so it takes the default 3.
+export function paramDefaults(text: string): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const block of text.split(/^\[/m).slice(1)) { const d = block.match(/^default=(.*)$/m)?.[1]?.trim(); if (d != null && d !== 'null') out.set(block.slice(0, block.indexOf(']')), d); }
+    return out;
+}
+export function contentRows(c: { smelting: string; smithingStruct: string; smithingRows: string; brewing: string; herbs: string; identify?: string; params?: string }): SkillRow[] {
+    const rows: SkillRow[] = [], d = paramDefaults(c.params ?? ''), g = (p: Map<string, string>, k: string) => p.get(k) ?? d.get(k);
     for (const { name, p } of configBlocks(c.smelting)) {
         if (!p.get('product')) continue;
-        rows.push({ skill: 'smithing', row: name, level: num(p.get('levelrequired'), 1), xp: num(p.get('productexp')) / 10,
-            inputs: [...times(p.get('ingredient'), num(p.get('bar_count'), 1)), ...times(p.get('ingredient_secondary'), num(p.get('ingredient_secondary_count'), 1))], outputs: [p.get('product')!] });
+        rows.push({ skill: 'smithing', row: name, level: num(g(p, 'levelrequired'), 1), xp: num(g(p, 'productexp')) / 10,
+            inputs: [...times(p.get('ingredient'), num(g(p, 'bar_count'), 1)), ...times(p.get('ingredient_secondary'), num(g(p, 'ingredient_secondary_count'), 1))], outputs: [p.get('product')!] });
     }
-    const perBar = new Map(configBlocks(c.smithingStruct).filter(b => b.p.get('namedobj')).map(b => [b.p.get('namedobj')!, num(b.p.get('xpperbar'))]));
+    const perBar = new Map(configBlocks(c.smithingStruct).filter(b => b.p.get('namedobj')).map(b => [b.p.get('namedobj')!, num(g(b.p, 'xpperbar'))]));
     for (const { name, p } of configBlocks(c.smithingRows)) {
         const bar = p.get('bar'), amount = num(p.get('bar_amount'), 1), product = p.get('product');
         if (!bar || !product || !perBar.get(bar)) continue;
         rows.push({ skill: 'smithing', row: name, level: num(p.get('levelrequired'), 1), xp: amount * perBar.get(bar)! / 10, inputs: times(bar, amount), outputs: times(product, num(p.get('product_amount'), 1)).slice(0, 1) });
     }
     for (const { name, p } of configBlocks(c.brewing)) {
-        const xp = num(p.get('brew_potion_exp'));
+        const xp = num(g(p, 'brew_potion_exp'));
         if (!xp || !p.get('brew_potion_mixture')) continue;
-        rows.push({ skill: 'herblore', row: name, level: num(p.get('brew_potion_level'), 1), xp: xp / 10, inputs: [p.get('brew_potion_ingredient'), p.get('brew_potion_solvent')].filter(Boolean) as string[], outputs: [p.get('brew_potion_mixture')!] });
+        rows.push({ skill: 'herblore', row: name, level: num(g(p, 'brew_potion_level'), 1), xp: xp / 10, inputs: [p.get('brew_potion_ingredient'), p.get('brew_potion_solvent')].filter(Boolean) as string[], outputs: [p.get('brew_potion_mixture')!] });
     }
     const unid = new Map([...(c.identify ?? '').matchAll(/\[opheld1,([a-z0-9_]+)\]\s*~attempt_identify_herb\(([a-z0-9_]+)/g)].map(m => [m[2]!, m[1]!]));
-    const herbLevel = num((c.identifyParams ?? '').match(/\[identified_herb_level\][^[]*?default=(\d+)/)?.[1], 1);
     for (const { name, p } of configBlocks(c.herbs)) {
-        const xp = num(p.get('identified_herb_exp'));
-        if (xp > 0) rows.push({ skill: 'herblore', row: name, level: num(p.get('identified_herb_level'), herbLevel), xp: xp / 10, inputs: unid.has(name) ? [unid.get(name)!] : [], outputs: [name] });
+        const xp = num(g(p, 'identified_herb_exp'));
+        if (xp > 0) rows.push({ skill: 'herblore', row: name, level: num(g(p, 'identified_herb_level'), 1), xp: xp / 10, inputs: unid.has(name) ? [unid.get(name)!] : [], outputs: [name] });
     }
     return rows;
 }
@@ -123,12 +129,13 @@ if (import.meta.main) {
     const block = (src?: string) => { const m = src?.match(/^(.*):(\d+)$/); if (!m) return ''; const lines = fileCache.get(m[1]!) ?? readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/); fileCache.set(m[1]!, lines); const from = Number(m[2]) - 1, end = lines.findIndex((l, k) => k > from && l.startsWith('[')); return lines.slice(from, end < 0 ? undefined : end).join('\n'); };
     const knowledge = (JSON.parse(readFileSync(join(root, 'knowledge', 'skills.json'), 'utf8')) as (SkillRow & { src?: { row?: string } })[]).map(r => ({ ...r, counts: inputCounts(r.inputs ?? [], block(r.src?.row)) }));
     const scripts = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts'), read = (p: string) => readFileSync(join(scripts, p), 'utf8');
+    const files = (d: string, ext: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? files(p, ext) : f.endsWith(ext) ? [readFileSync(p, 'utf8')] : []; });
     const objs = (d: string): [string, string][] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? objs(p) : f.endsWith('.obj') ? [[p, readFileSync(p, 'utf8')] as [string, string]] : []; });
     const actions = skillActions([...knowledge, ...objParamRows(objs(scripts), debug => tradeable.has(debug)),
         ...contentRows({
             smelting: read('skill_smithing/configs/smelting/smelting.struct'), smithingStruct: read('skill_smithing/configs/smithing/smithing.struct'),
             smithingRows: read('skill_smithing/configs/smithing/smithing.dbrow'), brewing: read('skill_herblore/configs/brewing/brew_potion.struct'), herbs: read('skill_herblore/configs/herbs.obj'),
-            identify: read('skill_herblore/scripts/identifying/identify.rs2'), identifyParams: read('skill_herblore/configs/identifying/identify.param'),
+            identify: read('skill_herblore/scripts/identifying/identify.rs2'), params: files(scripts, '.param').join('\n'),
         })], names, XP_RATE, ids);
     writeFileSync(join(import.meta.dir, 'client-assets', 'skill-actions.json'), JSON.stringify(actions));
     console.log(`skill-actions.json: ${Object.values(actions).reduce((n, l) => n + l.length, 0)} actions in ${Object.keys(actions).length} skills`);
