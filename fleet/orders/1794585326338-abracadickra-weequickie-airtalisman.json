@@ -1,0 +1,23 @@
+{
+ "id": "1794585326338-abracadickra-weequickie-airtalisman",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "WeeQuickie",
+ "item": "Air talisman",
+ "count": 1,
+ "start": 1794585326338,
+ "end": 1794590726338,
+ "meet": [
+  {
+   "x": 3013,
+   "z": 3356,
+   "level": 0
+  },
+  {
+   "x": 3014,
+   "z": 3356,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

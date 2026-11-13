@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794583257130,
+ "at": 1794585055728,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -409,6 +409,28 @@
    "autopilot": "local",
    "resources": [
     "aio:ardougne-blood-chests"
+   ]
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
    ]
   },
   {
