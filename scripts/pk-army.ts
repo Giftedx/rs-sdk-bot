@@ -175,7 +175,8 @@ if (import.meta.main) {
     // LEADER_SPEC=all: the leader's specials go at any health and with no reserve, as the followers' on army-alpha.
     // LEADER_CAP: the ticks of one fight of the leader (the roam's own is 120).
     if (arg(args, 'LEADER_CAP', '')) cfg.fight = { ...cfg.fight, cap: Number(arg(args, 'LEADER_CAP', '')) };
-    if (arg(args, 'LEADER_SPEC', '') === 'all') { cfg.specAll = true; cfg.fight = { ...cfg.fight, specReserve: 0 }; }
+    // Default with the spear lock (finding 71: 12 of 12 against 10 of 12): the leader's damage lands in the lock.
+    if (arg(args, 'LEADER_SPEC', lock ? 'all' : '') === 'all') { cfg.specAll = true; cfg.fight = { ...cfg.fight, specReserve: 0 }; }
     // FREEZE_SHARE=1 (default): one freeze for the army, on the leader's tick count.
     // FREEZE_STAGGER=<ticks>: a cast blocks the others that long only, until its caster sees the hold.
     const stagger = arg(args, 'FREEZE_STAGGER', '') ? Number(arg(args, 'FREEZE_STAGGER', '')) : undefined;

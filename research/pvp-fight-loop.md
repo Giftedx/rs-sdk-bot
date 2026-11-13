@@ -1735,9 +1735,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     target of finding 54 with 10 sharks and a glory, Wilderness level 34, multi-way; leader on the dragon dagger,
     four followers; `.practice/roam-switch/x5*`), kills of the target: followers on `army-alpha`, `OPEN_TOGETHER=1`
     and `OPEN_RANGE=1` (the army walks onto melee tiles with its fire held, then opens), with `ARMY_SPEARS` (the
-    first n followers on kit `tribrid-snare-spear`) 0: 1 of 12; 1: 0 of 6; 2: 6 of 12; 3: 15 of 18; 4: 18 of 18.
+    first n followers on kit `tribrid-snare-spear`) 0: 1 of 12; 1: 0 of 6; 2: 6 of 12; 3: 15 of 18; 4: 18 of 18;
+    with the fight loop's event fix of finding 71 (on both sides: the target fights with the same loop) four spears
+    kill 10 of 12 (seeds 1-12), and in the two misses the target leaves at 25 HP once the spears' energy is spent;
+    with the leader's specials at any health as well (`LEADER_SPEC=all`, the default with the lock) 17 of 18.
     Four spears with no opening options: 1 of 6; with `army-alpha` alone: 0 of 6; with the opening but not
-    `army-alpha`: 0 of 6; without `LEADER_SPEC=all` (the leader's specials at any health): 6 of 6. The two spear
+    `army-alpha`: 0 of 6; without `LEADER_SPEC=all` (the leader's specials at any health), before the event fix: 6 of 6. The two spear
     specials a tick or two apart keep the target from acting between them; on `army` the specials wait for low
     health and the lock never starts. Three accounts (two spears) kill none of 6: the leader's hits alone are too
     few in the lock. No account of the army died. `army-alpha`'s `specBelow: 1` holds before the target's first
