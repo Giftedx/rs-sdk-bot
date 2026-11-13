@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
 import { openBot, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { fightPlayer, nextTick, wildernessLevel, type FightOptions } from './pk';
+import { bestFood, fightPlayer, newVolley, nextTick, wildernessLevel, type FightOptions, type VolleyState } from './pk';
 import { escapeStep, huntOnce, kitFrom, type Cfg } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
@@ -58,16 +58,23 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
 }
 
 async function leave(s: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, emit: (e: object) => void): Promise<boolean> {
+    let removeTries = 0;
     for (let step = 0; step < 120; step++) {
         const p = s.sdk.getState()?.player;
         if (!p) { if (!await nextTick(s)) return false; continue; }
         const glory = s.sdk.getInventory().find(i => GLORY.test(i.name));
         const worn = s.sdk.getEquipment().find(i => GLORY.test(i.name));
-        const how = escapeStep(wildernessLevel(p.worldZ), { glory: !!glory || !!worn, teleport: false });
+        const how = escapeStep(wildernessLevel(p.worldZ), { glory: !!glory || (!!worn && removeTries < 3), teleport: false });
         if (how === 'out') { emit({ e: 'follower-out', name: s.name, at: [p.worldX, p.worldZ] }); return true; }
         if (how === 'glory') {
-            // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option).
-            if (!glory && worn) { await s.sdk.sendUseEquipmentItem?.(worn.slot, 1); await s.sdk.waitForTicks(1); continue; }
+            // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option). It comes off into a
+            // free slot: a full pack eats a food for one. Three tries, then the run south.
+            if (!glory && worn) {
+                const meal = s.sdk.getInventory().length >= 28 ? bestFood(s.sdk.getInventory() as any) : undefined;
+                if (meal) await s.bot.eatFood(meal as any);
+                else { removeTries++; await s.sdk.sendUseEquipmentItem?.(worn.slot, 1); }
+                await s.sdk.waitForTicks(1); continue;
+            }
             const op = glory!.optionsWithIndex?.find((o: { text: string }) => /^rub$/i.test(o.text));
             await s.sdk.sendUseItem(glory!.slot, op?.opIndex ?? 4);
             for (let i = 0; i < 6 && !s.sdk.getDialog()?.isOpen; i++) await s.sdk.waitForTicks(1);
@@ -128,11 +135,27 @@ if (import.meta.main) {
     };
     if (openTogether) cfg.hold = hold;
     // FREEZE_SHARE=1 (default): one freeze for the army, on the leader's tick count.
-    const freezeShare = arg(args, 'FREEZE_SHARE', '1') === '1' ? { clock: () => leader!.tick(), until: -1 } : undefined;
+    // FREEZE_STAGGER=<ticks>: a cast blocks the others that long only, until its caster sees the hold.
+    const stagger = arg(args, 'FREEZE_STAGGER', '') ? Number(arg(args, 'FREEZE_STAGGER', '')) : undefined;
+    const freezeShare = arg(args, 'FREEZE_SHARE', '1') === '1' ? { clock: () => leader!.tick(), until: -1, ...(stagger !== undefined ? { stagger } : {}) } : undefined;
     if (freezeShare) cfg.fight = { ...cfg.fight, freezeShare, allies: followers.map(f => f.name.toLowerCase()) };
+    // VOLLEY=1: the army's first special on each target goes in one tick once every account stands next to it with a
+    // special ready, VOLLEY_TICKS (default 8) of the leader's ticks after the first at most (FightOptions.volley).
+    const volleys = new Map<string, VolleyState>();
+    const volley = arg(args, 'VOLLEY', '0') === '1' ? { state: (t: string) => volleys.get(t) ?? (volleys.set(t, newVolley()), volleys.get(t)!),
+        members: sessions.length, window: Number(arg(args, 'VOLLEY_TICKS', '8')), clock: () => leader!.tick() } : undefined;
+    if (volley) cfg.fight = { ...cfg.fight, volley };
+    // BURST_HOLD=1: every account specials while the shared freeze holds the target (FightOptions.burstOnHold).
+    const burstOnHold = arg(args, 'BURST_HOLD', '0') === '1';
+    if (burstOnHold) cfg.fight = { ...cfg.fight, burstOnHold };
+    // OPEN_FREEZE=1: each account's first turn on a target is a freeze (FightOptions.openFreeze).
+    const openFreeze = arg(args, 'OPEN_FREEZE', '0') === '1';
+    if (openFreeze) cfg.fight = { ...cfg.fight, openFreeze };
     const leaderEmit = (e: object) => {
         const ev = e as { e?: string; target?: string };
         if (ev.e === 'target' && ev.target) shared.target = ev.target;
+        // The leader's chase moved to a softer target in view (scripts/pk-roam.ts, finding 62).
+        if (ev.e === 'switch') shared.target = (ev as { to?: string }).to ?? shared.target;
         if ((ev.e === 'kill' || (ev.e === 'fight-end' && (ev as { outcome?: string }).outcome === 'kill')) && ev.target) shared.killed.add(ev.target.toLowerCase());
         if (ev.e === 'chase-end' || ev.e === 'kill' || ev.e === 'gone' || ev.e === 'left') shared.target = null;
         if (ev.e === 'escape' || ev.e === 'death') { shared.target = null; shared.over = true; }
@@ -143,7 +166,7 @@ if (import.meta.main) {
     // ARMY_OPTS: fight options (JSON) on top of that profile, such as {"freeze":false} for followers that only hit while
     // the leader freezes.
     const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
-    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold } : {}) });
+    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold } : {}), ...(volley ? { volley } : {}), ...(burstOnHold ? { burstOnHold } : {}), ...(openFreeze ? { openFreeze } : {}) });
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     const runs = followers.map(f => follow(f, leader!, shared, army.filter(n => n !== f.name.toLowerCase()), options(f), followTiles, stop, emit));
     try { result = await huntOnce(leader!, cfg, stop, leaderEmit); }

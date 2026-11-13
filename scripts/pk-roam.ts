@@ -344,13 +344,24 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         stats.escapes++;
         emit({ e: 'escape', why, hp: me()?.hp, wild: me() ? wildLevel(me()!.x, me()!.z) : 0 });
         // A stop request does not end the escape: live, a stop file froze Mightyrod at level 36 and it died.
+        let blocked = 0, removeTries = 0;
         for (let step = 0; step < 120; step++) {
             const m = me();
             if (!m) { await sdk.waitForTicks(1); continue; }
             if (m.hp * 100 <= m.maxHp * cfg.eatAt) { const meal = bestFood(sdk.getInventory() as any); if (meal) await bot.eatFood(meal as any); }
             const glory = sdk.getInventory().find(i => GLORY.test(i.name));
-            const how = escapeStep(wildLevel(m.x, m.z), { glory: !!glory, teleport: canTeleport() });
+            const worn = sdk.getEquipment().find(i => GLORY.test(i.name));
+            const how = escapeStep(wildLevel(m.x, m.z), { glory: !!glory || (!!worn && removeTries < 3), teleport: canTeleport() });
             if (how === 'out') { emit({ e: 'escaped', at: [m.x, m.z], hp: m.hp }); return true; }
+            // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option): a worn one comes off
+            // first, into a free slot (a full pack eats a food for one). Without this a roam with its glory worn
+            // walked out, and a blocked walk stood 908 ticks at level 14. Three tries, then the walk.
+            if (how === 'glory' && !glory) {
+                const meal = sdk.getInventory().length >= 28 ? bestFood(sdk.getInventory() as any) : undefined;
+                if (meal) await bot.eatFood(meal as any);
+                else { removeTries++; await sdk.sendUseEquipmentItem?.(worn!.slot, 1); }
+                await sdk.waitForTicks(1); continue;
+            }
             if (how === 'glory') {
                 const op = glory!.optionsWithIndex?.find((o: any) => /^rub$/i.test(o.text));
                 await sdk.sendUseItem(glory!.slot, op?.opIndex ?? 4);
@@ -361,7 +372,11 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 await sdk.sendClickComponent(componentId('magic:varrock_teleport'));
                 await sdk.waitForTicks(6);
             } else {
-                await walkPath(walker, [{ x: m.x, z: Math.max(3510, m.z - 20), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
+                // A walk that moved us nowhere goes 10 tiles to the side, east and west in turn, before south again.
+                const side = blocked ? (blocked % 2 ? 10 : -10) : 0;
+                await walkPath(walker, [{ x: m.x + side, z: Math.max(3510, m.z - (side ? 4 : 20)), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
+                const n = me();
+                blocked = n && n.x === m.x && n.z === m.z ? blocked + 1 : 0;
             }
         }
         return false;

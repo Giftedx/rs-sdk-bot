@@ -92,6 +92,8 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // runes of Varrock Teleport; `potions` swaps 3 sharks for a super attack, a super strength and a ranging potion;
 // `god` is the potion kit with the Zamorak cape and staff, fire runes, and the Mage Arena done with Flames of
 // Zamorak learnt (varps 267 and 270), for one more shark.
+// The army route's settings from the environment (scripts/pk-army.ts): `--set VOLLEY=1` and the like reach the route.
+const armyEnv = () => ['ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE', 'BURST_HOLD', 'OPEN_FREEZE'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []));
 export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean; noDragonSlayer?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
@@ -471,18 +473,18 @@ const ROUTE_CASES: BenchCase[] = [
   // The army against a target that defends: 10 sharks and a glory, the champion's fight loop when hit (it eats, prays,
   // hits back and leaves by its glory when two of the army hit it in multi-way combat).
   {key: 'extra:army-route-defend', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ARMY_PROFILE ? [`ARMY_PROFILE=${process.env.ARMY_PROFILE}`] : []), ...(process.env.ARMY_OPTS ? [`ARMY_OPTS=${process.env.ARMY_OPTS}`] : []), ...(process.env.OPEN_TOGETHER ? [`OPEN_TOGETHER=${process.env.OPEN_TOGETHER}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3150, 3560, {food: 10, glory: true})},
       {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3095, 3515)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3093, 3515)}]},
   // The same at Wilderness level 34 in multi-way combat (east of x 3158), where a glory does not work: the army starts
   // at level 28 a short walk away, and the target's escape is a run south.
   {key: 'extra:army-route-defend-deep', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ARMY_PROFILE ? [`ARMY_PROFILE=${process.env.ARMY_PROFILE}`] : []), ...(process.env.ARMY_OPTS ? [`ARMY_OPTS=${process.env.ARMY_OPTS}`] : []), ...(process.env.OPEN_TOGETHER ? [`OPEN_TOGETHER=${process.env.OPEN_TOGETHER}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
     presetConfig: sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3166, 3784, {food: 10, glory: true})},
       {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3163, 3745)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3161, 3745)}]},
   // The deep defend case with five accounts: the leader and four followers.
   {key: 'extra:army-route-defend-deep-x5', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.OPEN_TOGETHER ? [`OPEN_TOGETHER=${process.env.OPEN_TOGETHER}`] : [])], pass: ok, output: /PK army: (\d+) kills/,
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
     presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3168, 3784) : sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
       // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
       ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},

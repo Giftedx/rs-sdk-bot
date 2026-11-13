@@ -163,10 +163,23 @@ export type FightOptions = {
     // last freeze one of them cast and `until` the tick to which it holds the target and keeps it immune (the hold,
     // then 5 ticks). An account casts no freeze before `until`, and the caster sets `until` back to now when it sees
     // the freeze splash, so the others' turns go to damage in place of casts on a held or immune target.
-    freezeShare?: { clock: () => number; until: number };
+    // stagger: a cast blocks the others for that many ticks only, until its caster sees the hold (3 ticks after the
+    // cast); then for the rest of the freeze and its immunity. Absent: the whole freeze from the cast.
+    // heldUntil: the tick of `clock` to which a hold that its caster saw stops the target.
+    freezeShare?: { clock: () => number; until: number; stagger?: number; heldUntil?: number };
+    // While the shared freeze holds the target (freezeShare.heldUntil), every special goes as soon as it can, whatever
+    // the target's health or the special reserve: the group's hits land while the target cannot run (pk-army BURST_HOLD).
+    burstOnHold?: boolean;
+    // The first turn of the fight is a freeze, whatever the freeze rule: a group's opening holds the target before it
+    // sees itself outnumbered and runs (pk-army OPEN_FREEZE).
+    openFreeze?: boolean;
     // While holdFire() is true the loop attacks and casts nothing; it walks to within 3 tiles of the target and eats
     // and prays as usual (a group's opening in one tick).
     holdFire?: () => boolean;
+    // The army's volley (scripts/pk-army.ts VOLLEY=1): the first special on a target waits, attacks and all, until
+    // `members` accounts stand next to the target with a special ready, or `window` ticks of `clock` after the first
+    // did; then every one of them specials at once, so the hits land inside the target's eat delay.
+    volley?: { state: (target: string) => VolleyState; members: number; window: number; clock: () => number };
     // In multi-way combat, against two or more players that face us or an ally, the overhead prayer covers the style
     // most of them hold (a crowd's hits all carry the source we face, so the last hitter names no one).
     crowdPrayer?: boolean;
@@ -318,11 +331,15 @@ export function negativeCastArmour(worn: readonly { id: number; slot: number }[]
 // dash3d/ClientPlayer.ts headicons, appearance: a part at 512 or more is an object id + 512). The SDK state leaves them
 // out, and reading them here keeps the swarm's launch release unchanged.
 // Its health bar (ClientEntity health, totalHealth) holds the values of the last hit it took.
-export type Observed = { headicons: number; worn: number[]; health: number; totalHealth: number };
+// spotanim: the graphic on the player, -1 for none. A hold spell that lands shows its impact on its target in the tick
+// the server casts it (entangle_impact 179, snare_impact 180, bind_impact 181), and one that splashes
+// failedspell_impact (85) (pvp_magic.rs2, magic_combat_spells.dbrow, pack/spotanim.pack).
+export type Observed = { headicons: number; worn: number[]; health: number; totalHealth: number; spotanim: number };
+export const HOLD_IMPACT: readonly number[] = [179, 180, 181], SPLASH_IMPACT = 85;
 export function observePlayer(client: unknown, index: number): Observed | null {
-    const p = (client as { players?: ({ headicons?: number; appearance?: ArrayLike<number>; health?: number; totalHealth?: number } | null)[] } | undefined)?.players?.[index];
+    const p = (client as { players?: ({ headicons?: number; appearance?: ArrayLike<number>; health?: number; totalHealth?: number; spotanimId?: number } | null)[] } | undefined)?.players?.[index];
     if (!p) return null;
-    return { headicons: p.headicons ?? 0, worn: Array.from(p.appearance ?? [], part => (part >= 512 ? part - 512 : -1)), health: p.health ?? 0, totalHealth: p.totalHealth ?? 0 };
+    return { headicons: p.headicons ?? 0, worn: Array.from(p.appearance ?? [], part => (part >= 512 ? part - 512 : -1)), health: p.health ?? 0, totalHealth: p.totalHealth ?? 0, spotanim: p.spotanimId ?? -1 };
 }
 // Special attack energy (0-1000) and the bar's on state, client vars 300 and 301 (scripts/microbot-c-qol.ts enableSpecial).
 const special = (client: unknown) => { const v = (client as { var?: number[] } | undefined)?.var; return { energy: v?.[300] ?? 0, on: v?.[301] === 1 }; };
@@ -515,6 +532,9 @@ export function kitRotation(asked: readonly Style[] | undefined, kit: Kit): read
 
 // The fight loop times each eat against its attacks, so it holds the session's eat guard (packages/core/src/eat-guard.ts)
 // for the fight.
+export type VolleyState = { ready: Set<string>; first: number; fired: boolean; done: Set<string> };
+export const newVolley = (): VolleyState => ({ ready: new Set(), first: -1, fired: false, done: new Set() });
+
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
     const eater = holdSessionEater(s.sdk);
     try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { eater.release(); }
@@ -529,7 +549,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const startLife = sdk.getState()?.player?.lifeId;
     let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
     let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
-    let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
+    let freezeReady = start, frozenUntil = start, freezeCastAt = -10, freezeDur = 0, lastSpot = -1, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, gloryOffAt = -10, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
@@ -639,6 +659,22 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 heading = { x: Math.sign(target.x - prevTarget.x), z: Math.sign(target.z - prevTarget.z) };
             }
             prevTarget = { x: target.x, z: target.z }; prevGap = gap;
+            // The graphic on the target names a hold spell's result in the tick the server casts it, whoever cast it:
+            // an impact graphic a hold, failedspell_impact a splash (of ours only within 3 ticks of our cast). The tile read
+            // below cannot tell a hold from a target that stands still (SPOT_READ=0 leaves only the tile read).
+            const spotRead = process.env.SPOT_READ !== '0', seenNow = observePlayer(s.client, target.index), spot = spotRead ? seenNow?.spotanim ?? -1 : -1;
+            if (spot !== lastSpot && HOLD_IMPACT.includes(spot)) {
+                const dur = freezeDuration(1592, protectedStyles(seenNow?.headicons).has('magic'));
+                frozenUntil = Math.max(frozenUntil, now + dur); freezeReady = Math.max(freezeReady, now + dur + 5); frozenTile = null;
+                if (o.freezeShare) { o.freezeShare.until = Math.max(o.freezeShare.until, o.freezeShare.clock() + dur + 5); o.freezeShare.heldUntil = o.freezeShare.clock() + dur; }
+                log(`PK freeze held (graphic) at distance ${cheb(at, target)}, wilderness level ${wildernessLevel(target.z)}`);
+            } else if (spot !== lastSpot && spot === SPLASH_IMPACT && now - freezeCastAt <= 3 && frozenTile) {
+                if (o.freezeShare) { o.freezeShare.until = o.freezeShare.clock(); o.freezeShare.heldUntil = Math.min(o.freezeShare.heldUntil ?? -1, o.freezeShare.clock()); }
+                frozenUntil = now; freezeReady = now; frozenTile = null;
+                log(`PK freeze missed (graphic) at distance ${cheb(at, target)}`);
+            }
+            if (spot !== lastSpot && process.env.PK_TRACE === '1') log(`PKS target graphic ${spot}`);
+            lastSpot = spot;
             // The server casts in the tick after our click, and a target that runs can step once more before it: the tile
             // of a hold is where the target stands two ticks after the cast.
             if (frozenTile && now === freezeCastAt + 2) frozenTile = { x: target.x, z: target.z };
@@ -647,10 +683,16 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 const splashed = now <= freezeCastAt + 3;
                 if (splashed && fled) log(`PK freeze missed at distance ${gap}`);
                 if (splashed && o.freezeShare) o.freezeShare.until = o.freezeShare.clock();
+                if (o.freezeShare?.heldUntil !== undefined) o.freezeShare.heldUntil = Math.min(o.freezeShare.heldUntil, o.freezeShare.clock());
                 frozenUntil = now;
                 freezeReady = splashed ? now : Math.min(freezeReady, now + 5);
                 frozenTile = null;
-            } else if (frozenTile && fled && now === freezeCastAt + 3) log(`PK freeze held at distance ${gap}, wilderness level ${wildernessLevel(target.z)}`);
+            } else if (frozenTile && now === freezeCastAt + 3) {
+                if (fled) log(`PK freeze held at distance ${gap}, wilderness level ${wildernessLevel(target.z)}`);
+                // With the graphic read on, a target that only stood still is no hold: the graphic confirms a hold.
+                if (!spotRead && o.freezeShare?.stagger !== undefined) o.freezeShare.until = Math.max(o.freezeShare.until, o.freezeShare.clock() + freezeDur + 2);
+                if (!spotRead && o.freezeShare) o.freezeShare.heldUntil = o.freezeShare.clock() + freezeDur - 3;
+            }
             if (o.maxDistance !== undefined && target.distance > o.maxDistance) { result.outcome = 'lost'; return result; }
             if (o.maxWild !== undefined && (wildernessLevel(at.z) > o.maxWild || wildernessLevel(target.z) > o.maxWild)) { result.outcome = 'lost'; return result; }
         } else if (now - lastSeen > 10 && !escapeNow(state.inventory)) {
@@ -994,7 +1036,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
         const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
-            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
+            && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
             && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until)
             && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
         // freezeStill: a moving account stops on this tick and casts from its stand on the next.
@@ -1013,8 +1055,17 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // special stays armed with its energy, and each such turn is lost.
         const running = now < fleeingUntil;
         const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > BOW_RANGE));
-        if (spec && !kiteTarget && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || lowHealth(seen, spec.below))
-            && (fled || bursting || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
+        const vs = o.volley && spec ? o.volley.state(targetName.toLowerCase()) : undefined, myKey = (s.name ?? '').toLowerCase();
+        if (vs && !vs.fired) {
+            const readyNow = energy.energy >= spec!.cost && now >= nextAttack && cheb(at, target) <= (specStyle === 'melee' ? 1 : BOW_RANGE);
+            if (readyNow) { vs.ready.add(myKey); if (vs.first < 0) vs.first = o.volley!.clock(); } else vs.ready.delete(myKey);
+            if (vs.ready.size >= o.volley!.members || (vs.first >= 0 && o.volley!.clock() - vs.first >= o.volley!.window)) {
+                vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
+            } else if (readyNow) continue;
+        }
+        const volleying = (!!vs?.fired && !vs.done.has(myKey)) || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1));
+        if (spec && !kiteTarget && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
+            && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
@@ -1033,6 +1084,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;
+            if (vs) vs.done.add(myKey);
             last = Math.max(0, rotation.indexOf(specStyle));
             const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
             // pvp_special_attack.rs2:35 always uses oc_param($weapon, attackrate) (4 for MSB/DDS/claws, 5 for longsword/mace), ignoring Rapid.
@@ -1102,7 +1154,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 result.freezes++;
                 if (now >= fleeingUntil) earlyFreezes++;
                 const dur = freezeDuration(freeze!, guarded.has('magic'));
-                if (o.freezeShare) o.freezeShare.until = o.freezeShare.clock() + dur + 5;
+                if (o.freezeShare) o.freezeShare.until = o.freezeShare.clock() + (o.freezeShare.stagger ?? dur + 5);
+                freezeDur = dur;
                 frozenUntil = now + dur;
                 freezeReady = now + dur + 5;
                 freezeCastAt = now;

@@ -1693,3 +1693,39 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     takes the profile's `noFoodAt`. Then every exit is a no-food exit and every
     roam escapes alive. Damage dealt before the exit is within noise: means of 120 (walk), 100 (flee) and 110 (flee,
     no race) a seed. Gap: no kill in any of these runs (4 sharks against 18 and a glory); six seeds.
+64. **A hold spell's result shows as a graphic on its target in the tick the server casts it, and the tile read takes
+    a target that stands still for a hold.** `pvp_magic.rs2` puts `entangle_impact` (179), `snare_impact` (180) or
+    `bind_impact` (181) on a target that a hold spell hits and `failedspell_impact` (85) on one it splashes
+    (`magic_combat_spells.dbrow`, `pack/spotanim.pack`); the client keeps it as the player's `spotanimId`
+    (`observePlayer` `spotanim`). The fight loop reads holds and splashes from it first, for every caster's hold
+    (`SPOT_READ=0` leaves the tile read alone). At an army's opening (`extra:army-route-defend-deep`, the target
+    still standing) the tile read took a splash for a hold and blocked the others' freezes. In single fights the
+    graphic read changes nothing: the champion with `tribrid-snare-sara` catches 30 of 64 runners and has 91 kills
+    and 5 deaths in 96 rival fights with it and without it (seeds 1-8, the repeatable setup of finding 41,
+    `.practice/climb/set-spot*`). A hold also ends once its caster stands more than 10 tiles from the target
+    (`pvp_frozen` walk trigger). Gap: the graphic of a later spell or arrow on the target replaces the impact
+    graphic, so a hold that another graphic hides is read by the tile.
+65. **No opening of three or five maxed tribrids kills the target that eats 10 sharks and leaves a crowd at level 34.**
+    `extra:army-route-defend-deep` (three accounts) and `-x5` (five), seeds 1-6, `.practice/roam-switch/`. The
+    target defends on the champion and runs as soon as two of the army face it; it reaches level 30, where its glory
+    works, in 16 to 20 ticks. Held casts land at level 29 or 30 when the freeze waits for the run (the champion's
+    `freeze: 'low'`). Options added to `scripts/pk-army.ts`, each off by default: `VOLLEY=1` (the first special on
+    a target waits until every account stands next to it with one ready), `FREEZE_STAGGER=1` (a cast blocks the
+    others for one tick until its caster sees the hold), `BURST_HOLD=1` (every special goes while the shared freeze
+    holds the target), `OPEN_FREEZE=1` (each account's first turn is a freeze) and `OPEN_TOGETHER=1`. Kills of 6,
+    three accounts: none 0, `VOLLEY` 1, `VOLLEY` with `FREEZE_STAGGER` 0, with `OPEN_TOGETHER` too 0, `BURST_HOLD`
+    with `FREEZE_STAGGER` and `OPEN_TOGETHER` 0, all five with the graphic read 0; five accounts: none 1, all five
+    0. With all five and the graphic read the army holds the target at level 33 or 34 in three seeds of six and
+    lands 13 specials, and it still leaves with 54 to 70 HP: three dragon dagger specials into Protect from Melee
+    and rune armour deal less than the target heals from its sharks. Escape HP (three accounts, mean of 6): none 78,
+    `OPEN_FREEZE` set 61, all five with the graphic read 76. The army's prey stays the target with no food or no
+    escape (findings 52 to 56). Gap: no kit with more burst than the dragon dagger; 6 seeds a setup.
+66. **The roam and the army left the Wilderness on foot with their glory worn.** The game rubs a glory only from the
+    pack (`amulet_of_glory.rs2` has no worn option). The roam's escape rubbed only a glory in the pack, so with the
+    glory worn it ran south; on `extra:army-route-defend-deep` seed 1 a blocked walk stood 908 ticks at level 14 and the
+    bench's no-progress check failed the run. The army's `leave` took a worn glory off first, but into a pack full of
+    kit, so the removal failed and the follower stood 120 ticks. Both now eat a food to free a slot when the pack is
+    full, take the glory off (three tries), rub it, and else walk, stepping 10 tiles to the side when a walk moves
+    them nowhere. `extra:army-route-defend-deep` seeds 1-6: the leader and both followers reach Edgeville at the end
+    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. Gap: the fight loop's own escape
+    is not checked with a full pack.
