@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794600069084,
+ "at": 1794600130190,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -53,6 +53,25 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "Bigchopper",
@@ -441,19 +460,6 @@
    "repeat": false,
    "goal": "run-imp-nabtheknob-melee-r1 [task-8be56522-cedf-46b7-bd17-1ad2d8e9bde1]",
    "role": "helper"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-7bedd5fd-978a-43c2-bcff-76ecee25e61a"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-bowbeforeme-20261113t195037z [task-7bedd5fd-978a-43c2-bcff-76ecee25e61a]",
-   "role": "thieving"
   },
   {
    "account": "Hocuspokeus",
