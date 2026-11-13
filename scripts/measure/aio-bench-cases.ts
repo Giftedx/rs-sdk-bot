@@ -325,6 +325,10 @@ const ROUTE_CASES: BenchCase[] = [
   // XP would save in the record route (591 ticks).
   {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '66', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
     presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 49, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-49'},
+  // The same with an adamant pickaxe (1271): the knife reset sets %action_delay, so the pickaxe's mining_rate
+  // (mining.rs2:118-119) does not pace the rolls, and success is stat_random(mining) alone (mining.rs2:155).
+  {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '66', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
+    presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 49, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1271, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-49-addy'},
   skiller('mining', 'loot', 'fresh_lumbridge', ['LOOT_MODE=list', 'LOOT_IDS=1511', 'RADIUS=2', 'MAX_UNITS=1', 'CAP=200', 'IDLE_TICKS=150'], {presetConfig: {position: {x: 3089, z: 3266, level: 0}, skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}}}),
   skiller('smithing', 'anvil', 'fresh_lumbridge', ['600', 'PRODUCT_ID=1205', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 2347, count: 1}], bank: [{id: 2349, count: 1}]}}),
   skiller('smithing', 'cannonballs', 'fresh_lumbridge', ['1', '600', 'CANNON_XP_RATE=25'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 35}, bank: [{id: 2353, count: 1}, {id: 4, count: 1}]}}),
