@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794602616093-nabtheknob-abracadickra",
  "account": "NabTheKnob",
  "partner": "Abracadickra",
@@ -12,23 +12,45 @@
  "claim": "4f7a9aec-9aa5-4fcf-a0b8-b8930fffce2e",
  "count": 0,
  "ok": false,
- "at": 1794602680097,
- "detail": "trade claimed",
+ "at": 1794603428724,
+ "detail": "release moved under the session: Error: partner failed: no trade",
  "lines": [
   {
    "item": "Snape grass",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1794602791508
+   }
   },
   {
    "item": "Law rune",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1794602792274
+   }
   },
   {
    "item": "Air rune",
    "requested": 5,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 5,
+    "at": 1794602793110
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 4,
+  "at": 1794602790275
+ },
+ "logout": {
+  "attemptId": "1794602680107-0000002184-0000000001",
+  "at": 1794603428712,
+  "sha256": "a76f3d68da80a20d90564f9c39ca0b4127343dc61c166c94a25e305c9b834401"
+ },
+ "screen": false
 }
