@@ -1688,8 +1688,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `escape` walks south and rubs only a glory in the pack, so with the glory worn it ran: on its no-food exits it lost
     7 to 38 HP on the way out. The fight loop's escape (`flee`, as the hunt uses since finding 61: protect prayer, food,
     the worn glory) loses 0 to 6 HP in five of six and 30 in one; `ROAM_FLEE=0` restores the walk. Between fights the
-    roam's `survive` passed no damage dealt to `dangerReason`, so the race check read `dealt 0` after any fight and
-    ended the hunt on `losing the race` at about HP 50 (three of six seeds); it no longer runs the race there
-    (`ROAM_RACE=1` restores it), and it takes the profile's `noFoodAt`. Then every exit is a no-food exit and every
+    roam's `survive` has no count of damage dealt, so a race check there reads `dealt 0` after any fight and ends the
+    hunt on `losing the race` at about HP 50 (three of six seeds with `ROAM_RACE=1`); `survive` runs no race check and
+    takes the profile's `noFoodAt`. Then every exit is a no-food exit and every
     roam escapes alive. Damage dealt before the exit is within noise: means of 120 (walk), 100 (flee) and 110 (flee,
     no race) a seed. Gap: no kill in any of these runs (4 sharks against 18 and a glory); six seeds.
