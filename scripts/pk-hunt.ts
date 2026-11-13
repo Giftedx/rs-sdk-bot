@@ -242,6 +242,8 @@ export async function hunt(s: Session, o: HuntOptions) {
                 ...(process.env.HUNT_RACE === '0' ? { raceExit: false } : {}),
                 // HUNT_PRESS=<fraction>: the no-food exit waits while the target's health bar is at that or lower.
                 ...(process.env.HUNT_PRESS ? { pressLow: Number(process.env.HUNT_PRESS) } : {}),
+                // HUNT_NOFOOD=<multiple>: the no-food exit at that many times the opponent's max hit (default 1.5).
+                ...(process.env.HUNT_NOFOOD ? { noFoodAt: Number(process.env.HUNT_NOFOOD) } : {}),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {

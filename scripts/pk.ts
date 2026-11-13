@@ -174,6 +174,8 @@ export type FightOptions = {
     raceExit?: boolean;
     // exitOnDanger's no-food exit waits while the target's health bar shows this fraction or lower.
     pressLow?: number;
+    // exitOnDanger leaves with no food at this many times the opponent's estimated max hit or less (default 1.5).
+    noFoodAt?: number;
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
     // keeps 500: research/pvp-fight-loop.md finding 50).
     specReserve?: number;
@@ -373,8 +375,8 @@ export const estMaxHit = (combatLevel: number) => Math.max(10, Math.round(combat
 // - losing the damage race: over the last 30 ticks we took 30+ and at least twice what we dealt, at under 60% HP;
 // - no prayer points left at under 50% HP.
 export function dangerReason(o: { hp: number; maxHp: number; food: boolean; prayer: number; oppMax: number;
-    hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number; window?: number; race?: boolean }): string | null {
-    if (!o.food && o.hp <= o.oppMax * 1.5) return `no food at HP ${o.hp}`;
+    hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number; window?: number; race?: boolean; noFoodAt?: number }): string | null {
+    if (!o.food && o.hp <= o.oppMax * (o.noFoodAt ?? 1.5)) return `no food at HP ${o.hp}`;
     // A hit's source is the entity the player faced (StateCollector); -1 is no one, not a second player.
     const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10 && h.src >= 0).map(h => h.src));
     if (attackers.size >= 2) return `${attackers.size} players hitting`;
@@ -657,7 +659,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));
         const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
         const oppMax = estMaxHit(oppCombat || me.combatLevel);
-        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now, window: o.raceWindow, race: o.raceExit });
+        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now, window: o.raceWindow, race: o.raceExit, noFoodAt: o.noFoodAt });
         // pressLow: a danger with food gone waits while the target's health bar shows this fraction or lower and the
         // target is the only one hitting us: one more hit or special may end it.
         const pressing = o.pressLow !== undefined && !!target && !!danger && /^no food/.test(danger) && lowHealth(observePlayer(s.client, target.index), o.pressLow)

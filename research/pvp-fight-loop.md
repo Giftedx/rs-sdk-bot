@@ -1646,4 +1646,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     choices) the champion's hunter kills the even target in 3 of 6 with one death (seed 1: it left on no food and
     died on the way out) and the stronger target in 3 of 6 with none. `pressLow: 0.3` (the no-food exit waits while
     the target's bar shows 30% or less and no one else hits us) gives the same seed for seed against both, and stays
-    off. Gap: six seeds; no target stronger than potions and food.
+    off. Leaving with no food at twice the opponent's estimated max hit (`noFoodAt: 2`, the check's default 1.5)
+    keeps every target dead (3 of 6 against each, one of them after the hunter has left) and the hunter alive in all
+    12 fights, where 1.5 lost it once; the champion takes `noFoodAt: 2`. Gap: six seeds; no target stronger than
+    potions and food.

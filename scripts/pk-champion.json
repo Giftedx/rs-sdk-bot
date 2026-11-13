@@ -16,5 +16,6 @@
   "escapeOutnumbered": 2,
   "specReserve": 500,
   "crowdPrayer": true,
-  "raceExit": false
+  "raceExit": false,
+  "noFoodAt": 2
 }
