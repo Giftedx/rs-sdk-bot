@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794606841264,
+ "at": 1794606921512,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -483,6 +483,19 @@
    "resources": [
     "knight:2671,3313"
    ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-06b49f87-9c97-4b05-aca2-bebb99a66f68"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-wandwaver-20261113t214531z [task-06b49f87-9c97-4b05-aca2-bebb99a66f68]",
+   "role": "helper"
   }
  ]
 }
