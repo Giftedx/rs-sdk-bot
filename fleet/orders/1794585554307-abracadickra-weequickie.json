@@ -1,0 +1,23 @@
+{
+ "id": "1794585554307-abracadickra-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "WeeQuickie",
+ "item": "Rune essence",
+ "count": 170,
+ "start": 1794585554307,
+ "end": 1794589154307,
+ "meet": [
+  {
+   "x": 3013,
+   "z": 3356,
+   "level": 0
+  },
+  {
+   "x": 3014,
+   "z": 3356,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
