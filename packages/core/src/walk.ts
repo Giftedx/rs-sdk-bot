@@ -5,7 +5,7 @@ import { watchTickStream } from './tick-stream';
 import type { TickSource } from './ticks';
 import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World, ROUTE_BUDGET_MS,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
-import {guardWalk} from './danger';
+import {guardWalk,liveHunters,withDanger} from './danger';
 import {disembark,type BoatSession} from './boat';
 import {componentId} from './logout';
 import {clientReach} from './reach';
@@ -417,8 +417,11 @@ export interface PathDeps {
     messages?(): readonly { text: string; tick: number; observationId?: number }[];
     blockDoor?(level: number, loc: PathTile): boolean;
     doorBlocked?(level: number, loc: PathTile): boolean;
-    // Path corners from `from` to `to`, without `from` (the rs-sdk findLongPath format).
-    plan(level: number, from: PathTile, to: PathTile): PathTile[];
+    // Path corners from `from` to `to`, without `from` (the rs-sdk findLongPath format). `avoid` tiles are closed
+    // for this query; `from` and `to` stay open.
+    plan(level: number, from: PathTile, to: PathTile, avoid?: readonly PathTile[]): PathTile[];
+    // Visible monsters that hunt this account, each with the square the walk keeps out of (danger.ts liveHunters).
+    hunters?(): readonly { x: number; z: number; r: number }[];
     // Whether the client can walk from the bot's tile to `to` in its loaded scene (reach.ts); null when unknown.
     reach?(to: { x: number; z: number; level: number }, opts?: { adjacentOk?: boolean }): boolean | null;
 }
@@ -475,23 +478,60 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     // Path tiles through every point in order. seg[i] is the index of the point that tile i leads to.
     let tiles: PathTile[] = [];
     let seg: number[] = [];
-    const build = (from: PathTile, firstPoint: number) => {
+    // Returns false when a segment had no plan and took the straight-line fallback.
+    const build = (from: PathTile, firstPoint: number, avoid: readonly PathTile[] = []): boolean => {
         tiles = []; seg = [];
-        let cur = from;
+        let cur = from, planned = true;
         for (let k = firstPoint; k < points.length; k++) {
             // rs-sdk's collision map can call the bot's own tile blocked (seen: 2774,3228 beside the Brimhaven
             // customs officer gives 0 waypoints). Then take the straight line: the client routes each click itself.
-            const corners = deps.plan(level, cur, points[k]!);
+            const corners = avoid.length ? deps.plan(level, cur, points[k]!, avoid) : deps.plan(level, cur, points[k]!);
+            if (!corners.length && d8(cur, points[k]!) > 0) planned = false;
             const t = expandPath(cur, corners.length ? corners : [points[k]!]);
             // A door coordinate anchors a wall edge, not a blocked floor tile.
             // Trust a nonempty edge-aware plan; only an unverified straight
             // fallback must reject a known blocked anchor.
-            if (!corners.length && t.some(blockedDoor)) { tiles = []; seg = []; return; }
+            if (!corners.length && t.some(blockedDoor)) { tiles = []; seg = []; return false; }
             for (const x of t) { tiles.push(x); seg.push(k); }
             if (t.length) cur = t[t.length - 1]!;
         }
+        return planned;
     };
-    build(start, 0);
+    // Live hunters (deps.hunters): each square within two lookaheads is closed for each plan; one further away moves
+    // before the bot gets there. A square that holds the bot shrinks to just inside the bot's distance, so no step
+    // goes nearer that monster (seed 5: dropping it let the bot run on to a giant spider), and the bot never holds.
+    let squares: { x: number; z: number; r: number }[] = [];
+    let inside = false;
+    const seen = (p: PathTile) => {
+        squares = []; inside = false;
+        for (const h of deps.hunters?.() ?? []) {
+            const d = d8(h, p);
+            if (d > look * 2) continue;
+            if (d > h.r) squares.push(h);
+            else { inside = true; if (d >= 1) squares.push({ x: h.x, z: h.z, r: d - 1 }); }
+        }
+        return squares;
+    };
+    const inSquare = (t: PathTile) => squares.some(h => d8(t, h) <= h.r);
+    const closed = (): PathTile[] => squares.flatMap(h => Array.from({ length: (2 * h.r + 1) ** 2 }, (_, i) => ({ x: h.x - h.r + (i % (2 * h.r + 1)), z: h.z - h.r + Math.floor(i / (2 * h.r + 1)) })));
+    // Plans round the live squares; when that finds no plan, plans without them (the walk goes on as before).
+    // A way round more than DETOUR tiles longer than the plain plan is refused for the first HOLD ticks of holding:
+    // the bot waits at the edge of the square for the monster to wander off. Taking each shortest way round as the
+    // Karamja scorpions moved swung the bot between the road and the far side of the volcano for 200 ticks (seed 5).
+    const DETOUR = 15, HOLD = 50, SHORT = 4;
+    let held = 0;
+    const buildAround = (from: PathTile, firstPoint: number) => {
+        if (squares.length && build(from, firstPoint, closed())) {
+            if (held >= HOLD) return;
+            const round = { tiles, seg };
+            build(from, firstPoint);
+            if (!tiles.length || round.tiles.length <= tiles.length + DETOUR) { tiles = round.tiles; seg = round.seg; }
+            return;
+        }
+        build(from, firstPoint);
+    };
+    seen(start);
+    buildAround(start, 0);
     if (tiles.length === 0 && d8(start, goal) > goalTol) return Promise.resolve({ ...res, detail: `no path to ${goal.x},${goal.z}` });
     const maxTicks = opts.maxTicks ?? tiles.length + 60;
 
@@ -506,6 +546,7 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     let sentThisTick = false;
     let movementEpoch = 0, rejectedWalks = 0, movementRepaths = 0;
     let rejectionReplan = false, rejectionReplanned = false;
+    let dodged = '', dodges = 0;
     let walkReply: (reply: unknown, from: { x: number; z: number; level: number }, to: PathTile, epoch: number) => void = () => {};
 
     const shutDoorAt = (from: number, to: number): { l: PathLoc; i: number } | null => {
@@ -563,23 +604,41 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     // The furthest tile within `span` the client can reach; a tile behind a closed door or out of the scene is
     // skipped (rs2b0t selectClickTarget). Without a reach probe, the tile `span` ahead.
     const clickIndex = (span: number): number => {
-        const top = Math.min(tiles.length - 1, Math.max(0, idx) + span);
+        let top = Math.min(tiles.length - 1, Math.max(0, idx) + span);
+        // The client routes each click itself, not always along the straight line (seed 5: a 20-tile click round a
+        // giant spider went north first, at it). With a live square within one lookahead a click goes at most SHORT
+        // tiles ahead, and one whose straight line crosses a square is moved back along the path until the line
+        // clears it. No clear tile ahead: hold (-1), unless a square holds the bot.
+        const here = deps.pos();
+        if (squares.length && here && top > Math.max(0, idx)) {
+            if (squares.some(h => d8(h, here) <= look + h.r)) top = Math.min(top, Math.max(0, idx) + SHORT);
+            let clear = top;
+            while (clear > Math.max(0, idx) && expandPath(here, [tiles[clear]!]).some(inSquare)) clear--;
+            if (clear > Math.max(0, idx)) top = clear;
+            else if (!inside && held < HOLD) return -1;
+        }
         if (!deps.reach) return top;
         for (let i = top; i > Math.max(0, idx); i--) if (deps.reach({ ...tiles[i]!, level }) !== false) return i;
         return top;
     };
     const clickAhead = (span: number) => {
         const i = clickIndex(span);
-        const t = tiles[i]!;
         if (sentThisTick) return;
         const from = deps.pos();
         if (!from) return;
+        if (i < 0) {
+            // Hold: a bot still running toward its last click is stopped on its own tile, short of the square.
+            held++;
+            if (still === 0 && send(`hold ${from.x},${from.z}`, () => deps.walk(from.x, from.z))) target = -1;
+            return;
+        }
+        const t = tiles[i]!;
         const epoch = movementEpoch;
         res.clicks++; // Dispatch attempts, including an explicit client refusal.
         if (send(`walk ${t.x},${t.z}`, () => deps.walk(t.x, t.z), reply => walkReply(reply, from, t, epoch))) target = i;
     };
     const replan = (p: PathTile, why: string): boolean => {
-        build(p, seg[Math.max(0, idx)] ?? 0);
+        buildAround(p, seg[Math.max(0, idx)] ?? 0);
         idx = -1; target = -1; res.repaths++;
         log(`re-plan: ${why}`);
         if (tiles.length === 0) return false;
@@ -649,6 +708,20 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
                 if (!replan(p, `off path by ${n.d}`)) return finish(false, `no path from ${p.x},${p.z}`);
             } else idx = n.i;
 
+            // A live hunter's square reaches the next lookahead of path: plan round it, once for each set of squares.
+            if (deps.hunters) {
+                seen(p);
+                const hi = Math.min(tiles.length - 1, Math.max(0, idx) + look);
+                const hit = squares.filter(h => { for (let i = Math.max(0, idx); i <= hi; i++) if (d8(tiles[i]!, h) <= h.r) return true; return false; });
+                const key = hit.map(h => `${h.x},${h.z},${h.r}`).join(' ');
+                if (key && key !== dodged && dodges < 60 && !door) {
+                    dodged = key; dodges++;
+                    if (!replan(p, `hunter at ${key}`)) return finish(false, `no path from ${p.x},${p.z}`);
+                    clickAhead(look);
+                    return;
+                }
+            }
+
             // A door the bot asked to open: click past it on the tick it opens.
             if (door) {
                 const d = door;
@@ -714,6 +787,8 @@ export async function sessionWalker(s: { sdk: any; client?:unknown; onTick(cb: (
     await installDoorPolicy(s.sdk,s.client);
     const pos = () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
     const reach = clientReach(s.client, pos);
+    // Skills do not change during one walk: the account is read once, on the first live-hunter check.
+    let hunterActor: Account | undefined;
     return {
         tick: () => s.sdk.getState()?.tick,
         pos,
@@ -728,11 +803,13 @@ export async function sessionWalker(s: { sdk: any; client?:unknown; onTick(cb: (
         blockDoor: (level, loc) => s.sdk.blockDoorTemporarily?.(level, loc.x, loc.z) === true,
         doorBlocked: (level, loc) => s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
-        plan: (level, from, to) => {
+        plan: (level, from, to, avoid) => {
             pf.initPathfinding();
             const blocks=applyKnownDoorBlocks(s.sdk, level, from, to).map(b=>b.whenAxis===undefined?{...b,...pf.getDoorAt(b.level,b.x,b.z)}:b);
-            // Deadly hunters' ground stays closed too (danger.ts).
-            return guardWalk(grid,accountForSdk(s.sdk),{...from,level},{...to,level},32,()=>withDoorPolicy(grid,blocks,()=>pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? [])));
+            const find=()=>withDoorPolicy(grid,blocks,()=>pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []));
+            // Deadly hunters' ground stays closed too (danger.ts), and the live hunters' squares walkPath passes.
+            return guardWalk(grid,accountForSdk(s.sdk),{...from,level},{...to,level},32,()=>avoid?.length?withDanger(grid,avoid.map(t=>({...t,level})),[{...from,level},{...to,level}],find,'live'):find());
         },
+        hunters: () => { const p = s.sdk.getState()?.player; return p ? liveHunters(s.sdk.getState()?.nearbyNpcs ?? [], hunterActor ??= accountForSdk(s.sdk)) : []; },
     };
 }
