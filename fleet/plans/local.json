@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794530173366,
+ "at": 1794530243541,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,6 +71,25 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "Bigchopper",
@@ -513,19 +532,6 @@
    "resources": [
     "pen:3187,3277"
    ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-92d06474-65a9-4e48-b33a-a73db8870eb5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-pickpockdick-20261113t002008z [task-92d06474-65a9-4e48-b33a-a73db8870eb5]",
-   "role": "thieving"
   }
  ]
 }
