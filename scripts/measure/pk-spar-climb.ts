@@ -9,7 +9,7 @@
 // the candidate's value less the champion's value in the same pair, so a matchup is compared with itself.
 // --measure scores takes the spar score (a kill is above 100) where kills matter more than damage.
 // Usage: bun scripts/measure/pk-spar-climb.ts [--case extra:spar-x8] [--knobs eatAt,rotation] [--cap 500]
-//   [--max-runs 3] [--against <profile>] [--measure nets|scores] [--dry]. --dry prints the plan and runs nothing.
+//   [--max-runs 3] [--against <profile>] [--measure nets|scores] [--jobs 3] [--dry]. --dry prints the plan and runs nothing.
 // A run takes only the memory that the live fleet does not need (scripts/measure/pk-spar-wait.ts). Every evaluation is one line in .practice/pk-spar/climb.jsonl. The engines use
 // ports from 21600 (BENCH_PORT_BASE), apart from the bench's own 21000, so a bench of another session can run beside.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -42,6 +42,9 @@ export const KNOBS: readonly Knob[] = [
     { name: 'freeFood', candidates: [{ freeFood: true }] },
     { name: 'bowBurst', candidates: [{ bowBurst: 0.6 }, { bowBurst: 0.45 }, { bowBurst: 0.8 }] },
     { name: 'cureNow', candidates: [{ cureNow: true }] },
+    // A freeze from half health, once before the target runs, with the armour off for it: it catches a runner and
+    // costs nothing against a fighter (docs on the escape and rival cases in research/pvp-fight-loop.md).
+    { name: 'freezeLow', candidates: [{ freeze: 'low', freezeBelow: 0.5, freezeEarlyMax: 1, freezeArmour: 'strip' }] },
     { name: 'diagonalFrozen', candidates: [{ freeze: true, diagonalFrozen: true }, { freeze: 'low', diagonalFrozen: true }] },
     { name: 'cutOff', candidates: [{ chase: true, cutOff: 3 }, { chaseBelow: 0.4, cutOff: 3 }] },
 ];
@@ -83,44 +86,60 @@ if (import.meta.main) {
     if (dry) { for (const k of knobs) console.log(`${k.name}: ${k.candidates.map(c => JSON.stringify(c)).join(' ')}`); process.exit(0); }
     const wait = () => waitForMemory(root);
     const firstSeed = Number(process.env.CLIMB_SEED ?? 1);
-    const sample = async (patch: Profile, seed: number): Promise<number[] | null> => {
+    // --jobs n evaluates n candidates of a knob at once, each on its own bench slots (BENCH_SLOT_BASE), engine ports,
+    // output folder and row file. A spar batch waits on its bots more than on the CPU, so a knob ends in about the time
+    // of its slowest candidate. Default 3.
+    const jobs = Math.max(1, Number(value('--jobs') ?? 3));
+    const sample = async (patch: Profile, seed: number, slot = 0): Promise<number[] | null> => {
         await wait();
-        const out = '.practice/pk-spar/climb-run.json';
+        const out = `.practice/pk-spar/climb-run-${slot}.json`;
         const set = { SPAR_A: 'champion', SPAR_A_OPTS: JSON.stringify(patch), SPAR_B: against ?? 'champion', ...(against ? {} : { SPAR_SWAP: '1' }), SPAR_CAP: cap };
-        Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), ...Object.entries(set).flatMap(([k, v]) => ['--set', `${k}=${v}`])],
-            { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
+        await Bun.spawn(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), ...Object.entries(set).flatMap(([k, v]) => ['--set', `${k}=${v}`])],
+            { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out, BENCH_SLOT_BASE: String(slot * 8), BENCH_OUTPUT_DIR: `.practice/pk-spar/output-${slot}` }, stdout: 'ignore', stderr: 'inherit', windowsHide: true }).exited;
         try { const row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; return row?.ok ? readNets(row.result, measure) : null; } catch { return null; }
     };
     // The champion's own values for each seed, kept until the champion changes.
     let baseline = new Map<number, number[]>();
-    const batch = async (patch: Profile, run: number): Promise<number[] | null> => {
+    const batch = async (patch: Profile, run: number, slot: number): Promise<number[] | null> => {
         const seed = firstSeed + run;
-        if (!against) return sample(patch, seed);
-        if (!baseline.has(seed)) { const own = await sample({}, seed); if (!own) return null; baseline.set(seed, own); }
-        const got = await sample(patch, seed);
-        return got && pairedGain(got, baseline.get(seed)!);
+        if (!against) return sample(patch, seed, slot);
+        const got = await sample(patch, seed, slot);
+        return got && baseline.has(seed) ? pairedGain(got, baseline.get(seed)!) : null;
+    };
+    // One candidate to its verdict on slot `slot`.
+    const evaluate = async (knob: Knob, patch: Profile, slot: number) => {
+        const nets: number[] = [];
+        let runs = 0, failed = 0, outcome: 'accept' | 'reject' | 'more' | 'invalid' = 'more';
+        while (outcome === 'more') {
+            const got = await batch(patch, runs, slot);
+            // A run that gave no fights (the engine did not start, a fight was not valid) is tried again after a
+            // pause; five in a row end the candidate as invalid.
+            if (!got) { if (++failed >= 5) outcome = 'invalid'; else await Bun.sleep(5_000); continue; }
+            runs++; failed = 0;
+            nets.push(...got);
+            outcome = verdict(nets, runs, maxRuns);
+        }
+        const line = { case: key, against, measure, knob: knob.name, patch, ...stats(nets), runs, outcome };
+        appendFileSync(resolve(dir, 'climb.jsonl'), JSON.stringify({ at: new Date().toISOString(), ...line }) + '\n');
+        console.log(`CLIMB ${JSON.stringify(line)}`);
+        return line;
     };
     for (const knob of knobs) {
-        for (const patch of knob.candidates) {
-            const champion = JSON.parse(readFileSync(championFile, 'utf8')) as Profile;
-            // A candidate equal to the champion's own value measures nothing.
-            if (Object.entries(patch).every(([k, v]) => JSON.stringify((champion as Record<string, unknown>)[k]) === JSON.stringify(v))) continue;
-            const nets: number[] = [];
-            let runs = 0, failed = 0, outcome: 'accept' | 'reject' | 'more' | 'invalid' = 'more';
-            while (outcome === 'more') {
-                const got = await batch(patch, runs);
-                // A run that gave no fights (the engine did not start, a fight was not valid) is tried again after a
-                // pause; five in a row end the candidate as invalid.
-                if (!got) { if (++failed >= 5) outcome = 'invalid'; else await Bun.sleep(30_000); continue; }
-                runs++; failed = 0;
-                nets.push(...got);
-                outcome = verdict(nets, runs, maxRuns);
-            }
-            const line = { case: key, against, measure, knob: knob.name, patch, ...stats(nets), runs, outcome };
-            appendFileSync(resolve(dir, 'climb.jsonl'), JSON.stringify({ at: new Date().toISOString(), ...line }) + '\n');
-            console.log(`CLIMB ${JSON.stringify(line)}`);
-            if (outcome === 'accept') { writeFileSync(championFile, JSON.stringify({ ...champion, ...patch }, null, 2) + '\n'); baseline = new Map(); }
-        }
+        const champion = JSON.parse(readFileSync(championFile, 'utf8')) as Profile;
+        // A candidate equal to the champion's own value measures nothing.
+        const todo = knob.candidates.filter(patch => !Object.entries(patch).every(([k, v]) => JSON.stringify((champion as Record<string, unknown>)[k]) === JSON.stringify(v)));
+        if (!todo.length) continue;
+        // Against a fixed opponent, the champion's own values on each seed come first, on all slots at once.
+        if (against) await Promise.all(Array.from({ length: maxRuns }, async (_, run) => {
+            const seed = firstSeed + run;
+            if (!baseline.has(seed)) { const own = await sample({}, seed, run % jobs); if (own) baseline.set(seed, own); }
+        }));
+        const lines: Awaited<ReturnType<typeof evaluate>>[] = [];
+        let next = 0;
+        await Promise.all(Array.from({ length: Math.min(jobs, todo.length) }, async (_, slot) => { while (next < todo.length) lines.push(await evaluate(knob, todo[next++]!, slot)); }));
+        // Of the candidates of this knob that beat the champion, the one with the best mean becomes the champion.
+        const best = lines.filter(l => l.outcome === 'accept').sort((a, b) => b.mean - a.mean)[0];
+        if (best) { writeFileSync(championFile, JSON.stringify({ ...champion, ...best.patch }, null, 2) + '\n'); baseline = new Map(); }
     }
     console.log(`CLIMB_DONE ${readFileSync(championFile, 'utf8').replace(/\s+/g, ' ')}`);
 }

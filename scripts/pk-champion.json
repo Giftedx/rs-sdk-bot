@@ -8,5 +8,9 @@
     "ranged",
     "melee"
   ],
-  "castArmour": "keep"
+  "castArmour": "keep",
+  "freeze": "low",
+  "freezeBelow": 0.5,
+  "freezeEarlyMax": 1,
+  "freezeArmour": "strip"
 }

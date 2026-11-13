@@ -76,6 +76,8 @@ export type FightOptions = {
     // Armour that cuts the attack roll of a cast or a shot (negativeCastArmour). 'torso' (default) takes the torso off
     // for the turn while HP is safe; 'keep' takes nothing off; 'strip' takes every such piece off.
     castArmour?: 'torso' | 'keep' | 'strip';
+    // The same rule for a freeze (default 'torso', whatever castArmour says): the freeze needs its magic roll.
+    freezeArmour?: 'torso' | 'keep' | 'strip';
     // false: no Defence prayer (Steel Skin and the lower ones). It saves prayer points and gives up their defence.
     defencePrayer?: boolean;
     // false: no Protect Item. An account with no skull keeps its three best items without it, and a melee turn then
@@ -944,11 +946,15 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         budget -= toWield.length;
         const freeSlots = 28 - inv.length - (switching2H ? 1 : 0);
+        const armourStrip = (castFreeze ? (o.freezeArmour ?? 'torso') : (o.castArmour ?? 'torso')) === 'strip';
         // A freeze on a target that has fled decides the chase, and the runner does not hit back: every piece that
         // cuts the magic attack roll comes off for it (platelegs -21, kiteshield -8, full helm -6), as far as the
         // packets and free pack slots of this tick allow. Any other cast takes off the torso alone.
-        const strip = (castFreeze && fled && o.freezeStrip !== false) || (o.castArmour === 'strip' && me.hp > oppMax + 12);
-        const toRemove = o.castArmour !== 'keep' && turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
+        const strip = (castFreeze && fled && o.freezeStrip !== false) || (armourStrip && me.hp > oppMax + 12);
+        // castArmour governs a shot or a damage spell, freezeArmour a freeze (default 'torso'): a freeze that misses lets
+        // a runner go, and plate leaves the magic roll near 0. The freeze on a fled target strips under freezeStrip.
+        const armourRule = castFreeze ? (o.freezeArmour ?? 'torso') : (o.castArmour ?? 'torso');
+        const toRemove = (armourRule !== 'keep' || strip) && turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
             ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => !(torsoLocked && DRAGON_SLAYER_BODY.test(names.get(eq.id) ?? '')))
                 .filter(eq => strip || eq.slot === 4).slice(0, strip ? Math.min(budget, freeSlots) : 1)
             : [];
