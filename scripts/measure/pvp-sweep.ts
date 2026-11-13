@@ -3,7 +3,9 @@
 // time counts as 90 s. Cases are packed longest first onto PARALLEL engines until a batch's estimate (the busiest
 // engine) reaches the budget; each batch runs with a hard limit of the budget plus 90 s, and a case it did not reach
 // goes into the next batch. Prints one line for each batch and one PVP_SWEEP total.
-// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 8] [--seed n] [--quick]
+// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 3.5] [--seed n] [--quick] [--batch k]
+// A batch's hard limit is the budget plus 90 s: with the default 3.5 minutes no batch runs past 5 minutes. --batch k
+// runs only the k-th batch of the packing (1-based), one bench of 5 minutes or less.
 // Default pattern: every pvp: case and every extra: spar, gang, kite, army, team and hunt-trip case (233 cases, about
 // 32 minutes in four batches on 4 cores; 10 engines at once are no faster than 6). --quick: every pvp: route case and
 // one case of each climb (QUICK_CASES), a few minutes, for the turns of a change; the full sweep before a merge.
@@ -37,7 +39,7 @@ export function packBatches(cases: readonly { key: string; ms: number }[], engin
 if (import.meta.main) {
     const argv = process.argv.slice(2), value = (k: string) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
     const pattern = argv.includes('--quick') ? quickPattern() : new RegExp(argv.find(a => !a.startsWith('--') && !/^\d+$/.test(a)) ?? '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))');
-    const engines = Number(value('--parallel') ?? 6), budgetMs = Number(value('--budget') ?? 8) * 60_000, seed = value('--seed');
+    const engines = Number(value('--parallel') ?? 6), budgetMs = Number(value('--budget') ?? 3.5) * 60_000, seed = value('--seed');
     mkdirSync(dir, { recursive: true });
     const times: Record<string, number> = existsSync(timesFile) ? JSON.parse(readFileSync(timesFile, 'utf8')) : {};
     const keys = benchCases().filter(c => pattern.test(c.key) && !c.known).map(c => c.key);
@@ -47,6 +49,13 @@ if (import.meta.main) {
     let todo = keys.map(key => ({ key, ms: times[key] ?? DEFAULT_MS }));
     const results = new Map<string, boolean>();
     let n = 0;
+    const only = value('--batch') ? Number(value('--batch')) : undefined;
+    if (only !== undefined) {
+        const all = packBatches(todo.map(c => ({ ...c, ms: c.ms * scale })), engines, budgetMs);
+        if (!(only >= 1 && only <= all.length)) { console.log(`PVP_SWEEP --batch needs 1..${all.length}`); process.exit(2); }
+        todo = todo.filter(c => all[only - 1]!.includes(c.key));
+        console.log(`PVP_SWEEP batch ${only} of ${all.length}: ${todo.length} cases`);
+    }
     while (todo.length) {
         const [batch] = packBatches(todo.map(c => ({ ...c, ms: c.ms * scale })), engines, budgetMs);
         const estimate = (() => { const load = Array.from({ length: engines }, () => 0); for (const c of todo.filter(c => batch!.includes(c.key)).sort((a, b) => b.ms - a.ms)) load[load.indexOf(Math.min(...load))]! += c.ms; return Math.max(...load); })();
