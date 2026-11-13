@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794607118317,
+ "at": 1794607270630,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -33,18 +33,6 @@
    },
    "enabled": false,
    "goal": "Haggis route rehearsal; hand-run legs by .practice/balls-alpha",
-   "role": "rehearsal"
-  },
-  {
-   "account": "WeeQuickie",
-   "script": "scripts/firemaking-order.ts",
-   "env": {
-    "TARGET_LEVEL": "99",
-    "PROGRESSIVE": "stock",
-    "CLEAR_PACK": "1"
-   },
-   "enabled": false,
-   "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
   },
   {
@@ -483,6 +471,18 @@
    "resources": [
     "knight:2671,3313"
    ]
+  },
+  {
+   "account": "WeeQuickie",
+   "script": "scripts/firemaking-order.ts",
+   "env": {
+    "TARGET_LEVEL": "99",
+    "PROGRESSIVE": "stock",
+    "CLEAR_PACK": "1"
+   },
+   "enabled": false,
+   "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
+   "role": "rehearsal"
   }
  ]
 }
