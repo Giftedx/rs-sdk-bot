@@ -202,7 +202,10 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             const serverWait = serverWaiting();
             const waiting = scriptTick ? listeners.size > listenersLow || selfWaiting()
                 : tickWaits.active > 0 || selfWaiting() || [...waitingSessions].some(f => f());
-            const busy = (running && waitLeft === 0 && !serverWait && !inDialogWait()) || !waiting;
+            // The count-dialog wait counts as a wait only until the dialog is open; then the tick holds for the submit,
+            // so the submit lands in the same tick on every run, whatever the executor's 50 ms poll meets.
+            const dialogOpen = !!(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
+            const busy = (running && waitLeft === 0 && !serverWait && !(inDialogWait() && !dialogOpen)) || !waiting;
             // A script that ended after its last tick wait leaves no wait: SIM_SCRIPT_MS (500) bounds that hold.
             if (busy && performance.now() - since < (scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
