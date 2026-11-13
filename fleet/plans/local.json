@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794535280526,
+ "at": 1794535713899,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -342,28 +342,6 @@
    ]
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -574,6 +552,28 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "local",
+   "resources": [
+    "shop:sarim"
+   ]
   }
  ]
 }
