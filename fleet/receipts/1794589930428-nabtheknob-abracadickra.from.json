@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794589930428-nabtheknob-abracadickra",
  "account": "NabTheKnob",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Rune axe",
  "requested": 1,
  "claim": "dd4975fd-1d8e-4067-ba82-d0839f1c1780",
- "count": 0,
- "ok": false,
- "at": 1794589936716,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794590056341,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794589970910
+ },
+ "logout": {
+  "attemptId": "1794589936724-0000026520-0000000001",
+  "at": 1794590056329,
+  "sha256": "6c4e2d0ee126f4bf432ed8c0bb2deb4095fcbba8c0d0233b437a95f2f062ca15"
+ },
+ "screen": true
 }
