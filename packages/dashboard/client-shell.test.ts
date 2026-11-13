@@ -820,7 +820,7 @@ test('respawn timers: the time left is the base scaled by the players online, le
  t.set({tick:110,at:1000,list:[[3059,3884,0,450,100],[3000,3000,0,1342,null],[1,1,0,450,100]]},res);
  const rows=t.respawnRows(1000);
  // 2,000 players halve the base: 600 ticks of 0.4 s = 240 s, less 10 ticks = 4 s.
- expect(rows[0]).toEqual({name:'Runite rock',x:3059,z:3884,left:236,range:null,total:240});
+ expect(rows[0]).toEqual({name:'Runite rock',x:3059,z:3884,l:0,left:236,range:null,total:240});
  // A start the view did not see has no countdown; a tile with no resource is left out.
  expect(rows[1]).toMatchObject({name:'Oak tree',left:null,range:null});
  expect(rows.length).toBe(2);
@@ -830,4 +830,81 @@ test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
  const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
  const window:any={efficiency:(t:string)=>t.split('').filter(c=>c==='i').length};
  expect(run('rate')).toBe('BAC');expect(run('waste')).toBe('BCA');
+});
+test('3D highlights: one overlay message with threats, rivals, fought npcs, labels, lines, the death tile and pies',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b={name:'Alpha',inWorld:true,pos:{x:3100,z:3700,level:0},combat:70};
+ const env={S:{economy:{itemValues:{'Rune scimitar':15000}},rivals:[{rows:[{name:'Goondelf'},{name:'Bad Name!'},{name:'Ours',fleet:true}]}]},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{atlasCam3d:{x:3100,z:3700,at:Date.now()}},
+  wildLevel:()=>23,pvpState:()=>({threats:[{name:'Near'}]}),recap:{state:'ok',name:'Alpha',data:{pos:{x:3101,z:3702,level:0}}},respawnRows:()=>[{x:3059,z:3884,l:0,left:30,total:120},{x:1,z:1,l:0,left:null,total:null}],VIEWER:{state:'loading'},$:()=>null,nf:String,location:{origin:''}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,setLines:(l)=>{multiLines=l;},setTargets:(t,who='Alpha')=>{recentTargets=t;targetsFor=who;}};`)(...Object.values(env));
+ t.setLines([[3120,3712,3120,3720,0],[100,100,108,100,0],[3130,3520,3130,3968,0]]);t.setTargets([2181]);
+ const o=t.overlayMessage();
+ expect(o.players).toEqual({goondelf:'#00ffff',near:'#ff0000'});
+ expect(o.npcs).toEqual([{types:[2181],colour:'#00ffff'}]);
+ expect(o.ground).toEqual({prices:{'Rune scimitar':15000},min:1000});
+ expect(o.lines).toContainEqual({x0:3120,z0:3712,x1:3120,z1:3720,l:0,colour:'#ff0000'});
+ // A long edge through the camera area keeps its part near the camera, though its middle is 204 tiles away.
+ expect(o.lines).toContainEqual({x0:3130,z0:3640,x1:3130,z1:3760,l:0,colour:'#ff0000'});
+ expect(o.lines.some((l:any)=>l.x0===100)).toBe(false);
+ expect(o.lines).toContainEqual({x0:3040,z0:3672,x1:3160,z1:3672,l:0,colour:'#ffff00',label:'Level 20'});
+ expect(o.tiles).toEqual([{x:3101,z:3702,l:0,colour:'#ff0000',fill:true,label:'Death'}]);
+ // Another watched account starts with no fought npcs.
+ t.setTargets([2181],'Other');expect(t.overlayMessage().npcs).toEqual([]);
+ expect(o.pies).toEqual([{x:3059,z:3884,l:0,p:0.75}]);
+});
+test('Skill Calculator: XP left to the target, the time at the rate, and each action with its count',()=>{
+ const code=shell.slice(shell.indexOf('  // Skill Calculator (RuneLite\'s)'),shell.indexOf("  const XP_STORE='atlas-xp-baselines';"));
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const t=new Function('window','asset','fetch','E','icon','nf','dur',`${code};return {calcBox,set:(s,t,a)=>{calcSkill=s;calcTarget=t;skillActions=a;}};`)({atlasXp:X},(n:string)=>n,()=>new Promise(()=>{}),String,(n:string)=>`[${n}]`,(n:number)=>String(n),(ms:number)=>Math.round(ms/60000)+'m');
+ const xp=X.xpForLevel(60)+10;
+ t.set('Woodcutting',61,{woodcutting:[['Willow logs',30,67.5,[],['Willow logs']],['Yew logs',60,175,[],['Yew logs']],['Magic logs',75,250,[],['Magic logs']]]});
+ const left=X.xpForLevel(61)-xp,html=t.calcBox({skills:[{name:'Woodcutting',xp}]},{rate:left});
+ expect(html).toContain('Current <b>60</b>');expect(html).toContain('value="61"');
+ expect(html).toContain(`<b>${left}</b> xp left`);expect(html).toContain('TTL 60m');
+ expect(html).toContain(`<span class="calc-count">${Math.ceil(left/175)}</span>`);
+ expect(html).toMatch(/calc-row calc-locked"[^>]*>\[Magic logs\]/);
+ t.set(null,null,null);expect(t.calcBox({skills:[]},null)).toBe('');
+});
+test('skilling highlights and the trail: the resource of the top loot item near the account, fishing spots, the walked path',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b:any={name:'Alpha',inWorld:true,pos:{x:3100,z:3400,level:0},goalSkill:'Woodcutting',flow:{since:0,at:3_600_000,loot:[{name:'Logs',count:3},{name:'Yew logs',count:40}]}};
+ const S:any={economy:{itemValues:{}},bots:[b]};
+ const env:any={S,D:{rival:new Set()},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,location:{origin:''},
+  resources:{kinds:{1:{name:'Yew tree'},2:{name:'Oak tree'},3:{name:'Iron rock'}},tiles:[[3105,3402,0,1],[3104,3400,0,2],[3130,3400,0,1],[3101,3401,0,3]]}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,trackTrails,resourceOf,setFish:(f)=>{fishingTypes=f;}};`)(...Object.values(env));
+ expect([t.resourceOf('Yew logs'),t.resourceOf('Achey tree logs'),t.resourceOf('Iron ore'),t.resourceOf('Coal'),t.resourceOf('Shark')]).toEqual(['Yew tree','Achey tree','Iron rock','Coal rock',null]);
+ t.trackTrails();b.pos={x:3101,z:3400,level:0};t.trackTrails();b.pos={x:3102,z:3401,level:0};t.trackTrails();
+ let o=t.overlayMessage();
+ // Only the yew within 15 tiles: not the oak, not the yew 30 tiles away, not the rock.
+ expect(o.tiles).toEqual([{x:3105,z:3402,l:0,colour:'#00ffff'}]);
+ expect(o.lines.filter((l:any)=>l.colour==='#ffff00').length).toBe(2);
+ b.goalSkill='Fishing';b.flow={since:0,at:1,loot:[]};t.setFish([233,309]);o=t.overlayMessage();
+ expect(o.npcs).toContainEqual({types:[233,309],colour:'#00ffff'});
+});
+test('Inventory Setups: worn slots green, red or yellow against the kit, and the pack list against the kit',()=>{
+ const code=shell.slice(shell.indexOf("  // Inventory Setups (RuneLite's) in the Equipment tab:"),shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"));
+ const t=new Function('localStorage','fetch','asset','E','icon','nf',`${code};return {setupSlot,setupPanel,set:(k,s)=>{pkKits=k;setupKit=s;}};`)({getItem:()=>null},()=>new Promise(()=>{}),(n:string)=>n,String,(n:string)=>`[${n}]`,String);
+ t.set([{name:'tribrid',worn:{0:['Rune full helm',1],13:['Rune arrow',300]},carried:[['Shark',18],['Blood rune',100]]}],'tribrid');
+ const b={equipment:[{slot:0,name:'Rune full helm',count:1},{slot:13,name:'Rune arrow',count:120},{slot:5,name:'Wooden shield',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Blood rune',count:100}]};
+ expect(t.setupSlot(b,0,b.equipment[0]).cls).toBe(' setup-ok');
+ expect(t.setupSlot(b,13,b.equipment[1])).toEqual({cls:' setup-miss',tip:' · kit wants Rune arrow × 300'});
+ expect(t.setupSlot(b,5,b.equipment[2]).cls).toBe(' setup-extra');
+ const html=t.setupPanel(b);
+ expect(html).toContain('1 worn slot differs from the kit'.replace('differs','differ'));
+ expect(html).toContain('setup-row setup-short');expect(html).toContain('<span>2 / 18</span>');
+ expect(html).toContain('setup-row setup-have');expect(html).toContain('<span>100 / 100</span>');
+});
+test('Screenshot: a level-up, a death or valuable loot of the watched account asks the viewer for a picture and keeps it',()=>{
+ const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));
+ const posted:any[]=[];const b:any={name:'Alpha',flow:{loot:[{name:'Rune scimitar',count:1}]}};
+ const env:any={localStorage:{getItem:()=>null,setItem:()=>{}},indexedDB:{open:()=>{throw new Error('none');}},VIEWER:{state:'ready'},$:()=>({contentWindow:{postMessage:(m:any)=>posted.push(m)}}),location:{origin:''},account:()=>b,S:{economy:{itemValues:{'Rune scimitar':15000,'Dragon chainbody':500000}}},gp:(n:number)=>String(n),selectedPlugin:'xp',window:{},body:{}};
+ const t=new Function(...Object.keys(env),`${code};return {shotFor,shotReply,lootShots,list:()=>shots};`)(...Object.values(env));
+ t.shotFor(b,'level','Level 70 Woodcutting');t.shotFor({name:'Other'},'death','Death');
+ expect(posted.length).toBe(1);expect(posted[0].capture.id).toMatch(/^[a-z0-9]+$/);
+ t.shotReply({id:posted[0].capture.id,url:'data:image/jpeg;base64,AAAA'});
+ expect(t.list()).toMatchObject([{name:'Alpha',kind:'level',text:'Level 70 Woodcutting',url:'data:image/jpeg;base64,AAAA'}]);
+ t.shotReply({id:'unknown',url:'data:image/jpeg;base64,BBBB'});expect(t.list().length).toBe(1);
+ t.lootShots();b.flow={loot:[{name:'Rune scimitar',count:2},{name:'Dragon chainbody',count:1}]};t.lootShots();
+ expect(posted.length).toBe(2);
 });
