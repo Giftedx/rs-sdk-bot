@@ -1622,5 +1622,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     Edgeville bank against a target with 18 sharks and a glory on the champion's fight loop, Wilderness level 3,
     single-way; seeds 1-6): on the hunt's own options the hunter's first fight deals 320 and takes 419, summed; on
     the champion's (`HUNT_PROFILE`, default `auto`: the champion for combat 115 or more) 1,024 and 715. Every fight
-    ends with the hunter leaving on its danger check (`exitOnDanger`), and none ends in a kill. Gap: six seeds; the
-    danger check's thresholds against an even target are not climbed.
+    ends with the hunter leaving on its danger check (`exitOnDanger`, "losing the race": 30 or more taken, twice what
+    it dealt, in the last 30 ticks, under 60% HP), and none ends in a kill. With the race read over 60 ticks
+    (`raceWindow`, `HUNT_RACE_WINDOW=60`) the fights go 859 dealt, 779 taken, and still end on the check. Gap: six
+    seeds.

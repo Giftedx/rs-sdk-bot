@@ -234,6 +234,8 @@ export async function hunt(s: Session, o: HuntOptions) {
                 // for the freeze. Random styles: an overhead that predicts cannot follow them.
                 rotation: o.rotation ?? (kit.ranged?.length && kit.melee?.length ? ['ranged', 'melee'] : undefined), mixStyles: true,
                 ...(await huntProfile(me.combatLevel)),
+                // HUNT_RACE_WINDOW: the ticks of the danger check's damage race (default the fight loop's 30).
+                ...(process.env.HUNT_RACE_WINDOW ? { raceWindow: Number(process.env.HUNT_RACE_WINDOW) } : {}),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
