@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { questFlags } from './quest-status';
+import { questDefinitions, questFlags } from './quest-status';
 import { waitUntil, waitTicks } from './ticks';
 import type { Session } from './inprocess';
 
@@ -19,6 +19,8 @@ let finals: Map<string, { varp: string; complete: number }> | undefined;
 export const questFinals = () => finals ??= new Map((JSON.parse(readFileSync(new URL('../../../knowledge/quests.json', import.meta.url), 'utf8')) as { folder?: string | null; varp?: string; complete?: number }[])
     .filter(q => q.folder && q.varp && Number.isInteger(q.complete)).map(q => [q.folder!, { varp: q.varp!, complete: q.complete! }]));
 export const questFolder = (key: string) => `quest_${key === 'fortress' ? 'blackknight' : key}`;
+let keys: Map<number, string> | undefined;
+const questKeys = () => keys ??= new Map(questDefinitions().map(q => [q.id, q.key]));
 const clean = (v: unknown) => String(v ?? '').replace(/@[^@]{3}@/g, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
 function saved(client: object) {
     let value = evidence.get(client);
@@ -40,7 +42,8 @@ export function guildActorFacts(client: any, state?: any): GuildActorFacts {
     for (const q of questFlags(client) ?? []) {
         // Green is completion, not an exact private stage. The native map is the final glider admission.
         if (q.id === 7361 && q.state === 'complete' && client.membersAccount === 1 && state?.inGame !== false) facts.unlocks.push('grandtree-glider');
-        const final = q.state === 'complete' && q.key ? questFinals().get(questFolder(q.key)) : undefined;
+        const folderKey = q.state === 'complete' ? questKeys().get(q.id) : undefined;
+        const final = folderKey ? questFinals().get(questFolder(folderKey)) : undefined;
         if (final) facts.questStages[final.varp] = Math.max(facts.questStages[final.varp] ?? 0, final.complete);
         const key = q.id === 7363 ? 'heroquest' : q.id === 7366 ? 'legendsquest' : q.id === 7356 ? 'mcannon' : undefined;
         if (!key) continue;

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseConfigs } from '../../knowledge/src/config';
 
-export type QuestFlag = { id:number; name:string; key?:string; state:'not started'|'started'|'complete'|'unknown' };
+export type QuestFlag = { id:number; name:string; state:'not started'|'started'|'complete'|'unknown' };
 export const QUEST_SOURCE='vendor/rs-sdk/server/content/scripts/player/interfaces/questlist.if';
 let definitions:{id:number;name:string;key:string}[]|undefined;
 export function questDefinitions(){
@@ -16,8 +16,8 @@ export function questDefinitions(){
 // Read only the account's own component table. Server IF_SETCOLOUR expands 5-bit
 // colours to f8, unlike the pristine ff defaults; an untouched red is UNKNOWN.
 // Quest varps are not generally transmitted. Never interpret their zero defaults.
-export function questFlags(client:any,definitions?:readonly {id:number;name:string;key?:string}[]):QuestFlag[]|null{
+export function questFlags(client:any,definitions?:readonly {id:number;name:string}[]):QuestFlag[]|null{
  if(client?.ingame!==true||typeof client.ifType!=='function')return null;
- try{return (definitions??questDefinitions()).map(q=>{const colour=client.ifType(q.id)?.colour;const state=colour===0x00f800?'complete':colour===0xf8f800?'started':colour===0xf80000?'not started':'unknown';return {...q,state};});}
+ try{return (definitions??questDefinitions()).map(q=>{const colour=client.ifType(q.id)?.colour;const state=colour===0x00f800?'complete':colour===0xf8f800?'started':colour===0xf80000?'not started':'unknown';return {id:q.id,name:q.name,state};});}
  catch{return null;} // Optional telemetry must not interrupt a worker.
 }
