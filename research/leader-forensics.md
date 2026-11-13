@@ -295,7 +295,8 @@ cairn_rocks 4,317 (single-skill). stunmine 4,575 (QP 2), nickquarry 6,015 (QP 1 
 Method: LIKELY the knife reset on iron at the six rocks south of the Ardougne zoo (Cairn segment 8, Mining 64-99
 in 3,470 live; `research/rival-gap-list.md` row 1: 3.00 ticks per ore at respawn 13, 292 XP/tick). miner3's
 combat 40 fits a contested or dangerous spot. Ours: 16,467 / 17,761; our measured iron is 97 XP/tick on 3 rocks
-in practice. Need: the knife reset on mining at the zoo rocks, measured live.
+in practice; the zoo rotation with the knife reset (`scripts/mining-rotation.ts`) is 272-274 XP/tick in practice at
+respawn 18 (`research/aio-bench.md`). Need: the same run live.
 
 Rejected alternatives (CODE-READ): limestone (loc_4027 to 4029, 662 XP, 3 ores then 40 ticks empty,
 `skill_mining/configs/mine.dbrow:195-223`) gives about 43 XP/tick per rock. The 5-rock iron tile (3100,3767) is

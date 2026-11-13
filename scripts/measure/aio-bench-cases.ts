@@ -305,6 +305,17 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('mining', 'drop', 'fresh_lumbridge', ['iron_rock_table', '2', '400', '1275'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 41, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}]}}),
   skiller('mining', 'progressive', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-mine.json'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 29, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1265, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-mine.json': {maximum: 1, batch: 1, cap: 600, returnTicks: 100, travelTicks: 100, members: false, mode: 'drop', keep: [1265], routes: [{profile: 'iron_rock_table', bank: {x: 3253, z: 3420, level: 0}, site: {x: 3286, z: 3368, level: 0}, tool: 1265}]}}}),
+  // The six iron rocks south of the Ardougne zoo (Cairn Mining 64-99, research/rival-gap-list.md row 1): 75 ores lift
+  // Mining 64 to 72. `zoo-drop` is the drop worker with no rotation, `zoo-plain` the rock rotation, `zoo-knife` the
+  // rotation with the knife reset (scripts/mining-rotation.ts), `zoo-knife9` the same with the three rocks 10 tiles west
+  // and the nearest-free pick, so it walks west when the six zoo rocks are down.
+  // MINING_RATE prints ticks per ore from the first ore.
+  ...(['drop', 'plain', 'knife', 'knife9'] as const).map((mode): BenchCase => {
+    const env = mode === 'drop' ? [] : ['MINING_ROTATE=1', 'MINING_DROP=1', `MINING_SITE=ardougne-zoo-iron${mode === 'knife9' ? '-9' : ''}`, ...(mode !== 'plain' ? ['MINING_KNIFE=1'] : []), ...(mode === 'knife9' ? ['MINING_PICK=nearest'] : [])];
+    const args = mode === 'drop' ? ['iron_rock_table', '75', '1500', '1275,946,1511'] : ['iron_rock_table', '75', '1500', ...env];
+    return {...skiller('mining', mode === 'drop' ? 'drop' : 'at-site', 'fresh_lumbridge', args, {output: /"made":(\d+)/,
+      presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 64, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: `extra:mining-zoo-${mode}`};
+  }),
   skiller('mining', 'loot', 'fresh_lumbridge', ['LOOT_MODE=list', 'LOOT_IDS=1511', 'RADIUS=2', 'MAX_UNITS=1', 'CAP=200', 'IDLE_TICKS=150'], {presetConfig: {position: {x: 3089, z: 3266, level: 0}, skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}}}),
   skiller('smithing', 'anvil', 'fresh_lumbridge', ['600', 'PRODUCT_ID=1205', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 2347, count: 1}], bank: [{id: 2349, count: 1}]}}),
   skiller('smithing', 'cannonballs', 'fresh_lumbridge', ['1', '600', 'CANNON_XP_RATE=25'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 35}, bank: [{id: 2353, count: 1}, {id: 4, count: 1}]}}),
