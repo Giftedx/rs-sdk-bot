@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794540192579,
+ "at": 1794540730498,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -59,25 +59,21 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts magic_guild 1500 ITEMS=staff.of.fire STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000",
-    "scripts/shop-buyer.ts magic_guild 600 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000",
-    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
-    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy a staff of fire, fire, nature and air runes at the Magic Guild in Yanille for the alchemy band",
-   "role": "supply",
-   "template": "army-staff-guild",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "shop:magic_guild"
+    "knight:2653,3300"
    ]
   },
   {
@@ -189,28 +185,21 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit5-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "mmtha0205",
@@ -252,21 +241,25 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -290,22 +283,21 @@
   },
   {
    "account": "PickpockDick",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "pen:3017,3288"
+    "knight:2653,3300"
    ]
   },
   {
@@ -406,25 +398,21 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2652,3318",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2652,3318"
    ]
   },
   {
