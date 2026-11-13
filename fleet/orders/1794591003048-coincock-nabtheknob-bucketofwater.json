@@ -1,0 +1,23 @@
+{
+ "id": "1794591003048-coincock-nabtheknob-bucketofwater",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "CoinCock",
+ "to": "NabTheKnob",
+ "item": "Bucket of water",
+ "count": 4,
+ "start": 1794591003048,
+ "end": 1794596403048,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

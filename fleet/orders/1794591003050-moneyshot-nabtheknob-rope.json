@@ -1,0 +1,23 @@
+{
+ "id": "1794591003050-moneyshot-nabtheknob-rope",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "NabTheKnob",
+ "item": "Rope",
+ "count": 1,
+ "start": 1794591003050,
+ "end": 1794596403050,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

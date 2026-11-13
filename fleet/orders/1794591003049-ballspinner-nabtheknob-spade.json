@@ -1,0 +1,29 @@
+{
+ "id": "1794591003049-ballspinner-nabtheknob-spade",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "NabTheKnob",
+ "item": "Spade",
+ "count": 1,
+ "start": 1794591003049,
+ "end": 1794596403049,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}

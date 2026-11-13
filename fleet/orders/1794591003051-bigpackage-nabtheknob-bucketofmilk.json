@@ -1,0 +1,23 @@
+{
+ "id": "1794591003051-bigpackage-nabtheknob-bucketofmilk",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "NabTheKnob",
+ "item": "Bucket of milk",
+ "count": 1,
+ "start": 1794591003051,
+ "end": 1794596403051,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
