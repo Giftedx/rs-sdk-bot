@@ -108,12 +108,25 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const t=wornBonuses(b);if(!t)return '';
     const sg=v=>(v>0?'+':'')+v,cells=(from,names)=>names.map((n,i)=>'<i title="'+n+'">'+sg(t[from+i])+'</i>').join('');
     const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),weapon=b.equipment.find(e=>e.slot===3),ranged=(itemBonusData[weapon?.name]?.[4]||0)>0;
-    const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' ('+maxHit(str,t[10],3,115)+' with +15% prayer)':'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
+    const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' · prayer '+maxHit(str,t[10],3,115):'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
+    {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+' ×'+sp.casts);}
     const names=['Stab','Slash','Crush','Magic','Range'];
-    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join(' · ')+'</b></div>':'')+'</div>';
+    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join('<br>')+'</b></div>':'')+'</div>';
   }
   // Teleport casts: how many casts of each teleport spell the pack's runes give (a wielded staff gives its rune without
   // limit; client-assets/spellbook.json); a spell above the account's current Magic level is dim.
+  // How many casts the pack's runes give for a rune list ([[rune, count], ...]); a wielded staff gives its rune without limit.
+  function runeCasts(b,runes){const have=n=>(b.inventory||[]).filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipment?.find(e=>e.slot===3)?.name;const free=new Set(Object.entries(spellbookData?.staffs||{}).filter(([,s])=>Array.isArray(s)&&s.includes(weapon)).map(([r])=>r));return Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c)));}
+  // Magic max hit (Equipment Stats): the combat spell with the highest max hit (spellbook.json, the server's
+  // magic_combat_spells.dbrow) that the account can cast now: its current Magic level, the runes for one cast, the staff
+  // a spell needs worn. A spell's max hit is fixed in this game (no magic damage bonus).
+  function bestSpell(b){
+    if(!spellbookData?.combat?.length||!Array.isArray(b?.inventory))return null;
+    const mg=curLevel(b,'Magic');if(!Number.isFinite(mg))return null;
+    const worn=new Set((b.equipment||[]).map(e=>e?.name));
+    let best=null;for(const [name,lv,max,runes,staff] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max))best={name,max,casts};}
+    return best;
+  }
   function teleCasts(b){
     if(!spellbookData||!Array.isArray(b?.inventory))return [];
     const have=n=>b.inventory.filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipment?.find(e=>e.slot===3)?.name;

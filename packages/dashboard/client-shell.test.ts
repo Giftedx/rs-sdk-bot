@@ -1023,11 +1023,18 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  expect([t.maxHit(99,54,0),t.maxHit(99,54,3),t.maxHit(99,0,3)]).toEqual([20,20,11]);
  // With the +15% prayer: floor(99 × 115 / 100) = 113, so floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
  expect(t.maxHit(99,54,3,115)).toBe(23);
- const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20 (23 with +15% prayer)');
+ const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20 · prayer 23');
  // Varrock: min(2 fire, 30/3 air, 4 law) = 2; Falador: 4 law, Magic 30 is below 37.
  expect(t.teleCasts(b)).toEqual([{name:'Varrock teleport',lv:25,casts:2,can:true},{name:'Falador teleport',lv:37,casts:4,can:false}]);
  // A wielded Staff of fire gives fire runes without limit.
  b.equipment[0]={slot:3,name:'Staff of fire'};expect(t.teleCasts(b)[0].casts).toBe(4);
+ // The magic max hit: the best combat spell for the current Magic level, runes and worn staff.
+ const t2=new Function('asset','fetch','E',`${code};return {bestSpell,equipStats,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String);
+ t2.set({'Staff of fire':[0,0,0,10,0,0,0,0,10,0,0,0,0]},{spells:[],staffs:{'Fire rune':['Staff of fire']},combat:[['Fire Strike',13,8,[['Mind rune',1],['Fire rune',3],['Air rune',2]],null],['Fire Bolt',35,12,[['Chaos rune',1],['Fire rune',4],['Air rune',3]],null],['Iban Blast',50,25,[['Death rune',1],['Fire rune',5]],"Iban's staff"],['Fire Blast',59,16,[['Death rune',1],['Fire rune',5],['Air rune',4]],null]]});
+ const mage:any={skills:[{name:'Magic',level:55,currentLevel:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Air rune',count:30},{name:'Chaos rune',count:6},{name:'Mind rune',count:50},{name:'Death rune',count:20}]};
+ // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
+ expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6});
+ expect(t2.equipStats(mage)).toContain('Magic Fire Bolt 12 ×6');
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));

@@ -2,8 +2,9 @@
 // - client-assets/item-bonuses.json for the Worn Equipment tab's Equipment Stats: each item's combat bonuses from its
 //   .obj config (param=stabattack,7 ...), by display name, as [stab, slash, crush, magic, range attack, stab, slash,
 //   crush, magic, range defence, strength, ranged strength, prayer]; items with no bonus are left out.
-// - client-assets/spellbook.json for the teleport casts: each teleport spell (knowledge/teleports.json, kind spell) as
-//   [name, Magic level, [[rune, count], ...]], and the staffs that give each rune without limit.
+// - client-assets/spellbook.json for the teleport casts and the magic max hit: each teleport spell (knowledge/teleports.json,
+//   kind spell) as [name, Magic level, [[rune, count], ...]], the staffs that give each rune without limit, and the combat
+//   spells (combatSpells below).
 // Run: bun packages/dashboard/gen-combat-data.ts
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,7 +36,24 @@ export function itemBonuses(blocks: { debug: string; name: string | null; bonus:
     return out;
 }
 
-export function spellbook(tp: { teleports: any[]; staffs?: any[] }, names: Map<string, string>) {
+// The combat spells of skill_combat/configs/magic/magic_combat_spells.dbrow: each row with a maxhit, as [name, level,
+// max hit, [[rune, count], ...], staff worn or null]. Crumble Undead is left out: it hits only undead, so it is no
+// general best spell.
+export function combatSpells(text: string, names: Map<string, string>): [string, number, number, [string, number][], string | null][] {
+    const n = (d: string) => names.get(d) ?? d, out: [string, number, number, [string, number][], string | null][] = [];
+    for (const block of text.split(/^\[/m).slice(1)) {
+        const field = (k: string) => block.match(new RegExp(`^data=${k},(.*)$`, 'm'))?.[1]?.trim();
+        const name = field('name'), max = Number(field('maxhit')), lv = Number(field('levelrequired'));
+        if (!name || !(max > 0) || !Number.isFinite(lv) || /^crumble undead$/i.test(name)) continue;
+        const parts = (field('runesrequired') ?? '').split(','), runes: [string, number][] = [];
+        for (let i = 0; i + 1 < parts.length; i += 2) if (parts[i] && parts[i] !== 'null') runes.push([n(parts[i]!), Number(parts[i + 1])]);
+        const worn = field('wornrequired');
+        out.push([name, lv, max, runes, worn && worn !== 'null' ? n(worn) : null]);
+    }
+    return out.sort((a, b) => a[1] - b[1]);
+}
+
+export function spellbook(tp: { teleports: any[]; staffs?: any[] }, names: Map<string, string>, combatText = '') {
     const n = (d: string) => names.get(d) ?? d;
     const spells = tp.teleports.filter(t => t.kind === 'spell').map(t => {
         const lv = (t.requires ?? []).find((r: any) => r.type === 'skill' && r.skill === 'magic')?.level ?? 1;
@@ -43,7 +61,7 @@ export function spellbook(tp: { teleports: any[]; staffs?: any[] }, names: Map<s
     });
     const staffs: Record<string, string[]> = {};
     for (const s of tp.staffs ?? []) staffs[n(s.rune)] = (s.staffs ?? []).map(n);
-    return { spells, staffs };
+    return { spells, staffs, combat: combatText ? combatSpells(combatText, names) : [] };
 }
 
 const objFiles = (dir: string): string[] => readdirSync(dir).flatMap(f => { const p = join(dir, f); return statSync(p).isDirectory() ? objFiles(p) : f.endsWith('.obj') ? [p] : []; });
@@ -53,8 +71,8 @@ if (import.meta.main) {
     const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { debugname?: string; name?: string }[];
     const names = new Map(items.filter(i => i.debugname && i.name).map(i => [i.debugname!, i.name!]));
     const bonuses = itemBonuses(objFiles(content).flatMap(f => objBonuses(readFileSync(f, 'utf8'))), names);
-    const book = spellbook(JSON.parse(readFileSync(join(root, 'knowledge', 'teleports.json'), 'utf8')), names);
+    const book = spellbook(JSON.parse(readFileSync(join(root, 'knowledge', 'teleports.json'), 'utf8')), names, readFileSync(join(content, 'skill_combat', 'configs', 'magic', 'magic_combat_spells.dbrow'), 'utf8'));
     writeFileSync(join(import.meta.dir, 'client-assets', 'item-bonuses.json'), JSON.stringify(bonuses));
     writeFileSync(join(import.meta.dir, 'client-assets', 'spellbook.json'), JSON.stringify(book));
-    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} items; spellbook.json: ${book.spells.length} spells`);
+    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} items; spellbook.json: ${book.spells.length} teleports, ${book.combat.length} combat spells`);
 }
