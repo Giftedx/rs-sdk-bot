@@ -1,0 +1,44 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794529177310-abracadickra-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Clay",
+ "requested": 6,
+ "claim": "8085ccaa-ce50-4dd1-bc76-c0cdba9fd332",
+ "count": 0,
+ "ok": false,
+ "at": 1794529202624,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Copper ore",
+   "requested": 4,
+   "count": 0
+  },
+  {
+   "item": "Iron ore",
+   "requested": 2,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Air rune",
+   "requested": 3,
+   "count": 0
+  },
+  {
+   "item": "Water rune",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
