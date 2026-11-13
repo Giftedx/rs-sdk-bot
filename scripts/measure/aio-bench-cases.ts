@@ -285,9 +285,11 @@ const ROUTE_CASES: BenchCase[] = [
     jobFiles: {'.practice/aio-bench/jobs/{bot}-mine.json': {maximum: 1, batch: 1, cap: 600, returnTicks: 100, travelTicks: 100, members: false, mode: 'drop', keep: [1265], routes: [{profile: 'iron_rock_table', bank: {x: 3253, z: 3420, level: 0}, site: {x: 3286, z: 3368, level: 0}, tool: 1265}]}}}),
   // The six iron rocks south of the Ardougne zoo (Cairn Mining 64-99, research/rival-gap-list.md row 1): 75 ores lift
   // Mining 64 to 72. `zoo-drop` is the drop worker with no rotation, `zoo-plain` the rock rotation, `zoo-knife` the
-  // rotation with the knife reset (scripts/mining-rotation.ts). MINING_RATE prints ticks per ore from the first ore.
-  ...(['drop', 'plain', 'knife'] as const).map((mode): BenchCase => {
-    const env = mode === 'drop' ? [] : ['MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', ...(mode === 'knife' ? ['MINING_KNIFE=1'] : [])];
+  // rotation with the knife reset (scripts/mining-rotation.ts), `zoo-knife9` the same with the three rocks 10 tiles west
+  // and the nearest-free pick, so it walks west when the six zoo rocks are down.
+  // MINING_RATE prints ticks per ore from the first ore.
+  ...(['drop', 'plain', 'knife', 'knife9'] as const).map((mode): BenchCase => {
+    const env = mode === 'drop' ? [] : ['MINING_ROTATE=1', 'MINING_DROP=1', `MINING_SITE=ardougne-zoo-iron${mode === 'knife9' ? '-9' : ''}`, ...(mode !== 'plain' ? ['MINING_KNIFE=1'] : []), ...(mode === 'knife9' ? ['MINING_PICK=nearest'] : [])];
     const args = mode === 'drop' ? ['iron_rock_table', '75', '1500', '1275,946,1511'] : ['iron_rock_table', '75', '1500', ...env];
     return {...skiller('mining', mode === 'drop' ? 'drop' : 'at-site', 'fresh_lumbridge', args, {output: /"made":(\d+)/,
       presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 64, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: `extra:mining-zoo-${mode}`};

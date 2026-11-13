@@ -6,7 +6,7 @@ import {openBot,finish} from '../packages/core/src/bot';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import type {BotWorldState,NearbyLoc} from '../vendor/rs-sdk/sdk/types';
 import {componentId} from '../packages/core/src/logout';
-import {runRotationMining,siteRocks,MINING_SITES,type MiningAction,type RotationOptions} from './mining-rotation';
+import {runRotationMining,siteTiles,MINING_SITES,type MiningAction,type RotationOptions} from './mining-rotation';
 const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content');
 const pack=(kind:string)=>new Map(readFileSync(resolve(content,'pack',kind+'.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
 const obj=pack('obj'),loc=pack('loc'),item=(name:string)=>{const n=obj.get(name);if(n===undefined)throw Error('native mining item missing '+name);return n;};
@@ -84,7 +84,7 @@ if(import.meta.main){
  // MINING_ROTATE=1: rock rotation over the site (MINING_SITE=<key of MINING_SITES>, or the rocks within 3 tiles);
  // MINING_KNIFE=1 adds the knife reset, MINING_DROP=1 drops each ore. s.direct sends the actions of one tick together.
  const env=process.env,site=MINING_SITES.find(t=>t.key===env.MINING_SITE);if(env.MINING_SITE&&!site)throw Error('unknown MINING_SITE '+env.MINING_SITE);
- const rotation=env.MINING_ROTATE==='1'||env.MINING_KNIFE==='1'?{knife:env.MINING_KNIFE==='1',drop:env.MINING_DROP==='1',make1:componentId('skill_multi3:make1_a'),players:Number(env.MINING_PLAYERS??1),rocks:site?siteRocks(profile,site.center,site.radius):undefined,keep:(env.MINING_KEEP??'').split(',').filter(Boolean).map(Number)}:undefined;
+ const rotation=env.MINING_ROTATE==='1'||env.MINING_KNIFE==='1'?{knife:env.MINING_KNIFE==='1',drop:env.MINING_DROP==='1',make1:componentId('skill_multi3:make1_a'),players:Number(env.MINING_PLAYERS??1),rocks:site?siteTiles(profile,site):undefined,keep:(env.MINING_KEEP??'').split(',').filter(Boolean).map(Number),pick:env.MINING_PICK==='nearest'||env.MINING_PICK==='roll'?env.MINING_PICK as 'nearest'|'roll':undefined}:undefined;
  try{const r=await runAtSiteMining({state:()=>s.sdk.getState(),tick:()=>s.tick(),stop:()=>ended||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all'),mine:async l=>(await s.sdk.sendInteractLoc(l.x,l.z,l.id,1)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),clearModal:async()=>{await s.sdk.sendCloseModal();},send:async acts=>{for(const a of acts)await s.direct({...a,reason:'SDK'});}},profile,{maximum,cap,idleTicks:Number(process.env.IDLE_TICKS??1200),rotation});
   // Ticks per ore from the first ore to the last, so the walk and the login are not in it.
   const rolls=(r as {rolls?:number[]}).rolls;if(rolls&&rolls.length>1){const per=(rolls.at(-1)!-rolls[0]!)/(rolls.length-1);console.log(`MINING_RATE ores=${r.made} ticksPerOre=${per.toFixed(2)} xpPerTick=${(r.xp/r.made/per).toFixed(1)} runTicks=${r.ticks} runXpPerTick=${(r.xp/r.ticks).toFixed(1)}`);}

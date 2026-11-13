@@ -83,17 +83,27 @@ export function contentSites(p:MiningProfile,gap=3):{center:Tile;rocks:Tile[]}[]
 // Named sites with a bank. The Ardougne zoo iron: six rocks at 2602,3233 2602,3234 2602,3236 2605,3233 2605,3235
 // 2605,3237 (maps/m40_50.jm2:5587-5678); research/route-danger.ts finds no hunting NPC on the path to the
 // Ardougne south bank (bank:ardougne-south-bank:0 in packages/planner/src/haggis-travel.json).
-export interface MiningSite{key:string;profile:string;center:Tile;radius:number;bank:Tile}
+// `ardougne-zoo-iron-9` adds the three iron rocks 10 tiles west, 2590,3230 2591,3232 2592,3234 (m40_50.jm2:5212-5266).
+// The six-rock site is the zoo default. Bench, 75 ores from Mining 64 with the knife, seeds 7/8/9, seen respawn 18:
+// six rocks 3.22/3.19/3.19 ticks an ore (272/274/274 XP a tick); nine rocks with the first-roll pick the same (it
+// never walks west: a zoo rock back in a tick beats the walk); nine rocks with the nearest-free pick, which walks west
+// when the six are down, 3.76 at each seed (233 XP a tick).
+export interface MiningSite{key:string;profile:string;center:Tile;radius:number;bank:Tile;more?:readonly{center:Tile;radius:number}[]}
 export const MINING_SITES:readonly MiningSite[]=[
  {key:'ardougne-zoo-iron',profile:'iron_rock_table',center:{x:2603,z:3235,level:0},radius:3,bank:{x:2655,z:3283,level:0}},
+ {key:'ardougne-zoo-iron-9',profile:'iron_rock_table',center:{x:2603,z:3235,level:0},radius:3,bank:{x:2655,z:3283,level:0},more:[{center:{x:2591,z:3232,level:0},radius:2}]},
  {key:'varrock-east-iron',profile:'iron_rock_table',center:{x:3286,z:3368,level:0},radius:3,bank:{x:3253,z:3420,level:0}},
 ];
+
+export function siteTiles(p:MiningProfile,site:MiningSite):Tile[]{return[site,...(site.more??[])].flatMap(a=>siteRocks(p,a.center,a.radius));}
 
 // A loc is reached from a tile beside one of its sides, not from a corner. Stand tiles are those that are no rock.
 export function standTiles(rock:Tile,rocks:readonly Tile[]):Tile[]{
  return [[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>({x:rock.x+dx!,z:rock.z+dz!,level:rock.level})).filter(t=>!rocks.some(r=>r.x===t.x&&r.z===t.z&&r.level===t.level));
 }
 const beside=(p:{x:number;z:number},rock:Tile)=>Math.abs(p.x-rock.x)+Math.abs(p.z-rock.z)===1;
+// Ticks of run (2 tiles a tick) to a stand tile of the rock; 0 when the account stands beside it.
+const runTicks=(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[])=>beside(p,rock)?0:Math.ceil(Math.min(...standTiles(rock,rocks).map(t=>cheb(p,t)))/2);
 
 export interface RotationOptions{
  maximum:number;cap:number;idleTicks:number;
@@ -103,6 +113,7 @@ export interface RotationOptions{
  make1:number;            // component skill_multi3:make1_a
  players?:number;         // first respawn estimate; the observed interval replaces it
  rocks?:readonly Tile[];  // the site; default: the profile rocks within 3 tiles of the start tile
+ pick?:'roll'|'nearest';  // the rock that rolls first (default with the knife), or the nearest free rock
 }
 export interface RotationResult{made:number;sideGems:number;attempts:number;outputs:Record<number,number>;xp:number;ticks:number;banked:0;dropped:number;knifeCuts:number;preArms:number;fletches:number;respawn:number;rolls:number[];waitTicks:number}
 
@@ -160,6 +171,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
    seen.set(k,up);
   }
   const actions:MiningAction[]=[];
+  const ticksTo=(r:Tile)=>runTicks(pos,r,rocks);
   const slot=(id:number)=>s.inventory.find(i=>i.id===id)?.slot;
   const knifeSlots=o.knife?{k:slot(KNIFE),l:slot(NORMAL_LOGS)}:undefined;
   const canCut=!!knifeSlots&&knifeSlots.k!==undefined&&knifeSlots.l!==undefined;
@@ -176,6 +188,9 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
   if(active){
    // After a step the swing starts in the next tick (the bench trace: a click with a 1-tile walk in tick 5 rolls in 8).
    if(active.arrival===undefined&&n>=active.sent&&beside(pos,active.rock)){active.arrival=n+1;const f=firstRoll(delay,n+1,rate);active.roll=f.roll;delay=f.delay;}
+   // On a walk of more than one tick the click-tick cut runs out on the way: cut again (and click again, as the cut
+   // clears the click, OpHeldUHandler.ts:57) when the swing is 2 ticks off, so it rolls in its first tick.
+   else if(active.arrival===undefined&&canCut&&n>=active.sent&&ticksTo(active.rock)===2&&delay<n+1){cut();actions.push({type:'interactLoc',x:active.loc.x,z:active.loc.z,locId:active.loc.id,optionIndex:1});}
    if(active.roll!==undefined&&n>=active.roll){
     // No ore by the roll: a miss, or a gem roll (mining.rs2:194). Cut again so the next roll is 2 ticks away.
     if(canCut){cut();actions.push({type:'interactLoc',x:active.loc.x,z:active.loc.z,locId:active.loc.id,optionIndex:1});attempts++;active.roll=Math.max(delay,n+1);}
@@ -183,19 +198,26 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
    }
   }
   if(!active){
+   // Pick the rock that rolls first: a free rock after the walk to it, or a depleted rock when it is seen again
+   // (with the knife the respawn click rolls in its own tick). Waiting beside a rock that is back in a tick beats a
+   // walk of 6 ticks to a free one.
    const free=rocks.map(r=>({r,loc:locAt(s,r)})).filter(v=>v.loc&&v.loc.reachable!==false&&!s.nearbyPlayers.some(q=>cheb(q,v.r)<=1));
-   if(free.length){
-    const steps=(r:Tile)=>Math.min(...standTiles(r,rocks).map(t=>cheb(pos,t)));
-    const pick=free.sort((a,b)=>steps(a.r)-steps(b.r))[0]!;
+   const freeRoll=(r:Tile)=>{const op=n+1+ticksTo(r);return delay>=op?delay:canCut?Math.max(op,n+3):op+rate;};
+   const waitRoll=(r:Tile,back:number)=>{const click=Math.max(back+1,n+1+ticksTo(r));return canCut?Math.max(click,n+3):click+rate;};
+   const byRoll=(o.pick??(canCut?'roll':'nearest'))==='roll',stepsTo=(r:Tile)=>Math.min(...standTiles(r,rocks).map(t=>cheb(pos,t)));
+   const best=free.map(v=>({...v,roll:freeRoll(v.r)})).sort((a,b)=>(byRoll?a.roll-b.roll:0)||stepsTo(a.r)-stepsTo(b.r))[0];
+   const soon=rocks.filter(r=>depleted.has(key(r))).map(r=>({r,back:depleted.get(key(r))!+respawn})).map(v=>({...v,roll:waitRoll(v.r,v.back)})).sort((a,b)=>a.roll-b.roll||a.back-b.back)[0];
+   if(best&&!(byRoll&&soon&&soon.roll<best.roll)){
+    const pick=best;
     if(s.inventory.length>=27)drops(1);
     if(canCut&&delay<n+1)cut();
     actions.push({type:'interactLoc',x:pick.loc!.x,z:pick.loc!.z,locId:pick.loc!.id,optionIndex:1});attempts++;
     active={rock:pick.r,loc:pick.loc!,sent:n+1};walkingTo=undefined;armedFor=undefined;
     if(beside(pos,pick.r)){active.arrival=n+1;const f=firstRoll(delay,n+1,rate);active.roll=f.roll;delay=f.delay;}
    }else{
-    // Every rock is down: stand beside the next one to respawn, and cut 2 ticks before the click.
+    // Wait beside the rock that rolls first, and cut 2 ticks before the click.
     waitTicks++;
-    const next=rocks.filter(r=>depleted.has(key(r))).map(r=>({r,back:depleted.get(key(r))!+respawn})).sort((a,b)=>a.back-b.back)[0];
+    const next=soon;
     // Seen up in tick `back`, clicked in back + 1: the cut in back - 1 sets the delay to back + 1. The close after
     // the cut drops the queued cut in that tick, so no log is cut if the rock comes back late.
     const arm=!!next&&canCut&&n+2===next.back&&delay<n+1&&armedFor!==next.back;

@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {miningProfiles,runAtSiteMining,type MiningDriver} from './microbot-b-mining';
-import {respawnTicks,knifeDelay,firstRoll,siteRocks,contentSites,standTiles,oreLag,MINING_SITES,KNIFE,NORMAL_LOGS,type MiningAction,type Tile} from './mining-rotation';
+import {respawnTicks,knifeDelay,firstRoll,siteRocks,siteTiles,contentSites,standTiles,oreLag,MINING_SITES,KNIFE,NORMAL_LOGS,type MiningAction,type Tile} from './mining-rotation';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 
 const iron=()=>miningProfiles().find(p=>p.name==='iron_rock_table')!;
@@ -16,6 +16,7 @@ test('server numbers: respawn scaling, the knife delay and the first swing',()=>
 test('the Ardougne zoo site has its six iron rocks from the map files, and every iron site is found',()=>{
  const zoo=MINING_SITES.find(s=>s.key==='ardougne-zoo-iron')!;
  expect(siteRocks(iron(),zoo.center,zoo.radius).map(r=>`${r.x},${r.z}`)).toEqual(['2602,3233','2602,3234','2602,3236','2605,3233','2605,3235','2605,3237']);
+ expect(siteTiles(iron(),MINING_SITES.find(s=>s.key==='ardougne-zoo-iron-9')!).map(r=>`${r.x},${r.z}`).slice(6)).toEqual(['2590,3230','2591,3232','2592,3234']);
  const sites=contentSites(iron());expect(sites.some(s=>s.rocks.length===6&&s.rocks.some(r=>r.x===2602&&r.z===3233))).toBe(true);
  expect(sites.reduce((n,s)=>n+s.rocks.length,0)).toBe(siteRocks(iron(),{x:0,z:0,level:0},99999).length);
  expect(standTiles({x:2602,z:3233,level:0},siteRocks(iron(),zoo.center,zoo.radius)).map(t=>`${t.x},${t.z}`)).toEqual(['2603,3233','2601,3233','2602,3232']);
@@ -81,4 +82,10 @@ test('adamant pickaxe (mining_rate 3): the knife holds 3 ticks an ore, plain min
 test('respawn 19 on six rocks: the knife cut 2 ticks before the respawn makes the click roll at once',async()=>{
  const plain=await run(false,2,19,ZOO,90),knife=await run(true,2,19,ZOO,90);
  expect(knife.per).toBeLessThan(plain.per);expect(knife.per).toBeLessThanOrEqual(20/6);expect(knife.r.preArms).toBeGreaterThan(5);expect(knife.fletches).toBe(0);expect(knife.r.respawn).toBe(19);
+});
+// The zoo with the three rocks 10 tiles west: the pick waits a tick for a zoo rock rather than walk 6 ticks west.
+test('nine rocks with a 6-tick walk between the groups are no slower than six',async()=>{
+ const NINE=[...ZOO,...[{x:-12,z:-3},{x:-11,z:-1},{x:-10,z:1}].map(t=>({...t,level:0}))];
+ const six=await run(true,2,18,ZOO,90),nine=await run(true,2,18,NINE,90);
+ expect(nine.per).toBeLessThanOrEqual(six.per+0.01);expect(nine.fletches).toBe(0);
 });
