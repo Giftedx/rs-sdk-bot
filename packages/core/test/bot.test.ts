@@ -1,5 +1,11 @@
 import { test, expect } from 'bun:test';
-import { closeWithin, settle, sessionDied, watchUnexpectedEnd } from '../src/bot';
+import { closeWithin, releaseLine, settle, sessionDied, watchUnexpectedEnd } from '../src/bot';
+
+test('the RELEASE line names the first 12 hex of the worker release, or unpinned', () => {
+    expect(releaseLine('ABCDEF0123456789abcdef')).toBe('RELEASE abcdef012345');
+    expect(releaseLine(undefined)).toBe('RELEASE unpinned');
+    expect(releaseLine('not a hash')).toBe('RELEASE unpinned');
+});
 
 test('an unexpected ended session settles a worker even when its script is waiting for ticks',async()=>{
     let end!:(v:{reason:string})=>void;const ended=new Promise<{reason:string}>(r=>{end=r;});
