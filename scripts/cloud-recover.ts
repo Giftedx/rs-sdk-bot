@@ -13,6 +13,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { loadOwners, mySide } from '../packages/core/src/fleet';
 import { BOOTSTRAP_STATUS_AGE_MS } from '../packages/core/src/session-admission';
 import { readFleetAccountClaim } from '../packages/core/src/fleet-trade-claim';
@@ -157,7 +158,16 @@ export function waitRefusedRuns(results: string): Set<string> {
     }
     return runs;
 }
-const waitRefused = (t: any, waits: ReadonlySet<string>) => t.status === 'failed' && (waits.has(t.runId) || WAIT_ERROR.test(t.receipt?.error ?? ''));
+// prepareLiveRecovery throws this exact refusal in beforeRequest, before the controller request is written.
+// It holds an existing lease, not a new authenticated attempt. Crossed accounts and other lease failures still count.
+const leaseWaitRefused = (t: any) => {
+    const r = t.spec?.sessionRecovery;
+    return t.spec?.kind === 'run' && t.spec.capability === 'session-recovery-only' && typeof r?.account === 'string'
+        && t.spec.account === r.account && t.spec.repairs?.some((p: any) => p.account === r.account && p.endedAt === r.endedAt)
+        && t.receipt?.ok === false && t.receipt.output == null
+        && t.receipt.error === `Error: account has an unresolved recovery lease: ${r.account}`;
+};
+const waitRefused = (t: any, waits: ReadonlySet<string>) => t.status === 'failed' && (waits.has(t.runId) || WAIT_ERROR.test(t.receipt?.error ?? '') || leaseWaitRefused(t));
 function endRuns(tasks: readonly any[], target: Target) {
     const byId = new Map(tasks.map(t => [t?.spec?.id, t]));
     const qualifyFailed = (id: string) => { const d = byId.get(id); return d?.spec?.kind === 'qualify' && (d.status === 'failed' || d.status === 'superseded'); };
@@ -172,6 +182,37 @@ export function spentAttempts(tasks: readonly any[], target: Target, waits: Read
 }
 export function waitedAttempts(tasks: readonly any[], target: Target, waits: ReadonlySet<string> = new Set()): number {
     return endRuns(tasks, target).filter(t => waitRefused(t, waits)).length;
+}
+
+// Compaction moves complete task records to this append-only archive. Replayed rows and the overlap before a state
+// save name the same task/run and count once. An unreadable or conflicting outcome cannot grant a fresh budget.
+export function retainedRecoveryTasks(root: string, tasks: readonly any[]): any[] {
+    const archive = join(root, '.practice/coordinator/archive/tasks.jsonl'), retained: any[] = [];
+    try {
+        for (const line of readFileSync(archive, 'utf8').split(/\r?\n/)) if (line.trim()) retained.push(JSON.parse(line));
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw Error('recovery outcome archive unreadable');
+    }
+    const outcomes = new Map<string, any>();
+    const terminal = (t: any) => ['succeeded', 'failed', 'superseded'].includes(t.status);
+    const binding = (t: any) => [t.spec.id, t.spec.kind, t.spec.capability, t.spec.account, t.spec.sessionRecovery, t.spec.repairs];
+    for (const t of [...retained, ...tasks]) {
+        if (typeof t?.spec?.id !== 'string' || !t.spec.id || !['pending', 'running', 'succeeded', 'failed', 'superseded'].includes(t.status))
+            throw Error('recovery outcome archive record invalid');
+        if (t.runId !== undefined && (typeof t.runId !== 'string' || !t.runId)) throw Error('recovery outcome archive run invalid');
+        // A compacted task id can be submitted again. Its distinct runs each spent their own budget. Tasks that
+        // never launched have no run id, so their creation time distinguishes separate submissions.
+        const key = t.runId ? `run:${t.runId}` : JSON.stringify(['task', t.spec.id, t.createdAt ?? null]), prior = outcomes.get(key);
+        if (prior) {
+            if (!isDeepStrictEqual(binding(prior), binding(t))
+                || terminal(prior) && terminal(t) && (prior.status !== t.status || prior.receipt?.error !== t.receipt?.error
+                    || prior.receipt?.ok !== t.receipt?.ok || !isDeepStrictEqual(prior.receipt?.output ?? null, t.receipt?.output ?? null)))
+                throw Error('recovery outcome archive conflict');
+        }
+        // Preserve the terminal outcome while keeping current records last for dependency lookup by task id.
+        outcomes.delete(key); outcomes.set(key, prior && terminal(prior) ? prior : t);
+    }
+    return [...outcomes.values()];
 }
 
 // One unresolved recovery lineage: a failed recovery child stays held, the swarm writes a new orphan end for it with a
@@ -237,13 +278,13 @@ export function lineageAttempts(root: string, account: string): LineageAttempt[]
 // only the count runs over the lineage. Waits keep their own budget.
 export function budgetRefusal(root: string, account: string, end: Pick<EndRecord, 'at' | 'reason'>, tasks: readonly any[], waits: ReadonlySet<string> = new Set()): string | undefined {
     let lineage: Lineage;
-    try { lineage = recoveryLineage(end, lineageAttempts(root, account), recoveryRecords(root, account, tasks)); }
-    catch (e) { lineage = { unknown: `lifecycle unreadable: ${String(e).slice(0, 120)}` }; }
+    try { tasks = retainedRecoveryTasks(root, tasks); lineage = recoveryLineage(end, lineageAttempts(root, account), recoveryRecords(root, account, tasks)); }
+    catch (e) { lineage = { unknown: `history or lifecycle unreadable: ${String(e).slice(0, 120)}` }; }
     if ('unknown' in lineage) return `recovery lineage of end ${end.at} unknown (${lineage.unknown}); recover by hand`;
     const sum = (f: typeof spentAttempts) => lineage.ends.reduce((n, endedAt) => n + f(tasks, { account, endedAt }, waits), 0);
     const of = lineage.ends.length > 1 ? `end ${end.at} and the ${lineage.ends.length - 1} earlier ends of its lineage (first ${lineage.ends.at(-1)})` : `end ${end.at}`;
     if (sum(spentAttempts) >= MAX_ATTEMPTS) return `${MAX_ATTEMPTS} recoveries of ${of} failed; recover by hand`;
-    if (sum(waitedAttempts) >= MAX_WAITS) return `${MAX_WAITS} recoveries of ${of} waited on memory, a bot slot or the source owner; recover by hand`;
+    if (sum(waitedAttempts) >= MAX_WAITS) return `${MAX_WAITS} recoveries of ${of} waited on memory, a bot slot, the source owner or an unresolved recovery lease; recover by hand`;
     return undefined;
 }
 
@@ -341,7 +382,10 @@ async function main(root: string, dry: boolean): Promise<number> {
     const coordinatorRunning = () => { const o = readJson(join(coord, 'owner.json'), null); return !!o && Number.isSafeInteger(o.pid) && pidAlive(o.pid) && !existsSync(stopCoordinator); };
     if (!coordinatorRunning()) { log('refused: coordinator is not running'); return 1; }
     const tasksNow = () => readJson(join(coord, 'state.json'), { tasks: [] }).tasks ?? [];
-    const before = tasksNow(), dead = deadTasks(before), inFlight = recoveriesInFlight(before, dead);
+    let before: any[];
+    try { before = retainedRecoveryTasks(root, tasksNow()); }
+    catch { log('refused: recovery outcome archive unreadable or conflicting'); return 1; }
+    const dead = deadTasks(before), inFlight = recoveriesInFlight(before, dead);
     if (inFlight.length) { log(`recovery in flight for ${inFlight.map((t: any) => t.spec.sessionRecovery.account).join(', ')}; waiting`); return 0; }
     if (recoveryRequestWaiting(join(coord, 'requests'))) { log('a submitted recovery waits for the coordinator to take it; waiting'); return 0; }
     const ended = loadEnded(join(root, '.practice', 'swarm-deaths.json'));
