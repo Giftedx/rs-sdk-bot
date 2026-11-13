@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794533071775,
+ "at": 1794533139521,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,6 +71,28 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
+   ]
   },
   {
    "account": "Bigpackage",
@@ -554,19 +576,6 @@
    "resources": [
     "knight:2671,3313"
    ]
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a2b0a92e-33ed-4d63-b512-c745a7d829a6"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-bigchopper-20261113t011505z [task-a2b0a92e-33ed-4d63-b512-c745a7d829a6]",
-   "role": "bank"
   }
  ]
 }
