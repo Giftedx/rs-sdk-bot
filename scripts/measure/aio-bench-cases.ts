@@ -5,6 +5,7 @@ import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
+import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -200,6 +201,16 @@ const atBank = (c: BenchCase, post: {x: number; z: number}): BenchCase => {
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
 
+// One crafter at the altar's crafter tile and `carriers` partners (suffixes b, c, ...) at its staging tile. The
+// LEDGER line of the crafter is the last one, so the case ticks are the crafter's.
+const carrierCase = (altar: CarrierAltarName, from: number, to: number, carriers: number, bank: {id: number; count: number}[] = []): BenchCase => {
+  const a = carrierAltar(altar), suffixes = 'bcdefghijklmnopq'.slice(0, carriers).split('');
+  return {key: `extra:rune-carriers-${altar}-${from}-${to}`, script: 'scripts/rune-bank-craft.ts', preset: 'fresh_lumbridge', timeoutMs: 600_000,
+    scriptArgs: [...suffixes.map(s => `{bot:${s}}`), `--staged=${altar}:${to}`], pass: s => ok(s) && Number(/^RUNE_STAGED_RESULT .*?"level":(\d+)/m.exec(s)?.[1] ?? 0) >= to,
+    presetConfig: {position: {...a.crafter, level: 0}, varps: {63: 6, 281: 1000}, skills: {Runecraft: from}},
+    companions: suffixes.map(suffix => ({suffix, preset: 'fresh_lumbridge', presetConfig: {position: {...a.staging, level: 0}, varps: {63: 6, 281: 1000},
+      inventory: [{id: a.talisman, count: 1}, ...Array.from({length: 27}, () => ({id: 1436, count: 1}))], bank}}))};
+};
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
 
@@ -319,6 +330,12 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('foraging', 'miscellania-coffer', 'fresh_lumbridge', ['1000', '200'], {presetConfig: {position: {x: 2500, z: 3857, level: 1}, coins: 5000, varps: {359: 100, 361: 1367343104, 362: -1073741824, 188: 15, 347: 10}}}),
   skiller('foraging', 'qol', 'fresh_lumbridge', ['prayer', '0', '10', '40'], {presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Prayer: 43}}}),
   skiller('runecraft', 'air', 'rc_air_inside'),
+  // The carrier pipeline (scripts/rune-carriers.ts --staged): the crafter stands in the altar with an empty pack, and
+  // each carrier stands at the staging tile with 27 essence and the talisman (scripts/rune-carrier-altar.ts).
+  // Block 4 of the record route: air altar, 7 essence helpers, Runecraft 1 to 44 (record 207 ticks).
+  carrierCase('air', 1, 44, 7),
+  // Fire with 2 carriers and 27 more essence in each bank: 3 packs, so one carrier banks at Al Kharid and returns.
+  carrierCase('fire', 14, 40, 2, [{id: 1436, count: 27}]),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
   // The stall trip of the same worker: no food in the pack or the bank, and no coins for the Baker's shop. The thief
   // has 40 Hitpoints, because one under 20 ends the run when it has no food (goldfarm.ts, FRAIL_HP).
