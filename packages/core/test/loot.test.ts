@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { claimPile, detourTicks, fileTables, lootRisk, lootRoom, pileValue, recordRun, releasePile, unitValue, worthIt, LOOT_RULES, type LootTables } from '../src/loot';
+import { claimPile, detourTicks, fileTables, lureGuard, LURE_PAUSE, lootRisk, lootRoom, pileValue, recordRun, releasePile, unitValue, worthIt, LOOT_RULES, type LootTables } from '../src/loot';
 import { watchRandomEvents } from '../src/randomevents';
 
 const RUNE = 9001, JUNK = 9002, FEATHER = 9003, QUEST = 9004, NOTED = 9005;
@@ -61,6 +61,34 @@ test('risk: no deeper Wilderness, no stranger there, no new hunter, hp and fight
     expect(lootRisk({ ...st, nearbyNpcs: [{ id: 50, x: 3230, z: 3218 }] }, pile(RUNE, 3227, 3218, 5), hunters, friends)).toBe('npc');
     expect(lootRisk({ ...st, nearbyNpcs: [{ id: 50, x: 3224, z: 3218 }] }, pile(RUNE, 3227, 3218, 5), hunters, friends)).toBeNull();
     expect(lootRisk(st, { ...pile(RUNE, 3227, 3218, 5), reachable: false }, none, friends)).toBe('unreachable');
+});
+
+test('bait guards: no pile near the Wilderness edge, none beside a stronger hunter', () => {
+    const none = new Map<number, number>(), friends = new Set<string>();
+    const south: any = state(3100, 3505);
+    expect(lootRisk(south, pile(RUNE, 3100, 3517, 12), none, friends)).toBe('near-wild');
+    expect(lootRisk(south, pile(RUNE, 3100, 3510, 5), none, friends)).toBeNull();
+    // The hunter already has the player in range, but it is stronger: no pickup.
+    const st: any = { ...state(3222, 3218), player: me(3222, 3218, { combatLevel: 20 }) };
+    const hunters = new Map([[50, 4]]);
+    expect(lootRisk({ ...st, nearbyNpcs: [{ id: 50, x: 3224, z: 3218, combatLevel: 21 }] }, pile(RUNE, 3227, 3218, 5), hunters, friends)).toBe('npc');
+    expect(lootRisk({ ...st, nearbyNpcs: [{ id: 50, x: 3224, z: 3218, combatLevel: 20 }] }, pile(RUNE, 3227, 3218, 5), hunters, friends)).toBeNull();
+});
+
+test('bait guards: the anchor holds through a trail; 3 pickups in 100 ticks pause looting', () => {
+    const g = lureGuard();
+    const at = (x: number) => ({ x, z: 3218, level: 0 });
+    expect(g.allow(0, at(3222), { x: 3230, z: 3218 })).toBeNull();
+    expect(g.picked(5)).toBe(false);
+    // The bot stands 8 tiles east after a walk back that timed out: the anchor stays at 3222.
+    expect(g.allow(20, at(3230), { x: 3236, z: 3218 })).toBeNull();
+    expect(g.allow(20, at(3230), { x: 3238, z: 3218 })).toBe('far-anchor');
+    expect(g.picked(25)).toBe(false);
+    expect(g.picked(40)).toBe(true);
+    expect(g.allow(41, at(3222), { x: 3223, z: 3218 })).toBe('lure-pause');
+    expect(g.allow(40 + LURE_PAUSE, at(3222), { x: 3223, z: 3218 })).toBeNull();
+    // 100 ticks with no pickup move the anchor to the player.
+    expect(g.allow(40 + LURE_PAUSE + 101, at(3300), { x: 3310, z: 3218 })).toBeNull();
 });
 
 test('room: a stack joins its stack; a full pack drops one of several cheap slots, never a kept or single item', () => {
@@ -189,6 +217,31 @@ test('an open bank takes the kept item first; a script that loots for itself is 
     expect(f.lines.filter(l => /^EVENT loot seen/.test(l)).length).toBe(1);
     await f.step(20);
     expect(f.lines.filter(l => /^EVENT loot seen/.test(l)).length).toBe(2);
+    w.stop();
+});
+
+test('a bait trail: after 3 pickups the next pile is left with lure-pause', async () => {
+    // Tiles on row 3230: the piles of earlier tests in this file are still claimed by their sessions.
+    const f = fake(state(3222, 3230));
+    const w = f.watch();
+    let slot = 0;
+    for (const x of [3223, 3224, 3225]) {
+        f.st.groundItems = [pile(RUNE, x, 3230, x - 3222)];
+        await f.step();
+        f.st.groundItems = [];
+        f.st.inventory = [...f.st.inventory, { slot: slot++, id: RUNE, name: 'rune', count: 1 }];
+        f.st.player = me(x, 3230);
+        await f.step();
+        f.st.player = me(3222, 3230);
+        await f.step(3);
+    }
+    expect(f.lines.filter(l => /^EVENT loot pickup/.test(l)).length).toBe(3);
+    expect(f.lines.some(l => /^EVENT loot lure-pause/.test(l))).toBe(true);
+    f.st.groundItems = [pile(RUNE, 3226, 3230, 4)];
+    const sent = f.sent.length;
+    await f.step(5);
+    expect(f.lines.some(l => /^EVENT loot skip-lure-pause .*id=9001/.test(l))).toBe(true);
+    expect(f.sent.slice(sent).some(a => a.type === 'pickupItem')).toBe(false);
     w.stop();
 });
 

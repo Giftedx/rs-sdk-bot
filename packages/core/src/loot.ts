@@ -35,6 +35,13 @@ export const ALCH_SHARE = 0.6;
 export const COMBAT_TICKS = 8;
 // Players within this many tiles count as a threat in the Wilderness.
 export const PLAYER_RANGE = 15;
+// Outside the Wilderness, a pile this close to its edge is skipped: the path to it can cross the edge.
+export const NEAR_WILD = 4;
+// Bait trails: a player can drop item after item to lead a bot into the Wilderness or to a monster. Three guards
+// stop it. Every pile must lie within maxDistance of the anchor, the tile where a run of pickups began; the anchor
+// moves only after ANCHOR_RESET ticks with no pickup. LURE_PICKUPS pickups inside LURE_TICKS ticks stop all pickups
+// for LURE_PAUSE ticks. And no pickup goes near the Wilderness edge or a stronger hunting NPC (lootRisk).
+export const ANCHOR_RESET = 100, LURE_PICKUPS = 3, LURE_TICKS = 100, LURE_PAUSE = 300;
 
 // A record run: the main account, a specialist board account, or any run with HAGGIS_RUN=1.
 export const recordRun = (name: string, env: Record<string, string | undefined> = process.env): boolean =>
@@ -81,15 +88,50 @@ export function lootRisk(st: any, g: Ground, danger: ReadonlyMap<number, number>
     const me = { x: p.worldX ?? p.x, z: p.worldZ ?? p.z };
     const wildMe = wildernessLevel(me.x, me.z), wildThere = wildernessLevel(g.x, g.z);
     if (wildThere > wildMe) return 'deeper';
+    if (wildMe === 0 && nearWild(g)) return 'near-wild';
     if (Math.max(wildMe, wildThere) > 0 && (st.nearbyPlayers ?? []).some((q: any) => !friends.has(String(q.name ?? '').toLowerCase()) && (q.distance ?? 0) <= PLAYER_RANGE))
         return 'player';
+    const combat = p.combatLevel ?? 3;
     for (const n of st.nearbyNpcs ?? []) {
         const range = danger.get(n.id);
         if (range === undefined) continue;
         const t = tileOf(n);
-        if (cheb(t, g) <= range && cheb(t, me) > range) return 'npc';
+        // A stronger hunter near the pile always stops the pickup, even one that already has the player in range.
+        if (cheb(t, g) <= range && (cheb(t, me) > range || (n.combatLevel ?? 0) > combat)) return 'npc';
     }
     return null;
+}
+
+// True when a tile within NEAR_WILD tiles of the pile is in the Wilderness.
+export const nearWild = (g: { x: number; z: number }) => {
+    for (const dx of [-NEAR_WILD, 0, NEAR_WILD]) for (const dz of [-NEAR_WILD, 0, NEAR_WILD]) if (wildernessLevel(g.x + dx, g.z + dz) > 0) return true;
+    return false;
+};
+
+// The anchor and the bait-trail pause of one session. `allow` answers for a pile; `picked` records a pickup.
+export function lureGuard(r: LootRules = LOOT_RULES) {
+    let anchor: { x: number; z: number; level: number } | null = null, last = -Infinity, pausedTo = -Infinity;
+    const picks: number[] = [];
+    return {
+        // Null when the pile may be taken, else the reason it may not.
+        allow(now: number, me: { x: number; z: number; level: number }, g: { x: number; z: number }): string | null {
+            if (now < pausedTo) return 'lure-pause';
+            if (!anchor || now - last > ANCHOR_RESET) anchor = { ...me };
+            if (anchor.level !== me.level || cheb(anchor, g) > r.maxDistance) return 'far-anchor';
+            return null;
+        },
+        // Records a pickup. True when it starts the bait-trail pause.
+        picked(now: number): boolean {
+            last = now;
+            picks.push(now);
+            while (picks.length && now - picks[0]! > LURE_TICKS) picks.shift();
+            if (picks.length < LURE_PICKUPS) return false;
+            pausedTo = now + LURE_PAUSE;
+            picks.length = 0;
+            return true;
+        },
+        anchor: () => anchor,
+    };
 }
 
 // True for an item that goes on one stack: coins, a noted item, or a pile of more than one on one ground entry.

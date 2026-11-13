@@ -7,7 +7,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from './inprocess';
-import { claimPile, LOOT_RULES, lootRisk, lootRoom, pileKey, pileValue, releasePile, unitValue, worthIt, type Ground, type LootRules, type LootTables } from './loot';
+import { claimPile, LOOT_RULES, LURE_PAUSE, lureGuard, lootRisk, lootRoom, pileKey, pileValue, releasePile, unitValue, worthIt, type Ground, type LootRules, type LootTables } from './loot';
 
 // ---- Server ids (vendor/rs-sdk/server/content/pack/{npc,obj,loc,seq,interface}.pack) ----
 
@@ -740,6 +740,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const SKIP_RISK = 10, SKIP_DONE = 100;
     const skipPiles = new Map<string, number>();
     const riskSaid = new Set<string>();
+    const lure = lureGuard(rules);
     const reserved = (id: number) => (loot?.reserved?.()[id] ?? 0) > 0;
     const keepOrReserve = (id: number) => kept.has(id) || reserved(id);
     const lootJob = (g: Ground, key: string): Omit<Job, 'started'> => {
@@ -769,6 +770,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 const got = countOf(inv(), g.id) - before;
                 if (got > 0) {
                     kept.set(g.id, (kept.get(g.id) ?? 0) + got);
+                    if (lure.picked(s.tick())) say('loot', 'lure-pause', `ticks=${LURE_PAUSE}`);
                     return end('pickup', ` n=${got} value=${unitValue(g.id, tables) * got}`);
                 }
                 if (st?.dialog?.isOpen) { continueDialog(); return false; }
@@ -840,7 +842,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         for (const g of piles) {
             const key = pileKey(p.level, g);
             if (skipPiles.has(key) || ownDrops.has(`${g.x},${g.z},${g.id}`)) continue;
-            const risk = lootRisk(st, g, danger(), fleetNames, rules);
+            const risk = lure.allow(now, p, g) ?? lootRisk(st, g, danger(), fleetNames, rules);
             if (risk) {
                 skipPiles.set(key, now + SKIP_RISK);
                 if (!riskSaid.has(key)) { riskSaid.add(key); say('loot', `skip-${risk}`, `id=${g.id} value=${pileValue(g, tables)} d=${g.distance}`); }
