@@ -1537,3 +1537,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     35 kills and 29 deaths where the champion has 37 and 27. Finding 44's numbers for the same option came from runs
     that did not repeat. The champion takes `specReserve: 500`. Gap: 8 seeds; the mirror and the rivals each lose 1
     or 2 fights.
+51. **No single knob of the champion beats it on the runner and the rivals at once.** Repeatable runs, the champion
+    with `tribrid-snare-sara`, seeds 1-8 (`.practice/climb/dual-sara.sh`): the champion catches 30 of 64 runners and
+    has 91 kills, 5 deaths in 96 rival fights, and a second run gives the same. Each change (runner of 64; rival kills
+    and deaths of 96): `eatAt` 55: 28; 87, 9. `eatAt` 65: 35; 87, 8. `chaseBelow` 0.5: 30; 91, 5 (no change).
+    `mixStyles: false`: 21; 91, 5. `adaptStyles: false`: 29; 87, 8. `freezeEarlyMax` 0: 19; 90, 6.
+    `freezeBelow` 0.4: 18; 92, 4. `freezeBelow` 0.55: 28; 88, 8. `specReserve` 750: 34; 90, 6. The early freeze from
+    half health holds 11 of the 30 runner kills. Gap: one knob at a time; 8 seeds.
