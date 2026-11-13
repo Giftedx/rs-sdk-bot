@@ -1583,6 +1583,6 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
 55. **Five accounts catch the target that three let go.** `extra:army-deep-x3` and `extra:army-deep-x5` (gang mode
     at 3166,3784, Wilderness level 34, multi-way; our account on the champion with 18 sharks, a glory and its
     escape from a crowd, a run south to level 30; the army on `army`; two groups; seeds 1-4): three accounts kill
-    the target in 2 of 8 meetings (5 escapes, 1 away), five in 6 of 8 (2 escapes). The army lost no account. A
-    target that leaves on the first two hits is the prey of five or more. Gap: one run per seed; four accounts not
-    tried.
+    the target in 2 of 8 meetings (5 escapes, 1 away), four in 4 of 8 (4 escapes), five in 6 of 8 (2 escapes).
+    The army lost no account. A target that leaves on the first two hits is the prey of five or more. Gap: one run
+    per seed.

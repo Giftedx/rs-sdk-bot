@@ -577,6 +577,7 @@ const ROUTE_CASES: BenchCase[] = [
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
   gangCase('extra:army-deep-x3', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 3),
+  gangCase('extra:army-deep-x4', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 4),
   gangCase('extra:army-deep-x5', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 5),
   // The same army with a stunner: one dragon spear and two daggers in each group.
   gangCase('extra:army-spear-multi-x4', 'tribrid-snare', 'tribrid-snare-spear+tribrid-snare+tribrid-snare', 4, {x: 3150, z: 3560}),
