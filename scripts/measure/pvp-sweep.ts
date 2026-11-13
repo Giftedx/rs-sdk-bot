@@ -3,8 +3,10 @@
 // time counts as 90 s. Cases are packed longest first onto PARALLEL engines until a batch's estimate (the busiest
 // engine) reaches the budget; each batch runs with a hard limit of the budget plus 90 s, and a case it did not reach
 // goes into the next batch. Prints one line for each batch and one PVP_SWEEP total.
-// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 8] [--seed n]
-// Default pattern: every pvp: case and every extra: spar, gang, kite, army, team and hunt-trip case.
+// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 8] [--seed n] [--quick]
+// Default pattern: every pvp: case and every extra: spar, gang, kite, army, team and hunt-trip case (233 cases, about
+// 32 minutes in four batches on 4 cores; 10 engines at once are no faster than 6). --quick: every pvp: route case and
+// one case of each climb (QUICK_CASES), a few minutes, for the turns of a change; the full sweep before a merge.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { benchCases } from './aio-bench-cases';
@@ -12,6 +14,11 @@ import { benchCases } from './aio-bench-cases';
 const root = resolve(import.meta.dir, '..', '..');
 const dir = join(root, '.practice', 'pvp-sweep'), timesFile = join(dir, 'elapsed.json');
 const DEFAULT_MS = 90_000;
+// One case of each climb of research/pvp-fight-loop.md: the champion against the rival builds and the runner, the
+// spear army, the roam's and the hunt's pick, two against two, and the dagger gang.
+export const QUICK_CASES = ['extra:spar-rivals-tribrid-snare-sara-x12', 'extra:spar-escape-tribrid-snare-sara-x8', 'extra:army-route-spear-x5',
+    'extra:roam-pick', 'extra:hunt-pick', 'extra:team-2v2-multi-x4', 'extra:gang-ganker-x4'] as const;
+export const quickPattern = () => new RegExp(`^(pvp:.*|${QUICK_CASES.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`);
 
 // Longest first onto the least loaded engine; a batch closes when its busiest engine would pass the budget.
 export function packBatches(cases: readonly { key: string; ms: number }[], engines: number, budgetMs: number): string[][] {
@@ -29,7 +36,7 @@ export function packBatches(cases: readonly { key: string; ms: number }[], engin
 
 if (import.meta.main) {
     const argv = process.argv.slice(2), value = (k: string) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
-    const pattern = new RegExp(argv.find(a => !a.startsWith('--') && !/^\d+$/.test(a)) ?? '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))');
+    const pattern = argv.includes('--quick') ? quickPattern() : new RegExp(argv.find(a => !a.startsWith('--') && !/^\d+$/.test(a)) ?? '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))');
     const engines = Number(value('--parallel') ?? 6), budgetMs = Number(value('--budget') ?? 8) * 60_000, seed = value('--seed');
     mkdirSync(dir, { recursive: true });
     const times: Record<string, number> = existsSync(timesFile) ? JSON.parse(readFileSync(timesFile, 'utf8')) : {};
