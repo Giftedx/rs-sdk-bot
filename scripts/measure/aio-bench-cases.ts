@@ -198,9 +198,11 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = []): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * 2 * size - 1).split('');
   const sideA = (i: number) => i % (2 * size) < size;
-  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kitA, at.x + 2, at.z), output: /wins=(\d+)/,
+  const kitOf = (kits: string, member: number) => { const list = kits.split('+'); return list[member % list.length]!; };
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kitOf(kitA, 0), at.x + 2, at.z), output: /wins=(\d+)/,
     scriptArgs: ['team', ...letters.map(l => `{bot:${l}}`), '900', `SPAR_TEAM=${size}`, `SPAR_KITS=${kitA}:${kitB}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitA, at.x + 2, at.z) : kitFixture(kitB, at.x, at.z)}))};
+    // A side's kits joined by `+` go to its members in turn (scripts/pk-team.ts).
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitOf(kitA, (i + 1) % (2 * size)), at.x + 2, at.z) : kitFixture(kitOf(kitB, (i + 1) % (2 * size) - size), at.x, at.z)}))};
 };
 // Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
 // (SPAR_POST): one walk of 150 tiles, not two.
@@ -638,6 +640,8 @@ const ROUTE_CASES: BenchCase[] = [
   // Three of ours against three, three groups.
   // Side A on the dragon spear (its special holds the target 4 ticks, finding 67) against the snare kit.
   teamCase('extra:team-2v2-spear-x4', 'tribrid-snare-spear', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // Side A one spear and one dragon dagger (the spear holds, the dagger hits), against the snare kit.
+  teamCase('extra:team-2v2-mixed-x4', 'tribrid-snare-spear+tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
   teamCase('extra:team-3v3-multi-x3', 'tribrid-snare', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.

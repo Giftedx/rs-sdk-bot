@@ -3,7 +3,8 @@
 // is dead or gone, then takes the next. The meeting ends when one side has no account left in the Wilderness, or at
 // the cap. Side A's accounts know each other as allies (FightOptions.allies), and so do side B's.
 // Usage: bun scripts/pk-team.ts <bot> <bot ...> [CAP ticks]: groups of 2 x SPAR_TEAM accounts, side A first.
-// SPAR_A, SPAR_B, SPAR_A_OPTS, SPAR_B_OPTS and SPAR_KITS=<kit A>:<kit B> as in scripts/pk-gang.ts.
+// SPAR_A, SPAR_B, SPAR_A_OPTS, SPAR_B_OPTS and SPAR_KITS=<kit A>:<kit B> as in scripts/pk-gang.ts; a side's kit may
+// be kits joined by `+` (tribrid-snare-spear+tribrid-snare), taken in turn by its members.
 // Prints one `TEAM <json>` line for each group and one RESULT: wins (side A left standing), losses, draws.
 import type { Session } from '../packages/core/src/inprocess';
 import { fightPlayer, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
@@ -27,7 +28,9 @@ const out = (s: Session, life0: number | undefined) => {
 
 // How an account takes its next enemy: `low` the lowest health bar in view (the nearest on a tie), `near` the nearest.
 export type TeamPick = 'low' | 'near';
-export async function team(a: readonly Session[], b: readonly Session[], optionsA: FightOptions, optionsB: FightOptions, cap: number,
+// optionsA and optionsB: one side's options, or a function of the member's place on its side (per-member kits).
+type SideOptions = FightOptions | ((member: number) => FightOptions);
+export async function team(a: readonly Session[], b: readonly Session[], optionsA: SideOptions, optionsB: SideOptions, cap: number,
     log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false, picks: { a: TeamPick; b: TeamPick } = { a: 'low', b: 'low' }): Promise<TeamResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if ((await Promise.all([...a, ...b].map(s => nextTick(s)))).some(t => !t)) break;
@@ -36,7 +39,8 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     const start = a[0]!.tick(), attacks = { a: 0, b: 0 };
     let over = false;
     const ended = () => over || halt() || a.every(isOut) || b.every(isOut) || a[0]!.tick() - start >= cap;
-    const side = (mine: readonly Session[], foes: readonly Session[], options: FightOptions, key: 'a' | 'b') => mine.map(async s => {
+    const side = (mine: readonly Session[], foes: readonly Session[], sideOptions: SideOptions, key: 'a' | 'b') => mine.map(async (s, member) => {
+        const options = typeof sideOptions === 'function' ? sideOptions(member) : sideOptions;
         const allies = mine.filter(x => x !== s).map(x => x.name.toLowerCase());
         while (!ended() && !isOut(s)) {
             // The enemy with the lowest health bar in view, the nearest on a tie.
@@ -67,8 +71,10 @@ if (import.meta.main) {
     const { openBot, finish } = await import('../packages/core/src/bot');
     const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base';
     const [kitA, kitB] = (env.SPAR_KITS ?? '').split(':');
-    const options = (sideB: boolean, group: number): FightOptions => {
-        const kit = sideB ? kitB : kitA;
+    // A side's kit may be one kit or kits joined by `+`, taken in turn by the side's members.
+    const options = (sideB: boolean, group: number) => (member: number): FightOptions => {
+        const kits = (sideB ? kitB : kitA)?.split('+').filter(Boolean) ?? [];
+        const kit = kits.length ? kits[member % kits.length] : undefined;
         const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + group * 2 + (sideB ? 1 : 0) };
         return { ...sparOptions(sideB ? nameB : nameA, sideB ? env.SPAR_B_OPTS : env.SPAR_A_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}), ...seed };
     };

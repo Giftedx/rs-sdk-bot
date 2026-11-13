@@ -1747,6 +1747,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     spears with no settings given, 6 of 6. In an even fight the spear loses: two of ours against two on the snare
     kit in multi-way combat (`extra:team-2v2-multi-x4` and `extra:team-2v2-spear-x4`, seeds 1-4, side B on the
     champion), wins, losses and draws of 16 groups: dragon dagger on the champion 10, 4, 2; spear on the champion
-    5, 8, 3; spear on `army-alpha` 4, 11, 1 (a hold deals no damage). Gap: a mixed team (one spear, one dagger); a
+    5, 8, 3; spear on `army-alpha` 4, 11, 1; one spear and one dagger (`extra:team-2v2-mixed-x4`, kits joined by `+`
+    in `scripts/pk-team.ts`) on the champion 5, 11, 0. No account dies in these fights: each ends when one side
+    leaves, and a hold deals no damage. Gap: a
     single-way spot (one attacker at a time) has no lock; the target's own escape does not answer the lock; four
     spears leave the army with one dagger.
