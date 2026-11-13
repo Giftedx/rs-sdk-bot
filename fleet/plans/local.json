@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794533139521,
+ "at": 1794533532518,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -74,25 +74,20 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "betty"
+    "99",
+    "5000"
    ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
    "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
+   "resources": []
   },
   {
    "account": "Bigpackage",
@@ -137,21 +132,24 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "shop:betty"
    ]
   },
   {
