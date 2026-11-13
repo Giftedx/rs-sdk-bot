@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794530827007-nabtheknob-masterbaiter-bones",
  "account": "Masterbaiter",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 6,
  "claim": "a4644674-bb4c-47c1-9349-79783afb514f",
- "count": 0,
- "ok": false,
- "at": 1794530833334,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1794531111639,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1794531109658
+ },
+ "logout": {
+  "attemptId": "1794530833342-0000016472-0000000001",
+  "at": 1794531111628,
+  "sha256": "a3f5615ea4c6d27a915b8329bcb0c4b3f5c19604e289bcba3d3643cfcd635237"
+ },
+ "screen": true
 }
