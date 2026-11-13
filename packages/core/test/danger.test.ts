@@ -59,3 +59,20 @@ test('a live Karamja scorpion is a hunter to dodge for an HP 10 account, though 
     // A combat-46 account is more than twice the scorpion's level: a cowardly monster leaves it alone.
     expect(liveHunters(seen, { skills: { attack: 40, strength: 40, defence: 40, hitpoints: 40 } })).toEqual([]);
 });
+
+import { deadlyTo, meleeOnly, PROTECT_MELEE_LEVEL } from '../src/danger';
+test('Protect from Melee opens the ground of melee-only hunters, not of ranged or magic ones', () => {
+    const dog = parseHunter({ id: 99001, name: 'Guard dog', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=cowardly')!;
+    const archer = parseHunter({ id: 99002, name: 'Archer', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=ranged')!;
+    const styles = new Map<number, readonly string[]>([[99002, ['ranged']]]);
+    expect(meleeOnly(dog, styles)).toBe(true);
+    expect(meleeOnly(archer, styles)).toBe(false);
+    expect(meleeOnly(wolf, styles)).toBe(false);
+    const runner = { hitpoints: 10, magic: 59, prayer: 99 }, low = { hitpoints: 10, magic: 59, prayer: PROTECT_MELEE_LEVEL - 1 };
+    expect(deadlyTo(dog, runner, styles)).toBe(false);
+    expect(deadlyTo(dog, low, styles)).toBe(true);
+    expect(deadlyTo(archer, runner, styles)).toBe(true);
+    const saved = process.env.PRAYER_GUARD;
+    process.env.PRAYER_GUARD = '0';
+    try { expect(deadlyTo(dog, runner, styles)).toBe(true); } finally { if (saved === undefined) delete process.env.PRAYER_GUARD; else process.env.PRAYER_GUARD = saved; }
+});

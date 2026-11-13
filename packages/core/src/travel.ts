@@ -175,6 +175,11 @@ export function loadTravel(): Travel[] {
 }
 let staffs: { rune: string; staffs: string[] }[] = [];
 
+// The completion value of a quest varp (knowledge/quests.json).
+let completeByVarp: Map<string, number> | undefined;
+export const questCompleteValue = (varp: string): number | undefined => (completeByVarp ??= new Map(
+    (JSON.parse(readFileSync(join(resolve(import.meta.dir, '..', '..', '..'), 'knowledge', 'quests.json'), 'utf8')) as { varp?: string; complete?: number }[])
+        .filter(q => q.varp && Number.isInteger(q.complete)).map(q => [q.varp!, q.complete!]))).get(varp);
 const compare = (have: number, op: string, want: number) => op === '>=' ? have >= want : op === '>' ? have > want : op === '=' ? have === want : op === '<' ? have < want : op === '<=' ? have <= want : false;
 // Whether this account can take this travel now. An unknown quest stage counts as not met.
 export function travelAllowed(t: Travel, a: Account): boolean {
@@ -186,7 +191,9 @@ export function travelAllowed(t: Travel, a: Account): boolean {
             const publicGlider = v === undefined && n.varp === 'grandtree' && n.op === '=' && n.value === 160
                 && t.kind === 'glider' && t.id.startsWith('npc:gnomepilot:') && t.run.how === 'npc' && t.run.npc === 'Gnome pilot'
                 && /^glidermap:com_2[1-5]$/.test(t.run.button?.component ?? '') && a.unlocks?.includes('grandtree-glider') === true;
-            if (!publicGlider && (v === undefined || !compare(v, n.op, n.value))) return false;
+            // A finished quest whose stage is unknown meets a need of exactly its completion value (guild-observation.ts).
+            const completed = v === undefined && n.op === '=' && a.unlocks?.includes(`complete:${n.varp}`) === true && questCompleteValue(n.varp) === n.value;
+            if (!publicGlider && !completed && (v === undefined || !compare(v, n.op, n.value))) return false;
         }
         else if ('skill' in n) { if ((a.skills[n.skill] ?? 1) < n.level) return false; }
         else if ('held' in n) { if (count(n.held) < n.count) return false; }
