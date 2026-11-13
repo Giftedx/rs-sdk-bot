@@ -162,6 +162,9 @@ export type FightOptions = {
     // While holdFire() is true the loop attacks and casts nothing; it walks to within 3 tiles of the target and eats
     // and prays as usual (a group's opening in one tick).
     holdFire?: () => boolean;
+    // In multi-way combat, against two or more players that face us or an ally, the overhead prayer covers the style
+    // most of them hold (a crowd's hits all carry the source we face, so the last hitter names no one).
+    crowdPrayer?: boolean;
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
     // keeps 500: research/pvp-fight-loop.md finding 50).
     specReserve?: number;
@@ -562,12 +565,14 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const allyNear = o.allies?.length ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && p.distance <= 10) : [];
         const alliesNear = allyNear.length;
         // The attackers: the client names a hit's source by the entity we face, so in a crowd every hit counts for one
-        // player. A player within 10 tiles, not an ally, that faces a player who is not one of our allies, faces us.
+        // player. A player within 10 tiles, not an ally, that faces a player who is not one of our allies, faces us or
+        // an ally (counting only those that face us did worse two against two, research finding 57).
         const allyIdx = new Set(allyNear.map(p => p.index));
-        const facing = o.escapeOutnumbered != null ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase()) && (() => {
+        const facers = o.escapeOutnumbered != null || o.crowdPrayer ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase()) && (() => {
             const f = (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players?.[p.index]?.faceEntity ?? -1;
             return f >= 32768 && !allyIdx.has(f - 32768);
-        })()).length : 0;
+        })()) : [];
+        const facing = facers.length;
         const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
         if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
             outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
@@ -777,7 +782,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const left = [...predictor.seen()].filter(st => st !== shownGuard);
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
-        let wantedOverhead = o.overheadPrayer === false ? null : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        // crowdPrayer: two or more players face us: the overhead covers the style that most of them hold.
+        const crowdStyle = o.crowdPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
+            const n = new Map<Style, number>();
+            for (const p of facers) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
+            return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+        })() : null;
+        let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         if (o.prayerLag?.length) {
             if (lagHas === undefined) lagWant = lagHas = wantedOverhead;
             else if (wantedOverhead !== lagWant) { lagWant = wantedOverhead; lagAt = now + pickWeighted(o.prayerLag, rand); }

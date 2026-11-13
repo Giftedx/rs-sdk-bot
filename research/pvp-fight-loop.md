@@ -1603,5 +1603,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 85 to 99 HP in most meetings and leaves alive
     in 5 of 8 where it left in 2 of 8. Two against two (both sides on the champion, seeds 1-8): side A wins 12,
     loses 8, draws 12, with 11 dead and 19 of side B's; 30 deaths in all where the hit count alone gave 42.
-    Evidence: `.practice/climb/set-ad5f`, `set-tv-face-*`. Gap: a player that faces a third party within 10 tiles
-    counts as ours; no run on the live server.
+    The overhead prayer had the same fault: the last hitter named the player we face. `crowdPrayer` (in multi-way
+    combat, with two or more such players facing us or an ally, the overhead covers the style most of them hold):
+    two against two, side A wins 20, loses 6, draws 6, with 5 dead and 25 of side B's, where the champion without it
+    has 12, 8, 12, 11 and 19; three against three, 13, 6, 5, 8 and 16 where it has 7, 7, 10, 18 and 12. Counting
+    only the players that face us (an index not in our own nearby list) did worse two against two: 14, 14, 4, 10
+    and 11 with `crowdPrayer`, 18, 12, 2, 10 and 15 without. The champion takes `crowdPrayer`. Evidence:
+    `.practice/climb/set-ad5f`, `set-tv-*`. Gap: a player that faces a third party within 10 tiles counts as ours;
+    no run on the live server.

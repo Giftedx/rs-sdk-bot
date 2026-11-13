@@ -14,5 +14,6 @@
   "freezeEarlyMax": 1,
   "freezeArmour": "strip",
   "escapeOutnumbered": 2,
-  "specReserve": 500
+  "specReserve": 500,
+  "crowdPrayer": true
 }
