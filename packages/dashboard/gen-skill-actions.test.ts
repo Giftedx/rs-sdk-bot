@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { inputCounts, objParamRows, skillActions } from './gen-skill-actions';
+import { contentRows, inputCounts, objParamRows, skillActions } from './gen-skill-actions';
 
 test('skill actions give the XP of one action on this server: base XP times the XP rate', () => {
     const names = new Map([['logs', 'Logs'], ['oak_logs', 'Oak logs']]);
@@ -36,6 +36,28 @@ test('item params give Prayer and Firemaking actions: bone_exp and productexp in
     expect(skillActions(rows, new Map([['bones', 'Bones'], ['oak_logs', 'Oak logs']]), 25, new Map([['bones', 526], ['oak_logs', 1521]]))).toEqual({
         prayer: [['Bones', 1, 112.5, ['Bones'], [], [526]]],
         firemaking: [['Oak logs', 15, 1500, ['Oak logs'], [], [1521]]],
+    });
+});
+
+test('Smithing and Herblore actions from the smelting and potion structs, the smithing dbrow and the herb params', () => {
+    const rows = contentRows({
+        smelting: '[smelting_steel_bar]\nparam=product,steel_bar\nparam=levelrequired,30\nparam=productexp,175\nparam=ingredient,iron_ore\nparam=bar_count,1\nparam=ingredient_secondary,coal\nparam=ingredient_secondary_count,2\n',
+        smithingStruct: '[smithing_rune_bar]\nparam=xpperbar,750\nparam=namedobj,runite_bar\n',
+        smithingRows: '[rune_platebody]\ntable=smithing\ndata=product,rune_platebody\ndata=product_amount,1\ndata=levelrequired,99\ndata=bar,runite_bar\ndata=bar_amount,5\n',
+        brewing: '[unf_guam_potion]\nparam=brew_potion_ingredient,guam_leaf\nparam=brew_potion_solvent,vial_water\nparam=brew_potion_mixture,guamvial\n\n[attack_potion]\nparam=brew_potion_ingredient,eye_of_newt\nparam=brew_potion_solvent,guamvial\nparam=brew_potion_mixture,attack_potion3\nparam=brew_potion_exp,250\n',
+        herbs: '[guam_leaf]\nname=Guam leaf\nparam=identified_herb_exp,25\n\n[marentill]\nparam=identified_herb_level,5\nparam=identified_herb_exp,38\n',
+        identify: '[opheld1,unidentified_guam]\n~attempt_identify_herb(guam_leaf, last_slot());\n',
+        params: '[identified_herb_level]\ntype=int\ndefault=3\n\n[identified_herb_exp]\ntype=int\ndefault=0\n\n[brew_potion_level]\ntype=int\ndefault=3\n\n[brew_potion_solvent]\ntype=namedobj\ndefault=null\n',
+    });
+    const names = new Map([['steel_bar', 'Steel bar'], ['iron_ore', 'Iron ore'], ['coal', 'Coal'], ['runite_bar', 'Runite bar'], ['rune_platebody', 'Rune platebody'],
+        ['eye_of_newt', 'Eye of newt'], ['guamvial', 'Unfinished potion'], ['attack_potion3', 'Attack potion(3)'], ['guam_leaf', 'Guam leaf'], ['marentill', 'Marrentill'], ['unidentified_guam', 'Herb']]);
+    const ids = new Map([['iron_ore', 440], ['coal', 453], ['runite_bar', 2363], ['eye_of_newt', 221], ['guamvial', 91], ['unidentified_guam', 199]]);
+    expect(skillActions(rows, names, 25, ids)).toEqual({
+        smithing: [['Steel bar', 30, 437.5, ['Iron ore', 'Coal', 'Coal'], ['Steel bar'], [440, 453, 453]], ['Rune platebody', 99, 9375, ['Runite bar', 'Runite bar', 'Runite bar', 'Runite bar', 'Runite bar'], ['Rune platebody'], [2363, 2363, 2363, 2363, 2363]]],
+        // The unfinished potion gives no XP. Identifying takes the unidentified herb that identify.rs2 pairs (all named
+        // "Herb", told apart by id) at the param default level 3; a herb with no pairing has no input.
+        // Attack potion has no brew_potion_level: it takes the param default 3.
+        herblore: [['Guam leaf', 3, 62.5, ['Herb'], ['Guam leaf'], [199]], ['Attack potion(3)', 3, 625, ['Eye of newt', 'Unfinished potion'], ['Attack potion(3)'], [221, 91]], ['Marrentill', 5, 95, [], ['Marrentill'], []]],
     });
 });
 
