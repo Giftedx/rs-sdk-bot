@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794537758131,
+ "at": 1794538332378,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -266,25 +266,21 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2653,3300"
    ]
   },
   {
@@ -347,24 +343,25 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "sarim"
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
    ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "shop:sarim"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
