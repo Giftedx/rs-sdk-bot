@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794528304050,
+ "at": 1794528399813,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -557,23 +557,16 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "15000",
-    "headless"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "BANK_PACK": "1",
-    "MAX_MAKE": "390"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-9bf10671-36ea-4433-85c2-d96ec6d2cf7a"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
-   "autopilot": "local",
-   "resources": []
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-shaftmaker-20261112t233007z [task-9bf10671-36ea-4433-85c2-d96ec6d2cf7a]",
+   "role": "fletching"
   }
  ]
 }
