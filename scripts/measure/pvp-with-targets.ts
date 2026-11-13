@@ -33,13 +33,17 @@ const defend = targetProfile ? await (async () => {
     const { fightPlayer } = await import('../pk');
     const { kitFrom } = await import('../pk-roam');
     const { sparOptions } = await import('../pk-spar');
+    const sawAt = new Map<typeof targets[number], number>();
     return async (t: typeof targets[number]) => {
         const st = t.sdk.getState();
         const hit = (st?.combatEvents ?? []).find(e => e.type === 'damage_taken' && e.sourceType === 'other_player');
         // TARGET_SIGHT=<tiles>: a target also takes the nearest other player within that many tiles for its attacker
         // before any hit (a wary target that leaves on sight, with TARGET_OPTS={"flee":true}).
         const sight = Number(process.env.TARGET_SIGHT ?? 0), mates = new Set(names.map(n => n.toLowerCase()));
-        const seen = sight > 0 ? (st?.nearbyPlayers ?? []).filter(p => !mates.has(p.name.toLowerCase()) && p.distance <= sight).sort((a, b) => a.distance - b.distance)[0] : undefined;
+        const near = sight > 0 ? (st?.nearbyPlayers ?? []).filter(p => !mates.has(p.name.toLowerCase()) && p.distance <= sight).sort((a, b) => a.distance - b.distance)[0] : undefined;
+        // TARGET_SIGHT_DELAY=<ticks>: it leaves that many ticks after it first sees one (a human's reaction).
+        if (near && !sawAt.has(t)) sawAt.set(t, t.tick());
+        const seen = near && t.tick() - sawAt.get(t)! >= Number(process.env.TARGET_SIGHT_DELAY ?? 0) ? near : undefined;
         const by = (hit && st?.nearbyPlayers.find(p => p.index === hit.sourceIndex)) || seen;
         if (!by) return false;
         const o = sparOptions(targetProfile, process.env.TARGET_OPTS, kitFrom(t.sdk.getEquipment(), t.sdk.getInventory()), 900);

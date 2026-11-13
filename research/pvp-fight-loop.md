@@ -1776,4 +1776,6 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     each level, with or without the opening hold (`OPEN_TOGETHER=0`). At level 6 it rubs its glory at full health
     and is gone 6 ticks after it sees the army, before any account is within the 10 tiles of a freeze; at level 34
     it runs to level 30 and rubs there. The army's prey is a target that is busy (skilling, fighting) or slow to
-    see it. Gap: a target that reacts after a human's delay (2 to 5 ticks) is not in a case.
+    see it. A delay before it leaves (`TARGET_SIGHT_DELAY`) of 3, 6 or 10 ticks still gives 0 of 6 at level 6: from
+    the first sight at 12 tiles the army takes about 15 ticks to stand all on melee tiles (`"open"` at t61 after the
+    rub). Gap: an approach that closes the 12 tiles in the 6 ticks of a run.
