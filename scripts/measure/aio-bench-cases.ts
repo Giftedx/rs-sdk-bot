@@ -5,6 +5,7 @@ import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
+import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -200,6 +201,16 @@ const atBank = (c: BenchCase, post: {x: number; z: number}): BenchCase => {
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
 
+// One crafter at the altar's crafter tile and `carriers` partners (suffixes b, c, ...) at its staging tile. The
+// LEDGER line of the crafter is the last one, so the case ticks are the crafter's.
+const carrierCase = (altar: CarrierAltarName, from: number, to: number, carriers: number, bank: {id: number; count: number}[] = []): BenchCase => {
+  const a = carrierAltar(altar), suffixes = 'bcdefghijklmnopq'.slice(0, carriers).split('');
+  return {key: `extra:rune-carriers-${altar}-${from}-${to}`, script: 'scripts/rune-bank-craft.ts', preset: 'fresh_lumbridge', timeoutMs: 600_000,
+    scriptArgs: [...suffixes.map(s => `{bot:${s}}`), `--staged=${altar}:${to}`], pass: s => ok(s) && Number(/^RUNE_STAGED_RESULT .*?"level":(\d+)/m.exec(s)?.[1] ?? 0) >= to,
+    presetConfig: {position: {...a.crafter, level: 0}, varps: {63: 6, 281: 1000}, skills: {Runecraft: from}},
+    companions: suffixes.map(suffix => ({suffix, preset: 'fresh_lumbridge', presetConfig: {position: {...a.staging, level: 0}, varps: {63: 6, 281: 1000},
+      inventory: [{id: a.talisman, count: 1}, ...Array.from({length: 27}, () => ({id: 1436, count: 1}))], bank}}))};
+};
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
 
@@ -212,6 +223,17 @@ const ROUTE_CASES: BenchCase[] = [
   // The default route of each skill runs for about 1,000 ticks, so its XP for each 1,000 ticks is a rate and not one unit of work.
   skiller('woodcutting', 'yews', 'gather_yews', ['1000', '200', 'MAX_TRIPS=4']),
   skiller('woodcutting', 'fresh45', 'wc_fresh', [], {timeoutMs: 900_000}),
+  // Record block 5 (rune.fast, Cairn: Woodcutting 1-99 and Prayer 1-99 in 3,296 ticks planned): the knife reset with a
+  // dragon bone buried in each 3-tick cycle, at the Draynor willows, bones from the bank beside them. The start state is
+  // the route's after block 4: Magic 59 (combat 31, over the dark wizards' hunt limit of 14), a rune axe (1359) and a
+  // knife (946) in the pack, 600 dragon bones (536) banked: 555 give Prayer 99 at 1,800 XP each.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_BANK_BONES=1', 'CAP=9000'], {key: 'extra:woodcut-bury-block5', timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [{id: 1359, count: 1}, {id: 946, count: 1}], bank: [{id: 536, count: 600}]}}),
+  // The same with a giver (scripts/site-givers.ts) that brings the bones to the trees by trade, the rival's "bone
+  // givers": the woodcutter has no bones in its bank. The giver has Magic 59 for the same dark wizards.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_GIVERS={bot:b}', 'CAP=9000'], {key: 'extra:woodcut-givers-block5', timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [{id: 1359, count: 1}, {id: 946, count: 1}]},
+    companions: [{suffix: 'b', preset: 'wc_fresh', presetConfig: {position: {x: 3093, z: 3244, level: 0}, skills: {Magic: 59}, bank: [{id: 536, count: 600}]}}]}),
   // The same 600 ticks at the knights with no guest action, with a bone buried in each stun, and with an enchant cast in each stun. Hitpoints 99, so a run of failed picks does not kill the account before the cap.
   skiller('thieving', 'stun-base', 'stun_base', ['600', 'MODE=base'], {presetConfig: {...PRESETS.stun_base!, skills: {...PRESETS.stun_base!.skills, Hitpoints: 99}}}),
   skiller('thieving', 'stun-bury', 'stun_bury', ['600', 'MODE=bury'], {presetConfig: {...PRESETS.stun_bury!, skills: {...PRESETS.stun_bury!.skills, Hitpoints: 99}}}),
@@ -283,6 +305,17 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('mining', 'drop', 'fresh_lumbridge', ['iron_rock_table', '2', '400', '1275'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 41, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}]}}),
   skiller('mining', 'progressive', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-mine.json'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 29, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1265, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-mine.json': {maximum: 1, batch: 1, cap: 600, returnTicks: 100, travelTicks: 100, members: false, mode: 'drop', keep: [1265], routes: [{profile: 'iron_rock_table', bank: {x: 3253, z: 3420, level: 0}, site: {x: 3286, z: 3368, level: 0}, tool: 1265}]}}}),
+  // The six iron rocks south of the Ardougne zoo (Cairn Mining 64-99, research/rival-gap-list.md row 1): 75 ores lift
+  // Mining 64 to 72. `zoo-drop` is the drop worker with no rotation, `zoo-plain` the rock rotation, `zoo-knife` the
+  // rotation with the knife reset (scripts/mining-rotation.ts), `zoo-knife9` the same with the three rocks 10 tiles west
+  // and the nearest-free pick, so it walks west when the six zoo rocks are down.
+  // MINING_RATE prints ticks per ore from the first ore.
+  ...(['drop', 'plain', 'knife', 'knife9'] as const).map((mode): BenchCase => {
+    const env = mode === 'drop' ? [] : ['MINING_ROTATE=1', 'MINING_DROP=1', `MINING_SITE=ardougne-zoo-iron${mode === 'knife9' ? '-9' : ''}`, ...(mode !== 'plain' ? ['MINING_KNIFE=1'] : []), ...(mode === 'knife9' ? ['MINING_PICK=nearest'] : [])];
+    const args = mode === 'drop' ? ['iron_rock_table', '75', '1500', '1275,946,1511'] : ['iron_rock_table', '75', '1500', ...env];
+    return {...skiller('mining', mode === 'drop' ? 'drop' : 'at-site', 'fresh_lumbridge', args, {output: /"made":(\d+)/,
+      presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 64, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: `extra:mining-zoo-${mode}`};
+  }),
   skiller('mining', 'loot', 'fresh_lumbridge', ['LOOT_MODE=list', 'LOOT_IDS=1511', 'RADIUS=2', 'MAX_UNITS=1', 'CAP=200', 'IDLE_TICKS=150'], {presetConfig: {position: {x: 3089, z: 3266, level: 0}, skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}}}),
   skiller('smithing', 'anvil', 'fresh_lumbridge', ['600', 'PRODUCT_ID=1205', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 2347, count: 1}], bank: [{id: 2349, count: 1}]}}),
   skiller('smithing', 'cannonballs', 'fresh_lumbridge', ['1', '600', 'CANNON_XP_RATE=25'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 35}, bank: [{id: 2353, count: 1}, {id: 4, count: 1}]}}),
@@ -319,6 +352,12 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('foraging', 'miscellania-coffer', 'fresh_lumbridge', ['1000', '200'], {presetConfig: {position: {x: 2500, z: 3857, level: 1}, coins: 5000, varps: {359: 100, 361: 1367343104, 362: -1073741824, 188: 15, 347: 10}}}),
   skiller('foraging', 'qol', 'fresh_lumbridge', ['prayer', '0', '10', '40'], {presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Prayer: 43}}}),
   skiller('runecraft', 'air', 'rc_air_inside'),
+  // The carrier pipeline (scripts/rune-carriers.ts --staged): the crafter stands in the altar with an empty pack, and
+  // each carrier stands at the staging tile with 27 essence and the talisman (scripts/rune-carrier-altar.ts).
+  // Block 4 of the record route: air altar, 7 essence helpers, Runecraft 1 to 44 (record 207 ticks).
+  carrierCase('air', 1, 44, 7),
+  // Fire with 2 carriers and 27 more essence in each bank: 3 packs, so one carrier banks at Al Kharid and returns.
+  carrierCase('fire', 14, 40, 2, [{id: 1436, count: 27}]),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
   // The stall trip of the same worker: no food in the pack or the bank, and no coins for the Baker's shop. The thief
   // has 40 Hitpoints, because one under 20 ends the run when it has no food (goldfarm.ts, FRAIL_HP).
@@ -686,6 +725,17 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'quester:mode:sweep', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['sweep', 'cook'], pass: ok},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
+  // Out of Doric's house to the Falador east bank, where Doric's Quest leaves the account (live: the first walk click,
+  // to 2949,3444, was refused 3 times by the client and the walk ended "no progress").
+  // Plague City through the quest sweep from the Draynor bank (block 6 of the mock Haggis run starts where block 5's
+  // woodcutting banks), at Magic 59 with the quest pack banked. `tele` adds a Camelot Teleport's runes (1 law, 5 air),
+  // which the sweep takes for the walk to Edmond's house (teleportRunes: the preset lists no runes).
+  ...([['tele', [{id: 563, count: 1}, {id: 556, count: 5}]], ['walk', []]] as const).map(([mode, runes]) =>
+    ({key: `extra:sweep-elena-draynor-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
+      presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
+        bank: [...(PRESETS.quest_elena!.inventory ?? []), ...runes]}} as BenchCase)),
+  {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
+    presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];
 
 // Routes that do the same job, each from one start state (research/aio-bench.md, "Routes that do the same job").
