@@ -1,0 +1,44 @@
+{
+ "id": "1794529177310-abracadickra-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "WeeQuickie",
+ "item": "Clay",
+ "count": 6,
+ "start": 1794529177310,
+ "end": 1794532777310,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Copper ore",
+   "count": 4
+  },
+  {
+   "item": "Iron ore",
+   "count": 2
+  },
+  {
+   "item": "Law rune",
+   "count": 1
+  },
+  {
+   "item": "Air rune",
+   "count": 3
+  },
+  {
+   "item": "Water rune",
+   "count": 1
+  }
+ ]
+}
