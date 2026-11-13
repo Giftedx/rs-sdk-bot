@@ -185,6 +185,13 @@ export function freezeSpell(magic: number): number | null {
     return magic >= 79 ? 1592 : magic >= 50 ? 1582 : magic >= 20 ? 1572 : null;
 }
 
+// Wear the glory in the pack (after a rub: the game rubs a glory only from the pack).
+export async function wearGlory(s: Session): Promise<void> {
+    const g = s.sdk.getInventory().find(i => /^amulet of glory\([1-4]\)$/i.test(i.name));
+    const op = g?.optionsWithIndex?.find((o: { text: string }) => /^wear$/i.test(o.text));
+    if (g && op && !s.sdk.getEquipment().some(i => /^amulet of glory/i.test(i.name))) { await s.sdk.sendUseItem(g.slot, op.opIndex); await s.sdk.waitForTicks(1); }
+}
+
 // friends replaces the fleet list of accounts never to attack (practice passes its own target's absence).
 export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
     // Fight options added to each fight of the hunt (the army's allies and shared freeze, scripts/pk-army.ts).
@@ -317,7 +324,10 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const lootMin = cfg.lootMin ?? 1000, bankAt = cfg.bankAt ?? 30_000;
     let carried = 0;
     const loot = async (at: { x: number; z: number }) => { carried += await lootAt(session, at, { value: valuer, min: lootMin, stats, emit }); };
-    const needBank = () => carried >= bankAt || 28 - sdk.getInventory().length <= 2;
+    // A full pack sends the hunt to the bank only with loot to put there: the fight kit itself (18 sharks, runes,
+    // potions, the bow) leaves 2 slots or fewer, and each chase then ended in a 156-tick walk to the bank and back
+    // with nothing deposited (extra:army-route-spear-pair-x5, finding 68).
+    const needBank = () => carried >= bankAt || (carried > 0 && 28 - sdk.getInventory().length <= 2);
     const bank = async (why: string) => {
         emit({ e: 'bank-trip', why, carried });
         const ok = await bankTrip(session, walker, keep, startFood?.id, foodCount, stopped, emit);
@@ -371,6 +381,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 for (let i = 0; i < 6 && !sdk.getDialog()?.isOpen; i++) await sdk.waitForTicks(1);
                 await sdk.clickDialogByText(/^Edgeville/i);
                 await sdk.waitForTicks(6);
+                // A glory that came off to be rubbed goes back on: left in the pack, the rubbed one (a new item id)
+                // read as loot and the next bank trip deposited it.
+                if (removeTries > 0) await wearGlory(session);
             } else if (how === 'teleport') {
                 await sdk.sendClickComponent(componentId('magic:varrock_teleport'));
                 await sdk.waitForTicks(6);

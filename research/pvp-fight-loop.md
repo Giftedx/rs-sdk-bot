@@ -1758,3 +1758,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     leaves, and a hold deals no damage. Gap: a
     single-way spot (one attacker at a time) has no lock; the target's own escape does not answer the lock; four
     spears leave the army with one dagger.
+68. **Against two targets together the spear army kills 10 of 12, once its leader stops banking an empty pack.**
+    `extra:army-route-spear-pair-x5` (the spear army of finding 67 against two of finding 54's targets two tiles
+    apart at Wilderness level 34, multi-way; seeds 1-6): four spears 8 of 12 targets and no death of ours, no spears
+    0 of 12. Between the targets the leader walked to the bank and back (156 ticks) with nothing to deposit: the
+    roam banked whenever 2 slots or fewer were free, and the fight kit leaves no more. It banks a full pack only
+    with loot in it: 10 of 12. The roam's escape and the army's leave take a worn glory off to rub it; the rubbed
+    glory is a new item, so the bank trip deposited it as loot and the next trip had none. They wear it again after
+    the teleport (`wearGlory`). Gap: the second target's fight still meets the roam's 120-tick cap; 6 seeds.

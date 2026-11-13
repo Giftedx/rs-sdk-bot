@@ -14,7 +14,7 @@ import { openBot, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { bestFood, fightPlayer, newVolley, nextTick, wildernessLevel, type FightOptions, type VolleyState } from './pk';
-import { escapeStep, huntOnce, kitFrom, type Cfg } from './pk-roam';
+import { escapeStep, huntOnce, kitFrom, wearGlory, type Cfg } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
 export type FollowerStats = { name: string; fights: number; kills: number; died: boolean; escaped: boolean; attacks: number };
@@ -82,6 +82,7 @@ async function leave(s: Session, walker: Awaited<ReturnType<typeof sessionWalker
             for (let i = 0; i < 6 && !s.sdk.getDialog()?.isOpen; i++) await s.sdk.waitForTicks(1);
             await s.sdk.clickDialogByText(/^Edgeville/i);
             await s.sdk.waitForTicks(6);
+            if (removeTries > 0) await wearGlory(s);
         } else await walkPath(walker, [{ x: p.worldX, z: Math.max(3510, p.worldZ - 20), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
     }
     return false;
