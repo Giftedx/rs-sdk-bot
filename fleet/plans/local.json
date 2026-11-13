@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794526336032,
+ "at": 1794528304050,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -311,26 +311,6 @@
    ]
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "15000",
-    "headless"
-   ],
-   "env": {
-    "BANK_PACK": "1",
-    "MAX_MAKE": "390"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Swordinhand",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -574,6 +554,26 @@
    "resources": [
     "knight:2582,3297"
    ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "15000",
+    "headless"
+   ],
+   "env": {
+    "BANK_PACK": "1",
+    "MAX_MAKE": "390"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
+   "autopilot": "local",
+   "resources": []
   }
  ]
 }
