@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794528733350,
+ "at": 1794529042996,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -544,7 +544,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-9bf10671-36ea-4433-85c2-d96ec6d2cf7a"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "local-recover-shaftmaker-20261112t233007z [task-9bf10671-36ea-4433-85c2-d96ec6d2cf7a]",
    "role": "fletching"
