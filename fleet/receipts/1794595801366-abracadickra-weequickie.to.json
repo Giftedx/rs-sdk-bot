@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794595801366-abracadickra-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 347,
+ "claim": "15865f6c-9c01-45c8-85f3-9cce11d63b93",
+ "count": 0,
+ "ok": false,
+ "at": 1794595827443,
+ "detail": "trade claimed"
+}
