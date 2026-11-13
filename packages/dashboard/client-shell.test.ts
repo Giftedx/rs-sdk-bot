@@ -706,6 +706,37 @@ test('!price answers from the market, then from the item value',()=>{
  expect(priceLine('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · no market offer.');
  expect(priceLine('nothing')).toBe('No price for nothing.');
  expect(priceLine(' ')).toContain('Usage: !price');
+ // With the alchemy table: the high alch value on each answer, and an item that only has an alch value.
+ const itemAlch={'Cannonball':5,'Rune scimitar':25600,'Rune platebody':65000};
+ const alchOf=(n:string)=>itemAlch[n as keyof typeof itemAlch]?Math.max(Math.floor(itemAlch[n as keyof typeof itemAlch]*6/10),1):null;
+ const withHa=new Function('S','nf','alchOf','itemAlch',`${code};return priceLine;`)(S,(n:number)=>n.toLocaleString('en-US'),alchOf,itemAlch);
+ expect(withHa('cannon')).toBe('Cannonball: ask 7,320 gp · bid none · 18,118 in stock · high alch 3 gp.');
+ expect(withHa('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · high alch 15,360 gp · no market offer.');
+ expect(withHa('RUNE PLATEBODY')).toBe('Rune platebody: high alch 39,000 gp · no market offer.');
+ expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
+});
+
+test('high alch: the server value, the profit of a cast after the market buy and a nature rune, no coins',()=>{
+ const code=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const data={'Rune platebody':65000,'Coins':1,'Steel arrow':12,'Cabbage':1};
+ const sync=(v:any)=>({then(f:any){const r=f(v);return sync(r);}});
+ const prices:Record<string,any>={'Rune platebody':{value:38000,ask:37000,bid:36000},'Nature rune':{value:250,ask:260,bid:240},'Steel arrow':{value:5,ask:null,bid:null}};
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:(n:string)=>/^coins$/i.test(n)?{value:1}:prices[n]??null,nf:(n:number)=>n.toLocaleString('en-US'),gp:(n:number)=>n.toLocaleString('en-US')+' gp'};
+ const t=new Function(...Object.keys(env),`${code};return {alchOf,alchTip,priceTip};`)(...Object.values(env));
+ expect(t.alchOf('Rune platebody')).toBe(39000);
+ expect(t.alchOf('Cabbage')).toBe(1);
+ expect(t.alchOf('Coins')).toBe(null);
+ expect(t.alchOf('Unknown')).toBe(null);
+ // 39,000 - 37,000 - 260 = 1,740 profit a cast.
+ expect(t.alchTip({name:'Rune platebody',count:1})).toBe(' · high alch 39,000 · alch profit +1,740 a cast after the market buy and a nature rune');
+ // No market ask: the alch value against the item value.
+ expect(t.alchTip({name:'Steel arrow',count:100})).toBe(' · high alch 7 (700 gp for 100) · alch pays 2 more than the value');
+ // A loss shows no profit text.
+ prices['Rune platebody']={value:40000,ask:39500,bid:39000};
+ expect(t.alchTip({name:'Rune platebody',count:1})).toBe(' · high alch 39,000');
+ expect(t.priceTip({name:'Coins',count:5})).toBe('');
+ expect(t.priceTip({name:'Cabbage',count:1})).toBe(' · high alch 1');
+ expect(t.priceTip({name:'Rune platebody',count:1})).toContain('market buy 39,500 / sell 39,000 · high alch 39,000');
 });
 
 test('the Wilderness level counts 8 tiles for each level from the south edge of each zone',()=>{
@@ -1023,11 +1054,91 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  expect([t.maxHit(99,54,0),t.maxHit(99,54,3),t.maxHit(99,0,3)]).toEqual([20,20,11]);
  // With the +15% prayer: floor(99 × 115 / 100) = 113, so floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
  expect(t.maxHit(99,54,3,115)).toBe(23);
- const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20 (23 with +15% prayer)');
+ const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20 · prayer 23');
  // Varrock: min(2 fire, 30/3 air, 4 law) = 2; Falador: 4 law, Magic 30 is below 37.
  expect(t.teleCasts(b)).toEqual([{name:'Varrock teleport',lv:25,casts:2,can:true},{name:'Falador teleport',lv:37,casts:4,can:false}]);
  // A wielded Staff of fire gives fire runes without limit.
  b.equipment[0]={slot:3,name:'Staff of fire'};expect(t.teleCasts(b)[0].casts).toBe(4);
+ // The magic max hit: the best combat spell for the current Magic level, runes and worn staff.
+ const t2=new Function('asset','fetch','E',`${code};return {bestSpell,equipStats,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String);
+ t2.set({'Staff of fire':[0,0,0,10,0,0,0,0,10,0,0,0,0]},{spells:[],staffs:{'Fire rune':['Staff of fire']},combat:[['Fire Strike',13,8,[['Mind rune',1],['Fire rune',3],['Air rune',2]],null],['Fire Bolt',35,12,[['Chaos rune',1],['Fire rune',4],['Air rune',3]],null],['Iban Blast',50,25,[['Death rune',1],['Fire rune',5]],"Iban's staff"],['Fire Blast',59,16,[['Death rune',1],['Fire rune',5],['Air rune',4]],null]]});
+ const mage:any={skills:[{name:'Magic',level:55,currentLevel:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Air rune',count:30},{name:'Chaos rune',count:6},{name:'Mind rune',count:50},{name:'Death rune',count:20}]};
+ // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
+ expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6});
+ expect(t2.equipStats(mage)).toContain('Magic Fire Bolt 12 ×6');
+ // Against the shipped spellbook: the pure-iban loadout (Magic 50, Staff of iban, death and fire runes, no air) casts Iban Blast.
+ const book=JSON.parse(readFileSync(new URL('./client-assets/spellbook.json',import.meta.url),'utf8'));
+ t2.set({},book);
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20});
+ // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
+});
+test('logout line: the session length, the most XP gained and the top loot with its value',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ const chat:any[]=[],b:any={name:'Alpha',inWorld:true,uptime:600_000,skills:[{name:'Woodcutting',xp:1000},{name:'Firemaking',xp:50}],flow:{loot:[]}};
+ const env:any={S:{bots:[b],boards:[],economy:{itemValues:{'Yew logs':200}}},chat,renderChat:()=>{},safeName:String,nf:(n:number)=>n.toLocaleString('en-GB'),gp:(n:number)=>String(n),dur:(ms:number)=>Math.round(ms/60000)+'m'};
+ const moments=new Function(...Object.keys(env),`${code};return moments;`)(...Object.values(env));
+ moments();
+ b.uptime=4_200_000;b.skills=[{name:'Woodcutting',xp:46000},{name:'Firemaking',xp:150}];b.flow={loot:[{name:'Yew logs',count:412},{name:'Logs',count:3}]};moments();
+ b.inWorld=false;b.flow=null;moments();
+ expect(chat.map(c=>c.text)).toEqual(['Alpha has logged out after 70m: +45,000 Woodcutting XP, 412 Yew logs, ≈ 82400 gp of loot.']);
+});
+test('rank lines: a move of the same account, and another account taking the best rank, never "up from" another account',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ const chat:any[]=[],S:any={bots:[],boards:[{board:'Overall',best:{name:'Alpha',rank:1619}}]};
+ const moments=new Function('S','chat','renderChat','safeName','nf','gp','dur',`${code};return moments;`)(S,chat,()=>{},String,String,String,String);
+ moments();
+ S.boards=[{board:'Overall',best:{name:'Alpha',rank:1500}}];moments();
+ S.boards=[{board:'Overall',best:{name:'Beta',rank:616}}];moments();
+ expect(chat.map(c=>c.text)).toEqual(['Alpha is now rank 1500 on Overall (up from 1619).','Beta now holds our best Overall rank: 616.']);
+});
+test('item identification: unidentified herbs by id, potions by type; other items have no label',()=>{
+ const start=shell.indexOf("  // Item identification (RuneLite's"),code=shell.slice(start,shell.indexOf('  const idTag=',start));
+ const hl:any={itemIds:true};
+ const idLabel=new Function('hl',`${code};return idLabel;`)(hl);
+ expect([{name:'Herb',id:207},{name:'Herb',id:199},{name:'Herb',id:1},{name:'Strength potion(3)'},{name:'Super attack(4)'},{name:'Prayer potion(1)'},{name:'Superantipoison(2)'},{name:'Ranging potion(4)'},{name:'Amulet of glory(4)'},{name:'Shark'}].map(i=>idLabel(i)))
+  .toEqual(['Ran','Gua','','Str','SAtt','Pra','SAP','Rng','','']);
+ hl.itemIds=false;expect(idLabel({name:'Herb',id:207})).toBe('');
+});
+test('GE price change: no change before a base snapshot is 20 hours old, then the change from it; snapshots rotate daily',()=>{
+ const start=shell.indexOf('  // GE price change:'),code=shell.slice(start,shell.indexOf("  let geQuery=",start));
+ const store:Record<string,string>={},ls={getItem:(k:string)=>store[k]??null,setItem:(k:string,v:string)=>{store[k]=v;}};
+ const geTrend=new Function('localStorage',`${code};return geTrend;`)(ls);
+ const H=3_600_000;
+ // A refresh before the market is fetched (no price) saves nothing.
+ expect(geTrend([],0).change.size).toBe(0);expect(store['atlas-ge-prices']).toBeUndefined();
+ expect(geTrend([{id:1,ask:100}],0).change.size).toBe(0);
+ // An empty refresh later does not replace the history.
+ geTrend([],1*H);expect(JSON.parse(store['atlas-ge-prices']).next.p['1']).toBe(100);
+ // Before 24 hours there is no base yet.
+ expect(geTrend([{id:1,ask:105}],10*H).change.size).toBe(0);
+ // At 24 hours the first snapshot becomes the base (24 hours old): +10%.
+ expect(geTrend([{id:1,ask:110}],24*H).change.get('1')).toBe(10);
+ // The base stays until the next snapshot is 24 hours old.
+ const r=geTrend([{id:1,ask:150},{id:2,vwap:50}],46*H);
+ expect(r.change.get('1')).toBe(50);expect(r.at).toBe(0);
+ // Under 1% shows nothing.
+ expect(geTrend([{id:1,ask:100.4}],46*H).change.has('1')).toBe(false);
+});
+test('player finder: online players by name, a hidden name never offered, the live position pinned',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const S:any={economy:{itemValues:{}},bots:[],roster:[['Goondelf',3078,3640,0,87],['Goonie',3000,3000,0,40],['Secret',3100,3100,0,99]]};
+ const env:any={S,D:{rival:new Set()},account:()=>null,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,E:String,location:{origin:''},resources:null,
+  safeName:(n:string)=>n==='Secret'?'Hidden':n,miniView:{cx:3078,cz:3600,PX:4}};
+ const t=new Function(...Object.keys(env),`${code};return {playerMatches,pinned,finderList,setPlayer:(p)=>{finderPlayer=p;},setQuery:(q)=>{finderQuery=q;},setSpawns:(n)=>{npcSpawns=n;}};`)(...Object.values(env));
+ expect(t.playerMatches('goon').map((r:any)=>r[0])).toEqual(['Goondelf','Goonie']);
+ expect(t.playerMatches('secret')).toEqual([]);
+ t.setSpawns([]);t.setQuery('goon');expect(t.finderList()).toContain('data-finder-player="Goondelf"');
+ t.setPlayer('goondelf');
+ expect(t.pinned()).toEqual({label:'Goondelf (87)',tip:'Goondelf (combat 87)',tiles:[{x:3078,z:3640,l:0}]});
+ expect(t.finderList()).toContain('combat 87 · 3078, 3640 · 40 tiles away');
+ // The pin follows the roster; an absent player is not online.
+ S.roster=[];expect(t.pinned()).toBe(null);expect(t.finderList()).toContain('not online');
+ // A new query, a best-spot pin and a GE source pin each replace the target, so each drops the player pick.
+ expect(shell).toContain('finderQuery=e.target.value.slice(0,40);finderPick=null;finderPlayer=null;');
+ expect(shell).toContain('tiles:s.tiles};finderPick=null;finderPlayer=null;');
+ expect(shell).toContain('tiles:flatTiles(src[2])};finderPick=null;finderPlayer=null;');
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));

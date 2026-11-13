@@ -899,6 +899,19 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:smelt-steel', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'smelt', '900', 'steel', 'MAX_MAKE=28', 'ORE_RESERVE=0'], pass: s => ok(s) && /"made":28,"banked":28/.test(s),
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 30}, bank: [{id: 440, count: 28}, {id: 453, count: 56}]}},
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
+  // Death recovery (packages/core/src/death-recovery.ts): unarmed at Hitpoints 2 (the save generator turns 1 into 10)
+  // the bot dies to a Man 12 tiles east of the Lumbridge respawn, runs back, picks up every dropped item and wears its
+  // helm, shield and boots again.
+  {key: 'extra:death-recovery', script: 'scripts/measure/death-probe.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3233, z: 3219, level: 0}, skills: {Hitpoints: 2},
+      equipment: [{id: 1155, count: 1, slot: 0}, {id: 1171, count: 1, slot: 5}, {id: 1061, count: 1, slot: 10}],
+      inventory: [{id: 1127, count: 1}, {id: 436, count: 1}, {id: 438, count: 1}, {id: 440, count: 1}]},
+    pass: s => /^DEATH_RECOVERY ok .* worn=3/m.test(s) && /^DEATH at=\S+ wild=0 hp=\S+ by=Man#\d+ /m.test(s)},
+  // The flee guard (randomevents.ts `flee`): unarmed, with no food, the bot fights a Guard (combat 21) in Varrock square
+  // and must run out of its reach at FLEE_HP of its Hitpoints, ending the session alive (scripts/measure/flee-probe.ts).
+  {key: 'extra:flee-guard', script: 'scripts/measure/flee-probe.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3210, z: 3460, level: 0}},
+    pass: s => ok(s) && /^FLEE_GUARD safe flee_guard id=9 /m.test(s)},
   // The loot job (packages/core/src/loot.ts): partner `b` drops a rune platebody 3 tiles away in Draynor bank; the bot
   // picks it up while its walk is held, finishes the walk and banks the platebody (scripts/measure/loot-probe.ts).
   {key: 'extra:loot-pickup', script: 'scripts/measure/loot-probe.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}'], engineEnv: {NODE_OBJ_REVEAL_TICKS: '1'},

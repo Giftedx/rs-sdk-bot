@@ -4,6 +4,8 @@
 // (flee, talk, pick up, solve), busy() is true and the gate holds the script's actions until it is done.
 // With `loot` set, the same watcher picks up a valuable ground item near the player (rules in loot.ts), keeps it
 // from the script's drops and sales, and puts it in the bank when the script next opens one: `EVENT loot <action>`.
+// With `guard` set, the gate also refuses a drop or a sale of any held stack worth guard.minValue: `EVENT guard <action>`.
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from './inprocess';
@@ -107,6 +109,11 @@ export interface RandomEventOptions {
     events?: boolean;
     // Ground-item pickup (loot.ts). Null or undefined: off.
     loot?: LootWatchOptions | null;
+    // The value guard: the gate refuses a drop, sale, spell or Drop option on a held stack worth minValue or more.
+    guard?: { tables: LootTables; minValue: number } | null;
+    // The flee guard: at `hp` or less of the maximum Hitpoints, with no food in the pack, the player runs out of the
+    // reach of the NPC that attacks it and stays held; `onSafe` then ends the session. Null or undefined: off.
+    flee?: { hp: number; onSafe(detail: string): void } | null;
 }
 export interface LootWatchOptions {
     tables: LootTables;
@@ -124,6 +131,10 @@ export interface RandomEventWatch {
     busy(): boolean;
     // Item id -> count the loot job picked up and the pack still holds. The gate keeps these from a drop or a sale.
     kept(): Map<number, number>;
+    // Runs `work` with the player held from the script (death recovery): the gate passes the actions that `work`
+    // sends and the eat, drink and prayer inputs of the guards, and holds every other action; no event or loot job
+    // starts until `work` ends.
+    exclusive<T>(work: () => Promise<T>): Promise<T>;
     // Event NPC indices and loc tiles ("x,z") a script must not click (whirlpool, ent, gas rock, gas chest).
     avoid(): { npcs: Set<number>; locs: Set<string> };
 }
@@ -254,8 +265,14 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // the script wins: the item leaves the keep list, so a script that must empty its pack never stalls.
     const REFUSE_LIMIT = 3;
     const DESTROY = /^(drop|destroy)$/i;
+    // The value guard (opts.guard): the same refusal for any held item whose stack is worth guard.minValue or more, so
+    // a script bug (a drop rule that matches too much) cannot throw away gear. After REFUSE_LIMIT refusals the item id
+    // is released for the session, as a kept item is.
+    const guard = opts.guard ?? null;
+    const guardReleased = new Set<number>();
     const keptRefusal = (a: any): string | null => {
-        if (!loot || kept.size === 0 || !a) return null;
+        if ((!loot || kept.size === 0) && !guard) return null;
+        if (!a) return null;
         const pack = packNow();
         let slot: number | undefined;
         if (a.type === 'dropItem' || a.type === 'shopSell' || a.type === 'spellOnItem') slot = a.slot;
@@ -264,18 +281,41 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             if ((i?.optionsWithIndex ?? []).some((o: any) => o.opIndex === a.optionIndex && DESTROY.test(o.text ?? ''))) slot = a.slot;
         }
         const item = slot === undefined ? undefined : pack.find(i => i.slot === slot);
-        const keep = item ? kept.get(item.id) ?? 0 : 0;
-        if (!item || keep <= 0) return null;
+        if (!item) return null;
+        const keep = kept.get(item.id) ?? 0;
         const leaves = a.type === 'shopSell' ? Math.min(a.amount ?? 1, item.count ?? 1) : item.count ?? 1;
-        if (countOf(pack, item.id) - leaves >= keep) return null;
+        const keptHit = keep > 0 && countOf(pack, item.id) - leaves < keep;
+        const valueHit = !keptHit && !!guard && !guardReleased.has(item.id) && unitValue(item.id, guard.tables) * leaves >= guard.minValue;
+        if (!keptHit && !valueHit) return null;
+        const who = keptHit ? 'loot' : 'guard';
         const r = refusals.get(item.id) ?? { n: 0, at: -1 };
-        if (r.at !== s.tick()) { r.n++; r.at = s.tick(); refusals.set(item.id, r); say('loot', 'refused', `${a.type} id=${item.id} n=${r.n}`); }
-        if (r.n > REFUSE_LIMIT) { kept.delete(item.id); refusals.delete(item.id); say('loot', 'released', `id=${item.id}`); return null; }
-        return 'loot: the item is kept until a bank';
+        if (r.at !== s.tick()) { r.n++; r.at = s.tick(); refusals.set(item.id, r); say(who, 'refused', `${a.type} id=${item.id} n=${r.n}`); }
+        if (r.n > REFUSE_LIMIT) {
+            refusals.delete(item.id);
+            if (keptHit) kept.delete(item.id); else guardReleased.add(item.id);
+            say(who, 'released', `id=${item.id}`);
+            return null;
+        }
+        return keptHit ? 'loot: the item is kept until a bank' : `guard: item ${item.id} is worth ${guard!.minValue} or more`;
+    };
+
+    // ---- exclusive work (death recovery) ----
+    const trusted = new AsyncLocalStorage<true>();
+    let exclusiveDepth = 0;
+    const SUSTAIN = /^(eat|drink)$/i;
+    // Passes the gate during exclusive work: the work's own actions, and the eat, drink and prayer inputs.
+    const passes = (a: any): boolean => {
+        if (trusted.getStore()) return true;
+        if (!exclusiveDepth || !a) return false;
+        if (a.type === 'togglePrayer') return true;
+        if (a.type !== 'useInventoryItem') return false;
+        const i = packNow().find(x => x.slot === a.slot);
+        return (i?.optionsWithIndex ?? []).some((o: any) => o.opIndex === a.optionIndex && SUSTAIN.test(o.text ?? ''));
     };
 
     if (gateOn) {
         s.direct = (a: Act) => {
+            if (passes(a)) return rawDirect(a);
             noteScript(a);
             if (avoided(a)) return new Promise(r => later(r, fail('random event: target avoided')));
             const no = keptRefusal(a);
@@ -285,6 +325,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         };
         if (rawSend) sdkAny.send = (msg: any) => {
             if (msg?.type === 'sdk_action') {
+                if (passes(msg.action)) return rawSend.call(sdkAny, msg);
                 noteScript(msg.action);
                 if (avoided(msg.action)) { later(() => answer(msg, fail('random event: target avoided')), {}); return; }
                 const no = keptRefusal(msg.action);
@@ -349,7 +390,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // ---- jobs: one controls the player at a time; hostile flight comes first ----
     const jobs = new Map<string, Job>();
     let active: Job | null = null;
-    const holding = () => !!active?.hold;
+    const holding = () => exclusiveDepth > 0 || !!active?.hold;
     const want = (key: string, job: Omit<Job, 'started'>) => { if (!jobs.has(key)) jobs.set(key, { ...job, started: s.tick() }); };
 
     // Hostile NPC memory, by NPC index.
@@ -358,12 +399,15 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const seeds = new Map<number, { seen: number; lastSeen: number; mine: boolean }>();
     const handledNpc = new Set<number>();
 
-    const fleeJob = (idx: number): Omit<Job, 'started'> => {
+    // `onSafe` (the flee guard): no walk back after the escape. The job calls onSafe once and keeps the player held, so
+    // the script cannot fight again before its session ends.
+    const fleeJob = (idx: number, onSafe?: (detail: string) => void): Omit<Job, 'started'> => {
         let dest: { x: number; z: number } | null = null;
         let sentAt = -99;
         let lastPos = '';
         let awaySince = -1;
         let backSince = -1;
+        let safeSaid = false;
         const begin = s.tick();
         const p0 = me();
         const origin = p0 ? { x: p0.x, z: p0.z } : null;
@@ -381,7 +425,10 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 // does not stand at a strange tile (seen: a swarm flight ended next to dark wizards).
                 if (backSince >= 0) {
                     if (engaged) { backSince = -1; dest = null; say(h.name, 'flee-again'); }
-                    else {
+                    else if (onSafe) {
+                        if (!safeSaid) { safeSaid = true; onSafe(`${h.name} id=${h.id} at=${p.x},${p.z} ticks=${s.tick() - begin}`); }
+                        return false;
+                    } else {
                         if (!origin || cheb(p, origin) <= 1) { say(h.name, 'returned', `ticks=${s.tick() - begin}`); h.done = true; return true; }
                         if (s.tick() - backSince > 30) { say(h.name, 'return-timeout'); h.done = true; return true; }
                         if (canSend() && s.tick() - sentAt >= 4) { send({ type: 'walkTo', x: origin.x, z: origin.z, running: true }); sentAt = s.tick(); }
@@ -730,6 +777,32 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         (st?.nearbyLocs ?? []).filter((l: any) => re.test(l.name) && l.options?.some((o: string) => op.test(o)) && !not(l) && l.reachable !== false)
             .sort((a: any, b: any) => a.distance - b.distance)[0];
 
+    // ---- flee guard ----
+    // The chase range of an NPC that does not hunt (one the script attacked): the engine drops the target past the
+    // NPC's maxrange from its spawn. Its spawn is unknown here, so the ring starts at the NPC's tile and the flee job
+    // widens it while the NPC still chases.
+    const FLEE_RANGE = 8;
+    const EAT = /^eat$/i;
+    let fleeing = false;
+    const scanFlee = () => {
+        const f = opts.flee;
+        const p = st?.player, now = s.tick();
+        if (!f || !p || fleeing) return;
+        const max = p.maxHp ?? 0, hp = p.hp ?? 0;
+        if (max <= 0 || hp <= 0 || hp > max * f.hp) return;
+        if (inv().some(i => (i.optionsWithIndex ?? []).some((o: any) => EAT.test(o.text ?? '')))) return;
+        const n = (st?.nearbyNpcs ?? []).filter((x: any) => targetsMe(x)).sort((a: any, b: any) => a.distance - b.distance)[0];
+        if (!n) return;
+        fleeing = true;
+        hostiles.set(n.index, { name: 'flee_guard', id: n.id, range: danger().get(n.id) ?? FLEE_RANGE, spawn: tileOf(n), seen: now, lastSeen: now, ours: true, pre: false, done: false });
+        jobs.set(`flee:${n.index}`, { ...fleeJob(n.index, f.onSafe), started: now });
+        say('flee_guard', 'flee', `hp=${hp}/${max} npc=${n.name ?? '?'}#${n.id}`);
+    };
+    // The watcher updates the last tick it saw each NPC of the flee guard (scanEvents does so for event NPCs only).
+    const seeFled = () => {
+        for (const n of st?.nearbyNpcs ?? []) { const h = hostiles.get(n.index); if (h?.name === 'flee_guard' && h.id === n.id) h.lastSeen = s.tick(); }
+    };
+
     // ---- loot jobs ----
     // Ticks after a pickup of the script in which the loot job starts nothing: the script loots for itself.
     const SCRIPT_LOOT_TICKS = 20;
@@ -1011,7 +1084,12 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             lastStateTick = s.tick();
             if (xpStart.size === 0) for (const k of st.skills ?? []) xpStart.set(String(k.name).toLowerCase(), k.experience ?? 0);
             newMessages.update();
+            if (exclusiveDepth) {
+                for (let i = held.length - 1; i >= 0; i--) if (s.tick() - held[i]!.at > HOLD_LIMIT) held.splice(i, 1)[0]!.fail();
+                return;
+            }
             if (eventsOn) scanEvents();
+            if (opts.flee) { seeFled(); scanFlee(); }
             if (loot) scanLoot();
             // Pick the job to run this tick: the active one, unless a flight must preempt it.
             const order = [...jobs.entries()].filter(([, j]) => j.name !== 'noop').sort((a, b) => priority(a[0]) - priority(b[0]) || a[1].started - b[1].started);
@@ -1047,5 +1125,11 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         busy: () => holding(),
         avoid: () => ({ npcs: new Set(avoidNpcs), locs: new Set(avoidLocs) }),
         kept: () => new Map(kept),
+        async exclusive<T>(work: () => Promise<T>): Promise<T> {
+            exclusiveDepth++;
+            try { return await trusted.run(true, work); }
+            // The script's actions from before the work are stale after it: they fail rather than run.
+            finally { if (--exclusiveDepth === 0) for (const h of held.splice(0)) h.fail(); }
+        },
     };
 }
