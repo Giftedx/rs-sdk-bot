@@ -1501,7 +1501,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
 47. **A dragon spear stunner does not speed the army's kill; waiting to stack the specials does a little.** In the
     multi-way army case the target eats 17.1 of its sharks on average before it dies (16 meetings, seeds 1-4, the
     repeatable setup, army on the champion). With the army's specials from 35% target health (`specBelow: 0.35`)
-    it eats 14.9, from 45% 15.9. With one army account on `tribrid-snare-spear` (`extra:army-spear-multi-x4`,
+    it eats 14.9, from 45% 15.9; seeds 5-8 repeat it (15.4 and 13.9). The `army` profile of `scripts/pk-spar.ts` is
+    the champion with `specBelow: 0.35`. With one army account on `tribrid-snare-spear` (`extra:army-spear-multi-x4`,
     `SPAR_KITS` naming a kit for each account) the target eats 19.1 when the spear's special goes out at once and
     18.2 when it goes out from 55% health: the special holds the target 5 ticks with no input
     (`pvp_dragon_spear.rs2` `p_delay(4)`), and the spear account gives up the dagger's specials and hits every 6
