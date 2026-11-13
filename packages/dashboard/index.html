@@ -412,7 +412,7 @@ function goalMetrics(){
  return [
   {title:'Fleet & wealth',metric:S.capacity?.fresh?`${S.capacity.active} / ${S.capacity.cap}`:'? active',meta:'active / live capacity',next:'Prove replenishment + recovery'},
   {title:'Collection & gear',metric:c?`${c.distinct} types`:'Unknown',meta:c?.missingIds?'name + ID observations':'observed bank item IDs',next:'Define missing items + best gear'},
-  {title:'Quests · unlocks · 99s',metric:obs.length?`${maxed.length} × 99`:'Unknown',meta:`${obs.length} accounts observed`,next:'Quest / unlock census missing'},
+  {title:'Quests · unlocks · 99s',metric:obs.length?`${maxed.length} × 99`:'Unknown',meta:(()=>{const done=new Set(bots.flatMap(b=>(b.quests||[]).filter(q=>q?.state==='complete'||q?.state==='completed').map(q=>q.name))),seen=new Set(bots.flatMap(b=>(b.quests||[]).map(q=>q?.name).filter(Boolean)));return `${obs.length} accounts observed`+(seen.size?` · ${done.size}/${seen.size} quests done by an account`:'');})(),next:'Quest Journal → Fleet lists each quest by account'},
   {title:'Specialist hiscores',metric:known.length?`${first.length} #1`:'Unknown',meta:`${known.length} boards with recent ranks`,next:'Verify ties; prove next contender'},
   {title:'Main Overall',metric:passes===null?'No check':`${passes} / 5`,meta:'launch checks · not completion',next:S.gates?.go?'Permission issued; check expiry':'Prove route + staging + rehearsals'},
   {title:'Tick efficiency',metric:idle===null?'Unknown':`${idle.toFixed(0)}%`,meta:'unchanged ticks · observed',next:'Measure net output per tick'}

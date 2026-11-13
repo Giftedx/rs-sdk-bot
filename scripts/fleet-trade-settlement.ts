@@ -5,7 +5,9 @@ type Tile = { x: number; z: number; level: number };
 export type OrderLine = { item: string; count: number };
 // `item` and `count` are the first line of the order. `extra` holds the other lines of a multi-item order: the giver
 // offers every line in one trade, and the receiver accepts only that exact offer. An order with no `extra` moves one item.
-export type Order = { id: string; server: string; from: string; to: string; item: string; count: number; start: number; end: number; meet?: [Tile, Tile]; extra?: OrderLine[] };
+// `takerWaits`: the receiver stays offline until the giver is at the meet (scripts/fleet-trade.ts waitForGiver). Only
+// for orders between accounts of one machine.
+export type Order = { id: string; server: string; from: string; to: string; item: string; count: number; start: number; end: number; meet?: [Tile, Tile]; extra?: OrderLine[]; takerWaits?: true };
 export type TradeRole = 'from' | 'to';
 export const orderLines = (order: Order): OrderLine[] => [{ item: order.item, count: order.count }, ...(order.extra ?? [])];
 // One trade window holds 28 items.
@@ -35,7 +37,7 @@ export function validOrder(o: any): o is Order {
         && Number.isSafeInteger(o.count) && o.count > 0 && o.count <= 2147483647
         && Number.isSafeInteger(o.start) && Number.isSafeInteger(o.end) && o.end > o.start
         && (o.meet === undefined || Array.isArray(o.meet) && o.meet.length === 2 && o.meet.every((t: any) => !!t && [t.x, t.z, t.level].every(Number.isSafeInteger)))
-        && (o.extra === undefined || validExtra(o.item, o.extra));
+        && (o.extra === undefined || validExtra(o.item, o.extra)) && (o.takerWaits === undefined || o.takerWaits === true);
 }
 function validExtra(first: string, extra: any): boolean {
     if (!Array.isArray(extra) || extra.length < 1 || extra.length >= MAX_ORDER_LINES) return false;

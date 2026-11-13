@@ -2,9 +2,14 @@
 // watchRandomEvents(s) checks every tick, handles each event with the cheapest response that never causes a
 // fail teleport, and prints `EVENT <name> <action> t=<tick>`. While it handles an event that needs the player
 // (flee, talk, pick up, solve), busy() is true and the gate holds the script's actions until it is done.
+// With `loot` set, the same watcher picks up a valuable ground item near the player (rules in loot.ts), keeps it
+// from the script's drops and sales, and puts it in the bank when the script next opens one: `EVENT loot <action>`.
+// With `guard` set, the gate also refuses a drop or a sale of any held stack worth guard.minValue: `EVENT guard <action>`.
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from './inprocess';
+import { claimPile, LOOT_RULES, LURE_PAUSE, lureGuard, lootRisk, lootRoom, pileKey, pileValue, releasePile, unitValue, worthIt, type Ground, type LootRules, type LootTables } from './loot';
 
 // ---- Server ids (vendor/rs-sdk/server/content/pack/{npc,obj,loc,seq,interface}.pack) ----
 
@@ -100,11 +105,39 @@ export interface RandomEventOptions {
     // NPC type id -> danger radius in tiles; undefined: read the server's hunt configs once; null: none.
     danger?: Map<number, number> | null;
     log?: (line: string) => void;
+    // False: no random-event handling; the gate and the loot job still run. Default true.
+    events?: boolean;
+    // Ground-item pickup (loot.ts). Null or undefined: off.
+    loot?: LootWatchOptions | null;
+    // The value guard: the gate refuses a drop, sale, spell or Drop option on a held stack worth minValue or more.
+    guard?: { tables: LootTables; minValue: number } | null;
+    // The flee guard: at `hp` or less of the maximum Hitpoints, with no food in the pack, the player runs out of the
+    // reach of the NPC that attacks it and stays held; `onSafe` then ends the session. Null or undefined: off.
+    flee?: { hp: number; onSafe(detail: string): void } | null;
+}
+export interface LootWatchOptions {
+    tables: LootTables;
+    // The account: the claim of a pile carries it.
+    name: string;
+    // Lower-case names of our own accounts: no threat in the Wilderness.
+    friends?: ReadonlySet<string>;
+    rules?: LootRules;
+    // Item id -> count the script holds back (quest items): never dropped for room.
+    reserved?: () => Readonly<Record<number, number>>;
 }
 export interface RandomEventWatch {
     stop(): void;
     counts(): Record<string, number>;
     busy(): boolean;
+    // Item id -> count the loot job picked up and the pack still holds. The gate keeps these from a drop or a sale.
+    kept(): Map<number, number>;
+    // Runs `work` with the player held from the script (death recovery): the gate passes the actions that `work`
+    // sends and the eat, drink and prayer inputs of the guards, and holds every other action; no event or loot job
+    // starts until `work` ends.
+    exclusive<T>(work: () => Promise<T>): Promise<T>;
+    // The type of the last action the script sent through the gate (prayer flicks not counted), for the ledger's
+    // idle reasons (ledger.ts idleWhy). Null before the first one.
+    lastAction(): string | null;
     // Event NPC indices and loc tiles ("x,z") a script must not click (whirlpool, ent, gas rock, gas chest).
     avoid(): { npcs: Set<number>; locs: Set<string> };
 }
@@ -171,6 +204,7 @@ export function loadDanger(): Map<number, number> {
 export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): RandomEventWatch {
     const log = opts.log ?? ((l: string) => console.log(l));
     const gateOn = opts.gate ?? process.env.RANDOM_EVENTS_GATE !== '0';
+    const eventsOn = opts.events ?? true;
     const lampSkill = (opts.lampSkill ?? process.env.RANDOM_EVENTS_LAMP ?? 'auto').toLowerCase();
     const counts: Record<string, number> = {};
     const noDanger = new Map<number, number>();
@@ -203,20 +237,111 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const held: { at: number; run: () => void; fail: () => void }[] = [];
     const avoidNpcs = new Set<number>();
     const avoidLocs = new Set<string>();
-    const fail = (msg: string) => ({ success: false, message: msg, reason: 'random_event' });
+    const fail = (msg: string, reason = 'random_event') => ({ success: false, message: msg, reason });
     const avoided = (a: any) => (a?.type === 'interactNpc' && avoidNpcs.has(a.npcIndex)) || (a?.type === 'interactLoc' && avoidLocs.has(`${a.x},${a.z}`));
     // A queued SDK action is answered the way the shim answers it, so the script's await resolves.
     const answer = (msg: any, result: object) => sdkAny.handleMessage?.(JSON.stringify({ type: 'sdk_action_result', actionId: msg.actionId, result }));
+    // An answer one tick later: a script that sends the refused action again in a loop sends it once a tick.
+    const later = (r: (v: any) => void, v: object) => { const off = s.onTick(() => { off(); r(v); }); };
+
+    // ---- loot: the keep list and what the script does with ground items ----
+    const loot = opts.loot ?? null;
+    const rules = loot?.rules ?? LOOT_RULES;
+    const fleetNames = loot?.friends ?? new Set<string>();
+    const kept = new Map<number, number>();
+    let scriptPickupAt = -99;
+    // Piles the script dropped, `x,z,id` -> tick: the loot job never picks those up again.
+    const ownDrops = new Map<string, number>();
+    const refusals = new Map<number, { n: number; at: number }>();
+    const packNow = (): any[] => s.sdk.getState()?.inventory ?? [];
+    const countOf = (pack: readonly any[], id: number) => pack.reduce((n, i) => (i.id === id ? n + (i.count ?? 1) : n), 0);
+    const noteScript = (a: any) => {
+        if (!loot || !a) return;
+        if (a.type === 'pickupItem' || a.type === 'interactGroundItem' || a.type === 'spellOnGroundItem') scriptPickupAt = s.tick();
+        if (a.type === 'dropItem') {
+            const i = packNow().find(x => x.slot === a.slot), q = s.sdk.getState()?.player;
+            if (i && q) ownDrops.set(`${q.worldX},${q.worldZ},${i.id}`, s.tick());
+        }
+    };
+    // The gate refuses a drop, a sale, a spell or a Drop/Destroy option on an item the loot job keeps, while the
+    // pack would then hold less than the kept count. After REFUSE_LIMIT refusals of one item (on different ticks)
+    // the script wins: the item leaves the keep list, so a script that must empty its pack never stalls.
+    const REFUSE_LIMIT = 3;
+    const DESTROY = /^(drop|destroy)$/i;
+    // The value guard (opts.guard): the same refusal for any held item whose stack is worth guard.minValue or more, so
+    // a script bug (a drop rule that matches too much) cannot throw away gear. After REFUSE_LIMIT refusals the item id
+    // is released for the session, as a kept item is.
+    const guard = opts.guard ?? null;
+    const guardReleased = new Set<number>();
+    const keptRefusal = (a: any): string | null => {
+        if ((!loot || kept.size === 0) && !guard) return null;
+        if (!a) return null;
+        const pack = packNow();
+        let slot: number | undefined;
+        if (a.type === 'dropItem' || a.type === 'shopSell' || a.type === 'spellOnItem') slot = a.slot;
+        else if (a.type === 'useInventoryItem') {
+            const i = pack.find(x => x.slot === a.slot);
+            if ((i?.optionsWithIndex ?? []).some((o: any) => o.opIndex === a.optionIndex && DESTROY.test(o.text ?? ''))) slot = a.slot;
+        }
+        const item = slot === undefined ? undefined : pack.find(i => i.slot === slot);
+        if (!item) return null;
+        const keep = kept.get(item.id) ?? 0;
+        const leaves = a.type === 'shopSell' ? Math.min(a.amount ?? 1, item.count ?? 1) : item.count ?? 1;
+        const keptHit = keep > 0 && countOf(pack, item.id) - leaves < keep;
+        const valueHit = !keptHit && !!guard && !guardReleased.has(item.id) && unitValue(item.id, guard.tables) * leaves >= guard.minValue;
+        if (!keptHit && !valueHit) return null;
+        const who = keptHit ? 'loot' : 'guard';
+        const r = refusals.get(item.id) ?? { n: 0, at: -1 };
+        if (r.at !== s.tick()) { r.n++; r.at = s.tick(); refusals.set(item.id, r); say(who, 'refused', `${a.type} id=${item.id} n=${r.n}`); }
+        if (r.n > REFUSE_LIMIT) {
+            refusals.delete(item.id);
+            if (keptHit) kept.delete(item.id); else guardReleased.add(item.id);
+            say(who, 'released', `id=${item.id}`);
+            return null;
+        }
+        return keptHit ? 'loot: the item is kept until a bank' : `guard: item ${item.id} is worth ${guard!.minValue} or more`;
+    };
+
+    // ---- exclusive work (death recovery) ----
+    const trusted = new AsyncLocalStorage<true>();
+    let lastType: string | null = null;
+    const noteType = (a: any) => { if (typeof a?.type === 'string' && a.type !== 'togglePrayer') lastType = a.type; };
+    let exclusiveDepth = 0;
+    const SUSTAIN = /^(eat|drink)$/i;
+    // Passes the gate during exclusive work: the work's own actions, and the eat, drink and prayer inputs.
+    const passes = (a: any): boolean => {
+        if (trusted.getStore()) return true;
+        if (!exclusiveDepth || !a) return false;
+        if (a.type === 'togglePrayer') return true;
+        if (a.type !== 'useInventoryItem') return false;
+        const i = packNow().find(x => x.slot === a.slot);
+        return (i?.optionsWithIndex ?? []).some((o: any) => o.opIndex === a.optionIndex && SUSTAIN.test(o.text ?? ''));
+    };
+
     if (gateOn) {
         s.direct = (a: Act) => {
-            if (avoided(a)) return new Promise(r => { const off = s.onTick(() => { off(); r(fail('random event: target avoided')); }); });
+            if (passes(a)) return rawDirect(a);
+            noteType(a);
+            noteScript(a);
+            if (avoided(a)) return new Promise(r => later(r, fail('random event: target avoided')));
+            const no = keptRefusal(a);
+            if (no) return new Promise(r => later(r, fail(no, 'loot_kept')));
             if (!holding()) return rawDirect(a);
-            return new Promise(r => held.push({ at: s.tick(), run: () => r(rawDirect(a)), fail: () => r(fail('random event in progress')) }));
+            return new Promise(r => held.push({ at: s.tick(), run: () => { const n = keptRefusal(a); n ? r(fail(n, 'loot_kept')) : r(rawDirect(a)); }, fail: () => r(fail('random event in progress')) }));
         };
         if (rawSend) sdkAny.send = (msg: any) => {
             if (msg?.type === 'sdk_action') {
-                if (avoided(msg.action)) { const off = s.onTick(() => { off(); answer(msg, fail('random event: target avoided')); }); return; }
-                if (holding()) { held.push({ at: s.tick(), run: () => rawSend.call(sdkAny, msg), fail: () => answer(msg, fail('random event in progress')) }); return; }
+                if (passes(msg.action)) return rawSend.call(sdkAny, msg);
+                noteType(msg.action);
+                noteScript(msg.action);
+                if (avoided(msg.action)) { later(() => answer(msg, fail('random event: target avoided')), {}); return; }
+                const no = keptRefusal(msg.action);
+                if (no) { later(() => answer(msg, fail(no, 'loot_kept')), {}); return; }
+                if (holding()) {
+                    held.push({ at: s.tick(), run: () => { const n = keptRefusal(msg.action); n ? answer(msg, fail(n, 'loot_kept')) : rawSend.call(sdkAny, msg); },
+                        fail: () => answer(msg, fail('random event in progress')) });
+                    return;
+                }
             }
             return rawSend.call(sdkAny, msg);
         };
@@ -272,7 +397,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // ---- jobs: one controls the player at a time; hostile flight comes first ----
     const jobs = new Map<string, Job>();
     let active: Job | null = null;
-    const holding = () => !!active?.hold;
+    const holding = () => exclusiveDepth > 0 || !!active?.hold;
     const want = (key: string, job: Omit<Job, 'started'>) => { if (!jobs.has(key)) jobs.set(key, { ...job, started: s.tick() }); };
 
     // Hostile NPC memory, by NPC index.
@@ -281,12 +406,15 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const seeds = new Map<number, { seen: number; lastSeen: number; mine: boolean }>();
     const handledNpc = new Set<number>();
 
-    const fleeJob = (idx: number): Omit<Job, 'started'> => {
+    // `onSafe` (the flee guard): no walk back after the escape. The job calls onSafe once and keeps the player held, so
+    // the script cannot fight again before its session ends.
+    const fleeJob = (idx: number, onSafe?: (detail: string) => void): Omit<Job, 'started'> => {
         let dest: { x: number; z: number } | null = null;
         let sentAt = -99;
         let lastPos = '';
         let awaySince = -1;
         let backSince = -1;
+        let safeSaid = false;
         const begin = s.tick();
         const p0 = me();
         const origin = p0 ? { x: p0.x, z: p0.z } : null;
@@ -304,7 +432,10 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 // does not stand at a strange tile (seen: a swarm flight ended next to dark wizards).
                 if (backSince >= 0) {
                     if (engaged) { backSince = -1; dest = null; say(h.name, 'flee-again'); }
-                    else {
+                    else if (onSafe) {
+                        if (!safeSaid) { safeSaid = true; onSafe(`${h.name} id=${h.id} at=${p.x},${p.z} ticks=${s.tick() - begin}`); }
+                        return false;
+                    } else {
                         if (!origin || cheb(p, origin) <= 1) { say(h.name, 'returned', `ticks=${s.tick() - begin}`); h.done = true; return true; }
                         if (s.tick() - backSince > 30) { say(h.name, 'return-timeout'); h.done = true; return true; }
                         if (canSend() && s.tick() - sentAt >= 4) { send({ type: 'walkTo', x: origin.x, z: origin.z, running: true }); sentAt = s.tick(); }
@@ -653,11 +784,167 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         (st?.nearbyLocs ?? []).filter((l: any) => re.test(l.name) && l.options?.some((o: string) => op.test(o)) && !not(l) && l.reachable !== false)
             .sort((a: any, b: any) => a.distance - b.distance)[0];
 
+    // ---- flee guard ----
+    // The chase range of an NPC that does not hunt (one the script attacked): the engine drops the target past the
+    // NPC's maxrange from its spawn. Its spawn is unknown here, so the ring starts at the NPC's tile and the flee job
+    // widens it while the NPC still chases.
+    const FLEE_RANGE = 8;
+    const EAT = /^eat$/i;
+    let fleeing = false;
+    const scanFlee = () => {
+        const f = opts.flee;
+        const p = st?.player, now = s.tick();
+        if (!f || !p || fleeing) return;
+        const max = p.maxHp ?? 0, hp = p.hp ?? 0;
+        if (max <= 0 || hp <= 0 || hp > max * f.hp) return;
+        if (inv().some(i => (i.optionsWithIndex ?? []).some((o: any) => EAT.test(o.text ?? '')))) return;
+        const n = (st?.nearbyNpcs ?? []).filter((x: any) => targetsMe(x)).sort((a: any, b: any) => a.distance - b.distance)[0];
+        if (!n) return;
+        fleeing = true;
+        hostiles.set(n.index, { name: 'flee_guard', id: n.id, range: danger().get(n.id) ?? FLEE_RANGE, spawn: tileOf(n), seen: now, lastSeen: now, ours: true, pre: false, done: false });
+        jobs.set(`flee:${n.index}`, { ...fleeJob(n.index, f.onSafe), started: now });
+        say('flee_guard', 'flee', `hp=${hp}/${max} npc=${n.name ?? '?'}#${n.id}`);
+    };
+    // The watcher updates the last tick it saw each NPC of the flee guard (scanEvents does so for event NPCs only).
+    const seeFled = () => {
+        for (const n of st?.nearbyNpcs ?? []) { const h = hostiles.get(n.index); if (h?.name === 'flee_guard' && h.id === n.id) h.lastSeen = s.tick(); }
+    };
+
+    // ---- loot jobs ----
+    // Ticks after a pickup of the script in which the loot job starts nothing: the script loots for itself.
+    const SCRIPT_LOOT_TICKS = 20;
+    // A pickup job ends after this many ticks; the walk back to the start tile has its own limit. The two stay under
+    // HOLD_LIMIT, so no held script action fails during a pickup.
+    const LOOT_TICKS = 25, RETURN_TICKS = 15;
+    // Ticks a pile the job skipped or gave up stays skipped.
+    const SKIP_RISK = 10, SKIP_DONE = 100;
+    const skipPiles = new Map<string, number>();
+    const riskSaid = new Set<string>();
+    const lure = lureGuard(rules);
+    const reserved = (id: number) => (loot?.reserved?.()[id] ?? 0) > 0;
+    const keepOrReserve = (id: number) => kept.has(id) || reserved(id);
+    const lootJob = (g: Ground, key: string): Omit<Job, 'started'> => {
+        const tables = loot!.tables, begin = s.tick(), p0 = me(), origin = p0 ? { x: p0.x, z: p0.z } : null;
+        const before = countOf(inv(), g.id);
+        let at = -99, dropAt = -99, tries = 0, back = -1;
+        // Ends the pickup: walk back first when the player left the start tile, so the script resumes where it was.
+        const end = (why: string, extra = '') => {
+            releasePile(key, loot!.name);
+            skipPiles.set(key, s.tick() + SKIP_DONE);
+            say('loot', why, `id=${g.id}${extra} ticks=${s.tick() - begin}`);
+            const p = me();
+            if (origin && p && cheb(p, origin) > 1) { back = s.tick(); at = -99; return false; }
+            return true;
+        };
+        return {
+            name: 'loot', hold: true,
+            tick() {
+                const p = me();
+                if (!p) return true;
+                if (back >= 0) {
+                    if (!origin || cheb(p, origin) <= 1) { say('loot', 'returned', `ticks=${s.tick() - begin}`); return true; }
+                    if (s.tick() - back > RETURN_TICKS) { say('loot', 'return-timeout'); return true; }
+                    if (canSend() && s.tick() - at >= 4) { send({ type: 'walkTo', x: origin.x, z: origin.z, running: true }); at = s.tick(); }
+                    return false;
+                }
+                const got = countOf(inv(), g.id) - before;
+                if (got > 0) {
+                    kept.set(g.id, (kept.get(g.id) ?? 0) + got);
+                    if (lure.picked(s.tick())) say('loot', 'lure-pause', `ticks=${LURE_PAUSE}`);
+                    return end('pickup', ` n=${got} value=${unitValue(g.id, tables) * got}`);
+                }
+                if (st?.dialog?.isOpen) { continueDialog(); return false; }
+                const here = (st?.groundItems ?? []).find((x: any) => x.id === g.id && x.x === g.x && x.z === g.z);
+                if (!here) return end('gone');
+                if (s.tick() - begin > LOOT_TICKS) return end('timeout');
+                const risk = lootRisk(st, here, danger(), fleetNames, rules);
+                if (risk) return end(`abort-${risk}`);
+                if (!canSend()) return false;
+                const room = lootRoom(inv(), here, tables, keepOrReserve);
+                if (room === null) return end('full');
+                if (room !== 'ok') {
+                    if (s.tick() - dropAt >= 2) {
+                        const i = inv().find(x => x.slot === room);
+                        if (i) ownDrops.set(`${p.x},${p.z},${i.id}`, s.tick());
+                        send({ type: 'dropItem', slot: room });
+                        dropAt = s.tick();
+                    }
+                    return false;
+                }
+                if (s.tick() - at >= 4) {
+                    if (++tries > 4) return end('failed');
+                    send({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id });
+                    at = s.tick();
+                }
+                return false;
+            },
+        };
+    };
+    // The script opened a bank: put the kept items in it first. The script's held actions run after.
+    const lootBankJob = (): Omit<Job, 'started'> => {
+        const begin = s.tick();
+        let at = -99;
+        return {
+            name: 'loot-bank', hold: true,
+            tick() {
+                if (!st?.bank?.isOpen) return true;
+                const item = inv().find(i => (kept.get(i.id) ?? 0) > 0);
+                if (!item) return true;
+                if (s.tick() - begin > 20) { say('loot', 'bank-timeout'); return true; }
+                if (canSend() && s.tick() - at >= 2) {
+                    send({ type: 'bankDeposit', slot: item.slot, amount: Math.min(item.count ?? 1, kept.get(item.id)!) });
+                    at = s.tick();
+                }
+                return false;
+            },
+        };
+    };
+    const scanLoot = () => {
+        const p = me();
+        if (!loot || !p) return;
+        const now = s.tick(), pack = inv();
+        // The keep list follows the pack: a deposit, a wield or a meal takes the item off it.
+        for (const [id, k] of kept) {
+            const n = countOf(pack, id);
+            if (n >= k) continue;
+            say('loot', st?.bank?.isOpen ? 'banked' : 'left-pack', `id=${id} n=${k - n}`);
+            if (n > 0) kept.set(id, n); else { kept.delete(id); refusals.delete(id); }
+        }
+        for (const [k, t] of ownDrops) if (now - t > 300) ownDrops.delete(k);
+        for (const [k, t] of skipPiles) if (t < now) skipPiles.delete(k);
+        if (st?.bank?.isOpen) { if (pack.some(i => kept.has(i.id))) want('loot-bank', lootBankJob()); return; }
+        if (active || [...jobs.keys()].some(k => k.startsWith('loot:'))) return;
+        if (st?.dialog?.isOpen || st?.shop?.isOpen || st?.trade?.isOpen || st?.ge || st?.modalOpen) return;
+        if (now - scriptPickupAt <= SCRIPT_LOOT_TICKS) return;
+        const tables = loot.tables;
+        const piles = ((st?.groundItems ?? []) as Ground[]).filter(g => worthIt(g, tables, rules))
+            .sort((a, b) => pileValue(b, tables) - pileValue(a, tables) || a.distance - b.distance);
+        for (const g of piles) {
+            const key = pileKey(p.level, g);
+            if (skipPiles.has(key) || ownDrops.has(`${g.x},${g.z},${g.id}`)) continue;
+            const risk = lure.allow(now, p, g) ?? lootRisk(st, g, danger(), fleetNames, rules);
+            if (risk) {
+                skipPiles.set(key, now + SKIP_RISK);
+                if (!riskSaid.has(key)) { riskSaid.add(key); say('loot', `skip-${risk}`, `id=${g.id} value=${pileValue(g, tables)} d=${g.distance}`); }
+                continue;
+            }
+            if (lootRoom(pack, g, tables, keepOrReserve) === null) {
+                skipPiles.set(key, now + SKIP_DONE);
+                say('loot', 'skip-full', `id=${g.id} value=${pileValue(g, tables)}`);
+                continue;
+            }
+            if (!claimPile(key, loot.name)) continue;
+            say('loot', 'seen', `id=${g.id} n=${g.count} value=${pileValue(g, tables)} d=${g.distance}`);
+            want(`loot:${key}`, lootJob(g, key));
+            return;
+        }
+    };
+
     const toolCounts = new Map<number, number>();
     const toolGone = new Map<number, number>();
     let lastStateTick = -1;
 
-    const scan = () => {
+    const scanEvents = () => {
         const p = me();
         if (!p) return;
         const now = s.tick();
@@ -793,7 +1080,8 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         for (const [k, sd] of seeds) if (now - sd.lastSeen > 50) seeds.delete(k);
     };
 
-    const priority = (key: string) => key.startsWith('flee:') ? 0 : key === 'mime' || key === 'maze' ? 1 : key.startsWith('talk:') ? 2 : 3;
+    const priority = (key: string) => key.startsWith('flee:') ? 0 : key === 'mime' || key === 'maze' ? 1 : key.startsWith('talk:') ? 2
+        : key === 'loot-bank' || key.startsWith('loot:') ? 4 : 3;
     const HOLD_LIMIT = 50;
 
     const off = s.onTick(() => {
@@ -803,7 +1091,13 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             lastStateTick = s.tick();
             if (xpStart.size === 0) for (const k of st.skills ?? []) xpStart.set(String(k.name).toLowerCase(), k.experience ?? 0);
             newMessages.update();
-            scan();
+            if (exclusiveDepth) {
+                for (let i = held.length - 1; i >= 0; i--) if (s.tick() - held[i]!.at > HOLD_LIMIT) held.splice(i, 1)[0]!.fail();
+                return;
+            }
+            if (eventsOn) scanEvents();
+            if (opts.flee) { seeFled(); scanFlee(); }
+            if (loot) scanLoot();
             // Pick the job to run this tick: the active one, unless a flight must preempt it.
             const order = [...jobs.entries()].filter(([, j]) => j.name !== 'noop').sort((a, b) => priority(a[0]) - priority(b[0]) || a[1].started - b[1].started);
             const top = order[0];
@@ -837,5 +1131,13 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         counts: () => ({ ...counts }),
         busy: () => holding(),
         avoid: () => ({ npcs: new Set(avoidNpcs), locs: new Set(avoidLocs) }),
+        kept: () => new Map(kept),
+        lastAction: () => lastType,
+        async exclusive<T>(work: () => Promise<T>): Promise<T> {
+            exclusiveDepth++;
+            try { return await trusted.run(true, work); }
+            // The script's actions from before the work are stale after it: they fail rather than run.
+            finally { if (--exclusiveDepth === 0) for (const h of held.splice(0)) h.fail(); }
+        },
     };
 }

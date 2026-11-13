@@ -28,7 +28,7 @@ test('the Grand Exchange rows stay the same markup when only the price age chang
  const code=shell.slice(shell.indexOf('  function geResults(){'),shell.indexOf('  // Pull requests plugin'));
  let old='1m';
  const state:any={bots:[],economy:{pricesAt:1,supplies:[{id:1,name:'Fire rune',ask:5,bid:4,stock:10}]}};
- const geResults=new Function('S','window','E','nf','icon','age',`let geQuery='',geAll=false;${code};return geResults;`)(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>old);
+ const geResults=new Function('S','window','E','nf','icon','age',`let geQuery='',geAll=false,geOpen=null;${code};return geResults;`)(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>old);
  const [head,rows]=geResults();old='2m';const [head2,rows2]=geResults();
  expect(head).toContain('prices 1m old');expect(head2).toContain('prices 2m old');
  expect(rows).toContain('Fire rune');expect(rows2).toBe(rows);

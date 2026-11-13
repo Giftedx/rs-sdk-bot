@@ -10,33 +10,62 @@ import {restock,inside,stopCarriers,bankCarrier,withdrawCarrier,closeCarrierBank
 import {freshBodyStart} from './rune-carrier-start';
 import {runeCarrierRoster,assertFreshRuneSkills,assertRuneDonor} from './rune-carrier-roster';
 import {observeCraftCompletion,runeHandoffPipeline} from './rune-pipeline';
+import {BODY_CARRIER_ALTAR,runesPerEssence,carrierXpPerEssence,type RuneCarrierAltar} from './rune-carrier-altar';
+// --staged=<altar>:<level>: the crafter already stands in the altar and every carrier stands there with a pack.
+export type StagedCarriers={altar:RuneCarrierAltar;target:number};
 
 export function runeCraftAfter(value=process.env.RUNE_CRAFT_AFTER??'inventory'):'inventory'|'trade-message'{
  if(value!=='inventory'&&value!=='trade-message')throw Error('RUNE_CRAFT_AFTER must be inventory or trade-message');
  return value;
 }
-function bodyCraft(s:Session,n:number,previousXp:number,level:number,runes:number,rate:number,stop:()=>boolean,pipeline=false){
+// One craft of n essence at altar a: the effect is no essence, n*rate XP and the runes of runecraft.rs2 for the level.
+function altarCraft(a:RuneCarrierAltar,s:Session,n:number,previousXp:number,level:number,runes:number,rate:number,stop:()=>boolean,pipeline=false){
  const complete=()=>ess(s)===0&&Math.abs((s.sdk.getSkillXp('Runecraft')??0)-previousXp-n*rate)<=1
-  &&s.sdk.getInventory().filter(i=>i.id===559).reduce((sum,i)=>sum+i.count,0)-runes===n*(Math.floor(level/46)+1);
+  &&s.sdk.getInventory().filter(i=>i.id===a.rune).reduce((sum,i)=>sum+i.count,0)-runes===n*runesPerEssence(a,level);
  const boundary=pipeline?observeCraftCompletion(s,complete,stop):undefined;
  return {complete,boundary,dispose:()=>boundary?.dispose(),send:async()=>{
-  if(stop())throw Error('body craft stopped');
-  const altar=state(s).nearbyLocs.find(l=>l.id===2483);if(!altar||!inside(s))throw Error('body altar unobserved');
+  if(stop())throw Error(a.name+' craft stopped');
+  const altar=state(s).nearbyLocs.find(l=>l.id===a.altar.id);if(!altar||!inside(s,a))throw Error(a.name+' altar unobserved');
   const r=await s.direct({type:'interactLoc',x:altar.x,z:altar.z,locId:altar.id,optionIndex:1,reason:'SDK'});
-  if(!(r as {success?:boolean})?.success)throw Error('body craft dispatch refused');
+  if(!(r as {success?:boolean})?.success)throw Error(a.name+' craft dispatch refused');
  }};
+}
+const bodyCraft=(s:Session,n:number,previousXp:number,level:number,runes:number,rate:number,stop:()=>boolean,pipeline=false)=>
+ altarCraft(BODY_CARRIER_ALTAR,s,n,previousXp,level,runes,rate,stop,pipeline);
+type Craft=ReturnType<typeof altarCraft>;
+type Carrier={s:Session;ready:boolean;deliveries:number;refills:number[];flight?:Promise<void>};
+// The crafter holds the altar; each ready carrier trades its pack, and the crafter crafts it. A crafter that holds
+// the altar's talisman swaps it for the first pack (the opening donor's talisman goes back to it).
+async function carrierCraftLoop(a:RuneCarrierAltar,s:Session,crew:Carrier[],o:{targetXp:number;rate:number;batches:number;rows:unknown[];
+ crafts:Set<Craft>;stop:()=>boolean;failure:()=>unknown;craftAfter:'inventory'|'trade-message';pipeline:boolean;delivered:(d:Carrier)=>void}){
+ const {stop,failure,craftAfter,pipeline,crafts,rows}=o;
+ const xp=()=>s.sdk.getSkillXp('Runecraft')??0,start=s.tick(),startedAt=performance.now();let batches=o.batches,waiting=0,previousCraft:Craft|undefined;
+ while(xp()<o.targetXp){
+  if(stop())throw failure()??Error('carrier route stopped or over budget');
+  let d=crew.filter(h=>h.ready).sort((a,b)=>a.deliveries-b.deliveries)[0];
+  if(!d){const at=s.tick();if(!await waitUntil(s,()=>stop()||crew.some(h=>h.ready),{timeoutTicks:190}))throw Error('no carrier returned');waiting+=s.tick()-at;if(stop())throw failure()??Error('carrier route stopped');d=crew.filter(h=>h.ready).sort((a,b)=>a.deliveries-b.deliveries)[0];}
+  if(!d)throw Error('no owned ready carrier');d.ready=false;const before=xp(),at=s.tick();
+  const tal=s.sdk.getInventory().filter(i=>i.id===a.talisman).reduce((n,i)=>n+i.count,0),runes=s.sdk.getInventory().filter(i=>i.id===a.rune).reduce((n,i)=>n+i.count,0);
+  const craft=altarCraft(a,s,27,before,s.sdk.getSkill('Runecraft')?.baseLevel??0,runes,o.rate,stop,pipeline),coupled=craftAfter==='trade-message'&&tal!==1;crafts.add(craft);
+  const tradeTicks=tal===1?(await ownedSwap(s,d.s,{[a.talisman]:1},{1436:27},stop)).ticks:await transfer(s,d.s,stop,27,coupled?craft:undefined,pipeline?{boundary:previousCraft?.boundary}:undefined);
+  if(stop())throw failure()??Error('carrier route stopped');d.deliveries++;o.delivered(d);
+  if(!coupled)await craft.send();
+  if(!await waitUntil(s,()=>stop()||craft.complete(),{timeoutTicks:15})||stop())throw Error(a.name+' craft effect unobserved or stopped');
+  batches++;const row={batch:batches,helper:d.s.name,tick:s.tick(),elapsedMs:performance.now()-startedAt,ticks:s.tick()-at,tradeTicks,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,waiting};rows.push(row);console.log('RUNE_CARRIER_BATCH '+JSON.stringify(row));
+  if(previousCraft){previousCraft.dispose();crafts.delete(previousCraft);}previousCraft=craft;
+ }
+ return {start,batches,waiting,levelTick:s.tick()};
 }
 
 // One composed swarm job owns the complete roster; openBot retains fleet-side,
 // worker-release and server admission for each session.
-export async function runRuneCarriers(roster:readonly string[],cap=2800,options:{bodyContinuation?:boolean;measurePacks?:number}={}){
- if(options.bodyContinuation&&options.measurePacks!==undefined)throw Error('choose one body mode');
+export async function runRuneCarriers(roster:readonly string[],cap=2800,options:{bodyContinuation?:boolean;measurePacks?:number;staged?:StagedCarriers}={}){
+ if([options.bodyContinuation,options.measurePacks!==undefined,!!options.staged].filter(Boolean).length>1)throw Error('choose one carrier mode');
  const confirmation=runeConfirmation(),craftAfter=runeCraftAfter(),pipeline=runeHandoffPipeline(undefined,craftAfter);
- const names=runeCarrierRoster([...roster,options.measurePacks!==undefined?'--body-measure='+options.measurePacks:options.bodyContinuation?'--body-continuation':'--carriers']),root=resolve(import.meta.dir,'..');
+ const names=runeCarrierRoster([...roster,options.staged?`--staged=${options.staged.altar.name}:${options.staged.target}`:options.measurePacks!==undefined?'--body-measure='+options.measurePacks:options.bodyContinuation?'--body-continuation':'--carriers']),root=resolve(import.meta.dir,'..');
  if(!Number.isSafeInteger(cap)||cap<1||cap>10000)throw Error('carrier tick budget must be1..10000');
  const servers=names.map(n=>{assertSideOwns(n);return serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',n,'bot.env'),'utf8'));});
  if(new Set(servers.map(s=>s.toLowerCase())).size!==1)throw Error('carrier participants must share one server');
- type Carrier={s:Session;ready:boolean;deliveries:number;refills:number[];flight?:Promise<void>};
  const opened:Session[]=[],crew:Carrier[]=[],rows:unknown[]=[],cancel=new AbortController(),crafts=new Set<ReturnType<typeof bodyCraft>>();let done=false,failure:unknown,monitor:(()=>void)|undefined;
  const stop=()=>{
   if(cancel.signal.aborted)return true;
@@ -55,9 +84,34 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
   if(firstFailure)throw firstFailure.reason;
   return results.map(r=>(r as PromiseFulfilledResult<Session>).value);
  };
- const launchRefill=(d:Carrier)=>{d.flight=restock(d.s).then(t=>{d.refills.push(t);d.ready=true;}).catch(e=>{if(!done){failure=e;cancel.abort(e);stopCarriers();}});};
+ const refilling=new Set<Carrier>();
+ const launchRefill=(d:Carrier,a?:RuneCarrierAltar)=>{refilling.add(d);d.flight=(a?restock(d.s,a):restock(d.s)).then(t=>{d.refills.push(t);refilling.delete(d);d.ready=true;}).catch(e=>{if(!done){failure=e;cancel.abort(e);stopCarriers();}});};
  try{
   await getWorld();
+  if(options.staged){
+   // The crafter logs in first: same-address player turns follow login order, as in the fresh body route.
+   const a=options.staged.altar,targetXp=xpForLevel(options.staged.target),rate=carrierXpPerEssence(a,Number(process.env.BODY_XP_RATE??25));
+   if(stop())throw Error('staged opening stopped');const s=await open(names[0]!);
+   if(!await waitUntil(s,()=>!!state(s)?.player&&!!s.sdk.getSkill('Runecraft'),{timeoutTicks:10}))throw Error('staged crafter state unavailable');
+   const held=(h:Session,id:number)=>h.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),xp=()=>s.sdk.getSkillXp('Runecraft')??0;
+   // 27 free slots: the crafter holds nothing but this altar's runes.
+   if(!inside(s,a)||s.sdk.getInventory().some(i=>i.id!==a.rune)||(s.sdk.getSkill('Runecraft')?.baseLevel??0)<a.level||xp()>=targetXp)throw Error(`staged crafter must hold the ${a.name} altar below the target with an empty pack`);
+   const helpers=await openTogether(names.slice(1),async h=>{
+    await waitTicks(h,3);
+    if(!inside(h,a)||ess(h)!==27||held(h,a.talisman)!==1)throw Error('staged carrier not observed');
+   });
+   crew.push(...helpers.map(h=>({s:h,ready:true,deliveries:0,refills:[]})));
+   console.log('RUNE_CARRIER_READY '+JSON.stringify({altar:a.name,masterTick:s.tick(),actors:crew.map(h=>({name:h.s.name,tick:h.s.tick(),remaining:cap-h.s.tick()}))}));
+   // A carrier banks again only when the packs held and in flight do not cover the XP still needed after this pack.
+   const delivered=(d:Carrier)=>{const need=targetXp-xp()-27*rate,stocked=(crew.filter(h=>h.ready).length+refilling.size)*27*rate;if(stocked<need)launchRefill(d,a);};
+   const {start,batches,waiting,levelTick}=await carrierCraftLoop(a,s,crew,{targetXp,rate,batches:0,rows,crafts,stop,failure:()=>failure,craftAfter,pipeline,delivered});
+   done=true;stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));
+   const result={mode:'staged',altar:a.name,target:options.staged.target,craftAfter,pipeline,opening:runeOpening(),confirmation,batches,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,
+    levelTick,masterTicks:s.tick(),loopTicks:levelTick-start,waiting,rows,crew:crew.map(h=>({name:h.s.name,deliveries:h.deliveries,refills:h.refills}))};
+   console.log('RUNE_STAGED_RESULT '+JSON.stringify(result));
+   // The crafter settles last, so the last LEDGER line is the crafter's.
+   const logout=await settle([...helpers,s],true,`${a.name} Runecraft${result.level} with staged carriers`);return {ok:logout,...result,logout};
+  }
   if(options.bodyContinuation||options.measurePacks!==undefined){
    if(stop())throw Error('continuation opening stopped');const s=await open(names[0]!);
    const helpers=await openTogether(names.slice(1));
@@ -81,22 +135,9 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
    console.log('RUNE_CARRIER_READY '+JSON.stringify({masterTick:s.tick(),actors:crew.map(h=>({name:h.s.name,tick:h.s.tick(),remaining:cap-h.s.tick()}))}));
   },cancel);
   const initial:Carrier={s:donor,ready:false,deliveries:1,refills:[]};crew.push(initial);launchRefill(initial);
-  const xp=()=>s.sdk.getSkillXp('Runecraft')??0,start=s.tick(),startedAt=performance.now();let batches=1,waiting=0,previousCraft:ReturnType<typeof bodyCraft>|undefined;
-  while(xp()<xpForLevel(99)){
-   if(stop())throw failure??Error('carrier route stopped or over budget');
-   let d=crew.filter(h=>h.ready).sort((a,b)=>a.deliveries-b.deliveries)[0];
-   if(!d){const at=s.tick();if(!await waitUntil(s,()=>stop()||crew.some(h=>h.ready),{timeoutTicks:190}))throw Error('no carrier returned');waiting+=s.tick()-at;if(stop())throw failure??Error('carrier route stopped');d=crew.filter(h=>h.ready).sort((a,b)=>a.deliveries-b.deliveries)[0];}
-   if(!d)throw Error('no owned ready carrier');d.ready=false;const before=xp(),at=s.tick();
-   const tal=s.sdk.getInventory().filter(i=>i.id===1446).reduce((n,i)=>n+i.count,0),runes=s.sdk.getInventory().filter(i=>i.id===559).reduce((n,i)=>n+i.count,0);
-   const craft=bodyCraft(s,27,before,s.sdk.getSkill('Runecraft')?.baseLevel??0,runes,Number(process.env.BODY_XP_RATE??25)*7.5,stop,pipeline),coupled=craftAfter==='trade-message'&&tal!==1;crafts.add(craft);
-   const tradeTicks=tal===1?(await ownedSwap(s,d.s,{1446:1},{1436:27},stop)).ticks:await transfer(s,d.s,stop,27,coupled?craft:undefined,pipeline?{boundary:previousCraft?.boundary}:undefined);
-   if(stop())throw failure??Error('carrier route stopped');d.deliveries++;launchRefill(d);
-   if(!coupled)await craft.send();
-   if(!await waitUntil(s,()=>stop()||craft.complete(),{timeoutTicks:15})||stop())throw Error('body craft effect unobserved or stopped');
-   batches++;const row={batch:batches,helper:d.s.name,tick:s.tick(),elapsedMs:performance.now()-startedAt,ticks:s.tick()-at,tradeTicks,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,waiting};rows.push(row);console.log('RUNE_CARRIER_BATCH '+JSON.stringify(row));
-   if(previousCraft){previousCraft.dispose();crafts.delete(previousCraft);}previousCraft=craft;
-  }
-  const levelTick=s.tick();done=true;stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));
+  const xp=()=>s.sdk.getSkillXp('Runecraft')??0;
+  const {start,batches,waiting,levelTick}=await carrierCraftLoop(BODY_CARRIER_ALTAR,s,crew,{targetXp:xpForLevel(99),rate:Number(process.env.BODY_XP_RATE??25)*7.5,batches:1,rows,crafts,stop,failure:()=>failure,craftAfter,pipeline,delivered:launchRefill});
+  done=true;stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));
   const result={craftAfter,pipeline,opening:runeOpening(),confirmation,prefix,batches,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,levelTick,masterTicks:s.tick(),bodyLoopTicks:levelTick-start,waiting,rows,crew:crew.map(h=>({name:h.s.name,deliveries:h.deliveries,refills:h.refills}))};
   const logout=await settle(opened,true,'fresh Runecraft99 with carrier banks');return {ok:logout,...result,logout};
  }catch(error){for(const craft of crafts)craft.dispose();const reason=failure??error;done=true;cancel.abort(reason);stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));const logout=await settle(opened,false,String(reason));return {ok:false,confirmation,failure:String(reason),logout};}finally{for(const craft of crafts)craft.dispose();monitor?.();}

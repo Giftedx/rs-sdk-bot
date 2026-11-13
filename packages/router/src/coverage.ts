@@ -81,8 +81,8 @@ const SCRIPT_ALIAS: Record<string, string> = { quest_romeojuliet: 'quest-rj.ts',
     quest_arthur: 'quest-merlin.ts', quest_mcannon: 'dwarfcannon.ts', quest_itexam: 'quest-dig.ts', quest_waterfall: 'waterfall.ts', quest_elemental_workshop: 'quest-elemental.ts' };
 export const questScript = (folder: string): string => SCRIPT_ALIAS[folder] ?? 'quest-' + folder.replace(/^quest_/, '').replace(/_/g, '') + '.ts';
 // knowledge/quests.json has no row for these folders; points from research/quest-points-board.md (quest.constant lines).
-const QP_FALLBACK: Record<string, number> = { quest_cog: 1, quest_elemental_workshop: 1, quest_mm: 3, quest_troll_love: 2 };
-const VARP_FOLDER: Record<string, string> = { goblinquest: 'quest_gobdip', elenaquest: 'quest_elena', waterfall_quest: 'quest_waterfall', horrorquest: 'quest_horror' };
+export const QP_FALLBACK: Record<string, number> = { quest_cog: 1, quest_elemental_workshop: 1, quest_mm: 3, quest_troll_love: 2 };
+export const VARP_FOLDER: Record<string, string> = { goblinquest: 'quest_gobdip', elenaquest: 'quest_elena', waterfall_quest: 'quest_waterfall', horrorquest: 'quest_horror' };
 
 // Journal labels are the names emitted by questFlags, not varps or script names.
 export function questJournalNames(root = resolve(import.meta.dir, '../../..')): Map<string, string> {

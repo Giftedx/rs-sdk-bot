@@ -3,6 +3,7 @@ import {mkdtempSync,mkdirSync,rmSync,writeFileSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,relative,resolve} from 'node:path';
 import {NAMES} from '../../core/src/names';
+import {mySide} from '../../core/src/fleet';
 import {provisionAccount, createAccountProvisionDeps,registrationEnvironment, type AccountProvisionDeps, type RegistrationResult} from '../src/account-provision';
 import {addTasks, chooseTask, finishTask, initialState, startTask, type CoordTask} from '../src/coordinator';
 import {preparedProvisionProof,provisionParticipantHold} from '../src/coordinator-worker';
@@ -125,6 +126,9 @@ test('a qualified composed first job holds the claim when its known participant 
   plan([]);
   mkdirSync(join(base,'vendor/rs-sdk/bots/Helper'),{recursive:true});
   writeFileSync(join(base,'vendor/rs-sdk/bots/Helper/bot.env'),'SERVER=rs-sdk-demo.fly.dev');
+  mkdirSync(join(base,'fleet'));
+  const own=(side:string)=>writeFileSync(join(base,'fleet/owners.json'),JSON.stringify({accounts:{Helper:{side,server:'rs-sdk-demo.fly.dev'}}}));
+  own(mySide());
   const state=initialState();
   const spec={goal:'skills' as const,capability:'train',dependsOn:[],priority:1,estimatedMs:1,why:'starter job'};
   addTasks(state,[
@@ -157,6 +161,10 @@ test('a qualified composed first job holds the claim when its known participant 
   writeFileSync(credentials,'SERVER=localhost:8888');
   expect(prepared()).toBe(false);
   writeFileSync(credentials,'SERVER=rs-sdk-demo.fly.dev');
+  expect(prepared()).toBe(true);
+  own(mySide()==='local'?'cloud':'local');
+  expect(prepared()).toBe(false);
+  own(mySide());
   expect(prepared()).toBe(true);
  }finally{
   if(/^rsbot-provision-ready-[^\\/]+$/.test(relative(parent,base)))rmSync(base,{recursive:true});

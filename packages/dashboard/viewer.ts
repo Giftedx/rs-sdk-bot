@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='462696BCAB4FB8F43B1B5DE9876B8FCF5E9A6300214B05F9DA6A372E30C5540C';
+export const VIEWER_MANIFEST_SHA256='597808E1445A163A48477DC30E90EFAE1D0736A12ED872D0B0663AEE5699CAFB';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -38,6 +38,10 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['tiling report', 'layoutInfo('],                                       // {viewerMultiLayout}: the rectangles for the page's frames
     ['moves at the display rate', 'needsEveryFrame('],                      // no frame limit while views move
     ['way back to the single view', 'onClosed'],                            // the kept view grows to the full frame
+    ['markers message', 'setOverlay('],                                     // {overlay:{tiles,pies,lines,players,npcs,ground}}: RuneLite-style highlights
+    ['markers layer', 'drawMarkers('],                                      // drawn under the names at the ground height of each tile
+    ['capture message', 'requestCapture('],                                 // {capture:{id}}: the next frame as a JPEG
+    ['capture reply', 'viewerCapture'],                                     // {viewerCapture:{id,url}} to the page that asked
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
@@ -142,14 +146,44 @@ export function installViewerBridge(host:any) {
     // the tick's zone records (w) as oa and od records, after the feed's own. An obj that the feed itself sends counts
     // first, so one pile shows once.
     let botGround:number[][]=[],groundVersion=0;
+    // Respawn timers (RuneLite's Mining and Woodcutting plugins). The page sends the loc ids of depleted rocks and
+    // stumps ({respawnWatch:[id,...]}, client-assets/resources.json). On the main view's feed, a loc change (la) to one of
+    // them marks its tile depleted at that tick; a change to another loc, or a del (ld: back to the map's own loc), ends
+    // it. A depleted loc in the snapshot of a newly held zone has no start tick (null). The page gets the list on each
+    // change: {atlasDepleted:{tick, list:[[x, z, level, id, since]]}}. Only tiles inside the held area stay.
+    let respawnWatch=new Set<number>(),mainFeed:any=null,depletedArea:{x:number;z:number;w:number;h:number}|null=null;
+    const depleted=new Map<string,[number,number,number,number,number|null]>();
+    // depletedSent: the page holds a list that is not empty. A cleared list reaches the page as an empty one.
+    let depletedSent=false;
+    const publishDepleted=(tick:number)=>{if(privacyReady&&renderReady&&!failed&&host.parent!==host){host.parent.postMessage({atlasDepleted:{tick,list:[...depleted.values()]}},host.location.origin);depletedSent=depleted.size>0;}};
+    const clearDepleted=()=>{const had=depleted.size>0||depletedSent;depleted.clear();depletedArea=null;if(had)publishDepleted(0);};
+    const trackDepleted=(m:any)=>{
+        if(!respawnWatch.size||!Array.isArray(m.w)&&!m.reset)return;
+        let changed=false;
+        if(m.reset&&depleted.size){depleted.clear();changed=true;}
+        for(const r of Array.isArray(m.w)?m.w:[]){
+            if(r?.e==='za'&&[r.x,r.z,r.w,r.h].every(Number.isFinite)){
+                const fresh=!!r.r,old=depletedArea;depletedArea={x:r.x,z:r.z,w:r.w,h:r.h};
+                for(const [k,v] of [...depleted])if(fresh||!(v[0]>=r.x&&v[0]<r.x+r.w&&v[1]>=r.z&&v[1]<r.z+r.h)||!old){depleted.delete(k);changed=true;}
+                continue;
+            }
+            if((r?.e!=='la'&&r?.e!=='ld')||![r.x,r.z,r.l].every(Number.isSafeInteger))continue;
+            const key=r.x+','+r.z+','+r.l;
+            if(r.e==='la'&&respawnWatch.has(r.id)){if(!depleted.has(key)){depleted.set(key,[r.x,r.z,r.l,r.id,m.reset||Array.isArray(m.w)&&m.w[0]?.e==='za'?null:m.k]);changed=true;}}
+            else if(depleted.delete(key))changed=true;
+        }
+        if(changed)publishDepleted(m.k);
+    };
     const groundRow=(r:any)=>Array.isArray(r)&&r.length===5&&r.every(Number.isSafeInteger)&&r[0]>=0&&r[0]<16384&&r[1]>=0&&r[1]<16384&&r[2]>=0&&r[2]<4&&r[3]>=0&&r[3]<65536&&r[4]>=1&&r[4]<2**31;
     const Socket=host.WebSocket;
     if(Socket)host.WebSocket=class extends Socket {
         constructor(address:any,protocols?:any){
             super(address,protocols);
             try{if(new host.URL(String(address),host.location.href).pathname==='/worldfeed'){
+                // The first feed socket is the main view's: its area is the one the respawn timers follow.
+                if(!mainFeed){mainFeed=this;clearDepleted();}
                 this.addEventListener('open',()=>{feedConnected=true;emit();});
-                this.addEventListener('close',()=>{feedConnected=false;emit();});
+                this.addEventListener('close',()=>{feedConnected=false;emit();if(mainFeed===this){mainFeed=null;clearDepleted();}});
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
@@ -253,6 +287,7 @@ export function installViewerBridge(host:any) {
                         const sendRoster=()=>host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
                         if(host.parent!==host&&!failed){if(privacyReady&&renderReady)sendRoster();else{heldRoster=sendRoster;heldRosterAt=Date.now();}}
                     }
+                    if(message.t==='tick'&&mainFeed===this)trackDepleted(message);
                     if(message.t==='tick'){
                         if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
                         for(const r of Array.isArray(message.p)?message.p:[]){if(typeof r?.i!=='number')continue;if(r.f){faces.delete(r.i);playerHp.delete(r.i);}if(typeof r.fe==='number')r.fe<0?faces.delete(r.i):faces.set(r.i,r.fe);const h=hp(r.hp);if(h)playerHp.set(r.i,h);}
@@ -315,6 +350,7 @@ export function installViewerBridge(host:any) {
         }
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
         if('botGround' in event.data){const rows=event.data.botGround;if(Array.isArray(rows)&&rows.length<=1000&&rows.every(groundRow)){botGround=rows.map((r:number[])=>r.slice());groundVersion++;}}
+        if('respawnWatch' in event.data){const ids=event.data.respawnWatch;if(Array.isArray(ids)&&ids.length<=64&&ids.every((n:any)=>Number.isSafeInteger(n)&&n>=0&&n<65536)){const next=new Set<number>(ids);if(next.size!==respawnWatch.size||[...next].some(n=>!respawnWatch.has(n))){respawnWatch=next;clearDepleted();}}}
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
         // The viewer writes its URL only when its camera rests. The name in the URL at a page follow is the old one.

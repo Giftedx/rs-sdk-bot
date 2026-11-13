@@ -6,7 +6,7 @@
 // Usage: bun scripts/fleet-trade.ts <account> [order id]
 // Run it with STALL_TICKS=0, as scripts/fleet-agent.ts does: the wait for the partner is bounded by the order window,
 // and the session's idle guard would end it after 900 ticks.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { walkTarget } from './walk-to';
@@ -18,6 +18,7 @@ import { FLEET_DIR } from '../packages/core/src/fleet';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { liveLogoutRef } from '../packages/core/src/session-admission';
+import { cachedReleaseFor, releaseEntries } from '../packages/core/src/worker-release';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { pidAlive } from '../packages/core/src/session-takeover';
 import { laterProcessHolds, processStartTimes } from '../packages/practice/src/proc';
@@ -119,6 +120,43 @@ export function partnerFailed(dir: string, order: Order, role: TradeRole): boole
         const receipt = JSON.parse(readFileSync(join(dir, `${order.id}.${role === 'from' ? 'to' : 'from'}.json`), 'utf8'));
         return receipt?.version === 2 && receipt.id === order.id && receipt.state === 'failed';
     } catch { return false; }
+}
+
+// An order with `takerWaits` keeps the receiver offline until the giver stands at the meet with every line out of its
+// bank. A route account's trade login counts on its board clock: live, WeeQuickie's staging sessions took 149 s and
+// 214 s while the giver walked to Draynor, 87% of block 3's board time. The giver marks its readiness in a file of
+// this machine, so the flag is for orders between accounts of one side (scripts/route-stage.ts).
+export const giverReadyFile = (base: string, id: string) => join(base, '.practice', 'fleet-ready', `${id}.ready`);
+export function markGiverReady(base: string, id: string) {
+    mkdirSync(join(base, '.practice', 'fleet-ready'), { recursive: true });
+    writeFileSync(giverReadyFile(base, id), String(Date.now()));
+}
+// The receiver waits for the giver's mark, the giver's failed receipt, or TAKER_WAIT_MS (default 30 minutes) before
+// the order's end, whichever comes first; then it logs in as before.
+// True once this session's release differs from the release it logged in on (a coordinator build published files, a
+// pull). While such a session runs, every new login reads "active legacy/different release" (assertCompatibleWorkers
+// in packages/core/src/worker-release.ts), its trade partner's too, so a waiting side ends with nothing traded and the
+// pair retries on the new release. Live: a block 6 trade waited for a partner that this rule kept out. Checks every
+// `everyMs`; a lookup that fails counts as not moved.
+export function releaseWatch(read: () => string, pin: string | undefined, { now = Date.now, everyMs = 20_000 } = {}): () => boolean {
+    let checked = -Infinity, moved = false;
+    return () => {
+        if (!pin || moved || now() - checked < everyMs) return moved;
+        checked = now();
+        try { moved = read() !== pin; } catch { moved = false; }
+        return moved;
+    };
+}
+
+export async function waitForGiver(order: Order, { ready, failed, now = Date.now, sleep = (ms: number) => Bun.sleep(ms), maxMs = Number(process.env.TAKER_WAIT_MS ?? 30 * 60_000) }:
+    { ready: () => boolean; failed: () => boolean; now?: () => number; sleep?: (ms: number) => Promise<unknown>; maxMs?: number }): Promise<'ready' | 'failed' | 'deadline'> {
+    const deadline = Math.min(now() + maxMs, order.end - 5 * 60_000);
+    for (;;) {
+        if (ready()) return 'ready';
+        if (failed()) return 'failed';
+        if (now() >= deadline) return 'deadline';
+        await sleep(2000);
+    }
 }
 
 export async function performFleetTransfer(s: Session, order: Order, role: TradeRole, progress: Progress, {
@@ -232,6 +270,7 @@ if (import.meta.main) {
     if (!tradePartners(order.server).has(partner.toLowerCase())) {
         console.log(`RESULT fail fleet-trade ${order.id}: ${partner} is not a listed fleet account`); process.exit(1);
     }
+    const releaseMoved = releaseWatch(() => cachedReleaseFor(releaseEntries(process.env.WORKER_ENTRY)), process.env.WORKER_RELEASE);
     let prepared: TradeReceipt | undefined;
     const progress: Progress = { uncertain: false, count: 0 };
     const complete = (s: Session, ok: boolean, detail: string) => finish([s], ok, settled => {
@@ -244,6 +283,10 @@ if (import.meta.main) {
         return `fleet-trade ${order.id} ${receipt.state} ${receipt.count}/${order.count}${extra}: ${detail}`;
     });
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
+    if (role === 'to' && order.takerWaits) {
+        const waited = await waitForGiver(order, { ready: () => existsSync(giverReadyFile(root, order.id)), failed: () => partnerFailed(receipts, order, role) });
+        console.log(`FLEET_TAKER_WAIT ${order.id} ${waited}`);
+    }
     const s = await openBot(account, {
         trade: {
             orderId: order.id, role,
@@ -273,6 +316,18 @@ if (import.meta.main) {
             if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) throw Error('bank did not open');
             for (const { line, i, item } of short) {
                 const held = () => countItems(s, item);
+                // Loose items beside a noted stack of the same item: the offer took the loose rows only (live: 23 loose
+                // dragon bones offered of 347, and the receiver refused the short offer). The loose ones go back in
+                // first, so the whole line comes out as one noted stack.
+                const loose = s.sdk.getInventory().filter(r => item.test(r.name) && r.count === 1);
+                if (line.count > 1 && !/^coins$/i.test(line.item) && loose.length) {
+                    const generation = s.bankObservation?.()?.generation ?? -1;
+                    progress.uncertain = true;
+                    await s.bot.depositItem(loose[0]!, -1);
+                    if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => item.test(r.name) && r.count === 1), { timeoutTicks: 10 }))
+                        throw Error(`sender loose ${line.item} deposit not confirmed`);
+                    progress.uncertain = false;
+                }
                 const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(r => item.test(r.name));
                 const amount = line.count - held(), bankCount = row?.count ?? 0;
                 if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${line.item} ${bankCount} banked + ${held()} held < ${line.count}`);
@@ -297,9 +352,10 @@ if (import.meta.main) {
             await s.bot.closeBank();
             progress.uncertain = false;
         }
-        await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role) });
+        if (role === 'from' && order.takerWaits) markGiverReady(root, order.id);
+        await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role) || releaseMoved() });
         ok = true;
         detail = 'transfer observed';
-    } catch (error) { detail = String(error); }
+    } catch (error) { detail = releaseMoved() ? `release moved under the session: ${String(error)}` : String(error); }
     await complete(s, ok, detail);
 }

@@ -36,6 +36,7 @@ import {proveInProcess} from '../../packages/practice/src/prove';
 import {createBot} from '../../packages/practice/src/bots';
 import {applyPreset, PRESETS} from '../../packages/practice/src/presets';
 import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type BenchCase} from './aio-bench-cases';
+import {FISHING_BENCH_CASES} from './fishing-bench-cases';
 import {practiceDir, rsSdkRoot} from '../../packages/practice/src/paths';
 import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -383,8 +384,15 @@ console.log('SAVES_DONE');`;
 }
 
 async function main() {
-  const prevRandom = process.env.RANDOM_EVENTS;
+  const prevRandom = process.env.RANDOM_EVENTS, prevLoot = process.env.LOOT_WATCH, prevDeath = process.env.DEATH_RECOVERY, prevGuard = process.env.VALUE_GUARD, prevFlee = process.env.FLEE_GUARD;
   process.env.RANDOM_EVENTS = '0';
+  // A ground-item pickup, a run back after a death, a refused drop or a flight would move a case's ticks: off unless the
+  // run sets LOOT_WATCH=1, DEATH_RECOVERY=1, VALUE_GUARD=1 or FLEE_GUARD=1 (packages/core/src/loot.ts,
+  // packages/core/src/death-recovery.ts).
+  process.env.LOOT_WATCH = prevLoot === '1' ? '1' : '0';
+  process.env.DEATH_RECOVERY = prevDeath === '1' ? '1' : '0';
+  process.env.VALUE_GUARD = prevGuard === '1' ? '1' : '0';
+  process.env.FLEE_GUARD = prevFlee === '1' ? '1' : '0';
   process.env.DEMO_OK = '';
 
   mkdirSync(dirname(OUT), { recursive: true });
@@ -397,7 +405,7 @@ async function main() {
 
   // BENCH_SMOKE=1 runs the short smoke set. BENCH_ALL=1 also runs the cases marked `known` (they cannot pass today).
   const smoke = process.env.BENCH_SMOKE === '1' ? new Set(SMOKE_KEYS) : undefined;
-  const cases = benchCases().filter(c => (!ONLY || ONLY.test(c.key)) && (!smoke || smoke.has(c.key)) && (process.env.BENCH_ALL === '1' || !c.known));
+  const cases = [...benchCases(), ...FISHING_BENCH_CASES].filter(c => (!ONLY || ONLY.test(c.key)) && (!smoke || smoke.has(c.key)) && (process.env.BENCH_ALL === '1' || !c.known));
   console.log(`AIO_BENCH start cases=${cases.length} runs=${RUNS} concurrency=${CONCURRENCY} timeoutMs=${TIMEOUT} ${LOCKSTEP ? `lockstep seed=${SEED}` : 'tickMs=150'} xpRate=25`);
   if (LOCKSTEP) process.env.SIM_LOCKSTEP = '1'; // bench bots inherit it and acknowledge each tick
   // A fresh-engine slot owns ports SLOT_PORT+10k .. +3 and its own market database, beside the shared stack's 8888.
@@ -482,6 +490,14 @@ async function main() {
     await stack?.stop();
     if (prevRandom === undefined) delete process.env.RANDOM_EVENTS;
     else process.env.RANDOM_EVENTS = prevRandom;
+    if (prevLoot === undefined) delete process.env.LOOT_WATCH;
+    else process.env.LOOT_WATCH = prevLoot;
+    if (prevDeath === undefined) delete process.env.DEATH_RECOVERY;
+    else process.env.DEATH_RECOVERY = prevDeath;
+    if (prevGuard === undefined) delete process.env.VALUE_GUARD;
+    else process.env.VALUE_GUARD = prevGuard;
+    if (prevFlee === undefined) delete process.env.FLEE_GUARD;
+    else process.env.FLEE_GUARD = prevFlee;
   }
   const passed = rows.filter(r => r.ok).length;
   console.log(`AIO_BENCH_SUMMARY ${JSON.stringify({ ok: passed === rows.length, cases: rows.length, passed, failed: rows.filter(r => !r.ok).map(r => r.case), routes: coverage.routes, covered: coverage.covered })}`);

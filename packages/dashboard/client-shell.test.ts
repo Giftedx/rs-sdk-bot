@@ -79,8 +79,8 @@ test('an open bank redraws newer observations and closes when its account change
 });
 
 function questPanel(bot:any,filter='all'){
- const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'){"),shell.indexOf("    if(selectedTab==='friends')"));
- return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='';let html='';${code};return html;`)(bot,filter,String,String);
+ const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'&&questScope==='fleet')"),shell.indexOf("    if(selectedTab==='friends')"));
+ return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String);
 }
 
 test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
@@ -706,6 +706,93 @@ test('!price answers from the market, then from the item value',()=>{
  expect(priceLine('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · no market offer.');
  expect(priceLine('nothing')).toBe('No price for nothing.');
  expect(priceLine(' ')).toContain('Usage: !price');
+ // With the alchemy table: the high alch value on each answer, and an item that only has an alch value.
+ const itemAlch={'Cannonball':5,'Rune scimitar':25600,'Rune platebody':65000};
+ const alchOf=(n:string)=>itemAlch[n as keyof typeof itemAlch]?Math.max(Math.floor(itemAlch[n as keyof typeof itemAlch]*6/10),1):null;
+ const withHa=new Function('S','nf','alchOf','itemAlch',`${code};return priceLine;`)(S,(n:number)=>n.toLocaleString('en-US'),alchOf,itemAlch);
+ expect(withHa('cannon')).toBe('Cannonball: ask 7,320 gp · bid none · 18,118 in stock · high alch 3 gp.');
+ expect(withHa('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · high alch 15,360 gp · no market offer.');
+ expect(withHa('RUNE PLATEBODY')).toBe('Rune platebody: high alch 39,000 gp · no market offer.');
+ expect(withHa('law rune')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
+});
+
+test('quest requirements: met, missing with the level held, unknown, and the Ready test',()=>{
+ const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
+ const data={"Hero's Quest":{s:[['Mining',52,1],['Cooking',53,0]],qp:[55,1],q:[['Lost City',1],['Dragon Slayer',0]]},'Lost City':{s:[['Woodcutting',36,1]],q:[]}};
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),E:(x:string)=>x};
+ const t=new Function(...Object.keys(env),`${code};return {questReqs,questReady,reqHtml};`)(...Object.values(env));
+ const b:any={skills:[{name:'Mining',level:60},{name:'Cooking',level:40},{name:'Woodcutting',level:36}],ranks:[{board:'Quest Points',level:60}],
+  quests:[{name:'Lost City',state:'complete'},{name:"Hero's Quest",state:'not started'}]};
+ expect(t.questReqs(b,"Hero's Quest").map((x:any)=>[x.text,x.ok])).toEqual([['52 Mining',true],['53 Cooking',false],['55 quest points',true],['Lost City',true],['Dragon Slayer',null]]);
+ expect(t.reqHtml(b,"Hero's Quest")).toContain('<span class="req-miss req-soft" title="only the wiki lists this · has 40">53 Cooking (40)</span>');
+ expect(t.questReady(b,b.quests[1])).toBe(false);
+ // Done quests are never ready; a quest with no listed requirement is ready.
+ expect(t.questReady(b,b.quests[0])).toBe(false);
+ expect(t.questReady(b,{name:"Cook's Assistant",state:'not started'})).toBe(true);
+ b.skills[1].level=53;b.quests.push({name:'Dragon Slayer',state:'complete'});
+ expect(t.questReady(b,b.quests[1])).toBe(true);
+ expect(t.reqHtml(b,'Nothing')).toBe('');
+ // Before the data loads (or when it fails), no quest is ready.
+ const pending=new Function(...Object.keys(env),`${code};return questReady;`)(...Object.values({...env,fetch:()=>({then:()=>({then:()=>{}})})}));
+ expect(pending(b,{name:"Cook's Assistant",state:'not started'})).toBe(false);
+ expect(shell).toContain(".filter(([id])=>id!=='ready'||(typeof questReqData!=='undefined'&&questReqData))");
+ // Items: held across the pack, worn gear and the bank.
+ data['Lost City']={s:[],q:[],i:[['Knife',1,1],['Plank',3,0]]} as any;
+ const t2=new Function(...Object.keys(env),`${code};return {questItems,itemHtml};`)(...Object.values(env));
+ const c:any={inventory:[{name:'Plank',count:1}],equipment:[],bank:[{name:'Knife',count:1},{name:'Plank',count:1}],bankAt:1};
+ expect(t2.questItems(c,'Lost City').map((x:any)=>[x.text,x.ok,x.have])).toEqual([['Knife',true,1],['3 Plank',false,2]]);
+ expect(t2.itemHtml(c,'Lost City')).toContain('<span class="req-miss req-soft" title="only the wiki lists this · holds 2">3 Plank (2)</span>');
+});
+
+test('cooking: the burn chance of the followed account on a fire, a range and with gauntlets, and the no-burn level',()=>{
+ const code=shell.slice(shell.indexOf('  // Cooking burn chance (RuneLite'),shell.indexOf("  // High alchemy (RuneLite's item prices"));
+ const data={'Raw shark':{c:'Shark',lv:80,f:[1,202],r:[1,232],g:[15,270]},'Raw lobster':{c:'Lobster',lv:40,f:[38,332],g:[55,368]}};
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ let lv:any=85;
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),account:()=>({}),curLevel:()=>lv};
+ const t=new Function(...Object.keys(env),`${code};return {cookTip,cookOk};`)(...Object.values(env));
+ // Shark at 85: fire 174/256 cooks, range 199/256, gauntlets 234/256; a range burns it even at 99 (233/256).
+ expect(t.cookTip({name:'Raw shark'})).toBe(' · burn at Cooking 85: fire 32%, range 22%, gauntlets 9% · a range burns it even at 99');
+ lv=50;
+ expect(t.cookTip({name:'Raw lobster'})).toBe(' · burn at Cooking 50: fire or range 27%, gauntlets 17% · no burns on a range from 74');
+ lv=74;expect(t.cookTip({name:'Raw lobster'})).toContain('fire or range 0%, gauntlets 0% · no burns on a range');
+ lv=60;expect(t.cookTip({name:'Raw shark'})).toBe(' · Cooking 80 needed to cook');
+ lv=null;expect(t.cookTip({name:'Raw shark'})).toBe(' · cooks to Shark at Cooking 80');
+ expect(t.cookTip({name:'Shark'})).toBe('');
+});
+
+test('the skilling session box shows the burn rate of the cooked foods',()=>{
+ const start=shell.indexOf('    const sessionLine=b=>{'),code=shell.slice(start,shell.indexOf('\n',shell.indexOf('% burn rate',start)));
+ const cookData={'Raw shark':{c:'Shark'}};
+ const sessionLine=new Function('cookData','line','nf','SESSION_VERB',`${code};return sessionLine;`)(cookData,(k:string,v:string)=>k+': '+v+'\n',(n:number)=>String(n),{cooking:'Food cooked'});
+ const b:any={goalSkill:'Cooking',flow:{since:0,at:3.6e6,loot:[{name:'Raw shark',count:100},{name:'Shark',count:75},{name:'Burnt shark',count:25}]}};
+ expect(sessionLine(b)).toBe('Food cooked: Raw shark 100 · 100/hr\nBurnt: 25 · 25% burn rate\n');
+ b.flow.loot=[{name:'Shark',count:10}];
+ expect(sessionLine(b)).toBe('Food cooked: Shark 10 · 10/hr\n');
+});
+
+test('high alch: the server value, the profit of a cast after the market buy and a nature rune, no coins',()=>{
+ const code=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const data={'Rune platebody':65000,'Coins':1,'Steel arrow':12,'Cabbage':1};
+ const sync=(v:any)=>({then(f:any){const r=f(v);return sync(r);}});
+ const prices:Record<string,any>={'Rune platebody':{value:38000,ask:37000,bid:36000},'Nature rune':{value:250,ask:260,bid:240},'Steel arrow':{value:5,ask:null,bid:null}};
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:(n:string)=>/^coins$/i.test(n)?{value:1}:prices[n]??null,nf:(n:number)=>n.toLocaleString('en-US'),gp:(n:number)=>n.toLocaleString('en-US')+' gp'};
+ const t=new Function(...Object.keys(env),`${code};return {alchOf,alchTip,priceTip};`)(...Object.values(env));
+ expect(t.alchOf('Rune platebody')).toBe(39000);
+ expect(t.alchOf('Cabbage')).toBe(1);
+ expect(t.alchOf('Coins')).toBe(null);
+ expect(t.alchOf('Unknown')).toBe(null);
+ // 39,000 - 37,000 - 260 = 1,740 profit a cast.
+ expect(t.alchTip({name:'Rune platebody',count:1})).toBe(' · high alch 39,000 · alch profit +1,740 a cast after the market buy and a nature rune');
+ // No market ask: the alch value against the item value.
+ expect(t.alchTip({name:'Steel arrow',count:100})).toBe(' · high alch 7 (700 gp for 100) · alch pays 2 more than the value');
+ // A loss shows no profit text.
+ prices['Rune platebody']={value:40000,ask:39500,bid:39000};
+ expect(t.alchTip({name:'Rune platebody',count:1})).toBe(' · high alch 39,000');
+ expect(t.priceTip({name:'Coins',count:5})).toBe('');
+ expect(t.priceTip({name:'Cabbage',count:1})).toBe(' · high alch 1');
+ expect(t.priceTip({name:'Rune platebody',count:1})).toContain('market buy 39,500 / sell 39,000 · high alch 39,000');
 });
 
 test('the Wilderness level counts 8 tiles for each level from the south edge of each zone',()=>{
@@ -721,7 +808,7 @@ test('the Wilderness level counts 8 tiles for each level from the south edge of 
 });
 
 test('the inventory value is the sum of the item values, and the tooltip counts the items with no value',()=>{
- const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf('  function itemCell(item,i){'));
+ const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf("  // Equipment Stats (the game's"));
  const vals:any={Coins:1,Lobster:150};
  const invWorth=new Function('price','gp',`${code};return invWorth;`)((n:string)=>vals[n]!=null?{value:vals[n]}:null,(n:number)=>String(n));
  expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp</p>');
@@ -742,4 +829,429 @@ test('a line with key=value pairs keeps the words between them, and a marked nam
  const {pretty,mention}=new Function('S','safeName','E',`${code};return {pretty,mention};`)({bots:[{name:'Woodenstaff'}]},(n:string)=>n,E);
  expect(pretty('t=1200 mined iron ore total=57 done')).toBe('<span title="t=1200 mined iron ore total=57 done">tick 1,200 mined iron ore · total 57 done</span>');
  expect(mention(pretty('Woodenstaff hp=10 str=20'))).toBe('<span title="Woodenstaff hp=10 str=20"><span class="chat-hl">Woodenstaff</span> hp 10 · str 20</span>');
+});
+test('the Quest Journal fleet view counts each quest over our accounts and colours it',()=>{
+ const src=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
+ const code=src.slice(src.indexOf("  let questScope='account';"),src.indexOf('  function gamePanel(){'));
+ const bots=[{name:'Alpha',quests:[{name:'Cook\'s Assistant',state:'complete'},{name:'Imp Catcher',state:'started'}]},{name:'Bravo',quests:[{name:'Cook\'s Assistant',state:'complete'},{name:'Imp Catcher',state:'not started'}]},{name:'Prac',practice:true,quests:[{name:'Imp Catcher',state:'complete'}]}];
+ const run=(detail:string|null,filter='all')=>new Function('S','E','safeName',`let questDetail=${JSON.stringify(detail)},questFilter=${JSON.stringify(filter)},questQuery='';${code};return fleetQuests();`)({bots},(s:any)=>String(s),(s:any)=>s);
+ const list=run(null);
+ expect(list).toContain('1 of 2 done by an account · 1 by all 2');
+ expect(list).toMatch(/color:#00ff00" data-quest="Cook's Assistant"[^>]*><span>Cook's Assistant<\/span><span>2\/2/);
+ expect(list).toMatch(/color:#ffff00" data-quest="Imp Catcher"[^>]*><span>Imp Catcher<\/span><span>0\/2/);
+ const detail=run('Imp Catcher');
+ expect(detail).toContain('<span style="color:#ffff00" title="started">Alpha</span><span style="color:#ff0000" title="not started">Bravo</span>');
+ expect(run(null,'completed')).not.toContain('Imp Catcher');
+});
+test('PvP Tools: risk, the 3 kept items, and only the players the server lets attack',()=>{
+ const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
+ const S={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Amulet of power':3000}},bots:[{name:'Ours1'},{name:'Mate'}],
+  roster:[['Near',3100,3700,0,72],['Far',3100,3740,0,72],['Strong',3101,3701,0,95],['Mate',3100,3701,0,70],['Outside',3100,3500,0,70],['Upstairs',3100,3700,1,70]]};
+ const {pvpState}=new Function('S',`${code};return {pvpState};`)(S);
+ // Wilderness level at z 3700 is 23: combat 70 can fight 47-93.
+ const p=pvpState({name:'Ours1',inWorld:true,combat:70,pos:{x:3102,z:3702,level:0},equipment:[{name:'Rune scimitar',count:1},{name:'Amulet of power',count:1}],inventory:[{name:'Shark',count:20}]});
+ expect(p.wild).toBe(23);
+ expect(p.risk).toBe(15000+3000+16000);
+ expect(p.kept.map((k:any)=>k.name)).toEqual(['Rune scimitar','Amulet of power','Shark']);
+ expect(p.keptValue).toBe(18800);expect(p.lost).toBe(34000-18800);
+ // Far is 38 tiles away, Strong is 25 levels apart, Mate is ours, Outside is not in the Wilderness, Upstairs is on another floor.
+ expect(p.threats.map((t:any)=>t.name)).toEqual(['Near']);
+ expect(pvpState({name:'Ours1',inWorld:false})).toBeNull();
+});
+test('the death recap card shows the tile, the last hit, hitsplats and what the death took',()=>{
+ const code=shell.slice(shell.indexOf('  let recap={name:null'),shell.indexOf('  // Quest Journal, Fleet view'));
+ const wild=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  const canAttack='));
+ const {recapHtml}=new Function('E','safeName','age','icon','qty','document','window','put','minimap',`${wild};${code};return {recapHtml};`)(String,(s:any)=>s,()=>'5m',(n:string)=>`[${n}]`,(n:number)=>`(${n})`,{createElement:()=>({})},{atlasOperator:()=>true},()=>{},()=>{});
+ const html=recapHtml({name:'Alpha',state:'ok',data:{at:1,pos:{x:3100,z:3700,level:0},killer:'Goondelf (level 80)',hits:[{tick:11,damage:6,source:'Goondelf (level 80)'},{tick:12,damage:0,source:'Goondelf (level 80)'}],hp:[[10,10],[11,4],[12,0]],actions:[{tick:11,type:'eatFood'}],carried:[{name:'Shark',count:5}],kept:[],lost:[{name:'Shark',count:5}],script:'scripts/pk.ts',tick:12}});
+ expect(html).toContain('Tile 3100, 3700');expect(html).toContain('Wilderness 23');
+ expect(html).toContain('Last hit: <b>Goondelf (level 80)</b>');
+ expect(html).toContain('<span class="hitsplat" title="tick 11 · Goondelf (level 80)">6</span><span class="hitsplat zero"');
+ expect(html).toContain('Lost</div><div class="recap-items"><span class="recap-item" title="Shark × 5">[Shark](5)</span>');
+ expect(html).toContain('pk.ts · tick 12');
+ expect(recapHtml({name:'Alpha',state:'none'})).toContain('No death in the newest tick records');
+});
+test('the death recap is read again for a newer death, and while it waits for the respawn after 30 s',()=>{
+ const code=shell.slice(shell.indexOf('  // A recap belongs to one reported death'),shell.indexOf('  function recapHtml(r){'));
+ const t=new Function('window','S','paintRecap','minimap','fetch',`${code};return {recapStale,set:(r)=>{recap=r;}};`)({atlasOperator:()=>true},{bots:[]},()=>{},()=>{},()=>new Promise(()=>{}));
+ const b={name:'Alpha',death:{at:100}};
+ t.set({name:'Alpha',state:'ok',data:{kept:[]},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
+ const D=1_000_000_000,b2={name:'Alpha',death:{at:D}};
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-60_000},deathAt:D,at:Date.now()-31_000});expect(t.recapStale(b2)).toBe(false);
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-20*60_000},deathAt:D,at:Date.now()-31_000});expect(t.recapStale(b2)).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-20*60_000},deathAt:D,at:Date.now()});expect(t.recapStale(b2)).toBe(false);
+ expect(t.recapStale({...b,death:{at:200}})).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()-31_000});expect(t.recapStale(b)).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
+ for(const state of ['none','error']){t.set({name:'Alpha',state,data:null,deathAt:100,at:Date.now()-31_000});expect(t.recapStale(b)).toBe(true);t.set({name:'Alpha',state,data:null,deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);}
+ expect(t.recapStale({name:'Alpha'})).toBe(false);expect(t.recapStale({...b,practice:true})).toBe(false);
+});
+test('Party: a card per PK account with hitpoints, prayer, run, food and a red edge when hurt',()=>{
+ const code=shell.slice(shell.indexOf('  const PK_GOAL='),shell.indexOf('  function worldPanel(){'));
+ const S={bots:[
+  {name:'Tribrid1',inWorld:true,combat:90,goal:'pk roam edgeville',pos:{x:3093,z:3500,level:0},hp:{now:30,max:99},runEnergy:55,skills:[{name:'Prayer',level:70,currentLevel:40}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Rune scimitar',count:1}]},
+  {name:'Fisher',inWorld:true,goal:'fish sharks',pos:{x:2600,z:3400,level:0}},
+  {name:'Offline',inWorld:false,goal:'pk'},
+ ]};
+ const {partyBox}=new Function('S','E','safeName','itemStats','wildLevel','pvpState',`${code};return {partyBox};`)(S,String,(s:any)=>s,{Shark:'heals 20'},()=>0,()=>null);
+ const html=partyBox();
+ expect(html).toContain('1 PK account');expect(html).toContain('Tribrid1');expect(html).not.toContain('Fisher');expect(html).not.toContain('Offline');
+ expect(html).toContain('party-card party-alert');
+ expect(html).toContain('<span>30 / 99</span>');expect(html).toContain('<span>40 / 70</span>');
+ expect(html).toContain('Run <b>55%</b>');expect(html).toContain('Food <b>2</b>');
+});
+test('respawn timers: the time left is the base scaled by the players online, less the time since the rock was taken',()=>{
+ const code=shell.slice(shell.indexOf("  // Respawn timers (RuneLite's Mining"),shell.indexOf("  // Party (RuneLite's Party panel)"));
+ const S={world:{tickMs:400},roster:Array.from({length:2000},(_,i)=>['p'+i,0,0,0,3])};
+ const t=new Function('S','asset','fetch','setInterval','E','$','location',`${code};return {respawnRows,set:(d,r)=>{depletedNow=d;resources=r;}};`)(S,(n:string)=>n,()=>new Promise(()=>{}),()=>0,String,()=>null,{origin:''});
+ const res={kinds:{2106:{name:'Runite rock',base:1200,min:null,max:null},1281:{name:'Oak tree',base:null,min:120,max:199}},depleted:[450],byTile:new Map([['3059,3884,0',2106],['3000,3000,0',1281]])};
+ t.set({tick:110,at:1000,list:[[3059,3884,0,450,100],[3000,3000,0,1342,null],[1,1,0,450,100]]},res);
+ const rows=t.respawnRows(1000);
+ // 2,000 players halve the base: 600 ticks of 0.4 s = 240 s, less 10 ticks = 4 s.
+ expect(rows[0]).toEqual({name:'Runite rock',x:3059,z:3884,l:0,left:236,range:null,total:240});
+ // A start the view did not see has no countdown; a tile with no resource is left out.
+ expect(rows[1]).toMatchObject({name:'Oak tree',left:null,range:null});
+ expect(rows.length).toBe(2);
+});
+test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
+ const line=shell.split('\n').find(l=>l.includes("live.sort(xpSort==='waste'"))!.trim();
+ const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
+ const window:any={efficiency:(t:string)=>t.split('').filter(c=>c==='i').length};
+ expect(run('rate')).toBe('BAC');expect(run('waste')).toBe('BCA');
+});
+test('3D highlights: one overlay message with threats, rivals, fought npcs, labels, lines, the death tile and pies',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b={name:'Alpha',inWorld:true,pos:{x:3100,z:3700,level:0},combat:70};
+ const env={S:{economy:{itemValues:{'Rune scimitar':15000}},rivals:[{rows:[{name:'Goondelf'},{name:'Bad Name!'},{name:'Ours',fleet:true}]}]},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{atlasCam3d:{x:3100,z:3700,at:Date.now()}},
+  wildLevel:()=>23,pvpState:()=>({threats:[{name:'Near'}]}),recap:{state:'ok',name:'Alpha',data:{pos:{x:3101,z:3702,level:0}}},respawnRows:()=>[{x:3059,z:3884,l:0,left:30,total:120},{x:1,z:1,l:0,left:null,total:null}],VIEWER:{state:'loading'},$:()=>null,nf:String,location:{origin:''}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,setLines:(l)=>{multiLines=l;},setTargets:(t,who='Alpha')=>{recentTargets=t;targetsFor=who;}};`)(...Object.values(env));
+ t.setLines([[3120,3712,3120,3720,0],[100,100,108,100,0],[3130,3520,3130,3968,0]]);t.setTargets([2181]);
+ const o=t.overlayMessage();
+ expect(o.players).toEqual({goondelf:'#00ffff',near:'#ff0000'});
+ expect(o.npcs).toEqual([{types:[2181],colour:'#00ffff'}]);
+ expect(o.ground).toEqual({prices:{'Rune scimitar':15000},min:1000});
+ expect(o.lines).toContainEqual({x0:3120,z0:3712,x1:3120,z1:3720,l:0,colour:'#ff0000'});
+ // A long edge through the camera area keeps its part near the camera, though its middle is 204 tiles away.
+ expect(o.lines).toContainEqual({x0:3130,z0:3640,x1:3130,z1:3760,l:0,colour:'#ff0000'});
+ expect(o.lines.some((l:any)=>l.x0===100)).toBe(false);
+ expect(o.lines).toContainEqual({x0:3040,z0:3672,x1:3160,z1:3672,l:0,colour:'#ffff00',label:'Level 20'});
+ expect(o.tiles).toEqual([{x:3101,z:3702,l:0,colour:'#ff0000',fill:true,label:'Death'}]);
+ // Another watched account starts with no fought npcs.
+ t.setTargets([2181],'Other');expect(t.overlayMessage().npcs).toEqual([]);
+ expect(o.pies).toEqual([{x:3059,z:3884,l:0,p:0.75}]);
+});
+test('Skill Calculator: XP left to the target, the time at the rate, and each action with its count',()=>{
+ const code=shell.slice(shell.indexOf('  // Skill Calculator (RuneLite\'s)'),shell.indexOf("  const XP_STORE='atlas-xp-baselines';"));
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const t=new Function('window','asset','fetch','E','icon','nf','dur',`${code};return {calcBox,set:(s,t,a)=>{calcSkill=s;calcTarget=t;skillActions=a;}};`)({atlasXp:X},(n:string)=>n,()=>new Promise(()=>{}),String,(n:string)=>`[${n}]`,(n:number)=>String(n),(ms:number)=>Math.round(ms/60000)+'m');
+ const xp=X.xpForLevel(60)+10;
+ t.set('Woodcutting',61,{woodcutting:[['Willow logs',30,67.5,[],['Willow logs']],['Yew logs',60,175,[],['Yew logs']],['Magic logs',75,250,[],['Magic logs']]]});
+ const left=X.xpForLevel(61)-xp,html=t.calcBox({skills:[{name:'Woodcutting',xp}]},{rate:left});
+ expect(html).toContain('Current <b>60</b>');expect(html).toContain('value="61"');
+ expect(html).toContain(`<b>${left}</b> xp left`);expect(html).toContain('TTL 60m');
+ expect(html).toContain(`<span class="calc-count">${Math.ceil(left/175)}</span>`);
+ expect(html).toMatch(/calc-row calc-locked"[^>]*>\[Magic logs\]/);
+ t.set(null,null,null);expect(t.calcBox({skills:[]},null)).toBe('');
+});
+test('skilling highlights and the trail: the resource of the top loot item near the account, fishing spots, the walked path',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b:any={name:'Alpha',inWorld:true,pos:{x:3100,z:3400,level:0},goalSkill:'Woodcutting',flow:{since:0,at:3_600_000,loot:[{name:'Logs',count:3},{name:'Yew logs',count:40}]}};
+ const S:any={economy:{itemValues:{}},bots:[b]};
+ const env:any={S,D:{rival:new Set()},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,location:{origin:''},
+  resources:{kinds:{1:{name:'Yew tree'},2:{name:'Oak tree'},3:{name:'Iron rock'}},tiles:[[3105,3402,0,1],[3104,3400,0,2],[3130,3400,0,1],[3101,3401,0,3]]}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,trackTrails,resourceOf,setFish:(f)=>{fishingTypes=f;}};`)(...Object.values(env));
+ expect([t.resourceOf('Yew logs'),t.resourceOf('Achey tree logs'),t.resourceOf('Iron ore'),t.resourceOf('Coal'),t.resourceOf('Shark')]).toEqual(['Yew tree','Achey tree','Iron rock','Coal rock',null]);
+ t.trackTrails();b.pos={x:3101,z:3400,level:0};t.trackTrails();b.pos={x:3102,z:3401,level:0};t.trackTrails();
+ let o=t.overlayMessage();
+ // Only the yew within 15 tiles: not the oak, not the yew 30 tiles away, not the rock.
+ expect(o.tiles).toEqual([{x:3105,z:3402,l:0,colour:'#00ffff'}]);
+ expect(o.lines.filter((l:any)=>l.colour==='#ffff00').length).toBe(2);
+ b.goalSkill='Fishing';b.flow={since:0,at:1,loot:[]};t.setFish([233,309]);o=t.overlayMessage();
+ expect(o.npcs).toContainEqual({types:[233,309],colour:'#00ffff'});
+});
+test('agility obstacles, Ground markers, failure markers and the NPC finder in the 3D view',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const b:any={name:'Alpha',inWorld:true,pos:{x:2474,z:3436,level:0},goalSkill:'Agility'};
+ const failed:any={name:'Beta',inWorld:false,pos:{x:2480,z:3440,level:0},lastRes:{at:Date.now()-60_000,ok:false,died:false,text:'fail travel to Ardougne failed: timeout far walk: tick stream stalled'}};
+ const old:any={name:'Gamma',inWorld:false,pos:{x:2481,z:3441,level:0},lastRes:{at:Date.now()-2*86_400_000,ok:false,text:'fail x'}};
+ const S:any={economy:{itemValues:{}},bots:[b,failed,old]},saved:Record<string,string>={'atlas-ground-marks':JSON.stringify([{x:2470,z:3430,l:0,c:'#00ff00'},{x:2700,z:3430,l:0,c:'#00ff00'}])};
+ const env:any={S,D:{rival:new Set()},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:(k:string)=>saved[k]??null,setItem:(k:string,v:string)=>{saved[k]=v;}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,E:String,location:{origin:''},resources:null,safeName:String,miniView:{cx:2474,cz:3436,PX:4}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,toggleMark,finderMatches,finderList,failReason,set:(a,n,p)=>{agilityTiles=a;npcSpawns=n;finderPick=p;}};`)(...Object.values(env));
+ t.set([[2474,3435,0,'Walk-across'],[2474,3435,1,'Climb'],[2500,3435,0,'Climb-over']],[['Hill Giant',28,28,[2470,3440,0,3100,9840,0]],['Giant rat',3,3,[3200,3200,0]]],null);
+ let o=t.overlayMessage();
+ // The obstacle within 15 tiles on the account's floor; the near marker; the recent failure, not the 2-day-old one.
+ expect(o.tiles).toContainEqual({x:2474,z:3435,l:0,colour:'#00ff00',label:'Walk-across'});
+ expect(o.tiles.filter((x:any)=>x.label==='Climb'||x.label==='Climb-over')).toEqual([]);
+ expect(o.tiles).toContainEqual({x:2470,z:3430,l:0,colour:'#00ff00'});
+ expect(o.tiles.some((x:any)=>x.x===2700)).toBe(false);
+ expect(o.tiles).toContainEqual({x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'Beta: travel to Ardougne failed · tick stream stalled'});
+ expect(o.tiles.some((x:any)=>x.x===2481)).toBe(false);
+ // A marker toggles off and on, and stays in this browser.
+ expect(t.toggleMark(2470,3430,0)).toBe(false);expect(JSON.parse(saved['atlas-ground-marks']!).length).toBe(1);
+ expect(t.toggleMark(2471,3431,0)).toBe(true);expect(t.overlayMessage().tiles).toContainEqual({x:2471,z:3431,l:0,colour:'#ffff00'});
+ // The finder: names that start with the text first, then the pick's near spawns in pink.
+ expect(t.finderMatches('gi').map((r:any)=>r[0])).toEqual(['Giant rat','Hill Giant']);
+ expect(t.finderMatches('g')).toEqual([]);
+ t.set(null,[['Hill Giant',28,28,[2470,3440,0,3100,9840,0]]],'Hill Giant');
+ expect(t.overlayMessage().tiles).toContainEqual({x:2470,z:3440,l:0,colour:'#ff66ff',label:'Hill Giant (28)'});
+ expect(t.overlayMessage().tiles.some((x:any)=>x.z===9840)).toBe(false);
+ expect(t.finderList()).toContain('level 28 · 2 spawns');expect(t.finderList()).toContain('data-finder-go="2470,3440"');
+ expect(t.failReason('fail')).toBe('failed');
+ expect(t.failReason('fail TickStallError: tick stream stalled: no new game tick for 15000ms')).toBe('tick stream stalled');
+ expect(t.failReason('fail fleet-trade 17-a-b-bones reconcile 0/94: Error: transfer requires reconciliation')).toBe('fleet-trade: transfer requires reconciliation');
+ expect(t.failReason('fail mode=giant ok=false creditedKills=16 banked={"bigBones":0}')).toBe('giant: run ended, not ok');
+ expect(t.failReason('fail {"ok":false,"phase":"settled","targetMet":false,"banked":true')).toBe('target not met');
+ // Two accounts on one tile share one marker.
+ S.bots.push({name:'Delta',inWorld:false,pos:{x:2480,z:3440,level:0},lastRes:{at:Date.now(),ok:false,text:'fail TickStallError: tick stream stalled'}});
+ const spot=t.overlayMessage().tiles.filter((x:any)=>x.colour==='#ff9900');
+ expect(spot).toEqual([{x:2480,z:3440,l:0,colour:'#ff9900',fill:true,label:'2 accounts: travel to Ardougne failed · tick stream stalled'}]);
+});
+test('Inventory Tags: food, potions, teleports and runes get their group class; the switch turns them off',()=>{
+ const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Equipment Stats (the game's"));
+ const hl:any={invTags:true};
+ const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
+ expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
+  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-rune','']);
+ hl.invTags=false;expect(invTag({name:'Shark'})).toBe('');expect(invTag(null)).toBe('');
+});
+test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
+ const code=shell.slice(shell.indexOf('  function gePanel(){'),shell.indexOf('  // Pull requests plugin'));
+ const state:any={bots:[],economy:{supplies:[{id:1,name:'Coal',ask:150}]}};
+ const run=new Function('S','window','E','nf','icon','loadItemSources','data',`const geTele=()=>'';let geQuery='',geAll=true,geOpen='1',geOpenName='Coal',sourcePin=null,itemSourcesData=data;const age=()=>'';${code};return gePanel();`);
+ const html=run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{1:[['gather','Mining 30: Coal rock',[3000,3000,0,3001,3001,0]],['drop','Drop: Giant (level 28) · always',[]]]});
+ expect(html).toContain('class="ge-row ge-open" data-ge-src="1" data-ge-name="Coal"');
+ expect(html).toContain('<span class="ge-label">Mining 30: Coal rock</span><button class="xp-reset" data-src-pin="0" title="2 places">Show on map</button>');
+ expect(html).not.toContain('data-src-pin="1"');
+ expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{})).toContain('Loading sources');
+ expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{2:[]})).toContain('No source on record');
+});
+test('skill guide: the best action now with its count to the next level, and the next unlocks',()=>{
+ const code=shell.slice(shell.indexOf("  // Skill guide (RuneLite's Skill Calculator"),shell.indexOf('  function calcBox(b,row){'));
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const acts={woodcutting:[['Logs',1,625,[],['Logs']],['Oak logs',15,937.5,[],['Oak logs']],['Willow logs',30,1687.5,[],['Willow logs']],['Maple logs',45,2500,[],['Maple logs']],['Yew logs',60,4375,[],['Yew logs']]]};
+ const t=new Function('window','nf',`let skillActions=${JSON.stringify(acts)};${code};return {skillGuide,guideText};`)({atlasXp:X},String);
+ const xp=X.xpForLevel(31),left=X.xpForLevel(32)-xp,g=t.skillGuide('Woodcutting',xp);
+ expect(g).toEqual({best:{name:'Willow logs',count:Math.ceil(left/1687.5)},next:[{name:'Maple logs',level:45},{name:'Yew logs',level:60}]});
+ expect(t.guideText(g)).toBe(' · '+Math.ceil(left/1687.5)+' × Willow logs to level · next: Maple logs at 45');
+ expect(t.skillGuide('Cooking',xp)).toBe(null);
+});
+test('idle markers and the closest teleport',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ let now=1_000_000;const b:any={name:'Alpha',inWorld:true,pos:{x:3200,z:3200,level:0},action:'idle'};
+ const S:any={economy:{itemValues:{}},bots:[b]};
+ const env:any={S,D:{rival:new Set()},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,E:String,location:{origin:''},resources:null,safeName:String,miniView:{cx:3200,cz:3200,PX:4},Date:{now:()=>now}};
+ const t=new Function(...Object.keys(env),`${code};return {overlayMessage,trackTrails,nearestTeleport,setIcons:(i)=>{mapIcons=i;}};`)(...Object.values(env));
+ t.trackTrails();now+=170_000;t.trackTrails();
+ expect(t.overlayMessage().tiles.filter((x:any)=>x.colour==='#ffff00')).toEqual([]);
+ now+=20_000;t.trackTrails();
+ expect(t.overlayMessage().tiles).toContainEqual({x:3200,z:3200,l:0,colour:'#ffff00',label:'Alpha: idle 3m'});
+ // A step or a non-idle action starts the clock again.
+ b.pos={x:3201,z:3200,level:0};t.trackTrails();expect(t.overlayMessage().tiles.some((x:any)=>x.colour==='#ffff00')).toBe(false);
+ t.setIcons([[3213,3424,0,'t','Varrock teleport'],[3221,3218,0,'t','Lumbridge teleport'],[3222,3218,1,'t','Upstairs'],[3200,3205,0,'a','Shortcut']]);
+ expect(t.nearestTeleport([{x:3200,z:3200,l:0}])).toEqual({label:'Lumbridge teleport',d:21});
+ expect(t.nearestTeleport([{x:3200,z:9600,l:0}])).toBe(null);
+ // Farther than 80 tiles: no hint.
+ expect(t.nearestTeleport([{x:3000,z:3000,l:0}])).toBe(null);
+});
+test('minimap right-click: only the names of players look up, not floor items or markers',()=>{
+ const line=shell.split('\n').find(l=>l.includes('const playerNames=()=>'))!;
+ const playerNames=new Function('S',`${line};return playerNames;`)({roster:[['Goondelf',1,2,0]],bots:[{name:'Alpha'}]});
+ const names=playerNames();
+ expect(['goondelf','alpha'].every(n=>names.has(n))).toBe(true);
+ expect(names.has('floor item')).toBe(false);expect(names.has('death tile')).toBe(false);
+});
+test('items kept on death: in the Wilderness the 3 kept items are green, other items of value red, worn items counted first',()=>{
+ const code=shell.slice(shell.indexOf("  // Items kept on death (RuneLite's"),shell.indexOf('  function itemCell(item,i,extra'));
+ const S:any={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Coins':1}}};
+ const b:any={inWorld:true,pos:{x:3100,z:3600},equipment:[{name:'Rune scimitar',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Shark',count:1},{name:'Bones',count:1}]};
+ const env:any={S,wildLevel:()=>5,pvpState:()=>({kept:[{name:'Rune scimitar'},{name:'Shark'},{name:'Shark'}]})};
+ const t=new Function(...Object.keys(env),`${code};return {deathMarks,deathCls};`)(...Object.values(env));
+ const m=t.deathMarks(b);
+ expect(t.deathCls(m,b.equipment[0])).toBe(' death-kept');
+ expect(b.inventory.map((i:any)=>t.deathCls(m,i))).toEqual([' death-kept',' death-kept',' death-lost','']);
+ expect(new Function('S','wildLevel','pvpState',`${code};return deathMarks;`)(S,()=>0,()=>null)(b)).toBe(null);
+ // A stack keeps only the counted units: 3 of 100,000 coins is part kept, and a second stack keeps nothing.
+ const coins:any={inWorld:true,pos:{x:3100,z:3600},equipment:[],inventory:[{name:'Coins',count:100000},{name:'Coins',count:5}]};
+ const c=new Function('S','wildLevel','pvpState',`${code};return {deathMarks,deathCls};`)(S,()=>5,()=>({kept:[{name:'Coins'},{name:'Coins'},{name:'Coins'}]}));
+ const cm=c.deathMarks(coins);
+ expect(coins.inventory.map((i:any)=>c.deathCls(cm,i))).toEqual([' death-part',' death-lost']);
+});
+test('best training spot: the best rock the account can mine now, and the nearest one on its floor',()=>{
+ const code=shell.slice(shell.indexOf('  // Best training spot (Skill Calculator)'),shell.indexOf('  const guideText=g=>'));
+ const acts={mining:[['Copper ore',1,437.5,[],['Copper ore']],['Iron ore',15,875,[],['Iron ore']],['Coal',30,1250,[],['Coal']]]};
+ const resources={kinds:{1:{name:'Copper rock'},2:{name:'Iron rock'},3:{name:'Coal rock'}},tiles:[[3000,3000,0,1],[3010,3000,0,2],[3050,3000,0,2],[3011,3000,1,2],[3020,3000,0,3]]};
+ const resourceOf=(i:string)=>/ ore$/i.test(i)?i.replace(/ ore$/i,'')+' rock':/^coal$/i.test(i)?'Coal rock':null;
+ const t=new Function('resources','skillActions','resourceOf','calcSkill','E','nf','sourcePin',`${code};return {bestSpot,bestSpotLine};`)(resources,acts,resourceOf,'Mining',String,String,null);
+ const b={pos:{x:3000,z:3000,level:0}};
+ expect(t.bestSpot(b,'Mining',20)).toMatchObject({name:'Iron rock',level:15,near:{x:3010,z:3000,l:0,d:10}});
+ expect(t.bestSpot(b,'Mining',20).tiles.length).toBe(3);
+ expect(t.bestSpot(b,'Mining',35).name).toBe('Coal rock');
+ // An action named after its rock, or named for an output item, finds its rock too.
+ const acts2={mining:[['Copper ore',1,437.5,[],['Copper ore']],['Limestone rock',10,662.5,[],[]],['Gem rock',12,500,[],['Uncut gem']]]};
+ const res2={kinds:{1:{name:'Copper rock'},4:{name:'Limestone rock'}},tiles:[[3000,3000,0,1],[3005,3000,0,4]]};
+ const t2=new Function('resources','skillActions','resourceOf','calcSkill','E','nf','sourcePin',`${code};return {bestSpot};`)(res2,acts2,resourceOf,'Mining',String,String,null);
+ expect(t2.bestSpot(b,'Mining',12)).toMatchObject({name:'Limestone rock',level:10,near:{x:3005,d:5}});
+ expect(t.bestSpot(b,'Fishing',35)).toBe(null);
+ expect(t.bestSpotLine(b,20)).toContain('Best now: <b>Iron rock</b> (level 15) · nearest 10 tiles');
+});
+test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from the pack',()=>{
+ const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const t=new Function('asset','fetch','E',`${code};return {wornBonuses,maxHit,equipStats,teleCasts,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String);
+ t.set({'Rune scimitar':[7,45,-2,0,0,0,1,0,0,0,44,0,0],'Amulet of strength':[0,0,0,0,0,0,0,0,0,0,10,0,0]},
+  {spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]],['Falador teleport',37,[['Water rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']}});
+ const b:any={skills:[{name:'Strength',level:99,currentLevel:99},{name:'Magic',level:30}],equipment:[{slot:3,name:'Rune scimitar'},{slot:2,name:'Amulet of strength'}],
+  inventory:[{name:'Air rune',count:30},{name:'Law rune',count:4},{name:'Fire rune',count:2},{name:'Water rune',count:9}]};
+ expect(t.wornBonuses(b)).toEqual([7,45,-2,0,0,0,1,0,0,0,54,0,0]);
+ // Unobserved equipment is unknown, not empty: no panel.
+ expect(t.wornBonuses({equipment:[],equipmentObserved:false})).toBe(null);expect(t.equipStats({equipment:[],equipmentObserved:false})).toBe('');
+ // The server's formula: floor(((99 + 8 + style) × (54 + 64) + 320) / 640).
+ expect([t.maxHit(99,54,0),t.maxHit(99,54,3),t.maxHit(99,0,3)]).toEqual([20,20,11]);
+ // With the +15% prayer: floor(99 × 115 / 100) = 113, so floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
+ expect(t.maxHit(99,54,3,115)).toBe(23);
+ const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20 · prayer 23');
+ // Varrock: min(2 fire, 30/3 air, 4 law) = 2; Falador: 4 law, Magic 30 is below 37.
+ expect(t.teleCasts(b)).toEqual([{name:'Varrock teleport',lv:25,casts:2,can:true},{name:'Falador teleport',lv:37,casts:4,can:false}]);
+ // A wielded Staff of fire gives fire runes without limit.
+ b.equipment[0]={slot:3,name:'Staff of fire'};expect(t.teleCasts(b)[0].casts).toBe(4);
+ // The magic max hit: the best combat spell for the current Magic level, runes and worn staff.
+ const t2=new Function('asset','fetch','E',`${code};return {bestSpell,equipStats,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String);
+ t2.set({'Staff of fire':[0,0,0,10,0,0,0,0,10,0,0,0,0]},{spells:[],staffs:{'Fire rune':['Staff of fire']},combat:[['Fire Strike',13,8,[['Mind rune',1],['Fire rune',3],['Air rune',2]],null],['Fire Bolt',35,12,[['Chaos rune',1],['Fire rune',4],['Air rune',3]],null],['Iban Blast',50,25,[['Death rune',1],['Fire rune',5]],"Iban's staff"],['Fire Blast',59,16,[['Death rune',1],['Fire rune',5],['Air rune',4]],null]]});
+ const mage:any={skills:[{name:'Magic',level:55,currentLevel:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Air rune',count:30},{name:'Chaos rune',count:6},{name:'Mind rune',count:50},{name:'Death rune',count:20}]};
+ // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
+ expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6});
+ expect(t2.equipStats(mage)).toContain('Magic Fire Bolt 12 ×6');
+ // Against the shipped spellbook: the pure-iban loadout (Magic 50, Staff of iban, death and fire runes, no air) casts Iban Blast.
+ const book=JSON.parse(readFileSync(new URL('./client-assets/spellbook.json',import.meta.url),'utf8'));
+ t2.set({},book);
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20});
+ // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
+});
+test('logout line: the session length, the most XP gained and the top loot with its value',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ const chat:any[]=[],b:any={name:'Alpha',inWorld:true,uptime:600_000,skills:[{name:'Woodcutting',xp:1000},{name:'Firemaking',xp:50}],flow:{loot:[]}};
+ const env:any={S:{bots:[b],boards:[],economy:{itemValues:{'Yew logs':200}}},chat,renderChat:()=>{},safeName:String,nf:(n:number)=>n.toLocaleString('en-GB'),gp:(n:number)=>String(n),dur:(ms:number)=>Math.round(ms/60000)+'m'};
+ const moments=new Function(...Object.keys(env),`${code};return moments;`)(...Object.values(env));
+ moments();
+ b.uptime=4_200_000;b.skills=[{name:'Woodcutting',xp:46000},{name:'Firemaking',xp:150}];b.flow={loot:[{name:'Yew logs',count:412},{name:'Logs',count:3}]};moments();
+ b.inWorld=false;b.flow=null;moments();
+ expect(chat.map(c=>c.text)).toEqual(['Alpha has logged out after 70m: +45,000 Woodcutting XP, 412 Yew logs, ≈ 82400 gp of loot.']);
+});
+test('rank lines: a move of the same account, and another account taking the best rank, never "up from" another account',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ const chat:any[]=[],S:any={bots:[],boards:[{board:'Overall',best:{name:'Alpha',rank:1619}}]};
+ const moments=new Function('S','chat','renderChat','safeName','nf','gp','dur',`${code};return moments;`)(S,chat,()=>{},String,String,String,String);
+ moments();
+ S.boards=[{board:'Overall',best:{name:'Alpha',rank:1500}}];moments();
+ S.boards=[{board:'Overall',best:{name:'Beta',rank:616}}];moments();
+ expect(chat.map(c=>c.text)).toEqual(['Alpha is now rank 1500 on Overall (up from 1619).','Beta now holds our best Overall rank: 616.']);
+});
+test('item identification: unidentified herbs by id, potions by type; other items have no label',()=>{
+ const start=shell.indexOf("  // Item identification (RuneLite's"),code=shell.slice(start,shell.indexOf('  const idTag=',start));
+ const hl:any={itemIds:true};
+ const idLabel=new Function('hl',`${code};return idLabel;`)(hl);
+ expect([{name:'Herb',id:207},{name:'Herb',id:199},{name:'Herb',id:1},{name:'Strength potion(3)'},{name:'Super attack(4)'},{name:'Prayer potion(1)'},{name:'Superantipoison(2)'},{name:'Ranging potion(4)'},{name:'Amulet of glory(4)'},{name:'Shark'}].map(i=>idLabel(i)))
+  .toEqual(['Ran','Gua','','Str','SAtt','Pra','SAP','Rng','','']);
+ hl.itemIds=false;expect(idLabel({name:'Herb',id:207})).toBe('');
+});
+test('GE price change: no change before a base snapshot is 20 hours old, then the change from it; snapshots rotate daily',()=>{
+ const start=shell.indexOf('  // GE price change:'),code=shell.slice(start,shell.indexOf("  let geQuery=",start));
+ const store:Record<string,string>={},ls={getItem:(k:string)=>store[k]??null,setItem:(k:string,v:string)=>{store[k]=v;}};
+ const geTrend=new Function('localStorage',`${code};return geTrend;`)(ls);
+ const H=3_600_000;
+ // A refresh before the market is fetched (no price) saves nothing.
+ expect(geTrend([],0).change.size).toBe(0);expect(store['atlas-ge-prices']).toBeUndefined();
+ expect(geTrend([{id:1,ask:100}],0).change.size).toBe(0);
+ // An empty refresh later does not replace the history.
+ geTrend([],1*H);expect(JSON.parse(store['atlas-ge-prices']).next.p['1']).toBe(100);
+ // Before 24 hours there is no base yet.
+ expect(geTrend([{id:1,ask:105}],10*H).change.size).toBe(0);
+ // At 24 hours the first snapshot becomes the base (24 hours old): +10%.
+ expect(geTrend([{id:1,ask:110}],24*H).change.get('1')).toBe(10);
+ // The base stays until the next snapshot is 24 hours old.
+ const r=geTrend([{id:1,ask:150},{id:2,vwap:50}],46*H);
+ expect(r.change.get('1')).toBe(50);expect(r.at).toBe(0);
+ // Under 1% shows nothing.
+ expect(geTrend([{id:1,ask:100.4}],46*H).change.has('1')).toBe(false);
+});
+test('player finder: online players by name, a hidden name never offered, the live position pinned',()=>{
+ const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const S:any={economy:{itemValues:{}},bots:[],roster:[['Goondelf',3078,3640,0,87],['Goonie',3000,3000,0,40],['Secret',3100,3100,0,99]]};
+ const env:any={S,D:{rival:new Set()},account:()=>null,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{},
+  wildLevel:()=>0,pvpState:()=>null,recap:{state:'none'},respawnRows:()=>[],VIEWER:{state:'loading'},$:()=>null,nf:String,E:String,location:{origin:''},resources:null,
+  safeName:(n:string)=>n==='Secret'?'Hidden':n,miniView:{cx:3078,cz:3600,PX:4}};
+ const t=new Function(...Object.keys(env),`${code};return {playerMatches,pinned,finderList,setPlayer:(p)=>{finderPlayer=p;},setQuery:(q)=>{finderQuery=q;},setSpawns:(n)=>{npcSpawns=n;}};`)(...Object.values(env));
+ expect(t.playerMatches('goon').map((r:any)=>r[0])).toEqual(['Goondelf','Goonie']);
+ expect(t.playerMatches('secret')).toEqual([]);
+ t.setSpawns([]);t.setQuery('goon');expect(t.finderList()).toContain('data-finder-player="Goondelf"');
+ t.setPlayer('goondelf');
+ expect(t.pinned()).toEqual({label:'Goondelf (87)',tip:'Goondelf (combat 87)',tiles:[{x:3078,z:3640,l:0}]});
+ expect(t.finderList()).toContain('combat 87 · 3078, 3640 · 40 tiles away');
+ // The pin follows the roster; an absent player is not online.
+ S.roster=[];expect(t.pinned()).toBe(null);expect(t.finderList()).toContain('not online');
+ // A new query, a best-spot pin and a GE source pin each replace the target, so each drops the player pick.
+ expect(shell).toContain('finderQuery=e.target.value.slice(0,40);finderPick=null;finderPlayer=null;');
+ expect(shell).toContain('tiles:s.tiles};finderPick=null;finderPlayer=null;');
+ expect(shell).toContain('tiles:flatTiles(src[2])};finderPick=null;finderPlayer=null;');
+});
+test('food: the healing items in the pack, most first',()=>{
+ const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
+ const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
+ expect(foodOf({inventory:[{name:'Shark',count:1},{name:'Lobster',count:1},{name:'Shark',count:1},{name:'Prayer potion(4)',count:1},{name:'Coins',count:500}]}))
+  .toEqual({items:[{name:'Shark',count:2},{name:'Lobster',count:1}],total:3});
+ // A healing effect after another effect counts too.
+ expect(foodOf({inventory:[{name:'Jug of wine',count:1},{name:'Jug of wine',count:1}]}).total).toBe(2);
+ expect(foodOf({inventory:[]}).total).toBe(0);
+});
+test('Inventory Setups: worn slots green, red or yellow against the kit, and the pack list against the kit',()=>{
+ const code=shell.slice(shell.indexOf("  // Inventory Setups (RuneLite's) in the Equipment tab:"),shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"));
+ const t=new Function('localStorage','fetch','asset','E','icon','nf',`${code};return {setupSlot,setupPanel,set:(k,s)=>{pkKits=k;setupKit=s;}};`)({getItem:()=>null},()=>new Promise(()=>{}),(n:string)=>n,String,(n:string)=>`[${n}]`,String);
+ t.set([{name:'tribrid',worn:{0:['Rune full helm',1],13:['Rune arrow',300]},carried:[['Shark',18],['Blood rune',100]]}],'tribrid');
+ const b={equipment:[{slot:0,name:'Rune full helm',count:1},{slot:13,name:'Rune arrow',count:120},{slot:5,name:'Wooden shield',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Blood rune',count:100}]};
+ expect(t.setupSlot(b,0,b.equipment[0]).cls).toBe(' setup-ok');
+ expect(t.setupSlot(b,13,b.equipment[1])).toEqual({cls:' setup-miss',tip:' · kit wants Rune arrow × 300'});
+ expect(t.setupSlot(b,5,b.equipment[2]).cls).toBe(' setup-extra');
+ const html=t.setupPanel(b);
+ expect(html).toContain('1 worn slot differs from the kit'.replace('differs','differ'));
+ expect(html).toContain('setup-row setup-short');expect(html).toContain('<span>2 / 18</span>');
+ expect(html).toContain('setup-row setup-have');expect(html).toContain('<span>100 / 100</span>');
+ // With an observed bank, each row gives the bank count; short when pack and bank together miss the kit.
+ const withBank=t.setupPanel({...b,bank:[{name:'Shark',count:10}]});
+ expect(withBank).toContain('2 / 18 <small class="setup-bank setup-bank-short">bank 10</small>');
+ expect(withBank).toContain('100 / 100 <small class="setup-bank">bank 0</small>');
+ // The restock line: 18 sharks less 2 in the pack and 10 in the bank leave 6.
+ expect(withBank).toContain('Restock: 6 Shark');
+ const rt=shell.split('\n').find(l=>l.includes('const rewardText=name=>'))!;
+ const rewardText=new Function('nf',`let questRewardData={"Dragon Slayer":[2,[["Strength",466250],["Defence",466250]]],"Rune Mysteries Quest":[1,[]]};${rt};return rewardText;`)((n:number)=>n.toLocaleString('en-GB'));
+ expect(rewardText('Dragon Slayer')).toBe('2 quest points · 466,250 Strength XP · 466,250 Defence XP');
+ expect(rewardText('Rune Mysteries Quest')).toBe('1 quest point');expect(rewardText('Unknown')).toBe('');
+ const rewardText2=new Function('nf',`let questRewardData={"Observatory Quest":[2,[["Crafting",56250]],[["Strength",21875],["Defence",21875]]]};${rt};return rewardText;`)((n:number)=>n.toLocaleString('en-GB'));
+ expect(rewardText2('Observatory Quest')).toBe('2 quest points · 56,250 Crafting XP · one of: 21,875 Strength, 21,875 Defence XP');
+});
+test('map icons by requirement: true or false with the account level, null with no level',()=>{
+ const line=shell.split('\n').find(l=>l.includes('const iconCan=(b,req)=>'))!;
+ const iconCan=new Function(`${line};return iconCan;`)();
+ const b={skills:[{name:'Agility',level:40},{name:'Magic',level:20}]};
+ expect([iconCan(b,['agility',40]),iconCan(b,['agility',41]),iconCan(b,['magic',25]),iconCan(b,null),iconCan({},['agility',1]),iconCan(b,['mining',1])]).toEqual([true,false,false,null,null,null]);
+ // A boost or a drain counts: the game checks the current level.
+ expect(iconCan({skills:[{name:'Magic',level:22,currentLevel:25}]},['magic',25])).toBe(true);
+ expect(iconCan({skills:[{name:'Magic',level:25,currentLevel:22}]},['magic',25])).toBe(false);
+});
+test('Screenshot: a level-up, a death or valuable loot of the watched account asks the viewer for a picture and keeps it',()=>{
+ const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));
+ const posted:any[]=[];const b:any={name:'Alpha',flow:{loot:[{name:'Rune scimitar',count:1}]}};
+ const env:any={localStorage:{getItem:()=>null,setItem:()=>{}},indexedDB:{open:()=>{throw new Error('none');}},VIEWER:{state:'ready'},$:()=>({contentWindow:{postMessage:(m:any)=>posted.push(m)}}),location:{origin:''},account:()=>b,S:{economy:{itemValues:{'Rune scimitar':15000,'Dragon chainbody':500000}}},gp:(n:number)=>String(n),selectedPlugin:'xp',window:{atlasOperator:()=>false},body:{}};
+ const t=new Function(...Object.keys(env),`${code};return {shotFor,shotReply,lootShots,list:()=>shots};`)(...Object.values(env));
+ // A signed-out viewer takes no picture: it has no Activity plugin to see them.
+ t.shotFor(b,'level','Level 70 Woodcutting');expect(posted.length).toBe(0);
+ env.window.atlasOperator=()=>true;
+ t.shotFor(b,'level','Level 70 Woodcutting');t.shotFor({name:'Other'},'death','Death');
+ expect(posted.length).toBe(1);expect(posted[0].capture.id).toMatch(/^[a-z0-9]+$/);
+ t.shotReply({id:posted[0].capture.id,url:'data:image/jpeg;base64,AAAA'});
+ expect(t.list()).toMatchObject([{name:'Alpha',kind:'level',text:'Level 70 Woodcutting',url:'data:image/jpeg;base64,AAAA'}]);
+ t.shotReply({id:'unknown',url:'data:image/jpeg;base64,BBBB'});expect(t.list().length).toBe(1);
+ t.lootShots();b.flow={loot:[{name:'Rune scimitar',count:2},{name:'Dragon chainbody',count:1}]};t.lootShots();
+ expect(posted.length).toBe(2);
 });

@@ -7,7 +7,17 @@ const SIG: [string, RegExp][] = [['goldfarm', /coinsGained=|picks=\d+ fails=/], 
  ['cook-food', /cookedTotal=|cookedPer1kTicks/], ['gather-fish', /caughtTotal=|lobsters?=|fish=\d/], ['gather-feathers', /feathers=\d+ gained=/], ['quest-sweep', /^quest-sweep /],
  ['quest script', /qp=|alreadyComplete|questMsg|flag=complete/], ['fletch', /^mode=(headless|arrows|shafts|steel|bows)/], ['smelt', /^mode=(iron|steel|bronze|gold|mithril)/], ['essence', /^essence /],
  ['shark-supply', /newBankedSharks=/], ['rune-bank-craft', /runecraft=\d+ trips=/], ['stop file', /^stop file/], ['session ended', /^session ended/], ['gather-yews', /wood|logs=|chops/i]];
-export type Waste = { runs: number; ticks: number; idle: number; move: number; anim: number; stun: number; dialog: number };
+// `idleBy`: idle ticks by reason (ledger.ts idleWhy), from the LEDGER lines that carry `idleBy=`.
+export type Waste = { runs: number; ticks: number; idle: number; move: number; anim: number; stun: number; dialog: number; idleBy: Record<string, number> };
+// The idle reasons of one LEDGER line: `idleBy=combat:12,after:walkTo:3` -> {combat: 12, 'after:walkTo': 3}.
+export const idleReasons = (line: string): Record<string, number> => {
+  const out: Record<string, number> = {};
+  for (const part of (line.match(/ idleBy=(\S*)/)?.[1] ?? '').split(',').filter(Boolean)) {
+    const at = part.lastIndexOf(':');
+    if (at > 0) out[part.slice(0, at)] = (out[part.slice(0, at)] ?? 0) + Number(part.slice(at + 1));
+  }
+  return out;
+};
 export const familyOf = (result: string) => SIG.find(([, re]) => re.test(result))?.[0] ?? ('other:' + result.split(/[\s=]/)[0]!.slice(0, 16));
 
 const workerLine = (line: string) => line.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, '');
@@ -30,8 +40,9 @@ export function tickWaste(dir = '.practice/swarm-logs'): Map<string, Waste> {
         const r = workerLine(next).match(/^RESULT (?:ok|fail) (.*)$/);
         if (r) { key = familyOf(r[1]!); break; }
       }
-      const e = agg.get(key) ?? { runs: 0, ticks: 0, idle: 0, move: 0, anim: 0, stun: 0, dialog: 0 };
+      const e = agg.get(key) ?? { runs: 0, ticks: 0, idle: 0, move: 0, anim: 0, stun: 0, dialog: 0, idleBy: {} };
       e.runs++; e.ticks += +m[1]!; e.move += +m[2]!; e.anim += +m[3]!; e.dialog += +m[4]!; e.stun += +m[5]!; e.idle += +m[6]!;
+      for (const [why, n] of Object.entries(idleReasons(line))) e.idleBy[why] = (e.idleBy[why] ?? 0) + n;
       agg.set(key, e);
     }
   }
@@ -44,6 +55,10 @@ export const wasteShare = (agg: Map<string, Waste>, minTicks = 2000): Record<str
 
 if (import.meta.main) {
   const rows = [...tickWaste()].filter(([, e]) => e.ticks >= Number(process.argv[2] ?? 2000)).sort((a, b) => (b[1].idle + b[1].move) - (a[1].idle + a[1].move));
-  console.log('script'.padEnd(26), 'runs', 'ticks'.padStart(8), 'idle%', 'move%', 'anim%', 'wasteTicks');
-  for (const [k, e] of rows.slice(0, 30)) console.log(k.padEnd(26), String(e.runs).padStart(4), String(e.ticks).padStart(8), (100 * e.idle / e.ticks).toFixed(0).padStart(5), (100 * e.move / e.ticks).toFixed(0).padStart(5), (100 * e.anim / e.ticks).toFixed(0).padStart(5), String(e.idle + e.move).padStart(9));
+  console.log('script'.padEnd(26), 'runs', 'ticks'.padStart(8), 'idle%', 'move%', 'anim%', 'wasteTicks', ' idle reasons (share of the idle ticks that carry one)');
+  for (const [k, e] of rows.slice(0, 30)) {
+    const named = Object.values(e.idleBy).reduce((n, v) => n + v, 0);
+    const why = named ? Object.entries(e.idleBy).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([w, n]) => `${w} ${(100 * n / named).toFixed(0)}%`).join(', ') : '-';
+    console.log(k.padEnd(26), String(e.runs).padStart(4), String(e.ticks).padStart(8), (100 * e.idle / e.ticks).toFixed(0).padStart(5), (100 * e.move / e.ticks).toFixed(0).padStart(5), (100 * e.anim / e.ticks).toFixed(0).padStart(5), String(e.idle + e.move).padStart(9), ' ' + why);
+  }
 }

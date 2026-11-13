@@ -1,7 +1,7 @@
 // Prints the state of this PC and the fleet on one screen. A session reads it first, so that it starts from the
 // facts: free memory, the heavy jobs, stop files, the controllers, the swarm, the coordinator queue, alerts, the
 // board, the fleet sides, the open pull requests, and this checkout and the main checkout against origin/master.
-// It reads the local dashboard (http://localhost:<DASH_PORT>/api/state) for the fleet. It reads by itself what must
+// It reads the local dashboard (http://127.0.0.1:<DASH_PORT>/api/state) for the fleet. It reads by itself what must
 // be fresh or what the dashboard does not hold: the process list, the stop files, the git state and the SDK patch.
 // It changes nothing.
 // Usage: bun scripts/now.ts
@@ -185,7 +185,8 @@ if(import.meta.main){
     const stops=['stop-coordinator','stop-swarm'].filter(f=>existsSync(join(main,'.practice',f)))
         .map(file=>({file,text:(readFileSync(join(main,'.practice',file),'utf8').split(/\r?\n/)[0]??'').trim().slice(0,120)}));
     const port=Number(process.env.DASH_PORT??3100);
-    const state=await fetch(`http://localhost:${port}/api/state`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json() as Promise<DashState>:null).catch(()=>null);
+    // 127.0.0.1: the dashboard listens on IPv4 (DASH_HOST default), and localhost can resolve to ::1 first.
+    const state=await fetch(`http://127.0.0.1:${port}/api/state`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json() as Promise<DashState>:null).catch(()=>null);
     const same=main.toLowerCase()===here.toLowerCase(),now=Date.now();
     for(const line of nowLines(state,{uptimeSec:uptime(),procs:scanProcs(now),stops,here:readCheckout(here),main:same?null:readCheckout(main)},now))console.log(line);
 }

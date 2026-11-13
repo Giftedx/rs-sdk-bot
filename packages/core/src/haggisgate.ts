@@ -8,6 +8,7 @@ import {gateProblem,launchContext,readBound,fresh} from './launch-evidence';
 const root=resolve(import.meta.dir,'../../..');
 export const GATE_FILE = join(root, '.practice', 'haggis-go.json');
 const MAIN = 'haggis';
+export const MAIN_ACCOUNT = MAIN;
 
 export function assertLoginAllowed(name: string, now = Date.now(), env = process.env, server?: string): string | undefined {
     if (name.toLowerCase() !== MAIN) return assertSpecialistLogin(root,name,now,env,server);
