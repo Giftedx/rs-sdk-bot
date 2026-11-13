@@ -111,6 +111,9 @@ export interface RandomEventOptions {
     loot?: LootWatchOptions | null;
     // The value guard: the gate refuses a drop, sale, spell or Drop option on a held stack worth minValue or more.
     guard?: { tables: LootTables; minValue: number } | null;
+    // The flee guard: at `hp` or less of the maximum Hitpoints, with no food in the pack, the player runs out of the
+    // reach of the NPC that attacks it and stays held; `onSafe` then ends the session. Null or undefined: off.
+    flee?: { hp: number; onSafe(detail: string): void } | null;
 }
 export interface LootWatchOptions {
     tables: LootTables;
@@ -396,12 +399,15 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const seeds = new Map<number, { seen: number; lastSeen: number; mine: boolean }>();
     const handledNpc = new Set<number>();
 
-    const fleeJob = (idx: number): Omit<Job, 'started'> => {
+    // `onSafe` (the flee guard): no walk back after the escape. The job calls onSafe once and keeps the player held, so
+    // the script cannot fight again before its session ends.
+    const fleeJob = (idx: number, onSafe?: (detail: string) => void): Omit<Job, 'started'> => {
         let dest: { x: number; z: number } | null = null;
         let sentAt = -99;
         let lastPos = '';
         let awaySince = -1;
         let backSince = -1;
+        let safeSaid = false;
         const begin = s.tick();
         const p0 = me();
         const origin = p0 ? { x: p0.x, z: p0.z } : null;
@@ -419,7 +425,10 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 // does not stand at a strange tile (seen: a swarm flight ended next to dark wizards).
                 if (backSince >= 0) {
                     if (engaged) { backSince = -1; dest = null; say(h.name, 'flee-again'); }
-                    else {
+                    else if (onSafe) {
+                        if (!safeSaid) { safeSaid = true; onSafe(`${h.name} id=${h.id} at=${p.x},${p.z} ticks=${s.tick() - begin}`); }
+                        return false;
+                    } else {
                         if (!origin || cheb(p, origin) <= 1) { say(h.name, 'returned', `ticks=${s.tick() - begin}`); h.done = true; return true; }
                         if (s.tick() - backSince > 30) { say(h.name, 'return-timeout'); h.done = true; return true; }
                         if (canSend() && s.tick() - sentAt >= 4) { send({ type: 'walkTo', x: origin.x, z: origin.z, running: true }); sentAt = s.tick(); }
@@ -768,6 +777,32 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         (st?.nearbyLocs ?? []).filter((l: any) => re.test(l.name) && l.options?.some((o: string) => op.test(o)) && !not(l) && l.reachable !== false)
             .sort((a: any, b: any) => a.distance - b.distance)[0];
 
+    // ---- flee guard ----
+    // The chase range of an NPC that does not hunt (one the script attacked): the engine drops the target past the
+    // NPC's maxrange from its spawn. Its spawn is unknown here, so the ring starts at the NPC's tile and the flee job
+    // widens it while the NPC still chases.
+    const FLEE_RANGE = 8;
+    const EAT = /^eat$/i;
+    let fleeing = false;
+    const scanFlee = () => {
+        const f = opts.flee;
+        const p = st?.player, now = s.tick();
+        if (!f || !p || fleeing) return;
+        const max = p.maxHp ?? 0, hp = p.hp ?? 0;
+        if (max <= 0 || hp <= 0 || hp > max * f.hp) return;
+        if (inv().some(i => (i.optionsWithIndex ?? []).some((o: any) => EAT.test(o.text ?? '')))) return;
+        const n = (st?.nearbyNpcs ?? []).filter((x: any) => targetsMe(x)).sort((a: any, b: any) => a.distance - b.distance)[0];
+        if (!n) return;
+        fleeing = true;
+        hostiles.set(n.index, { name: 'flee_guard', id: n.id, range: danger().get(n.id) ?? FLEE_RANGE, spawn: tileOf(n), seen: now, lastSeen: now, ours: true, pre: false, done: false });
+        jobs.set(`flee:${n.index}`, { ...fleeJob(n.index, f.onSafe), started: now });
+        say('flee_guard', 'flee', `hp=${hp}/${max} npc=${n.name ?? '?'}#${n.id}`);
+    };
+    // The watcher updates the last tick it saw each NPC of the flee guard (scanEvents does so for event NPCs only).
+    const seeFled = () => {
+        for (const n of st?.nearbyNpcs ?? []) { const h = hostiles.get(n.index); if (h?.name === 'flee_guard' && h.id === n.id) h.lastSeen = s.tick(); }
+    };
+
     // ---- loot jobs ----
     // Ticks after a pickup of the script in which the loot job starts nothing: the script loots for itself.
     const SCRIPT_LOOT_TICKS = 20;
@@ -1054,6 +1089,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 return;
             }
             if (eventsOn) scanEvents();
+            if (opts.flee) { seeFled(); scanFlee(); }
             if (loot) scanLoot();
             // Pick the job to run this tick: the active one, unless a flight must preempt it.
             const order = [...jobs.entries()].filter(([, j]) => j.name !== 'noop').sort((a, b) => priority(a[0]) - priority(b[0]) || a[1].started - b[1].started);
