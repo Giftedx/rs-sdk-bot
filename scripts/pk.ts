@@ -170,6 +170,8 @@ export type FightOptions = {
     crowdPrayer?: boolean;
     // The ticks over which exitOnDanger's damage race is read (default 30).
     raceWindow?: number;
+    // false: exitOnDanger leaves on no food, two attackers and no prayer, not on a lost damage race.
+    raceExit?: boolean;
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
     // keeps 500: research/pvp-fight-loop.md finding 50).
     specReserve?: number;
@@ -369,7 +371,7 @@ export const estMaxHit = (combatLevel: number) => Math.max(10, Math.round(combat
 // - losing the damage race: over the last 30 ticks we took 30+ and at least twice what we dealt, at under 60% HP;
 // - no prayer points left at under 50% HP.
 export function dangerReason(o: { hp: number; maxHp: number; food: boolean; prayer: number; oppMax: number;
-    hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number; window?: number }): string | null {
+    hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number; window?: number; race?: boolean }): string | null {
     if (!o.food && o.hp <= o.oppMax * 1.5) return `no food at HP ${o.hp}`;
     // A hit's source is the entity the player faced (StateCollector); -1 is no one, not a second player.
     const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10 && h.src >= 0).map(h => h.src));
@@ -378,7 +380,7 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
     const window = o.window ?? 30;
     const taken = o.hits.filter(h => o.now - h.tick <= window).reduce((n, h) => n + h.damage, 0);
     const dealt = o.dealt.filter(h => o.now - h.tick <= window).reduce((n, h) => n + h.damage, 0);
-    if (taken >= 30 && taken >= 2 * dealt && o.hp < o.maxHp * 0.6) return `losing the race: took ${taken}, dealt ${dealt}`;
+    if (o.race !== false && taken >= 30 && taken >= 2 * dealt && o.hp < o.maxHp * 0.6) return `losing the race: took ${taken}, dealt ${dealt}`;
     if (o.prayer <= 0 && o.hp < o.maxHp * 0.5) return 'no prayer points';
     return null;
 }
@@ -648,7 +650,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));
         const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
         const oppMax = estMaxHit(oppCombat || me.combatLevel);
-        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now, window: o.raceWindow });
+        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now, window: o.raceWindow, race: o.raceExit });
         if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
         // While suspended by p_delay (DDS spec p_delay(0), potion p_delay(1), karambwan p_delay(2)), processClientsIn
         // drops OpHeld/InvButton/OpPlayer/MoveClick and protected scripts fail p_finduid(uid); wait until un-delayed.

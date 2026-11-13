@@ -236,6 +236,10 @@ export async function hunt(s: Session, o: HuntOptions) {
                 ...(await huntProfile(me.combatLevel)),
                 // HUNT_RACE_WINDOW: the ticks of the danger check's damage race (default the fight loop's 30).
                 ...(process.env.HUNT_RACE_WINDOW ? { raceWindow: Number(process.env.HUNT_RACE_WINDOW) } : {}),
+                // HUNT_EXIT=0: no danger exit; the fight goes on to its own escape rules (escapeAt and the crowd escape).
+                ...(process.env.HUNT_EXIT === '0' ? { exitOnDanger: false } : {}),
+                // HUNT_RACE=0: the danger exit keeps its food, crowd and prayer rules and leaves the damage race out.
+                ...(process.env.HUNT_RACE === '0' ? { raceExit: false } : {}),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {

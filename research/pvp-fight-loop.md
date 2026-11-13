@@ -1626,3 +1626,15 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     it dealt, in the last 30 ticks, under 60% HP), and none ends in a kill. With the race read over 60 ticks
     (`raceWindow`, `HUNT_RACE_WINDOW=60`) the fights go 859 dealt, 779 taken, and still end on the check. Gap: six
     seeds.
+60. **The danger check's damage race costs the hunter its kills: without it the hunter wins the even fight and
+    most of the hard one.** `extra:hunt-defend` (finding 59, the hunter on the champion's options; seeds 1-6): with
+    the race (`raceExit` on) every first fight ends on the danger check and none in a kill. With `raceExit: false`
+    (the check keeps its no-food, two-attacker and no-prayer rules) the hunter kills the even target in 5 of 6 and
+    leaves once on no food; with no danger check at all, 6 of 6, no death. Against a stronger target
+    (`TARGET_STRONG=1`: boost potions and 24 sharks) the race gives 6 danger exits and no kill; without it, 3 kills
+    in one run of six and 2 in another, with one death of the hunter (seed 4) and the other fights left on no food.
+    A kill drops the target's kit (about 250,000 coins of loot in `pvp:army`), a death costs ours. The champion
+    takes `raceExit: false`, so the hunt, the roam and the army leader (champion options for combat 115 or more)
+    fight on past a lost race; with it from the profile the hunter kills the even target in 3 of 6 and leaves on no
+    food in 3 (route cases run several processes and repeat less exactly than spar batches). Gap: six seeds a target;
+    no target stronger than potions and food.

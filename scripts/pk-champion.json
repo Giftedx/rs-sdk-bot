@@ -15,5 +15,6 @@
   "freezeArmour": "strip",
   "escapeOutnumbered": 2,
   "specReserve": 500,
-  "crowdPrayer": true
+  "crowdPrayer": true,
+  "raceExit": false
 }
