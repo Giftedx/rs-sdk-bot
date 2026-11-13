@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794589624229-nabtheknob-abracadickra",
  "account": "Abracadickra",
  "partner": "NabTheKnob",
@@ -12,6 +12,12 @@
  "claim": "457ac807-c959-4ffa-bcb9-5cbb328e132d",
  "count": 0,
  "ok": false,
- "at": 1794589807218,
- "detail": "trade claimed"
+ "at": 1794589818261,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794589807539-0000014176-0000000001",
+  "at": 1794589818254,
+  "sha256": "a10b0cbe228ba05c04a6c175c95339ba389d3629d16261318e4f8820385ac872"
+ },
+ "screen": false
 }
