@@ -148,6 +148,9 @@ export type FightOptions = {
     // casts on arrival, a chase that costs no click.
     freezeStill?: boolean;
     fledSpec?: boolean;
+    // In multi-way combat, hits from this many different players within 8 ticks start the escape (escapeWalk, glory,
+    // escapeSpell) at once, whatever the food: a lone account against three cannot win (research finding 48).
+    escapeOutnumbered?: number | null;
     // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower. 500 catches more
     // runners and loses mirror fights (research/pvp-fight-loop.md finding 44).
     specReserve?: number;
@@ -372,6 +375,22 @@ export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean>
     });
 }
 
+// Multi-combat zones: maps/multiway.csv lists 8x8 zones as level_mapX_mapZ_localX_localZ (engine GameMap.loadCsvMap).
+let multi: Set<string> | undefined;
+export function isMulti(x: number, z: number, root = resolve(import.meta.dir, '..')): boolean {
+    if (!multi) {
+        multi = new Set();
+        try {
+            for (const line of readFileSync(join(root, 'vendor/rs-sdk/server/content/maps/multiway.csv'), 'ascii').split(/\r?\n/)) {
+                if (!line || line.startsWith('//')) continue;
+                const [y, mx, mz, lx, lz] = line.split('_').map(Number);
+                if (y === 0) multi.add((((mx! << 6) + lx!) >> 3) + ',' + (((mz! << 6) + lz!) >> 3));
+            }
+        } catch { /* no map: everything single-way */ }
+    }
+    return multi.has((x >> 3) + ',' + (z >> 3));
+}
+
 export const wildernessLevel = (z: number) => (z >= 9920 ? Math.floor((z - 9920) / 8) + 1 : z >= 3520 ? Math.floor((z - 3520) / 8) + 1 : 0);
 // Both players must stand in the Wilderness and the combat gap must fit inside the shallower player's level.
 export function attackable(me: { z: number; combatLevel: number }, other: { z: number; combatLevel: number }): boolean {
@@ -487,7 +506,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
-    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10;
+    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10, outnumbered = false;
     // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.
     let lagWant: number | null | undefined, lagAt = start, lagHas: number | null | undefined;
     let lastStyle: Style | null = null, arm: StyleArm = 'avoid', lastArm: StyleArm = 'avoid';
@@ -527,6 +546,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (e.type === 'damage_taken') { result.taken += e.damage; if (e.sourceType === 'other_player') hits.push({ tick: now, damage: e.damage, src: e.sourceIndex }); }
         }
         seenEvent = maxEvent;
+        // escapeOutnumbered: in multi-way combat, hits from that many players in 8 ticks start the escape for good, food
+        // or not. In single-way combat one player at a time can hit (pvp_combat.rs2:103-133), so a crowd is no danger.
+        if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size >= o.escapeOutnumbered) {
+            outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
+        }
+        const escapeNow = (pack: typeof state.inventory) => outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));
         let maxMessage = seenMessage;
         for (const m of state.gameMessages) {
             const id = m.observationId ?? m.tick;
@@ -577,7 +602,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             } else if (frozenTile && fled && now === freezeCastAt + 3) log(`PK freeze held at distance ${gap}, wilderness level ${wildernessLevel(target.z)}`);
             if (o.maxDistance !== undefined && target.distance > o.maxDistance) { result.outcome = 'lost'; return result; }
             if (o.maxWild !== undefined && (wildernessLevel(at.z) > o.maxWild || wildernessLevel(target.z) > o.maxWild)) { result.outcome = 'lost'; return result; }
-        } else if (now - lastSeen > 10 && !(o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(state.inventory))) {
+        } else if (now - lastSeen > 10 && !escapeNow(state.inventory)) {
             // While it escapes, a target out of view is the aim: the loop goes on until it is out of the Wilderness.
             result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result;
         }
@@ -640,7 +665,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
         }
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
-        if (o.escapeAt !== undefined && o.escapeWalk !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= o.escapeWalk) {
+        if (o.escapeWalk !== undefined && escapeNow(inv) && wildernessLevel(at.z) <= o.escapeWalk) {
             if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; }
             continue;
         }
@@ -648,11 +673,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // the amulet that an account wears is then its way out, and its pack needs no second one.
         const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
         const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : o.escapeSpell !== undefined ? 20 : 0;
-        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && reach && wildernessLevel(at.z) > reach) {
+        if (escapeNow(inv) && reach && wildernessLevel(at.z) > reach) {
             if (now - ranAt > 3) { if (ranAt < 0) log(`PK run south at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
             continue;
         }
-        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= 30) {
+        if (escapeNow(inv) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
             else if (!glory && wornGlory && inv.length < 28 && typeof sdk.sendUseEquipmentItem === 'function') { if (now - gloryOffAt > 2) { log(`PK takes its glory off at HP ${me.hp}`); void sdk.sendUseEquipmentItem(wornGlory.slot, 1); gloryOffAt = now; } }

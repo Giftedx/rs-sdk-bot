@@ -18,7 +18,7 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
-import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, type Kit } from './pk';
+import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, isMulti, type Kit } from './pk';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
 export function wildLevel(x: number, z: number): number {
@@ -41,21 +41,8 @@ export type Track = {
     fighting?: 'npc' | 'player'; skulled?: boolean; protect?: readonly string[]; hpFrac?: number; weapon?: number;
 };
 
-// Multi-combat zones: maps/multiway.csv lists 8x8 zones as level_mapX_mapZ_localX_localZ (engine GameMap.loadCsvMap).
-let multi: Set<string> | undefined;
-export function isMulti(x: number, z: number, root = resolve(import.meta.dir, '..')): boolean {
-    if (!multi) {
-        multi = new Set();
-        try {
-            for (const line of readFileSync(join(root, 'vendor/rs-sdk/server/content/maps/multiway.csv'), 'ascii').split(/\r?\n/)) {
-                if (!line || line.startsWith('//')) continue;
-                const [y, mx, mz, lx, lz] = line.split('_').map(Number);
-                if (y === 0) multi.add((((mx! << 6) + lx!) >> 3) + ',' + (((mz! << 6) + lz!) >> 3));
-            }
-        } catch { /* no map: everything single-way */ }
-    }
-    return multi.has((x >> 3) + ',' + (z >> 3));
-}
+// Multi-combat zones (scripts/pk.ts isMulti).
+export { isMulti };
 
 // Lower is better: ticks to meet, less a bonus for prey that is weak, busy, carrying everything or unable to teleport.
 // A skulled player drops all its items; a player fighting an NPC or another player is already losing HP and looking

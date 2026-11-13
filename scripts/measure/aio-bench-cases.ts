@@ -538,7 +538,7 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:gang-ganker-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker']),
   // The PK army: three maxed snare tribrids (the gang side, SPAR_B) against one maxed snare tribrid, four groups.
   // A meeting the gang wins ends with our side's account dead (died=), so died counts the army's kills. SPAR_B names
-  // the army's profile.
+  // the army's profile; SPAR_A_OPTS={"escapeOutnumbered":null} keeps the champion target in the fight.
   gangCase('extra:army-tribrid-x4', 'tribrid-snare', 'tribrid-snare', 4, GANKER_POST),
   // The same in multi-way combat east of Edgeville (Wilderness level 6), where all three can hit at once.
   gangCase('extra:army-tribrid-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),

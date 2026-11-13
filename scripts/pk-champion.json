@@ -12,5 +12,6 @@
   "freeze": "low",
   "freezeBelow": 0.5,
   "freezeEarlyMax": 1,
-  "freezeArmour": "strip"
+  "freezeArmour": "strip",
+  "escapeOutnumbered": 2
 }

@@ -1508,3 +1508,14 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`pvp_dragon_spear.rs2` `p_delay(4)`), and the spear account gives up the dagger's specials and hits every 6
     ticks. No meeting lost an army account. Evidence: `.practice/climb/set-army-*`. Gap: the
     stun is not timed with the others' specials; one run per seed.
+48. **A lone account in multi-way combat survives three maxed attackers only by leaving at once.** On the champion
+    our account dies in all 16 army meetings (`extra:army-tribrid-multi-x4`, army on `army`, seeds 1-4). With
+    `escapeOutnumbered: 2` (in multi-way combat, hits from two players within 8 ticks start the escape whatever the
+    food: the worn glory comes off and is rubbed at level 6) it escapes in all 16, 22 to 60 ticks into the meeting.
+    Without the multi-way test the option throws fights away: against the dagger gang in single-way combat
+    (`extra:gang-ganker-x4`) the champion clears 16 of 16 groups (48 kills), and with the option escapes from them
+    (1 kill at threshold 2, 19 at threshold 3); with the test it clears 16 of 16 again. In single-way combat one
+    player at a time can hit (`pvp_combat.rs2:103-133`). The champion takes `escapeOutnumbered: 2`; of the bench
+    spots only the army spot (3150,3560) is multi-way (`scripts/pk.ts` `isMulti`, `maps/multiway.csv`). The `army`
+    profile leaves it off. Evidence: `.practice/climb/set-esc-out*`, `set-gk-out*`. Gap: no case of two of ours
+    against two, where a hit from both enemies sends an account away from its ally.
