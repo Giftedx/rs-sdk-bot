@@ -1584,7 +1584,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     at 3166,3784, Wilderness level 34, multi-way; our account on the champion with 18 sharks, a glory and its
     escape from a crowd, a run south to level 30; the army on `army`; two groups; seeds 1-4): three accounts kill
     the target in 2 of 8 meetings (5 escapes, 1 away), four in 4 of 8 (4 escapes), five in 6 of 8 (2 escapes),
-    with the target counting its attackers by hit source alone; with the count of finding 57 five kill it in 3 of 8.
+    with the target counting its attackers by hit source alone; with the count of finding 57 five kill it in 4 of 8.
     The army lost no account. Gap: one run per seed.
 56. **In the army route five accounts still lose the running target; gang mode's start on the target's tile is
     the easy case.** `extra:army-route-defend-deep-x5` (the route of finding 52 with a leader and four followers
@@ -1595,19 +1595,16 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     to 37 ticks in with 53 to 67 HP. Finding 55's five accounts start on the target's tile in gang mode. Gap: the
     cause of the gap between the two harnesses (approach direction, the leader's roam fight options) is not
     measured.
-57. **The escape from a crowd counts attackers by facing: the client names a hit's source by the entity we face.**
-    `StateCollector` gives each damage splat the player we face as its source, so in a crowd every hit counted for
-    one player and `escapeOutnumbered` fired late: at 49 to 65 HP in gang mode against five. The fight loop now also
-    counts the players within 10 tiles, not allies, that face a player who is not an ally (`faceEntity`), while a
-    hit has landed in the last 8 ticks, and takes the larger count. Against five maxed tribrids at level 34
-    (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 85 to 99 HP in most meetings and leaves alive
-    in 5 of 8 where it left in 2 of 8. Two against two (both sides on the champion, seeds 1-8): side A wins 12,
-    loses 8, draws 12, with 11 dead and 19 of side B's; 30 deaths in all where the hit count alone gave 42.
-    The overhead prayer had the same fault: the last hitter named the player we face. `crowdPrayer` (in multi-way
-    combat, with two or more such players facing us or an ally, the overhead covers the style most of them hold):
-    two against two, side A wins 20, loses 6, draws 6, with 5 dead and 25 of side B's, where the champion without it
-    has 12, 8, 12, 11 and 19; three against three, 13, 6, 5, 8 and 16 where it has 7, 7, 10, 18 and 12. Counting
-    only the players that face us (an index not in our own nearby list) did worse two against two: 14, 14, 4, 10
-    and 11 with `crowdPrayer`, 18, 12, 2, 10 and 15 without. The champion takes `crowdPrayer`. Evidence:
-    `.practice/climb/set-ad5f`, `set-tv-*`. Gap: a player that faces a third party within 10 tiles counts as ours;
-    no run on the live server.
+57. **A crowd's attackers are counted by facing, not by hit source: the client names a hit's source by the entity we
+    face.** `StateCollector` gives each damage splat the player we face as its source, so in a crowd every hit
+    counted for one player: `escapeOutnumbered` fired at 49 to 65 HP against five, and the overhead protected
+    against the player we faced. The fight loop now reads each nearby non-ally player's `faceEntity`: one that faces
+    an index not in our own nearby list faces us (we are not in it) and counts for the escape; one that faces us or
+    an ally sets the crowd's prayer; one that faces some other visible player (another fight close by) counts for
+    neither. `crowdPrayer` (multi-way combat, two or more of those: the overhead covers the style most of them hold)
+    joins the champion. Two against two, side B on the champion, seeds 1-8: side A on the champion wins 17, loses 11,
+    draws 4, with 5 dead and 16 of side B's; without `crowdPrayer` 9, 17, 6, with 18 dead and 9. Three against three
+    with the earlier count: 13, 6, 5, 8 dead and 16, against 7, 7, 10, 18 and 12. Against five at level 34
+    (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 99 HP in half the meetings and leaves alive in
+    4 of 8 where the hit count let it leave in 2. The army case of finding 46 holds: 16 kills, no losses, the target
+    eats 15.5 sharks. Gap: a target out of view counts as us; no run on the live server.

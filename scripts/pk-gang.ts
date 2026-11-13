@@ -166,7 +166,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         while (!over && !halt()) {
             const began = g.tick();
             const called = () => !!gangTrips?.follow && retreatAt > began && retreater !== g;
-            const r = await fightPlayer(g, a.name, { ...own, cap: Math.max(1, cap - (g.tick() - start)), stop: () => over || halt() || called(),
+            const r = await fightPlayer(g, a.name, { ...own, allies: others.filter(x => x !== g).map(x => x.name.toLowerCase()), cap: Math.max(1, cap - (g.tick() - start)), stop: () => over || halt() || called(),
                 log: l => { if (/walks out of the Wilderness/.test(l) && gangTrips && tripsLeft > 0) { retreatAt = g.tick(); retreater = g; } log(`[${g.name}] ${l}`); } });
             sum(total, r);
             reap();

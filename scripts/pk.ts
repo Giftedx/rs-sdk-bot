@@ -565,14 +565,17 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const allyNear = o.allies?.length ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && p.distance <= 10) : [];
         const alliesNear = allyNear.length;
         // The attackers: the client names a hit's source by the entity we face, so in a crowd every hit counts for one
-        // player. A player within 10 tiles, not an ally, that faces a player who is not one of our allies, faces us or
-        // an ally (counting only those that face us did worse two against two, research finding 57).
-        const allyIdx = new Set(allyNear.map(p => p.index));
-        const facers = o.escapeOutnumbered != null || o.crowdPrayer ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase()) && (() => {
-            const f = (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players?.[p.index]?.faceEntity ?? -1;
-            return f >= 32768 && !allyIdx.has(f - 32768);
-        })()) : [];
-        const facing = facers.length;
+        // player. A player within 10 tiles, not an ally, faces us when the index it faces is not in our own list of
+        // nearby players (we are not in it); it faces an ally when that index is an ally's. Another fight close by (a
+        // player facing some other visible player) counts for neither.
+        const allyIdx = new Set(allyNear.map(p => p.index)), visibleIdx = new Set(state.nearbyPlayers.map(p => p.index));
+        const faceOf = (index: number) => (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players?.[index]?.faceEntity ?? -1;
+        const hostile = o.escapeOutnumbered != null || o.crowdPrayer
+            ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase())).map(p => ({ p, f: faceOf(p.index) - 32768 })).filter(x => x.f >= 0)
+            : [];
+        // Those that face us count for the escape; those that face us or an ally set the crowd's prayer.
+        const facing = hostile.filter(x => !visibleIdx.has(x.f)).length;
+        const facers = hostile.filter(x => !visibleIdx.has(x.f) || allyIdx.has(x.f)).map(x => x.p);
         const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
         if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
             outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
