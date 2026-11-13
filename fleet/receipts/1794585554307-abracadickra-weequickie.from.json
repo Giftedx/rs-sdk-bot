@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794585554307-abracadickra-weequickie",
  "account": "Abracadickra",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 170,
  "claim": "a6e36e30-766b-4193-959a-b0bcd81b349f",
- "count": 0,
- "ok": false,
- "at": 1794585559754,
- "detail": "trade claimed"
+ "count": 170,
+ "ok": true,
+ "at": 1794585598706,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 170,
+  "after": 0
+ },
+ "bank": {
+  "count": 170,
+  "at": 1794585573335
+ },
+ "logout": {
+  "attemptId": "1794585559808-0000008844-0000000001",
+  "at": 1794585598686,
+  "sha256": "9c97dc7064e0325183701e6d6b5aa381017217ce858f6723ddab0a9414713477"
+ },
+ "screen": true
 }
