@@ -12,7 +12,7 @@ import { assertSideOwns, loadOwners } from './fleet';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { loadDanger, watchRandomEvents, type RandomEventWatch } from './randomevents';
-import { recordRun, sharedLootTables } from './loot';
+import { GUARD_VALUE, recordRun, sellsItems, sharedLootTables } from './loot';
 import { recoverDeath, snapshot, type DeathSnapshot } from './death-recovery';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { noGuardScript, startEatGuard } from './eat-guard';
@@ -106,6 +106,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // On a death the bot first runs back for its items (packages/core/src/death-recovery.ts) while the watcher holds
     // the script; the session then ends as a death, as before. DEATH_RECOVERY=0 turns it off; a record run never runs it.
     const deathOn = process.env.DEATH_RECOVERY !== '0' && !recordRun(name);
+    // The value guard keeps a held stack worth GUARD_VALUE coins from a drop, a sale or an alch (randomevents.ts
+    // `guard`). VALUE_GUARD=0 turns it off; a record run and a script that sells, alchs or trades on purpose get none.
+    const guardOn = process.env.VALUE_GUARD !== '0' && !recordRun(name) && !sellsItems(opts.record?.script ?? process.argv[1] ?? '');
     const lootTables = lootOn ? sharedLootTables() : null;
     if (lootOn) loadDanger();
     const s = await connectInProcess({ name, password, server, ...(trade ? {
@@ -131,7 +134,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
     // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
     // Death recovery needs the watcher's gate too: it starts the watcher with events and loot off.
-    if (events || lootTables || deathOn) randomEvents.set(s, watchRandomEvents(s, { events, loot: lootTables ? { tables: lootTables, name,
+    if (events || lootTables || deathOn || guardOn) randomEvents.set(s, watchRandomEvents(s, { events,
+        guard: guardOn ? { tables: sharedLootTables(), minValue: GUARD_VALUE } : null, loot: lootTables ? { tables: lootTables, name,
         friends: new Set(loadOwners().keys()), reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {} } : null }));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
     // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.

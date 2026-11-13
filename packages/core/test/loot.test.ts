@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { claimPile, detourTicks, fileTables, lureGuard, LURE_PAUSE, lootRisk, lootRoom, pileValue, recordRun, releasePile, unitValue, worthIt, LOOT_RULES, type LootTables } from '../src/loot';
+import { claimPile, detourTicks, fileTables, sellsItems, lureGuard, LURE_PAUSE, lootRisk, lootRoom, pileValue, recordRun, releasePile, unitValue, worthIt, LOOT_RULES, type LootTables } from '../src/loot';
 import { watchRandomEvents } from '../src/randomevents';
 
 const RUNE = 9001, JUNK = 9002, FEATHER = 9003, QUEST = 9004, NOTED = 9005;
@@ -243,6 +243,29 @@ test('a bait trail: after 3 pickups the next pile is left with lure-pause', asyn
     expect(f.lines.some(l => /^EVENT loot skip-lure-pause .*id=9001/.test(l))).toBe(true);
     expect(f.sent.slice(sent).some(a => a.type === 'pickupItem')).toBe(false);
     w.stop();
+});
+
+test('value guard: a drop of a valuable stack is refused 3 times, then released; a cheap drop passes', async () => {
+    const f = fake(state(3222, 3218));
+    const w = watchRandomEvents(f.s, { pf: null, ifReader: null, danger: null, events: false, log: l => f.lines.push(l), guard: { tables: tables(), minValue: 10_000 } });
+    f.st.inventory = [{ slot: 0, id: RUNE, name: 'rune', count: 1 }, { slot: 1, id: JUNK, name: 'ore', count: 1 }];
+    const cheap = f.s.direct({ type: 'dropItem', slot: 1 });
+    await f.step();
+    expect(await cheap).toEqual({ success: true });
+    const results: any[] = [];
+    for (let i = 0; i < 4; i++) { const r = f.s.direct({ type: 'dropItem', slot: 0 }); await f.step(); results.push(await r); }
+    expect(results.slice(0, 3).map(r => r.reason)).toEqual(['loot_kept', 'loot_kept', 'loot_kept']);
+    expect(results[0].message).toMatch(/^guard: item 9001 is worth 10000 or more/);
+    expect(results[3]).toEqual({ success: true });
+    expect(f.lines.some(l => /^EVENT guard released .*id=9001/.test(l))).toBe(true);
+    w.stop();
+});
+
+test('value guard: scripts that sell, alch or trade on purpose are exempt', () => {
+    for (const s of ['scripts/alch-train.ts', 'scripts/aio-market.ts', 'scripts\\microbot-a-shop-sell.ts', 'scripts/coin-courier.ts', 'scripts/item-fanin.ts', 'scripts/fleet-trade.ts', 'scripts/give-to-banker.ts'])
+        expect(sellsItems(s)).toBe(true);
+    for (const s of ['scripts/wc-loop.ts', 'scripts/aio-skiller.ts', 'scripts/mining-rotation.ts', 'scripts/generated/quest-cook.ts'])
+        expect(sellsItems(s)).toBe(false);
 });
 
 test('a pile deeper in the Wilderness is skipped once with its reason', async () => {
