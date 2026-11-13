@@ -1,0 +1,22 @@
+{
+ "id": "1794601552583-moneyshot-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 18186,
+ "start": 1794601552583,
+ "end": 1794603952583,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
