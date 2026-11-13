@@ -922,9 +922,11 @@ test('agility obstacles, Ground markers, failure markers and the NPC finder in t
 });
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
- const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Prayer potion(4)':'restores 7 + 25% Prayer'});
+ const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
  expect(foodOf({inventory:[{name:'Shark',count:1},{name:'Lobster',count:1},{name:'Shark',count:1},{name:'Prayer potion(4)',count:1},{name:'Coins',count:500}]}))
   .toEqual({items:[{name:'Shark',count:2},{name:'Lobster',count:1}],total:3});
+ // A healing effect after another effect counts too.
+ expect(foodOf({inventory:[{name:'Jug of wine',count:1},{name:'Jug of wine',count:1}]}).total).toBe(2);
  expect(foodOf({inventory:[]}).total).toBe(0);
 });
 test('Inventory Setups: worn slots green, red or yellow against the kit, and the pack list against the kit',()=>{
