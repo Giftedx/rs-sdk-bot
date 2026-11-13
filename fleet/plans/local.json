@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794555999033,
+ "at": 1794565113248,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,25 +71,6 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
   },
   {
    "account": "BowBeforeMe",
@@ -554,6 +535,25 @@
   },
   {
    "account": "Sausagefest",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Bigpackage",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
