@@ -1035,6 +1035,9 @@ test('map icons by requirement: true or false with the account level, null with 
  const iconCan=new Function(`${line};return iconCan;`)();
  const b={skills:[{name:'Agility',level:40},{name:'Magic',level:20}]};
  expect([iconCan(b,['agility',40]),iconCan(b,['agility',41]),iconCan(b,['magic',25]),iconCan(b,null),iconCan({},['agility',1]),iconCan(b,['mining',1])]).toEqual([true,false,false,null,null,null]);
+ // A boost or a drain counts: the game checks the current level.
+ expect(iconCan({skills:[{name:'Magic',level:22,currentLevel:25}]},['magic',25])).toBe(true);
+ expect(iconCan({skills:[{name:'Magic',level:25,currentLevel:22}]},['magic',25])).toBe(false);
 });
 test('Screenshot: a level-up, a death or valuable loot of the watched account asks the viewer for a picture and keeps it',()=>{
  const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));

@@ -520,8 +520,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const teleText=tiles=>{const t=nearestTeleport(tiles);return t?'Closest teleport: '+t.label+', '+t.d+' tiles':'';};
   const geTele=flat=>{const t=flat?.length?nearestTeleport(flatTiles(flat)):null;return t?' <small class="ge-tele" title="'+E('Closest teleport: '+t.label+', '+t.d+' tiles')+'">· '+E(t.label)+', '+t.d+' tiles</small>':'';};
   // Map icons by requirement (RuneLite's World Map shortcut colours): with the watched account's levels, a shortcut it
-  // cannot use is red and a teleport spell it cannot cast is dark blue; true, false, or null with no level known.
-  const iconCan=(b,req)=>{if(!req||!b?.skills)return null;const s=b.skills.find(x=>String(x.name).toLowerCase()===String(req[0]).toLowerCase());return s&&Number.isFinite(s.level)?s.level>=req[1]:null;};
+  // cannot use is red and a teleport spell it cannot cast is dark blue; true, false, or null with no level known. The game
+  // checks the current level (stat(), boosts count: knowledge/teleports.json), so currentLevel, else the base level.
+  const iconCan=(b,req)=>{if(!req||!b?.skills)return null;const s=b.skills.find(x=>String(x.name).toLowerCase()===String(req[0]).toLowerCase()),lv=Number.isFinite(s?.currentLevel)?s.currentLevel:s?.level;return Number.isFinite(lv)?lv>=req[1]:null;};
   const flatTiles=a=>{const t=[];for(let i=0;i+2<(a?.length||0);i+=3)t.push({x:a[i],z:a[i+1],l:a[i+2]});return t;};
   // What the pink layer shows: the NPC finder's pick, else the pinned item source.
   function pinned(){const r=typeof finderRow==='function'?finderRow():null;if(r)return {label:r[0]+(r[2]?' ('+r[2]+')':''),tip:r[0]+' ('+combatText(r)+')',tiles:spawnTiles(r)};return sourcePin;}
