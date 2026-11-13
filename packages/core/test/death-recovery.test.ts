@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { deathPlan, recoverDeath, snapshot, DROP_TICKS, PICKUP_MARGIN, type DeathSnapshot } from '../src/death-recovery';
+import { damageLog, deathLine, deathPlan, recoverDeath, snapshot, DROP_TICKS, PICKUP_MARGIN, type DeathSnapshot } from '../src/death-recovery';
 import { watchRandomEvents } from '../src/randomevents';
 import type { LootTables } from '../src/loot';
 
@@ -127,4 +127,61 @@ test('exclusive: the work passes, eating passes, every other script action waits
     expect(await script).toMatchObject({ success: false });
     expect(w.busy()).toBe(false);
     w.stop();
+});
+
+test('death cause: the source that did the most damage in the last 20 ticks, each event once', () => {
+    const log = damageLog();
+    const npcs = [{ index: 7, id: 3, name: 'Guard' }, { index: 9, id: 1, name: 'Man' }];
+    const ev = (tick: number, i: number, damage: number, o: number) => ({ type: 'damage_taken', tick, damage, sourceType: 'npc', sourceIndex: i, observationId: o, targetType: 'player', targetIndex: 0 });
+    log.read({ tick: 1, nearbyNpcs: npcs, combatEvents: [ev(1, 9, 1, 1)] });
+    log.read({ tick: 30, nearbyNpcs: npcs, combatEvents: [ev(1, 9, 1, 1), ev(28, 7, 3, 2), ev(30, 7, 4, 3), ev(29, 9, 1, 4)] });
+    expect(log.cause()).toBe('by=Guard#3 taken=8 hits=3');
+    const d: DeathSnapshot = { tick: 30, at: { x: 3212, z: 3462, level: 0 }, pack: [], worn: [] };
+    expect(deathLine(d, '2/10', log.cause(), 'F:\\dev\\scripts\\aio-skiller.ts')).toBe('DEATH at=3212,3462,0 wild=0 hp=2/10 by=Guard#3 taken=8 hits=3 script=aio-skiller.ts');
+    expect(damageLog().cause()).toBe('by=unknown taken=0 hits=0');
+});
+
+test('flee guard: low Hitpoints, no food, an attacker: run out of reach, report safe once, stay held', async () => {
+    let t = 0;
+    const listeners = new Set<() => void>(), sent: any[] = [], safe: string[] = [];
+    const st: any = { player: { worldX: 3212, worldZ: 3462, level: 0, hp: 2, maxHp: 10, animId: -1 }, inventory: [{ slot: 0, id: 1, optionsWithIndex: [] }],
+        nearbyNpcs: [{ index: 7, id: 3, name: 'Guard', x: 3213, z: 3462, tileX: 3213, tileZ: 3462, distance: 1, targetIndex: 32768 + 5 }], nearbyPlayers: [], groundItems: [] };
+    const s: any = {
+        name: 'x', bot: {}, tick: () => t, sdk: { getState: () => ({ ...st, tick: t }), send: () => {}, handleMessage: () => {} },
+        onTick(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); },
+        direct: async (a: any) => { sent.push(a); return { success: true }; }, ended: new Promise(() => {}),
+    };
+    const step = async (n = 1) => { for (let i = 0; i < n; i++) { t++; for (const l of [...listeners]) l(); await Promise.resolve(); await Promise.resolve(); } };
+    const w = watchRandomEvents(s, { pf: null, ifReader: null, danger: new Map(), events: false, log: () => {}, flee: { hp: 0.3, onSafe: d => safe.push(d) } });
+    await step();
+    const walk = sent.find(a => a.type === 'walkTo');
+    expect(walk).toBeTruthy();
+    expect(Math.max(Math.abs(walk.x - 3213), Math.abs(walk.z - 3462))).toBe(10);
+    expect(w.busy()).toBe(true);
+    // Out of reach, the guard drops the target.
+    st.player = { ...st.player, worldX: walk.x, worldZ: walk.z };
+    st.nearbyNpcs = [{ ...st.nearbyNpcs[0], targetIndex: -1 }];
+    await step(8);
+    expect(safe.length).toBe(1);
+    expect(safe[0]).toMatch(/^flee_guard id=3 at=\d+,\d+ ticks=\d+$/);
+    expect(w.busy()).toBe(true);
+    w.stop();
+});
+
+test('flee guard: food in the pack or Hitpoints above the line start nothing', async () => {
+    for (const st of [
+        { player: { worldX: 1, worldZ: 1, level: 0, hp: 2, maxHp: 10 }, inventory: [{ slot: 0, id: 379, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }] },
+        { player: { worldX: 1, worldZ: 1, level: 0, hp: 4, maxHp: 10 }, inventory: [] },
+    ] as any[]) {
+        let t = 0;
+        const listeners = new Set<() => void>(), sent: any[] = [];
+        st.nearbyNpcs = [{ index: 7, id: 3, name: 'Guard', x: 2, z: 1, distance: 1, targetIndex: 32768 + 5 }]; st.nearbyPlayers = []; st.groundItems = [];
+        const s: any = { name: 'x', bot: {}, tick: () => t, sdk: { getState: () => ({ ...st, tick: t }), send: () => {}, handleMessage: () => {} },
+            onTick(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); }, direct: async (a: any) => { sent.push(a); return { success: true }; } };
+        const w = watchRandomEvents(s, { pf: null, ifReader: null, danger: new Map(), events: false, log: () => {}, flee: { hp: 0.3, onSafe: () => {} } });
+        t++; for (const l of [...listeners]) l();
+        expect(sent.length).toBe(0);
+        expect(w.busy()).toBe(false);
+        w.stop();
+    }
 });

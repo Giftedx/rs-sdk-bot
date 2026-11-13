@@ -13,7 +13,7 @@ import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { loadDanger, watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { GUARD_VALUE, recordRun, sellsItems, sharedLootTables } from './loot';
-import { recoverDeath, snapshot, type DeathSnapshot } from './death-recovery';
+import { FLEE_HP, damageLog, deathLine, recoverDeath, snapshot, type DeathSnapshot } from './death-recovery';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { noGuardScript, startEatGuard } from './eat-guard';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
@@ -109,6 +109,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // The value guard keeps a held stack worth GUARD_VALUE coins from a drop, a sale or an alch (randomevents.ts
     // `guard`). VALUE_GUARD=0 turns it off; a record run and a script that sells, alchs or trades on purpose get none.
     const guardOn = process.env.VALUE_GUARD !== '0' && !recordRun(name) && !sellsItems(opts.record?.script ?? process.argv[1] ?? '');
+    // The flee guard (randomevents.ts `flee`): at FLEE_HP of the maximum Hitpoints or less, with no food, the bot runs
+    // out of the attacker's reach and the session ends there instead of in a death. FLEE_GUARD=0 turns it off; a record
+    // run and a PvP script (it fights on purpose at low Hitpoints) get none.
+    const scriptFile = opts.record?.script ?? process.argv[1] ?? '';
+    const fleeOn = process.env.FLEE_GUARD !== '0' && !recordRun(name) && !/pk|pvp|spar|gang/i.test(scriptFile.split(/[\\/]/).at(-1) ?? '');
     const lootTables = lootOn ? sharedLootTables() : null;
     if (lootOn) loadDanger();
     const s = await connectInProcess({ name, password, server, ...(trade ? {
@@ -134,7 +139,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
     // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
     // Death recovery needs the watcher's gate too: it starts the watcher with events and loot off.
-    if (events || lootTables || deathOn || guardOn) randomEvents.set(s, watchRandomEvents(s, { events,
+    if (events || lootTables || deathOn || guardOn || fleeOn) randomEvents.set(s, watchRandomEvents(s, { events,
+        flee: fleeOn ? { hp: FLEE_HP, onSafe: detail => {
+            log(`FLEE_GUARD safe ${detail} bot=${name}`);
+            if (!stopping && !settling.has(s)) { stopping = true; stop(`fled at low hitpoints: ${detail}`); }
+        } } : null,
         guard: guardOn ? { tables: sharedLootTables(), minValue: GUARD_VALUE } : null, loot: lootTables ? { tables: lootTables, name,
         friends: new Set(loadOwners().keys()), reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {} } : null }));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
@@ -153,18 +162,22 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
     let stopping = false;
-    let lastAlive: DeathSnapshot | null = null;
+    let lastAlive: DeathSnapshot | null = null, lastHp = '?';
+    // The damage of the last ticks, by source, for the DEATH line (death-recovery.ts damageLog).
+    const damage = damageLog();
     const stop = (reason: string) => void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
     s.onTick(() => {
         const st = s.sdk.getState();
         lastLife = life(st?.player) ?? lastLife;
         const died = sessionDied(born,lastLife);
-        if (!died) lastAlive = snapshot(st) ?? lastAlive;
+        damage.read(st);
+        if (!died) { lastAlive = snapshot(st) ?? lastAlive; if (st?.player) lastHp = `${st.player.hp}/${st.player.maxHp}`; }
         const reason = died ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
             : stopTicks % 25 === 0 && !isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot) ? 'fleet controller lease unavailable'
             : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items, dialog or a journey` : null;
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
+            if (reason === 'died') log(`${deathLine(lastAlive, lastHp, damage.cause(), scriptFile)} bot=${name}`);
             const watch = randomEvents.get(s), at = lastAlive;
             if (reason !== 'died' || !deathOn || !watch || !at) { stop(reason); return; }
             // The walker's world loads during the respawn wait, not after it.
