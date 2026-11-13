@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794598730664-bigpackage-abracadickra-spade",
  "account": "Bigpackage",
  "partner": "Abracadickra",
@@ -10,15 +10,33 @@
  "item": "Spade",
  "requested": 1,
  "claim": "4c15c2f2-95a4-4f87-9cc3-5da3e6c3e9d1",
- "count": 0,
- "ok": false,
- "at": 1794598736744,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1794598941671,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Bucket of milk",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794598918074
+ },
+ "logout": {
+  "attemptId": "1794598736753-0000026032-0000000001",
+  "at": 1794598941661,
+  "sha256": "0489b75ded3485f42861297862cf33bf114eb378380f119e8e81fb050f3f188d"
+ },
+ "screen": true
 }

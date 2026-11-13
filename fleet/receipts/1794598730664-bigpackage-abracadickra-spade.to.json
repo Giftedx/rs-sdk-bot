@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794598730664-bigpackage-abracadickra-spade",
+ "account": "Abracadickra",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Spade",
+ "requested": 1,
+ "claim": "82a9ea65-eb31-4689-9b43-90ad803b09d1",
+ "count": 0,
+ "ok": false,
+ "at": 1794598925051,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Bucket of milk",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
