@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794530497118-magicwanda-weequickie-runeessence",
  "account": "Magicwanda",
  "partner": "WeeQuickie",
@@ -12,13 +12,27 @@
  "claim": "cd9816fb-2eb3-4c34-ad8d-790139702921",
  "count": 0,
  "ok": false,
- "at": 1794530503068,
- "detail": "trade claimed",
+ "at": 1794530690010,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Air talisman",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1794530688967
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 170,
+  "at": 1794530687600
+ },
+ "logout": {
+  "attemptId": "1794530503077-0000035564-0000000001",
+  "at": 1794530689999,
+  "sha256": "7fceedb4fde33afe9e083274fb3acff773bd0710719e0bfbc9363b1d5d766705"
+ },
+ "screen": false
 }
