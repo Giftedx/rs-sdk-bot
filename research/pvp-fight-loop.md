@@ -1816,3 +1816,17 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     third at 596; `BANK_AT=2000000` (bank only a big load) 19, the third at 860. The worn glory counts as kit too,
     so one that the escape rubbed is not banked. The quick sweep (20) and the gang cases (23) pass. Gap: the loot
     is the supply of arrows, runes and food that a long hunt needs; no case prices that against the kills.
+72. **Dragon armour wins the rival fights and loses the runner; no kit wins both.** The champion with each kit
+    (`.practice/kits/run.sh`, `extra:spar-escape-<kit>-x8` against a `base` runner and
+    `extra:spar-rivals-<kit>-x12`, seeds 1-8, the repeatable setup; bonuses from `bun scripts/gear.ts kit`),
+    runners caught of 64 and rival kills and deaths of 96: `tribrid-snare-sara` (rune, Saradomin cape) 28 to 30, 91,
+    5; `tribrid-dragon` (dragon med helm, chainbody, platelegs and square shield, Legends cape, black dragonhide
+    vambraces: every defence 31 to 56 higher, ranged attack +19 against -3) 17, 95, 1; the same with the Saradomin cape
+    and no vambraces 28, 88, 7; `tribrid-snare-dhide` (black dragonhide body and chaps: ranged attack +72, magic
+    defence +97) 23, 93, 3; `tribrid-snare-swap` (rune for a melee turn, dragonhide for a bow turn, 16 sharks) 17,
+    90, 5; `tribrid-snare-sara-mlb` (a magic longbow for the bow special: no hit roll, 10 tiles,
+    `pvp_magic_longbow.rs2`) 27, 89, 7. The runner is caught by freezes, and the freeze roll is set by what stays on:
+    with 18 sharks the pack has one free slot, so the strip before a cast takes off one piece. The strip reads each
+    worn item's own magic or ranged penalty from `knowledge/gear.json`, the largest first (a name list missed the
+    vambraces); with it the dragon kit catches 17 against 7. Gap: a kit with fewer sharks, so the strip takes off
+    more; dragon armour for the rival fight and a change to the Saradomin cape for the chase.

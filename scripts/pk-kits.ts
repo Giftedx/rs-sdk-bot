@@ -115,6 +115,34 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-snare-sara': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit in black dragonhide (body, chaps, vambraces) in place of the rune platebody and platelegs: ranged
+    // attack +47 against -17, magic attack -25 against -51 (the freeze roll), magic defence +78 against -10, stab
+    // defence 86 against 133 and ranged defence 86 against 129 (all.obj params). Defence 40 and Ranged 70 to wear.
+    'tribrid-snare-dhide': { worn: { ...RUNE, torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit that changes body and legs with the turn: rune for a melee turn, black dragonhide for a bow turn
+    // (ranged attack +64, magic defence +88 against rune), the other pair in the pack, so 2 sharks fewer.
+    'tribrid-snare-swap': { worn: { ...RUNE, hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 16,
+        switches: { ranged: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps'], melee: ['dragon_dagger_p', 'rune_kiteshield', 'rune_platebody', 'rune_platelegs'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit in the best armour for each slot of a maxed tribrid (bun scripts/gear.ts best): dragon med helm,
+    // dragon chainbody (magic attack -15 against the rune platebody's -30, slash and crush defence higher), dragon
+    // platelegs (stab defence 68 against 51), dragon square shield (Legends' Quest) and black dragonhide vambraces
+    // (ranged attack +11). Defence 60 and Ranged 70 to wear; no Dragon Slayer.
+    'tribrid-dragon': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The Saradomin-cape kit with a magic longbow for the bow special (pvp_magic_longbow.rs2: no hit roll, +10 Ranged
+    // levels, 10 tiles against the shortbow's 7; both 35% energy); the shortbow still shoots each bow turn. One shark fewer.
+    'tribrid-snare-sara-mlb': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', 'magic_longbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 17,
+        switches: { ranged: ['magic_shortbow', 'magic_longbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The dragon kit with the Saradomin cape (magic attack +10) and no vambraces (-10): the strip takes off one piece
+    // a cast with 18 sharks in the pack, so what stays on decides the freeze roll (finding 72).
+    'tribrid-dragon-sara': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] }, options: { rotation: ['ranged', 'melee'] } },
     // The army's stunner: the snare kit with a dragon spear (two-handed) in place of the dagger and shield. Its special
     // holds the target 5 ticks with no input, so in multi-way combat the others hit a target that cannot eat.
     'tribrid-snare-spear': { worn: { ...RUNE, weapon: 'dragon_spear', ammo: ['rune_arrow', 300] },

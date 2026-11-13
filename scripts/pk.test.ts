@@ -118,7 +118,8 @@ test('negativeCastArmour orders penalizing armour by torso, legs, shield, helm a
     ];
     expect(negativeCastArmour(worn, 'melee', new Set())).toEqual([]);
     expect(negativeCastArmour(worn, 'magic', new Set()).map(x => x.slot)).toEqual([4, 7, 5, 0]);
-    expect(negativeCastArmour(worn, 'ranged', new Set()).map(x => x.slot)).toEqual([4, 7, 0]);
+    // knowledge/gear.json: the kiteshield has -2 ranged attack, as the helm does (ties go by slot).
+    expect(negativeCastArmour(worn, 'ranged', new Set()).map(x => x.slot)).toEqual([4, 7, 0, 5]);
 });
 
 test('style turns follow the rotation and skip a style that is not usable', () => {

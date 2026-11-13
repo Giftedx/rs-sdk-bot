@@ -9,10 +9,10 @@
 // the candidate's value less the champion's value in the same pair, so a matchup is compared with itself.
 // --measure scores takes the spar score (a kill is above 100) where kills matter more than damage.
 // Usage: bun scripts/measure/pk-spar-climb.ts [--case extra:spar-x8] [--knobs eatAt,rotation] [--cap 500]
-//   [--max-runs 3] [--against <profile>] [--measure nets|scores] [--jobs 3] [--dry]. --dry prints the plan and runs nothing.
+//   [--max-runs 3] [--against <profile>] [--measure nets|scores] [--jobs 1] [--dry]. --dry prints the plan and runs nothing.
 // A run takes only the memory that the live fleet does not need (scripts/measure/pk-spar-wait.ts). Every evaluation is one line in .practice/pk-spar/climb.jsonl. The engines use
 // ports from 21600 (BENCH_PORT_BASE), apart from the bench's own 21000, so a bench of another session can run beside.
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Profile } from '../pk-spar';
 import { waitForMemory } from './pk-spar-wait';
@@ -87,15 +87,19 @@ if (import.meta.main) {
     const wait = () => waitForMemory(root);
     const firstSeed = Number(process.env.CLIMB_SEED ?? 1);
     // --jobs n evaluates n candidates of a knob at once, each on its own bench slots (BENCH_SLOT_BASE), engine ports,
-    // output folder and row file. A spar batch waits on its bots more than on the CPU, so a knob ends in about the time
-    // of its slowest candidate. Default 3.
-    const jobs = Math.max(1, Number(value('--jobs') ?? 3));
+    // output folder and row file; it needs a bench that reads BENCH_SLOT_BASE and BENCH_OUTPUT_DIR (PR #798). Default
+    // 1: one heavy job at a time (AGENTS.md).
+    const jobs = Math.max(1, Number(value('--jobs') ?? 1));
     const sample = async (patch: Profile, seed: number, slot = 0): Promise<number[] | null> => {
         await wait();
         const out = `.practice/pk-spar/climb-run-${slot}.json`;
         const set = { SPAR_A: 'champion', SPAR_A_OPTS: JSON.stringify(patch), SPAR_B: against ?? 'champion', ...(against ? {} : { SPAR_SWAP: '1' }), SPAR_CAP: cap };
-        await Bun.spawn(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), ...Object.entries(set).flatMap(([k, v]) => ['--set', `${k}=${v}`])],
+        // A run that the bench refused (exit 2) or that crashed leaves no row of its own: the last run's row is
+        // removed first, and only exit 0 or 1 (a result) is read.
+        rmSync(resolve(root, out), { force: true });
+        const code = await Bun.spawn(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), ...Object.entries(set).flatMap(([k, v]) => ['--set', `${k}=${v}`])],
             { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out, BENCH_SLOT_BASE: String(slot * 8), BENCH_OUTPUT_DIR: `.practice/pk-spar/output-${slot}` }, stdout: 'ignore', stderr: 'inherit', windowsHide: true }).exited;
+        if (code !== 0 && code !== 1) return null;
         try { const row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; return row?.ok ? readNets(row.result, measure) : null; } catch { return null; }
     };
     // The champion's own values for each seed, kept until the champion changes.

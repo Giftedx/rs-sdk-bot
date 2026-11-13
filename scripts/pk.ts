@@ -310,11 +310,25 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
     return bowSpec(kit, names);
 }
 // The magic shortbow special of a kit: the burst against a target out of melee reach.
+// A weapon's reach in tiles from knowledge/gear.json (param attackrange: magic shortbow 7, magic longbow 10).
+let gearRange: Map<string, number> | undefined;
+export function weaponRange(id: number, names = getObjNames()): number | undefined {
+    gearRange ??= new Map((JSON.parse(readFileSync(join(resolve(import.meta.dir, '..'), 'knowledge', 'gear.json'), 'utf8')) as { debugname: string; attackRange?: number }[])
+        .filter(g => g.attackRange).map(g => [g.debugname, g.attackRange!]));
+    return gearRange.get(names.get(id) ?? '');
+}
+// The bow special: the magic longbow's when the kit carries one (pvp_magic_longbow.rs2: no hit roll, +10 Ranged levels
+// to its max hit, 10 tiles), else the magic shortbow's (two arrows, accuracy x10/7, 7 tiles). Both cost 35%.
 export function bowSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
-    for (const id of kit.ranged ?? []) {
-        if ((names.get(id) ?? '') === 'magic_shortbow') return { kit: kit.ranged!, bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged' };
-    }
-    return undefined;
+    const ids = kit.ranged ?? [];
+    const bow = ids.find(id => names.get(id) === 'magic_longbow') ?? ids.find(id => names.get(id) === 'magic_shortbow');
+    return bow === undefined ? undefined : { kit: [bow], bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged' };
+}
+// A turn's ranged weapons: the magic shortbow when the kit carries it with the longbow (4 ticks, 3 on rapid, against
+// the longbow's 6); the longbow is the special's.
+export function shootingKit(kit: Kit, names = getObjNames()): number[] {
+    const ids = kit.ranged ?? [];
+    return ids.some(id => names.get(id) === 'magic_shortbow') ? ids.filter(id => names.get(id) !== 'magic_longbow') : ids;
 }
 
 // Metal/leather armour pieces that penalize a magic or ranged attack roll on the cast/shot tick (kiteshields.obj,
@@ -322,14 +336,18 @@ export function bowSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined
 // legs -21, shield -8, helm -6); unequipped on the attack tick before the hit roll and re-equipped on the next tick.
 export function negativeCastArmour(worn: readonly { id: number; slot: number }[], style: Style, kitIds: ReadonlySet<number>, names = getObjNames()): { id: number; slot: number }[] {
     if (style === 'melee') return [];
-    const re = style === 'magic'
-        ? /(^|_)(platebody|chainbody|dragonhide_body|leather_body|studded_body|platelegs|plateskirt|dragonhide_chaps|studded_chaps|kiteshield|sq_shield|full_helm|med_helm|coif)(_|$)/
-        : /(^|_)(platebody|chainbody|platelegs|plateskirt|full_helm)(_|$)/;
-    const rank = (slot: number) => (slot === 4 ? 0 : slot === 7 ? 1 : slot === 5 ? 2 : 3);
-    return worn
-        .filter(e => !kitIds.has(e.id) && re.test(names.get(e.id) ?? ''))
-        .sort((a, b) => rank(a.slot) - rank(b.slot))
+    // Each worn item's own penalty to this attack (knowledge/gear.json magicAttack or rangeAttack), the largest first:
+    // the vambraces' -10 magic counts as the plate's does. The weapon and shield of the turn's kit stay.
+    const key = style === 'magic' ? 'magicAttack' : 'rangeAttack';
+    return worn.map(e => ({ id: e.id, slot: e.slot, p: gearBonus(e.id, key, names) }))
+        .filter(e => !kitIds.has(e.id) && e.p < 0)
+        .sort((a, b) => a.p - b.p || a.slot - b.slot)
         .map(e => ({ id: e.id, slot: e.slot }));
+}
+let gearBonuses: Map<string, Record<string, number>> | undefined;
+export function gearBonus(id: number, bonus: string, names = getObjNames()): number {
+    gearBonuses ??= new Map((JSON.parse(readFileSync(join(resolve(import.meta.dir, '..'), 'knowledge', 'gear.json'), 'utf8')) as { debugname: string; bonuses: Record<string, number> }[]).map(g => [g.debugname, g.bonuses]));
+    return gearBonuses.get(names.get(id) ?? '')?.[bonus] ?? 0;
 }
 
 // Another player's head icons and worn items, read from the in-process client's player entity (webclient
@@ -341,6 +359,8 @@ export function negativeCastArmour(worn: readonly { id: number; slot: number }[]
 // failedspell_impact (85) (pvp_magic.rs2, magic_combat_spells.dbrow, pack/spotanim.pack).
 export type Observed = { headicons: number; worn: number[]; health: number; totalHealth: number; spotanim: number };
 export const HOLD_IMPACT: readonly number[] = [179, 180, 181], SPLASH_IMPACT = 85;
+// The hold spell of each impact graphic (magic_combat_spells.dbrow spotanim_target): its freeze_time sets the hold.
+export const IMPACT_SPELL: Readonly<Record<number, number>> = { 179: SPELLS.entangle, 180: SPELLS.snare, 181: SPELLS.bind };
 export function observePlayer(client: unknown, index: number): Observed | null {
     const p = (client as { players?: ({ headicons?: number; appearance?: ArrayLike<number>; health?: number; totalHealth?: number; spotanimId?: number } | null)[] } | undefined)?.players?.[index];
     if (!p) return null;
@@ -672,7 +692,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             // below cannot tell a hold from a target that stands still (SPOT_READ=0 leaves only the tile read).
             const spotRead = process.env.SPOT_READ !== '0', seenNow = observePlayer(s.client, target.index), spot = spotRead ? seenNow?.spotanim ?? -1 : -1;
             if (spot !== lastSpot && HOLD_IMPACT.includes(spot)) {
-                const dur = freezeDuration(1592, protectedStyles(seenNow?.headicons).has('magic'));
+                const dur = freezeDuration(IMPACT_SPELL[spot]!, protectedStyles(seenNow?.headicons).has('magic'));
                 frozenUntil = Math.max(frozenUntil, now + dur); freezeReady = Math.max(freezeReady, now + dur + 5); frozenTile = null;
                 if (o.freezeShare) { o.freezeShare.until = Math.max(o.freezeShare.until, o.freezeShare.clock() + dur + 5); o.freezeShare.heldUntil = o.freezeShare.clock() + dur; }
                 log(`PK freeze held (graphic) at distance ${cheb(at, target)}, wilderness level ${wildernessLevel(target.z)}`);
@@ -778,6 +798,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // the amulet that an account wears is then its way out, and its pack needs no second one.
         const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
         const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : o.escapeSpell !== undefined ? 20 : 0;
+        // No teleport at all (no glory, no escape spell): the way out is a run south, at any level, or the escape
+        // stands beside its attacker until its cap (review of PR #804).
+        const runSouth = () => { if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; } };
+        if (escapeNow(inv) && !reach && wildernessLevel(at.z) > 0) { runSouth(); continue; }
         if (escapeNow(inv) && reach && wildernessLevel(at.z) > reach) {
             if (now - ranAt > 3) { if (ranAt < 0) log(`PK run south at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
             continue;
@@ -789,6 +813,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             else if (!glory && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
                 log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
             }
+            // A worn glory with a full pack, or a spell out of its reach: nothing to click, so run south.
+            else if (!glory && (!wornGlory || inv.length >= 28) && (o.escapeSpell === undefined || wildernessLevel(at.z) > 20) && !state.dialog?.isOpen) runSouth();
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
             continue;
         }
@@ -911,7 +937,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             : o.mixStyles ? open[Math.floor(rand() * open.length)]! : null;
         const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
         const burstBow = o.bowBurst !== undefined ? bowSpec(o.kit, names) : undefined;
-        const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= BOW_RANGE;
+        const burstRange = burstBow ? weaponRange(burstBow.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
+        const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= burstRange;
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
@@ -1065,10 +1092,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // that runs beyond the bow's range (7 tiles for a shortbow, bows.obj attackrange) never leaves the bow: the
         // special stays armed with its energy, and each such turn is lost.
         const running = now < fleeingUntil;
-        const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > BOW_RANGE));
+        const specRange = specStyle === 'ranged' && spec ? weaponRange(spec.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
+        const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > specRange));
         const vs = o.volley && spec ? o.volley.state(targetName.toLowerCase()) : undefined, myKey = (s.name ?? '').toLowerCase();
         if (vs && !vs.fired) {
-            const readyNow = energy.energy >= spec!.cost && now >= nextAttack && cheb(at, target) <= (specStyle === 'melee' ? 1 : BOW_RANGE);
+            const readyNow = energy.energy >= spec!.cost && now >= nextAttack && cheb(at, target) <= (specStyle === 'melee' ? 1 : specRange);
             if (readyNow) { vs.ready.add(myKey); if (vs.first < 0) vs.first = o.volley!.clock(); } else vs.ready.delete(myKey);
             if (vs.ready.size >= o.volley!.members || (vs.first >= 0 && o.volley!.clock() - vs.first >= o.volley!.window)) {
                 vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
@@ -1130,7 +1158,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         let budget = 5 - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
         const keepWeapon = castFreeze && hasFreezeRunes && o.freezeWithStaff !== true;
-        for (const id of keepWeapon ? [] : [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
+        for (const id of keepWeapon ? [] : [...(turn.style === 'ranged' ? shootingKit(o.kit, names) : o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
             if (item && toWield.length < budget) toWield.push(item);
