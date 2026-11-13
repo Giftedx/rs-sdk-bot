@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794601603320,
+ "at": 1794601641469,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -464,19 +464,6 @@
    "resources": [
     "knight:2652,3318"
    ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-128f03ff-d704-4c28-a4bb-673a9a8d97f2"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-masterbaiter-20261113t201529z [task-128f03ff-d704-4c28-a4bb-673a9a8d97f2]",
-   "role": "helper"
   },
   {
    "account": "MineYourBiz",
