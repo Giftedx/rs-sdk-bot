@@ -1,0 +1,22 @@
+{
+ "id": "1794532275086-nabtheknob-wandwaver-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Wandwaver",
+ "item": "Bones",
+ "count": 94,
+ "start": 1794532275086,
+ "end": 1794534675086,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
