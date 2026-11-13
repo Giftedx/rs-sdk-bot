@@ -350,6 +350,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const hl=(()=>{try{return {...HL_DEFAULT,...JSON.parse(localStorage.getItem(HL_KEY)||'{}')};}catch{return {...HL_DEFAULT};}})();
   const saveHl=()=>{try{localStorage.setItem(HL_KEY,JSON.stringify(hl));}catch{/* private window */}};
   let multiLines=null,recentTargets=[],sentOverlay='',sentOverlayAt=0;
+  // The part of a level or upright line inside the square of half-side r around (cx, cz), or null: a long line keeps
+  // its part near the camera, so its middle is near too (the viewer and the minimap skip a line by its middle).
+  const clipLine=(x0,z0,x1,z1,cx,cz,r)=>{const lx=Math.round(cx-r),hx=Math.round(cx+r),lz=Math.round(cz-r),hz=Math.round(cz+r);if(z0===z1){if(z0<lz||z0>hz)return null;const a=Math.max(Math.min(x0,x1),lx),b=Math.min(Math.max(x0,x1),hx);return a<b?[a,z0,b,z1]:null;}if(x0===x1){if(x0<lx||x0>hx)return null;const a=Math.max(Math.min(z0,z1),lz),b=Math.min(Math.max(z0,z1),hz);return a<b?[x0,a,x1,b]:null;}return null;};
   fetch(asset('multiway.json')).then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j))multiLines=j;},()=>{});
   function overlayMessage(){
     const b=account(),o={tiles:[],pies:[],lines:[],players:{},npcs:[]};
@@ -362,8 +365,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(hl.npcs&&recentTargets.length)o.npcs.push({types:recentTargets.slice(),colour:'#00ffff'});
     if(hl.ground)o.ground={prices:S?.economy?.itemValues||{},min:hl.groundMin};
     if(hl.multi&&at){
-      for(const [x0,z0,x1,z1,l] of multiLines||[])if(near((x0+x1)/2,(z0+z1)/2,96))o.lines.push({x0,z0,x1,z1,l,colour:'#ff0000'});
-      for(const lv of [1,10,20,30,40,50]){const z=3520+8*(lv-1);if(near(at.x,z,96)&&at.x>=2944-96&&at.x<=3392+96)o.lines.push({x0:2944,z0:z,x1:3392,z1:z,l:0,colour:'#ffff00',label:'Level '+lv});}
+      for(const [x0,z0,x1,z1,l] of multiLines||[]){const c=clipLine(x0,z0,x1,z1,at.x,at.z,60);if(c)o.lines.push({x0:c[0],z0:c[1],x1:c[2],z1:c[3],l,colour:'#ff0000'});}
+      for(const lv of [1,10,20,30,40,50]){const z=3520+8*(lv-1),c=clipLine(2944,z,3392,z,at.x,at.z,60);if(c)o.lines.push({x0:c[0],z0:c[1],x1:c[2],z1:c[3],l:0,colour:'#ffff00',label:'Level '+lv});}
     }
     if(hl.tiles){
       if(typeof recap!=='undefined'&&recap.state==='ok'&&recap.data?.pos&&b&&recap.name===b.name)o.tiles.push({x:recap.data.pos.x,z:recap.data.pos.z,l:recap.data.pos.level||0,colour:'#ff0000',fill:true,label:'Death'});
@@ -694,7 +697,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Death recap: the watched account's death tile, while its recap is open.
     const dt=typeof recap!=='undefined'&&recap.state==='ok'&&b&&recap.name===b.name?recap.data?.pos:null;if(dt&&(dt.z>6400)===(cz>6400))dot(dt.x,dt.z,'#ff2020','#a00000','Death tile',3);
     // Multi-Lines on the minimap: the red multi-combat edges near the minimap's centre, turned and scaled as the dots are.
-    if(p&&typeof hl!=='undefined'&&hl.multi&&typeof multiLines!=='undefined'&&multiLines){g.strokeStyle='#ff0000';g.lineWidth=1;const px=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const [x0,z0,x1,z1,l] of multiLines){if(l!==(b?.pos?.level||0)||Math.abs((x0+x1)/2-cx)>80||Math.abs((z0+z1)/2-cz)>80)continue;const a=px(x0,z0),c=px(x1,z1);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c[0],c[1]);g.stroke();}}
+    if(p&&typeof hl!=='undefined'&&hl.multi&&typeof multiLines!=='undefined'&&multiLines){g.strokeStyle='#ff0000';g.lineWidth=1;const px=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const [x0,z0,x1,z1,l] of multiLines){if(l!==(b?.pos?.level||0))continue;const k=clipLine(x0,z0,x1,z1,cx,cz,80);if(!k)continue;const a=px(k[0],k[1]),c=px(k[2],k[3]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c[0],c[1]);g.stroke();}}
     if(p){g.fillStyle='#fff';g.fillRect(OX-1,OY-2,3,3);}
     // Only the pixels of the map hole stay: the frame is a cut-out, and it does not hide the rest of the square.
     if(D.hole){g.globalCompositeOperation='destination-in';g.drawImage(D.hole,0,0);g.globalCompositeOperation='source-over';}}

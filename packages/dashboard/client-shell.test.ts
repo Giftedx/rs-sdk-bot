@@ -837,14 +837,16 @@ test('3D highlights: one overlay message with threats, rivals, fought npcs, labe
  const env={S:{economy:{itemValues:{'Rune scimitar':15000}}},D:{rival:new Set(['goondelf','bad name!'])},account:()=>b,asset:(n:string)=>n,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},window:{atlasCam3d:{x:3100,z:3700,at:Date.now()}},
   wildLevel:()=>23,pvpState:()=>({threats:[{name:'Near'}]}),recap:{state:'ok',name:'Alpha',data:{pos:{x:3101,z:3702,level:0}}},respawnRows:()=>[{x:3059,z:3884,l:0,left:30,total:120},{x:1,z:1,l:0,left:null,total:null}],VIEWER:{state:'loading'},$:()=>null,nf:String,location:{origin:''}};
  const t=new Function(...Object.keys(env),`${code};return {overlayMessage,setLines:(l)=>{multiLines=l;},setTargets:(t)=>{recentTargets=t;}};`)(...Object.values(env));
- t.setLines([[3008,3712,3008,3720,0],[100,100,108,100,0]]);t.setTargets([2181]);
+ t.setLines([[3120,3712,3120,3720,0],[100,100,108,100,0],[3130,3520,3130,3968,0]]);t.setTargets([2181]);
  const o=t.overlayMessage();
  expect(o.players).toEqual({goondelf:'#00ffff',near:'#ff0000'});
  expect(o.npcs).toEqual([{types:[2181],colour:'#00ffff'}]);
  expect(o.ground).toEqual({prices:{'Rune scimitar':15000},min:1000});
- expect(o.lines).toContainEqual({x0:3008,z0:3712,x1:3008,z1:3720,l:0,colour:'#ff0000'});
+ expect(o.lines).toContainEqual({x0:3120,z0:3712,x1:3120,z1:3720,l:0,colour:'#ff0000'});
+ // A long edge through the camera area keeps its part near the camera, though its middle is 204 tiles away.
+ expect(o.lines).toContainEqual({x0:3130,z0:3640,x1:3130,z1:3760,l:0,colour:'#ff0000'});
  expect(o.lines.some((l:any)=>l.x0===100)).toBe(false);
- expect(o.lines).toContainEqual({x0:2944,z0:3672,x1:3392,z1:3672,l:0,colour:'#ffff00',label:'Level 20'});
+ expect(o.lines).toContainEqual({x0:3040,z0:3672,x1:3160,z1:3672,l:0,colour:'#ffff00',label:'Level 20'});
  expect(o.tiles).toEqual([{x:3101,z:3702,l:0,colour:'#ff0000',fill:true,label:'Death'}]);
  expect(o.pies).toEqual([{x:3059,z:3884,l:0,p:0.75}]);
 });
