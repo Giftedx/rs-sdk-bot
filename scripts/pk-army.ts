@@ -147,6 +147,8 @@ if (import.meta.main) {
     };
     if (openTogether) { cfg.hold = hold; cfg.holdRange = openRange; }
     // LEADER_SPEC=all: the leader's specials go at any health and with no reserve, as the followers' on army-alpha.
+    // LEADER_CAP: the ticks of one fight of the leader (the roam's own is 120).
+    if (arg(args, 'LEADER_CAP', '')) cfg.fight = { ...cfg.fight, cap: Number(arg(args, 'LEADER_CAP', '')) };
     if (arg(args, 'LEADER_SPEC', '') === 'all') { cfg.specAll = true; cfg.fight = { ...cfg.fight, specReserve: 0 }; }
     // FREEZE_SHARE=1 (default): one freeze for the army, on the leader's tick count.
     // FREEZE_STAGGER=<ticks>: a cast blocks the others that long only, until its caster sees the hold.

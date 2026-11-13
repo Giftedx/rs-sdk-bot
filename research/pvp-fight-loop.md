@@ -1765,4 +1765,5 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     roam banked whenever 2 slots or fewer were free, and the fight kit leaves no more. It banks a full pack only
     with loot in it: 10 of 12. The roam's escape and the army's leave take a worn glory off to rub it; the rubbed
     glory is a new item, so the bank trip deposited it as loot and the next trip had none. They wear it again after
-    the teleport (`wearGlory`). Gap: the second target's fight still meets the roam's 120-tick cap; 6 seeds.
+    the teleport (`wearGlory`). The roam's 120-tick fight cap costs nothing here: `LEADER_CAP=400` kills 8 of 12.
+    Gap: 6 seeds.
