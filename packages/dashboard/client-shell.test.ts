@@ -1001,6 +1001,11 @@ test('best training spot: the best rock the account can mine now, and the neares
  expect(t.bestSpot(b,'Mining',20)).toMatchObject({name:'Iron rock',level:15,near:{x:3010,z:3000,l:0,d:10}});
  expect(t.bestSpot(b,'Mining',20).tiles.length).toBe(3);
  expect(t.bestSpot(b,'Mining',35).name).toBe('Coal rock');
+ // An action named after its rock, or named for an output item, finds its rock too.
+ const acts2={mining:[['Copper ore',1,437.5,[],['Copper ore']],['Limestone rock',10,662.5,[],[]],['Gem rock',12,500,[],['Uncut gem']]]};
+ const res2={kinds:{1:{name:'Copper rock'},4:{name:'Limestone rock'}},tiles:[[3000,3000,0,1],[3005,3000,0,4]]};
+ const t2=new Function('resources','skillActions','resourceOf','calcSkill','E','nf','sourcePin',`${code};return {bestSpot};`)(res2,acts2,resourceOf,'Mining',String,String,null);
+ expect(t2.bestSpot(b,'Mining',12)).toMatchObject({name:'Limestone rock',level:10,near:{x:3005,d:5}});
  expect(t.bestSpot(b,'Fishing',35)).toBe(null);
  expect(t.bestSpotLine(b,20)).toContain('Best now: <b>Iron rock</b> (level 15) · nearest 10 tiles');
 });
