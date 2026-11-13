@@ -1,0 +1,98 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794608252226-bigpackage-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant pickaxe",
+ "requested": 1,
+ "claim": "be082f1d-7bf8-4053-8b48-03ee47727a08",
+ "count": 1,
+ "ok": true,
+ "at": 1794608315413,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Logs",
+   "requested": 7,
+   "count": 7,
+   "inventory": {
+    "before": 0,
+    "after": 7
+   },
+   "bank": {
+    "count": 7,
+    "at": 1794608308382
+   }
+  },
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794608309095
+   }
+  },
+  {
+   "item": "Chaos rune",
+   "requested": 160,
+   "count": 160,
+   "inventory": {
+    "before": 0,
+    "after": 160
+   },
+   "bank": {
+    "count": 160,
+    "at": 1794608309932
+   }
+  },
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1794608310939
+   }
+  },
+  {
+   "item": "Shark",
+   "requested": 8,
+   "count": 8,
+   "inventory": {
+    "before": 0,
+    "after": 8
+   },
+   "bank": {
+    "count": 8,
+    "at": 1794608311686
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794608307514
+ },
+ "logout": {
+  "attemptId": "1794608283531-0000030764-0000000001",
+  "at": 1794608315400,
+  "sha256": "61f7dd3ed902394ecaebea7ef4a310891e368f3b085ed49caaf7fd65121c512d"
+ },
+ "screen": true
+}

@@ -1,0 +1,74 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794608252226-bigpackage-weequickie",
+ "account": "Bigpackage",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant pickaxe",
+ "requested": 1,
+ "claim": "c9cb0556-321c-4be8-9b22-0a14ad25173b",
+ "count": 1,
+ "ok": true,
+ "at": 1794608315023,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Logs",
+   "requested": 7,
+   "count": 7,
+   "inventory": {
+    "before": 7,
+    "after": 0
+   }
+  },
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   }
+  },
+  {
+   "item": "Chaos rune",
+   "requested": 160,
+   "count": 160,
+   "inventory": {
+    "before": 160,
+    "after": 0
+   }
+  },
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   }
+  },
+  {
+   "item": "Shark",
+   "requested": 8,
+   "count": 8,
+   "inventory": {
+    "before": 8,
+    "after": 0
+   }
+  }
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794608266927-0000006708-0000000001",
+  "at": 1794608315010,
+  "sha256": "ebdfb409f3b0d2bd49ce831f7967deb326e2db114415179cdf604873d5f8e6d6"
+ },
+ "screen": true
+}
