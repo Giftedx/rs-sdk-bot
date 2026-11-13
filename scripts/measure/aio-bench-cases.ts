@@ -229,6 +229,11 @@ const ROUTE_CASES: BenchCase[] = [
   // knife (946) in the pack, 600 dragon bones (536) banked: 555 give Prayer 99 at 1,800 XP each.
   skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_BANK_BONES=1', 'CAP=9000'], {key: 'extra:woodcut-bury-block5', timeoutMs: 900_000,
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [{id: 1359, count: 1}, {id: 946, count: 1}], bank: [{id: 536, count: 600}]}}),
+  // The tools in the site bank, as a fleet trade leaves them (scripts/fleet-trade.ts banks what it brings): step 0
+  // takes the rune axe and the knife from the Draynor bank; without it the worker pickpocketed for an axe.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=30', 'WC_SITE=draynor', 'CAP=3000'], {key: 'extra:woodcut-tools-banked',
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [], bank: [{id: 1359, count: 1}, {id: 946, count: 1}]},
+    pass: s => ok(s) && /WC_TOOLS_FROM_BANK \{"axe":"rune","knife":true\}/.test(s) && /thiefTicks=0 /.test(s)}),
   // The same with a giver (scripts/site-givers.ts) that brings the bones to the trees by trade, the rival's "bone
   // givers": the woodcutter has no bones in its bank. The giver has Magic 59 for the same dark wizards.
   skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_GIVERS={bot:b}', 'CAP=9000'], {key: 'extra:woodcut-givers-block5', timeoutMs: 900_000,
@@ -734,6 +739,11 @@ const ROUTE_CASES: BenchCase[] = [
     ({key: `extra:sweep-elena-draynor-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
       presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
         bank: [...(PRESETS.quest_elena!.inventory ?? []), ...runes]}} as BenchCase)),
+  // The same with the three items no fleet account and no GE seller held (dwellberries 2126, chocolate dust 1975, snape
+  // grass 231) left out of the bank, and 5,000 coins: what the sweep's own shop and gather plans cost.
+  {key: 'extra:sweep-elena-draynor-partial', script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
+      bank: [...(PRESETS.quest_elena!.inventory ?? []).filter(i => ![2126, 1975, 231].includes(i.id)), {id: 563, count: 1}, {id: 556, count: 5}, {id: 995, count: 5000}]}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];
