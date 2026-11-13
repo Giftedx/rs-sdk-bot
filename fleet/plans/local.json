@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794599769698,
+ "at": 1794599975617,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -56,25 +56,6 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -479,6 +460,25 @@
    "repeat": false,
    "goal": "run-imp-nabtheknob-melee-r1 [task-8be56522-cedf-46b7-bd17-1ad2d8e9bde1]",
    "role": "helper"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
   }
  ]
 }
