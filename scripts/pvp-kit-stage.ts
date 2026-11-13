@@ -3,7 +3,7 @@
 import {existsSync} from 'node:fs';
 import {openBot,finish,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
-import {waitUntil} from '../packages/core/src/ticks';
+import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import {depositObserved} from '../packages/core/src/deposit';
 import {planTripOffThread} from '../packages/core/src/route-plan';
@@ -67,8 +67,19 @@ export async function runKitStage(s:Session,cap=1800,stop=()=>false){
   const g=s.bankObservation!()!.generation;
   await s.bot.withdrawItem(cash,108,{asNote:false});
   if(!await waitUntil(s,()=>count(inv(),995)===108&&(s.bankObservation?.()?.generation??0)>g&&count(s.bankObservation!()!.items,995)===8244,{timeoutTicks:10}))throw Error('kit stage travel float unobserved');
-  await close();await travel(3015,3206);check();
-  if(!(await s.bot.openShop(/^wydin$/i)).success||!await waitUntil(s,()=>!!state()?.shop?.isOpen,{timeoutTicks:10}))throw Error('kit stage Wydin unavailable');
+  // The walk ends at the shop's east side and a Trade lets the server path to Wydin. walkTo (the final walk leg
+  // and bot.openShop) opens any door beside its waypoints: Wydin's staff door at 3012,3204, beside the counter,
+  // starts his apron dialogue, which costs about 1,000 bench ticks (pvp:stage-kit seeds 1, 4 and 5). Wydin wanders
+  // 5 tiles from 3014,3204, into the staff room too: there no Trade reaches him (seed 6 stood at 3013,3206), so
+  // the Trade waits until the client can path to him and is sent again until the shop opens.
+  await close();await travel(3019,3208);check();
+  const shopDeadline=s.tick()+120;
+  while(!state()?.shop?.isOpen){
+   check();if(s.tick()>=shopDeadline)throw Error('kit stage Wydin unavailable');
+   const wydin=state()?.nearbyNpcs.find(n=>/^wydin$/i.test(n.name)),trade=wydin?.optionsWithIndex.find(o=>/^trade$/i.test(o.text));
+   if(!wydin||!trade||wydin.reachable===false){await waitTicks(s,2);continue;}
+   if((await s.sdk.sendInteractNpc(wydin.index,trade.opIndex)).success)await waitUntil(s,()=>!!state()?.shop?.isOpen,{timeoutTicks:8});
+  }
   const shelf=state()?.shop?.shopItems.find(i=>i.id===1985);
   if(!shelf||shelf.count<2)throw Error('kit stage two cheese not on shelf');
   console.log('KIT_STAGE_SHELF '+JSON.stringify(shelf));
