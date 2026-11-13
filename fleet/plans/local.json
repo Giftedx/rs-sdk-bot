@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794531386990,
+ "at": 1794531753865,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -74,21 +74,24 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "shop:betty"
    ]
   },
   {
@@ -472,24 +475,21 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "shop:betty"
+    "knight:2582,3297"
    ]
   },
   {
