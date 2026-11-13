@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794601717214,
+ "at": 1794601741848,
  "jobs": [
   {
    "account": "Woodpecker",
@@ -109,6 +109,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
    ]
   },
   {
@@ -464,19 +483,6 @@
    "resources": [
     "knight:2652,3318"
    ]
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-4f192c1c-b43c-47a1-92d7-253a1e716b68"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-mineyourbiz-20261113t201529z [task-4f192c1c-b43c-47a1-92d7-253a1e716b68]",
-   "role": "thieving"
   }
  ]
 }
