@@ -1,0 +1,22 @@
+{
+ "id": "1794600663027-mmsmk1232-wandwaver-mindrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "Wandwaver",
+ "item": "Mind rune",
+ "count": 8,
+ "start": 1794600663027,
+ "end": 1794603063027,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
