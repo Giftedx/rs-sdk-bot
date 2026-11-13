@@ -423,7 +423,6 @@ const ROUTE_CASES: BenchCase[] = [
   // escort-ore: scripts/lava-maze-escorted-ore.ts, the archer escort and the miner of its practice proof
   // (packages/practice/src/lava-maze-escorted-ore-proof.ts) at the Edgeville bank, one runite ore, the world feed on.
   {key: 'pvp:escort-ore', engineEnv: {WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['escort-ore', '{bot:b}', 'CAP=1800', 'MAX_ORE=1', 'EXPECTED_BANK_ORE=0'], pass: ok,
-    known: 'on the lockstep engine the escort walks to its stage at the Lava Maze, but its world-feed roster stops at the frame of tick 250 while the engine ticks on, so the three frames 10 ticks apart that release the miner never come (RESULT fail Three fresh stage frames unconfirmed); the feed send path (worldfeed.ts networkPressure) is not checked',
     presetConfig: {position: {x: 3094, z: 3492, level: 0}, skills: {Attack: 65, Defence: 10, Strength: 11, Hitpoints: 69, Ranged: 99, Prayer: 65, Magic: 50},
       inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}], equipment: [{id: 861, count: 1, slot: 3}, {id: 1131, count: 1, slot: 4}]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 47, Hitpoints: 33, Prayer: 43, Mining: 99},

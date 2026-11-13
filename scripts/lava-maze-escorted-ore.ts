@@ -147,7 +147,7 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
         rocks:[] as {tick:number;x:number;z:number;id:number}[],attempts:[] as Awaited<ReturnType<typeof mineRock>>[],
         actors:[] as {name:string;ticks:number;wallMs:number;foodUsed:number;hpStart:number;hpMin:number;hpEnd:number;prayerStart:number;prayerEnd:number;position:Tile|undefined}[]};
     let feed:ReturnType<typeof radar>|undefined,failure:string|undefined,abort:string|undefined,holding=false;
-    let escort:Session|undefined,miner:Session|undefined,previousEscortHp=0;
+    let escort:Session|undefined,miner:Session|undefined,previousEscortHp=0,meleeProtectAt=-10;
     const starts=new Map<Session,{tick:number;wall:number;hp:number;min:number;prayer:number;food:number;inventory:Record<number,number>;equipment:string}>();
     const walkers=new Map<Session,Awaited<ReturnType<typeof sessionWalker>>>();
     const lastTicks=new Map<Session,number>();
@@ -207,6 +207,10 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
             lastTicks.set(s,Date.now());
             offs.push(s.onTick(()=>{
                 lastTicks.set(s,Date.now());const initial=starts.get(s)!;initial.min=Math.min(initial.min,hp(s));
+                // An npc of the maze (a deadly red spider) can walk to the stage and attack: Protect from Melee goes up
+                // while one within 3 tiles has a player as its target (index 32768 and up), before its first hit.
+                if(holding&&s===escort&&!s.sdk.isPrayerActive('protect_from_melee')&&prayer(s)>=10&&s.tick()-meleeProtectAt>=2&&
+                    (s.sdk.getState()?.nearbyNpcs??[]).some(n=>n.distance<=3&&n.targetIndex>=32768)){meleeProtectAt=s.tick();void s.sdk.sendTogglePrayer('protect_from_melee');}
                 if(holding&&s===escort&&hp(s)<previousEscortHp)abort??='Escort HP dropped';
                 if(holding&&s===escort)previousEscortHp=hp(s);
                 if(holding)checkOutbound();
