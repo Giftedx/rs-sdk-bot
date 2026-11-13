@@ -1117,11 +1117,33 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function deaths(){for(const b of S.bots){if(b.practice||!b.death)continue;const key=b.name+'|'+b.death.at;if(deathsSeen.has(key))continue;deathsSeen.add(key);if(deathsPrimed){chat.push({kind:'Private',name:safeName(b.name),text:'Oh dear, you are dead!',at:b.death.at});renderChat();desktopNotify(safeName(b.name)+': Oh dear, you are dead!');shotFor(b,'death','Death');}}deathsPrimed=true;}
   // Logins, logouts and rank moves as chat lines (RuneLite's Friend List notifications). The state on record when the page opens is not announced. More than four logins or logouts in one snapshot make one line.
   const worldSeen=new Map(),rankSeen=new Map();let momentsPrimed=false;
+  // Session summary on a logout line: while an account is in the world, its XP when this page first saw it in the world
+  // (sessionXp) and its last uptime and loot (sessionLast). A logout line adds the session length, the skill with the
+  // most XP gained and the top loot item with its GE value. A session that began before the page opened counts from
+  // the page's first sight of it.
+  const sessionXp=new Map(),sessionLast=new Map();
+  function trackSession(b){
+    if(!b.inWorld)return;
+    const xp=Object.fromEntries((b.skills||[]).filter(k=>k&&k.name!=='Overall'&&Number.isFinite(k.xp)).map(k=>[k.name,k.xp]));
+    if(!sessionXp.has(b.name))sessionXp.set(b.name,xp);
+    sessionLast.set(b.name,{xp,uptime:b.uptime,loot:b.flow?.loot||[]});
+  }
+  function sessionText(name){
+    const start=sessionXp.get(name),last=sessionLast.get(name);sessionXp.delete(name);sessionLast.delete(name);
+    if(!start||!last)return '';
+    const gains=Object.entries(last.xp).map(([k,v])=>[k,v-(start[k]??v)]).filter(([,d])=>d>0).sort((a,b)=>b[1]-a[1]);
+    const top=[...last.loot].sort((a,b)=>(b.count||0)-(a.count||0))[0],price=n=>S?.economy?.itemValues?.[n]??(n==='Coins'?1:0);
+    const value=last.loot.reduce((t,i)=>t+price(i.name)*(i.count||0),0);
+    const parts=[gains[0]?'+'+nf(Math.round(gains[0][1]))+' '+gains[0][0]+' XP':'',top&&top.count>0?nf(top.count)+' '+top.name:'',value>=1?'≈ '+gp(Math.round(value))+' gp of loot':''].filter(Boolean);
+    return (last.uptime?' after '+dur(last.uptime):'')+(parts.length?': '+parts.join(', '):'');
+  }
   function moments(){let n=0;const say=(kind,text)=>{chat.push({kind,text,at:Date.now()});if(chat.length>200)chat.shift();n++;};
     const moved={in:[],out:[]};
-    for(const b of S.bots){if(b.practice)continue;const was=worldSeen.get(b.name),is=!!b.inWorld;worldSeen.set(b.name,is);if(momentsPrimed&&was!==undefined&&was!==is)moved[is?'in':'out'].push(safeName(b.name));}
-    for(const [k,names] of Object.entries(moved)){if(names.length>4)say('Private',names.length+' accounts have logged '+k+'.');else for(const name of names)say('Private',name+' has logged '+k+'.');}
-    for(const x of S.boards||[]){const r=x.best?.rank;if(!r)continue;const was=rankSeen.get(x.board);rankSeen.set(x.board,r);if(momentsPrimed&&was&&was!==r)say('Game',safeName(x.best.name)+' is now rank '+r+' on '+x.board+' ('+(r<was?'up':'down')+' from '+was+').');}
+    for(const b of S.bots){if(b.practice)continue;const was=worldSeen.get(b.name),is=!!b.inWorld;worldSeen.set(b.name,is);if(momentsPrimed&&was!==undefined&&was!==is)moved[is?'in':'out'].push(is?safeName(b.name):{name:safeName(b.name),text:sessionText(b.name)});else if(!is){sessionXp.delete(b.name);sessionLast.delete(b.name);}trackSession(b);}
+    for(const [k,names] of Object.entries(moved)){if(names.length>4)say('Private',names.length+' accounts have logged '+k+'.');else for(const name of names)say('Private',typeof name==='string'?name+' has logged '+k+'.':name.name+' has logged out'+name.text+'.');}
+    // A board's best rank is one account's; a move is announced for the same account, and another account taking the best
+    // rank is its own line (comparing two accounts' ranks made lines such as "up from" another account's rank).
+    for(const x of S.boards||[]){const r=x.best?.rank,who=x.best?.name;if(!r||!who)continue;const was=rankSeen.get(x.board);rankSeen.set(x.board,{r,who});if(!momentsPrimed||!was)continue;if(was.who===who){if(was.r!==r)say('Game',safeName(who)+' is now rank '+r+' on '+x.board+' ('+(r<was.r?'up':'down')+' from '+was.r+').');}else say('Game',safeName(who)+' now holds our best '+x.board+' rank: '+r+'.');}
     momentsPrimed=true;if(n)renderChat();}
   function levelUps(){
     for(const b of S.bots){if(b.practice||!Array.isArray(b.skills))continue;const prev=levelsSeen.get(b.name);const now={};for(const k of b.skills)now[k.name]=k.level;
