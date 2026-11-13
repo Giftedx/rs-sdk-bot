@@ -116,7 +116,10 @@ if (import.meta.main) {
     };
     // ARMY_PROFILE: the followers' profile of scripts/pk-spar.ts (default army; army-alpha opens with every special).
     const armyProfile = arg(args, 'ARMY_PROFILE', 'army');
-    const options = (s: Session): FightOptions => sparOptions(armyProfile, undefined, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600));
+    // ARMY_OPTS: fight options (JSON) on top of that profile, such as {"freeze":false} for followers that only hit while
+    // the leader freezes.
+    const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
+    const options = (s: Session): FightOptions => sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600));
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     const runs = followers.map(f => follow(f, leader!, shared, army.filter(n => n !== f.name.toLowerCase()), options(f), followTiles, stop, emit));
     try { result = await huntOnce(leader!, cfg, stop, leaderEmit); }

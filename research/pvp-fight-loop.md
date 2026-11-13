@@ -1566,3 +1566,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     escapes on seeds 1-3 too: the followers walk in after the leader's first hit, and a teleport is not interrupted.
     Gap: the army opens one account at a time; no run above level 30, where a glory does not work, or with all three
     striking in one tick.
+54. **Above level 30 the defending target still outruns three maxed tribrids: it leaves at once, eats, and reaches
+    level 30 in about 16 ticks of running.** `extra:army-route-defend-deep` (the target of finding 53 at 3166,3784,
+    Wilderness level 34, multi-way; the army from level 28; seeds 1-4): the target escapes in every run, 19 to 60
+    ticks after the first hit, with 52 to 66 HP on `army` followers, 56 to 94 on `army-alpha`, and 57 to 62 with
+    followers that only hit (`ARMY_OPTS={"freeze":false}`, the leader's freeze alone). All three accounts cast a
+    freeze at the same target on the same ticks, so two of three casts meet a held or immune target. The target's
+    10 sharks heal 200 HP, more than the army deals in a 16-tick hold. Gap: one shared freeze for the army; more
+    accounts; a target that does not leave at the first two hits.
