@@ -12,7 +12,7 @@ test('the server checks: the highest level of each skill, quest points and compl
 });
 
 test('the wiki requirements: skills, quest points and quest names; recommended and optional lines are left out', () => {
-    const page = `# Hero's Quest\n\n## Requirements\n\n- Completion of **Shield of Arrav**, **Lost City**\n- 55 Quest Points\n- 50 Mining\n- 20 Agility (for shortcuts)\n- Recommended: Druidic Ritual quest complete\n- Ability to defeat a level 172 enemy\n\n## Items Needed\n\n- 50 Mining\n`;
+    const page = `# Hero's Quest\n\n## Requirements\n\n- Completion of **Shield of Arrav**, **Lost City**\n- 55 Quest Points\n- 50 Mining\n- 20 Agility (for shortcuts)\n- 33 Magic (for Telegrab spell)\n- 40 Ranged or 40 Magic\n- Recommended: Druidic Ritual quest complete\n- Ability to defeat a level 172 enemy\n\n## Items Needed\n\n- 50 Mining\n`;
     const w = wikiReqs(page, ['Shield of Arrav', 'Lost City', 'Druidic Ritual']);
     expect(w).toEqual({ s: new Map([['Mining', 50]]), qp: 55, q: ['Shield of Arrav', 'Lost City'] });
     // The server level wins and marks the line checked; a server-only skill is marked 2, a wiki-only line 0.

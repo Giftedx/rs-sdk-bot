@@ -733,6 +733,10 @@ test('quest requirements: met, missing with the level held, unknown, and the Rea
  b.skills[1].level=53;b.quests.push({name:'Dragon Slayer',state:'complete'});
  expect(t.questReady(b,b.quests[1])).toBe(true);
  expect(t.reqHtml(b,'Nothing')).toBe('');
+ // Before the data loads (or when it fails), no quest is ready.
+ const pending=new Function(...Object.keys(env),`${code};return questReady;`)(...Object.values({...env,fetch:()=>({then:()=>({then:()=>{}})})}));
+ expect(pending(b,{name:"Cook's Assistant",state:'not started'})).toBe(false);
+ expect(shell).toContain(".filter(([id])=>id!=='ready'||(typeof questReqData!=='undefined'&&questReqData))");
  // Items: held across the pack, worn gear and the bank.
  data['Lost City']={s:[],q:[],i:[['Knife',1,1],['Plank',3,0]]} as any;
  const t2=new Function(...Object.keys(env),`${code};return {questItems,itemHtml};`)(...Object.values(env));

@@ -65,6 +65,9 @@ export function wikiReqs(page: string, journal: string[]): { s: Map<string, numb
         if (/recommended|optional|for shortcuts|^no\b|^none\b|^ability\b/i.test(line)) continue;
         const qpm = line.match(/^(\d+)\s+quest points?/i);
         if (qpm) { qp = Number(qpm[1]); continue; }
+        // A level with a reason or an alternative ("33 Magic (for Telegrab spell)": the map piece can be bought) is
+        // one way through the quest, not a gate; the server checks give the gates.
+        if (/^\d+\s+[A-Za-z]+\s*\(\s*(for|or)\b|\bor\b/i.test(line)) continue;
         const sk = line.match(/^(\d+)\s+([A-Za-z]+)/);
         if (sk && SKILLS.includes(cap(sk[2]!.toLowerCase()))) { s.set(cap(sk[2]!.toLowerCase()), Number(sk[1])); continue; }
         const n = norm(line);
