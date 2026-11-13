@@ -223,6 +223,17 @@ const ROUTE_CASES: BenchCase[] = [
   // The default route of each skill runs for about 1,000 ticks, so its XP for each 1,000 ticks is a rate and not one unit of work.
   skiller('woodcutting', 'yews', 'gather_yews', ['1000', '200', 'MAX_TRIPS=4']),
   skiller('woodcutting', 'fresh45', 'wc_fresh', [], {timeoutMs: 900_000}),
+  // Record block 5 (rune.fast, Cairn: Woodcutting 1-99 and Prayer 1-99 in 3,296 ticks planned): the knife reset with a
+  // dragon bone buried in each 3-tick cycle, at the Draynor willows, bones from the bank beside them. The start state is
+  // the route's after block 4: Magic 59 (combat 31, over the dark wizards' hunt limit of 14), a rune axe (1359) and a
+  // knife (946) in the pack, 600 dragon bones (536) banked: 555 give Prayer 99 at 1,800 XP each.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_BANK_BONES=1', 'CAP=9000'], {key: 'extra:woodcut-bury-block5', timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [{id: 1359, count: 1}, {id: 946, count: 1}], bank: [{id: 536, count: 600}]}}),
+  // The same with a giver (scripts/site-givers.ts) that brings the bones to the trees by trade, the rival's "bone
+  // givers": the woodcutter has no bones in its bank. The giver has Magic 59 for the same dark wizards.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_GIVERS={bot:b}', 'CAP=9000'], {key: 'extra:woodcut-givers-block5', timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [{id: 1359, count: 1}, {id: 946, count: 1}]},
+    companions: [{suffix: 'b', preset: 'wc_fresh', presetConfig: {position: {x: 3093, z: 3244, level: 0}, skills: {Magic: 59}, bank: [{id: 536, count: 600}]}}]}),
   // The same 600 ticks at the knights with no guest action, with a bone buried in each stun, and with an enchant cast in each stun. Hitpoints 99, so a run of failed picks does not kill the account before the cap.
   skiller('thieving', 'stun-base', 'stun_base', ['600', 'MODE=base'], {presetConfig: {...PRESETS.stun_base!, skills: {...PRESETS.stun_base!.skills, Hitpoints: 99}}}),
   skiller('thieving', 'stun-bury', 'stun_bury', ['600', 'MODE=bury'], {presetConfig: {...PRESETS.stun_bury!, skills: {...PRESETS.stun_bury!.skills, Hitpoints: 99}}}),
