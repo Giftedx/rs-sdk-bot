@@ -176,6 +176,7 @@ export type FightOptions = {
     // While holdFire() is true the loop attacks and casts nothing; it walks to within 3 tiles of the target and eats
     // and prays as usual (a group's opening in one tick).
     holdFire?: () => boolean;
+    holdRange?: number;
     // The army's volley (scripts/pk-army.ts VOLLEY=1): the first special on a target waits, attacks and all, until
     // `members` accounts stand next to the target with a special ready, or `window` ticks of `clock` after the first
     // did; then every one of them specials at once, so the hits land inside the target's eat delay.
@@ -344,7 +345,8 @@ export function observePlayer(client: unknown, index: number): Observed | null {
 // Special attack energy (0-1000) and the bar's on state, client vars 300 and 301 (scripts/microbot-c-qol.ts enableSpecial).
 const special = (client: unknown) => { const v = (client as { var?: number[] } | undefined)?.var; return { energy: v?.[300] ?? 0, on: v?.[301] === 1 }; };
 // A health bar at or under the fraction, from a hit that showed one.
-export const lowHealth = (seen: Observed | null, fraction: number) => !!seen && seen.totalHealth > 0 && seen.health / seen.totalHealth <= fraction;
+// A fraction of 1 or more holds at any health, also before the target's health bar shows (its first hit).
+export const lowHealth = (seen: Observed | null, fraction: number) => !!seen && (fraction >= 1 || (seen.totalHealth > 0 && seen.health / seen.totalHealth <= fraction));
 
 // The new hit splats on another player since the last call, read from the client's player entity (ClientEntity
 // damageCycles and damageValues, four slots). The SDK publishes a damage_dealt event only while our player faces the
@@ -822,9 +824,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         if (!target) continue;
         if (o.holdFire?.()) {
-            if (cheb(at, target) > 3 && stoodStill && now - stepAt >= 2) {
+            // To within holdRange (default 3) tiles; at 1, onto the side tile toward us (a melee tile, not a corner).
+            const range = o.holdRange ?? 3;
+            if (cheb(at, target) > range && stoodStill && now - stepAt >= 2) {
                 const dx = Math.sign(at.x - target.x), dz = Math.sign(at.z - target.z);
-                void sdk.sendWalk(target.x + dx * 2, target.z + dz * 2); stepAt = now;
+                const side = range <= 1 ? (Math.abs(at.x - target.x) >= Math.abs(at.z - target.z) ? { x: dx, z: 0 } : { x: 0, z: dz }) : { x: dx * (range - 1), z: dz * (range - 1) };
+                void sdk.sendWalk(target.x + side.x, target.z + side.z); stepAt = now;
             }
             continue;
         }

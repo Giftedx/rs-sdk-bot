@@ -122,18 +122,22 @@ if (import.meta.main) {
     const shared = { target: null as string | null, over: false, killed: new Set<string>() };
     // OPEN_TOGETHER=1: the army holds its fire on a new target until every account stands within 3 tiles of it,
     // OPEN_TICKS of the leader's ticks at most (default 20), then all open in one tick.
-    const openTogether = arg(args, 'OPEN_TOGETHER', '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20'));
+    // OPEN_RANGE: the tiles from the target at which an account counts as near and holds (default 3; 1 puts each
+    // account on a melee tile, for a spear's opening special).
+    const openTogether = arg(args, 'OPEN_TOGETHER', '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20')), openRange = Number(arg(args, 'OPEN_RANGE', '3'));
     const opened = new Map<string, number>();
     const hold = () => {
         const t = shared.target?.toLowerCase();
         if (!openTogether || !t) return false;
         const first = opened.get(t) ?? (opened.set(t, leader!.tick()), leader!.tick());
         if (first < 0) return false;
-        const near = sessions.every(x => { const p = x.sdk.getState()?.nearbyPlayers.find(n => n.name.toLowerCase() === t); return !!p && p.distance <= 3; });
+        const near = sessions.every(x => { const p = x.sdk.getState()?.nearbyPlayers.find(n => n.name.toLowerCase() === t); return !!p && p.distance <= openRange; });
         if (near || leader!.tick() - first >= openTicks) { opened.set(t, -1); console.log('PK_EVENT ' + JSON.stringify({ t: leader!.tick(), e: 'open', target: t, why: near ? 'all near' : 'waited', after: leader!.tick() - first })); return false; }
         return true;
     };
-    if (openTogether) cfg.hold = hold;
+    if (openTogether) { cfg.hold = hold; cfg.holdRange = openRange; }
+    // LEADER_SPEC=all: the leader's specials go at any health and with no reserve, as the followers' on army-alpha.
+    if (arg(args, 'LEADER_SPEC', '') === 'all') { cfg.specAll = true; cfg.fight = { ...cfg.fight, specReserve: 0 }; }
     // FREEZE_SHARE=1 (default): one freeze for the army, on the leader's tick count.
     // FREEZE_STAGGER=<ticks>: a cast blocks the others that long only, until its caster sees the hold.
     const stagger = arg(args, 'FREEZE_STAGGER', '') ? Number(arg(args, 'FREEZE_STAGGER', '')) : undefined;
@@ -166,7 +170,7 @@ if (import.meta.main) {
     // ARMY_OPTS: fight options (JSON) on top of that profile, such as {"freeze":false} for followers that only hit while
     // the leader freezes.
     const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
-    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold } : {}), ...(volley ? { volley } : {}), ...(burstOnHold ? { burstOnHold } : {}), ...(openFreeze ? { openFreeze } : {}) });
+    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold, holdRange: openRange } : {}), ...(volley ? { volley } : {}), ...(burstOnHold ? { burstOnHold } : {}), ...(openFreeze ? { openFreeze } : {}) });
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     const runs = followers.map(f => follow(f, leader!, shared, army.filter(n => n !== f.name.toLowerCase()), options(f), followTiles, stop, emit));
     try { result = await huntOnce(leader!, cfg, stop, leaderEmit); }

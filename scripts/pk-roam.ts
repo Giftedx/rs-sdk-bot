@@ -192,6 +192,9 @@ export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: numbe
     // While hold() is true the chase closes to 3 tiles of its target and casts and attacks nothing (the army's
     // opening in one tick, scripts/pk-army.ts).
     hold?: () => boolean;
+    // The tiles the hold closes to (default 3).
+    holdRange?: number;
+    specAll?: boolean;
     // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
     lootMin?: number; bankAt?: number };
 
@@ -413,6 +416,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     // first fight, to an idle player in view whose melee armour is at least ROAM_SOFTER (40) stab defence lower
     // (research/pvp-fight-loop.md finding 62). ROAM_SWITCH=0 keeps the first pick.
     const switchOn = process.env.ROAM_SWITCH !== '0', softer = Number(process.env.ROAM_SOFTER ?? 40);
+    // cfg.specAll: every special goes at any health and with no reserve (the army leader's LEADER_SPEC=all).
+    const specAll = <T extends { below: number } | undefined>(spec: T): T => (cfg.specAll && spec ? { ...spec, below: 1 } : spec);
     const stabOf = (index: number) => { const o = observePlayer(session.client, index); return o ? armourDefence(o.worn.map(id => getObjNames().get(id) ?? '')).melee : null; };
     let chasing = '';
     const chase = async (first: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
@@ -473,7 +478,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // Freeze first, at first reach, before the target can run; freeze again whenever it moves.
                 const castable = freezeNow();
                 if (cfg.hold?.()) {
-                    if (near.distance > 3) await walkPath(walker, [{ x: near.x, z: near.z, tol: 3 }], { maxTicks: 2, idleMs: 9000, stop: stopped });
+                    const range = cfg.holdRange ?? 3;
+                    if (near.distance > range) await walkPath(walker, [{ x: near.x, z: near.z, tol: range }], { maxTicks: 2, idleMs: 9000, stop: stopped });
                     else await sdk.waitForTicks(1);
                     continue;
                 }
@@ -498,7 +504,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 const fight = await fightPlayer(session, name, {
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
-                    kit, spec: defaultSpec(kit), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
+                    kit, spec: specAll(defaultSpec(kit)), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell),
                     cap: 120, maxWild: cfg.maxWild, maxDistance: 15, ...cfg.fight, stop: () => stopped() || Date.now() >= end,
                     log: line => emit({ e: "fight", line }),

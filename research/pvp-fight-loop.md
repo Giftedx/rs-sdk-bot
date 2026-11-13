@@ -1729,3 +1729,19 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     them nowhere. `extra:army-route-defend-deep` seeds 1-6: the leader and both followers reach Edgeville at the end
     of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. Gap: the fight loop's own escape
     is not checked with a full pack.
+67. **Spears on a melee tile at the opening kill the target that eats and leaves a crowd at level 34: 18 of 18.**
+    The dragon spear's special has no hit roll: it pushes the target a tile and holds it with `p_delay(4)`, no
+    move, no eat and no glory rub, for 25% energy (`pvp_dragon_spear.rs2`). `extra:army-route-defend-deep-x5` (the
+    target of finding 54 with 10 sharks and a glory, Wilderness level 34, multi-way; leader on the dragon dagger,
+    four followers; `.practice/roam-switch/x5*`), kills of the target: followers on `army-alpha`, `OPEN_TOGETHER=1`
+    and `OPEN_RANGE=1` (the army walks onto melee tiles with its fire held, then opens), with `ARMY_SPEARS` (the
+    first n followers on kit `tribrid-snare-spear`) 0: 1 of 12; 1: 0 of 6; 2: 6 of 12; 3: 15 of 18; 4: 18 of 18.
+    Four spears with no opening options: 1 of 6; with `army-alpha` alone: 0 of 6; with the opening but not
+    `army-alpha`: 0 of 6; without `LEADER_SPEC=all` (the leader's specials at any health): 6 of 6. The two spear
+    specials a tick or two apart keep the target from acting between them; on `army` the specials wait for low
+    health and the lock never starts. Three accounts (two spears) kill none of 6: the leader's hits alone are too
+    few in the lock. No account of the army died. `army-alpha`'s `specBelow: 1` holds before the target's first
+    hit since `lowHealth` takes a fraction of 1 as any health; a check that needs the health bar to show makes the
+    first special of the opening wait 5 ticks for the first hit. Case `extra:army-route-spear-x5` (four spears). Gap: a
+    single-way spot (one attacker at a time) has no lock; the target's own escape does not answer the lock; four
+    spears leave the army with one dagger.
