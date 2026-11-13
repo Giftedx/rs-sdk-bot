@@ -1042,6 +1042,14 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
 });
+test('item identification: unidentified herbs by id, potions by type; other items have no label',()=>{
+ const start=shell.indexOf("  // Item identification (RuneLite's"),code=shell.slice(start,shell.indexOf('  const idTag=',start));
+ const hl:any={itemIds:true};
+ const idLabel=new Function('hl',`${code};return idLabel;`)(hl);
+ expect([{name:'Herb',id:207},{name:'Herb',id:199},{name:'Herb',id:1},{name:'Strength potion(3)'},{name:'Super attack(4)'},{name:'Prayer potion(1)'},{name:'Superantipoison(2)'},{name:'Ranging potion(4)'},{name:'Amulet of glory(4)'},{name:'Shark'}].map(i=>idLabel(i)))
+  .toEqual(['Ran','Gua','','Str','SAtt','Pra','SAP','Rng','','']);
+ hl.itemIds=false;expect(idLabel({name:'Herb',id:207})).toBe('');
+});
 test('food: the healing items in the pack, most first',()=>{
  const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
