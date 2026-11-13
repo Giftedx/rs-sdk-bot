@@ -1,6 +1,9 @@
 import {test,expect} from 'bun:test';
-import {FISH_PROFILES,fishSpotIds,pickFishSpot,runStagedFishing,searchNativeCatherbyFishing,catherbyFishingSearchPoints,karambwanLoadEffect,karambwanAttemptEffect,bigNetSnapshot,bigNetReceipt as nativeBigNetReceipt,fishingByproducts,fishingOutputs,fishingCapacityOutputs,type FishDriver} from './microbot-b-fishing';
+import {FISH_PROFILES,FISH_KNIFE_RESET,fishSpotIds,pickFishSpot,runStagedFishing,searchNativeCatherbyFishing,catherbyFishingSearchPoints,karambwanLoadEffect,karambwanAttemptEffect,bigNetSnapshot,bigNetReceipt as nativeBigNetReceipt,fishingByproducts,fishingOutputs,fishingCapacityOutputs,type FishDriver,type FishAction,type FishMethod} from './microbot-b-fishing';
+import {knifeDelay,knifeCut,KNIFE,NORMAL_LOGS} from './knife-reset';
 import {createHash} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 const item=(id:number,count=1,slot=0)=>({id,count,slot,name:'native fixture item',optionsWithIndex:[]});
 const state=(method:'fly'|'karambwan',inventory:ReturnType<typeof item>[],xp=0)=>({player:{worldX:2899,worldZ:3118,level:0,lifeId:1},inventory,skills:[{name:'Fishing',level:65,experience:xp},{name:'Hitpoints',level:10,baseLevel:10,experience:1000}],nearbyNpcs:[{index:1,id:fishSpotIds(method)[0],x:2900,z:3118,distance:1,optionsWithIndex:[{text:method==='fly'?'Lure':'Fish',opIndex:1}]}]} as unknown as BotWorldState);
@@ -76,3 +79,64 @@ test('new fishing methods honor declared native1/25 XP rates and park wrong-rate
 });
 test('Lava catch after a spot change during step credits the final bait before another dispatch',async()=>{for(const mode of ['ok','free-fish','wrong-xp','extra-fish']){let tick=0,actions=0;let current=netState([item(1585),item(313,1,1)]);current.nearbyNpcs=[{index:8,id:800,x:2890,z:9766,distance:1,optionsWithIndex:[{text:'Bait',opIndex:1}]}]as any;const d:FishDriver={state:()=>current,tick:()=>tick,stopped:()=>false,interact:async()=>{actions++;return{success:true};},combine:async()=>({success:true}),wait:async(test)=>{tick++;current={...current,nearbyNpcs:[]};return test();},step:async()=>{tick++;current={...current,inventory:[item(1585),item(2148,mode==='extra-fish'?2:1,1),...mode==='free-fish'?[item(313,1,2)]:[]],skills:[{name:'Fishing',level:99,baseLevel:99,experience:mode==='wrong-xp'?59:60},{name:'Hitpoints',level:10,baseLevel:10,experience:1000}]}as any;}};const run=runStagedFishing(d,{method:'lava',xpRate:1,amount:1,cap:30,maxAttempts:3,progressTicks:20});if(mode==='ok')expect(await run).toMatchObject({caught:1,baitUsed:1});else await expect(run).rejects.toThrow('step catch/bait/XP');expect(actions).toBe(1);}});
 for(const method of ['net','seaBait','fly','riverBait','cage','harpoon','karambwanji']as const)test(method+' credits a catch received in the inter-iteration tick before the next input',async()=>{const p=FISH_PROFILES[method];let tick=0,actions=0,current=netState([item(p.tool),...p.bait?[item(p.bait,1,1)]:[]]);current.nearbyNpcs=[{index:8,id:fishSpotIds(method)[0]!,x:2890,z:9766,distance:1,optionsWithIndex:[{text:p.label,opIndex:p.op}]}]as any;const d:FishDriver={state:()=>current,tick:()=>tick,stopped:()=>false,interact:async()=>{actions++;return{success:true};},combine:async()=>({success:true}),wait:async(test)=>{tick++;current={...current,nearbyNpcs:[]};return test();},step:async()=>{tick++;current={...current,inventory:[item(p.tool),item(p.products[0],1,1)],skills:[{name:'Fishing',level:99,baseLevel:99,experience:60},{name:'Hitpoints',level:10,baseLevel:10,experience:1000}]}as any;}};expect(await runStagedFishing(d,{method,xpRate:1,amount:1,cap:30,maxAttempts:3,progressTicks:20})).toMatchObject({caught:1,baitUsed:p.bait?1:0});expect(actions).toBe(1);});
+
+// Knife reset (FISH_KNIFE_RESET). The family of each method follows its attempt label in the server scripts: 'same'
+// when the label re-ops on %action_delay = clock + 2 (a clock + 2 branch, or an else that re-ops), 'delayed' when it
+// only rolls on %action_delay = map_clock, null when it never reads %action_delay.
+test('knife reset family of each method matches its server attempt label',()=>{
+ const dir=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_fishing/scripts/fishing_spots');
+ const labels:Record<FishMethod,[string,string]>={net:['saltfish','attempt_fish_shrimp'],seaBait:['saltfish','attempt_fish_sardine'],fly:['freshfish','attempt_fish_trout_salmon'],riverBait:['freshfish','attempt_fish_pike'],cage:['rarefish','attempt_fish_lobster'],harpoon:['rarefish','attempt_fish_swordfish'],karambwanji:['tbwt','attempt_fish_karambwanji'],karambwan:['tbwt','attempt_fish_karambwan'],bigNet:['memberfish','attempt_fish_mackerel'],lava:['lavafish','attempt_fish_lava_eel']};
+ expect(Object.keys(labels).sort()).toEqual(Object.keys(FISH_PROFILES).sort());
+ for(const [method,[file,name]] of Object.entries(labels)){
+  const text=readFileSync(resolve(dir,file+'.rs2'),'utf8').replace(/\r/g,''),at=text.indexOf(`[label,${name}]`),end=text.indexOf('\n[',at+1);
+  expect(at).toBeGreaterThanOrEqual(0);
+  const body=text.slice(at,end<0?undefined:end);
+  const family=!/%action_delay/.test(body)?null:/map_clock \+ 2\)/.test(body)||/\}\s*else\s*\{\s*p_opnpc/.test(body)?'same':/%action_delay = map_clock\)/.test(body)?'delayed':'none';
+  expect([method,family]).toEqual([method,FISH_KNIFE_RESET[method as FishMethod]]);
+ }
+});
+test('knife cut sets the delay two ticks ahead only when it is past, and needs a knife and a log',()=>{
+ expect(knifeDelay(5,10)).toBe(12);expect(knifeDelay(10,10)).toBe(10);expect(knifeDelay(13,10)).toBe(13);
+ expect(knifeCut([item(KNIFE,1,4),item(NORMAL_LOGS,1,7)],99)).toEqual([{type:'useItemOnItem',sourceSlot:4,targetSlot:7},{type:'clickComponent',componentId:99}]);
+ expect(knifeCut([item(KNIFE,1,4)],99)).toBeUndefined();
+});
+// A fake server: the cut sets %action_delay (cut_logs.rs2:83-84); a 'same' click rolls at the delay, a 'delayed' click
+// rolls only when the delay is the click tick. Each roll catches one fish (50 XP) and uses one bait.
+function knifeServer(method:FishMethod,spot:{x:number;z:number},player:{x:number;z:number}){
+ const p=FISH_PROFILES[method],reset=FISH_KNIFE_RESET[method];
+ const w={tick:0,delay:-10,rollAt:-1,xp:0,inv:[item(p.tool,1,0),item(KNIFE,1,1),item(NORMAL_LOGS,1,2),...p.bait?[item(p.bait,20,3)]:[]],player:{...player},sent:[] as {tick:number;types:string[]}[],stands:0};
+ const st=()=>({player:{worldX:w.player.x,worldZ:w.player.z,level:0,lifeId:1},inventory:w.inv.map(i=>({...i})),dialog:{isOpen:false},skills:[{name:'Fishing',level:99,baseLevel:99,experience:w.xp},{name:'Hitpoints',level:10,baseLevel:10,experience:1000}],nearbyNpcs:[{index:8,id:fishSpotIds(method)[0]!,x:spot.x,z:spot.z,distance:1,reachable:true,optionsWithIndex:[{text:p.label,opIndex:p.op}]}]})as unknown as BotWorldState;
+ const free=()=>[...Array(28).keys()].find(s=>!w.inv.some(i=>i.slot===s))!;
+ const d:FishDriver={state:st,tick:()=>w.tick,stopped:()=>false,interact:async()=>{throw Error('knife mode clicks through send');},combine:async()=>({success:true}),wait:async()=>false,
+  step:async()=>{w.tick++;if(w.rollAt===w.tick){w.xp+=50;w.inv.push(item(p.products[0]!,1,free()));if(p.bait)w.inv.find(i=>i.id===p.bait)!.count--;}},
+  send:async(acts:FishAction[])=>{w.sent.push({tick:w.tick,types:acts.map(a=>a.type)});for(const a of acts){
+   if(a.type==='dropItem')w.inv=w.inv.filter(i=>i.slot!==a.slot);
+   if(a.type==='clickComponent')w.delay=knifeDelay(w.delay,w.tick);
+   if(a.type==='interactNpc'){if(reset==='same'&&w.delay>=w.tick)w.rollAt=w.delay;if(reset==='delayed'&&w.delay===w.tick)w.rollAt=w.tick+1;}}},
+  stand:async()=>{w.stands++;w.tick+=2;w.player={x:spot.x+1,z:spot.z};return true;}};
+ return{w,d};
+}
+test('fly knife reset: drop, knife, Make 1, Lure and a close in one tick, one roll each 3 ticks',async()=>{
+ const {w,d}=knifeServer('fly',{x:3238,z:3252},{x:3239,z:3252});
+ const r=await runStagedFishing(d,{method:'fly',amount:4,cap:100,maxAttempts:5,progressTicks:40,knife:{make1:99,drop:true}});
+ expect(r).toMatchObject({caught:4,baitUsed:4,attempts:4,knife:{reset:'same',dropped:3,stands:0}});
+ expect(w.sent.map(s=>s.tick)).toEqual([0,3,6,9]);
+ expect(w.sent[0]!.types).toEqual(['useItemOnItem','clickComponent','interactNpc','closeModal']);
+ expect(w.sent[1]!.types).toEqual(['dropItem','useItemOnItem','clickComponent','interactNpc','closeModal']);
+ expect(w.inv.filter(i=>i.id===NORMAL_LOGS).length).toBe(1);
+});
+test('cage knife reset: knife in T, close in T+1, click in T+2; a corner start stands beside the spot first',async()=>{
+ const {w,d}=knifeServer('cage',{x:2924,z:3180},{x:2925,z:3181});
+ const r=await runStagedFishing(d,{method:'cage',amount:3,cap:100,maxAttempts:5,progressTicks:40,knife:{make1:99}});
+ expect(r).toMatchObject({caught:3,attempts:3,knife:{reset:'delayed',dropped:0,stands:1}});
+ expect(w.sent.slice(0,3)).toEqual([{tick:2,types:['useItemOnItem','clickComponent']},{tick:3,types:['closeModal']},{tick:4,types:['interactNpc']}]);
+ expect(w.sent[3]!.tick).toBe(5);
+});
+test('knife reset refuses karambwan, a missing log and a driver without send',async()=>{
+ const base={amount:1,cap:100,maxAttempts:5,progressTicks:40,knife:{make1:99}};
+ const {w,d}=knifeServer('fly',{x:3238,z:3252},{x:3239,z:3252});
+ await expect(runStagedFishing({...d,send:undefined},{...base,method:'fly'})).rejects.toThrow('send and stand');
+ w.inv=w.inv.filter(i=>i.id!==NORMAL_LOGS);await expect(runStagedFishing(d,{...base,method:'fly'})).rejects.toThrow('knife and logs');
+ const k=knifeServer('karambwan',{x:2899,z:3118},{x:2900,z:3118});k.w.inv.push(item(3159,1,9));
+ await expect(runStagedFishing(k.d,{...base,method:'karambwan'})).rejects.toThrow('no knife reset');
+});
