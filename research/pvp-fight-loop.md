@@ -1217,14 +1217,36 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   own single-way post (`POST=3075,3640 ALLOW_SINGLE=1`, for a gang that does not follow into multi-way), 11 of 12, no
   death, about 37 HP a kill (`extra:squad-4-gang-single-x1`). Two of ours with 3 sharks each, outnumbered, made 4
   bank trips in 8 minutes with no fault and no death (`extra:squad-2-gang-trips-x1`).
+- **The first live pilot** (four of ours, combat 126, rune chainbody, no antipoison, few water runes, 10 minutes):
+  4 gang deaths in the world feed, matching the 4 kill messages, no death of ours, 995 HP lost, about 249 a kill.
+  The gang met the squad on the walk in, at about (3072, 3610), one tile east of the multi-way area (x 3040-3071,
+  z 3600 and north). On single-way tiles each gang account took one of ours, so the kills were long one-on-one fights.
+  The same kit on the bench (`live-walker-iron-rune-chain-bare`, seeds 1 to 4): four on the lowest bar in multi-way,
+  20 kills of 24 at 36 HP a kill (`extra:team-4v3-gang-chainbare-west-x2`); four on single-way tiles, each gang
+  account on one of ours (`SPAR_*_PICK=pair`), 5 kills of 24 at 454 HP a kill (`-chainbare-split-`). Where the fight
+  happens costs more than the kit.
+- **Marching and pulling.** The squad moves as a march: its post steps `STEP` (default 12) tiles at a time toward the
+  goal, and on only when every account stands within 4 tiles of the step or after 60 ticks there. A march to a
+  multi-way goal goes first to the nearest multi-way tile (`multiEntry`). An account on a single-way tile with a
+  target in view, while the goal is multi-way and within 40 tiles, walks on into multi-way and eats instead of
+  fighting (`PULL`), for at most 20 ticks at a stretch. A squad account takes only a target the game lets it attack
+  (`attackable`); one that walked out of the Wilderness held three of ours at its edge. With `SQUAD_GANG_HUNT=1` the
+  bench gang walks to the nearest of ours, as the live gang did. Seeds 1 to 8, no death in any:
+  - the walk-in from the Edgeville bank against the hunting gang: 24 of 24 at about 34 HP a kill
+    (`extra:squad-4-gang-hunted-x1`); with `MARCH=0 PULL=0`, 23 of 24 at about 31. The bench gang did not split
+    the squad on the way, so the bench shows no gain from the march and the pull; the live split is their reason.
+  - the same walk-in in the pilot's kit against `ganker-max` (23 sharks, boosts, prayer potions), each gang account
+    hunting its own one of ours (`SQUAD_GANG_SPLIT=1`, `extra:squad-4-gangmax-hunted-chain-x1`), seeds 1 to 8:
+    march and pull 19 kills at about 80 HP a kill, neither 20 at 78, pull only 22 at 72, march only 15 kills in 5
+    runs at 65. The four sit within the noise; this copy of the gang costs 65 to 80 HP a kill where the live split
+    cost about 249.
+  - `FOLLOW=1` from (3150, 3560), 110 tiles away, past the gang's single-way post: 19 of 24 at about 60 HP a kill
+    (`extra:squad-4-gang-follow-x1`; seeds 1 to 4: 38, seeds 5 to 8: 84). Seeds 1 to 4 only: straight in, 81;
+    gathered once 10 tiles short, 48.
 - **Following the gang.** The gang roams (the first live pilot's feed showed it 250 tiles from its post). `FOLLOW=1`
-  moves the squad's post, once no target has been in view for 30 ticks, to the nearest multi-way tile within 24 tiles
-  of the targets that the world feed shows, at Wilderness level `MAX_WILD` or less (`meetTile`, the feed through
+  marches the squad, once no target has been in view for 30 ticks, to the nearest multi-way tile within 24 tiles of
+  the targets that the world feed shows, at Wilderness level `MAX_WILD` or less (`meetTile`, the feed through
   scripts/pk-roam.ts `Radar`). On the bench, which serves no world feed, the bench gang's own tiles fill the radar.
-  Four of ours starting at (3150, 3560), 110 tiles away (`extra:squad-4-gang-follow-x1`, seeds 1 to 4): 11 of 12 gang
-  accounts died with no death of ours. Going straight in, the accounts came one at a time and lost about 81 HP a
-  kill; gathering first on a tile `GATHER` (default 10) tiles short of the meeting tile and going in together when
-  every account stands within 3 tiles of it, about 48 HP a kill.
 - **The freeze matters most to a small squad.** Three of ours in rune chainbody (the kit of the first live pilot)
   in the multi-way zone, seeds 1 to 8: with no freeze runes 25 kills of 48 and 7 of 16 groups, 74 HP a kill
   (`extra:team-3v3-gang-chain-west-x2`); with Bind runes 44 kills and 14 groups, 64 HP a kill

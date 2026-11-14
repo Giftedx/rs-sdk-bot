@@ -11,14 +11,15 @@
 //   TARGETS=goondelf,ligma,sugma  POST=3067,3640  MAX_MINUTES=30  MAX_KILLS=0 (no limit)  SQUAD_PROFILE=gang-hunter
 //   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null}
 //   PICKUP=1  TRIPS=10 (bank trips an account may make)  ALLOW_SINGLE=1 (a single-way post)
-//   FOLLOW=1 (move the post to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30, GATHER=10)
+//   FOLLOW=1 (march to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30)  MARCH=1 STEP=12 (move together)
+//   PULL=1 (attacked on a single-way tile with a multi-way post: walk on into multi-way)
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { fightPlayer, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
+import { attackable, fightPlayer, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { EDGEVILLE_BANK } from './pk-hunt';
 import { connectRadar, kitFrom, Radar } from './pk-roam';
@@ -46,18 +47,46 @@ export function meetTile(targets: readonly { x: number; z: number }[], maxWild: 
     return best;
 }
 
-export type SquadStats = { name: string; fights: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number };
+// Where a march into a multi-way post enters multi-way: the multi-way tile nearest `from` that is no farther from `to`
+// than `from` is (null when `from` is multi-way already or none is within `radius`). Single-way tiles on the way split a
+// squad into one fight a pair (the first live pilot met the gang at (3072, 3610), one tile east of the zone).
+export function multiEntry(from: { x: number; z: number }, to: { x: number; z: number }, radius = 150, multi: (x: number, z: number) => boolean = isMulti): { x: number; z: number } | null {
+    const fx = Math.round(from.x), fz = Math.round(from.z);
+    if (multi(fx, fz)) return null;
+    const far = Math.max(Math.abs(to.x - fx), Math.abs(to.z - fz));
+    for (let d = 1; d <= radius; d++) {
+        let best: { x: number; z: number } | null = null, bestTo = Infinity;
+        for (let dx = -d; dx <= d; dx++) for (const dz of Math.abs(dx) === d ? Array.from({ length: 2 * d + 1 }, (_, i) => i - d) : [-d, d]) {
+            // Closest to the post, then the shortest walk from `from` (a tie on steps alone ran along the zone's edge).
+            const x = fx + dx, z = fz + dz, toGap = Math.max(Math.abs(to.x - x), Math.abs(to.z - z)) + (Math.abs(dx) + Math.abs(dz)) / 1000;
+            if (toGap <= far + 1 && toGap < bestTo && wildernessLevel(z) > 0 && multi(x, z)) { best = { x, z }; bestTo = toGap; }
+        }
+        if (best) return best;
+    }
+    return null;
+}
+
+// The steps of a march from `from` to `to`: a tile each `step` tiles on the straight line, `to` last.
+export function marchRoute(from: { x: number; z: number }, to: { x: number; z: number }, step: number): { x: number; z: number }[] {
+    const span = Math.max(Math.abs(to.x - from.x), Math.abs(to.z - from.z)), n = Math.max(1, Math.ceil(span / Math.max(1, step)));
+    return Array.from({ length: n }, (_, i) => i === n - 1 ? { ...to } : { x: Math.round(from.x + (to.x - from.x) * (i + 1) / n), z: Math.round(from.z + (to.z - from.z) * (i + 1) / n) });
+}
+
+export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number };
 
 // The target of the squad: the target account in view with the lowest health bar, the nearest on a tie; one the game
 // refused leaves the pick for 8 ticks.
-export function squadTarget<P extends { name: string; index: number; distance: number }>(view: readonly P[], targets: ReadonlySet<string>, health: (p: P) => number, skip: ReadonlySet<string> = new Set()): P | undefined {
-    return view.filter(p => targets.has(p.name.toLowerCase()) && !skip.has(p.name.toLowerCase())).sort((a, b) => health(a) - health(b) || a.distance - b.distance)[0];
+// `me`: the squad account; a target is taken only where the game lets it attack (both in the Wilderness, the combat gap
+// within the shallower level: pk.ts attackable). A target that walked out of the Wilderness held the squad at its edge.
+export function squadTarget<P extends { name: string; index: number; distance: number; z?: number; combatLevel?: number }>(view: readonly P[], targets: ReadonlySet<string>, health: (p: P) => number, skip: ReadonlySet<string> = new Set(), me?: { z: number; combatLevel: number }): P | undefined {
+    return view.filter(p => targets.has(p.name.toLowerCase()) && !skip.has(p.name.toLowerCase()) && (!me || p.z === undefined || attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })))
+        .sort((a, b) => health(a) - health(b) || a.distance - b.distance)[0];
 }
 
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
-export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean;
+export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
     trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void }): Promise<SquadStats> {
-    const stats: SquadStats = { name: s.name, fights: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0 };
+    const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player, life0 = st?.player?.lifeId;
     const pack = packOf(st?.inventory ?? [], st?.equipment ?? []), kit = kitFrom(st?.equipment ?? [], st?.inventory ?? []);
     const ammo = (st?.equipment ?? []).find(e => /arrow|bolt/i.test(e.name))?.id;
@@ -65,7 +94,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const trip = bankTrip(EDGEVILLE_BANK, o.post, pack, kit, o.stopped);
     const walker = await sessionWalker(s);
     const going = () => !o.stopped() && s.tick() < o.deadline && o.killsLeft();
-    let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100;
+    let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
         const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
@@ -98,14 +127,38 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             for (const [k, until] of skip) if (until <= now) skip.delete(k);
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
-            const target = squadTarget(view, o.targets, health, new Set(skip.keys()));
+            const self = { z: p.worldZ, combatLevel: p.combatLevel };
+            const target = squadTarget(view, o.targets, health, new Set(skip.keys()), self);
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
                 // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
                 if (s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
                 // Back to the post between fights.
-                if (Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 1 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health) });
-                else if (!await nextTick(s)) break;
+                // At least a tick each pass: a walk to a step that cannot be reached fails at once.
+                if (Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
+                if (!await nextTick(s)) break;
+                continue;
+            }
+            // Pull: on a single-way tile with the post multi-way (and within 40 tiles), walk on into multi-way and eat on the
+            // way instead of fighting there; on a single-way tile the game lets one attacker at a time on each account,
+            // so the squad cannot concentrate.
+            // The pull aims at the march's goal (`aim`), not its current step, which can be a single-way tile.
+            const aim = o.aim ?? o.post;
+            // At most 20 ticks of pull at a stretch: an account that cannot get into multi-way (stood on, blocked) fights
+            // where it is; one stuck pulling took hits without an answer for hundreds of ticks.
+            if (isMulti(p.worldX, p.worldZ)) pullSince = -1;
+            if (o.pull && !isMulti(p.worldX, p.worldZ) && isMulti(aim.x, aim.z) && Math.max(Math.abs(p.worldX - aim.x), Math.abs(p.worldZ - aim.z)) <= 40
+                && (pullSince < 0 || s.tick() - pullSince < 20)) {
+                if (pullSince < 0) pullSince = s.tick();
+                const low = () => { const q = me(); return !!q && q.hp < q.maxHp * 0.6; };
+                if (low()) {
+                    const food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))), op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+                    if (food && op) { await s.sdk.sendUseItem(food.slot, op.opIndex); if (!await nextTick(s)) break; }
+                }
+                stats.pulls++;
+                await walkPath(walker, [{ ...aim, tol: 2 }], { maxTicks: 30, idleMs: 9000, stop: () => !going() || low() || (() => { const q = me(); return !!q && isMulti(q.worldX, q.worldZ); })() });
+                // At least a tick each pass: a walk that stops at once (low HP with no food) must not spin the loop.
+                if (!await nextTick(s)) break;
                 continue;
             }
             const began = s.tick();
@@ -173,19 +226,55 @@ if (import.meta.main) {
     const optsJson = get('SQUAD_OPTS', JSON.stringify(SQUAD_OPTS));
     const log = (l: string) => console.log(l);
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
-    const gangRuns = gang.map(async g => {
+    // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
+    // pilot's walk-in, in place of the nearest of ours.
+    const split = env.SQUAD_GANG_SPLIT === '1';
+    const gangRuns = gang.map(async (g, gi) => {
+        const mine = squad[gi % squad.length]!.name.toLowerCase();
         const opts = sparOptions('ganker-live', env.SPAR_B_OPTS, kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200);
         while (!stopped() && g.tick() < deadline) {
             const me = g.sdk.getState()?.player;
             if (!me || wildernessLevel(me.worldZ) === 0) break;
-            const prey = (g.sdk.getState()?.nearbyPlayers ?? []).filter(q => ours.some(n => n.toLowerCase() === q.name.toLowerCase())).sort((a, b) => a.distance - b.distance)[0];
-            if (!prey) { if (!await nextTick(g)) break; continue; }
+            const seenOurs = (g.sdk.getState()?.nearbyPlayers ?? []).filter(q => ours.some(n => n.toLowerCase() === q.name.toLowerCase())).sort((a, b) => a.distance - b.distance);
+            const prey = split ? seenOurs.find(q => q.name.toLowerCase() === mine) ?? seenOurs[0] : seenOurs[0];
+            if (!prey) {
+                // SQUAD_GANG_HUNT=1: like the live gang, which the world feed takes to its target (it met the first live
+                // pilot 30 tiles from the post), it walks toward the nearest of ours in the Wilderness.
+                if (env.SQUAD_GANG_HUNT === '1' && g.tick() % 4 === 0) {
+                    const far = (split ? [squad[gi % squad.length]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
+                        .sort((a, b) => Math.max(Math.abs(a.worldX - me.worldX), Math.abs(a.worldZ - me.worldZ)) - Math.max(Math.abs(b.worldX - me.worldX), Math.abs(b.worldZ - me.worldZ)))[0];
+                    if (far) void g.sdk.sendWalk(far.worldX, far.worldZ);
+                }
+                if (!await nextTick(g)) break; continue;
+            }
             const r = await fightPlayer(g, prey.name, { ...opts, allies: gangNames.filter(n => n !== g.name).map(n => n.toLowerCase()), cap: Math.max(1, deadline - g.tick()), stop: stopped });
             if (r.outcome === 'died' || r.outcome === 'escaped') break;
             if (!await nextTick(g)) break;
         }
     });
-    // FOLLOW=1: with no target in view of any of ours for FOLLOW_WAIT ticks (default 30), the post moves to the
+    // The march: the post moves in steps of STEP tiles (default 12) toward its goal, and on to the next step only when
+    // every account stands within 4 tiles of the step's tile, or after 60 ticks there. The squad then meets an attacker
+    // together: in the first live pilot the gang met the accounts strung out on the walk from Edgeville (about 250 HP
+    // lost a kill), and on the bench a squad that went straight to the gang lost about 81 HP a kill, 48 marching.
+    const step = Number(get('STEP', '12')), aim = { ...post };
+    let route: { x: number; z: number }[] = [], stepAt = 0;
+    const centroid = () => { const ps = squad.map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q); return { x: ps.reduce((n, q) => n + q.worldX, 0) / Math.max(1, ps.length), z: ps.reduce((n, q) => n + q.worldZ, 0) / Math.max(1, ps.length) }; };
+    const march = (to: { x: number; z: number }) => {
+        aim.x = to.x; aim.z = to.z;
+        const from = centroid(), entry = isMulti(to.x, to.z) ? multiEntry(from, to) : null;
+        route = entry ? [...marchRoute(from, entry, step), ...marchRoute(entry, to, step)] : marchRoute(from, to, step);
+        const next = route.shift() ?? to;
+        post.x = next.x; post.z = next.z; stepAt = squad[0]!.tick();
+        log(`SQUAD march to ${to.x},${to.z} in ${route.length + 1} steps`);
+    };
+    squad[0]!.onTick(() => {
+        if (!route.length) return;
+        const close = squad.every(q => { const p = q.sdk.getState()?.player; return !p || wildernessLevel(p.worldZ) === 0 && wildernessLevel(post.z) > 0 ? true : !p || Math.max(Math.abs(p.worldX - post.x), Math.abs(p.worldZ - post.z)) <= 4; });
+        if (!close && squad[0]!.tick() - stepAt < 60) return;
+        const next = route.shift()!;
+        post.x = next.x; post.z = next.z; stepAt = squad[0]!.tick();
+    });
+    // FOLLOW=1: with no target in view of any of ours for FOLLOW_WAIT ticks (default 30), the squad marches to the
     // meeting tile by the targets that the world feed shows (meetTile), at Wilderness level MAX_WILD or less (default 20).
     let closeRadar: (() => void) | undefined;
     if (get('FOLLOW', '0') === '1') {
@@ -195,34 +284,24 @@ if (import.meta.main) {
         if (gang.length) squad[0]!.onTick(() => radar.accept({ t: 'roster', k: squad[0]!.tick(), p: gang.flatMap((g, i) => { const q = g.sdk.getState()?.player; return q ? [[i, g.name, q.worldX, q.worldZ, 0, q.combatLevel] as [number, string, number, number, number, number]] : []; }) }));
         else closeRadar = connectRadar(accountServer(squad[0]!.name), radar);
         let unseen = 0, goal: { x: number; z: number } | null = null;
-        const gather = Number(get('GATHER', '10'));
         squad[0]!.onTick(() => {
-            // Gathered: every account within 3 tiles of the staging tile, so the post goes on to the meeting tile.
-            if (goal && (post.x !== goal.x || post.z !== goal.z) && squad.every(q => { const p = q.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - post.x), Math.abs(p.worldZ - post.z)) <= 3; })) {
-                log(`SQUAD gathered at ${post.x},${post.z}: in to ${goal.x},${goal.z}`); post.x = goal.x; post.z = goal.z;
-            }
             const seen = squad.some(s => (s.sdk.getState()?.nearbyPlayers ?? []).some(q => targets.has(q.name.toLowerCase())));
             unseen = seen ? 0 : unseen + 1;
-            if (process.env.FOLLOW_TRACE === '1' && squad[0]!.tick() % 100 === 0) log(`SQUAD follow trace unseen=${unseen} fresh=${radar.fresh()} tracks=${radar.tracks.size} targets=${[...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase())).map(t => `${t.name} ${t.x},${t.z}`).join(' ')}`);
+            if (process.env.FOLLOW_TRACE === '1' && squad[0]!.tick() % 100 === 0) log(`SQUAD follow trace unseen=${unseen} fresh=${radar.fresh()} tracks=${radar.tracks.size}`);
             if (unseen < wait || !radar.fresh() || squad[0]!.tick() % 10 !== 0) return;
             const where = [...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase()) && wildernessLevel(t.z) > 0);
             const tile = meetTile(where, maxWild);
-            if (!tile || Math.max(Math.abs(tile.x - post.x), Math.abs(tile.z - post.z)) <= 4 || (goal && goal.x === tile.x && goal.z === tile.z)) return;
-            // Gather first: a staging tile `GATHER` tiles (default 10) short of the meeting tile on the squad's side, so
-            // the accounts go in together; one that arrives alone takes the gang on its own.
-            const mine = squad.map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q);
-            const mx = mine.reduce((n, q) => n + q.worldX, 0) / Math.max(1, mine.length), mz = mine.reduce((n, q) => n + q.worldZ, 0) / Math.max(1, mine.length);
-            const span = Math.max(Math.abs(mx - tile.x), Math.abs(mz - tile.z)), back = Math.min(gather, span);
+            if (!tile || (goal && Math.max(Math.abs(goal.x - tile.x), Math.abs(goal.z - tile.z)) <= 4)) return;
             goal = tile;
-            const stage = span > 0 ? { x: Math.round(tile.x + (mx - tile.x) * back / span), z: Math.round(tile.z + (mz - tile.z) * back / span) } : tile;
-            log(`SQUAD post moves to ${stage.x},${stage.z}, then ${tile.x},${tile.z} (targets at ${where.map(t => `${t.name} ${t.x},${t.z}`).join(' ')})`);
-            post.x = stage.x; post.z = stage.z;
+            log(`SQUAD follow: targets at ${where.map(t => `${t.name} ${t.x},${t.z}`).join(' ')}`);
+            march(tile);
         });
     }
     // Our accounts walk to the post first.
-    await Promise.all(squad.map(async s => { const r = await walkPath(await sessionWalker(s), [{ ...post, tol: 2 }], { maxTicks: 600, idleMs: 9000, stop: stopped }); if (!r.ok) log(`[${s.name}] SQUAD no walk to the post: ${r.detail ?? 'stopped'}`); }));
+    // Far from the post (MARCH=1, the default): march there; hold() walks each account to the post's current step.
+    { const c = centroid(); if (get('MARCH', '1') === '1' && Math.max(Math.abs(c.x - post.x), Math.abs(c.z - post.z)) > step) march({ ...post }); }
     const results = await Promise.all(squad.map(s => hold(s, { targets, post, options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []), 1200),
-        allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', trips: Number(get('TRIPS', '10')), deadline,
+        allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), deadline,
         stopped: () => stopped() || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); } })));
     await Promise.all(gangRuns);
     closeRadar?.();
