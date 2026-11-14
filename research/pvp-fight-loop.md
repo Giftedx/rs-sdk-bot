@@ -1195,9 +1195,14 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
 - **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
   (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
   (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at
-  login) and `SPAR_B_OPTS={"protectItem":false}`, our account with `SPAR_PICKUP=1` took the dragon dagger(p) after 7
+  login) and `SPAR_B_OPTS={"protectItem":false}`, our account with `SPAR_PICKUP=1` took the dragon dagger(p) after 8
   of 8 kills (`extra:gang-live-cheap-rune-nopot-solo-skull-x2`, seeds 1 to 4): 24,000 coins at shop value, about 16
-  times the supplies of the kill, and the weapon of a PK account. A gang with Protect Item keeps the dagger and drops a
+  times the supplies of the kill, and the weapon of a PK account. Four of ours in the multi-way zone
+  (`extra:team-4v3-gang-skull-west-x2`, `scripts/pk-team.ts` `SPAR_PICKUP=1`, seeds 1 to 8) killed 44 of 48 with no
+  death, 36 HP a kill, and took 40 daggers and 49 sharks. The pickup takes the dearest item first and eats a shark to
+  free a slot (the rune kit fills 27 of the 28): taking the nearest first, a shark filled the pack and the dagger
+  stayed (31 of 48). It runs on after the last kill, which ends the meeting, and after any death of the account's
+  target, since the loop can stop on the death before the kill message comes. A gang with Protect Item keeps the dagger and drops a
   hat, two robes (72 coins) and what food it has left. Whether the gang uses Protect Item does not show (no head icon).
 
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a

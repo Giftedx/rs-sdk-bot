@@ -11,8 +11,9 @@ import { fightPlayer, nextTick, observePlayer, wildernessLevel, type FightOption
 import { TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
+import { pickUp, PICKUP_ITEMS } from './pk-gang';
 
-export type TeamResult = { winner: 'a' | 'b' | 'draw'; ticks: number; standing: { a: number; b: number }; died: { a: number; b: number }; attacks: { a: number; b: number }; taken: { a: number; b: number } };
+export type TeamResult = { winner: 'a' | 'b' | 'draw'; ticks: number; standing: { a: number; b: number }; died: { a: number; b: number }; attacks: { a: number; b: number }; taken: { a: number; b: number }; picked?: Record<string, number> };
 
 // An account died when it has a new life id or stands at the Lumbridge spawn; it is out when it died or left the
 // Wilderness.
@@ -38,17 +39,18 @@ export function pickEnemy<F, X extends { f: F; p?: { distance: number } }>(live:
 // optionsA and optionsB: one side's options, or a function of the member's place on its side (per-member kits).
 type SideOptions = FightOptions | ((member: number) => FightOptions);
 export async function team(a: readonly Session[], b: readonly Session[], optionsA: SideOptions, optionsB: SideOptions, cap: number,
-    log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false, picks: { a: TeamPick; b: TeamPick } = { a: 'low', b: 'low' }, wait = 100): Promise<TeamResult> {
+    log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false, picks: { a: TeamPick; b: TeamPick } = { a: 'low', b: 'low' }, wait = 100, pickup?: ReadonlySet<number>, pickupRadius = 3): Promise<TeamResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if ((await Promise.all([...a, ...b].map(s => nextTick(s)))).some(t => !t)) break;
     const lives = new Map([...a, ...b].map(s => [s, s.sdk.getState()?.player?.lifeId] as const));
     const isOut = (s: Session) => out(s, lives.get(s));
-    const start = a[0]!.tick(), attacks = { a: 0, b: 0 }, taken = { a: 0, b: 0 };
+    const start = a[0]!.tick(), attacks = { a: 0, b: 0 }, taken = { a: 0, b: 0 }, picked: Record<string, number> = {};
     // HP lost by each side: the sum of each account's drops, read each tick.
     const lastHp = new Map<Session, number>();
     const unwatch = [...a, ...b].map(s => s.onTick(() => { const hp = s.sdk.getState()?.player?.hp; if (hp === undefined) return; const was = lastHp.get(s); if (was !== undefined && hp < was) taken[a.includes(s) ? 'a' : 'b'] += was - hp; lastHp.set(s, hp); }));
     let over = false;
-    // A side whose accounts all stopped (each saw no enemy for `wait` ticks) ends the meeting.
+    // A side whose accounts are all out or stopped (each saw no enemy for `wait` ticks) ends the meeting. An account
+    // whose fight loop ends for another reason (it escaped, it fled) is not stopped: a runner is still chased.
     const stopped = new Set<Session>();
     const ended = () => over || halt() || a.every(isOut) || b.every(isOut) || a[0]!.tick() - start >= cap || a.every(s => isOut(s) || stopped.has(s)) || b.every(s => isOut(s) || stopped.has(s));
     const side = (mine: readonly Session[], foes: readonly Session[], sideOptions: SideOptions, key: 'a' | 'b') => mine.map(async (s, member) => {
@@ -68,17 +70,21 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
             const pick = pickEnemy(live, foes[member], picks[key], health);
             // No enemy in view for SPAR_TEAM_WAIT ticks (default 100): the enemies left are away, as the gang meeting's `away`.
-            if (!pick) { if (++unseen > wait || !await nextTick(s)) return; continue; }
+            if (!pick) { if (++unseen > wait) { stopped.add(s); return; } if (!await nextTick(s)) return; continue; }
             unseen = 0;
             const began = s.tick();
             const r = await fightPlayer(s, pick.f.name, { ...options, allies, cap: Math.max(1, cap - (s.tick() - start)), stop: () => ended() || isOut(pick.f) || refusedAt > began,
                 log: l => log(`[${s.name}] ${l}`) });
             if (refusedAt > began) skip.set(pick.f, s.tick() + 8);
+            // `pickup`: after its kill the account takes the wanted stacks within `pickupRadius` tiles (SPAR_PICKUP_RADIUS,
+            // default 3; scripts/pk-gang.ts pickUp). It runs on after the meeting ends: the last kill ends it.
+            // A dead target counts as a kill too: the loop can stop on its death before the kill message comes.
+            if ((r.outcome === 'kill' || dead(pick.f, lives.get(pick.f))) && pickup && key === 'a') for (const [id, n] of Object.entries(await pickUp(s, pickup, { radius: pickupRadius, maxTicks: 30, wait: 6, stop: () => over || halt() }))) picked[id] = (picked[id] ?? 0) + n;
             attacks[key] += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
             if (r.outcome === 'died' || r.outcome === 'escaped' || r.outcome === 'session ended') return;
             if (!await nextTick(s)) return;
         }
-        } finally { unwatchRefusals(); stopped.add(s); }
+        } finally { unwatchRefusals(); }
     });
     await Promise.all([...side(a, b, optionsA, 'a'), ...side(b, a, optionsB, 'b')]);
     over = true;
@@ -86,7 +92,7 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     const standing = { a: a.filter(s => !isOut(s)).length, b: b.filter(s => !isOut(s)).length };
     const died = { a: a.filter(s => dead(s, lives.get(s))).length, b: b.filter(s => dead(s, lives.get(s))).length };
     const winner = standing.a > 0 && standing.b === 0 ? 'a' : standing.b > 0 && standing.a === 0 ? 'b' : 'draw';
-    return { winner, ticks: a[0]!.tick() - start, standing, died, attacks, taken };
+    return { winner, ticks: a[0]!.tick() - start, standing, died, attacks, taken, ...(pickup ? { picked } : {}) };
 }
 
 if (import.meta.main) {
@@ -118,10 +124,10 @@ if (import.meta.main) {
     // SPAR_A_PICK, SPAR_B_PICK: low (default), near or pair.
     const pickOf = (v?: string): TeamPick => (v === 'near' || v === 'pair' ? v : 'low');
     const results = await Promise.all(groups.map((g, i) => team(g.slice(0, size), g.slice(size), options(false, i), options(true, i), cap, undefined, () => halted !== undefined,
-        { a: pickOf(env.SPAR_A_PICK), b: pickOf(env.SPAR_B_PICK) }, Number(env.SPAR_TEAM_WAIT ?? 100))));
+        { a: pickOf(env.SPAR_A_PICK), b: pickOf(env.SPAR_B_PICK) }, Number(env.SPAR_TEAM_WAIT ?? 100), env.SPAR_PICKUP === '1' ? new Set(PICKUP_ITEMS) : undefined, Number(env.SPAR_PICKUP_RADIUS ?? 3))));
     for (const r of results) console.log(`TEAM ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
     const wins = results.filter(r => r.winner === 'a').length, losses = results.filter(r => r.winner === 'b').length;
     const ok = halted === undefined && results.every(r => r.attacks.a > 0 && r.attacks.b > 0);
     await finish(groups.flat(), ok, `team groups=${results.length} size=${size} wins=${wins} losses=${losses} draws=${results.length - wins - losses} ticks=${Math.max(0, ...results.map(r => r.ticks))} a=${nameA} b=${nameB} `
-        + `standing=${results.map(r => `${r.standing.a}-${r.standing.b}`).join(',')} diedA=${results.reduce((n, r) => n + r.died.a, 0)} diedB=${results.reduce((n, r) => n + r.died.b, 0)} takenA=${results.reduce((n, r) => n + r.taken.a, 0)}${halted ? ` halted=${halted}` : ''}`);
+        + `standing=${results.map(r => `${r.standing.a}-${r.standing.b}`).join(',')} diedA=${results.reduce((n, r) => n + r.died.a, 0)} diedB=${results.reduce((n, r) => n + r.died.b, 0)} takenA=${results.reduce((n, r) => n + r.taken.a, 0)} picked=${results.reduce((n, r) => n + Object.values(r.picked ?? {}).reduce((x, c) => x + c, 0), 0)}${halted ? ` halted=${halted}` : ''}`);
 }

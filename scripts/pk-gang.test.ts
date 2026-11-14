@@ -164,6 +164,7 @@ test('the gang that holds its protect prayer is the gang with one more option, a
 test('plannedPickups takes the wanted stacks within the radius, nearest first', () => {
     const g = (id: number, distance: number) => ({ id, count: 3, x: 3078 + distance, z: 3640, distance });
     const ids = new Set([884, ...PICKUP_ITEMS]);
-    expect(plannedPickups([g(884, 5), g(526, 1), g(1231, 2), g(884, 15)], ids, 12).map(p => [p.id, p.distance])).toEqual([[1231, 2], [884, 5]]);
+    expect(plannedPickups([g(884, 5), g(526, 1), g(385, 1), g(1231, 2), g(884, 15)], ids, 12).map(p => [p.id, p.distance])).toEqual([[884, 5], [1231, 2], [385, 1]]);
+    expect(plannedPickups([g(385, 1), g(1231, 2)], new Set(PICKUP_ITEMS), 12).map(p => p.id)).toEqual([1231, 385]);
     expect(PICKUP_ITEMS).toContain(itemId('dragon_dagger_p'));
 });

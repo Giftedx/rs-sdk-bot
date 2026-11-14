@@ -274,12 +274,13 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
 // The counts of several meetings that ran at once.
 // What an account of ours takes back after a meeting: a gang account's dagger (it drops when the account dies with
 // no Protect Item: death.rs2 pvp_death_lose_items keeps none on a skulled account) and sharks.
-export const PICKUP_ITEMS = [ITEMS.shark as number, 1215, 1231];
-// The stacks of `ids` within `radius` tiles that the account can stand on, nearest first; 4 arrows in 5 land on the
-// tile of the player they hit (pvp_ranged.rs2 ranged_dropammo_pvp, ^dropammo_chance 5). Returns the count taken of
-// each item id. A full pack takes a stackable item only.
+// Dearest first: a pickup takes them in this order.
+export const PICKUP_ITEMS = [1215, 1231, ITEMS.shark as number];
+// The stacks of `ids` within `radius` tiles, in the order of `ids` (dearest first), nearest first within an id; 4
+// arrows in 5 land on the tile of the player they hit (pvp_ranged.rs2 ranged_dropammo_pvp, ^dropammo_chance 5).
 export function plannedPickups<G extends { id: number; count: number; x: number; z: number; distance: number }>(ground: readonly G[], ids: ReadonlySet<number>, radius: number): G[] {
-    return ground.filter(g => ids.has(g.id) && g.distance <= radius).sort((a, b) => a.distance - b.distance);
+    const rank = new Map([...ids].map((id, i) => [id, i]));
+    return ground.filter(g => ids.has(g.id) && g.distance <= radius).sort((a, b) => rank.get(a.id)! - rank.get(b.id)! || a.distance - b.distance);
 }
 // `wait`: ticks to wait for a first stack to show (a death drops its items 4 ticks after the kill message: death.rs2
 // player_death p_delay 1 and 3).
@@ -288,9 +289,12 @@ export async function pickUp(a: Session, ids: ReadonlySet<number>, o: { radius?:
     if (process.env.PICKUP_TRACE === '1') { const g = a.sdk.getState()?.groundItems ?? [], me = a.sdk.getState()?.player; console.log(`PICKUP at ${me?.worldX},${me?.worldZ} ground ${g.length}: ${g.slice(0, 12).map(i => `${i.id}x${i.count}@${i.x},${i.z}d${i.distance}`).join(' ')}`); }
     while (a.tick() - start < (o.maxTicks ?? 200) && !o.stop?.()) {
         const inv = a.sdk.getInventory(), full = inv.length >= 28;
+        const edible = inv.find(i => i.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
+        // A full pack takes a stack it holds already, or eats a food for an item that is no food (`ids` order: dearer).
         const next = plannedPickups((a.sdk.getState()?.groundItems ?? []) as { id: number; count: number; x: number; z: number; distance: number; name: string }[], ids, o.radius ?? 12)
-            .find(g => !tried.has(`${g.id}@${g.x},${g.z}`) && (!full || inv.some(i => i.id === g.id && i.count > 1)));
+            .find(g => !tried.has(`${g.id}@${g.x},${g.z}`) && (!full || inv.some(i => i.id === g.id && i.count > 1) || (!!edible && edible.id !== g.id)));
         if (!next) { if (a.tick() - start < (o.wait ?? 0) && await nextTick(a)) continue; break; }
+        if (full && edible && !inv.some(i => i.id === next.id && i.count > 1)) { const op = edible.optionsWithIndex.find(x => /^eat$/i.test(x.text)); if (op) { await a.sdk.sendUseItem(edible.slot, op.opIndex); await nextTick(a); } }
         tried.add(`${next.id}@${next.x},${next.z}`);
         const r = await a.bot.pickupItem(next as never);
         if (r.success) got[next.id] = (got[next.id] ?? 0) + next.count;
