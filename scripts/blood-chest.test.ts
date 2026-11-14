@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {ARRIVAL,BANK,BLOOD_RUNE,CHEST,CHESTS,COINS,DOOR,EXIT_TICKS,LADDER_DOWN,LADDER_FOOT,LADDER_UP,PICK_LIMIT,RESPAWN_TICKS,STAGE,TRAVEL_TICKS,bloodOptions,bloodRefusal,bloodZone,chestEffect,failureResult,runBloodChest,walkBloodDungeon,type BloodDeps} from './blood-chest';
+import {ARRIVAL,BANK,BLOOD_RUNE,CHEST,CHESTS,COINS,DOOR,EXIT_TICKS,LADDER_DOWN,LADDER_FOOT,LADDER_UP,PICK_LIMIT,REGEN_TICKS,RESPAWN_TICKS,STAGE,TRAVEL_TICKS,bloodOptions,bloodRefusal,bloodZone,chestEffect,failureResult,runBloodChest,walkBloodDungeon,type BloodDeps} from './blood-chest';
 import type {PathDeps} from '../packages/core/src/walk';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 
@@ -22,7 +22,7 @@ test('stranded dungeon step 2574,9742 reaches the chest stage despite an empty S
  expect(await stuck).toBe(false);expect(tick).toBeLessThanOrEqual(151);expect(listeners.size).toBe(0);
 });
 // A small model of the native route: door, ladders, chests with respawn, bank.
-function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number;base?:number;lobster?:number;bankLobster?:number}={}){
+function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number;base?:number;lobster?:number;bankLobster?:number;regen?:boolean}={}){
  const w={x:p.x??ARRIVAL.x,z:p.z??ARRIVAL.z,level:0,tick:0,xp:1000,hp:p.hp??56,base:p.base??56,runes:0,coins:p.coins??0,cake:p.cake??3,lobster:p.lobster??0,bankCake:p.bankCake??0,bankLobster:p.bankLobster??0,lifeId:1,
   bankRunes:0,bankCoins:0,bankCalls:0,fails:p.pickAfter??0,chestUntil:CHESTS.map(()=>0),acts:[] as {id:number;option:number;x:number;z:number;tick:number}[],
   messages:[] as {type:number;text:string;sender:string;tick:number}[],stopped:false,surfaceWalks:[] as string[],dungeonWalks:[] as string[],travels:[] as string[]};
@@ -32,7 +32,8 @@ function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:num
   gameMessages:w.messages,nearbyNpcs:[],
   nearbyLocs:[{id:DOOR.id,x:DOOR.x,z:DOOR.z,level:0,optionsWithIndex:[{text:'Open',opIndex:1},{text:'Pick Lock',opIndex:2}]},
    ...CHESTS.filter((_,i)=>w.chestUntil[i]!<=w.tick).map(c=>({id:CHEST,x:c.x,z:c.z,level:0,optionsWithIndex:[{text:'Open',opIndex:1},{text:'Search for traps',opIndex:2}]}))]} as unknown as BotWorldState);
- const step=async()=>{w.tick++;if(w.tick===p.hitAt)w.hp=20;};
+ // The server's health_regen timer: 1 Hitpoint each REGEN_TICKS from login.
+ const step=async()=>{w.tick++;if(w.tick===p.hitAt)w.hp=20;if(p.regen&&w.tick%REGEN_TICKS===0)w.hp=Math.min(w.base,w.hp+1);};
  const d:BloodDeps={state,tick:()=>w.tick,stopped:()=>w.stopped,
   walkSurface:async(x,z)=>{w.surfaceWalks.push(`${x},${z}`);w.x=x;w.z=z;w.tick+=20;return true;},
   travel:async(x,z)=>{w.travels.push(`${x},${z}`);w.x=x;w.z=z;w.tick+=600;return true;},
@@ -209,6 +210,17 @@ test('a low Hitpoints surface start with no food in the bank ends at the hp stop
  expect(r).toMatchObject({ok:false,stop:'hp',targetMet:false,conserved:true,loots:0,meals:0,startRunes:6,startCoins:40,bankedRunes:6,bankedCoins:40});
  expect(w.acts).toEqual([]);
  expect(w.runes).toBe(0);expect(w.coins).toBe(0);expect(w.bankRunes).toBe(6);expect(w.bankCoins).toBe(40);
+});
+// CoinCock: Hitpoints 34 of base 47 beside the bank, no food in the pack or the bank, a 4000 tick cap.
+test('a surface start below the fed level with no food waits for regeneration, then loots',async()=>{
+ const {w,d}=world({hp:34,base:47,cake:0,x:2618,z:3332,regen:true});
+ const r=await runBloodChest(d,{...options,cap:4000});
+ expect(r).toMatchObject({ok:true,stop:'target',targetMet:true,conserved:true,loots:2,meals:0});
+ expect(w.hp).toBeGreaterThanOrEqual(Math.ceil(47*0.75)-2);
+ // A gap that the cap cannot cover still ends at the hp stop at once.
+ const short=world({hp:15,base:39,cake:0,x:2618,z:3332,regen:true});
+ expect(await runBloodChest(short.d,options)).toMatchObject({ok:false,stop:'hp',loots:0});
+ expect(short.w.tick).toBeLessThan(REGEN_TICKS);
 });
 test('food with no observed effect fails the run',async()=>{
  const {d}=world({hp:20});
