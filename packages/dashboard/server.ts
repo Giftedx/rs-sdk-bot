@@ -14,13 +14,16 @@ import { cpus, freemem, totalmem } from 'node:os';
 import { createHash } from 'node:crypto';
 import { accountJobRows, collectionState, operationState, isLoopback, effectiveJob, productionGoal, boundedOperation, capacityState, hostStopNativeProof, productionReview, type NativeProof } from './collection';
 import {requestEvidence,gateView} from './evidence';
-import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
+import {goalPlan,goalProgress,questPointObservation,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { GEAR_TARGETS } from './goal-details';
 import { deathRecap, type DeathRecap } from './death-recap';
 import { flowView, trackFlow } from './flow';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerEntry } from './viewer';
 import {coordinationView} from './coordination';
-import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
+import {dashboardStatuses,fleetSidesView,healthObservation,localDisplayNames,remoteBots,scoreboardView} from './fleet-view';
+import {buildItemPrices,expectedLootPrices,itemPrice,priceItemKey,projectItemPrices,type ItemPrices,type PriceCatalogItem,type PriceIdentity} from './item-prices';
+import {buildItemExamine,catalogueIconAliases,projectItemExamine} from './item-examine';
+import {createVaultItems,type VaultItem} from './vault-items';
 import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
@@ -29,6 +32,7 @@ import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
 import { RosterFeed } from '../core/src/roster-feed';
 import { canonicalSnapshots, ownerOfIn } from '../core/src/fleet-snapshots';
+import { marketRows, writeMarketCache, type MarketItem } from '../../scripts/market-cache';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 // DASH_ROOT lets a server in a worktree read the data of another checkout.
@@ -137,7 +141,7 @@ setTimeout(buildMap, 100);
 
 // ---------- bots ----------
 type Status = Record<string, any> & { name: string; at: number; server: string };
-type Item = { name: string; count: number };
+type Item = PriceIdentity & { name: string; count: number; unconfirmed?: true };
 // The bots folder holds every practice bot ever made, so a bot.env is read once and then again only in the scan's slice.
 const accountScan = folderScan(botsDir, { cycle: 20, listMs: 0 }), accountLive = new Map<string, boolean>();
 let accountsCache = { at: 0, names: [] as string[] };
@@ -465,7 +469,7 @@ async function refreshRanks() {
     if (ranksRefreshing) return;
     ranksRefreshing = true;
     try {
-    for (const name of [...liveAccounts(), ...remoteNames()]) {
+    for (const name of [...new Set([...liveAccounts(), ...remoteNames()])]) {
         const r = ranks.get(name);
         if (r && Date.now() - r.at < 300_000) continue;
         try {
@@ -535,7 +539,7 @@ const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'resea
 // asks through /api/player; in the background each board's 10 rivals and the strangers at our spots (about 200
 // names, 10 a minute against the 30-minute cache) are kept fresh, because the hosted page cannot reach the hiscores
 // itself (no CORS) and reads these from its published state.
-type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; name: string }[] | null; wornAt: number | null };
+type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; id:number; name: string }[] | null; wornAt: number | null };
 const lookups = new Map<string, Lookup>();
 // Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
 const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
@@ -594,14 +598,20 @@ const itemIds = new Map<string, number>(Object.entries((() => { try { return JSO
 const marketIds = new Map<string, number>();
 const iconId = (name: string) => marketIds.get(name.toLowerCase()) ?? itemIds.get(name.toLowerCase()) ?? null;
 const prices = new Map<string, number>();
+const priceCatalogue = cached<PriceCatalogItem[]>(join(root, 'knowledge', 'items.json'), JSON.parse, []);
+let itemPrices: ItemPrices = buildItemPrices([], priceCatalogue);
 const marketById = new Map<number, { name: string; ask: number | null; bid: number | null; stock: number; vwap: number | null; base: number | null }>();
 // Key supplies for the main run: the ids in research/market-2026-10-23.json.
 const KEY_SUPPLY_FILE = join(root, 'research', 'market-2026-10-23.json');
 const keySupplyIds = () => cached<number[]>(KEY_SUPPLY_FILE, t => Object.values(JSON.parse(t).items ?? {}).map((x: any) => Number(x.id)).filter(n => !isNaN(n)), []);
+// Finder loot estimates need prices even when no account currently holds the expected drop.
+const npcLootPrices = () => cached<(PriceIdentity | string)[]>(join(import.meta.dir, 'client-assets', 'npc-loot.json'), text => expectedLootPrices(JSON.parse(text)), []);
 let pricesAt = 0;
 async function refreshPrices() {
     try {
-        const nextIds = new Map<string, number>(), nextMarket = new Map<number, typeof marketById extends Map<number, infer T> ? T : never>(), nextPrices = new Map<string, number>();
+        const nextIds = new Map<string, number>(), nextMarket = new Map<number, typeof marketById extends Map<number, infer T> ? T : never>();
+        const rows: any[] = [];
+        const shared: Record<number, MarketItem> = {};
         // 100 items per page (the API refuses more); about 15 pages.
         for (let offset = 0, total = 1; offset < total; offset += 100) {
             const response = await fetch(`${DEMO}/api/market/items?limit=100&offset=${offset}`, { signal: AbortSignal.timeout(15_000) });
@@ -609,24 +619,27 @@ async function refreshPrices() {
             const j = await response.json() as { items: any[]; total: number };
             if (!Number.isSafeInteger(j.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('Invalid market page');
             total = Math.min(j.total ?? 0, 5000);
+            Object.assign(shared, marketRows(j.items));
+            rows.push(...j.items);
             // The market is thin: one trade set Bread's lastPrice to 1,000,000. Use the 7-day VWAP when the item
             // traded at least 3 times, else the shop base price.
             for (const i of j.items ?? []) {
                 if (i.id != null) { nextIds.set(String(i.name).toLowerCase(), Number(i.id)); nextMarket.set(Number(i.id), { name: i.name, ask: i.ask ?? null, bid: i.bid ?? null, stock: i.sellQuantity ?? 0, vwap: i.vwap ?? null, base: i.basePrice ?? null }); }
-                const p = i.vwap != null && (i.trades ?? 0) >= 3 ? i.vwap : i.basePrice;
-                if (p != null) nextPrices.set(String(i.name).toLowerCase(), Number(p));
             }
             await Bun.sleep(500); // 2 requests a second at most
         }
+        const nextPrices = buildItemPrices(rows, priceCatalogue);
         marketIds.clear();for (const [key,value] of nextIds) marketIds.set(key,value);
         marketById.clear();for (const [key,value] of nextMarket) marketById.set(key,value);
-        prices.clear();for (const [key,value] of nextPrices) prices.set(key,value);
+        itemPrices = nextPrices;
+        prices.clear();for (const [key,value] of Object.entries(nextPrices.byName)) if (key !== 'coins') prices.set(key,value.value);
         pricesAt = Date.now();
+        try { writeMarketCache(root, shared, pricesAt); } catch { /* Dashboard prices remain available when the cache cannot be written. */ }
     } catch { /* next round */ }
 }
 setInterval(() => void refreshPrices(), 600_000);
 void refreshPrices();
-const priceOf = (name: string) => name === 'Coins' ? 1 : prices.get(name.toLowerCase()) ?? null;
+const priceOf = (item: PriceIdentity | string) => itemPrice(itemPrices, item)?.value ?? null;
 
 // ---------- role inference for accounts the names list does not know ----------
 const NO_ROLE = new Set(['unknown', 'test', '', undefined, null]);
@@ -655,14 +668,13 @@ function vault(bots: any[], now: number) {
     const byKey = new Map(live.map(b => [keyName(b.name), b]));
     const names = new Set<string>([...live.filter(b => b.at).map(b => keyName(b.name))]);
     for (const t of log) { names.add(keyName(t.from)); names.add(keyName(t.to)); }
-    const totals = new Map<string, { count: number; holders: Map<string, number> }>();
+    const totals = new Map<string, VaultItem & { holders: Map<string, number> }>();
     const holders = [];
     for (const k of names) {
         const b = byKey.get(k);
         const name = b?.name ?? log.find(t => keyName(t.from) === k)?.from ?? log.find(t => keyName(t.to) === k)?.to ?? k;
         const isBanker = keyName(BANKER) === k;
-        const mine = new Map<string, number>();
-        const add = (l: Item[] | null | undefined, sign = 1) => { for (const i of l ?? []) if (i?.name && i.count > 0) mine.set(i.name, (mine.get(i.name) ?? 0) + sign * i.count); };
+        const mine = createVaultItems(), add = mine.add;
         const mineLog = log.filter(t => keyName(t.from) === k || keyName(t.to) === k);
         const lastLog = mineLog.reduce((n, t) => Math.max(n, t.at), 0);
         let source: 'snapshot' | 'log' | 'snapshot+log';
@@ -680,40 +692,42 @@ function vault(bots: any[], now: number) {
             for (const t of after) add(t.items, keyName(t.to) === k ? 1 : -1);
             source = after.length ? 'snapshot+log' : 'snapshot';
         }
-        for (const [n, c] of [...mine]) if (c <= 0) mine.delete(n);
-        let value = 0;
-        for (const [n, c] of mine) {
-            const t = totals.get(n) ?? { count: 0, holders: new Map() };
-            t.count += c; t.holders.set(name, c); totals.set(n, t);
-            value += (priceOf(n) ?? 0) * c;
+        const held = mine.rows();
+        let value = 0, unpriced = 0;
+        for (const i of held) {
+            const key = (i.unconfirmed ? 'unconfirmed:' : '') + priceItemKey(i), t = totals.get(key) ?? { ...i, count: 0, holders: new Map<string,number>() };
+            t.count += i.count; t.holders.set(name, i.count); totals.set(key, t);
+            const p = i.unconfirmed ? null : priceOf(i);
+            if(p == null) unpriced++; else value += p * i.count;
         }
         holders.push({
             name, banker: isBanker, age: b?.at ? now - b.at : null, bankSeen: !!b?.bank || source === 'log', bankAt: b?.bankAt ?? null, source,
-            coins: mine.get('Coins') ?? 0, value,
-            items: [...mine].filter(([n]) => n !== 'Coins').sort((a, z) => z[1] - a[1]).map(([name, count]) => ({ name, count })),
+            coins: held.filter(i => !i.unconfirmed && priceItemKey(i) === 'id:995').reduce((n,i) => n+i.count,0), value, unpriced, valueComplete: !unpriced && !mine.unconfirmed(), countsComplete: !mine.unconfirmed(),
+            items: held.filter(i => i.unconfirmed || priceItemKey(i) !== 'id:995').sort((a, z) => z.count - a.count),
         });
     }
     holders.sort((a, z) => Number(z.banker) - Number(a.banker) || z.value - a.value || a.name.localeCompare(z.name));
-    const items = [...totals].filter(([n]) => n !== 'Coins').map(([name, t]) => {
-        const p = priceOf(name);
-        return { name, count: t.count, price: p, value: p != null ? p * t.count : null, holders: [...t.holders].sort((a, z) => z[1] - a[1]).map(([n, c]) => ({ name: n, count: c })) };
+    const items = [...totals].filter(([key]) => key !== 'id:995').map(([, t]) => {
+        const p = t.unconfirmed ? null : priceOf(t);
+        return { ...t, price: p, value: p != null ? p * t.count : null, holders: [...t.holders].sort((a, z) => z[1] - a[1]).map(([n, c]) => ({ name: n, count: c })) };
     }).sort((a, z) => (z.value ?? 0) - (a.value ?? 0) || z.count - a.count || a.name.localeCompare(z.name));
-    const coins = totals.get('Coins')?.count ?? 0;
+    const coins = totals.get('id:995')?.count ?? 0;
     // Flow: one link per giver -> receiver pair, with coins, value and item counts.
-    const links = new Map<string, { from: string; to: string; coins: number; value: number; items: Map<string, number>; n: number; last: number }>();
+    const links = new Map<string, { from: string; to: string; coins: number; value: number; unpriced: number; items: Map<string, Item>; n: number; last: number }>();
     // The vault log spells some accounts with a capital first letter; use the account's own spelling.
     const accts = liveAccounts(), canon = (n: string) => accts.find(a => a.toLowerCase() === n.toLowerCase()) ?? n;
     for (const t0 of log) {
         const t = { ...t0, from: canon(t0.from), to: canon(t0.to) };
-        const k = t.from + '>' + t.to, l = links.get(k) ?? { from: t.from, to: t.to, coins: 0, value: 0, items: new Map(), n: 0, last: 0 };
-        for (const i of t.items) { l.items.set(i.name, (l.items.get(i.name) ?? 0) + i.count); l.value += (priceOf(i.name) ?? 0) * i.count; if (i.name === 'Coins') l.coins += i.count; }
+        const k = t.from + '>' + t.to, l = links.get(k) ?? { from: t.from, to: t.to, coins: 0, value: 0, unpriced: 0, items: new Map<string,Item>(), n: 0, last: 0 };
+        for (const i of t.items) { const key=priceItemKey(i),held=l.items.get(key)??{...i,count:0};held.count+=i.count;l.items.set(key,held);const p=i.unconfirmed?null:priceOf(i);if(p==null)l.unpriced++;else l.value+=p*i.count;if(key==='id:995'&&!i.unconfirmed)l.coins+=i.count; }
         l.n++; l.last = Math.max(l.last, t.at); links.set(k, l);
     }
     return {
         coins, value: coins + items.reduce((n, i) => n + (i.value ?? 0), 0), unpriced: items.filter(i => i.price == null).length,
+        valueComplete: holders.every(h => h.valueComplete), countsComplete: holders.every(h => h.countsComplete),
         items, holders, log: log.slice(-20).reverse(), logExists: existsSync(FILES.vault), banker: BANKER, pricesAt,
         lastTransferAt: log.reduce((n, t) => Math.max(n, t.at), 0) || null,
-        flow: [...links.values()].map(l => ({ ...l, items: [...l.items].map(([name, count]) => ({ name, count })).sort((a, z) => z.count - a.count) })),
+        flow: [...links.values()].map(l => ({ ...l, valueComplete: !l.unpriced, items: [...l.items.values()].sort((a, z) => z.count - a.count) })),
     };
 }
 
@@ -1027,18 +1041,21 @@ function shortPhase(ph: string) {
 }
 function buildState() {
     const proofs=nativeProofs(Date.now());
-    const st = readStatuses();
+    const localStatuses = readStatuses();
     const sw = swarm();
     const accountJobs=accountJobRows(sw?.jobs);
     // File/proof reads can span a newer controller publication. Compare those
     // observations with the time after the reads, not the build's old start time.
     const now = Date.now();
-    const names = new Set([...liveAccounts(), ...st.keys(), ...accountJobs.map(j => j.account)]);
+    const snapshots=snapshotFiles(),side=process.env.FLEET_SIDE??'local',ownerOf=ownerOfIn(FILES.fleet);
+    const st=dashboardStatuses(localStatuses,snapshots,ownerOf,side,now);
+    const statusByName=new Map([...st.values()].map(s=>[s.name.toLowerCase(),s]));
+    const names = localDisplayNames([...liveAccounts(), ...st.keys(), ...accountJobs.map(j => j.account)],snapshots,ownerOf,side,now);
     const bots = [...names].map(name => {
-        const s0 = st.get(name) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
+        const s0 = statusByName.get(name.toLowerCase()) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
         const live = roster.get(name.toLowerCase());
         const inWorld = !!live && now - live.seen < 30_000;
-        const fresh = now - s0.at < 20_000 && s0.at <= now + 5_000;
+        const fresh = !s0.snapshotOnly && now - s0.at < 20_000 && s0.at <= now + 5_000;
         const mine = accountJobs.filter(j => j.account.toLowerCase() === name.toLowerCase());
         // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
         const byHand = fresh && !isLocalServer(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
@@ -1051,7 +1068,7 @@ function buildState() {
         const targetRaw = Number(s.env?.target), target = Number.isInteger(targetRaw) && targetRaw >= 2 && targetRaw <= 99 ? targetRaw : 99;
         const r = fresh ? rate(name, skill) : null;
         // XP left to this run's TARGET level on this server's curve (packages/planner/src/curve.ts), not always 99.
-        const xpLeft = sk ? Math.max(0, xpForLevel(target) - sk.xp) : null;
+        const xpLeft = sk && Number.isFinite(sk.xp) ? Math.max(0, xpForLevel(target) - sk.xp) : null;
         const ticksLeft = r && r > 0 && xpLeft != null ? xpLeft / r : null;
         // Pace: the account's hiscore time on the goal board (or this run's ticks) plus ticks left, against #1's time.
         // Pace only means something when the run's target reaches #1's level.
@@ -1068,7 +1085,7 @@ function buildState() {
         const jobRaw = mine.find(j => j.enabled && j.script) ?? mine.filter(j => j.script).pop() ?? null;
         const jobBeforeStatus = byHand ? { ...(jobRaw ?? { account: name, repeat: false, since: null }), script: String(s0.goal), role: byHand.role, goal: byHand.goal, enabled: true, state: 'manual', note: `started by hand: ${s0.goal}` } as SwarmJob : jobRaw;
         const job = effectiveJob(s, jobBeforeStatus, fresh);
-        const processActive = procs.some(p => p.accounts.some(a => a.toLowerCase() === name.toLowerCase()) && p.started <= (s.at ?? 0));
+        const processActive = !s.snapshotOnly && procs.some(p => p.accounts.some(a => a.toLowerCase() === name.toLowerCase()) && p.started <= (s.at ?? 0));
         const currentGoal = String(s.goal || job?.goal || '');
         // The status may carry a custom goal. Keep the configured script as
         // classification evidence even when effectiveJob labels it manual.
@@ -1076,11 +1093,11 @@ function buildState() {
         const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
         return {
-            ...s, ground: name === MAIN ? [] : s.ground ?? [], flow: name === MAIN ? null : flowView(flows, name), name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
+            ...s, ground: name === MAIN ? [] : s.ground ?? [], flow: name === MAIN || s.snapshotOnly ? null : flowView(flows, name), name, fresh, inWorld, processActive, currentGoal, production, operation: s.snapshotOnly ? (inWorld ? 'unobserved' : 'offline') : operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
             practice: isLocalServer(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
-            xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: spark.get(name) ?? [], rateSkill: skill ?? "all skills", xpLeft,
+            xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: s.snapshotOnly ? [] : spark.get(name) ?? [], rateSkill: skill ?? "all skills", xpLeft,
             eta: ticksLeft != null ? fmtTicks(ticksLeft) : null, finish: finish != null ? fmtTicks(finish) : null,
             pace: finish != null && top ? { top: top.name, topTime: fmtTicks(top.ticks), ahead: finish < top.ticks, gap: fmtTicks(Math.abs(top.ticks - finish)) } : null,
             action: fresh ? ({ x: 'xp', v: 'inventory', m: 'move', a: 'anim', d: 'dialog', s: 'stun', i: 'idle' } as Record<string, string>)[last] ?? null : null,
@@ -1099,8 +1116,9 @@ function buildState() {
     });
     // The other sides' accounts (Codex cloud, Claude cloud): snapshot items and levels, world-feed position, hiscore ranks.
     const local = new Set(bots.map(b => b.name.toLowerCase()));
-    for (const r of remoteBots(snapshotFiles(), local, roster, firstSeen, now, process.env.FLEET_SIDE ?? 'local'))
+    for (const r of remoteBots(snapshots, local, roster, firstSeen, now, side, fleetList(join(FILES.fleet, 'plans')), ownerOf))
         (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: [...(ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), ...valueRanks(r.name)], spark: [], rateSkill: 'all skills' });
+    for (const bot of bots as any[]) { bot.questPoints=questPointObservation(bot,now); Object.assign(bot,healthObservation(bot,now)); }
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
@@ -1124,29 +1142,32 @@ function buildState() {
     const cargo = every(10_000, cargoDir, () => existsSync(cargoDir) ? readdirSync(cargoDir).filter(f => f.endsWith('.json') && !f.startsWith('request-')).flatMap(f => {
         try { return [JSON.parse(readFileSync(join(cargoDir, f), 'utf8'))]; } catch { return []; }
     }) : []);
-    const collection = collectionState(bots, liveAccounts(), cargo, tailJsonl<any>(FILES.vault, 100_000), now);
+    const collection = collectionState(bots, [...new Set([...liveAccounts(), ...remoteNames()])], cargo, tailJsonl<any>(FILES.vault, 100_000), now);
     if (!vaultTrend.length || now - vaultTrend[vaultTrend.length - 1]!.at > 60_000) { vaultTrend.push({ at: now, value: Math.round(v.value), coins: v.coins }); if (vaultTrend.length > 240) vaultTrend.shift(); }
     const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
+    const visiblePrices: (PriceIdentity | string)[] = [...(bots as any[]).flatMap(b => [b.inventory,b.bank,b.equipment,b.flow?.loot,b.flow?.used].flatMap(l => l ?? []).filter(Boolean)),
+        ...(bots as any[]).flatMap(b => (b.ground ?? []).filter((row:any) => Array.isArray(row) && row.length >= 5).map((row:any) => ({id:row[3]}))),
+        ...v.items,...v.log.flatMap(t => t.items),...v.flow.flatMap(f => f.items),...keySupplyIds().map(id => ({id})),...npcLootPrices()];
+    for (const f of flows.values()) for (const m of [f.loot,f.used]) for (const item of m?.values?.() ?? []) visiblePrices.push(item);
+    const projectedPrices = projectItemPrices(itemPrices,visiblePrices);
     const economy = {
         goldPerTick: farmers.reduce((n, b) => n + (b.fresh && b.role4.coinsPerTick > 0 ? b.role4.coinsPerTick : 0), 0),
         farmers: farmers.map(b => ({ name: b.name, fresh: b.fresh, ...b.role4 })),
         trend: vaultTrend.map(t => t.value),
         supplies: keySupplyIds().map(id => ({ id, ...(marketById.get(id) ?? { name: '?', ask: null, bid: null, stock: 0, vwap: null, base: null }) })).filter(x => x.name !== '?'),
         pricesAt,
+        itemPricesById: projectedPrices.byId,
+        itemPricesByName: projectedPrices.byName,
         // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
         // else the shop base price), for the page's item prices and bank value.
         // The game's examine text of each held item (obj configs), for the page's Examine option.
-        itemExamine: (() => { const out: Record<string, string> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const d = Number.isInteger(i?.id) ? OBJS.get(i.id)?.desc : undefined; if (d && i.name) out[i.name] = d; } return out; })(),
+        ...projectItemExamine(buildItemExamine(OBJS),(bots as any[]).flatMap(b=>[b.inventory,b.bank,b.equipment].flatMap(l=>l??[]).filter(Boolean))),
         // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
-        itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } for (const f of flows.values()) for (const m of [f.loot, f.used]) for (const name of m?.keys?.() ?? []) { const p = prices.get(String(name).toLowerCase()); if (p != null) out[name] = p; } return out; })(),
+        itemValues: (() => { const out: Record<string, number> = {}; for (const i of visiblePrices) { const name=typeof i==='string'?i:i.name; if(!name)continue; const p=itemPrice({byId:{},byName:projectedPrices.byName},name); if(p)out[name]=p.value; } return out; })(),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
         gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
     };
-    const icons: Record<string, number | null> = {};
-    const see = (l: any) => { for (const i of l ?? []) if (i?.name && !(i.name in icons)) icons[i.name] = iconId(i.name); };
-    for (const b of bots as any[]) { see(b.inventory); see(b.bank); }
-    for (const l of lookups.values()) see(l.worn);
-    see(v.items); see([{ name: 'Coins' }]); for (const t of v.log) see(t.items); for (const f of v.flow) see(f.items);
+    const icons=catalogueIconAliases(OBJS);
     const prac = practiceNames();
     const sys = {
         freeGB: freemem() / 2 ** 30, totalGB: totalmem() / 2 ** 30, cpu: cpuPct, cores: cpus().length, buildMs,
@@ -1192,7 +1213,8 @@ function buildState() {
 function fleetList(dir: string): any[] { return every(10_000, dir, () => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : []); }
 // One row per account: an account that changed side shows once, under the side that owns it (packages/core/src/fleet-snapshots.ts).
 function snapshotFiles() { return canonicalSnapshots(fleetList(join(FILES.fleet, 'snapshots')).filter(s => typeof s?.side === 'string'), ownerOfIn(FILES.fleet)); }
-function remoteNames(): string[] { return snapshotFiles().filter(s => s?.side !== (process.env.FLEET_SIDE ?? 'local')).flatMap(s => (s?.accounts ?? []).map((a: any) => String(a?.name ?? ''))).filter(n => /^[A-Za-z0-9]{1,12}$/.test(n)); }
+// A side's own published names also need ranks and nameplates when this container has no local credentials yet.
+function remoteNames(): string[] { return snapshotFiles().flatMap(s => (s?.accounts ?? []).map((a: any) => String(a?.name ?? ''))).filter(n => /^[A-Za-z0-9]{1,12}$/.test(n)); }
 function fleetSides(now: number) {
     return fleetSidesView(snapshotFiles(), fleetList(join(FILES.fleet, 'orders')), now, fleetList(join(FILES.fleet, 'receipts')));
 }
@@ -1331,7 +1353,7 @@ Bun.serve({
         // The 3D viewer (localhost:3000) fetches the names whose nameplates it must hide, so the dashboard page
         // never holds the name: the iframe URL carries only this endpoint.
         // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
-        if (url.pathname === '/api/our-names') return Response.json([...liveAccounts(), ...remoteNames()].filter(n => n.toLowerCase() !== MAIN.toLowerCase()), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
+        if (url.pathname === '/api/our-names') return Response.json([...new Set([...liveAccounts(), ...remoteNames()])].filter(n => n.toLowerCase() !== MAIN.toLowerCase()), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (['/api/reveal', '/api/hidden-names', '/api/death-recap'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
         // Death recap: the newest death in the account's tick records, read when the page asks, kept for 30 s.
         if (url.pathname === '/api/death-recap') {

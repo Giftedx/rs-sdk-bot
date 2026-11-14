@@ -8,16 +8,42 @@
 // worth a walk now, by shop, the largest first. A bid far above a shop price is filled by other players within hours,
 // so this file is where a session looks first.
 // Usage: bun scripts/market-cache.ts
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 export const MARKET_FILE = '.practice/market-all.json';
 export const MARKET_CACHE_MS = 30 * 60_000;
 export const MIN_TRADES = 3;
 const DEMO = 'https://rs-sdk-demo.fly.dev';
 
-// `base`: the item's base (shop) price; `want`: the units the open bids want.
-export type MarketItem = { name: string; price: number | null; bid: number | null; ask: number | null; trades: number; base?: number; want?: number };
+// `base`: the item's base (shop) price; `want`: the units the open bids want; `sell`: the units offered for sale.
+export type MarketItem = { name: string; price: number | null; bid: number | null; ask: number | null; trades: number; base?: number; want?: number; sell?: number };
+export type MarketQuote = { at: number; ask: number | null; bid: number | null; sell: number };
+// A dashboard and a fleet refresh can finish together. Each publishes a complete file through its own temporary path.
+export function writeMarketCache(base: string, items: Readonly<Record<number, MarketItem>>, at = Date.now()): void {
+    if (!Number.isSafeInteger(at) || at <= 0) throw Error('invalid market observation time');
+    const file = join(base, MARKET_FILE), tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+    mkdirSync(join(base, '.practice'), { recursive: true });
+    try {
+        writeFileSync(tmp, JSON.stringify({ at, items }), { flag: 'wx' });
+        renameSync(tmp, file);
+    } finally { rmSync(tmp, { force: true }); }
+}
+// Acquisition needs an observed seller count as well as the ask. Older caches that omit it remain unknown.
+export function marketQuotes(raw: unknown, now = Date.now()): Record<number, MarketQuote> {
+    const cache = raw as any, out: Record<number, MarketQuote> = {};
+    if (!Number.isSafeInteger(cache?.at) || cache.at <= 0 || now < cache.at || now - cache.at >= MARKET_CACHE_MS
+        || !cache.items || typeof cache.items !== 'object' || Array.isArray(cache.items)) return out;
+    const price = (value: unknown) => value === null || (Number.isSafeInteger(value) && (value as number) > 0);
+    for (const [key, row] of Object.entries<any>(cache.items)) {
+        const id = Number(key);
+        if (!/^\d+$/.test(key) || !Number.isSafeInteger(id) || !row || !price(row.ask) || !price(row.bid)
+            || !Number.isSafeInteger(row.sell) || row.sell < 0) continue;
+        out[id] = { at: cache.at, ask: row.ask, bid: row.bid, sell: row.sell };
+    }
+    return out;
+}
 // One page of the market API as cache rows.
 export function marketRows(items: readonly any[]): Record<number, MarketItem> {
     const out: Record<number, MarketItem> = {};
@@ -25,7 +51,8 @@ export function marketRows(items: readonly any[]): Record<number, MarketItem> {
         if (!Number.isSafeInteger(i?.id)) continue;
         const trades = Number.isFinite(i.trades) ? i.trades : 0;
         out[i.id] = { name: String(i.name ?? ''), price: i.vwap != null && trades >= MIN_TRADES ? Number(i.vwap) : null, bid: i.bid ?? null, ask: i.ask ?? null, trades,
-            ...(Number.isSafeInteger(i.basePrice) ? { base: i.basePrice } : {}), ...(Number.isSafeInteger(i.buyQuantity) ? { want: i.buyQuantity } : {}) };
+            ...(Number.isSafeInteger(i.basePrice) ? { base: i.basePrice } : {}), ...(Number.isSafeInteger(i.buyQuantity) ? { want: i.buyQuantity } : {}),
+            ...(Number.isSafeInteger(i.sellQuantity) && i.sellQuantity >= 0 ? { sell: i.sellQuantity } : {}) };
     }
     return out;
 }
@@ -67,12 +94,10 @@ export async function fetchMarket(get: (url: string) => Promise<any> = async url
 }
 
 if (import.meta.main) {
-    const root = resolve(import.meta.dir, '..'), file = join(root, MARKET_FILE);
+    const root = resolve(import.meta.dir, '..');
     try {
         const items = await fetchMarket();
-        mkdirSync(join(root, '.practice'), { recursive: true });
-        writeFileSync(file + '.tmp', JSON.stringify({ at: Date.now(), items }));
-        renameSync(file + '.tmp', file);
+        writeMarketCache(root, items);
         const priced = Object.values(items).filter(i => i.price !== null).length;
         // The shop-to-bid lots: optional, so a failure here never loses the price cache.
         let best = 'none';

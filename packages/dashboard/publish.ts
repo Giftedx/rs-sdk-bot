@@ -14,10 +14,12 @@ import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,r
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT} from './publish-relay';
+import {expectedLootPrices} from './item-prices';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
 import {validateCommand,authorizeCommand,applyCommand,receiptPath,writeReceipt,ACTIONS,ID_RE,MAX_AGE_MS} from './publish-commands';
 
 const root=resolve(import.meta.dir,'..','..'),prac=join(root,'.practice');
+const expectedDrops=expectedLootPrices(JSON.parse(readFileSync(join(import.meta.dir,'client-assets','npc-loot.json'),'utf8')));
 const REPO=process.env.FLEET_COMMAND_REPO??'';
 const DIR=resolve(process.env.FLEET_COMMAND_DIR??join(prac,'fleet-command'));
 const CYCLE_MS=Math.max(15,Number(process.env.CYCLE_S)||60)*1000,PUBLIC_MS=Math.max(60,Number(process.env.PUBLIC_EVERY_S)||600)*1000;
@@ -205,7 +207,7 @@ async function cycle(){
  }
  // The public view refuses a state that still names the main account. The owner's control view must still go out.
  const control=JSON.stringify(controlView(state,meta));let pub:string|null=null,pubError:unknown=null;
- try{pub=JSON.stringify(publicView(state));}catch(e){pubError=e;}
+ try{pub=JSON.stringify(publicView(state,MAIN_ACCOUNT,expectedDrops));}catch(e){pubError=e;}
  writeAtomic(join(DIR,'out','control.json'),control);if(pub!==null)writeAtomic(join(DIR,'out','public.json'),pub);
  if(REPO){
   const main=join(DIR,'repo');
