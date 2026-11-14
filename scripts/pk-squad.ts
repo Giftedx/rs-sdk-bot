@@ -9,7 +9,7 @@
 // with, the boosts drunk at the bank) and walks back to the post.
 // Usage: bun scripts/pk-squad.ts <account> [<account> ...] [KEY=value ...]
 //   TARGETS=goondelf,ligma,sugma  POST=3067,3640  MAX_MINUTES=30  MAX_KILLS=0 (no limit)  SQUAD_PROFILE=gang-hunter
-//   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null}
+//   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}
 //   PICKUP=1  TRIPS=10 (bank trips an account may make)  ALLOW_SINGLE=1 (a single-way post)
 //   FOLLOW=1 (march to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30)  MARCH=1 STEP=12 (move together)
 //   PULL=1 (attacked on a single-way tile with a multi-way post: walk on into multi-way)
@@ -30,7 +30,9 @@ export const GANG = ['goondelf', 'ligma', 'sugma'];
 export const SQUAD_POST = { x: 3067, z: 3640 };
 const MAIN = new Set(['haggis']);
 // dropForStrip off: the profile's champion base drops a shark before a freeze to free slots for its armour strip.
-export const SQUAD_OPTS = { cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null } as const;
+// specBelow 0.45: the special waits for a gang account at 45% or less (one-on-one in the pilot's kit with Bind: 13 kills
+// of 16 at 89 HP a kill, against 12 at 107 with the profile's special at once; the squad case the same within the noise).
+export const SQUAD_OPTS = { cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45 } as const;
 
 // FOLLOW=1: where the squad goes when the targets stay out of view. The nearest multi-way Wilderness tile, at
 // Wilderness level `maxWild` or less, within `radius` tiles of the targets' middle (their own tile when it is multi-way),

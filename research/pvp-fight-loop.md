@@ -1225,6 +1225,14 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   20 kills of 24 at 36 HP a kill (`extra:team-4v3-gang-chainbare-west-x2`); four on single-way tiles, each gang
   account on one of ours (`SPAR_*_PICK=pair`), 5 kills of 24 at 454 HP a kill (`-chainbare-split-`). Where the fight
   happens costs more than the kit.
+- **One against one gang account, the fight the live split gives each of ours.** One of ours in the pilots' kit
+  (rune chainbody, no antipoison) against one gang account (`ganker-live`), seeds 1 to 8, 16 meetings a row, no death
+  in any. With no freeze runes (`extra:gang-live-chain-solo-x2`) the gang account walks out at low HP and gets away:
+  5 kills at about 350 HP a kill on the base options; the special at 45% (`specBelow`) 6; ranged only 4; the special
+  at once 3; eating at 50 or 70, or no chase, 1 each; melee only 0. With Bind runes (`-chainbind-solo-`): the freeze
+  on a runner (`"freeze":"flee"`) 12 kills at about 107 HP, with the special at 45% 13 at about 89, the freeze on a
+  low bar (`"low"`) 13 at about 106. pk-squad's default options hold the special for 45% (the squad case: 24 of 24
+  either way, 39 and 42 HP a kill).
 - **Marching and pulling.** The squad moves as a march: its post steps `STEP` (default 12) tiles at a time toward the
   goal, and on only when every account stands within 4 tiles of the step or after 60 ticks there. A march to a
   multi-way goal goes first to the nearest multi-way tile (`multiEntry`). An account on a single-way tile with a
