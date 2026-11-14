@@ -1,21 +1,24 @@
 {
  "side": "local",
- "at": 1794676863401,
+ "at": 1794677476809,
  "jobs": [
   {
-   "account": "Woodpecker",
+   "account": "FishAndChips",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "0",
+    "RUN": "2"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
-   "role": "pk-trainee"
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
   },
   {
    "account": "Balls",
@@ -74,22 +77,45 @@
    "role": "market"
   },
   {
-   "account": "Bigchopper",
+   "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
+    "KNIGHT_SPOT": "2669,3298",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -154,25 +180,21 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2671,3313"
    ]
   },
   {
@@ -214,6 +236,25 @@
    ]
   },
   {
+   "account": "mmthv2350",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -249,6 +290,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
@@ -331,25 +391,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
    ]
   },
   {
@@ -492,25 +533,6 @@
    ]
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -530,36 +552,19 @@
    ]
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-76bd513c-c8e5-4771-8775-70c7fbfac682"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-fishandchips-20261114t171020z [task-76bd513c-c8e5-4771-8775-70c7fbfac682]",
-   "role": "supply"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
   }
  ]
 }
