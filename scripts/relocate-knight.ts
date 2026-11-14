@@ -28,7 +28,7 @@ export async function relocateKnight(s:Session,name:string,options:{stop?:()=>bo
     const observe=s.bankObservation?.bind(s);if(!observe)throw new Error('no relocation progress: fresh bank observation unavailable');
     let ended=false,died=false,damaged=false,hpMin=hpStart,failure='';
     const safety=()=>{const st=state(),p=st?.player;hpMin=Math.min(hpMin,hp());damaged||=hp()<hpStart;
-        died||=!!p?.isDead||hp()<=0||(p?.respawnCount??0)>(first.respawnCount??0)||(first.lifeId!==undefined&&p?.lifeId!==first.lifeId);
+        died||=!!p?.isDead||(p?.respawnCount??0)>(first.respawnCount??0)||(first.lifeId!==undefined&&(p?.lifeId ?? first.lifeId) !== first.lifeId);
         if(ended||died)return 'relocation ended/dead';if(damaged)return 'relocation first HP drop';if(options.stop?.())return 'relocation stop requested';
         if(!p||p.level!==0)return 'relocation unexpected floor';
         if(st?.nearbyNpcs.some(n=>/bear/i.test(n.name)&&n.distance<=6))return 'relocation observed bear within6';return null;};

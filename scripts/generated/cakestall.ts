@@ -3,7 +3,7 @@
 // 5 tiles of the player with line of sight, and a Guard within 5 tiles shouts and attacks. The bot steals only from a
 // side tile with no Baker or Guard within SAFE tiles (one tile of margin for NPC movement, line of sight ignored).
 // Baker's stall is 2x2 and nearbyLocs reports its SW tile only (World.sceneType matches minTileX/minTileZ).
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 
 const RUN_TICKS = 300;
@@ -34,10 +34,12 @@ try {
 
     let hpMin = hp0;
     let died = false;
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
         const h = hp();
         hpMin = Math.min(hpMin, h);
-        if (h <= 0) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
     });
 
     const dangers = (): Tile[] => (s.sdk.getState()?.nearbyNpcs ?? [])

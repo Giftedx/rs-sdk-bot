@@ -167,7 +167,7 @@ try {
     const off = s.onTick(() => {
         if (hp0 > 0) hpMin = Math.min(hpMin, hp());
         const p = pos();
-        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && p?.lifeId !== life)) died = true;
+        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && (p?.lifeId ?? life) !== life)) died = true;
     });
 
     let oreWaitTicks = 0, stop = 'cap';

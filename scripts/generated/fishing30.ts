@@ -11,7 +11,7 @@
 // old script always went back to pickpocketing for 5 coins and only waited at HP 2. Now each step runs only when
 // its item or level is missing, the bot eats when HP is low, sells spare pack items at the Lumbridge general store,
 // and pickpockets only at HP 5 or more and only when coins are still short.
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { componentId } from '../../packages/core/src/logout';
 import { xpForLevel } from '../../packages/planner/src/curve';
@@ -94,14 +94,15 @@ try {
     let died = false;
     let last = pos();
     let lastHp = hp();
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
         const p = pos();
         const base = s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0;
         hpMin = Math.min(hpMin, hp());
-        if (base > 0 && hp() <= 0) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) {
             const respawn = p.level === 0 && cheb(RESPAWN, p) <= 3 && lastHp < base;
-            if (respawn) died = true;
             console.log(`WARN jump ${last.worldX},${last.worldZ},${last.level} -> ${p.worldX},${p.worldZ},${p.level} hp=${lastHp}->${hp()} death=${respawn}`);
         }
         last = p;

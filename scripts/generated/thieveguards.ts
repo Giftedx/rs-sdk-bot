@@ -2,7 +2,7 @@
 // Preset thieve_guards (3210,3459,0 outside Varrock palace, Thieving 40, Hitpoints 30, 20 shrimps 315 in the pack).
 // Guards stand at (3206,3462), (3211,3463), (3212,3462), (3213,3465) (knowledge/npcs.json guard1).
 // A guard stun hits harder than a man, so eat at 15 HP or below. Death shows as HP 0 or a jump far from the start.
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
 
 const SPOT = { x: 3210, z: 3463 };
@@ -19,10 +19,10 @@ try {
     const xp0 = xp();
     const t0 = s.tick();
     let died = false;
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
-        const p = s.sdk.getState()?.player;
-        if (hp() <= 0) died = true;
-        if (p && Math.max(Math.abs(p.worldX - SPOT.x), Math.abs(p.worldZ - SPOT.z)) > 40) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
     });
     let tries = 0, stuns = 0, eaten = 0;
     let lastFail = '';

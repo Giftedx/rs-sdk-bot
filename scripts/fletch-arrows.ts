@@ -40,7 +40,7 @@ export async function runHeadless(s: Session, options: HeadlessOptions) {
     const off = s.onTick(() => {
         const p = s.sdk.getState()?.player;
         hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin);
-        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || (player?.lifeId !== undefined && p?.lifeId !== player.lifeId)) died = true;
+        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || (player?.lifeId !== undefined && (p?.lifeId ?? player.lifeId) !== player.lifeId)) died = true;
     });
     const over = () => ended || died || options.stop?.() || options.pause?.() || s.tick() - start >= options.cap;
     const hold = () => { if (options.pause?.()) throw new Error('headless owner pause'); };
@@ -162,7 +162,7 @@ export async function runSteel(s: Session, options: SteelOptions, metal: ArrowMe
     const off = s.onTick(() => {
         const p = s.sdk.getState()?.player;
         hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin);
-        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || (player?.lifeId !== undefined && p?.lifeId !== player.lifeId)) died = true;
+        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || (player?.lifeId !== undefined && (p?.lifeId ?? player.lifeId) !== player.lifeId)) died = true;
     });
     const over = () => ended || died || options.stop?.() || s.tick() - start >= options.cap;
     const protectedItems = new Map<number, number>();
@@ -303,7 +303,7 @@ export async function runOakBows(s: Session, options: OakBowOptions) {
     const off = s.onTick(() => {
         const p = s.sdk.getState()?.player;
         hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin);
-        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || (player?.lifeId !== undefined && p?.lifeId !== player.lifeId)) died = true;
+        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || (player?.lifeId !== undefined && (p?.lifeId ?? player.lifeId) !== player.lifeId)) died = true;
     });
     const over = () => ended || died || !!options.stop?.() || s.tick() - start >= options.cap;
     let snapshot: { id: number; count: number }[] | undefined;

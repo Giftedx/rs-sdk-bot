@@ -356,7 +356,7 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
  let hpGuard=hp0;const foodUsed:{id:number;count:number}[]=[],preparationFood=new Set<number>();
  let ended=false,died=false,damaged=false,hpMin=hp0,failure='',bankItems:readonly {id:number;name:string;count:number}[]=[],baseline:Map<number,number>|undefined,journal:ItemOrder|undefined=entryJournal;
  const save=()=>{if(!journal)throw Error('missing order journal');journal.at=Date.now();writeFileSync(journalPath+'.tmp',JSON.stringify(journal,null,2));renameSync(journalPath+'.tmp',journalPath);};
- void s.ended.then(()=>{ended=true;});const off=s.onTick(()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());damaged||=hp()<hpGuard||!!p&&!marketTileSafe({x:p.worldX,z:p.worldZ,level:p.level});died||=hp()<=0||!!p?.isDead||p?.lifeId!==p0.lifeId||(p?.respawnCount??0)>(p0.respawnCount??0);});
+ void s.ended.then(()=>{ended=true;});const off=s.onTick(()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());damaged||=hp()<hpGuard||!!p&&!marketTileSafe({x:p.worldX,z:p.worldZ,level:p.level});died||=!!p?.isDead||(p?.lifeId ?? p0.lifeId) !== p0.lifeId||(p?.respawnCount??0)>(p0.respawnCount??0);});
  const terminal=()=>ended||died,over=()=>terminal()||damaged||stop()||s.tick()-start>=500;
  // Item totals join the item with its banknote. Coins are counted by ID.
  const count=(a:readonly {id:number;name:string;count:number}[],match:(i:{id:number;name:string})=>boolean)=>a.filter(match).reduce((n,i)=>n+i.count,0);

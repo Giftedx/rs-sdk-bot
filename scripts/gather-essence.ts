@@ -2,7 +2,7 @@
 // Mines Rune essence (and Pure essence from Mining 30+ on supported worlds) via Aubury teleport and banks at Varrock East.
 // Usage: bun scripts/gather-essence.ts <bot> [CAP ticks, default 15000] [BANK_AT essence, default 28]
 // Environment: DEMO_OK=1 for live server.
-import { openBot, finish, randomEventsOf } from '../packages/core/src/bot';
+import { openBot, finish, randomEventsOf, sessionDied } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
@@ -150,8 +150,10 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
     };
     const active=()=>{if(over())throw Error('essence stopped; preserve observed load');};
 
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
-        if (hp() <= 0 && (s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
     });
 
     const isInMine = (): boolean => {

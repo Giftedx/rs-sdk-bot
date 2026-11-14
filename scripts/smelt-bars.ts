@@ -55,7 +55,7 @@ export async function runBronze(raw:import('../packages/core/src/inprocess').Ses
  if(p0.level!==0||Math.max(Math.abs(p0.worldX-BANK_SPOT.x),Math.abs(p0.worldZ-BANK_SPOT.z))>5)throw new Error('bronze requires staged Al Kharid bank entry');
  let died=false,ended=false,hpMin=s.sdk.getSkill('Hitpoints')!.level,made=0,attempts=0,failed=0,failure='';
  void s.ended.then(()=>{ended=true;});
- const off=s.onTick(()=>{const p=s.sdk.getState()?.player;hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(!owner.own()||p?.isDead||hpMin<=0||(p?.respawnCount??0)>(p0.respawnCount??0)||(p0.lifeId!==undefined&&p?.lifeId!==p0.lifeId))died=true;});
+ const off=s.onTick(()=>{const p=s.sdk.getState()?.player;hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(!owner.own()||p?.isDead||hpMin<=0||(p?.respawnCount??0)>(p0.respawnCount??0)||(p0.lifeId!==undefined&&(p?.lifeId ?? p0.lifeId) !== p0.lifeId))died=true;});
  const keep=new RegExp(process.env.KEEP??'^(knife|shrimps|bread|shears|.*pickaxe|coins)$','i');
  const protectedKit=new Map<number,number>();for(const i of inv())if(keep.test(i.name))protectedKit.set(i.id,(protectedKit.get(i.id)??0)+i.count);
  const over=()=>owner.stopped()||ended||died||hpMin<7||s.tick()-t0>=options.cap;

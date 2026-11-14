@@ -3,12 +3,11 @@
 // Barnaby (Ardougne) -> Brimhaven, walk to Musa Point, customs officer -> Port Sarim, walk to the GE, and back.
 // Decks from the rs2 set_sail coords: Brimhaven 1_43_50_23_34 = (2775,3234,1), Port Sarim 1_47_50_24_17 = (3032,3217,1).
 // Env: LOBSTERS (default 120), PRICE (default 170), DRY=1 skips the buy (the practice server has no sellers).
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../../packages/core/src/walk';
 
 const MARKET = { x: 2655, z: 3304 };
-const LUMBRIDGE = { x: 3222, z: 3218 };
 const BRIM_DECK = { x: 2775, z: 3234 };
 const SARIM_DECK = { x: 3032, z: 3217 };
 const MUSA_DECK = { x: 2956, z: 3143 };
@@ -30,14 +29,14 @@ try {
     let died = false;
     const jumps: string[] = [];
     let last = pos();
-    // A boat trip also jumps more than 20 tiles, so only a jump that lands near the Lumbridge spawn (or HP 0) is a death.
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
-        if (hp() <= 0) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) {
             jumps.push(`${s.tick()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
-            if (cheb(LUMBRIDGE, p) <= 15) died = true;
         }
         last = p;
     });
