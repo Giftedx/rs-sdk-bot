@@ -2,7 +2,18 @@ import { expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { affectedTests, failedFiles, shard } from './test-shards';
+import { affectedTests, failedFiles, shard, shardCount } from './test-shards';
+
+test('shards fit the requested cap, CPU capacity and memory floor independently', () => {
+    expect(shardCount(12, 16, 1, 4)).toBe(4);
+    expect(shardCount(2, 16, 1, 4)).toBe(2);
+    expect(shardCount(12, 6, 4, 8)).toBe(2);
+    expect(shardCount(12, 0.5, 1, 4)).toBe(1);
+    expect(shardCount(12, NaN, 1, 4)).toBe(1);
+    expect(shardCount(12, 64, 1, 1)).toBe(1);
+    expect(shardCount(4, 64, 1, 16)).toBe(4);
+    expect(shardCount(12, 64, 1, NaN)).toBe(1);
+});
 
 test('the slow files go to separate shards and every file runs once', () => {
     const files = ['a.test.ts', 'b.test.ts', 'c.test.ts', 'd.test.ts', 'e.test.ts'];

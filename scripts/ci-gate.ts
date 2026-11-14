@@ -28,7 +28,7 @@ export function gateSteps(yml:string):Step[]{
 }
 
 // The local form of the workflow's test steps. One `bun test` process for every file takes about 520 s on the PC.
-// test-shards.ts runs the files in 12 processes, and with --changed it runs only the files that the change since
+// test-shards.ts runs the files in up to 12 processes within CPU and memory limits. With --changed it runs only the files that the change since
 // origin/master can reach. `--full` keeps the shards and runs every file. A `bun test` step on a folder inside an
 // earlier step's folders is the same files again, so it is left out.
 export function localSteps<T extends {cmd:string[]}>(steps:T[],full:boolean):T[]{
