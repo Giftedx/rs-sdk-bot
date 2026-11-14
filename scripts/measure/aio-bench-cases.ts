@@ -94,6 +94,8 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // Zamorak learnt (varps 267 and 270), for one more shark.
 // The army route's settings from the environment (scripts/pk-army.ts): `--set VOLLEY=1` and the like reach the route.
 const armyEnv = () => ['ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE', 'BURST_HOLD', 'OPEN_FREEZE', 'OPEN_RANGE', 'OPEN_TICKS', 'LEADER_SPEC', 'STUN_SHARE', 'LEADER_CAP', 'TARGET_PROFILE', 'TARGET_OPTS', 'TARGET_SIGHT', 'TARGET_SIGHT_DELAY', 'ARMY_TRACE', 'FOLLOW_TARGET', 'PACE', 'OPEN_ON_RUN'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []));
+// A fixture that wears a kit's equipment (and has the kit's quest varps) in place of its own, its pack and bank kept.
+const wearKit = (cfg: SaveConfig, kit?: string): SaveConfig => (kit ? {...cfg, equipment: kitItems(kit).equipment, varps: {...cfg.varps, ...kitVarps(kit)}} : cfg);
 export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean; noDragonSlayer?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
@@ -439,8 +441,9 @@ const ROUTE_CASES: BenchCase[] = [
   // The hunt against a target that defends on the champion's fight loop (HUNT_PROFILE, environment, sets the hunter's options).
   {key: 'extra:hunt-defend', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'hunt', '900', 'TARGET_PROFILE=champion'],
     pass: ok, output: /kills (\d+)/,
-    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
-      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]},
+    // HUNTER_KIT=<kit of scripts/pk-kits.ts>: the hunter wears that kit's equipment, with its quests.
+    presetConfig: wearKit({...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]}, process.env.HUNTER_KIT),
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {glory: true, ...(process.env.TARGET_STRONG === '1' ? {potions: true, food: 24} : {})})}]},
     // Two targets that defend on the champion at the first hunt spot: one in rune with 18 sharks and a glory next to
   // the spot, one in monk robes (kit ganker-dds) four tiles on. HUNT_PICK=soft sends the hunter to the softer one.

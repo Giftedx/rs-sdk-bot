@@ -159,6 +159,11 @@ export async function hunt(s: Session, o: HuntOptions) {
     // the staff trip (research/pvp-fight-loop.md, finding 25).
     const auto = !o.kit && !o.trip, sighted = new Map<string, string>();
     let kit = o.kit ?? TRIBRID_KIT;
+    // The shield the hunter wears at the start takes the rune kiteshield's place in the melee list: a fixed list put
+    // no other shield back on after a two-handed bow turn (a dragon square shield came off for good).
+    const startShield = s.sdk.getEquipment().find(e => e.slot === 5)?.id;
+    const ownKit = (k: Kit): Kit => (startShield === undefined || startShield === KIT_IDS.runeKiteshield ? k
+        : { ...k, melee: (k.melee ?? []).map(id => (id === KIT_IDS.runeKiteshield ? startShield : id)) });
     const shallow = (o.spots ?? HUNT_SPOTS).every(sp => wildernessLevel(sp.z) <= 30);
     let spot = 0;
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
@@ -236,7 +241,7 @@ export async function hunt(s: Session, o: HuntOptions) {
                 // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
                 // The overhead changes one tick before the target's next attack: 42 kills to 6 in mirror spars against 24 to 24.
-                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true, counterRead: true, adaptStyles: true,
+                kit: ownKit(kit), spec: defaultSpec(ownKit(kit)), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true, counterRead: true, adaptStyles: true,
                 escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, stop: over, log,
                 // A stand-up fight with bow and dagger only: a spell takes 5 ticks, the bow 3 and the dagger 4. Magic stays
                 // for the freeze. Random styles: an overhead that predicts cannot follow them.
@@ -265,7 +270,7 @@ export async function hunt(s: Session, o: HuntOptions) {
             // standing beside its attacker dies there. This escape has its own 200-tick cap and stops only out of the
             // Wilderness.
             if (r.outcome === 'danger' || (r.outcome === 'timeout' && wildernessLevel(s.sdk.getState()?.player?.worldZ ?? 0) > 0)) {
-                const e = await fightPlayer(s, target.name, { kit, exitOnDanger: false, escapeSpell: o.teleSpell, cap: 200, log,
+                const e = await fightPlayer(s, target.name, { kit: ownKit(kit), exitOnDanger: false, escapeSpell: o.teleSpell, cap: 200, log,
                     predictPrayer: true, snapPrayer: true, flee: true });
                 log(`HUNT escape after danger: ${e.outcome}`);
                 if (e.outcome === 'escaped') tally.escapes++;

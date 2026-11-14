@@ -1843,4 +1843,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     every weapon (index 1 is the bow's rapid and the dagger's aggressive stab, +3 Strength; `combat.dbrow`
     `weapon_stab_table`); `meleeStyle: 0` (accurate stab, +3 Attack, on melee turns and specials, rapid on bow turns,
     a packet for each change) gives `tribrid-dragon-sara` 33, 94, 2: no gain. Gap: 8 seeds; the hunt, roam and army
-    routes still stage the rune kit.
+    routes still stage the rune kit.73. **The hunt in dragon armour takes a quarter less damage for the same kills; its fixed kit dropped any other
+    shield.** `extra:hunt-defend` (the hunt route against a target defending on the champion with 18 sharks and a
+    glory, seeds 1-6), the hunter in rune (the fixture) or in `tribrid-dragon-sara`'s armour (`HUNTER_KIT`, which
+    gives the fixture a kit's equipment and quest varps): kills 5 and 5, deaths 0 and 0, damage dealt 2,580 and 2,683,
+    damage taken 2,655 and 1,954 (the `HUNT` lines of `.practice/roam-switch/hunt-*`). The hunt's kits name the rune
+    kiteshield in their melee lists, so a hunter in any other shield lost it at its first bow turn for good; the hunt
+    puts the shield it wears at its start in that place. Gap: 6 seeds; the roam and the army in dragon armour; the
+    dragon pieces are rare drops (supply).
