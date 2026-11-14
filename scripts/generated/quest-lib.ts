@@ -9,6 +9,7 @@ import { holdSessionEater } from '../../packages/core/src/sustain';
 import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
+import { messageTally } from '../../packages/core/src/message-tally';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -241,7 +242,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (pages.some(p => re.test(p))) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
     };
-    const msgCount = (re: RegExp): number => (st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).length;
+    // Counts every game message seen, past the client's 50-message window; the tick hook reads it each tick.
+    const tally = messageTally(() => st()?.gameMessages);
+    const msgCount = tally.count;
 
     // Auto retaliate off (controls:com_3), so a hit never turns a walk or a loc click into a fight.
     await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
@@ -274,6 +277,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     }},{food:FOOD,eatAt:EAT_AT,reserved:()=>reservedNow(),dropRetries:2,onConsumed:()=>{stats.eats++;}});
     let lastHp = hp();
     const off = s.onTick(() => {
+        tally.pull();
         const p = pos();
         const h = hp();
         if (h > 0 && h < stats.hpMin) {
