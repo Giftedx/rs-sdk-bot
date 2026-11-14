@@ -13,3 +13,12 @@ test('the asset route serves every JSON data file that the page asks for', () =>
         expect(existsSync(new URL('./client-assets/' + name, import.meta.url))).toBe(true);
     }
 });
+
+// A data file is asked again on each load (no-cache) with a weak ETag, so a new round's data shows at once; images keep
+// the hour.
+test('the asset route revalidates JSON data files and caches images', () => {
+    const server = readFileSync(new URL('./server.ts', import.meta.url), 'utf8');
+    expect(server).toContain("if(!name.endsWith('.json'))return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});");
+    expect(server).toContain("if(req.headers.get('if-none-match')===tag)return new Response(null,{status:304");
+    expect(server).toContain("return new Response(file,{headers:{etag:tag,'cache-control':'no-cache'}});");
+});

@@ -185,6 +185,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function combatLine(b){const X=window.atlasXp;if(!b?.skills?.length||!X?.combat)return '';const lv=Object.fromEntries(b.skills.map(s=>[s.name,s.level])),c=X.combat(lv);
     const n=c.next,parts=n?[['Attack/Strength',n.melee],['Defence/Hitpoints',n.defence],['Prayer',n.prayer],['Ranged',n.ranged],['Magic',n.magic]].filter(([,v])=>v!=null).map(([k,v])=>v+' '+k):[];
     return '<div class="skill-total combat-line" title="'+(n?'Next combat level ('+(c.level+1)+'): '+E(parts.join(', or '))+'.':'Highest combat level')+'">Combat level: '+c.level+(n&&parts.length?' <small>next: '+E(parts[0])+'</small>':'')+'</div>';}
+  // Banked XP line (RuneLite's Banked Experience panel): under the Skills tab, each skill the bank holds XP for
+  // (bankedXp), the most first, with the levels it gains; the tooltip lists them all.
+  function bankedLine(b){if(typeof bankedXp!=='function'||!Array.isArray(b?.bank))return '';
+    const list=skills.map(n=>{const x=bankedXp(b,n),lv=(b.skills||[]).find(k=>k.name===n)?.level;return x?{n,xp:x.xp,gain:x.level&&lv?x.level-lv:0}:null;}).filter(Boolean).sort((a,c)=>c.xp-a.xp);
+    if(!list.length)return '';const t=x=>x.n+' +'+nf(x.xp)+(x.gain>0?' (+'+x.gain+' level'+(x.gain===1?'':'s')+')':'');
+    return '<div class="skill-total combat-line" title="'+E('Banked XP: '+list.map(t).join(', ')+'. The bank as last observed.')+'">Banked XP: '+nf(list.reduce((n,x)=>n+x.xp,0))+' <small>'+E(list.slice(0,2).map(t).join(' · '))+'</small></div>';}
   // Death recap (RuneLite's Death Indicator, with the hits before it), at the top of the Activity plugin: the newest
   // death in the account's tick records, which the PC's dashboard reads on request (/api/death-recap). The death tile
   // shows on the minimap as a red mark.
@@ -240,7 +246,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function gamePanel(){
     const b=account(),panel=$('#game-panel');let html='';
     if(selectedTab==='inventory'){const dm=deathMarks(b);if(dm)for(const it of b.equipment||[])deathCls(dm,it);html=b?.inventory?'<div class="inventory-grid">'+Array.from({length:28},(_,i)=>itemCell(b.inventory[i],i,deathCls(dm,b.inventory[i]))).join('')+'</div>'+invWorth(b.inventory)+teleLine(b):'<p class="game-muted">Select an account with a reported inventory.</p>';}
-    if(selectedTab==='skills'){html='<div class="skill-grid">'+skills.filter(n=>reported(b,n)).map(n=>{const s=level(n);return `<button class="game-skill" data-skill="${n}" title="${n}${s?(s.xp!=null?' · '+s.xp.toLocaleString()+' XP':' · level '+s.level):' · not reported by this game'}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt=""><span>${s?s.currentLevel??s.level:'—'}<small>／${s?s.level:'—'}</small></span></button>`;}).join('')+'</div><div class="skill-total">Total level: '+(b?.skills?.filter(realSkill).reduce((n,s)=>n+s.level,0)??'—')+'</div>'+combatLine(b);}
+    if(selectedTab==='skills'){html='<div class="skill-grid">'+skills.filter(n=>reported(b,n)).map(n=>{const s=level(n);return `<button class="game-skill" data-skill="${n}" title="${n}${s?(s.xp!=null?' · '+s.xp.toLocaleString()+' XP':' · level '+s.level):' · not reported by this game'}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt=""><span>${s?s.currentLevel??s.level:'—'}<small>／${s?s.level:'—'}</small></span></button>`;}).join('')+'</div><div class="skill-total">Total level: '+(b?.skills?.filter(realSkill).reduce((n,s)=>n+s.level,0)??'—')+'</div>'+combatLine(b)+bankedLine(b);}
     if(selectedTab==='equipment'&&b?.equipment?.length&&b.equipment.every(e=>e.slot==null)){html='<div class="game-list">'+b.equipment.map(it=>`<span class="equip-row">${icon(it.name,32)}<span>${E(it.name)}</span></span>`).join('')+'</div><p class="game-muted">The '+E(b.side||'other')+' side reports worn items without their slots. Snapshot '+age(b.at)+' old.</p>';}
     else if(selectedTab==='equipment'){const slots=[[0,'Head',78,4,0],[1,'Cape',37,43,1],[2,'Neck',78,43,2],[13,'Ammo',119,43,10],[3,'Weapon',22,82,3],[4,'Body',78,82,5],[5,'Shield',134,82,6],[7,'Legs',78,122,7],[9,'Hands',22,162,8],[10,'Feet',78,162,9],[12,'Ring',134,162,4]];const dm=deathMarks(b);html='<div class="equipment-doll">'+slots.map(([id,name,x,y,f])=>{const it=b?.equipment?.find(e=>e.slot===id),su=setupSlot(b,id,it);return `<button class="equipment-slot${su.cls}${deathCls(dm,it)}" style="left:${x}px;top:${y}px" data-equipment="${id}" title="${(it?E(it.name)+(it.count>1?' × '+E(it.count):''):name+' · '+(b?.equipment?'empty':'not reported'))+E(su.tip)}">${it?icon(it.name,32)+(it.count>1?qty(it.count):'')+chargeTag(it):'<i class="worn-icon" style="background-position:-'+32*(f%4)+'px -'+32*Math.floor(f/4)+'px"></i>'}</button>`;}).join('')+'</div>'+(b?'<p class="game-muted">'+(b.equipment?(window.atlasOperator()?'Observed ':'Updated ')+''+age(b.at)+' ago':'Equipment is not reported for this account.')+'</p>':'<p class="game-muted">Select an account in the title bar.</p>')+equipStats(b)+setupPanel(b);}
     if(selectedTab==='quests'&&questScope==='fleet')html=fleetQuests();
@@ -395,11 +401,23 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       const ids=new Set(Object.keys(kinds).filter(id=>String(kinds[id]?.name||'').toLowerCase()===want.toLowerCase()).map(Number));
       const tiles=resources.tiles.filter(t=>ids.has(t[3])).map(t=>({x:t[0],z:t[1],l:t[2]}));if(!tiles.length)continue;
       const near=p?tiles.filter(t=>t.l===(p.level||0)&&(t.z>6400)===(p.z>6400)).map(t=>({...t,d:Math.max(Math.abs(t.x-p.x),Math.abs(t.z-p.z))})).sort((x,y)=>x.d-y.d)[0]||null:null;
-      return {name:want,level:a[1],tiles,near};
+      return {name:want,level:a[1],tiles,near,item:a[4]?.[0]||a[0]};
     }
     return null;
   }
-  const bestSpotLine=(b,lvl)=>{const s=bestSpot(b,calcSkill,lvl);return s?'<div class="calc-best">Best now: <b>'+E(s.name)+'</b> (level '+s.level+')'+(s.near?' · nearest '+nf(s.near.d)+' tiles':'')+' <button class="xp-reset" data-best-pin="'+E(s.name)+'">'+(sourcePin?.key==='best|'+s.name?'Shown':'Show on map')+'</button></div>':'';};
+  // Gather chance (RuneLite's Woodcutting and Mining overlays, with the server's roll): client-assets/gather-chance.json
+  // (gen-gather-chance.ts) has each tree's [low, high] for each axe and each rock's [low, high], by the log or ore.
+  // woodcut.rs2 and mining.rs2 roll stat_random: floor(low*(99-L)/98) + floor(high*(L-1)/98) + 1 beats a roll of 0-255.
+  // A tree counts the best axe the account holds or wears; a pickaxe changes how often a rock is tried, not the roll.
+  let gatherData={};if(typeof asset==='function'&&typeof fetch==='function')fetch(asset('gather-chance.json')).then(r=>r.ok?r.json():{}).then(j=>{gatherData=j||{};},()=>{});
+  // The roll uses the current level (a boost or a drain counts), else the level from the XP.
+  function gatherText(b,item,lvl,skill){const g=gatherData[item],cur=skill&&typeof curLevel==='function'?curLevel(b,skill):null;if(Number.isFinite(cur))lvl=cur;if(!g||!Number.isFinite(lvl))return '';
+    const roll=([lo,hi])=>{const l=Math.min(lvl,99);return Math.min(Math.floor(lo*(99-l)/98)+Math.floor(hi*(l-1)/98)+1,256)/256;};
+    if(g.roll)return Math.round(roll(g.roll)*100)+'% a try';
+    const held=new Set([...(b?.inventory||[]),...(b?.equipment||[])].filter(Boolean).map(i=>i.name));
+    const t=(g.tool||[]).filter(([n])=>held.has(n)).map(([n,lo,hi])=>({n,p:roll([lo,hi])})).sort((x,y)=>y.p-x.p)[0];
+    return t?Math.round(t.p*100)+'% a try with the '+t.n.toLowerCase():'no axe held';}
+  const bestSpotLine=(b,lvl)=>{const s=bestSpot(b,calcSkill,lvl);return s?'<div class="calc-best">Best now: <b>'+E(s.name)+'</b> (level '+s.level+')'+(gatherText(b,s.item,lvl,calcSkill)?' · '+E(gatherText(b,s.item,lvl,calcSkill)):'')+(s.near?' · nearest '+nf(s.near.d)+' tiles':'')+' <button class="xp-reset" data-best-pin="'+E(s.name)+'">'+(sourcePin?.key==='best|'+s.name?'Shown':'Show on map')+'</button></div>':'';};
   const guideText=g=>!g?'':(g.best?' · '+nf(g.best.count)+' × '+g.best.name+' to level':'')+(g.next.length?' · next: '+g.next[0].name+' at '+g.next[0].level:'');
   function calcBox(b,row){
     const X=window.atlasXp,k=(b.skills||[]).find(x=>x.name===calcSkill);
@@ -718,12 +736,20 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const rows=marks.slice(-20).reverse().map(m=>{const i=marks.indexOf(m);return '<div class="mark-row"><span class="mark-swatch" style="background:'+E(m.c||MARK_COLOURS[0][0])+'"></span><button class="xp-reset" data-mark-go="'+i+'" title="Move the camera there (2D)">'+m.x+', '+m.z+(m.l?' · floor '+m.l:'')+'</button><button class="xp-reset" data-mark-del="'+i+'" title="Remove this marker" aria-label="Remove marker">✕</button></div>';}).join('');
     return '<div class="xp-box"><div class="xp-head"><span>Ground markers</span><span class="xp-muted">'+marks.length+' · shift+click the minimap</span></div><div class="xp-buttons"><button class="xp-reset" data-mark-here '+(p?'':'disabled')+'>Mark the account\'s tile</button><select data-mark-colour aria-label="Marker colour">'+colours+'</select>'+(marks.length?'<button class="xp-reset" data-mark-clear>Clear all</button>':'')+'</div>'+(rows?'<div class="mark-list">'+rows+'</div>':'')+'</div>';
   }
+  // Pickpocket (RuneLite's Thieving overlay, with the server's roll): client-assets/thieving.json (gen-thieving.ts) has
+  // [level, xp, low, high, stun ticks, stun damage] by NPC name. thieving.rs2 passes when floor(low*(99-L)/98) +
+  // floor(high*(L-1)/98) + 1 beats a roll of 0-255; L is the current Thieving level of the followed account.
+  let thieveData={};fetch(asset('thieving.json')).then(r=>r.ok?r.json():{}).then(j=>{thieveData=j||{};},()=>{});
+  function thieveText(name){const t=thieveData[name];if(!t)return '';const [lv,xp,lo,hi,stun,dmg]=t,b=typeof account==='function'?account():null,L=typeof curLevel==='function'?curLevel(b,'Thieving'):null;
+    if(!Number.isFinite(L))return 'Pickpocket: Thieving '+lv+' · '+nf(xp)+' XP';if(L<lv)return 'Pickpocket: Thieving '+lv+' needed (has '+L+')';
+    const l=Math.min(L,99),p=Math.min(Math.floor(lo*(99-l)/98)+Math.floor(hi*(l-1)/98)+1,256)/256;
+    return 'Pickpocket at Thieving '+L+': '+Math.round(p*100)+'% · '+nf(Math.round(p*xp))+' XP a try'+(p<1?' · a fail stuns '+stun+' ticks and hits '+dmg:'');}
   function finderList(){
     if(finderPlayer){const p=playerRow(),c=miniView.PX?{x:miniView.cx,z:miniView.cz}:null,d=p&&c?Math.max(Math.abs(p[1]-c.x),Math.abs(p[2]-c.z)):null;
       return '<div class="finder-pick"><b>'+E(p?String(p[0]):finderPlayer)+'</b> <span class="xp-muted">'+(p?'combat '+(p[4]??'?')+' · '+p[1]+', '+p[2]+(d!=null?' · '+nf(d)+' tiles away':''):'not online')+'</span>'+(p?'<button class="xp-reset" data-finder-go="'+p[1]+','+p[2]+'" title="Move the camera there (2D)">Go</button><button class="xp-reset" data-lookup="'+E(String(p[0]))+'">Hiscores</button>':'')+'<button class="xp-reset" data-finder-clear>Clear</button></div>';}
     const r=finderRow();
     if(r){const tiles=spawnTiles(r),c=miniView.PX?{x:miniView.cx,z:miniView.cz}:null,best=c?tiles.map(t=>({...t,d:Math.max(Math.abs(t.x-c.x),Math.abs(t.z-c.z))})).sort((a,b)=>a.d-b.d)[0]:null;
-      return '<div class="finder-pick"><b>'+E(r[0])+'</b> <span class="xp-muted">'+combatText(r)+' · '+tiles.length+(tiles.length===1?' spawn':' spawns')+'</span>'+(best?'<button class="xp-reset" data-finder-go="'+best.x+','+best.z+'" title="Move the camera there (2D)">Nearest: '+best.x+', '+best.z+' · '+nf(best.d)+' tiles</button>':'')+'<button class="xp-reset" data-finder-clear>Clear</button>'+(teleText(tiles)?'<small class="finder-tele">'+E(teleText(tiles))+'</small>':'')+'</div>';}
+      return '<div class="finder-pick"><b>'+E(r[0])+'</b> <span class="xp-muted">'+combatText(r)+' · '+tiles.length+(tiles.length===1?' spawn':' spawns')+'</span>'+(best?'<button class="xp-reset" data-finder-go="'+best.x+','+best.z+'" title="Move the camera there (2D)">Nearest: '+best.x+', '+best.z+' · '+nf(best.d)+' tiles</button>':'')+'<button class="xp-reset" data-finder-clear>Clear</button>'+(teleText(tiles)?'<small class="finder-tele">'+E(teleText(tiles))+'</small>':'')+(thieveText(r[0])?'<small class="finder-tele">'+E(thieveText(r[0]))+'</small>':'')+'</div>';}
     // While the NPC list loads, the players (from the roster, already here) still show.
     if(npcSpawns!==null&&!npcSpawns.length&&!playerMatches(finderQuery).length)return '<span class="xp-muted">Loading NPC spawns…</span>';
     const m=finderMatches(finderQuery),pm=playerMatches(finderQuery);
