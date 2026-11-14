@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1794643307780-nabtheknob-mmsmk1232-bones",
+ "account": "mmsmk1232",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 94,
+ "claim": "99c89831-be5a-4746-a986-03c5c0caff82",
+ "count": 0,
+ "ok": false,
+ "at": 1794643346344,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794643317462-0000027468-0000000001",
+  "at": 1794643346336,
+  "sha256": "1a20d761ea3a45ed14b10d6c3b0be41746c4281b5629c8da2e08ca68e55877dd"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794642953428-weequickie-oreelse",
  "account": "WeeQuickie",
  "partner": "OreElse",
@@ -12,6 +12,16 @@
  "claim": "4918096f-1561-4eda-954d-e763ff0f85ff",
  "count": 0,
  "ok": false,
- "at": 1794642975299,
- "detail": "trade claimed"
+ "at": 1794643258203,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1794642975308-0000014876-0000000001",
+  "at": 1794643258193,
+  "sha256": "2347a4c8c75e384891edab5005774fbaab6160bf9a7b41b79c5c182822fd4ece"
+ },
+ "screen": true
 }
