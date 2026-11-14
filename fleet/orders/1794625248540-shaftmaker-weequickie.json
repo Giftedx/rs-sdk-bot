@@ -1,0 +1,23 @@
+{
+ "id": "1794625248540-shaftmaker-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "WeeQuickie",
+ "item": "Death rune",
+ "count": 4,
+ "start": 1794625248540,
+ "end": 1794628848540,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
