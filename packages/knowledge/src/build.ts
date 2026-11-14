@@ -12,7 +12,7 @@ import { classifyDoor, parseTriggers, openedTeamDoor,type OpenDoorVariant,type D
 import { buildDbTables } from './dbtables';
 import { buildSkillActions } from './skills';
 import { buildQuests, parseConstants } from './quests';
-import { parseDrops } from './drops';
+import { parseDrops, parseDropProcs, expandProcItems } from './drops';
 
 interface Door { id: number; loc: string; x: number; z: number; level: number; angle?:number; shape?:number;open?:OpenDoorVariant; kind: DoorKind; need?: DoorNeed; trigger: string; src: string }
 
@@ -109,6 +109,9 @@ const questFile = 'scripts/general/configs/quest.constant';
 const procFile = 'scripts/general/scripts/quests.rs2';
 const quests = buildQuests({ constants: parseConstants(read(questFile), questFile), proc: { text: read(procFile), file: procFile }, varpFolders: questVarpFolders, folderScripts: questScripts });
 const drops = scriptFiles.flatMap(s => parseDrops(s.text, s.file));
+// Items a roll on a shared drop proc (~randomherb, ~randomjewel, ~ultrarare_getitem, then ~megararetable) can give.
+const dropProcs = new Map(scriptFiles.flatMap(s => [...parseDropProcs(s.text, s.file)]));
+expandProcItems(drops, dropProcs);
 
 const doorKinds: Record<string, number> = {};
 for (const d of doors) doorKinds[d.kind] = (doorKinds[d.kind] ?? 0) + 1;
