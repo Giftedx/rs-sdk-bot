@@ -135,6 +135,9 @@ export async function collectClaim(collect:(offerId:number,notes:boolean)=>Promi
  return !result.success&&notes&&result.reason==='no_control'?collect(offerId,false):result;
 }
 const BANK={x:3185,z:3436},GE={x:3181,z:3443};
+// The meals the health preparation may eat, cheapest first: trout 7, salmon 9, tuna 10, lobster 12, swordfish 14,
+// shark 20 hitpoints (consume_effects.dbrow).
+export const HEAL_FOOD=[333,329,361,379,373,385] as const;
 export const marketTileSafe=(p:{x:number;z:number;level:number})=>p.level===0&&p.x>=3180&&p.x<=3188&&p.z>=3433&&p.z<=3447;
 // North Varrock arrival observed live at 3165,3487,0. Its only pinned exit is north-east, and findLongPath
 // enters Varrock from the north. The 3241,3507 waypoint keeps the path 6+ tiles from the brownbear spawn at
@@ -379,11 +382,12 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
   await walk(BANK);await openBank();baseline=assets();
   if(journal?.phase==='entry'&&(JSON.stringify(bankTotals(bankItems))!==JSON.stringify(bankTotals(journal.rescue!.bank))||!rescueKit(s)))throw Error('rescue market bank/kit changed');
   await bankPack();
-  // One owned salmon/trout/lobster crosses the >6 HP entry floor. Cash is never spent on preparation.
+  // One owned meal crosses the >6 HP entry floor (each heals 7 or more); the cheapest that the bank holds goes first.
+  // Cash is never spent on preparation.
   if(hp()<=6){
    if(over())throw Error('market health preparation stopped');
-   const food=bankItems.find(i=>[329,333,379].includes(i.id)&&i.id!==request.item&&i.count>0);
-   if(!food)throw Error(`market health preparation: currentHP=${hp()}; acquire 1 owned salmon(329),trout(333) or lobster(379) at this bank`);
+   const food=HEAL_FOOD.map(id=>bankItems.find(i=>i.id===id&&i.id!==request.item&&i.count>0)).find(Boolean);
+   if(!food)throw Error(`market health preparation: currentHP=${hp()}; acquire 1 owned meal (${HEAL_FOOD.join(',')}) at this bank`);
    preparationFood.add(food.id);const n=held(food.id),bankBefore=count(bankItems,i=>i.id===food.id),gen=bankObservation()?.generation??0,beforeHp=hp();
    const live=state()?.bank.items.find(i=>i.id===food.id);if(!live)throw Error('market health preparation food missing from open bank');
    // The session eat guard can eat the withdrawn food at an urgent HP before this worker does. The bank debit with the HP gain proves that eat.
