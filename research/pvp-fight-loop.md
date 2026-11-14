@@ -1112,6 +1112,14 @@ The levers for our side: `cureNow` (an antipoison in the first tick after the po
 `chaseBelow` (a run after a target that flees with a low health bar), and `specBelow` (keep the special energy for a
 low target).
 
+### The roam's loot threshold
+
+`extra:roam-field` (four targets in rune with no food at Wilderness 6 to 17, the roam on the default options, 1,000
+ticks, seeds 1 to 8): picking up every stack worth 1,000 gp or more, 21 kills of 32 and about 2.30M gp of loot each 4
+runs; only stacks worth 20,000 gp or more, 24 kills and about 2.23M; no loot (`LOOT=0`), 30 kills; no freeze
+(`FREEZE=0`, seeds 1 to 4), 10 of 16 against the base's 11. The cheap stacks (sharks, runes) cost the ticks of a kill,
+so the roam's `LOOT_MIN` default is 20,000.
+
 ### Runners by depth and squad size
 
 A runner (kit `runner`, `SPAR_B_OPTS={"escapeAt":60}`: with its food gone at 60 HP or less it runs south and rubs its
