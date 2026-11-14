@@ -281,9 +281,10 @@ test('a run refused for a qualification of an older release spends no attempt', 
     const target = { account: 'Sausagefest', endedAt: 1794632675457 };
     const run = (id: string, error: string) => ({ ...task(id, 'failed', [], target), runId: `task-${id}`, receipt: { ok: false, output: null, error } });
     const stale = 'Error: authenticated recovery requires its current native delivery';
-    const tasks = [run('a', stale), run('b', stale)];
+    const noQualify = 'Error: fresh same-capability native qualification required';
+    const tasks = [run('a', stale), run('b', stale), run('e', noQualify)];
     expect(spentAttempts(tasks, target)).toBe(0);
-    expect(waitedAttempts(tasks, target)).toBe(2);
+    expect(waitedAttempts(tasks, target)).toBe(3);
     // A held child and other errors still count.
     const childHeld = 'Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry';
     expect(spentAttempts([run('c', childHeld), run('d', `${stale} now`)], target)).toBe(2);
