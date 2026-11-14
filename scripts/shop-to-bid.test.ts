@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { bidPlan, chunkTooDear, fetchMarket, floatNeed, parseProfiles, tickPackets, trickleOnly, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
+import { bidPlan, chunkTooDear, fetchMarket, floatNeed, lotValue, parseProfiles, tickPackets, trickleOnly, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
 
 const bait = { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334 };
 
@@ -106,4 +106,17 @@ test('a tick of a few units after the first means only the restock trickle is le
     expect(trickleOnly(2, true, 0)).toBe(false);
     expect(trickleOnly(0, false, 0)).toBe(false);
     expect(trickleOnly(3, false, 20)).toBe(false);
+});
+
+test('lotValue counts only the quoted items the shop sells, at the base price, up to a shelf of units', () => {
+    const sarim = [{ re: /^fishing bait$/i }, { re: /^feather$/i }];
+    const quotes = [
+        { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334 },
+        { id: 560, name: 'Death rune', basePrice: 30, bid: 250, buyQuantity: 100_000 },
+    ];
+    // Bait: (207.1 - 3) x 1,500. The death rune is not sold here.
+    expect(lotValue(sarim, quotes)).toBe(306_150);
+    expect(lotValue(sarim, quotes.slice(1))).toBe(0);
+    expect(lotValue(sarim, [{ ...quotes[0]!, buyQuantity: 10 }])).toBe(2041);
+    expect(lotValue(sarim, [{ ...quotes[0]!, bid: null }])).toBe(0);
 });
