@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794621595315-mightyrod-weequickie",
  "account": "Mightyrod",
  "partner": "WeeQuickie",
@@ -12,6 +12,12 @@
  "claim": "ab0146f0-ca1d-41b7-8c6e-6c07686d71b4",
  "count": 0,
  "ok": false,
- "at": 1794621886051,
- "detail": "trade claimed"
+ "at": 1794621955837,
+ "detail": "Error: bank did not open",
+ "logout": {
+  "attemptId": "1794621886060-0000031120-0000000001",
+  "at": 1794621955824,
+  "sha256": "a66606eaba989a34e03337430bdad796b34125747e299b38aeaee811cd184ca7"
+ },
+ "screen": false
 }
