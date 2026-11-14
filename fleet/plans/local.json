@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794627912612,
+ "at": 1794627996719,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -306,21 +306,22 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "21",
-    "1500"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-strike-magic-21",
+   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-fire-aubury",
    "autopilot": "local",
    "resources": [
-    "strike:ardougne-guard-dog"
+    "shop:aubury"
    ]
   },
   {
