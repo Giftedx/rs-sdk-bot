@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794643833511-oreelse-weequickie",
+ "account": "WeeQuickie",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannonball",
+ "requested": 150,
+ "claim": "9954330e-01ce-4f23-975d-b011bc201755",
+ "count": 150,
+ "ok": true,
+ "at": 1794644047303,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 150
+ },
+ "bank": {
+  "count": 150,
+  "at": 1794644046226
+ },
+ "logout": {
+  "attemptId": "1794643969655-0000025208-0000000001",
+  "at": 1794644047295,
+  "sha256": "283d3a9807790453783e2018283833e1c03d7fa4c0949702fd34a7b6860c1e61"
+ },
+ "screen": true
+}

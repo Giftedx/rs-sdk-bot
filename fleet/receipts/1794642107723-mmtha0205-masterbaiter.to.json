@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794642107723-mmtha0205-masterbaiter",
  "account": "Masterbaiter",
  "partner": "mmtha0205",
@@ -12,6 +12,12 @@
  "claim": "29b9a782-0924-4ff3-a32c-9f8bdf362ea7",
  "count": 0,
  "ok": false,
- "at": 1794642114845,
- "detail": "trade claimed"
+ "at": 1794643828356,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794642114854-0000005780-0000000001",
+  "at": 1794643828330,
+  "sha256": "7df5f39207dcc44ae88d7bc8356944a6b37424fc737aac24e821e00403283d47"
+ },
+ "screen": false
 }

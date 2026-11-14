@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794643646185,
+ "at": 1794644622236,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -64,28 +64,6 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby"
-   ]
   },
   {
    "account": "Mightyrod",
@@ -364,6 +342,28 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby"
    ]
   },
   {
