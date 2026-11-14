@@ -1181,7 +1181,9 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   (`extra:team-3v3-gang-rune-west-x2`). Three of ours hit one gang account at once and kill it before it eats. Two of
   ours against three there leave at once (`escapeOutnumbered`), with no kill and no death
   (`extra:team-2v3-gang-rune-west-x2`). Four of ours against the three there: 15 of 16 groups won, 47 kills of 48,
-  no death, 35 HP a kill, under 2 sharks (`extra:team-4v3-gang-rune-west-x2`). Three in the adamant kit: 41 kills, 75
+  no death, 35 HP a kill, under 2 sharks (`extra:team-4v3-gang-rune-west-x2`); four in the adamant kit 48 kills and
+  53 HP a kill (`-addy-`), and four in adamant with no antipoison and no freeze 48 kills and 76 HP a kill (`-bare-`).
+  Three in the adamant kit: 41 kills, 75
   HP a kill (`extra:team-3v3-gang-addy-west-x2`). Gap: the bench gang follows its target into multi-way; no record
   shows whether the live gang does.
 - **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
