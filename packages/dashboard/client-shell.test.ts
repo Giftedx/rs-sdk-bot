@@ -970,6 +970,14 @@ test('regeneration meter: the heal and restore timers, their phase from a 1-poin
  // Attack 50 / 60: at most 400 s; 51 at 12 s sets the phase: at 12 s, 40 s to the next and 8 more.
  expect(t.regenStatText(b,b.skills[0],0)).toBe(' · back to 60 in at most 6:40');
  b.skills[0].currentLevel=51;t.regenTrack(b,12e3);expect(t.regenStatText(b,b.skills[0],12e3)).toBe(' · back to 60 in 6:00');
+ // Rapid Heal: heals at 0 s and 20 s (50 ticks) set a 50-tick period: at 20 s the next heal is 20 s away, then 17 x 20 s.
+ const f:any={name:'F',inWorld:true,hp:{now:10,max:30},skills:[]};t.regenTrack(f,-5e3);
+ f.hp={now:11,max:30};t.regenTrack(f,0);f.hp={now:12,max:30};t.regenTrack(f,20e3);
+ expect(t.regenHpText(f,20e3)).toBe(' · next heal in 0:20 · full in 6:00');
+ // A drained and a boosted stat use two timers: a rise of the drained one does not set the boosted one's phase.
+ const g:any={name:'G',inWorld:true,hp:{now:30,max:30},skills:[{name:'Attack',currentLevel:50,level:60},{name:'Strength',currentLevel:70,level:60}]};t.regenTrack(g,0);
+ g.skills[0].currentLevel=51;t.regenTrack(g,10e3);
+ expect(t.regenStatText(g,g.skills[0],10e3)).toBe(' · back to 60 in 6:00');expect(t.regenStatText(g,g.skills[1],10e3)).toBe(' · back to 60 in at most 6:40');
  // Logged out: the record goes.
  t.regenTrack({...b,inWorld:false},40e3);expect(t.regenHpText(b,40e3)).toBe('');
 });

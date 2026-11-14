@@ -1018,27 +1018,32 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return left<=0?{text:'safe',title:'NPC aggression: '+names+(h.length===1?' no longer hunts':' no longer hunt')+' you here (1,000 ticks in these areas).',red:false}
       :{text:mmss(left),title:'NPC aggression: '+names+(h.length===1?' hunts':' hunt')+' you here for '+(t.first?'at most ':'')+mmss(left)+' more. The hunt stops after 1,000 ticks ('+mmss(1000*tick)+') in two 21 x 21 areas. A step out of both starts the count again.',red:true};}
   // Regeneration meter (RuneLite's Regeneration Meter, with the server's timers): Hitpoints heal 1 every 100 ticks
-  // (health_regen; 50 with Rapid Heal), a drained stat rises 1 and a boosted stat falls 1 every 100 ticks (stat_regen,
+  // (health_regen), a drained stat rises 1 and a boosted stat falls 1 every 100 ticks (stat_regen,
   // stat_boost_restore, all set at login: login.rs2, stat.rs2). Prayer does not regenerate. The page finds each timer's
   // phase from the state reads: Hitpoints up by exactly 1, or a stat 1 step nearer its base, is a timer tick. Until it
   // sees one, it gives the most time. State reads come every 5 ticks, so a time is good to about 5 ticks.
-  const regen=new Map();
+  // Rapid Heal makes health_regen 50 ticks and Rapid Restore makes stat_regen 50 (rapidheal.rs2, rapidrestore.rs2); the
+  // state has no prayers, so each timer measures its period: two counted steps 50 ticks apart (within 6) set it to 50,
+  // 100 apart set it back to 100. A drained stat (stat_regen) and a boosted stat (stat_boost_restore) have two timers.
+  const regen=new Map(),regenTick=()=>Number(S?.world?.tickMs)||600;
+  const regenStep=(t,now)=>{if(t.at!=null){const gap=(now-t.at)/regenTick();if(Math.abs(gap-50)<=6)t.ticks=50;else if(Math.abs(gap-100)<=6)t.ticks=100;}t.at=now;};
   function regenTrack(b,now){if(!b?.inWorld||!b.hp||!Number.isFinite(b.hp.now)){if(b?.name)regen.delete(b.name);return null;}if(typeof aggroNow==='function')now=aggroNow(b,now);
     const lv={};for(const s of b.skills||[])if(s&&s.name!=='Hitpoints'&&s.name!=='Prayer'&&Number.isFinite(s.currentLevel)&&Number.isFinite(s.level))lv[s.name]=[s.currentLevel,s.level];
     // A step counts only when no item of the pack fell in count between the two reads: food and potions take one away
     // (a cake bite leaves a smaller slice), so a hit and a bite that net +1 are not taken for a timer tick. Loot only adds.
     const inv=new Map();for(const i of b.inventory||[])if(i?.name)inv.set(i.name,(inv.get(i.name)||0)+(i.count||1));
-    const r=regen.get(b.name);if(!r){const n={hp:b.hp.now,hpAt:null,lv,statAt:null,inv};regen.set(b.name,n);return n;}
+    const r=regen.get(b.name);if(!r){const n={hp:b.hp.now,lv,inv,heal:{at:null,ticks:100},up:{at:null,ticks:100},down:{at:null,ticks:100}};regen.set(b.name,n);return n;}
     let still=true;for(const [k,c] of r.inv)if((inv.get(k)||0)<c){still=false;break;}
-    if(still&&b.hp.now===r.hp+1)r.hpAt=now;r.hp=b.hp.now;
-    for(const k in lv){const p=r.lv[k];if(still&&p&&p[1]===lv[k][1]&&Math.abs(lv[k][0]-p[0])===1&&Math.abs(lv[k][0]-lv[k][1])<Math.abs(p[0]-p[1]))r.statAt=now;}
+    if(still&&b.hp.now===r.hp+1)regenStep(r.heal,now);r.hp=b.hp.now;
+    let up=false,down=false;for(const k in lv){const p=r.lv[k];if(still&&p&&p[1]===lv[k][1]&&Math.abs(lv[k][0]-p[0])===1&&Math.abs(lv[k][0]-lv[k][1])<Math.abs(p[0]-p[1])){if(lv[k][0]>p[0])up=true;else down=true;}}
+    if(up)regenStep(r.up,now);if(down)regenStep(r.down,now);
     r.lv=lv;r.inv=inv;return r;}
-  // The time (ms) until `steps` more ticks of a 100-tick timer last seen at `at`; null at: the most time ("at most").
-  function regenTime(at,steps,now){const period=100*(Number(S?.world?.tickMs)||600);if(steps<=0)return {ms:0,most:false};if(at==null)return {ms:steps*period,most:true};const next=period-((now-at)%period);return {ms:next+(steps-1)*period,most:false,next};}
+  // The time (ms) until `steps` more ticks of a timer {at, ticks}; at null: the most time ("at most").
+  function regenTime(t,steps,now){const period=t.ticks*regenTick();if(steps<=0)return {ms:0,most:false};if(t.at==null)return {ms:steps*100*regenTick(),most:true};const next=period-((now-t.at)%period);return {ms:next+(steps-1)*period,most:false,next};}
   const regenClock=ms=>Math.floor(ms/6e4)+':'+String(Math.floor(ms%6e4/1e3)).padStart(2,'0');
-  function regenHpText(b,now){const r=regen.get(b?.name);if(!r||!b.hp||!(b.hp.max>b.hp.now))return '';const t=regenTime(r.hpAt,b.hp.max-b.hp.now,typeof aggroNow==='function'?aggroNow(b,now):now);
+  function regenHpText(b,now){const r=regen.get(b?.name);if(!r||!b.hp||!(b.hp.max>b.hp.now))return '';const t=regenTime(r.heal,b.hp.max-b.hp.now,typeof aggroNow==='function'?aggroNow(b,now):now);
     return (t.most?' · full in at most ':' · next heal in '+regenClock(t.next)+' · full in ')+regenClock(t.ms);}
-  function regenStatText(b,s,now){const r=regen.get(b?.name);if(!r)return '';const t=regenTime(r.statAt,Math.abs(s.currentLevel-s.level),typeof aggroNow==='function'?aggroNow(b,now):now);return ' · back to '+s.level+' in '+(t.most?'at most ':'')+regenClock(t.ms);}
+  function regenStatText(b,s,now){const r=regen.get(b?.name);if(!r)return '';const t=regenTime(s.currentLevel<s.level?r.up:r.down,Math.abs(s.currentLevel-s.level),typeof aggroNow==='function'?aggroNow(b,now):now);return ' · back to '+s.level+' in '+(t.most?'at most ':'')+regenClock(t.ms);}
   function infoboxes(){
     const el=hud.querySelector('.game-infoboxes'),b=account();
     if(typeof aggroTrack==='function'){const now=Date.now();for(const x of S?.bots||[]){aggroTrack(x,now);regenTrack(x,now);}}
