@@ -1,0 +1,22 @@
+{
+ "id": "1794649129322-swordinhand-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 18186,
+ "start": 1794649129322,
+ "end": 1794651529322,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
