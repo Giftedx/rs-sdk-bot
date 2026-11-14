@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794619028386-bigpackage-weequickie",
+ "account": "Bigpackage",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Death rune",
+ "requested": 110,
+ "claim": "83371b4a-b08e-4508-892d-ea655d8609d5",
+ "count": 110,
+ "ok": true,
+ "at": 1794619067899,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 110,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794619034352-0000009788-0000000001",
+  "at": 1794619067890,
+  "sha256": "b581b3976e9f08721b74d8ca9dd346923caa087de8ce1b17d3159c06b70f1c46"
+ },
+ "screen": true
+}
