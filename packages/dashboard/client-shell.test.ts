@@ -818,6 +818,9 @@ test('kill XP: one style and Hitpoints from the hitpoints and the multiplier, an
  // A row with the respawn rate: 60 ticks x 0.6 = 36 s.
  const t2=new Function(...Object.keys(env),`${code};return killXpText;`)(...Object.values({...env,fetch:()=>sync({ok:true,json:()=>({'Giant spider':[[27,21,1,0,0,0,0,0,20,24,0,0,0,30,1000,60]]})})}));
  expect(t2('Giant spider')).toContain('A kill: 3,000 XP in one style + about 998 Hitpoints · respawns in 36 s');
+ // A 400 ms server: 60 ticks are 24 s.
+ const t3=new Function(...Object.keys(env),'S',`${code};return killXpText;`)(...Object.values({...env,fetch:()=>sync({ok:true,json:()=>({'Giant spider':[[27,21,1,0,0,0,0,0,20,24,0,0,0,30,1000,60]]})})}),{world:{tickMs:400}});
+ expect(t3('Giant spider')).toContain('respawns in 24 s');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
