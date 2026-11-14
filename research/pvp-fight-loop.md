@@ -1231,12 +1231,13 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   target in view, while the goal is multi-way and within 40 tiles, walks on into multi-way and eats instead of
   fighting (`PULL`), for at most 20 ticks at a stretch. A squad account takes only a target the game lets it attack
   (`attackable`); one that walked out of the Wilderness held three of ours at its edge. With `SQUAD_GANG_HUNT=1` the
-  bench gang walks to the nearest of ours, as the live gang did. Seeds 1 to 4, no death in any:
-  - the walk-in from the Edgeville bank against the hunting gang: 12 of 12 at 36 HP a kill
-    (`extra:squad-4-gang-hunted-x1`); with `MARCH=0 PULL=0`, 12 of 12 at 32. The bench gang did not split the
-    squad on the way, so this case does not show the live gain.
-  - `FOLLOW=1` from (3150, 3560), 110 tiles away, past the gang's single-way post: 10 of 12 at 38 HP a kill
-    (`extra:squad-4-gang-follow-x1`); straight in, 81; gathered once 10 tiles short, 48.
+  bench gang walks to the nearest of ours, as the live gang did. Seeds 1 to 8, no death in any:
+  - the walk-in from the Edgeville bank against the hunting gang: 24 of 24 at about 34 HP a kill
+    (`extra:squad-4-gang-hunted-x1`); with `MARCH=0 PULL=0`, 23 of 24 at about 31. The bench gang did not split
+    the squad on the way, so the bench shows no gain from the march and the pull; the live split is their reason.
+  - `FOLLOW=1` from (3150, 3560), 110 tiles away, past the gang's single-way post: 19 of 24 at about 60 HP a kill
+    (`extra:squad-4-gang-follow-x1`; seeds 1 to 4: 38, seeds 5 to 8: 84). Seeds 1 to 4 only: straight in, 81;
+    gathered once 10 tiles short, 48.
 - **Following the gang.** The gang roams (the first live pilot's feed showed it 250 tiles from its post). `FOLLOW=1`
   marches the squad, once no target has been in view for 30 ticks, to the nearest multi-way tile within 24 tiles of
   the targets that the world feed shows, at Wilderness level `MAX_WILD` or less (`meetTile`, the feed through
