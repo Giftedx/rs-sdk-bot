@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794658057975-mineyourbiz-weequickie",
  "account": "MineYourBiz",
  "partner": "WeeQuickie",
@@ -10,15 +10,37 @@
  "item": "Blood rune",
  "requested": 300,
  "claim": "c53df2f5-ee16-422a-907c-3a2f4f178ef8",
- "count": 0,
- "ok": false,
- "at": 1794658102266,
- "detail": "trade claimed",
+ "count": 300,
+ "ok": true,
+ "at": 1794658501595,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Coins",
    "requested": 700000,
-   "count": 0
+   "count": 700000,
+   "inventory": {
+    "before": 700000,
+    "after": 0
+   },
+   "bank": {
+    "count": 700000,
+    "at": 1794658406082
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1794658404903
+ },
+ "logout": {
+  "attemptId": "1794658102390-0000011512-0000000001",
+  "at": 1794658501584,
+  "sha256": "5da2ef911f43fc1e5e8757a7a9520806e07d1a8167e6d16b49f474928dcd5a50"
+ },
+ "screen": true
 }
