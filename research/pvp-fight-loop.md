@@ -1180,8 +1180,10 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   3071, z 3624 to 3663, Wilderness 14 to 18, `maps/multiway.csv`) 13 won and 3 drawn, 41 kills, no death, 65 HP a kill
   (`extra:team-3v3-gang-rune-west-x2`). Three of ours hit one gang account at once and kill it before it eats. Two of
   ours against three there leave at once (`escapeOutnumbered`), with no kill and no death
-  (`extra:team-2v3-gang-rune-west-x2`). Gap: the bench gang follows its target into multi-way; no record shows
-  whether the live gang does.
+  (`extra:team-2v3-gang-rune-west-x2`). Four of ours against the three there: 15 of 16 groups won, 47 kills of 48,
+  no death, 35 HP a kill, under 2 sharks (`extra:team-4v3-gang-rune-west-x2`). Three in the adamant kit: 41 kills, 75
+  HP a kill (`extra:team-3v3-gang-addy-west-x2`). Gap: the bench gang follows its target into multi-way; no record
+  shows whether the live gang does.
 - **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
   (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
   (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at
@@ -1192,7 +1194,8 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
 
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
 regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
-at once, each against its own, or on the multi-way tiles west of the post where the gang follows. Every
+at once, each against its own, or best, four such accounts on the multi-way tiles west of the post (35 HP a kill,
+about 700 coins of supplies), where the bench gang follows. Every
 consumable has a source with no Grand Exchange: sharks by fishing and cooking, iron arrows from the archery shops
 (`archeryshop` 1,500, `archeryshop2` 800), earth and water runes from the rune shops (`runeshop` 2,000), nature runes
 from `magearena_runeshop` and `magicguildshop`, the antipoison from `junglestore` (10). The gear: the dragon dagger
