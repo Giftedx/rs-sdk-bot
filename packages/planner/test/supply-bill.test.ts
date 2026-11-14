@@ -107,3 +107,36 @@ test('an account that changed side counts once, from the side that owns it', asy
     const rows = liveHelperStatuses(base, snaps, 'local');
     expect(rows.map(s => s.name)).toEqual(['Mover']);
 });
+
+test('an adopted account uses its owner snapshot instead of the former owner\'s local status', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const base = mkdtempSync(join(tmpdir(), 'bill-adopted-')), fleet = join(base, 'fleet'), snaps = join(fleet, 'snapshots');
+    try {
+        mkdirSync(join(base, '.practice/status'), { recursive: true }); mkdirSync(snaps, { recursive: true });
+        const holding = (name: string, count: number, at: number) => ({ name, server: 'rs-sdk-demo.fly.dev', at, bank: [{ id: 536, count }] });
+        writeFileSync(join(fleet, 'owners.json'), JSON.stringify({ accounts: { Mover: { side: 'cloud', server: 'rs-sdk-demo.fly.dev' } } }));
+        writeFileSync(join(base, '.practice/status/Mover.json'), JSON.stringify(holding('Mover', 1000, 30)));
+        writeFileSync(join(snaps, 'local.json'), JSON.stringify({ side: 'local', accounts: [holding('Mover', 1000, 30)] }));
+        writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [holding('MOVER', 25, 20)] }));
+        const statuses = liveHelperStatuses(base, snaps, 'local');
+        expect(statuses).toHaveLength(1);
+        expect(supplyBill([{ item: 'dragon bones', count: 100 }], items, statuses)[0]).toMatchObject({ owned: 25, short: 75 });
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
+test('a local practice observation cannot hide a live fleet snapshot with the same account name', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const base = mkdtempSync(join(tmpdir(), 'bill-practice-')), snaps = join(base, 'snaps');
+    try {
+        mkdirSync(join(base, '.practice/status'), { recursive: true }); mkdirSync(snaps);
+        writeFileSync(join(base, '.practice/status/Helper.json'), JSON.stringify({ name: 'Helper', server: 'localhost:8888', bank: [{ id: 536, count: 9999 }] }));
+        writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [{ name: 'HELPER', server: 'rs-sdk-demo.fly.dev', bank: [{ id: 536, count: 25 }] }] }));
+        const statuses = liveHelperStatuses(base, snaps, 'local');
+        expect(statuses).toHaveLength(1);
+        expect(supplyBill([{ item: 'dragon bones', count: 100 }], items, statuses)[0]).toMatchObject({ owned: 25, short: 75 });
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
