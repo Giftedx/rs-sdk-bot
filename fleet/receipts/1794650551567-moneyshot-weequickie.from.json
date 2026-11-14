@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794650551567-moneyshot-weequickie",
+ "account": "Moneyshot",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 1,
+ "claim": "18b1b612-06bc-4cb8-9034-262931694041",
+ "count": 0,
+ "ok": false,
+ "at": 1794650663764,
+ "detail": "trade claimed"
+}
