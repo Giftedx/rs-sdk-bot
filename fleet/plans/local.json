@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794663815773,
+ "at": 1794664021389,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -134,23 +134,23 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "15000",
+    "headless"
+   ],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "BANK_PACK": "1",
+    "MAX_MAKE": "390"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
    "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
+   "resources": []
   },
   {
    "account": "Hocuspokeus",
