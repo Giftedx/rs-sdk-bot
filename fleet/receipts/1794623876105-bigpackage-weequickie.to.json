@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794623876105-bigpackage-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 1000,
+ "claim": "54764cd9-7207-4ff8-a048-851fc5a13e19",
+ "count": 0,
+ "ok": false,
+ "at": 1794624368951,
+ "detail": "trade claimed"
+}
