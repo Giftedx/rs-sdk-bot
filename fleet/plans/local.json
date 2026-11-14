@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794648233759,
+ "at": 1794648294097,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -414,17 +414,15 @@
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-34b70bba-3cfb-4ba3-93c7-22183eedee13"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-woodpecker-20261114t091512z [task-34b70bba-3cfb-4ba3-93c7-22183eedee13]",
    "role": "pk-trainee"
   }
  ]
