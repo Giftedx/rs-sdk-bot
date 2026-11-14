@@ -108,4 +108,3 @@
     {"sourceSet":"r8-snare-focus-58","seed":8,"case":"extra:gang-live-fast-snare-x2","options":{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4},"idlePrayerOff":false,"elapsedMs":34737,"ledgerTicks":[726,723,724,723,719,719,719,719],"walkedOut":2,"walkedEscaped":0,"walkedKilled":2,"result":"RESULT ok gang groups=2 cleared=0 died=0 escaped=0 away=2 cap=0 kills=2 ticks=614 a=gang-hunter b=ganker-live valid=2 killsEach=1,1 taken=137,98 eaten=5,4 food=15,16 prayer=0,39 doses=0,0 trips=1,1 gangTrips=2,2 prayerOut=460,-1 refused=6,8"}
   ]
 }
-
