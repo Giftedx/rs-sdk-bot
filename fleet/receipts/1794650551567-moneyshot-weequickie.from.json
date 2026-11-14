@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794650551567-moneyshot-weequickie",
  "account": "Moneyshot",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 1,
  "claim": "18b1b612-06bc-4cb8-9034-262931694041",
- "count": 0,
- "ok": false,
- "at": 1794650663764,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794650901309,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794650876966
+ },
+ "logout": {
+  "attemptId": "1794650663772-0000013232-0000000001",
+  "at": 1794650901297,
+  "sha256": "a33f0f4ea68e8a22b844e3231250831b43629423995c24c7365193a31b2fcf0e"
+ },
+ "screen": true
 }

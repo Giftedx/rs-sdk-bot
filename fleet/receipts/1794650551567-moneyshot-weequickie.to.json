@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794650551567-moneyshot-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 1,
+ "claim": "805fb7b0-27c4-4acc-b212-7477a3ba8cc3",
+ "count": 1,
+ "ok": true,
+ "at": 1794650903347,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794650902617
+ },
+ "logout": {
+  "attemptId": "1794650883114-0000026960-0000000001",
+  "at": 1794650903266,
+  "sha256": "78f2c16348cfab5e5caf24b9a46ae953ab996dd04d635a956ea1bd9de1af05df"
+ },
+ "screen": true
+}
