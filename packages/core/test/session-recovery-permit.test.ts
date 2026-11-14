@@ -1,8 +1,8 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync,statSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
-import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,releaseExpiredRecoveryLease,releaseExpiredRecoveryLeases,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,cachedProcessStarts,releaseExpiredRecoveryLease,releaseExpiredRecoveryLeases,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
@@ -518,10 +518,26 @@ test('an exact pre-request lease refusal waits while the controller archives onl
 });
 test('restart counts inherited children without replay, ignores dead children, and retains every lease',()=>{
  const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,1234,f.base,f.options);
- expect(heldRecoveryOwners(f.base,[],pid=>pid===1234,now)).toEqual([{account:'Rod',pid:1234,started:now,source}]);
- expect(heldRecoveryOwners(f.base,['rod'],()=>true,now)).toEqual([]);
- expect(heldRecoveryOwners(f.base,[],()=>false,now)).toEqual([]);
+ const noTable=()=>new Map<number,number>();
+ expect(heldRecoveryOwners(f.base,[],pid=>pid===1234,now,noTable)).toEqual([{account:'Rod',pid:1234,started:now,source}]);
+ expect(heldRecoveryOwners(f.base,['rod'],()=>true,now,noTable)).toEqual([]);
+ expect(heldRecoveryOwners(f.base,[],()=>false,now,noTable)).toEqual([]);
  expect(()=>assertNoRecoveryLease('Rod',f.base)).toThrow('lease');expect(existsSync(recoveryPermitPaths(f.request,f.base).used)).toBe(false);
+});
+test('a later process that holds the id of a dead recovery child is not the child',()=>{
+ const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,1234,f.base,f.options);
+ const written=statSync(recoveryPermitPaths(f.request,f.base).child).mtimeMs;
+ expect(heldRecoveryOwners(f.base,[],()=>true,now,()=>new Map([[1234,written+60_000]]))).toEqual([]);
+ expect(heldRecoveryOwners(f.base,[],()=>true,now,()=>new Map([[1234,written-60_000]]))).toHaveLength(1);
+ expect(heldRecoveryOwners(f.base,[],()=>true,now,()=>null)).toHaveLength(1);
+});
+test('cachedProcessStarts reads each id once a minute and keeps a failed read',()=>{
+ let reads=0;const read=(ids:readonly number[])=>{reads++;return new Map(ids.map(i=>[i,i*10]));};
+ expect(cachedProcessStarts([90001],read,1_000)?.get(90001)).toBe(900010);
+ expect(cachedProcessStarts([90001],read,30_000)?.get(90001)).toBe(900010);expect(reads).toBe(1);
+ cachedProcessStarts([90001],read,61_000);expect(reads).toBe(2);
+ expect(cachedProcessStarts([90002],()=>null,1_000)).toBeNull();
+ expect(cachedProcessStarts([90002],read,2_000)).toBeNull();
 });
 
 test('authenticated cleanup admits a stopped end and still honours owner stops and exact end identity',()=>{

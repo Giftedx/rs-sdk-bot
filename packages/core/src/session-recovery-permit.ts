@@ -1,9 +1,9 @@
-import {existsSync,mkdirSync,readFileSync,writeFileSync,linkSync,realpathSync,unlinkSync,readdirSync,lstatSync} from 'node:fs';
+import {existsSync,mkdirSync,readFileSync,writeFileSync,linkSync,realpathSync,unlinkSync,readdirSync,lstatSync,statSync} from 'node:fs';
 import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {capabilityRevision,cachedLaunchRevision} from './worker-release';
-import {processMatchesRecent,safeKill,commandLine} from '../../practice/src/proc';
+import {processMatchesRecent,safeKill,commandLine,processStartTimes} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {savedProcessAlive,type ProcessStarts} from './session-takeover';
 import {isLocalServer} from './localserver';
@@ -496,9 +496,23 @@ export function releaseExpiredRecoveryLeases(base:string,managed:readonly string
  return results;
 }
 
+// The start time of each process, from one process table read for each id at most once a minute: the swarm calls
+// heldRecoveryOwners in each loop, and each read starts PowerShell. A failed read is kept for the minute too.
+const START_CACHE_MS=60_000,startCache=new Map<number,{at:number;start:number|undefined;known:boolean}>();
+export function cachedProcessStarts(pids:readonly number[],read:ProcessStarts=processStartTimes,now=Date.now()):ReadonlyMap<number,number>|null{
+ const stale=pids.filter(p=>{const c=startCache.get(p);return !c||now-c.at>=START_CACHE_MS;});
+ if(stale.length){const table=read(stale);for(const p of stale)startCache.set(p,{at:now,start:table?.get(p),known:table!==null});}
+ const out=new Map<number,number>();
+ for(const p of pids){const c=startCache.get(p)!;if(!c.known)return null;if(c.start!==undefined)out.set(p,c.start);}
+ return out;
+}
+
 // A controller restart must still count an inherited child's resource ownership. It may observe that child,
 // but cannot replay its nonce, take over its permit or turn a lost completion into a success.
-export function heldRecoveryOwners(base:string,managed:readonly string[]=[],alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException).code!=='ESRCH';}},now=Date.now()){
+// The system gives the id of an ended child to a later process, so a live id proves the child only when its process
+// started before the child record was written (savedProcessAlive). A swarm that holds the id of a dead child must
+// not count the child as held, or it pauses every new start.
+export function heldRecoveryOwners(base:string,managed:readonly string[]=[],alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException).code!=='ESRCH';}},now=Date.now(),starts:ProcessStarts=pids=>cachedProcessStarts(pids)){
  const root=join(base,'.practice/coordinator/session-recovery/accounts'),held:{account:string;pid:number|null;started:number;source:string|null}[]=[];
  if(!existsSync(root))return held;
  for(const account of readdirSync(root)){
@@ -508,7 +522,7 @@ export function heldRecoveryOwners(base:string,managed:readonly string[]=[],aliv
    if(!same(r.account,account))throw Error('crossed lease');const paths=recoveryPermitPaths(r,base);
    const child=existsSync(paths.child)?json(paths.child):null;
    if(child&&(!Number.isSafeInteger(child.pid)||child.pid<1||child.nonce!==r.nonce||child.runId!==r.runId))throw Error('unbound child');
-   if(child?alive(child.pid):!Number.isFinite(permit.expiresAt)||permit.expiresAt>now)held.push({account:r.account,pid:child?.pid??null,started:permit.issuedAt,source:r.source});
+   if(child?savedProcessAlive(child.pid,statSync(paths.child).mtimeMs,starts,alive):!Number.isFinite(permit.expiresAt)||permit.expiresAt>now)held.push({account:r.account,pid:child?.pid??null,started:permit.issuedAt,source:r.source});
   }catch{held.push({account,pid:null,started:now,source:null});}
  }
  return held;
