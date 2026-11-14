@@ -1318,6 +1318,29 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   - with a step away while the target is held (`"kiteFrozen":3`): 2 at about 1,230;
   - the same with the best freeze the runes allow (no `freezeMagicCap`): 0.
   Each cast is a turn without damage while the gang account eats, so the freeze pays only on a runner.
+- **The east multi-way zone: no single-way tile on the walk in.** The Wilderness has two multi-way zones near
+  Edgeville (`multiway.csv`):
+  - west, x 3008 to 3071 from z 3600 (Wilderness 11), where the squad post (3067, 3640) is;
+  - east, x 3136 to 3327 from the ditch north of Varrock (z 3520), and x 3192 and east further north. The live gang
+    was there when `FOLLOW` moved the post in the second pilot, at (3192, 3679) and (3136, 3583).
+
+  A squad posted in the east zone and walking in from Varrock crosses no single-way tile. A gang account must come
+  into multi-way to fight it, so the live split on the walk in cannot happen there. The squad banks at Varrock West
+  from an east post (`bankNear`), and that walk keeps to multi-way tiles.
+
+  On the bench the hunting gang follows into multi-way at either post, and the west post is a little cheaper. Four of
+  ours, hunted, no death:
+  - west post, rune kit (`extra:squad-4-gang-hunted-x1`), seeds 1 to 8: 22 kills of 24 at about 29 HP a kill;
+  - east post at Wilderness 3 (3160, 3540; `-hunted-east-`), seeds 1 to 16: 44 of 48 at about 41;
+  - east post at Wilderness 13 (3200, 3620; `-hunted-east13-`), seeds 1 to 8: 23 of 24 at about 38;
+  - east post at Wilderness 3 in the live kit (`-hunted-east-chain-`), seeds 1 to 8: 18 of 24 at about 48, against
+    21 at about 42 at the west post.
+
+  A gang account that walks out near the ditch is out of the Wilderness in a few tiles. Gap: the live gang's choice
+  between the two posts is not measured.
+- **A bank trip after a teleport.** The fight loop's outnumbered escape casts Camelot Teleport, so the trip starts
+  about 430 tiles from Varrock West. The trip's walks had 400 ticks each and ended short (`extra:squad-2-gang-trips-east-x1`,
+  two of ours against three). The walk budget is 3 ticks a tile of distance plus 100, at least 400 (`bankTrip`).
 - **The least build that can fight the gang is combat 110.** The game allows an attack only within as many combat
   levels as the Wilderness level, and the gang (combat 126) stands at level 16. A combat-83 squad (Attack 60,
   Strength, Defence and Ranged 70) at the post made no attack in 8 runs. The combat-111 build

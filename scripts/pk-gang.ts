@@ -72,7 +72,10 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
     // but the boosts.
     return async (a: Session, fresh = false): Promise<string | null> => {
         const deps = await sessionWalker(a);
-        const go = (to: { x: number; z: number }) => walkPath(deps, [{ ...to, tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: halt });
+        // The walk budget grows with the distance: an account that left a fight by teleport (Camelot, about 430 tiles
+        // from Varrock West) starts its trip far from both the bank and the post.
+        const go = (to: { x: number; z: number }) => { const p = a.sdk.getState()?.player, d = p ? Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) : 0;
+            return walkPath(deps, [{ ...to, tol: 2 }], { maxTicks: Math.max(400, 3 * d + 100), idleMs: 9000, stop: halt }); };
         const out = await go(at);
         if (!out.ok) return `no walk to the bank: ${out.detail ?? 'stopped'}`;
         const fault = fresh ? null : await restock(a, pack.food, pack.items, kit);

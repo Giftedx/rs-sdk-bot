@@ -5,8 +5,9 @@
 // health bar (on the bench four kill 47 of 48 at 35 HP a kill, nine 24 of 24 at 14 HP). Each account fights with the
 // fight loop (profile SQUAD_PROFILE, default gang-hunter, with SQUAD_OPTS), picks up the dearest drops after a kill
 // (scripts/pk-gang.ts pickUp: a skulled gang account with no Protect Item drops its dragon dagger(p)), and when its
-// fight loop leaves (low HP with no food) it banks at Edgeville (scripts/pk-gang.ts bankTrip: the pack it started
-// with, the boosts drunk at the bank) and walks back to the post.
+// fight loop leaves (low HP with no food) it banks at the nearer bank (bankNear: Edgeville, or Varrock West for a
+// post east of x 3136; scripts/pk-gang.ts bankTrip: the pack it started with, the boosts drunk at the bank) and walks
+// back to the post.
 // Usage: bun scripts/pk-squad.ts <account> [<account> ...] [KEY=value ...]
 //   TARGETS=goondelf,ligma,sugma  POST=3067,3640  MAX_MINUTES=30  MAX_KILLS=0 (no limit)  SQUAD_PROFILE=gang-hunter
 //   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}
@@ -75,8 +76,12 @@ export function marchRoute(from: { x: number; z: number }, to: { x: number; z: n
     return Array.from({ length: n }, (_, i) => i === n - 1 ? { ...to } : { x: Math.round(from.x + (to.x - from.x) * (i + 1) / n), z: Math.round(from.z + (to.z - from.z) * (i + 1) / n) });
 }
 
+// The bank of a squad account at x: Varrock West east of x 3136, where the east multi-way zone runs from the ditch
+// north of Varrock to x 3327, so the walk between it and the bank keeps to multi-way tiles; Edgeville west of it.
+export const VARROCK_WEST_BANK = { x: 3185, z: 3436 };
+export const bankNear = (x: number) => (x >= 3136 ? VARROCK_WEST_BANK : EDGEVILLE_BANK);
 // A dropped account logged in again: eat to near full, then Camelot Teleport where it can (Magic 45, a law rune and
-// 5 air runes, Wilderness 20 or less), else walk to the Edgeville bank. The session when it ends out of the Wilderness, else null.
+// 5 air runes, Wilderness 20 or less), else walk to the nearer bank (bankNear). The session when it ends out of the Wilderness, else null.
 export async function rescue(s: Session, log: (l: string) => void): Promise<Session | null> {
     const me = () => s.sdk.getState()?.player;
     for (let i = 0; i < 3; i++) if (!await nextTick(s)) return null;
@@ -94,7 +99,7 @@ export async function rescue(s: Session, log: (l: string) => void): Promise<Sess
         const held = (id: number) => (st?.inventory ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
         if (st && wildernessLevel(start.worldZ) <= 20 && magic >= 45 && held(ITEMS.lawRune) >= 1 && held(ITEMS.airRune) >= 5)
             for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) { await s.sdk.sendClickComponent(1174); for (let t = 0; t < 6; t++) if (!await nextTick(s)) return null; }
-        if (wildernessLevel(me()?.worldZ ?? 0) > 0) await walkPath(await sessionWalker(s), [{ ...EDGEVILLE_BANK, tol: 2 }], { maxTicks: 500, idleMs: 9000 });
+        if (wildernessLevel(me()?.worldZ ?? 0) > 0) await walkPath(await sessionWalker(s), [{ ...bankNear(me()?.worldX ?? start.worldX), tol: 2 }], { maxTicks: 500, idleMs: 9000 });
     }
     const end = me();
     log(`[${s.name}] SQUAD rescue ends at ${end?.worldX},${end?.worldZ} wild ${wildernessLevel(end?.worldZ ?? 0)}`);
@@ -120,7 +125,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const pack = packOf(st?.inventory ?? [], st?.equipment ?? []), kit = kitFrom(st?.equipment ?? [], st?.inventory ?? []);
     const ammo = (st?.equipment ?? []).find(e => /arrow|bolt/i.test(e.name))?.id;
     const wanted = new Set([...PICKUP_ITEMS, ...(ammo ? [ammo] : [])]);
-    const trip = bankTrip(EDGEVILLE_BANK, o.post, pack, kit, o.stopped);
+    const trip = bankTrip(bankNear(o.post.x), o.post, pack, kit, o.stopped);
     const walker = await sessionWalker(s);
     const going = () => !o.stopped() && s.tick() < o.deadline && o.killsLeft();
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
@@ -205,7 +210,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     return stats;
 }
 
-// An account in the Wilderness at the end eats up and walks to the Edgeville bank. `died`: it died on the way (a new
+// An account in the Wilderness at the end eats up and walks to the nearer bank (bankNear). `died`: it died on the way (a new
 // life, or at the Lumbridge spawn), which the hold's stats did not see; `why`: why a living account is not out.
 export async function leaveWilderness(s: Session, diedBefore: boolean): Promise<{ died: boolean; why: string | null }> {
     const me = () => s.sdk.getState()?.player;
@@ -220,7 +225,7 @@ export async function leaveWilderness(s: Session, diedBefore: boolean): Promise<
         await s.sdk.sendUseItem(food.slot, op.opIndex);
         for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
     }
-    const r = died() ? null : await walkPath(await sessionWalker(s), [{ ...EDGEVILLE_BANK, tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: died });
+    const r = died() ? null : await walkPath(await sessionWalker(s), [{ ...bankNear(me()?.worldX ?? p.worldX), tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: died });
     if (died()) return { died: true, why: 'died walking out of the Wilderness' };
     const q = me();
     return { died: false, why: q && wildernessLevel(q.worldZ) === 0 ? null : `still in the Wilderness at the end: ${r?.detail ?? 'walk stopped'}` };

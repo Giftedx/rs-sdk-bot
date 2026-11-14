@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { leaveWilderness, squadTarget } from './pk-squad';
+import { bankNear, leaveWilderness, squadTarget, VARROCK_WEST_BANK } from './pk-squad';
 import { escapeCastable } from './pk';
 
 const session = (z: number) => ({ sdk: { getState: () => ({ player: { worldX: 3092, worldZ: z, hp: 50, maxHp: 99 } }), getInventory: () => [] } }) as any;
@@ -35,4 +35,10 @@ describe('escapeCastable', () => {
         expect(escapeCastable(1174, [{ id: 563, count: 1 }], [1381], 99)).toBe(true);
         expect(escapeCastable(1174, [{ id: 563, count: 1 }, { id: 556, count: 5 }], [], 40)).toBe(false);
     });
+});
+
+test('bankNear: Varrock West for the east multi-way zone, Edgeville west of it', () => {
+    expect(bankNear(3200)).toEqual(VARROCK_WEST_BANK);
+    expect(bankNear(3136)).toEqual(VARROCK_WEST_BANK);
+    expect(bankNear(3067)).toEqual({ x: 3092, z: 3496 });
 });

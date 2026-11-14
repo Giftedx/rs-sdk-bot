@@ -815,6 +815,8 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-6-gang-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 6),
   // Three sharks each at the start: the squad's bank trip and walk back mid-meeting.
   squadCase('extra:squad-4-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=12'], 3),
+  // The bank trip from the east post goes to Varrock West (bankNear) and keeps to multi-way tiles.
+  squadCase('extra:squad-2-gang-trips-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2', 'SQUAD_GANG_HUNT=1', 'POST=3200,3620'], 3, {x: 3197, z: 3621}),
   // Two of ours leave outnumbered: each walks out, banks at Edgeville and walks back to the post.
   squadCase('extra:squad-2-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2'], 3),
   // The squad on the gang's own single-way post (ALLOW_SINGLE=1), for a gang that does not follow into multi-way.
@@ -828,6 +830,11 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-4-gang-hunted-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
   // The same walk-in in the first live pilot's kit (chainbody, no antipoison, no freeze runes).
   squadCase('extra:squad-4-gang-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // The east multi-way zone runs up to the ditch north of Varrock (x 3136 to 3327 from z 3520): a post there at
+  // Wilderness 3 leaves no single-way tile on the walk in, and the hunting gang comes into multi-way to fight.
+  squadCase('extra:squad-4-gang-hunted-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'POST=3160,3540'], undefined, {x: 3160, z: 3512}),
+  squadCase('extra:squad-4-gang-hunted-east13-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'POST=3200,3620'], undefined, {x: 3160, z: 3512}),
+  squadCase('extra:squad-4-gang-hunted-east-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'POST=3160,3540'], undefined, {x: 3160, z: 3512}),
   // Against the most the gang can carry (ganker-max: 23 sharks, the boosts, prayer potions): the live fights ran long.
   squadCase('extra:squad-4-gangmax-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-max', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
   // The combat-111 build, the least that can attack the gang at its post (Wilderness 16 against combat 126), at 4, 6
