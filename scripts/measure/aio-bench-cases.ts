@@ -199,11 +199,14 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
 // Teams of own accounts (scripts/pk-team.ts): `groups` groups of `size` against `size`, side A two tiles east.
 // The gang squad (scripts/pk-squad.ts): `n` of ours at the multi-way post west of the gang, the three of the gang on
 // their post, driven by the script's bench gang (SQUAD_GANG=3, profile ganker-live).
-const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = []): BenchCase => {
+// `food`: the sharks of each of ours at the start (the kit's own count by default), with EDGE_BANK_SNARE in its bank: a
+// low count sends it to the bank and back mid-meeting.
+const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = [], food?: number): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
-  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kit, 3067, 3640), output: /kills=(\d+)/,
+  const ours = (x: number, z: number): SaveConfig => { const c = kitFixture(kit, x, z); return food === undefined ? c : {...c, bank: [...EDGE_BANK_SNARE, {id: 884, count: 2000}], inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: ours(3067, 3640), output: /kills=(\d+)/,
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=6', 'STALL_TICKS=3000', ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? kitFixture(kit, 3066 + (i % 3), 3641) : kitFixture(gangKit, 3078, 3640)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? ours(3066 + (i % 3), 3641) : kitFixture(gangKit, 3078, 3640)}))};
 };
 // `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
@@ -724,6 +727,10 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('pvp:squad', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4),
   squadCase('extra:squad-4-gang-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4),
   squadCase('extra:squad-6-gang-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 6),
+  // Three sharks each at the start: the squad's bank trip and walk back mid-meeting.
+  squadCase('extra:squad-4-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=12'], 3),
+  // Two of ours leave outnumbered: each walks out, banks at Edgeville and walks back to the post.
+  squadCase('extra:squad-2-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2'], 3),
   squadCase('extra:squad-4-gang-skull-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 4),
   teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at

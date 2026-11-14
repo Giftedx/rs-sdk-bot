@@ -63,7 +63,17 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (wildernessLevel(p.worldZ) === 0) {
                 if (stats.trips >= o.trips) { o.log(`[${s.name}] SQUAD no trips left`); break; }
                 stats.trips++;
+                // Eat up first: a teleport out (Camelot) leaves a long walk, and the gang's daggers poison.
+                for (let i = 0; i < 12 && !o.stopped(); i++) {
+                    const q = me(), food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
+                    const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+                    if (!q || !food || !op || q.hp >= q.maxHp - 20) break;
+                    await s.sdk.sendUseItem(food.slot, op.opIndex);
+                    for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
+                }
                 const fault = await trip(s);
+                const after = me();
+                if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { stats.died = true; o.log(`[${s.name}] SQUAD died on a bank trip`); break; }
                 if (fault) { o.log(`[${s.name}] SQUAD bank trip: ${fault}`); break; }
                 continue;
             }
