@@ -939,8 +939,39 @@ test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spa
  expect(t.aggroText(b,550e3)).toMatchObject({text:'safe',red:false});
  // A logout drops the record: back at the same tile much later, a new "at most" count, not "safe".
  t.aggroTrack({...b,inWorld:false},600e3);const back=t.aggroText(b,5000e3);expect(back.text).toBe('6:40');expect(back.title).toContain('at most');
+ // A teleport is measured from the last seen tile: 3170 -> 3181 (new area) -> 3165 (old area) -> 3206 (41 tiles from
+ // 3165) makes both areas new, so a return to 3181 starts the count again.
+ const c:any={name:'C',inWorld:true,combat:20,pos:{x:3170,z:9900,level:0}};
+ for(const [x,at] of [[3170,0],[3181,10e3],[3165,20e3],[3206,30e3]] as const){c.pos.x=x;t.aggroTrack(c,at);}
+ c.pos.x=3181;expect(t.aggroText(c,40e3).text).toBe('6:40');
+ // A replayed snapshot: the last read (at) is 0, so the clock stops at 10 s, however late the page draws.
+ const d:any={name:'D',inWorld:true,combat:20,at:1,pos:{x:3170,z:9900,level:0}};t.aggroTrack(d,1);
+ expect(t.aggroText(d,900e3).text).toBe('6:30');
  // Combat 85 is too strong for the Moss giant outside the Wilderness.
  expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
+});
+
+test('regeneration meter: the heal and restore timers, their phase from a 1-point step, at most until seen',()=>{
+ const code=shell.slice(shell.indexOf("  // Regeneration meter (RuneLite's"),shell.indexOf('  function infoboxes(){'));
+ const t=new Function('S',`${code};return {regenTrack,regenHpText,regenStatText};`)({world:{tickMs:400}});
+ const b:any={name:'A',inWorld:true,hp:{now:20,max:30},skills:[{name:'Attack',currentLevel:50,level:60},{name:'Prayer',currentLevel:1,level:40}]};
+ t.regenTrack(b,0);
+ // 10 missing x 100 ticks x 400 ms = 400 s; the phase is not seen yet.
+ expect(t.regenHpText(b,0)).toBe(' · full in at most 6:40');
+ // Hitpoints 20 -> 21 at 10 s: the timer ticked. At 25 s the next heal is 40 - 15 = 25 s away, then 8 more x 40 s.
+ b.hp.now=21;t.regenTrack(b,10e3);expect(t.regenHpText(b,25e3)).toBe(' · next heal in 0:25 · full in 5:45');
+ // +1 with a changed pack (a hit and a cake bite) is no timer tick: the phase stays.
+ const e:any={...b,name:'E',hp:{now:20,max:30},inventory:[{name:'Cake',count:1}]};t.regenTrack(e,0);
+ e.hp={now:21,max:30};e.inventory=[{name:'2/3 cake',count:1}];t.regenTrack(e,10e3);expect(t.regenHpText(e,10e3)).toBe(' · full in at most 6:00');
+ // +1 while coins come in (loot only adds) is a timer tick.
+ e.inventory=[{name:'2/3 cake',count:1},{name:'Coins',count:50}];e.hp={now:22,max:30};t.regenTrack(e,20e3);expect(t.regenHpText(e,20e3)).toBe(' · next heal in 0:40 · full in 5:20');
+ // A heal of 5 (food) is no timer tick: the phase stays. 4 missing: 20 s, then 3 more x 40 s.
+ b.hp.now=26;t.regenTrack(b,30e3);expect(t.regenHpText(b,30e3)).toBe(' · next heal in 0:20 · full in 2:20');
+ // Attack 50 / 60: at most 400 s; 51 at 12 s sets the phase: at 12 s, 40 s to the next and 8 more.
+ expect(t.regenStatText(b,b.skills[0],0)).toBe(' · back to 60 in at most 6:40');
+ b.skills[0].currentLevel=51;t.regenTrack(b,12e3);expect(t.regenStatText(b,b.skills[0],12e3)).toBe(' · back to 60 in 6:00');
+ // Logged out: the record goes.
+ t.regenTrack({...b,inWorld:false},40e3);expect(t.regenHpText(b,40e3)).toBe('');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
