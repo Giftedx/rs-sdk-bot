@@ -19,6 +19,9 @@ describe('cloud side bootstrap', () => {
         const codex = sessionPrompt('codex', 'cloud');
         expect(codex).toContain('bun scripts/cloud-side.ts --side cloud --watch-minutes 50 --stop-at-end');
         expect(codex).not.toContain('run_in_background');
+        // A cached image of an older commit, and a setup PATH that does not reach the agent, cannot stop it.
+        expect(codex).toContain('git checkout -q --detach origin/master');
+        expect(codex).toContain('/workspace/.tools/bun/node_modules/.bin');
         expect(() => sessionPrompt('claude', 'local')).toThrow();
     });
 

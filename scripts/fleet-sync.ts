@@ -86,15 +86,35 @@ const git = (cwd: string, ...args: string[]) => {
 };
 
 // The fleet-data worktree: the remote branch when it exists, else a new branch from the current commit (fleet/ seed).
-export function ensureWorktree(dir = FLEET_WORKTREE): string {
+// The fetch names the remote-tracking ref: a clone of master alone (a Codex cloud checkout) has no refspec for
+// fleet-data, so a plain `git fetch origin fleet-data` leaves origin/fleet-data missing. A branch that exists on the
+// remote but cannot be read here is an error, never a new fleet-data from HEAD: that branch holds the code history,
+// and its first pull tries to replay master onto the published fleet data (live: a Codex container stopped on a
+// conflict in packages/dashboard/goals.ts).
+export const FETCH_FLEET_DATA = ['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}`] as const;
+export function ensureWorktree(dir = FLEET_WORKTREE, base = root): string {
     if (existsSync(join(dir, '.git'))) return dir;
-    git(root, 'fetch', 'origin', BRANCH);
-    const remote = git(root, 'rev-parse', '--verify', `origin/${BRANCH}`).ok;
-    const local = git(root, 'rev-parse', '--verify', BRANCH).ok;
-    const add = local ? git(root, 'worktree', 'add', dir, BRANCH) : remote ? git(root, 'worktree', 'add', '-b', BRANCH, dir, `origin/${BRANCH}`) : git(root, 'worktree', 'add', '-b', BRANCH, dir, 'HEAD');
+    git(base, ...FETCH_FLEET_DATA);
+    const remote = git(base, 'rev-parse', '--verify', `origin/${BRANCH}`).ok;
+    if (!remote && git(base, 'ls-remote', '--exit-code', '--heads', 'origin', BRANCH).ok) throw Error(`fleet worktree: origin has ${BRANCH} but it could not be fetched`);
+    const local = git(base, 'rev-parse', '--verify', BRANCH).ok;
+    const add = local ? git(base, 'worktree', 'add', dir, BRANCH) : remote ? git(base, 'worktree', 'add', '-b', BRANCH, dir, `origin/${BRANCH}`) : git(base, 'worktree', 'add', '-b', BRANCH, dir, 'HEAD');
     if (!add.ok) throw Error(`fleet worktree: ${add.out}`);
     git(dir, 'branch', '--set-upstream-to', `origin/${BRANCH}`);
     return dir;
+}
+
+// Why the fleet-data worktree cannot sync, or null: a rebase or merge stopped in it, an unmerged file, or a HEAD that
+// holds more than STRAY_COMMITS commits the published branch lacks, which no sync makes (it is a branch made from the
+// code, see ensureWorktree). The caller fetched origin/fleet-data first.
+export const STRAY_COMMITS = 200;
+export function worktreeProblem(dir: string, stray = STRAY_COMMITS): string | null {
+    const gitDir = git(dir, 'rev-parse', '--absolute-git-dir').out;
+    if (['rebase-merge', 'rebase-apply', 'MERGE_HEAD'].some(f => existsSync(join(gitDir, f)))) return 'a rebase or merge stopped in it';
+    if (git(dir, 'diff', '--name-only', '--diff-filter=U').out) return 'it has unmerged files';
+    const ahead = Number(git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out);
+    if (Number.isFinite(ahead) && ahead > stray) return `HEAD holds ${ahead} commits that origin/${BRANCH} lacks: it is not the fleet-data branch`;
+    return null;
 }
 
 // A worktree on a detached HEAD commits each sync, but the push sends the branch, which does not move: the sync
@@ -210,6 +230,9 @@ function releaseSyncedTrades(dir: string, side: string) {
 
 export function runSync(push = true): string {
     const dir = ensureWorktree();
+    git(root, ...FETCH_FLEET_DATA);
+    const problem = worktreeProblem(dir);
+    if (problem) throw Error(`fleet worktree ${dir}: ${problem}; scripts/cloud-side.ts replaces it, or remove it with git worktree remove --force`);
     reattach(dir);
     const hasRemote = git(dir, 'ls-remote', '--exit-code', '--heads', 'origin', BRANCH).ok;
     if (hasRemote) { const pull = git(dir, 'pull', '--rebase', 'origin', BRANCH); if (!pull.ok) throw Error(`pull: ${pull.out}`); }
