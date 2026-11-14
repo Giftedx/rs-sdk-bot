@@ -62,7 +62,7 @@ export function guardCowWalker(base:PathDeps,safety:()=>string|null){
     };
     const refuse=()=>({success:false,phase:'dispatch',reason:'cow_route_guard',message:why??'cow route unknown'});
     const deps:PathDeps={...base,
-        plan:(level,from,to)=>{const corners=base.plan(level,from,to);return validate(level,from,to,corners)?corners:[];},
+        plan:(level,from,to,avoid)=>{const corners=base.plan(level,from,to,avoid);return validate(level,from,to,corners)?corners:[];},
         walk:(x,z)=>{if(check())return refuse();const p=base.pos();if(!p||!validate(p.level,p,{x,z},base.plan(p.level,p,{x,z})))return refuse();return base.walk(x,z);},
         interactLoc:(loc,op)=>check()?refuse():base.interactLoc(loc,op),
         ...(base.runOn?{runOn:()=>check()?refuse():base.runOn!()}:{}),

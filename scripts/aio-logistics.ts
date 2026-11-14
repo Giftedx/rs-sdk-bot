@@ -41,7 +41,7 @@ export const LOGISTICS_ROLES: readonly LogisticsRoleSpec[] = [
  {role:'take-from-banker',script:'scripts/take-from-banker.ts',description:'Receive staged items from a standing banker account'},
  {role:'supply-chain',script:'scripts/supply-chain.ts',description:'Run multi-actor supply-chain transfer'},
  {role:'supply-holder',script:'scripts/supply-holder.ts',description:'Hold and serve staged route supplies'},
- {role:'supply-bootstrap',script:'scripts/supply-bootstrap.ts',description:'Bootstrap initial starter supplies for a fresh worker'},
+ {role:'supply-bootstrap',script:'scripts/supply-bootstrap.ts',description:'Practice-only zero-resource qualification: discard tutorial gifts before earning initial route supplies'},
  // Runecraft Essence Runners ("RC Runners")
  // Cross-side Fleet Trade
  {role:'fleet-trade',script:'scripts/fleet-trade.ts',description:'Execute cross-machine fleet order trade settlement'},

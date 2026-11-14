@@ -7,7 +7,7 @@ import {join,resolve} from 'node:path';
 import {openBot,finish} from '../packages/core/src/bot';
 import {runDirectChild} from '../packages/core/src/run-child';
 import type {Step} from '../packages/core/src/chain-step';
-import {resolveRouteStep} from './aio-route-step';
+import {DEFAULT_METHOD,resolveRouteStep,resolveSkillerMethod} from './aio-route-step';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {planBankTripSchedule} from '../packages/core/src/bank-trip';
 import {runBankJob,runBankProfile,validateBankJob,type BankJob} from './microbot-bank-jobs';
@@ -185,23 +185,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'foraging',method:'qol',script:'scripts/microbot-c-qol.ts',description:'Auto Cannon refill, prayer hold, special bar enable, and inventory drop patterns'},
 ];
 
-const DEFAULT_METHOD: Readonly<Record<string, string>> = {
- fishing: 'shark',
- cooking: 'food',
- woodcutting: 'yews',
- firemaking: 'order',
- fletching: 'arrows',
- mining: 'ore',
- smithing: 'smelt',
- crafting: 'inventory',
- herblore: 'potions',
- runecraft: 'bank-craft',
- magic: 'order',
- prayer: 'bury',
- agility: 'order',
- thieving: 'knights',
- foraging: 'flax',
-};
+export {DEFAULT_METHOD};
 
 export function skillerCatalogSummary() {
  return {
@@ -473,9 +457,7 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
   if(!jobs.length)throw Error('aio-skiller bank-job requires <job.json>');
   return{script:'scripts/aio-skiller.ts',args:['bank-job',...jobs],env:{}};
  }
- const hasExplicitMethod = methodInput && !methodInput.includes('=') && !/^\d+$/.test(methodInput);
- const method = (hasExplicitMethod ? methodInput.toLowerCase().replace(/^--method=/, '') : DEFAULT_METHOD[skill]) ?? '';
- const extra = hasExplicitMethod ? rest : methodInput ? [methodInput, ...rest] : rest;
+ const {method,args:extra} = resolveSkillerMethod(skill, methodInput, rest);
  const route = SKILLER_ROUTES.find(r => r.skill === skill && r.method === method)
   ?? SKILLER_ROUTES.find(r => r.skill === skill && r.script.endsWith(`${method}.ts`));
  if (!route) {
