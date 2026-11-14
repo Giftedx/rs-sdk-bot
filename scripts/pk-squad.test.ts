@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { leaveWilderness, squadTarget } from './pk-squad';
+import { escapeCastable } from './pk';
 
 const session = (z: number) => ({ sdk: { getState: () => ({ player: { worldX: 3092, worldZ: z, hp: 50, maxHp: 99 } }), getInventory: () => [] } }) as any;
 
@@ -17,5 +18,16 @@ describe('squadTarget', () => {
         const view = [{ name: 'Ligma', index: 1, distance: 2 }, { name: 'Sugma', index: 2, distance: 5 }, { name: 'Other', index: 3, distance: 1 }];
         const hp: Record<number, number> = { 1: 0.8, 2: 0.3, 3: 0.1 };
         expect(squadTarget(view, new Set(['ligma', 'sugma']), p => hp[p.index]!)?.name).toBe('Sugma');
+    });
+});
+
+describe('escapeCastable', () => {
+    test('Camelot Teleport needs its law and air runes', () => {
+        expect(escapeCastable(1174, [], [], 99)).toBe(false);
+        expect(escapeCastable(1174, [{ id: 563, count: 1 }, { id: 556, count: 5 }], [], 99)).toBe(true);
+    });
+    test('a staff of air stands in for the air runes, and the level counts', () => {
+        expect(escapeCastable(1174, [{ id: 563, count: 1 }], [1381], 99)).toBe(true);
+        expect(escapeCastable(1174, [{ id: 563, count: 1 }, { id: 556, count: 5 }], [], 40)).toBe(false);
     });
 });
