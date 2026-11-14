@@ -1,7 +1,7 @@
 // Eat to full: eats the meals in the pack, cheapest first, until the hitpoints reach the base level (or AT=<level>) or
-// the pack holds no meal. The session eat guard eats only in a fight, so an account that respawned at a few hitpoints
-// otherwise walks out at that level: a planned walk into the Wilderness at 7 of 97 hitpoints ended in a death to the
-// first NPC on the way. Usage: bun scripts/eat-to-full.ts <account> [AT=<level>]
+// the pack holds no meal. The session eat guard eats only in a fight, so an account with few hitpoints stays at that
+// level out of combat until it eats. Usage: bun scripts/eat-to-full.ts <account> [AT=<level>] (an argument or the AT
+// environment variable, which .practice/mock-run/run.ts sets from a KEY=value argument).
 import { openBot, finish } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
@@ -16,6 +16,15 @@ export const MEALS_BY_HEAL: readonly { id: number; heal: number }[] = [
 export function nextMeal(pack: readonly { id: number }[], missing: number): number | undefined {
     const held = MEALS_BY_HEAL.filter(m => pack.some(i => i.id === m.id));
     return (held.find(m => m.heal <= missing * 2) ?? held[0])?.id;
+}
+
+// The AT level from an `AT=<level>` argument, else from the AT environment variable; undefined for none.
+export function parseAt(args: readonly string[], env: string | undefined): number | undefined {
+    const text = args.find(a => /^AT=\d+$/.test(a))?.slice(3) ?? env;
+    if (text === undefined || text === '') return undefined;
+    const n = Number(text);
+    if (!Number.isSafeInteger(n) || n < 1 || n > 99) throw Error(`AT=${text} is not a level from 1 to 99`);
+    return n;
 }
 
 export async function eatToFull(s: Session, target?: number): Promise<{ ok: boolean; eaten: number; hp: number; detail: string }> {
@@ -36,9 +45,11 @@ export async function eatToFull(s: Session, target?: number): Promise<{ ok: bool
 if (import.meta.main) {
     const [account] = process.argv.slice(2);
     if (!account) { console.log('RESULT fail usage: bun scripts/eat-to-full.ts <account> [AT=<level>]'); process.exit(2); }
+    let at: number | undefined;
+    try { at = parseAt(process.argv.slice(3), process.env.AT); } catch (e) { console.log(`RESULT fail ${String(e)}`); process.exit(2); }
     const s = await openBot(account);
     try {
-        const r = await eatToFull(s, process.env.AT ? Number(process.env.AT) : undefined);
+        const r = await eatToFull(s, at);
         await finish([s], r.ok, `eat-to-full ${r.detail}`);
     } catch (e) { await finish([s], false, String(e)); }
 }
