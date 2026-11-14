@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {configTable,decodeAppearance,WEAR_SLOTS} from './appearance';
+import {configTable,decodeAppearance,readWorn,WEAR_SLOTS} from './appearance';
 
 // Writes a block the way Player.generateAppearance does: gender, head icons, 12 slots, 5 colours, 7 animations,
 // the base-37 name, the combat level and the total level.
@@ -24,4 +24,18 @@ test('appearance: an npc transform has no worn items; a short or broken block is
 test('content table: pack ids joined to config names, with shown levels',()=>{
  const t=configTable('0=a\n1=b\n2=c',['[a]\nname=Bronze sword\ndesc=A razor sharp sword.\n[b]\nname=Man\nvislevel=2\n[c]\ndesc=no name']);
  expect([...t]).toEqual([[0,{name:'Bronze sword',desc:'A razor sharp sword.'}],[1,{name:'Man',level:2}]]);
+});
+
+test('worn lookups retain decoded raw IDs even when two worn variants have the same display name',async()=>{
+ const original=globalThis.WebSocket,slots:(number|null)[]=Array(12).fill(null);slots[0]=0x200+1135;slots[3]=0x200+2503;slots[7]=0x200+4000;
+ class Socket{
+  onopen:any;onmessage:any;onerror:any;
+  constructor(){queueMicrotask(()=>this.onmessage?.({data:JSON.stringify({t:'tick',p:[{ap:block('Worker',50,slots)}]})}));}
+  send(){}close(){}
+ }
+ try{
+  globalThis.WebSocket=Socket as unknown as typeof WebSocket;
+  const worn=await readWorn('ws://unused','Worker',{x:3200,z:3200},new Map([[1135,{name:'Dragonhide body'}],[2503,{name:'Dragonhide body'}]]),100);
+  expect(worn).toEqual([{slot:'Head',id:1135,name:'Dragonhide body'},{slot:'Weapon',id:2503,name:'Dragonhide body'},{slot:'Legs',id:4000,name:'item 4000'}]);
+ }finally{globalThis.WebSocket=original;}
 });

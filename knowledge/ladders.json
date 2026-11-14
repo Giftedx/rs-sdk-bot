@@ -33201,7 +33201,18 @@
     "kind": "gem_cutting_table",
     "label": "dragonstone cutting",
     "source": "knowledge/skills.json",
-    "src": "scripts/skill_crafting/configs/gem/gem.dbrow:62"
+    "src": "scripts/skill_crafting/configs/gem/gem.dbrow:62",
+    "measuredRate": {
+     "method": "cut_dragonstone_trade_loop",
+     "skill": "crafting",
+     "level": 55,
+     "xpPerTick": 4884.8,
+     "runs": 2,
+     "tickMs": 300,
+     "source": "measured",
+     "evidence": "scripts/measure/gems.ts (27 cuts in 7 ticks, +92812 XP, 2 runs) + scripts/measure/trade-supply.ts (12-tick resupply, 2 runs) = 19 ticks per pack",
+     "note": "excludes level-up dialogs, about 2.7 ticks per level when a trade or bank follows (research/levelup-cost.md)"
+    }
    },
    {
     "xpPerAction": 100,
@@ -51068,7 +51079,18 @@
     "kind": "mining_table",
     "label": "copper rock table",
     "source": "knowledge/skills.json",
-    "src": "scripts/skill_mining/configs/mine.dbrow:26"
+    "src": "scripts/skill_mining/configs/mine.dbrow:26",
+    "measuredRate": {
+     "method": "mine_copper",
+     "skill": "mining",
+     "level": 1,
+     "xpPerTick": 26.35,
+     "runs": 3,
+     "tickMs": 300,
+     "source": "measured",
+     "evidence": "scripts/generated/copper5.ts, 3/3 runs: 2187 XP for 5 ores in 75 / 83 / 123 ticks (median 83)",
+     "note": "SE Varrock mine, bronze pickaxe, rocks deplete after one ore"
+    }
    },
    {
     "xpPerAction": 1,
@@ -58630,7 +58652,18 @@
     "kind": "pickpocket",
     "label": "pickpocket man",
     "source": "knowledge/skills.json",
-    "src": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:1"
+    "src": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:1",
+    "measuredRate": {
+     "method": "pickpocket_man",
+     "skill": "thieving",
+     "level": 1,
+     "xpPerTick": 19.33,
+     "runs": 3,
+     "tickMs": 300,
+     "source": "measured",
+     "evidence": "scripts/generated/thieve300.ts, 3/3 runs: 5600 / 6000 / 5800 XP in 300 ticks from level 1 (median 5800)",
+     "note": "includes stuns (about half the tries) and eating; level rises during the run"
+    }
    },
    {
     "xpPerAction": 8,
@@ -60374,7 +60407,18 @@
     "kind": "pickpocket",
     "label": "pickpocket guard",
     "source": "knowledge/skills.json",
-    "src": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:68"
+    "src": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:68",
+    "measuredRate": {
+     "method": "pickpocket_guard",
+     "skill": "thieving",
+     "level": 40,
+     "xpPerTick": 73.85,
+     "runs": 3,
+     "tickMs": 150,
+     "source": "measured",
+     "evidence": "scripts/generated/thieveguards.ts (base XP read after 5 ticks), 3/3 runs at 150 ms: 22230 / 26910 / 16380 XP in 300-301 ticks from Thieving 40 (median 22230 / 301)",
+     "note": "Old value 130.63 counted the preset base XP (15789) as gained: the script read XP before the preset stats arrived. About 63% of tries stunned."
+    }
    },
    {
     "xpPerAction": 4.2,
@@ -61310,7 +61354,18 @@
     "kind": "pickpocket",
     "label": "pickpocket knight of ardougne",
     "source": "knowledge/skills.json",
-    "src": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:81"
+    "src": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:81",
+    "measuredRate": {
+     "method": "pickpocket_knight",
+     "skill": "thieving",
+     "level": 55,
+     "xpPerTick": 206.9,
+     "runs": 6,
+     "tickMs": 150,
+     "source": "measured",
+     "evidence": "scripts/generated/thieveknights.ts (base XP read after 5 ticks), 6/6 runs at 150 ms: HP 10: 75870 / 69547 / 61117 XP; HP 50: 63225 / 59010 / 56902 XP, each in 300-303 ticks from Thieving 55 (median of the 6 rates)",
+     "note": "Old value 378.65 counted the preset base XP (46534) as gained. HP 10 is not slower than HP 50 when eating lobsters at half HP."
+    }
    },
    {
     "xpPerAction": 250,
@@ -62620,7 +62675,18 @@
     "kind": "runecraft_table",
     "label": "runecraft air",
     "source": "knowledge/skills.json",
-    "src": "scripts/skill_runecraft/configs/runecraft.dbrow:1"
+    "src": "scripts/skill_runecraft/configs/runecraft.dbrow:1",
+    "measuredRate": {
+     "method": "craft_air_runes_trade_loop",
+     "skill": "runecraft",
+     "level": 1,
+     "xpPerTick": 177.6,
+     "runs": 3,
+     "tickMs": 300,
+     "source": "measured",
+     "evidence": "scripts/generated/rcair.ts, 3/3 runs: 27 essence -> 3375 XP in 5-7 ticks at the altar; plus the measured 12-tick helper trade (scripts/measure/trade-supply.ts) = 19 ticks per pack",
+     "note": "assumes a helper inside the altar trades each pack; excludes level-up dialogs (research/levelup-cost.md)"
+    }
    },
    {
     "xpPerAction": 148.5,

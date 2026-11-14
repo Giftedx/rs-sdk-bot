@@ -13,7 +13,7 @@ let world: Promise<World> | null = null;
 self.onmessage = async e => {
     const { id, from, to, acct, stock, budgetMs } = e.data;
     try {
-        world ??= (async () => { await loadPathfinding(); return createWorld({ pathLength: await rsPathLength() }); })();
+        world ??= (async () => { await loadPathfinding(); return createWorld({ pathLength: await rsPathLength() }); })().catch(error=>{world=null;throw error;});
         const w = await world, deadline = budgetMs === undefined ? undefined : performance.now() + budgetMs;
         self.postMessage({ id, plan: planTrip(w, from, to, acct, stock, undefined, undefined, { deadline }) });
     } catch (error) {

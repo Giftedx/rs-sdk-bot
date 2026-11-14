@@ -1,10 +1,29 @@
 import { expect, test } from 'bun:test';
-import { combatSpells, itemBonuses, objBonuses, spellbook, weaponSpeeds } from './gen-combat-data';
+import { readFileSync } from 'node:fs';
+import { BONUSES, type Gear } from '../knowledge/src/gear';
+import { combatSpells, itemBonuses, spellbook, weaponSpeeds } from './gen-combat-data';
 
-test('obj bonuses: each block with its name and its 13 bonuses; items with no bonus are left out', () => {
-    const blocks = objBonuses('[rune_scimitar]\nname=Rune scimitar\nparam=stabattack,7\nparam=slashattack,45\r\nparam=crushattack,-2\nparam=strengthbonus,44\nparam=slash,1\n\n[logs]\nname=Logs\n');
-    expect(blocks.map(b => b.debug)).toEqual(['rune_scimitar', 'logs']);
-    expect(itemBonuses(blocks, new Map())).toEqual({ 'Rune scimitar': [7, 45, -2, 0, 0, 0, 0, 0, 0, 0, 44, 0, 0] });
+test('bonus assets preserve the exact Black dagger and dragonhide variants from the gear catalogue', () => {
+    const gear = JSON.parse(readFileSync(new URL('../../knowledge/gear.json', import.meta.url), 'utf8')) as Gear[];
+    const out = itemBonuses(gear), shipped = JSON.parse(readFileSync(new URL('./client-assets/item-bonuses.json', import.meta.url), 'utf8'));
+    for (const data of [out, shipped]) {
+        expect(data[1217]).toEqual([10, 5, -4, 1, 0, 0, 0, 0, 1, 0, 7, 0, 0]);
+        expect(data[746]).toEqual([5, 3, -4, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0]);
+        expect(data[1135].slice(3, 10)).toEqual([-15, 15, 40, 32, 45, 20, 40]);
+        expect(data[2503].slice(3, 10)).toEqual([-15, 30, 55, 47, 60, 50, 55]);
+        expect(data['Black dagger']).toBeUndefined();
+        expect(data['Dragonhide body']).toBeUndefined();
+    }
+});
+
+test('known zero bonuses and identical name aliases survive without choosing a differing variant', () => {
+    const zero = Object.fromEntries(BONUSES.map(b => [b, 0])) as Gear['bonuses'];
+    const out = itemBonuses([{ id: 1, name: 'Plain ring', bonuses: zero }, { id: 2, name: 'Plain ring', bonuses: { ...zero } },
+        { id: 3, name: 'Different ring', bonuses: zero }, { id: 4, name: 'Different ring', bonuses: { ...zero, prayer: 1 } }]);
+    expect(out[1]).toEqual(new Array(13).fill(0));
+    expect(out['Plain ring']).toEqual(out[1]);
+    expect(out['Different ring']).toBeUndefined();
+    expect(out[4]![12]).toBe(1);
 });
 
 test('spellbook: teleport spells with the Magic level and rune names, and the staffs by rune', () => {
@@ -30,7 +49,10 @@ test('combat spells: rows with a max hit, level, runes and the staff worn; Crumb
     ]);
 });
 
-test('weapon speeds: the attackrate param by display name; an item without it is left out (the default 4)', () => {
-    const obj = '[rune_longsword]\nname=Rune longsword\nparam=attackrate,5\n\n[rune_scimitar]\nname=Rune scimitar\n\n[rune_2h_sword]\nname=Rune 2h sword\nparam=attackrate,7\n';
-    expect(weaponSpeeds([obj], new Map())).toEqual({ 'Rune longsword': 5, 'Rune 2h sword': 7 });
+test('weapon speeds preserve exact IDs and omit ambiguous name aliases', () => {
+    expect(weaponSpeeds([{ id: 1, name: 'Training blade', attackRate: 4 }, { id: 2, name: 'Training blade', attackRate: 7 },
+        { id: 3, name: 'Scimitar', attackRate: 4 }, { id: 4, name: 'Ring' }])).toEqual({ 1: 4, 2: 7, 3: 4, Scimitar: 4 });
+    const shipped = JSON.parse(readFileSync(new URL('./client-assets/weapon-speed.json', import.meta.url), 'utf8'));
+    expect(shipped[1217]).toBe(4);
+    expect(shipped[746]).toBe(4);
 });

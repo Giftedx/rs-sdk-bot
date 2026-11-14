@@ -14,7 +14,7 @@ export const typescriptLoaded=()=>tsLoaded!==undefined;
 const ts=new Proxy({} as typeof TS,{get:(_,key)=>(tsLoaded??=require('typescript') as typeof TS)[key as keyof typeof TS]});
 // One fleet revision includes helpers and both host/single launch paths, not
 // just the entry script. Credentials, mutable receipts and notes are excluded.
-export const workerSourceRoots=['scripts','packages','vendor/rs-sdk/sdk','vendor/rs-sdk/server/webclient/src'];
+export const workerSourceRoots=['scripts','packages','vendor/rs-sdk/sdk','vendor/rs-sdk/server/webclient/src','vendor/rs-sdk/server/vendor/rsmod-pathfinder'];
 // These packages do not execute workers. A runtime import into either must be
 // included deliberately instead of silently escaping the release fingerprint.
 const toolingRoots=['packages/dashboard','packages/router'];
@@ -47,7 +47,7 @@ export function workerSourceRevision(base=root):string {
 // A release covers the files one process can run, not the whole tree (docs/script-contract.md, Release scope):
 // its entries and every file they reach through relative imports or through string literals that name a file or
 // folder under releaseDataRoots, plus the runtime trees and root files every worker runs on.
-export const runtimeTrees=['vendor/rs-sdk/sdk','vendor/rs-sdk/server/webclient/src'];
+export const runtimeTrees=['vendor/rs-sdk/sdk','vendor/rs-sdk/server/webclient/src','vendor/rs-sdk/server/vendor/rsmod-pathfinder'];
 const releaseRootFiles=['package.json','bun.lock','tsconfig.json'];
 const releaseDataRoots=['knowledge','scripts','packages'];
 // The processes that start a swarm worker; supervise-host.ts names packages/core/src/host.ts.

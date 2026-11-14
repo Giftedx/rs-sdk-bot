@@ -182,6 +182,7 @@ export const sharedLootTables = (): LootTables => (shared ??= fileTables());
 // most each RELOAD_MS. A missing file gives no prices or no bill.
 // The market value of an item is the lower of its 7-day VWAP (when it traded at least 3 times) and its current bid:
 // the market is thin, and the bid is what a buyer pays now.
+// The newest dated quote wins between the two files, even when its value falls. Undated files are fallback evidence.
 const RELOAD_MS = 600_000;
 export const marketValue = (m: { price?: number | null; bid?: number | null } | undefined): number => {
     const price = typeof m?.price === 'number' && m.price > 0 ? m.price : null, bid = typeof m?.bid === 'number' && m.bid > 0 ? m.bid : null;
@@ -206,17 +207,28 @@ export function fileTables(root = resolve(import.meta.dir, '..', '..', '..')): L
         const next = `${mtime(pricesFile)}|${mtime(marketFile)}|${mtime(billFile)}`;
         if (next === stamp) return;
         stamp = next;
-        const b = new Map<number, number>(), w = new Set<number>();
+        const b = new Map<number, number>(), observed = new Map<number, number>(), w = new Set<number>();
+        const quoteNumber = (value: unknown) => value === null || (typeof value === 'number' && Number.isFinite(value) && value > 0);
+        const remember = (id: number, value: number, rawAt: unknown) => {
+            const at = typeof rawAt === 'number' && Number.isFinite(rawAt) && rawAt > 0 && rawAt <= now ? rawAt : 0;
+            const prior = observed.get(id);
+            // Shared rows include the VWAP guard, so they win a dated tie with their projected legacy bid.
+            // With neither observation dated, retain the existing higher-value fallback.
+            if (prior === undefined || at > prior || (at === prior && (at > 0 || value > (b.get(id) ?? 0)))) {
+                observed.set(id, at); b.set(id, value);
+            }
+        };
         try {
             for (const [name, p] of Object.entries(JSON.parse(readFileSync(pricesFile, 'utf8')) as Record<string, any>)) {
                 const id = byDebug.get(name);
-                if (id !== undefined && typeof p?.bid === 'number' && p.bid > 0) b.set(id, p.bid);
+                if (id !== undefined && quoteNumber(p?.bid)) remember(id, p.bid ?? 0, p.at);
             }
         } catch { /* no prices */ }
         try {
-            for (const [id, m] of Object.entries(JSON.parse(readFileSync(marketFile, 'utf8')).items ?? {}) as [string, any][]) {
-                const v = marketValue(m);
-                if (v > (b.get(Number(id)) ?? 0)) b.set(Number(id), v);
+            const market = JSON.parse(readFileSync(marketFile, 'utf8'));
+            for (const [id, m] of Object.entries(market.items ?? {}) as [string, any][]) {
+                if (Number.isSafeInteger(Number(id)) && quoteNumber(m?.price) && quoteNumber(m?.bid))
+                    remember(Number(id), marketValue(m), market.at);
             }
         } catch { /* no market file */ }
         try {

@@ -2,8 +2,8 @@ import { test, expect } from 'bun:test';
 import { domainOf } from '../../knowledge/src/actions';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, firedActions, sideSnapshots, fleetSkills, practicePasses, ownedNames } from '../src/coverage';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, firedActions, sideSnapshots, fleetSkills, practicePasses, ownedNames, buildScoreboard } from '../src/coverage';
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { questDefinitions } from '../../core/src/quest-status';
@@ -184,4 +184,89 @@ test('Haggis is left out of shared fleet output', () => {
     expect(rows.find(s => s.skill === 'Ranged')).toMatchObject({ best: 20, side: 'claude-cloud' });
     const summary = scoreboardSummary({ quests: { liveComplete: [], folders: [] }, skills: [], domains: [], fleetSkills: rows, fleet: { side: 'local' } });
     expect(JSON.stringify(summary)).not.toContain('Haggis');
+});
+
+test('shared collection observations keep unknown containers distinct from observed empty ones', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-items-'));
+    try {
+        writeFileSync(join(dir, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [
+            { name: 'Known', server: SERVER, at: NOW, skills: [], bank: [{ id: 554, count: 20 }], equipment: [], inventory: null },
+            { name: 'Unknown', server: SERVER, at: NOW, skills: [], bank: null },
+            { name: 'Invalid', server: SERVER, at: NOW, skills: [], bank: [{ id: 99, count: 0 }] },
+            { name: 'Future', server: SERVER, at: NOW + 1, bank: [{ id: 99, count: 1 }] },
+            { name: 'Practice', server: SERVER, at: NOW, practice: true, bank: [{ id: 99, count: 1 }] },
+        ] }));
+        const { accounts } = sideSnapshots(dir, 'local', NOW);
+        expect(accounts.map(a => a.name)).toEqual(['Known', 'Unknown', 'Invalid']);
+        expect(accounts[0]).toMatchObject({ bank: [{ id: 554, count: 20 }], equipment: [], inventory: null });
+        expect(accounts[1]!.bank).toBeNull();
+        expect(accounts[2]!.bank).toBeNull();
+        expect(itemsHeld(accounts.map(({ quests: _quests, ...a }) => a), [{ id: 554 }, { id: 99 }]).held).toBe(1);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('scoreboard progress counts canonical fleet achievements, stock and same-side snapshot fallback', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fleet-board-')), oldSide = process.env.FLEET_SIDE, oldFleet = process.env.FLEET_DIR;
+    const save = (path: string, value: unknown) => writeFileSync(join(root, path), JSON.stringify(value));
+    const account = (name: string, skill: string, level: number, item: number, extra = {}) => ({ name, server: SERVER, at: NOW - 5, skills: [{ name: skill, level }], inventory: [{ id: item, count: 1 }], ...extra });
+    try {
+        process.env.FLEET_SIDE = 'local';
+        for (const dir of ['knowledge', '.practice/status', '.practice/coordinator', '.practice/fleet-data/fleet/snapshots',
+            'vendor/rs-sdk/server/content/scripts/quests/quest_cook', 'vendor/rs-sdk/server/content/scripts/player/interfaces'])
+            mkdirSync(join(root, dir), { recursive: true });
+        save('knowledge/actions.json', []);
+        save('knowledge/items.json', [1, 2, 3, 4, 99].map(id => ({ id, tradeable: true })));
+        save('knowledge/quests.json', [{ folder: 'quest_cook', varp: 'cookquest', questPoints: 1 }]);
+        writeFileSync(join(root, 'vendor/rs-sdk/server/content/scripts/player/interfaces/questlist.if'), "[cook]\nbuttontype=normal\ntext=Cook's Assistant\n");
+        save('.practice/owned-accounts.json', Object.fromEntries(['Primary', 'Mover', 'Future', 'Practice', 'Wrong', 'Haggis'].map(name => [name, {}])));
+        save('.practice/status/Primary.json', account('Primary', 'Magic', 40, 1, { at: NOW - 30 * HOUR }));
+        save('.practice/status/Mover.json', account('Mover', 'Attack', 99, 99, { at: NOW - 1 }));
+        save('.practice/status/Future.json', account('Future', 'Smithing', 99, 99, { at: NOW + 1 }));
+        save('.practice/status/Practice.json', account('Practice', 'Ranged', 99, 99, { practice: true }));
+        save('.practice/status/Wrong.json', account('Wrong', 'Defence', 99, 99, { server: 'localhost:8888' }));
+        save('.practice/status/Haggis.json', account('Haggis', 'Strength', 99, 99));
+        save('.practice/fleet-data/fleet/owners.json', { accounts: Object.fromEntries([
+            ['Primary', 'local'], ['Mover', 'cloud'], ['Mage', 'cloud'], ['Fallback', 'local'], ['StalePub', 'cloud'],
+        ].map(([name, side]) => [name, { side, server: SERVER }])) });
+        save('.practice/fleet-data/fleet/snapshots/local.json', { side: 'local', at: NOW, accounts: [account('Fallback', 'Fishing', 99, 3)] });
+        save('.practice/fleet-data/fleet/snapshots/cloud.json', { side: 'cloud', at: NOW, accounts: [
+            account('Mover', 'Attack', 20, 4),
+            account('Mage', 'Magic', 99, 2, { questJournal: [{ id: 1, name: "Cook's Assistant", state: 'complete' }] }),
+            account('FuturePub', 'Smithing', 99, 99, { at: NOW + 1 }),
+            account('StalePub', 'Herblore', 99, 99, { at: NOW - 30 * HOUR }),
+            account('Haggis', 'Strength', 99, 99),
+        ] });
+        save('.practice/fleet-data/fleet/snapshots/claude-cloud.json', { side: 'claude-cloud', at: NOW, accounts: [
+            account('Mover', 'Attack', 99, 99, { at: NOW - 1 }),
+            account('StalePub', 'Herblore', 99, 99),
+        ] });
+
+        const fixtureFleet = join(root, '.practice/fleet-data/fleet');
+        const board = buildScoreboard(root, NOW, fixtureFleet);
+        expect(board.statuses).toBe(4);
+        expect(board.items).toMatchObject({ held: 4, tradeableHeld: 4 });
+        expect(board.progress).toMatchObject({ skills99: 2, skillLevels: 234, itemsHeld: 4, questsLive: 1 });
+        expect(board.skills.find(s => s.skill === 'Attack')!.bestLive).toBe(20);
+        expect(board.skills.find(s => s.skill === 'Herblore')!.bestLive).toBe(1);
+        expect(board.fleetSkills.find(s => s.skill === 'Magic')).toMatchObject({ best: 99, side: 'cloud', bySide: { local: { level: 40 }, cloud: { level: 99 } } });
+        expect(board.fleetSkills.find(s => s.skill === 'Fishing')).toMatchObject({ best: 99, side: 'local' });
+        expect(board.quests.folders[0]!.stage).toBe('live');
+        expect(board.fleet.sharedAccounts).toBe(2);
+        expect(board.fleet.stale).toEqual(['cloud:StalePub']);
+        expect(board.progress.remaining).not.toContain('Magic 40/99');
+
+        const configuredFleet = join(root, 'shared-fleet');
+        renameSync(fixtureFleet, configuredFleet);
+        process.env.FLEET_DIR = configuredFleet;
+        const configured = buildScoreboard(root, NOW);
+        expect(configured.progress).toEqual(board.progress);
+        expect(configured.fleetSkills).toEqual(board.fleetSkills);
+        const explicit = buildScoreboard(root, NOW, fixtureFleet);
+        expect(explicit.skills.find(s => s.skill === 'Magic')!.bestLive).toBe(40);
+        expect(explicit.skills.find(s => s.skill === 'Fishing')!.bestLive).toBe(1);
+    } finally {
+        if (oldSide === undefined) delete process.env.FLEET_SIDE; else process.env.FLEET_SIDE = oldSide;
+        if (oldFleet === undefined) delete process.env.FLEET_DIR; else process.env.FLEET_DIR = oldFleet;
+        rmSync(root, { recursive: true, force: true });
+    }
 });

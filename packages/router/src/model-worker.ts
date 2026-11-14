@@ -76,8 +76,9 @@ export async function runModel(worker:ModelWorker,prompt:string,timeoutMs:number
  child.stdin.write(prompt);child.stdin.end();let expired=false,termination:Promise<void>|undefined;
  const timer=setTimeout(()=>{expired=true;termination=killTree(child.pid);},timeoutMs);
  const exit=await child.exited;clearTimeout(timer);await termination;
- const text=existsSync(output)?readFileSync(output,'utf8'):modelFailure(readFileSync(join(dir,'events.jsonl'),'utf8'),readFileSync(join(dir,'stderr.log'),'utf8'),expired);
- return{ok:exit===0&&!expired&&!!text.trim(),text,costUsd:0,evidence:dir};
+ const answer=existsSync(output)?readFileSync(output,'utf8'):undefined;
+ const text=answer?.trim()?answer:modelFailure(readFileSync(join(dir,'events.jsonl'),'utf8'),readFileSync(join(dir,'stderr.log'),'utf8'),expired);
+ return{ok:exit===0&&!expired&&!!answer?.trim(),text,costUsd:0,evidence:dir};
 }
 export function assignedWorker(kind:string,records:{spec:{kind:string};agent?:ModelWorker}[],requested?:ModelWorker):ModelWorker{
  if(requested)return requested;

@@ -1,6 +1,11 @@
 import {expect,test} from 'bun:test';
-import {readFileSync} from 'node:fs';
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {marketRows,writeMarketCache,MARKET_FILE} from '../../scripts/market-cache';
+import {buildItemPrices,itemPrice,priceItemKey} from './item-prices';
+import {createVaultItems} from './vault-items';
+import {isLocalServer} from '../core/src/localserver';
 
 const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
@@ -25,8 +30,13 @@ test('failed rank reads preserve the last observation and have a request deadlin
 test('a failed market page cannot publish fresh prices or partial data',async()=>{
  const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
  const marketIds=new Map([['old',1]]),marketById=new Map(),prices=new Map([['old',10]]);let calls=0;
- const run=new Function('fetch','Bun','marketIds','marketById','prices',`const DEMO='http://example.test';let pricesAt=1;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>++calls===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):Response.json({error:'unavailable'},{status:503}),{sleep:async()=>{}},marketIds,marketById,prices);
- expect(await run()).toBe(1);expect(prices.has('new')).toBe(false);expect(marketIds.has('new')).toBe(false);
+ const root=mkdtempSync(join(tmpdir(),'dashboard-market-failure-'));
+ try{
+  const items=marketRows([{id:1,name:'Old',ask:10,bid:5,sellQuantity:2}]);writeMarketCache(root,items,1);
+  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>++calls===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):Response.json({error:'unavailable'},{status:503}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root,buildItemPrices);
+  expect(await run()).toBe(1);expect(prices.has('new')).toBe(false);expect(marketIds.has('new')).toBe(false);
+  expect(JSON.parse(readFileSync(join(root,MARKET_FILE),'utf8'))).toEqual({at:1,items});
+ }finally{rmSync(root,{recursive:true,force:true});}
 });
 
 test('opponent information retries a failed NPC table load',async()=>{
@@ -48,8 +58,55 @@ test('slow rank refreshes cannot overlap on the minute timer',async()=>{
 test('a complete market refresh replaces removed listings and publishes its timestamp',async()=>{
  const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
  const marketIds=new Map([['old',1]]),marketById=new Map([[1,{}]]),prices=new Map([['old',10]]);
- const run=new Function('fetch','Bun','marketIds','marketById','prices',`const DEMO='http://example.test';let pricesAt=1;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[{id:2,name:'New',basePrice:20}]}),{sleep:async()=>{}},marketIds,marketById,prices);
- expect(await run()).toBeGreaterThan(1);expect([...prices]).toEqual([['new',20]]);expect([...marketIds]).toEqual([['new',2]]);expect(marketById.has(1)).toBe(false);
+ const root=mkdtempSync(join(tmpdir(),'dashboard-market-success-'));
+ try{
+  const row={id:2,name:'New',basePrice:20,vwap:999,trades:1,ask:20,bid:15,sellQuantity:0,buyQuantity:3};
+  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[row]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root,buildItemPrices);
+  const at=await run();expect(at).toBeGreaterThan(1);expect([...prices]).toEqual([['new',20]]);expect([...marketIds]).toEqual([['new',2]]);expect(marketById.has(1)).toBe(false);
+  expect(JSON.parse(readFileSync(join(root,MARKET_FILE),'utf8'))).toEqual({at,items:marketRows([row])});
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('a shared-cache write failure does not hide a successful dashboard market refresh',async()=>{
+ const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const marketIds=new Map(),marketById=new Map(),prices=new Map();let writes=0;
+ const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[{id:2,name:'New',basePrice:20}]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,()=>{writes++;throw Error('read-only cache');},'/unused',buildItemPrices);
+ expect(await run()).toBeGreaterThan(1);expect(writes).toBe(1);expect([...prices]).toEqual([['new',20]]);
+});
+
+test('the complete dashboard scrape publishes exact variant values without a last-name alias',async()=>{
+ const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const rows=[{id:1135,name:'Dragonhide body',basePrice:7800,ask:8000},{id:2503,name:'Dragonhide body',basePrice:13480,vwap:15000,trades:3,ask:16000}];
+ const run=new Function('fetch','Bun','marketRows','buildItemPrices','priceCatalogue',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{};let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return {itemPrices,prices};};`)
+  (async()=>Response.json({total:2,items:rows}),{sleep:async()=>{}},marketRows,buildItemPrices,rows);
+ const result=await run();expect(result.itemPrices.byId[1135]).toMatchObject({value:7800,ask:8000});expect(result.itemPrices.byId[2503]).toMatchObject({value:15000,ask:16000});
+ expect(result.itemPrices.byName['dragonhide body']).toBeUndefined();expect(result.prices.has('dragonhide body')).toBe(false);
+});
+
+test('the exact ID and alias tables replace together only after a complete market scrape',async()=>{
+ const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const previous=buildItemPrices([{id:1,name:'Old',basePrice:10}],[{id:1,name:'Old'}]);
+ let fail=true,calls=0;
+ const run=new Function('fetch','Bun','marketRows','buildItemPrices','previous',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{},priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices=previous;${code};return async()=>{await refreshPrices();return itemPrices;};`)
+  (async()=>++calls%2===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):fail?new Response('',{status:503}):Response.json({total:200,items:[]}),{sleep:async()=>{}},marketRows,buildItemPrices,previous);
+ expect(await run()).toBe(previous);expect(previous.byId[1]?.value).toBe(10);expect(previous.byName.old?.value).toBe(10);
+ fail=false;const next=await run();expect(next.byId[1]).toBeUndefined();expect(next.byName.old).toBeUndefined();expect(next.byId[2]?.value).toBe(20);expect(next.byName.new?.value).toBe(20);
+});
+
+test('vault valuation retains exact variants and marks historical name-only outgoing stock unconfirmed',()=>{
+ const code=transpile(server.slice(server.indexOf('function vault('),server.indexOf('// ---------- swarm controller')));
+ const table=buildItemPrices([{id:1135,name:'Dragonhide body',basePrice:7800},{id:2503,name:'Dragonhide body',basePrice:13480}],
+  [{id:1135,name:'Dragonhide body'},{id:2503,name:'Dragonhide body'}]);
+ const log:any[]=[];
+ const vault=new Function('isLocalServer','createVaultItems','priceItemKey','priceOf','log',`const cached=()=>log,FILES={},NL='\\n',keyName=n=>n.toLowerCase(),BANKER='Banker',liveAccounts=()=>['Worker','Receiver'],existsSync=()=>true,pricesAt=1;${code};return vault;`)
+  (isLocalServer,createVaultItems,priceItemKey,(i:any)=>itemPrice(table,i)?.value??null,log);
+ const bots=[{name:'Worker',server:'rs-sdk-demo.fly.dev',at:1,inventory:[],bank:[{id:1135,name:'Dragonhide body',count:4},{id:2504,baseId:2503,name:'Dragonhide body (noted)',count:2},{id:-1,name:'Coins',count:100}]}];
+ const exact=vault(bots,4);expect(exact.value).toBe(4*7800+2*13480);expect(exact.items.map((i:any)=>i.id).sort((a:number,b:number)=>a-b)).toEqual([-1,1135,2504]);expect(exact.coins).toBe(0);expect(exact.unpriced).toBe(1);expect(exact.valueComplete).toBe(false);
+ log.push({at:2,from:'Worker',to:'Receiver',items:[{name:'Dragonhide body',count:3}]});
+ const uncertain=vault(bots,4),owner=uncertain.holders.find((h:any)=>h.name==='Worker');
+ expect(owner.items.find((i:any)=>i.name==='Dragonhide body')).toEqual({name:'Dragonhide body',count:3,unconfirmed:true});
+ expect(owner.value).toBe(0);expect(owner.valueComplete).toBe(false);expect(owner.countsComplete).toBe(false);
+ expect(uncertain.value).toBe(0);expect(uncertain.valueComplete).toBe(false);expect(uncertain.log[0]).toEqual(log[0]);expect(uncertain.flow[0].items[0]).toEqual(log[0].items[0]);
 });
 
 test('market holdings keep different item IDs with the same display name separate',()=>{

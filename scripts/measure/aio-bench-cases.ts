@@ -1,6 +1,7 @@
 // AIO bench coverage manifest: one key per AIO catalog route, and the practice case that measures it.
 // A route with no case is a coverage gap; benchCoverage() lists the gaps so the bench can grow to the full catalog.
 import {aioCatalog} from '../aio';
+import {planProgressiveSkiller} from '../aio-skiller';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
@@ -280,7 +281,7 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=15', 'LOG=normal', 'TOOL_BUDGET=0', 'CASH_RESERVE=0', 'CAP=2000', 'MAX_LOGS=2'], {presetConfig: firemakingFixture('entry')}),
   // The record route's fires with helpers that drop the logs (scripts/firemaking-line.ts): two helpers at the Draynor
   // bank drop two batches on the burn line, and the runner logs in when the first batch shows. Firemaking 1 to 62.
-  {key: 'extra:firemaking-line', script: 'scripts/firemaking-line.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', '{bot:c}', 'TARGET_LEVEL=62', 'CAP=1500'], pass: ok, timeoutMs: 600_000,
+  {key: 'skiller:firemaking:line', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['firemaking', 'line', '{bot:b}', '{bot:c}', 'TARGET_LEVEL=62', 'CAP=1500'], pass: ok, timeoutMs: 600_000,
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, varps: {173: 1}, inventory: [{id: 590, count: 1}]},
     companions: [
       {suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3092, z: 3243, level: 0}, varps: {173: 1}, bank: [{id: 1511, count: 2}, {id: 1521, count: 30}]}},
@@ -300,6 +301,20 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('herblore', 'meats', 'fresh_lumbridge', ['CAP=4000'], {timeoutMs: 900_000, presetConfig: {position: {x: 3092, z: 3242, level: 0}, skills: {Attack: 94, Strength: 83, Defence: 76, Hitpoints: 75}, equipment: [{id: 1289, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], inventory: [{id: 954, count: 1}, {id: 329, count: 2}], bank: [{id: 995, count: 1000}, {id: 590, count: 1}, {id: 1511, count: 13}, {id: 2132, count: 265}]}}),
   // packages/practice/src/rune-bank-craft-proof.ts
   skiller('runecraft', 'bank-craft', 'fresh_lumbridge', ['99', 'CAP=4000'], {presetConfig: {position: {x: 3013, z: 3355, level: 0}, varps: {63: 6, 101: 1, 281: 1000}, skills: {Attack: 47, Hitpoints: 33, Runecraft: 1}, bank: [{id: 1436, count: 30}, {id: 556, count: 25}, {id: 1438, count: 1}, {id: 1448, count: 1}], inventory: [{id: 556, count: 5}]}}),
+  skiller('runecraft', 'bank-craft', 'fresh_lumbridge', ['99', 'RUNE_ALTAR=air', 'ESSENCE_TARGET=28', 'CAP=4000'], {
+    key: 'extra:air-supply-higher-altar',
+    presetConfig: {position: {x: 3013, z: 3355, level: 0}, varps: {63: 6, 101: 1, 281: 1000}, skills: {Runecraft: 99, Hitpoints: 99, Defence: 99},
+      bank: [{id: 1436, count: 31}, {id: 1438, count: 1}, {id: 1446, count: 1}, {id: 995, count: 42}]},
+    pass: s => ok(s) && /"consumed":28/.test(s) && /"crafted":280/.test(s) && /"bankEssence":3/.test(s)
+      && /"altar":"air"/.test(s) && !/RUNE_BANK_ALTAR .*"altar":"body"/.test(s) && /LOGOUT logged-out/.test(s),
+  }),
+  skiller('runecraft', 'bank-craft', 'fresh_lumbridge', ['99', 'RUNE_ALTAR=body', 'ESSENCE_TARGET=3', 'CAP=4000'], {
+    key: 'extra:rune-supply-body-odd',
+    presetConfig: {position: {x: 3013, z: 3355, level: 0}, varps: {63: 6, 101: 1, 281: 1000}, skills: {Runecraft: 99, Hitpoints: 99, Defence: 99},
+      bank: [{id: 1436, count: 4}, {id: 1446, count: 1}, {id: 995, count: 42}]},
+    pass: s => ok(s) && /"consumed":3/.test(s) && /"crafted":9/.test(s) && /"bankEssence":1/.test(s)
+      && /"altar":"body"/.test(s) && /"xp":562/.test(s) && /"xpBalanced":true/.test(s) && /LOGOUT logged-out/.test(s),
+  }),
   // packages/practice/src/magic-order-proof.ts `varrock`
   skiller('magic', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=32', 'MAX_CASTS=5', 'RUNE_BUDGET=1000', 'CASH_RESERVE=10000', 'CAP=1500'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Magic: 31}, inventory: [{id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 1351, count: 1}], bank: [{id: 556, count: 25}, {id: 557, count: 4}, {id: 563, count: 5}, {id: 995, count: 14911}, {id: 1511, count: 5}]}}),
   skiller('prayer', 'bury', 'fresh_lumbridge', ['46', 'CAP=1000', 'MAX_BURY=175', 'BONE_RESERVE=6'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Prayer: 42}, bank: [{id: 526, count: 200}]}}),
@@ -423,6 +438,14 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:bank-sort', script: 'scripts/aio-logistics.ts', preset: 'bank_gems', scriptArgs: ['bank-sort', '200', '20', 'name'], pass: ok, presetConfig: {...PRESETS.bank_gems!, position: {x: 3092, z: 3242, level: 0}, bank: [{id: 1631, count: 270}, {id: 995, count: 50}, {id: 1511, count: 5}, {id: 314, count: 40}, {id: 2349, count: 3}]}},
   {key: 'logistics:relocate-bank', script: 'scripts/aio-logistics.ts', preset: 'bank_gems', scriptArgs: ['relocate-bank', 'CAP=1500'], pass: ok},
   {key: 'logistics:arrive-draynor', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['arrive-draynor', 'CAP=1250'], pass: ok},
+  {key: 'logistics:walk-edge', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-edge'],
+    presetConfig: {position: {x: 3107, z: 3491, level: 0}, skills: {Hitpoints: 60, Defence: 60}},
+    pass: s => ok(s) && /WALK_EDGE \{"ok":true,/.test(s) && /"loggedOut":true/.test(s) && s.includes('LOGOUT logged-out')},
+  // Hold an ordinary offensive prayer with the guard disabled, then restore the spent points through the AIO
+  // route. A full-prayer preset alone would exercise only the altar worker's idempotent early return.
+  {key: 'logistics:restore-prayer', script: 'scripts/measure/restore-prayer-entry.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3241, z: 3205, level: 0}, skills: {Hitpoints: 60, Prayer: 43}},
+    pass: s => ok(s) && /"drained":true/.test(s) && /pray-at-altar prayer 43 at the Lumbridge church/.test(s) && s.includes('LOGOUT logged-out')},
   {key: 'fighter:imp', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['imp', 'CAP=1400', 'MAX_KILLS=1'], pass: ok, presetConfig: {position: {x: 2655, z: 3283, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], inventory: [{id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}]}},
   {key: 'fighter:fire-giant', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['fire-giant', 'CAP=1400'], pass: ok, presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Hitpoints: 99, Prayer: 99, Defence: 99}, varps: {65: 10}, bank: [{id: 294, count: 1}, {id: 329, count: 16}]}},
   {key: 'fighter:fire-combat', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['fire-combat', 'CAP=1600'], pass: ok, timeoutMs: 900_000, presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 43}, varps: {65: 10}, bank: [{id: 295, count: 1}, {id: 954, count: 1}, {id: 329, count: 16}, {id: 1331, count: 1}, {id: 1171, count: 1}]}},
@@ -432,6 +455,9 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'fighter:ranged-camp', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged-camp', '1400', 'STAGED=1'], pass: ok, presetConfig: {position: {x: 2895, z: 9792, level: 0}, skills: {Ranged: 99, Hitpoints: 99, Defence: 99}, equipment: [{id: 837, count: 1, slot: 3}, {id: 1540, count: 1, slot: 5}, {id: 877, count: 500, slot: 13}]}},
   {key: 'fighter:ranged', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged', '11', '1500', 'MIN_ARROWS=30', 'BUY_ARROWS=0', 'AMMO=60', 'FOOD=3', 'FOOD_ID=333', 'KILLS_PER_TRIP=5', 'MAX_TRIPS=2'], pass: s => ok(s) && s.includes('mode=ranged-train'),
     presetConfig: {position: {x: 3253, z: 3421, level: 0}, skills: {Ranged: 10, Hitpoints: 30}, bank: [{id: 841, count: 1}, {id: 884, count: 90}, {id: 333, count: 5}]}},
+  {key: 'fighter:trooper', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TARGET_LEVEL=61'], pass: s => ok(s) && /stop=target-level/.test(s),
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 43, Thieving: 5},
+      bank: [{id: 1277, count: 1}, {id: 1171, count: 1}, {id: 333, count: 30}]}},
   {key: 'fighter:chompy', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['chompy', '1', '1', '1500'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2614, z: 3093, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99}, varps: {293: 65},
       equipment: [{id: 1718, count: 1, slot: 2}, {id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}],
@@ -442,7 +468,7 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'fighter:loot-trip', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['loot-trip', '.practice/aio-bench/jobs/{bot}-loot-trip.json'], pass: ok,
     presetConfig: {position: {x: 3185, z: 3436, level: 0}},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-loot-trip.json': {target: 2, batch: 2, cap: 1200, returnTicks: 300, members: true, bank: {x: 3185, z: 3436, level: 0}, site: {x: 3152, z: 3399, level: 0}, policy: {mode: 'list', ids: [1573], names: [], minimumValue: 0, maximumValue: 2147483647, radius: 8, idleTicks: 20}}}},
-  {key: 'boss:kbd', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['kbd', 'STAGED=1', 'CAP=1000'], pass: ok,
+  {key: 'boss:kbd', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['kbd', '1000', 'STAGED=1'], pass: ok,
     presetConfig: {position: {x: 2717, z: 9802, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Magic: 99, Prayer: 99},
       equipment: [{id: 1289, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1540, count: 1, slot: 5}, {id: 1079, count: 1, slot: 7}],
       inventory: [{id: 2448, count: 1}, {id: 2452, count: 1}, {id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2434, count: 1}, {id: 2434, count: 1}, {id: 563, count: 1}, {id: 556, count: 3}, {id: 554, count: 1}, ...Array.from({length: 12}, () => ({id: 385, count: 1}))]}},
@@ -932,6 +958,46 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'market:shop-trip', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-trip', '.practice/aio-bench/jobs/{bot}-shop-trip.json'], pass: ok,
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, bank: [{id: 1277, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-shop-trip.json': {merchant: 'alkharid-general', item: 1277, minimumUnit: 1, target: 1, batch: 1, cap: 800, returnTicks: 200, members: true}}},
+  {key: 'market:shop-sell', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-sell', '.practice/aio-bench/jobs/{bot}-shop-sale.json'],
+    pass: s => ok(s) && /"completed":1/.test(s) && /"atBank":true/.test(s) && s.includes('LOGOUT logged-out'),
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Hitpoints: 60, Defence: 60}, bank: [{id: 1277, count: 2}, {id: 1351, count: 1}]},
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-shop-sale.json': {merchant: 'alkharid-general', item: 1277, minimumUnit: 1, target: 1, batch: 1, cap: 800, returnTicks: 200, members: false, reserve: 1}}},
+  {key: 'logistics:coin-courier', script: 'packages/router/src/owned-logistics-entry.ts', preset: 'fresh_lumbridge', scriptArgs: ['coin-courier', '{bot:b}'],
+    presetConfig: {position: {x: 3183, z: 3436, level: 0}, skills: {Hitpoints: 99, Defence: 99}, bank: [{id: 995, count: 200}, {id: 2347, count: 1}],
+      inventory: [{id: 1446, count: 1}, ...Array.from({length: 27}, () => ({id: 1436, count: 1}))]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3184, z: 3436, level: 0}, skills: {Hitpoints: 99, Defence: 99}, bank: [{id: 995, count: 5}], inventory: [{id: 995, count: 3}, {id: 1265, count: 1}]}}],
+    pass: s => ok(s) && /COIN_RECEIPT .*"amount":100/.test(s) && /OWNED_LOGISTICS_RESULT .*"ok":true.*"authenticated":2/.test(s)},
+  {key: 'logistics:coin-fanout', script: 'packages/router/src/owned-logistics-entry.ts', preset: 'fresh_lumbridge', scriptArgs: ['coin-fanout', '{bot:b}', '{bot:c}'],
+    presetConfig: {position: {x: 3183, z: 3436, level: 0}, skills: {Hitpoints: 99, Defence: 99}, bank: [{id: 995, count: 400}, {id: 1351, count: 1}], inventory: [{id: 995, count: 11}]},
+    companions: ['b', 'c'].map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: {position: {x: 3184, z: 3436, level: 0}, skills: {Hitpoints: 99, Defence: 99},
+      bank: [{id: 995, count: 5 + i}], inventory: [{id: 995, count: 3 + i}, {id: 1265, count: 1}]}})),
+    pass: s => ok(s) && /FANOUT_SUMMARY \{"ok":true,"completed":2,"requested":2,"cancelled":false\}/.test(s)
+      && (s.match(/^COIN_RECEIPT .*"amount":50/gm) ?? []).length === 2 && /OWNED_LOGISTICS_RESULT .*"ok":true.*"authenticated":3/.test(s)},
+  {key: 'logistics:item-fanin', script: 'packages/router/src/owned-logistics-entry.ts', preset: 'fresh_lumbridge', scriptArgs: ['item-fanin', '{bot:b}', '{bot:c}'],
+    presetConfig: {position: {x: 3183, z: 3436, level: 0}, skills: {Hitpoints: 99, Defence: 99}, bank: [{id: 314, count: 5}, {id: 995, count: 42}], inventory: [{id: 314, count: 2}, {id: 2347, count: 1}]},
+    companions: ['b', 'c'].map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: {position: {x: 3184, z: 3436, level: 0}, skills: {Hitpoints: 99, Defence: 99},
+      bank: [{id: 314, count: 10 * (i + 1)}, {id: 995, count: 7}], inventory: [{id: 1265, count: 1}]}})),
+    pass: s => ok(s) && /FANIN_SUMMARY \{"ok":true,"banked":true,"completed":2,"requested":2,"cancelled":false\}/.test(s)
+      && /DEPOSIT_RECEIPT .*"itemId":314,.*"bankAfter":37/.test(s) && /OWNED_LOGISTICS_RESULT .*"ok":true.*"authenticated":3/.test(s)},
+  {key: 'logistics:note-courier', script: 'packages/router/src/owned-logistics-entry.ts', preset: 'fresh_lumbridge', scriptArgs: ['note-courier', '{bot:b}'],
+    presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Hitpoints: 99, Defence: 99}, bank: [{id: 995, count: 37}, {id: 1351, count: 1}],
+      inventory: [{id: 1780, count: 28}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 995, count: 5}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 2655, z: 3283, level: 0}, skills: {Hitpoints: 99, Defence: 99},
+      bank: [{id: 1779, count: 7}, {id: 995, count: 23}], inventory: [{id: 2347, count: 1}, {id: 995, count: 3}]}}],
+    pass: s => ok(s) && /OWNED_LOGISTICS_RESULT .*"ok":true,"mode":"note-courier","authenticated":1/.test(s)
+      && /"banked":28,"preserved":true/.test(s) && /"notesDelivered":28,"troutRetained":2,"assetsPreserved":true/.test(s)},
+  {key: 'logistics:supply-bootstrap', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['supply-bootstrap', 'ROLE=producer', 'PHASE=clean'],
+    presetConfig: {position: {x: 3094, z: 3106, level: 0}, varps: {281: 0}},
+    pass: s => ok(s) && /BOOTSTRAP_CHECKPOINT .*"stage":"empty"/.test(s) && /SUPPLY_BOOTSTRAP .*"ok":true.*"phase":"clean"/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'logistics:relocate-knight', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['relocate-knight'],
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 43},
+      inventory: [{id: 995, count: 123}], bank: [{id: 995, count: 100}, {id: 1351, count: 1}]},
+    pass: s => ok(s) && /preserved=true/.test(s) && /xpPreserved=true/.test(s) && /died=false/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'skiller:runecraft:nature', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['runecraft', 'nature', '.practice/aio-bench/jobs/{bot}-nature.json'],
+    presetConfig: {position: {x: 2852, z: 2955, level: 0}, skills: {Runecraft: 99, Hitpoints: 99, Defence: 99, Prayer: 99}, varps: {63: 6, 116: 15},
+      bank: [{id: 1436, count: 5}, {id: 1462, count: 1}, {id: 995, count: 42}]},
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-nature.json': {target: 2, batch: 2, cap: 3000, returnTicks: 700, reserve: 3, members: true, xpRate: 25, protectMelee: true}},
+    pass: s => ok(s) && /"completed":2/.test(s) && /"runecraftXp":450/.test(s) && /"xpBalanced":true/.test(s) && /"preserved":true/.test(s) && /"atBank":true/.test(s) && s.includes('LOGOUT logged-out')},
   {key: 'logistics:loadout', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['loadout', '.practice/aio-bench/jobs/{bot}-loadout.json'], pass: ok,
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1351, count: 1}, {id: 1171, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-loadout.json': {bank: {x: 3092, z: 3243, level: 0}, pack: [{id: 1351, count: 1}], wear: [{id: 1171, count: 1, slot: 5}], cap: 300, maximumMoves: 64}}},
@@ -1062,6 +1128,10 @@ const SAME_JOB_CASES: BenchCase[] = [
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
 const EXTRA_CASES: BenchCase[] = [
+  {key: 'extra:progressive-crafting-entry', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge',
+    scriptArgs: planProgressiveSkiller('crafting',1,2)[0]!.step.args,
+    presetConfig: {position:{x:3269,z:3167,level:0},skills:{Crafting:1},inventory:[],bank:[{id:1741,count:1},{id:1733,count:1},{id:1734,count:5}]},
+    pass: s => ok(s) && /"completed":1\b/.test(s) && s.includes('LOGOUT logged-out')},
   {key: 'extra:direct-quest-cook', script: 'scripts/generated/quest-cook.ts', preset: 'quest_cook', scriptArgs: [], pass: s => ok(s) && s.includes('Cook flag=complete')},
   {key: 'extra:master-quest-cook', script: 'scripts/aio.ts', preset: 'quest_cook', scriptArgs: ['quester', 'sweep', 'cook'], pass: ok},
   {key: 'extra:bank-job-cook-lobster', script: 'scripts/aio-skiller.ts', preset: 'cook_food_catherby', scriptArgs: ['bank-job', COOK_JOB_PATH], pass: s => ok(s) && s.includes('cooking_generic_lobster')},
@@ -1139,8 +1209,9 @@ const EXTRA_CASES: BenchCase[] = [
   })),
   // Fletching 1 to 25 for The Fremennik Trials, the planner's band army-fletch-25: 210 headless arrows from banked
   // arrow shafts and feathers (25 XP an arrow at the server's rate; level 25 is 4,863 XP), 100 of each kept.
+  // The carried tinderbox exercises BANK_PACK before the production inputs are withdrawn.
   {key: 'extra:fletch-headless-25', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '3000', 'headless', 'MAX_MAKE=210', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
-    pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
+    pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, inventory: [{id: 590, count: 1}], bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
   // The same job from the tile where a goldfarm thief stands at the Ardougne knights (2672,3320): the worker walks to
   // the nearest bank stand (Ardougne south, 2655,3283) before it opens the bank.
   {key: 'extra:fletch-headless-from-knights', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '1500', 'headless', 'MAX_MAKE=30', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
@@ -1254,20 +1325,12 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'skiller:woodcutting:loop': 'worker scripts/wc-loop.ts needs the lite runner, not the in-process client',
   'skiller:cooking:ge-cook': 'needs the Grand Exchange service',
   'skiller:firemaking:ge': 'needs the Grand Exchange service',
-  'market:shop-sell': 'the worker needs its shop open at entry and never opens one; market:shop-trip runs the same sale after it opens the shop',
-  'logistics:coin-courier': 'both accounts must be in the owned-account registry before login; a new bench account is not',
-  'logistics:coin-fanout': 'both accounts must be in the owned-account registry before login; a new bench account is not',
-  'logistics:item-fanin': 'both accounts must be in the owned-account registry before login; a new bench account is not',
-  'logistics:note-courier': 'requires accounts owned on the live server address',
   'logistics:give-to-banker': 'needs scripts/banker.ts running for the banker account',
   'logistics:take-from-banker': 'needs scripts/banker.ts running for the banker account',
   'logistics:supply-holder': 'serves trades from a specialist and a courier that other processes drive',
-  'logistics:supply-bootstrap': 'requires SERVER=localhost:8888 in the account file; a bench account has 127.0.0.1 and its own port',
-  'skiller:runecraft:nature': 'the worker requires Runecraft XP of 9 for each essence (XP rate 1); the practice engine runs rate 25',
   'quester:mode:hero-owned': 'needs an order file that names two owned accounts',
   'quester:mode:legends-owned': 'needs an order file that names the owned account',
-  'logistics:loadout-import': 'dispatcher mismatch: an offline converter with no account argument',
-  'logistics:relocate-knight': 'the worker admits three named live accounts only',
+  'logistics:loadout-import': 'offline setup conversion; the CLI and chain adapter are covered by unit tests without a game engine',
   'pvp:pilot': 'a live run by design',
   'logistics:banker': 'a standing service with no finite end',
   'logistics:food-chain': 'a standing controller for named accounts',

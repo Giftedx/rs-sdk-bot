@@ -75,3 +75,32 @@ test('a send() that throws becomes a rejected outcome, not an exception', async 
     const r = await checked(s as any, { name: 'boom', send: async () => { throw new Error('socket gone'); }, effect: () => false, timeoutTicks: 50 });
     expect(r).toMatchObject({ ok: false, reason: 'rejected', detail: expect.stringContaining('socket gone') });
 });
+
+test('a broken effect rejects its action and leaves later tick consumers running', async () => {
+    const listeners = new Set<() => void>();
+    const s = {
+        sdk: { getState: () => ({}) }, tick: () => 0,
+        onTick(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; },
+    };
+    let otherTicks = 0;
+    const pending = checked(s, { name: 'broken', send: async () => {}, effect: () => { throw Error('bad observation'); }, timeoutTicks: 5 });
+    s.onTick(() => { otherTicks++; });
+    expect(() => { for (const listener of listeners) listener(); }).not.toThrow();
+    expect(await pending).toMatchObject({ ok: false, reason: 'rejected', detail: expect.stringContaining('bad observation') });
+    expect(otherTicks).toBe(1);
+    expect(listeners.size).toBe(1);
+});
+
+test('an observation read failure rejects its action and releases the tick watch', async () => {
+    const listeners = new Set<() => void>();
+    let broken = false;
+    const s = {
+        sdk: { getState: () => { if (broken) throw Error('state unavailable'); return {}; } }, tick: () => 0,
+        onTick(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; },
+    };
+    const pending = checked(s, { name: 'read', send: async () => {}, effect: () => false, timeoutTicks: 5 });
+    broken = true;
+    expect(() => { for (const listener of listeners) listener(); }).not.toThrow();
+    expect(await pending).toMatchObject({ ok: false, reason: 'rejected', detail: expect.stringContaining('state unavailable') });
+    expect(listeners.size).toBe(0);
+});

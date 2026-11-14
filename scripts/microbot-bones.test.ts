@@ -77,6 +77,45 @@ test('staff receipts require exactly the substituted native rune costs',()=>{
  expect(bonesEffect(before,after,{earth:0,water:2,nature:1})).toBe(true);
  expect(bonesEffect(before,after)).toBe(false);
 });
+
+for(const stopAt of ['open','withdraw'] as const)test('bones preparation stops after an awaited bank '+stopAt,async()=>{
+ const player={lifeId:1,respawnCount:0},names=new Map([[526,'Bones'],[557,'Earth rune'],[555,'Water rune'],[561,'Nature rune']]);
+ const stock=new Map([[526,5],[557,2],[555,2],[561,1]]),pack:{id:number;name:string;count:number;slot:number}[]=[];
+ const inputs:string[]=[];let stopped=false,bankOpen=false,generation=0;
+ const items=()=>[...stock].map(([id,count])=>({id,count,name:names.get(id)!}));
+ const s:any={name:'Owned',tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getEquipment:()=>[],getInventory:()=>pack,getSkill:()=>({level:15}),getSkillXp:()=>0,
+   getState:()=>({player,inventory:pack,bank:{isOpen:bankOpen},interface:{isOpen:false},dialog:{isOpen:false}})},
+  bankObservation:()=>({generation,items:items()}),
+  bot:{openBank:async()=>{inputs.push('open');bankOpen=true;generation++;await Promise.resolve();if(stopAt==='open')stopped=true;return{success:true};},
+   withdrawItem:async(pattern:RegExp,count:number)=>{const item=items().find(i=>pattern.test(i.name))!;inputs.push('withdraw:'+item.id);stock.set(item.id,stock.get(item.id)!-count);pack.push({id:item.id,count,slot:pack.length,name:item.name});generation++;await Promise.resolve();if(stopAt==='withdraw')stopped=true;return{success:true};},
+   closeBank:async()=>{inputs.push('close');bankOpen=false;}},direct:async()=>{inputs.push('cast');return{success:true};}};
+ const result=await runBonesBank(s,{maximum:5,cap:40,stop:()=>stopped});
+ expect(result).toMatchObject({ok:false,made:0,banked:0,casts:0,failure:'bones conversion session stopped'});
+ expect(inputs).toEqual(stopAt==='open'?['open']:['open','withdraw:557']);
+ for(const [id,initial] of [[526,5],[557,2],[555,2],[561,1]])expect((stock.get(id!)??0)+pack.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0)).toBe(initial!);
+});
+test('bones adapter retains converted output when stopped during deposit bank open',async()=>{
+ const names=new Map([[526,'Bones'],[1963,'Banana'],[557,'Earth rune'],[555,'Water rune'],[561,'Nature rune']]);
+ const pack=[[526,3],[557,2],[555,2],[561,1]].map(([id,count],slot)=>({id:id!,count:count!,slot,name:names.get(id!)!})),stock=new Map([[1963,9]]);
+ const inputs:string[]=[];let stopped=false,bankOpen=false,generation=0,opens=0,xp=100,tick=0;
+ const inventory=()=>pack.filter(i=>i.count>0),items=()=>[...stock].map(([id,count])=>({id,count,name:names.get(id)!}));
+ const s:any={name:'Owned',tick:()=>tick,ended:new Promise(()=>{}),
+  onTick:(fn:()=>void)=>{let active=true;const pump=()=>{if(active){tick++;fn();queueMicrotask(pump);}};queueMicrotask(pump);return()=>{active=false;};},
+  sdk:{getEquipment:()=>[],getInventory:inventory,getSkill:()=>({level:15}),getSkillXp:()=>xp,
+   getState:()=>({player:{lifeId:1,respawnCount:0},inventory:inventory(),bank:{isOpen:bankOpen},interface:{isOpen:false},dialog:{isOpen:false}})},
+  bankObservation:()=>({generation,items:items()}),
+  bot:{openBank:async()=>{inputs.push('open');opens++;bankOpen=true;generation++;await Promise.resolve();if(opens===2)stopped=true;return{success:true};},
+   closeBank:async()=>{inputs.push('close');bankOpen=false;},
+   depositItem:async(item:{id:number})=>{inputs.push('deposit');const p=pack.find(i=>i.id===item.id)!;stock.set(p.id,(stock.get(p.id)??0)+p.count);p.count=0;generation++;return{success:true};}},
+  direct:async()=>{inputs.push('cast');const bones=pack.find(i=>i.id===526)!;pack.push({id:1963,count:bones.count,slot:pack.length,name:names.get(1963)!});bones.count=0;
+   for(const [id,n] of [[557,2],[555,2],[561,1]])pack.find(i=>i.id===id)!.count-=n!;xp+=25;return{success:true};}};
+ const result=await runBonesBank(s,{maximum:3,cap:40,stop:()=>stopped});
+ expect(result).toMatchObject({ok:false,made:3,banked:0,casts:1,failure:'bones conversion session stopped'});
+ expect(inputs).toEqual(['open','close','cast','open']);
+ expect(inventory()).toEqual([{id:1963,count:3,slot:4,name:'Banana'}]);
+ expect(stock.get(1963)).toBe(9);
+});
 test('final bones deposit cannot turn an expired budget or cancellation into success',async()=>{
  const cap=fixture();cap.io.deposit=async()=>{cap.io.tick=()=>100;return 3;};
  expect((await runBonesConversion(cap.io,{maximum:3,cap:40})).ok).toBe(false);
