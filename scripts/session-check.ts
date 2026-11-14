@@ -8,6 +8,7 @@ import { openBot, finish } from '../packages/core/src/bot';
 import { waitUntil } from '../packages/core/src/ticks';
 import { RECOVERY_SCRIPT, verifyNativeRecoveryProof } from '../packages/core/src/session-recovery-permit';
 import { launchRevision } from '../packages/core/src/worker-release';
+import type { Session } from '../packages/core/src/inprocess';
 
 export const CAPABILITY = 'session-recovery-only';
 
@@ -15,6 +16,13 @@ export function sessionCheckDetail(state: any): string {
     const p = state?.player;
     if (state?.inGame !== true || !p || !(p.hp > 0)) throw new Error('session check: account not in game');
     return `sessionChecked=1 hp=${p.hp} x=${p.worldX} z=${p.worldZ} level=${p.level}`;
+}
+
+// openBot can refuse before it connects (a release hold, a side check, a missing bot.env). No session exists then, so
+// finish() has nothing to log out. The refusal goes to stdout as the RESULT line, which the supervisor classifies.
+export async function openSessionCheck(name: string, open: (name: string) => Promise<Session> = openBot,
+    out: (line: string) => void = l => console.log(l)): Promise<Session | null> {
+    try { return await open(name); } catch (e) { out(`RESULT fail ${String(e)}`); return null; }
 }
 
 export function verifyDelivery(directory: string, root = resolve(import.meta.dir, '..')): true {
@@ -34,7 +42,8 @@ if (import.meta.main) {
             process.exit(0);
         } catch (e) { console.error(String(e)); process.exit(1); }
     }
-    const s = await openBot(process.argv[2]!);
+    const s = await openSessionCheck(process.argv[2]!);
+    if (!s) process.exit(1);
     try {
         await waitUntil(s, st => st?.inGame && !!st.player && st.player.hp > 0, { timeoutTicks: 100, idleMs: 10000 });
         await finish([s], true, sessionCheckDetail(s.sdk.getState()));
