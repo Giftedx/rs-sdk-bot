@@ -97,12 +97,30 @@ export function replaceTasks(state:CoordinatorState,replacements:{from:string;to
 // may start, so one failed account never strands the accounts behind it. Every other dependency must still succeed.
 export const orderOnlyDependency=(task:CoordTask,dep:TaskRecord|undefined):boolean=>!!dep&&task.kind==='run'&&!!task.sessionRecovery
  &&dep.spec.kind==='run'&&!!dep.spec.sessionRecovery&&(dep.status==='succeeded'||dep.status==='failed'||dep.status==='superseded');
-export const dependencyMet=(task:CoordTask,dep:TaskRecord|undefined):boolean=>dep?.status==='succeeded'||orderOnlyDependency(task,dep);
+// A recovery run gains one qualification of its capability for each relink, and it needs only one that passed: the run
+// checks the freshness of the qualification when it starts. So its qualifications of that capability count as one group:
+// a failed one is covered once another passed and none is still pending (a pending one may be the newer one it needs).
+// `alive` (deadRoots): the failed one does not make the run dead while another passed or may still pass.
+const qualificationGroup=(task:CoordTask,dep:TaskRecord|undefined,records:ReadonlyMap<string,TaskRecord>):TaskRecord[]|null=>{
+ if(!dep||task.kind!=='run'||!task.sessionRecovery||dep.spec.kind!=='qualify'||dep.spec.capability!==task.capability||(dep.status!=='failed'&&dep.status!=='superseded'))return null;
+ return task.dependsOn.map(id=>records.get(id)).filter((r):r is TaskRecord=>!!r&&r.spec.kind==='qualify'&&r.spec.capability===task.capability);
+};
+const unsettled=(r:TaskRecord)=>r.status==='pending'||r.status==='running';
+export const coveredQualification=(task:CoordTask,dep:TaskRecord|undefined,records:ReadonlyMap<string,TaskRecord>):boolean=>{
+ const group=qualificationGroup(task,dep,records);
+ return !!group&&group.some(r=>r.status==='succeeded')&&!group.some(unsettled);
+};
+export const aliveQualification=(task:CoordTask,dep:TaskRecord|undefined,records:ReadonlyMap<string,TaskRecord>):boolean=>{
+ const group=qualificationGroup(task,dep,records);
+ return !!group&&group.some(r=>r.status==='succeeded'||unsettled(r));
+};
+export const dependencyMet=(task:CoordTask,dep:TaskRecord|undefined,records?:ReadonlyMap<string,TaskRecord>):boolean=>
+ dep?.status==='succeeded'||orderOnlyDependency(task,dep)||(!!records&&coveredQualification(task,dep,records));
 
 /** Qualify demanded capabilities only. Old failed refreshes must not poison new consumers. */
 export function qualificationDemand(state:CoordinatorState){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
- return state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&[...r.spec.dependsOn.filter(id=>!id.startsWith('refresh-'+r.spec.capability+'-')),...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id))));
+ return state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&[...r.spec.dependsOn.filter(id=>!id.startsWith('refresh-'+r.spec.capability+'-')),...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id),records)));
 }
 export function refreshQualifications(state:CoordinatorState,fingerprints:Record<string,string>){
  const runs=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run');
@@ -263,7 +281,7 @@ export function deadRoots(state:CoordinatorState,records:ReadonlyMap<string,Task
    const next=records.get(dep);
    let candidate:{root:string;at:number}|null=null;
    if(!next)candidate={root:dep,at:0};
-   else if((next.status==='failed'||next.status==='superseded')&&!orderOnlyDependency(record.spec,next))candidate={root:dep,at:finishedAt(next)};
+   else if((next.status==='failed'||next.status==='superseded')&&!orderOnlyDependency(record.spec,next)&&!aliveQualification(record.spec,next,records))candidate={root:dep,at:finishedAt(next)};
    else if(next.status==='pending')candidate=visit(next);
    if(candidate&&(!found||candidate.at<found.at))found=candidate;
   }
@@ -312,7 +330,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   focusCaps.add(resources.focusCapability);
   for(const record of state.tasks)if(['pending','running'].includes(record.status)&&record.spec.capability===resources.focusCapability)includeFocus(record.spec.id);
  }
- const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id))));
+ const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id),records)));
  if(!pending.length)return null;
  const dead=deadRoots(state,records),consumerCounts=new Map<string,number>(),liveDependencies=new Set<string>();
  for(const r of state.tasks){
