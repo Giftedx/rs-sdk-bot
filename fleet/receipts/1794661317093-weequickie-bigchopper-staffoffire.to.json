@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794661317093-weequickie-bigchopper-staffoffire",
+ "account": "Bigchopper",
+ "partner": "WeeQuickie",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "40f7a54f-cb77-4db2-af04-46b38e913f29",
+ "count": 0,
+ "ok": false,
+ "at": 1794661323153,
+ "detail": "trade claimed"
+}
