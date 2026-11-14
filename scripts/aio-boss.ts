@@ -2,7 +2,8 @@
 // Usage:
 //   bun scripts/aio-boss.ts <account> <boss> [arg ...] [KEY=value ...]
 import {runDirectChild} from '../packages/core/src/run-child';
-import {parseStep,type Step} from '../packages/core/src/chain-step';
+import type {Step} from '../packages/core/src/chain-step';
+import {resolveRouteStep} from './aio-route-step';
 import {
  BLUE_KIT,BLACK_KIT,KBD_KIT,validateCombatKit,combatKitTotals,combatAssetIssues,
  inKbdEntrancePit,inNativeKbdLair,combatTeleportAllowed,leaveKbdEntrancePit,
@@ -80,8 +81,15 @@ export function resolveBossStep(bossInput: string, rest: readonly string[] = [])
  if (!spec) {
   throw Error(`aio-boss: unknown encounter "${boss}"; known: ${BOSS_ENCOUNTERS.map(b => b.boss).join(', ')}`);
  }
- const tokens = rest.length ? rest : [...(spec.defaultArgs ?? [])];
- const step = parseStep([spec.script, ...tokens].join(' '));
+ const step = resolveRouteStep(spec, rest);
+ // The KBD worker reads its fight limit from CAP, while the dragon/trawler workers read a positional cap.
+ if (boss === 'kbd' && step.args.length) {
+  if (step.args.length !== 1 || !/^\d+$/.test(step.args[0]!) || Number(step.args[0]) < 1 || Number(step.args[0]) > 1000) {
+   throw Error('aio-boss kbd positional CAP must be 1..1000 ticks; use TRIP_CAP for the full trip');
+  }
+  if (step.env.CAP === undefined) step.env.CAP = step.args[0]!;
+  step.args = [];
+ }
  return { script: step.script, args: step.args, env: { ...(spec.defaultEnv ?? {}), ...step.env } };
 }
 

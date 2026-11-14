@@ -4,14 +4,13 @@
 // the next receiver still gets its turn.
 // Usage: bun scripts/coin-fanout.ts <donor> <receiver> [receiver ...] <amount>   (a swarm orchestrate job passes
 // its accounts first, then its args)
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, settle, serverFromEnv, assertServerAllowed } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
-import { ownedAccounts } from '../packages/core/src/tradeguard';
-import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { moveCoins, parseCoins } from './coin-courier';
-import { assertAccountOwnership, acquireAccountLeases, assertRecoverableStatus } from './handoff-inputs';
+import { acquireAccountLeases } from './handoff-inputs';
+import {checkTransferAccounts,transferOrderKey} from './transfer-admission';
 
 export function parseFanout(args: string[]) {
     const [donor, ...rest] = args, amount = rest.at(-1), receivers = rest.slice(0, -1);
@@ -20,53 +19,57 @@ export function parseFanout(args: string[]) {
     return { donor, receivers, pairs: receivers.map(r => parseCoins([donor, r, amount])) };
 }
 
-if (import.meta.main) {
-    const f = parseFanout(process.argv.slice(2)), root = resolve(import.meta.dir, '..'), dir = join(root, '.practice');
+export async function coinFanoutMain(argv:string[]=process.argv.slice(2)) {
+    const f = parseFanout(argv), root = resolve(import.meta.dir, '..'), dir = join(root, '.practice');
     const all = [f.donor, ...f.receivers];
-    const read = (p: string, fallback: any) => existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : fallback;
     const host = (name: string) => serverFromEnv(readFileSync(join(root, 'vendor/rs-sdk/bots', name, 'bot.env'), 'utf8'));
     const server = host(f.donor);
     if (all.some(n => host(n) !== server)) throw Error('coin accounts must use the same server');
     assertServerAllowed(server);
-    const runId = process.env.COORDINATOR_RUN_ID ?? '', order = process.env.COIN_ORDER ?? `fanout-${Date.now()}`;
+    const runId = process.env.COORDINATOR_RUN_ID ?? '', order = transferOrderKey(process.env.COIN_ORDER ?? `fanout-${Date.now()}`,'COIN_ORDER');
     let cancelled = false;
+    const closing=new Set<string>();
     const cancel = () => { cancelled = true; };
+    const sessionEnd=(name:string)=>async()=>{if(!closing.has(name.toLowerCase()))cancel();};
     const check = (names: string[], open: Session[]) => () => {
         if (cancelled) throw Error('coin fan-out cancelled');
-        assertAccountOwnership(names, read(join(dir, 'coordinator/state.json'), null), read(join(root, 'swarm.json'), {}).jobs, n => existsSync(join(dir, 'stop-' + n)), runId);
-        const owned = ownedAccounts(server);
-        for (const n of names) {
-            if (!owned.has(n.toLowerCase())) throw Error('not authenticated owned: ' + n);
-            // A confirmed producer logout settles an account; host-run accounts write no status result line.
-            if (!open.some(s => s.name.toLowerCase() === n.toLowerCase()) && readLogoutProof(n, server).state !== 'confirmed')
-                assertRecoverableStatus(read(join(dir, 'status', n + '.json'), null), null, () => true);
-        }
+        checkTransferAccounts(root,names,server,open,runId);
     };
     const results: { to: string; ok: boolean; detail: string }[] = [];
     let donor: Session | undefined, release: (() => void) | undefined;
     try {
         check(all, [])(); release = acquireAccountLeases(all, runId);
         process.on('SIGINT', cancel); process.on('SIGTERM', cancel);
-        donor = await openBot(f.donor, { onStop: async () => cancel(), onSessionEnd: async () => cancel() });
+        donor = await openBot(f.donor, { onStop: async () => cancel(), onSessionEnd: sessionEnd(f.donor) });
         for (const c of f.pairs) {
             if (cancelled) break;
             const open: Session[] = [donor];
             let ok = false, detail = '';
             try {
-                open.push(await openBot(c.receiver, { onStop: async () => cancel(), onSessionEnd: async () => cancel() }));
+                check([f.donor,c.receiver],open)();
+                open.push(await openBot(c.receiver, { onStop: async () => cancel(), onSessionEnd: sessionEnd(c.receiver) }));
                 await moveCoins(c, open, join(dir, 'coin-courier', `${order}-${c.receiver}`), server, check([f.donor, c.receiver], open));
                 ok = true; detail = `transferred ${c.amount} coins ${f.donor} -> ${c.receiver}`;
             } catch (error) { detail = String(error); }
-            if (open[1]) await settle([open[1]], ok, detail);
+            if (open[1]) {
+                closing.add(c.receiver.toLowerCase());
+                try{if(!await settle([open[1]],ok,detail)){ok=false;detail+='; receiver settlement failed';}}
+                catch(error){ok=false;detail+='; receiver settlement: '+String(error);}
+            }
             results.push({ to: c.receiver, ok, detail });
             console.log('FANOUT_PAIR ' + JSON.stringify(results.at(-1)));
         }
     } catch (error) { results.push({ to: '-', ok: false, detail: String(error) }); }
     finally {
-        const ok = results.some(r => r.ok);
-        try { if (donor) await settle([donor], ok, `fan-out ${results.filter(r => r.ok).length}/${f.receivers.length}: ${results.map(r => `${r.to} ${r.ok ? 'ok' : 'fail'}`).join(', ')}`); }
+        let ok = !cancelled&&results.length===f.receivers.length&&results.every(r=>r.ok);
+        closing.add(f.donor.toLowerCase());
+        try { ok=!!donor&&await settle([donor], ok, `fan-out ${results.filter(r => r.ok).length}/${f.receivers.length}: ${results.map(r => `${r.to} ${r.ok ? 'ok' : 'fail'}`).join(', ')}`)&&ok; }
+        catch(error){ok=false;results.push({to:'-',ok:false,detail:'donor settlement: '+String(error)});}
         finally { process.off('SIGINT', cancel); process.off('SIGTERM', cancel); release?.(); }
         console.log('FANOUT_RESULT ' + JSON.stringify(results));
+        console.log('FANOUT_SUMMARY '+JSON.stringify({ok,completed:results.filter(r=>r.to!=='-'&&r.ok).length,requested:f.receivers.length,cancelled}));
         process.exitCode = ok ? 0 : 1;
+        return{ok,results};
     }
 }
+if(import.meta.main)coinFanoutMain().catch(error=>{console.error('RESULT fail '+String(error));process.exitCode=1;});

@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
-import {settleRuneEntryModal,dispatchRuneEntry,runeEntryWarning,runeEntrySnapshot,runeBankTarget,runeBankBalanced,runeBankDone,runeBankOk,chooseRuneAltar,RUNE_ALTARS,ruinTarget,inRuinFootprint,runeAltarStaging,RUINS,type RuneBankLedger} from './rune-bank-craft';
+import {settleRuneEntryModal,dispatchRuneEntry,runeEntryWarning,runeEntrySnapshot,runeBankTarget,runeBankOptions,runeBankXpBalanced,runRuneBankCraft,runeBankBalanced,runeBankDone,runeBankOk,chooseRuneAltar,RUNE_ALTARS,ruinTarget,inRuinFootprint,runeAltarStaging,RUINS,type RuneBankLedger} from './rune-bank-craft';
 import type {Session} from '../packages/core/src/inprocess';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 import {parseJm2} from '../packages/knowledge/src/jm2';
@@ -101,6 +101,14 @@ test('altar follows level and owned access items on each bank visit',()=>{
  expect(chooseRuneAltar(66,new Set([1446])).wanted).toEqual([]);
 });
 
+test('requested output pins the owned, unlocked altar and never falls back',()=>{
+ expect(chooseRuneAltar(99,new Set([1438,1446]),'air').altar?.name).toBe('air');
+ expect(chooseRuneAltar(99,new Set([1438,1446])).altar?.name).toBe('body');
+ expect(()=>chooseRuneAltar(99,new Set([1446]),'air')).toThrow('air talisman1438 required');
+ expect(()=>chooseRuneAltar(1,new Set([1438,1446]),'body')).toThrow('requires Runecraft20');
+ expect(()=>chooseRuneAltar(99,new Set([1438]),'nature')).toThrow('unknown rune altar');
+});
+
 test('mixed altar output reconciles every rune type, not just the total',()=>{
  const mixed=ledger({air:57,crafted:30,runes:{556:{before:30,after:57,crafted:27},558:{before:0,after:3,crafted:3}}});
  expect(runeBankBalanced(mixed)).toBe(true);
@@ -121,6 +129,7 @@ test('altar levels, XP, access items and destinations match pinned content',()=>
   const row=rows.split(`[runecraft_${a.name}]`)[1]!.split('[')[0]!;
   const field=(name:string)=>row.match(new RegExp(`^data=${name},(.+)$`,'m'))![1]!.trim();
   expect(Number(field('level'))).toBe(a.level);expect(Number(field('experience'))/10).toBe(a.xp);
+  expect(Number(field('multiplier'))).toBe(a.multiplier);
   expect(pack).toContain(`${a.talisman}=${a.name}_talisman`);
   expect(pack).toContain(`${a.rune}=${a.name}rune`);
   expect(Number(field('members'))).toBe(0);
@@ -158,6 +167,43 @@ test('target is a bounded Runecraft level',()=>{
  expect(runeBankTarget()).toBe(99);expect(runeBankTarget(20)).toBe(20);
  for(const v of [1,100,NaN,2.5])expect(()=>runeBankTarget(v)).toThrow('Runecraft target');
 });
+test('finite production options reject malformed orders before session access',async()=>{
+ expect(runeBankOptions()).toEqual({cap:20000});
+ expect(runeBankOptions({altar:'air',essenceTarget:28})).toEqual({cap:20000,altar:'air',essenceTarget:28});
+ for(const options of [{altar:''},{altar:'nature'},{essenceTarget:0},{essenceTarget:1.5},{essenceTarget:Infinity},{cap:0}]){
+  expect(()=>runeBankOptions(options)).toThrow();
+  await expect(runRuneBankCraft({} as Session,99,options)).rejects.toThrow();
+ }
+});
+test('production XP accepts the pinned rate and cap, and rejects missing or wrong-rate observations',()=>{
+ expect(runeBankXpBalanced(10_000,13_500,140)).toBe(true);
+ expect(runeBankXpBalanced(199_999_900,200_000_000,140)).toBe(true);
+ expect(runeBankXpBalanced(200_000_000,200_000_000,140)).toBe(true);
+ expect(runeBankXpBalanced(10_000,10_140,140)).toBe(false);
+ expect(runeBankXpBalanced(NaN,10_000,140)).toBe(false);
+ expect(runeBankXpBalanced(200_000_001,200_000_001,0)).toBe(false);
+});
+test('odd mind, earth and body batches allow the hidden half XP phase of whole stat packets',()=>{
+ const encoder=readFileSync('vendor/rs-sdk/server/engine/src/network/game/server/codec/UpdateStatEncoder.ts','utf8');
+ expect(encoder).toContain('buf.p4((message.exp / 10) | 0)');
+ for(const altar of ['mind','earth','body']){
+  const recipe=RUNE_ALTARS.find(a=>a.name===altar)!;
+  for(const essence of [1,3,27])for(const phase of [0,0.5]){
+   const actualInitial=10_000+phase,baseGain=essence*recipe.xp;
+   const initial=Math.floor(actualInitial),current=Math.floor(actualInitial+baseGain*25);
+   expect(runeBankXpBalanced(initial,current,baseGain)).toBe(true);
+   expect(runeBankXpBalanced(initial,initial+Math.floor(baseGain*25)-1,baseGain)).toBe(false);
+   expect(runeBankXpBalanced(initial,initial+Math.ceil(baseGain*25)+1,baseGain)).toBe(false);
+   expect(runeBankXpBalanced(199_999_999,200_000_000,baseGain)).toBe(true);
+  }
+ }
+ expect(runeBankXpBalanced(10_000.5,10_188,7.5)).toBe(false);
+ // Two odd batches must reconcile to their integral total; rounding cannot accumulate per trip.
+ expect(runeBankXpBalanced(10_000,10_187,7.5)).toBe(true);
+ expect(runeBankXpBalanced(10_187,10_374,7.5)).toBe(true);
+ expect(runeBankXpBalanced(10_000,10_374,15)).toBe(false);
+ expect(runeBankXpBalanced(10_000,10_375,15)).toBe(true);
+});
 test('essence spent equals the essence debit; banked runes equal the crafted output',()=>{
  expect(runeBankBalanced(ledger())).toBe(true);
  // Level 11+ makes two runes per essence.
@@ -168,6 +214,16 @@ test('essence spent equals the essence debit; banked runes equal the crafted out
 });
 test('the order ends at the target level or when the bank has no essence',()=>{
  expect(runeBankDone(20,20,500)).toBe(true);expect(runeBankDone(5,20,0)).toBe(true);expect(runeBankDone(5,20,1)).toBe(false);
+});
+test('finite supply requires the exact debit regardless of level or exhausted stock',()=>{
+ expect(runeBankDone(99,99,0,28,0)).toBe(false);
+ expect(runeBankDone(99,99,0,28,27)).toBe(false);
+ expect(runeBankDone(1,99,20,28,28)).toBe(true);
+ expect(runeBankDone(99,99,0,28,29)).toBe(false);
+ const at99={...base,level0:99,level:99,essenceTarget:30};
+ expect(runeBankOk({...at99,ledger:ledger()})).toBe(true);
+ expect(runeBankOk({...at99,ledger:ledger({essence0:0,consumed:0,crafted:0,air:30})})).toBe(false);
+ expect(runeBankOk({...at99,essenceTarget:31,ledger:ledger()})).toBe(false);
 });
 test('pass needs observed progress, an empty pack, no stop and a finished order',()=>{
  expect(runeBankOk({...base,ledger:ledger()})).toBe(true);

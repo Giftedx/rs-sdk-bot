@@ -10,6 +10,16 @@ test('shark notes satisfy generic food stock/demand but raw and burnt never do',
     expect(selectCookedFoodSource(['Endgame'],[{...s,at:0}],new Set(['endgame']),40000,25,'local')).toBeUndefined();
     expect(selectCookedFoodSource(['Endgame'],[s],new Set(),1001,25,'local')).toBeUndefined();
 });
+test('source banks count canonical cooked fish while carried notes still satisfy a consumer',()=>{
+    const now=1000,server='127.0.0.1:21000',owned=new Set(['cook']);
+    const source={name:'Cook',server,at:now,bankAt:now-1,bank:[{id:385,count:25}],inventory:[{id:386,count:80}]};
+    expect(selectCookedFoodSource(['Cook'],[source],owned,now,25,server)).toBe('Cook');
+    expect(selectCookedFoodSource(['Cook'],[{...source,bank:[{id:386,count:100}]}],owned,now,25,server)).toBeUndefined();
+    expect(selectCookedFoodSource(['Cook'],[{...source,bank:[{id:385,count:24},{id:386,count:100}]}],owned,now,25,server)).toBeUndefined();
+    expect(cookedFoodRestock('Cook',{...source,bank:[]},now,server)).toBe(0);
+    for(const change of [{server:'rs-sdk-demo.fly.dev'},{at:now-30000},{at:now+1},{bankAt:now+1},{bank:[{id:385,count:25},{id:386,count:-1}]}])
+        expect(selectCookedFoodSource(['Cook'],[{...source,...change}],owned,now,25,server)).toBeUndefined();
+});
 test('banker demand requires fresh unfinished cargo, not coins or stale/offline inventory',()=>{
     const s={at:100,result:'',inventory:[{name:'Flax',count:81}]};
     expect(hasDelivery(s,200)).toBe(true);

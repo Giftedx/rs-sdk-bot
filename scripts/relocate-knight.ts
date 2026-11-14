@@ -5,30 +5,43 @@ import {waitUntil} from '../packages/core/src/ticks';
 import {sessionWalker,walkPath,type PathDeps} from '../packages/core/src/walk';
 import {guardCowWalker} from './gather-combat';
 
-export function knightRelocationProfile(name:string){
-    const key=name.toLowerCase();
-    if(key==='pocketrocket')return {name:'Pocketrocket',start:{x:2727,z:3492,radius:6},points:[[2763,3472],[2800,3457],[2809,3441],[2677,3358],[2648,3358],[2654,3283]]};
-    if(key==='mmtha0205')return {name:'mmtha0205',start:{x:2809,z:3441,radius:6},points:[[2809,3441],[2677,3358],[2648,3358],[2654,3283]]};
-    if(key==='mightyrod')return {name:'Mightyrod',start:{x:2619,z:3332,radius:3},points:[[2644,3293],[2655,3283]]};
-    throw new Error('no relocation progress: only Pocketrocket, mmtha0205 or Mightyrod are admitted');
+type RelocationPosition={worldX:number;worldZ:number;level:number};
+type RelocationProfile={name:string;start:{x:number;z:number;radius:number};points:number[][]};
+const KNIGHT_RELOCATION_PROFILES:readonly RelocationProfile[]=[
+    {name:'seers',start:{x:2727,z:3492,radius:6},points:[[2763,3472],[2800,3457],[2809,3441],[2677,3358],[2648,3358],[2654,3283]]},
+    {name:'catherby',start:{x:2809,z:3441,radius:6},points:[[2809,3441],[2677,3358],[2648,3358],[2654,3283]]},
+    {name:'ardougne-north',start:{x:2619,z:3332,radius:3},points:[[2644,3293],[2655,3283]]},
+    {name:'ardougne-south',start:{x:2655,z:3283,radius:3},points:[[2655,3283]]},
+];
+const LEGACY_RELOCATION_PROFILES:Readonly<Record<string,{route:string;name:string}>>={
+    pocketrocket:{route:'seers',name:'Pocketrocket'},mmtha0205:{route:'catherby',name:'mmtha0205'},mightyrod:{route:'ardougne-north',name:'Mightyrod'},
+};
+export function knightRelocationProfile(name:string,position?:RelocationPosition):RelocationProfile{
+    const key=name.toLowerCase(),alias=LEGACY_RELOCATION_PROFILES[key];
+    // Names retain their CLI aliases, but only the observed start grants a worker's route.
+    const profile=position
+        ?KNIGHT_RELOCATION_PROFILES.find(candidate=>relocationStart(position,candidate))
+        :KNIGHT_RELOCATION_PROFILES.find(candidate=>candidate.name===(alias?.route??key));
+    if(!profile)throw new Error('no relocation progress: supported ground-floor bank start required (Seers, Catherby or Ardougne)');
+    return{name:!position&&alias?alias.name:profile.name,start:{...profile.start},points:profile.points.map(point=>[...point])};
 }
-export function relocationStart(p:{worldX:number;worldZ:number;level:number}|null|undefined,profile:ReturnType<typeof knightRelocationProfile>){
+export function relocationStart(p:RelocationPosition|null|undefined,profile:{start:{x:number;z:number;radius:number}}){
     return !!p&&p.level===0&&Math.max(Math.abs(p.worldX-profile.start.x),Math.abs(p.worldZ-profile.start.z))<=profile.start.radius;
 }
 export function relocationAssets(items:readonly{id:number;count:number}[]){const out=new Map<number,number>();for(const i of items)out.set(i.id,(out.get(i.id)??0)+i.count);return out;}
 export function relocationPreserved(a:ReadonlyMap<number,number>,b:ReadonlyMap<number,number>){return [...new Set([...a.keys(),...b.keys()])].every(id=>(a.get(id)??0)===(b.get(id)??0));}
 
 export async function relocateKnight(s:Session,name:string,options:{stop?:()=>boolean;walker?:PathDeps}={}){
-    const profile=knightRelocationProfile(name),state=()=>s.sdk.getState(),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
+    const state=()=>s.sdk.getState(),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
     if(!await waitUntil(s,()=>hp()>0&&!!state()?.player,{timeoutTicks:15}))throw new Error('no relocation progress: HP/position unknown');
-    const first=state()!.player!,hpStart=hp(),start=s.tick();
+    const first=state()!.player!,profile=knightRelocationProfile(name,first),lifeId=first.lifeId,respawns=first.respawnCount??0,hpStart=hp(),start=s.tick();
     if(!relocationStart(first,profile))throw new Error('no relocation progress: explicit profile requires its known ground-floor bank start');
     if(!Array.isArray(state()?.equipment))throw new Error('no relocation progress: worn equipment unknown');
     if(state()?.skills.length!==21||state()!.skills.some(v=>!Number.isFinite(v.experience)))throw new Error('no relocation progress: all21 XP observations required');
     const observe=s.bankObservation?.bind(s);if(!observe)throw new Error('no relocation progress: fresh bank observation unavailable');
     let ended=false,died=false,damaged=false,hpMin=hpStart,failure='';
     const safety=()=>{const st=state(),p=st?.player;hpMin=Math.min(hpMin,hp());damaged||=hp()<hpStart;
-        died||=!!p?.isDead||(p?.respawnCount??0)>(first.respawnCount??0)||(first.lifeId!==undefined&&(p?.lifeId ?? first.lifeId) !== first.lifeId);
+        died||=!!p?.isDead||(p?.respawnCount??0)>respawns||(lifeId!==undefined&&(p?.lifeId ?? lifeId) !== lifeId);
         if(ended||died)return 'relocation ended/dead';if(damaged)return 'relocation first HP drop';if(options.stop?.())return 'relocation stop requested';
         if(!p||p.level!==0)return 'relocation unexpected floor';
         if(st?.nearbyNpcs.some(n=>/bear/i.test(n.name)&&n.distance<=6))return 'relocation observed bear within6';return null;};
@@ -60,7 +73,7 @@ export async function relocateKnight(s:Session,name:string,options:{stop?:()=>bo
 }
 
 if(import.meta.main){
-    const name=process.argv[2];knightRelocationProfile(name??'');let stopped=false;
+    const name=process.argv[2];if(!name||!/^[A-Za-z0-9]{1,12}$/.test(name))await finish([],false,'no relocation progress: valid account required');let stopped=false;
     const s=await openBot(name!,{onStop:async()=>{stopped=true;}}).catch(e=>finish([],false,`login: ${String(e)}`));
     try{const r=await relocateKnight(s,name!,{stop:()=>stopped});console.log('KNIGHT_RELOCATION '+JSON.stringify(r));await finish([s],r.ok,`relocation ok=${r.ok} profile=${r.profile} ticks=${r.ticks} hpMin=${r.hpMin} preserved=${r.preserved} xpPreserved=${r.xpPreserved} died=${r.died} failure=${r.failure}`);}catch(e){await finish([s],false,String(e));}
 }
