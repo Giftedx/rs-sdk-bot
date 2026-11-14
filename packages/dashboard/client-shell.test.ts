@@ -779,6 +779,10 @@ test('melee hit chance: the best style from the worn bonuses, and the range over
  expect(t('Moss giant')).toBe('Melee hit at Attack 60: 86% with slash');
  // Giant spider: D = 10 x 54 = 540 (level 2) or 30 x 64 = 1,920 (level 27): 97% and 89%.
  expect(t('Giant spider')).toBe('Melee hit at Attack 60: 89–97% with slash');
+ // A range attack bonus of 50 adds ranged at Ranged 60: A = 68 x 114 = 7,752 against 2,496: 84%. Magic 30 at Magic 60:
+ // A = 69 x 94 = 6,486 against the giant's (1 + 9) x 64 = 640: 95%.
+ bon=[0,67,0,30,50];
+ expect(t('Moss giant')).toBe('Melee hit at Attack 60: 86% with slash · ranged 84% · magic 95%');
  bon=null;expect(t('Moss giant')).toBe('');
  expect(t('Banker')).toBe('');
 });
