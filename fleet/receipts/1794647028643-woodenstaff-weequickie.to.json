@@ -1,0 +1,39 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794647028643-woodenstaff-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(3)",
+ "requested": 5,
+ "claim": "60f7b71a-49cb-4320-987e-0b4d69f80f48",
+ "count": 0,
+ "ok": false,
+ "at": 1794647267715,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Gold bar",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Blood rune",
+   "requested": 200,
+   "count": 0
+  },
+  {
+   "item": "Air rune",
+   "requested": 1000,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 3,
+   "count": 0
+  }
+ ]
+}
