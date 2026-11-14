@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794661317093-weequickie-bigchopper-staffoffire",
  "account": "Bigchopper",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "40f7a54f-cb77-4db2-af04-46b38e913f29",
- "count": 0,
- "ok": false,
- "at": 1794661323153,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794661657228,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794661655619
+ },
+ "logout": {
+  "attemptId": "1794661323162-0000021164-0000000001",
+  "at": 1794661657217,
+  "sha256": "61706880f15a22068d8866dc4fd10849d6d38fa45c1a32553429830180edf4c0"
+ },
+ "screen": true
 }
