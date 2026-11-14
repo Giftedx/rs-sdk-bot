@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { bidPlan, chunkTooDear, fetchMarket, floatNeed, parseProfiles, tickPackets, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
+import { bidPlan, chunkTooDear, fetchMarket, floatNeed, parseProfiles, tickPackets, trickleOnly, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
 
 const bait = { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334 };
 
@@ -95,4 +95,15 @@ test('parseProfiles reads a comma list of known profiles in order', () => {
     expect(parseProfiles('Sarim,HARRY_BAIT', known)).toEqual(['sarim', 'harry_bait']);
     expect(parseProfiles('sarim,nowhere', known)).toBeNull();
     expect(parseProfiles('', known)).toBeNull();
+});
+
+test('a tick of a few units after the first means only the restock trickle is left', () => {
+    expect(trickleOnly(3, false, 0)).toBe(true);
+    expect(trickleOnly(9, false, 0)).toBe(true);
+    expect(trickleOnly(10, false, 0)).toBe(false);
+    expect(trickleOnly(50, false, 0)).toBe(false);
+    // The 2-unit probe, a tick with nothing, and a run told to wait for restock never count as a trickle.
+    expect(trickleOnly(2, true, 0)).toBe(false);
+    expect(trickleOnly(0, false, 0)).toBe(false);
+    expect(trickleOnly(3, false, 20)).toBe(false);
 });
