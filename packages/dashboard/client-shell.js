@@ -1003,10 +1003,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // read (b.at): a replayed snapshot (the hosted page between data files) does not count down to "safe". A teleport is a
   // move of more than 40 tiles from the last seen tile.
   // The last read is the newer of the state file (b.at) and the live roster's sight of the account (b.live.seen,
-  // withLiveRoster in index.html), so a roster that keeps seeing the account keeps the clock going.
-  const aggroNow=(b,now)=>{const at=Math.max(Number(b?.at)||0,Number(b?.live?.seen)||0);return at>0?Math.min(now,at+10e3):now;};
-  function aggroTrack(b,now){if(!b?.inWorld||!b.pos){if(b?.name)aggro.delete(b.name);return null;}now=aggroNow(b,now);const x=b.pos.x,z=b.pos.z,t=aggro.get(b.name),inside=c=>x>=c[0]&&x<c[0]+21&&z>=c[1]&&z<c[1]+21,c=[x-10,z-10];
-    if(!t){const n={zones:[c,c],since:now,first:true,last:[x,z]};aggro.set(b.name,n);return n;}
+  // withLiveRoster in index.html), so a roster that keeps seeing the account keeps the clock going. A gap of more than
+  // 30 s between two reads (an old snapshot, then the roster) starts a new "at most" count: the unseen time can hold a
+  // move or a relog, so it does not count toward the 1,000 ticks.
+  const aggroSeen=b=>Math.max(Number(b?.at)||0,Number(b?.live?.seen)||0);
+  const aggroNow=(b,now)=>{const at=aggroSeen(b);return at>0?Math.min(now,at+10e3):now;};
+  function aggroTrack(b,now){if(!b?.inWorld||!b.pos){if(b?.name)aggro.delete(b.name);return null;}now=aggroNow(b,now);const seen=aggroSeen(b),x=b.pos.x,z=b.pos.z,inside=c=>x>=c[0]&&x<c[0]+21&&z>=c[1]&&z<c[1]+21,c=[x-10,z-10];
+    let t=aggro.get(b.name);if(t&&seen>0&&t.seen>0&&seen-t.seen>30e3)t=null;if(t)t.seen=seen;
+    if(!t){const n={zones:[c,c],since:now,first:true,last:[x,z],seen};aggro.set(b.name,n);return n;}
     const jump=Math.max(Math.abs(x-t.last[0]),Math.abs(z-t.last[1]))>40;t.last=[x,z];
     if(inside(t.zones[0])||inside(t.zones[1]))return t;
     t.zones=[c,jump?c:t.zones[0]];t.since=now;t.first=false;return t;}

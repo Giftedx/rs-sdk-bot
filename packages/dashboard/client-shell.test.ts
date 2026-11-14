@@ -947,8 +947,11 @@ test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spa
  // A replayed snapshot: the last read (at) is 0, so the clock stops at 10 s, however late the page draws.
  const d:any={name:'D',inWorld:true,combat:20,at:1,pos:{x:3170,z:9900,level:0}};t.aggroTrack(d,1);
  expect(t.aggroText(d,900e3).text).toBe('6:30');
- // The live roster still sees the account at 500 s: the clock runs on to 400 s and the account is safe.
- d.live={seen:500e3};expect(t.aggroText(d,500e3)).toMatchObject({text:'safe'});
+ // An old snapshot (read at 1 ms), then the live roster at 600 s: the unseen gap starts a new "at most" count.
+ d.live={seen:600e3};const r1=t.aggroText(d,600e3);expect(r1.text).toBe('6:40');expect(r1.title).toContain('at most');
+ // The roster keeps seeing it every 2 s: the clock runs, and after 400 s the account is safe.
+ for(let s=602e3;s<=1000e3;s+=2e3){d.live={seen:s};t.aggroTrack(d,s);}
+ expect(t.aggroText(d,1000e3)).toMatchObject({text:'safe'});
  // Combat 85 is too strong for the Moss giant outside the Wilderness.
  expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
 });
