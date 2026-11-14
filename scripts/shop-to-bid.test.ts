@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { bidPlan, chunkTooDear, fetchMarket, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
+import { bidPlan, chunkTooDear, fetchMarket, floatNeed, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
 
 const bait = { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334 };
 
@@ -23,6 +23,12 @@ test('the plan refuses with no bid, a thin margin or no spare coins', () => {
     expect(bidPlan({ quote: { id: 556, name: 'Air rune', basePrice: 4, bid: 17, buyQuantity: 1e6 }, unitCost: 28, coins: 1e6, reserve: 0, maxUnits: 10, minNet: 1 }).refusal)
         .toBe('margin -12 is under MIN_NET 1');
     expect(bidPlan({ quote: bait, unitCost: 21, coins: 10_000, reserve: 10_000, maxUnits: 10, minNet: 50 }).refusal).toBe('no coins above the reserve');
+});
+
+test('the float tops the pack up to the reserve plus the spend limit', () => {
+    expect(floatNeed(0, 10_000, 200_000)).toBe(210_000);
+    expect(floatNeed(50_000, 10_000, 200_000)).toBe(160_000);
+    expect(floatNeed(300_000, 10_000, 200_000)).toBe(0);
 });
 
 test('parseItems reads a comma list of positive item ids', () => {

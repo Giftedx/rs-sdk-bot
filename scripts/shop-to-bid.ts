@@ -45,6 +45,9 @@ export function bidPlan(o: { quote: Quote; unitCost: number; coins: number; rese
     return units > 0 ? { units } : { units: 0, refusal: 'no coins above the reserve' };
 }
 
+// The coins to take from the bank so the pack holds the reserve and the whole spend limit.
+export const floatNeed = (packCoins: number, reserve: number, maxSpend: number) => Math.max(0, reserve + maxSpend - packCoins);
+
 // The item ids of a comma list, or null when one is not a positive whole number.
 export function parseItems(arg: string): number[] | null {
     const ids = arg.split(',').map(Number);
@@ -116,9 +119,20 @@ async function main() {
     if (!quotes.length) { console.log('RESULT fail shop-to-bid refused before login: no item clears MIN_NET'); process.exit(1); }
     const server = serverFromEnv(readFileSync(resolve(import.meta.dir, '../vendor/rs-sdk/bots', bot, 'bot.env'), 'utf8'));
     const s = await openBot(bot);
-    const startCoins = coins(s), stop = () => saleStopRequested(bot);
+    const stop = () => saleStopRequested(bot);
     const lots: { q: Quote; startHeld: number; bought: number; spent: number }[] = [];
     try {
+        // Accounts keep their coins in the bank: take the float at the profile's bank before the shop.
+        const need = floatNeed(coins(s), reserve, maxSpend);
+        if (need > 0) {
+            if (!(await walkTargetPersist(s, { x: conf.bankSpot.x, z: conf.bankSpot.z, level: 0 })).ok) await finish([s], false, 'shop-to-bid: bank walk failed');
+            const b = await s.bot.openBank();
+            if (!b.success) await finish([s], false, `shop-to-bid: openBank failed: ${b.message}`);
+            await s.bot.withdrawItem(/^coins$/i, need);
+            await s.bot.closeInterface();
+            console.log(`FLOAT took ${need} asked, pack coins ${coins(s)}`);
+        }
+        const startCoins = coins(s);
         if (!(await walkTargetPersist(s, { x: conf.npcSpot.x, z: conf.npcSpot.z, level: conf.npcSpot.level ?? 0 })).ok) await finish([s], false, 'shop-to-bid: shop walk failed');
         const open = await s.bot.openShop(conf.npc);
         if (!open.success) await finish([s], false, `shop-to-bid: openShop failed: ${open.message}`);
