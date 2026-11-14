@@ -3,6 +3,55 @@ import {readFileSync,writeFileSync,mkdtempSync,existsSync,rmSync} from 'node:fs'
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,runQuestSweepProofCase,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
+import {converseDialogue,dialogueTransition,liveDialoguePage,type ConverseIO} from '../../../scripts/generated/quest-lib';
+
+test('the Seer conversation waits through an observed closure or pending continue and fails a refused live page',async()=>{
+ // seer.rs2 seer_looking_glass: "Let me look into my looking glass.", if_close, three mes + p_delay(3), then the hint pages.
+ // Each frame is one tick: the SDK page (snap) and the client page (live), which can be a tick ahead.
+ type Opt={text:string;componentId:number;buttonType:number};
+ type Page={opts:Opt[];waiting?:boolean}|null;
+ const cont=(text:string):{text:string;opts:Opt[]}=>({text,opts:[{text:'Click here to continue',componentId:1,buttonType:6}]});
+ const choice={text:'Many greetings.',opts:['I need to locate some scorpions.','Your friend Thormac sent me to speak to you.','I seek knowledge and power!'].map((text,i)=>({text,componentId:2471+i,buttonType:1}))};
+ const right=cont('Well you have come to the right place.'),glass=cont('Let me look into my looking glass.');
+ const hint=cont('I can see a scorpion that you seek.'),last=cont("Well see if you can find that scorpion then, and I'll try and get you some information on the others.");
+ const seer:{snap:{text:string;opts:Opt[]}|null;live:Page;refuse?:boolean}[]=[
+  {snap:choice,live:choice},
+  // A continue still waits for its next page in the client while the SDK shows the page open.
+  {snap:right,live:{...right,waiting:true}},{snap:right,live:right},
+  // The server closed the chat; the SDK still shows the last page.
+  {snap:glass,live:null},{snap:null,live:null},{snap:null,live:null},{snap:null,live:null},
+  {snap:hint,live:hint},{snap:last,live:last},{snap:null,live:null}];
+ const run=async(frames:typeof seer)=>{
+  let tick=0;const clicks:string[]=[],log:string[]=[],seen:string[]=[];
+  const frame=()=>frames[Math.min(tick,frames.length-1)]!;
+  const client=()=>{const l=frame().live;return{chatModalId:l?4882:-1,resumedPauseButton:!!l?.waiting,getDialogOptions:()=>l?.opts??[]};};
+  const io:ConverseIO={tick:()=>tick,stopped:()=>false,guard:async()=>{},
+   dialog:()=>{const p=frame().snap;if(p)seen.push(p.text);return p?{isOpen:true,isWaiting:false,options:p.opts}:{isOpen:false,isWaiting:false,options:[]};},
+   live:()=>liveDialoguePage(client()),
+   click:async opt=>{
+    const l=frame().live;
+    if(frame().refuse||!l||l.waiting||(opt?!l.opts.some(o=>o.text===opt.text):l.opts.some(o=>o.buttonType!==6)))
+     return{success:false,message:opt?'visible option was not on the current page':'Failed to click dialog option'};
+    clicks.push(opt?.text??'continue');return{success:true};
+   },
+   wait:async()=>{tick++;},fail:async why=>{throw Error(why);},log:line=>{log.push(line);},planGrace:()=>false};
+  const done=await converseDialogue(io,[/i need to locate some scorpions/i],()=>seen.some(t=>/information on the others/.test(t))&&!frame().snap,60);
+  return{done,clicks,log,tick};
+ };
+ const ok=await run(seer);
+ expect(ok.done).toBe(true);
+ expect(ok.clicks).toEqual(['I need to locate some scorpions.','continue','continue','continue']);
+ expect(ok.log).toEqual([
+  'NOTE dialogue continue refused (Failed to click dialog option): live page waiting, wait 1/6',
+  'NOTE dialogue continue refused (Failed to click dialog option): live page closed, wait 2/6']);
+ // The same actionable page refused in the client fails at once and names the option and the live flags.
+ const stuck=Array.from({length:20},()=>({snap:choice,live:choice,refuse:true}));
+ await expect(run(stuck)).rejects.toThrow('dialogue click refused: visible option was not on the current page (option "I need to locate some scorpions."; options ["I need to locate some scorpions.","Your friend Thormac sent me to speak to you.","I seek knowledge and power!"]; live open=true waiting=false same page)');
+ expect(dialogueTransition({isOpen:true,isWaiting:false,options:choice.opts},{isOpen:true,isWaiting:false,options:choice.opts.slice(1)})).toBe('new page');
+ // A client that refuses while the SDK page never moves on fails after the bounded waits.
+ await expect(run(Array.from({length:20},()=>({snap:glass,live:null})))).rejects.toThrow('live open=false waiting=false closed after 6 waits');
+});
+
 
 test('a required case child that exits nonzero writes its log and snapshot, then rejects before any later case',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'qsw-nonzero-')),save=join(dir,'live.sav');

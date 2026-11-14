@@ -47,7 +47,7 @@ export async function startQuestSweepProofStack(p:ProofEndpoints,start:(opts:Sta
 }
 export function questSweepChildConfiguration(name:string,quest:string,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
  return{cmd:['bun','scripts/quest-sweep.ts',name,quest],cwd:root,windowsHide:true,
-  env:{...inherited,...p.env,GATEWAY_URL:p.gateway,QUEST_SWEEP_OBSERVE_BANK:'',RANDOM_EVENTS:'0'}};
+  env:{...inherited,...p.env,GATEWAY_URL:p.gateway,QUEST_SWEEP_OBSERVE_BANK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0'}};
 }
 // Refusal cases end with exit 1; every other case must exit 0. The checks below keep their own child rule.
 export const questSweepExpectedExit=(id:string)=>id==='ball-missing-gloves'||id==='doric-no-cash'?1:0;
