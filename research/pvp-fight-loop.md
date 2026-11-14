@@ -1127,6 +1127,26 @@ seeds 1 to 8, one fight a run): the default (`HUNT_PROFILE` auto, the champion) 
 `ESCAPE_AT=25` 6 and 2,585; `HUNT_PROFILE=gang-hunter` 7 and 2,850; the hunt's own options (`HUNT_PROFILE=none`) 3
 and 2,642. The champion's options double the hunt's own; the other two sit within the noise, so the default stays.
 
+### The champion's kit against a melee build
+
+The champion against the maxed melee build (kit `melee`: rune, dragon dagger(p), kiteshield, 22 sharks, boosts and
+prayer potions; `extra:spar-duel-<kit>-vs-melee-x8`, seeds 1 to 8, 64 duels a row):
+
+| Kit | Kills | Deaths |
+| --- | --- | --- |
+| `tribrid-snare-sara` (rune) | 57 | 7 |
+| `tribrid-pray` | 50 | 12 |
+| `tribrid-dragon-sara` (the champion's) | 45 | 16 |
+| `tribrid-dragon` | 43 | 18 |
+| `tribrid-food` | 40 | 9 |
+
+On `tribrid-dragon-sara`: eating at 70, no magic in the rotation, a step back of 3 from a frozen target
+(`kiteFrozen`) or its corner tile (`diagonalFrozen`), and no food drop for the strip all gave 43 to 45 kills and 16 to
+18 deaths; the special held for 45% gave 46 and 11; a freeze on any target with a step back of 6 gave 24 and 29. With
+the rival builds (91 kills and 5 deaths of 96 in rune, 94 and 1 in dragon) the rune kit loses 12 of 160 and the dragon
+kit 17; the dragon kit catches more runners (34 of 64 against 28 to 30). Against a melee opponent, the dagger gang
+among them, the rune kit is the stronger kit.
+
 ### The champion's special against runners and rivals
 
 The champion in `tribrid-dragon-sara`, seeds 1 to 8: with the special held for a target at 45% or less
