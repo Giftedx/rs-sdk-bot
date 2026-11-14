@@ -2,7 +2,23 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer,crashResidue,LOST_SESSION_DROP_MS} from '../src/worker-release';
+import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer,crashResidue,LOST_SESSION_DROP_MS,forgetReleaseMemory} from '../src/worker-release';
+
+test('a new process answers the release from the disk cache until a release file changes',()=>{
+ const root=fixture();
+ try{
+  const first=cachedReleaseFor(['scripts/worker.ts'],root);
+  expect(first).toBe(capabilityRevision(['scripts/worker.ts'],root));
+  forgetReleaseMemory();
+  expect(cachedReleaseFor(['scripts/worker.ts'],root)).toBe(first);
+  // An edit changes the file's stamp: the disk record no longer answers.
+  writeFileSync(join(root,'packages/core/src/shared.ts'),'export const shared=2;\n');
+  forgetReleaseMemory();
+  const second=cachedReleaseFor(['scripts/worker.ts'],root);
+  expect(second).not.toBe(first);
+  expect(second).toBe(capabilityRevision(['scripts/worker.ts'],root));
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
 
 test('cached admission keeps entry closures separate and rejects changed bytes, new imports and removed files',()=>{
  const root=fixture(),entry=['scripts/worker.ts'];
