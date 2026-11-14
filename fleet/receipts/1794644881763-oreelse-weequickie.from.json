@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794644881763-oreelse-weequickie",
  "account": "OreElse",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 40,
  "claim": "cbdcc97c-9f57-491c-81c0-4b90de134c1a",
- "count": 0,
- "ok": false,
- "at": 1794644913017,
- "detail": "trade claimed"
+ "count": 40,
+ "ok": true,
+ "at": 1794644990304,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 40,
+  "after": 0
+ },
+ "bank": {
+  "count": 40,
+  "at": 1794644966718
+ },
+ "logout": {
+  "attemptId": "1794644913369-0000027060-0000000001",
+  "at": 1794644990292,
+  "sha256": "4c10183767de052d54548ab4cc083942f8d239524e6e0d6355bbf37173909d24"
+ },
+ "screen": true
 }
