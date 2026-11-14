@@ -1,0 +1,23 @@
+{
+ "id": "1794644881763-oreelse-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "WeeQuickie",
+ "item": "Shark",
+ "count": 40,
+ "start": 1794644881763,
+ "end": 1794648481763,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
