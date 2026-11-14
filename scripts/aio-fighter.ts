@@ -2,7 +2,8 @@
 // Usage:
 //   bun scripts/aio-fighter.ts <account> <target> [arg ...] [KEY=value ...]
 import {runDirectChild} from '../packages/core/src/run-child';
-import {parseStep,type Step} from '../packages/core/src/chain-step';
+import type {Step} from '../packages/core/src/chain-step';
+import {resolveRouteStep} from './aio-route-step';
 import {cowProfile,cowRoutePoints,guardCowWalker,bankCombatLoot,genericCombatNpc} from './gather-combat';
 import {chickenTrainingKit,chickenTrainingStyle,chickenTrainingProfile,chickenCombatUnlockPlan} from './train-chickens';
 import {combatPotionPolicy,createCombatPotions,combatPotionSession,combatPotionRecovery} from './microbot-combat-potions';
@@ -33,10 +34,11 @@ export interface CombatLevels {
 }
 
 // Auto-select the next melee training band (target NPC, skill to train, target level, and step) for an account.
-// Follows the PK-army progression rule: chickens to Hitpoints 15 / melee 20, Ardougne cows to 40/40/40 (Strength -> Attack -> Defence), then hill/fire giants.
+// Cows stage the owned kit from any start, including fresh accounts; the army's faster
+// Khazard trooper method opens at melee 60. Hitpoints can still need work after all melee skills reach 99.
 export function planAutoFighterBand(levels: CombatLevels, bank: 'draynor' | 'varrock' | 'ardougne' = 'draynor'): {
  target: string;
- trainSkill: 'Strength' | 'Attack' | 'Defence';
+ trainSkill: 'Strength' | 'Attack' | 'Defence' | 'Hitpoints';
  targetLevel: number;
  eatAt: number;
  step: Step;
@@ -52,34 +54,25 @@ export function planAutoFighterBand(levels: CombatLevels, bank: 'draynor' | 'var
   return { skill: 'Defence', goal: cap };
  };
  const eatAt = defaultEatAt(Hitpoints);
- if (Hitpoints < 15 || Math.min(Attack, Strength, Defence) < 15) {
-  const { skill, goal } = pickSkill(20);
-  return {
-   target: 'chicken',
-   trainSkill: skill,
-   targetLevel: goal,
-   eatAt,
-   step: resolveFighterStep('chicken', [`TRAIN_BANK=${bank}`, `TRAIN_SKILL=${skill}`, `TARGET_LEVEL=${goal}`, 'CAP=3000']),
-  };
- }
- if (Math.min(Attack, Strength, Defence) < 40) {
-  const { skill, goal } = pickSkill(40);
+ const melee = Math.min(Attack, Strength, Defence);
+ if (melee < 60) {
+  const { skill, goal } = pickSkill(melee < 40 ? 40 : 60);
   return {
    target: 'cow',
    trainSkill: skill,
    targetLevel: goal,
    eatAt,
-   step: resolveFighterStep('cow', [`TRAIN_SKILL=${skill}`, `TARGET_LEVEL=${goal}`, 'CAP=3000']),
+   step: resolveFighterStep('cow', [`TRAIN_SKILL=${skill}`, `TARGET_LEVEL=${goal}`, 'COW_BANK_PROFILE=north', 'COW_STAGE=1', 'MAX_KILLS=8', 'CAP=3000']),
   };
  }
- const nextCap = Math.min(99, Math.floor(Math.min(Attack, Strength, Defence) / 10) * 10 + 10);
- const { skill, goal } = pickSkill(nextCap);
+ if (melee === 99 && Hitpoints === 99) throw Error('aio-fighter: melee and Hitpoints goals complete');
+ const { skill, goal } = melee === 99 ? {skill: 'Hitpoints' as const, goal: 99} : pickSkill(Math.min(99, Math.floor(melee / 10) * 10 + 10));
  return {
-  target: 'giant',
+  target: 'trooper',
   trainSkill: skill,
   targetLevel: goal,
   eatAt,
-  step: resolveFighterStep('giant', ['6000', 'giant', `TRAIN_SKILL=${skill}`, `TARGET_LEVEL=${goal}`]),
+  step: resolveFighterStep('trooper', [`TRAIN_SKILL=${skill}`, `TARGET_LEVEL=${goal}`]),
  };
 }
 
@@ -94,8 +87,9 @@ export interface FighterProfileSpec {
 export const FIGHTER_PROFILES: readonly FighterProfileSpec[] = [
  {target:'chicken',script:'scripts/train-chickens.ts',defaultEnv:{TRAIN_BANK:'draynor',TRAIN_SKILL:'Strength',TARGET_LEVEL:'30',CAP:'3000'},description:'Train melee or CombatUnlock on Lumbridge/Ardougne chickens and return kit to bank'},
  {target:'cow',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'cow',CAP:'3000',TRAIN_SKILL:'Defence',TARGET_LEVEL:'40'},description:'Fight Ardougne cows (north/south profile) for melee levels and cowhides/beef'},
- {target:'druid',script:'scripts/gather-combat.ts',defaultArgs:['6000','druid'],defaultEnv:{TARGET:'druid'},description:'Fight Chaos Druids and bank herbs, law/nature/air runes, and vials'},
- {target:'giant',script:'scripts/gather-combat.ts',defaultArgs:['6000','giant'],defaultEnv:{TARGET:'giant'},description:'Fight Hill Giants in Edgeville dungeon for melee XP, big bones, and limpwurt roots'},
+ {target:'druid',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'druid',CAP:'6000'},description:'Fight Chaos Druids and bank herbs, law/nature/air runes, and vials'},
+ {target:'giant',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'giant',CAP:'6000'},description:'Fight Hill Giants in Edgeville dungeon for melee XP, big bones, and limpwurt roots'},
+ {target:'trooper',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'trooper',CAP:'1500',TRAIN_SKILL:'Strength',TARGET_LEVEL:'99',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1'},description:'Train melee, Ranged or Hitpoints on Khazard troopers with bank staging, food and bone burial'},
  {target:'fire-giant',script:'scripts/gather-fire-giants.ts',description:'Fight Fire Giants (Baxtorian Falls / Waterfall) with food/potion sustain and loot banking'},
  {target:'fire-combat',script:'scripts/gather-fire-combat.ts',description:'Fire Giant combat training trip with safespot/melee options'},
  {target:'imp',script:'scripts/gather-imps.ts',description:'Hunt imps and bank beads (red/yellow/black/white) for Imp Catcher'},
@@ -116,9 +110,7 @@ export function resolveFighterStep(targetInput: string, rest: readonly string[] 
  if (!profile) {
   throw Error(`aio-fighter: unknown target "${target}"; known: ${FIGHTER_PROFILES.map(p => p.target).join(', ')}`);
  }
- const tokens = rest.length ? rest : [...(profile.defaultArgs ?? [])];
- const step = parseStep([profile.script, ...tokens].join(' '));
- return { script: step.script, args: step.args, env: { ...(profile.defaultEnv ?? {}), ...step.env } };
+ return resolveRouteStep(profile, rest);
 }
 
 export async function runAioFighter(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {

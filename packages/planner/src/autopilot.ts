@@ -12,6 +12,7 @@
 import type { BillRow } from './supply-bill';
 import { missionSignature } from '../../core/src/session-admission';
 import { xpForLevel } from './curve';
+import { parseStep } from '../../core/src/chain-step';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
@@ -1709,13 +1710,15 @@ export function catalogue(): Template[] {
 export function jobResources(job: { script?: string; args?: string[]; env?: Record<string, string>; resources?: string[] }): string[] {
     if (Array.isArray(job.resources)) return job.resources.filter(r => typeof r === 'string');
     const script = String(job.script ?? '').replace(/\\/g, '/').replace(/^\.\//, '');
-    // A scripts/chain.ts job runs each argument as a step with its own KEY=value environment.
-    const steps = script === 'scripts/chain.ts' ? (job.args ?? []).map(t => t.trim().split(/\s+/)) : [[script, ...(job.args ?? [])]];
+    // Use the execution parser so quoted arguments and the literal-argv delimiter
+    // cannot hide a shop or fishing spot from resource admission.
+    const chained = script === 'scripts/chain.ts';
+    const steps = chained ? (job.args ?? []).map(parseStep) : [{script, args: job.args ?? [], env: {}}];
     const cheb = (s: string, x: number, z: number) => { const [sx, sz] = s.split(',').map(Number); return Math.max(Math.abs(sx! - x), Math.abs(sz! - z)); };
     const out: string[] = [];
-    for (const [file, ...rest] of steps) {
-        const env: Record<string, string> = { ...job.env }, args: string[] = [];
-        for (const t of rest) { const m = t.match(/^([A-Z][A-Z0-9_]*)=(.*)$/); if (m) env[m[1]!] = m[2]!; else args.push(t); }
+    for (const step of steps) {
+        const file = step.script, env: Record<string, string> = { ...job.env, ...step.env }, args: string[] = [];
+        for (const t of step.args) { const m = !chained && t.match(/^([A-Z][A-Z0-9_]*)=(.*)$/); if (m) env[m[1]!] = m[2]!; else args.push(t); }
         if (file === 'scripts/goldfarm.ts') {
             const m = (env.KNIGHT_SPOT ?? '2653,3302').match(/^(\d+),(\d+)$/), x = Number(m?.[1] ?? 2653), z = Number(m?.[2] ?? 3302);
             out.push(`knight:${KNIGHT_SPOTS.reduce((b, s) => cheb(s, x, z) < cheb(b, x, z) ? s : b)}`);
