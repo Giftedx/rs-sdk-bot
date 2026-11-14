@@ -834,6 +834,44 @@ test('loot of a kill: expected count times the item value, the top items, and th
  expect(t('Nobody')).toBe('');
 });
 
+test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hitpoints, then XP and gold an hour',()=>{
+ const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const data:any={'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{'Moss giant':[['Coins',20]]},'weapon-speed.json':{'Rune longsword':5}};
+ const bon=[0,67,0,0,0,0,0,0,0,0,66,0,0];
+ const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[{name:'Rune longsword',slot:3}]}),wornBonuses:()=>bon,curLevel:()=>60,
+  maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:(n:string)=>n==='Coins'?{value:1}:null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{}};
+ const t=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env));
+ // Max floor((68 x 130 + 320) / 640) = 14; slash hit 86% (A = 68 x 131 = 8,908 against 2,496): 0.86 x 7 = 6.02 a swing;
+ // 60 / 6.02 = 9.97 swings x 5 ticks x 0.6 s = 29.9 s a kill: 120 kills an hour, 120 x 6,000 = 722k XP, 120 x 20 gp.
+ const out=t('Moss giant');
+ expect(out).toMatch(/^About 12\d kills an hour \(max hit 14, speed 5\) · 72\d,\d{3} XP\/h in one style · 2,4\d\d gp\/h$/);
+ expect(new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values({...env,wornBonuses:()=>null}))('Moss giant')).toBe('');
+ // Two variants: a weak one with few hitpoints (many kills, little XP) and a strong one (few kills, much XP). XP/h is
+ // each variant's own product, so the range is narrow, not the product of the two extremes.
+ data['npc-defence.json']={'Goblin':[[2,1,1,0,0,0,0,0,1,1,0,0,2,5,1000,60],[13,10,1,0,0,0,0,0,10,10,0,0,2,16,1000,60]]};
+ const g=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env))('Goblin');
+ const xp=(g.match(/· ([\d,]+)–([\d,]+) XP\/h/)||[]).slice(1).map((x:string)=>Number(x.replace(/,/g,'')));
+ expect(xp.length).toBe(2);expect(xp[1]/xp[0]).toBeLessThan(1.5);
+ // A ranged weapon (range attack bonus above 0) rolls ranged, not melee: with Ranged 60, range attack 0 and ranged
+ // strength 0 the max is floor((68 x 64 + 320) / 640) = 7; the roll 68 x 64 = 4,352 meets Moss giant's 39 x 64 = 2,496:
+ // 71%, 2.5 a swing, 24 swings x 4 ticks x 0.6 s = 57.7 s a kill: 62 kills an hour.
+ data['npc-defence.json']={'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]};
+ const ranged=new Function(...Object.keys(env),'itemBonusData',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Bronze dart',slot:3}]})}),{'Bronze dart':[0,0,0,0,1,0,0,0,0,0,0,1,0]});
+ expect(ranged('Moss giant')).toMatch(/^About 62 kills an hour \(ranged, max hit 7, speed 4\) · /);
+ // A staff with a castable spell casts it: Fire Bolt max 12 at Magic 60 with magic attack 10: the roll 69 x 74 = 5,106
+ // meets Moss giant's (1 + 9) x 64 = 640: 94%, 5.6 a cast, 10.7 casts x 5 ticks x 0.6 s = 32 s a kill: 112 kills an hour.
+ const mage=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]}),wornBonuses:()=>[0,0,0,10,0,0,0,0,0,0,0,0,0]}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>({name:'Fire Bolt',max:12,casts:50}));
+ expect(mage('Moss giant')).toMatch(/^About 11\d kills an hour \(magic, Fire Bolt, max hit 12, speed 5\) · /);
+ const mageXp=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]}),wornBonuses:()=>[0,0,0,10,0,0,0,0,0,0,0,0,0]}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>({name:'Fire Bolt',max:12,casts:50,xp:22.5}));
+ // 720 casts x 22.5 = 16,200 cast XP plus kills x 60 x 50 damage XP, in Magic.
+ const mx=Number((mageXp('Moss giant').match(/· ([\d,]+) XP\/h in Magic/)||[])[1]?.replace(/,/g,''));
+ expect(mx).toBeGreaterThan(16200+110*3000);expect(mx).toBeLessThan(16200+120*3000);
+ // A staff with no castable spell falls back to melee.
+ const noSpell=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]})}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>null);
+ expect(noSpell('Moss giant')).not.toContain('magic,');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
@@ -1301,12 +1339,12 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  t2.set({'Staff of fire':[0,0,0,10,0,0,0,0,10,0,0,0,0]},{spells:[],staffs:{'Fire rune':['Staff of fire']},combat:[['Fire Strike',13,8,[['Mind rune',1],['Fire rune',3],['Air rune',2]],null],['Fire Bolt',35,12,[['Chaos rune',1],['Fire rune',4],['Air rune',3]],null],['Iban Blast',50,25,[['Death rune',1],['Fire rune',5]],"Iban's staff"],['Fire Blast',59,16,[['Death rune',1],['Fire rune',5],['Air rune',4]],null]]});
  const mage:any={skills:[{name:'Magic',level:55,currentLevel:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Air rune',count:30},{name:'Chaos rune',count:6},{name:'Mind rune',count:50},{name:'Death rune',count:20}]};
  // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
- expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6});
+ expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6,xp:0});
  expect(t2.equipStats(mage)).toContain('Magic Fire Bolt 12 ×6');
  // Against the shipped spellbook: the pure-iban loadout (Magic 50, Staff of iban, death and fire runes, no air) casts Iban Blast.
  const book=JSON.parse(readFileSync(new URL('./client-assets/spellbook.json',import.meta.url),'utf8'));
  t2.set({},book);
- expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20});
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20,xp:750});
  // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
 });

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { combatSpells, itemBonuses, objBonuses, spellbook } from './gen-combat-data';
+import { combatSpells, itemBonuses, objBonuses, spellbook, weaponSpeeds } from './gen-combat-data';
 
 test('obj bonuses: each block with its name and its 13 bonuses; items with no bonus are left out', () => {
     const blocks = objBonuses('[rune_scimitar]\nname=Rune scimitar\nparam=stabattack,7\nparam=slashattack,45\r\nparam=crushattack,-2\nparam=strengthbonus,44\nparam=slash,1\n\n[logs]\nname=Logs\n');
@@ -25,7 +25,12 @@ test('combat spells: rows with a max hit, level, runes and the staff worn; Crumb
         + '[magic_spell_iban]\ndata=name,Iban Blast\ndata=levelrequired,50\ndata=runesrequired,deathrune,1,firerune,5,null,null\ndata=wornrequired,iban_staff\ndata=maxhit,25\n\n'
         + '[magic_spell_bind]\ndata=name,Bind\ndata=levelrequired,20\n';
     expect(combatSpells(text, new Map([['deathrune', 'Death rune'], ['firerune', 'Fire rune'], ['airrune', 'Air rune'], ['iban_staff', "Iban's staff"]]))).toEqual([
-        ['Iban Blast', 50, 25, [['Death rune', 1], ['Fire rune', 5]], "Iban's staff"],
-        ['Fire Blast', 59, 16, [['Death rune', 1], ['Fire rune', 5], ['Air rune', 4]], null],
+        ['Iban Blast', 50, 25, [['Death rune', 1], ['Fire rune', 5]], "Iban's staff", 0],
+        ['Fire Blast', 59, 16, [['Death rune', 1], ['Fire rune', 5], ['Air rune', 4]], null, 0],
     ]);
+});
+
+test('weapon speeds: the attackrate param by display name; an item without it is left out (the default 4)', () => {
+    const obj = '[rune_longsword]\nname=Rune longsword\nparam=attackrate,5\n\n[rune_scimitar]\nname=Rune scimitar\n\n[rune_2h_sword]\nname=Rune 2h sword\nparam=attackrate,7\n';
+    expect(weaponSpeeds([obj], new Map())).toEqual({ 'Rune longsword': 5, 'Rune 2h sword': 7 });
 });

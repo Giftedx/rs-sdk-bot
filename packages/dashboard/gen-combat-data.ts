@@ -40,8 +40,8 @@ export function itemBonuses(blocks: { debug: string; name: string | null; bonus:
 // max hit, [[rune, count], ...], staff worn or null]. A row with no data=name takes its name from its header
 // (magic_spell_iban_blast: Iban Blast; the staff spells have none). Crumble Undead is left out: it hits only undead,
 // so it is no general best spell.
-export function combatSpells(text: string, names: Map<string, string>): [string, number, number, [string, number][], string | null][] {
-    const n = (d: string) => names.get(d) ?? d, out: [string, number, number, [string, number][], string | null][] = [];
+export function combatSpells(text: string, names: Map<string, string>): [string, number, number, [string, number][], string | null, number][] {
+    const n = (d: string) => names.get(d) ?? d, out: [string, number, number, [string, number][], string | null, number][] = [];
     for (const block of text.split(/^\[/m).slice(1)) {
         const field = (k: string) => block.match(new RegExp(`^data=${k},(.*)$`, 'm'))?.[1]?.trim();
         const header = block.slice(0, block.indexOf(']')).replace(/^magic_spell_/, '').split('_').map((w, i) => i && w === 'of' ? w : w.replace(/^./, c => c.toUpperCase())).join(' ');
@@ -51,7 +51,8 @@ export function combatSpells(text: string, names: Map<string, string>): [string,
         const parts = (field('runesrequired') ?? '').split(','), runes: [string, number][] = [];
         for (let i = 0; i + 1 < parts.length; i += 2) if (parts[i] && parts[i] !== 'null') runes.push([n(parts[i]!), Number(parts[i + 1])]);
         const worn = field('wornrequired');
-        out.push([name, lv, max, runes, worn && worn !== 'null' ? n(worn) : null]);
+        // The sixth field is the cast XP in tenths (experience): pvm_spell_cast gives it on every cast, hit or splash.
+        out.push([name, lv, max, runes, worn && worn !== 'null' ? n(worn) : null, Number(field('experience')) || 0]);
     }
     return out.sort((a, b) => a[1] - b[1]);
 }
@@ -69,6 +70,19 @@ export function spellbook(tp: { teleports: any[]; staffs?: any[] }, names: Map<s
 
 const objFiles = (dir: string): string[] => readdirSync(dir).flatMap(f => { const p = join(dir, f); return statSync(p).isDirectory() ? objFiles(p) : f.endsWith('.obj') ? [p] : []; });
 
+// The attack speed of each weapon in ticks (param=attackrate of the .obj config; an item without it attacks at the
+// combat.param default 4), by display name: client-assets/weapon-speed.json. A name with two speeds keeps the first.
+export function weaponSpeeds(texts: string[], names: Map<string, string>): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const text of texts) for (const block of text.split(/^\[/m).slice(1)) {
+        const rate = Number(block.match(/^param=attackrate,(\d+)\s*$/m)?.[1]);
+        if (!(rate > 0)) continue;
+        const debug = block.slice(0, block.indexOf(']')), name = block.match(/^name=(.*)$/m)?.[1]?.trim() ?? names.get(debug);
+        if (name && out[name] == null) out[name] = rate;
+    }
+    return out;
+}
+
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..'), content = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts');
     const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { debugname?: string; name?: string }[];
@@ -77,5 +91,7 @@ if (import.meta.main) {
     const book = spellbook(JSON.parse(readFileSync(join(root, 'knowledge', 'teleports.json'), 'utf8')), names, readFileSync(join(content, 'skill_combat', 'configs', 'magic', 'magic_combat_spells.dbrow'), 'utf8'));
     writeFileSync(join(import.meta.dir, 'client-assets', 'item-bonuses.json'), JSON.stringify(bonuses));
     writeFileSync(join(import.meta.dir, 'client-assets', 'spellbook.json'), JSON.stringify(book));
-    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} items; spellbook.json: ${book.spells.length} teleports, ${book.combat.length} combat spells`);
+    const speeds = weaponSpeeds(objFiles(content).map(f => readFileSync(f, 'utf8')), names);
+    writeFileSync(join(import.meta.dir, 'client-assets', 'weapon-speed.json'), JSON.stringify(speeds));
+    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} items; spellbook.json: ${book.spells.length} teleports, ${book.combat.length} combat spells; weapon-speed.json: ${Object.keys(speeds).length} weapons`);
 }
