@@ -783,6 +783,11 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {...PRESETS.quest_arena!, position: {x: 2464, z: 9895, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
       skills: {...PRESETS.quest_arena!.skills, Attack: 94, Magic: 73, Hitpoints: 36, Prayer: 99, Agility: 25},
       inventory: [{id: 560, count: 60}, {id: 556, count: 300}, {id: 562, count: 160}, {id: 995, count: 20}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // The coal trucks log balance stands on level 1 (knowledge/shortcuts.json mine_log_balance1); its level-0 crossing records
+  // planned a crossing that does not exist (WeeQuickie: no Log balance with Walk-across at 2603,3477). From beside it
+  // the walk to the Dwarf Commander goes round on foot.
+  {key: 'extra:walk-coal-log', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2572', '3464', '0'], pass: ok,
+    presetConfig: {position: {x: 2602, z: 3476, level: 0}, skills: {Agility: 25, Hitpoints: 43, Prayer: 99, Magic: 74, Attack: 99}}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];
