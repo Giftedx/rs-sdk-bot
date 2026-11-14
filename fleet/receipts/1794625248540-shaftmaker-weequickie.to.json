@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794625248540-shaftmaker-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Death rune",
+ "requested": 4,
+ "claim": "20b626e6-bc14-4806-8794-b6d8fe94499d",
+ "count": 4,
+ "ok": true,
+ "at": 1794625626305,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 59,
+  "after": 63
+ },
+ "bank": {
+  "count": 4,
+  "at": 1794625621358
+ },
+ "logout": {
+  "attemptId": "1794625585575-0000016680-0000000001",
+  "at": 1794625626294,
+  "sha256": "c23d005473b28d7a5a992517782d4e8e5d5bbd8216d476232164ac89cc43ea07"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794625248540-shaftmaker-weequickie",
  "account": "Shaftmaker",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Death rune",
  "requested": 4,
  "claim": "fa64022f-6a70-42a6-bc97-e685f32812c3",
- "count": 0,
- "ok": false,
- "at": 1794625449464,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1794625625966,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1794625524368
+ },
+ "logout": {
+  "attemptId": "1794625449472-0000025540-0000000001",
+  "at": 1794625625953,
+  "sha256": "66b9815b94631a8bc40f0b0da9f063a6803e9a82242e3a5f0986780f02c2fdc3"
+ },
+ "screen": true
 }
