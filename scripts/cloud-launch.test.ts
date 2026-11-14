@@ -41,7 +41,7 @@ describe('cloud launch', () => {
     test('requests: the routine fire, the claude CLI and the codex CLI each carry the one-command prompt', () => {
         const r = launchRequest(config.sides[0]!, 'tok');
         expect(r).toMatchObject({ kind: 'http', url: 'https://api.anthropic.com/v1/claude_code/routines/trig_abc/fire' });
-        if (r.kind === 'http') expect(r.headers.authorization).toBe('Bearer tok');
+        if (r.kind === 'http') { expect(r.headers.authorization).toBe('Bearer tok'); expect(r.headers['anthropic-version']).toBe('2023-06-01'); }
         expect(() => launchRequest(config.sides[0]!)).toThrow('no token');
         const cli = launchRequest(config.sides[1]!);
         expect(cli.kind === 'exec' && cli.cmd.slice(0, 2)).toEqual(['claude', '--cloud']);
