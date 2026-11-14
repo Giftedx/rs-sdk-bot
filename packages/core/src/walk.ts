@@ -156,9 +156,12 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
     } else if (run.how === 'gate') {
         // A scripted gate: click its action, answer the dialogue, then step to the far tile while it stands open. The gate
         // loc stands up to two tiles from the recorded entrance tile (gnome_areagate 190 at 2459,3383; the record names
-        // its south entrance, 2461,3382). Femi's box dialogue at that gate (femi.rs2) ends with the player still outside
-        // and the gate shut; the next click opens it, so the click repeats while the player is not through.
-        const want = run.action.toLowerCase(), near = (l: any) => l.level === run.at.level && Math.max(Math.abs(l.x - run.at.x), Math.abs(l.z - run.at.z)) <= 2;
+        // its south entrance, 2461,3382), and a log balance up to five: the coal trucks log (mine_log_balance1,
+        // shortcuts.rs2:26-47) moves the player five tiles from beside its origin, so its east entrance (2603,3477) is
+        // five tiles from the loc the client reports. The nearest such loc wins. Femi's box dialogue at that gate
+        // (femi.rs2) ends with the player still outside and the gate shut; the next click opens it, so the click repeats
+        // while the player is not through.
+        const want = run.action.toLowerCase(), near = (l: any) => l.level === run.at.level && Math.max(Math.abs(l.x - run.at.x), Math.abs(l.z - run.at.z)) <= 5;
         const gateOf = () => (st()?.nearbyLocs ?? []).filter((l: any) => near(l) && l.name?.toLowerCase() === run.loc.toLowerCase() && (l.optionsWithIndex ?? []).some((o: any) => o.text?.toLowerCase() === want))
             .sort((x: any, y: any) => cheb(run.at, { worldX: x.x, worldZ: x.z }) - cheb(run.at, { worldX: y.x, worldZ: y.z }))[0];
         const through = () => { const p = here(); return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1; };
