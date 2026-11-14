@@ -1429,6 +1429,35 @@ from `magearena_runeshop` and `magicguildshop`, the antipoison from `junglestore
 from `dragonswordshop` (Lost City), the rune body and legs as above, the magic shortbow by fletching (no shop), the
 amulet of power by crafting and Enchant (the `amuletshop` holds none).
 
+### Measured gang kit options
+
+The [retained measurements](pvp-gang-climb-proof.json) supply the kit-choice evidence for
+`scripts/pk-kits.ts` and the `extra:gang-live-fast-*` cases. Each run has two independent one-versus-three
+meetings against `ganker-live` in kit `ganker-dds` at (3078, 3640), with game-tick waits. Our profile is
+`gang-hunter`, with `cureNow: true` and `eatAt: 60`. The snare rows also use `freeze: 'flee'`,
+`focusRunner: 0.4` and `chaseBelow: 0.4`. The poisoned snare kit adds a poisoned dragon dagger and super
+antipoison; both snare kits carry 17 sharks. These results count individual gang kills, not complete clears.
+
+| Casting condition | Our kit | Seeds | Meetings | Kills | Own deaths |
+|---|---|---|---:|---:|---:|
+| Configured armour retained | `live-walker-iron` | 1-8 | 16 | 4 | 0 |
+| Configured armour retained | `live-walker-iron-snare` | 1-8 | 16 | 12 | 0 |
+| Configured armour retained | `live-walker-iron-snarep` | 1-8 | 16 | 12 | 0 |
+| Torso removed for the freeze | `live-walker-iron-snare` | 1-8 | 16 | 15 | 0 |
+| Torso removed for the freeze | `live-walker-iron-snarep` | 1-4 | 8 | 8 | 0 |
+| Torso removed; hold confirmed two ticks after casting | `live-walker-iron-snare` | 1-8 | 16 | 16 | 0 |
+
+The final snare condition takes 562, 608, 629, 621, 588, 550, 639 and 614 meeting ticks for seeds 1-8;
+the corresponding raw wall times are 33314, 35197, 36051, 36971, 35428, 32382, 36057 and 34737 ms.
+The evidence retains options, account tick ledgers, food, damage, escape counts and exact RESULT lines for
+all 68 game-tick-wait runs, including rejected cutoff and diagonal-movement choices. Wall-clock-timeout
+measurements are excluded because their outcomes depend on worker speed.
+
+Gap: the source artifact identifies the casting conditions but does not record each tested code revision.
+These measurements support option selection within each condition; they do not qualify the current code,
+establish a wall-time gain across casting conditions, or prove live performance. No poisoned-kit run shares
+the final hold-confirmation condition.
+
 ### Options against the gang
 
 Each lever of a meeting, with what is measured. A lever with no result is a test to run on `ganker-max`.
