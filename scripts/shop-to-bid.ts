@@ -9,7 +9,7 @@
 // MAX_SPEND (default 200000) the shop spend limit of the run; WAIT_TICKS (default 0) ticks to wait at the shop for
 // restocked units. DEMO_OK=1 for the live server. The run reads each bid from the public market API before it buys and
 // again before it sells, and sells only while the bid still clears MIN_NET. Unsold units stay in the pack.
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openBot, finish, serverFromEnv } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
@@ -152,6 +152,7 @@ async function main() {
             const sell = bidPlan({ quote: q, unitCost: lot.spent / Math.max(1, lot.bought), coins: Number.MAX_SAFE_INTEGER, reserve: 0, maxUnits: units, minNet });
             if (!sell.units) { console.log(`KEPT ${units} ${q.name}: ${sell.refusal}`); continue; }
             const goal = `bid-${q.id}-${Date.now()}`, paths = orderPaths(server, bot, 'sell-' + goal);
+            mkdirSync(paths.base, { recursive: true }); // runOwnedSale writes its journal there and creates no folder
             const sale = await runOwnedSale(s, { actor: bot, server, goal, item: q.id, quantity: sell.units, price: q.bid!, floor: q.bid!, reserveItems: 0, deadline: Date.now() + 120_000 }, paths.journal, stop);
             console.log(`SHOP_TO_BID ${JSON.stringify({ item: q.id, name: q.name, bought: lot.bought, spent: lot.spent, sold: sale.journal?.progress?.filled ?? 0, bid: q.bid, ok: sale.ok, error: sale.ok ? undefined : sale.error })}`);
             if (!sale.ok) { ok = false; errors.push(`${q.name}: ${sale.error}`); }
