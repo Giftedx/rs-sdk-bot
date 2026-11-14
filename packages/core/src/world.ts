@@ -40,6 +40,9 @@ export interface World {
     offThread?: boolean;
     // Door tiles this account cannot pass (doorBlocks), for the walker to block in the SDK pathfinder too.
     blockedDoors(acct: Account): DoorBlock[];
+    // Whether account `b` may take a travel or pass a key door that account `a` may not. Routes read items and coins
+    // only there (travelAllowed, doorBlocks), so with equal coins and no gain the two accounts have the same routes.
+    routeGain?(a: Account, b: Account): boolean;
 }
 
 const TRANSPORT_COST = 3; // ticks to climb or descend, roughly
@@ -320,6 +323,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
     return {
         navigationGraph: () => ({transports,travel}),
         blockedDoors: acct => doors.filter(d => doorBlocks(d, acct)).map(doorBlock),
+        routeGain: (a, b) => travel.some(t => travelAllowed(t, b) && !travelAllowed(t, a)) || doors.some(d => doorBlocks(d, a) && !doorBlocks(d, b)),
         route(from, to, acct, routeOpts) {
             const deadline=routeOpts?.deadline??Infinity;
             const tileKeys=new WeakMap<Tile,string>();
