@@ -1,0 +1,41 @@
+{
+ "id": "1794647028643-woodenstaff-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "WeeQuickie",
+ "item": "Prayer potion(3)",
+ "count": 5,
+ "start": 1794647028643,
+ "end": 1794650628643,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Gold bar",
+   "count": 1
+  },
+  {
+   "item": "Blood rune",
+   "count": 200
+  },
+  {
+   "item": "Air rune",
+   "count": 1000
+  },
+  {
+   "item": "Law rune",
+   "count": 3
+  }
+ ],
+ "takerWaits": true
+}
