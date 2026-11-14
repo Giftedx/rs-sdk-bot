@@ -5,11 +5,12 @@
 // actions without a display name rarely match, shared code handles others without naming them, and a word in a comment
 // matches. Batch qualification is not tracked yet. Deterministic: no model calls. `bun packages/router/src/coverage.ts` writes .practice/coordinator/scoreboard.json.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import type { GameAction } from '../../knowledge/src/actions';
 import { parseConfigs } from '../../knowledge/src/config';
 import { QUEST_SOURCE } from '../../core/src/quest-status';
 import { mySide } from '../../core/src/fleet';
+import { canonicalSnapshots, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
 
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'] as const;
 export const BANDS = [[1, 40], [40, 70], [70, 99]] as const;
@@ -81,8 +82,8 @@ const SCRIPT_ALIAS: Record<string, string> = { quest_romeojuliet: 'quest-rj.ts',
     quest_arthur: 'quest-merlin.ts', quest_mcannon: 'dwarfcannon.ts', quest_itexam: 'quest-dig.ts', quest_waterfall: 'waterfall.ts', quest_elemental_workshop: 'quest-elemental.ts' };
 export const questScript = (folder: string): string => SCRIPT_ALIAS[folder] ?? 'quest-' + folder.replace(/^quest_/, '').replace(/_/g, '') + '.ts';
 // knowledge/quests.json has no row for these folders; points from research/quest-points-board.md (quest.constant lines).
-const QP_FALLBACK: Record<string, number> = { quest_cog: 1, quest_elemental_workshop: 1, quest_mm: 3, quest_troll_love: 2 };
-const VARP_FOLDER: Record<string, string> = { goblinquest: 'quest_gobdip', elenaquest: 'quest_elena', waterfall_quest: 'quest_waterfall', horrorquest: 'quest_horror' };
+export const QP_FALLBACK: Record<string, number> = { quest_cog: 1, quest_elemental_workshop: 1, quest_mm: 3, quest_troll_love: 2 };
+export const VARP_FOLDER: Record<string, string> = { goblinquest: 'quest_gobdip', elenaquest: 'quest_elena', waterfall_quest: 'quest_waterfall', horrorquest: 'quest_horror' };
 
 // Journal labels are the names emitted by questFlags, not varps or script names.
 export function questJournalNames(root = resolve(import.meta.dir, '../../..')): Map<string, string> {
@@ -107,11 +108,13 @@ export const SNAPSHOT_MAX_AGE_MS = (Number(process.env.FLEET_SNAPSHOT_MAX_AGE_H)
 export function sideSnapshots(dir: string, side: string, now = Date.now(), maxAgeMs = SNAPSHOT_MAX_AGE_MS, server = 'rs-sdk-demo.fly.dev') {
     const accounts: SideAccount[] = [], stale: string[] = [];
     if (!existsSync(dir)) return { accounts, stale };
-    for (const f of readdirSync(dir).filter(f => f.endsWith('.json'))) {
-        let snap: any; try { snap = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { continue; }
-        if (typeof snap?.side !== 'string' || snap.side === side) continue;
+    // One canonical row per account (packages/core/src/fleet-snapshots.ts); an account this side owns now is read from
+    // its status files, even when another side's last snapshot still lists it.
+    const ownerOf = ownerOfIn(dirname(dir));
+    for (const snap of canonicalSnapshots(readSnapshotFiles(dir), ownerOf)) {
+        if (snap.side === side) continue;
         for (const a of snap.accounts ?? []) {
-            if (typeof a?.name !== 'string' || a.name.toLowerCase() === 'haggis' || String(a.server).toLowerCase() !== server) continue;
+            if (typeof a?.name !== 'string' || a.name.toLowerCase() === 'haggis' || String(a.server).toLowerCase() !== server || ownerOf(a.name) === side) continue;
             const at = Number(a.at ?? snap.at) || 0;
             if (now - at > maxAgeMs) { stale.push(`${snap.side}:${a.name}`); continue; }
             accounts.push({ side: snap.side, name: a.name, at, skills: (a.skills ?? []).map((k: any) => ({ name: String(k.name), level: Number(k.level) || 1 })), ...(Array.isArray(a.quests) ? { quests: a.quests.map(String) } : {}) });

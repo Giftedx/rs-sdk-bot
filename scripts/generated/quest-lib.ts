@@ -9,6 +9,7 @@ import { holdSessionEater } from '../../packages/core/src/sustain';
 import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
+import { messageTally } from '../../packages/core/src/message-tally';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -16,7 +17,19 @@ import { castable } from '../teleport-runes';
 import { needs, reservedEdible, walkFar } from '../quest-sweep';
 import { magicKit, type MagicKit } from '../../packages/core/src/gather';
 import { PRESETS } from '../../packages/practice/src/presets';
-import { giantStyle } from '../gather-combat';
+import { giantStyle, GIANT_BOWS, GIANT_ARROWS, selectGiantArrows } from '../gather-combat';
+import { wornWeaponStyle } from '../../packages/core/src/opponent';
+import { parsePack } from '../../packages/knowledge/src/pack';
+import { contentRoot } from '../../packages/knowledge/src/paths';
+
+type DialogueClickSdk = {
+    clickDialogByText(pattern: string | RegExp): Promise<{ success: boolean; message?: string }>;
+    sendClickDialog(index?: number): Promise<{ success: boolean; message?: string }>;
+};
+
+export function clickDialoguePage(sdk: DialogueClickSdk, option?: { text: string }): Promise<{ success: boolean; message?: string }> {
+    return option ? sdk.clickDialogByText(option.text) : sdk.sendClickDialog(0);
+}
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
@@ -40,6 +53,7 @@ export const teleportRefusal = (comp: string, magic: number, laws: number, level
     if (laws < 1) return 'no law rune';
     return undefined;
 };
+export { fireSpell } from '../fire-spells';
 export let bursts = 0;
 // A planned conversation token: 'R' continue, 'F' fence to the next tick, or a choice component id.
 export type PlanToken = 'R' | 'F' | number;
@@ -65,6 +79,93 @@ export const LUMBRIDGE = { x: 3222, z: 3218 };
 // Ticks after a teleport click within which a landing by Lumbridge is the spell's, not a respawn.
 export const TELEPORT_TICKS = 10;
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
+
+// A fight for a drop the quest needs (Scorpion Catcher's Jailer and its jail key) uses the method the account can use
+// now. The order is: the worn bow with fitting arrows in the ammo slot; the bow and fitting arrows from the pack, wielded
+// first; the strongest strike spell whose runes the pack and a staff cover for one cast (magicKit), one cast every five
+// ticks; then melee: a worn weapon that is not a bow, a melee weapon from the pack (wielded first), or the fists of an
+// unarmed account, attacked on the bow's cadence. The fight chooses the method again each tick, so an empty quiver turns
+// it to the strike spell or the blade. With the target in view and no usable method (a worn bow with no arrows, no strike
+// runes and no melee weapon in the pack), the fight returns a refusal. The bows are GIANT_BOWS: the core BOWS list of attackNpc
+// stops at oak, and the Attack option of a worn magic shortbow with no arrows gives only "There is no ammo left in your quiver."
+export type DropFightItem = { id: number; count: number; slot?: number };
+export type DropFightTarget = { index: number };
+export type DropFightGround = { x: number; z: number; id: number };
+export type DropFightIO = {
+    tick(): number; worn(): DropFightItem[]; pack(): DropFightItem[]; ranged(): number; magic(): number;
+    target(): DropFightTarget | undefined; engaged(target: DropFightTarget): boolean;
+    drop(): DropFightGround | undefined; held(): boolean;
+    equip(item: DropFightItem): Promise<void>; attack(target: DropFightTarget): Promise<void>;
+    cast(target: DropFightTarget, component: string): Promise<void>; pickup(g: DropFightGround): Promise<void>;
+    wait(): Promise<void>;
+};
+export type DropFightKind = 'ranged' | 'magic' | 'melee';
+export type DropFightMethod = { kind: 'ranged'; wield?: DropFightItem } | { kind: 'magic'; kit: MagicKit; wield?: DropFightItem } | { kind: 'melee'; wield?: DropFightItem };
+export type DropFightResult = { ok: boolean; detail?: string; methods: DropFightKind[]; ticks: number };
+export const DROP_FIGHT_REFUSAL = 'no usable ammunition or strike runes';
+const WEAPON_SLOT = 3, AMMO_SLOT = 13;
+// Melee weapons by object name (content pack/obj.pack), including wieldable tools. Certificates cannot be wielded.
+// A staff hits in melee too, so a worn staff with no runes fights.
+const MELEE_NAME = /(^|_)(scimitar|sword|longsword|2h_sword|dagger|mace|axe|pickaxe|battleaxe|warhammer|spear|halberd|claws|staff|battlestaff)(_|$|p)/;
+let dropObjNames: Map<number, string> | undefined;
+const objName = (id: number): string => (dropObjNames ??= parsePack(readFileSync(join(contentRoot(), 'pack/obj.pack'), 'utf8'))).get(id) ?? '';
+const isRangedWeapon = (id: number): boolean => bowLevel(id) !== undefined || wornWeaponStyle(id) === 'ranged';
+const isMeleeWeapon = (id: number): boolean => !objName(id).startsWith('cert_') && !isRangedWeapon(id) && MELEE_NAME.test(objName(id));
+const bowLevel = (id: number): number | undefined => GIANT_BOWS.find(t => (t.ids as readonly number[]).includes(id))?.level;
+export function dropFightMethod(worn: readonly DropFightItem[], pack: readonly DropFightItem[], ranged: number, magic: number): DropFightMethod | null {
+    const weapon = worn.find(i => i.slot === WEAPON_SLOT);
+    const ammo = worn.find(i => i.slot === AMMO_SLOT && i.count > 0);
+    const wornLevel = weapon ? bowLevel(weapon.id) : undefined;
+    const fits = (id: number, level: number) => GIANT_ARROWS.some(a => a.id === id && a.level <= Math.min(ranged, level));
+    if (wornLevel !== undefined && wornLevel <= ranged) {
+        if (ammo && fits(ammo.id, wornLevel)) return { kind: 'ranged' };
+        const id = selectGiantArrows(pack, ranged, wornLevel);
+        const stack = id === undefined ? undefined : pack.find(i => i.id === id && i.count > 0);
+        if (stack) return { kind: 'ranged', wield: stack };
+    } else {
+        // A bow in the pack is wielded only when arrows it fires are worn or in the pack.
+        for (const tier of GIANT_BOWS) {
+            if (tier.level > ranged) continue;
+            const bow = pack.find(i => (tier.ids as readonly number[]).includes(i.id));
+            if (bow && ((ammo && fits(ammo.id, tier.level)) || selectGiantArrows(pack, ranged, tier.level) !== undefined)) return { kind: 'ranged', wield: bow };
+        }
+    }
+    const kit = magicKit([...pack, ...worn].map(i => ({ id: i.id, count: i.count })), magic, 1);
+    if (kit) {
+        const staff = kit.staff !== undefined && !worn.some(i => i.id === kit.staff) ? pack.find(i => i.id === kit.staff) : undefined;
+        return staff ? { kind: 'magic', kit, wield: staff } : { kind: 'magic', kit };
+    }
+    // Melee: a worn weapon that is not a bow, else a melee weapon from the pack, else the fists of an unarmed account.
+    // A worn bow with no ammunition cannot hit, so only a pack weapon gives it melee.
+    if (weapon && !isRangedWeapon(weapon.id)) return { kind: 'melee' };
+    const blade = pack.find(i => i.count > 0 && isMeleeWeapon(i.id));
+    if (blade) return { kind: 'melee', wield: blade };
+    return weapon ? null : { kind: 'melee' };
+}
+// The fight takes the drop from the ground every third tick. It ends when the drop is held, on a refusal or after `ticks`.
+export async function fightForDrop(io: DropFightIO, ticks: number): Promise<DropFightResult> {
+    const methods: DropFightKind[] = [];
+    const t0 = io.tick();
+    let lastCast = -Infinity;
+    for (let t = 0; t < ticks && !io.held(); t++) {
+        const g = io.drop(), n = io.target();
+        if (g) { if (t % 3 === 0) await io.pickup(g); }
+        else if (n) {
+            const m = dropFightMethod(io.worn(), io.pack(), io.ranged(), io.magic());
+            if (!m) return { ok: false, detail: DROP_FIGHT_REFUSAL, methods, ticks: io.tick() - t0 };
+            if (methods[methods.length - 1] !== m.kind) methods.push(m.kind);
+            if (m.wield) {
+                await io.equip(m.wield);
+                if (!io.worn().some(i => i.id === m.wield!.id && i.count > 0)) return { ok: false, detail: `equipment not observed: ${m.wield.id}`, methods, ticks: io.tick() - t0 };
+            }
+            else if (m.kind !== 'magic') { if (t % 5 === 0 || !io.engaged(n)) await io.attack(n); }
+            else if (io.tick() - lastCast >= 5) { lastCast = io.tick(); await io.cast(n, m.kit.component); }
+        }
+        await io.wait();
+    }
+    const ok = io.held();
+    return ok ? { ok, methods, ticks: io.tick() - t0 } : { ok, detail: `no drop in ${ticks} ticks`, methods, ticks: io.tick() - t0 };
+}
 
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
 // name: the account (default process.argv[2]). others: more sessions of a two-account quest (quest-arrav.ts); fail()
@@ -141,7 +242,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (pages.some(p => re.test(p))) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
     };
-    const msgCount = (re: RegExp): number => (st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).length;
+    // Counts every game message seen, past the client's 50-message window; the tick hook reads it each tick.
+    const tally = messageTally(() => st()?.gameMessages);
+    const msgCount = tally.count;
 
     // Auto retaliate off (controls:com_3), so a hit never turns a walk or a loc click into a fight.
     await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
@@ -174,6 +277,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     }},{food:FOOD,eatAt:EAT_AT,reserved:()=>reservedNow(),dropRetries:2,onConsumed:()=>{stats.eats++;}});
     let lastHp = hp();
     const off = s.onTick(() => {
+        tally.pull();
         const p = pos();
         const h = hp();
         if (h > 0 && h < stats.hpMin) {
@@ -320,7 +424,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                     c.flush?.();bursts++;answeredSeq=textSeq;
                     await waitTicks(s,1);continue;
                 }
-                const reply=await s.sdk.sendClickDialog(opt ? opt.index : 0);
+                const reply=await clickDialoguePage(s.sdk, opt);
                 if(!reply.success){if(s.tick()-planSentAt<=8){await waitTicks(s,1);continue;}await fail(`dialogue click refused: ${reply.message}`);}
                 // A choice records its component; a choice with no component ends the record for this talk.
                 if(recording){const clicked=choice?(opt??d.options[0])?.componentId:'R';if(clicked===undefined)recording=null;else recording.push(clicked);}

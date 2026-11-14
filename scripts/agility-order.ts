@@ -6,10 +6,10 @@
 // -> this order consumer. Adapt to observed per-obstacle effects and position-based restart;
 // do not import the measurement CLI (it logs in at module load). Acceptance belongs to agility-order-proof.
 import {basename} from 'node:path';
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
-import {sessionWalker,walkPath,type PathDeps} from '../packages/core/src/walk';
+import {goTo,sessionWalker,walkPath,type PathDeps} from '../packages/core/src/walk';
 import {executionContext} from '../vendor/rs-sdk/sdk/execution-context';
 import {sail as sailBoat,disembark as disembarkBoat,type BoatResult} from '../packages/core/src/boat';
 import {readPracticeSave} from './measure/fleet-player-save';
@@ -521,7 +521,14 @@ export async function runAgility(s:Session,o:AgilityOptions){
    const w=await sessionWalker(s),p=pos(),at=`${p.worldX},${p.worldZ},${p.level}`;
    const route=gnomeApproachRoute((a,b)=>w.plan(0,a,b),{x:p.worldX,z:p.worldZ});
    console.log(`AGILITY_ENTRY_ROUTE ${JSON.stringify({route,at,tick:s.tick()})}`);
-   if(!route)throw Error(`course approach: no supported public route from ${at}`);
+   // No ground route from inside a fenced area (King Bolren in Tree Gnome Village, bench
+   // extra:agility-gnome-25-from-village): the world router plans the travel (the village spirit tree).
+   if(!route){
+    const r=await goTo(s,await getWorld(),{...C.start,level:0},accountOf(s),{legTimeoutTicks:150});
+    live();
+    console.log(`AGILITY_ENTRY_WORLD ${JSON.stringify({ok:r.ok,detail:r.ok?undefined:r.detail,at:`${pos().worldX},${pos().worldZ},${pos().level}`,tick:s.tick()})}`);
+    if(!r.ok)throw Error(`course approach: no supported public route from ${at}: ${r.detail}`);
+   }
    if(route==='gate'){
     await travel([{...STRONGHOLD_GATE.south,tol:1}],'walk to Stronghold gate');
     entry.gate=await crossStrongholdGate(s,{left,live,health});

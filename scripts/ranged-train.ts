@@ -3,7 +3,7 @@
 // Env: MIN_ARROWS, BUY_ARROWS, BUY_ARROW_ID, MAX_SPEND, COIN_RESERVE, AMMO, FOOD, FOOD_ID, KILLS_PER_TRIP, MAX_TRIPS.
 // MAX_SPEND includes food, arrows and fares. COIN_RESERVE protects total owned coins.
 // Missing trout/salmon falls back to observed Wydin cheese stock; FOOD remains the per-trip meal target.
-import {openBot,finish,accountOf,getWorld} from '../packages/core/src/bot';
+import {openBot,finish,accountOf,getWorld,sessionDied} from '../packages/core/src/bot';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
@@ -95,7 +95,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  void s.ended.then(()=>{ended=true;});
  let stopAmmo=()=>{};
  const off=s.onTick(()=>{const p=st()?.player;hpMin=Math.min(hpMin,hp());
-  if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||(p0.lifeId!==undefined&&p?.lifeId!==p0.lifeId))died=true;});
+  if(sessionDied(p0,p))died=true;});
  const over=()=>ended||died||(!cleanup&&!!o.stop?.())||s.tick()-start>=o.cap;
  let snapshot:Item[]=[];let initial:Item[]|undefined;
  const capture=()=>{const b=s.bankObservation?.();if(!b)throw Error('ranged-train bank observation unknown');snapshot=b.items.map(i=>({id:i.id,count:i.count}));};

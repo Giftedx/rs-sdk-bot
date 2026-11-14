@@ -697,6 +697,21 @@ test('the orphan scan replaces only a successful end, and only for an attempt th
     expect(out).toEqual([['Retired', 'exit orphaned: attempt new-Retired owner 11 gone']]);
 });
 
+test('the orphan scan replaces an exit unknown end (a lost process, as after a reboot) for the held attempt', async () => {
+    const { orphanedSessionEnds } = await import('./swarm');
+    const ended = new Map([['Rebooted', { at: 300, reason: 'exit unknown' }], ['Died', { at: 300, reason: 'died during cows' }]]);
+    const held = (account: string) => ({
+        state: 'held' as const, account, server: 's', domain: 'live' as const,
+        attemptId: 'cut-' + account, reason: 'session active or outcome unknown',
+    });
+    // The attempt started before the end: it is the session that the end lost.
+    const producer = () => ({ pid: 12, createdAt: 100, updatedAt: 250 });
+    expect(orphanedSessionEnds(['Rebooted', 'Died'], ended, [], held, producer, () => false))
+        .toEqual([['Rebooted', 'exit orphaned: attempt cut-Rebooted owner 12 gone']]);
+    // A live owner keeps the end.
+    expect(orphanedSessionEnds(['Rebooted'], ended, [], held, producer, () => true, () => null)).toEqual([]);
+});
+
 test('the orphan scan refreshes an older orphan end for a newer held attempt only', async () => {
     const { orphanedSessionEnds } = await import('./swarm');
     const prior = { at: 100, reason: 'exit orphaned: attempt old owner 10 gone' };

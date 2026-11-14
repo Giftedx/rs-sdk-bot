@@ -44,6 +44,10 @@ export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stoc
     const counts = { ...acct.counts };
     for (const [i, n] of banked) counts[i] = (counts[i] ?? 0) + Math.min(n, BANK_ITEM_CAP);
     const richer: Account = { ...acct, coins: held + take, counts, items: [...new Set([...acct.items, ...banked.map(([i]) => i)])] };
+    // With no fare coins to take and no travel or key door that the bank's items open, a bank stop gives the same routes
+    // as the direct search plus a detour, so it is never cheaper. Each bank search costs a full route search (about 10 s
+    // from Varrock West to Port Sarim; the 3 banks made the plan 40 s against 11 s direct, with the same cost).
+    if (best && take <= 0 && world.routeGain && !world.routeGain(acct, richer)) return best;
     for (const bank of [...bankTiles].filter(b => b.level === from.level).sort((a, b) => cheb(a, from) - cheb(b, from)).slice(0, nearest)) {
         const there = world.route(from, bank, acct, routeOpts);
         if (!there.ok || (best && there.cost + BANK_STOP_COST >= best.cost)) continue;

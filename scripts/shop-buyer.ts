@@ -114,6 +114,14 @@ export const PROFILES: Record<string, {
         bankSpot: { x: 2809, z: 3441 }, // Catherby Bank
         items: [{ re: /^lobster pot$/i, buyPerTick: 1 }],
     },
+    // The same shop for its fishing bait (1,200 on the shelf, 1 restocked a tick): scripts/shop-to-bid.ts sells it into an
+    // open bid. A separate key keeps the harry profile of the lobster chain from buying bait.
+    harry_bait: {
+        npc: /^harry$/i,
+        npcSpot: { x: 2834, z: 3445 },
+        bankSpot: { x: 2809, z: 3441 }, // Catherby Bank
+        items: [{ re: /^fishing bait$/i, buyPerTick: 50, shelf: 1200 }],
+    },
     taverley: {
         npc: /^jatix$/i,
         npcSpot: { x: 2908, z: 3443 },
@@ -123,6 +131,17 @@ export const PROFILES: Record<string, {
             { re: /vial of water/i, buyPerTick: 50 },
             { re: /^vial$/i, buyPerTick: 50 },
             { re: /pestle and mortar/i, buyPerTick: 1 },
+        ],
+    },
+    // Dommik's Crafting Store, Al Kharid (dommik.rs2, craftingshop2: chisel 2, ring_mould 4; npc 545 spawn 3322,3194,
+    // the tile black-dhide-sets.ts walks to). The ring chain of the mock Haggis run needs a ring mould and a chisel.
+    dommik: {
+        npc: /^dommik$/i,
+        npcSpot: { x: 3320, z: 3194 },
+        bankSpot: { x: 3269, z: 3167 }, // Al Kharid bank
+        items: [
+            { re: /^ring mould$/i, buyPerTick: 1, shelf: 4 },
+            { re: /^chisel$/i, buyPerTick: 1, shelf: 2 },
         ],
     },
     general_sarim: {

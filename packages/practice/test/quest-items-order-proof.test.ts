@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
-import {HETTY_MATCHED_ENTRY,hettyCarriedEntry,hettyLiveJobSavedChecks,hettyMainlandReady,hettyRegisteredEntry,hettyTutorialJobSavedChecks,tutorialGrantedSave,HETTY_TUTORIAL_GRANT,questItemsConsumerChecks,parseItemResult,cookLiveJobSavedChecks,cookLiveRepeatSavedChecks,COOK_JOB_NATIVE_NULL_VARPS,bindHettyFixtureIpv4} from '../src/quest-items-order-proof';
+import {HETTY_MATCHED_ENTRY,hettyCarriedEntry,hettyLiveJobSavedChecks,hettyMainlandReady,hettyRegisteredEntry,hettyTutorialJobSavedChecks,tutorialGrantedSave,HETTY_TUTORIAL_GRANT,questItemsConsumerChecks,parseItemResult,cookLiveJobSavedChecks,cookLiveRepeatSavedChecks,COOK_JOB_NATIVE_NULL_VARPS,bindHettyFixtureIpv4,savedProofTimestampValid} from '../src/quest-items-order-proof';
 import {practiceProfile} from '../src/register-proof-account';
 import {runBotName} from '../src/prove';
 const save=(pack:{id:number;count:number}[],bank:{id:number;count:number}[],vars:Record<number,number>={})=>({version:9,position:{x:3092,z:3243,level:0},skills:[{index:3,level:10,rawExperience:11540,xp:1154}],vars,inventories:{93:pack.map((i,slot)=>({...i,slot})),95:bank.map((i,slot)=>({...i,slot}))}});
@@ -204,4 +204,12 @@ test('only the fresh Hetty fixture binds and registers on exact IPv4 loopback',(
   [name,bound.replace('SERVER=127.0.0.1:8888','SERVER=http://127.0.0.1:8888'),receipt],
  ];
  for(const [n,env,r] of rejected)expect(practiceProfile(n,env,r)).toBeNull();
+});
+
+test('saved proof stays valid across the observed 1041714ms native-turn delay but rejects future or non-finite timestamps',()=>{
+ const at=1794601703587;
+ expect(savedProofTimestampValid(at,at+1041714)).toBe(true);
+ expect(savedProofTimestampValid(at,at)).toBe(true);
+ expect(savedProofTimestampValid(at+1,at)).toBe(false);
+ for(const bad of [NaN,Infinity,-Infinity,undefined,null,String(at)])expect(savedProofTimestampValid(bad,at+1041714)).toBe(false);
 });

@@ -171,7 +171,7 @@
       "took": 511,
       "ours": [],
       "scripts": [
-        "scripts/gather-ranged.ts"
+        "scripts/cannon-fight.ts"
       ],
       "note": "our ranged row is priced under spiders-2"
     },
@@ -341,7 +341,7 @@
         "hp-top"
       ],
       "scripts": [
-        "scripts/gather-ranged.ts"
+        "scripts/cannon-fight.ts"
       ]
     },
     {

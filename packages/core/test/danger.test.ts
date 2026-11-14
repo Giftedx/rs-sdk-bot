@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAGED, combatLevel, dangerTiles, deadly, escapeTiles, loadHunters, parseHunter } from '../src/danger';
+import { CAGED, combatLevel, dangerTiles, deadly, escapeTiles, liveHunters, loadHunters, parseHunter } from '../src/danger';
 import { createWorld, type PathLength } from '../src/world';
 import type { Travel } from '../src/travel';
 
@@ -46,4 +46,33 @@ test('one boat needs one fare; two boats need both fares', () => {
     const two = createWorld({ transports: [], doors: [], travel: [boat, second], pathLength });
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 59 }).ok).toBe(false);
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 60 }).ok).toBe(true);
+});
+
+test('a live Karamja scorpion is a hunter to dodge for an HP 10 account, though not deadly', () => {
+    const scorpion = loadHunters().find(h => h.name === 'Scorpion' && h.combat === 14)!;
+    expect(scorpion.id).toBe(107);
+    expect(scorpion.hunt).toBe(2);
+    expect(deadly(scorpion, 3, 10)).toBe(false);
+    const seen = [{ id: 107, name: 'Scorpion', x: 2869, z: 3175, tileX: 2868, tileZ: 3174, size: 2, hp: 17 }, { id: 557, name: 'Wydin', x: 3014, z: 3204 }];
+    expect(liveHunters(seen, { skills: { hitpoints: 10 } })).toEqual([{ x: 2868, z: 3174, r: 5, name: 'Scorpion' }]);
+    expect(liveHunters([{ ...seen[0]!, hp: 0 }], { skills: { hitpoints: 10 } })).toEqual([]);
+    // A combat-46 account is more than twice the scorpion's level: a cowardly monster leaves it alone.
+    expect(liveHunters(seen, { skills: { attack: 40, strength: 40, defence: 40, hitpoints: 40 } })).toEqual([]);
+});
+
+import { deadlyTo, meleeOnly, PROTECT_MELEE_LEVEL } from '../src/danger';
+test('Protect from Melee opens the ground of melee-only hunters, not of ranged or magic ones', () => {
+    const dog = parseHunter({ id: 99001, name: 'Guard dog', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=cowardly')!;
+    const archer = parseHunter({ id: 99002, name: 'Archer', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=ranged')!;
+    const styles = new Map<number, readonly string[]>([[99002, ['ranged']]]);
+    expect(meleeOnly(dog, styles)).toBe(true);
+    expect(meleeOnly(archer, styles)).toBe(false);
+    expect(meleeOnly(wolf, styles)).toBe(false);
+    const runner = { hitpoints: 10, magic: 59, prayer: 99 }, low = { hitpoints: 10, magic: 59, prayer: PROTECT_MELEE_LEVEL - 1 };
+    expect(deadlyTo(dog, runner, styles)).toBe(false);
+    expect(deadlyTo(dog, low, styles)).toBe(true);
+    expect(deadlyTo(archer, runner, styles)).toBe(true);
+    const saved = process.env.PRAYER_GUARD;
+    process.env.PRAYER_GUARD = '0';
+    try { expect(deadlyTo(dog, runner, styles)).toBe(true); } finally { if (saved === undefined) delete process.env.PRAYER_GUARD; else process.env.PRAYER_GUARD = saved; }
 });

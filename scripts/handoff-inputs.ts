@@ -19,6 +19,11 @@ import {runShafts} from './fletch-shafts';
 import {runHeadless} from './fletch-arrows';
 import {walkTarget} from './walk-to';
 import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
+import {readMergedPlan} from '../packages/core/src/coordinator-jobs';
+
+// The coordinator installs its assignments only in its overlay, so ownership reads the merged plan.
+// A missing swarm.json leaves the jobs unknown, and assertAccountOwnership refuses.
+const ownershipJobs=(root:string)=>existsSync(join(root,'swarm.json'))?readMergedPlan(root).jobs:undefined;
 
 export function parseHeadlessOrder(args:string[],cap=process.env.CAP??'1600') {
     const [account,mode,output,logs]=args;
@@ -81,7 +86,7 @@ async function headlessMain(io:{root?:string;openBot?:typeof openBot;settle?:typ
     const read=(p:string,fallback:any)=>existsSync(p)?JSON.parse(readFileSync(p,'utf8')):fallback;
     const check=()=>{
         if(cancelled)throw Error('headless-order cancelled');
-        assertAccountOwnership([c.account],read(join(dir,'coordinator/state.json'),null),read(join(root,'swarm.json'),{}).jobs,n=>existsSync(join(dir,'stop-'+n)),runId);
+        assertAccountOwnership([c.account],read(join(dir,'coordinator/state.json'),null),ownershipJobs(root) as any,n=>existsSync(join(dir,'stop-'+n)),runId);
         if(!owned.has(c.account.toLowerCase()))throw Error('not authenticated owned: '+c.account);
         if(!sessions.length)assertRecoverableStatus(read(join(dir,'status',c.account+'.json'),null),null,ownerAlive);
     };
@@ -416,7 +421,7 @@ export async function main(io:{root?:string;openBot?:typeof openBot;settle?:type
     const read=(p:string,fallback:any)=>existsSync(p)?JSON.parse(readFileSync(p,'utf8')):fallback;
     const check=()=>{
         if(cancelled)throw Error('handoff cancelled');
-        assertHandoffOwnership(c,read(join(dir,'coordinator/state.json'),null),read(join(root,'swarm.json'),{}).jobs,n=>existsSync(join(dir,'stop-'+n)),runId);
+        assertHandoffOwnership(c,read(join(dir,'coordinator/state.json'),null),ownershipJobs(root) as any,n=>existsSync(join(dir,'stop-'+n)),runId);
         for(const name of [c.donor,c.receiver]){
             if(!owned.has(name.toLowerCase()))throw Error('not authenticated owned: '+name);
             if(sessions.some(s=>s.name.toLowerCase()===name.toLowerCase()))continue;

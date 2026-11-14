@@ -20,16 +20,18 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync,
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
+import { canonicalRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
-import { combatLevel, deadly, loadHunters, type Hunter } from '../packages/core/src/danger';
+import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
+import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
@@ -169,6 +171,13 @@ export function kitBuyRunning(job: any, assigned: { template: string; offset: nu
     const r = assess(linesSince(assigned.offset));
     return r.ok + r.fail + r.drains === 0;
 }
+// The accounts whose last session has no confirmed logout (session-lifecycle `held`), in lower case. Such an account
+// cannot take a trade claim until a recovery confirms the logout, so it is no donor.
+export function strandedAccounts(names: readonly string[], proof: (name: string) => string): Set<string> {
+    const out = new Set<string>();
+    for (const n of names) { try { if (proof(n) === 'held') out.add(n.toLowerCase()); } catch { /* unreadable proof: as before */ } }
+    return out;
+}
 // Accounts with an enabled job, as scripts/fleet-agent.ts swarmBusy counts them: the agent trades for no other account.
 const enabledAccounts = (jobs: readonly any[]) => new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
 // New receipts hold both parties through a matched settlement or explicit reconciliation, even after the window. An
@@ -254,7 +263,7 @@ export function mountainWalk(hunters: readonly Hunter[] = loadHunters()): (a: Ac
     const pass = hunters.filter(h => h.spawns.some(s => s.level === 0 && s.x >= MOUNTAIN.minX && s.x <= MOUNTAIN.maxX && s.z >= MOUNTAIN.minZ && s.z <= MOUNTAIN.maxZ));
     return a => {
         const skills = Object.fromEntries(Object.entries(a.skills).map(([k, v]) => [k.toLowerCase(), v]));
-        return !pass.some(h => deadly(h, combatLevel(skills), skills.hitpoints ?? 10));
+        return !pass.some(h => deadlyTo(h, skills));
     };
 }
 
@@ -381,13 +390,14 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     }
 
     const listed = listedNames;
-    // An account's freshest observation: its status file, or its row in this side's published fleet snapshot (a fresh
-    // cloud container has no status files, and a Thieving 99 account must not plan as a level-1 start).
+    // An account's freshest observation: its status file, or its canonical row in the fleet snapshots (a fresh cloud
+    // container has no status files, an account adopted from another side has its last row there, and a Thieving 99
+    // account must not plan as a level-1 start).
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
-    const published: any[] = readJson(join(FLEET_DIR(), 'snapshots', `${side}.json`), { accounts: [] }).accounts ?? [];
+    const published = canonicalRows(readSnapshotFiles(join(FLEET_DIR(), 'snapshots')), n => owners.get(n.toLowerCase())?.side);
     const observed = (n: string) => {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        return freshest(f ? readJson(join(statusDir, f), null) : null, published.find(r => String(r?.name).toLowerCase() === n.toLowerCase()));
+        return freshest(f ? readJson(join(statusDir, f), null) : null, published.get(n.toLowerCase()));
     };
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), Date.now()));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
@@ -407,10 +417,14 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         const order = orders.find(o => o.id === claim.orderId);
         if (order) for (const name of [order.from, order.to]) open.add(name.toLowerCase());
     }
-    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase())))
+    // An account whose last session has no confirmed logout cannot log in for a trade: its held swarm claim refuses the
+    // trade claim ("fleet account claim held by swarm"), so its partner waits for nothing and the order fails. It gives
+    // nothing until a recovery confirms its logout.
+    const stranded = strandedAccounts(listed, n => readLogoutProof(n, owners.get(n.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev').state);
+    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open, stranded].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     // Kit donors: this side's free accounts (the coin donors' rule), then each other side's, on the same server.
-    const free = (n: string) => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase()));
+    const free = (n: string) => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open, stranded].some(s => s.has(n.toLowerCase()));
     const stock: Stock[] = listed.filter(free).map(n => { const a = accountFrom(n, side, observed(n), id => byId.get(id)); return { name: a.name, side, items: a.items }; });
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {

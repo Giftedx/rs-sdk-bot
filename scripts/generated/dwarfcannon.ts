@@ -13,6 +13,7 @@ import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
+import { messageTally } from '../../packages/core/src/message-tally';
 
 const LOC = {
     towerLadder: { id: 1747, x: 2570, z: 3441 },     // ladders.rs2:52, 0_40_53_10_49 (needs %mcannon >= 2)
@@ -32,6 +33,7 @@ const RAILINGS = [
     { id: 18, x: 2559, z: 3462 }, { id: 19, x: 2564, z: 3460 }, { id: 20, x: 2572, z: 3460 },
 ];
 const ITEM = { remains: 0, toolkit: 1, notes: 3, mould: 4, railing: 14, lobster: 379 };
+const MEALS = [385, 373, 379, 365, 361, 333, 329, 1891, 1893, 1895, 2309];
 const PARTS = ['Pipe', 'Barrel', 'Axle', 'Shaft'];
 const LAWGOF = { x: 2571, z: 3463 };
 const NULODION = { x: 3011, z: 3453 };
@@ -61,7 +63,9 @@ try {
         if (d?.text && re.test(d.text)) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
     };
-    const msgCount = (re: RegExp): number => (st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).length;
+    // Counts every game message seen, past the client's 50-message window; the tick hook reads it each tick.
+    const tally = messageTally(() => st()?.gameMessages);
+    const pullMessages = tally.pull, msgCount = tally.count;
 
     // Auto retaliate off (controls:com_3): a goblin hit never turns a walk or a loc click into a fight.
     await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
@@ -89,6 +93,7 @@ try {
     };
 
     const off = s.onTick(() => {
+        pullMessages();
         const p = pos();
         const h = hp();
         if (h > 0 && h < hpMin) {
@@ -108,7 +113,9 @@ try {
             if (line !== lastTrace) { console.log(`TRACE ${T()} ${line}`); lastTrace = line; }
         }
         if (h > 0 && h <= EAT_AT) {
-            const food = inv().find(i => i.id === ITEM.lobster);
+            // Any held meal, best heal first (quest-sweep MEALS: shark, swordfish, lobster, ...): an account with sharks
+            // and no lobsters otherwise takes the railing cuts (up to 3 HP each at Crafting 1) unfed.
+            const food = MEALS.map(id => inv().find(i => i.id === id)).find(Boolean);
             if (food) { eats++; void s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' }); }
         }
     });
@@ -214,6 +221,11 @@ try {
 
     const walker = await sessionWalker(s as any);
 
+    // FROM=8 resumes after the cannon repair: the SDK state has no varps, so the caller names the last milestone the
+    // account passed (a MILESTONE line of the run that stopped). Only 0 and 8 are resume points.
+    const FROM = Number(process.env.FROM ?? 0);
+    if (FROM !== 0 && FROM !== 8) await fail(`FROM=${process.env.FROM}: only 0 and 8 are resume points`);
+    if (FROM < 8) {
     // 1. Commander: "Yeah, I'd love to help." sets 1 and gives six railings (lawgof2.rs2:30-41).
     await talk('commander 1', /^dwarf commander$/i, [/love to help/i], () => cnt(ITEM.railing) >= 6);
     milestone(1);
@@ -345,6 +357,7 @@ try {
         await waitUntil(s, () => working() || died, { timeoutTicks: 6 });
     }, working, 3, 4);
     milestone(8);
+    }
 
     // 9. Commander: "Ok then, just for you!" sets 9 (lawgof2.rs2:139-175). The shed door shuts behind the bot
     // (~open_and_close_door) and no planned walk opens it, so the bot ops it from inside (west wall of 2576,3461).

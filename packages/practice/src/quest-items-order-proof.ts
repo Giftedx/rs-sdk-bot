@@ -173,6 +173,10 @@ export function bindHettyFixtureIpv4(env:string):string|null{
  if(server.length!==1||server[0]!=='SERVER=localhost:8888'||gateway.length!==1||gateway[0]!=='GATEWAY_URL=ws://localhost:7780')return null;
  return lines.map(l=>l==='SERVER=localhost:8888'?`SERVER=${PRACTICE_IPV4.server}`:l==='GATEWAY_URL=ws://localhost:7780'?`GATEWAY_URL=${PRACTICE_IPV4.gateway}`:l).join('\n');
 }
+// Delivery schedules the saved consumer in a later native turn, so the proof age has no ceiling (same rule as ge-bulk-order-proof).
+export function savedProofTimestampValid(at:unknown,now:number):boolean{
+ return typeof at==='number'&&Number.isFinite(at)&&at<=now;
+}
 function verify(dir:string){
  const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8'));
  const run=(label:string):Run=>({code:meta.codes[label],log:readFileSync(join(dir,label+'.log'),'utf8')+readFileSync(join(dir,label+'.err'),'utf8')});
@@ -188,7 +192,7 @@ function verify(dir:string){
   refusal:refusal.code!==0&&refused?.ok===false&&refused?.logout===true&&/quest already complete/.test(refused?.detail??'')&&logout(refusal),
   refusalAssets:[93,94,95].every(id=>JSON.stringify(a.inventories[id]??[])===JSON.stringify(f.inventories[id]??[])),
   refusalVars:JSON.stringify(vars(a))===JSON.stringify(vars(f)),refusalSkills:JSON.stringify(a.skills)===JSON.stringify(f.skills),
-  source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
+  source:meta.source===workerSourceRevision(),fresh:savedProofTimestampValid(meta.at,Date.now()),
   artifacts:Object.entries(meta.hashes as Record<string,string>).every(([file,value])=>hash(join(dir,file))===value)};
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),source:meta.source,checks,
   scope:'Native150ms/25x: real quest-cook-job account hetty CLI from an isolated staged ordinary account matching western pack80/three flour, bank19895 and entry2863,3428,0 at HP10; two observed30-coin fares; saved Witch Potion/QP+1/Magic+8125 to31, exact costs, retained assets/life, completed refusal and logout. Live acceptance belongs to the connected finite consumer.'};

@@ -63,6 +63,10 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     if(cw){const enemy=cw[1]==='saradomin'?'zamorak':'saradomin';if(body.includes(`%castlewars_team = ^castlewars_team_${enemy}`)&&/~check_axis_locactive\(coord\) = true/.test(body)&&/It's shut, you'll have to break it down\./.test(body))return {kind:'team',need:{team:cw[1]==='saradomin'?0:1,whenAxis:true},trigger:src};}
     // These thresholds are pinned quest constants, not generic varp truthiness.
     if(loc==='championdoor'&&/%qp\s*<\s*32/.test(body))return {kind:'quest',need:{varp:'qp',minimum:32},trigger:src};
+    // Dwarf Cannon (quest_mcannon/scripts/locs/mcannon_doors.rs2, quest_mcannon.constant): Nulodion's door opens from
+    // ^mcannon_tasked_with_speaking_to_nulodion (9), the cannon shed's from ^mcannon_tasked_with_fixing_cannon (6).
+    if(loc==='mcannondoor'&&/%mcannon\s*<\s*\^mcannon_tasked_with_speaking_to_nulodion/.test(body))return {kind:'quest',need:{varp:'mcannon',minimum:9},trigger:src};
+    if(loc==='mcannondoor1'&&/%mcannon\s*>=\s*\^mcannon_tasked_with_fixing_cannon/.test(body))return {kind:'quest',need:{varp:'mcannon',minimum:6},trigger:src};
     if(/^herodoor_[lr]$/.test(loc)&&/%heroquest\s*>=\s*\^hero_complete/.test(body))return {kind:'quest',need:{varp:'heroquest',minimum:15},trigger:src};
     if(/^legendsguilddoor[lr]$/.test(loc)&&/%legendsquest\s*>=\s*\^legends_returned_to_radimus/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:50},trigger:src};
     if(/^legendsguildgate[lr]$/.test(loc)&&/%legendsquest\s*>\s*\^legends_not_started/.test(body)&&/if\s*\(\$entering = false\)/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:1,whenAxis:true},trigger:src};

@@ -40,6 +40,9 @@ export interface World {
     offThread?: boolean;
     // Door tiles this account cannot pass (doorBlocks), for the walker to block in the SDK pathfinder too.
     blockedDoors(acct: Account): DoorBlock[];
+    // Whether account `b` may take a travel or pass a key door that account `a` may not. Routes read items and coins
+    // only there (travelAllowed, doorBlocks), so with equal coins and no gain the two accounts have the same routes.
+    routeGain?(a: Account, b: Account): boolean;
 }
 
 const TRANSPORT_COST = 3; // ticks to climb or descend, roughly
@@ -75,14 +78,20 @@ export function canonicalTransportLeg(leg:Extract<Leg,{kind:'transport'}>,aliase
     return {...leg,loc:c.locName,interaction:c.interaction,requires:leg.requires??c.requires,entry:c.entry,landing:c.landing,requireSrc:c.requireSrc};
 }
 
-// Only an observed value meeting a mined threshold admits quest gates.
+// Only an observed value meeting a mined threshold admits quest gates. The SDK state has no varps, so a quest that the
+// quest list shows complete (unlock complete:<varp>, guild-observation.ts completedQuestUnlocks) stands for its
+// complete value while its stage is not observed: a gate whose threshold is at or below that value opens.
+const questGateValue = (varp: string, a: Account): number | undefined => {
+    const seen = varp === 'qp' ? a.varps.qp : a.questStages?.[varp] ?? a.varps[varp];
+    return seen ?? (a.unlocks?.includes(`complete:${varp}`) ? questCompleteValue(varp) : undefined);
+};
 export function doorBlocks(d: Door, a: Account): boolean {
     switch (d.kind) {
         case 'open': return false;
         case 'skill': return !(d.need?.skill && d.need.level !== undefined && (a.skills[d.need.skill] ?? 1) >= d.need.level && (!d.need.worn || a.worn?.includes(d.need.worn)));
         case 'key': return !(d.need?.item && a.items.includes(d.need.item));
         case 'team': return !(d.need?.team!==undefined&&(a.castlewarsTeam===d.need.team||a.doorStates?.[`${d.level},${d.x},${d.z}`]===true));
-        case 'quest': return !(d.need?.varp && d.need.minimum!==undefined && (d.need.varp==='qp'?a.varps.qp:a.questStages?.[d.need.varp]??a.varps[d.need.varp])! >= d.need.minimum);
+        case 'quest': return !(d.need?.varp && d.need.minimum!==undefined && (questGateValue(d.need.varp, a) ?? -Infinity) >= d.need.minimum);
         default: return true;
     }
 }
@@ -125,7 +134,7 @@ export async function installDoorPolicy(sdk:any,client?:unknown):Promise<void>{
 }
 import { mapAreas, separated } from './components';
 import { activeDanger, guardRoute, guardWalk } from './danger';
-import { crossingTravel, loadCrossings, loadTravel, travelAllowed, type Travel } from './travel';
+import { crossingTravel, loadCrossings, loadTravel, questCompleteValue, travelAllowed, type Travel } from './travel';
 import { legCache, routeDangerHash } from './leg-cache';
 async function loadPathfinding() {
     if (!rsPath) rsPath = await import(join(repoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts'));
@@ -320,6 +329,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
     return {
         navigationGraph: () => ({transports,travel}),
         blockedDoors: acct => doors.filter(d => doorBlocks(d, acct)).map(doorBlock),
+        routeGain: (a, b) => travel.some(t => travelAllowed(t, b) && !travelAllowed(t, a)) || doors.some(d => doorBlocks(d, a) && !doorBlocks(d, b)),
         route(from, to, acct, routeOpts) {
             const deadline=routeOpts?.deadline??Infinity;
             const tileKeys=new WeakMap<Tile,string>();

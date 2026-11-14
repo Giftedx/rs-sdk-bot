@@ -19,7 +19,7 @@ import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../..
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {canBind} from './ports';
-import {killTree,safeKill} from './proc';
+import {killTree,safeKill,sleeperCommand} from './proc';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
@@ -571,7 +571,9 @@ async function run(directory:string){
   const observer=join(directory,'observe-auth.ts'),authTrace=join(directory,'auth-observations.log'),sealRequest=join(directory,'auth-seal-request'),sealAck=join(directory,'auth-sealed');
   writeFileSync(authTrace,'',{flag:'wx'});
   writeFileSync(observer,`import{createRequire}from'node:module';import{appendFileSync,existsSync,writeFileSync}from'node:fs';const req=createRequire(${JSON.stringify(join(engine,'package.json'))});const {WebSocketServer}=req('ws');const observer=(${installAuthObserver.toString()})(WebSocketServer,line=>{appendFileSync(${JSON.stringify(authTrace)},line+'\\n');console.log(line);});const timer=setInterval(()=>{if(existsSync(${JSON.stringify(sealRequest)})){observer.seal();writeFileSync(${JSON.stringify(sealAck)},'sealed');clearInterval(timer);}},50);timer.unref();`);
-  const env={...process.env,DB_BACKEND:'sqlite',LOGIN_SERVER:'true',LOGIN_HOST:'localhost',LOGIN_PORT:String(LOGIN_PORT),EASY_STARTUP:'false',NODE_ID:'77',NODE_PORT:'43651',NODE_MEMBERS:'true',NODE_TICKRATE:'150',WEB_PORT:'8890',WEB_MANAGEMENT_PORT:'8896',WEBSITE_REGISTRATION:'false',FRIEND_SERVER:'false',LOGGER_SERVER:'false'};
+  // 127.0.0.1, not localhost: the login server binds 0.0.0.0 (IPv4 only, LoginServer.ts:379), and on this PC localhost
+  // can resolve to ::1 first; the world's login client then never connects and every login reads "login server offline".
+  const env={...process.env,DB_BACKEND:'sqlite',LOGIN_SERVER:'true',LOGIN_HOST:'127.0.0.1',LOGIN_PORT:String(LOGIN_PORT),EASY_STARTUP:'false',NODE_ID:'77',NODE_PORT:'43651',NODE_MEMBERS:'true',NODE_TICKRATE:'150',WEB_PORT:'8890',WEB_MANAGEMENT_PORT:'8896',WEBSITE_REGISTRATION:'false',FRIEND_SERVER:'false',LOGGER_SERVER:'false'};
   const spawnServer=(args:string[],log:string,extra:Record<string,string>={})=>{const p=Bun.spawn(args,{cwd:workspace,env:{...env,...extra},stdout:Bun.file(join(directory,log+'.out.log')),stderr:Bun.file(join(directory,log+'.err.log')),windowsHide:true});children.push(p);return p;};
   const waitLog=async(p:ReturnType<typeof Bun.spawn>,file:string,pattern:RegExp)=>{const until=Date.now()+60000;while(Date.now()<until){if(p.exitCode!==null)throw Error('native server exited: '+file);if(existsSync(join(directory,file))&&pattern.test(readFileSync(join(directory,file),'utf8')))return;await Bun.sleep(200);}throw Error('native server readiness timeout: '+file);};
   const login=spawnServer([process.execPath,'--preload',observer,join(engine,'src/login.ts')],'login',{WEB_MANAGEMENT_PORT:'8897',LOGIN_TAKEOVER_MIN_MS:String(TAKEOVER_WINDOW_MS)});await waitLog(login,'login.out.log',/Login server listening/);
@@ -631,7 +633,9 @@ async function run(directory:string){
   type Fixture=Awaited<ReturnType<typeof fixture>>;
   const task=async(f:Fixture,id:string)=>{
    const runId=`native-rcv-${id}-${stamp}`;
-   const owner=Bun.spawn([process.execPath,'-e','await Bun.sleep(900000)',runId],{cwd:root,stdout:'ignore',stderr:'ignore',windowsHide:true});children.push(owner);
+   // The task owner only has to run with its runId on the command line (permit check processMatchesRecent): a light
+   // sleeper, not a Bun runtime. Fifteen of them run at once.
+   const owner=Bun.spawn(sleeperCommand(runId),{cwd:root,stdout:'ignore',stderr:'ignore',windowsHide:true});children.push(owner);
    tasks.set(runId,{status:'running',runId,pid:owner.pid,spec:{kind:'run',capability,account:f.name,...(f.completed?{env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500'}}:{}),repairs:[{account:f.name,endedAt:f.endedAt}],sessionRecovery:{account:f.name,endedAt:f.endedAt}}});
    put('.practice/coordinator/runs/'+runId+'/owner.json',{pid:owner.pid,runId});writeState();
    return {runId,owner};
@@ -702,6 +706,21 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     release:async()=>{const at=Date.now();writeFileSync(release,'release');const t=setTimeout(()=>void killTree(p.pid),60000);await p.exited;clearTimeout(t);return at;}};
   };
   const freshSave=async(f:Fixture,before:Save)=>(await waitPracticeSave(f.save,s=>(s.vars[134]??0)>(before.vars[134]??0),{timeoutMs:15000})).matched;
+  // The capability's actual entry after a confirmed recovery: scripts/session-check.ts <account> logs in, sees the
+  // account in game and logs out. Its producer attempt goes to the checkout's own lifecycle tree (the CLI has no root
+  // option), and a fresh save after its logout must hold the same items, skills and tile.
+  const sessionCheckCli=async(f:Fixture,dir:string,before:Save)=>{
+   const since=Date.now(),env:Record<string,string|undefined>={...process.env,WORKER_RELEASE:source};delete env.COORDINATOR_RUN_ID;
+   const cli=Bun.spawn([process.execPath,'scripts/session-check.ts',f.name],{cwd:root,env,stdout:Bun.file(join(dir,'session-check.out.log')),stderr:Bun.file(join(dir,'session-check.err.log')),windowsHide:true});
+   children.push(cli);const t=setTimeout(()=>void killTree(cli.pid),120000);const code=await cli.exited;clearTimeout(t);
+   const persisted=await freshSave(f,before);copyFileSync(f.save,join(dir,'session-check-after.sav'));
+   const after=readPracticeSave(join(dir,'session-check-after.sav')),rec=reconcileSaves(before,after),text=readFileSync(join(dir,'session-check.out.log'),'utf8');
+   const proof=readLogoutProof(f.name,f.server),session=recoverySessionAuth(authReplies(loginLog(),since,f.name),f.name);
+   writeFileSync(join(dir,'session-check.json'),JSON.stringify({code,proof,session},null,2));
+   return {sessionCheckExit:code===0,sessionCheckChecked:/^RESULT ok sessionChecked=1 /m.test(text),sessionCheckLogout:/^LOGOUT logged-out$/m.test(text),
+    sessionCheckProducerConfirmed:proof.state==='confirmed',sessionCheckLoginAcknowledged:session.loginAcknowledged,sessionCheckLogoutAcknowledged:session.logoutAcknowledged,
+    sessionCheckFreshSave:persisted,sessionCheckInventories:rec.inventories,sessionCheckSkills:rec.skills,sessionCheckPosition:rec.position};
+  };
   const preset={position:{x:2618,z:3332,level:0},skills:{Hitpoints:43,Fishing:99,Cooking:99},inventory:[{id:995,count:1200},{id:311,count:1},{id:329,count:4}],equipment:[{id:1275,count:1,slot:3}],bank:[{id:385,count:5},{id:436,count:17}],varps:{300:1000}};
   const d8890=dispatcher(HOST);
   // Positive confirmed cleanup through the actual dispatcher, launcher and CLI, reconciled from fresh saves.
@@ -752,7 +771,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    const repair=applyEndRepair({account:C.name,endedAt:C.endedAt,server:C.server,proof:{kind:'producer',attemptId:out.receipt?.attemptId}},retained,[],{
     readProof:()=>proof,verifyLegacy:()=>({state:'refused',reason:'unused'})},[]);
    writeFileSync(join(dir,'controller-after.json'),JSON.stringify({ends:[...retained],repair,revision,beforeProof,proof},null,2));
-   out.record('native-actual-controller-core-cli',{
+   const check=await sessionCheckCli(C,dir,out.after);
+   out.record('native-actual-controller-core-cli',{...check,
     noProducerBefore:beforeProof.state==='none',successfulEndRetained:retained.get(C.name)===end&&end.reason==='done after 1 runs',
     endRepairRefused:!repair.changed&&repair.reason==='completed work needs a new mission',
     oldMissionRefused:startable([C.name],false,retained,()=>Infinity,undefined,end.revision).start.length===0,

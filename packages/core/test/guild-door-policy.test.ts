@@ -17,6 +17,18 @@ test('started quests and one QP cannot pass completion or 32QP guards',()=>{
  for(const [varp,minimum] of [['qp',32],['heroquest',15],['legendsquest',50]] as const){const d={...door,kind:'quest',need:{varp,minimum}};expect(doorBlocks(d,actor)).toBe(true);expect(doorBlocks(d,{...actor,varps:{qp:32},questStages:{heroquest:15,legendsquest:50}})).toBe(false);}
  expect(doorBlocks({...door,kind:'quest',need:{varp:'unparsed'}},{...actor,varps:{unparsed:99}})).toBe(true);
 });
+test('a quest the quest list shows complete opens its stage doors while the stage is not observed',()=>{
+ // Dwarf Cannon: complete = 11 (knowledge/quests.json); Nulodion's door opens from 9, the shed's from 6.
+ const nulodion={...door,loc:'mcannondoor',kind:'quest',need:{varp:'mcannon',minimum:9}} as Door,shed={...nulodion,need:{varp:'mcannon',minimum:6}} as Door;
+ const plain:Account={skills:{},items:[],varps:{}},done:Account={...plain,unlocks:['complete:mcannon']};
+ expect(doorBlocks(nulodion,plain)).toBe(true);
+ expect(doorBlocks(nulodion,done)).toBe(false);expect(doorBlocks(shed,done)).toBe(false);
+ // An observed stage wins over the completion unlock, and a threshold above the complete value stays shut.
+ expect(doorBlocks(nulodion,{...done,questStages:{mcannon:6}})).toBe(true);
+ expect(doorBlocks({...nulodion,need:{varp:'mcannon',minimum:12}},done)).toBe(true);
+ // A door with no mined threshold still blocks.
+ expect(doorBlocks({...nulodion,need:{varp:'mcannon'}},done)).toBe(true);
+});
 test('transport guards use actual membership, current skill and team plus worn banner',()=>{
  const a:Account={skills:{mining:59},varps:{},items:[],worn:[]};
  expect(transportAllowed({requires:{unlock:'prayer-guild'}},a)).toBe(false);

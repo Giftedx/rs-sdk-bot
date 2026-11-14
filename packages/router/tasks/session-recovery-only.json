@@ -5,6 +5,8 @@
   "files": [
     "scripts/session-check.ts",
     "scripts/swarm.ts",
+    "scripts/cloud-recover.ts",
+    "scripts/cloud-recover.test.ts",
     "packages/core/src/session-lifecycle.ts",
     "packages/core/src/inprocess.ts",
     "packages/core/src/bot.ts",
@@ -29,7 +31,7 @@
     "packages/core/test/inprocess-auth-order.test.ts",
     "packages/practice/test/session-recovery-proof.test.ts"
   ],
-  "consumer": "A held-logout live account (latest attempt ready, owner gone, saved end) reaches readLogoutProof confirmed through the controller recovery; the entry then reports sessionChecked=1 and a producer-confirmed logout with no item, position or skill change.",
+  "consumer": "A held-logout live account reaches producer-confirmed logout through authenticated controller recovery within one bounded unresolved lineage. The actual account-parameterized session-check CLI then reports sessionChecked=1 and confirmed logout with reconciled assets. Sausagefest's finite recovery releases the unchanged Witch's Potion and Cook's Assistant consumers on its existing provision identity.",
   "checks": [
     {
       "id": "session-recovery-only-regressions",
@@ -38,6 +40,7 @@
         "bun",
         "test",
         "scripts/session-check.test.ts",
+        "scripts/cloud-recover.test.ts",
         "packages/core/test/session-lifecycle.test.ts",
         "packages/core/test/inprocess.test.ts",
         "packages/core/test/bot.test.ts",

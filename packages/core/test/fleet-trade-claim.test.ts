@@ -183,9 +183,8 @@ test('another side replaces a dead side\'s swarm claim only once the claim and t
     await withRepos(async (a, b) => {
         acquireFleetLease(a, 'claude-cloud-4', () => T0);
         const dead = acquireFleetSwarmClaim(a, oldSide, { now: () => T0 });
-        // The container died holding the claim. Another checkout of the same side stays refused, however long.
-        expect(() => acquireFleetSwarmClaim(b, oldSide, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
-        expect(() => acquireFleetSwarmClaim(b, oldSide, { recover: true, now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
+        // The container died holding the claim. Its own checkout recovers only through session recovery.
+        expect(() => acquireFleetSwarmClaim(a, oldSide, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
         // The side that now owns the account: refused a millisecond early, admitted at the hour.
         expect(() => acquireFleetSwarmClaim(b, newSide, { now: () => T0 + ORPHAN_CLAIM_MS - 1 })).toThrow('held');
         const taken = acquireFleetSwarmClaim(b, newSide, { now: () => T0 + ORPHAN_CLAIM_MS });
@@ -194,6 +193,36 @@ test('another side replaces a dead side\'s swarm claim only once the claim and t
         expect(git(b, 'ls-remote', 'origin', 'refs/heads/fleet-trade-claim/dipstick').toString()).toMatch(/^[0-9a-f]{40}/);
         expect(git(a, 'log', '-1', '--format=%s', git(a, 'ls-remote', 'origin', 'refs/heads/fleet-trade-claim/dipstick').toString().split(/\s/)[0]!).toString())
             .toContain(`replacing the orphaned claude-cloud-4 claim ${dead.nonce}`);
+    });
+}, 30_000);
+
+test('a new checkout of the same side replaces a dead checkout\'s claim once the claim and that checkout\'s renewals are an hour stale', async () => {
+    await withRepos(async (a, b) => {
+        const side = { account: 'Fatstack', server, side: 'claude-cloud' };
+        const dead = acquireFleetSwarmClaim(a, side, { now: () => T0 });
+        // The dead container renewed the side's lease 50 minutes after it took the claim.
+        acquireFleetLease(a, 'claude-cloud', () => T0 + 50 * 60_000);
+        expect(() => acquireFleetSwarmClaim(b, side, { now: () => T0 + ORPHAN_CLAIM_MS - 1 })).toThrow('held');
+        // The claim is an hour old, but its checkout renewed ten minutes ago: still alive.
+        expect(() => acquireFleetSwarmClaim(b, side, { now: () => T0 + ORPHAN_CLAIM_MS })).toThrow('held');
+        const taken = acquireFleetSwarmClaim(b, side, { now: () => T0 + 50 * 60_000 + ORPHAN_CLAIM_MS });
+        expect(taken.nonce).not.toBe(dead.nonce);
+        expect(readFleetAccountClaim(a, side)).toMatchObject({ kind: 'swarm', phase: 'held', side: 'claude-cloud', nonce: taken.nonce });
+        expect(git(a, 'log', '-1', '--format=%s', git(a, 'ls-remote', 'origin', 'refs/heads/fleet-trade-claim/fatstack').toString().split(/\s/)[0]!).toString())
+            .toContain(`replacing the orphaned claude-cloud claim ${dead.nonce}`);
+    });
+}, 30_000);
+
+test('a same-side claim whose checkout never held the lease is orphaned once another checkout holds it; no lease ref gives no takeover', async () => {
+    await withRepos(async (a, b) => {
+        const one = { account: 'Dipstick', server, side: 'claude-cloud' };
+        acquireFleetSwarmClaim(a, one, { now: () => T0 });
+        acquireFleetLease(b, 'claude-cloud', () => T0 + 60_000);
+        expect(() => acquireFleetSwarmClaim(b, one, { now: () => T0 + ORPHAN_CLAIM_MS - 1 })).toThrow('held');
+        expect(acquireFleetSwarmClaim(b, one, { now: () => T0 + ORPHAN_CLAIM_MS }).nonce).toBeTruthy();
+        const two = { account: 'Kiltlifter', server, side: 'claude-cloud-2' };
+        acquireFleetSwarmClaim(a, two, { now: () => T0 });
+        expect(() => acquireFleetSwarmClaim(b, two, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
     });
 }, 30_000);
 

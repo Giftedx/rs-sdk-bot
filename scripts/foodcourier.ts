@@ -11,7 +11,7 @@ import {courierFoodAllocation} from './courier-allocation';
 // FEATHERS=<n>: buy at most n feathers toward the cook's1000-feather buffer. Unknown stock retains the configured purchase.
 // START=draynor skips the outbound legs (the courier already stands at Draynor bank).
 // OUTBOUND_ONLY=1 ends at Draynor with the owned supplies still held; no collection or return trip.
-import { openBot, finish, countItems, serverFromEnv } from '../packages/core/src/bot';
+import { openBot, finish, countItems, serverFromEnv, sessionDied } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { readFileSync } from 'node:fs';
@@ -27,7 +27,6 @@ import { COOKED_FOOD, cookedFoodRestock as foodRestockAmount, selectCookedFoodSo
 
 type Pt = [number, number, number];
 const DRAYNOR = { x: 3092, z: 3243 };
-const LUMBRIDGE = { x: 3222, z: 3218 };
 const BRIM_DECK = { x: 2775, z: 3234 };
 const SARIM_DECK = { x: 3032, z: 3217 };
 const MUSA_DECK = { x: 2956, z: 3143 };
@@ -72,13 +71,15 @@ try {
     let hpMin = hp(), died = false;
     const jumps: string[] = [];
     let last = pos();
+    // A death is the server's (sessionDied). A disconnect blanks the state for a moment, so an HP of 0 or a far
+    // position read then is no death. The jumps stay in the report.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
-        if (hp() <= 0) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) {
             jumps.push(`${s.tick()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
-            if (cheb(LUMBRIDGE, p) <= 15) died = true;
         }
         last = p;
     });

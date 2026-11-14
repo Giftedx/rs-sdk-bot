@@ -195,6 +195,28 @@ try {
         await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
     };
 
+    // Zooknock takes monkey bones in stage 100 (mm_zooknock.rs2:48-96). No shop sells them and the GE has no seller, but a
+    // Karamja monkey (npc 132, 6 HP, wanders) spawns 20 tiles west of the Gandius glider (2948-2953, 2965-3001,
+    // npc-spawns.json) and drops mm_normal_monkey_bones, id 3183 (quest_tbwt/scripts/monkey.rs2:73). An account that holds
+    // none kills one there and takes the bones.
+    const MONKEYS = { x: 2951, z: 2976 };
+    const monkeyBones = async (): Promise<void> => {
+        await walk('to the monkeys', [{ x: MONKEYS.x, z: MONKEYS.z, tol: 4 }]);
+        let target: any;
+        for (let t = 0; t < 150 && !q.has(ITEM.bones); t += 2) {
+            await q.guard('monkey bones');
+            const bones = ((q.st()?.groundItems ?? []) as any[]).filter(g => g.id === ITEM.bones && q.cheb(g.x, g.z) <= 12)
+                .sort((a, b) => q.cheb(a.x, a.z) - q.cheb(b.x, b.z))[0];
+            if (bones) { await q.s.bot.pickupItem(bones); await q.waitUntil(() => q.has(ITEM.bones), 8); continue; }
+            const alive = target && (q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === target.index && (n.hp ?? 1) > 0);
+            if (!alive) target = q.npc(/^monkey$/i);
+            if (target) await q.attackNpc(target);
+            else await walk('monkey search', [{ x: MONKEYS.x, z: MONKEYS.z + (t % 20 < 10 ? 15 : -8), tol: 3 }]);
+            await q.waitTicks(2);
+        }
+        if (!q.has(ITEM.bones)) await q.fail('monkey bones');
+    };
+
     // 10. Narnode: "Yes" to "Start Monkey Madness?" (mm_narnode.rs2:124-137): the royal seal.
     if (FROM < 10) {
         await talkChoose('narnode start', /^king narnode/i, pick(/^yes$/i), () => q.has(ITEM.seal) && !q.dialogOpen(), 80, NARNODE);
@@ -209,6 +231,7 @@ try {
         q.milestone('gandius');
         // Jungle spiders and jogres on the way (melee; a spider poisoned the bot 35 -> 20 HP in a test run).
         await setPfm(true);
+        if (!q.has(ITEM.bones)) await monkeyBones();
         await walk('to shipyard gate', [{ x: SHIP_GATE.x - 2, z: SHIP_GATE.z, tol: 1 }]);
         for (let i = 0; i < 3 && (q.pos()?.worldX ?? 0) < SHIP_GATE.x; i++) {
             await q.guard('shipyard gate');

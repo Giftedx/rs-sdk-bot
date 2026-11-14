@@ -4,7 +4,7 @@ import {existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync,
 import {tmpdir} from 'node:os';
 import {join, relative, resolve} from 'node:path';
 import {loadOwners} from '../packages/core/src/fleet';
-import {reserveFleetOwner, withFleetDataWrite} from './fleet-owner-claim';
+import {reserveFleetOwner, transferFleetOwnersLocked, withFleetDataWrite} from './fleet-owner-claim';
 import {recoverConcurrentPlanWrite} from '../packages/core/src/plan-lock';
 
 // A git call has 20 s: beside the 11 other processes of the local gate one call passed the 5 s it had (ETIMEDOUT).
@@ -144,6 +144,43 @@ test('competing fleet sides reserve one name and retry only their own durable cl
         expect(owners.get('legacy')?.side).toBe('local');
         expect(git(first, '--git-dir=' + remote, 'diff-tree', '--no-commit-id', '--name-only', '-r', 'fleet-data')).toBe('fleet/owners.json');
         expect(readFileSync(orderFile, 'utf8')).toBe('local pending order\n');
+    } finally {
+        if (/^rsbot-owner-claim-[^/\\]+$/.test(relative(parent, scratch))) rmSync(scratch, {recursive: true, force: true});
+    }
+}, 60_000);
+
+test('two sides adopting the same account: one move lands, the other finds the row moved and writes nothing', () => {
+    const parent = resolve(tmpdir()), scratch = mkdtempSync(join(parent, 'rsbot-owner-claim-'));
+    try {
+        const remote = join(scratch, 'remote.git'), first = join(scratch, 'first'), second = join(scratch, 'second');
+        git(scratch, 'init', '--bare', remote);
+        git(scratch, 'init', first);
+        mkdirSync(join(first, 'fleet'));
+        writeFileSync(join(first, 'fleet', 'owners.json'), JSON.stringify({accounts: {Alpha: {side: 'local', server: 'rs-sdk-demo.fly.dev'},
+            Bravo: {side: 'local', server: 'rs-sdk-demo.fly.dev'}, Haggis: {side: 'local', server: 'rs-sdk-demo.fly.dev'}}}));
+        git(first, 'add', 'fleet/owners.json');
+        git(first, '-c', 'user.name=Test', '-c', 'user.email=test@localhost', 'commit', '-m', 'seed registry');
+        git(first, 'remote', 'add', 'origin', remote);
+        git(first, 'push', 'origin', 'HEAD:refs/heads/fleet-data');
+        git(scratch, 'clone', '--branch', 'fleet-data', remote, second);
+        const firstFleet = join(first, 'data');
+        git(first, 'worktree', 'add', '-b', 'fleet-data', firstFleet, 'origin/fleet-data');
+        const won = transferFleetOwnersLocked(first, [{account: 'alpha', from: 'local', to: 'claude-cloud', home: 'local'}], firstFleet);
+        expect(won).toEqual([{account: 'Alpha', from: 'local', to: 'claude-cloud', home: 'local'}]);
+        // The worktree fast-forwards to the published registry, home kept.
+        expect(JSON.parse(readFileSync(join(firstFleet, 'fleet', 'owners.json'), 'utf8')).accounts.Alpha).toEqual({side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev', home: 'local'});
+        // The other side planned from the old registry: Alpha no longer names local, so only Bravo moves.
+        const late = transferFleetOwnersLocked(second, [{account: 'Alpha', from: 'local', to: 'cloud', home: 'local'}, {account: 'Bravo', from: 'local', to: 'cloud', home: 'local'}], second);
+        expect(late.map(m => m.account)).toEqual(['Bravo']);
+        const registry = JSON.parse(git(first, '--git-dir=' + remote, 'show', 'fleet-data:fleet/owners.json')).accounts;
+        expect(registry.Alpha.side).toBe('claude-cloud');
+        expect(registry.Bravo).toEqual({side: 'cloud', server: 'rs-sdk-demo.fly.dev', home: 'local'});
+        // A move whose row is already elsewhere makes no commit at all; returning home drops the mark.
+        const tip = git(first, '--git-dir=' + remote, 'rev-parse', 'fleet-data');
+        expect(transferFleetOwnersLocked(second, [{account: 'Bravo', from: 'local', to: 'cloud', home: null}], second)).toEqual([]);
+        expect(git(first, '--git-dir=' + remote, 'rev-parse', 'fleet-data')).toBe(tip);
+        expect(transferFleetOwnersLocked(first, [{account: 'Alpha', from: 'claude-cloud', to: 'local', home: null}], firstFleet).length).toBe(1);
+        expect(JSON.parse(git(first, '--git-dir=' + remote, 'show', 'fleet-data:fleet/owners.json')).accounts.Alpha).toEqual({side: 'local', server: 'rs-sdk-demo.fly.dev'});
     } finally {
         if (/^rsbot-owner-claim-[^/\\]+$/.test(relative(parent, scratch))) rmSync(scratch, {recursive: true, force: true});
     }

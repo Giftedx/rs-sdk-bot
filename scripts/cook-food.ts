@@ -75,31 +75,38 @@ try {
         return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
     };
 
-    const bank = async () => {
+    // 'empty' when the open bank, once its list has loaded, holds no raw food of this kind: the supply is used up.
+    const bank = async (): Promise<'ok' | 'empty' | 'failed'> => {
         await walk(BANK_SPOT.x, BANK_SPOT.z, 2);
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank failed: ${b.message}`);
             await waitTicks(s, 2);
-            return;
+            return 'failed';
         }
 
         // Deposit all cooked and burnt items
         await s.bot.depositItem(new RegExp(`(${FOOD_TYPE}|burnt)`, 'i'), -1);
         await waitTicks(s, 1);
 
+        const loaded = await waitUntil(s, () => (s.sdk.getState()?.bank?.items?.length ?? 0) > 0, { timeoutTicks: 5 });
+        const empty = loaded && !(s.sdk.getState()?.bank?.items ?? []).some((i: { name: string; count: number }) => rawRe.test(i.name) && i.count > 0);
         // Withdraw 28 raw food
-        await s.bot.withdrawItem(rawRe, 28);
+        if (!empty) await s.bot.withdrawItem(rawRe, 28);
         bankTrips++;
         await s.bot.closeInterface();
         await waitTicks(s, 1);
+        return empty ? 'empty' : 'ok';
     };
 
     console.log(`START food cooker ${botName} at=${pos()?.worldX},${pos()?.worldZ} food=${FOOD_TYPE}`);
 
     while (!over()) {
         if (rawCount() === 0) {
-            await bank();
+            const banked = await bank();
+            // No raw food in the pack or the bank: the batch is done. Waiting here only ran the no-progress watchdog
+            // out (900 idle ticks) and failed the chain that feeds this cook.
+            if (banked === 'empty' && rawCount() === 0) { console.log(`STOP no raw ${FOOD_TYPE} left in the pack or the bank`); break; }
             if (rawCount() === 0) {
                 await waitTicks(s, 5);
                 continue;

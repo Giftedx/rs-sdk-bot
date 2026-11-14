@@ -1,7 +1,7 @@
 // AIO Skiller ("Vortex All In One"): unified entry for all 15 non-combat skills, bank-profile jobs, and progressive training.
 // Usage:
 //   bun scripts/aio-skiller.ts <account> <skill> [method] [arg ...] [KEY=value ...]
-//   bun scripts/aio-skiller.ts <account> bank-job <job.json>
+//   bun scripts/aio-skiller.ts <account> bank-job <job.json> [job.json ...]   (several jobs: one login, in order)
 import {existsSync,readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {openBot,finish} from '../packages/core/src/bot';
@@ -471,15 +471,21 @@ export async function runAioSkiller(account: string, args: readonly string[], en
  if (!first) throw Error('aio-skiller requires <skill|bank-job>');
  if (first === 'bank-job') {
   if (!second) throw Error('aio-skiller bank-job requires <job.json>');
-  const job = JSON.parse(readFileSync(resolve(second), 'utf8')) as BankJob;
-  validateBankJob(job);
+  // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.
+  const jobs = [second, ...rest].map(file => JSON.parse(readFileSync(resolve(file), 'utf8')) as BankJob);
+  jobs.forEach(job => validateBankJob(job));
   let stopped = false;
   const s = await openBot(account, { onStop: async () => { stopped = true; } });
   let ok = false, summary = '';
   try {
-   const res = await runBankJob(s, job, () => stopped || existsSync(join('.practice', `stop-${account}`)));
-   ok = res.ok;
-   summary = JSON.stringify(res);
+   const results: Awaited<ReturnType<typeof runBankJob>>[] = [];
+   for (const job of jobs) {
+    const res = await runBankJob(s, job, () => stopped || existsSync(join('.practice', `stop-${account}`)));
+    results.push(res);
+    if (!res.ok) break;
+   }
+   ok = results.length === jobs.length && results.every(r => r.ok);
+   summary = jobs.length === 1 ? JSON.stringify(results[0]) : JSON.stringify({ ok, jobs: results });
   } finally {
    await finish([s], ok, summary || 'aio-skiller bank-job');
   }

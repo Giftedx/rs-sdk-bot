@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SWARM_STOP } from './swarm';
-import { archiveDir, archiveStaleLease, clearSwarmStops, cloudSide, deadTasks, eligibility, END_SETTLE_MS, endSettled, lifecycleRoot, NEVER_RECOVERED, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryLeaseState, recoveryProposal, recoveryRequestWaiting, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
-import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
+import { archiveDir, archiveStaleLease, budgetRefusal, clearSwarmStops, cloudSide, deadTasks, eligibility, END_SETTLE_MS, endSettled, LIVE_SERVER, lifecycleRoot, NEVER_RECOVERED, MAX_ATTEMPTS, MAX_TARGETS, MAX_WAITS, waitedAttempts, waitRefusedRuns, recoveriesInFlight, recoveryBatch, recoveryLeaseState, recoveryLineage, recoveryProposal, recoveryRequestWaiting, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
+import { accountDir, DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
+import { RECOVERY_SCRIPT } from '../packages/core/src/session-recovery-permit';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
 const held: LogoutProof = { state: 'held', account: 'kiltlifter', server: 'rs-sdk-demo.fly.dev', domain: 'live', attemptId: 'a', reason: 'disconnected' };
@@ -256,6 +257,41 @@ test('a run that never started behind a failed earlier run of its chain spends n
     expect(spentAttempts([...tasks, ...tasks.map(t => ({ ...t, spec: { ...t.spec, id: t.spec.id + '2', dependsOn: t.spec.dependsOn.map(d => d + '2') } }))], target)).toBe(0);
 });
 
+// The shape of a dispatcher result line (packages/core/src/session-recovery-dispatch.ts emit).
+const resultLine = (runId: string, result: object) => JSON.stringify({ at: 1, raw: JSON.stringify({ kind: 'session-recovery', account: 'Sausagefest', runId }), result });
+const refused = (cause: string, reason = 'recovery setup refused; no lease issued; no retry') => ({ changed: false, sessionRecovered: false, reason, setup: { phase: 'admission', cause } });
+
+test('a run that the controller refused while it waited for memory or a bot slot spends no attempt', () => {
+    const target = { account: 'Sausagefest', endedAt: 1794509172759 };
+    const run = (id: string, runId: string, error: string) => ({ ...task(id, 'failed', [], target), runId, receipt: { ok: false, error } });
+    const held = 'Error: controller held authenticated recovery: recovery setup refused; no lease issued; no retry';
+    // The four live Sausagefest runs: three dispatcher refusals and one preflight refusal, all on memory.
+    const tasks = [run('a', 'task-1', held), run('b', 'task-2', held), run('c', 'task-3', 'Error: live admission waiting: memory'), run('d', 'task-4', held)];
+    const waits = waitRefusedRuns([resultLine('task-1', refused('recovery admission waiting: memory')), resultLine('task-2', refused('recovery admission waiting: maxBots')),
+        resultLine('task-4', { ...refused('recovery waits for runtime source owner'), setup: { phase: 'source-owner', cause: 'recovery waits for runtime source owner' } }), 'not json', ''].join('\n'));
+    expect([...waits].sort()).toEqual(['task-1', 'task-2', 'task-4']);
+    expect(spentAttempts(tasks, target, waits)).toBe(0);
+    expect(waitedAttempts(tasks, target, waits)).toBe(4);
+    // Without the result lines only the preflight refusal is known as a wait: the other three count.
+    expect(spentAttempts(tasks, target)).toBe(3);
+    expect(MAX_WAITS).toBeGreaterThan(MAX_ATTEMPTS);
+});
+
+test('a refusal for any other cause, or a setup failure after the lease, still spends an attempt', () => {
+    const waits = waitRefusedRuns([
+        resultLine('owner', refused('recovery previous session owner still alive')),
+        resultLine('unknown', refused('unclassified setup error')),
+        resultLine('leased', refused('recovery admission waiting: memory', 'recovery setup failed after issuance; account lease held; no retry')),
+        resultLine('child', { changed: false, sessionRecovered: false, reason: 'recovery child held; inspect fixed child output and retained account lease; no retry' }),
+        resultLine('ok', { changed: false, sessionRecovered: true, reason: 'confirmed session cleanup; old failure retained' }),
+    ].join('\n'));
+    expect(waits.size).toBe(0);
+    const target = { account: 'Sausagefest', endedAt: 5 };
+    const tasks = ['owner', 'unknown'].map(r => ({ ...task(r, 'failed', [], target), runId: r, receipt: { ok: false, error: 'Error: live admission waiting: invalid' } }));
+    expect(spentAttempts(tasks, target, waits)).toBe(MAX_ATTEMPTS);
+    expect(waitedAttempts(tasks, target, waits)).toBe(0);
+});
+
 test('the swarm\'s own stop file is removed before a recovery is submitted; an owner\'s stays, and so do all under stop-swarm', () => {
     const root = mkdtempSync(join(tmpdir(), 'cloud-recover-stops-')), prac = join(root, '.practice'), stop = (a: string) => join(prac, `stop-${a}`);
     try {
@@ -332,4 +368,89 @@ test('a recovery lease is stale once its child is gone or, with no child, its pe
         expect(existsSync(join(dir, 'nonce-1', 'child.json'))).toBe(true);
         expect(recoveryLeaseState(root, 'Fingersmith', () => false, now)).toBe('none');
     } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+// Live local Bigchopper: each failed recovery child stayed held, the swarm gave it a new orphan end with a new time,
+// and the exact-end count of that new end started at zero.
+test('two failures across successive child-generated ends stop a third automatic proposal, also after a stale lease is moved aside', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-lineage-')), account = 'Bigchopper', t0 = 1794554000000;
+    const attempts = join(accountDir(account, LIVE_SERVER, lifecycleRoot(root)), 'attempts'), rec = join(root, '.practice', 'coordinator', 'session-recovery', 'accounts', 'bigchopper');
+    const id = (at: number, pid: number) => `${at}-${String(pid).padStart(10, '0')}-0000000001`;
+    const attempt = (at: number, pid: number, owner: { runId: string | null; script: string; role: string | null }) => {
+        const attemptId = id(at, pid);
+        writeFileSync(join(attempts, `${attemptId}.json`), JSON.stringify({ schema: 'session-lifecycle/1', attemptId, account, server: LIVE_SERVER, domain: 'live',
+            owner: { pid, coordinatorRunId: owner.runId, workerRelease: 'a'.repeat(64), script: owner.script, role: owner.role, participants: null }, config: { members: null },
+            createdAt: at, updatedAt: at + 1, events: [{ at, kind: 'connecting' }, { at: at + 1, kind: 'connect-failed' }] }));
+        return attemptId;
+    };
+    const orphan = (at: number, attemptId: string) => ({ at, reason: `exit orphaned: attempt ${attemptId} owner ${Number(attemptId.split('-')[1])} gone` });
+    const ordinary = { runId: null, script: 'scripts/goldfarm.ts', role: 'thieving' }, child = (runId: string) => ({ runId, script: RECOVERY_SCRIPT, role: 'recovery' });
+    const request = (runId: string, nonce: string, endedAt: number) => ({ schema: 'session-recovery/1', kind: 'session-recovery', account, server: LIVE_SERVER, endedAt, runId, nonce, source: 'a'.repeat(64) });
+    const run = (id: string, runId: string, endedAt: number, error: string) => [{ status: 'succeeded', spec: { id: `q-${id}`, kind: 'qualify', dependsOn: [] } },
+        { status: 'failed', runId, receipt: { ok: false, error }, spec: { id, kind: 'run', dependsOn: [`q-${id}`], sessionRecovery: { account, endedAt } } }];
+    const childHeld = 'Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry';
+    try {
+        mkdirSync(attempts, { recursive: true });
+        // An ordinary session dropped: the first end of the lineage.
+        const e0 = orphan(t0 + 60_000, attempt(t0, 100, ordinary));
+        expect(budgetRefusal(root, account, e0, [])).toBeUndefined();
+        // Recovery 1 of e0 fails and its child stays held. The child is gone, its lease is stale and moved aside, and its permit stays.
+        mkdirSync(join(rec, 'n1'), { recursive: true });
+        const permit1 = { schema: 'session-recovery-permit/1', request: request('run-1', 'n1', e0.at), issuedAt: t0 + 100_000, expiresAt: t0 + 250_000 };
+        writeFileSync(join(rec, 'n1', 'permit.json'), JSON.stringify(permit1)); writeFileSync(join(rec, 'lease.json'), JSON.stringify(permit1));
+        const e1 = orphan(t0 + 200_000, attempt(t0 + 120_000, 201, child('run-1')));
+        // A run that only waited on memory issued no lease and spends no attempt; it counts against MAX_WAITS.
+        const tasks: any[] = [...run('r1', 'run-1', e0.at, childHeld), ...run('w1', 'run-w1', e1.at, 'Error: live admission waiting: memory')];
+        expect(recoveryLeaseState(root, account, () => false, t0 + 300_000)).toBe('stale');
+        archiveStaleLease(root, account, t0 + 300_000);
+        // The exact count of the new end is zero: that is the defect. The lineage carries the first failure.
+        expect(spentAttempts(tasks, { account, endedAt: e1.at })).toBe(0);
+        expect(budgetRefusal(root, account, e1, tasks)).toBeUndefined();
+        // Recovery 2 of e1 fails the same way. Its request is retained only in its output folder.
+        mkdirSync(join(rec, 'n2', 'output'), { recursive: true });
+        writeFileSync(join(rec, 'n2', 'output', 'request.json'), JSON.stringify(request('run-2', 'n2', e1.at)));
+        const e2 = orphan(t0 + 400_000, attempt(t0 + 320_000, 202, child('run-2')));
+        tasks.push(...run('r2', 'run-2', e1.at, childHeld));
+        expect(spentAttempts(tasks, { account, endedAt: e2.at })).toBe(0);
+        expect(budgetRefusal(root, account, e2, tasks)).toBe(`${MAX_ATTEMPTS} recoveries of end ${e2.at} and the 2 earlier ends of its lineage (first ${e0.at}) failed; recover by hand`);
+        // Compaction retains full outcomes. A replayed archive row and a row still in state count only once.
+        const archive = join(root, '.practice/coordinator/archive/tasks.jsonl');
+        mkdirSync(join(archive, '..'), { recursive: true });
+        const archived = [...tasks, ...tasks];
+        writeFileSync(archive, archived.map(t => JSON.stringify(t)).join('\n') + '\n');
+        const exhausted = budgetRefusal(root, account, e2, tasks);
+        expect(budgetRefusal(root, account, e2, [])).toBe(exhausted);
+        expect(budgetRefusal(root, account, e1, tasks.slice(0, 4))).toMatch(/^2 recoveries /);
+        // Task ids may be reused after compaction. Unrelated executions cannot hold this account's budget.
+        const reused = ['task-1f733251-4e75-4fc2-8d92-06c81cee5303', 'task-2d04d57a-4b62-4ebf-b2f6-046ee44d7ff3']
+            .map(runId => ({ status: 'failed', runId, spec: { id: 'build-fishing-contest-trophy-gate-exit', kind: 'build' } }));
+        writeFileSync(archive, [...reused, ...archived].map(t => JSON.stringify(t)).join('\n') + '\n');
+        expect(budgetRefusal(root, account, e2, tasks)).toBe(exhausted);
+        // Six waits also survive compaction, without any child attempt to bound their number.
+        const waits = Array.from({ length: MAX_WAITS }, (_, i) => run(`w${i + 2}`, `run-w${i + 2}`, e2.at, 'Error: live admission waiting: memory')).flat();
+        writeFileSync(archive, [...tasks.slice(0, 2), ...waits, ...waits].map(t => JSON.stringify(t)).join('\n') + '\n');
+        expect(budgetRefusal(root, account, e2, waits.slice(0, 2))).toMatch(/^6 recoveries .* waited /);
+        writeFileSync(archive, JSON.stringify(tasks[1]) + '\n{');
+        expect(budgetRefusal(root, account, e2, tasks)).toMatch(/unknown .*archive/);
+        writeFileSync(archive, '');
+        // A separate ordinary session after the lineage is a new lineage: its end has its full budget.
+        const e3 = orphan(t0 + 560_000, attempt(t0 + 500_000, 300, ordinary));
+        expect(budgetRefusal(root, account, e3, tasks)).toBeUndefined();
+        // Unknown links get no budget: an end that names an attempt with no receipt, a recovery child of a run with no retained request.
+        expect(budgetRefusal(root, account, orphan(t0 + 600_000, id(t0 + 590_000, 9)), tasks)).toMatch(/^recovery lineage of end \d+ unknown \(attempt .* has no lifecycle receipt\); recover by hand$/);
+        expect(budgetRefusal(root, account, orphan(t0 + 760_000, attempt(t0 + 700_000, 400, child('run-unknown'))), tasks)).toMatch(/no retained recovery request names/);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a confirmed logout or an ordinary session between an end and its recovery child starts a new lineage', () => {
+    const c = (attemptId: string, runId: string, confirmed = false) => ({ attemptId, runId, script: RECOVERY_SCRIPT, role: 'recovery', confirmed });
+    const parent = 1794554060000, records = [{ runId: 'run-1', endedAt: parent }];
+    const childId = '1794554120000-0000000201-0000000001', end = { at: 1794554200000, reason: `exit orphaned: attempt ${childId} owner 201 gone` }, between = '1794554090000-0000000150-0000000001';
+    expect(recoveryLineage(end, [c(childId, 'run-1')], records)).toEqual({ ends: [end.at, parent] });
+    expect(recoveryLineage(end, [c(between, 'run-0', true), c(childId, 'run-1')], records)).toEqual({ ends: [end.at] });
+    expect(recoveryLineage(end, [{ attemptId: between, runId: null, script: 'scripts/goldfarm.ts', role: 'thieving', confirmed: false }, c(childId, 'run-1')], records)).toEqual({ ends: [end.at] });
+    // A coordinator job that runs the session check is an ordinary session, not a recovery child.
+    expect(recoveryLineage(end, [{ ...c(childId, 'run-1'), script: 'scripts/session-check.ts', role: null }], records)).toEqual({ ends: [end.at] });
+    expect(recoveryLineage(end, [{ attemptId: between, unreadable: true }, c(childId, 'run-1')], records)).toMatchObject({ unknown: expect.stringContaining('unreadable') });
+    expect(recoveryLineage(end, [c(childId, 'run-1')], [...records, { runId: 'run-1', endedAt: parent - 1 }])).toMatchObject({ unknown: expect.stringContaining('different ends') });
 });
