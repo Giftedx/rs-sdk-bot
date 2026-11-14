@@ -769,6 +769,20 @@ test('runes per essence: the count at the current level and the next step, 1 wit
  expect(t('Blood rune',80)).toBe('');
 });
 
+test('melee hit chance: the best style from the worn bonuses, and the range over variants',()=>{
+ const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ let bon:any=[0,67,0];
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>({'Moss giant':[[42,30,1,0,0,0,0,0]],'Giant spider':[[2,1,1,-10,-10,-10,-10,-10],[27,21,1,0,0,0,0,0]]})}),account:()=>({}),wornBonuses:()=>bon,curLevel:()=>60};
+ const t=new Function(...Object.keys(env),`${code};return meleeHitText;`)(...Object.values(env));
+ // Slash 67 at Attack 60: A = 68 x 131 = 8,908; Moss giant D = 39 x 64 = 2,496: 1 - 2,498 / 17,818 = 86%.
+ expect(t('Moss giant')).toBe('Melee hit at Attack 60: 86% with slash');
+ // Giant spider: D = 10 x 54 = 540 (level 2) or 30 x 64 = 1,920 (level 27): 97% and 89%.
+ expect(t('Giant spider')).toBe('Melee hit at Attack 60: 89–97% with slash');
+ bon=null;expect(t('Moss giant')).toBe('');
+ expect(t('Banker')).toBe('');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
