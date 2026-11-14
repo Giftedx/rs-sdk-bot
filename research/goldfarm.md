@@ -111,8 +111,10 @@ The log has one `REFUGE` line for the move. The RESULT line has `spot=` (the spo
   corner tiles (`.practice/goldfarm-noop/reach.ts`). `scripts/goldfarm.ts` counts a corner (Chebyshev distance 1)
   as near, so a corner click spends a tick on a step. Waiting one more tick after a corner click does not help:
   bench `skiller:thieving:knights`, seeds 7, 8, 9, 1,500 ticks: 16.56, 16.67, 15.58 coins a tick before; 15.23,
-  16.70, 13.47 with the wait (`noopNear` 59, 60, 71 before; 48, 49, 64 with it). Gap: a step to a side tile, or a
-  choice of the knight on a side tile, is not measured.
+  16.70, 13.47 with the wait (`noopNear` 59, 60, 71 before; 48, 49, 64 with it). Choosing a knight on a side tile
+  before a nearer one on a corner does not help either: 16.56, 15.10, 13.72 on the same seeds (`noopNear` 44, 50,
+  47, but `noopFar` 91, 101, 137 against 50, 16, 42: the side knight is often farther). Gap: a step to a side tile
+  is not measured.
 - The planner gives each market spot four thieves and the west spot four (`KNIGHT_SHARE`). The refuge rule
   moves a thief inside its run. The spot list of the planner does not rank the west spot first.
 
