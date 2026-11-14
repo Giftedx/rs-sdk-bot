@@ -10,8 +10,9 @@
 // Env: UNITS (default 5000) the most units of each item one lot buys; MIN_NET (default 50) the least coins a unit must
 // clear after the 5% seller tax and the highest shop price; COIN_RESERVE (default 10000) coins the run never spends;
 // MAX_SPEND (default 200000) the shop spend limit of one lot; WAIT_TICKS (default 0) ticks to wait at the shop for
-// restocked units. DEMO_OK=1 for the live server. The run reads each bid from the public market API before it buys and
-// again before it sells, and sells only while the bid still clears MIN_NET. Unsold units stay in the pack.
+// restocked units; MIN_LOT (default 20000) the least coins a lot at a shop could clear at the base price (lotValue), else
+// the run does not walk there. DEMO_OK=1 for the live server. The run reads each bid from the public market API before
+// it buys and again before it sells, and sells only while the bid still clears MIN_NET. Unsold units stay in the pack.
 import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openBot, finish, serverFromEnv } from '../packages/core/src/bot';
@@ -68,12 +69,25 @@ export function parseItems(arg: string): number[] | null {
     return ids.length && ids.every(n => Number.isSafeInteger(n) && n > 0) ? [...new Set(ids)] : null;
 }
 
+// A profile line names an item exactly: its pattern anchored at both ends.
+const exactly = (re: RegExp) => new RegExp(re.source.replace(/^\^?/, '^').replace(/\$?$/, '$'), re.flags);
+
+// The coins one lot at this shop could clear at the base price: each quoted item the profile sells, its margin times
+// the units the bid wants, up to `cap` units (the most one lot buys of an item: UNITS, default 5000). The shop price
+// rises as the shelf empties, so this is an upper bound; it rules out a walk to a shop that sells none of the items, or
+// too little of them.
+export function lotValue(items: readonly { re: RegExp }[], quotes: readonly Quote[], cap = 5000): number {
+    let total = 0;
+    for (const q of quotes) if (q.bid && items.some(({ re }) => exactly(re).test(q.name))) total += Math.max(0, netPerUnit(q.bid) - q.basePrice) * Math.min(cap, q.buyQuantity);
+    return Math.floor(total);
+}
+
 // Each profile item that a market row names exactly, with an open bid that clears minNet at the worst shop price.
 export function scanProfiles(profiles: Record<string, { items: { re: RegExp }[] }>, market: readonly Quote[], minNet: number) {
     const out: { profile: string; id: number; name: string; bid: number; want: number; margin: number }[] = [];
     for (const [profile, conf] of Object.entries(profiles))
         for (const { re } of conf.items)
-            for (const q of market.filter(m => new RegExp(re.source.replace(/^\^?/, '^').replace(/\$?$/, '$'), re.flags).test(m.name))) {
+            for (const q of market.filter(m => exactly(re).test(m.name))) {
                 if (!bidPlan({ quote: q, unitCost: q.basePrice, coins: Number.MAX_SAFE_INTEGER, reserve: 0, maxUnits: Number.MAX_SAFE_INTEGER, minNet }).units) continue;
                 out.push({ profile, id: q.id, name: q.name, bid: q.bid!, want: q.buyQuantity, margin: Math.floor(netPerUnit(q.bid!) - q.basePrice) });
             }
@@ -137,7 +151,7 @@ async function tickBuy(s: Session, q: Quote, want: number, reserve: number, spen
 
 async function main() {
     const num = (key: string, d: number) => { const v = Number(process.env[key] ?? d); if (!Number.isSafeInteger(v) || v < 0) throw Error(`${key} must be a whole number`); return v; };
-    const maxUnits = num('UNITS', 5000), minNet = num('MIN_NET', 50), reserve = num('COIN_RESERVE', 10_000), maxSpend = num('MAX_SPEND', 200_000), wait = num('WAIT_TICKS', 0);
+    const maxUnits = num('UNITS', 5000), minNet = num('MIN_NET', 50), reserve = num('COIN_RESERVE', 10_000), maxSpend = num('MAX_SPEND', 200_000), wait = num('WAIT_TICKS', 0), minLot = num('MIN_LOT', 20_000);
     if (process.argv[2] === '--scan') {
         const rows = scanProfiles(PROFILES, await fetchMarket(), minNet);
         for (const r of rows) console.log(`${r.profile.padEnd(14)} ${String(r.id).padStart(5)} ${r.name.padEnd(20)} bid ${r.bid} want ${r.want} margin ${r.margin}`);
@@ -233,6 +247,13 @@ async function main() {
         for (let n = 0; n < lotsWanted && !stop(); n++) {
             const key = profiles[n % profiles.length]!, quotes = n === 0 ? await quotesNow(false) : await quotesNow(true);
             if (!quotes.length) { console.log('LOT_STOP no item clears MIN_NET'); break; }
+            const value = lotValue(PROFILES[key]!.items, quotes, maxUnits);
+            if (value < minLot) {
+                console.log(`LOT_SKIP ${key}: at most ${value} coins at the base price, under MIN_LOT ${minLot}`);
+                empty++;
+                if (empty >= profiles.length) { console.log('LOT_STOP every shop sold nothing'); break; }
+                continue;
+            }
             const t0 = s.tick(), r = await runLot(key, quotes);
             total += r.gain; done++;
             console.log(`LOT ${n + 1} ${key} coins ${r.gain >= 0 ? '+' : ''}${r.gain} sold ${r.sold} ticks ${s.tick() - t0}`);

@@ -51,3 +51,19 @@ test('the market cache is stale when missing or older than 30 minutes', () => {
     utimesSync(join(root, MARKET_FILE), old, old);
     expect(marketStale(root)).toBe(true);
 });
+
+test('shopLots lists the shops whose open bids make a lot worth a walk, the largest first', async () => {
+    const { shopLots, marketRows } = await import('./market-cache');
+    const { scanProfiles, lotValue } = await import('./shop-to-bid');
+    const items = marketRows([
+        { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334, trades: 200, vwap: 230 },
+        { id: 560, name: 'Death rune', basePrice: 30, bid: 250, buyQuantity: 40, trades: 9, vwap: 260 },
+        { id: 556, name: 'Air rune', basePrice: 4, bid: 17, buyQuantity: 1_000_000, trades: 9, vwap: 20 },
+    ]);
+    expect(items[313]).toMatchObject({ base: 3, want: 38_334 });
+    const profiles = { sarim: { items: [{ re: /^fishing bait$/i }] }, betty: { items: [{ re: /death rune/i }, { re: /air rune/i }] } };
+    const lots = shopLots(items, profiles, scanProfiles, lotValue);
+    // Bait clears 1,020,500 at most (5,000 units); 40 death runes clear 8,300, under the 20,000 floor; air runes lose money.
+    expect(lots).toEqual([{ profile: 'sarim', value: 1_020_500, items: [{ id: 313, name: 'Fishing bait', bid: 218, want: 38_334, margin: 204 }] }]);
+    expect(shopLots(items, profiles, scanProfiles, lotValue, 5000).map(l => l.profile)).toEqual(['sarim', 'betty']);
+});
