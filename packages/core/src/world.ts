@@ -9,11 +9,6 @@ export type Leg =
     | { kind: 'walk'; to: Tile;tolerance?:number }
     | ({ kind: 'transport'; loc: string; option: string; at: Tile; to: Tile; exact: boolean }&TransportMeta)
     | { kind: 'travel'; travel: Travel; at: Tile | null; to: Tile };
-// The search does not carry coins spent along a route. It first lets each boat take one fare and keeps the route
-// when its fares add up to the coins held (OreElse: 40 coins, one 30-coin boat off Karamja). Otherwise it
-// searches again with a fare and one more held for every boat: an Ardougne to Port Sarim trip takes two boats.
-const oneFare = (t: Travel, a: Account) => travelAllowed(t, a);
-const fareAndOne = (t: Travel, a: Account) => travelAllowed(t, t.coins > 0 ? { ...a, coins: (a.coins ?? 0) - t.coins } : a);
 export const routeFares = (legs: readonly Leg[]) => legs.reduce((n, l) => n + (l.kind === 'travel' ? l.travel.coins : 0), 0);
 export interface Account { skills: Record<string, number>; varps: Record<string, number>; items: string[]; coins?: number; counts?: Record<string, number>; worn?:string[]; unlocks?:string[];questStages?:Record<string,number>;castlewarsTeam?:0|1;doorStates?:Record<string,boolean>;visibleLocs?:ReadonlyArray<Tile&{id:number}> }
 
@@ -335,7 +330,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
             const tileKeys=new WeakMap<Tile,string>();
             const key=(tile:Tile)=>{let value=tileKeys.get(tile);if(value===undefined){value=`${tile.x},${tile.z},${tile.level}`;tileKeys.set(tile,value);}return value;};
             const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
-            const search=(travelOk:(t:Travel,a:Account)=>boolean):ReturnType<World['route']>=>{
+            const search=(trackFares:boolean):ReturnType<World['route']>=>{
             const cache = new Map<string, number | null>();
             const walk = (a: Tile, b: Tile, tol: number,interaction?:InteractionTarget) => {
                 const k = `${key(a)}>${key(b)}:${tol}:${interaction?JSON.stringify(interaction):''}`;
@@ -356,13 +351,20 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                 const start=backward?to:from,finish=backward?from:to,goal=key(finish),root=key(start);
                 const lower=transportLowerBounds(backward?[...reversed,...jumpsBack]:[...transports,...jumps],finish,radius);
                 const h=(tile:Tile)=>lower.get(key(tile))??0;
-                type Entry={k:string;tile:Tile;g:number;f:number;prev:string|null;leg:Leg|null;walkFrom?:Tile;walkTo?:Tile;tol?:number;approach?:Transport;interaction?:InteractionTarget};
+                // Keep both cost and fares at a node: a faster arrival can leave too
+                // few coins for the next boat. Only an arrival no slower and no more
+                // expensive may discard another, in either search orientation.
+                const stateKey=(k:string,fare:number)=>`${k}|${fare}`;
+                type Entry={k:string;id:string;fare:number;tile:Tile;g:number;f:number;prev:string|null;leg:Leg|null;walkFrom?:Tile;walkTo?:Tile;tol?:number;approach?:Transport;interaction?:InteractionTarget};
                 const heap=new MinHeap<Entry>(e=>e.f),done=new Set<string>(),via=new Map<string,{prev:string;leg:Leg}>(),best=new Map<string,number>();
-                heap.push({k:root,tile:start,g:0,f:h(start),prev:null,leg:null});
+                const settled=new Map<string,{fare:number;cost:number}[]>();
+                const dominated=(k:string,fare:number,cost:number)=>(settled.get(k)??[]).some(s=>s.fare<=fare&&s.cost<=cost);
+                const rootId=stateKey(root,0);
+                heap.push({k:root,id:rootId,fare:0,tile:start,g:0,f:h(start),prev:null,leg:null});
                 try {
                 while(heap.size){
                     const e=heap.pop()!;
-                    if(done.has(e.k))continue;
+                    if(done.has(e.id)||dominated(e.k,e.fare,e.g))continue;
                     if(e.walkTo){
                         // Both orientations measure the original FORWARD edge,
                         // under the same synchronous policy and shared cache.
@@ -371,30 +373,33 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                         yield;
                         continue;
                     }
-                    done.add(e.k);best.set(e.k,e.g);
-                    if(e.prev!==null)via.set(e.k,{prev:e.prev,leg:e.leg!});
+                    done.add(e.id);best.set(e.id,e.g);
+                    settled.set(e.k,[...(settled.get(e.k)??[]).filter(s=>s.fare<e.fare||s.cost<e.g),{fare:e.fare,cost:e.g}]);
+                    if(e.prev!==null)via.set(e.id,{prev:e.prev,leg:e.leg!});
                     if(e.k===goal){
                         const legs:Leg[]=[];
-                        for(let k=goal;k!==root;k=via.get(k)!.prev)legs.push(via.get(k)!.leg);
+                        for(let k=e.id;k!==rootId;k=via.get(k)!.prev)legs.push(via.get(k)!.leg);
                         if(!backward)legs.reverse();
                         return {ok:true,legs,cost:e.g};
                     }
                     const enqueueTransport=(t:Transport,k:string,tile:Tile,approach?:Transport)=>{
-                        if(done.has(k))return;
+                        const id=stateKey(k,e.fare);if(done.has(id))return;
                         const g=e.g+TRANSPORT_COST;
 
-                        heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:legOf(t),approach});
+                        heap.push({k,id,fare:e.fare,tile,g,f:g+h(tile),prev:e.id,leg:legOf(t),approach});
                     };
                     const enqueueWalk=(tile:Tile,k:string,target:Tile,tol:number,interaction?:InteractionTarget,approach?:Transport)=>{
                         const walkFrom=backward?tile:e.tile;
-                        if(done.has(k)||k===e.k||walkFrom.level!==target.level||cheb(walkFrom,target)>MAX_LEG)return;
+                        const id=stateKey(k,e.fare);
+                        if(done.has(id)||k===e.k||walkFrom.level!==target.level||cheb(walkFrom,target)>MAX_LEG)return;
                         const g=e.g+Math.max(0,cheb(walkFrom,target)-tol);
 
-                        heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:null,walkFrom,walkTo:target,tol,interaction,approach});
+                        heap.push({k,id,fare:e.fare,tile,g,f:g+h(tile),prev:e.id,leg:null,walkFrom,walkTo:target,tol,interaction,approach});
                     };
                     const enqueueTravel=(t:Travel,tile:Tile)=>{
-                        const k=key(tile);if(done.has(k)||!travelOk(t,acct))return;
-                        const g=e.g+t.cost;heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:{kind:'travel',travel:t,at:t.from,to:t.to}});
+                        const k=key(tile),fare=e.fare+(trackFares?t.coins:0),id=stateKey(k,fare);
+                        if(done.has(id)||!travelAllowed(t,e.fare?{...acct,coins:(acct.coins??0)-e.fare}:acct))return;
+                        const g=e.g+t.cost;heap.push({k,id,fare,tile,g,f:g+h(tile),prev:e.id,leg:{kind:'travel',travel:t,at:t.from,to:t.to}});
                     };
                     if(!e.approach){
                         if(!backward)for(const t of [...travelFrom.get(e.k)??[],...(e.k===root?anywhere:[])])enqueueTravel(t,t.to);
@@ -420,7 +425,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                     }
                 }
                 return {ok:false,reason:'no_route'};
-                } finally { heap.clear(); done.clear(); via.clear(); best.clear(); lower.clear(); }
+                } finally { heap.clear(); done.clear(); via.clear(); best.clear(); settled.clear(); lower.clear(); }
             }
             const forward=run(false),backward=run(true);
             try { for(;;){
@@ -429,8 +434,11 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                 const b=backward.next();if(b.done)return b.value;
             } } finally { forward.return({ok:false,reason:'no_route'}); backward.return({ok:false,reason:'no_route'}); cache.clear(); }
             };
-            const fares=()=>{const r=search(oneFare);return r.ok&&routeFares(r.legs)<=(acct.coins??0)?r:search(fareAndOne);};
-            const policed=()=>opts.pathLength.withPolicy?opts.pathLength.withPolicy(blocked,fares):fares();
+            // An affordable unconstrained optimum is also the affordable optimum.
+            // Keep one state per tile in that common case; only an unfunded result
+            // needs the cost/fare frontier. Both passes share the route's deadline.
+            const funded=()=>{const r=search(false);return !r.ok||routeFares(r.legs)<=(acct.coins??0)?r:search(true);};
+            const policed=()=>opts.pathLength.withPolicy?opts.pathLength.withPolicy(blocked,funded):funded();
             return opts.pathLength.withDanger?opts.pathLength.withDanger(acct,from,to,policed):policed();
         },
     };

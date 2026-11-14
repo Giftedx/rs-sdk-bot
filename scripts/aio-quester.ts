@@ -4,10 +4,11 @@
 import {existsSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {runDirectChild} from '../packages/core/src/run-child';
-import {parseStep,type Step} from '../packages/core/src/chain-step';
-import {QUEST_NAMES} from './quest-chain';
+import type {Step} from '../packages/core/src/chain-step';
+import {resolveRouteStep} from './aio-route-step';
+import {QUEST_NAMES,questShortfall} from './quest-chain';
 import {QUEST_ORDERS,questSpec,questPreflight,questSavedChecks} from './quest-order';
-import {presetFor} from './quest-sweep';
+import {presetFor,needs,wornKitPlan} from './quest-sweep';
 import {walkQuestCorridor} from './quest-walk';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
 
@@ -79,32 +80,51 @@ export function resolveQuestScript(questInput: string, root = resolve(import.met
  throw Error(`aio-quester: unknown quest "${questInput}"`);
 }
 
-export function assessQuestReadiness(questInput: string, ownedItems: Readonly<Record<number, number>>, completedQuests: ReadonlySet<string> = new Set()) {
- const slug = questInput.toLowerCase().replace(/^quest[-_]/, '').replace(/\.ts$/, '');
- const script = resolveQuestScript(slug);
- if (completedQuests.has(slug)) {
-  return { slug, script, alreadyComplete: true, ready: false, missingItems: {} as Record<number, number>, startTile: null };
+const questKey = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+// Explicit gates from pinned content: king_arthur.rs2:46-49, quest_upass.rs2:80-84,
+// regicide_kings_messenger.rs2:1-3 and druidspirit_journal.rs2:23-35.
+const QUEST_PREREQUISITES: Readonly<Record<string, readonly string[]>> = {
+ grail: ['merlin'], upass: ['biohazard'], regicide: ['upass'], druidspirit: ['priest', 'priestperil'],
+};
+
+export function assessQuestReadiness(questInput: string, ownedItems: Readonly<Record<number, number>>, completedQuests: ReadonlySet<string> = new Set(), skills?: Readonly<Record<string, number>>) {
+ const script = resolveQuestScript(questInput);
+ const slug = script.split('/').at(-1)!.replace(/^quest-/, '').replace(/\.ts$/, '');
+ const completed = new Set([...completedQuests].flatMap(name => {
+  try { return [questKey(name), questKey(resolveQuestScript(name).split('/').at(-1)!.replace(/^quest-/, '').replace(/\.ts$/, ''))]; }
+  catch { return [questKey(name)]; }
+ }));
+ const isComplete = (q: string) => completed.has(questKey(q)) || !!QUEST_NAMES[q] && completed.has(questKey(QUEST_NAMES[q]!));
+ const blockers: string[] = [];
+ if (isComplete(slug) || completed.has(questKey(questInput))) {
+  return { slug, script, alreadyComplete: true, ready: false, missingItems: {} as Record<number, number>, blockers, startTile: null };
  }
+ const observedSkills = skills && Object.entries(skills).filter(([, level]) => Number.isFinite(level) && level >= 1).map(([name, level]) => ({ name, level }));
+ blockers.push(...questShortfall(slug, observedSkills).map(short => `skill ${short}`));
+ for (const q of QUEST_PREREQUISITES[slug] ?? []) if (!isComplete(q)) blockers.push(`quest ${QUEST_NAMES[q] ?? q} incomplete or unknown`);
+ if (slug === 'hero') blockers.push('Heroes requires an explicit owned pair order');
  try {
   const preset = presetFor(slug);
   const missingItems: Record<number, number> = {};
-  for (const item of preset.inventory ?? []) {
-   const have = ownedItems[item.id] ?? 0;
-   if (have < item.count) missingItems[item.id] = item.count - have;
-  }
-  if (preset.coins && (ownedItems[995] ?? 0) < preset.coins) {
-   missingItems[995] = preset.coins - (ownedItems[995] ?? 0);
+  // Share the sweep's required pack and worn kit; duplicate preset rows are summed,
+  // while optional food and walking teleports do not block an otherwise ready quest.
+  const required = wornKitPlan(slug, needs(preset, false, slug), [], [], []).need;
+  for (const [id, count] of required) {
+   const have = ownedItems[id] ?? 0;
+   if (have < count) missingItems[id] = count - have;
   }
   return {
    slug,
    script,
    alreadyComplete: false,
-   ready: Object.keys(missingItems).length === 0,
+   ready: blockers.length === 0 && Object.keys(missingItems).length === 0,
    missingItems,
+   blockers,
    startTile: preset.position,
   };
  } catch {
-  return { slug, script, alreadyComplete: false, ready: true, missingItems: {} as Record<number, number>, startTile: null };
+  blockers.push('quest sweep preparation unavailable');
+  return { slug, script, alreadyComplete: false, ready: false, missingItems: {} as Record<number, number>, blockers, startTile: null };
  }
 }
 
@@ -114,40 +134,50 @@ export function prioritizeQuestsForAccount(
  ownedItems: Readonly<Record<number, number>>,
  completedQuests: ReadonlySet<string> = new Set(),
  candidates: readonly string[] = Object.keys(QUEST_NAMES),
+ skills?: Readonly<Record<string, number>>,
 ) {
  const evaluations = candidates
-  .map(slug => assessQuestReadiness(slug, ownedItems, completedQuests))
+  .map(slug => assessQuestReadiness(slug, ownedItems, completedQuests, skills))
   .filter(e => !e.alreadyComplete);
  const readyNow = evaluations
   .filter(e => e.ready)
   .map(e => ({ ...e, step: resolveQuesterStep('sweep', [e.slug]) }));
  const needsItems = evaluations
-  .filter(e => !e.ready)
+  .filter(e => !e.ready && !e.blockers.length)
   .sort((a, b) => Object.keys(a.missingItems).length - Object.keys(b.missingItems).length);
- return { readyNow, needsItems };
+ return { readyNow, needsItems, blocked: evaluations.filter(e => e.blockers.length > 0) };
 }
 
 export function resolveQuesterStep(modeOrQuest: string, rest: readonly string[] = [], root = resolve(import.meta.dir, '..')): Step {
  const key = modeOrQuest.toLowerCase().replace(/^--mode=/, '').replace(/^--quest=/, '');
  const modeSpec = QUESTER_MODES.find(m => m.mode === key);
  if (modeSpec) {
-  return parseStep([modeSpec.script, ...rest].join(' '));
+  // Generic pipelines and hosts prepend the account to every Step. Keep order-file
+  // workers behind this adapter, which removes that account before raw dispatch.
+  if (modeSpec.orderFile) {
+   const order = resolveRouteStep(modeSpec, rest);
+   if (order.args.length !== 1) throw Error(`aio-quester ${key} requires <order.json>`);
+   return {script: 'scripts/aio-quester.ts', args: [key, ...order.args], env: order.env};
+  }
+  return resolveRouteStep(modeSpec, rest);
  }
  if (key === 'quest' && rest[0]) {
   const script = resolveQuestScript(rest[0], root);
-  return parseStep([script, ...rest.slice(1)].join(' '));
+  return resolveRouteStep({script}, rest.slice(1));
  }
  const script = resolveQuestScript(key, root);
- return parseStep([script, ...rest].join(' '));
+ return resolveRouteStep({script}, rest);
 }
 
 export async function runAioQuester(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {
  if (!account) throw Error('aio-quester requires account');
  const [first, ...rest] = args;
  if (!first) throw Error('aio-quester requires <mode|quest>');
- const step = resolveQuesterStep(first, rest);
- const orderFile = QUESTER_MODES.find(m => m.mode === first.toLowerCase())?.orderFile;
- if (orderFile && !step.args.length) throw Error(`aio-quester ${first} requires <order.json>`);
+ const key = first.toLowerCase().replace(/^--mode=/, '').replace(/^--quest=/, '');
+ const mode = QUESTER_MODES.find(m => m.mode === key);
+ const resolved = resolveQuesterStep(first, rest);
+ const step = mode?.orderFile ? resolveRouteStep(mode, rest) : resolved;
+ const orderFile = mode?.orderFile;
  return runDirectChild(orderFile ? [step.script, ...step.args] : [step.script, account, ...step.args], { ...env, ...step.env });
 }
 

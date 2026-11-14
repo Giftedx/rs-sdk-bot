@@ -95,10 +95,10 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
    args: [],
    env: { TARGET: 'cow', CAP: '3000', TRAIN_SKILL: 'Defence', TARGET_LEVEL: '40', MAX_KILLS: '5' },
   });
-  expect(resolveBossStep('kbd', ['5000'])).toEqual({
+  expect(resolveBossStep('kbd', ['500'])).toEqual({
    script: 'scripts/microbot-b-kbd.ts',
-   args: ['5000'],
-   env: {},
+   args: [],
+   env: {CAP: '500'},
   });
   expect(resolvePvpStep('pilot')).toEqual({
    script: 'scripts/pk-live/live-pilot.ts',
@@ -180,10 +180,10 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
    [45, 60, 'maple'],
   ]);
 
-  // Auto-fighter band selector (Chicken -> Cow -> Giant)
-  expect(planAutoFighterBand({ Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10 }).target).toBe('chicken');
+  // Auto-fighter band selector (staged cows -> troopers)
+  expect(planAutoFighterBand({ Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10 }).target).toBe('cow');
   expect(planAutoFighterBand({ Attack: 20, Strength: 20, Defence: 20, Hitpoints: 25 }).target).toBe('cow');
-  expect(planAutoFighterBand({ Attack: 40, Strength: 40, Defence: 40, Hitpoints: 42 }).target).toBe('giant');
+  expect(planAutoFighterBand({ Attack: 40, Strength: 40, Defence: 40, Hitpoints: 42 }).target).toBe('cow');
 
   // Boss readiness check (KBD & Trawler)
   const kbdCheck = assessBossReadiness('kbd', { skills: { Attack: 60, Defence: 40 }, ownedItems: {} });
@@ -252,10 +252,10 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
   expect(prioritized.readyNow.map(q => q.slug)).toEqual(['cook']);
   expect(prioritized.needsItems.map(q => q.slug)).toEqual(['hetty']);
 
-  expect(recommendNextAioJob({ name: 'Fresh', skills: { Thieving: 1 }, ownedItems: {} }, 'goldfarm').step.script).toBe('scripts/generated/thieving60.ts');
-  expect(recommendNextAioJob({ name: 'Knight', skills: { Thieving: 60 }, ownedItems: { 379: 25 } }, 'goldfarm').step.script).toBe('scripts/goldfarm.ts');
-  expect(recommendNextAioJob({ name: 'Trainee', skills: { Attack: 20, Strength: 20, Defence: 20, Hitpoints: 25 }, ownedItems: {} }, 'pk-tribrid').step.script).toBe('scripts/gather-combat.ts');
-  expect(recommendNextAioJob({ name: 'Quester', skills: {}, ownedItems: { 1944: 1, 1927: 1, 1933: 1 } }, 'quest-sweep').step.script).toBe('scripts/quest-sweep.ts');
+  expect(recommendNextAioJob({ name: 'Fresh', skills: { Thieving: 1 }, ownedItems: {} }, 'goldfarm').step?.script).toBe('scripts/generated/thieving60.ts');
+  expect(recommendNextAioJob({ name: 'Knight', skills: { Thieving: 60 }, ownedItems: { 379: 25 } }, 'goldfarm').step?.script).toBe('scripts/goldfarm.ts');
+  expect(recommendNextAioJob({ name: 'Trainee', skills: { Attack: 20, Strength: 20, Defence: 20, Hitpoints: 25 }, ownedItems: {} }, 'pk-tribrid').step?.script).toBe('scripts/gather-combat.ts');
+  expect(recommendNextAioJob({ name: 'Quester', skills: {}, ownedItems: { 1944: 1, 1927: 1, 1933: 1 } }, 'quest-sweep').step?.script).toBe('scripts/quest-sweep.ts');
   expect(recommendNextAioJob({
    name: 'AllRounder',
    skills: {
@@ -264,7 +264,7 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
     Crafting: 50, Smithing: 50, Mining: 50, Herblore: 50, Agility: 50, Thieving: 50, Runecraft: 50,
    },
    ownedItems: {},
-  }, 'max-overall').step.script).toBe('scripts/firemaking-order.ts');
+  }, 'max-overall').step?.script).toBe('scripts/firemaking-order.ts');
   // Banked production scanner across all 230+ artisan recipes
   const banked = discoverBankedProduction(
    { Cooking: 80, Crafting: 50, Fletching: 60, Smithing: 40 },

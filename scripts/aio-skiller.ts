@@ -6,7 +6,8 @@ import {existsSync,readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {openBot,finish} from '../packages/core/src/bot';
 import {runDirectChild} from '../packages/core/src/run-child';
-import {parseStep,type Step} from '../packages/core/src/chain-step';
+import type {Step} from '../packages/core/src/chain-step';
+import {resolveRouteStep} from './aio-route-step';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {planBankTripSchedule} from '../packages/core/src/bank-trip';
 import {runBankJob,runBankProfile,validateBankJob,type BankJob} from './microbot-bank-jobs';
@@ -86,8 +87,8 @@ export interface SkillerRouteSpec {
 export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  // Fishing
  {skill:'fishing',method:'shark',script:'scripts/shark-supply.ts',description:'Catherby shark harpoon + cook + bank order'},
- {skill:'fishing',method:'cage',script:'scripts/gather-fish.ts',defaultArgs:['cage','3000'],description:'Catherby lobster cage + bank'},
- {skill:'fishing',method:'harpoon',script:'scripts/gather-fish.ts',defaultArgs:['harpoon','3000'],description:'Catherby tuna/swordfish harpoon + bank'},
+ {skill:'fishing',method:'cage',script:'scripts/gather-fish.ts',defaultArgs:['cage'],defaultEnv:{CAP:'3000'},description:'Catherby lobster cage + bank'},
+ {skill:'fishing',method:'harpoon',script:'scripts/gather-fish.ts',defaultArgs:['harpoon'],defaultEnv:{CAP:'3000'},description:'Catherby tuna/swordfish harpoon + bank'},
  {skill:'fishing',method:'fishcook',script:'scripts/fishcook.ts',description:'Lumbridge 3-tick fly fishing + general store fireplace cooking + Draynor bank'},
  {skill:'fishing',method:'village',script:'scripts/microbot-village-fishing.ts',description:'Barbarian Village fly/bait fishing with drop/cook/bank modes'},
  {skill:'fishing',method:'staged',script:'scripts/microbot-b-fishing.ts',description:'Staged native fishing across all 10 FISH_PROFILES methods'},
@@ -106,6 +107,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'woodcutting',method:'loop',script:'scripts/wc-loop.ts',description:'Continuous woodcutting loop'},
  // Firemaking
  {skill:'firemaking',method:'order',script:'scripts/firemaking-order.ts',description:'Line firemaking order from banked logs (normal/oak/willow/maple/yew/magic)'},
+ {skill:'firemaking',method:'line',script:'scripts/firemaking-line.ts',description:'Train a runner on a firemaking line supplied by named owned helper accounts'},
  {skill:'firemaking',method:'ge',script:'scripts/microbot-ge-firemaking.ts',description:'GE-supplied firemaking batch'},
  // Fletching
  {skill:'fletching',method:'arrows',script:'scripts/fletch-arrows.ts',description:'Fletch shafts, headless arrows, and tipped arrows (bronze..rune)'},
@@ -228,7 +230,8 @@ export interface ProgressiveBand {
  step: Step;
 }
 
-const PROGRESSIVE_TIERS: Readonly<Record<string, readonly { level: number; method: string; xp: number; args?: readonly string[]; env?: Readonly<Record<string, string>> }[]>> = {
+type ProgressiveTier = { level: number; method: string; xp: number; args?: readonly string[]; env?: Readonly<Record<string, string>>; job?: {family: BankJob['family'];recipe: string;members?: boolean;bank?: BankJob['bank'];site?: BankJob['site']} };
+const PROGRESSIVE_TIERS: Readonly<Record<string, readonly ProgressiveTier[]>> = {
  firemaking: [
   { level: 1, method: 'order', xp: 40, env: { LOG: 'normal' } },
   { level: 15, method: 'order', xp: 60, env: { LOG: 'oak' } },
@@ -238,45 +241,44 @@ const PROGRESSIVE_TIERS: Readonly<Record<string, readonly { level: number; metho
   { level: 75, method: 'order', xp: 303.8, env: { LOG: 'magic' } },
  ],
  woodcutting: [
-  { level: 1, method: 'edgeville', xp: 25, env: { LOG: 'normal' } },
-  { level: 15, method: 'edgeville', xp: 37.5, env: { LOG: 'oak' } },
-  { level: 60, method: 'yews', xp: 175, env: { TREE: 'yew' } },
+  { level: 1, method: 'fresh45', xp: 25 },
+  { level: 15, method: 'fresh45', xp: 37.5 },
+  { level: 30, method: 'fresh45', xp: 67.5 },
  ],
  fishing: [
-  { level: 1, method: 'fishcook', xp: 10 },
-  { level: 20, method: 'fishcook', xp: 60 },
-  { level: 40, method: 'cage', xp: 90, args: ['cage', '3000'] },
-  { level: 76, method: 'shark', xp: 110 },
+  { level: 1, method: 'fly30', xp: 10 },
+  { level: 20, method: 'fly30', xp: 50 },
  ],
  cooking: [
-  { level: 1, method: 'stock', xp: 30, env: { RAW: 'chicken' } },
-  { level: 15, method: 'stock', xp: 70, env: { RAW: 'trout' } },
-  { level: 35, method: 'wine', xp: 200 },
-  { level: 40, method: 'food', xp: 120, args: ['1500', 'lobster'] },
-  { level: 80, method: 'food', xp: 210, args: ['1500', 'shark'] },
+  { level: 1, method: 'batch', xp: 30, job: {family:'cooking',recipe:'cooking_generic_chicken'} },
+  { level: 15, method: 'batch', xp: 70, job: {family:'cooking',recipe:'cooking_generic_trout'} },
+  { level: 35, method: 'mixed-wine', xp: 200, job: {family:'wine',recipe:'wine'} },
  ],
  fletching: [
   { level: 1, method: 'arrows', xp: 5, args: ['3000', 'shafts'] },
-  { level: 10, method: 'worker', xp: 10 },
-  { level: 55, method: 'arrows', xp: 112.5, args: ['3000', 'arrows', 'mithril'] },
-  { level: 75, method: 'arrows', xp: 187.5, args: ['3000', 'arrows', 'rune'] },
+  { level: 5, method: 'worker', xp: 5, job: {family:'inventory',recipe:'cut-bow:unstrung_shortbow',members:true} },
+  { level: 10, method: 'worker', xp: 10, job: {family:'inventory',recipe:'cut-bow:unstrung_longbow',members:true} },
+  { level: 25, method: 'worker', xp: 25, job: {family:'inventory',recipe:'cut-bow:unstrung_oak_longbow',members:true} },
+  { level: 40, method: 'worker', xp: 41.5, job: {family:'inventory',recipe:'cut-bow:unstrung_willow_longbow',members:true} },
+  { level: 55, method: 'worker', xp: 58.3, job: {family:'inventory',recipe:'cut-bow:unstrung_maple_longbow',members:true} },
+  { level: 70, method: 'worker', xp: 75, job: {family:'inventory',recipe:'cut-bow:unstrung_yew_longbow',members:true} },
+  { level: 85, method: 'worker', xp: 91.5, job: {family:'inventory',recipe:'cut-bow:unstrung_magic_longbow',members:true} },
  ],
  mining: [
-  { level: 1, method: 'ore', xp: 17.5, env: { ORE: 'copper' } },
-  { level: 15, method: 'ore', xp: 35, env: { ORE: 'iron' } },
-  { level: 85, method: 'lava-maze', xp: 125 },
+  { level: 1, method: 'ore', xp: 17.5, job: {family:'mining',recipe:'copper_rock_table',bank:{x:3253,z:3420,level:0},site:{x:3286,z:3368,level:0}} },
+  { level: 15, method: 'ore', xp: 35, job: {family:'mining',recipe:'iron_rock_table',bank:{x:3253,z:3420,level:0},site:{x:3286,z:3368,level:0}} },
  ],
  smithing: [
-  { level: 1, method: 'smelt', xp: 6.2, args: ['3000', 'bronze'] },
-  { level: 15, method: 'smelt', xp: 12.5, args: ['3000', 'iron'] },
-  { level: 30, method: 'smelt', xp: 17.5, args: ['3000', 'steel'] },
-  { level: 40, method: 'smelt', xp: 22.5, args: ['3000', 'gold'] },
+  { level: 1, method: 'smelt', xp: 6.2, args: ['20000', 'bronze'] },
+  { level: 15, method: 'smelt', xp: 12.5, args: ['20000', 'iron'] },
+  { level: 30, method: 'smelt', xp: 17.5, args: ['20000', 'steel'] },
+  { level: 40, method: 'smelt', xp: 22.5, args: ['20000', 'gold'] },
  ],
  crafting: [
-  { level: 1, method: 'soften-clay', xp: 15 },
-  { level: 5, method: 'jewellery', xp: 15 },
+  { level: 1, method: 'inventory', xp: 13.8, job: {family:'inventory',recipe:'leather:leather_gloves'} },
+  { level: 5, method: 'jewellery', xp: 15, job: {family:'jewellery',recipe:'gold_ring'} },
   { level: 10, method: 'bowstrings', xp: 15 },
-  { level: 46, method: 'glass', xp: 52.5 },
+  { level: 46, method: 'inventory', xp: 52.5, job: {family:'inventory',recipe:'glass:stafforb',members:true} },
  ],
  herblore: [
   { level: 3, method: 'potions', xp: 25, env: { RECIPE: 'attack' } },
@@ -285,9 +287,8 @@ const PROGRESSIVE_TIERS: Readonly<Record<string, readonly { level: number; metho
  ],
  magic: [
   { level: 1, method: 'order', xp: 11.5 },
-  { level: 21, method: 'items', xp: 31, env: { SPELL: 'low_alchemy' } },
-  { level: 43, method: 'items', xp: 53, env: { SPELL: 'superheat' } },
-  { level: 55, method: 'items', xp: 65, env: { SPELL: 'high_alchemy' } },
+  { level: 21, method: 'alch-train', xp: 31 },
+  { level: 55, method: 'alch-train', xp: 65 },
  ],
  agility: [
   { level: 1, method: 'order', xp: 86.5, args: ['gnome'] },
@@ -296,32 +297,42 @@ const PROGRESSIVE_TIERS: Readonly<Record<string, readonly { level: number; metho
  ],
  thieving: [
   { level: 1, method: 'bootstrap55', xp: 8 },
-  { level: 55, method: 'knights', xp: 84.3 },
+  { level: 55, method: 'bootstrap55', xp: 84.3 },
  ],
  runecraft: [
   { level: 1, method: 'bank-craft', xp: 5 },
-  { level: 44, method: 'nature', xp: 9 },
  ],
  prayer: [
   { level: 1, method: 'bury', xp: 4.5, env: { BONE_ID: '526' } },
-  { level: 15, method: 'bury', xp: 15, env: { BONE_ID: '532' } },
- ],
- foraging: [
-  { level: 1, method: 'flax', xp: 1 },
+  { level: 43, method: 'bury', xp: 15, env: { BONE_ID: '532' } },
  ],
 };
+
+// Inline profiles keep a generated progression self-contained when a chain or swarm executes it.
+export function bankJobStep(job: BankJob): Step {
+ validateBankJob(job);
+ return {script:'scripts/aio-skiller.ts',args:['bank-job',`--job=${encodeURIComponent(JSON.stringify(job))}`],env:{}};
+}
+
+export function readBankJobArgument(argument: string): BankJob {
+ const job = JSON.parse(argument.startsWith('--job=') ? decodeURIComponent(argument.slice(6)) : readFileSync(resolve(argument),'utf8')) as BankJob;
+ validateBankJob(job);
+ return job;
+}
 
 // Compute an automatic level-band progression from currentLevel -> targetLevel (accounting for server xpRate, default 25x).
 export function planProgressiveSkiller(skillInput: string, currentLevel: number, targetLevel: number, xpRate = 25): ProgressiveBand[] {
  const skill = skillInput.toLowerCase();
- if (!Number.isSafeInteger(currentLevel) || currentLevel < 1 || !Number.isSafeInteger(targetLevel) || targetLevel <= currentLevel || targetLevel > 99 || xpRate <= 0) {
+ if (!Number.isSafeInteger(currentLevel) || currentLevel < 1 || !Number.isSafeInteger(targetLevel) || targetLevel <= currentLevel || targetLevel > 99 || !Number.isFinite(xpRate) || xpRate <= 0) {
   throw Error('aio-skiller: invalid progressive level bounds');
  }
  const tiers = PROGRESSIVE_TIERS[skill];
  if (!tiers) {
-  const step = resolveSkillerStep(skill, undefined, [`TARGET_LEVEL=${targetLevel}`]);
-  return [{ skill, method: DEFAULT_METHOD[skill] ?? 'default', fromLevel: currentLevel, toLevel: targetLevel, unlockLevel: 1, xpPerUnit: 25 * xpRate, unitsNeeded: 1, step }];
+  throw Error(`aio-skiller: no XP progression for ${skill}`);
  }
+ if (currentLevel < tiers[0]!.level) throw Error(`aio-skiller: ${skill} requires its level ${tiers[0]!.level} quest unlock`);
+ // The owned prayer worker also verifies Protect from Melee; its first accepted milestone is 43.
+ if(skill==='prayer')targetLevel=Math.max(43,targetLevel);
  const bands: ProgressiveBand[] = [];
  let cursor = currentLevel;
  while (cursor < targetLevel) {
@@ -332,8 +343,14 @@ export function planProgressiveSkiller(skillInput: string, currentLevel: number,
   const unitsNeeded = Math.max(1, Math.ceil(xpNeeded / effectiveXp));
   const extra = [
    ...(active.args ?? []),
-   ...(skill === 'agility' ? [String(nextUnlock)] : []),
+   ...(['agility','runecraft','cooking','magic'].includes(skill) && (skill!=='magic'||active.method==='alch-train') ? [String(nextUnlock)] : []),
    `TARGET_LEVEL=${nextUnlock}`,
+   'CAP=20000',
+   ...(['woodcutting','fishing','thieving'].includes(skill) ? [`TARGET=${nextUnlock}`] : []),
+   ...(skill==='fletching' ? [`MAX_MAKE=${Math.min(25,unitsNeeded)}`,'LOG_RESERVE=0','BANK_KNIFE=1'] : []),
+   ...(skill==='crafting' && active.method==='bowstrings' ? [`MAX_MAKE=${unitsNeeded}`,'RAW_RESERVE=0'] : []),
+   ...(skill==='smithing' ? [`MAX_MAKE=${unitsNeeded}`,'ORE_RESERVE=0'] : []),
+   ...(skill==='prayer' ? [`MAX_BURY=${unitsNeeded}`] : []),
    ...Object.entries(active.env ?? {}).map(([k, v]) => `${k}=${v}`),
   ];
   bands.push({
@@ -344,7 +361,7 @@ export function planProgressiveSkiller(skillInput: string, currentLevel: number,
    unlockLevel: active.level,
    xpPerUnit: effectiveXp,
    unitsNeeded,
-   step: resolveSkillerStep(skill, active.method, extra),
+   step: active.job ? bankJobStep({family:active.job.family,recipe:active.job.recipe,target:unitsNeeded,batch:13,cap:20000,returnTicks:300,members:active.job.members??false,reserve:0,...active.job.bank?{bank:active.job.bank}:{},...active.job.site?{site:active.job.site}:{}}) : resolveSkillerStep(skill, active.method, extra),
   });
   cursor = nextUnlock;
  }
@@ -451,6 +468,11 @@ export { planBankTripSchedule };
 
 export function resolveSkillerStep(skillInput: string, methodInput?: string, rest: readonly string[] = []): Step {
  const skill = skillInput.toLowerCase().replace(/^--skill=/, '');
+ if(skill==='bank-job'){
+  const jobs=[...methodInput?[methodInput]:[],...rest];
+  if(!jobs.length)throw Error('aio-skiller bank-job requires <job.json>');
+  return{script:'scripts/aio-skiller.ts',args:['bank-job',...jobs],env:{}};
+ }
  const hasExplicitMethod = methodInput && !methodInput.includes('=') && !/^\d+$/.test(methodInput);
  const method = (hasExplicitMethod ? methodInput.toLowerCase().replace(/^--method=/, '') : DEFAULT_METHOD[skill]) ?? '';
  const extra = hasExplicitMethod ? rest : methodInput ? [methodInput, ...rest] : rest;
@@ -460,9 +482,7 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
   const known = SKILLER_ROUTES.filter(r => r.skill === skill).map(r => r.method);
   throw Error(known.length ? `aio-skiller: unknown ${skill} method "${method}"; known: ${known.join(', ')}` : `aio-skiller: unknown skill "${skill}"; known: ${Object.keys(DEFAULT_METHOD).join(', ')}`);
  }
- const argsTokens = extra.length ? extra : [...(route.defaultArgs ?? [])];
- const step = parseStep([route.script, ...argsTokens].join(' '));
- return { script: step.script, args: step.args, env: { ...(route.defaultEnv ?? {}), ...step.env } };
+ return resolveRouteStep(route, extra);
 }
 
 export async function runAioSkiller(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {
@@ -472,8 +492,7 @@ export async function runAioSkiller(account: string, args: readonly string[], en
  if (first === 'bank-job') {
   if (!second) throw Error('aio-skiller bank-job requires <job.json>');
   // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.
-  const jobs = [second, ...rest].map(file => JSON.parse(readFileSync(resolve(file), 'utf8')) as BankJob);
-  jobs.forEach(job => validateBankJob(job));
+  const jobs = [second, ...rest].map(readBankJobArgument);
   let stopped = false;
   const s = await openBot(account, { onStop: async () => { stopped = true; } });
   let ok = false, summary = '';

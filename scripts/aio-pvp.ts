@@ -2,7 +2,8 @@
 // Usage:
 //   bun scripts/aio-pvp.ts <account> <mode> [arg ...] [KEY=value ...]
 import {runDirectChild} from '../packages/core/src/run-child';
-import {parseStep,type Step} from '../packages/core/src/chain-step';
+import type {Step} from '../packages/core/src/chain-step';
+import {resolveRouteStep} from './aio-route-step';
 import {
  ITEMS as PVP_ITEMS,SPELLS as PVP_SPELLS,PRAYER as PVP_PRAYER,
  attackable,bestFood,castableFreeze,defaultSpec,fightPlayer,nextTick,wildernessLevel,
@@ -94,11 +95,9 @@ export function resolvePvpStep(modeInput: string, rest: readonly string[] = []):
  if (!spec) {
   throw Error(`aio-pvp: unknown mode "${mode}"; known: ${PVP_MODES.map(m => m.mode).join(', ')}`);
  }
- const tokens = rest.length ? rest : [...(spec.defaultArgs ?? [])];
  // pk-roam.ts and pk-army.ts read their KEY=value settings from argv, so they stay arguments.
- if (spec.mode === 'roam' || spec.mode === 'army') return { script: spec.script, args: [...tokens], env: { ...(spec.defaultEnv ?? {}) } };
- const step = parseStep([spec.script, ...tokens].join(' '));
- return { script: step.script, args: step.args, env: { ...(spec.defaultEnv ?? {}), ...step.env } };
+ if (spec.mode === 'roam' || spec.mode === 'army') return { script: spec.script, args: rest.length ? [...rest] : [...(spec.defaultArgs ?? [])], env: { ...(spec.defaultEnv ?? {}) } };
+ return resolveRouteStep(spec, rest);
 }
 
 export async function runAioPvp(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {

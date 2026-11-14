@@ -2,7 +2,8 @@
 // Usage:
 //   bun scripts/aio-market.ts <account> <mode> [arg ...] [KEY=value ...]
 import {runDirectChild} from '../packages/core/src/run-child';
-import {parseStep,type Step} from '../packages/core/src/chain-step';
+import type {Step} from '../packages/core/src/chain-step';
+import {resolveRouteStep} from './aio-route-step';
 import {
  orderQuantity,orderEscrow,orderAccounting,earthShopFallback,shopFallbackSpent,
  validateRequest,orderItemMatcher,orderPaths,type ItemRequest,type ItemOrder,
@@ -96,9 +97,7 @@ export function resolveMarketStep(modeInput: string, rest: readonly string[] = [
  if (!spec) {
   throw Error(`aio-market: unknown mode "${mode}"; known: ${MARKET_MODES.map(m => m.mode).join(', ')}`);
  }
- const tokens = rest.length ? rest : [...(spec.defaultArgs ?? [])];
- const step = parseStep([spec.script, ...tokens].join(' '));
- return { script: step.script, args: step.args, env: { ...(spec.defaultEnv ?? {}), ...step.env } };
+ return resolveRouteStep(spec, rest);
 }
 
 export async function runAioMarket(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {
