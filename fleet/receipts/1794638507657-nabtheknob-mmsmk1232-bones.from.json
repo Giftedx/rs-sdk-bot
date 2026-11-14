@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794638507657-nabtheknob-mmsmk1232-bones",
+ "account": "NabTheKnob",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 85,
+ "claim": "e7615edd-5baa-402a-b5ea-d68a8154e5fb",
+ "count": 85,
+ "ok": true,
+ "at": 1794638725899,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 85,
+  "after": 0
+ },
+ "bank": {
+  "count": 85,
+  "at": 1794638707550
+ },
+ "logout": {
+  "attemptId": "1794638514175-0000024872-0000000001",
+  "at": 1794638725889,
+  "sha256": "6633216f090dae758710b6a1ea17b8d9caf33b29d79d29b4f8383575b79021c7"
+ },
+ "screen": true
+}

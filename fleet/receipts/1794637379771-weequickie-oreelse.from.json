@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794637379771-weequickie-oreelse",
  "account": "WeeQuickie",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "6b21a9ca-9b55-4cbd-97ae-44465d748f00",
  "count": 0,
  "ok": false,
- "at": 1794637385782,
- "detail": "trade claimed"
+ "at": 1794637399433,
+ "detail": "Error: route to 3013, 3356: precondition no route to 3013,3356,0",
+ "logout": {
+  "attemptId": "1794637385791-0000005040-0000000001",
+  "at": 1794637399422,
+  "sha256": "404fea9a9dbb452c69d904a91ca4dc6b8cc46c525a6a4d973c91bd933ac26f0b"
+ },
+ "screen": false
 }

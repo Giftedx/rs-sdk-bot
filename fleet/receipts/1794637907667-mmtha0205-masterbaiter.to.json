@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794637907667-mmtha0205-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 18186,
+ "claim": "4862bc8d-b0d9-4f08-8fd9-bb0b17aad0b2",
+ "count": 0,
+ "ok": false,
+ "at": 1794640309124,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794637913766-0000020112-0000000001",
+  "at": 1794640309002,
+  "sha256": "89794b928404c0b40c73bb716ed7d3a990aa9bfa2e61c3bc7720b631984b7b69"
+ },
+ "screen": false
+}
