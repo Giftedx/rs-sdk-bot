@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794621873171,
+ "at": 1794622006063,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -433,6 +433,13 @@
    "resources": [
     "knight:2669,3298"
    ]
+  },
+  {
+   "account": "Mightyrod",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
+   "role": "pvp"
   },
   {
    "account": "Ballspinner",

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794621595315-mightyrod-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 4,
+ "claim": "38587717-401e-4463-86e4-f251cf38a8d2",
+ "count": 0,
+ "ok": false,
+ "at": 1794622004310,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794621962951-0000029052-0000000001",
+  "at": 1794622004299,
+  "sha256": "19333579c5712b7ecafd8b1a90c88e3453b3fa457c97e5f0f0c6510c8c98eb3f"
+ },
+ "screen": false
+}
