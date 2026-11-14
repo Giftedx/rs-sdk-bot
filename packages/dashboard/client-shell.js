@@ -996,7 +996,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // the first count is the most time left. aggroHunters: the NPC names that spawn within 12 tiles on the account's plane
   // and hunt it (npc-defence.json hunt kind: 1 up to combat 2 x vislevel outside the Wilderness, 2 all, 3 never stops).
   const aggro=new Map();
-  function aggroTrack(b,now){if(!b?.inWorld||!b.pos)return null;const x=b.pos.x,z=b.pos.z,t=aggro.get(b.name),inside=c=>x>=c[0]&&x<c[0]+21&&z>=c[1]&&z<c[1]+21,c=[x-10,z-10];
+  // An account out of the world loses its record: the server keeps its count in the save (Player.ts), so offline time
+  // does not count, and the next read starts a new "at most" count.
+  function aggroTrack(b,now){if(!b?.inWorld||!b.pos){if(b?.name)aggro.delete(b.name);return null;}const x=b.pos.x,z=b.pos.z,t=aggro.get(b.name),inside=c=>x>=c[0]&&x<c[0]+21&&z>=c[1]&&z<c[1]+21,c=[x-10,z-10];
     if(!t){const n={zones:[c,c],since:now,first:true};aggro.set(b.name,n);return n;}
     if(inside(t.zones[0])||inside(t.zones[1]))return t;
     const jump=Math.max(Math.abs(c[0]-t.zones[0][0]),Math.abs(c[1]-t.zones[0][1]))>40;

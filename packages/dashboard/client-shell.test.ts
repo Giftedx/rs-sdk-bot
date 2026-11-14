@@ -934,6 +934,8 @@ test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spa
  // Back west into the old area (kept as the second area): the count goes on.
  b.pos.x=3165;expect(t.aggroText(b,200e3).text).toBe('5:50');
  expect(t.aggroText(b,550e3)).toMatchObject({text:'safe',red:false});
+ // A logout drops the record: back at the same tile much later, a new "at most" count, not "safe".
+ t.aggroTrack({...b,inWorld:false},600e3);const back=t.aggroText(b,5000e3);expect(back.text).toBe('6:40');expect(back.title).toContain('at most');
  // Combat 85 is too strong for the Moss giant outside the Wilderness.
  expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
 });
