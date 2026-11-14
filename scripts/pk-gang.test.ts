@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { gangSummary, gangValid, packOf, pickAttacker, pickRunner, startsAttack, type GangResult } from './pk-gang';
+import { gangSummary, gangValid, packOf, pickAttacker, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -58,7 +58,10 @@ test('the ganker kit is what the three accounts wear, at combat 126, and no buil
     expect(kitSwitches('ganker-dds')).toEqual({ melee: [itemId('dragon_dagger_p')] });
     expect(kitVarps('ganker-dds')).toEqual({ 147: 6, 300: 1000 });
     expect(kitRoute('ganker-dds')).toEqual({ quests: ['Lost City'], breaks: [] });
-    expect(Object.keys(KITS).filter(k => KITS[k]!.rival).sort()).toEqual(['ganker-dds', 'ganker-max']);
+    expect(Object.keys(KITS).filter(k => KITS[k]!.rival).sort()).toEqual(['ganker-dds', 'ganker-dds-skull', 'ganker-max']);
+    // The skulled copy: the same items, and the skull of the live gang (varp 78) for its loot.
+    expect(kitItems('ganker-dds-skull')).toEqual(kitItems('ganker-dds'));
+    expect(kitVarps('ganker-dds-skull')).toEqual({ 78: 2000, 147: 6, 300: 1000 });
     // The most the gang can be: the same worn items and levels, with potions and a full pack.
     expect(kitItems('ganker-max').equipment).toEqual(equipment);
     expect(kitSkills('ganker-max')).toEqual(kitSkills('ganker-dds'));
@@ -156,4 +159,11 @@ test('the gang that holds its protect prayer is the gang with one more option, a
     expect(PROFILES['ganker-sticky']).toEqual({ ...PROFILES.ganker!, overheadHold: 20 });
     const c = benchCases().find(k => k.key === 'extra:gang-ganker-max-gang-walker-sticky-near-x2')!;
     expect(c.scriptArgs).toEqual(expect.arrayContaining(['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1']));
+});
+
+test('plannedPickups takes the wanted stacks within the radius, nearest first', () => {
+    const g = (id: number, distance: number) => ({ id, count: 3, x: 3078 + distance, z: 3640, distance });
+    const ids = new Set([884, ...PICKUP_ITEMS]);
+    expect(plannedPickups([g(884, 5), g(526, 1), g(1231, 2), g(884, 15)], ids, 12).map(p => [p.id, p.distance])).toEqual([[1231, 2], [884, 5]]);
+    expect(PICKUP_ITEMS).toContain(itemId('dragon_dagger_p'));
 });

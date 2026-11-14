@@ -1112,6 +1112,69 @@ The levers for our side: `cureNow` (an antipoison in the first tick after the po
 `chaseBelow` (a run after a target that flees with a low health bar), and `specBelow` (keep the special energy for a
 low target).
 
+### The cost of a kill
+
+What one kill of a gang account uses, against the live-like gang (profile `ganker-live`, kit `ganker-dds`: the gang
+walks out with its food gone and comes back). Our account has profile `gang-hunter` with the options
+`{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}`, the snare runes, a dragon dagger,
+a magic shortbow, iron arrows and an amulet of power. It drinks its boosts at the Edgeville bank and walks to the post
+(`SPAR_PRETRIP=1`). The cases are `extra:gang-live-fast-snare-x2` and `extra:gang-live-cheap-<kit>-x2`; each row is
+seeds 1 to 8 (16 meetings), run with `.practice/gang-cheap/set.sh` and summed by `use2.ts` in the same folder (raw
+lines in `round1.txt` to `round7.txt`). No account of ours died in any row. Worn gear is bought once and kept, so the
+cost of a kill is what it eats, shoots and drinks. Each HP lost is eaten back before the next meeting, so the food of a
+kill is its HP lost / 20 sharks.
+
+| Kit (`live-walker-iron-snare-...`) | Gang | Kills | HP lost a kill | Arrows a kill | Entangles a kill | Ticks a kill | Coins a kill |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| (base) adamant body and legs, 3 boosts, antipoison | 3 | 17 | 142 | 50 | 2.5 | 582 | 2,900 |
+| `nopot`: no boost | 3 | 16 | 146 | 44 | 1.8 | 592 | 2,700 |
+| `noanti`: no antipoison | 3 | 8 | 188 | - | - | 556 | - |
+| `bare`: neither | 3 | 8 | 197 | - | - | 589 | - |
+| `addy`: adamant arrows | 3 | 16 | 102 | 37 | 1.5 | 520 | 4,800 |
+| `rune`: rune arrows | 3 | 20 | 122 | - | - | - | - |
+| `snarep`: dagger (p), super antipoison | 3 | 16 | 110 | - | - | - | - |
+| `helm-nopot`: adamant helm too | 3 | 15 | 136 | - | - | - | - |
+| `runeshop-nopot`: adamant helm, rune body and legs | 3 | 15 | 114 | 45 | 1.4 | 590 | 2,000 |
+| `runeshop-cape-nopot`: the same, cape of legends | 3 | 16 | 104 | 42 | 1.6 | 576 | 2,000 |
+| `rune-nopot`: rune helm, body and legs | 3 | 15 | 97 | 40 | 1.7 | 577 | 1,900 |
+| `rune-nopot` (`-duo` case) | 2 | 16 | 89 | 38 | 1.6 | 491 | 1,700 |
+| `rune-nopot` (`-solo` case) | 1 | 15 | 75 | 29 | 1.6 | 260 | 1,500 |
+
+Coins are shop values (`knowledge/items.json`): a shark 300, an iron arrow 3, an adamant arrow 80, an Entangle 120
+(5 earth, 5 water, 4 nature runes), a dose of antipoison 96 and of the three boosts 213 together, one of each a
+meeting. A dash is not counted (4 seeds, or a log that a later run replaced). Gap: 15 to 20 kills a row; the base
+lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference under about 15 HP is noise.
+
+- **Rune armour is the largest cut.** Full rune loses 97 HP a kill where adamant body and legs lose 142 to 146: about
+  2 sharks less a kill. NPC shops sell the rune platebody (Oziach, `runeplateshop`, Dragon Slayer) and platelegs
+  (`runiteshop`), but no rune full helm (smithing only: `smithing_rune4`); the adamant helm is `helmetshop`.
+- **The antipoison pays; the boosts do not.** Without an antipoison our account loses about 45 HP more a kill (8
+  meetings a row). The boosts save nothing over 16 meetings (146 HP a kill without, 142 with), and they are the one
+  supply that no shop sells (super attack, strength and defence are herblore only); the regular antipoison is sold
+  by `junglestore`.
+- **Better arrows cost more than they save.** Adamant arrows save about 40 HP (2 sharks, 600 coins) a kill and cost
+  about 3,000 coins more in arrows. Four arrows in five land on the tile of the player hit (`pvp_ranged.rs2`
+  `ranged_dropammo_pvp`, `^dropammo_chance` 5) and a drop lasts 200 ticks (`lootdrop.constant`), less than a meeting.
+- **One or two of the gang at a time.** With one gang account a kill takes 260 ticks and 75 HP; with three, 577 ticks
+  and 97 HP. A gang account that is frozen hands the fight to the next one (the 8-tick takeover), so a freeze and a
+  step away (`"freeze":true,"kiteFrozen":3` or `6`) ends the meeting in 70 to 290 ticks with our account away and
+  1 kill in 16 (`round2.txt`).
+- **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
+  (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
+  (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at
+  login) and `SPAR_B_OPTS={"protectItem":false}`, our account with `SPAR_PICKUP=1` took the dragon dagger(p) after 7
+  of 8 kills (`extra:gang-live-cheap-rune-nopot-solo-skull-x2`, seeds 1 to 4): 24,000 coins at shop value, about 16
+  times the supplies of the kill, and the weapon of a PK account. A gang with Protect Item keeps the dagger and drops a
+  hat, two robes (72 coins) and what food it has left. Whether the gang uses Protect Item does not show (no head icon).
+
+The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, the snare runes, a
+regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away. Every
+consumable has a source with no Grand Exchange: sharks by fishing and cooking, iron arrows from the archery shops
+(`archeryshop` 1,500, `archeryshop2` 800), earth and water runes from the rune shops (`runeshop` 2,000), nature runes
+from `magearena_runeshop` and `magicguildshop`, the antipoison from `junglestore` (10). The gear: the dragon dagger
+from `dragonswordshop` (Lost City), the rune body and legs as above, the magic shortbow by fletching (no shop), the
+amulet of power by crafting and Enchant (the `amuletshop` holds none).
+
 ### Options against the gang
 
 Each lever of a meeting, with what is measured. A lever with no result is a test to run on `ganker-max`.
@@ -1125,7 +1188,8 @@ Each lever of a meeting, with what is measured. A lever with no result is a test
   - The lines at level 20 (teleport spells) and 30 (glory): the post is under both.
 - **The time.** One or two of the three are away at times (the Chaos Temple altar, the Monastery, the tile at
   (2934, 3516)), and the world feed shows where each one is. A meeting with one or two of them is `SPAR_GANG=1` or
-  `2` of `scripts/pk-gang.ts`. Not measured.
+  `2` of `scripts/pk-gang.ts`. Measured in "The cost of a kill": with one, a kill takes 260 ticks and 75 HP; with three,
+  577 ticks and 97 HP.
 - **Before the meeting.** The four boost potions drunk at the bank leave four pack slots for sharks. The server drops
   a boost at logout (`PlayerLoading.ts:99`), so a bench start state cannot hold one: the bench account goes to the
   bank first. Measured above.
