@@ -1,0 +1,29 @@
+{
+ "id": "1794628599327-moneyshot-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "WeeQuickie",
+ "item": "Law rune",
+ "count": 4,
+ "start": 1794628599327,
+ "end": 1794632199327,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Water rune",
+   "count": 2
+  }
+ ],
+ "takerWaits": true
+}
