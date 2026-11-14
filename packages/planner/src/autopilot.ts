@@ -383,6 +383,8 @@ export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
     zerker: ['Lost City', 'The Fremennik Trials'], dragon: LOST, 'range-tank': TRIALS, 'mage-tank': NONE, 'pure-scim': NONE, 'pure-dlong': LOST,
     'pure-knives': LOST, 'pure-pray31': LOST, 'pure-god': ['Mage Arena'], 'pure-max': LOST, 'addy-pure': LOST, def50: LOST, 'tank-range': TRIALS,
     'baby-pure': NONE, 'low-ranger': NONE, 'low-mage': NONE, 'low-addy': NONE, skiller: NONE,
+    // The least build that fights the dagger gang at its post (combat 111).
+    'live-walker-iron-snare-rune-nopot-b111': ['Dragon Slayer', 'Lost City'],
 };
 // A quest of a route with the quests that it needs and that have a band of their own: a band for one of those is on
 // the route too (scripts/pk-kits.ts QUEST_CHAIN has the whole chain of each quest).

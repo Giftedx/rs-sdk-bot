@@ -15,6 +15,8 @@ import { questFlags } from '../packages/core/src/quest-status';
 import { holdSessionEater } from '../packages/core/src/sustain';
 import { tickWaits } from '../packages/core/src/tick-stream';
 import { armourDefence, StyleArms, StylePredictor, weakestFirst, type StyleArm } from './pk-read';
+import { castable } from './teleport-runes';
+import { Spells } from '../vendor/rs-sdk/sdk/spells';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
@@ -62,6 +64,9 @@ export type FightOptions = {
     // already held.
     freeze?: boolean | 'flee' | 'low';
     freezeBelow?: number;
+    // The freeze spell as for this Magic level at most: 78 casts Snare at most (4 earth, 4 water, 3 nature runes), 49
+    // Bind (3, 3, 2), against Entangle's 5, 5, 4 (freezeSpell). Default the account's level.
+    freezeMagicCap?: number;
     // With 'low': at most this many freeze casts on a target that has not run (default no limit). Each cast takes a
     // turn of 5 ticks, and against a target that stands and fights the turns cost more than the freeze gives.
     freezeEarlyMax?: number;
@@ -483,6 +488,15 @@ export const freezeDuration = (spell: number, protectFromMagic: boolean) => {
     const base = FREEZE_TICKS[spell] ?? 16;
     return protectFromMagic ? Math.floor(base / 2) : base;
 };
+// Whether the escape teleport (a spell component id, sdk/spells.ts) can be cast from the pack, the worn staff and the
+// Magic level (scripts/teleport-runes.ts). Live, a squad account with no law runes clicked Camelot Teleport four times
+// at 17 to 8 HP and died beside its attacker; with this false the escape runs south instead.
+export function escapeCastable(spell: number, carried: readonly { id: number; count: number }[], wornIds: readonly number[], magic: number): boolean {
+    const key = Object.entries(Spells).find(([, id]) => id === spell)?.[0];
+    if (!key) return false;
+    return castable(`magic:${key.toLowerCase()}`, id => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0), wornIds, magic);
+}
+
 // Strongest freeze the Magic level and held runes allow (557 earth, 555 water, 561 nature).
 export function castableFreeze(magic: number, carried: readonly { id: number; count: number }[]): number | null {
     const max = freezeSpell(magic);
@@ -801,7 +815,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option), so a worn one comes off first:
         // the amulet that an account wears is then its way out, and its pack needs no second one.
         const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
-        const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : o.escapeSpell !== undefined ? 20 : 0;
+        // The escape spell counts only when its runes, staff and level allow a cast (escapeCastable).
+        const spellReady = o.escapeSpell !== undefined && escapeCastable(o.escapeSpell, inv, state.equipment.map(e => e.id), state.skills.find(k => k.name === 'Magic')?.level ?? 1);
+        const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : spellReady ? 20 : 0;
         // No teleport at all (no glory, no escape spell): the way out is a run south, at any level, or the escape
         // stands beside its attacker until its cap (review of PR #804).
         const runSouth = () => { if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; } };
@@ -814,11 +830,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             const glory = slotOf(ITEMS.glory);
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
             else if (!glory && wornGlory && inv.length < 28 && typeof sdk.sendUseEquipmentItem === 'function') { if (now - gloryOffAt > 2) { log(`PK takes its glory off at HP ${me.hp}`); void sdk.sendUseEquipmentItem(wornGlory.slot, 1); gloryOffAt = now; } }
-            else if (!glory && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
+            else if (!glory && spellReady && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
                 log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
             }
             // A worn glory with a full pack, or a spell out of its reach: nothing to click, so run south.
-            else if (!glory && (!wornGlory || inv.length >= 28) && (o.escapeSpell === undefined || wildernessLevel(at.z) > 20) && !state.dialog?.isOpen) runSouth();
+            else if (!glory && (!wornGlory || inv.length >= 28) && (!spellReady || wildernessLevel(at.z) > 20) && !state.dialog?.isOpen) runSouth();
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
             continue;
         }
@@ -1075,7 +1091,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
-        const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
+        const freezeMagic = Math.min(magicLevel, o.freezeMagicCap ?? magicLevel);
+        const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
         const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
             && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))

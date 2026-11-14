@@ -198,14 +198,26 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
       : {...kitFixture(gangKit.split('+')[((i + 1) % (size + 1) - 1) % gangKit.split('+').length]!, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
 };
 // Teams of own accounts (scripts/pk-team.ts): `groups` groups of `size` against `size`, side A two tiles east.
-const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = []): BenchCase => {
-  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * 2 * size - 1).split('');
-  const sideA = (i: number) => i % (2 * size) < size;
+// The gang squad (scripts/pk-squad.ts): `n` of ours at the multi-way post west of the gang, the three of the gang on
+// their post, driven by the script's bench gang (SQUAD_GANG=3, profile ganker-live).
+// `food`: the sharks of each of ours at the start (the kit's own count by default), with EDGE_BANK_SNARE in its bank: a
+// low count sends it to the bank and back mid-meeting.
+const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = [], food?: number, start = {x: 3066, z: 3641}): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
+  const ours = (x: number, z: number): SaveConfig => { const c = kitFixture(kit, x, z); return food === undefined ? c : {...c, bank: [...EDGE_BANK_SNARE, {id: 884, count: 2000}], inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
+    scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=6', 'STALL_TICKS=3000', ...args],
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? ours(start.x + (i % 3), start.z) : kitFixture(gangKit, 3078, 3640)}))};
+};
+// `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
+const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
+  const group = size + sizeB, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * group - 1).split('');
+  const sideA = (i: number) => i % group < size;
   const kitOf = (kits: string, member: number) => { const list = kits.split('+'); return list[member % list.length]!; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kitOf(kitA, 0), at.x + 2, at.z), output: /wins=(\d+)/,
-    scriptArgs: ['team', ...letters.map(l => `{bot:${l}}`), '900', `SPAR_TEAM=${size}`, `SPAR_KITS=${kitA}:${kitB}`, ...args],
+    scriptArgs: ['team', ...letters.map(l => `{bot:${l}}`), '900', `SPAR_TEAM=${size}`, ...(sizeB !== size ? [`SPAR_TEAM_B=${sizeB}`] : []), `SPAR_KITS=${kitA}:${kitB}`, ...args],
     // A side's kits joined by `+` go to its members in turn (scripts/pk-team.ts).
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitOf(kitA, (i + 1) % (2 * size)), at.x + 2, at.z) : kitFixture(kitOf(kitB, (i + 1) % (2 * size) - size), at.x, at.z)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitOf(kitA, (i + 1) % group), at.x + 2, at.z) : kitFixture(kitOf(kitB, (i + 1) % group - size), at.x, at.z)}))};
 };
 // Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
 // (SPAR_POST): one walk of 150 tiles, not two.
@@ -456,7 +468,9 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2675, z: 3170, level: 0}, skills: {Fishing: 99, Crafting: 99, Hitpoints: 50}, inventory: [{id: 1941, count: 200}, {id: 583, count: 1}, ...Array.from({length: 10}, () => ({id: 954, count: 1}))]}},
   {key: 'pvp:standby', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['standby', 'stage'], pass: ok,
     presetConfig: {position: {x: 3252, z: 3420, level: 0}, skills: {Hitpoints: 11, Ranged: 7, Magic: 7}, bank: [{id: 841, count: 1}, {id: 882, count: 8}, {id: 556, count: 10}, {id: 558, count: 5}, {id: 1985, count: 1}, {id: 1277, count: 1}, {id: 1171, count: 1}]}},
-  {key: 'pvp:stage-kit', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['stage-kit', '2000'], pass: ok, timeoutMs: 900_000,
+  // A cold off-thread route plan (Port Sarim to Varrock) takes about 33 s here, 1,800 bench ticks of standing; the
+  // stage's own deadline leaves plan ticks out, and STALL_TICKS keeps the no-progress guard from ending the plan.
+  {key: 'pvp:stage-kit', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['stage-kit', '2000', 'STALL_TICKS=6000'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2809, z: 3441, level: 0}, bank: [{id: 995, count: 8352}, {id: 1277, count: 1}, {id: 1171, count: 1}, {id: 841, count: 1}, {id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 44, count: 3}]}},
   {key: 'pvp:special-swap', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['special-swap', '35', '1000', '60'], pass: ok,
     presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Hitpoints: 99, Attack: 99}, inventory: [{id: 35, count: 1}], varps: {172: 1, 300: 1000}}},
@@ -769,6 +783,72 @@ const ROUTE_CASES: BenchCase[] = [
   teamCase('extra:team-3v3-spear-x3', 'tribrid-snare-spear+tribrid-dragon-sara+tribrid-dragon-sara', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   teamCase('extra:team-3v3-dragon-x3', 'tribrid-dragon-sara', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   teamCase('extra:team-3v3-multi-x3', 'tribrid-snare', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
+  // Three of ours against the three of the gang on its single-way post, each account against its own (SPAR_*_PICK=pair):
+  // one fight a pair, as the solo meeting (scripts/pk-kits.ts live-walker-iron-snare-rune-nopot against ganker-dds).
+  teamCase('extra:team-3v3-gang-rune-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
+  teamCase('extra:team-3v3-gang-addy-x2', 'live-walker-iron-snare-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
+  teamCase('extra:team-2v3-gang-rune-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 2, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 3),
+  // The same three against the three on a multi-way tile (the team cases' (3150, 3560)): each side on the lowest bar.
+  teamCase('extra:team-3v3-gang-rune-multi-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3150, z: 3560}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  // The multi-way zone 12 tiles west of the gang's post (maps/multiway.csv: x 3064-3071, z 3624-3663, Wilderness 14-18):
+  // the gang comes to its target, so the target picks this ground.
+  teamCase('extra:team-3v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  teamCase('extra:team-2v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 2, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-4v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-3v3-gang-addy-west-x2', 'live-walker-iron-snare-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  ...([['addy', 'live-walker-iron-snare-nopot'], ['bare', 'live-walker-iron-snare-bare'], ['b111', 'live-walker-iron-snare-rune-nopot-b111']] as const).map(([name, kit]) => teamCase(`extra:team-4v3-gang-${name}-west-x2`, kit, 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3)),
+  // Larger squads against the three in the same zone: one group a case for 6 and 9 (an engine holds 7 or 10 accounts).
+  teamCase('extra:team-5v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 5, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-6v3-gang-rune-west-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, {x: 3066, z: 3640}, 6, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-9v3-gang-rune-west-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, {x: 3066, z: 3640}, 9, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  // The four against the skulled gang (its loot as live), for SPAR_PICKUP=1 with SPAR_B_OPTS {"protectItem":false} or not.
+  teamCase('extra:team-4v3-gang-skull-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  // A squad against one runner (kit runner, SPAR_B_OPTS {"escapeAt":60}: its food gone at 60 HP or less it runs south
+  // and rubs its glory under Wilderness level 30): on the escape spars' single-way tile at level 34, and on the
+  // multi-way tiles at (3010, 3864), level 43, where the runner has 13 levels to cross.
+  ...([1, 2, 4] as const).flatMap(n => [
+    teamCase(`extra:team-${n}v1-runner-single-x2`, 'tribrid-dragon-sara', 'runner', 2, {x: 3125, z: 3790}, n, ['SPAR_A=champion', 'SPAR_B=base', 'SPAR_CAP=900'], 1),
+    teamCase(`extra:team-${n}v1-runner-multi-x2`, 'tribrid-dragon-sara', 'runner', 2, {x: 3010, z: 3864}, n, ['SPAR_A=champion', 'SPAR_B=base', 'SPAR_CAP=900'], 1)]),
+  // The squad script against the bench gang: four, and six, of ours in the rune kit; the skulled gang for the loot.
+  squadCase('pvp:squad', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4),
+  squadCase('extra:squad-4-gang-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4),
+  squadCase('extra:squad-6-gang-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 6),
+  // Three sharks each at the start: the squad's bank trip and walk back mid-meeting.
+  squadCase('extra:squad-4-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=12'], 3),
+  // The bank trip from the east post goes to Varrock West (bankNear) and keeps to multi-way tiles.
+  squadCase('extra:squad-2-gang-trips-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2', 'SQUAD_GANG_HUNT=1', 'POST=3200,3620'], 3, {x: 3197, z: 3621}),
+  // Two of ours leave outnumbered: each walks out, banks at Edgeville and walks back to the post.
+  squadCase('extra:squad-2-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2'], 3),
+  // The squad on the gang's own single-way post (ALLOW_SINGLE=1), for a gang that does not follow into multi-way.
+  squadCase('extra:squad-4-gang-single-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3075,3640', 'ALLOW_SINGLE=1']),
+  // The squad starts out of sight of the gang, on the multi-way tiles at (3150, 3560), and follows the world feed to it.
+  squadCase('extra:squad-4-gang-follow-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3150,3560', 'FOLLOW=1', 'MAX_MINUTES=8'], undefined, {x: 3149, z: 3561}),
+  // The squad walks in from the Edgeville bank (3094, 3500) to the multi-way post: as a march (the default) or not.
+  squadCase('extra:squad-4-gang-walkin-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8'], undefined, {x: 3093, z: 3501}),
+  // The gang hunts (SQUAD_GANG_HUNT=1: it walks to the nearest of ours in the Wilderness, as the live gang did): the
+  // walk-in from Edgeville with the march and pull, or with neither (MARCH=0 PULL=0).
+  squadCase('extra:squad-4-gang-hunted-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // The same walk-in in the first live pilot's kit (chainbody, no antipoison, no freeze runes).
+  squadCase('extra:squad-4-gang-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // The east multi-way zone runs up to the ditch north of Varrock (x 3136 to 3327 from z 3520): a post there at
+  // Wilderness 3 leaves no single-way tile on the walk in, and the hunting gang comes into multi-way to fight.
+  squadCase('extra:squad-4-gang-hunted-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'POST=3160,3540'], undefined, {x: 3160, z: 3512}),
+  squadCase('extra:squad-4-gang-hunted-east13-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'POST=3200,3620'], undefined, {x: 3160, z: 3512}),
+  squadCase('extra:squad-4-gang-hunted-east-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'POST=3160,3540'], undefined, {x: 3160, z: 3512}),
+  // Against the most the gang can carry (ganker-max: 23 sharks, the boosts, prayer potions): the live fights ran long.
+  squadCase('extra:squad-4-gangmax-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-max', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // The combat-111 build, the least that can attack the gang at its post (Wilderness 16 against combat 126), at 4, 6
+  // and 9 of ours.
+  ...[4, 6, 9].map(n => squadCase(`extra:squad-${n}-gang-b111-x1`, 'live-walker-iron-snare-rune-nopot-b111', 'ganker-dds', n)),
+  squadCase('extra:squad-4-gang-skull-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 4),
+  teamCase('extra:team-3v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  teamCase('extra:team-3v3-gang-chainbind-west-x2', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  teamCase('extra:team-4v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  // The pilot's kit with no antipoison: four in the multi-way zone (all on the lowest bar), and four on single-way
+  // tiles where each gang account takes one of ours (the split of the first live pilot: SPAR_*_PICK=pair).
+  teamCase('extra:team-4v3-gang-chainbare-west-x2', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-4v3-gang-chainbare-split-x2', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 2, GANKER_POST, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
   gangCase('extra:army-deep-x3', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 3),
@@ -821,6 +901,17 @@ const ROUTE_CASES: BenchCase[] = [
   atBank(gangCase('extra:gang-live-fast-snarep-x2', 'live-walker-iron-snarep', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK_SNARE), GANKER_POST),
   // The fast case with the freeze runes in the kit (live-walker-iron-snare): run it with SPAR_A_OPTS {"freeze":"flee"}.
   atBank(gangCase('extra:gang-live-fast-snare-x2', 'live-walker-iron-snare', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK_SNARE), GANKER_POST),
+  // The cost of a kill: the fast snare case with the kits of fewer bought supplies (scripts/pk-kits.ts live-walker-iron-snare-*).
+  ...['nopot', 'noanti', 'bare', 'addy', 'rune', 'mith', 'addyp', 'addyp-nopot', 'p-nopot', 'helm-nopot', 'rune-nopot', 'runeshop-nopot', 'runeshop-cape-nopot'].map(v => atBank(gangCase(`extra:gang-live-cheap-${v}-x2`, `live-walker-iron-snare-${v}`, 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK_SNARE), GANKER_POST)),
+  // One of ours in the first live pilot's kit (chainbody, no antipoison, no freeze runes) against one gang account: the
+  // one-on-one fight that the live gang's split gives each of ours.
+  atBank(gangCase('extra:gang-live-chain-solo-x2', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 1, undefined, [...EDGE_BANK_SNARE, {id: 884, count: 2000}]), GANKER_POST),
+  atBank(gangCase('extra:gang-live-blast-solo-x2', 'live-walker-iron-rune-chain-blast', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 1, undefined, [...EDGE_BANK_SNARE, {id: 884, count: 2000}, {id: 554, count: 3000}, {id: 560, count: 600}, {id: 556, count: 3000}]), GANKER_POST),
+  atBank(gangCase('extra:gang-live-chainbind-solo-x2', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 1, undefined, [...EDGE_BANK_SNARE, {id: 884, count: 2000}]), GANKER_POST),
+  // The same rune kit against one or two of the gang: a meeting at a time when the others are away (the world feed shows where each one is).
+  ...([[1, 'solo'], [2, 'duo']] as const).map(([size, name]) => atBank(gangCase(`extra:gang-live-cheap-rune-nopot-${name}-x2`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], size, undefined, EDGE_BANK_SNARE), GANKER_POST)),
+  // The solo meeting with the gang account skulled (its loot as live), for SPAR_PICKUP=1 with SPAR_B_OPTS {"protectItem":false} or not.
+  atBank(gangCase('extra:gang-live-cheap-rune-nopot-solo-skull-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 1, undefined, EDGE_BANK_SNARE), GANKER_POST),
   gangCase('extra:gang-ganker-dds-live-walker-prepot-x2', 'live-walker', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
   // The same against the gang that holds its protect prayer.
   gangCase('extra:gang-ganker-max-gang-walker-sticky-near-x2', 'gang-walker', 'ganker-max', 2, GANG_EDGE, ['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
