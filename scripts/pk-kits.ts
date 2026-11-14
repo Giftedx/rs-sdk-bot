@@ -230,7 +230,7 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'live-walker-iron-psuper': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger_p', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3dose2antipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] } },
-    // The two methods that each beat the base against the bench gang (docs/gang-climb-results.md, round 5): the snare
+    // The measured kit options against the bench gang (research/pvp-fight-loop.md, "Measured gang kit options"): the snare
     // kit's Entangle runes for freeze 'flee' and the poisoned dagger with a super antipoison, for 3 sharks (17).
     'live-walker-iron-snarep': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger_p', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3dose2antipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 50], ['waterrune', 50], ['naturerune', 40]], food: 17,
