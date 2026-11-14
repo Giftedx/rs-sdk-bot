@@ -1,4 +1,4 @@
-// Writes client-assets/gather-chance.json: the success roll of each tree and rock of the pinned server, by the name of
+// Writes client-assets/gather-chance.json: the success roll of each tree, rock and fish of the pinned server, by the name of
 // the log or ore it gives, as {item: {tool: [[tool name, low, high], ...]}} for a tree (one roll for each axe,
 // skill_woodcutting/configs/trees.dbrow successchance) and {item: {roll: [low, high]}} for a rock
 // (skill_mining/configs/mine.dbrow rock_successchance). Both scripts roll stat_random (woodcut.rs2, mining.rs2):
@@ -24,11 +24,25 @@ export function gatherChance(trees: string, rocks: string, names: Map<string, st
     return out;
 }
 
+// Fish: fishing.obj names each fish's struct (param=fishing_struct); fishing.struct holds success_low and success_high,
+// which fishing.rs2 ~fish_roll passes to stat_random.
+export function fishChance(fishObj: string, fishStruct: string, names: Map<string, string>): Record<string, GatherChance> {
+    const params = (t: string) => new Map(t.split(/^\[/m).slice(1).map(b => [b.slice(0, b.indexOf(']')), new Map([...b.matchAll(/^param=([a-z_]+),(.*)$/gm)].map(m => [m[1]!, m[2]!.trim()]))] as const));
+    const structs = params(fishStruct), out: Record<string, GatherChance> = {};
+    for (const [fish, p] of params(fishObj)) {
+        const s = structs.get(p.get('fishing_struct') ?? ''), lo = Number(s?.get('success_low')), hi = Number(s?.get('success_high'));
+        if (Number.isFinite(lo) && Number.isFinite(hi)) out[names.get(fish) ?? fish.replace(/_/g, ' ')] = { roll: [lo, hi] };
+    }
+    return out;
+}
+
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..'), scripts = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts');
     const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { debugname?: string; name?: string }[];
     const names = new Map(items.filter(i => i.debugname && i.name).map(i => [i.debugname!, i.name!]));
-    const out = gatherChance(readFileSync(join(scripts, 'skill_woodcutting', 'configs', 'trees.dbrow'), 'utf8'), readFileSync(join(scripts, 'skill_mining', 'configs', 'mine.dbrow'), 'utf8'), names);
+    const read = (...p: string[]) => readFileSync(join(scripts, ...p), 'utf8');
+    const out = { ...gatherChance(read('skill_woodcutting', 'configs', 'trees.dbrow'), read('skill_mining', 'configs', 'mine.dbrow'), names),
+        ...fishChance(read('skill_fishing', 'configs', 'fishing.obj'), read('skill_fishing', 'configs', 'fishing.struct'), names) };
     writeFileSync(join(import.meta.dir, 'client-assets', 'gather-chance.json'), JSON.stringify(out));
     console.log(`gather-chance.json: ${Object.keys(out).length} logs and ores`);
 }

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { contentRows, inputCounts, objParamRows, skillActions } from './gen-skill-actions';
+import { contentRows, fishingRows, inputCounts, objParamRows, skillActions } from './gen-skill-actions';
 
 test('skill actions give the XP of one action on this server: base XP times the XP rate', () => {
     const names = new Map([['logs', 'Logs'], ['oak_logs', 'Oak logs']]);
@@ -67,4 +67,16 @@ test('input counts come from the dbrow block of the row; each input is listed on
     const out = skillActions([{ skill: 'crafting', row: 'craft_dragonhide_body_black', level: 84, xp: 258, inputs: ['dragon_leather_black'], outputs: ['black_dragonhide_body'], counts: [3] }],
         new Map([['dragon_leather_black', 'Dragon leather'], ['black_dragonhide_body', "Black d'hide body"]]), 25, new Map([['dragon_leather_black', 2509]]));
     expect(out.crafting).toEqual([["Black d'hide body", 84, 6450, ['Dragon leather', 'Dragon leather', 'Dragon leather'], ["Black d'hide body"], [2509, 2509, 2509]]]);
+});
+
+test('Fishing actions from the spot scripts: the gate level, the second fish at its own level, and the bait', () => {
+    const spot = '[label,fish_trout_salmon]\nif (stat(fishing) < 20) {\n    return;\n}\nif (%action_delay = map_clock) {\n    if (stat(fishing) >= 30) {\n        ~fish_roll(raw_trout, raw_salmon, fly_fishing_rod, feather);\n    } else {\n        ~fish_roll(raw_trout, null, fly_fishing_rod, feather);\n    }\n}\n\n[label,fish_shrimps]\n~fish_roll(raw_shrimp, null, net, null);\n';
+    const obj = '[raw_trout]\nparam=fishing_struct,fs_trout\n\n[raw_salmon]\nparam=fishing_struct,fs_salmon\n\n[raw_shrimp]\nparam=fishing_struct,fs_shrimp\n';
+    const struct = '[fs_trout]\nparam=productexp,500\n\n[fs_salmon]\nparam=productexp,700\n\n[fs_shrimp]\nparam=productexp,100\n';
+    const names = new Map([['raw_trout', 'Raw trout'], ['raw_salmon', 'Raw salmon'], ['raw_shrimp', 'Raw shrimps'], ['feather', 'Feather']]);
+    expect(skillActions(fishingRows([spot], obj, struct), names, 25)).toEqual({ fishing: [
+        ['Raw shrimps', 1, 250, [], ['Raw shrimps'], []],
+        ['Raw trout', 20, 1250, ['Feather'], ['Raw trout'], [0]],
+        ['Raw salmon', 30, 1750, ['Feather'], ['Raw salmon'], [0]],
+    ] });
 });

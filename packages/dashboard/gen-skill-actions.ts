@@ -118,6 +118,29 @@ export function contentRows(c: { smelting: string; smithingStruct: string; smith
     return rows;
 }
 
+// Fishing has no table either. fishing.obj names each fish's struct (param=fishing_struct), the struct holds its XP
+// (productexp, in tenths), and the spot scripts (skill_fishing/scripts/fishing_spots) hold the levels: in a
+// [label,fish_...] block the first `stat(fishing) < N` gates the catch, and `stat(fishing) >= M` before
+// `~fish_roll(a, b, tool, bait)` lets the second fish b in at M (trout at 20, salmon at 30). The bait is the input.
+// Left out: the big-net catches (cod, mackerel, bass: inv_add in their own label) and fish that fishing.obj does not
+// define (lava eel).
+export function fishingRows(spots: string[], fishObj: string, fishStruct: string): SkillRow[] {
+    const xp = new Map(configBlocks(fishStruct).map(b => [b.name, num(b.p.get('productexp'))]));
+    const fishXp = new Map(configBlocks(fishObj).filter(b => b.p.get('fishing_struct')).map(b => [b.name, xp.get(b.p.get('fishing_struct')!) ?? 0]));
+    const best = new Map<string, { level: number; bait: string | null }>();
+    const put = (fish: string, level: number, bait: string | null) => { const cur = best.get(fish); if (fishXp.get(fish) && (!cur || level < cur.level)) best.set(fish, { level, bait }); };
+    for (const text of spots) for (const block of text.split(/^\[/m).filter(b => b.startsWith('label,'))) {
+        // A level-1 catch (shrimps) has no check.
+        const gate = Number(block.match(/stat\(fishing\)\s*<\s*(\d+)/)?.[1] ?? 1);
+        for (const m of block.matchAll(/(?:stat\(fishing\)\s*>=\s*(\d+)[^~]*)?~fish_roll(?:_loc)?\(\s*([a-z0-9_]+)\s*,\s*([a-z0-9_]+)\s*(?:,\s*([a-z0-9_]+))?(?:\s*,\s*([a-z0-9_]+))?/g)) {
+            const second = m[1] ? Number(m[1]) : gate, loc = m[0].includes('fish_roll_loc'), bait = (loc ? m[4] : m[5]) ?? null;
+            put(m[2]!, gate, bait && bait !== 'null' ? bait : null);
+            if (m[3] && m[3] !== 'null') put(m[3], Math.max(gate, second), bait && bait !== 'null' ? bait : null);
+        }
+    }
+    return [...best].map(([fish, { level, bait }]) => ({ skill: 'fishing', row: fish, level, xp: fishXp.get(fish)! / 10, inputs: bait ? [bait] : [], outputs: [fish] }));
+}
+
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..');
     const items: { debugname?: string; name?: string; tradeable?: boolean }[] = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'));
@@ -136,7 +159,8 @@ if (import.meta.main) {
             smelting: read('skill_smithing/configs/smelting/smelting.struct'), smithingStruct: read('skill_smithing/configs/smithing/smithing.struct'),
             smithingRows: read('skill_smithing/configs/smithing/smithing.dbrow'), brewing: read('skill_herblore/configs/brewing/brew_potion.struct'), herbs: read('skill_herblore/configs/herbs.obj'),
             identify: read('skill_herblore/scripts/identifying/identify.rs2'), params: files(scripts, '.param').join('\n'),
-        })], names, XP_RATE, ids);
+        }),
+        ...fishingRows(files(join(scripts, 'skill_fishing', 'scripts', 'fishing_spots'), '.rs2'), read('skill_fishing/configs/fishing.obj'), read('skill_fishing/configs/fishing.struct'))], names, XP_RATE, ids);
     writeFileSync(join(import.meta.dir, 'client-assets', 'skill-actions.json'), JSON.stringify(actions));
     console.log(`skill-actions.json: ${Object.values(actions).reduce((n, l) => n + l.length, 0)} actions in ${Object.keys(actions).length} skills`);
 }
