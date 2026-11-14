@@ -468,7 +468,9 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2675, z: 3170, level: 0}, skills: {Fishing: 99, Crafting: 99, Hitpoints: 50}, inventory: [{id: 1941, count: 200}, {id: 583, count: 1}, ...Array.from({length: 10}, () => ({id: 954, count: 1}))]}},
   {key: 'pvp:standby', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['standby', 'stage'], pass: ok,
     presetConfig: {position: {x: 3252, z: 3420, level: 0}, skills: {Hitpoints: 11, Ranged: 7, Magic: 7}, bank: [{id: 841, count: 1}, {id: 882, count: 8}, {id: 556, count: 10}, {id: 558, count: 5}, {id: 1985, count: 1}, {id: 1277, count: 1}, {id: 1171, count: 1}]}},
-  {key: 'pvp:stage-kit', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['stage-kit', '2000'], pass: ok, timeoutMs: 900_000,
+  // A cold off-thread route plan (Port Sarim to Varrock) takes about 33 s here, 1,800 bench ticks of standing; the
+  // stage's own deadline leaves plan ticks out, and STALL_TICKS keeps the no-progress guard from ending the plan.
+  {key: 'pvp:stage-kit', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['stage-kit', '2000', 'STALL_TICKS=6000'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2809, z: 3441, level: 0}, bank: [{id: 995, count: 8352}, {id: 1277, count: 1}, {id: 1171, count: 1}, {id: 841, count: 1}, {id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 44, count: 3}]}},
   {key: 'pvp:special-swap', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['special-swap', '35', '1000', '60'], pass: ok,
     presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Hitpoints: 99, Attack: 99}, inventory: [{id: 35, count: 1}], varps: {172: 1, 300: 1000}}},
