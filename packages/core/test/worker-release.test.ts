@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
+import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer,crashResidue,LOST_SESSION_DROP_MS} from '../src/worker-release';
 
 test('cached admission keeps entry closures separate and rejects changed bytes, new imports and removed files',()=>{
  const root=fixture(),entry=['scripts/worker.ts'];
@@ -47,6 +47,26 @@ function fixture():string{
  for(const [f,text] of Object.entries(files))writeFileSync(join(root,f),text);
  return root;
 }
+
+test('a status file of null bytes (a power cut) names no peer once the lost-session window ends; a broken one refuses',()=>{
+ const root=fixture();
+ try{
+  const pin=capabilityRevision(['scripts/worker.ts'],root),env={WORKER_RELEASE:pin,WORKER_ENTRY:'scripts/worker.ts'};
+  const cut=join(root,'.practice/status/Cut.json'),empty=join(root,'.practice/status/Empty.json');
+  writeFileSync(cut,new Uint8Array(9677));writeFileSync(empty,'');
+  // Inside the window the writer's server session may still be open: unknown evidence.
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('unreadable status evidence');
+  const old=(Date.now()-LOST_SESSION_DROP_MS-60_000)/1000;
+  utimesSync(cut,old,old);utimesSync(empty,old,old);
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).not.toThrow();
+  writeFileSync(join(root,'.practice/status/Torn.json'),'{"name":"Torn","at":');
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('unreadable status evidence');
+  const now=1_000_000_000;
+  expect(crashResidue(new Uint8Array(3),now-LOST_SESSION_DROP_MS,now)).toBe(true);
+  expect(crashResidue(new Uint8Array(3),now-LOST_SESSION_DROP_MS+1,now)).toBe(false);
+  expect(crashResidue(new Uint8Array([0,123,0]),0,now)).toBe(false);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
 
 test('release pin covers its closure; notes, receipts and edits elsewhere do not change it',()=>{
  const root=fixture();
