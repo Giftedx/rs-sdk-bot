@@ -746,3 +746,10 @@ test('the place of each shop job is the bank of its shop profile, and the reach 
     const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
     expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
 });
+
+test('an account whose logout is not confirmed is stranded and gives nothing', async () => {
+    const { strandedAccounts } = await import('./autopilot');
+    const proofs: Record<string, string> = { mmtha0205: 'held', Masterbaiter: 'confirmed', Fresh: 'none' };
+    const out = strandedAccounts(['mmtha0205', 'Masterbaiter', 'Fresh', 'Broken'], n => { if (n === 'Broken') throw Error('unreadable'); return proofs[n]!; });
+    expect([...out]).toEqual(['mmtha0205']);
+});
