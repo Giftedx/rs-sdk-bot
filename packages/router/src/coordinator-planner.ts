@@ -10,11 +10,13 @@ import {projectRoot,coordinationDir,atomicJson,capabilitySource,publishCapabilit
 import {deliveryConflictRoots} from './delivery-pr';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PROOF_TIMING} from './build-fault';
-import {liveRows,readFreshControllerState} from './coordinator-live';
+import {readFreshControllerState} from './coordinator-live';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
 import {liveHelperStatuses,observedStock,overallSupplyDemand,supplyBill} from '../../planner/src/supply-bill';
+import {FLEET_DIR,mySide} from '../../core/src/fleet';
+import {fleetStatusRows,ownerOfIn,readSnapshotFiles} from '../../core/src/fleet-snapshots';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -173,13 +175,29 @@ export function readPlannerControllerCapacity(base=projectRoot,now=Date.now()){
    freeGB:memory(state.freeGB),minFreeGB:memory(state.minFreeGB),maxBots:count(state.maxBots)};
  }catch{return null;}
 }
-export function readPlannerStatuses(base=projectRoot){
- if(!existsSync(join(base,'.practice/status')))return [];
- return liveRows(base).filter(s=>s?.server==='rs-sdk-demo.fly.dev'&&!s.practice).map(s=>({
-  name:s.name,server:s.server,at:s.at,result:s.result,started:s.started,workRevision:s.workRevision,goal:s.goal,
-  skills:s.skills,quests:s.quests,questsAt:s.questsAt,inventory:s.inventory,bank:s.bank,bankAt:s.bankAt,
-  equipment:s.equipment,hp:s.hp,pos:s.pos,counters:s.counters,
- }));
+export function readPlannerStatuses(base=projectRoot,fleetDir=FLEET_DIR(),side=mySide()){
+ const dir=join(base,'.practice/status'),ownerOf=ownerOfIn(fleetDir);
+ const local=existsSync(dir)?readdirSync(dir).filter(f=>f.endsWith('.json')).flatMap(f=>{
+  try{const s=JSON.parse(readFileSync(join(dir,f),'utf8'));
+   return typeof s?.name==='string'&&s.name.toLowerCase()===f.slice(0,-5).toLowerCase()
+    &&typeof s.server==='string'&&s.server.toLowerCase()==='rs-sdk-demo.fly.dev'&&!s.practice?[s]:[];
+  }catch{return [];}
+ }):[];
+ const byName=new Map(local.map(s=>[s.name.toLowerCase(),s]));
+ return fleetStatusRows(local,readSnapshotFiles(join(fleetDir,'snapshots')),ownerOf,side)
+  .filter(s=>(ownerOf(s.name)??s.side)===side).map(s=>{
+   const current=byName.get(s.name.toLowerCase()),isLocal=s.side===side&&current?.at===s.at&&current!==undefined;
+   return{
+    name:s.name,server:s.server,side,at:s.at,observation:isLocal?'local-status':'fleet-snapshot',snapshotOnly:!isLocal,
+    skills:s.skills,quests:Array.isArray(s.questJournal)?s.questJournal:s.quests,questsAt:s.questsAt,
+    inventory:s.inventory,bank:s.bank,bankAt:s.bankAt,equipment:s.equipment,equipmentObserved:s.equipmentObserved,
+    hp:s.hp,pos:s.pos,combat:s.combat,guildFacts:s.guildFacts,
+    // Shared snapshots describe saved account facts, never another container's executing session.
+    ...(isLocal?{result:current.result,started:current.started,sessionAttemptId:current.sessionAttemptId,
+     workRevision:current.workRevision,workEntry:current.workEntry,goal:current.goal,tick:current.tick,
+     counters:current.counters,ledger:current.ledger}:{}),
+   };
+  });
 }
 export function readWorld(){
  const plan=readMergedPlan(projectRoot);
@@ -194,7 +212,7 @@ export function readWorld(){
  let stall:any=null;try{const f=join(projectRoot,'.practice/coordinator/stall.json');if(existsSync(f))stall=JSON.parse(readFileSync(f,'utf8'));}catch{/* no stall note */}
  const controller=readPlannerControllerCapacity();
  const now=Date.now();
- return{at:now,scoreboard,stall,assets:assetSummary(statuses,protectedNames,now),supplyBill:supplyBillSummary({source:'route',now}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true,...(controller?{controller}:{})},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+ return{at:now,scoreboard,stall,assets:assetSummary(liveHelperStatuses(),protectedNames,now),supplyBill:supplyBillSummary({source:'route',now}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true,...(controller?{controller}:{})},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
 }
 // A fresh status cannot refresh an older bank observation.
 function recentStockStatus(status:any,now:number){
@@ -245,7 +263,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
 export function assetSummary(statuses:readonly any[],protectedNames:readonly string[]=[],now=Date.now()){
  const names=new Map((JSON.parse(readFileSync(join(projectRoot,'knowledge/items.json'),'utf8')) as any[]).map(i=>[i.id,i.name]));
  const protectedAccounts=new Set(['haggis',...protectedNames.map(name=>name.toLowerCase())]);
- return statuses.filter(s=>typeof s?.name==='string'&&/^[A-Z]/.test(s.name)&&s.server==='rs-sdk-demo.fly.dev'
+ return statuses.filter(s=>typeof s?.name==='string'&&/^[A-Za-z0-9]{1,12}$/.test(s.name)&&s.server==='rs-sdk-demo.fly.dev'
   &&!s.practice&&!protectedAccounts.has(s.name.toLowerCase())).map(s=>{
   const observed=observedStock(s),fresh=observedStock(recentStockStatus(s,now));
   const coins=observed.get(995)??0,recentCoins=fresh.get(995)??0;
@@ -257,7 +275,7 @@ export function assetSummary(statuses:readonly any[],protectedNames:readonly str
    if(current>0)recent.stacks.push(`${name} ${current}`);
    if(count>current)verify.stacks.push(`${name} ${count-current}`);
   }
-  return{account:s.name,at:s.pos?`${s.pos.x},${s.pos.z}`:null,statusAt:s.at??null,bankAt:s.bankAt??null,recent,verify};
+  return{account:s.name,...(typeof s.side==='string'?{side:s.side}:{}),at:s.pos?`${s.pos.x},${s.pos.z}`:null,statusAt:s.at??null,bankAt:s.bankAt??null,recent,verify};
  }).filter(a=>a.recent.coins+a.verify.coins>=1000||a.recent.stacks.length||a.verify.stacks.length);
 }
 // The planner sees the whole-game scoreboard in a compact form: every skill, every quest by stage, weak domains.
@@ -279,12 +297,23 @@ export function fleetLeads(rows:any[],side:string){
   return{skill:r.skill,best:r.best,side:r.side,account:r.account,local:mine,otherSideLeads:r.side!==side&&r.best-(mine?.level??1)>FLEET_BAND};
  });
 }
+export function plannerStatusSummary(s:any){
+ const number=(n:unknown)=>typeof n==='number'&&Number.isFinite(n)&&n>=0?n:undefined;
+ const text=(value:unknown,limit:number):string|undefined=>typeof value==='string'?clip(value,limit) as string:undefined;
+ const numeric=(raw:any,limit:number,keys?:readonly string[])=>Object.fromEntries(Object.entries(raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{})
+  .filter(([key,value])=>/^[A-Za-z][A-Za-z0-9]{0,47}$/.test(key)&&number(value)!==undefined&&(!keys||keys.includes(key))).slice(0,limit));
+ return{name:s.name,server:s.server,side:s.side,at:s.at,observation:s.observation,snapshotOnly:s.snapshotOnly,
+  result:text(s.result,160),goal:text(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt,
+  started:number(s.started),sessionAttemptId:text(s.sessionAttemptId,96),workRevision:text(s.workRevision,128),workEntry:text(s.workEntry,500),tick:number(s.tick),
+  counters:numeric(s.counters,64),ledger:numeric(s.ledger,12,['ticks','xp','inventory','move','anim','dialog','stun','idle','xpGain'])};
+}
 export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[],publicationConflicts:ReturnType<typeof deliveryConflictRoots>=[]){
- const compact={...world,ended:briefEnded(world.ended),coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
+ const compact={...world,ended:briefEnded(world.ended),coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map(plannerStatusSummary),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
  const recent=state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').sort((a,b)=>finishedAt(b)-finishedAt(a)).slice(0,48);
  return[
   'You are the autonomous director of this RuneScape project, working with Codex and Claude through one claimed task queue. Return ONLY a JSON object {reason:string,tasks:CoordTask[],capabilities:DeliveryTask[]}. Both tasks and capabilities must be JSON arrays, including when empty: {"reason":"No new work","tasks":[],"capabilities":[]}. Never use {} or null for either collection; capabilities is not a map of existing definitions.',
   'Do not edit files, launch processes or play the game. The coordinator owns execution. Read local sources as needed.',
+  'Status observations preserve their original ages. A fleet-snapshot row is saved account state, not an executing session. Structured counters and ledger summaries are advisory observations bound to their started/sessionAttemptId/workRevision/workEntry fields; acceptance still needs the coordinator\'s bound receipts.',
   'Goals: own useful and rare items and best-in-slot gear, earn the wealth to buy them, finish all quests and unlocks, finish the fresh completion account, reach specialist rank 1 on skill boards with a priced winning margin, and reach Haggis rank 1 Overall under the record. Goal IDs: '+GOALS.join(', ')+'. The main24 ID denotes the main Overall run. For specialist work, price each specialist route against the current board record before treating it as a target.',
   'Read AGENTS.md, docs/plans/joined-plan.md, docs/script-contract.md. All game mechanics are authorized. Missing supplies create acquisition tasks, never route exclusions. Preserve all current work, pauses and clocks. No paid APIs.',
   'Own a whole useful outcome through its consumer. Prefer existing workers and trained helpers. Parameterize simple scripts; compose them with dependency IDs. Research only an unresolved decision. Do not create notes/status tools as a substitute for game progress.',
@@ -295,14 +324,14 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Expand coverage incrementally: reuse candidate scripts, promote the smallest missing parameterized action, qualify normal entry and recovery, run a useful finite live batch, then pick its next consumer. New accounts require a named absent role or measured capacity need, prepared inputs and a finite first useful job. Never use protected accounts for discovery. Full coverage is a continuing goal across pinned content, not a claim made from filename counts.',
   'For an existing capability whose owned files or entry cannot support the real consumer, return capabilityUpdates:[{expectedSource:<capabilitySources[id]>,definition:<complete DeliveryTask>}] with a same-capability build task and explicit replacements for old pending builds. One update per proposal; no running owner may hold that capability. The daemon preserves the old definition. Expand the existing module scope instead of duplicating it under a new capability name. Entry must be an actual account-parameterized live worker; local --save fixtures and privileged practice commands belong in checks. Native proof must invoke that worker CLI, not only helper functions. Every new/progress build must include a finite live consumer with useful acceptance, inputs and a next goal; never stop at stock or qualification.',
   'THIN ACCEPTANCE (owner order): a consumer and its checks hold only the script contract acceptance bar: unit tests, one practice run of the real CLI showing the useful effect, assets reconciled, a clear refusal and logout. Never add interruption/resume, reseed, independent recompute, raw-file binding or failure-window scenarios, and never widen an existing consumer. A live failure gets the smallest fix of the exact failed step plus one regression test.',
-  'FLEET SIDES (world.scoreboard.fleetSkills, world.scoreboard.fleet): this side ('+(world.scoreboard?.fleet?.side??'local')+') plans only its own accounts, but the board counts the best account of any side (local, Codex cloud, Claude cloud). Each row gives the fleet best of a skill, the side and account that hold it, and the best of this side (local). bestLive and progress count this side only. For ordinary helper batches, do not queue work on a skill where otherSideLeads is true (another side leads this side by more than '+FLEET_BAND+' levels) unless the planned local account ends above that fleet best; a run that stays under it does not raise the board. Prefer skills this side leads or no side has trained for helper batches. The fresh completion account and scored main/specialist routes follow their own required progression and clocks. Name the fleet best and its side in why when a task targets a skill another side holds.',
+  'FLEET SIDES (world.scoreboard.fleetSkills, world.scoreboard.fleet): this side ('+(world.scoreboard?.fleet?.side??'local')+') plans only its own accounts, but the board counts the best account of any side (local, Codex cloud, Claude cloud). Each row gives the fleet best of a skill, the side and account that hold it, and the best of this side (local). bestLive and progress count the fleet. For ordinary helper batches, do not queue work on a skill where otherSideLeads is true (another side leads this side by more than '+FLEET_BAND+' levels) unless the planned local account ends above that fleet best; a run that stays under it does not raise the board. Prefer skills this side leads or no side has trained for helper batches. The fresh completion account and scored main/specialist routes follow their own required progression and clocks. Name the fleet best and its side in why when a task targets a skill another side holds.',
   'SUPPLY BILL (world.supplyBill): Use scope overall to plan supplies through the last 99. If scope is unknown, refresh the bill before assigning work from it. recentlyCovered counts route lines covered by recent observations, before reservations or delivery. Verify entries are last-seen stock that could cover a gap: confirm the named holder and available quantity before assigning a consumer or buying replacements. Short entries show the gap even if all last-seen holdings are still available. Aliases on a row draw from the same base stock pool. Check item form at handoff. Unmapped entries need a pinned item ID. Prioritize the largest confirmed shortfalls. Give each supply job a finite count and a named consumer. Helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
   'METHOD LADDER (owner order): a worker uses the best method the current level of the account and owned items allow and switches at once when a better one unlocks (Runecraft altars by level and owned talisman, Agility courses, bows and arrows by Ranged level, logs by Firemaking level, monsters by combat). XP is 25x, so a level band takes minutes. Ordinary helper batches target the next unlock. Completion and scored routes may span a qualified method-switching ladder; never target a distant level on a weak method. Never gather or make stock the banks already hold in quantity (world.assets); spend it.',
   'MEMORY GATES: a proof imports FREE_FLOOR_GB and PRACTICE_STARTUP_GB from packages/core/src/memory.ts and takes the practice turn through delivery; it never hardcodes a free-memory number (a hardcoded 12 GiB gate failed the Firemaking and Magic builds on a machine with 5 to 10 GB available).',
   'PRACTICE CAPACITY (world.capacity.nativeTurn): a present holder PID or live waiters means the shared native turn may be busy even if RAM meets nativeStartupGB. Unknown tickets or holder state need inspection. Use independent qualified live work or source preparation while proof waits. The dated sample does not grant admission.',
   'LIVE CAPACITY (world.capacity.controller): use its dated running and externalRunning counts, pendingStartup and pendingReserveGB to weigh another independent job against the host limits. Missing fields or a missing snapshot mean occupancy is unknown. The controller checks current admission before starting a job.',
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
-  'ASSETS (world.assets): recent shows coins and large stacks supported by observations from the past five minutes. verify shows additional last-seen stock that needs a new observation. Check statusAt, bankAt and reservations before staging stock. Turn confirmed stock into scoreboard progress before buying or gathering more. Move coins and items to the account that will use them with the courier and trade workers.',
+  'ASSETS (world.assets): every side shares coins and large stacks with its account and side. recent shows stock supported by observations from the past five minutes. verify shows additional last-seen stock that needs a new observation. Check statusAt, bankAt and reservations before staging stock. Turn confirmed stock into scoreboard progress before buying or gathering more. Plan only this side\'s accounts; request another side\'s supplies through fleet orders. Move coins and items to the account that will use them with the courier and trade workers.',
   'NO DIARY (AGENTS.md): write why, reason and capability consumer text as the current work order and current facts only. No dates, no was/now, no history of earlier attempts or builds; cite the failed runId or evidence path instead. Git and runs/<runId>/ hold the history.',
   'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence belongs to a build task only and is 1 to '+NEW_EVIDENCE_MAX+' characters. Put longer observations, the observations of a run, qualify or review task, and the next consumer in why. args is an array of strings, for example ["18000"]. env is an object of NAME:"string value" pairs, for example {"CAP":"400"}. The task lists below are brief: envKeys names the env variables of a task and argCount counts its args, and neither is a task field. Read the full spec in .practice/coordinator/state.json before you copy env or args from a task.',
   'Kinds: review is a read-only cross-model source review of an existing delivered capability and can overlap independent authors. agent optionally selects codex or claude; the dispatcher balances builds and uses the other agent for review. qualify runs an existing capability native delivery. build authors named files, runs native delivery and a fresh reviewer. provision creates/registers one ordinary missing role. run installs a finite assignment in the coordinator job overlay, then checks fresh matched live status. Never set repeat:true yourself.',

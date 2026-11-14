@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { actionLabel, itemSources, mapIcons, npcDrops, pretty } from './gen-map-data';
 
 test('npc drops: the route items each NPC drops, most likely first, the higher chance for two NPCs of one name', () => {
@@ -69,4 +70,65 @@ test('item sources: drops by chance, and two NPC variants of one name are one ro
         ['drop', 'Drop: Jogre (level 53) · always', [2, 2, 0, 3, 3, 0]],
         ['drop', 'Drop: Giant (level 28) · 1/2', [1, 1, 0]],
     ]);
+});
+
+test('item sources retain helper-time evidence without changing their labels, gates or pins', () => {
+    const note = 'mine_copper, measured level 1, bronze pickaxe; three practice runs, including travel';
+    const cost = { helperTicksPerUnit: 16.6, ticksBasis: 'measured', ticksNote: note, privateValue: 'private-cost' };
+    const source = { kind: 'gather', skill: 'mining', level: 1, rung: 'mining/copper_rock_table', gate: 'access gate',
+        places: [{ loc: 'copperrock1', tiles: [{ x: 3229, z: 3145, level: 0 }] }], cost };
+    const row = itemSources([{ item: 'copper_ore', id: 436, sources: [source] }], names)['436']![0]!;
+    expect(row.slice(0, 3)).toEqual(['gather', 'Mining 1: Copper rock · Requires: access gate', [3229, 3145, 0]]);
+    expect(row[3]).toEqual({ helperTicksPerUnit: 16.6, ticksBasis: 'measured', ticksNote: note });
+});
+
+test('item sources combine places only when the source timing basis, value and conditions agree', () => {
+    const base = { helperTicksPerUnit: 1, ticksBasis: 'model' as const, ticksNote: 'ready stock; travel excluded' };
+    const costs = [base, base, { ...base, ticksBasis: 'measured' as const }, { ...base, helperTicksPerUnit: 2 }, { ...base, ticksNote: 'travel included' }];
+    const sources = costs.map((cost, index) => ({ kind: 'shop', shop: 'shop', basePrice: 10, cost,
+        owners: [{ npc: 'hickton', tiles: [{ x: index + 1, z: 3000, level: 0 }] }] }));
+    const rows = itemSources([{ item: 'rune_arrow', id: 892, sources }], names)['892']!;
+    expect(rows).toHaveLength(4);
+    expect(rows.map(r => r[2])).toEqual([[1, 3000, 0, 2, 3000, 0], [3, 3000, 0], [4, 3000, 0], [5, 3000, 0]]);
+    expect(rows.map(r => r[3])).toEqual([base, costs[2], costs[3], costs[4]]);
+});
+
+test('conditions beyond the display-note limit keep different sources and their coordinates separate', () => {
+    const prefix = 'shared condition; '.repeat(60);
+    const sources = ['travel included', 'travel excluded'].map((condition, index) => ({
+        kind: 'shop', shop: 'shop', basePrice: 10, owners: [{ npc: 'hickton', tiles: [{ x: index + 1, z: 3000, level: 0 }] }],
+        cost: { helperTicksPerUnit: 1, ticksBasis: 'model', ticksNote: prefix + condition },
+    }));
+    const rows = itemSources([{ item: 'rune_arrow', id: 892, sources }], names)['892']!;
+    expect(rows).toHaveLength(2);
+    expect(rows.map(r => r[2])).toEqual([[1, 3000, 0], [2, 3000, 0]]);
+    expect(rows.map(r => r[3]?.ticksNote)).toEqual([prefix.slice(0, 800) + '…', prefix.slice(0, 800) + '…']);
+});
+
+test('unknown or malformed helper times never become zero-cost facts and notes stay bounded', () => {
+    const source = (cost: unknown) => itemSources([{ item: 'rune_arrow', id: 892,
+        sources: [{ kind: 'make', skill: 'smithing', level: 75, inputs: [], cost }] }], names)['892']![0]!;
+    for (const helperTicksPerUnit of [undefined, null, '0', -1, NaN, Infinity])
+        expect(source({ helperTicksPerUnit, ticksBasis: 'model' })).toHaveLength(3);
+    for (const ticksBasis of [undefined, null, 'unknown', 'estimated', 1])
+        expect(source({ helperTicksPerUnit: 0, ticksBasis })).toHaveLength(3);
+    expect(source({ helperTicksPerUnit: 0, ticksBasis: 'measured' })[3]).toEqual({ helperTicksPerUnit: 0, ticksBasis: 'measured' });
+    expect(source({ helperTicksPerUnit: 1, ticksBasis: 'content', ticksNote: 'x'.repeat(1000) })[3]?.ticksNote).toBe('x'.repeat(800) + '…');
+});
+
+test('item-source labels retain access gates and map pins while blocked sources remain excluded', () => {
+    const gate = 'quest script: may give the item once or only at a quest stage';
+    const out = itemSources([{ item: 'blankrune', id: 1436, sources: [
+        { kind: 'gather', skill: 'mining', level: 1, rung: 'mining/blankrunestone', gate: 'quest Rune Mysteries', places: [{ loc: 'blankrunestone', tiles: [{ x: 2891, z: 4847, level: 0 }] }] },
+        { kind: 'action', trigger: 'opnpc1', subject: 'head_wizard', gate, places: [{ tiles: [{ x: 3100, z: 3100, level: 0 }] }] },
+        { kind: 'action', trigger: 'opnpc1', subject: 'head_wizard', places: [{ tiles: [{ x: 3200, z: 3200, level: 0 }] }] },
+        { kind: 'shop', gate: 'quest access', blocked: 'no owner spawn' },
+    ] }], names);
+    expect(out['1436']).toEqual([
+        ['gather', 'Mining 1: Blankrunestone · Requires: quest Rune Mysteries', [2891, 4847, 0]],
+        ['action', `Talk to Head wizard · Requires: ${gate}`, [3100, 3100, 0]],
+        ['action', 'Talk to Head wizard', [3200, 3200, 0]],
+    ]);
+    const shipped = JSON.parse(readFileSync(new URL('./client-assets/item-sources.json', import.meta.url), 'utf8'));
+    expect(shipped['1436'][0][1]).toContain('quest Rune Mysteries');
 });

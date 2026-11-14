@@ -37,6 +37,18 @@ export function canonicalRows(files: readonly SnapshotFile[], ownerOf: OwnerOf):
     return new Map([...best].map(([k, v]) => [k, { ...v.row, side: v.file.side }]));
 }
 
+// Local observations and published observations use the same ownership rule. Filter before choosing a row so a
+// practice file cannot hide live stock; include this side's published rows when a fresh container has no status yet.
+export function fleetStatusRows(local: readonly any[], files: readonly SnapshotFile[], ownerOf: OwnerOf, side: string, server = 'rs-sdk-demo.fly.dev'): any[] {
+    const valid = (row: any) => typeof row?.name === 'string' && /^[A-Za-z0-9]{1,12}$/.test(row.name)
+        && typeof row.server === 'string' && row.server.toLowerCase() === server.toLowerCase() && !row.practice;
+    return [...canonicalRows([
+        { side, accounts: local.filter(valid) },
+        // A sync's publication time cannot make an undated account observation newer than a dated local one.
+        ...files.map(file => ({ ...file, at: undefined, accounts: (file.accounts ?? []).filter(valid) })),
+    ], ownerOf).values()];
+}
+
 // The same files with each account kept only in the file of its canonical row, rows in their published order.
 export function canonicalSnapshots(files: readonly SnapshotFile[], ownerOf: OwnerOf): SnapshotFile[] {
     const keep = canonicalRows(files, ownerOf);

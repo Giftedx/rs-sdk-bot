@@ -316,7 +316,7 @@ test('a snapshot holds only this side’s accounts and no credentials', () => {
     const snap = snapshot([{ name: 'Practicebot', server: 'localhost:8888' }, { name: 'Giver', server: 's', bank: [{ id: 379, name: 'Lobster', count: 9 }], password: 'x', skills: [{ name: 'Fishing', level: 99, xp: 1 }] }, { name: 'Taker', server: 's' }], 'local', owners, 7);
     expect(snap.accounts.map(a => a.name)).toEqual(['Giver']);
     expect(JSON.stringify(snap)).not.toContain('password');
-    expect(snap.accounts[0]!.skills).toEqual([{ name: 'Fishing', level: 99 }]);
+    expect(snap.accounts[0]!.skills).toEqual([{ name: 'Fishing', level: 99, xp: 1 }]);
 });
 
 test('a snapshot lists completed quests and leaves an unread journal unknown', () => {
@@ -329,6 +329,7 @@ test('a snapshot lists completed quests and leaves an unread journal unknown', (
     ], 'local', owners, 7).accounts;
     expect(accounts.map(a => (a as { quests?: string[] }).quests)).toEqual([['Cook'], [], undefined, undefined]);
     expect(accounts.filter(a => 'quests' in a).map(a => a.name)).toEqual(['Read', 'None']);
+    expect(accounts.every(a => a.questJournal === null && a.questsAt === null)).toBe(true);
 });
 
 test('the agent acts only for its own side, skips busy and running accounts, and frees the rest', async () => {

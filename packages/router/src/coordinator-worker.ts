@@ -117,6 +117,11 @@ export function preparedProvisionProof(state:CoordinatorState,id:string,source:(
  return false;
 }
 
+// Account discovery includes published facts; this host's capacity still follows its actual local sessions.
+export function provisionLiveSessions(base=projectRoot,now=Date.now()):string[]{
+ return activeExternalLive(existsSync(join(base,'.practice/status'))?liveRows(base).filter(s=>!s?.practice):[],[],now);
+}
+
 export async function executeTask(task:CoordTask,dependencies:Record<string,any>,directory:string,runId:string,startedAt:number,agent:ModelWorker='claude'){
  if(task.kind==='provision'){
   const requirePreparedJob=()=>{
@@ -133,7 +138,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
   };
   requirePreparedJob();
   const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:capabilityRevision([REGISTRATION_SCRIPT]),reservation:runId});
-  const admission=admissionDecision({running:activeExternalLive(world.statuses,[],Date.now()).length,external:0,starting:1,startingReserve:1,pending:0,freeGB:freemem()/2**30,minFreeGB:world.capacity.minFreeGB,maxBots:world.capacity.maxBots});
+  const admission=admissionDecision({running:provisionLiveSessions().length,external:0,starting:1,startingReserve:1,pending:0,freeGB:freemem()/2**30,minFreeGB:world.capacity.minFreeGB,maxBots:world.capacity.maxBots});
   if(!admission.allowed)throw Error('account claim waits for measured capacity: '+admission.reason);
   const reserve=deps.reserveLiveAccount;
   deps.reserveLiveAccount=async(name,server)=>{requirePreparedJob();atomicJson(join(directory,'identity.json'),{account:name,server,purpose:task.why,at:Date.now()});return reserve(name,server);};

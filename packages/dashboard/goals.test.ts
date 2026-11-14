@@ -1,6 +1,7 @@
 import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { goalPlan,goalProgress,type GoalInputs } from './goals';
+import { goalPlan,goalProgress,questPointObservation,type GoalInputs } from './goals';
+import { remoteBots } from './fleet-view';
 test('dashboard goals come from the current plan, not the historical request ledger', () => {
     const text=readFileSync(new URL('../../docs/plans/joined-plan.md',import.meta.url),'utf8');
     const plan=goalPlan(text);
@@ -22,6 +23,61 @@ const now=1_000_000;
 const bot=(name='Worker')=>({name,server:'rs-sdk-demo.fly.dev',at:now-1000,bankAt:now-1000,bank:[{id:314,name:'Feather',count:100}],equipment:[],skills:[{name:'Mining',level:99,xp:2_000_000},{name:'Stat18',level:99,xp:2_000_000}],ranks:[],operation:'observed'});
 const inputs=():GoalInputs=>({requirements:[{item:'Feathers',count:100},{item:'Bronze sword',count:1}],items:[{id:314,name:'Feather'},{id:1277,name:'Bronze sword'}],quests:[{questPoints:1}],questConstants:'^first_questpoints = 1\n^second_questpoints = 2',receipts:{}});
 const state=(bots:any[]=[bot()]):any=>({now,bots,boards:[{board:'Mining'},{board:'Equipment',kind:'value'}],objectives:{paused:true},race:null,gates:null});
+test('quest points prefer the newest dated account observation and direct state wins ties, including zero',()=>{
+ const base={...bot(),guildFacts:{varps:{qp:55}},ranksAt:now-2000,ranks:[{board:'Quest Points',level:50}]};
+ expect(questPointObservation(base,now)).toEqual({points:55,at:base.at,source:'status'});
+ expect(questPointObservation({...base,ranksAt:now-500},now)).toEqual({points:50,at:now-500,source:'hiscores'});
+ expect(questPointObservation({...base,ranksAt:base.at},now)?.source).toBe('status');
+ expect(questPointObservation({...base,guildFacts:{varps:{qp:0}}},now)).toEqual({points:0,at:base.at,source:'status'});
+ expect(questPointObservation({...base,ranksAt:1,ranks:[{board:'Quest Points',level:60,at:now-1}]},now))
+  .toEqual({points:60,at:now-1,source:'hiscores'});
+});
+test('invalid QP values and explicit unknown dates cannot become current QP or borrow a different date',()=>{
+ const base={...bot(),guildFacts:{varps:{qp:55}},ranksAt:now-2000,ranks:[{board:'Quest Points',level:50}]};
+ for(const qp of [undefined,null,-1,1.5,NaN,Infinity,Number.MAX_SAFE_INTEGER+1,'55']){
+  expect(questPointObservation({...base,guildFacts:{varps:{qp}}},now)).toEqual({points:50,at:now-2000,source:'hiscores'});
+  expect(questPointObservation({...base,guildFacts:{varps:{qp}},ranks:[{board:'Quest Points',level:qp}]},now)).toBeNull();
+ }
+ for(const at of [undefined,null,0,-1,now+1,NaN,Infinity,'999999']){
+  expect(questPointObservation({...base,at},now)).toEqual({points:50,at:now-2000,source:'hiscores'});
+  expect(questPointObservation({...base,at,ranks:[{board:'Quest Points',level:50,at}]},now)).toBeNull();
+ }
+ expect(questPointObservation({...bot(),at:undefined,guildFacts:{varps:{qp:55}},ranks:[{board:'Quest Points',level:50}]},now)).toBeNull();
+});
+test('QP observations retain their live account identity instead of using practice, foreign or mismatched records',()=>{
+ const base={...bot(),guildFacts:{varps:{qp:55}},ranksAt:now-2000,ranks:[{board:'Quest Points',level:50}]};
+ for(const change of [{practice:true},{server:'localhost:8888'},{server:null},{name:'invalid!'},{account:'Other'}])
+  expect(questPointObservation({...base,...change},now)).toBeNull();
+ for(const change of [{account:'Other'},{name:'Other'},{server:'foreign'},{practice:true}]){
+  expect(questPointObservation({...base,guildFacts:{...base.guildFacts,...change}},now)).toEqual({points:50,at:now-2000,source:'hiscores'});
+  expect(questPointObservation({...base,guildFacts:null,ranks:[{...base.ranks[0],...change}]},now)).toBeNull();
+ }
+ expect(questPointObservation({...base,server:'RS-SDK-DEMO.FLY.DEV',guildFacts:{...base.guildFacts,account:'worker'}},now)?.source).toBe('status');
+});
+test('goal rows show selected QP source and original date without adding quest completion proof',()=>{
+ const shared={...bot(),remote:true,side:'cloud',guildFacts:{varps:{qp:55}},ranksAt:now-2000,ranks:[{board:'Quest Points',level:50}]};
+ const goals=goalProgress(state([shared]),inputs())[2]!;
+ expect(goals.rows.find(r=>r.label==='Worker recorded QP')).toMatchObject({value:'55/3 · not a quest census',at:shared.at,source:'fleet/snapshots/cloud.json'});
+ expect(goals.blocker).toContain('0/1 account journals observed');
+ expect(goals.rows.find(r=>r.label==='Guild chain · live')?.value).toBe('unproved');
+ const ranks=goalProgress(state([{...shared,ranksAt:now-500}]),inputs())[2]!;
+ expect(ranks.rows.find(r=>r.label==='Worker recorded QP')).toMatchObject({value:'50/3 · not a quest census',at:now-500,source:'hiscore snapshot'});
+ expect(goalProgress(state([{...shared,guildFacts:null,ranksAt:null}]),inputs())[2]!.rows.some(r=>r.label==='Worker recorded QP')).toBe(false);
+});
+test('server projection attaches selected dated QP after local and remote rank observations join',()=>{
+ const source=readFileSync(new URL('./server.ts',import.meta.url),'utf8'),start=source.indexOf('    const local = new Set(bots.map');
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(source.slice(start,source.indexOf('    // In the world now',start)));
+ const server='rs-sdk-demo.fly.dev',local={...bot('Local'),guildFacts:{varps:{qp:55}},ranksAt:now-2000,ranks:[{board:'Quest Points',level:50}]};
+ const bots:any[]=[local,{...bot('Practice'),practice:true,guildFacts:{varps:{qp:999}}}];
+ const snapshots=[{side:'cloud',at:now,accounts:[{name:'Remote',server,at:now-100,guildFacts:{varps:{qp:35}}}]}];
+ const ranks=new Map([['Remote',{at:now-2000,rows:[{board:'Quest Points',level:30}]}]]);
+ const run=new Function('bots','snapshots','ranks','now','remoteBots','questPointObservation',
+  `const roster=new Map(),firstSeen=new Map(),side='local',FILES={fleet:'fleet'},join=(...parts)=>parts.join('/'),fleetList=()=>[],ownerOf=()=>undefined,rankDelta=()=>({}),valueRanks=()=>[];${code};return bots;`);
+ const projected=run(bots,snapshots,ranks,now,remoteBots,questPointObservation);
+ expect(projected.find((b:any)=>b.name==='Local').questPoints).toEqual({points:55,at:local.at,source:'status'});
+ expect(projected.find((b:any)=>b.name==='Remote').questPoints).toEqual({points:35,at:now-100,source:'status'});
+ expect(projected.find((b:any)=>b.name==='Practice').questPoints).toBeNull();
+});
 test('kit coverage uses exact IDs even when variants share a display name',()=>{
  const i=inputs();
  i.requirements=[{item:'black dragonhide body',itemId:2503,count:1}];

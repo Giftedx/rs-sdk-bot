@@ -14,8 +14,10 @@ export const UNLOCKS:Record<string,Requirement>={
 export function goalReadiness(s:any,expectedName:string,now:number){
  const fresh=(at:any)=>Number.isFinite(at)&&at>0&&at<=now&&now-at<300000;
  const valid=s?.name?.toLowerCase()===expectedName.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.practice&&fresh(s.at);
- const questsAt=s&&Object.hasOwn(s,'questsAt')?s.questsAt:s?.at;
- const journal=valid&&fresh(questsAt)&&questsAt<=s.at&&Array.isArray(s.quests)?s.quests:[];
+ const full=s&&Object.hasOwn(s,'questJournal');
+ const questsAt=s&&Object.hasOwn(s,'questsAt')?s.questsAt:full?null:s?.at;
+ const observed=full?s.questJournal:s?.quests;
+ const journal=valid&&fresh(questsAt)&&questsAt<=s.at&&Array.isArray(observed)?observed:[];
  const facts:Record<string,Truth>={};
  for(const q of questDefinitions()){
   const rows=journal.filter((v:any)=>v?.id===q.id);

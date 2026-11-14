@@ -6,7 +6,7 @@
 // machine (.practice/fleet-agent.lock holds its process id).
 // Usage: bun scripts/fleet-agent.ts [--daemon] [--once]   Env: CYCLE (default 10), LEAD (default 15), FLEET_SIDE
 import { closeSync, existsSync, openSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { MARKET_CACHE_MS, MARKET_FILE } from './market-cache';
+import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from './market-cache';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
@@ -25,10 +25,10 @@ const readJson = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f =>
 
 export { readAgentJobs, swarmBusy } from './fleet-trade';
 
-// True when the market cache (scripts/market-cache.ts) is missing or older than MARKET_CACHE_MS.
-export const marketStale = (base: string, now = Date.now()): boolean => {
-    try { return now - statSync(join(base, MARKET_FILE)).mtimeMs > MARKET_CACHE_MS; } catch { return true; }
-};
+// The dashboard also publishes quotes; its refresh cannot keep the shop-to-bid recommendations from being refreshed.
+export const marketStale = (base: string, now = Date.now()): boolean => [MARKET_FILE, BIDS_FILE].some(file => {
+    try { return now - statSync(join(base, file)).mtimeMs > MARKET_CACHE_MS; } catch { return true; }
+});
 
 // The orders this side must act on now: each of its accounts with a pickable order, minus busy or already running ones.
 export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[], side: string, owners: ReturnType<typeof loadOwners>, busy: ReadonlySet<string>, running: ReadonlySet<string>, now: number, lead = LEAD) {
@@ -133,8 +133,8 @@ if (import.meta.main) {
         // The update and the sync are child processes that can wait on the network for longer than the lease time.
         // After each one, this agent goes on only while it still holds the lease. The top of the loop handles a loss.
         if (!renewLease(lock)) continue;
-        // The market prices that the loot job and the value guard read (scripts/market-cache.ts): a refresh in the
-        // background when the file is older than MARKET_CACHE_MS. It takes about 8 s and never holds this loop.
+        // The market prices and shop-to-bid recommendations (scripts/market-cache.ts): refresh in the background
+        // when either file is older than MARKET_CACHE_MS. It takes about 8 s and never holds this loop.
         if (!once && !marketRefresh && marketStale(root)) {
             marketRefresh = spawn('bun', [join(root, 'scripts', 'market-cache.ts')], { cwd: root, windowsHide: true, stdio: 'ignore' });
             marketRefresh.on('exit', () => { marketRefresh = null; });

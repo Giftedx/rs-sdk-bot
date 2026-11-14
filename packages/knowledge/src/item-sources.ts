@@ -2,8 +2,8 @@
 // Usage: bun packages/knowledge/src/item-sources.ts [--market <file>] [--owned] [--practice <dir>] [--out <file>]
 //   writes knowledge/item-sources.json and knowledge/item-sources-gaps.md.
 //   --market: GE snapshot, either .practice/coordinator/market-prices.json ({debugname: {at, ask, bid, sell}}) or a
-//     research/market-*.json (scripts/market-snapshot.ts). Default: <practice>/coordinator/market-prices.json if it
-//     exists, else the newest research/market-*.json.
+//     research/market-*.json (scripts/market-snapshot.ts), or the shared <practice>/market-all.json cache. Default:
+//     newest quote per item from the fresh shared cache, coordinator prices and latest research snapshot.
 //   --owned: fill the owned slot from <practice>/status/*.json and the other sides' fleet/snapshots. Live stock is not
 //     committed, so the default output then is <practice>/coordinator/item-sources.json.
 // Item set: rung inputs and requires (knowledge/ladders.json), the tools, bait and access items of the skill-tools
@@ -12,11 +12,15 @@
 // Every source cites a content-relative path and 1-based line under vendor/rs-sdk/server/content, or the snapshot file.
 // Each cost keeps three numbers apart (helper ticks, coins, risk) and adds a wall-clock number; each says what it rests on.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { listConfigFiles, parseConfigs, type ConfigBlock } from './config';
 import { parseJm2 } from './jm2';
 import { parsePack } from './pack';
 import { contentRoot, knowledgeDir } from './paths';
+import { FLEET_DIR, mySide } from '../../core/src/fleet';
+import { fleetStatusRows, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
+import type { Rate } from './ladders';
+import { marketQuotes } from '../../../scripts/market-cache';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 
@@ -42,6 +46,9 @@ export interface Cost {
     realSecondsPerUnit: number | null; realBasis: Basis; realNote: string;
 }
 export interface Tile { x: number; z: number; level: number }
+// Map pins and nearest-place suggestions need every location, with one pin per tile even when spawns overlap.
+export const sourceTiles = (spawns: readonly Tile[]): Tile[] => [...new Map(spawns.map(({ x, z, level }) =>
+    [`${x},${z},${level}`, { x, z, level }])).values()];
 export interface Place { npc?: string; loc?: string; spawns: number; tiles: Tile[]; src: string | null; wilderness: boolean }
 interface Base { kind: string; src: string; blocked: string | null; gate: string | null; cost: Cost }
 export interface GatherSource extends Base { kind: 'gather'; rung: string; skill: string; level: number; tools: string[][]; bait: string[]; places: Place[]; yieldPerAction: number | null; respawnTicks: number | null; respawnSrc: string | null; successChance: { low: number; high: number; src: string } | null }
@@ -51,7 +58,7 @@ export interface DropSource extends Base { kind: 'drop'; npc: string; combat: nu
 export interface ActionSource extends Base { kind: 'action'; trigger: string; subject: string; places: Place[] }
 export interface MakeSource extends Base { kind: 'make'; rung: string | null; skill: string; level: number; inputs: { item: string; count: number | null }[]; outputs: string[]; tools: string[][] }
 export interface GeSource extends Base { kind: 'ge'; at: string; ask: number | null; bid: number | null; sellers: number }
-export interface OwnedSource extends Base { kind: 'owned'; at: string; total: number; holders: { account: string; count: number; side: string }[] }
+export interface OwnedSource extends Base { kind: 'owned'; at: string | null; total: number; holders: { account: string; count: number; side: string; at: string | null }[] }
 export type Source = GatherSource | PickupSource | ShopSource | DropSource | MakeSource | ActionSource | GeSource | OwnedSource;
 export interface Substitute { group: string; items: string[]; note: string; src: string }
 export interface ItemSources {
@@ -62,6 +69,7 @@ export interface ItemSources {
 }
 interface Rung {
     id: string; skill: string; level: number; kind: string; src: string; xpPerAction: number | null; xpPerTick: number | null; ticksPerAction?: number | null; timing?: { basis?: string } | null;
+    measuredRate?: Rate;
     inputs: { debugname: string; count: number | null }[]; outputs: { debugname: string; count: number | null }[]; requires: { debugname: string }[];
     where: { locs: string[]; npcs: string[] } | null; quest: { name: string } | null; members: boolean | null;
 }
@@ -83,12 +91,21 @@ export function shopUnitPrice(objCost: number, sell: number, delta: number, stoc
     return Math.max(1, Math.floor((Math.max(100, sell - mod) * objCost) / 1000));
 }
 
-export interface Market { at: string; file: string; prices: Record<string, { ask: number | null; bid: number | null; sell: number }> }
+export interface Market { at: string; file: string; prices: Record<string, { ask: number | null; bid: number | null; sell: number; at?: string; file?: string }> }
 export function readMarket(file: string): Market {
     const raw = json(file);
     // Shown relative to the checkout that holds it, so the output does not name this machine's folders.
     const norm = file.replace(/\\/g, '/'), cut = norm.search(/\/(\.practice|research)\//);
     const rel = cut >= 0 ? norm.slice(cut + 1) : norm;
+    if (raw.items && Number.isSafeInteger(raw.at) && raw.at > 0) {
+        const quotes = marketQuotes(raw, raw.at), prices: Market['prices'] = {};
+        const items = json(join(knowledgeDir(), 'items.json')) as { id: number; debugname: string }[];
+        for (const item of items) if (quotes[item.id]) {
+            const q = quotes[item.id]!;
+            prices[item.debugname] = { ask: q.ask, bid: q.bid, sell: q.sell };
+        }
+        return { at: new Date(raw.at).toISOString(), file: rel, prices };
+    }
     if (raw.items && raw.takenAt) {
         const prices: Market['prices'] = {};
         for (const [k, v] of Object.entries<any>(raw.items)) prices[k] = { ask: v.market?.ask ?? null, bid: v.market?.bid ?? null, sell: v.market?.sellQuantity ?? 0 };
@@ -96,27 +113,57 @@ export function readMarket(file: string): Market {
     }
     const prices: Market['prices'] = {};
     let at = 0;
-    for (const [k, v] of Object.entries<any>(raw)) { prices[k] = { ask: v.ask ?? null, bid: v.bid ?? null, sell: v.sell ?? 0 }; at = Math.max(at, v.at ?? 0); }
+    for (const [k, v] of Object.entries<any>(raw)) { prices[k] = { ask: v.ask ?? null, bid: v.bid ?? null, sell: v.sell ?? 0, at: new Date(v.at ?? 0).toISOString() }; at = Math.max(at, v.at ?? 0); }
     return { at: new Date(at).toISOString(), file: rel, prices };
 }
 
-// Live holdings by account: this side's status files, then accounts other sides published. The main account is left out.
-export function readOwned(practice: string, fleetDir: string): { at: string; accounts: { name: string; side: string; items: Map<number, number> }[] } {
-    const out: { name: string; side: string; items: Map<number, number> }[] = [];
-    const add = (s: any, side: string) => {
-        // Live server only, as supply-bill.ts liveHelperStatuses: practice accounts hold nothing the fleet can trade.
-        if (typeof s?.name !== 'string' || s.server !== LIVE_SERVER || s.name.toLowerCase() === 'haggis' || out.some(o => o.name.toLowerCase() === s.name.toLowerCase())) return;
-        const items = new Map<number, number>();
-        for (const r of [...(s.inventory ?? []), ...(s.equipment ?? []), ...(s.bank ?? [])]) {
-            const id = r?.baseId ?? r?.id;
-            if (Number.isInteger(id) && r.count > 0) items.set(id, (items.get(id) ?? 0) + r.count);
+// Prefer the newest observation of each item; preserve that quote's source and age when combining caches.
+export function defaultMarket(practice: string, research = join(repoRoot, 'research'), now = Date.now()): Market | null {
+    const historical = existsSync(research) ? readdirSync(research).filter(f => /^market-.*\.json$/.test(f)).sort().pop() : undefined;
+    const shared = join(practice, 'market-all.json'), files = [join(practice, 'coordinator/market-prices.json'), ...(historical ? [join(research, historical)] : [])];
+    try { if (Object.keys(marketQuotes(json(shared), now)).length) files.push(shared); } catch { /* no shared cache */ }
+    let newest: Market | null = null;
+    const prices: Market['prices'] = {};
+    for (const file of files) {
+        let market: Market;
+        try { market = readMarket(file); } catch { continue; }
+        const at = Date.parse(market.at);
+        if (!Number.isFinite(at) || at > now) continue;
+        if (!newest || at > Date.parse(newest.at)) newest = market;
+        for (const [name, quote] of Object.entries(market.prices)) {
+            const quoteAt = quote.at ?? market.at, time = Date.parse(quoteAt);
+            if (!Number.isFinite(time) || time > now || (prices[name]?.at && Date.parse(prices[name]!.at!) >= time)) continue;
+            prices[name] = { ...quote, at: quoteAt, file: market.file };
         }
-        out.push({ name: s.name, side, items });
-    };
-    const files = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')) : [];
-    for (const f of files(join(practice, 'status'))) { try { add(json(join(practice, 'status', f)), 'local'); } catch { /* partial write */ } }
-    for (const f of files(fleetDir)) { try { const x = json(join(fleetDir, f)); for (const a of x.accounts ?? []) add(a, x.side ?? 'other'); } catch { /* partial write */ } }
-    return { at: new Date().toISOString(), accounts: out };
+    }
+    return newest ? { ...newest, prices } : null;
+}
+
+const oldest = (times: readonly (string | null)[]): string | null => times.length && times.every(t => t !== null) ? [...times as string[]].sort()[0]! : null;
+
+// Each account uses the same owner/freshness rule as supply planning. Item ages are the oldest contributing
+// container observation, so a heartbeat or report generation cannot make an old or undated bank look recent.
+export function readOwned(practice: string, fleetDir = join(FLEET_DIR(), 'snapshots'), side = mySide(), now = Date.now()) {
+    const statusDir = join(practice, 'status');
+    const local = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => {
+        try { return [json(join(statusDir, f))]; } catch { return []; }
+    }) : [];
+    const dated = (at: unknown, limit = now): string | null => typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= limit ? new Date(at).toISOString() : null;
+    const accounts = fleetStatusRows(local, readSnapshotFiles(fleetDir), ownerOfIn(dirname(fleetDir)), side, LIVE_SERVER)
+        .filter(s => s.name.toLowerCase() !== 'haggis').map(s => {
+            const items = new Map<number, number>(), itemAt = new Map<number, string | null>();
+            const at = dated(s.at), bankAt = at === null ? null : dated(s.bankAt, s.at);
+            for (const [rows, observedAt] of [[s.inventory, at], [s.equipment, at], [s.bank, bankAt]] as const) {
+                for (const r of Array.isArray(rows) ? rows : []) {
+                    const id = r?.baseId ?? r?.id;
+                    if (!Number.isSafeInteger(id) || id < 0 || !Number.isSafeInteger(r?.count) || r.count <= 0) continue;
+                    itemAt.set(id, items.has(id) ? oldest([itemAt.get(id) ?? null, observedAt]) : observedAt);
+                    items.set(id, (items.get(id) ?? 0) + r.count);
+                }
+            }
+            return { name: s.name as string, side: s.side as string, items, itemAt };
+        });
+    return { at: oldest(accounts.flatMap(a => [...a.itemAt.values()])), accounts };
 }
 
 export interface Options { market?: Market | null; owned?: ReturnType<typeof readOwned> | null }
@@ -183,7 +230,7 @@ export function buildItemSources(opts: Options = {}) {
     const npcPlace = (name: string): Place => {
         const n = npcByName.get(name);
         const sp = n?.spawns ?? [];
-        return { npc: name, spawns: sp.length, tiles: sp.slice(0, 3).map(({ x, z, level }) => ({ x, z, level })), src: sp[0]?.src ?? n?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
+        return { npc: name, spawns: sp.length, tiles: sourceTiles(sp), src: sp[0]?.src ?? n?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
     };
     const npcsFor = (name: string) => name.startsWith('_') ? (npcsInCategory.get(name.slice(1)) ?? []) : (npcsInCategory.get(name)?.length && !npcByName.has(name) ? npcsInCategory.get(name)! : [name]);
 
@@ -341,14 +388,14 @@ export function buildItemSources(opts: Options = {}) {
     const locPack = parsePack(read('pack/loc.pack')), objPack = parsePack(read('pack/obj.pack'));
     const neededIds = new Set([...needed.keys()].map(n => byName.get(n)?.id).filter((x): x is number => x !== undefined));
     const locSpawns = new Map<string, (Tile & { src: string })[]>(), objSpawns = new Map<string, (Tile & { src: string; count: number })[]>();
-    for (const f of readdirSync(join(contentRoot(), 'maps')).filter(f => f.endsWith('.jm2'))) {
+    for (const f of readdirSync(join(contentRoot(), 'maps')).filter(f => f.endsWith('.jm2')).sort()) {
         const m = parseJm2(f, read(`maps/${f}`));
         for (const l of m.locs) { const n = locPack.get(l.id); if (n && locNames.has(n)) locSpawns.set(n, [...(locSpawns.get(n) ?? []), l]); }
         for (const o of m.objs) if (neededIds.has(o.id)) { const n = objPack.get(o.id)!; objSpawns.set(n, [...(objSpawns.get(n) ?? []), o]); }
     }
     const locPlace = (name: string): Place => {
         const sp = locSpawns.get(name) ?? [];
-        return { loc: name, spawns: sp.length, tiles: sp.slice(0, 3).map(({ x, z, level }) => ({ x, z, level })), src: sp[0]?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
+        return { loc: name, spawns: sp.length, tiles: sourceTiles(sp), src: sp[0]?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
     };
 
     // Shared drop procs (drop tables/scripts/shared_droptables.rs2): cumulative `$random < T` branches over random(N),
@@ -436,7 +483,11 @@ export function buildItemSources(opts: Options = {}) {
     const ticksFrom = (r: Rung, perAction: number | null): Pick<Cost, 'helperTicksPerUnit' | 'ticksBasis' | 'ticksNote'> => {
         // A measured rate (rates.json, xpPerTick at 25x) wins over the content timing model (ticksPerAction, timing.basis).
         const one = perAction === null ? '; assumes 1 unit per action' : '';
-        if (r.xpPerTick && r.xpPerAction) return { helperTicksPerUnit: r3((r.xpPerAction * XP_RATE) / r.xpPerTick / (perAction ?? 1)), ticksBasis: 'measured', ticksNote: `${r.id} rate from knowledge/rates.json via ladders.json${one}` };
+        if (r.xpPerTick && r.xpPerAction) {
+            const measured = r.measuredRate;
+            const provenance = measured ? `; ${measured.method}, measured level ${measured.level}${measured.runs === undefined ? '' : `, ${measured.runs} runs`}${measured.tickMs === undefined ? '' : `, ${measured.tickMs} ms ticks`}; ${measured.evidence}${measured.note ? `; ${measured.note}` : ''}` : '';
+            return { helperTicksPerUnit: r3((r.xpPerAction * XP_RATE) / r.xpPerTick / (perAction ?? 1)), ticksBasis: 'measured', ticksNote: `${r.id} rate from knowledge/rates.json via ladders.json${provenance}${one}` };
+        }
         if (r.ticksPerAction) return { helperTicksPerUnit: r3(r.ticksPerAction / (perAction ?? 1)), ticksBasis: 'model', ticksNote: `${r.id} ticksPerAction from knowledge/ladders.json (timing ${r.timing?.basis ?? 'model'}, at the unlock level)${one}` };
         return { helperTicksPerUnit: null, ticksBasis: 'unknown', ticksNote: `no rate or timing for ${r.id} in knowledge/ladders.json` };
     };
@@ -499,7 +550,7 @@ export function buildItemSources(opts: Options = {}) {
         // ground spawns
         const os = objSpawns.get(item) ?? [];
         if (os.length) sources.push({
-            kind: 'pickup', spawns: os.length, countPerSpawn: os[0]!.count, tiles: os.slice(0, 3).map(({ x, z, level }) => ({ x, z, level })), wilderness: os.every(inWilderness), src: os[0]!.src, gate: null, blocked: null,
+            kind: 'pickup', spawns: os.length, countPerSpawn: os[0]!.count, tiles: sourceTiles(os), wilderness: os.every(inWilderness), src: os[0]!.src, gate: null, blocked: null,
             cost: cost({ ticksNote: 'walk and take; respawn time is the engine default and is not read here', coinsPerUnit: 0, coinsBasis: 'content', coinsNote: 'no coins spent', risk: os.every(inWilderness) ? null : 0, riskBasis: os.every(inWilderness) ? 'model' : 'content', riskNote: os.every(inWilderness) ? 'every spawn is in the Wilderness' : 'no combat at the spawn' }),
         });
         // shops
@@ -531,8 +582,8 @@ export function buildItemSources(opts: Options = {}) {
         // GE
         const m = opts.market?.prices[item];
         if (opts.market && def?.tradeable) sources.push({
-            kind: 'ge', at: opts.market.at, ask: m?.ask ?? null, bid: m?.bid ?? null, sellers: m?.sell ?? 0, src: opts.market.file, gate: null,
-            blocked: (m?.sell ?? 0) > 0 ? null : `0 sellers in the snapshot of ${opts.market.at}`,
+            kind: 'ge', at: m?.at ?? opts.market.at, ask: m?.ask ?? null, bid: m?.bid ?? null, sellers: m?.sell ?? 0, src: m?.file ?? opts.market.file, gate: null,
+            blocked: (m?.sell ?? 0) > 0 ? null : `0 sellers in the snapshot of ${m?.at ?? opts.market.at}`,
             cost: cost({
                 ticksNote: 'GE trip not measured', coinsPerUnit: m?.ask ?? null, coinsBasis: m?.ask ? 'measured' : 'unknown', coinsNote: m?.ask ? `lowest ask in the snapshot; ${m.sell} for sale` : 'no ask',
                 risk: 0, riskBasis: 'content', riskNote: 'no combat', realNote: 'the wait for new sellers is not modelled',
@@ -540,10 +591,10 @@ export function buildItemSources(opts: Options = {}) {
         });
         // owned
         if (opts.owned && def) {
-            const holders = opts.owned.accounts.map(a => ({ account: a.name, side: a.side, count: a.items.get(def.id) ?? 0 })).filter(h => h.count > 0).sort((a, b) => b.count - a.count);
+            const holders = opts.owned.accounts.map(a => ({ account: a.name, side: a.side, count: a.items.get(def.id) ?? 0, at: a.itemAt.get(def.id) ?? null })).filter(h => h.count > 0).sort((a, b) => b.count - a.count);
             const total = holders.reduce((a, h) => a + h.count, 0);
             if (total > 0) sources.push({
-                kind: 'owned', at: opts.owned.at, total, holders, src: '.practice/status/*.json + fleet/snapshots', gate: null, blocked: null,
+                kind: 'owned', at: oldest(holders.map(h => h.at)), total, holders, src: '.practice/status/*.json + synced fleet/snapshots', gate: null, blocked: null,
                 cost: cost({
                     helperTicksPerUnit: stackable.has(item) ? 0 : r3(TRADE_TICKS / PACK_SLOTS), ticksBasis: 'measured', ticksNote: `one ${TRADE_TICKS}-tick trade per pack (scripts/measure/trade-supply.ts)`,
                     coinsPerUnit: 0, coinsBasis: 'measured', coinsNote: 'already held', risk: 0, riskBasis: 'content', riskNote: 'no combat',
@@ -601,10 +652,9 @@ export function gapsMarkdown(rows: ItemSources[], market: Market | null) {
 if (import.meta.main) {
     const arg = (k: string) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : undefined; };
     const practice = resolve(arg('--practice') ?? join(repoRoot, '.practice'));
-    const marketFile = arg('--market') ?? (existsSync(join(practice, 'coordinator/market-prices.json')) ? join(practice, 'coordinator/market-prices.json')
-        : readdirSync(join(repoRoot, 'research')).filter(f => /^market-.*\.json$/.test(f)).sort().map(f => join(repoRoot, 'research', f)).pop());
-    const market = marketFile ? readMarket(resolve(marketFile)) : null;
-    const owned = process.argv.includes('--owned') ? readOwned(practice, join(repoRoot, 'fleet', 'snapshots')) : null;
+    const marketFile = arg('--market');
+    const market = marketFile ? readMarket(resolve(marketFile)) : defaultMarket(practice);
+    const owned = process.argv.includes('--owned') ? readOwned(practice) : null;
     const rows = buildItemSources({ market, owned });
     const file = arg('--out') ?? (owned ? join(practice, 'coordinator/item-sources.json') : join(knowledgeDir(), 'item-sources.json'));
     writeFileSync(file, JSON.stringify({

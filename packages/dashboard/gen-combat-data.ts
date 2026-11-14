@@ -1,39 +1,33 @@
-// Writes two client assets from the pinned server's content:
-// - client-assets/item-bonuses.json for the Worn Equipment tab's Equipment Stats: each item's combat bonuses from its
-//   .obj config (param=stabattack,7 ...), by display name, as [stab, slash, crush, magic, range attack, stab, slash,
-//   crush, magic, range defence, strength, ranged strength, prayer]; items with no bonus are left out.
+// Writes combat assets from the pinned server's knowledge:
+// - client-assets/item-bonuses.json for the Worn Equipment tab's Equipment Stats: every wearable item's combat bonuses
+//   from knowledge/gear.json, by item ID, as [stab, slash, crush, magic, range attack, stab, slash, crush, magic, range
+//   defence, strength, ranged strength, prayer]. Legacy name aliases are present only when all variants agree.
+// - client-assets/weapon-speed.json: each weapon's attack rate from knowledge/gear.json, with the same identity rule.
 // - client-assets/spellbook.json for the teleport casts and the magic max hit: each teleport spell (knowledge/teleports.json,
 //   kind spell) as [name, Magic level, [[rune, count], ...]], the staffs that give each rune without limit, and the combat
 //   spells (combatSpells below).
 // Run: bun packages/dashboard/gen-combat-data.ts
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { BONUSES, type Gear } from '../knowledge/src/gear';
 
-export const BONUS = ['stabattack', 'slashattack', 'crushattack', 'magicattack', 'rangeattack', 'stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence', 'strengthbonus', 'rangebonus', 'prayerbonus'];
-
-// One .obj file: each [debugname] block with its name= and its bonus params.
-export function objBonuses(text: string): { debug: string; name: string | null; bonus: number[] }[] {
-    const out: { debug: string; name: string | null; bonus: number[] }[] = [];
-    let cur: { debug: string; name: string | null; bonus: number[] } | null = null;
-    for (const raw of text.split(/\r?\n/)) {
-        const line = raw.trim(), head = line.match(/^\[([^\]]+)\]$/);
-        if (head) { cur = { debug: head[1]!, name: null, bonus: BONUS.map(() => 0) }; out.push(cur); continue; }
-        if (!cur) continue;
-        if (line.startsWith('name=')) cur.name = line.slice(5);
-        const p = line.match(/^param=([a-z]+),(-?\d+)$/);
-        if (p) { const i = BONUS.indexOf(p[1]!); if (i >= 0) cur.bonus[i] = Number(p[2]); }
+function byIdentity<G extends { id: number; name: string }, T>(gear: readonly G[], valueOf: (item: G) => T | undefined): Record<string, T> {
+    const out: Record<string, T> = {}, aliases = new Map<string, { value: T; key: string } | null>();
+    for (const item of gear) {
+        const value = valueOf(item);
+        if (!Number.isSafeInteger(item.id) || item.id < 0 || value === undefined) continue;
+        out[item.id] = value;
+        if (!item.name || item.name === 'null') continue;
+        const key = JSON.stringify(value), prior = aliases.get(item.name);
+        if (!aliases.has(item.name)) aliases.set(item.name, { value, key });
+        else if (prior && prior.key !== key) aliases.set(item.name, null);
     }
+    for (const [name, alias] of aliases) if (alias) out[name] = alias.value;
     return out;
 }
 
-export function itemBonuses(blocks: { debug: string; name: string | null; bonus: number[] }[], names: Map<string, string>): Record<string, number[]> {
-    const out: Record<string, number[]> = {};
-    for (const b of blocks) {
-        const name = b.name ?? names.get(b.debug);
-        if (!name || name === 'null' || b.bonus.every(v => v === 0) || out[name]) continue;
-        out[name] = b.bonus;
-    }
-    return out;
+export function itemBonuses(gear: readonly Pick<Gear, 'id' | 'name' | 'bonuses'>[]): Record<string, number[]> {
+    return byIdentity(gear, item => BONUSES.map(b => item.bonuses[b]));
 }
 
 // The combat spells of skill_combat/configs/magic/magic_combat_spells.dbrow: each row with a maxhit, as [name, level,
@@ -68,30 +62,20 @@ export function spellbook(tp: { teleports: any[]; staffs?: any[] }, names: Map<s
     return { spells, staffs, combat: combatText ? combatSpells(combatText, names) : [] };
 }
 
-const objFiles = (dir: string): string[] => readdirSync(dir).flatMap(f => { const p = join(dir, f); return statSync(p).isDirectory() ? objFiles(p) : f.endsWith('.obj') ? [p] : []; });
-
-// The attack speed of each weapon in ticks (param=attackrate of the .obj config; an item without it attacks at the
-// combat.param default 4), by display name: client-assets/weapon-speed.json. A name with two speeds keeps the first.
-export function weaponSpeeds(texts: string[], names: Map<string, string>): Record<string, number> {
-    const out: Record<string, number> = {};
-    for (const text of texts) for (const block of text.split(/^\[/m).slice(1)) {
-        const rate = Number(block.match(/^param=attackrate,(\d+)\s*$/m)?.[1]);
-        if (!(rate > 0)) continue;
-        const debug = block.slice(0, block.indexOf(']')), name = block.match(/^name=(.*)$/m)?.[1]?.trim() ?? names.get(debug);
-        if (name && out[name] == null) out[name] = rate;
-    }
-    return out;
+export function weaponSpeeds(gear: readonly Pick<Gear, 'id' | 'name' | 'attackRate'>[]): Record<string, number> {
+    return byIdentity(gear, item => Number.isFinite(item.attackRate) && item.attackRate! > 0 ? item.attackRate : undefined);
 }
 
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..'), content = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts');
     const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { debugname?: string; name?: string }[];
     const names = new Map(items.filter(i => i.debugname && i.name).map(i => [i.debugname!, i.name!]));
-    const bonuses = itemBonuses(objFiles(content).flatMap(f => objBonuses(readFileSync(f, 'utf8'))), names);
+    const gear = JSON.parse(readFileSync(join(root, 'knowledge', 'gear.json'), 'utf8')) as Gear[];
+    const bonuses = itemBonuses(gear);
     const book = spellbook(JSON.parse(readFileSync(join(root, 'knowledge', 'teleports.json'), 'utf8')), names, readFileSync(join(content, 'skill_combat', 'configs', 'magic', 'magic_combat_spells.dbrow'), 'utf8'));
     writeFileSync(join(import.meta.dir, 'client-assets', 'item-bonuses.json'), JSON.stringify(bonuses));
     writeFileSync(join(import.meta.dir, 'client-assets', 'spellbook.json'), JSON.stringify(book));
-    const speeds = weaponSpeeds(objFiles(content).map(f => readFileSync(f, 'utf8')), names);
+    const speeds = weaponSpeeds(gear);
     writeFileSync(join(import.meta.dir, 'client-assets', 'weapon-speed.json'), JSON.stringify(speeds));
-    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} items; spellbook.json: ${book.spells.length} teleports, ${book.combat.length} combat spells; weapon-speed.json: ${Object.keys(speeds).length} weapons`);
+    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} ID/name entries; spellbook.json: ${book.spells.length} teleports, ${book.combat.length} combat spells; weapon-speed.json: ${Object.keys(speeds).length} ID/name entries`);
 }

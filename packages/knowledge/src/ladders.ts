@@ -19,7 +19,10 @@ interface Shop { inv: string; stock: { item: string }[] }
 interface DbRow { name: string; data: Record<string, string[][]>; src: Record<string, string[]>; def: string }
 interface DbTable { table: string; rows: DbRow[] }
 interface Quest { varp: string; folder: string | null }
-interface Rate { method: string; skill: string; level: number; xpPerTick: number; evidence: string }
+export interface Rate {
+    method: string; skill: string; level: number; xpPerTick: number; evidence: string;
+    runs?: number; tickMs?: number; source?: 'measured'; note?: string;
+}
 interface Capability { id: string; goal?: string; entry: string; consumer?: string }
 
 export interface Data {
@@ -40,6 +43,7 @@ export interface Method {
     inputsBuyable: boolean | null; members: boolean | null;
     quest: { name: string; varp: string | null; src: string } | null;
     xpPerTick: number | null; rateMethod: string | null;
+    measuredRate?: Rate;
     worker: string | null; workers: string[]; workerEvidence: string | null; pendingCapability: string | null;
     source: string; src: string; gaps: string[];
     combat?: number; spawns?: number; targetBasis?: string;
@@ -368,7 +372,7 @@ export function buildLadders(d: Data) {
     for (const r of d.rates) {
         const m = byId.get(RATE_METHODS[r.method] ?? '');
         if (!m || m.skill !== r.skill || r.level < m.level) { notes.push(`rate ${r.method} not mapped to a ladder method`); continue; }
-        m.xpPerTick = r.xpPerTick; m.rateMethod = r.method;
+        m.xpPerTick = r.xpPerTick; m.rateMethod = r.method; m.measuredRate = { ...r };
     }
 
     // 6. Workers.

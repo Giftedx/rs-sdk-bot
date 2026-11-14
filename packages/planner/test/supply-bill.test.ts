@@ -57,7 +57,7 @@ test('the shortfall premium still applies to a merged item alias', () => {
     expect(unitValue('mort myre fungi',rows,{'mort myre fungi':10})).toBe(20);
 });
 
-test('the bill counts the other fleet side’s snapshot, not this side’s own', async () => {
+test('the bill counts shared snapshots and keeps a local observation on an undated tie', async () => {
     const { liveHelperStatuses } = await import('../src/supply-bill');
     const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
     const { join } = await import('node:path');
@@ -67,7 +67,7 @@ test('the bill counts the other fleet side’s snapshot, not this side’s own',
     writeFileSync(join(base, '.practice/status/Giver.json'), JSON.stringify({ name: 'Giver', server: 'rs-sdk-demo.fly.dev', bank: [{ id: 379, count: 5 }] }));
     writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [{ name: 'Taker', server: 'rs-sdk-demo.fly.dev', bank: [{ id: 379, count: 7 }] }, { name: 'Giver', server: 'rs-sdk-demo.fly.dev' }] }));
     writeFileSync(join(snaps, 'local.json'), JSON.stringify({ side: 'local', accounts: [{ name: 'Old', server: 'rs-sdk-demo.fly.dev' }] }));
-    expect(liveHelperStatuses(base, snaps, 'local').map(s => s.name).sort()).toEqual(['Giver', 'Taker']);
+    expect(liveHelperStatuses(base, snaps, 'local').map(s => s.name).sort()).toEqual(['Giver', 'Old', 'Taker']);
 });
 
 test('default shared snapshots use FLEET_DIR and prevent a covered global arrow requirement becoming surplus production',async()=>{
@@ -85,9 +85,11 @@ test('default shared snapshots use FLEET_DIR and prevent a covered global arrow 
         writeFileSync(join(fleet,'snapshots/claude-cloud.json'),JSON.stringify({side:'claude-cloud',accounts:[holding('OtherCloud',15)]}));
         writeFileSync(join(base,'fleet/snapshots/local.json'),JSON.stringify({side:'local',accounts:[holding('Legacy',10)]}));
         const statuses=liveHelperStatuses(base,undefined,'cloud');
-        expect(statuses.map(s=>s.name).sort()).toEqual(['LocalBank','OtherCloud','Swordswallow']);
+        expect(statuses.map(s=>s.name).sort()).toEqual(['LocalBank','OldCloud','OtherCloud','Swordswallow']);
+        // Same-side published observations survive a new container with no local status files.
+        expect(statuses.find(s=>s.name==='OldCloud')?.side).toBe('cloud');
         const rows=supplyBill([{item:'headless arrows',count:3615}],[{id:53,name:'Headless arrow'}],statuses);
-        expect(rows[0]).toMatchObject({owned:3771,short:0,holders:[{account:'LocalBank',count:3486},{account:'Swordswallow',count:270},{account:'OtherCloud',count:15}]});
+        expect(rows[0]).toMatchObject({owned:13770,short:0,holders:[{account:'OldCloud',count:9999},{account:'LocalBank',count:3486},{account:'Swordswallow',count:270},{account:'OtherCloud',count:15}]});
         // A caller's explicit snapshot directory remains authoritative over the configured default.
         const explicit=liveHelperStatuses(base,join(base,'fleet/snapshots'),'cloud');
         expect(supplyBill([{item:'headless arrows',count:3615}],[{id:53,name:'Headless arrow'}],explicit)[0]).toMatchObject({owned:280,short:3335});
@@ -104,6 +106,8 @@ test('an account that changed side counts once, from the side that owns it', asy
     // Mover ran on claude-cloud, which stopped; cloud adopted it. Both files list it.
     writeFileSync(join(snaps, 'claude-cloud.json'), JSON.stringify({ side: 'claude-cloud', accounts: [{ name: 'Mover', server: 'rs-sdk-demo.fly.dev', at: 9, bank: [{ id: 995, count: 1000 }] }] }));
     writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [{ name: 'Mover', server: 'rs-sdk-demo.fly.dev', at: 9, bank: [{ id: 995, count: 1000 }] }] }));
+    writeFileSync(join(base, '.practice/status/Mover.json'), JSON.stringify({ name: 'Mover', server: 'rs-sdk-demo.fly.dev', at: 10, bank: [{ id: 995, count: 9000 }] }));
     const rows = liveHelperStatuses(base, snaps, 'local');
     expect(rows.map(s => s.name)).toEqual(['Mover']);
+    expect(supplyBill([{item:'Coins',count:2000}],[{id:995,name:'Coins'}],rows)[0]).toMatchObject({owned:1000,short:1000});
 });

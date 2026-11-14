@@ -20,13 +20,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync,
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
-import { canonicalRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
+import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
+import { publishedSideHold } from '../packages/core/src/fleet-side-card';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -70,6 +71,15 @@ export function liveRetirements(retired: Readonly<Record<string, Retirement>>, s
 }
 
 const readJson = (f: string, fallback: any) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return fallback; } };
+// A filename binds its local observation to the requested account. Shared observations use the same live server
+// and ownership rule as supply planning, so a newer practice status cannot hide an account's published skills or stock.
+export function observedAccount(name: string, local: any, files: readonly SnapshotFile[], owners: ReturnType<typeof loadOwners>, side: string): any {
+    const key = name.toLowerCase(), owner = owners.get(key);
+    if (!owner) return null;
+    const bound = typeof local?.name === 'string' && local.name.toLowerCase() === key ? [local] : [];
+    return fleetStatusRows(bound, files, n => owners.get(n.toLowerCase())?.side, side, owner.server)
+        .find(row => row.name.toLowerCase() === key) ?? null;
+}
 const loadState = (side: string): State => ({ assigned: {}, retired: {}, ...readJson(join(prac, 'autopilot', `${side}.json`), {}) });
 const writeAtomic = (f: string, text: string) => { writeFileSync(`${f}.tmp`, text); renameSync(`${f}.tmp`, f); };
 export function readJobResultLines(file: string, offset: number, job: Parameters<typeof matchingJobLines>[1]): string[] {
@@ -113,18 +123,24 @@ export function itemOrder(from: string, to: string, item: string, count: number,
 }
 // A side's free accounts as kit donors, from its published snapshot and plan (fleet/snapshots, fleet/plans): the side
 // published a plan within `maxAgeMs` (SIDE_STOCK_MAX_AGE_MS: its fleet agent syncs every 10 minutes, so it runs and
-// will trade), and the account has no enabled job in that
-// plan and is in no open order. That side's planner keeps a party to an open order vacant until the order closes.
+// will trade), and the account has no enabled job, open order or published owner hold. Registered and observed
+// servers must match the live recipient's server. That side's planner keeps an open order's parties vacant.
 export const SIDE_STOCK_MAX_AGE_MS = 30 * 60_000;
-export function sideStock(side: string, snapshot: any, plan: any, open: ReadonlySet<string>, now: number, maxAgeMs: number, itemName: (id: number) => string | undefined): Stock[] {
-    if (!Array.isArray(snapshot?.accounts) || !Array.isArray(plan?.jobs) || !(now - plan.at < maxAgeMs)) return [];
+export function sideStock(side: string, snapshot: any, plan: any, open: ReadonlySet<string>, now: number, maxAgeMs: number, itemName: (id: number) => string | undefined,
+    context: { owners: ReturnType<typeof loadOwners>; server: string; card?: unknown }): Stock[] {
+    if (!Array.isArray(snapshot?.accounts) || !Array.isArray(plan?.jobs) || !Number.isFinite(plan.at) || plan.at > now || !(now - plan.at < maxAgeMs)) return [];
     const busy = enabledAccounts(plan.jobs);
-    return snapshot.accounts.filter((r: any) => typeof r?.name === 'string' && !busy.has(r.name.toLowerCase()) && !open.has(r.name.toLowerCase()) && r.name.toLowerCase() !== 'haggis')
+    const server = context.server.toLowerCase();
+    return snapshot.accounts.filter((r: any) => {
+        if (typeof r?.name !== 'string' || !/^[A-Za-z0-9]{1,12}$/.test(r.name) || typeof r.server !== 'string' || r.server.toLowerCase() !== server || r.practice) return false;
+        const name = r.name.toLowerCase(), owner = context.owners.get(name);
+        return owner?.side === side && owner.server.toLowerCase() === server && !publishedSideHold(context.card, side, name)
+            && !busy.has(name) && !open.has(name) && name !== 'haggis';
+    })
         .map((r: any) => { const a = accountFrom(r.name, side, r, itemName); return { name: a.name, side, items: a.items }; });
 }
 // Donor and recipient pairs whose item order failed or needs reconciliation in the last `windowMs`, as `from>to` in lower
-// case. The same donor would fail the same way (an owner pause the published plan does not show, a tile it cannot
-// reach), so the planner asks another donor.
+// case. The same donor would fail the same way (an unpublished pause or a tile it cannot reach), so the planner asks another donor.
 export const SEND_RETRY_MS = 24 * 3600_000;
 export function failedSends(orders: readonly Order[], receipts: readonly Receipt[], now: number, windowMs = SEND_RETRY_MS): Set<string> {
     const out = new Set<string>();
@@ -394,10 +410,10 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     // container has no status files, an account adopted from another side has its last row there, and a Thieving 99
     // account must not plan as a level-1 start).
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
-    const published = canonicalRows(readSnapshotFiles(join(FLEET_DIR(), 'snapshots')), n => owners.get(n.toLowerCase())?.side);
+    const published = readSnapshotFiles(join(FLEET_DIR(), 'snapshots'));
     const observed = (n: string) => {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        return freshest(f ? readJson(join(statusDir, f), null) : null, published.get(n.toLowerCase()));
+        return observedAccount(n, f ? readJson(join(statusDir, f), null) : null, published, owners, side);
     };
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), Date.now()));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
@@ -429,8 +445,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
         const other = f.slice(0, -'.json'.length);
-        if (other !== side && !silent.has(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id))
-            .filter(s => owners.get(s.name.toLowerCase())?.side === other));
+        if (other !== side && !silent.has(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id),
+            { owners, server: 'rs-sdk-demo.fly.dev', card: readJson(join(fleetDir, 'sides', f), null) }));
     }
     const market: Record<string, { id: number; name: string; limit: number }> = {};
     for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
@@ -441,7 +457,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const coinValue = coinValueFor(sideCoins);
     if (coinValue !== 1) log.push(`AUTOPILOT coins: this side holds ${sideCoins}, so a coin counts as ${coinValue}`);
     const bill = routeBill(items);
-    const planned = plan({ side, accounts, owners, coinValue, bill, templates: catalogue(), prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    const planned = plan({ side, accounts, owners, coinValue, bill, templates: catalogue(), prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const funding = fundOrders(planned, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined),

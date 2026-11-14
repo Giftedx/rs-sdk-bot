@@ -6,9 +6,26 @@ import {NAMES} from '../../core/src/names';
 import {mySide} from '../../core/src/fleet';
 import {provisionAccount, createAccountProvisionDeps,registrationEnvironment, type AccountProvisionDeps, type RegistrationResult} from '../src/account-provision';
 import {addTasks, chooseTask, finishTask, initialState, startTask, type CoordTask} from '../src/coordinator';
-import {preparedProvisionProof,provisionParticipantHold} from '../src/coordinator-worker';
+import {preparedProvisionProof,provisionParticipantHold,provisionLiveSessions} from '../src/coordinator-worker';
+import {readPlannerStatuses} from '../src/coordinator-planner';
 
 const request = {role:'ranged' as const,purpose:'missing role: ranged supply',server:'rs-sdk-demo.fly.dev',reservedNames:['PULLMYBOW']};
+test('provision capacity counts local execution even when newer shared discovery facts exist',()=>{
+ const base=mkdtempSync(join(tmpdir(),'provision-local-sessions-')),fleetDir=join(base,'fleet'),server='rs-sdk-demo.fly.dev',now=1_000_000;
+ try{
+  mkdirSync(join(fleetDir,'snapshots'),{recursive:true});
+  writeFileSync(join(fleetDir,'snapshots/local.json'),JSON.stringify({side:'local',accounts:[{name:'Published',server,at:now-1},{name:'Running',server,at:now-1,skills:[{name:'Fishing',level:99}]}]}));
+  expect(provisionLiveSessions(base,now)).toEqual([]);
+  mkdirSync(join(base,'.practice/status'),{recursive:true});
+  writeFileSync(join(base,'.practice/status/Null.json'),'null');
+  for(const[name,status]of Object.entries({Running:{},Ended:{result:'ok'},Practice:{practice:true},Old:{at:now-30_000}}))
+   writeFileSync(join(base,'.practice/status',name+'.json'),JSON.stringify({name,server,at:now-10,...status}));
+  const statuses=readPlannerStatuses(base,fleetDir,'local');
+  expect(statuses.find(s=>s.name==='Published')?.snapshotOnly).toBe(true);
+  expect(statuses.find(s=>s.name==='Running')?.snapshotOnly).toBe(true);
+  expect(provisionLiveSessions(base,now)).toEqual(['Running']);
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
 test('live registration forwards its verified release and refuses a missing pin before login',()=>{
  const pin='a'.repeat(64);expect(registrationEnvironment('rs-sdk-demo.fly.dev',pin).WORKER_RELEASE).toBe(pin);expect(registrationEnvironment('rs-sdk-demo.fly.dev',pin).DEMO_OK).toBe('1');
  expect(()=>registrationEnvironment('rs-sdk-demo.fly.dev',undefined)).toThrow('qualified runtime');expect(()=>registrationEnvironment('rs-sdk-demo.fly.dev','bad')).toThrow('qualified runtime');expect(registrationEnvironment('localhost:8888',undefined).DEMO_OK).toBe('');

@@ -7,7 +7,7 @@ import { aioTemplates, BLOOD_FOOD, BLOOD_MEALS, BOUGHT_BONE_XP, CANNON_BARS, SWE
 import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { missionSignature, startable } from './swarm';
-import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 import { existsSync } from 'node:fs';
 import { resolveAioStep } from './aio';
@@ -22,6 +22,7 @@ import { jewelleryOrderFromEnv, planJewelleryOrder, validateJewelleryOrder } fro
 import { smithRecipe } from './smith-batch';
 import { parseStep } from '../packages/core/src/chain-step';
 import { PROFILES, maximumUnitCost, selectItems } from './shop-buyer';
+import { sideCard } from './fleet-sync';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -345,15 +346,50 @@ test('a kit send becomes an item order and a vacant account; a party to an open 
 });
 
 test('another side gives only from accounts its fresh plan leaves free and no open order holds', () => {
+    const server = 'rs-sdk-demo.fly.dev';
     const snapshot = { accounts: [
         { name: 'Free', inventory: [{ name: 'Mind rune', count: 374 }], bank: [{ name: 'Coins', count: 4_000_000 }] },
-        { name: 'Working', bank: [{ name: 'Mind rune', count: 335 }] }, { name: 'Trading', bank: [{ name: 'Mind rune', count: 50 }] }, { name: 'Haggis', bank: [] }] };
+        { name: 'Working', bank: [{ name: 'Mind rune', count: 335 }] }, { name: 'Trading', bank: [{ name: 'Mind rune', count: 50 }] }, { name: 'Haggis', bank: [] }].map(row => ({ ...row, server })) };
+    const context = { server, owners: new Map(snapshot.accounts.map(row => [row.name.toLowerCase(), { side: 'claude-cloud', server }])) };
     const plan = { at: 1_000_000, jobs: [{ account: 'Working', enabled: true }, { account: 'Free', enabled: false }] };
-    const stock = (at: number) => sideStock('claude-cloud', snapshot, { ...plan, at }, new Set(['trading']), 1_000_000 + 60_000, 30 * 60_000, () => undefined);
+    const stock = (at: number) => sideStock('claude-cloud', snapshot, { ...plan, at }, new Set(['trading']), 1_000_000 + 60_000, 30 * 60_000, () => undefined, context);
     expect(stock(1_000_000)).toEqual([{ name: 'Free', side: 'claude-cloud', items: { 'mind rune': 374, coin: 4_000_000 } }]);
     // A side with no fresh plan has no running fleet agent to trade.
     expect(stock(1_000_000 - 31 * 60_000)).toEqual([]);
-    expect(sideStock('claude-cloud', snapshot, null, new Set(), 0, 1, () => undefined)).toEqual([]);
+    expect(sideStock('claude-cloud', snapshot, null, new Set(), 0, 1, () => undefined, context)).toEqual([]);
+    expect(stock(1_000_000 + 60_001)).toEqual([]);
+});
+
+test('published owner pauses and death holds keep remote kit orders on an available live donor', () => {
+    const server = 'rs-sdk-demo.fly.dev', remote = 'local', now = 1_000_000;
+    const row = (name: string, count: number) => ({ name, server, inventory: [{ name: 'Mind rune', count }], bank: [] });
+    const rows = [row('Paused', 1000), row('Dead', 900), row('Free', 100)];
+    const owners = new Map<string, { side: string; server: string }>([...rows.map(r => [r.name.toLowerCase(), { side: remote, server }] as const), ['needy', { side, server }] as const]);
+    const card = sideCard(remote, 5, rows.map(r => r.name), n => n === 'Paused' ? 'owner pause' : undefined, ['Dead']);
+    const stockFor = (card?: unknown) => sideStock(remote, { accounts: rows }, { at: now, jobs: [] }, new Set(), now, 30 * 60_000, () => undefined, { owners, server, card });
+    const recipient: Acct = { name: 'Needy', side, skills: { Hitpoints: 20, Magic: 1 }, items: {} };
+    const band = { ...catalogue().find(t => t.id === 'army-strike-magic-21')!, needs: { items: { 'mind rune': 20 } }, resources: [] };
+    const [assignment] = plan({ ...inputs(recipient), owners, templates: [band], army: new Set(['needy']), stock: stockFor(card), market: {} });
+    expect(assignment!.send?.from).toBe('Free');
+    const funded = fundOrders([assignment!], new Set(), () => { throw Error('unexpected coin order'); }, send => itemOrder(send.from, send.to, send.item, send.count, server, now));
+    expect(funded.orders).toHaveLength(1); expect(funded.orders[0]).toMatchObject({ from: 'Free', to: 'Needy', server });
+    expect(stockFor(card).map(s => s.name)).toEqual(['Free']);
+    expect(stockFor({ ...card, paused: ['PAUSED'], died: ['DEAD'] }).map(s => s.name)).toEqual(['Free']);
+    expect(stockFor({ ...card, stopped: true })).toEqual([]);
+    expect(stockFor().map(s => s.name)).toEqual(['Paused', 'Dead', 'Free']);
+    expect(stockFor({ ...card, side: 'another-side', stopped: true }).map(s => s.name)).toEqual(['Paused', 'Dead', 'Free']);
+});
+
+test('remote donor observations must belong to the registered live server and current side', () => {
+    const server = 'rs-sdk-demo.fly.dev', remote = 'local', now = 1_000_000;
+    const row = (name: string) => ({ name, server, inventory: [{ name: 'Mind rune', count: 100 }], bank: [] });
+    const rows = [row('Live'), { ...row('Practice'), practice: true }, { ...row('WrongServer'), server: 'localhost:8888' },
+        row('WrongOwner'), row('Moved'), row('Unregistered'), { ...row('UndatedServer'), server: undefined }];
+    const owners = new Map(rows.filter(r => r.name !== 'Unregistered').map(r => [r.name.toLowerCase(), {
+        side: r.name === 'Moved' ? side : remote, server: r.name === 'WrongOwner' ? 'localhost:8888' : server,
+    }]));
+    const stock = sideStock(remote, { accounts: rows }, { at: now, jobs: [] }, new Set(), now, 30 * 60_000, () => undefined, { owners, server });
+    expect(stock.map(s => s.name)).toEqual(['Live']);
 });
 
 import { failedSends, kitBuyRunning, SEND_RETRY_MS } from './autopilot';
@@ -636,6 +672,41 @@ test('the plan gives a build account the quest route of its kit; a kit with no r
 
 import { mountainWalk, offlinePlace, MOUNTAIN } from './autopilot';
 import { accountFrom, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
+
+test('autopilot plans from shared live skills when a newer local file belongs to practice or another account', () => {
+    const server = 'rs-sdk-demo.fly.dev', owners = new Map([['worker', { side, server }]]);
+    const published = { name: 'Worker', server, at: 100, bankAt: 50, bank: [], inventory: [],
+        skills: [{ name: 'Thieving', level: 55 }, { name: 'Hitpoints', level: 20 }] };
+    const files = [{ side, at: 1000, accounts: [published] }];
+    for (const local of [
+        { ...published, at: 200, server: 'localhost:8888', skills: [{ name: 'Thieving', level: 1 }] },
+        { ...published, at: 200, practice: true, skills: [{ name: 'Thieving', level: 1 }] },
+        { ...published, at: 200, name: 'Other', skills: [{ name: 'Thieving', level: 1 }] },
+    ]) {
+        const observed = observedAccount('worker', local, files, owners, side);
+        expect(observed).toMatchObject({ name: 'Worker', at: 100, bankAt: 50, side });
+        const [assignment] = plan(inputs(accountFrom('Worker', side, observed, () => undefined)));
+        expect(assignment!.template!.id).toMatch(/^goldfarm@/);
+    }
+    const local = { ...published, at: 200, skills: [{ name: 'Thieving', level: 1 }, { name: 'Hitpoints', level: 20 }], result: 'ok' };
+    const observed = observedAccount('Worker', local, files, owners, side);
+    expect(observed).toMatchObject({ at: 200, result: 'ok' });
+    expect(plan(inputs(accountFrom('Worker', side, observed, () => undefined)))[0]!.template!.id).toBe('thieving55');
+    expect(observedAccount('Worker', local, [{ ...files[0], accounts: [{ ...published, at: 200 }] }], owners, side).result).toBe('ok');
+});
+
+test('autopilot retains same-side and adopted observations while obeying the owner and expected server', () => {
+    const server = 'rs-sdk-demo.fly.dev', owners = new Map([['worker', { side, server }]]);
+    const row = (at: number, level: number) => ({ name: 'Worker', server, at, bankAt: 50,
+        bank: [{ id: 995, name: 'Coins', count: level }], inventory: [], skills: [{ name: 'Thieving', level }] });
+    const adopted = { side: 'old-side', accounts: [row(300, 99)] }, owned = { side, at: 900, accounts: [row(100, 55)] };
+    expect(observedAccount('Worker', null, [adopted, owned], owners, side)).toMatchObject({ side, at: 100, bankAt: 50 });
+    expect(observedAccount('Worker', null, [adopted], owners, side)).toMatchObject({ side: 'old-side', at: 300, bankAt: 50 });
+    expect(observedAccount('Worker', null, [{ ...owned, accounts: [{ ...row(900, 1), server: 'other-server' }] }, adopted], owners, side))
+        .toMatchObject({ side: 'old-side', at: 300 });
+    expect(observedAccount('Unknown', row(400, 1), [adopted], owners, side)).toBeNull();
+    expect(observedAccount('Worker', { ...row(400, 1), name: 'Other' }, [], owners, side)).toBeNull();
+});
 import { walkWithFerryFallback } from './walk-to';
 import { loadHunters } from '../packages/core/src/danger';
 import { loadTravel } from '../packages/core/src/travel';

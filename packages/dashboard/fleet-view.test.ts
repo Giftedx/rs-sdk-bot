@@ -1,5 +1,7 @@
 import {test,expect} from 'bun:test';
-import {fleetSidesView,remoteBots,scoreboardView,SIDE_SYNC_MS} from './fleet-view';
+import {dashboardStatuses,fleetSidesView,localDisplayNames,remoteBots,scoreboardView,SIDE_SYNC_MS} from './fleet-view';
+import {questProgress} from './goal-details';
+import {questDefinitions} from '../core/src/quest-status';
 
 test('scoreboard keeps the remaining list, best live level per skill and the coverage counts',()=>{
  const raw={at:'2026-10-31T11:20:12.643Z',totals:{actions:10,actionsNamed:4},items:{tradeable:20,tradeableHeld:3},
@@ -41,6 +43,125 @@ test('other sides become fleet rows with snapshot levels and items, a world-feed
  expect(moved.map(r=>[r.name,r.side,r.skills[0]?.level])).toEqual([['mover','cloud-2',9],['Stay','cloud',undefined]]);
  const late=remoteBots(snaps,new Set(),new Map([['tossthecaber',{x:1,z:2,level:0,combat:3,seen:now-60_000}]]),new Map(),now);
  expect(late.find(x=>x.name==='TossTheCaber').fresh).toBe(false);expect(late.find(x=>x.name==='TossTheCaber').pos).toEqual({x:1,z:2,level:0});
+});
+
+test('remote observations retain skill detail, worn slots, journal and bank ages without proving an online session',()=>{
+ const now=1_000_000,old=now-400_000,quest=questDefinitions().find(q=>q.name==='Rune Mysteries Quest')!;
+ const snapshot={side:'cloud',at:now-1,accounts:[{name:'Worker',server:'rs-sdk-demo.fly.dev',at:now-100,
+  skills:[{name:'Magic',level:40,currentLevel:37,xp:37224},{name:'Runecraft',level:1,xp:0}],
+  equipment:[{slot:3,id:1387,name:'Staff of fire',count:1}],equipmentObserved:true,
+  inventory:null,bank:[{id:995,name:'Coins',count:100}],bankAt:old,
+  questJournal:[{...quest,state:'complete'}],questsAt:old,
+  pos:{x:2618,z:3333,level:0},combat:58,guildFacts:{varps:{qp:25},questStages:{},unlocks:[]}}]};
+ const [r]=remoteBots([snapshot],new Set(),new Map(),new Map(),now);
+ expect(r.skills).toEqual([{name:'Magic',level:40,currentLevel:37,xp:37224},{name:'Runecraft',level:1,xp:0}]);
+ expect(r.equipment[0].slot).toBe(3);expect(r.equipmentObserved).toBe(true);expect(r.inventory).toBeNull();
+ expect(r.bankAt).toBe(old);expect(r.questsAt).toBe(old);expect(r.quests).toEqual(snapshot.accounts[0]!.questJournal);
+ expect(r.guildFacts.varps.qp).toBe(25);expect(r.pos).toEqual({x:2618,z:3333,level:0});expect(r.combat).toBe(58);
+ expect(r.fresh).toBe(false);expect(r.inWorld).toBe(false);expect(r.operation).toBe('offline');expect(r.live).toBeNull();
+ const journal=questProgress([r],now);
+ expect(journal.completed).toBe(1);expect(journal.rows.find(row=>row.label==='Worker')?.value).toContain('old');
+ const staleFeed=new Map([['worker',{x:1,z:2,level:0,combat:3,seen:old}]]);
+ expect(remoteBots([snapshot],new Set(),staleFeed,new Map(),now)[0].pos).toEqual(r.pos);
+ const freshFeed=new Map([['worker',{x:3200,z:3200,level:0,combat:60,seen:now-1}]]);
+ const observed=remoteBots([snapshot],new Set(),freshFeed,new Map(),now)[0];
+ expect(observed.pos).toEqual({x:3200,z:3200,level:0});expect(observed.combat).toBe(60);expect(observed.inWorld).toBe(true);
+ expect(observed.bankAt).toBe(old);expect(observed.questsAt).toBe(old);
+});
+
+test('missing or invalid remote observation times stay unknown rather than borrowing the account heartbeat',()=>{
+ const now=1_000_000,quest=questDefinitions()[0]!;
+ for(const value of [undefined,null,0,'999999',now+1,now-1]){
+  const [r]=remoteBots([{side:'cloud',at:now,accounts:[{name:'Worker',at:now-2,
+   skills:[{name:'Magic',level:1}],bank:[],bankAt:value,quests:['Rune Mysteries Quest'],questJournal:[{...quest,state:'complete'}],questsAt:value}]}],new Set(),new Map(),new Map(),now);
+  expect(r.bankAt).toBeNull();expect(r.questsAt).toBeNull();expect(r.skills[0].xp).toBeNull();expect(r.equipmentObserved).toBe(false);
+  expect(questProgress([r],now).observed).toBe(0);
+ }
+ const [legacy]=remoteBots([{side:'cloud',at:now,accounts:[{name:'Worker',at:now-1,quests:['Rune Mysteries Quest']}]}],new Set(),new Map(),new Map(),now);
+ expect(legacy.quests).toBeNull();expect(legacy.bank).toBeNull();expect(legacy.bankAt).toBeNull();
+});
+
+test('remote owner snapshots replace leftover local display candidates without hiding local or protected accounts',()=>{
+ const now=1_000_000,server='rs-sdk-demo.fly.dev',owners=new Map([['mover','cloud'],['mine','local'],['haggis','cloud'],['practice','cloud']]);
+ const snapshots=[{side:'cloud',at:now,accounts:[{name:'Mover',server,at:now-10,skills:[{name:'Magic',level:40,xp:37224}]},
+  {name:'Mine',server,at:now-10},{name:'Haggis',server,at:now-10},
+  {name:'Practice',server,at:now-10}]}];
+ const names=localDisplayNames(['mover','Mine','Haggis','Practice','Missing'],snapshots,name=>owners.get(name.toLowerCase()),'local',now);
+ expect([...names]).toEqual(['Mine','Haggis','Missing']);
+ const rows=remoteBots(snapshots,new Set([...names].map(name=>name.toLowerCase())),new Map(),new Map(),now);
+ expect(rows.map(row=>row.name)).toEqual(['Mover','Practice']);expect(rows[0].skills[0].xp).toBe(37224);
+ for(const row of [{server:'localhost:8888',at:now-1},{server,at:now+1},{server,at:0},{server,at:now-1,practice:true}]){
+  expect([...localDisplayNames(['Mover'],[{side:'cloud',accounts:[{name:'Mover',...row}]}],()=> 'cloud','local',now)]).toEqual(['Mover']);
+ }
+ expect([...localDisplayNames(['Mover'],snapshots,()=>undefined,'local',now)]).toEqual(['Mover']);
+ expect([...localDisplayNames(['Worker','worker','WORKER'],[],()=> 'local','local',now)]).toEqual(['Worker']);
+});
+
+test('a fresh container displays its own published observations without borrowing a local session',()=>{
+ const now=1_000_000,server='rs-sdk-demo.fly.dev',old=now-400_000;
+ const quest={id:7356,name:'Dwarf Cannon',state:'complete'};
+ const snapshot={side:'cloud',at:now-1,accounts:[{name:'Worker',server,at:now-10,
+  skills:[{name:'Magic',level:40,currentLevel:37,xp:37224}],inventory:[],
+  equipment:[{slot:3,id:1387,name:'Staff of fire',count:1}],equipmentObserved:true,
+  bank:[{id:995,name:'Coins',count:100}],bankAt:old,questJournal:[quest],questsAt:old,
+  pos:{x:2618,z:3333,level:0},combat:58,guildFacts:{varps:{qp:25}},
+  result:'ok',tick:9000,started:old,phase:'working',goal:'private session'}]};
+ const rows=dashboardStatuses(new Map(),[snapshot],()=> 'cloud','cloud',now);
+ const r=rows.get('Worker');
+ expect([...rows.keys()]).toEqual(['Worker']);expect(r.snapshotOnly).toBe(true);
+ expect(r.at).toBe(now-10);expect(r.snapshotAt).toBe(now-1);expect(r.bankAt).toBe(old);expect(r.questsAt).toBe(old);
+ expect(r.skills).toEqual(snapshot.accounts[0]!.skills);expect(r.equipment).toEqual(snapshot.accounts[0]!.equipment);
+ expect(r.equipmentObserved).toBe(true);expect(r.quests).toEqual([quest]);expect(r.guildFacts.varps.qp).toBe(25);
+ expect(r.goal).toBe('');expect(r.role).toBe('unknown');
+ for(const field of ['result','tick','started','phase','xpPerTick','xpPerHour','processActive','inWorld'])expect(r).not.toHaveProperty(field);
+ const stale={name:'worker',server,at:old,started:old,result:'fail',skills:[{name:'Magic',level:1}]};
+ const newer=dashboardStatuses(new Map([['worker',stale]]),[snapshot],()=> 'cloud','cloud',now);
+ expect([...newer.keys()]).toEqual(['Worker']);expect(newer.get('Worker').skills[0].level).toBe(40);
+ expect(newer.get('Worker')).not.toHaveProperty('result');
+ const tied={...stale,name:'Worker',at:now-10};
+ expect(dashboardStatuses(new Map([['Worker',tied]]),[snapshot],()=> 'cloud','cloud',now).get('Worker')).toBe(tied);
+});
+
+test('snapshot fallback preserves local practice and protected rows and rejects invalid or former-side observations',()=>{
+ const now=1_000_000,server='rs-sdk-demo.fly.dev';
+ const practice={name:'Practice',server:'localhost:8888',at:now-100,skills:[]};
+ const main={name:'Haggis',server,at:now-100,skills:[]};
+ const moved={name:'Mover',server,at:now-100,skills:[]};
+ const local=new Map([['Practice',practice],['Haggis',main],['Mover',moved]]);
+ const rows=dashboardStatuses(local,[{side:'local',at:now,accounts:[
+  {name:'Practice',server,at:now-1},{name:'Haggis',server,at:now-1},{name:'Mover',server,at:now-1},
+  {name:'Future',server,at:now+1},{name:'Undated',server},{name:'Wrong',server:'localhost:8888',at:now-1},
+  {name:'Test',server,practice:true,at:now-1}]},{side:'cloud',accounts:[{name:'Mover',server,at:now-50}]}],
+  n=>n==='Mover'?'cloud':'local','local',now);
+ expect([...rows.keys()]).toEqual(['Practice','Haggis','Mover']);
+ expect(rows.get('Practice')).toBe(practice);expect(rows.get('Haggis')).toBe(main);expect(rows.get('Mover')).toBe(moved);
+ expect(dashboardStatuses(new Map(),[{side:'local',accounts:[{name:'Haggis',server,at:now-1}]}],()=> 'local','local',now).size).toBe(0);
+ expect(remoteBots([{side:'cloud',accounts:[{name:'Haggis',server,at:now-1}]}],new Set(),new Map(),new Map(),now)).toEqual([]);
+});
+
+test('a published remote assignment is configuration evidence while its account stays offline',()=>{
+ const now=10_000_000,server='rs-sdk-demo.fly.dev';
+ const snapshots=[{side:'cloud',at:now,accounts:[{name:'Worker',server,at:now-1}]}];
+ const plans=[{side:'cloud',at:now-100,jobs:[{accounts:['Other','worker'],script:'scripts/goldfarm.ts',goal:'gold for an army kit',role:'thieving',enabled:true,
+  env:{PASSWORD:'private'},note:'private note'}]}];
+ const [row]=remoteBots(snapshots,new Set(),new Map(),new Map(),now,'local',plans,()=> 'cloud');
+ expect(row.planJob).toEqual({account:'Worker',side:'cloud',at:now-100,state:'configured',script:'scripts/goldfarm.ts',goal:'gold for an army kit',role:'thieving',enabled:true});
+ expect(row.currentGoal).toBe('Planned: gold for an army kit');expect(row.goal).toBeNull();expect(row.role).toBeNull();
+ expect(row.operation).toBe('offline');expect(row.inWorld).toBe(false);expect(row.fresh).toBe(false);
+ for(const field of ['processActive','xpPerTick','xpPerHour'])expect(row).not.toHaveProperty(field);
+ expect(JSON.stringify(row)).not.toContain('private');
+ const disabled=remoteBots(snapshots,new Set(),new Map(),new Map(),now,'local',[{...plans[0],jobs:[{...plans[0]!.jobs[0],enabled:false}]}],()=> 'cloud')[0];
+ expect(disabled.currentGoal).toBe('Disabled: gold for an army kit');expect(disabled.operation).toBe('offline');
+});
+
+test('remote assignment display rejects missing, stale, future, wrong-side and former-owner plans',()=>{
+ const now=10_000_000,snapshots=[{side:'cloud',accounts:[{name:'Worker',server:'rs-sdk-demo.fly.dev',at:now-1}]}];
+ const plan={side:'cloud',at:now-1,jobs:[{account:'Worker',script:'scripts/goldfarm.ts',goal:'kit coins'}]};
+ for(const plans of [[],[{...plan,at:now-3*SIDE_SYNC_MS-1}],[{...plan,at:now+1}],[{...plan,side:'cloud-2'}],[{...plan,jobs:[{...plan.jobs[0],account:'Other'}]}]]){
+  const [row]=remoteBots(snapshots,new Set(),new Map(),new Map(),now,'local',plans,()=> 'cloud');
+  expect(row.planJob).toBeNull();expect(row.currentGoal).toBe('');expect(row.operation).toBe('offline');
+ }
+ expect(remoteBots(snapshots,new Set(),new Map(),new Map(),now,'local',[plan],()=> 'cloud-2')[0].planJob).toBeNull();
 });
 
 

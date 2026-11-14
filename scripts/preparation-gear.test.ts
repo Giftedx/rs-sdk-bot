@@ -21,6 +21,22 @@ test('stale, foreign, practice and missing skills do not become current gear rea
   expect(preparationGear([job],[changed],['Mightyrod'],now).kits[0]?.loadout.state).not.toBe('ready');
  }
 });
+test('unknown worn equipment preserves usable pack and bank facts without turning unknown stock into missing gear',()=>{
+ const base=snapshot(),kit=base.bank,withoutWeapon=kit.filter(i=>i.id!==1277);
+ const unknown={...base,inventory:[],equipment:[],equipmentObserved:false,bank:[]};
+ const loadout=(status:any)=>preparationGear([job],[status],['Mightyrod'],now).kits[0]!.loadout;
+ expect(loadout(unknown).state).toBe('unknown');
+ const packed=loadout({...unknown,inventory:kit});
+ expect(packed.state).toBe('ready');expect(packed.selected[0]?.id).toBe(1277);
+ expect(loadout({...unknown,bank:kit}).state).toBe('ready');
+ // Cached worn rows are not evidence when the producer explicitly marks them unobserved.
+ const cached={...unknown,inventory:withoutWeapon,equipment:[{id:1277,count:1}]};
+ expect(loadout(cached).state).toBe('unknown');
+ expect(loadout({...cached,equipmentObserved:true}).state).toBe('ready');
+ expect(loadout({...unknown,inventory:withoutWeapon,equipmentObserved:true}).state).toBe('missing');
+ // Legacy rows without the observation flag retain their established array semantics.
+ expect(loadout({...unknown,equipmentObserved:undefined}).state).toBe('missing');
+});
 test('unbanked noted weapons never equip and dated bank/pack quantities are not added twice',()=>{
  const base=snapshot();base.bank=[];
  const noted={...base,inventory:[{id:1332,baseId:1331,count:1},{id:1171,count:1},{id:295,count:1},{id:954,count:1},{id:329,count:16}]};
