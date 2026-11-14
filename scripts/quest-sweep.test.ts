@@ -1788,9 +1788,8 @@ test('prayer potions ride as food when base Prayer covers the points the quest u
  expect(prayerCovers('tree',43)).toBe(false);
  expect(prayerCovers('grandtree',62)).toBe(true);
  expect(prayerCovers('zanaris',99)).toBe(false);
- // Monkey Madness used 78 points in its bench (potions=3 prayerLeft=16 at Prayer 43).
- expect(prayerCovers('mm',99)).toBe(true);
- expect(prayerCovers('mm',92)).toBe(false);
+ // Monkey Madness used 384 points in its bench (21 sips at Prayer 43): even Prayer 99 keeps its potions.
+ expect(prayerCovers('mm',99)).toBe(false);
 });
 test('a preset antipoison is a food row, never a need: Monkey Madness carries its superantipoison only when held', async () => {
  const {ANTIPOISONS}=await import('./quest-sweep');

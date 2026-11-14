@@ -209,10 +209,11 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
 // The prayer points a quest's fights used in its bench case (quester_quest_<quest>): the preset's Prayer 43, plus 17 for
 // each sip (7 + 25% of 43, consume_effects.dbrow prayer_potion_effect), less the points left. Tree Gnome Village
-// 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47; Fight Arena 43 - 36 = 7; Monkey Madness 43 + 3 x 17 - 16 = 78
-// (potions=3 prayerLeft=16). An account whose base Prayer covers that by PRAYER_MARGIN
-// leaves the preset's prayer potions out of its pack. No shop sells them.
-export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7,mm:78},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
+// 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47; Fight Arena 43 - 36 = 7. An account whose base Prayer covers
+// that by PRAYER_MARGIN leaves the preset's prayer potions out of its pack. No shop sells them. Monkey Madness has no
+// row: Ape Atoll took 18 sips and the demon 3 (NOTE atoll ... potions=18, RESULT ... potions=3 prayerLeft=16), so
+// 43 + 21 x 17 - 16 = 384 points, which no base Prayer covers.
+export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
 // The generated quests drink any antipoison dose they hold (quest-mm.ts ANTIPOISON), and no shop sells one: a preset's
 // antipoison goes with the food rows, taken when the bank holds it and never a missing item.
 export const ANTIPOISONS=[2448,181,183,185,175,177,179];
