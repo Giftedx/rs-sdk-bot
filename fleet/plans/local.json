@@ -1,25 +1,7 @@
 {
  "side": "local",
- "at": 1794671821813,
+ "at": 1794675638122,
  "jobs": [
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 1500 lobster"
-   ],
-   "env": {
-    "ROUNDS": "0",
-    "RUN": "2"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
   {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
@@ -90,6 +72,29 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
   },
   {
    "account": "Bigchopper",
@@ -171,48 +176,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
-   ]
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
    ]
   },
   {
@@ -564,6 +527,43 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
    ]
   }
  ]
