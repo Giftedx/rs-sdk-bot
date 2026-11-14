@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794623876105-bigpackage-weequickie",
  "account": "WeeQuickie",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 1000,
  "claim": "54764cd9-7207-4ff8-a048-851fc5a13e19",
- "count": 0,
- "ok": false,
- "at": 1794624368951,
- "detail": "trade claimed"
+ "count": 1000,
+ "ok": true,
+ "at": 1794624391243,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 1020
+ },
+ "bank": {
+  "count": 1000,
+  "at": 1794624386858
+ },
+ "logout": {
+  "attemptId": "1794624369080-0000006004-0000000001",
+  "at": 1794624391234,
+  "sha256": "cfc6a671549edf5faba6f18e491898436db424f0245d56ec8a74a68abd8c106a"
+ },
+ "screen": true
 }
