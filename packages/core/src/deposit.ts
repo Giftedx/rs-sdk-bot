@@ -65,8 +65,7 @@ export async function depositPack(s: Session, keep: (item: { id: number; name: s
     for (const id of new Set(s.sdk.getInventory().filter(i => !keep(i)).map(i => i.id))) {
         const item = s.sdk.getInventory().find(i => i.id === id);
         if (!item) continue;
-        await s.bot.depositItem(item, -1);
-        await waitUntil(s, () => !s.sdk.getInventory().some(i => i.id === id), { timeoutTicks: 5 });
+        await depositObserved(s, item);
         n++;
     }
     return n;

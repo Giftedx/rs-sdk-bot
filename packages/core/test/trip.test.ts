@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { planTrip } from '../src/trip';
+import { planTrip, takeItems } from '../src/trip';
 import { createWorld, type PathLength } from '../src/world';
 import type { Travel } from '../src/travel';
 
@@ -82,4 +82,62 @@ test('routeGain is true only when the second account may take a travel or pass a
     expect(w.routeGain!({ ...mage, skills: { magic: 1 } }, { ...mage, skills: { magic: 1 }, counts: { airrune: 3, lawrune: 1 } })).toBe(false);
     expect(w.routeGain!(poor, { ...poor, items: ['elenakey'] })).toBe(true);
     expect(w.routeGain!(poor, poor)).toBe(false);
+});
+
+function withdrawalFixture(stock: number, received: number, delay = 0) {
+    let tick = 0, held = 7, pending = false, closed = false;
+    const row = { id: 995, count: stock };
+    const requests: number[] = [];
+    const s = {
+        tick: () => tick,
+        sdk: { getState: () => ({ inventory: [{ id: 995, count: held }], bank: { items: [row] } }) },
+        bot: {
+            openBank: async () => ({ success: true }),
+            withdrawItem: async (_row: unknown, amount: number) => {
+                requests.push(amount);
+                row.count -= amount;
+                if (delay) pending = true; else held += received;
+                return { success: true };
+            },
+            closeBank: async () => { closed = true; },
+        },
+    };
+    const wait = async () => {
+        tick++;
+        if (pending && tick >= delay) { held += received; pending = false; }
+    };
+    return { s, wait, requests, held: () => held, closed: () => closed };
+}
+
+test('a bank stop reports the exact shortfall when only part of the route fare is banked', async () => {
+    const f = withdrawalFixture(20, 20);
+    expect(await takeItems(f.s, 100, {}, f.wait)).toEqual({ ok: false, detail: 'withdraw short 995:20/100' });
+    expect(f.requests).toEqual([20]);
+    expect(f.closed()).toBe(true);
+});
+
+test('a bank row emptied in place does not confirm a withdrawal before the pack receives it', async () => {
+    const f = withdrawalFixture(100, 100, 3);
+    expect(await takeItems(f.s, 100, {}, f.wait)).toEqual({ ok: true, detail: 'took 995x100' });
+    expect(f.s.tick()).toBe(3);
+    expect(f.held()).toBe(107);
+    expect(f.closed()).toBe(true);
+});
+
+test('a bank debit with only partial pack credit cannot satisfy a bank stop', async () => {
+    const f = withdrawalFixture(100, 60);
+    expect(await takeItems(f.s, 100, {}, f.wait)).toEqual({ ok: false, detail: 'withdraw short 995:60/100' });
+    expect(f.s.tick()).toBe(5);
+});
+
+test('a bank debit without pack credit cannot satisfy a bank stop', async () => {
+    const f = withdrawalFixture(100, 0);
+    expect(await takeItems(f.s, 100, {}, f.wait)).toEqual({ ok: false, detail: 'withdraw short 995:0/100' });
+    expect(f.s.tick()).toBe(5);
+});
+
+test('a missing travel item holds the route even after its full fare is withdrawn', async () => {
+    const f = withdrawalFixture(100, 100);
+    expect(await takeItems(f.s, 100, { lawrune: 1 }, f.wait)).toEqual({ ok: false, detail: 'withdraw short 563:none' });
+    expect(f.closed()).toBe(true);
 });

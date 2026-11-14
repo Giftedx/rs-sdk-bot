@@ -1,4 +1,6 @@
 import { rsSdkRoot } from './paths';
+import { existsSync, mkdirSync, realpathSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { isLiteRunning } from './lite';
 import { MM_PRESETS, extendVarps } from './presets-mm';
 import { DRAGON_PRESETS } from './presets-dragon';
@@ -545,14 +547,23 @@ function agilityPresets(): Record<string, SaveConfig> {
     return out;
 }
 
+export function preparePresetDirectory(root = rsSdkRoot()): string {
+    const dir = resolve(realpathSync(root), 'server/engine/data/players/main');
+    // The generator chooses its engine directory by existence, so a fresh checkout needs the canonical parent first.
+    mkdirSync(dir, { recursive: true });
+    return dir;
+}
+
 // The engine writes the save on logout, so a preset written while logged in is lost.
-export async function applyPreset(name: string, preset: SaveConfig): Promise<string> {
+export async function applyPreset(name: string, preset: SaveConfig, options: { root?: string } = {}): Promise<string> {
     if (isLiteRunning(name)) throw new Error(`bot ${name} is logged in`);
+    const root = realpathSync(options.root ?? rsSdkRoot());
+    const expected = resolve(preparePresetDirectory(root), `${name.toLowerCase()}.sav`);
     const code = `import { generateSave } from './sdk/test/utils/save-generator.ts';
 const p = await generateSave(process.env.BOT_NAME, JSON.parse(process.env.PRESET));
 console.log('SAVE=' + p);`;
     const r = Bun.spawnSync(['bun', '-e', code], {
-        cwd: rsSdkRoot(),
+        cwd: root,
         env: { ...process.env, BOT_NAME: name, PRESET: JSON.stringify(preset) },
         stdout: 'pipe',
         stderr: 'pipe',
@@ -560,7 +571,9 @@ console.log('SAVE=' + p);`;
     const out = r.stdout.toString();
     const m = out.match(/SAVE=(.+)/);
     if (r.exitCode !== 0 || !m) throw new Error(`generateSave failed for ${name}: ${r.stderr.toString()}${out}`);
+    const path = resolve(root, m[1]!.trim());
+    if (path !== expected || !existsSync(expected)) throw new Error(`generateSave wrote an unexpected path for ${name}: ${path}, expected ${expected}`);
     // The generator keeps varps 0-308 only; higher ids (Monkey Madness 365-374) are written here.
-    if (preset.varps && Object.keys(preset.varps).some(k => Number(k) >= 309)) extendVarps(m[1]!.trim(), preset.varps);
-    return m[1]!.trim();
+    if (preset.varps && Object.keys(preset.varps).some(k => Number(k) >= 309)) extendVarps(path, preset.varps);
+    return path;
 }

@@ -94,9 +94,12 @@ export async function takeItems(s: BankSession, coins: number, want: Record<stri
     for (const [id, n] of list as [number, number][]) {
         const row = (s.sdk.getState()?.bank?.items ?? []).find((i: any) => i.id === id), before = held(id);
         if (!row) { short.push(`${id}:none`); continue; }
-        await s.bot.withdrawItem(row, Math.min(n, row.count));
-        for (let i = 0; i < 5 && held(id) < before + Math.min(n, row.count); i++) await waitTicks(1);
-        if (held(id) < before + Math.min(n, row.count)) short.push(`${id}:${held(id) - before}/${n}`);
+        // The bank row may change in place during dispatch. Observe the pack gain against a fixed amount,
+        // and require the full route supply even when the bank can only provide part of it.
+        const amount = Math.min(n, row.count);
+        await s.bot.withdrawItem(row, amount);
+        for (let i = 0; i < 5 && held(id) < before + amount; i++) await waitTicks(1);
+        if (held(id) < before + n) short.push(`${id}:${held(id) - before}/${n}`);
     }
     await s.bot.closeBank();
     return short.length ? { ok: false, detail: `withdraw short ${short.join(',')}` } : { ok: true, detail: `took ${list.map(([id, n]) => `${id}x${n}`).join(',')}` };
