@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794626211223,
+ "at": 1794626270786,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -264,25 +264,6 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -505,17 +486,23 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/session-check.ts",
+   "account": "Swordinhand",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-ea9f27fe-712e-4f55-b7b2-4b8274abe538"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-moneyshot-20261113t102024z [task-ea9f27fe-712e-4f55-b7b2-4b8274abe538]",
-   "role": "helper"
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
   }
  ]
 }
