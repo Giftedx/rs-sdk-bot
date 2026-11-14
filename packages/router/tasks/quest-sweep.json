@@ -61,7 +61,9 @@
       "phase": "practice",
       "command": [
         "bun",
-        "packages/practice/src/quest-sweep-proof.ts"
+        "packages/practice/src/quest-sweep-proof.ts",
+        "--case=scorpion-barcrawl",
+        "--case=scorpion-complete-refusal"
       ],
       "timeoutMs": 1800000
     },
@@ -71,7 +73,9 @@
       "command": [
         "bun",
         "packages/practice/src/quest-sweep-proof.ts",
-        "--verify"
+        "--verify",
+        "--case=scorpion-barcrawl",
+        "--case=scorpion-complete-refusal"
       ],
       "timeoutMs": 30000
     }
