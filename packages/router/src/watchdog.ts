@@ -9,7 +9,10 @@
 //    timed out, a dropped socket): scripts/cloud-recover.ts queues one proposal on the running coordinator and
 //    returns. Without it such an account fails each login with `fleet account claim held by swarm` until a person
 //    queues the recovery. .practice/stop-session-recovery keeps this step off.
-// 5. Records the scoreboard progress numbers, and writes .practice/coordinator/stall.json when none rose for
+// 5. Starts a Claude Code or Codex cloud session for a cloud side whose controller is silent while accounts wait
+//    (scripts/cloud-launch.ts --once), when .practice/cloud-launch/config.json exists. .practice/stop-cloud-launch
+//    keeps this step off.
+// 6. Records the scoreboard progress numbers, and writes .practice/coordinator/stall.json when none rose for
 //    STALL_MS; the planner reads it and must change lane or method. A gain removes the note.
 // Before the owner-stop check, it restarts the hosted dashboard's publisher (packages/dashboard/publish.ts) when the
 // publisher has a clone in .practice/fleet-command/repo and its lock names no live process. Nothing else starts it
@@ -115,6 +118,12 @@ if (import.meta.main) {
     if (coordinatorUp && (process.env.FLEET_SIDE || 'local') === 'local' && !existsSync(join(prac, 'stop-session-recovery'))) {
         const r = Bun.spawnSync([process.execPath, 'scripts/cloud-recover.ts'], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 120_000, windowsHide: true });
         for (const line of recoveryLog(r.stdout.toString(), r.stderr.toString(), r.exitCode)) log(line);
+    }
+    // Cloud sessions for the cloud sides whose controllers are silent while accounts wait (scripts/cloud-launch.ts):
+    // only with its config, never under .practice/stop-cloud-launch.
+    if ((process.env.FLEET_SIDE || 'local') === 'local' && existsSync(join(prac, 'cloud-launch', 'config.json')) && !existsSync(join(prac, 'stop-cloud-launch'))) {
+        const r = Bun.spawnSync([process.execPath, 'scripts/cloud-launch.ts', '--once'], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 240_000, windowsHide: true });
+        for (const line of `${r.stdout.toString()}\n${r.stderr.toString()}`.split('\n').map(l => l.trim()).filter(Boolean).slice(-6)) log(line.slice(0, 300));
     }
     // The planner reads the Overall route's supply bill against current banks (packages/planner/src/supply-bill.ts).
     const bill = Bun.spawnSync([process.execPath, 'packages/planner/src/supply-bill.ts'], { cwd: root, stdout: 'ignore', stderr: 'pipe', windowsHide: true });

@@ -1,8 +1,9 @@
-import {test,expect} from 'bun:test';
+import {test,expect,beforeAll} from 'bun:test';
 import {heckelDustNeed,groundShopNeeds,fetchHeckelDust,heckelIO,type HeckelIO} from './quest-sweep';
 import {returnToAmik,finishBlackKnight,type AmikIO} from './quest-sweep';
-import {scorpionBarcrawlNeeds} from './quest-sweep';
+import {scorpionBarcrawlNeeds,scorpionEntryRefusal} from './quest-sweep';
 import {establishBarcrawlGate} from './generated/quest-barcrawl';
+import {clickDialoguePage} from './generated/quest-lib';
 import {questScriptId} from './quest-sweep';
 import {resolve} from 'node:path';
 
@@ -14,10 +15,31 @@ test('the Barcrawl script starts under the name the sweep gives it',()=>{
  expect(guard?.[1]).toBe(questScriptId(file));
 });
 
+test('a named dialogue choice is page-bound while a continue keeps the implicit index',async()=>{
+ const calls:string[]=[];
+ const sdk={
+  clickDialogByText:async(pattern:string|RegExp)=>{calls.push(`choice:${typeof pattern==='string'?pattern:pattern.source}`);return{success:true};},
+  sendClickDialog:async(index:number)=>{calls.push(`continue:${index}`);return{success:true};},
+ };
+ const option={index:2,text:'I need to locate some scorpions.'};
+ expect(await clickDialoguePage(sdk,option)).toEqual({success:true});
+ expect(await clickDialoguePage(sdk)).toEqual({success:true});
+ expect(calls).toEqual(['choice:I need to locate some scorpions.','continue:0']);
+});
+
+test('a refused named dialogue choice stays refused for the quest owner to fail clearly',async()=>{
+ const sdk={
+  clickDialogByText:async()=>({success:false,message:'visible option was not on the current page'}),
+  sendClickDialog:async()=>({success:true}),
+ };
+ expect(await clickDialoguePage(sdk,{text:'I need to locate some scorpions.'})).toEqual({success:false,message:'visible option was not on the current page'});
+});
+
 test('Scorpion stages and establishes a missing Barcrawl gate before the outpost',async()=>{
  const base=needs(presetFor('scorpion'),false,'scorpion');
  expect([...scorpionBarcrawlNeeds(base,2)]).toEqual([...base]);
  expect([...scorpionBarcrawlNeeds(base,0)]).toEqual([[995,268],[563,3],[556,11],[555,1],[554,1]]);
+ expect([...scorpionBarcrawlNeeds(base,undefined)]).toEqual([[995,268],[563,3],[556,11],[555,1],[554,1]]);
  // The gate is the only sign of the Barcrawl state: the server does not send %barcrawl to the client.
  let gate=0,runs=0,tries=0;
  const tryGate=async()=>{tries++;return gate===2;};
@@ -27,6 +49,20 @@ test('Scorpion stages and establishes a missing Barcrawl gate before the outpost
  expect({runs,tries}).toEqual({runs:1,tries:3});
  gate=0;
  await expect(establishBarcrawlGate(tryGate,async()=>{})).rejects.toThrow('Barcrawl gate shut after the Barcrawl');
+});
+
+test('a completed Scorpion journal refuses before staging while client varp 76 stays at its untransmitted default',()=>{
+ // A completed account shows the journal "complete" while client var[76] stays 0; a varp-100 test lets it stage coins and runes.
+ expect(scorpionEntryRefusal('complete',0)).toBe('invalid entry: Scorpion Catcher is complete');
+ expect(scorpionEntryRefusal('complete',undefined)).toBe('invalid entry: Scorpion Catcher is complete');
+ expect(scorpionEntryRefusal('not started',6)).toBe('invalid entry: Scorpion Catcher is complete');
+ expect(scorpionEntryRefusal('unknown',0)).toBe('invalid entry: Scorpion Catcher journal state unavailable');
+ for(const journal of ['not started','started'])expect(scorpionEntryRefusal(journal,0)).toBeNull();
+ expect(scorpionEntryRefusal('started',100)).toBeNull();
+ const source=readFileSync(new URL('./quest-sweep.ts',import.meta.url),'utf8');
+ const refused=source.indexOf('if(refusal)return fail(refusal);'),staged=source.indexOf('base=scorpionBarcrawlNeeds(base,state);');
+ expect(refused).toBeGreaterThan(0);expect(staged).toBeGreaterThan(refused);
+ expect(source).not.toContain('var?.[76]===100');
 });
 
 test('only a started Black Knight journal selects the Amik return',()=>{
@@ -94,7 +130,9 @@ import type {Session} from '../packages/core/src/inprocess';
 import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
 import type {Tile} from '../packages/core/src/world';
 import {reachStart} from './quest-sweep';
-import {findLongPath} from '../vendor/rs-sdk/sdk/pathfinding';
+import {findLongPath,initPathfinding} from '../vendor/rs-sdk/sdk/pathfinding';
+// The one-time collision load takes 31 s under the 12-process gate; keep it out of each route test's own timeout.
+beforeAll(()=>initPathfinding(),120000);
 import {returnFishingContestTrophy} from './quest-walk';
 import {downward} from './quest-sweep';
 import {teleportRefusal} from './generated/quest-lib';
@@ -941,6 +979,109 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBe(30);expect(QUEST_CASTS['imp']).toBeUndefined();
 });
 
+// A Jailer simulation: 47 hitpoints, a hit of 8 a landed cast or arrow. Its death puts the jail key on the ground; the
+// pickup moves it to the pack. The bow fires one worn arrow per attack and empties the ammo slot.
+async function jailerFight(start:{worn:{id:number;count:number;slot:number}[];pack:{id:number;count:number}[];magic?:number;ranged?:number;rejectEquip?:boolean}){
+ const {fightForDrop}=await import('./generated/quest-lib');
+ const worn=start.worn.map(i=>({...i})),pack=start.pack.map(i=>({...i}));
+ let tick=0,hp=47,dropped=false,held=false;const log:string[]=[];
+ const hit=()=>{hp-=8;if(hp<=0)dropped=true;};
+ const take=(id:number,n:number)=>{const r=pack.find(i=>i.id===id);if(!r||r.count<n)throw Error(`short of ${id}`);r.count-=n;};
+ const r=await fightForDrop({
+  tick:()=>tick,worn:()=>worn,pack:()=>pack.filter(i=>i.count>0),ranged:()=>start.ranged??99,magic:()=>start.magic??50,
+  target:()=>hp>0?{index:7}:undefined,engaged:()=>false,
+  drop:()=>dropped&&!held?{x:2933,z:9693,id:1591}:undefined,held:()=>held,
+  equip:async item=>{log.push(`equip ${item.id}`);if(item.id===1334||item.id===1266||start.rejectEquip){log.push(`equip rejected ${item.id}`);return;}const slot=[882,884,886,888,890,892].includes(item.id)?13:3;const at=worn.findIndex(w=>w.slot===slot);if(at>=0)worn.splice(at,1);worn.push({id:item.id,count:item.count,slot});take(item.id,item.count);},
+  attack:async()=>{const w=worn.find(w=>w.slot===3);if(!w||w.id!==861){log.push(w?`melee ${w.id}`:'fists');hit();return;}const ammo=worn.find(w=>w.slot===13);if(!ammo||ammo.count<1){log.push('no ammo');return;}ammo.count--;log.push('arrow');hit();},
+  cast:async(_n,component)=>{log.push(component);for(const [id,n] of [[558,1],[554,3],[556,2]] as const)take(id,n);hit();},
+  pickup:async()=>{log.push('pickup');held=true;dropped=false;pack.push({id:1591,count:1});},
+  wait:async()=>{tick++;},
+ },150);
+ return {r,log,pack,worn,hp};
+}
+const BOW={id:861,count:1,slot:3},STRIKE_RUNES=[{id:558,count:30},{id:554,count:90},{id:556,count:60}];
+
+test('the Jailer with a depleted magic shortbow and staged Fire Strike runes dies to the strikes and the jail key is collected',async()=>{
+ const {r,log,pack,hp}=await jailerFight({worn:[BOW,{id:882,count:0,slot:13}],pack:STRIKE_RUNES});
+ expect(r.ok).toBe(true);expect(r.methods).toEqual(['magic']);expect(hp).toBeLessThanOrEqual(0);
+ expect(log.filter(l=>l==='magic:fire_strike').length).toBe(6);expect(log).not.toContain('no ammo');expect(log).toContain('pickup');
+ expect(pack.find(i=>i.id===1591)?.count).toBe(1);
+ // Six casts at the cast rate of five ticks, then the pickup.
+ expect(r.ticks).toBeLessThanOrEqual(30);
+});
+
+test('an emptied quiver turns the Jailer fight from the bow to the staged strikes',async()=>{
+ const {r,log}=await jailerFight({worn:[BOW,{id:882,count:3,slot:13}],pack:STRIKE_RUNES});
+ expect(r.ok).toBe(true);expect(r.methods).toEqual(['ranged','magic']);
+ expect(log.filter(l=>l==='arrow').length).toBe(3);expect(log.filter(l=>l==='magic:fire_strike').length).toBe(3);
+});
+
+test('a magic shortbow with arrows in the pack wields them for the Jailer',async()=>{
+ const {r,log}=await jailerFight({worn:[BOW],pack:[{id:882,count:40}]});
+ expect(r.ok).toBe(true);expect(r.methods).toEqual(['ranged']);expect(log[0]).toBe('equip 882');expect(log.filter(l=>l==='arrow').length).toBe(6);
+});
+
+test('the Jailer fight refuses before any action without usable ammunition or strike runes',async()=>{
+ const {DROP_FIGHT_REFUSAL}=await import('./generated/quest-lib');
+ const {r,log}=await jailerFight({worn:[BOW,{id:882,count:0,slot:13}],pack:[{id:556,count:31},{id:554,count:1},{id:563,count:8}]});
+ expect(r).toEqual({ok:false,detail:DROP_FIGHT_REFUSAL,methods:[],ticks:0});expect(DROP_FIGHT_REFUSAL).toBe('no usable ammunition or strike runes');expect(log).toEqual([]);
+ // A bow the account cannot wield and no runes leave an unarmed account its fists, the last resort.
+ const low=await jailerFight({worn:[],pack:[{id:861,count:1},{id:882,count:40}],ranged:40,magic:1});
+ expect(low.r.ok).toBe(true);expect(low.r.methods).toEqual(['melee']);expect(low.log).toContain('fists');expect(low.log).not.toContain('equip 861');
+});
+
+const SCIMITAR=1333,STAFF=1381;
+test('dropFightMethod keeps ranged first and magic second, then melee for a non-bow weapon',async()=>{
+ const {dropFightMethod}=await import('./generated/quest-lib');
+ // A worn rune scimitar with no ammunition and no strike runes fights in melee.
+ expect(dropFightMethod([{id:SCIMITAR,count:1,slot:3}],[{id:563,count:3},{id:556,count:11}],99,1)).toEqual({kind:'melee'});
+ // A rune scimitar in the pack is wielded for melee.
+ expect(dropFightMethod([],[{id:SCIMITAR,count:1},{id:995,count:268}],99,1)).toEqual({kind:'melee',wield:{id:SCIMITAR,count:1}});
+ // A worn bow with no arrows wields the pack scimitar.
+ expect(dropFightMethod([{...BOW},{id:882,count:0,slot:13}],[{id:SCIMITAR,count:1}],99,1)).toEqual({kind:'melee',wield:{id:SCIMITAR,count:1}});
+ // A bow with arrows is still ranged, even with a scimitar and strike runes in the pack.
+ expect(dropFightMethod([{...BOW},{id:882,count:40,slot:13}],[{id:SCIMITAR,count:1},...STRIKE_RUNES],99,50)).toEqual({kind:'ranged'});
+ // Strike runes with a staff are still magic before the scimitar.
+ expect(dropFightMethod([{id:STAFF,count:1,slot:3}],[{id:SCIMITAR,count:1},...STRIKE_RUNES],1,50)?.kind).toBe('magic');
+ // Coins and runes are not melee weapons: a worn bow with no ammunition still refuses.
+ expect(dropFightMethod([{...BOW},{id:882,count:0,slot:13}],[{id:995,count:268},{id:563,count:3}],99,1)).toBeNull();
+});
+
+test('the Jailer dies to a worn rune scimitar and to a pack scimitar wielded first',async()=>{
+ const worn=await jailerFight({worn:[{id:SCIMITAR,count:1,slot:3}],pack:[{id:563,count:3},{id:556,count:11}],magic:1});
+ expect(worn.r.ok).toBe(true);expect(worn.r.methods).toEqual(['melee']);expect(worn.log.filter(l=>l===`melee ${SCIMITAR}`).length).toBe(6);
+ expect(worn.pack.find(i=>i.id===1591)?.count).toBe(1);
+ const pack=await jailerFight({worn:[],pack:[{id:SCIMITAR,count:1}],magic:1});
+ expect(pack.r.ok).toBe(true);expect(pack.r.methods).toEqual(['melee']);expect(pack.log[0]).toBe(`equip ${SCIMITAR}`);
+ expect(pack.log.filter(l=>l===`melee ${SCIMITAR}`).length).toBe(6);
+});
+
+test.each([1333,1265])('the Jailer uses carried melee %i after a certificate with an empty worn bow',async weapon=>{
+ const {r,log,pack,worn,hp}=await jailerFight({worn:[BOW,{id:882,count:0,slot:13}],pack:[{id:1334,count:1},{id:1266,count:1},{id:weapon,count:1},{id:563,count:3},{id:556,count:11}],magic:50});
+ expect(r.ok).toBe(true);expect(r.methods).toEqual(['melee']);expect(hp).toBeLessThanOrEqual(0);
+ expect(worn.find(i=>i.slot===3)?.id).toBe(weapon);expect(log[0]).toBe(`equip ${weapon}`);
+ expect(log).not.toContain('equip 1334');expect(log).not.toContain('equip 1266');expect(log).not.toContain('no ammo');
+ expect(log.filter(l=>l===`melee ${weapon}`).length).toBe(6);expect(pack.find(i=>i.id===1591)?.count).toBe(1);
+ expect(pack.find(i=>i.id===1334)?.count).toBe(1);expect(pack.find(i=>i.id===1266)?.count).toBe(1);
+});
+
+test('the Jailer fight stops after an unobserved equip instead of selecting it again',async()=>{
+ const {r,log,hp,pack}=await jailerFight({worn:[BOW],pack:[{id:SCIMITAR,count:1}],magic:1,rejectEquip:true});
+ expect(r.ok).toBe(false);expect(r.detail).toBe(`equipment not observed: ${SCIMITAR}`);
+ expect(log).toEqual([`equip ${SCIMITAR}`,`equip rejected ${SCIMITAR}`]);expect(hp).toBe(47);
+ expect(pack.some(i=>i.id===1591)).toBe(false);expect(r.ticks).toBe(0);
+});
+
+test('Scorpion Catcher stages a magic shortbow account\'s owned arrows for the Jailer and leaves other quests on the core kit',async()=>{
+ const {jailerBowKit}=await import('./quest-sweep');
+ const owned=[{id:861,count:1},{id:882,count:40},{id:556,count:31}];
+ expect(jailerBowKit('scorpion',owned,99,65,false)).toEqual({bow:861,arrows:882});
+ expect(jailerBowKit('merlin',owned,99,65,false)).toBeNull();
+ expect(jailerBowKit('scorpion',owned,99,65,true)).toBeNull();
+ expect(jailerBowKit('scorpion',owned,60,65,false)).toBeNull();
+ expect(jailerBowKit('scorpion',[{id:861,count:1}],99,65,false)).toBeNull();
+});
+
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
  const {QUEST_PICKUPS,slotsFor}=await import('./quest-sweep');
  const hunt=needs(presetFor('hunt')),hazeel=needs(presetFor('hazeelcult'));
@@ -1638,3 +1779,86 @@ test('a Defence 1 build that fights with the bow takes the bow pack for Undergro
  expect(buildPack('upass',level({Attack:1,Ranged:49,Defence:1}))).toEqual([]);
  expect(Object.keys(BUILD_PACK).sort()).toEqual(['regicide','upass']);
 });
+
+import {prayerCovers,PRAYER_USED,PRAYER_MARGIN} from './quest-sweep';
+test('prayer potions ride as food when base Prayer covers the points the quest used in its bench', () => {
+ expect(prayerCovers('tree',99)).toBe(true);
+ expect(prayerCovers('tree',PRAYER_USED.tree!+PRAYER_MARGIN)).toBe(true);
+ expect(prayerCovers('tree',PRAYER_USED.tree!+PRAYER_MARGIN-1)).toBe(false);
+ expect(prayerCovers('tree',43)).toBe(false);
+ expect(prayerCovers('grandtree',62)).toBe(true);
+ expect(prayerCovers('zanaris',99)).toBe(false);
+ // Monkey Madness used 384 points in its bench (21 sips at Prayer 43): even Prayer 99 keeps its potions.
+ expect(prayerCovers('mm',99)).toBe(false);
+});
+test('a preset antipoison is a food row, never a need: Monkey Madness carries its superantipoison only when held', async () => {
+ const {ANTIPOISONS}=await import('./quest-sweep');
+ const preset=presetFor('mm');
+ expect((preset.inventory??[]).some(i=>i.id===2448)).toBe(true);
+ expect(ANTIPOISONS).toContain(2448);
+ expect(ANTIPOISONS).not.toContain(2446);
+});
+test('Tree Gnome Village and The Grand Tree need the staff of fire worn', () => {
+ for(const quest of ['tree','grandtree']){
+  const {need,wear}=wornKitPlan(quest,new Map([[562,80]]),[],[],[]);
+  expect(wear).toEqual([{id:1387,required:true}]);
+  expect(need.get(1387)).toBe(1);
+  expect(wornKitPlan(quest,new Map(),[],[],[{id:1387,count:1}]).need.has(1387)).toBe(false);
+ }
+});
+
+test('a corridor end in another connected area is not the goal', async () => {
+ const {sameArea}=await import('./quest-sweep');
+ const t=(x:number,z:number,level=0)=>({x,z,level});
+ expect(await sameArea(t(1,1),t(2,2,1))).toBe(false);
+ const fake=async()=>Object.assign(()=>0,{areaOf:(p:{x:number})=>p.x<10?21:p.x<20?8579:-1}) as any;
+ expect(await sameArea(t(15,0),t(12,0),fake)).toBe(true);
+});
+
+test('any meals in the pack meet the preset food rows; teleport runes need their own ids', async () => {
+ const {foodShort}=await import('./quest-sweep');
+ const food=new Map([[379,4],[563,2]]);
+ const pack=(rows:[number,number][])=>rows.map(([id,count])=>({id,count}));
+ expect(foodShort(food,pack([[385,8],[563,2]]))).toBe(false);
+ expect(foodShort(food,pack([[385,3],[563,2]]))).toBe(true);
+ expect(foodShort(food,pack([[385,8],[563,1]]))).toBe(true);
+ expect(foodShort(food,pack([[2309,5],[563,2]]),new Map([[2309,2]]))).toBe(true);
+});
+
+test('rune swaps only for the fire-spell quests', async () => {
+ const {FIRE_QUESTS}=await import('./quest-sweep');
+ const {readdirSync,readFileSync}=await import('node:fs');
+ const users=readdirSync(new URL('./generated',import.meta.url)).filter(f=>/^quest-.*\.ts$/.test(f)&&readFileSync(new URL(`./generated/${f}`,import.meta.url),'utf8').includes('fireSpell(')).map(f=>f.replace(/^quest-|\.ts$/g,'')).sort();
+ expect([...FIRE_QUESTS].sort()).toEqual(users);
+ expect(FIRE_QUESTS.has('magearena')).toBe(false);
+});
+// Bigchopper.log:8873-8878: bound for the Magic Store owner (2595,3087,1), the far walk stopped at 2590,3094 outside the
+// shut guild doors; the client rejected 2590,3089 and the world router found no route.
+import {magicGuildApproach,enterMagicGuild,inMagicGuild,MAGIC_GUILD} from './quest-sweep';
+test('a Magic Guild seller is entered by the nearest door at Magic 66 and refused below it',async()=>{
+ const owner={x:2595,z:3087,level:1},outside={x:2590,z:3094,level:0};
+ expect(inMagicGuild(owner)&&inMagicGuild({x:2590,z:3089,level:0})&&!inMagicGuild(outside)).toBe(true);
+ expect(magicGuildApproach(owner,outside,50)).toEqual({refused:'Magic Guild entry needs Magic 66, have 50'});
+ expect(magicGuildApproach(owner,{x:2600,z:3090,level:0},66)).toEqual({door:MAGIC_GUILD.doors[1]});
+ expect(magicGuildApproach(owner,{x:2590,z:3089,level:0},50)).toEqual({});
+ expect(magicGuildApproach({x:3012,z:3259,level:0},outside,1)).toEqual({});
+ let player={worldX:outside.x,worldZ:outside.z,level:0},tick=0,through=true;
+ const listeners=new Set<()=>void>(),walks:Tile[]=[],opened:number[]=[];
+ // m40_48.jm2: 1601 and 1600 at 2584,3087-3088 (west), 1600 and 1601 at 2597,3087-3088 (east).
+ const state={player,nearbyLocs:[{id:1601,name:'Door',x:2584,z:3087},{id:1600,name:'Door',x:2584,z:3088},{id:1600,name:'Door',x:2597,z:3087},{id:1601,name:'Door',x:2597,z:3088}]};
+ const s={sdk:{getState:()=>state},tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  bot:{openDoor:async(loc:{id:number;x:number})=>{opened.push(loc.id);if(through){player.worldX=loc.x===2584?2585:2596;player.worldZ=3087;}return{success:true};}}} as unknown as Session;
+ const walk=async(_s:Session,_w:unknown,to:Tile)=>{walks.push(to);player.worldX=to.x;player.worldZ=to.z;return{ok:true};};
+ const timer=setInterval(()=>{tick++;for(const cb of listeners)cb();},1);
+ try{
+  // The observed ground-floor approach: the walk to the door's outer tile, the door, then the bot inside.
+  const door=magicGuildApproach(owner,outside,70).door!;
+  expect(await enterMagicGuild(s,{} as never,door,walk)).toEqual({ok:true});
+  expect([walks,opened.length,inMagicGuild({x:player.worldX,z:player.worldZ,level:0})]).toEqual([[door],1,true]);
+  // A door that leaves the bot outside is a refused transition, not a walk to the stairs.
+  through=false;player.worldX=outside.x;player.worldZ=outside.z;
+  expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[1]!,walk)).toEqual({ok:false,reason:'transition',detail:'Magic Guild door at 2597,3087 left the bot at 2597,3087,0'});
+  state.nearbyLocs=[];
+  expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[1]!,walk)).toEqual({ok:false,reason:'transition',detail:'Magic Guild door unobserved at 2597,3087'});
+ }finally{clearInterval(timer);}
+},30000);

@@ -126,3 +126,26 @@ test('actual Monk referral approaches the observed Abbot and selects monastery a
  }
 });
 
+
+import {questDefinitions} from './quest-status';
+import {questFolder,questFinals,completedQuestUnlocks} from './guild-observation';
+test('a green questlist entry adds complete:<varp>, never an exact stage; the spirit tree need is met',()=>{
+ const {c,table}=fixture();
+ const tree=questDefinitions().find(q=>q.key==='tree')!,fortress=questDefinitions().find(q=>q.key==='fortress')!;
+ table[tree.id]={colour:0x00f800};table[fortress.id]={colour:0xf8f800};
+ expect(guildActorFacts(c).questStages).toEqual({});expect(guildActorFacts(c).unlocks).toEqual([]);expect(completedQuestUnlocks(c)).toEqual(['complete:treequest']);
+ table[fortress.id]={colour:0x00f800};
+ expect(completedQuestUnlocks(c)).toContain('complete:spy');
+ const missing=questDefinitions().filter(q=>!questFinals().has(questFolder(q.key))).map(q=>q.key);
+ expect(missing.length).toBeLessThan(12);
+});
+import {travelAllowed,questCompleteValue,type Travel} from './travel';
+test('travel that needs a finished quest takes the completion unlock only for that exact value and an unknown stage',()=>{
+ const tree={id:'spirit_tree:stronghold_ent:Gnome stronghold',kind:'spirit_tree',name:'t',from:null,to:{x:0,z:0,level:0},coins:0,needs:[{varp:'treequest',op:'=',value:9}],runes:[],run:{how:'loc',loc:'stronghold_ent',op:1,option:null},cost:1} as unknown as Travel;
+ const acct=(o:any)=>({skills:{},varps:{},items:[],...o});
+ expect(questCompleteValue('treequest')).toBe(9);
+ expect(travelAllowed(tree,acct({unlocks:['complete:treequest']}))).toBe(true);
+ expect(travelAllowed(tree,acct({}))).toBe(false);
+ expect(travelAllowed(tree,acct({unlocks:['complete:treequest'],questStages:{treequest:5}}))).toBe(false);
+ expect(travelAllowed({...tree,needs:[{varp:'treequest',op:'=',value:5}]} as Travel,acct({unlocks:['complete:treequest']}))).toBe(false);
+});

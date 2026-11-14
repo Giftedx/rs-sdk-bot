@@ -5,6 +5,7 @@ import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
+import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -216,6 +217,16 @@ const atBank = (c: BenchCase, post: {x: number; z: number}): BenchCase => {
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
 
+// One crafter at the altar's crafter tile and `carriers` partners (suffixes b, c, ...) at its staging tile. The
+// LEDGER line of the crafter is the last one, so the case ticks are the crafter's.
+const carrierCase = (altar: CarrierAltarName, from: number, to: number, carriers: number, bank: {id: number; count: number}[] = []): BenchCase => {
+  const a = carrierAltar(altar), suffixes = 'bcdefghijklmnopq'.slice(0, carriers).split('');
+  return {key: `extra:rune-carriers-${altar}-${from}-${to}`, script: 'scripts/rune-bank-craft.ts', preset: 'fresh_lumbridge', timeoutMs: 600_000,
+    scriptArgs: [...suffixes.map(s => `{bot:${s}}`), `--staged=${altar}:${to}`], pass: s => ok(s) && Number(/^RUNE_STAGED_RESULT .*?"level":(\d+)/m.exec(s)?.[1] ?? 0) >= to,
+    presetConfig: {position: {...a.crafter, level: 0}, varps: {63: 6, 281: 1000}, skills: {Runecraft: from}},
+    companions: suffixes.map(suffix => ({suffix, preset: 'fresh_lumbridge', presetConfig: {position: {...a.staging, level: 0}, varps: {63: 6, 281: 1000},
+      inventory: [{id: a.talisman, count: 1}, ...Array.from({length: 27}, () => ({id: 1436, count: 1}))], bank}}))};
+};
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
 
@@ -228,6 +239,22 @@ const ROUTE_CASES: BenchCase[] = [
   // The default route of each skill runs for about 1,000 ticks, so its XP for each 1,000 ticks is a rate and not one unit of work.
   skiller('woodcutting', 'yews', 'gather_yews', ['1000', '200', 'MAX_TRIPS=4']),
   skiller('woodcutting', 'fresh45', 'wc_fresh', [], {timeoutMs: 900_000}),
+  // Record block 5 (rune.fast, Cairn: Woodcutting 1-99 and Prayer 1-99 in 3,296 ticks planned): the knife reset with a
+  // dragon bone buried in each 3-tick cycle, at the Draynor willows, bones from the bank beside them. The start state is
+  // the route's after block 4: Magic 59 (combat 31, over the dark wizards' hunt limit of 14), a rune axe (1359) and a
+  // knife (946) in the pack, 600 dragon bones (536) banked: 555 give Prayer 99 at 1,800 XP each.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_BANK_BONES=1', 'CAP=9000'], {key: 'extra:woodcut-bury-block5', timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [{id: 1359, count: 1}, {id: 946, count: 1}], bank: [{id: 536, count: 600}]}}),
+  // The tools in the site bank, as a fleet trade leaves them (scripts/fleet-trade.ts banks what it brings): step 0
+  // takes the rune axe and the knife from the Draynor bank; without it the worker pickpocketed for an axe.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=30', 'WC_SITE=draynor', 'CAP=3000'], {key: 'extra:woodcut-tools-banked',
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [], bank: [{id: 1359, count: 1}, {id: 946, count: 1}]},
+    pass: s => ok(s) && /WC_TOOLS_FROM_BANK \{"axe":"rune","knife":true\}/.test(s) && /thiefTicks=0 /.test(s)}),
+  // The same with a giver (scripts/site-givers.ts) that brings the bones to the trees by trade, the rival's "bone
+  // givers": the woodcutter has no bones in its bank. The giver has Magic 59 for the same dark wizards.
+  skiller('woodcutting', 'fresh45', 'wc_fresh', ['TARGET=99', 'PRAYER_TARGET=99', 'WC_SITE=draynor', 'WC_GIVERS={bot:b}', 'CAP=9000'], {key: 'extra:woodcut-givers-block5', timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 59}, inventory: [{id: 1359, count: 1}, {id: 946, count: 1}]},
+    companions: [{suffix: 'b', preset: 'wc_fresh', presetConfig: {position: {x: 3093, z: 3244, level: 0}, skills: {Magic: 59}, bank: [{id: 536, count: 600}]}}]}),
   // The same 600 ticks at the knights with no guest action, with a bone buried in each stun, and with an enchant cast in each stun. Hitpoints 99, so a run of failed picks does not kill the account before the cap.
   skiller('thieving', 'stun-base', 'stun_base', ['600', 'MODE=base'], {presetConfig: {...PRESETS.stun_base!, skills: {...PRESETS.stun_base!.skills, Hitpoints: 99}}}),
   skiller('thieving', 'stun-bury', 'stun_bury', ['600', 'MODE=bury'], {presetConfig: {...PRESETS.stun_bury!, skills: {...PRESETS.stun_bury!.skills, Hitpoints: 99}}}),
@@ -299,6 +326,25 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('mining', 'drop', 'fresh_lumbridge', ['iron_rock_table', '2', '400', '1275'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 41, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}]}}),
   skiller('mining', 'progressive', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-mine.json'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 29, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1265, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-mine.json': {maximum: 1, batch: 1, cap: 600, returnTicks: 100, travelTicks: 100, members: false, mode: 'drop', keep: [1265], routes: [{profile: 'iron_rock_table', bank: {x: 3253, z: 3420, level: 0}, site: {x: 3286, z: 3368, level: 0}, tool: 1265}]}}}),
+  // The six iron rocks south of the Ardougne zoo (Cairn Mining 64-99, research/rival-gap-list.md row 1): 75 ores lift
+  // Mining 64 to 72. `zoo-drop` is the drop worker with no rotation, `zoo-plain` the rock rotation, `zoo-knife` the
+  // rotation with the knife reset (scripts/mining-rotation.ts), `zoo-knife9` the same with the three rocks 10 tiles west
+  // and the nearest-free pick, so it walks west when the six zoo rocks are down.
+  // MINING_RATE prints ticks per ore from the first ore.
+  ...(['drop', 'plain', 'knife', 'knife9'] as const).map((mode): BenchCase => {
+    const env = mode === 'drop' ? [] : ['MINING_ROTATE=1', 'MINING_DROP=1', `MINING_SITE=ardougne-zoo-iron${mode === 'knife9' ? '-9' : ''}`, ...(mode !== 'plain' ? ['MINING_KNIFE=1'] : []), ...(mode === 'knife9' ? ['MINING_PICK=nearest'] : [])];
+    const args = mode === 'drop' ? ['iron_rock_table', '75', '1500', '1275,946,1511'] : ['iron_rock_table', '75', '1500', ...env];
+    return {...skiller('mining', mode === 'drop' ? 'drop' : 'at-site', 'fresh_lumbridge', args, {output: /"made":(\d+)/,
+      presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 64, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: `extra:mining-zoo-${mode}`};
+  }),
+  // The knife rotation from Mining 49, 66 ores (57,255 XP at 875 each) to Mining 64: the ticks Plague City's 2,425 x 25
+  // XP would save in the record route (591 ticks).
+  {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '66', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
+    presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 49, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-49'},
+  // The same with an adamant pickaxe (1271): the knife reset sets %action_delay, so the pickaxe's mining_rate
+  // (mining.rs2:118-119) does not pace the rolls, and success is stat_random(mining) alone (mining.rs2:155).
+  {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '66', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=ardougne-zoo-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
+    presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 49, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1271, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-49-addy'},
   skiller('mining', 'loot', 'fresh_lumbridge', ['LOOT_MODE=list', 'LOOT_IDS=1511', 'RADIUS=2', 'MAX_UNITS=1', 'CAP=200', 'IDLE_TICKS=150'], {presetConfig: {position: {x: 3089, z: 3266, level: 0}, skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}}}),
   skiller('smithing', 'anvil', 'fresh_lumbridge', ['600', 'PRODUCT_ID=1205', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 2347, count: 1}], bank: [{id: 2349, count: 1}]}}),
   skiller('smithing', 'cannonballs', 'fresh_lumbridge', ['1', '600', 'CANNON_XP_RATE=25'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 35}, bank: [{id: 2353, count: 1}, {id: 4, count: 1}]}}),
@@ -335,6 +381,12 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('foraging', 'miscellania-coffer', 'fresh_lumbridge', ['1000', '200'], {presetConfig: {position: {x: 2500, z: 3857, level: 1}, coins: 5000, varps: {359: 100, 361: 1367343104, 362: -1073741824, 188: 15, 347: 10}}}),
   skiller('foraging', 'qol', 'fresh_lumbridge', ['prayer', '0', '10', '40'], {presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Prayer: 43}}}),
   skiller('runecraft', 'air', 'rc_air_inside'),
+  // The carrier pipeline (scripts/rune-carriers.ts --staged): the crafter stands in the altar with an empty pack, and
+  // each carrier stands at the staging tile with 27 essence and the talisman (scripts/rune-carrier-altar.ts).
+  // Block 4 of the record route: air altar, 7 essence helpers, Runecraft 1 to 44 (record 207 ticks).
+  carrierCase('air', 1, 44, 7),
+  // Fire with 2 carriers and 27 more essence in each bank: 3 packs, so one carrier banks at Al Kharid and returns.
+  carrierCase('fire', 14, 40, 2, [{id: 1436, count: 27}]),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
   // The stall trip of the same worker: no food in the pack or the bank, and no coins for the Baker's shop. The thief
   // has 40 Hitpoints, because one under 20 ends the run when it has no food (goldfarm.ts, FRAIL_HP).
@@ -354,6 +406,10 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
   {key: 'fighter:ranged-gather', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged-gather', 'CAP=1500', 'MAX_KILLS=2', 'AMMO=90', 'FOOD=3', 'FOOD_ID=333'], pass: s => ok(s) && s.includes('RANGED_BANK'),
     presetConfig: {position: {x: 3253, z: 3421, level: 0}, skills: {Ranged: 30, Hitpoints: 30}, bank: [{id: 841, count: 1}, {id: 884, count: 90}, {id: 333, count: 5}]}},
+  // Cairn segment 24 (packages/planner/src/cairn-route.json): cannon and magic shortbow at the Wilderness poison spiders,
+  // Ranged 55 to 99 on Haggis at the Ranged row (preset cannon_spiders_h: Attack 99, Defence 89, Hitpoints 97, Prayer 99,
+  // rapid magic shortbow, 700 rune arrows, cannon, 1,500 cannonballs). `--set STOP_LEVEL=<n>` for a shorter run.
+  {key: 'fighter:cannon', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h', scriptArgs: ['cannon', 'SPOT=spiders', 'STYLE=1'], pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/},
   {key: 'pvp:monitor', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['monitor', '50', '12', 'stop'], pass: ok},
   {key: 'quester:mode:chain', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['chain', 'cook'], pass: ok,},
   // packages/practice/src/shop-supply-order-proof.ts
@@ -572,6 +628,34 @@ const ROUTE_CASES: BenchCase[] = [
   // PRAYER_GUARD line; `--set PRAYER_GUARD=0` runs the comparison without it.
   {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
+  // Cairn segment 13: the cannon at the poison spiders from Ranged 1 to 50, at the levels Cairn holds then (Attack 99
+  // from Fight Arena, Prayer 99, Hitpoints 42, Strength and Defence 1). A rune scimitar on accurate: the cannon roll
+  // uses the worn weapon's style (cannon_fire.rs2:116), so Attack 99 makes it hit while Ranged is 1.
+  {key: 'extra:cannon-spiders-r1', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h_sci', scriptArgs: ['cannon', 'SPOT=spiders', 'STYLE=0', 'STOP_LEVEL=50', 'CAP=900'], pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
+    presetConfig: {...PRESETS.cannon_spiders_h_sci!, skills: {Attack: 99, Strength: 1, Defence: 1, Hitpoints: 42, Prayer: 99, Ranged: 1},
+      equipment: [{id: 1731, count: 1, slot: 2}, {id: 1333, count: 1, slot: 3}, {id: 1061, count: 1, slot: 10}]}},
+  // Cairn segment 24 as a whole: Ranged 55-99, Defence 98-99 and Hitpoints 97-99 at the levels Cairn holds after Dragon
+  // Slayer (Attack 99, Strength 99, Defence 98, Hitpoints 97, Prayer 99), the cannon_spiders_h kit with a rune scimitar
+  // in place of one shark. `melee`: the scimitar on block (Defence XP, combat.rs2:149-150) until Defence 99, then the
+  // rapid bow; `long`: the bow on longrange (Ranged and Defence XP, combat.rs2:157-159) until Defence 99, then rapid.
+  // The worker uses the magic shortbow special by default; `--set SPECIAL=0` runs without it (research/combat-measure.md 6c).
+  ...(['melee', 'long'] as const).map((arm): BenchCase => ({key: `extra:cannon-step24-${arm}`, script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h',
+    scriptArgs: ['cannon', 'SPOT=spiders', 'STOP=Ranged=99,Defence=99,Hitpoints=99', `PHASES=${arm === 'melee' ? '1333:3:Defence=99;861:1' : '861:2:Defence=99;861:1'}`, 'CAP=3200'],
+    pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
+    presetConfig: {...PRESETS.cannon_spiders_h!, skills: {Attack: 99, Strength: 99, Defence: 98, Hitpoints: 97, Prayer: 99, Ranged: 55},
+      inventory: PRESETS.cannon_spiders_h!.inventory!.map((item, i, all) => i === all.findIndex(x => x.id === 385) ? {id: 1333, count: 1} : item)}})),
+  // Recovery: %ownedmcannon (varp 4) holds 3286,3809 (packed (x << 14) | z) and %dropcannon (varp 2) = 4 (full cannon,
+  // cannon.constant) with no cannon loc there, as after a decay. The worker talks to Nulodion beside him, who replaces a
+  // cannon whose loc is gone (nulodion.rs2:91-143).
+  {key: 'extra:cannon-reclaim-nulodion', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['cannon', 'MODE=reclaim'], pass: s => ok(s) && / how=nulodion /.test(s), timeoutMs: 300_000,
+    presetConfig: {position: {x: 3012, z: 3453, level: 0}, skills: {Hitpoints: 30}, varps: {0: 11, 2: 4, 4: (3286 << 14) | 3809}}},
+  // Recovery after a death at the spiders: Hitpoints 10, no prayer and no food, so the spiders and their poison kill the
+  // account (Attack, Strength, Defence 99 for the walker's danger rule). It respawns and walks back for the cannon, or waits for
+  // the loc to end and asks Nulodion. OK_ON_RECLAIM=1 ends the run ok when the cannon came back.
+  {key: 'extra:cannon-death-reclaim', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h', scriptArgs: ['cannon', 'SPOT=spiders', 'PRAYER=none', 'OK_ON_RECLAIM=1', 'CAP=600', 'STYLE=1'],
+    pass: s => ok(s) && /reclaimed=(picked|nulodion):true/.test(s), timeoutMs: 600_000,
+    presetConfig: {...PRESETS.cannon_spiders_h!, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 10, Prayer: 1, Ranged: 55},
+      inventory: [6, 8, 10, 12].map(id => ({id, count: 1})).concat([{id: 2, count: 300}])}},
   // The same fight with a 500 tick cap: the short run for a change to the guard.
   {key: 'extra:guard-giant-short', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
@@ -854,6 +938,58 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'quester:mode:sweep', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['sweep', 'cook'], pass: ok},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
+  // Out of Doric's house to the Falador east bank, where Doric's Quest leaves the account (live: the first walk click,
+  // to 2949,3444, was refused 3 times by the client and the walk ended "no progress").
+  // Plague City through the quest sweep from the Draynor bank (block 6 of the mock Haggis run starts where block 5's
+  // woodcutting banks), at Magic 59 with the quest pack banked. `tele` adds a Camelot Teleport's runes (1 law, 5 air),
+  // which the sweep takes for the walk to Edmond's house (teleportRunes: the preset lists no runes).
+  ...([['tele', [{id: 563, count: 1}, {id: 556, count: 5}]], ['walk', []]] as const).map(([mode, runes]) =>
+    ({key: `extra:sweep-elena-draynor-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
+      presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
+        bank: [...(PRESETS.quest_elena!.inventory ?? []), ...runes]}} as BenchCase)),
+  // The same with the three items no fleet account and no GE seller held (dwellberries 2126, chocolate dust 1975, snape
+  // grass 231) left out of the bank, and 5,000 coins: what the sweep's own shop and gather plans cost.
+  {key: 'extra:sweep-elena-draynor-partial', script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
+      bank: [...(PRESETS.quest_elena!.inventory ?? []).filter(i => ![2126, 1975, 231].includes(i.id)), {id: 563, count: 1}, {id: 556, count: 5}, {id: 995, count: 5000}]}},
+  // Tree Gnome Village through the quest sweep from the Ardougne south bank (block 8 of the mock Haggis run starts where
+  // block 7's zoo mining banks), at the runner's state there (Prayer 99, Magic 59, 10 HP): the quest pack and the staff
+  // of fire banked, no prayer potions (prayerCovers takes them as food), then the walk into the village.
+  {key: 'extra:sweep-tree-ardougne', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_tree!, position: {x: 2655, z: 3283, level: 0}, inventory: [], equipment: [], skills: {...PRESETS.quest_tree!.skills, Magic: 59, Prayer: 99},
+      bank: [...(PRESETS.quest_tree!.inventory ?? []).filter(i => i.id !== 2434), {id: 1387, count: 1}]}},
+  // Block 9 of the mock Haggis run, at the runner's state after Tree Gnome Village (Attack 80, Hitpoints 29, Prayer 99,
+  // Magic 59, varp 111 = 9): the Gnome course to Agility 25 from King Bolren, then The Grand Tree through the sweep from
+  // the course's end with what Tree Gnome Village leaves in the pack (block 8 packs both quests: 160 chaos, 500 air,
+  // 2 law, 8 sharks for the 4 lobsters of each preset; the warlord takes about 33 casts), so the sweep needs no bank.
+  {key: 'extra:agility-gnome-25-from-village', script: 'scripts/aio-skiller.ts', preset: 'agility_gnome_1', scriptArgs: ['agility', 'order', 'gnome', '25', 'AGI_POTION=0', 'AGI_MAX_TICKS=4000', 'AGI_PROGRESS_TICKS=150', 'AGI_ENTRY_TICKS=1200'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...agilityFixturePreset(PRESETS.agility_gnome_1!), position: {x: 2542, z: 3170, level: 0}, varps: {111: 9}, skills: {Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Mining: 99, Woodcutting: 99, Firemaking: 99}}},
+  {key: 'extra:sweep-grandtree-course', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['sweep', 'grandtree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Agility: 25},
+      inventory: [{id: 562, count: 127}, {id: 556, count: 401}, {id: 563, count: 2}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // Blocks 8 and 9 as the live run stages them: both quests' packs held from the start, plus death runes for Fire Blast
+  // (Magic 59; max 16 against Fire Bolt's 12). `-blast` against the cases above measures the spell alone.
+  {key: 'extra:sweep-tree-kit-blast', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_tree!, position: {x: 2655, z: 3283, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}], skills: {...PRESETS.quest_tree!.skills, Magic: 59, Prayer: 99},
+      inventory: [{id: 562, count: 160}, {id: 556, count: 500}, {id: 563, count: 2}, {id: 560, count: 60}, ...Array.from({length: 6}, () => ({id: 1511, count: 1})), ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  {key: 'extra:sweep-grandtree-course-blast', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['sweep', 'grandtree'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 60, Agility: 25},
+      inventory: [{id: 562, count: 127}, {id: 556, count: 400}, {id: 563, count: 2}, {id: 560, count: 35}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // Block 10: Fight Arena through the sweep from where The Grand Tree ends (under the tree), at the runner's state then
+  // (Attack 94, Magic 73, Hitpoints 36, Prayer 99): Fire Blast with death runes in place of the preset's Fire Wave.
+  {key: 'extra:sweep-arena-after-grandtree', script: 'scripts/aio-quester.ts', preset: 'quest_arena', scriptArgs: ['sweep', 'arena'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_arena!, position: {x: 2464, z: 9895, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
+      skills: {...PRESETS.quest_arena!.skills, Attack: 94, Magic: 73, Hitpoints: 36, Prayer: 99, Agility: 25},
+      inventory: [{id: 560, count: 60}, {id: 556, count: 300}, {id: 562, count: 160}, {id: 995, count: 20}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // The coal trucks log balance stands on level 1 (knowledge/shortcuts.json mine_log_balance1); its level-0 crossing records
+  // planned a crossing that does not exist (WeeQuickie: no Log balance with Walk-across at 2603,3477). From beside it
+  // the walk to the Dwarf Commander goes round on foot.
+  {key: 'extra:walk-coal-log', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2572', '3464', '0'], pass: ok,
+    presetConfig: {position: {x: 2602, z: 3476, level: 0}, skills: {Agility: 25, Hitpoints: 43, Prayer: 99, Magic: 74, Attack: 99}}},
+  {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
+    presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];
 
 // Routes that do the same job, each from one start state (research/aio-bench.md, "Routes that do the same job").
@@ -881,6 +1017,28 @@ const SAME_JOB_CASES: BenchCase[] = [
     known: 'the smelt action of scripts/craft-jewelry.ts does not end: the furnace distance test at line 117 is always true, and the loop holds about 1 GB until the time limit'}),
   sameJob('jewel-trip', ['crafting', 'jewellery-trip', '.practice/aio-bench/jobs/{bot}-same-jewel.json'], SAME_JEWEL, /"made":(\d+)/, {pass: s => ok(s) && /"made":26,"banked":26/.test(s),
     jobFiles: {'.practice/aio-bench/jobs/{bot}-same-jewel.json': {recipe: 'sapphire_ring', target: 26, batch: 13, cap: 1500, returnTicks: 200, reserve: 0, members: false, stringAmulet: false, bank: {x: 3269, z: 3167, level: 0}, furnace: {x: 3275, z: 3186, level: 0}}}}),
+  // The enchant steps of the mock Haggis run's block 2 (Magic 9 to 59 at the Draynor bank): each gem's rings, cosmic
+  // runes and element runes banked, at the Magic level where its step starts, 26 rings a pack.
+  ...([['sapphire', 1637, 40, 9, 555, 1], ['emerald', 1639, 13, 27, 556, 3], ['ruby', 1641, 16, 49, 554, 5], ['diamond', 1643, 5, 57, 557, 10]] as const).map(([gem, ring, n, magic, rune, per]) =>
+    sameJob(`enchant-${gem}`, ['bank-job', `.practice/aio-bench/jobs/{bot}-same-enchant-${gem}.json`],
+      {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: magic}, bank: [{id: ring, count: n}, {id: 564, count: n}, {id: rune, count: n * per}]},
+      /"completed":(\d+)/, {pass: s => ok(s) && new RegExp(`"completed":${n},`).test(s),
+        jobFiles: {[`.practice/aio-bench/jobs/{bot}-same-enchant-${gem}.json`]: {family: 'magic', recipe: `enchant:${gem}_ring`, target: n, batch: Math.min(n, 26), cap: 1500, returnTicks: 300, members: true, bank: {x: 3092, z: 3243, level: 0}, site: {x: 3092, z: 3243, level: 0}}}})),
+  // The whole block in one login: the four jobs above in order from Magic 10, all supplies banked. A preset sets a
+  // level, not XP: from Magic 9 (838 XP) ruby misses Magic 49 by 4 XP; the live runner started block 2 with 925 XP.
+  ((jobs: [string, number][]) => sameJob('enchant-block2', ['bank-job', ...jobs.map(([gem]) => `.practice/aio-bench/jobs/{bot}-same-enchant2-${gem}.json`)],
+    {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 10}, bank: [{id: 1637, count: 40}, {id: 1639, count: 13}, {id: 1641, count: 16}, {id: 1643, count: 5},
+      {id: 564, count: 74}, {id: 555, count: 40}, {id: 556, count: 39}, {id: 554, count: 80}, {id: 557, count: 50}]},
+    /"completed":(\d+),"trips/, {pass: s => ok(s) && /"ok":true,"jobs":\[/.test(s) && jobs.every(([gem, n]) => new RegExp(`"recipe":"enchant:${gem}_ring","completed":${n},`).test(s)),
+      jobFiles: Object.fromEntries(jobs.map(([gem, n]) => [`.practice/aio-bench/jobs/{bot}-same-enchant2-${gem}.json`, {family: 'magic', recipe: `enchant:${gem}_ring`, target: n, batch: Math.min(n, 26), cap: 1500, returnTicks: 300, members: true, bank: {x: 3092, z: 3243, level: 0}, site: {x: 3092, z: 3243, level: 0}}]))}))(
+    [['sapphire', 40], ['emerald', 13], ['ruby', 16], ['diamond', 5]]),
+  // Block 3 of the mock Haggis run: Doric's Quest through the quest sweep from the Draynor bank, where block 2 ends,
+  // at Magic 59 with 6 clay, 4 copper ore, 2 iron ore banked. `tele` adds the runes of a Falador Teleport (1 law,
+  // 3 air, 1 water), which the sweep takes and the walker may cast; `walk` has none.
+  ...([['tele', [{id: 563, count: 1}, {id: 556, count: 3}, {id: 555, count: 1}], []], ['walk', [], []], ['pack', [], [{id: 563, count: 1}, {id: 556, count: 3}, {id: 555, count: 1}]]] as const).map(([mode, runes, pack]) =>
+    ({key: `extra:sweep-doric-draynor-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_doric', scriptArgs: ['sweep', 'doric'], pass: ok,
+      presetConfig: {...PRESETS.quest_doric!, position: {x: 3092, z: 3243, level: 0}, inventory: [...pack], skills: {Magic: 59},
+        bank: [{id: 434, count: 6}, {id: 436, count: 4}, {id: 440, count: 2}, ...runes]}} as BenchCase)),
   // Lobsters at the Catherby cage spots at Fishing 70, from the beach with a lobster pot and an empty pack, no bank
   // trip. `cage` has no unit count and runs to a cap of 150 ticks; `staged` catches 15 and ends.
   // The harpoon pair is the same start with a harpoon: tuna and swordfish from the same spots.
@@ -946,6 +1104,25 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:smelt-steel', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'smelt', '900', 'steel', 'MAX_MAKE=28', 'ORE_RESERVE=0'], pass: s => ok(s) && /"made":28,"banked":28/.test(s),
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 30}, bank: [{id: 440, count: 28}, {id: 453, count: 56}]}},
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
+  // Death recovery (packages/core/src/death-recovery.ts): unarmed at Hitpoints 2 (the save generator turns 1 into 10)
+  // the bot dies to a Man 12 tiles east of the Lumbridge respawn, runs back, picks up every dropped item and wears its
+  // helm, shield and boots again.
+  {key: 'extra:death-recovery', script: 'scripts/measure/death-probe.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3233, z: 3219, level: 0}, skills: {Hitpoints: 2},
+      equipment: [{id: 1155, count: 1, slot: 0}, {id: 1171, count: 1, slot: 5}, {id: 1061, count: 1, slot: 10}],
+      inventory: [{id: 1127, count: 1}, {id: 436, count: 1}, {id: 438, count: 1}, {id: 440, count: 1}]},
+    pass: s => /^DEATH_RECOVERY ok .* worn=3/m.test(s) && /^DEATH at=\S+ wild=0 hp=\S+ by=Man#\d+ /m.test(s)},
+  // The flee guard (randomevents.ts `flee`): unarmed, with no food, the bot fights a Guard (combat 21) in Varrock square
+  // and must run out of its reach at FLEE_HP of its Hitpoints, ending the session alive (scripts/measure/flee-probe.ts).
+  {key: 'extra:flee-guard', script: 'scripts/measure/flee-probe.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3210, z: 3460, level: 0}},
+    pass: s => ok(s) && /^FLEE_GUARD safe flee_guard id=9 /m.test(s)},
+  // The loot job (packages/core/src/loot.ts): partner `b` drops a rune platebody 3 tiles away in Draynor bank; the bot
+  // picks it up while its walk is held, finishes the walk and banks the platebody (scripts/measure/loot-probe.ts).
+  {key: 'extra:loot-pickup', script: 'scripts/measure/loot-probe.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}'], engineEnv: {NODE_OBJ_REVEAL_TICKS: '1'},
+    presetConfig: {position: {x: 3093, z: 3243, level: 0}},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3096, z: 3243, level: 0}, inventory: [{id: 1127, count: 1}]}}],
+    pass: s => ok(s) && /^EVENT loot pickup /m.test(s) && /^EVENT loot banked /m.test(s)},
   // Lost City on an account of the `pure-pray` build: the levels of the kit, the Woodcutting and Crafting that Monk's
   // Friend and Murder Mystery give before it in the chain, nothing worn and the pack of quest_zanaris. The build
   // stays: the run passes only when the quest is complete and no XP went to Attack, Defence, Ranged, Magic or Prayer.
@@ -1098,6 +1275,7 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'market:ge-plan': 'needs Grand Exchange market data',
   'market:bank-seller': 'needs buyers on the Grand Exchange',
   'market:ge-sell': 'needs a buyer on the Grand Exchange',
+  'market:shop-to-bid': 'needs an open bid on the Grand Exchange above the shop price; the practice server has no buyers',
   'market:ge-buy': 'needs a seller on the Grand Exchange, or two runs for the shop fallback',
 };
 

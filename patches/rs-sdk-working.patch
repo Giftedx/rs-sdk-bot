@@ -8,7 +8,7 @@ index ec3ce9f7c..aa345480d 100644
  import { Worker } from 'worker_threads';
  
 diff --git a/server/engine/src/engine/World.ts b/server/engine/src/engine/World.ts
-index 4cc0110..ba5e85c 100644
+index 4cc0110..89ed985 100644
 --- a/server/engine/src/engine/World.ts
 +++ b/server/engine/src/engine/World.ts
 @@ -72,6 +72,9 @@ import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
@@ -164,11 +164,17 @@ index 4cc0110..ba5e85c 100644
              try {
                  npc.turn();
              } catch (err) {
-@@ -2339,6 +2451,7 @@ class World {
+@@ -2339,6 +2451,13 @@ class World {
                      player.teleport(3221, 3219, 0);
                  }
  
-+                if (simSeed !== null && simSeedAnchor.test(username)) this.simAnchorTick = this.currentTick + 1;
++                if (simSeed !== null && simSeedAnchor.test(username)) {
++                    this.simAnchorTick = this.currentTick + 1;
++                    // SIM_DET: the timers of the players already in (hitpoint and stat regen, prayer, poison) restart at
++                    // the anchor, as the new player's start there, so their phase does not hang on how many ticks the
++                    // earlier logins took in wall-clock time.
++                    if (SIM_DET) for (const other of this.players) if (other) for (const timer of other.timers.values()) timer.clock = this.simAnchorTick;
++                }
                  this.newPlayers.add(player);
                  client.state = 1;
              } catch (err) {

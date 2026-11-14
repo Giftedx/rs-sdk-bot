@@ -456,3 +456,173 @@ test('a name in the viewer URL is not relayed as a follow while the wall is open
  d.host.location.href=d.host.location.href.replace('follow=Worker','follow=Third');relay();
  expect(follows()).toEqual(['Third']);
 });
+
+function groundBrowser(){
+ const b=browser(),hostListeners:Function[]=[];
+ b.host.addEventListener=(t:string,fn:Function)=>{if(t==='message')hostListeners.push(fn);};
+ class Socket {
+  listeners:Function[]=[];handler:any=null;constructor(..._args:any[]){}
+  addEventListener(t:string,fn:Function){if(t==='message')this.listeners.push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.listeners)f(e);this.handler?.(e);}}
+ b.host.WebSocket=Socket;b.host.MessageEvent??=class{data:any;origin:any;constructor(_t:string,i:any){this.data=i.data;this.origin=i.origin;}};
+ installViewerBridge(b.host);
+ const socket:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),seen:any[]=[];socket.onmessage=(e:any)=>seen.push(JSON.parse(e.data));
+ const page=(data:any,origin=b.host.location.origin,source=b.host.parent)=>{for(const f of hostListeners)f({data,origin,source,stopImmediatePropagation(){}});};
+ const zone=()=>seen.at(-1).w??[];
+ // What the viewer draws: rs-world WorldState applies the zone records of each tick in order. oa adds a pile, od deletes
+ // the first pile of that type on the tile, oc changes the pile with the old count, else the first of that type.
+ const drawn=()=>{
+  const tiles=new Map<string,[number,number][]>();let area:any=null;
+  for(const m of seen)for(const r of m.w??[]){
+   const key=`${r.x},${r.z},${r.l}`,list=tiles.get(key)??[];
+   if(r.e==='za'){const inside=(a:any,x:number,z:number)=>a&&x>=a.x&&x<a.x+a.w&&z>=a.z&&z<a.z+a.h;for(const k of [...tiles.keys()]){const [x,z]=k.split(',').map(Number) as [number,number];if(r.r||!inside(area,x,z)||!inside(r,x,z))tiles.delete(k);}area=r;continue;}
+   if(r.e==='oa'&&r.id>=0&&r.n>=1)list.push([r.id,r.n]);
+   if(r.e==='od'){const i=list.findIndex(p=>p[0]===r.id);if(i>=0)list.splice(i,1);}
+   if(r.e==='oc'&&r.n>=1){const p=list.find(p=>p[0]===r.id&&p[1]===r.n0)??list.find(p=>p[0]===r.id);if(p)p[1]=r.n;}
+   list.length?tiles.set(key,list):tiles.delete(key);
+  }
+  return Object.fromEntries(tiles);
+ };
+ return {b,socket,seen,page,zone,drawn};
+}
+test('ground items from the page reach the viewer as oa records inside the held area, and leave as od records',async()=>{
+ const {b,socket,page,zone,drawn}=groundBrowser();await b.consume();
+ page({botGround:[[3218,3242,0,526,1],[3218,3242,0,526,1],[3219,3242,0,995,40],[3500,3500,0,995,1]]});
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ // The pile outside the held area is not sent: the viewer would drop it.
+ expect(zone()).toEqual([{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1},{e:'oa',x:3219,z:3242,l:0,id:995,n:40}]);
+ // With nothing new, a tick reaches the viewer as the feed sent it.
+ socket.message({t:'tick',k:2,ms:600});expect(zone()).toEqual([]);
+ // One bone picked up, and the coins stack grows: every pile of a changed type on the tile is deleted and added again.
+ page({botGround:[[3218,3242,0,526,1],[3219,3242,0,995,45]]});
+ socket.message({t:'tick',k:3,ms:600});
+ expect(zone()).toEqual([{e:'od',x:3218,z:3242,l:0,id:526},{e:'od',x:3218,z:3242,l:0,id:526},{e:'oa',x:3218,z:3242,l:0,id:526,n:1},{e:'od',x:3219,z:3242,l:0,id:995},{e:'oa',x:3219,z:3242,l:0,id:995,n:45}]);
+ expect(drawn()).toEqual({'3218,3242,0':[[526,1]],'3219,3242,0':[[995,45]]});
+});
+test('a later pile of one type leaves the viewer, not the first one (the viewer deletes the first pile of a type)',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20]]});
+ socket.message({t:'tick',k:2,ms:600});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,10],[995,20]]});
+ page({botGround:[[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:3,ms:600});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,10]]});
+ page({botGround:[[3219,3242,0,995,20]]});
+ socket.message({t:'tick',k:4,ms:600});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,20]]});
+});
+test('an obj that the feed itself sends is not added again, and a reset adds the page rows again',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1}]});
+ page({botGround:[[3218,3242,0,526,1],[3218,3242,0,526,1]]});
+ socket.message({t:'tick',k:2,ms:600});
+ expect(drawn()).toEqual({'3218,3242,0':[[526,1],[526,1]]});
+ socket.message({t:'tick',k:3,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ expect(drawn()).toEqual({'3218,3242,0':[[526,1],[526,1]]});
+});
+test('feed del and count records that hit a pile of the bridge are repaired on the same tick',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:2,ms:600});
+ // A public pile of 10 appears beside the bridge's private 10: the account sees both, the feed sends one.
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:3,ms:600,w:[{e:'oa',x:3219,z:3242,l:0,id:995,n:10}]});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,10],[995,10]]});
+ // The feed changes its pile to 30, and the viewer changes the first pile of 10, which is the bridge's.
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,30]]});
+ socket.message({t:'tick',k:4,ms:600,w:[{e:'oc',x:3219,z:3242,l:0,id:995,n0:10,n:30}]});
+ expect(drawn()['3219,3242,0']!.map(p=>p[1]).sort((a,c)=>a-c)).toEqual([10,30]);
+ // The feed's pile leaves, and the viewer deletes the first pile of coins: the private 10 stays.
+ page({botGround:[[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:5,ms:600,w:[{e:'od',x:3219,z:3242,l:0,id:995}]});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,10]]});
+});
+test('a feed del that hits a pile of the bridge leaves no ghost pile after the private pile goes',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:2,ms:600});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:3,ms:600,w:[{e:'oa',x:3219,z:3242,l:0,id:995,n:10}]});
+ page({botGround:[[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:4,ms:600,w:[{e:'od',x:3219,z:3242,l:0,id:995}]});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,10]]});
+ page({botGround:[]});
+ socket.message({t:'tick',k:5,ms:600});
+ expect(drawn()).toEqual({});
+});
+test('a public pile and a private pile of one type on a tile each show once',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'oa',x:3219,z:3242,l:0,id:995,n:20}]});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20]]});
+ socket.message({t:'tick',k:2,ms:600});
+ expect(drawn()['3219,3242,0']!.map(p=>p[1]).sort((a,c)=>a-c)).toEqual([10,20]);
+});
+test('ground rows from another sender or with a bad row change nothing',async()=>{
+ const {b,socket,page,zone}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3218,3242,0,526,1]]},'https://evil.example');
+ page({botGround:[[3218,3242,0,526,1],[3218,3242,9,526,1]]});
+ page({botGround:Array.from({length:1001},()=>[3218,3242,0,526,1])});
+ socket.message({t:'tick',k:2,ms:600});
+ expect(zone()).toEqual([]);
+});
+test('a feed count change and del after a private pile keep the feed order: the surviving public pile stays',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ const at={x:3219,z:3242,l:0,id:995};
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3219,3242,0,995,10]]});socket.message({t:'tick',k:2,ms:600});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20]]});socket.message({t:'tick',k:3,ms:600,w:[{e:'oa',...at,n:20}]});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20],[3219,3242,0,995,10]]});socket.message({t:'tick',k:4,ms:600,w:[{e:'oa',...at,n:10}]});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,20],[3219,3242,0,995,30]]});socket.message({t:'tick',k:5,ms:600,w:[{e:'oc',...at,n0:10,n:30}]});
+ expect(drawn()['3219,3242,0']!.map(p=>p[1]).sort((a,c)=>a-c)).toEqual([10,20,30]);
+ // The feed deletes its first pile, the 20.
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,30]]});socket.message({t:'tick',k:6,ms:600,w:[{e:'od',...at}]});
+ expect(drawn()['3219,3242,0']!.map(p=>p[1]).sort((a,c)=>a-c)).toEqual([10,30]);
+ page({botGround:[]});socket.message({t:'tick',k:7,ms:600});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,30]]});
+});
+test('respawn timers: a loc change to a watched depleted form marks the tile, a del ends it, and the page gets the list',async()=>{
+ const {b,socket,page}=groundBrowser();await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const lists=()=>b.messages.filter(m=>m.data.atlasDepleted).map(m=>m.data.atlasDepleted);
+ page({respawnWatch:[450]});
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ socket.message({t:'tick',k:5,ms:600,w:[{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0},{e:'la',x:3211,z:3220,l:0,id:1276,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:5,list:[[3210,3220,0,450,5]]});
+ socket.message({t:'tick',k:9,ms:600,w:[{e:'ld',x:3210,z:3220,l:0,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:9,list:[]});
+ // A depleted loc in the snapshot of a newly held zone has no start tick.
+ socket.message({t:'tick',k:12,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'la',x:3230,z:3230,l:0,id:450,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:12,list:[[3230,3230,0,450,null]]});
+ page({respawnWatch:[-1]});
+ expect(lists().length).toBe(3);
+});
+test('respawn timers: a closed main feed and a new watch list send the page an empty list',async()=>{
+ const b=browser(),hostListeners:Function[]=[];
+ b.host.addEventListener=(t:string,fn:Function)=>{if(t==='message')hostListeners.push(fn);};
+ class Socket {
+  on:Record<string,Function[]>={};handler:any=null;constructor(..._args:any[]){}
+  addEventListener(t:string,fn:Function){(this.on[t]??=[]).push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.on.message??[])f(e);this.handler?.(e);}
+  close(){for(const f of this.on.close??[])f({});}}
+ b.host.WebSocket=Socket;b.host.MessageEvent??=class{data:any;origin:any;constructor(_t:string,i:any){this.data=i.data;this.origin=i.origin;}};
+ installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const page=(data:any)=>{for(const f of hostListeners)f({data,origin:b.host.location.origin,source:b.host.parent,stopImmediatePropagation(){}});};
+ const last=()=>b.messages.filter(m=>m.data.atlasDepleted).at(-1)?.data.atlasDepleted;
+ const s1:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');s1.onmessage=()=>{};
+ page({respawnWatch:[450]});
+ s1.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ s1.message({t:'tick',k:5,ms:600,w:[{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0}]});
+ expect(last().list.length).toBe(1);
+ s1.close();
+ expect(last().list).toEqual([]);
+ const s2:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');s2.onmessage=()=>{};
+ s2.message({t:'tick',k:9,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0}]});
+ expect(last().list.length).toBe(1);
+ page({respawnWatch:[451]});
+ expect(last().list).toEqual([]);
+});

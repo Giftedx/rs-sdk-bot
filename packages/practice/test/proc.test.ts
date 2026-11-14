@@ -1,9 +1,21 @@
 import { test, expect } from 'bun:test';
-import { processMatches, processStartTimes, safeKill } from '../src/proc';
+import { killTree, processMatches, processMatchesRecent, processStartTimes, safeKill, sleeperCommand } from '../src/proc';
 
 function alive(pid: number): boolean {
     try { process.kill(pid, 0); return true; } catch { return false; }
 }
+
+test('a sleeper stays alive with its label on the command line until killTree ends it', async () => {
+    expect(() => sleeperCommand('bad label; rm')).toThrow('sleeper label');
+    const label = 'sleeper-test-' + Date.now();
+    const p = Bun.spawn(sleeperCommand(label, 30), { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
+    await Bun.sleep(1000);
+    expect(p.exitCode).toBeNull();
+    expect(processMatchesRecent(p.pid, label)).toBe(true);
+    await killTree(p.pid);
+    await p.exited;
+    expect(alive(p.pid)).toBe(false);
+}, 15000);
 
 test('processMatches checks the command line, not just the PID', () => {
     expect(processMatches(process.pid, 'bun')).toBe(true);

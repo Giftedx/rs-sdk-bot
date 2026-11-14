@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from './fleet';
@@ -21,23 +21,39 @@ const SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const LEGACY_REF = 'refs/heads/fleet-data';
 type RemoteLease = { side: string; host: string; holder: string; epoch: string; pid: number; at: number };
 
-export function fleetGitWindow(root: string, authority = 'fleet controller lease authority', budgetMs = GIT_DEADLINE_MS) {
+// Git errors of the network, not of the refs: a retry inside the budget can pass. A rejected push (another writer moved
+// the ref) is never one of these, so a claim keeps exactly one winner.
+export const TRANSIENT_GIT = /Could not resolve host|Failed to connect|Connection (?:reset|refused|timed out)|Operation timed out|early EOF|unexpected disconnect|RPC failed|The requested URL returned error: 5\d\d|gnutls|SSL|TLS|schannel/i;
+export const NETWORK_RETRIES = 2;
+// The tail of Git's error text for the message, with any credential in a URL removed.
+export const gitErrorDetail = (text: string) => text.replace(/(https?:\/\/)[^\s/@]+@/gi, '$1').replace(/\s+/g, ' ').trim().slice(-160);
+const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+// Each Git command of an authority within one time budget. A failure names the authority and ends with Git's own error
+// text, so a log tells a network fault from a moved ref.
+export function fleetGitWindow(root: string, authority = 'fleet controller lease authority', budgetMs = GIT_DEADLINE_MS,
+    run: (args: string[], options: { input?: string; timeout: number }) => string = (args, { input, timeout }) => execFileSync('git', args, {
+        cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, killSignal: 'SIGKILL', windowsHide: true,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+    })) {
     const deadline = performance.now() + budgetMs;
     return (args: string[], input?: string): string => {
+        let network = 0;
         for (let attempt = 0; ; attempt++) {
             const timeout = Math.floor(deadline - performance.now());
             if (timeout <= 0) throw Error(authority + ' timed out');
             try {
-                return execFileSync('git', args, {
-                    cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, killSignal: 'SIGKILL', windowsHide: true,
-                    env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
-                }).trim();
+                return run(args, { input, timeout }).trim();
             } catch (error) {
                 const failure = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
                 // Windows Bun can report an empty timeout before Git starts after an idle period.
                 if (attempt === 0 && process.platform === 'win32' && failure.code === 'ETIMEDOUT'
                     && !failure.stdout?.length && !failure.stderr?.length && performance.now() < deadline) continue;
-                throw Error(authority + ' unavailable or changed');
+                const detail = gitErrorDetail(String(failure.stderr ?? '') || failure.message || '');
+                // A network fault: try again after a short pause while the budget lasts.
+                const wait = 300 * (network + 1);
+                if (network < NETWORK_RETRIES && TRANSIENT_GIT.test(detail) && performance.now() + wait < deadline) { network++; pause(wait); continue; }
+                throw Error(authority + ' unavailable or changed' + (detail ? ': ' + detail : ''));
             }
         }
     };
@@ -134,6 +150,39 @@ export function fleetLeaseLastSeen(git: FleetGit, side: string): number | null {
         }
     }
     return seen;
+}
+
+// The newest renewal of every side in one round trip: each fleet-lease/<side> ref's head, and the older heartbeat files
+// in `legacyDir` (a synced fleet-data worktree's fleet/leases). A side with neither is absent from the map.
+export function allLeaseLastSeen(git: FleetGit, legacyDir?: string): Map<string, number> {
+    const prefix = 'refs/heads/fleet-lease/', refs = readFleetGitRefs(git, [prefix + '*']), seen = new Map<string, number>();
+    const heads = [...refs].filter(([ref]) => SIDE_NAME.test(ref.slice(prefix.length)));
+    if (heads.length) {
+        git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', ...heads.map(([, sha]) => sha)]);
+        for (const [ref, sha] of heads) {
+            const side = ref.slice(prefix.length);
+            try { seen.set(side, parseRemote(git(['show', '-s', '--format=%B', sha]), side).at); } catch { /* an unreadable record proves nothing */ }
+        }
+    }
+    if (legacyDir && existsSync(legacyDir)) for (const f of readdirSync(legacyDir).filter(f => f.endsWith('.json'))) {
+        const side = f.slice(0, -5);
+        if (!SIDE_NAME.test(side)) continue;
+        try { const at = JSON.parse(readFileSync(join(legacyDir, f), 'utf8')).at; if (Number.isSafeInteger(at) && at > 0) seen.set(side, Math.max(seen.get(side) ?? 0, at)); } catch { /* skip */ }
+    }
+    return seen;
+}
+
+// The newest renewal one checkout recorded on its side's lease ref (each renewal is a child commit, so the ref's
+// history is the side's controller record), with the record at the head. seen is null when the checkout is not among
+// the last `depth` records; head is null when the side has no lease ref.
+export function fleetCheckoutLastSeen(git: FleetGit, side: string, checkout: string, depth = 600): { head: RemoteLease | null; seen: number | null } {
+    if (!SIDE_NAME.test(side) || !HOLDER.test(checkout)) throw Error('invalid fleet lease checkout');
+    const ref = 'refs/heads/fleet-lease/' + side, tip = readFleetGitRefs(git, [ref]).get(ref);
+    if (!tip) return { head: null, seen: null };
+    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', tip]);
+    const records = git(['log', '-n', String(depth), '--format=%B%x00', tip]).split('\0').map(r => r.trim()).filter(Boolean).map(r => parseRemote(r, side));
+    const head = records[0] ?? null, mine = records.find(r => r.holder === checkout);
+    return { head, seen: mine ? mine.at : null };
 }
 
 // The remote ref is the authority. A contender writes a child of the exact head it read.

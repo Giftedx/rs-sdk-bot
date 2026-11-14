@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { expandPath, walkPath, applyKnownDoorBlocks, type PathDeps, type PathLoc } from '../src/walk';
+import { expandPath, walkPath, applyKnownDoorBlocks, type PathDeps, type PathLoc, type PathTile } from '../src/walk';
 
 // A straight east-west road at z=3200. The fake bot runs 2 tiles per tick toward its last click. A shut door at
 // doorX blocks the road until a loc click opens it; the open takes effect `openDelay` ticks after the bot
@@ -246,6 +246,19 @@ test('a dispatched door that stays closed is bounded even without a refusal mess
     expect(r.detail).toContain('no progress: door');
 });
 
+// totem-started-cakes: the Clock Tower save (2571,3250) opened door 1530 at 2574,3250 on tick 1, and the client
+// answered no input until tick 43. Three unanswered Opens blocked the door, the room had no other exit, and every
+// bank walk then clicked the straight-line fallback 2583,3264 through the wall (client_rejected).
+test('Open clicks the client has not answered do not mark the only door blocked', async () => {
+    const w=road({doorX:3010,openDelay:1});let blocks=0,opens=0;const pending:{answer?:()=>void}={};
+    const open=w.deps.interactLoc;
+    w.deps.interactLoc=(l,op)=>{opens++;return new Promise(res=>{pending.answer=()=>{open(l,op);res({success:true});};});};
+    w.deps.blockDoor=()=>{blocks++;return true;};
+    const p=walkPath(w.deps,[{x:3060,z:3200,tol:1}]);let r:Awaited<typeof p>|undefined;p.then(v=>r=v);
+    for(let i=0;i<200&&!r;i++){if(w.tick()===40&&pending.answer){pending.answer();delete pending.answer;}w.step();await Promise.resolve();await Promise.resolve();}
+    expect(r?.ok).toBe(true);expect(opens).toBe(1);expect(blocks).toBe(0);expect(r?.doors).toBe(1);
+});
+
 test('door approach and delayed open remain valid; stop during an open never marks it blocked', async () => {
     const w=road({doorX:3030,openDelay:5});const r=await run(w,3060);
     expect(r.ok).toBe(true);expect(r.doors).toBe(1);
@@ -347,4 +360,189 @@ test(`a door that shuts ${reshut} ticks behind the bot is not opened again`, asy
     expect(r.ok).toBe(true);
     expect(r.doors).toBe(1);
     expect(h.inputs.filter(i => i.startsWith('open'))).toHaveLength(1);
+});
+
+// The bot stands on a gate tile (3000,3200) whose wall is on its west edge. `shipyard`: an Open from the east side
+// moves the player out to the west, as the Karamja shipyard gate does (quest_grandtree.rs2 open_shipyard_gate).
+function gateTile(shipyard: boolean) {
+    const pos = { x: 3000, z: 3200 };
+    let tick = 0, shut = true, openAt = -1, route: number[] = [];
+    const inputs: string[] = [], listeners = new Set<() => void>();
+    const gate: PathLoc = { id: 2438, x: 3000, z: 3200, name: 'Gate', optionsWithIndex: [{ text: 'Open', opIndex: 1 }] };
+    const crosses = (a: number, b: number) => (a >= 3000) !== (b >= 3000);
+    const deps: PathDeps = {
+        tick: () => tick, pos: () => ({ ...pos, level: 0 }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        plan: (_l, _f, to) => [to],
+        locs: () => shut ? [gate] : [],
+        reach: to => !(shut && crosses(pos.x, to.x)),
+        interactLoc: () => { inputs.push(`open@${tick}`); if (shipyard && pos.x >= 3000) { pos.x = 2999; route = []; } else openAt = tick + 1; },
+        walk: x => {
+            inputs.push(`walk ${x}@${tick}`);
+            if (shut && crosses(pos.x, x)) return { success: false, phase: 'validation', reason: 'client_rejected', message: 'Failed to walk' };
+            route = [];
+            for (let c = pos.x; c !== x;) { c += Math.sign(x - c); route.push(c); }
+            return { success: true };
+        },
+    };
+    const step = () => {
+        tick++;
+        if (openAt >= 0 && tick >= openAt) { shut = false; openAt = -1; }
+        for (let k = 0; k < 2 && route.length; k++) { if (shut && crosses(pos.x, route[0]!)) break; pos.x = route.shift()!; }
+        for (const l of [...listeners]) l();
+    };
+    return { deps, step, inputs, pos };
+}
+async function walkFromGate(g: ReturnType<typeof gateTile>, x: number) {
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const done = walkPath(g.deps, [{ x, z: 3200, tol: 0 }], { maxTicks: 40 }).then(r => result = r);
+    for (let i = 0; i < 50 && !result; i++) { await Promise.resolve(); g.step(); await Promise.resolve(); }
+    return done;
+}
+
+test('a shut gate on the bot\'s own tile with its wall behind the bot is not opened', async () => {
+    const g = gateTile(true);
+    const r = await walkFromGate(g, 3010);
+    expect(g.inputs.filter(i => i.startsWith('open'))).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(g.pos.x).toBe(3010);
+});
+
+test('a shut door on the bot\'s own tile that blocks the next path tile is opened', async () => {
+    const g = gateTile(false);
+    const r = await walkFromGate(g, 2990);
+    expect(g.inputs.filter(i => i.startsWith('open'))).toHaveLength(1);
+    expect(r.ok).toBe(true);
+    expect(g.pos.x).toBe(2990);
+});
+
+// An open field (or a one-tile road) with a monster standing on the straight line to the goal. The fake client
+// walks each click in a straight line, 2 tiles per tick; plan() is a breadth-first search round `avoid`.
+function field(opts: { hunter: { x: number; z: number; r: number }; road?: boolean; open?: (x: number, z: number) => boolean; axisFirst?: boolean }) {
+    const pos = { x: 3000, z: 3200 };
+    let tick = 0, route: PathTile[] = [];
+    const listeners = new Set<() => void>();
+    const open = opts.open ?? ((x: number, z: number) => x >= 2990 && x <= 3060 && (opts.road ? z === 3200 : z >= 3170 && z <= 3230));
+    const deps: PathDeps = {
+        pos: () => ({ ...pos, level: 0 }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        // axisFirst: the client walks the longer axis first and the diagonal last, off the straight line.
+        walk: (x, z) => {
+            const dx = x - pos.x, dz = z - pos.z, run = Math.abs(dx) - Math.abs(dz);
+            const bend = run > 0 ? { x: pos.x + Math.sign(dx) * run, z: pos.z } : { x: pos.x, z: pos.z - Math.sign(dz) * run };
+            route = opts.axisFirst ? expandPath(pos, [bend, { x, z }]) : expandPath(pos, [{ x, z }]);
+        },
+        interactLoc: () => {},
+        locs: () => [],
+        plan: (_l, from, to, avoid = []) => {
+            // Open ground with nothing closed: the straight line, as findLongPath gives it.
+            if (!avoid.length) return opts.road || from.z === to.z ? [to] : [{ x: to.x, z: from.z }, to];
+            const shut = new Set(avoid.map(t => `${t.x},${t.z}`)), key = (x: number, z: number) => `${x},${z}`;
+            shut.delete(key(from.x, from.z)); shut.delete(key(to.x, to.z));
+            const back = new Map<string, PathTile | null>([[key(from.x, from.z), null]]), queue: PathTile[] = [from];
+            while (queue.length) {
+                const c = queue.shift()!;
+                if (c.x === to.x && c.z === to.z) break;
+                for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+                    const n = { x: c.x + dx, z: c.z + dz }, k = key(n.x, n.z);
+                    if (back.has(k) || !open(n.x, n.z) || shut.has(k)) continue;
+                    back.set(k, c); queue.push(n);
+                }
+            }
+            if (!back.has(key(to.x, to.z))) return [];
+            const out: PathTile[] = [];
+            for (let c: PathTile | null = to; c && !(c.x === from.x && c.z === from.z); c = back.get(key(c.x, c.z)) ?? null) out.unshift(c);
+            return out;
+        },
+        hunters: () => [opts.hunter],
+    };
+    let nearest = Infinity;
+    const step = () => {
+        tick++;
+        for (let k = 0; k < 2 && route.length; k++) { const n = route.shift()!; if (!open(n.x, n.z)) { route = []; break; } pos.x = n.x; pos.z = n.z; }
+        nearest = Math.min(nearest, Math.max(Math.abs(pos.x - opts.hunter.x), Math.abs(pos.z - opts.hunter.z)));
+        for (const l of [...listeners]) l();
+    };
+    return { deps, step, pos, nearest: () => nearest, tick: () => tick };
+}
+async function walkField(f: ReturnType<typeof field>, to: PathTile) {
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const done = walkPath(f.deps, [{ ...to, tol: 0 }], { maxTicks: 120 }).then(r => result = r);
+    for (let i = 0; i < 150 && !result; i++) { await Promise.resolve(); f.step(); await Promise.resolve(); }
+    return done;
+}
+
+test('walkPath plans round a live hunter\'s square and keeps every click outside it', async () => {
+    const hunter = { x: 3030, z: 3200, r: 4 };
+    const f = field({ hunter });
+    const r = await walkField(f, { x: 3055, z: 3200 });
+    expect(r.ok).toBe(true);
+    expect(f.pos).toEqual({ x: 3055, z: 3200 });
+    expect(f.nearest()).toBeGreaterThan(hunter.r);
+    // The same walk with no live hunters runs over the monster's tile.
+    const blind = field({ hunter });
+    delete blind.deps.hunters;
+    expect((await walkField(blind, { x: 3055, z: 3200 })).ok).toBe(true);
+    expect(blind.nearest()).toBe(0);
+});
+
+test('walkPath walks on when no path goes round a live hunter', async () => {
+    const f = field({ hunter: { x: 3030, z: 3200, r: 4 }, road: true });
+    const r = await walkField(f, { x: 3055, z: 3200 });
+    expect(r.ok).toBe(true);
+    expect(f.pos).toEqual({ x: 3055, z: 3200 });
+});
+
+test('walkPath re-plans round a hunter that comes into view during the walk', async () => {
+    const hunter = { x: 3040, z: 3200, r: 4 };
+    const f = field({ hunter });
+    // Out of view (more than 15 tiles away) until the bot reaches x 3025.
+    f.deps.hunters = () => (f.pos.x >= 3025 ? [hunter] : []);
+    const r = await walkField(f, { x: 3058, z: 3200 });
+    expect(r.ok).toBe(true);
+    expect(f.pos).toEqual({ x: 3058, z: 3200 });
+    expect(f.nearest()).toBeGreaterThan(2);
+    expect(r.repaths).toBeGreaterThan(0);
+});
+
+test('walkPath holds at the edge of a hunter\'s square rather than take a long way round', async () => {
+    // A road at z 3199-3201 with a loop 20 tiles north: round the monster is about 40 tiles longer than the road.
+    const open = (x: number, z: number) => x >= 2990 && x <= 3060 && (z >= 3199 && z <= 3201 || z === 3221 || (x === 3010 || x === 3050) && z >= 3199 && z <= 3221);
+    const hunter = { x: 3030, z: 3200, r: 4 };
+    const f = field({ hunter, open });
+    // The monster wanders off the road after 25 ticks, when the bot has stood at the edge of its square a while.
+    let maxZ = 0, near = Infinity;
+    f.deps.hunters = () => {
+        maxZ = Math.max(maxZ, f.pos.z);
+        if (f.tick() >= 25) return [{ ...hunter, z: 3260 }];
+        near = Math.min(near, Math.max(Math.abs(f.pos.x - hunter.x), Math.abs(f.pos.z - hunter.z)));
+        return [hunter];
+    };
+    const r = await walkField(f, { x: 3055, z: 3200 });
+    expect(r.ok).toBe(true);
+    expect(f.pos).toEqual({ x: 3055, z: 3200 });
+    expect(maxZ).toBeLessThanOrEqual(3201);
+    // While it stood on the road the bot stayed out of its square.
+    expect(near).toBeGreaterThan(hunter.r);
+    expect(r.still).toBeGreaterThan(0);
+});
+
+test('walkPath keeps clicks short beside a live hunter, so a client that leaves the straight line stays clear', async () => {
+    // The bot walks north past a monster a little east of the road; a long click round it takes the client north first.
+    const hunter = { x: 3004, z: 3215, r: 3 };
+    const f = field({ hunter, axisFirst: true });
+    const r = await walkField(f, { x: 3012, z: 3229 });
+    expect(r.ok).toBe(true);
+    expect(f.pos).toEqual({ x: 3012, z: 3229 });
+    // r is huntrange 1 plus a margin of 2: the bot stays out of the huntrange.
+    expect(f.nearest()).toBeGreaterThan(1);
+});
+
+test('walkPath steps no nearer to a hunter whose square already holds the bot', async () => {
+    // The monster stands 2 tiles off the road beside the bot's start: inside its square from the first tick.
+    const hunter = { x: 3002, z: 3202, r: 4 };
+    const f = field({ hunter });
+    const r = await walkField(f, { x: 3040, z: 3200 });
+    expect(r.ok).toBe(true);
+    expect(f.nearest()).toBeGreaterThanOrEqual(2);
 });

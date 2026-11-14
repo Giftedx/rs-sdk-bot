@@ -40,6 +40,7 @@ export const MARKET_MODES: readonly MarketModeSpec[] = [
  {mode:'ge-buy-list',script:'scripts/microbot-ge-buy-list.ts',description:'Execute a multi-item Grand Exchange shopping list'},
  {mode:'ge-trip',script:'scripts/microbot-ge-trip.ts',description:'Bank-to-GE round trip for buying/selling'},
  {mode:'ge-plan',script:'scripts/microbot-ge-plan.ts',description:'Compute Grand Exchange order plan from bank state'},
+ {mode:'shop-to-bid',script:'scripts/shop-to-bid.ts',description:'Buy a stackable item from an NPC shop and sell it into an open Grand Exchange bid above the shop price'},
  {mode:'bank-seller',script:'scripts/microbot-bank-seller.ts',description:'Withdraw and liquidate banked surplus items'},
 ];
 

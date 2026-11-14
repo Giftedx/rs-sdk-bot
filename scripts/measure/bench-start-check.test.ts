@@ -58,6 +58,15 @@ describe('otherHeavyJobs', () => {
         expect(otherHeavyJobs(procs, 100)).toEqual([]);
         expect(otherHeavyJobs(procs, 110)).toEqual([]);
     });
+    test('the seed children of one --seed-jobs run are one job; benches of two test shards are two', () => {
+        const parent = proc(100, 1, 1000, `${BUN} scripts/measure/aio-practice-bench.ts --seeds 1,2 --seed-jobs 2`);
+        const a = proc(110, 100, 1100, `${BUN} scripts/measure/aio-practice-bench.ts --seed 1`), b = proc(120, 100, 1100, `${BUN} scripts/measure/aio-practice-bench.ts --seed 2`);
+        expect(otherHeavyJobs([parent, a, b], 110)).toEqual([]);
+        expect(otherHeavyJobs([parent, a, b], 120)).toEqual([]);
+        const gate = proc(50, 1, 900, `${BUN} scripts/ci-gate.ts`), s1 = proc(60, 50, 950, `${BUN} test ./scripts/x.test.ts`), s2 = proc(61, 50, 950, `${BUN} test ./scripts/y.test.ts`);
+        const b1 = proc(200, 60, 1000, `${BUN} scripts/measure/aio-practice-bench.ts cook`), b2 = proc(210, 61, 1000, `${BUN} scripts/measure/aio-practice-bench.ts fish`);
+        expect(otherHeavyJobs([gate, s1, s2, b1, b2], 210)).toEqual([{ pid: 200, script: 'aio-practice-bench.ts' }]);
+    });
     test('a process that holds the id of an ended parent is not a parent', () => {
         // Pid 90 started after this bench, so it is a later process with the id of the parent that ended.
         const procs = [proc(90, 1, 9000, `${BUN} scripts/ci-gate.ts`), proc(100, 90, 3000, `${BUN} scripts/measure/aio-practice-bench.ts`)];

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { heldCount, orderInWay, parseLine, planStage } from './route-stage';
+import { groupOrders, heldBack, heldCount, orderInWay, parseLine, planStage } from './route-stage';
 
 test('free holders give first, then the largest busy stock; the held count is not ordered', () => {
     const holders = (item: string) => item === 'magic logs'
@@ -54,4 +54,34 @@ test('a held trade claim of another order holds the account', () => {
     expect(orderInWay([], [], 'mmsmk1232', 1, claims)).toBe('1794503734080-nabtheknob-mmsmk1232-bones');
     expect(orderInWay([], [], 'MMSMK1232', 1, claims)).toBe('1794503734080-nabtheknob-mmsmk1232-bones');
     expect(orderInWay([], [], 'Shaftmaker', 1, claims)).toBeUndefined();
+});
+
+test('an owner stop file, a reservation or a hand job holds an account back from giving', () => {
+    const jobs = [
+        { account: 'Mightyrod', script: '', enabled: false },
+        { account: 'WeeQuickie', script: 'scripts/firemaking-order.ts', enabled: false },
+        { account: 'OreElse', script: 'scripts/goldfarm.ts', enabled: true, autopilot: 'local' },
+        { account: 'Shaftmaker', script: 'scripts/shop-buyer.ts', enabled: false, autopilot: 'local' },
+    ];
+    expect(heldBack('Mightyrod', jobs, undefined)).toBe('reserved (a job with no script)');
+    expect(heldBack('WeeQuickie', jobs, undefined)).toBe('hand job (disabled, not an autopilot job)');
+    expect(heldBack('OreElse', jobs, undefined)).toBeUndefined();
+    expect(heldBack('Shaftmaker', jobs, undefined)).toBeUndefined();
+    expect(heldBack('Bigchopper', jobs, 'session: owner pause for a dagger gang pilot\n')).toBe('owner stop file');
+    expect(heldBack('Bigchopper', jobs, 'swarm')).toBeUndefined();
+    expect(heldBack('Bigchopper', jobs, undefined)).toBeUndefined();
+});
+
+test('each giver gets one order with all its lines, split at one trade window', () => {
+    const groups = groupOrders([
+        { from: 'Abracadickra', item: 'Sapphire ring', count: 40, busy: false },
+        { from: 'Balls', item: 'Fire rune', count: 80, busy: true },
+        { from: 'abracadickra', item: 'Cosmic rune', count: 74, busy: false },
+    ]);
+    expect(groups).toEqual([
+        { from: 'Abracadickra', lines: [{ item: 'Sapphire ring', count: 40 }, { item: 'Cosmic rune', count: 74 }], busy: false },
+        { from: 'Balls', lines: [{ item: 'Fire rune', count: 80 }], busy: true },
+    ]);
+    const many = groupOrders(Array.from({ length: 30 }, (_, i) => ({ from: 'Balls', item: `Item ${i}`, count: 1, busy: false })));
+    expect(many.map(g => g.lines.length)).toEqual([28, 2]);
 });

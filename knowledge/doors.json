@@ -3366,7 +3366,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "mcannon"
+   "varp": "mcannon",
+   "minimum": 6
   },
   "trigger": "scripts/quests/quest_mcannon/scripts/locs/mcannon_doors.rs2:10",
   "src": "maps/m40_54.jm2:4604"
@@ -23497,7 +23498,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "mcannon"
+   "varp": "mcannon",
+   "minimum": 9
   },
   "trigger": "scripts/quests/quest_mcannon/scripts/locs/mcannon_doors.rs2:2",
   "src": "maps/m47_53.jm2:4399"

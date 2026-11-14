@@ -9,9 +9,12 @@ import { waitUntil } from './ticks';
 import { stalled, startLedger, formatLedger } from './ledger';
 import { startTickStallWatch } from './tick-stall';
 import { assertSideOwns, loadOwners } from './fleet';
+import { ensureCredential } from './fleet-vault';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
-import { watchRandomEvents, type RandomEventWatch } from './randomevents';
+import { loadDanger, watchRandomEvents, type RandomEventWatch } from './randomevents';
+import { GUARD_VALUE, recordRun, sellsItems, sharedLootTables } from './loot';
+import { FLEE_HP, damageLog, deathLine, recoverDeath, snapshot, type DeathSnapshot } from './death-recovery';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { noGuardScript, startEatGuard } from './eat-guard';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
@@ -42,6 +45,9 @@ export function assertServerAllowed(server: string, env: Record<string, string |
     if (env.DEMO_OK === '1') return;
     throw new Error(`refusing to connect to ${server}: not the local practice server; set DEMO_OK=1 to allow it on purpose`);
 }
+
+// `RELEASE <first 12 hex of the worker release>`, or `RELEASE unpinned` for a run that the swarm did not start.
+export const releaseLine = (release: string | undefined) => `RELEASE ${/^[0-9a-f]{12,}$/i.test(release ?? '') ? release!.slice(0, 12).toLowerCase() : 'unpinned'}`;
 
 export function sessionDied(initial: any, now: any): boolean {
     return !!now && (now.isDead === true || (now.respawnCount ?? 0) > (initial?.respawnCount ?? 0)
@@ -89,6 +95,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Never log in an account the other fleet side owns (fleet/owners.json): two machines would fight over it.
     assertSideOwns(name);
     const log = opts.log ?? ((l: string) => console.log(l));
+    // Any session can log in any account fleet/owners.json gives its side: a bot.env this machine lacks comes from
+    // the fleet credential vault (fleet-vault.ts) when FLEET_VAULT_KEY is set.
+    ensureCredential(name);
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
     if (!password) throw new Error(`no PASSWORD in bots/${name}/bot.env`);
@@ -99,6 +108,21 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // The prayer guard reads two NPC tables, and the first read takes about 1 s. It runs before the connection: a
     // connected client that does not answer holds the tick of a lockstep world for every other client.
     const guardTables = process.env.PRAYER_GUARD !== '0' ? { protect: protectByStyle(npcAttackStyles()), hunters: npcHunters() } : null;
+    // The loot job reads the item tables and the hunting NPCs: read them here too, for the same reason.
+    const events = process.env.RANDOM_EVENTS !== '0', lootOn = process.env.LOOT_WATCH !== '0' && !recordRun(name);
+    // On a death the bot first runs back for its items (packages/core/src/death-recovery.ts) while the watcher holds
+    // the script; the session then ends as a death, as before. DEATH_RECOVERY=0 turns it off; a record run never runs it.
+    const deathOn = process.env.DEATH_RECOVERY !== '0' && !recordRun(name);
+    // The value guard keeps a held stack worth GUARD_VALUE coins from a drop, a sale or an alch (randomevents.ts
+    // `guard`). VALUE_GUARD=0 turns it off; a record run and a script that sells, alchs or trades on purpose get none.
+    const guardOn = process.env.VALUE_GUARD !== '0' && !recordRun(name) && !sellsItems(opts.record?.script ?? process.argv[1] ?? '');
+    // The flee guard (randomevents.ts `flee`): at FLEE_HP of the maximum Hitpoints or less, with no food, the bot runs
+    // out of the attacker's reach and the session ends there instead of in a death. FLEE_GUARD=0 turns it off; a record
+    // run and a PvP script (it fights on purpose at low Hitpoints) get none.
+    const scriptFile = opts.record?.script ?? process.argv[1] ?? '';
+    const fleeOn = process.env.FLEE_GUARD !== '0' && !recordRun(name) && !/pk|pvp|spar|gang/i.test(scriptFile.split(/[\\/]/).at(-1) ?? '');
+    const lootTables = lootOn ? sharedLootTables() : null;
+    if (lootOn) loadDanger();
     const s = await connectInProcess({ name, password, server, ...(trade ? {
         trade: {...trade, check: server => { assertSideOwns(name); trade.check(server); }},
     } : {}) });
@@ -111,16 +135,29 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     let lastLife = born;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
+    // The worker release of this run (WORKER_RELEASE, which the swarm sets from the files the job runs): reports such as
+    // scripts/tick-waste.ts count each run under the code it ran, so a fixed bug stops counting. A line of its own,
+    // because proofs match the START line to its end.
+    log(releaseLine(process.env.WORKER_RELEASE));
     // On the lockstep practice engine: the time from the start of the worker process to its login, for the bench.
     if (process.env.SIM_LOCKSTEP === '1') log(`BOOT ${Math.round(performance.now())} ms from process start to login`);
     const record = createTickRecorder({ account: name, server, script: opts.record?.script ?? process.argv[1] ?? 'unknown',
         argv: opts.record?.argv ?? process.argv.slice(2), startedAt: Date.now() });
     if (record && s.record) { s.record(record); records.set(s, record); }
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
-    const led = startLedger(s as any);
+    // The ledger names the last script action of each idle tick: the watcher's gate sees them (started below).
+    const led = startLedger(s as any, () => randomEvents.get(s)?.lastAction() ?? null);
     ledgers.set(s, led);
-    // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
-    if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
+    // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
+    // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
+    // Death recovery needs the watcher's gate too: it starts the watcher with events and loot off.
+    if (events || lootTables || deathOn || guardOn || fleeOn) randomEvents.set(s, watchRandomEvents(s, { events,
+        flee: fleeOn ? { hp: FLEE_HP, onSafe: detail => {
+            log(`FLEE_GUARD safe ${detail} bot=${name}`);
+            if (!stopping && !settling.has(s)) { stopping = true; stop(`fled at low hitpoints: ${detail}`); }
+        } } : null,
+        guard: guardOn ? { tables: sharedLootTables(), minValue: GUARD_VALUE } : null, loot: lootTables ? { tables: lootTables, name,
+        friends: new Set(loadOwners().keys()), reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {} } : null }));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
     // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.
     if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...(process.env.PRAYER_GUARD_TRACE === '1' ? { trace: log } : {}), ...guardTables,
@@ -137,14 +174,32 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
     let stopping = false;
+    let lastAlive: DeathSnapshot | null = null, lastHp = '?';
+    // The damage of the last ticks, by source, for the DEATH line (death-recovery.ts damageLog).
+    const damage = damageLog();
+    const stop = (reason: string) => void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
     s.onTick(() => {
-        lastLife = life(s.sdk.getState()?.player) ?? lastLife;
-        const reason = sessionDied(born,lastLife) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
+        const st = s.sdk.getState();
+        lastLife = life(st?.player) ?? lastLife;
+        const died = sessionDied(born,lastLife);
+        damage.read(st);
+        if (!died) { lastAlive = snapshot(st) ?? lastAlive; if (st?.player) lastHp = `${st.player.hp}/${st.player.maxHp}`; }
+        const reason = died ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
             : stopTicks % 25 === 0 && !isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot) ? 'fleet controller lease unavailable'
             : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items, dialog or a journey` : null;
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
-            void (opts.onStop ? opts.onStop(s,reason) : finish([s], false, reason));
+            if (reason === 'died') log(`${deathLine(lastAlive, lastHp, damage.cause(), scriptFile)} bot=${name}`);
+            const watch = randomEvents.get(s), at = lastAlive;
+            if (reason !== 'died' || !deathOn || !watch || !at) { stop(reason); return; }
+            // The walker's world loads during the respawn wait, not after it.
+            const worldReady = getWorld();
+            const run = watch.exclusive(() => recoverDeath(s, at, {
+                walk: async (to, signal) => (await import('./walk')).goTo(s, await worldReady, to, accountOf(s), { legTimeoutTicks: 100, signal }),
+                tables: sharedLootTables(), danger: loadDanger(), friends: new Set(loadOwners().keys()), log: line => log(`${line} bot=${name}`),
+            })).catch(e => { log(`DEATH_RECOVERY error ${String(e)} bot=${name}`); return 'error'; });
+            deathRecoveries.set(s, run);
+            void run.then(() => stop(reason));
         }
     });
     // A tick stream that stops arriving without a disconnect (tick-stall.ts) ends the session on the clock.
@@ -199,6 +254,7 @@ const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
+const deathRecoveries = new Map<Session, Promise<string>>();
 const prayerGuards = new Map<Session, ReturnType<typeof startPrayerGuard>>();
 const eatGuards = new Map<Session, ReturnType<typeof startEatGuard>>();
 // For a script that owns the prayers and needs them all off at its start (scripts/microbot-prayer-flick.ts).
@@ -249,6 +305,8 @@ export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, o
 }
 
 async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: SettlementOptions, prior: Promise<boolean>): Promise<boolean> {
+    // A script that ends during a death recovery does not log the account out under it.
+    await Promise.all(sessions.map(s => deathRecoveries.get(s)));
     for (const s of sessions) settling.add(s);
     // A settling script waits for nothing more, and logout needs ticks: count as waiting so a lockstep tick is not held.
     tickWaits.active++;

@@ -1,12 +1,17 @@
 import {createHash} from 'node:crypto';
-import {readFileSync,readdirSync,existsSync,statSync} from 'node:fs';
+import {readFileSync,readdirSync,existsSync,statSync,mkdirSync,writeFileSync,renameSync} from 'node:fs';
 import {join,resolve,dirname,relative} from 'node:path';
-import ts from 'typescript';
+import type TS from 'typescript';
 import {isLocalServer} from './localserver';
 import {readLogoutProof,listAttempts,type LogoutProof} from './session-lifecycle';
 import {commandLine} from '../../practice/src/proc';
 
 const root=resolve(import.meta.dir,'../../..');
+// The TypeScript parser loads on its first use: about 100 MB of working set in each bot and supervisor process. A
+// release that the disk cache below answers never parses a file, so most processes never load it.
+let tsLoaded:typeof TS|undefined;
+export const typescriptLoaded=()=>tsLoaded!==undefined;
+const ts=new Proxy({} as typeof TS,{get:(_,key)=>(tsLoaded??=require('typescript') as typeof TS)[key as keyof typeof TS]});
 // One fleet revision includes helpers and both host/single launch paths, not
 // just the entry script. Credentials, mutable receipts and notes are excluded.
 export const workerSourceRoots=['scripts','packages','vendor/rs-sdk/sdk','vendor/rs-sdk/server/webclient/src'];
@@ -94,10 +99,10 @@ function resolveImport(base:string,file:string,spec:string):string[]{
 // Consecutive literal arguments of one call are one path: join(root,'knowledge','npcs.json') names the file, and
 // join(root,'knowledge',name) names the folder.
 function stringLiterals(file:string,text:string):string[]{
-    const out:string[]=[],joined=new Set<ts.Node>();
-    const visit=(n:ts.Node):void=>{
+    const out:string[]=[],joined=new Set<TS.Node>();
+    const visit=(n:TS.Node):void=>{
         if(ts.isCallExpression(n)){
-            let run:ts.StringLiteralLike[]=[];
+            let run:TS.StringLiteralLike[]=[];
             const flush=()=>{if(run.length>1){out.push(run.map(r=>r.text).join('/'));run.forEach(r=>joined.add(r));}run=[];};
             for(const a of n.arguments){if(ts.isStringLiteralLike(a))run.push(a);else flush();}
             flush();
@@ -198,13 +203,26 @@ function releaseStamp(base:string,files:readonly string[]):string{
 const releaseByEntries=new Map<string,{files:string[];stamp:string;value:string}>();
 // Group login must keep reading packets while it checks each actor. Reuse parsed release closures only while
 // their files and folders retain their stamps; every network admission still checks the current stamps and peers.
+// The same record is kept on disk (.practice/cache/release/), so a new process answers from the stamps alone, with no
+// parse, while no release file or folder changed. The stamp check is the in-memory one.
+export const forgetReleaseMemory=()=>releaseByEntries.clear();
+const releaseCacheFile=(base:string,key:string)=>join(base,'.practice','cache','release',createHash('sha256').update(key).digest('hex').slice(0,32)+'.json');
 export function cachedReleaseFor(entries:readonly string[],base=root):string{
     const fullEntries=entries.length?[...entries,...workerLaunchers]:launchEntries,key=JSON.stringify([resolve(base),fullEntries]);
     const hit=releaseByEntries.get(key);
     if(hit)try{if(releaseStamp(base,hit.files)===hit.stamp)return hit.value;}catch{/* a missing file recomputes */}
+    const file=releaseCacheFile(base,key);
+    try{
+        const disk=JSON.parse(readFileSync(file,'utf8'));
+        if(disk?.key===key&&Array.isArray(disk.files)&&typeof disk.stamp==='string'&&typeof disk.value==='string'&&releaseStamp(base,disk.files)===disk.stamp){
+            releaseByEntries.set(key,{files:disk.files,stamp:disk.stamp,value:disk.value});return disk.value;
+        }
+    }catch{/* no record, or a changed or missing file: recompute */}
     const memo:ReleaseMemo=new Map(),sourceFiles=releaseFiles(fullEntries,base,memo);
     const files=[...new Set([...sourceFiles,...[...memo].filter(([k])=>k.startsWith('dirs:')).flatMap(([,v])=>v as string[])])],stamp=releaseStamp(base,files);
-    const value=revisionOf(base,sourceFiles,memo);releaseByEntries.set(key,{files,stamp,value});return value;
+    const value=revisionOf(base,sourceFiles,memo);releaseByEntries.set(key,{files,stamp,value});
+    try{mkdirSync(dirname(file),{recursive:true});const tmp=`${file}.${process.pid}.tmp`;writeFileSync(tmp,JSON.stringify({key,files,stamp,value}));renameSync(tmp,file);}catch{/* the cache is optional */}
+    return value;
 }
 export function cachedLaunchRevision(base=root):string{return cachedReleaseFor([],base);}
 
@@ -250,6 +268,11 @@ export function isWorkerReleaseHold(result:string):boolean {
 
 // Recheck before the network boundary, including workers launched by an old
 // in-memory supervisor. Existing connected sessions are never polled or killed.
+// A status file of only null bytes (or none) is what a power cut leaves of a write whose data never reached the disk:
+// the rename was kept, the bytes were not. Only a crash makes it, and the crash ended its writer. The writer's session
+// can still be open on the server until the lost-session window ends, so the file names no peer only once its last
+// write is LOST_SESSION_DROP_MS old; before that it stays unknown evidence.
+export const crashResidue=(raw:Uint8Array,writtenAt:number,now=Date.now())=>raw.every(b=>b===0)&&Number.isFinite(writtenAt)&&now-writtenAt>=LOST_SESSION_DROP_MS;
 export function assertLiveWorkerRelease(server:string,env:Record<string,string|undefined>=process.env,base=root):void {
     if(isLocalServer(server))return;
     // A standing owner job (swarm STANDING=1) has no coordinator acceptance and runs the current source, so neither
@@ -259,7 +282,9 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
     const memo:ReleaseMemo=new Map(),pin=assertWorkerRelease(env,base,memo),statuses:any[]=[];
     try{for(const entry of readdirSync(join(base,'.practice/status'))){
         if(!entry.endsWith('.json'))continue;
-        statuses.push(JSON.parse(readFileSync(join(base,'.practice/status',entry),'utf8')));
+        const file=join(base,'.practice/status',entry),raw=readFileSync(file);
+        if(crashResidue(raw,statSync(file).mtimeMs))continue;
+        statuses.push(JSON.parse(raw.toString('utf8')));
     }}catch{throw Error('no worker progress: release peer state unknown; unreadable status evidence');}
     const owners=standingAccounts(base);
     // A peer whose entries are gone or do not resolve has no current release, so it counts as stale.

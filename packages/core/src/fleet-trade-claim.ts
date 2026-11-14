@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, fleetCheckoutId, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs } from './fleet-lease';
+import { appendFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs } from './fleet-lease';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive, savedProcessAlive } from './session-takeover';
 
@@ -14,7 +14,7 @@ type ClaimState = { nonce: string; phase: 'held' | 'released'; at: number };
 type ClaimOwner = { checkout: string; host: string; pid: number };
 export type FleetTradeClaim = TradeClaimInput & ClaimState & Partial<ClaimOwner>;
 type FleetSwarmClaim = ClaimIdentity & ClaimState & ClaimOwner & { kind: 'swarm' };
-type FleetAccountClaim = FleetTradeClaim | FleetSwarmClaim;
+export type FleetAccountClaim = FleetTradeClaim | FleetSwarmClaim;
 
 const ORDER_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -98,6 +98,20 @@ export function readHeldFleetTradeClaims(root: string, accounts?: readonly strin
     }
     if (pending.size || rows[0]?.trim()) throw Error('fleet trade claim authority has incomplete records');
     return held;
+}
+
+// Every account's latest claim record, swarm and trade, in one round trip (fleet adoption reads which accounts are
+// free). An unreadable record maps to null, which a reader treats as held.
+export function readAllFleetAccountClaims(git: ReturnType<typeof fleetGitWindow>): Map<string, FleetAccountClaim | null> {
+    const refs = readFleetGitRefs(git, [CLAIM_PREFIX + '*']), out = new Map<string, FleetAccountClaim | null>();
+    const heads = [...refs].filter(([ref]) => ACCOUNT.test(ref.slice(CLAIM_PREFIX.length)));
+    if (!heads.length) return out;
+    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', ...heads.map(([, sha]) => sha)]);
+    for (const [ref, sha] of heads) {
+        const account = ref.slice(CLAIM_PREFIX.length);
+        try { out.set(account, parseClaim(git(['show', '-s', '--format=%b', sha]), account)); } catch { out.set(account, null); }
+    }
+    return out;
 }
 
 function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: string | undefined, subject: string, claim: FleetAccountClaim) {
@@ -199,12 +213,22 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
 // A swarm claim outlives its container: only the owning checkout can prove the logout, and a container that is gone
 // never will. The claim of ANOTHER side may be replaced once that side's controller lease has gone unrenewed, and the
 // claim itself has stood, for ORPHAN_CLAIM_MS. By then the side's workers have refused logins for most of that time
-// (FLEET_LEASE_TTL_MS is 10 minutes) and the game server has dropped a session with no client. A claim of the caller's
-// own side is never orphaned here: its lease is live, and session recovery owns that case. Trade claims never qualify.
-// openBot admits only accounts fleet/owners.json gives to the caller's side (fleet.ts assertSideOwns).
+// (FLEET_LEASE_TTL_MS is 10 minutes) and the game server has dropped a session with no client. Trade claims never
+// qualify. openBot admits only accounts fleet/owners.json gives to the caller's side (fleet.ts assertSideOwns).
+// A claim of the caller's own side taken by ANOTHER checkout (a container of this side that is gone) is orphaned on the
+// same terms, judged by that checkout's own renewals: its newest record on the side's lease ref is an hour old, or it
+// has none there while another checkout now holds the lease. A fresh container of a side thus takes over the accounts
+// its dead predecessor left held. A side with no lease ref still gives no takeover; the caller's own checkout
+// recovers its claims through session recovery, never here.
 export const ORPHAN_CLAIM_MS = 60 * 60_000;
-function orphanedSwarmClaim(git: ReturnType<typeof fleetGitWindow>, claim: FleetSwarmClaim, side: string, now: number): boolean {
-    if (claim.side === side || now - claim.at < ORPHAN_CLAIM_MS) return false;
+function orphanedSwarmClaim(git: ReturnType<typeof fleetGitWindow>, claim: FleetSwarmClaim, side: string, now: number, checkout: string): boolean {
+    if (now - claim.at < ORPHAN_CLAIM_MS) return false;
+    if (claim.side === side) {
+        if (claim.checkout === checkout) return false;
+        const { head, seen } = fleetCheckoutLastSeen(git, side, claim.checkout);
+        if (!head) return false;
+        return seen === null ? head.holder !== claim.checkout : now - seen >= ORPHAN_CLAIM_MS;
+    }
     const seen = fleetLeaseLastSeen(git, claim.side);
     return seen !== null && now - seen >= ORPHAN_CLAIM_MS;
 }
@@ -220,7 +244,7 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     if (claim?.phase === 'held') {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
         const prior = matchedWorkerProof(root, claim, input);
-        if (!prior && orphanedSwarmClaim(git, claim, side, now())) orphan = claim;
+        if (!prior && orphanedSwarmClaim(git, claim, side, now(), fleetCheckoutId(root))) orphan = claim;
         // A recovery takes a held claim only from an owner that is gone. The claim's time tells its owner from a later
         // process with the same id (savedProcessAlive).
         else if (!prior || (prior.state !== 'confirmed' && !(recover && !ownerAlive(claim.pid, claim.at)))) {

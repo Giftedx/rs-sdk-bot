@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { parseDrops } from '../src/drops';
+import { parseDrops, parseDropProcs, expandProcItems } from '../src/drops';
 
 const SCRIPT = `[ai_queue3,testgiant]
 gosub(npc_death);
@@ -101,4 +101,106 @@ if ($r < 10) {
 `;
     const roll = parseDrops(text, 'k.rs2').find(x => x.trigger === 'testkbd')!.rolls[0]!;
     expect([roll.item, roll.count, roll.countMax]).toEqual(['coins', 100, 500]);
+});
+
+// The shapes of drop tables/scripts/shared_droptables.rs2: an early return before the roll, a die set in both arms of
+// an if, a nested `$random < T &` narrowing inside a slot, a `$drop = item` chain read by a later return, and a switch.
+const PROCS = `[proc,herbs]()(namedobj, int)
+if(map_members = ^false) {
+    return (coins, 10);
+}
+def_int $random = 0;
+$random = random(128);
+if ($random < 32) {
+    return (unidentified_guam, 1);
+} else if ($random < 128) {
+    return (unidentified_dwarf_weed, 1);
+}
+
+[proc,jewels]()(namedobj, int)
+def_int $random = 0;
+if (inv_total(worn, ring_of_wealth) > 0 & map_members = ^true) {
+    $random = random(65);
+} else {
+    $random = random(128);
+}
+if ($random < 32) {
+    return (uncut_sapphire, 1);
+} else if ($random < 59) {
+    if (map_members = ^true) {
+        return (rune_javelin, 5);
+    }
+} else if ($random < 65) {
+    if (map_members = ^true) {
+        if ($random < 62 & %legendsquest = ^legends_complete) {
+            return (~mega);
+        }
+        if (coordz(coord) > 6400) {
+            return (chaos_talisman, 1);
+        }
+    }
+}
+
+[proc,ultra]()(namedobj, int)
+def_int $random = 0;
+$random = random(128);
+if ($random < 113) {
+    return (~jewels);
+} else if ($random < 128) {
+    return (~mega);
+}
+
+[proc,mega]()(namedobj, int)
+def_int $random = random(128);
+def_namedobj $drop = null;
+if ($random < 8) { $drop = rune_spear; }
+else if ($random < 12) { $drop = dragonshield_a; }
+else if ($random < 15) { $drop = dragon_spear; }
+if ($drop ! null) {
+    session_log(^log_adventure, "x");
+    return ($drop, 1);
+}
+
+[proc,junk]()(namedobj, int)
+switch_int (random(8)) {
+    case 0 : return(digsitearrow, 1);
+    case 1 : return(old_boot, 1);
+    case default : return(pot_empty, 1);
+}
+
+[proc,helper](namedobj $obj)(namedobj, int)
+return($obj, 1);
+`;
+
+test('shared drop procs: slot chances, early returns, nested narrowing, $drop chains and switch cases', () => {
+    const p = parseDropProcs(PROCS, 's.rs2');
+    const rows = (k: string) => p.get(k)!.map(r => [r.item ?? '~' + r.table, r.count, r.chance * (k === 'junk' ? 8 : 128), r.conditional]);
+    expect(rows('herbs')).toEqual([['coins', 10, 128, true], ['unidentified_guam', 1, 32, false], ['unidentified_dwarf_weed', 1, 96, false]]);
+    expect(rows('jewels')).toEqual([['uncut_sapphire', 1, 32, false], ['rune_javelin', 5, 27, true], ['~mega', 1, 3, true], ['chaos_talisman', 1, 6, true]]);
+    expect(rows('mega')).toEqual([['rune_spear', 1, 8, false], ['dragonshield_a', 1, 4, false], ['dragon_spear', 1, 3, false]]);
+    expect(rows('junk')).toEqual([['digsitearrow', 1, 1, false], ['old_boot', 1, 1, false], ['pot_empty', 1, 6, false]]);
+    expect(p.get('mega')!.map(r => r.src)).toEqual(['s.rs2:49', 's.rs2:50', 's.rs2:51']);
+    expect(p.get('herbs')![0]!.step).toBe('herbs: if map_members = ^false then coins 1/1');
+    expect(p.has('helper')).toBe(false);
+});
+
+test('a roll on a shared proc lists every item reachable through it, with the chance and steps of each path', () => {
+    const drops = parseDrops(`[ai_queue3,testdemon]
+def_int $random = random(128);
+if ($random < 127) {
+    obj_add(npc_coord, coins, 132, ^lootdrop_duration);
+} else if ($random < 128) {
+    obj_add(npc_coord, ~ultra, ^lootdrop_duration);
+}
+`, 'd.rs2');
+    expandProcItems(drops, parseDropProcs(PROCS, 's.rs2'));
+    const [coins, ultra] = drops[0]!.rolls;
+    expect(coins!.items).toBeUndefined();
+    expect(ultra!.src).toBe('d.rs2:6');
+    const spears = ultra!.items!.filter(i => i.item === 'dragon_spear');
+    expect(spears.map(i => [i.chance, i.conditional, i.path])).toEqual([
+        [(1 / 128) * (113 / 128) * (3 / 128) * (3 / 128), true, 'ultra: random(128) < 113 then jewels 113/128; jewels: random(128) < 62 then mega 3/128; mega: random(128) < 15 then dragon_spear 3/128'],
+        [(1 / 128) * (15 / 128) * (3 / 128), false, 'ultra: random(128) < 128 then mega 15/128; mega: random(128) < 15 then dragon_spear 3/128'],
+    ]);
+    expect(spears[0]!.src).toBe('s.rs2:51');
 });

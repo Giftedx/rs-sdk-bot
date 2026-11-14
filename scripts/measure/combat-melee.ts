@@ -17,6 +17,7 @@
 // 150 ticks; STOP_LEVEL ends the run at that Ranged level; each Ranged level and each 100 ticks print a SAMPLE line.
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
+import { setupCannon } from '../cannon-fight';
 
 const [bot, tArg] = process.argv.slice(2);
 const CAP = Number(tArg ?? process.env.CAP ?? 300);
@@ -66,61 +67,14 @@ try {
     const pfmOn = () => !!st().prayers?.activePrayers?.[PFM];
     if (PROTECT && !pfmOn()) { await s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }); await waitTicks(s, 1); }
     // ---- Cannon setup (outside the measured window) ----
+    // Set-up, spiral search and the first load are scripts/cannon-fight.ts setupCannon.
     let cannon: { x: number; z: number; id: number } | null = null;
     let setupTicks = 0;
-    const findCannon = () => (st().nearbyLocs ?? []).filter((l: any) => /cannon/i.test(l.name)).sort((a: any, b: any) => a.distance - b.distance)[0] as any;
     if (CANNON) {
-        const c0 = s.tick();
-        const base = slotOf(/^cannon base$/i);
-        if (!base) await finish([s], false, 'no cannon base in pack');
-        const op = base.optionsWithIndex.find((o: any) => /set-?up/i.test(o.text))?.opIndex ?? 1;
-        // A cannon left by an earlier run (decay 2,500 ticks, cannon.constant) blocks the spot: stand 6+ tiles away from it.
-        const spots = [[0, 0], [8, 0], [-8, 4], [4, 8], [-6, -6], [10, 8]];
-        const p0 = me();
-        for (const [dx, dz] of spots) {
-            const c = findCannon();
-            const sx = p0.worldX + dx!, sz = p0.worldZ + dz!;
-            if (!c || cheb({ x: c.x + 1, z: c.z + 1 }, { x: sx, z: sz }) >= 6) {
-                if (dx || dz) { await s.bot.walkTo(sx, sz, 0); await waitTicks(s, 1); }
-                break;
-            }
-        }
-        // "There isn't enough space" (a blocked 3x3, cannon_setup.rs2): try the tiles of a spiral up to 6 tiles out.
-        const ring: number[][] = [[0, 0]];
-        for (let r = 1; r <= 6; r++) for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) if (Math.max(Math.abs(dx), Math.abs(dz)) === r) ring.push([dx, dz]);
-        const p1 = me();
-        let m0 = msgs.length, placed = false, tries = 0;
-        for (const [dx, dz] of ring) {
-            if (tries >= 30) break;
-            if (dx || dz) { const w = await s.bot.walkTo(p1.worldX + dx!, p1.worldZ + dz!, 0); if (!w.success) continue; await waitTicks(s, 1); }
-            const bs = slotOf(/^cannon base$/i);
-            m0 = msgs.length; tries++;
-            await s.direct({ type: 'useInventoryItem', slot: bs.slot, optionIndex: op, reason: 'SDK' });
-            await waitUntil(s, () => sawMsg(/place the cannon base|can't|cannot|isn't enough|won't be happy/i, m0), { timeoutTicks: 8 });
-            if (sawMsg(/place the cannon base/i, m0)) { placed = true; break; }
-            if (!sawMsg(/isn't enough space/i, m0)) break;
-        }
-        if (!placed) await finish([s], false, `cannon base not placed after ${tries} tries: ${msgs.slice(m0).join(' | ')}`);
-        await waitTicks(s, 1);
-        for (const part of [/^cannon stand$/i, /^cannon barrels$/i, /^cannon furnace$/i]) {
-            const p = slotOf(part), l = findCannon();
-            if (!p || !l) await finish([s], false, `missing ${part} or loc`);
-            const name0 = l.name, id0 = l.id;
-            await s.direct({ type: 'useItemOnLoc', itemSlot: p.slot, x: l.x, z: l.z, locId: l.id, reason: 'SDK' });
-            await waitUntil(s, () => { const n = findCannon(); return !!n && n.id !== id0; }, { timeoutTicks: 8 });
-            console.log(`NOTE cannon ${name0} -> ${findCannon()?.name} t=${s.tick() - c0}`);
-        }
-        const l = findCannon();
-        const balls = slotOf(/^cannonball$/i);
-        m0 = msgs.length;
-        await s.direct({ type: 'useItemOnLoc', itemSlot: balls.slot, x: l.x, z: l.z, locId: l.id, reason: 'SDK' });
-        await waitUntil(s, () => sawMsg(/load the cannon/i, m0), { timeoutTicks: 6 });
-        const fire = l.optionsWithIndex.find((o: any) => /fire/i.test(o.text))?.opIndex ?? 1;
-        await s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: fire, reason: 'SDK' });
-        await waitTicks(s, 2);
-        cannon = { x: l.x, z: l.z, id: l.id };
-        setupTicks = s.tick() - c0;
-        console.log(`NOTE cannon up at ${l.x},${l.z} id=${l.id} setupTicks=${setupTicks} msgs=${msgs.slice(-4).join(' | ')}`);
+        const placed = await setupCannon(s, { avoidOld: true }).catch(e => finish([s], false, String(e)));
+        cannon = { x: placed.x, z: placed.z, id: placed.id };
+        setupTicks = placed.setupTicks;
+        console.log(`NOTE cannon up at ${placed.x},${placed.z} id=${placed.id} setupTicks=${setupTicks} msgs=${msgs.slice(-4).join(' | ')}`);
     }
 
     // ---- Measured window ----
