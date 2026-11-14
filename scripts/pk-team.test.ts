@@ -29,3 +29,23 @@ test('meetTile: the nearest multi-way tile by the targets, under the depth limit
     expect(meetTile([{ x: 3078, z: 3640 }], 10, 24, multi)).toBeNull();
     expect(meetTile([], 20, 24, multi)).toBeNull();
 });
+
+test('marchRoute: a step each `step` tiles on the line, the goal last', async () => {
+    const { marchRoute } = await import('./pk-squad');
+    expect(marchRoute({ x: 3094, z: 3500 }, { x: 3067, z: 3640 }, 50)).toEqual([{ x: 3085, z: 3547 }, { x: 3076, z: 3593 }, { x: 3067, z: 3640 }]);
+    expect(marchRoute({ x: 0, z: 0 }, { x: 3, z: 0 }, 12)).toEqual([{ x: 3, z: 0 }]);
+});
+
+test('multiEntry: the nearest multi-way tile toward the post', async () => {
+    const { multiEntry } = await import('./pk-squad');
+    const multi = (x: number, z: number) => x <= 3071 && x >= 3040 && z >= 3600;
+    expect(multiEntry({ x: 3094, z: 3500 }, { x: 3067, z: 3640 }, 150, multi)).toEqual({ x: 3071, z: 3600 });
+    expect(multiEntry({ x: 3066, z: 3620 }, { x: 3067, z: 3640 }, 150, multi)).toBeNull();
+});
+
+test('squadTarget leaves out a target the game will not let it attack', async () => {
+    const { squadTarget } = await import('./pk-squad');
+    const view = [{ name: 'Goondelf', index: 1, distance: 3, z: 3515, combatLevel: 126 }, { name: 'Ligma', index: 2, distance: 5, z: 3640, combatLevel: 125 }];
+    const bar: Record<number, number> = { 1: 0.2, 2: 0.9 };
+    expect(squadTarget(view, new Set(['goondelf', 'ligma']), p => bar[p.index]!, new Set(), { z: 3640, combatLevel: 126 })?.name).toBe('Ligma');
+});

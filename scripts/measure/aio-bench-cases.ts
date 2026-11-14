@@ -735,10 +735,19 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-4-gang-single-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3075,3640', 'ALLOW_SINGLE=1']),
   // The squad starts out of sight of the gang, on the multi-way tiles at (3150, 3560), and follows the world feed to it.
   squadCase('extra:squad-4-gang-follow-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3150,3560', 'FOLLOW=1', 'MAX_MINUTES=8'], undefined, {x: 3149, z: 3561}),
+  // The squad walks in from the Edgeville bank (3094, 3500) to the multi-way post: as a march (the default) or not.
+  squadCase('extra:squad-4-gang-walkin-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8'], undefined, {x: 3093, z: 3501}),
+  // The gang hunts (SQUAD_GANG_HUNT=1: it walks to the nearest of ours in the Wilderness, as the live gang did): the
+  // walk-in from Edgeville with the march and pull, or with neither (MARCH=0 PULL=0).
+  squadCase('extra:squad-4-gang-hunted-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
   squadCase('extra:squad-4-gang-skull-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 4),
   teamCase('extra:team-3v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   teamCase('extra:team-3v3-gang-chainbind-west-x2', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   teamCase('extra:team-4v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  // The pilot's kit with no antipoison: four in the multi-way zone (all on the lowest bar), and four on single-way
+  // tiles where each gang account takes one of ours (the split of the first live pilot: SPAR_*_PICK=pair).
+  teamCase('extra:team-4v3-gang-chainbare-west-x2', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-4v3-gang-chainbare-split-x2', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 2, GANKER_POST, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
