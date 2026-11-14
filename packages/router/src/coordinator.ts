@@ -127,6 +127,12 @@ export function needsFreshQualification(task:CoordTask,records:ReadonlyMap<strin
  return !task.dependsOn.some(id=>{const d=records.get(id)?.receipt?.output?.delivery;return d?.ok===true&&d.id===task.capability&&d.source===source;});
 }
 
+// All session recoveries share one repair slot (coordinator-live.ts requestLiveRecovery waits 15 s for it), and two at
+// once fail as "recovery repair slot timed out". Separate recovery chains no longer wait on each other's failures
+// (orderOnlyDependency), so the dispatcher starts a recovery run only while no other recovery run is running.
+export const recoverySlotBusy=(task:CoordTask,tasks:readonly TaskRecord[]):boolean=>
+ task.kind==='run'&&!!task.sessionRecovery&&tasks.some(r=>r.status==='running'&&r.spec.kind==='run'&&!!r.spec.sessionRecovery&&r.spec.id!==task.id);
+
 /** Qualify demanded capabilities only. Old failed refreshes must not poison new consumers. */
 export function qualificationDemand(state:CoordinatorState){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));

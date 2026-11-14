@@ -1,5 +1,19 @@
 import {test,expect} from 'bun:test';
-import {addTasks,chooseTask,coveredQualification,deadRoots,dependencyMet,initialState,needsFreshQualification,orderOnlyDependency,qualificationDemand,type CoordTask} from '../src/coordinator';
+import {addTasks,chooseTask,coveredQualification,deadRoots,dependencyMet,initialState,needsFreshQualification,orderOnlyDependency,qualificationDemand,recoverySlotBusy,type CoordTask} from '../src/coordinator';
+
+test('a recovery run waits while another recovery run of any chain is running', () => {
+ const state=initialState();
+ addTasks(state,[qualify,recovery('Shaftmaker',0,[]),recovery('Woodenstaff',1,[]),{...qualify,id:'qualify-other',capability:'cow-progress'}],1);
+ const rec=(id:string)=>state.tasks.find(t=>t.spec.id===id)!;
+ expect(recoverySlotBusy(rec('recover-woodenstaff').spec,state.tasks)).toBe(false);
+ rec('recover-shaftmaker').status='running';
+ expect(recoverySlotBusy(rec('recover-woodenstaff').spec,state.tasks)).toBe(true);
+ // The running recovery itself and tasks that are not recoveries are not held.
+ expect(recoverySlotBusy(rec('recover-shaftmaker').spec,state.tasks)).toBe(false);
+ expect(recoverySlotBusy(rec('qualify-other').spec,state.tasks)).toBe(false);
+ rec('recover-shaftmaker').status='failed';
+ expect(recoverySlotBusy(rec('recover-woodenstaff').spec,state.tasks)).toBe(false);
+});
 
 test('a run with no qualification on the current source is held; one with it is not', () => {
  const state=initialState();
