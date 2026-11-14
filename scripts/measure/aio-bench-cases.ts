@@ -1139,8 +1139,9 @@ const EXTRA_CASES: BenchCase[] = [
   })),
   // Fletching 1 to 25 for The Fremennik Trials, the planner's band army-fletch-25: 210 headless arrows from banked
   // arrow shafts and feathers (25 XP an arrow at the server's rate; level 25 is 4,863 XP), 100 of each kept.
+  // The carried tinderbox exercises BANK_PACK before the production inputs are withdrawn.
   {key: 'extra:fletch-headless-25', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '3000', 'headless', 'MAX_MAKE=210', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
-    pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
+    pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, inventory: [{id: 590, count: 1}], bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
   // The same job from the tile where a goldfarm thief stands at the Ardougne knights (2672,3320): the worker walks to
   // the nearest bank stand (Ardougne south, 2655,3283) before it opens the bank.
   {key: 'extra:fletch-headless-from-knights', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '1500', 'headless', 'MAX_MAKE=30', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],

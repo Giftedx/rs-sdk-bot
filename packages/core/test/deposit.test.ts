@@ -1,5 +1,5 @@
 import { expect, test, spyOn } from 'bun:test';
-import { depositObserved } from '../src/deposit';
+import { depositObserved, depositPack } from '../src/deposit';
 import { isNoProgressFailure } from '../../practice/src/supervise';
 
 function fixture(mode: string, id = 995, name = 'Coins') {
@@ -41,6 +41,28 @@ for (const mode of ['matched', 'delayed', 'sdk-false', 'thrown', 'missing', 'mis
 test('noted food debits its pack ID and credits the unnoted bank item', async () => {
     const f = fixture('matched', 334, 'Trout');
     expect(await depositObserved(f.s, { id: 334, name: 'Trout' })).toBe(23);
+});
+
+for (const mode of ['matched', 'delayed', 'no-debit', 'no-credit', 'partial', 'stale']) {
+    test(`whole-pack deposit requires a settled debit and credit: ${mode}`, async () => {
+        const f = fixture(mode, 333, 'Trout');
+        f.s.sdk.getInventory = () => f.s.sdk.getState().inventory;
+        const result = depositPack(f.s).then(value => ({ value }), error => ({ error: String(error) }));
+        for (let i = 0; i < 30; i++) { await Promise.resolve(); f.advance(); }
+        const r = await result;
+        if (['matched', 'delayed'].includes(mode)) expect(r).toEqual({ value: 1 });
+        else {
+            expect(r).toEqual({ error: expect.stringContaining('no deposit progress: pack debit/bank credit unobserved 333') });
+            expect(f.calls()).toBe(1);
+        }
+    });
+}
+
+test('whole-pack deposit preserves explicitly kept supplies', async () => {
+    const f = fixture('matched', 333, 'Trout');
+    f.s.sdk.getInventory = () => f.s.sdk.getState().inventory;
+    expect(await depositPack(f.s, item => item.id === 333)).toBe(0);
+    expect(f.calls()).toBe(0);
 });
 
 test('carried 1902 coins with bank 15606 records dispatch and containers without accepting debit alone', async () => {
