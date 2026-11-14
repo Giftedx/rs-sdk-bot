@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {addTasks,chooseTask,deadRoots,dependencyMet,initialState,orderOnlyDependency,qualificationDemand,type CoordTask} from '../src/coordinator';
+import {addTasks,chooseTask,coveredQualification,deadRoots,dependencyMet,initialState,orderOnlyDependency,qualificationDemand,type CoordTask} from '../src/coordinator';
 
 const qualify:CoordTask={id:'qualify-recovery',kind:'qualify',goal:'gear',capability:'session-recovery-only',dependsOn:[],priority:15,estimatedMs:1,why:'Qualify the recovery runner on the current source.'};
 const recovery=(name:string,i:number,after:string[]):CoordTask=>({id:'recover-'+name.toLowerCase(),kind:'run',goal:'gear',capability:'session-recovery-only',account:name,
@@ -24,6 +24,27 @@ test('a failed recovery in a chain lets the next recovery start; the qualificati
  // A failed qualification still stops every recovery behind it.
  const d=chain();d.set('qualify-recovery','failed');
  expect([...deadRoots(d.state).keys()].sort()).toEqual(['recover-bigchopper','recover-bigpackage','recover-bowbeforeme']);
+});
+
+test('a failed qualification is covered when another of the recovery passed and none is pending', () => {
+ const state=initialState();
+ const q=(id:string):CoordTask=>({...qualify,id});
+ addTasks(state,[q('qualify-a'),q('qualify-b'),q('qualify-c'),{...recovery('Woodpecker',0,[]),dependsOn:['qualify-a','qualify-b','qualify-c']}],1);
+ const set=(id:string,status:'succeeded'|'failed'|'pending')=>{state.tasks.find(t=>t.spec.id===id)!.status=status;};
+ set('qualify-a','succeeded');set('qualify-b','failed');
+ // A newer qualification still pending: the run waits for it.
+ expect(qualificationDemand(state).map(r=>r.spec.id)).toEqual([]);
+ expect([...deadRoots(state).keys()]).toEqual([]);
+ set('qualify-c','succeeded');
+ expect(qualificationDemand(state).map(r=>r.spec.id)).toEqual(['recover-woodpecker']);
+ expect([...deadRoots(state).keys()]).toEqual([]);
+ // No qualification passed: the failure kills the run.
+ set('qualify-a','failed');set('qualify-c','failed');
+ expect([...deadRoots(state).keys()]).toEqual(['recover-woodpecker']);
+ // A plain run gets no such cover.
+ const plain={...state.tasks.find(t=>t.spec.id==='recover-woodpecker')!.spec,sessionRecovery:undefined};
+ set('qualify-a','succeeded');
+ expect(coveredQualification(plain,state.tasks.find(t=>t.spec.id==='qualify-b'),new Map(state.tasks.map(r=>[r.spec.id,r])))).toBe(false);
 });
 
 test('only a recovery run after a recovery run is an order; other kinds still need success', () => {
