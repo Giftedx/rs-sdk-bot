@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794650053038,
+ "at": 1794650126385,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -44,6 +44,18 @@
    },
    "enabled": false,
    "goal": "Haggis route rehearsal; hand-run legs by .practice/balls-alpha",
+   "role": "rehearsal"
+  },
+  {
+   "account": "WeeQuickie",
+   "script": "scripts/firemaking-order.ts",
+   "env": {
+    "TARGET_LEVEL": "99",
+    "PROGRESSIVE": "stock",
+    "CLEAR_PACK": "1"
+   },
+   "enabled": false,
+   "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
   },
   {
@@ -432,19 +444,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "WeeQuickie",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-12490a9b-e9fd-4317-a380-a84c7656173c"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-session-recovery-weequickie-relink-0938 [task-12490a9b-e9fd-4317-a380-a84c7656173c]",
-   "role": "rehearsal"
   }
  ]
 }
