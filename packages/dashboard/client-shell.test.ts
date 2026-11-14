@@ -823,6 +823,17 @@ test('kill XP: one style and Hitpoints from the hitpoints and the multiplier, an
  expect(t3('Giant spider')).toContain('respawns in 24 s');
 });
 
+test('loot of a kill: expected count times the item value, the top items, and the unpriced count',()=>{
+ const code=shell.slice(shell.indexOf("  // Loot of a kill (RuneLite's loot tracker"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const values:Record<string,number>={'Coins':1,'Big bones':300,'Earth rune':4};
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>({'Moss giant':[['Coins',19.6],['Big bones',1],['Earth rune',0.6328],['Herb',0.01]]})}),price:(n:string)=>values[n]!=null?{value:values[n]}:null,nf:(n:number)=>n.toLocaleString('en-GB')};
+ const t=new Function(...Object.keys(env),`${code};return lootText;`)(...Object.values(env));
+ // 19.6 + 300 + 2.53 = 322; the Herb has no price.
+ expect(t('Moss giant')).toBe('Loot about 322 gp a kill (Big bones, Coins, Earth rune) · 1 unpriced');
+ expect(t('Nobody')).toBe('');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
