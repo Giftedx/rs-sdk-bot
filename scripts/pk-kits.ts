@@ -287,6 +287,14 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['magic_shortbow', '3doseantipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 50], ['waterrune', 50], ['naturerune', 40]], food: 20,
         skills: trained({ Attack: 75, Strength: 99, Defence: 99, Ranged: 99, Magic: 49, Prayer: 43 }),
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The live pilot's kit: rune chainbody (the platebody needs Dragon Slayer), no freeze runes (the rune shops' water
+    // shelves were empty).
+    'live-walker-iron-rune-chain': { worn: { hat: 'rune_full_helm', torso: 'rune_chainbody', legs: 'rune_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 23,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    'live-walker-iron-rune-chain-bind': { worn: { hat: 'rune_full_helm', torso: 'rune_chainbody', legs: 'rune_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '3doseantipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 30], ['waterrune', 30], ['naturerune', 20]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },

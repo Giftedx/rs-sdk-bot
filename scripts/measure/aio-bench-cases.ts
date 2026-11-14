@@ -734,6 +734,9 @@ const ROUTE_CASES: BenchCase[] = [
   // The squad on the gang's own single-way post (ALLOW_SINGLE=1), for a gang that does not follow into multi-way.
   squadCase('extra:squad-4-gang-single-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3075,3640', 'ALLOW_SINGLE=1']),
   squadCase('extra:squad-4-gang-skull-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 4),
+  teamCase('extra:team-3v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  teamCase('extra:team-3v3-gang-chainbind-west-x2', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  teamCase('extra:team-4v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
