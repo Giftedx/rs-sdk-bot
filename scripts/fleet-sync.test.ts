@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { activeAccounts, carriedPrior, ensureWorktree, keepPublished, planView, reattach, sideCapacity, sideCard, snapshot, worktreeProblem } from './fleet-sync';
+import { activeAccounts, carriedPrior, ensureWorktree, keepPublished, planView, pullFleetData, reattach, sideCapacity, sideCard, snapshot, worktreeProblem } from './fleet-sync';
 import { SWARM_STOP } from './swarm';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
@@ -113,6 +113,42 @@ test('an adopted account keeps its last row from the side that ran it; a row thi
 
 test('a side card lists its accounts whose last end was a death', () => {
     expect(sideCard('local', 4, ['Fatstack', 'Kilo'], () => undefined, ['fatstack', 'Stranger']).died).toEqual(['fatstack']);
+});
+
+test('the pull keeps a rewritten committed receipt and a staged order removal, and takes the other side\'s commit', () => {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
+    const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000 }).trim();
+    const base = mkdtempSync(join(tmpdir(), 'fleet-pull-'));
+    const saved = { name: process.env.GIT_AUTHOR_NAME, email: process.env.GIT_AUTHOR_EMAIL, cname: process.env.GIT_COMMITTER_NAME, cemail: process.env.GIT_COMMITTER_EMAIL };
+    Object.assign(process.env, { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@localhost', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@localhost' });
+    try {
+        const remote = join(base, 'remote.git'), here = join(base, 'here'), other = join(base, 'other');
+        g(base, 'init', '--bare', '-b', 'fleet-data', remote);
+        g(base, 'clone', '-q', remote, here);
+        g(here, 'checkout', '-q', '-b', 'fleet-data');
+        writeFileSync(join(here, 'receipt.json'), '{"phase":"waiting"}\n'); writeFileSync(join(here, 'order.json'), '{}\n');
+        g(here, 'add', '.'); g(here, 'commit', '-qm', 'sync'); g(here, 'push', '-q', 'origin', 'fleet-data');
+        g(base, 'clone', '-q', '--branch', 'fleet-data', remote, other);
+        writeFileSync(join(other, 'snapshot.json'), '{}\n'); g(other, 'add', '.'); g(other, 'commit', '-qm', 'other side'); g(other, 'push', '-q', 'origin', 'fleet-data');
+        // A trade step rewrites the committed receipt, and the order is withdrawn with git rm: a plain rebase pull refuses.
+        writeFileSync(join(here, 'receipt.json'), '{"phase":"failed"}\n'); g(here, 'rm', '-q', 'order.json');
+        expect(() => g(here, 'pull', '-q', '--rebase', 'origin', 'fleet-data')).toThrow();
+        pullFleetData(here);
+        expect(g(here, 'log', '--format=%s', '-1')).toBe('other side');
+        expect(g(here, 'show', ':receipt.json')).toBe('{"phase":"waiting"}');
+        // core.autocrlf=true (Git for Windows' system default) puts the restored file back with CRLF ends.
+        expect(require('node:fs').readFileSync(join(here, 'receipt.json'), 'utf8').replace(/\r/g, '')).toBe('{"phase":"failed"}\n');
+        expect(require('node:fs').existsSync(join(here, 'order.json'))).toBe(false);
+        // The other side rewrites the same receipt: the stash pop conflicts, the pull exits 0, and pullFleetData stops.
+        g(here, 'add', '.'); g(here, 'commit', '-qm', 'sync 2'); g(here, 'push', '-q', 'origin', 'fleet-data');
+        g(other, 'pull', '-q', '--rebase', 'origin', 'fleet-data');
+        writeFileSync(join(other, 'receipt.json'), '{"phase":"settled"}\n'); g(other, 'add', '.'); g(other, 'commit', '-qm', 'other side 2'); g(other, 'push', '-q', 'origin', 'fleet-data');
+        writeFileSync(join(here, 'receipt.json'), '{"phase":"reconcile"}\n');
+        expect(() => pullFleetData(here)).toThrow('local changes conflict with the fetched fleet data in receipt.json');
+    } finally {
+        for (const [k, v] of [['GIT_AUTHOR_NAME', saved.name], ['GIT_AUTHOR_EMAIL', saved.email], ['GIT_COMMITTER_NAME', saved.cname], ['GIT_COMMITTER_EMAIL', saved.cemail]] as const) if (v === undefined) delete process.env[k]; else process.env[k] = v;
+        rmSync(base, { recursive: true, force: true });
+    }
 });
 
 test('a clone of master alone gets the published fleet-data branch, never one made from the code', () => {
