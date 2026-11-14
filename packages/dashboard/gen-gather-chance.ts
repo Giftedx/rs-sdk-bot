@@ -4,8 +4,9 @@
 // (skill_mining/configs/mine.dbrow rock_successchance). Both scripts roll stat_random (woodcut.rs2, mining.rs2):
 // floor(low*(99-L)/98) + floor(high*(L-1)/98) + 1 beats a roll of 0-255. Two rows that give one item keep the first.
 // Run: bun packages/dashboard/gen-gather-chance.ts
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { procCatches } from './gen-skill-actions';
 
 export type GatherChance = { tool?: [string, number, number][]; roll?: [number, number] };
 
@@ -43,6 +44,9 @@ if (import.meta.main) {
     const read = (...p: string[]) => readFileSync(join(scripts, ...p), 'utf8');
     const out = { ...gatherChance(read('skill_woodcutting', 'configs', 'trees.dbrow'), read('skill_mining', 'configs', 'mine.dbrow'), names),
         ...fishChance(read('skill_fishing', 'configs', 'fishing.obj'), read('skill_fishing', 'configs', 'fishing.struct'), names) };
+    // The big-net catches roll in their own proc (procCatches): cod, mackerel, bass.
+    const spotsDir = join(scripts, 'skill_fishing', 'scripts', 'fishing_spots');
+    for (const c of procCatches(readdirSync(spotsDir).filter(f => f.endsWith('.rs2')).map(f => readFileSync(join(spotsDir, f), 'utf8')))) out[names.get(c.fish) ?? c.fish] ??= { roll: c.roll };
     writeFileSync(join(import.meta.dir, 'client-assets', 'gather-chance.json'), JSON.stringify(out));
-    console.log(`gather-chance.json: ${Object.keys(out).length} logs and ores`);
+    console.log(`gather-chance.json: ${Object.keys(out).length} logs, ores and fish`);
 }
