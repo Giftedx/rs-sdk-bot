@@ -7,7 +7,7 @@ const total=(items:{id:number;count:number}[])=>{const m=new Map<number,number>(
 try{
  await waitUntil(s,()=> (s.sdk.getSkill('Hitpoints')?.level??0)>0,{timeoutTicks:15});
  const t0=s.tick(),first=s.sdk.getState()!.player!;let hpMin=s.sdk.getSkill('Hitpoints')!.level,died=false;
- const off=s.onTick(()=>{const p=s.sdk.getState()?.player;hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(p?.isDead||(p?.respawnCount??0)>(first.respawnCount??0)||(first.lifeId!==undefined&&p?.lifeId!==first.lifeId))died=true;});
+ const off=s.onTick(()=>{const p=s.sdk.getState()?.player;hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(p?.isDead||(p?.respawnCount??0)>(first.respawnCount??0)||(first.lifeId!==undefined&&(p?.lifeId ?? first.lifeId) !== first.lifeId))died=true;});
  try{
   if(first.level!==0 || Math.max(Math.abs(first.worldX-3092),Math.abs(first.worldZ-3243))>4)throw new Error('requires Draynor bank ground-floor start');
   if(!(await s.bot.openBank()).success)throw new Error('initial bank failed');await waitTicks(s,2);

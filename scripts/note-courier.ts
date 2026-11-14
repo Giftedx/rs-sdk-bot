@@ -42,7 +42,7 @@ try {
     const over = () => used() >= CAP || ended || died;
     const off = s.onTick(() => {
         const p = pos();
-        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && p?.lifeId !== life)) died = true;
+        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && (p?.lifeId ?? life) !== life)) died = true;
     });
 
     let cycles = 0;

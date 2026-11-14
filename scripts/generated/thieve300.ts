@@ -1,7 +1,7 @@
 // Pickpocket men and women for 300 ticks, eating shrimps when Hitpoints is low.
 // Preset thieve_varrock (3235,3403,0 south Varrock, 5 shrimps 315 in the pack).
 // A fail stuns and hits for 1-3, so eat at 5 HP or below. Death shows as HP 0 or a jump far from the start.
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
 
 const SPOT = { x: 3230, z: 3402 };
@@ -13,10 +13,10 @@ try {
     const xp0 = xp();
     const t0 = s.tick();
     let died = false;
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
-        const p = s.sdk.getState()?.player;
-        if (hp() <= 0) died = true;
-        if (p && Math.max(Math.abs(p.worldX - SPOT.x), Math.abs(p.worldZ - SPOT.z)) > 40) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
     });
     let tries = 0, stuns = 0, eaten = 0;
     let lastFail = '';

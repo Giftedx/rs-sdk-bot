@@ -30,7 +30,7 @@ export async function bootstrapSupplyActor(s:Session,role:Role,checkpoint?:Check
  const initialLife=s.sdk.getState()?.player,off=s.onTick(()=>{
   const p=s.sdk.getState()?.player;
   if(s.tick()-start>=20000)ac.abort(Error('bootstrap20000tick deadline'));
-  if(p?.isDead||(p?.respawnCount??0)>(initialLife?.respawnCount??0)||(initialLife?.lifeId!==undefined&&p?.lifeId!==initialLife.lifeId))ac.abort(Error('bootstrap actor died/respawned'));
+  if(p?.isDead||(p?.respawnCount??0)>(initialLife?.respawnCount??0)||(initialLife?.lifeId !== undefined&&(p?.lifeId ?? initialLife.lifeId) !== initialLife.lifeId))ac.abort(Error('bootstrap actor died/respawned'));
  });
  const state=()=>s.sdk.getState(),pack=()=>s.sdk.getInventory(),worn=()=>s.sdk.getEquipment(),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,fullHp=()=>s.sdk.getSkill('Hitpoints')?.baseLevel??0;
  const count=(id:number)=>pack().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);

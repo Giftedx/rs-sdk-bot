@@ -2,11 +2,10 @@
 // Preset boat_ardougne (Lumbridge, 60 coins, 10 HP, no food). The land route kills a fresh account, so it sails.
 // Fares and dialog text from lostcity-content sailors.rs2 and customs_officer.rs2 (30 coins each).
 // Each ship lands on its deck (level 1); the "Gangplank" loc (op Cross) puts the bot back on level 0.
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 
 const MARKET = { x: 2654, z: 3304 };
-const LUMBRIDGE = { x: 3222, z: 3218 };
 const MUSA_DECK = { x: 2956, z: 3143 };
 const ARDY_DECK = { x: 2683, z: 3268 };
 
@@ -20,14 +19,14 @@ try {
     let died = false;
     const jumps: string[] = [];
     let last = pos();
-    // A boat trip also jumps more than 20 tiles, so only a jump that lands near the Lumbridge spawn (or HP 0) is a death.
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
-        if (hp() <= 0) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) {
             jumps.push(`${s.tick()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
-            if (cheb(LUMBRIDGE, p) <= 15) died = true;
         }
         last = p;
     });

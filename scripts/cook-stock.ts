@@ -55,7 +55,7 @@ async function main() {
     const off = s.onTick(() => {
         const p = st()?.player;
         hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin);
-        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > respawns || (life !== undefined && p?.lifeId !== life)) died = true;
+        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > respawns || (life !== undefined && (p?.lifeId ?? life) !== life)) died = true;
     });
     void s.ended.then(() => { ended = true; });
     const over = () => died || ended || (!returning && requestedStop) || used() >= CAP + (returning ? 200 : 0);

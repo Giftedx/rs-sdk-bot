@@ -33,7 +33,7 @@ export async function runSoftenClay(s: Session, options: { cap: number; maximum:
     const start = s.tick(), inv = () => s.sdk.getInventory();
     let ended = false, died = false, hpMin = s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const player = s.sdk.getState()?.player; void s.ended.then(() => { ended = true; });
-    const off = s.onTick(() => { const p = s.sdk.getState()?.player; hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin); if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || player?.lifeId !== undefined && p?.lifeId !== player.lifeId) died = true; });
+    const off = s.onTick(() => { const p = s.sdk.getState()?.player; hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin); if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || player?.lifeId !== undefined && (p?.lifeId ?? player.lifeId) !== player.lifeId) died = true; });
     const over = () => ended || died || s.tick() - start >= options.cap;
     const walk = async (x: number, z: number) => { const r = await walkPath(await sessionWalker(s), [{ x, z, tol: 1 }], { maxTicks: 250, stop: () => ended || died }); if (!r.ok) throw new Error(`soft clay route: ${r.detail}`); };
     const open = async () => { if (!(await s.bot.openBank()).success) throw new Error('soft clay bank failed'); await waitTicks(s, 1); };

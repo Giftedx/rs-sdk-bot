@@ -41,7 +41,7 @@
 //   where the bench engine trace shows it hunt the bot at a tree 6 tiles away and the giver on its path. The bot uses
 //   no tree within 12 tiles of the spawn: that leaves out both oaks (3102,3242, 3106,3247), the normal trees at
 //   3099,3242 and 3099,3247, and the trees at 3104-3110,3228-3244.
-import { openBot, finish, countItems, releasePrayerGuard } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, releasePrayerGuard, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
 import {runWoodSupply} from '../woodcut-supply';
 import { componentId } from '../../packages/core/src/logout';
@@ -140,14 +140,12 @@ try {
     // the pack count outside the bank is a bury.
     let hpMin = hp();
     let died = false;
-    let last = pos();
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     let banking = false, buried = 0, bones = boneCount();
     const off = s.onTick(() => {
-        const p = pos();
         hpMin = Math.min(hpMin, hp());
-        if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
-        if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) died = true;
-        last = p;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
         const b = boneCount();
         if (!banking && b < bones) buried += bones - b;
         bones = b;

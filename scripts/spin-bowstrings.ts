@@ -104,7 +104,7 @@ try {
     const xp0=s.sdk.getSkillXp('Crafting')??0;
     const protectedKit=s.sdk.getInventory().filter(i=>!/^flax$|^bow string$/i.test(i.name)).map(i=>({id:i.id,count:i.count}));
     let hpMin=s.sdk.getSkill('Hitpoints')?.level??10; const life=pos()?.lifeId;let died=false;
-    const off=s.onTick(()=>{hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(pos()?.isDead||life!==undefined&&pos()?.lifeId!==life)died=true;});unwatch=off;
+    const off=s.onTick(()=>{hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(pos()?.isDead||life!==undefined&&(pos()?.lifeId ?? life) !== life)died=true;});unwatch=off;
     let made=0;
     let spunTotal = 0;
     let bankTrips = 0;

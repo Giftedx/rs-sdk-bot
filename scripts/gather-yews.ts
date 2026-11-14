@@ -86,7 +86,7 @@ export async function runDraynorOak(s:Session,o:{cap:number;maximum:number;prepa
     let previous={x:p0.worldX,z:p0.worldZ,level:p0.level};
     const pathLegs:{from:{x:number;z:number};to:{x:number;z:number};tiles:number}[]=[];
     void s.ended.then(()=>{ended=true;});
-    const observe=()=>{const p=st()?.player;if(p){if(previous.level===p.level)observedTileDistance+=Math.max(Math.abs(p.worldX-previous.x),Math.abs(p.worldZ-previous.z));previous={x:p.worldX,z:p.worldZ,level:p.level};}hpMin=Math.min(hpMin,hp());damaged||=hp()<initialHp;died||=hp()<=0||!!p?.isDead||p?.lifeId!==p0.lifeId||(p?.respawnCount??0)>(p0.respawnCount??0);};
+    const observe=()=>{const p=st()?.player;if(p){if(previous.level===p.level)observedTileDistance+=Math.max(Math.abs(p.worldX-previous.x),Math.abs(p.worldZ-previous.z));previous={x:p.worldX,z:p.worldZ,level:p.level};}hpMin=Math.min(hpMin,hp());damaged||=hp()<initialHp;died||=!!p?.isDead||(p?.lifeId ?? p0.lifeId) !== p0.lifeId||(p?.respawnCount??0)>(p0.respawnCount??0);};
     const off=s.onTick(observe),over=()=>{observe();return ended||died||damaged||s.tick()-start>=o.cap;};
     const foodIds=[315,2309,333,329],foods=()=>foodIds.reduce((n,id)=>n+held(id),0);
     const walk=async(x:number,z:number,tol:number)=>{const tick=s.tick();try{
@@ -185,7 +185,7 @@ try {
     const off = s.onTick(() => {
         if (hp0 > 0) hpMin = Math.min(hpMin, hp());
         const p = pos();
-        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && p?.lifeId !== life)) died = true;
+        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && (p?.lifeId ?? life) !== life)) died = true;
     });
 
     const retryAfter=new Map<string,number>();

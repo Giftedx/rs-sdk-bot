@@ -21,7 +21,7 @@ try {
     const over = () => ended || died || s.tick()-t0 >= CAP;
     const off = s.onTick(()=>{
         const p=s.sdk.getState()?.player;
-        if (p?.isDead || (p?.respawnCount??0)>(initial?.respawnCount??0) || (initial?.lifeId!==undefined && p?.lifeId!==initial.lifeId)) died=true;
+        if (p?.isDead || (p?.respawnCount??0)>(initial?.respawnCount??0) || (initial?.lifeId !== undefined && (p?.lifeId ?? initial.lifeId) !== initial.lifeId)) died=true;
     });
     const inv = () => s.sdk.getInventory();
     const cnt = (re: RegExp) => countItems(s,re);

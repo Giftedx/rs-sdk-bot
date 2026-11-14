@@ -312,7 +312,7 @@ export async function runCannonFight(s: Session, o: CannonFightOptions) {
     const eatAt = o.eatAt ?? Math.max(Math.floor(maxHp * 0.4), Math.min(maxHp - 12, 8));
     const walk: Walk = o.walk ?? (async to => (await s.bot.walkTo(to.x, to.z, 1)).success);
     const life0 = { respawn: me().respawnCount, life: me().lifeId };
-    const died = () => hp() <= 0 || !!me().isDead || me().respawnCount > life0.respawn || (life0.life !== undefined && me().lifeId !== life0.life);
+    const died = () => !!me().isDead || me().respawnCount > life0.respawn || (life0.life !== undefined && me().lifeId !== life0.life);
     const feed = messageFeed(s);
     let phase = o.phases.findIndex((ph, i) => i === o.phases.length - 1 || !levelsMet(level, ph.until));
     let targetIndex = -1;

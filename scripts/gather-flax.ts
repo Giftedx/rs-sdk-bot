@@ -49,7 +49,7 @@ export async function runFlax(s: Session, o: FlaxOptions) {
         if (hp0 > 0) hpMin = Math.min(hpMin, hp());
         stopped ||= !!o.stop?.();
         const p = pos();
-        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && p?.lifeId !== life)) died = true;
+        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && (p?.lifeId ?? life) !== life)) died = true;
     });
 
     let picks = 0, banked = 0, bankTrips = 0, walkTicks = 0, tries = 0;

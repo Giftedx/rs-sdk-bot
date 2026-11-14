@@ -40,7 +40,7 @@ export async function runOwnedSword(s:Session,o:{itemId?:number;cap:number;maxim
     let snapshot:{id:number;count:number}[]=[],original=new Map<number,number>();
     void s.ended.then(()=>{ended=true;});
     const terminal=()=>ended||died||(stopped||=!!o.stop?.()),over=()=>terminal()||damaged||s.tick()-start>=o.cap;
-    const off=s.onTick(()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());damaged||=hp()<initialHp;stopped||=!!o.stop?.();died||=hp()<=0||!!p?.isDead||p?.lifeId!==initial.lifeId||(p?.respawnCount??0)>(initial.respawnCount??0);});
+    const off=s.onTick(()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());damaged||=hp()<initialHp;stopped||=!!o.stop?.();died||=!!p?.isDead||(p?.lifeId ?? initial.lifeId) !== initial.lifeId||(p?.respawnCount??0)>(initial.respawnCount??0);});
     const capture=()=>{const b=s.bankObservation?.();if(!b||!state()?.bank.isOpen)throw new Error('sword bank data unknown');snapshot=b.items.map(i=>({id:i.id,count:i.count}));bankObservedAt=b.at;};
     const bankCount=(id:number)=>count(snapshot,id),assets=()=>{const m=new Map<number,number>();for(const i of [...snapshot,...inv(),...(state()?.equipment??[])])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
     const open=async()=>{if(state()?.bank.isOpen&&s.bankObservation?.()){capture();return;}await s.bot.dismissBlockingUI();const gen=s.bankObservation?.()?.generation??0;
