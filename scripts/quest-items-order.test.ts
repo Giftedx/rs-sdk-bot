@@ -30,6 +30,11 @@ test('Hetty waits for the observed reachable public keeper and sends its actual 
  },()=>{});
  expect(f.actions).toEqual([[42,3]]);expect(f.state.shop.isOpen).toBe(true);
 });
+test('Hetty trades with the reachable public keeper at 3012,3206',async()=>{
+ const f=foodShopFixture(3012,true);f.npc.z=3206;
+ await openHettyFoodShop(f.s,f.observe,()=>{});
+ expect(f.actions).toEqual([[42,3]]);expect(f.state.shop.isOpen).toBe(true);
+});
 test('Hetty never treats a dispatch acknowledgement as an open shop or acts after stop',async()=>{
  const f=foodShopFixture(3014,true);
  f.s.sdk.sendInteractNpc=async()=>({success:true});

@@ -86,7 +86,7 @@ type Observe=(pred:()=>boolean,label:string,ticks?:number)=>Promise<void>;
 // SDK openShop's automatic walk must not pursue a wandering keeper into it.
 export async function openHettyFoodShop(s:Session,observe:Observe,check:()=>void){
  const keeper=()=>(s.sdk.getState()?.nearbyNpcs??[]).find(n=>n.id===557&&/^wydin$/i.test(n.name)
-  &&n.x>3012&&n.reachable===true&&n.optionsWithIndex.some(o=>/^trade$/i.test(o.text)));
+  &&n.x>=3012&&n.reachable===true&&n.optionsWithIndex.some(o=>/^trade$/i.test(o.text)));
  const evidence=()=>({at:s.sdk.getState()?.player,keepers:(s.sdk.getState()?.nearbyNpcs??[])
   .filter(n=>n.id===557).map(n=>({id:n.id,index:n.index,x:n.x,z:n.z,reachable:n.reachable,options:n.optionsWithIndex})),dialog:s.sdk.getDialog()});
  try{
