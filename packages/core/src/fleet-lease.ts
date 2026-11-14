@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from './fleet';
@@ -150,6 +150,39 @@ export function fleetLeaseLastSeen(git: FleetGit, side: string): number | null {
         }
     }
     return seen;
+}
+
+// The newest renewal of every side in one round trip: each fleet-lease/<side> ref's head, and the older heartbeat files
+// in `legacyDir` (a synced fleet-data worktree's fleet/leases). A side with neither is absent from the map.
+export function allLeaseLastSeen(git: FleetGit, legacyDir?: string): Map<string, number> {
+    const prefix = 'refs/heads/fleet-lease/', refs = readFleetGitRefs(git, [prefix + '*']), seen = new Map<string, number>();
+    const heads = [...refs].filter(([ref]) => SIDE_NAME.test(ref.slice(prefix.length)));
+    if (heads.length) {
+        git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', ...heads.map(([, sha]) => sha)]);
+        for (const [ref, sha] of heads) {
+            const side = ref.slice(prefix.length);
+            try { seen.set(side, parseRemote(git(['show', '-s', '--format=%B', sha]), side).at); } catch { /* an unreadable record proves nothing */ }
+        }
+    }
+    if (legacyDir && existsSync(legacyDir)) for (const f of readdirSync(legacyDir).filter(f => f.endsWith('.json'))) {
+        const side = f.slice(0, -5);
+        if (!SIDE_NAME.test(side)) continue;
+        try { const at = JSON.parse(readFileSync(join(legacyDir, f), 'utf8')).at; if (Number.isSafeInteger(at) && at > 0) seen.set(side, Math.max(seen.get(side) ?? 0, at)); } catch { /* skip */ }
+    }
+    return seen;
+}
+
+// The newest renewal one checkout recorded on its side's lease ref (each renewal is a child commit, so the ref's
+// history is the side's controller record), with the record at the head. seen is null when the checkout is not among
+// the last `depth` records; head is null when the side has no lease ref.
+export function fleetCheckoutLastSeen(git: FleetGit, side: string, checkout: string, depth = 600): { head: RemoteLease | null; seen: number | null } {
+    if (!SIDE_NAME.test(side) || !HOLDER.test(checkout)) throw Error('invalid fleet lease checkout');
+    const ref = 'refs/heads/fleet-lease/' + side, tip = readFleetGitRefs(git, [ref]).get(ref);
+    if (!tip) return { head: null, seen: null };
+    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', tip]);
+    const records = git(['log', '-n', String(depth), '--format=%B%x00', tip]).split('\0').map(r => r.trim()).filter(Boolean).map(r => parseRemote(r, side));
+    const head = records[0] ?? null, mine = records.find(r => r.holder === checkout);
+    return { head, seen: mine ? mine.at : null };
 }
 
 // The remote ref is the authority. A contender writes a child of the exact head it read.

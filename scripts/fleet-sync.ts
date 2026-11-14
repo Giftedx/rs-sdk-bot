@@ -16,8 +16,12 @@ import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElsewhere, thisHost, type Lease } from '../packages/core/src/fleet';
 import { CLAIM_MAX_AGE_MS, claimFor, recoveringOwnerJobs } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import { withFleetDataWrite } from './fleet-owner-claim';
-import { readHeldFleetTradeClaims, releaseFleetTradeClaim, type FleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
+import { transferFleetOwnersLocked, withFleetDataWrite } from './fleet-owner-claim';
+import { readAllFleetAccountClaims, readHeldFleetTradeClaims, releaseFleetTradeClaim, type FleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
+import { allLeaseLastSeen, fleetGitWindow } from '../packages/core/src/fleet-lease';
+import { describeMoves, planTransfers, type OwnerRow, type SideView } from '../packages/core/src/fleet-assign';
+import { hasCredential } from '../packages/core/src/fleet-vault';
+import { swarmWroteStop } from './swarm';
 import { terminalTradeReceipt, validOrder } from './fleet-trade-settlement';
 
 const root = resolve(import.meta.dir, '..');
@@ -230,16 +234,77 @@ export function runSync(push = true): string {
     const current = readLease(snap.side, join(dir, 'fleet')), lease = nextLease(current, mine);
     if (lease) { mkdirSync(join(dir, 'fleet', 'leases'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'leases', `${snap.side}.json`), JSON.stringify(lease) + '\n'); }
     const leaseNote = lease ? 'ours' : leaseHeldElsewhere(current, thisHost()) ? `held by ${current!.host}` : 'none';
+    // The side card other sides' adoption reads: room for accounts and the owner's pauses. Only the session running
+    // the side's controller writes it, and only on a change.
+    const plan = (() => { try { return JSON.parse(readFileSync(planFile, 'utf8')); } catch { return null; } })();
+    const capacity = sideCapacity(plan);
+    if (mine && capacity !== null) {
+        const card = sideCard(snap.side, capacity, owners, (n: string) => { try { return readFileSync(join(root, '.practice', `stop-${n}`), 'utf8'); } catch { return undefined; } });
+        const cardFile = join(dir, 'fleet', 'sides', `${snap.side}.json`);
+        if (JSON.stringify(published(cardFile)) !== JSON.stringify(card)) { mkdirSync(join(dir, 'fleet', 'sides'), { recursive: true }); writeFileSync(cardFile, JSON.stringify(card) + '\n'); }
+    }
     git(dir, 'add', '--', 'fleet');
+    // The sealed credentials (packages/core/src/fleet-vault.ts): master's .gitignore names the directory, so add it
+    // by name; this branch is the vault's only home.
+    if (existsSync(join(dir, 'fleet', 'vault'))) git(dir, 'add', '-f', '--', 'fleet/vault');
     const staged = !git(dir, 'diff', '--cached', '--quiet').ok;
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
     if (push) releaseSyncedTrades(dir, snap.side);
-    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}`;
+    let adopted = '';
+    if (push && mine && capacity !== null && process.env.FLEET_ADOPT !== '0') {
+        try { adopted = ` adoption=${adoptionPass(dir, snap.side, capacity) || 'none'}`; }
+        catch (e) { adopted = ` adoption=failed: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`; }
+    }
+    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}${adopted}`;
 }
 
-if (import.meta.main) {
+// The number of accounts a side holds work for: its plan's fleetCapacity, else its maxBots. null: no readable plan.
+export function sideCapacity(plan: any): number | null {
+    const n = plan?.fleetCapacity ?? plan?.maxBots;
+    return Number.isSafeInteger(n) && n >= 0 ? n : null;
+}
+
+// This side's card: its capacity, the accounts it owns that an owner's stop file pauses, and whether the owner
+// stopped its whole swarm (a stop file the swarm wrote itself is no owner's pause).
+export function sideCard(side: string, capacity: number, owners: ReturnType<typeof loadOwners>, stopText: (name: string) => string | undefined) {
+    const paused = [...owners].filter(([, o]) => o.side === side).map(([n]) => n).filter(n => { const t = stopText(n); return t !== undefined && !swarmWroteStop(t); }).sort();
+    const swarm = stopText('swarm');
+    return { side, capacity, paused, stopped: swarm !== undefined && !swarmWroteStop(swarm) };
+}
+
+// One adoption pass (packages/core/src/fleet-assign.ts) after this side's sync has pushed: reads every side's lease,
+// card and every account's claim, and moves the planned owner rows with a compare-and-swap push.
+function adoptionPass(dir: string, side: string, capacity: number): string {
+    const moves = planAdoption(dir, side, capacity);
+    if (!moves.length) return '';
+    const landed = transferFleetOwnersLocked(root, moves, dir);
+    return landed.length ? describeMoves(landed) : 'lost to another side';
+}
+
+export function planAdoption(dir: string, side: string, capacity: number) {
+    const git = fleetGitWindow(root, 'fleet adoption', 60_000);
+    const seen = allLeaseLastSeen(git, join(dir, 'fleet', 'leases'));
+    const raw = JSON.parse(readFileSync(join(dir, 'fleet', 'owners.json'), 'utf8')).accounts as Record<string, OwnerRow>;
+    const names = new Set([...Object.values(raw).map(o => o.side), ...seen.keys()]);
+    const sides: Record<string, SideView> = {};
+    for (const s of names) {
+        let card: any = null;
+        try { card = JSON.parse(readFileSync(join(dir, 'fleet', 'sides', `${s}.json`), 'utf8')); } catch { /* no card: no room, no pauses */ }
+        sides[s] = { seen: seen.get(s) ?? null, capacity: Number.isSafeInteger(card?.capacity) ? card.capacity : undefined,
+            paused: Array.isArray(card?.paused) ? card.paused : undefined, stopped: card?.stopped === true };
+    }
+    return planTransfers({ side, capacity, owners: raw, sides, claims: readAllFleetAccountClaims(git), canLogin: n => hasCredential(n), now: Date.now() });
+}
+
+if (import.meta.main && process.argv.includes('--adopt-dry')) {
+    // What this side's next adoption pass would move, with no write: `--capacity <n>` overrides the plan's.
+    const at = process.argv.indexOf('--capacity'), plan = (() => { try { return JSON.parse(readFileSync(resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json')), 'utf8')); } catch { return null; } })();
+    const capacity = at > 0 ? Number(process.argv[at + 1]) : sideCapacity(plan) ?? 0;
+    const moves = planAdoption(ensureWorktree(), mySide(), capacity);
+    console.log(`ADOPT-DRY side=${mySide()} capacity=${capacity} moves=${moves.length}${moves.length ? ' ' + describeMoves(moves) : ''}`);
+} else if (import.meta.main) {
     try { console.log(`RESULT ok fleet-sync ${await withFleetDataWrite(root, () => runSync(!process.argv.includes('--no-push')))}`); }
     catch (e) { console.log(`RESULT fail fleet-sync ${String(e)}`); process.exit(1); }
 }

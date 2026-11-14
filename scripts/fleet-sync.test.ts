@@ -2,7 +2,8 @@ import { test, expect } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { activeAccounts, keepPublished, planView, reattach, snapshot } from './fleet-sync';
+import { activeAccounts, keepPublished, planView, reattach, sideCapacity, sideCard, snapshot } from './fleet-sync';
+import { SWARM_STOP } from './swarm';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
 
@@ -83,4 +84,16 @@ test('a detached worktree goes back on its branch with its commits, and a diverg
         run('checkout', '-q', '--detach', first);
         expect(() => reattach(dir, 'fleet-data')).toThrow('holds commits that HEAD lacks');
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a side card carries the plan\'s capacity and only the owner\'s pauses of its own accounts', () => {
+    expect(sideCapacity({ maxBots: 4 })).toBe(4);
+    expect(sideCapacity({ maxBots: 4, fleetCapacity: 9 })).toBe(9);
+    expect(sideCapacity(null)).toBeNull();
+    const owners = new Map([['alpha', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }], ['bravo', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }],
+        ['kilo', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]);
+    const stops: Record<string, string> = { alpha: 'owner: hold for the quest', bravo: SWARM_STOP.job, kilo: 'owner hold' };
+    expect(sideCard('claude-cloud', 4, owners, n => stops[n])).toEqual({ side: 'claude-cloud', capacity: 4, paused: ['alpha'], stopped: false });
+    expect(sideCard('claude-cloud', 4, owners, n => n === 'swarm' ? 'owner stopped the side' : undefined).stopped).toBe(true);
+    expect(sideCard('claude-cloud', 4, owners, n => n === 'swarm' ? SWARM_STOP.all : undefined).stopped).toBe(false);
 });
