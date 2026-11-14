@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ARROW_METALS,nativeArrowProfile,nativeArrowDetail,runNativeArrows,planHeadless, runHeadless, planSteel, runSteel, planOakBows, runOakBows } from "./fletch-arrows";
+import { ARROW_METALS,nativeArrowProfile,nativeArrowDetail,runNativeArrows,planHeadless, runHeadless, planSteel, runSteel, planOakBows, runOakBows, nearestBankStand, BANK_WALK_LIMIT } from "./fletch-arrows";
 import type { Session } from "../packages/core/src/inprocess";
 
 test('headless plan rounds to15 and preserves both input reserves', () => {
@@ -289,3 +289,12 @@ test('rune order45 from400 headless and50 tips banks45 and leaves355 headless an
 test('rune order with no tips names the missing input and withdraws nothing',async()=>{const f=fixture({metal:'rune',headless:400,tips:0,level:99});try{const r=await runSteel(f.s,{...runeOrder,exact:{xpRate:25}},'rune');expect(r).toMatchObject({made:0,actions:0,targetMet:false,stop:'input-insufficient',headlessBank:400,tipBank:0});const d=nativeArrowDetail({...r,ok:r.ok&&r.targetMet,metal:'rune',profile:nativeArrowProfile('rune')},runeOrder);expect(d).toStartWith('native arrows missing owned inputs: MAX_MAKE 45 needs Rune arrowtips above 5 (bank 0) and Headless arrow above 200 (bank 400); ');}finally{f.stop();}});
 
 test('wrong declared native XP rate stops after one paid batch without another input or cleanup',async()=>{const f=fixture({metal:'rune',headless:230,level:99});try{const r=await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,exact:{xpRate:1}},'rune');expect(r).toMatchObject({ok:false,actions:1,uncertain:true});expect(r.failure).toContain('exact XP');expect(f.count(892)).toBe(15);}finally{f.stop();}});
+
+// Shaftmaker started the headless job at the Ardougne knights (2672,3320): the nearest bank stand is Ardougne south.
+test('the headless job walks from a start away from a bank to the nearest bank stand on its floor', () => {
+    expect(nearestBankStand({ worldX: 2672, worldZ: 3320, level: 0 })).toEqual({ x: 2655, z: 3283, level: 0 });
+    expect(37).toBeLessThanOrEqual(BANK_WALK_LIMIT);
+    const banks = [{ x: 10, z: 10, level: 1 }, { x: 50, z: 50, level: 0 }];
+    expect(nearestBankStand({ worldX: 11, worldZ: 11, level: 0 }, banks)).toEqual({ x: 50, z: 50, level: 0 });
+    expect(nearestBankStand({ worldX: 11, worldZ: 11, level: 2 }, banks)).toBeUndefined();
+});

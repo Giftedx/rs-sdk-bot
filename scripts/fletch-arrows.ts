@@ -15,6 +15,16 @@ import { waitTicks, waitUntil } from "../packages/core/src/ticks";
 import { depositPack } from "../packages/core/src/deposit";
 import { depositObserved } from "../packages/core/src/deposit";
 import {runShafts} from "./fletch-shafts";
+import { knownBanks } from "../packages/core/src/trip";
+import { sessionWalker, walkPath } from "../packages/core/src/walk";
+
+// A walk to a bank longer than this is a route, not a step to the nearest booth: the job refuses it.
+export const BANK_WALK_LIMIT = 80;
+const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
+// The nearest bank stand tile on the player's floor, or undefined when the floor has none.
+export function nearestBankStand(p: { worldX: number; worldZ: number; level: number }, banks = knownBanks()) {
+    return banks.filter(b => b.level === p.level).sort((a, b) => cheb(a, p) - cheb(b, p))[0];
+}
 
 // `stop` ends crafting and still banks the batch. `pause` (an owner stop) permits no further bank action, cleanup included.
 export interface HeadlessOptions { cap: number; maximum: number; shaftReserve: number; featherReserve: number; stop?: () => boolean; pause?: () => boolean }
@@ -478,6 +488,16 @@ if (MODE === 'steel') {
 }
 if (MODE === 'headless') {
     try {
+        // The headless worker opens the bank where it stands. An account that starts away from a bank (a goldfarm
+        // thief at the Ardougne knights) walks to the nearest bank stand tile first (haggis-travel.json banks).
+        const p = s.sdk.getState()?.player;
+        if (!p) throw new Error('headless: no player state');
+        const bank = nearestBankStand(p);
+        if (bank && cheb(bank, p) > 2) {
+            if (cheb(bank, p) > BANK_WALK_LIMIT) throw new Error(`headless: nearest bank ${bank.x},${bank.z} is ${cheb(bank, p)} tiles away`);
+            const walked = await walkPath(await sessionWalker(s), [{ ...bank, tol: 1 }], { maxTicks: 400, stop: () => stopped });
+            if (!walked.ok) throw new Error(`headless: walk to the bank at ${bank.x},${bank.z} failed: ${walked.detail ?? ''}`);
+        }
         // BANK_PACK=1: bank the whole pack first. A pack left full by other jobs (quest leftovers) is not
         // protected kit, and headless needs three free slots.
         if (process.env.BANK_PACK === '1') {

@@ -1138,10 +1138,13 @@ const EXTRA_CASES: BenchCase[] = [
       ...(stage ? {known: `a stage of the quest: run it with --set VK_FROM=${stage}`} : {})};
   })),
   // Fletching 1 to 25 for The Fremennik Trials, the planner's band army-fletch-25: 210 headless arrows from banked
-  // arrow shafts and feathers (25 XP an arrow at the server's rate; level 25 is 4,863 XP), 100 of each kept. The
-  // worker starts at the bank: 25 tiles away it ends "bank did not open", so the band walks there first.
+  // arrow shafts and feathers (25 XP an arrow at the server's rate; level 25 is 4,863 XP), 100 of each kept.
   {key: 'extra:fletch-headless-25', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '3000', 'headless', 'MAX_MAKE=210', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
     pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
+  // The same job from the tile where a goldfarm thief stands at the Ardougne knights (2672,3320): the worker walks to
+  // the nearest bank stand (Ardougne south, 2655,3283) before it opens the bank.
+  {key: 'extra:fletch-headless-from-knights', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '1500', 'headless', 'MAX_MAKE=30', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
+    pass: s => ok(s) && / made=30 /.test(s), presetConfig: {position: {x: 2672, z: 3320, level: 0}, skills: {Fletching: 1}, bank: [{id: 52, count: 130}, {id: 314, count: 130}]}},
   // The flax route from a start on another floor: level 1 of a house in East Ardougne (2575,3269), where an account
   // of the planner's flax pilot stood. The worker goes to the field with the shared walker (the stairs at 2568,3268),
   // then picks and banks at Seers.
