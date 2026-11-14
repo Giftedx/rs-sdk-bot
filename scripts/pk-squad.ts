@@ -10,7 +10,7 @@
 // Usage: bun scripts/pk-squad.ts <account> [<account> ...] [KEY=value ...]
 //   TARGETS=goondelf,ligma,sugma  POST=3067,3640  MAX_MINUTES=30  MAX_KILLS=0 (no limit)  SQUAD_PROFILE=gang-hunter
 //   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null}
-//   PICKUP=1  TRIPS=10 (bank trips an account may make)
+//   PICKUP=1  TRIPS=10 (bank trips an account may make)  ALLOW_SINGLE=1 (a single-way post)
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
@@ -114,7 +114,9 @@ if (import.meta.main) {
     if (ours.some(n => MAIN.has(n.toLowerCase()))) { console.log('RESULT fail the main account is not a squad account'); process.exit(2); }
     const [px, pz] = get('POST', `${SQUAD_POST.x},${SQUAD_POST.z}`).split(',').map(Number);
     const post = { x: px!, z: pz! };
-    if (!isMulti(post.x, post.z) || wildernessLevel(post.z) === 0) { console.log(`RESULT fail post ${post.x},${post.z} is not a multi-way Wilderness tile`); process.exit(2); }
+    // ALLOW_SINGLE=1 holds a single-way post (the gang's own, when it does not follow into multi-way): one fight a
+    // pair there, the refused accounts take the others (bench 3v3 at the post: 39 kills of 48, 80 HP a kill).
+    if (wildernessLevel(post.z) === 0 || (!isMulti(post.x, post.z) && get('ALLOW_SINGLE', '0') !== '1')) { console.log(`RESULT fail post ${post.x},${post.z} is not a multi-way Wilderness tile (ALLOW_SINGLE=1 for a single-way one)`); process.exit(2); }
     const targets = new Set((gangSize ? gangNames : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;

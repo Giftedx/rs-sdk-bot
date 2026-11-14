@@ -1213,7 +1213,10 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   `dropForStrip`, which dropped a shark before each account's first freeze. Against the bench gang (`SQUAD_GANG=3`,
   seeds 1 to 4): four of ours killed all three in each run with no death, about 33 HP a kill
   (`extra:squad-4-gang-x1`); six, all three, about 23 HP a kill (`extra:squad-6-gang-x1`); four against the skulled
-  gang with no Protect Item, 12 of 12 and 11 dragon daggers(p) (`extra:squad-4-gang-skull-x1`).
+  gang with no Protect Item, 12 of 12 and 11 dragon daggers(p) (`extra:squad-4-gang-skull-x1`); four on the gang's
+  own single-way post (`POST=3075,3640 ALLOW_SINGLE=1`, for a gang that does not follow into multi-way), 11 of 12, no
+  death, about 37 HP a kill (`extra:squad-4-gang-single-x1`). Two of ours with 3 sharks each, outnumbered, made 4
+  bank trips in 8 minutes with no fault and no death (`extra:squad-2-gang-trips-x1`).
 
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
 regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three

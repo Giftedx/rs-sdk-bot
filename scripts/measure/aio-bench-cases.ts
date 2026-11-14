@@ -731,6 +731,8 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-4-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=12'], 3),
   // Two of ours leave outnumbered: each walks out, banks at Edgeville and walks back to the post.
   squadCase('extra:squad-2-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2'], 3),
+  // The squad on the gang's own single-way post (ALLOW_SINGLE=1), for a gang that does not follow into multi-way.
+  squadCase('extra:squad-4-gang-single-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3075,3640', 'ALLOW_SINGLE=1']),
   squadCase('extra:squad-4-gang-skull-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 4),
   teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
