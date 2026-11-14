@@ -1843,17 +1843,19 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     every weapon (index 1 is the bow's rapid and the dagger's aggressive stab, +3 Strength; `combat.dbrow`
     `weapon_stab_table`); `meleeStyle: 0` (accurate stab, +3 Attack, on melee turns and specials, rapid on bow turns,
     a packet for each change) gives `tribrid-dragon-sara` 33, 94, 2: no gain. Gap: 8 seeds; the hunt, roam and army
-    routes still stage the rune kit.73. **The hunt in dragon armour takes a quarter less damage for the same kills; its fixed kit dropped any other
-    shield.** `extra:hunt-defend` (the hunt route against a target defending on the champion with 18 sharks and a
-    glory, seeds 1-6), the hunter in rune (the fixture) or in `tribrid-dragon-sara`'s armour (`HUNTER_KIT`, which
-    gives the fixture a kit's equipment and quest varps): kills 5 and 5, deaths 0 and 0, damage dealt 2,580 and 2,683,
-    damage taken 2,655 and 1,954 (the `HUNT` lines of `.practice/roam-switch/hunt-*`). The hunt's kits name the rune
-    kiteshield in their melee lists, so a hunter in any other shield lost it at its first bow turn for good; the hunt
-    puts the shield it wears at its start in that place. Two against two in multi-way combat (side B on the snare
-    kit, both sides on the champion, seeds 1-4, 16 groups): side A in `tribrid-dragon-sara` wins 11, loses 4, draws 1
-    (`extra:team-2v2-dragon-x4`); on the snare kit 8, 6, 2 (`extra:team-2v2-multi-x4`, the same run). Supply (the drop scripts; `knowledge/drops.json` leaves out
+    routes still stage the rune kit.
+73. **Dragon armour wins more team fights; in the hunt it takes about as much damage as rune. The hunt's fixed kit
+    dropped any other shield.** `extra:hunt-defend` (the hunt route against a target defending on the champion with 18
+    sharks and a glory, seeds 1-12), the hunter in rune (the fixture) or in `tribrid-dragon-sara`'s armour
+    (`HUNTER_KIT`, which gives the fixture a kit's equipment and quest varps): kills 11 and 11, deaths 0 and 0, damage
+    dealt 5,224 and 5,310, damage taken 4,493 and 4,130 (seeds 1-6: 2,655 against 1,954; seeds 7-12: 1,838 against
+    2,176, so the difference is in the noise; the `HUNT` lines of `.practice/roam-switch/hunt-*`). The hunt's kits
+    name the rune kiteshield in their melee lists, so a hunter in any other shield lost it at its first bow turn for
+    good; the hunt puts the shield it wears at its start in that place. Two against two in multi-way combat (side B on
+    the snare kit, both sides on the champion, seeds 1-8, 32 groups): side A in `tribrid-dragon-sara` wins 21, loses
+    9, draws 2 (`extra:team-2v2-dragon-x4`); on the snare kit 16, 9, 7 (`extra:team-2v2-multi-x4`, the same runs). Supply (the drop scripts; `knowledge/drops.json` leaves out
     the shared tables): dragon platelegs from a steel, iron or bronze dragon 1 in 256, 512 or 1,024 kills
     (`steel_dragon.rs2` and the others), the dragon chainbody from the Kalphite Queen 1 in 128 (`kalphite_queen.rs2`),
     the dragon med helm from the King Black Dragon 1 in 128 (`king_black_dragon.rs2`) and the shared rare table, the
-    left half of the dragon square shield (`dragonshield_a`) 4 in 128 rolls of the mega-rare table. Gap: 6 seeds; the
-    roam and the army in dragon armour; the square shield's other half is not traced.
+    left half of the dragon square shield (`dragonshield_a`) 4 in 128 rolls of the mega-rare table. Gap: the roam and
+    the army in dragon armour; the square shield's other half is not traced.
