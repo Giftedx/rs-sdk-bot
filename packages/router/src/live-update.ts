@@ -143,7 +143,10 @@ export function rebasableDeliveryEdits(root: string, dirty: readonly Dirty[], in
         if (!record) continue;
         const ours = read.local(d.path), theirs = read.target(d.path), base = read.head(d.path) ?? '';
         if (ours === null || theirs === null) continue;
-        const text = merge(ours, base, theirs);
+        // The repository checks out LF, but a published Windows build can hold CRLF: compare lines, not line ends
+        // (as delivery-pr.ts does), or every line differs and a clean merge conflicts.
+        const lf = (s: string) => s.replaceAll('\r\n', '\n');
+        const text = merge(lf(ours), lf(base), lf(theirs));
         if (text !== null) out.set(d.path, { text, taskId: record.taskId! });
     }
     return out;

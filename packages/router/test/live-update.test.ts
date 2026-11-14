@@ -32,6 +32,10 @@ test('an unmerged delivery edit moves on top of master when the three-way merge 
         record('pending');
         const r = rebasableDeliveryEdits(root, dirty, ['scripts/q.ts'], files, mergeText, hash, {});
         expect(r.get('scripts/q.ts')).toEqual({ text: 'A\nb\nc\nd\nE\n', taskId: 't9' });
+        // A Windows build copy with CRLF line ends merges by lines, the same as LF.
+        writeFileSync(join(snap, 'scripts', 'q.ts'), build.replaceAll('\n', '\r\n')); writeFileSync(join(root, 'scripts', 'q.ts'), build.replaceAll('\n', '\r\n'));
+        expect(rebasableDeliveryEdits(root, dirty, ['scripts/q.ts'], files, mergeText, hash, {}).get('scripts/q.ts')?.text).toBe('A\nb\nc\nd\nE\n');
+        writeFileSync(join(snap, 'scripts', 'q.ts'), build); writeFileSync(join(root, 'scripts', 'q.ts'), build);
         // Master changed the same line: a conflict waits as before.
         expect(rebasableDeliveryEdits(root, dirty, ['scripts/q.ts'], { ...files, target: () => clash }, mergeText, hash, {}).size).toBe(0);
         // A local edit that is not the delivery's waits as before.
