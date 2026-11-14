@@ -10,7 +10,7 @@
 // GIANT_BURY=1 buries the bones each trooper kill leaves, on the field. TROOPER_COOK=1 first makes trooper food when
 // the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
 // (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
-import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
+import { openBot, finish, countItems, getWorld, accountOf, sessionDied } from '../packages/core/src/bot';
 import {startQuestSustain} from './quest-sustain';
 import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
 import{combatPotionPolicy,createCombatPotions,combatPotionSession,combatPotionRecovery,type CombatPotionPolicy}from'./microbot-combat-potions';
@@ -170,7 +170,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
         diagnostics.push({tick:s.tick(),elapsed:s.tick()-start,sinceProgress:s.tick()-lastProgress,sinceAttack:attackStarted===undefined?null:s.tick()-attackStarted,...evidence});
     };
     void s.ended.then(()=>{ended=true;});
-    const observeLife=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(profile.foodBanked&&hp()<=40)healthCutoff=true;if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||p?.lifeId!==p0.lifeId)died=true;};
+    const observeLife=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(profile.foodBanked&&p&&hp()<=40)healthCutoff=true;if(sessionDied(p0,p))died=true;};
     const off=s.onTick(observeLife);
     let walkTicks=0,walkedTiles=0,doorInteractions=0,houseInteractions=0,maxPackSlots=inv().length,detourTiles=0;
     let previousPosition={x:p0.worldX,z:p0.worldZ};
@@ -464,7 +464,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const quiver=()=>count((state()?.equipment??[]).filter(i=>i.slot===13),ammoId??-1);
     let ended=false,died=false,hpMin=hp(),creditedKills=0,limpwurt=0,eaten=0,bankTrips=0,failure='',stop='cap',lastProgress=start,bankFood=0;
     void s.ended.then(()=>{ended=true;});
-    const observeLife=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||p?.lifeId!==p0.lifeId)died=true;};
+    const observeLife=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(sessionDied(p0,p))died=true;};
     const off=s.onTick(observeLife);
     const over=()=>{observeLife();return ended||died||!!o.stop?.()||s.tick()-start>=o.cap;};
     // The game drops an eat sent within EAT_DELAY ticks of the last one (consume.rs2 player_consume_item sets %eat_delay

@@ -1,5 +1,5 @@
 // ONE Fire giant pilot. Actual owned inputs and actual Waterfall access; never an endless camp.
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,sessionDied} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,expandPath,type PathOptions} from '../packages/core/src/walk';
@@ -67,7 +67,7 @@ export async function runFireCombat(s:Session,o:{cap:number;stop?:()=>boolean;re
  const capture=(event:string)=>{const q=p();trace.push({event,tick:s.tick()-start,phase,pos:q?[q.worldX,q.worldZ,q.level]:null,hp:hp(),food:held(FOOD),prayer:points(),runEnergy:q?.runEnergy??null,spiders:st()?.nearbyNpcs.filter(n=>n.id===58&&n.distance<=15).map(n=>({index:n.index,x:n.tileX??n.x,z:n.tileZ??n.z,distance:n.distance,inCombat:n.inCombat})),target:targetIndex,targetPosition:(()=>{const n=st()?.nearbyNpcs.find(n=>n.index===targetIndex&&n.id===110);return n?{render:[n.x,n.z],route:[n.tileX??null,n.tileZ??null],size:n.size??null}:null;})()});if(trace.length>80)trace.splice(1,1);};
  const totals=()=>{const m=new Map<number,number>();for(const i of [...inv(),...eq(),...(s.bankObservation?.()?.items??[])])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
  const eat=async()=>{const item=inv().find(i=>i.id===FOOD),before=held(FOOD),h=hp();if(!item||before<=8)throw new Error('food retreat reserve reached');await s.bot.eatFood(item);await waitUntil(s,()=>held(FOOD)<before&&hp()>h||died||ended,{timeoutTicks:6});eaten+=Math.max(0,before-held(FOOD));if(held(FOOD)!==before-1||hp()<=h)throw new Error('actual Salmon debit/heal not observed');capture('eat');await waitTicks(s,3);};
- const off=s.onTick(()=>{const q=p();if(hp()>0)hpMin=Math.min(hpMin,hp());if(hp()<=0||q?.isDead||q?.lifeId!==life||(q?.respawnCount??0)>respawns)died=true;
+ const off=s.onTick(()=>{const q=p();if(hp()>0)hpMin=Math.min(hpMin,hp());if(sessionDied({lifeId:life,respawnCount:respawns},q))died=true;
   if(targetIndex!==undefined){const n=st()?.nearbyNpcs.find(n=>n.id===110&&n.index===targetIndex);if(n&&(n.hp===0||n.animId===131))death={x:n.tileX??n.x,z:n.tileZ??n.z,hp0:n.hp===0,anim:n.animId===131};}
   // Eating closes the bank and clears pending actions. Bank preparation and
   // final deposits own their inputs; heal explicitly between those actions.

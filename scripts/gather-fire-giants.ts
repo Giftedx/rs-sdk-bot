@@ -1,5 +1,5 @@
 // Phase 1: reclaim OWN Glarial amulet, bank it, restore original kit. Fire-giant combat remains gated.
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,sessionDied} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {sessionWalker,walkPath,type PathPoint} from '../packages/core/src/walk';
@@ -33,7 +33,7 @@ export async function runFireReclaim(s:Session,o:{cap:number;stop?:()=>boolean})
  const over=()=>ended||died||!!o.stop?.()||s.tick()-start>=o.cap;
  const totals=()=>{const m=new Map<number,number>();for(const i of [...inv(),...eq(),...(s.bankObservation?.()?.items??[])])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
  const eat=async()=>{const item=inv().find(i=>i.id===FOOD),before=held(FOOD),h=hp();if(!item)throw new Error('no fire access progress: owned Salmon exhausted');await s.bot.eatFood(item);await waitUntil(s,()=>held(FOOD)<before&&hp()>h||died||ended,{timeoutTicks:6});eaten+=Math.max(0,before-held(FOOD));if(held(FOOD)!==before-1||hp()<=h)throw new Error('no fire access progress: Salmon debit/heal unobserved');};
- const off=s.onTick(()=>{const p=pos();if(hp()>0)hpMin=Math.min(hpMin,hp());if(hp()<=0||p?.isDead||p?.lifeId!==p0.lifeId||(p?.respawnCount??0)>(p0.respawnCount??0))died=true;if(hp()>0&&hp()<=40&&!eating&&!ended&&!died&&held(FOOD)>0){eating=eat().catch(e=>{foodFailure=String(e);}).finally(()=>{eating=undefined;});}});
+ const off=s.onTick(()=>{const p=pos();if(hp()>0)hpMin=Math.min(hpMin,hp());if(sessionDied(p0,p))died=true;if(hp()>0&&hp()<=40&&!eating&&!ended&&!died&&held(FOOD)>0){eating=eat().catch(e=>{foodFailure=String(e);}).finally(()=>{eating=undefined;});}});
  const guard=async()=>{if(eating)await eating;if(over()||foodFailure||hp()<=20)throw new Error(`no fire access progress: ${foodFailure||(died?'died':over()?'stop/cap/session-ended':'unsafe HP')}`);};
  const walk=async(x:number,z:number,tol=1,entry?:PathPoint[])=>{await guard();const base=await sessionWalker(s),p=pos()!,bearRoute=p.worldZ<4000&&z<4000&&(p.worldZ<3390||z<3390),plans:{level:number;from:{x:number;z:number};to:{x:number;z:number};corners:{x:number;z:number}[]}[]=[];
   const traced={...base,plan:(level:number,from:{x:number;z:number},to:{x:number;z:number})=>{const corners=base.plan(level,from,to);plans.push({level,from:{...from},to:{...to},corners:corners.map(c=>({...c}))});if(plans.length>16)plans.shift();return corners;}};
