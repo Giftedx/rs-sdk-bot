@@ -1,5 +1,21 @@
 import {test,expect} from 'bun:test';
-import {addTasks,chooseTask,coveredQualification,deadRoots,dependencyMet,initialState,orderOnlyDependency,qualificationDemand,type CoordTask} from '../src/coordinator';
+import {addTasks,chooseTask,coveredQualification,deadRoots,dependencyMet,initialState,needsFreshQualification,orderOnlyDependency,qualificationDemand,type CoordTask} from '../src/coordinator';
+
+test('a run with no qualification on the current source is held; one with it is not', () => {
+ const state=initialState();
+ addTasks(state,[qualify,recovery('Woodpecker',0,[])],1);
+ const q=state.tasks.find(t=>t.spec.id==='qualify-recovery')!,run=state.tasks.find(t=>t.spec.id==='recover-woodpecker')!.spec;
+ q.status='succeeded';q.receipt={taskId:'qualify-recovery',runId:'r',ok:true,at:1,output:{delivery:{ok:true,id:'session-recovery-only',source:'old'}}} as any;
+ const records=()=>new Map(state.tasks.map(r=>[r.spec.id,r]));
+ expect(needsFreshQualification(run,records(),'new')).toBe(true);
+ expect(needsFreshQualification(run,records(),'old')).toBe(false);
+ // No fingerprint now: hold.
+ expect(needsFreshQualification(run,records(),null)).toBe(true);
+ // A qualification of another capability does not count.
+ (q.receipt as any).output.delivery.id='other';
+ expect(needsFreshQualification(run,records(),'old')).toBe(true);
+ expect(needsFreshQualification(qualify,records(),'new')).toBe(false);
+});
 
 const qualify:CoordTask={id:'qualify-recovery',kind:'qualify',goal:'gear',capability:'session-recovery-only',dependsOn:[],priority:15,estimatedMs:1,why:'Qualify the recovery runner on the current source.'};
 const recovery=(name:string,i:number,after:string[]):CoordTask=>({id:'recover-'+name.toLowerCase(),kind:'run',goal:'gear',capability:'session-recovery-only',account:name,

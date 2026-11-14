@@ -117,6 +117,16 @@ export const aliveQualification=(task:CoordTask,dep:TaskRecord|undefined,records
 export const dependencyMet=(task:CoordTask,dep:TaskRecord|undefined,records?:ReadonlyMap<string,TaskRecord>):boolean=>
  dep?.status==='succeeded'||orderOnlyDependency(task,dep)||(!!records&&coveredQualification(task,dep,records));
 
+// True when a run has no passed qualification of its capability on the current source among its dependencies: the
+// worker would refuse it at once ("fresh same-capability native qualification required", coordinator-worker.ts). The
+// refresh that adds such a qualification skips ticks while a build runs, so the dispatcher holds such a run instead of
+// starting it. `source` null (no fingerprint) holds it too.
+export function needsFreshQualification(task:CoordTask,records:ReadonlyMap<string,TaskRecord>,source:string|null):boolean{
+ if(task.kind!=='run')return false;
+ if(source===null)return true;
+ return !task.dependsOn.some(id=>{const d=records.get(id)?.receipt?.output?.delivery;return d?.ok===true&&d.id===task.capability&&d.source===source;});
+}
+
 /** Qualify demanded capabilities only. Old failed refreshes must not poison new consumers. */
 export function qualificationDemand(state:CoordinatorState){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
