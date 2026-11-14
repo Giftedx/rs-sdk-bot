@@ -250,6 +250,10 @@ export function isWorkerReleaseHold(result:string):boolean {
 
 // Recheck before the network boundary, including workers launched by an old
 // in-memory supervisor. Existing connected sessions are never polled or killed.
+// A status file of only null bytes (or none) is what a power cut leaves of a write whose data never reached the disk:
+// the rename was kept, the bytes were not. Only a crash makes it, and the crash ended its writer, so it names no live
+// peer. Reading it as unknown evidence refused every live start of the side until a person moved the files.
+export const crashResidue=(raw:Uint8Array)=>raw.every(b=>b===0);
 export function assertLiveWorkerRelease(server:string,env:Record<string,string|undefined>=process.env,base=root):void {
     if(isLocalServer(server))return;
     // A standing owner job (swarm STANDING=1) has no coordinator acceptance and runs the current source, so neither
@@ -259,7 +263,9 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
     const memo:ReleaseMemo=new Map(),pin=assertWorkerRelease(env,base,memo),statuses:any[]=[];
     try{for(const entry of readdirSync(join(base,'.practice/status'))){
         if(!entry.endsWith('.json'))continue;
-        statuses.push(JSON.parse(readFileSync(join(base,'.practice/status',entry),'utf8')));
+        const raw=readFileSync(join(base,'.practice/status',entry));
+        if(crashResidue(raw))continue;
+        statuses.push(JSON.parse(raw.toString('utf8')));
     }}catch{throw Error('no worker progress: release peer state unknown; unreadable status evidence');}
     const owners=standingAccounts(base);
     // A peer whose entries are gone or do not resolve has no current release, so it counts as stale.
