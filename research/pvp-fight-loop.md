@@ -1217,6 +1217,11 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   own single-way post (`POST=3075,3640 ALLOW_SINGLE=1`, for a gang that does not follow into multi-way), 11 of 12, no
   death, about 37 HP a kill (`extra:squad-4-gang-single-x1`). Two of ours with 3 sharks each, outnumbered, made 4
   bank trips in 8 minutes with no fault and no death (`extra:squad-2-gang-trips-x1`).
+- **The freeze matters most to a small squad.** Three of ours in rune chainbody (the kit of the first live pilot)
+  in the multi-way zone, seeds 1 to 8: with no freeze runes 25 kills of 48 and 7 of 16 groups, 74 HP a kill
+  (`extra:team-3v3-gang-chain-west-x2`); with Bind runes 44 kills and 14 groups, 64 HP a kill
+  (`-chainbind-`); four with no freeze runes 37 kills and 11 groups, 35 HP a kill (`extra:team-4v3-gang-chain-west-x2`).
+  No death in any. A gang account that walks out at low HP gets away unless a freeze holds it or more of ours hit it.
 
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
 regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
