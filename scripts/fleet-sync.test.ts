@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { activeAccounts, carriedPrior, keepPublished, planView, reattach, sideCapacity, sideCard, snapshot } from './fleet-sync';
+import { activeAccounts, carriedPrior, ensureWorktree, keepPublished, planView, reattach, sideCapacity, sideCard, snapshot, worktreeProblem } from './fleet-sync';
 import { SWARM_STOP } from './swarm';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
@@ -113,4 +113,30 @@ test('an adopted account keeps its last row from the side that ran it; a row thi
 
 test('a side card lists its accounts whose last end was a death', () => {
     expect(sideCard('local', 4, ['Fatstack', 'Kilo'], () => undefined, ['fatstack', 'Stranger']).died).toEqual(['fatstack']);
+});
+
+test('a clone of master alone gets the published fleet-data branch, never one made from the code', () => {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
+    const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000 }).trim();
+    const base = mkdtempSync(join(tmpdir(), 'fleet-wt-'));
+    try {
+        const remote = join(base, 'remote.git'), seed = join(base, 'seed'), clone = join(base, 'clone');
+        g(base, 'init', '--bare', remote); g(base, 'init', '-b', 'master', seed);
+        writeFileSync(join(seed, 'code.ts'), 'code\n'); g(seed, 'add', '.'); g(seed, 'commit', '-qm', 'code');
+        g(seed, 'checkout', '-q', '--orphan', 'fleet-data'); g(seed, 'rm', '-rq', '--cached', '.');
+        writeFileSync(join(seed, 'owners.json'), '{}\n'); g(seed, 'add', 'owners.json'); g(seed, 'commit', '-qm', 'fleet data');
+        g(seed, 'remote', 'add', 'origin', remote); g(seed, 'push', '-q', 'origin', 'master', 'fleet-data');
+        // A Codex checkout: master only, so `git fetch origin fleet-data` alone leaves origin/fleet-data missing.
+        g(base, 'clone', '-q', '--single-branch', '--branch', 'master', remote, clone);
+        const wt = ensureWorktree(join(clone, 'fleet'), clone);
+        expect(g(wt, 'log', '--format=%s', '-1')).toBe('fleet data');
+        expect(worktreeProblem(wt, 0)).toBeNull();
+        // The worktree the old fetch made: fleet-data from the code. It holds commits the published branch lacks.
+        const bogus = join(clone, 'bogus');
+        g(clone, 'worktree', 'add', '-q', '-b', 'stray', bogus, 'master');
+        expect(worktreeProblem(bogus, 0)).toContain('not the fleet-data branch');
+        // Unpublished fleet data (pushes refused, say) is never taken for the code, however many commits.
+        for (const n of [1, 2, 3]) { writeFileSync(join(wt, `receipt-${n}.json`), '{}\n'); g(wt, 'add', '.'); g(wt, 'commit', '-qm', `receipt ${n}`); }
+        expect(worktreeProblem(wt, 0)).toBeNull();
+    } finally { rmSync(base, { recursive: true, force: true }); }
 });

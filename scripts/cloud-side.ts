@@ -12,13 +12,15 @@
 //                   that ends with its task, as a Codex cloud task does)
 //   --setup-only    the setup and credentials only (an environment's setup script)
 import { spawn, spawnSync } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, appendFileSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, unlinkSync, appendFileSync, writeFileSync } from 'node:fs';
 import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, SIDE_NAME } from '../packages/core/src/fleet';
 import { restoreCredential, vaultKey, putCredential } from '../packages/core/src/fleet-vault';
 import { MAIN_ACCOUNT } from '../packages/core/src/haggisgate';
 import { SWARM_STOP, swarmWroteStop } from './swarm';
+import { FETCH_FLEET_DATA, worktreeProblem } from './fleet-sync';
+import { withFleetDataWrite } from './fleet-owner-claim';
 
 const root = resolve(import.meta.dir, '..');
 export const DEFAULT_WATCH_MINUTES = 110;
@@ -43,8 +45,10 @@ export function parseOptions(argv: string[], env: Record<string, string | undefi
 // codex: a task runs its commands in the foreground and ends with them.
 export function sessionPrompt(kind: 'claude' | 'codex', side: string, watchMinutes = kind === 'codex' ? 50 : DEFAULT_WATCH_MINUTES): string {
     if (!SIDE_NAME.test(side) || side === 'local') throw Error('cloud-side: invalid side');
+    // A Codex container can be a cached image of an older commit, and its setup script's PATH does not reach the agent:
+    // the command checks out current master and puts the setup's bun (or ~/.bun) on PATH itself.
     if (kind === 'codex') return [
-        `Run exactly this one command from the repository root and wait for it: bun scripts/cloud-side.ts --side ${side} --watch-minutes ${watchMinutes} --stop-at-end`,
+        `Run exactly this one command from the repository root and wait for it: git fetch -q origin master && git checkout -q --detach origin/master; export PATH="/workspace/.tools/bun/node_modules/.bin:$HOME/.bun/bin:$PATH"; bun scripts/cloud-side.ts --side ${side} --watch-minutes ${watchMinutes} --stop-at-end`,
         'Then reply with its last output line only. Do not read files or logs, do not investigate, and make no code changes, commits or pull requests.',
     ].join('\n');
     return [
@@ -107,6 +111,26 @@ if (import.meta.main) {
     if (!run(['bun', 'scripts/worktree-setup.ts'], root, 1_200_000)) fail('worktree setup failed');
     run(['git', 'config', 'submodule.vendor/rs-sdk.ignore', 'dirty']);
     for (const d of ['cloud-handoff', 'status', 'swarm-logs']) mkdirSync(join(root, '.practice', d), { recursive: true });
+    // A cached container can hold a fleet-data worktree that cannot sync. Under the fleet-data write lock, so a sync
+    // the fleet agent is running finishes first and any marker left is an abandoned one: a stopped rebase or merge is
+    // aborted, which keeps the worktree's unpublished commits (a trade receipt among them must survive), and one that
+    // is not the fleet-data branch at all (worktreeProblem: a branch made from the code) is replaced; it holds no
+    // fleet data.
+    run(['git', ...FETCH_FLEET_DATA]);
+    const unrepaired = await withFleetDataWrite(root, () => {
+        if (!existsSync(join(FLEET_WORKTREE, '.git')) || !worktreeProblem(FLEET_WORKTREE)) return null;
+        run(['git', '-C', FLEET_WORKTREE, 'rebase', '--abort']);
+        run(['git', '-C', FLEET_WORKTREE, 'merge', '--abort']);
+        const problem = worktreeProblem(FLEET_WORKTREE);
+        if (!problem?.includes('not the fleet-data branch')) return problem;
+        log(`fleet worktree replaced: ${problem}`);
+        run(['git', 'worktree', 'remove', '--force', FLEET_WORKTREE]);
+        rmSync(FLEET_WORKTREE, { recursive: true, force: true });
+        run(['git', 'worktree', 'prune']);
+        run(['git', 'branch', '-D', 'fleet-data']);
+        return null;
+    });
+    if (unrepaired) fail(`fleet worktree: ${unrepaired}`);
     if (!run(['bun', 'scripts/fleet-sync.ts', '--no-push'])) fail('fleet sync failed');
     run(['git', '-C', FLEET_WORKTREE, 'config', 'rebase.autoStash', 'true']);
     const plan = join(root, '.practice', 'cloud-handoff', 'swarm.json');
