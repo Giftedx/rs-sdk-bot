@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794630307999,
+ "at": 1794630782817,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -438,6 +438,24 @@
    "resources": [
     "knight:2669,3298"
    ]
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/shop-to-bid.ts",
+   "args": [
+    "sarim,harry_bait",
+    "313"
+   ],
+   "env": {
+    "UNITS": "1500",
+    "MAX_SPEND": "40000",
+    "LOTS": "6"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "sell Port Sarim and Catherby fishing bait into the open GE bid (scripts/shop-to-bid.ts)",
+   "role": "market"
   },
   {
    "account": "Ballspinner",
