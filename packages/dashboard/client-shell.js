@@ -816,7 +816,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // worn strength bonus and no style bonus; XP an hour is one style, gold an hour the loot value of a kill.
   let weaponSpeedData={};if(typeof asset==='function'&&typeof fetch==='function')fetch(asset('weapon-speed.json')).then(r=>r.ok?r.json():{}).then(j=>{weaponSpeedData=j||{};},()=>{});
   function lootTotal(name){const list=npcLootData[name];if(!list?.length||typeof price!=='function')return 0;let t=0;for(const [item,e] of list){const p=price(item);if(p)t+=p.value*e;}return t;}
-  function hourRates(name){let list=(npcDefData[name]||[]).filter(v=>v.length>14&&v[13]>0);if(list.some(v=>v[14]>=1000))list=list.filter(v=>v[14]>=1000);const b=typeof account==='function'?account():null;
+  function hourRates(name,safeOnly){let list=(npcDefData[name]||[]).filter(v=>v.length>14&&v[13]>0);if(list.some(v=>v[14]>=1000))list=list.filter(v=>v[14]>=1000);const b=typeof account==='function'?account():null;
     if(!list.length||typeof wornBonuses!=='function'||typeof maxHit!=='function')return null;const bon=wornBonuses(b);if(!bon)return null;
     // A ranged weapon (a range attack bonus, as equipStats tells it) rolls ranged: the max hit is the current Ranged with
     // the worn ranged strength (ammo counts), and its roll (Ranged + 8) x (range attack + 64) meets the NPC's (defence + 9)
@@ -843,7 +843,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // A kill cycle is the swings of a kill, plus 2 ticks for the death and the next target. Each spawn gives one kill per
     // fight plus respawn (the respawn starts at the death), so a cycle is no shorter than (kill + respawn) over the spawns
     // of that name (npc-spawns.json; few spawns make the account wait). Walking is not counted.
-    const spawnRow=typeof npcSpawns!=='undefined'&&npcSpawns?npcSpawns.find(r=>r[0]===name):null,spawns=spawnRow?Math.max(1,spawnRow[3].length/3):0;
+    // safeOnly (Combat training): only the spawns outside the Wilderness count, as the training tip sends the account there.
+    const spawnRow=typeof npcSpawns!=='undefined'&&npcSpawns?npcSpawns.find(r=>r[0]===name):null,wl=safeOnly&&typeof wildLevel==='function'?wildLevel:null;
+    let spawns=0;if(spawnRow)for(let i=0;i+1<spawnRow[3].length;i+=3)if(!wl||!wl({x:spawnRow[3][i],z:spawnRow[3][i+1]}))spawns++;if(spawnRow)spawns=Math.max(1,spawns);
     const rates=list.map(v=>{const dmg=chance(v)*capped(v[13]),kill=dmg>0?(v[13]/dmg)*speed*tickSec+2*tickSec:0,wait=spawns&&v.length>15?(kill+v[15]*tickSec)/spawns:0,k=kill>0?3600/Math.max(kill,wait):0;return {k,xp:magic?k*((v[13]/dmg)*spell.xp+v[13]*50*v[14]/1000):k*v[13]*100*v[14]/1000};}).filter(r=>r.k>0);
     if(!rates.length)return null;const ks=rates.map(r=>r.k),xs=rates.map(r=>r.xp);
     return {lo:Math.min(...ks),hi:Math.max(...ks),xLo:Math.min(...xs),xHi:Math.max(...xs),magic,ranged,spell,max,speed,loot};}
@@ -857,7 +859,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // A name counts when one of its spawns is outside the Wilderness: a training tip never sends an account into PvP.
     const wild=typeof wildLevel==='function'?wildLevel:()=>0,safe=r=>{for(let i=0;i+1<r[3].length;i+=3)if(!wild({x:r[3][i],z:r[3][i+1]}))return true;return false;};
     const spawned=new Set(npcSpawns.filter(safe).map(r=>r[0])),out=[];
-    for(const name of Object.keys(npcDefData)){if(!spawned.has(name))continue;const max=Math.max(0,...(npcDefData[name]||[]).filter(v=>v.length>11).map(v=>Math.floor(((v[9]+9)*(v[11]+64)+320)/640)));if(max*3>=hp)continue;const r=hourRates(name);if(r&&r.xLo>0)out.push({name,xp:r.xLo,kills:r.lo,max});}
+    for(const name of Object.keys(npcDefData)){if(!spawned.has(name))continue;const max=Math.max(0,...(npcDefData[name]||[]).filter(v=>v.length>11).map(v=>Math.floor(((v[9]+9)*(v[11]+64)+320)/640)));if(max*3>=hp)continue;const r=hourRates(name,true);if(r&&r.xLo>0)out.push({name,xp:r.xLo,kills:r.lo,max});}
     return out.sort((a,c)=>c.xp-a.xp).slice(0,5);}
   // The box starts the spawn load. The wrapper stays on the page, so loadSpawns can fill it when the data arrives.
   function trainBox(){if(typeof loadSpawns==='function')loadSpawns();return '<div class="train-box">'+trainInner()+'</div>';}

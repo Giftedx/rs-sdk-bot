@@ -895,7 +895,9 @@ test('combat training: the NPCs with the most XP an hour that spawn, leaving out
   maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:()=>null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{},E:(x:string)=>x,
   wildLevel:(p:any)=>p.x>=2944&&p.x<=3391&&p.z>=3520&&p.z<=6399?Math.floor((p.z-3520)/8)+1:0,
   npcSpawns:[['Cow',0,0,[3253,3270,0]],['Moss giant',0,0,[3100,3927,0,2550,3405,0]],['Ogre',0,0,[2500,3000,0]],['Wild giant',0,0,[3100,3927,0]]]};
- const t=new Function(...Object.keys(env),`${code};return {trainRows,trainBox};`)(...Object.values(env));
+ const t=new Function(...Object.keys(env),`${code};return {trainRows,trainBox,hourRates};`)(...Object.values(env));
+ // The training rate counts only Moss giant's safe spawn: one spawn, so the respawn wait counts in full.
+ expect(t.hourRates('Moss giant',true).lo).toBeLessThan(t.hourRates('Moss giant').lo);
  const rows=t.trainRows();
  // Ogre max floor((69 x 144 + 320) / 640) = 16: 48 is over 40 Hitpoints, left out. Ghost town does not spawn. Wild giant
  // spawns only in the Wilderness, left out. Moss giant has one spawn outside it, kept. The Cow
