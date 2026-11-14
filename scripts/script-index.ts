@@ -52,6 +52,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/monitor.ts': 'fleet control: the watchdog of the machine and the swarm',
  'scripts/now.ts': 'developer tool: prints the state of this PC and the fleet on one screen; it changes nothing',
  'scripts/pk-sim.ts': 'offline fight simulator; it starts no game work',
+ 'scripts/pray-at-altar.ts': 'hand tool: restores a drained account\'s prayer points at a prayer altar before a walk onto melee-hunter ground',
  'scripts/preparation-report.ts': 'report: owned gear and supplies against the inputs of the workers',
  'scripts/preparation-route-state.ts': 'helper of scripts/preparation-report.ts',
  'scripts/provision-readiness.ts': 'fleet control: checks the crew of an account provision',
