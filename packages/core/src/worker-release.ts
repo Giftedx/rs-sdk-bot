@@ -251,9 +251,10 @@ export function isWorkerReleaseHold(result:string):boolean {
 // Recheck before the network boundary, including workers launched by an old
 // in-memory supervisor. Existing connected sessions are never polled or killed.
 // A status file of only null bytes (or none) is what a power cut leaves of a write whose data never reached the disk:
-// the rename was kept, the bytes were not. Only a crash makes it, and the crash ended its writer, so it names no live
-// peer. Reading it as unknown evidence refused every live start of the side until a person moved the files.
-export const crashResidue=(raw:Uint8Array)=>raw.every(b=>b===0);
+// the rename was kept, the bytes were not. Only a crash makes it, and the crash ended its writer. The writer's session
+// can still be open on the server until the lost-session window ends, so the file names no peer only once its last
+// write is LOST_SESSION_DROP_MS old; before that it stays unknown evidence.
+export const crashResidue=(raw:Uint8Array,writtenAt:number,now=Date.now())=>raw.every(b=>b===0)&&Number.isFinite(writtenAt)&&now-writtenAt>=LOST_SESSION_DROP_MS;
 export function assertLiveWorkerRelease(server:string,env:Record<string,string|undefined>=process.env,base=root):void {
     if(isLocalServer(server))return;
     // A standing owner job (swarm STANDING=1) has no coordinator acceptance and runs the current source, so neither
@@ -263,8 +264,8 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
     const memo:ReleaseMemo=new Map(),pin=assertWorkerRelease(env,base,memo),statuses:any[]=[];
     try{for(const entry of readdirSync(join(base,'.practice/status'))){
         if(!entry.endsWith('.json'))continue;
-        const raw=readFileSync(join(base,'.practice/status',entry));
-        if(crashResidue(raw))continue;
+        const file=join(base,'.practice/status',entry),raw=readFileSync(file);
+        if(crashResidue(raw,statSync(file).mtimeMs))continue;
         statuses.push(JSON.parse(raw.toString('utf8')));
     }}catch{throw Error('no worker progress: release peer state unknown; unreadable status evidence');}
     const owners=standingAccounts(base);
