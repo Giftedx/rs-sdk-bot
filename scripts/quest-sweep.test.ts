@@ -1798,6 +1798,13 @@ test('a preset antipoison is a food row, never a need: Monkey Madness carries it
  expect(ANTIPOISONS).toContain(2448);
  expect(ANTIPOISONS).not.toContain(2446);
 });
+test('Monkey Madness finds its own monkey bones: the preset row rides as food, and the script holds the kill step', async () => {
+ const {QUEST_FINDS}=await import('./quest-sweep');
+ expect((presetFor('mm').inventory??[]).some(i=>i.id===3183)).toBe(true);
+ expect(QUEST_FINDS.mm).toContain(3183);
+ const src=require('node:fs').readFileSync(require('node:path').join(import.meta.dir,'generated','quest-mm.ts'),'utf8');
+ expect(src).toContain('if (!q.has(ITEM.bones)) await monkeyBones();');
+});
 test('Tree Gnome Village and The Grand Tree need the staff of fire worn', () => {
  for(const quest of ['tree','grandtree']){
   const {need,wear}=wornKitPlan(quest,new Map([[562,80]]),[],[],[]);
