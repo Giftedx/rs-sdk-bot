@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { bidPlan, chunkTooDear, fetchMarket, floatNeed, tickPackets, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
+import { bidPlan, chunkTooDear, fetchMarket, floatNeed, parseProfiles, tickPackets, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
 
 const bait = { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334 };
 
@@ -87,4 +87,12 @@ test('one tick of shop packets holds at most 5 buys of 10, 5 or 1', () => {
     expect(tickPackets(2)).toEqual([1, 1]);
     expect(tickPackets(0)).toEqual([]);
     expect(tickPackets(-3)).toEqual([]);
+});
+
+test('parseProfiles reads a comma list of known profiles in order', () => {
+    const known = ['sarim', 'harry_bait', 'betty'];
+    expect(parseProfiles('sarim', known)).toEqual(['sarim']);
+    expect(parseProfiles('Sarim,HARRY_BAIT', known)).toEqual(['sarim', 'harry_bait']);
+    expect(parseProfiles('sarim,nowhere', known)).toBeNull();
+    expect(parseProfiles('', known)).toBeNull();
 });

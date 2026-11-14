@@ -1,12 +1,15 @@
 // Shop to bid: buys stackable items from an NPC shop and sells them at the Grand Exchange into open buy offers.
 // Some players bid far above the shop price: fishing bait has a bid of 218 against a shop base of 3, and the Port Sarim
 // fishing shop holds 1,500 and restocks 1 a tick. One stack fills one pack slot, so one walk to the exchange sells it.
-// Usage: bun scripts/shop-to-bid.ts <bot> <profile> <itemId[,itemId...]>
+// Usage: bun scripts/shop-to-bid.ts <bot> <profile[,profile...]> <itemId[,itemId...]>
 //        bun scripts/shop-to-bid.ts --scan   (no login: each profile item with an open bid that clears MIN_NET)
-//   profile: a shop of scripts/shop-buyer.ts PROFILES (sarim = Gerrant's fishing shop, betty = the Port Sarim runes).
-// Env: UNITS (default 5000) the most units of each item one run buys; MIN_NET (default 50) the least coins a unit must
+//   profile: a shop of scripts/shop-buyer.ts PROFILES (sarim = Gerrant's fishing shop, harry_bait = Harry's Catherby
+//   fishing shop, betty = the Port Sarim runes). With LOTS=n the run makes n lots, one shop after the next in the list,
+//   so each shop restocks while the bot serves the others. It ends early when no item clears MIN_NET or when a full
+//   turn of the shops sold nothing.
+// Env: UNITS (default 5000) the most units of each item one lot buys; MIN_NET (default 50) the least coins a unit must
 // clear after the 5% seller tax and the highest shop price; COIN_RESERVE (default 10000) coins the run never spends;
-// MAX_SPEND (default 200000) the shop spend limit of the run; WAIT_TICKS (default 0) ticks to wait at the shop for
+// MAX_SPEND (default 200000) the shop spend limit of one lot; WAIT_TICKS (default 0) ticks to wait at the shop for
 // restocked units. DEMO_OK=1 for the live server. The run reads each bid from the public market API before it buys and
 // again before it sells, and sells only while the bid still clears MIN_NET. Unsold units stay in the pack.
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -47,6 +50,12 @@ export function bidPlan(o: { quote: Quote; unitCost: number; coins: number; rese
 
 // The coins to take from the bank so the pack holds the reserve and the whole spend limit.
 export const floatNeed = (packCoins: number, reserve: number, maxSpend: number) => Math.max(0, reserve + maxSpend - packCoins);
+
+// The profile keys of a comma list (lower case), or null when one is not a known profile.
+export function parseProfiles(arg: string, known: readonly string[]): string[] | null {
+    const keys = arg.toLowerCase().split(',').filter(Boolean);
+    return keys.length && keys.every(k => known.includes(k)) ? keys : null;
+}
 
 // The item ids of a comma list, or null when one is not a positive whole number.
 export function parseItems(arg: string): number[] | null {
@@ -130,42 +139,49 @@ async function main() {
         console.log(`RESULT ok shop-to-bid scan: ${rows.length} items clear MIN_NET ${minNet}`);
         return;
     }
-    const [bot, profileKey = '', itemArg = ''] = process.argv.slice(2);
-    const conf = PROFILES[profileKey.toLowerCase()], items = parseItems(itemArg);
-    if (!bot || !conf || !items) {
-        console.error(`Usage: bun scripts/shop-to-bid.ts <bot> <${Object.keys(PROFILES).join(' | ')}> <itemId[,itemId...]> | --scan`);
+    const [bot, profileArg = '', itemArg = ''] = process.argv.slice(2);
+    const profiles = parseProfiles(profileArg, Object.keys(PROFILES)), items = parseItems(itemArg), lotsWanted = Math.max(1, num('LOTS', 1));
+    if (!bot || !profiles || !items) {
+        console.error(`Usage: bun scripts/shop-to-bid.ts <bot> <profile[,profile...]> <itemId[,itemId...]> | --scan   (profiles: ${Object.keys(PROFILES).join(' | ')})`);
         process.exit(2);
     }
-    const quotes: Quote[] = [];
-    for (const id of items) {
-        const q = await fetchQuote(id), pre = bidPlan({ quote: q, unitCost: q.basePrice, coins: Number.MAX_SAFE_INTEGER, reserve: 0, maxUnits, minNet });
-        console.log(`QUOTE ${id} ${q.name} bid=${q.bid} want=${q.buyQuantity} base=${q.basePrice}${pre.units ? '' : ` skip: ${pre.refusal}`}`);
-        if (pre.units) quotes.push(q);
-    }
-    if (!quotes.length) { console.log('RESULT fail shop-to-bid refused before login: no item clears MIN_NET'); process.exit(1); }
+    // The items that clear MIN_NET now, from fresh quotes; a profile's lot buys the ones its shop sells.
+    const quotesNow = async (log: boolean) => {
+        const out: Quote[] = [];
+        for (const id of items) {
+            const q = await fetchQuote(id), pre = bidPlan({ quote: q, unitCost: q.basePrice, coins: Number.MAX_SAFE_INTEGER, reserve: 0, maxUnits, minNet });
+            if (log) console.log(`QUOTE ${id} ${q.name} bid=${q.bid} want=${q.buyQuantity} base=${q.basePrice}${pre.units ? '' : ` skip: ${pre.refusal}`}`);
+            if (pre.units) out.push(q);
+        }
+        return out;
+    };
+    if (!(await quotesNow(true)).length) { console.log('RESULT fail shop-to-bid refused before login: no item clears MIN_NET'); process.exit(1); }
     const server = serverFromEnv(readFileSync(resolve(import.meta.dir, '../vendor/rs-sdk/bots', bot, 'bot.env'), 'utf8'));
     const s = await openBot(bot);
     const stop = () => saleStopRequested(bot);
-    const lots: { q: Quote; startHeld: number; bought: number; spent: number }[] = [];
-    try {
-        // Accounts keep their coins in the bank: take the float before the shop. A bank in view (the exchange stands at
-        // Varrock West bank, where the last run ended) needs no walk; else the profile's bank.
+
+    // One lot: float, shop, exchange. Returns the coin change of the lot and the sale errors.
+    const runLot = async (key: string, quotes: Quote[]): Promise<{ gain: number; sold: number; errors: string[] }> => {
+        const conf = PROFILES[key]!;
         const need = floatNeed(coins(s), reserve, maxSpend);
         if (need > 0) {
+            // Accounts keep their coins in the bank. A bank in view (the exchange stands at Varrock West bank, where each
+            // lot ends) needs no walk; else the profile's bank.
             const near = !!(s.sdk.findNearbyNpc(/^banker$/i) || s.sdk.findNearbyLoc(/^bank booth$/i));
-            if (!near && !(await walkTargetPersist(s, { x: conf.bankSpot.x, z: conf.bankSpot.z, level: 0 })).ok) await finish([s], false, 'shop-to-bid: bank walk failed');
+            if (!near && !(await walkTargetPersist(s, { x: conf.bankSpot.x, z: conf.bankSpot.z, level: 0 })).ok) throw Error('shop-to-bid: bank walk failed');
             const b = await s.bot.openBank();
-            if (!b.success) await finish([s], false, `shop-to-bid: openBank failed: ${b.message}`);
+            if (!b.success) throw Error(`shop-to-bid: openBank failed: ${b.message}`);
             await s.bot.withdrawItem(/^coins$/i, need);
             await s.bot.closeInterface();
             console.log(`FLOAT took ${need} asked, pack coins ${coins(s)}`);
         }
-        const startCoins = coins(s);
-        if (!(await walkTargetPersist(s, { x: conf.npcSpot.x, z: conf.npcSpot.z, level: conf.npcSpot.level ?? 0 })).ok) await finish([s], false, 'shop-to-bid: shop walk failed');
+        const startCoins = coins(s), lots: { q: Quote; startHeld: number; bought: number; spent: number }[] = [];
+        if (!(await walkTargetPersist(s, { x: conf.npcSpot.x, z: conf.npcSpot.z, level: conf.npcSpot.level ?? 0 })).ok) throw Error('shop-to-bid: shop walk failed');
         const open = await s.bot.openShop(conf.npc);
-        if (!open.success) await finish([s], false, `shop-to-bid: openShop failed: ${open.message}`);
+        if (!open.success) throw Error(`shop-to-bid: openShop failed: ${open.message}`);
         let spent = 0;
-        for (const q of quotes) {
+        const sells = new Set(s.sdk.getState()?.shop?.shopItems.map(i => i.name.toLowerCase()) ?? []);
+        for (const q of quotes.filter(q => sells.has(q.name.toLowerCase()))) {
             const plan = bidPlan({ quote: q, unitCost: q.basePrice, coins: coins(s), reserve, maxUnits, minNet });
             const lot = { q, startHeld: held(s, q.id), bought: 0, spent: 0 };
             lots.push(lot);
@@ -181,12 +197,13 @@ async function main() {
                 if (chunkTooDear(b.spent, b.bought, q.bid!, minNet)) { console.log(`DEAR ${q.name} at ${(b.spent / b.bought).toFixed(1)} a unit`); break; }
                 if (b.bought === 0) { if (++idle > wait) break; await waitTicks(s, 1); } else idle = 0;
             }
-            console.log(`BOUGHT ${lot.bought} ${q.name} spent=${lot.spent}${plan.units ? '' : ` (${plan.refusal})`}`);
+            console.log(`BOUGHT ${lot.bought} ${q.name} spent=${lot.spent} at ${key}${plan.units ? '' : ` (${plan.refusal})`}`);
         }
-        if (!lots.some(l => held(s, l.q.id) > l.startHeld)) await finish([s], false, 'shop-to-bid: the shop sold no units');
-        if (!(await walkTargetPersist(s, GE_SPOT)).ok) await finish([s], false, 'shop-to-bid: exchange walk failed');
-        let ok = true;
+        await s.bot.closeInterface();
+        if (!lots.some(l => held(s, l.q.id) > l.startHeld)) return { gain: coins(s) - startCoins, sold: 0, errors: [] };
+        if (!(await walkTargetPersist(s, GE_SPOT)).ok) throw Error('shop-to-bid: exchange walk failed');
         const errors: string[] = [];
+        let sold = 0;
         for (const lot of lots) {
             const units = held(s, lot.q.id) - lot.startHeld;
             if (units <= 0 || stop()) continue;
@@ -196,11 +213,28 @@ async function main() {
             const goal = `bid-${q.id}-${Date.now()}`, paths = orderPaths(server, bot, 'sell-' + goal);
             mkdirSync(paths.base, { recursive: true }); // runOwnedSale writes its journal there and creates no folder
             const sale = await runOwnedSale(s, { actor: bot, server, goal, item: q.id, quantity: sell.units, price: q.bid!, floor: q.bid!, reserveItems: 0, deadline: Date.now() + 120_000 }, paths.journal, stop);
-            console.log(`SHOP_TO_BID ${JSON.stringify({ item: q.id, name: q.name, bought: lot.bought, spent: lot.spent, sold: sale.journal?.progress?.filled ?? 0, bid: q.bid, ok: sale.ok, error: sale.ok ? undefined : sale.error })}`);
-            if (!sale.ok) { ok = false; errors.push(`${q.name}: ${sale.error}`); }
+            const filled = sale.journal?.progress?.filled ?? 0;
+            sold += filled;
+            console.log(`SHOP_TO_BID ${JSON.stringify({ item: q.id, name: q.name, profile: key, bought: lot.bought, spent: lot.spent, sold: filled, bid: q.bid, ok: sale.ok, error: sale.ok ? undefined : sale.error })}`);
+            if (!sale.ok) errors.push(`${q.name}: ${sale.error}`);
         }
-        const gain = coins(s) - startCoins;
-        await finish([s], ok, ok ? `shop-to-bid coins ${gain >= 0 ? '+' : ''}${gain}` : `shop-to-bid sale failed: ${errors.join('; ')}; coins ${gain}`);
+        return { gain: coins(s) - startCoins, sold, errors };
+    };
+
+    try {
+        let total = 0, done = 0, empty = 0;
+        for (let n = 0; n < lotsWanted && !stop(); n++) {
+            const key = profiles[n % profiles.length]!, quotes = n === 0 ? await quotesNow(false) : await quotesNow(true);
+            if (!quotes.length) { console.log('LOT_STOP no item clears MIN_NET'); break; }
+            const t0 = s.tick(), r = await runLot(key, quotes);
+            total += r.gain; done++;
+            console.log(`LOT ${n + 1} ${key} coins ${r.gain >= 0 ? '+' : ''}${r.gain} sold ${r.sold} ticks ${s.tick() - t0}`);
+            if (r.errors.length) await finish([s], false, `shop-to-bid sale failed: ${r.errors.join('; ')}; coins ${total} over ${done} lots`);
+            // A full rotation of shops that sold nothing ends the run.
+            empty = r.sold ? 0 : empty + 1;
+            if (empty >= profiles.length) { console.log('LOT_STOP every shop sold nothing'); break; }
+        }
+        await finish([s], done > 0 && empty < profiles.length, `shop-to-bid coins ${total >= 0 ? '+' : ''}${total} over ${done} lots`);
     } catch (e) {
         await finish([s], false, String(e));
     }

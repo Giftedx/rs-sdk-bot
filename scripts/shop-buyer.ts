@@ -114,6 +114,14 @@ export const PROFILES: Record<string, {
         bankSpot: { x: 2809, z: 3441 }, // Catherby Bank
         items: [{ re: /^lobster pot$/i, buyPerTick: 1 }],
     },
+    // The same shop for its fishing bait (1,200 on the shelf, 1 restocked a tick): scripts/shop-to-bid.ts sells it into an
+    // open bid. A separate key keeps the harry profile of the lobster chain from buying bait.
+    harry_bait: {
+        npc: /^harry$/i,
+        npcSpot: { x: 2834, z: 3445 },
+        bankSpot: { x: 2809, z: 3441 }, // Catherby Bank
+        items: [{ re: /^fishing bait$/i, buyPerTick: 50, shelf: 1200 }],
+    },
     taverley: {
         npc: /^jatix$/i,
         npcSpot: { x: 2908, z: 3443 },
