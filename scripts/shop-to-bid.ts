@@ -27,8 +27,13 @@ const DEMO = 'https://rs-sdk-demo.fly.dev';
 export const GE_SPOT = { x: 3184, z: 3440, level: 0 };
 // The shop price rises as its stock falls (shop.rs2 adjusted_item_cost_buying), up to about 6 times the base. The plan
 // checks the margin at the base price, and the shop buys in chunks of CHUNK: an item stops when the real unit cost of
-// its last chunk no longer clears MIN_NET.
+// its last chunk does not clear MIN_NET.
 export const CHUNK = 50;
+// A tick that buys fewer than this, after the first, finds the shelf empty but for its restock (1 a tick for bait).
+// Buying that trickle ties the bot to one shop at about 1 unit a tick, so the lot ends and the run moves on; with
+// LOTS over several shops, each shelf refills while the bot serves the others.
+export const TRICKLE = 10;
+export const trickleOnly = (bought: number, probe: boolean, wait: number) => !probe && wait === 0 && bought > 0 && bought < TRICKLE;
 export const chunkTooDear = (spent: number, bought: number, bid: number, minNet: number) => bought > 0 && spent / bought > netPerUnit(bid) - minNet;
 
 export type Quote = { id: number; name: string; basePrice: number; bid: number | null; buyQuantity: number };
@@ -190,11 +195,13 @@ async function main() {
             for (let idle = 0; lot.bought < cap && !stop();) {
                 const b = await tickBuy(s, q, Math.min(probe ? 2 : CHUNK, cap - lot.bought), reserve, maxSpend - spent);
                 lot.bought += b.bought; lot.spent += b.spent; spent += b.spent;
+                const wasProbe = probe;
                 if (probe && b.bought > 0) {
                     probe = false;
                     if (s.sdk.getInventory().filter(i => i.id === q.id).length > 1) cap = Math.min(cap, lot.bought + Math.max(0, 26 - s.sdk.getInventory().length));
                 }
                 if (chunkTooDear(b.spent, b.bought, q.bid!, minNet)) { console.log(`DEAR ${q.name} at ${(b.spent / b.bought).toFixed(1)} a unit`); break; }
+                if (trickleOnly(b.bought, wasProbe, wait)) { console.log(`TRICKLE ${q.name}: ${b.bought} in a tick, the shelf is empty`); break; }
                 if (b.bought === 0) { if (++idle > wait) break; await waitTicks(s, 1); } else idle = 0;
             }
             console.log(`BOUGHT ${lot.bought} ${q.name} spent=${lot.spent} at ${key}${plan.units ? '' : ` (${plan.refusal})`}`);
