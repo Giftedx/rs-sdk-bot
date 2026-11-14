@@ -20,7 +20,7 @@ import { deathRecap, type DeathRecap } from './death-recap';
 import { flowView, trackFlow } from './flow';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerEntry } from './viewer';
 import {coordinationView} from './coordination';
-import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
+import {fleetSidesView,localDisplayNames,remoteBots,scoreboardView} from './fleet-view';
 import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
@@ -1033,7 +1033,8 @@ function buildState() {
     // File/proof reads can span a newer controller publication. Compare those
     // observations with the time after the reads, not the build's old start time.
     const now = Date.now();
-    const names = new Set([...liveAccounts(), ...st.keys(), ...accountJobs.map(j => j.account)]);
+    const snapshots=snapshotFiles(),side=process.env.FLEET_SIDE??'local';
+    const names = localDisplayNames([...liveAccounts(), ...st.keys(), ...accountJobs.map(j => j.account)],snapshots,ownerOfIn(FILES.fleet),side,now);
     const bots = [...names].map(name => {
         const s0 = st.get(name) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
         const live = roster.get(name.toLowerCase());
@@ -1099,7 +1100,7 @@ function buildState() {
     });
     // The other sides' accounts (Codex cloud, Claude cloud): snapshot items and levels, world-feed position, hiscore ranks.
     const local = new Set(bots.map(b => b.name.toLowerCase()));
-    for (const r of remoteBots(snapshotFiles(), local, roster, firstSeen, now, process.env.FLEET_SIDE ?? 'local'))
+    for (const r of remoteBots(snapshots, local, roster, firstSeen, now, side))
         (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: [...(ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), ...valueRanks(r.name)], spark: [], rateSkill: 'all skills' });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;

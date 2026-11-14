@@ -1,6 +1,6 @@
 // Shares fleet state between the two machines through git, on the fleet-data branch in its own worktree
 // (.practice/fleet-data), never in the code checkout: pulls the other side's orders, receipts and snapshot, writes
-// this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn, skill levels and completed quests of
+// this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn, skill observations and quest journals of
 // this side's listed accounts from .practice/status, never practice bots or credentials; an account with no local status,
 // or an older one, keeps its published row, so a fresh cloud container does not erase what the side last saw), this side's claim
 // (fleet/claims/<side>.json: the knight spots, pens and shops the enabled jobs of this side's plan hold, SWARM_PLAN or
@@ -27,7 +27,16 @@ import { terminalTradeReceipt, validOrder } from './fleet-trade-settlement';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
-const rows = (r: any[] | undefined) => (r ?? []).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
+const nonnegativeInteger = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
+const observationAt = (value: unknown, at: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0
+    && typeof at === 'number' && Number.isFinite(at) && value <= at ? value : null;
+// Empty and unknown containers have different meanings. Project only item fields;
+// worn slots are needed by the dashboard's weapon, staff and ammunition consumers.
+const rows = (raw: unknown, worn = false) => !Array.isArray(raw) || !raw.every(i => i && nonnegativeInteger(i.baseId ?? i.id)
+    && Number.isSafeInteger(i.count) && i.count > 0) ? null : raw.map(i => ({
+        id: i.baseId ?? i.id, ...(typeof i.name === 'string' ? { name: i.name } : {}), count: i.count,
+        ...(worn && nonnegativeInteger(i.slot) ? { slot: i.slot } : {}),
+    }));
 // `prior` is the side's published snapshot rows: a row stays when its account has no local status or a staler one.
 export function snapshot(statuses: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), prior: readonly any[] = []) {
     const mine = (s: any) => typeof s?.name === 'string' && owners.get(s.name.toLowerCase())?.side === side && owners.get(s.name.toLowerCase())?.server === String(s.server).toLowerCase();
@@ -35,12 +44,29 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
     for (const s of statuses.filter(mine)) {
         const kept = by.get(s.name.toLowerCase());
         if (kept && Number.isFinite(kept.at) && !(Number(s.at) >= kept.at)) continue;
+        const bank = rows(s.bank), equipment = rows(s.equipment, true), p = s.pos, qp = s.guildFacts?.varps?.qp;
+        const journal = Array.isArray(s.quests) && s.quests.length > 0
+            && s.quests.every((q: any) => q && nonnegativeInteger(q.id) && typeof q.name === 'string' && q.name.trim()
+                && ['not started', 'started', 'complete', 'unknown'].includes(q.state))
+            && new Set(s.quests.map((q: any) => q.id)).size === s.quests.length && s.quests.some((q: any) => q.state !== 'unknown')
+            ? s.quests.map((q: any) => ({ id: q.id, name: q.name, state: q.state })) : null;
         by.set(s.name.toLowerCase(), {
-            name: s.name, server: s.server, at: s.at, bank: rows(s.bank), inventory: rows(s.inventory), equipment: rows(s.equipment),
-            ...(Array.isArray(s.bank) && Number.isFinite(s.bankAt) && s.bankAt > 0 && s.bankAt <= s.at ? { bankAt: s.bankAt } : {}),
-            skills: (s.skills ?? []).map((k: any) => ({ name: k.name, level: k.level })),
+            name: s.name, server: s.server, at: s.at, bank, inventory: rows(s.inventory), equipment,
+            bankAt: bank ? observationAt(s.bankAt, s.at) : null,
+            ...(typeof s.equipmentObserved === 'boolean' ? { equipmentObserved: equipment !== null && s.equipmentObserved } : {}),
+            skills: (Array.isArray(s.skills) ? s.skills : []).filter((k: any) => k && typeof k.name === 'string'
+                && Number.isSafeInteger(k.level) && k.level > 0).map((k: any) => ({ name: k.name, level: k.level,
+                ...(nonnegativeInteger(k.currentLevel) ? { currentLevel: k.currentLevel } : {}),
+                ...(typeof k.xp === 'number' && Number.isFinite(k.xp) && k.xp >= 0 ? { xp: k.xp } : {}),
+            })),
+            ...(Number.isSafeInteger(s.combat) && s.combat > 0 ? { combat: s.combat } : {}),
+            ...(p && nonnegativeInteger(p.x) && nonnegativeInteger(p.z) && nonnegativeInteger(p.level) && p.level <= 3
+                ? { pos: { x: p.x, z: p.z, level: p.level } } : {}),
+            ...(nonnegativeInteger(qp) ? { guildFacts: { varps: { qp } } } : {}),
+            questJournal: journal, questsAt: journal ? observationAt(s.questsAt, s.at) : null,
             // No field when the journal was never read, so readers see unknown and not zero completed.
-            ...(Array.isArray(s.quests) && s.quests.some((q: any) => q.state !== 'unknown') ? { quests: s.quests.filter((q: any) => q.state === 'complete').map((q: any) => q.name) } : {}),
+            ...(Array.isArray(s.quests) && s.quests.some((q: any) => q && ['not started', 'started', 'complete'].includes(q.state))
+                ? { quests: s.quests.filter((q: any) => q?.state === 'complete' && typeof q.name === 'string').map((q: any) => q.name) } : {}),
         });
     }
     // Published rows keep their order and a replaced row its place; new accounts follow in status order.

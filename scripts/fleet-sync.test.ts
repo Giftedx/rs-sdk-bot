@@ -43,6 +43,67 @@ test('the snapshot keeps a published row for an account with no local status or 
     expect(next[1]!.bank).toEqual([{ id: 995, name: 'Coins', count: 7 }]);
 });
 
+test('a snapshot shares observed skill, gear and quest detail with original observation times and an explicit field list', () => {
+    const owners = new Map([['worker', { side: 'cloud', server: 'rs-sdk-demo.fly.dev' }]]) as any;
+    const quests = [
+        { id: 7333, name: "Cook's Assistant", state: 'complete', privateText: 'private-journal' },
+        { id: 7335, name: 'Rune Mysteries', state: 'started' },
+        { id: 7344, name: 'Sheep Shearer', state: 'unknown' },
+    ];
+    const [account] = snapshot([{
+        name: 'Worker', server: 'rs-sdk-demo.fly.dev', at: 1_000, bankAt: 100, questsAt: 800,
+        bank: [{ id: 996, baseId: 995, name: 'Coins', count: 50, password: 'private-item' }],
+        inventory: [], equipment: [{ id: 1387, name: 'Staff of fire', count: 1, slot: 3, secret: 'private-gear' }], equipmentObserved: true,
+        skills: [{ name: 'Magic', level: 60, currentLevel: 65, xp: 300_001, credential: 'private-skill' }],
+        combat: 80, pos: { x: 2618, z: 3333, level: 0, session: 'private-position' },
+        guildFacts: { varps: { qp: 35, secret: 'private-varp' }, privateSession: 'private-guild' }, quests,
+        password: 'private-password', env: { TOKEN: 'private-token' }, sessionAttemptId: 'private-session',
+    }], 'cloud', owners, 2_000).accounts;
+    expect(account).toEqual({
+        name: 'Worker', server: 'rs-sdk-demo.fly.dev', at: 1_000, bankAt: 100, questsAt: 800,
+        bank: [{ id: 995, name: 'Coins', count: 50 }], inventory: [],
+        equipment: [{ id: 1387, name: 'Staff of fire', count: 1, slot: 3 }], equipmentObserved: true,
+        skills: [{ name: 'Magic', level: 60, currentLevel: 65, xp: 300_001 }],
+        combat: 80, pos: { x: 2618, z: 3333, level: 0 }, guildFacts: { varps: { qp: 35 } },
+        quests: ["Cook's Assistant"], questJournal: quests.map(({ privateText: _private, ...q }) => q),
+    });
+    expect(JSON.stringify(account)).not.toContain('private-');
+});
+
+test('unknown containers and journals stay unknown while observed empty containers stay empty', () => {
+    const owners = new Map(['unknown', 'empty', 'invalid'].map(name => [name, { side: 'cloud', server: 's' }])) as any;
+    const accounts = snapshot([
+        { name: 'Unknown', server: 's', at: 100, bank: null, equipment: null, equipmentObserved: false, quests: null },
+        { name: 'Empty', server: 's', at: 100, bank: [], bankAt: 50, inventory: [], equipment: [], equipmentObserved: true },
+        { name: 'Invalid', server: 's', at: 100, bank: 'unavailable', bankAt: 50, inventory: [{ id: 995, count: 0 }], equipment: [{ id: -1, count: 1 }], equipmentObserved: true },
+    ], 'cloud', owners, 200).accounts;
+    expect(accounts.map(a => [a.bank, a.bankAt, a.inventory, a.equipment, a.equipmentObserved, a.questJournal, a.questsAt])).toEqual([
+        [null, null, null, null, false, null, null],
+        [[], 50, [], [], true, null, null],
+        [null, null, null, null, false, null, null],
+    ]);
+    expect(accounts.every(a => !('quests' in a))).toBe(true);
+});
+
+test('snapshots do not infer observation ages or optional actor facts from missing or invalid values', () => {
+    const owners = new Map([['worker', { side: 'cloud', server: 's' }]]) as any;
+    const quests = [{ id: 7333, name: "Cook's Assistant", state: 'complete' }];
+    const status = { name: 'Worker', server: 's', at: 1_000, bank: [], quests,
+        skills: [{ name: 'Magic', level: 60, currentLevel: -1, xp: '300001' }],
+        combat: NaN, pos: { x: 2618, z: 3333, level: 4 }, guildFacts: { varps: { qp: -1 } } };
+    for (const at of [undefined, null, 0, -1, 1_001, NaN, Infinity, '900']) {
+        const [account] = snapshot([{ ...status, bankAt: at, questsAt: at }], 'cloud', owners, 2_000).accounts;
+        expect(account.bankAt).toBeNull();
+        expect(account.questsAt).toBeNull();
+        expect(account.questJournal).toEqual(quests);
+        expect(account.skills).toEqual([{ name: 'Magic', level: 60 }]);
+        for (const key of ['combat', 'pos', 'guildFacts']) expect(account).not.toHaveProperty(key);
+    }
+    const [invalidJournal] = snapshot([{ ...status, quests: [quests[0], { ...quests[0] }] }], 'cloud', owners, 2_000).accounts;
+    expect(invalidJournal.questJournal).toBeNull();
+    expect(invalidJournal.questsAt).toBeNull();
+});
+
 test('an account is active for the claim when its snapshot row was written within CLAIM_MAX_AGE_MS', () => {
     const now = 10 * CLAIM_MAX_AGE_MS;
     const active = activeAccounts([{ name: 'Pocketpython', at: now - 60_000 }, { name: 'Billionaire', at: now - CLAIM_MAX_AGE_MS }, { name: 'Broken', at: 'x' }], now);

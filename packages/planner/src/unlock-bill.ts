@@ -39,8 +39,13 @@ export function holdings(statuses: readonly any[], idToName: Map<number, string>
 }
 
 export function questDone(status: any, quest: string): boolean {
-    const q = (status.quests ?? []).find((x: any) => String(x.name).toLowerCase() === quest.toLowerCase());
-    return q?.state === 'complete';
+    const name = quest.toLowerCase();
+    // A full journal keeps explicit unknown or incomplete flags authoritative
+    // over a legacy completed-name list retained beside it.
+    if (Array.isArray(status.questJournal)) return status.questJournal.some((q: any) => q?.state === 'complete'
+        && typeof q.name === 'string' && q.name.toLowerCase() === name);
+    return Array.isArray(status.quests) && status.quests.some((q: any) => typeof q === 'string' ? q.toLowerCase() === name
+        : q?.state === 'complete' && typeof q.name === 'string' && q.name.toLowerCase() === name);
 }
 
 // The best usable rung for one skill at `level`, the blockers for it, and the next rung above.

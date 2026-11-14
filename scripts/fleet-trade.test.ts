@@ -316,7 +316,7 @@ test('a snapshot holds only this side’s accounts and no credentials', () => {
     const snap = snapshot([{ name: 'Practicebot', server: 'localhost:8888' }, { name: 'Giver', server: 's', bank: [{ id: 379, name: 'Lobster', count: 9 }], password: 'x', skills: [{ name: 'Fishing', level: 99, xp: 1 }] }, { name: 'Taker', server: 's' }], 'local', owners, 7);
     expect(snap.accounts.map(a => a.name)).toEqual(['Giver']);
     expect(JSON.stringify(snap)).not.toContain('password');
-    expect(snap.accounts[0]!.skills).toEqual([{ name: 'Fishing', level: 99 }]);
+    expect(snap.accounts[0]!.skills).toEqual([{ name: 'Fishing', level: 99, xp: 1 }]);
 });
 
 test('a snapshot lists completed quests and leaves an unread journal unknown', () => {

@@ -29,6 +29,17 @@ test('live status projection keeps dated stock available to the planner',()=>{
  ]);
 });
 
+test('planner asset summaries expose shared holders without refreshing their bank observations',()=>{
+ const now=1_000_000;
+ const assets=planner.assetSummary([{name:'Remote',side:'cloud',server:'rs-sdk-demo.fly.dev',at:now,
+  bankAt:100,bank:[{id:995,count:2000}],inventory:[{id:565,count:50}]}],[],now);
+ expect(assets).toEqual([{account:'Remote',side:'cloud',at:null,statusAt:now,bankAt:100,
+  recent:{coins:0,stacks:['Blood rune 50']},verify:{coins:2000,stacks:[]}}]);
+ const prompt=plannerPrompt(initialState(),world);
+ expect(prompt).toContain('bestLive and progress count the fleet');
+ expect(prompt).toContain('request another side\'s supplies through fleet orders');
+});
+
 test('the live planner gets current route demand even when a legacy bill is present',()=>{
  const base=mkdtempSync(join(tmpdir(),'planner-current-demand-')),fleetDir=join(base,'snapshots');
  for(const dir of ['knowledge','research','.practice/coordinator','snapshots'])mkdirSync(join(base,dir),{recursive:true});

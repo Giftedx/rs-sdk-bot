@@ -19,3 +19,18 @@ test('a rung whose item cannot be obtained is not chosen; a quest gate is a bloc
     expect(r.best?.id).toBe('quest');
     expect(r.blockers[0]).toMatchObject({ kind: 'quest', name: 'Rune Mysteries Quest' });
 });
+
+test('a shared completed quest unlocks its rung through the full journal or legacy completed names', () => {
+    const quest = 'Rune Mysteries Quest', rungs = [rung('quest', 1, 5, { quest: { name: quest } })];
+    for (const status of [
+        { quests: [{ name: quest, state: 'complete' }] },
+        { quests: [quest.toLowerCase()] },
+        { quests: [], questJournal: [{ id: 7335, name: quest, state: 'complete' }] },
+    ]) {
+        expect(skillRow('A', status, 'runecraft', 1, rungs, [], own, () => []).blockers).toEqual([]);
+    }
+    for (const questJournal of [[], [{ id: 7335, name: quest, state: 'unknown' }], [{ id: 7335, name: quest, state: 'started' }]]) {
+        const row = skillRow('A', { quests: [quest], questJournal }, 'runecraft', 1, rungs, [], own, () => []);
+        expect(row.blockers).toEqual([{ kind: 'quest', name: quest, have: 0, sources: [] }]);
+    }
+});

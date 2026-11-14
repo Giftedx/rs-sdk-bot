@@ -48,27 +48,47 @@ export function fleetSidesView(snapshots:any[],orders:any[],now:number,receipts:
 }
 
 type Seen={x:number;z:number;level:number;combat:number;seen:number};
-// The other sides' accounts as fleet rows: bank, pack, worn items and levels from their snapshot (levels only: the
-// snapshot carries no XP), the position and combat level from the world feed, which sees every player on the server.
-// A row is fresh while the feed saw the account in the last 30 seconds; the snapshot itself is up to a sync period old.
+// A leftover local file, credential or assignment cannot hide an account's current owner's published live row.
+// Snapshots are canonical before this projection. Keep local candidates when the shared observation is unavailable.
+export function localDisplayNames(names:Iterable<string>,snapshots:any[],ownerOf:(name:string)=>string|undefined,mySide:string,now:number){
+ const shared=new Set<string>();
+ for(const s of snapshots){
+  if(typeof s?.side!=='string'||s.side===mySide||!Array.isArray(s.accounts))continue;
+  for(const a of s.accounts){
+   if(typeof a?.name!=='string'||a.name.toLowerCase()==='haggis'||a.practice||a.server!=='rs-sdk-demo.fly.dev'
+    ||!Number.isFinite(a.at)||a.at<=0||a.at>now)continue;
+   const owner=ownerOf(a.name);
+   if(owner&&owner!==mySide)shared.add(a.name.toLowerCase());
+  }
+ }
+ return new Set([...names].filter(name=>!shared.has(name.toLowerCase())));
+}
+// The other sides' accounts as fleet rows, preserving the observations and their own ages from the snapshot.
+// A row is fresh while the feed saw the account in the last 30 seconds; snapshot position never proves it is online.
 // An account that moved from one side to another is in two snapshots until the old side syncs again: the row is the
 // one with the newer account time, so the fleet has one row for each name.
 export function remoteBots(snapshots:any[],localNames:ReadonlySet<string>,roster:ReadonlyMap<string,Seen>,firstSeen:ReadonlyMap<string,number>,now:number,mySide='local'){
  const rows:any[]=[],place=new Map<string,number>(),time=(r:any)=>r.at??r.snapshotAt??0;
+ const dated=(at:any)=>Number.isFinite(at)&&at>0&&at<=now;
  for(const s of snapshots){
   if(!s||typeof s.side!=='string'||s.side===mySide||!Array.isArray(s.accounts))continue;
   for(const a of s.accounts){
    const name=String(a?.name??'');if(!/^[A-Za-z0-9]{1,12}$/.test(name)||localNames.has(name.toLowerCase()))continue;
-   const live=roster.get(name.toLowerCase()),inWorld=!!live&&now-live.seen<30_000;
-   const row:any={name,server:String(a.server??''),side:s.side,remote:true,at:Number.isFinite(a.at)?a.at:null,snapshotAt:Number.isFinite(s.at)?s.at:null,
+   const at=dated(a.at)?a.at:null,observedAt=(value:any)=>at!==null&&dated(value)&&value<=at?value:null;
+   const live=roster.get(name.toLowerCase()),inWorld=!!live&&dated(live.seen)&&now-live.seen<30_000;
+   const pos=a.pos&&[a.pos.x,a.pos.z,a.pos.level].every(Number.isSafeInteger)&&a.pos.level>=0&&a.pos.level<=3?a.pos:null;
+   const useFeed=!!live&&dated(live.seen)&&(inWorld||!pos||at===null||live.seen>=at);
+   const row:any={name,server:String(a.server??''),side:s.side,remote:true,at,snapshotAt:dated(s.at)?s.at:null,
     role:null,goal:null,currentGoal:'',
-    skills:Array.isArray(a.skills)?a.skills.map((k:any)=>({name:String(k.name),level:Number(k.level)||1,xp:null})):[],
-    inventory:Array.isArray(a.inventory)?a.inventory:null,equipment:Array.isArray(a.equipment)?a.equipment:null,bank:Array.isArray(a.bank)?a.bank:null,bankAt:Number.isFinite(a.at)?a.at:null,
-    pos:live?{x:live.x,z:live.z,level:live.level}:null,live:inWorld?live:null,combat:live?.combat??null,
+    skills:Array.isArray(a.skills)?a.skills.map((k:any)=>({name:String(k.name),level:Number(k.level)||1,xp:Number.isFinite(k.xp)&&k.xp>=0?k.xp:null,...(Number.isSafeInteger(k.currentLevel)&&k.currentLevel>=0?{currentLevel:k.currentLevel}:{})})):[],
+    inventory:Array.isArray(a.inventory)?a.inventory:null,equipment:Array.isArray(a.equipment)?a.equipment:null,bank:Array.isArray(a.bank)?a.bank:null,bankAt:Array.isArray(a.bank)?observedAt(a.bankAt):null,
+    equipmentObserved:Array.isArray(a.equipment)&&a.equipmentObserved===true,
+    quests:Array.isArray(a.questJournal)?a.questJournal:null,questsAt:observedAt(a.questsAt),guildFacts:a.guildFacts??null,
+    pos:useFeed?{x:live!.x,z:live!.z,level:live!.level}:pos,live:inWorld?live:null,combat:useFeed?live!.combat:Number.isSafeInteger(a.combat)&&a.combat>0?a.combat:null,
     fresh:inWorld,inWorld,operation:inWorld?'observed':'offline',practice:false,reserved:false,
     seenInFeed:firstSeen.has(name.toLowerCase()),lastSeen:live?.seen??null};
-   const at=place.get(name.toLowerCase());
-   if(at===undefined){place.set(name.toLowerCase(),rows.length);rows.push(row);}else if(time(row)>time(rows[at]))rows[at]=row;
+   const index=place.get(name.toLowerCase());
+   if(index===undefined){place.set(name.toLowerCase(),rows.length);rows.push(row);}else if(time(row)>time(rows[index]))rows[index]=row;
   }
  }
  return rows;
