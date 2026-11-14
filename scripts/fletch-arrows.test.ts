@@ -290,10 +290,11 @@ test('rune order with no tips names the missing input and withdraws nothing',asy
 
 test('wrong declared native XP rate stops after one paid batch without another input or cleanup',async()=>{const f=fixture({metal:'rune',headless:230,level:99});try{const r=await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,exact:{xpRate:1}},'rune');expect(r).toMatchObject({ok:false,actions:1,uncertain:true});expect(r.failure).toContain('exact XP');expect(f.count(892)).toBe(15);}finally{f.stop();}});
 
-// Shaftmaker started the headless job at the Ardougne knights (2672,3320): the nearest bank stand is Ardougne south.
+// A start at the Ardougne knights (2672,3320): the nearest bank stand is Ardougne south, inside the walk limit.
 test('the headless job walks from a start away from a bank to the nearest bank stand on its floor', () => {
-    expect(nearestBankStand({ worldX: 2672, worldZ: 3320, level: 0 })).toEqual({ x: 2655, z: 3283, level: 0 });
-    expect(37).toBeLessThanOrEqual(BANK_WALK_LIMIT);
+    const knights = { worldX: 2672, worldZ: 3320, level: 0 }, bank = nearestBankStand(knights)!;
+    expect(bank).toEqual({ x: 2655, z: 3283, level: 0 });
+    expect(Math.max(Math.abs(bank.x - knights.worldX), Math.abs(bank.z - knights.worldZ))).toBeLessThanOrEqual(BANK_WALK_LIMIT);
     const banks = [{ x: 10, z: 10, level: 1 }, { x: 50, z: 50, level: 0 }];
     expect(nearestBankStand({ worldX: 11, worldZ: 11, level: 0 }, banks)).toEqual({ x: 50, z: 50, level: 0 });
     expect(nearestBankStand({ worldX: 11, worldZ: 11, level: 2 }, banks)).toBeUndefined();
