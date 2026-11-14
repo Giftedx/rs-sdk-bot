@@ -11,7 +11,7 @@
 //   TARGETS=goondelf,ligma,sugma  POST=3067,3640  MAX_MINUTES=30  MAX_KILLS=0 (no limit)  SQUAD_PROFILE=gang-hunter
 //   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null}
 //   PICKUP=1  TRIPS=10 (bank trips an account may make)  ALLOW_SINGLE=1 (a single-way post)
-//   FOLLOW=1 (move the post to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30)
+//   FOLLOW=1 (move the post to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30, GATHER=10)
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
@@ -176,15 +176,29 @@ if (import.meta.main) {
         // Bench: the practice engine serves no world feed, so the bench gang's own tiles fill the radar as roster frames.
         if (gang.length) squad[0]!.onTick(() => radar.accept({ t: 'roster', k: squad[0]!.tick(), p: gang.flatMap((g, i) => { const q = g.sdk.getState()?.player; return q ? [[i, g.name, q.worldX, q.worldZ, 0, q.combatLevel] as [number, string, number, number, number, number]] : []; }) }));
         else closeRadar = connectRadar(accountServer(squad[0]!.name), radar);
-        let unseen = 0;
+        let unseen = 0, goal: { x: number; z: number } | null = null;
+        const gather = Number(get('GATHER', '10'));
         squad[0]!.onTick(() => {
+            // Gathered: every account within 3 tiles of the staging tile, so the post goes on to the meeting tile.
+            if (goal && (post.x !== goal.x || post.z !== goal.z) && squad.every(q => { const p = q.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - post.x), Math.abs(p.worldZ - post.z)) <= 3; })) {
+                log(`SQUAD gathered at ${post.x},${post.z}: in to ${goal.x},${goal.z}`); post.x = goal.x; post.z = goal.z;
+            }
             const seen = squad.some(s => (s.sdk.getState()?.nearbyPlayers ?? []).some(q => targets.has(q.name.toLowerCase())));
             unseen = seen ? 0 : unseen + 1;
             if (process.env.FOLLOW_TRACE === '1' && squad[0]!.tick() % 100 === 0) log(`SQUAD follow trace unseen=${unseen} fresh=${radar.fresh()} tracks=${radar.tracks.size} targets=${[...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase())).map(t => `${t.name} ${t.x},${t.z}`).join(' ')}`);
             if (unseen < wait || !radar.fresh() || squad[0]!.tick() % 10 !== 0) return;
             const where = [...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase()) && wildernessLevel(t.z) > 0);
             const tile = meetTile(where, maxWild);
-            if (tile && Math.max(Math.abs(tile.x - post.x), Math.abs(tile.z - post.z)) > 4) { log(`SQUAD post moves to ${tile.x},${tile.z} (targets at ${where.map(t => `${t.name} ${t.x},${t.z}`).join(' ')})`); post.x = tile.x; post.z = tile.z; }
+            if (!tile || Math.max(Math.abs(tile.x - post.x), Math.abs(tile.z - post.z)) <= 4 || (goal && goal.x === tile.x && goal.z === tile.z)) return;
+            // Gather first: a staging tile `GATHER` tiles (default 10) short of the meeting tile on the squad's side, so
+            // the accounts go in together; one that arrives alone takes the gang on its own.
+            const mine = squad.map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q);
+            const mx = mine.reduce((n, q) => n + q.worldX, 0) / Math.max(1, mine.length), mz = mine.reduce((n, q) => n + q.worldZ, 0) / Math.max(1, mine.length);
+            const span = Math.max(Math.abs(mx - tile.x), Math.abs(mz - tile.z)), back = Math.min(gather, span);
+            goal = tile;
+            const stage = span > 0 ? { x: Math.round(tile.x + (mx - tile.x) * back / span), z: Math.round(tile.z + (mz - tile.z) * back / span) } : tile;
+            log(`SQUAD post moves to ${stage.x},${stage.z}, then ${tile.x},${tile.z} (targets at ${where.map(t => `${t.name} ${t.x},${t.z}`).join(' ')})`);
+            post.x = stage.x; post.z = stage.z;
         });
     }
     // Our accounts walk to the post first.

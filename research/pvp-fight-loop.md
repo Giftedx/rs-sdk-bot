@@ -1221,8 +1221,10 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   moves the squad's post, once no target has been in view for 30 ticks, to the nearest multi-way tile within 24 tiles
   of the targets that the world feed shows, at Wilderness level `MAX_WILD` or less (`meetTile`, the feed through
   scripts/pk-roam.ts `Radar`). On the bench, which serves no world feed, the bench gang's own tiles fill the radar.
-  Four of ours starting at (3150, 3560), 110 tiles away: the post moved to (3071, 3640) in each run, and 11 of 12 gang
-  accounts died with no death of ours, about 74 HP a kill (`extra:squad-4-gang-follow-x1`, seeds 1 to 4).
+  Four of ours starting at (3150, 3560), 110 tiles away (`extra:squad-4-gang-follow-x1`, seeds 1 to 4): 11 of 12 gang
+  accounts died with no death of ours. Going straight in, the accounts came one at a time and lost about 81 HP a
+  kill; gathering first on a tile `GATHER` (default 10) tiles short of the meeting tile and going in together when
+  every account stands within 3 tiles of it, about 48 HP a kill.
 - **The freeze matters most to a small squad.** Three of ours in rune chainbody (the kit of the first live pilot)
   in the multi-way zone, seeds 1 to 8: with no freeze runes 25 kills of 48 and 7 of 16 groups, 74 HP a kill
   (`extra:team-3v3-gang-chain-west-x2`); with Bind runes 44 kills and 14 groups, 64 HP a kill
