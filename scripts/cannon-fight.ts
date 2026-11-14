@@ -30,7 +30,8 @@ import { PRAYER_NAMES, type PrayerName } from '../vendor/rs-sdk/sdk/types';
 import { walkTarget } from './walk-to';
 
 export type Tile = { x: number; z: number; level: number };
-export type CannonSpot = { label: string; centre: Tile; target: string; prayer: PrayerName | 'none'; near: number };
+// `clear`: a tile out of the spot's NPC range for the walk before logout, where hunters attack any player in reach.
+export type CannonSpot = { label: string; centre: Tile; target: string; prayer: PrayerName | 'none'; near: number; clear?: Tile };
 
 // Each centre has a free 3x3 for set-up; set-up tries a spiral up to 6 tiles out when it is blocked.
 export const CANNON_SPOTS: Readonly<Record<string, CannonSpot>> = {
@@ -39,7 +40,9 @@ export const CANNON_SPOTS: Readonly<Record<string, CannonSpot>> = {
     // stab attacks, wanderrange 10, respawnrate 60, huntmode cowardly, huntrange 1 (_unpack/225/all.npc:3476-3498);
     // cowardly attacks any player in the Wilderness (all.hunt:37-45). Spawn density puts 7.8 of the 8 cannon directions
     // over a spider within 3 tiles of this centre (.practice/cannon-spiders/placement.ts).
-    spiders: { label: 'Wilderness poison spiders', centre: { x: 3287, z: 3810, level: 0 }, target: '^poison spider$', prayer: 'protect_from_melee', near: 10 },
+    // The walk before logout leaves the map square to the south (z < 3776, beyond the wander range 10): a walk that stays
+    // in the square stays in reach of spiders that attack any player in the Wilderness, and the logout waits on combat.
+    spiders: { label: 'Wilderness poison spiders', centre: { x: 3287, z: 3810, level: 0 }, target: '^poison spider$', prayer: 'protect_from_melee', near: 10, clear: { x: 3287, z: 3755, level: 0 } },
     // Gnome battlefield, multiway (maps/multiway.csv "gnome battlefield"), 23 khazard_troop and 16 khazard_troop_spearmen
     // (maps/m39_50.jm2); research/combat-measure.md section 6.
     battlefield: { label: 'Gnome battlefield troopers', centre: { x: 2525, z: 3242, level: 0 }, target: '^khazard trooper$', prayer: 'none', near: 10 },
@@ -468,9 +471,13 @@ export async function runCannonFight(s: Session, o: CannonFightOptions) {
         picked = await pickupCannon(s, cannon);
     }
     if (!ended) {
-        // A player hit in the last 10 s cannot log out: walk 18 tiles out and wait for 17 ticks with no hit.
+        // A player hit in the last 10 s cannot log out: walk out (to the spot's clear tile, with the prayer still on, or
+        // 18 tiles) and wait for 17 ticks with no hit.
         const from = { x: me().worldX, z: me().worldZ };
-        if (!dead || reclaimed.startsWith('picked')) for (const [dx, dz] of [[18, 0], [-18, 0], [0, 18], [0, -18], [12, 12], [-12, -12]]) if ((await s.bot.walkTo(from.x + dx!, from.z + dz!, 2)).success) break;
+        if (!dead || reclaimed.startsWith('picked')) {
+            if (o.spot.clear) await walk(o.spot.clear);
+            else for (const [dx, dz] of [[18, 0], [-18, 0], [0, 18], [0, -18], [12, 12], [-12, -12]]) if ((await s.bot.walkTo(from.x + dx!, from.z + dz!, 2)).success) break;
+        }
         clear = await waitUntil(s, () => { const lt = me().combat?.lastDamageTick ?? -1; return lt < 0 || s.tick() - lt >= 17; }, { timeoutTicks: 60 });
         if (prayerOn()) await s.direct({ type: 'togglePrayer', prayerIndex, reason: 'prayer off' });
     }

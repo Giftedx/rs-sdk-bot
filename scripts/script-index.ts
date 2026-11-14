@@ -55,6 +55,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/pray-at-altar.ts': 'fleet control: restores prayer points at an altar before a walk onto melee hunter ground; started by hand for one account',
  'scripts/pk-live/walk-edge.ts': 'hand tool: walks one account to Edgeville bank with a long route budget',
  'scripts/pk-sim.ts': 'offline fight simulator; it starts no game work',
+ 'scripts/pray-at-altar.ts': 'hand tool: restores a drained account\'s prayer points at a prayer altar before a walk onto melee-hunter ground',
  'scripts/preparation-report.ts': 'report: owned gear and supplies against the inputs of the workers',
  'scripts/preparation-route-state.ts': 'helper of scripts/preparation-report.ts',
  'scripts/provision-readiness.ts': 'fleet control: checks the crew of an account provision',
