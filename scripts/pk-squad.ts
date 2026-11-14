@@ -203,6 +203,27 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     return stats;
 }
 
+// An account in the Wilderness at the end eats up and walks to the Edgeville bank. `died`: it died on the way (a new
+// life, or at the Lumbridge spawn), which the hold's stats did not see; `why`: why a living account is not out.
+export async function leaveWilderness(s: Session, diedBefore: boolean): Promise<{ died: boolean; why: string | null }> {
+    const me = () => s.sdk.getState()?.player;
+    const p = me();
+    if (!p || diedBefore || wildernessLevel(p.worldZ) === 0) return { died: false, why: null };
+    const life0 = p.lifeId;
+    const died = () => { const q = me(); return !!q && ((life0 !== undefined && q.lifeId !== life0) || Math.max(Math.abs(q.worldX - 3222), Math.abs(q.worldZ - 3218)) <= 40); };
+    for (let i = 0; i < 12 && !died(); i++) {
+        const q = me(), food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
+        const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+        if (!q || !food || !op || q.hp >= q.maxHp - 20) break;
+        await s.sdk.sendUseItem(food.slot, op.opIndex);
+        for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
+    }
+    const r = died() ? null : await walkPath(await sessionWalker(s), [{ ...EDGEVILLE_BANK, tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: died });
+    if (died()) return { died: true, why: 'died walking out of the Wilderness' };
+    const q = me();
+    return { died: false, why: q && wildernessLevel(q.worldZ) === 0 ? null : `still in the Wilderness at the end: ${r?.detail ?? 'walk stopped'}` };
+}
+
 if (import.meta.main) {
     const env = process.env, args = process.argv.slice(2);
     const kv = Object.fromEntries(args.filter(a => /^[A-Z_]+=/.test(a)).map(a => [a.slice(0, a.indexOf('=')), a.slice(a.indexOf('=') + 1)]));
@@ -321,6 +342,11 @@ if (import.meta.main) {
         stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); } })));
     await Promise.all(gangRuns);
     closeRadar?.();
+    // Live: no account logs out in the Wilderness. The deadline or a stop can end an account's hold mid-fight with
+    // its food gone, and a later login on that tile met a PKer: live, KnightRider logged out at the post with 4 HP and
+    // died 31 ticks into its next session, skulled, with its whole kit.
+    // A dropped account has no session to walk; the rescue below logs it in again.
+    if (!gang.length) await Promise.all(squad.map(async (s, i) => { if (dropped.has(s.name)) return; const out = await leaveWilderness(s, results[i]!.died); if (out.died) results[i]!.died = true; if (out.why) log(`[${s.name}] SQUAD ${out.why}`); }));
     for (const r of results) console.log(`SQUAD ${JSON.stringify(r)}`);
     const picked: Record<string, number> = {};
     for (const r of results) for (const [id, n] of Object.entries(r.picked)) picked[id] = (picked[id] ?? 0) + n;

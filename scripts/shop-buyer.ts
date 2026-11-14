@@ -244,6 +244,20 @@ export const PROFILES: Record<string, {
             outBank: { x: 3269, z: 3167 }, // Al Kharid Bank
         },
     },
+    // Scavvo's rune shop upstairs in the Champions' Guild (champions_guild.inv runiteshop, shared): rune plateskirt,
+    // platelegs and chainbody, 1 each. Scavvo spawns at 3191,3351 on level 1 (maps/m49_52.jm2). The guild door needs
+    // 32 quest points (champions_guild.rs2). The platelegs of a PK kit for an account with no Dragon Slayer: the Grand
+    // Exchange had no seller.
+    scavvo: {
+        npc: /^scavvo$/i,
+        npcSpot: { x: 3191, z: 3351, level: 1 },
+        bankSpot: { x: 3185, z: 3436 }, // Varrock West Bank
+        items: [
+            { re: /^rune platelegs$/i, buyPerTick: 1 },
+            { re: /^rune chainbody$/i, buyPerTick: 1 },
+            { re: /^rune plateskirt$/i, buyPerTick: 1 },
+        ],
+    },
     thessalia: {
         // NPC548, Trade3 -> clotheshop; leather_gloves1059 stock10.
         npc: /^thessalia$/i,

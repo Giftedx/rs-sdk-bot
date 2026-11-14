@@ -1258,6 +1258,24 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   (`extra:team-3v3-gang-chain-west-x2`); with Bind runes 44 kills and 14 groups, 64 HP a kill
   (`-chainbind-`); four with no freeze runes 37 kills and 11 groups, 35 HP a kill (`extra:team-4v3-gang-chain-west-x2`).
   No death in any. A gang account that walks out at low HP gets away unless a freeze holds it or more of ours hit it.
+- **The first live pilot.** One 10-minute pilot of four combat-126 accounts (side `claude-cloud`), kit short of the bench: rune chainbody
+  for want of Dragon Slayer, no antipoison (none on the Grand Exchange; `junglestore` only), few or no water runes
+  (Aubury's shelf empty), bronze arrows on two accounts. Result: 4 kills (Sugma twice, Goondelf, Ligma), no death in
+  the run, 995 HP lost, about 250 HP a kill against the bench's 35. The world feed shows 4 gang deaths, as many as the
+  kill messages. The gang met the squad on its walk in, at about (3072, 3610), and each gang account took one of ours,
+  so most kills were one-on-one fights of 114 to 386 ticks. No kill dropped a dragon dagger(p): the pickups were 40
+  bronze arrows. A deadline that logs an account out where it stands loses it: KnightRider, logged out at the post
+  with 4 HP, died skulled, with its whole kit, 31 ticks into its next login. So the script walks each live account to
+  the Edgeville bank before logout (`leaveWilderness`).
+  A second pilot, the same four with 50 water runes each (Bind), `FOLLOW=1`, stopped by hand at 11 minutes: 6 kills
+  (each gang account twice), 6 gang deaths in the feed, 1,562 HP lost, about 260 HP a kill. `FOLLOW` moved the post
+  twice to the gang, to (3192, 3679) and to (3136, 3583). KnightRider, with no leg armour (every rune, adamant and
+  mithril leg piece was gone from the shops and the Grand Exchange), died at Wilderness 8 with Ligma and Sugma both
+  on it. It clicked Camelot Teleport at 17, 14 and 8 HP with no law runes, since the kit it was given carried none
+  (the bench kits carry 2 law and 10 air runes). So the fight loop counts the escape spell only when
+  `escapeCastable` (scripts/teleport-runes.ts) says its runes, staff and level allow a cast, and otherwise runs
+  south. The three others walked out at the stop and logged out at the bank. Gap: two pilots; the gang still splits
+  one-on-one, so HP a kill stays near 7 times the bench's.
 
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
 regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
