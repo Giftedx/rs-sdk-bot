@@ -1,9 +1,13 @@
 import { test, expect } from 'bun:test';
-import { buildItemSources, defaultMarket, readMarket, readOwned, shopUnitPrice, type DropSource, type GatherSource, type MakeSource, type ShopSource } from '../src/item-sources';
+import { buildItemSources, defaultMarket, readMarket, readOwned, shopUnitPrice, sourceTiles, type DropSource, type GatherSource, type MakeSource, type PickupSource, type ShopSource, type Tile } from '../src/item-sources';
 import { lines } from '../src/skill-tools';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { parseJm2 } from '../src/jm2';
+import { parsePack } from '../src/pack';
+import { contentRoot, knowledgeDir } from '../src/paths';
+import { itemSources as mapItemSources } from '../../dashboard/gen-map-data';
 
 const rows = buildItemSources();
 const row = (item: string) => rows.find(r => r.item === item)!;
@@ -52,6 +56,49 @@ test('copper ore: mined from copper rocks with any pickaxe; respawn and rate fro
     expect(s.cost.ticksNote).toContain('scripts/generated/copper5.ts');
     expect(s.cost.ticksNote).toContain('bronze pickaxe, rocks deplete after one ore');
     expect(s.cost.coinsPerUnit).toBe(0);
+});
+
+test('source tiles retain distant locations and distinct planes while collapsing overlapping spawn pins', () => {
+    expect(sourceTiles([{ x: 10, z: 20, level: 0 }, { x: 10, z: 21, level: 0 }, { x: 11, z: 20, level: 0 },
+        { x: 3200, z: 3200, level: 0 }, { x: 10, z: 20, level: 0 }, { x: 10, z: 20, level: 1 }])).toEqual([
+        { x: 10, z: 20, level: 0 }, { x: 10, z: 21, level: 0 }, { x: 11, z: 20, level: 0 },
+        { x: 3200, z: 3200, level: 0 }, { x: 10, z: 20, level: 1 },
+    ]);
+});
+
+test('NPC sources retain every catalogue spawn location', () => {
+    const giant = (JSON.parse(readFileSync(join(knowledgeDir(), 'npcs.json'), 'utf8')) as { debugname: string; spawns: Tile[] }[])
+        .find(n => n.debugname === 'giant')!;
+    const source = row('big_bones').sources.find((s): s is DropSource => s.kind === 'drop' && s.npc === 'giant')!;
+    const place = source.places.find(p => p.npc === 'giant')!;
+    const expected = [...new Map(giant.spawns.map(({ x, z, level }) => [`${x},${z},${level}`, { x, z, level }])).values()];
+    expect(place.spawns).toBe(giant.spawns.length);
+    expect(place.tiles).toEqual(expected);
+    expect(place.tiles).toContainEqual({ x: 3042, z: 10317, level: 0 });
+    expect(place.tiles.length).toBeGreaterThan(3);
+});
+
+test('loc and floor sources forward complete pinned-map locations to map-source consumers', () => {
+    const locPack = parsePack(readFileSync(join(contentRoot(), 'pack/loc.pack'), 'utf8'));
+    const locs: Tile[] = [], bones: Tile[] = [];
+    for (const file of readdirSync(join(contentRoot(), 'maps')).filter(f => f.endsWith('.jm2')).sort()) {
+        const map = parseJm2(file, readFileSync(join(contentRoot(), 'maps', file), 'utf8'));
+        for (const spawn of map.locs) if (locPack.get(spawn.id) === 'copperrock1') locs.push(spawn);
+        for (const spawn of map.objs) if (spawn.id === 526) bones.push(spawn);
+    }
+    const unique = (tiles: Tile[]) => [...new Map(tiles.map(({ x, z, level }) => [`${x},${z},${level}`, { x, z, level }])).values()];
+    const copper = row('copper_ore').sources.find((s): s is GatherSource => s.kind === 'gather')!;
+    const rock = copper.places.find(p => p.loc === 'copperrock1')!;
+    const pickup = row('bones').sources.find((s): s is PickupSource => s.kind === 'pickup')!;
+    expect(rock.spawns).toBe(locs.length); expect(rock.tiles).toEqual(unique(locs));
+    expect(pickup.spawns).toBe(bones.length); expect(pickup.tiles).toEqual(unique(bones));
+    expect(rock.tiles.length).toBeGreaterThan(3); expect(pickup.tiles.length).toBeGreaterThan(3);
+    const mapped = mapItemSources([row('copper_ore'), row('bones')], { item: s => s, npc: s => s });
+    const mappedBones = mapped['526']!.find(s => s[0] === 'pickup')![2];
+    expect(mappedBones).toEqual(pickup.tiles.flatMap(t => [t.x, t.z, t.level]));
+    const mappedCopper = mapped['436']!.find(s => s[0] === 'gather')![2];
+    const fourth = rock.tiles[3]!;
+    expect(mappedCopper.some((x, i) => i % 3 === 0 && x === fourth.x && mappedCopper[i + 1] === fourth.z && mappedCopper[i + 2] === fourth.level)).toBe(true);
 });
 
 function fixture(run: (dir: string, write: (path: string, value: unknown) => void) => void) {

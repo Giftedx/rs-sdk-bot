@@ -1,6 +1,6 @@
 // What each live account needs to train every skill with the best method its level allows, and where to get it.
-// For each account and skill: the best usable rung of knowledge/ladders.json (highest known XP per tick, else XP
-// per action, else unlock level: an estimate where no rate is measured), what blocks it now (a quest not done, a
+// For each account and skill: the usable rung of knowledge/ladders.json with the highest estimated score
+// (base XP per action + unlock level / 1000), what blocks it now (a quest not done, a
 // required item, a tool tier from knowledge/skill-tools.json, consumed inputs), and the next rung up. Each missing
 // item names its sources: the account's own bank, another owned account, a shop, the GE. A rung counts only when
 // every item it uses is obtainable: held by an owned account, sold by a shop, offered on the GE, or made by another
@@ -12,18 +12,41 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { liveHelperStatuses } from './supply-bill';
 import { MARKET_FILE, marketQuotes } from '../../../scripts/market-cache';
+import type { Rate } from '../../knowledge/src/ladders';
 
 const root = resolve(import.meta.dir, '../../..');
 export type Rung = { id: string; skill: string; level: number; label: string; kind: string; xpPerAction: number | null; xpPerTick: number | null;
+    measuredRate?: Rate;
     inputs: { id: number; debugname: string; name: string; count: number | null }[]; requires: { id: number; debugname: string; name: string }[];
     quest: { name: string } | null; worker: string | null; workers?: string[] };
 export type Tool = { skill: string; kind?: string; rung?: string; items: string[]; level: number; mode?: string; rank?: number };
 export type Blocker = { kind: 'quest' | 'item' | 'tool' | 'input'; name: string; item?: string; have: number; sources: string[] };
-export type SkillRow = { account: string; skill: string; level: number; best: { id: string; label: string; level: number; worker: boolean } | null;
-    blockers: Blocker[]; next: { id: string; label: string; level: number } | null };
+export type MethodSummary = Pick<Rung, 'id' | 'label' | 'level' | 'xpPerAction' | 'xpPerTick'> & { measuredRate?: Rate };
+export type SkillRow = { account: string; skill: string; level: number; rankingBasis: string; best: (MethodSummary & { worker: boolean }) | null;
+    blockers: Blocker[]; next: MethodSummary | null };
 
-// Rank estimate: XP per action, then unlock level. Only 6 rungs have a measured XP per tick, too few to rank by.
+// Measurements cover different tools, levels and resupply conditions; do not mix XP/tick with base XP/action.
 const score = (r: Rung) => (r.xpPerAction ?? 0) + r.level / 1000;
+const RANKING_BASIS = 'base XP/action + unlock level / 1000 (estimate)';
+const rateText = (value: string) => value.length > 1000 ? value.slice(0, 1000) + '…' : value;
+function methodSummary(r: Rung): MethodSummary {
+    const m = r.measuredRate;
+    const measured = m && typeof m.method === 'string' && m.method.trim() && m.method.length <= 128
+        && typeof m.skill === 'string' && m.skill.length <= 64 && m.skill.toLowerCase() === r.skill.toLowerCase()
+        && Number.isSafeInteger(m.level) && m.level >= r.level && m.level <= 99
+        && typeof m.xpPerTick === 'number' && Number.isFinite(m.xpPerTick) && m.xpPerTick > 0 && m.xpPerTick === r.xpPerTick
+        && (m.source === undefined || m.source === 'measured') && typeof m.evidence === 'string' && m.evidence.trim() ? {
+            method: m.method, skill: m.skill, level: m.level, xpPerTick: m.xpPerTick, evidence: rateText(m.evidence),
+            ...(Number.isSafeInteger(m.runs) && m.runs! > 0 ? { runs: m.runs } : {}),
+            ...(Number.isSafeInteger(m.tickMs) && m.tickMs! > 0 ? { tickMs: m.tickMs } : {}),
+            ...(m.source === 'measured' ? { source: 'measured' as const } : {}),
+            ...(typeof m.note === 'string' && m.note.trim() ? { note: rateText(m.note) } : {}),
+        } : undefined;
+    return { id: r.id, label: r.label, level: r.level,
+        xpPerAction: typeof r.xpPerAction === 'number' && Number.isFinite(r.xpPerAction) && r.xpPerAction >= 0 ? r.xpPerAction : null,
+        xpPerTick: typeof r.xpPerTick === 'number' && Number.isFinite(r.xpPerTick) && r.xpPerTick > 0 ? r.xpPerTick : null,
+        ...(measured ? { measuredRate: measured } : {}) };
+}
 
 // Holdings by item debugname for one account (pack, worn and last seen bank) and for every other owned account.
 export function holdings(statuses: readonly any[], idToName: Map<number, string>) {
@@ -74,9 +97,9 @@ export function skillRow(account: string, status: any, skill: string, level: num
         for (const i of best.inputs) { const have = mine.get(i.debugname) ?? 0; if (have < 1) blockers.push({ kind: 'input', name: i.name, item: i.debugname, have, sources: sources(i.debugname) }); }
     }
     const next = rungs.filter(r => r.level > level).sort((a, b) => a.level - b.level || score(b) - score(a))[0] ?? null;
-    return { account, skill, level,
-        best: best && { id: best.id, label: best.label, level: best.level, worker: !!(best.worker || best.workers?.length) },
-        blockers, next: next && { id: next.id, label: next.label, level: next.level } };
+    return { account, skill, level, rankingBasis: RANKING_BASIS,
+        best: best && { ...methodSummary(best), worker: !!(best.worker || best.workers?.length) },
+        blockers, next: next && methodSummary(next) };
 }
 
 // Missing items across accounts, most-needed first: an item one account lacks and another holds is a transfer.

@@ -46,6 +46,9 @@ export interface Cost {
     realSecondsPerUnit: number | null; realBasis: Basis; realNote: string;
 }
 export interface Tile { x: number; z: number; level: number }
+// Map pins and nearest-place suggestions need every location, with one pin per tile even when spawns overlap.
+export const sourceTiles = (spawns: readonly Tile[]): Tile[] => [...new Map(spawns.map(({ x, z, level }) =>
+    [`${x},${z},${level}`, { x, z, level }])).values()];
 export interface Place { npc?: string; loc?: string; spawns: number; tiles: Tile[]; src: string | null; wilderness: boolean }
 interface Base { kind: string; src: string; blocked: string | null; gate: string | null; cost: Cost }
 export interface GatherSource extends Base { kind: 'gather'; rung: string; skill: string; level: number; tools: string[][]; bait: string[]; places: Place[]; yieldPerAction: number | null; respawnTicks: number | null; respawnSrc: string | null; successChance: { low: number; high: number; src: string } | null }
@@ -227,7 +230,7 @@ export function buildItemSources(opts: Options = {}) {
     const npcPlace = (name: string): Place => {
         const n = npcByName.get(name);
         const sp = n?.spawns ?? [];
-        return { npc: name, spawns: sp.length, tiles: sp.slice(0, 3).map(({ x, z, level }) => ({ x, z, level })), src: sp[0]?.src ?? n?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
+        return { npc: name, spawns: sp.length, tiles: sourceTiles(sp), src: sp[0]?.src ?? n?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
     };
     const npcsFor = (name: string) => name.startsWith('_') ? (npcsInCategory.get(name.slice(1)) ?? []) : (npcsInCategory.get(name)?.length && !npcByName.has(name) ? npcsInCategory.get(name)! : [name]);
 
@@ -392,7 +395,7 @@ export function buildItemSources(opts: Options = {}) {
     }
     const locPlace = (name: string): Place => {
         const sp = locSpawns.get(name) ?? [];
-        return { loc: name, spawns: sp.length, tiles: sp.slice(0, 3).map(({ x, z, level }) => ({ x, z, level })), src: sp[0]?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
+        return { loc: name, spawns: sp.length, tiles: sourceTiles(sp), src: sp[0]?.src ?? null, wilderness: sp.length > 0 && sp.every(inWilderness) };
     };
 
     // Shared drop procs (drop tables/scripts/shared_droptables.rs2): cumulative `$random < T` branches over random(N),
@@ -547,7 +550,7 @@ export function buildItemSources(opts: Options = {}) {
         // ground spawns
         const os = objSpawns.get(item) ?? [];
         if (os.length) sources.push({
-            kind: 'pickup', spawns: os.length, countPerSpawn: os[0]!.count, tiles: os.slice(0, 3).map(({ x, z, level }) => ({ x, z, level })), wilderness: os.every(inWilderness), src: os[0]!.src, gate: null, blocked: null,
+            kind: 'pickup', spawns: os.length, countPerSpawn: os[0]!.count, tiles: sourceTiles(os), wilderness: os.every(inWilderness), src: os[0]!.src, gate: null, blocked: null,
             cost: cost({ ticksNote: 'walk and take; respawn time is the engine default and is not read here', coinsPerUnit: 0, coinsBasis: 'content', coinsNote: 'no coins spent', risk: os.every(inWilderness) ? null : 0, riskBasis: os.every(inWilderness) ? 'model' : 'content', riskNote: os.every(inWilderness) ? 'every spawn is in the Wilderness' : 'no combat at the spawn' }),
         });
         // shops

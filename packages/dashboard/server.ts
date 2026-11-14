@@ -14,7 +14,7 @@ import { cpus, freemem, totalmem } from 'node:os';
 import { createHash } from 'node:crypto';
 import { accountJobRows, collectionState, operationState, isLoopback, effectiveJob, productionGoal, boundedOperation, capacityState, hostStopNativeProof, productionReview, type NativeProof } from './collection';
 import {requestEvidence,gateView} from './evidence';
-import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
+import {goalPlan,goalProgress,questPointObservation,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { GEAR_TARGETS } from './goal-details';
 import { deathRecap, type DeathRecap } from './death-recap';
 import { flowView, trackFlow } from './flow';
@@ -1108,6 +1108,7 @@ function buildState() {
     const local = new Set(bots.map(b => b.name.toLowerCase()));
     for (const r of remoteBots(snapshots, local, roster, firstSeen, now, side, fleetList(join(FILES.fleet, 'plans')), ownerOf))
         (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: [...(ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), ...valueRanks(r.name)], spark: [], rateSkill: 'all skills' });
+    for (const bot of bots as any[]) bot.questPoints=questPointObservation(bot,now);
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));

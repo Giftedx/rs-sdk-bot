@@ -24,6 +24,37 @@ test('a rung whose item cannot be obtained is not chosen; a quest gate is a bloc
     expect(r.blockers[0]).toMatchObject({ kind: 'quest', name: 'Rune Mysteries Quest' });
 });
 
+test('method recommendations retain measured conditions while keeping the actual action-score estimate', () => {
+    const measured: NonNullable<Rung['measuredRate']> = { method: 'resupplied', skill: 'runecraft', level: 1, xpPerTick: 10, runs: 3, tickMs: 300,
+        source: 'measured', evidence: 'three practice runs: 200 XP in 20 ticks', note: 'Helper trades each pack; excludes travel and level-up dialogs' };
+    const future = { ...measured, method: 'future', level: 5, xpPerTick: 12 };
+    const rungs = [rung('action-winner', 1, 20, { xpPerTick: 10, measuredRate: measured }),
+        rung('rate-winner', 1, 10, { xpPerTick: 500, measuredRate: { ...measured, method: 'other-scope', xpPerTick: 500 } }),
+        rung('next', 5, 21, { xpPerTick: 12, measuredRate: future })];
+    const row = skillRow('A', {}, 'runecraft', 1, rungs, [], own, () => []);
+    expect(row.rankingBasis).toBe('base XP/action + unlock level / 1000 (estimate)');
+    expect(row.best).toMatchObject({ id: 'action-winner', xpPerAction: 20, xpPerTick: 10, measuredRate: measured });
+    expect(row.next).toMatchObject({ id: 'next', xpPerAction: 21, xpPerTick: 12, measuredRate: future });
+    const unmeasured = skillRow('A', {}, 'runecraft', 1, [rung('legacy', 1, 5)], [], own, () => []).best!;
+    expect(unmeasured.xpPerTick).toBeNull(); expect(unmeasured).not.toHaveProperty('measuredRate');
+});
+
+test('method evidence is bounded and explicit while invalid or mismatched observations stay unreported', () => {
+    const measured: NonNullable<Rung['measuredRate']> = { method: 'method', skill: 'runecraft', level: 55, xpPerTick: 10,
+        source: 'measured', evidence: 'sample '.repeat(300), note: 'condition '.repeat(300) };
+    const recommendation = (m: unknown) => skillRow('A', {}, 'runecraft', 1,
+        [rung('method', 1, 20, { xpPerTick: 10, measuredRate: m as any })], [], own, () => []).best!;
+    const actual = recommendation({ ...measured, runs: 3, tickMs: 300, privateData: 'private-value' }).measuredRate!;
+    expect(actual.level).toBe(55); expect(actual.runs).toBe(3); expect(actual.tickMs).toBe(300);
+    expect(actual.evidence).toHaveLength(1001); expect(actual.note).toHaveLength(1001);
+    expect(actual.evidence.endsWith('…')).toBe(true); expect(actual).not.toHaveProperty('privateData');
+    for (const invalid of [{ ...measured, level: -1 }, { ...measured, xpPerTick: Infinity }, { ...measured, xpPerTick: 11 },
+        { ...measured, skill: 'crafting' }, { ...measured, source: 'estimated' }, { ...measured, evidence: '' }, { ...measured, method: 'x'.repeat(129) }])
+        expect(recommendation(invalid)).not.toHaveProperty('measuredRate');
+    const optional = recommendation({ ...measured, runs: -1, tickMs: '300' }).measuredRate!;
+    expect(optional).not.toHaveProperty('runs'); expect(optional).not.toHaveProperty('tickMs');
+});
+
 test('a shared completed quest unlocks its rung through the full journal or legacy completed names', () => {
     const quest = 'Rune Mysteries Quest', rungs = [rung('quest', 1, 5, { quest: { name: quest } })];
     for (const status of [

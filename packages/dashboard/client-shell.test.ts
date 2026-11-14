@@ -1,6 +1,8 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
+import {questPointObservation} from './goals';
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
+const questPointSource=shell.slice(shell.indexOf('  function questPointsOf('),shell.indexOf('  function questReqs('));
 const equipmentValue=new Function(`${shell.slice(shell.indexOf('  function equipmentValue('),shell.indexOf('  function wornBonuses('))};return equipmentValue;`)();
 
 test('the fleet search shortcut focuses the visible search control',()=>{
@@ -79,9 +81,9 @@ test('an open bank redraws newer observations and closes when its account change
  current={name:'Other',bank:[]};node('input').oninput();expect(removed).toBe(true);
 });
 
-function questPanel(bot:any,filter='all'){
+function questPanel(bot:any,filter='all',now=Date.now()){
  const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'&&questScope==='fleet')"),shell.indexOf("    if(selectedTab==='friends')"));
- return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String);
+ return new Function('b','questFilter','E','age','S',`${questPointSource};const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String,{now});
 }
 
 test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
@@ -97,6 +99,49 @@ test('quest points need a point observation, not the number of completed quests'
  const bot={quests:[{name:'One quest',state:'complete'}]};
  expect(questPanel(bot)).toContain('Quest Points: —');
  expect(questPanel({...bot,ranks:[{board:'Quest Points',level:4}]})).toContain('Quest Points: 4');
+});
+
+test('quest requirements, journal and chat use the backend selected QP, including explicit unknown',()=>{
+ const now=1_000_000,server='rs-sdk-demo.fly.dev';
+ const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
+ const data={Gate:{s:[],q:[],qp:[55,1]}},sync=(v:any):any=>({then:(f:any)=>sync(f(v))});
+ const t=new Function('S','asset','fetch','E',`${code};return {questPointsOf,questReqs,questReady};`)({now},String,()=>sync({ok:true,json:()=>data}),String);
+ let current:any={name:'Worker',server,at:now-10,guildFacts:{varps:{qp:55}},ranksAt:now-1000,ranks:[{board:'Quest Points',level:50,rank:12}],quests:[]};
+ current.questPoints=questPointObservation(current,now);
+ const chat=shell.slice(shell.indexOf('  function chatLookup(text){'),shell.indexOf('  // Opponent information',shell.indexOf('  function chatLookup(text){')));
+ const lookup=new Function('S','account','safeName','nf',`${questPointSource};${chat};return chatLookup;`)({now},()=>current,String,String);
+ expect(t.questReqs(current,'Gate')).toEqual([{text:'55 quest points',ok:true,have:55,src:1}]);
+ expect(t.questReady(current,{name:'Gate',state:'not started'})).toBe(true);
+ expect(questPanel(current,'all',now)).toContain('Quest Points: 55');
+ expect(lookup('!qp')).toBe('Worker: 55 quest points.');
+ expect(current.quests).toEqual([]);
+ current={...current,questPoints:null};
+ expect(t.questReqs(current,'Gate')[0]).toMatchObject({have:null,ok:null});
+ expect(t.questReady(current,{name:'Gate',state:'not started'})).toBe(false);
+ expect(questPanel(current,'all',now)).toContain('Quest Points: —');
+ expect(lookup('!qp')).toBe('Worker: quest points not reported.');
+ current={...current,questPoints:{points:0,at:now-10,source:'status'}};
+ expect(t.questReqs(current,'Gate')[0]).toMatchObject({have:0,ok:false});
+ expect(questPanel(current,'all',now)).toContain('Quest Points: 0');expect(lookup('!qp')).toBe('Worker: 0 quest points.');
+ current={...current,ranksAt:now-1,ranks:[{board:'Quest Points',level:60,rank:4}],questPoints:{points:60,at:now-1,source:'hiscores'}};
+ expect(lookup('!qp')).toBe('Worker: 60 quest points · rank #4.');
+});
+
+test('current QP cannot fall back after invalid values while old APIs retain compatible safe rank display',()=>{
+ const now=1_000_000,t=new Function('S',`${questPointSource};return questPointsOf;`)({now});
+ const base={name:'Worker',server:'rs-sdk-demo.fly.dev',ranks:[{board:'Quest Points',level:55,rank:12}]};
+ expect(t(base)).toEqual({points:55,at:null,source:'hiscores',rank:12});
+ for(const questPoints of [null,undefined,{points:-1,at:now-1,source:'status'},{points:1.5,at:now-1,source:'status'},
+  {points:Number.MAX_SAFE_INTEGER+1,at:now-1,source:'status'},{points:55,at:now+1,source:'status'},{points:55,at:null,source:'status'},
+  {points:55,at:now-1,source:'unknown'}])expect(t({...base,questPoints})).toBeNull();
+ for(const change of [{practice:true},{server:'foreign'},{server:null},{account:'Other'}])expect(t({...base,...change})).toBeNull();
+ for(const at of [null,undefined,0,now+1]){
+  expect(t({...base,ranksAt:at})).toBeNull();
+  expect(t({...base,ranksAt:now-1,ranks:[{...base.ranks[0],at}]})).toBeNull();
+ }
+ for(const change of [{account:'Other'},{server:'foreign'},{practice:true},{level:'55'},{level:-1}])
+  expect(t({...base,ranks:[{...base.ranks[0],...change}]})).toBeNull();
+ expect(t({...base,ranks:[...base.ranks,{board:'Quest Points',level:60}]})).toBeNull();
 });
 
 test('unknown quest flags stay separate from observed started quests',()=>{
@@ -709,7 +754,7 @@ test('!price answers from the market, then from the item value',()=>{
  expect(priceLine(' ')).toContain('Usage: !price');
  // With the alchemy table: the high alch value on each answer, and an item that only has an alch value.
  const itemAlch={'Cannonball':5,'Rune scimitar':25600,'Rune platebody':65000};
- const alchOf=(n:string)=>itemAlch[n as keyof typeof itemAlch]?Math.max(Math.floor(itemAlch[n as keyof typeof itemAlch]*6/10),1):null;
+ const alchOf=(item:any)=>{const n=typeof item==='string'?item:item?.name;return itemAlch[n as keyof typeof itemAlch]?Math.max(Math.floor(itemAlch[n as keyof typeof itemAlch]*6/10),1):null;};
  const withHa=new Function('S','nf','alchOf','itemAlch',`${code};return priceLine;`)(S,(n:number)=>n.toLocaleString('en-US'),alchOf,itemAlch);
  expect(withHa('cannon')).toBe('Cannonball: ask 7,320 gp · bid none · 18,118 in stock · high alch 3 gp.');
  expect(withHa('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · high alch 15,360 gp · no market offer.');
@@ -1032,7 +1077,7 @@ test('banked XP line: every skill the bank holds XP for, the most first, with th
 test('GE sort: the flip margin after the 5% tax, and the high alch profit after a nature rune',()=>{
  const code=shell.slice(shell.indexOf('  // GE sort (RuneLite'),shell.indexOf("  function gePanel(){"));
  const S:any={economy:{supplies:[{name:'Nature rune',ask:260,bid:240}]}};
- const alchOf=(n:string)=>({'Rune platebody':39000} as any)[n]??null;
+ const alchOf=(item:any)=>({'Rune platebody':39000} as any)[typeof item==='string'?item:item?.name]??null;
  const geProfit=new Function('S','alchOf','price',`${code};return geProfit;`)(S,alchOf,()=>null);
  // Sell at 1,999: 99 tax, 1,900 net; buy at 1,501: 399 a flip.
  expect(geProfit({ask:2000,bid:1500,vwap:2500},'flip')).toBe(399);
@@ -1158,6 +1203,49 @@ test('high alch: the server value, the profit of a cast after the market buy and
  expect(t.priceTip({name:'Coins',count:5})).toBe('');
  expect(t.priceTip({name:'Cabbage',count:1})).toBe(' · high alch 1');
  expect(t.priceTip({name:'Rune platebody',count:1})).toContain('market buy 39,500 / sell 39,000 · high alch 39,000');
+});
+
+test('exact alchemy identity reaches tooltips, GE profit, chat and the displayed bank HA total',()=>{
+ const alchemy=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const ge=shell.slice(shell.indexOf('  function geProfit(i,mode){'),shell.indexOf('  function gePanel(){'));
+ const chat=shell.slice(shell.indexOf('  function priceLine(q){'),shell.indexOf('  function chatLookup(text){'));
+ const data=JSON.parse(readFileSync(new URL('./client-assets/item-alch.json',import.meta.url),'utf8'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}}),nf=(n:number)=>n.toLocaleString('en-US'),gp=(n:number)=>nf(n)+' gp';
+ const green={id:1135,name:'Dragonhide body',count:2,ask:4000,bid:3000},black={id:2503,name:'Dragonhide body',count:1,ask:4000,bid:3000};
+ const noted={id:1136,baseId:1135,name:'Dragonhide body',count:3},ambiguous={name:'Dragonhide body',count:1};
+ const S={economy:{supplies:[{id:561,name:'Nature rune',ask:260},green,black],itemValues:{}}};
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:()=>null,nf,gp,S};
+ const t=new Function(...Object.keys(env),`${alchemy}${ge}${chat};return {alchOf,alchTip,geProfit,priceLine};`)(...Object.values(env));
+ expect(t.alchOf(green)).toBe(4680);expect(t.alchOf(black)).toBe(8088);expect(t.alchOf(noted)).toBe(4680);
+ expect(t.alchOf(ambiguous)).toBeNull();expect(t.alchOf('Dragonhide body')).toBeNull();
+ expect(t.alchOf({id:999999,name:'Rune platebody'})).toBeNull();expect(t.alchOf('Rune platebody')).toBe(39000);
+ expect(t.alchOf({id:995,name:'Other'})).toBeNull();
+ expect(t.alchTip(green)).toBe(' · high alch 4,680 (9,360 gp for 2) · alch profit +420 a cast after the market buy and a nature rune');
+ expect(t.alchTip(black)).toBe(' · high alch 8,088 · alch profit +3,828 a cast after the market buy and a nature rune');expect(t.alchTip(ambiguous)).toBe('');
+ expect(t.geProfit(green,'alch')).toBe(420);expect(t.geProfit(black,'alch')).toBe(3828);expect(t.geProfit({...ambiguous,ask:4000},'alch')).toBeNull();
+ expect(t.priceLine('dragonhide body')).toContain('high alch 4,680 gp');
+ const bank=shell.slice(shell.indexOf('  function openBank(){'),shell.indexOf('  // Orbs as RuneLite'));
+ const current={name:'Worker',bankAt:1,bank:[green,black,noted,ambiguous]},nodes:any={};
+ const node=(s:string)=>nodes[s]??=(s==='input'?{value:''}:{insertAdjacentHTML:()=>{},innerHTML:'',textContent:''});
+ const modal:any={dataset:{},setAttribute:()=>{},querySelector:node,remove:()=>{}};
+ new Function('account','document','hud','window','E','safeName','age','stackValue','gp','icon','qty','priceTip','statTip','alchOf',`${bank};openBank();`)(()=>current,{createElement:()=>modal},{querySelector:()=>null,append:()=>{}},{atlasOperator:()=>true},String,String,String,()=>({value:0,unpriced:0}),gp,()=>'',String,()=>'',()=>'',t.alchOf);
+ // Five green bodies (two plain, three noted) and one black body: 5 × 4,680 + 8,088.
+ expect(node('.bank-value').textContent).toBe('0 gp · HA 31,488 gp');
+});
+
+test('alchemy tooltip profit uses the exact item ask and never borrows a same-name quote',()=>{
+ const code=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const data={900001:1000,900002:1000,Ring:1000},sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const first={id:900001,name:'Ring',count:1},second={id:900002,name:'Ring',count:1};
+ const S={economy:{supplies:[{id:900001,name:'Ring',ask:100},{id:900002,name:'Ring',ask:500},{id:561,name:'Nature rune',ask:260}]}};
+ const prices:Record<string,any>={Ring:{value:1000,ask:500},'Nature rune':{value:999,ask:999}};
+ const env:any={S,asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:(name:string)=>prices[name]??null,nf:String,gp:String};
+ const alchTip=new Function(...Object.keys(env),`${code};return alchTip;`)(...Object.values(env));
+ expect(alchTip(first)).toBe(' · high alch 600 · alch profit +240 a cast after the market buy and a nature rune');
+ expect(alchTip(second)).toBe(' · high alch 600');
+ expect(alchTip({id:900003,baseId:900001,name:'Ring',count:1})).toBe(alchTip(first));
+ S.economy.supplies=S.economy.supplies.filter(q=>q.id!==900001);prices.Ring.ask=1;
+ expect(alchTip(first)).toBe(' · high alch 600');
 });
 
 test('the Wilderness level counts 8 tiles for each level from the south edge of each zone',()=>{
