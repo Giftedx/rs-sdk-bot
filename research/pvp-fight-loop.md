@@ -1243,6 +1243,12 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   - `FOLLOW=1` from (3150, 3560), 110 tiles away, past the gang's single-way post: 19 of 24 at about 60 HP a kill
     (`extra:squad-4-gang-follow-x1`; seeds 1 to 4: 38, seeds 5 to 8: 84). Seeds 1 to 4 only: straight in, 81;
     gathered once 10 tiles short, 48.
+- **A dropped account.** In the third live pilot one account's connection dropped, and openBot's default ended the
+  process, logging the other three out in the Wilderness. pk-squad now stops only the dropped account, and at the end
+  logs it in again, eats, and leaves by Camelot Teleport (Magic 45, a law and 5 air runes, Wilderness 20 or less) or a
+  walk to the Edgeville bank (`RESCUE=1`); the RESULT names it (`dropped=`, `stranded=`). Bench (`SQUAD_DROP_AT=40`
+  closes the first account's session): the other three killed all three gang accounts, and the dropped one logged in
+  at Wilderness 15 and teleported out.
 - **Following the gang.** The gang roams (the first live pilot's feed showed it 250 tiles from its post). `FOLLOW=1`
   marches the squad, once no target has been in view for 30 ticks, to the nearest multi-way tile within 24 tiles of
   the targets that the world feed shows, at Wilderness level `MAX_WILD` or less (`meetTile`, the feed through
