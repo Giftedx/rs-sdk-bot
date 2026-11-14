@@ -11,6 +11,7 @@ import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { messageTally } from '../../packages/core/src/message-tally';
 
 const LOC = {
     raft: { id: 1987, x: 2509, z: 3493 },
@@ -233,8 +234,10 @@ try {
         if (d?.text && re.test(d.text)) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
     };
-    // Counts matching game messages; a step is done when the count rises past a count taken before the send.
-    const msgCount = (re: RegExp): number => (st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).length;
+    // Counts matching game messages; a step is done when the count rises past a count taken before the send. The tally
+    // keeps every message seen, past the client's 50-message window; the tick hook reads it each tick.
+    const tally = messageTally(() => st()?.gameMessages);
+    const msgCount = tally.count;
 
     // Auto retaliate off (controls:com_3 = component 151): a hit never turns a walk or a loc click into a fight.
     if (MIGHTY) {
@@ -287,6 +290,7 @@ try {
 
     // Every tick: death watch, jump log, and the eat reflex (a direct op, so it never waits behind a bot.* action).
     const off = s.onTick(() => {
+        tally.pull();
         capturePage();
         const p = pos();
         const h = hp();

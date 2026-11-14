@@ -13,6 +13,7 @@ import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
+import { messageTally } from '../../packages/core/src/message-tally';
 
 const LOC = {
     towerLadder: { id: 1747, x: 2570, z: 3441 },     // ladders.rs2:52, 0_40_53_10_49 (needs %mcannon >= 2)
@@ -62,24 +63,9 @@ try {
         if (d?.text && re.test(d.text)) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
     };
-    // The client publishes only the last 50 game messages (webclient StateCollector.ts MAX_GAME_MESSAGES). A count over
-    // that window stops rising once an old match drops out as a new one comes in, so every message seen is kept here.
-    // Messages group by observationId (one publication can hold several), else by tick. The k-th message of a group is
-    // new when the group never held k messages before; only the oldest group in the window can lose messages, and that
-    // lowers its count, never raises it.
-    const seenText: string[] = [];
-    const perGroup = new Map<string, number>();
-    const pullMessages = (): void => {
-        const nth = new Map<string, number>();
-        for (const m of (st()?.gameMessages ?? []) as any[]) {
-            if (m.type !== 0) continue;
-            const g = typeof m.observationId === 'number' ? `o${m.observationId}` : `t${m.tick}`;
-            const k = (nth.get(g) ?? 0) + 1;
-            nth.set(g, k);
-            if (k > (perGroup.get(g) ?? 0)) { perGroup.set(g, k); seenText.push(m.text); }
-        }
-    };
-    const msgCount = (re: RegExp): number => { pullMessages(); return seenText.filter(t => re.test(t)).length; };
+    // Counts every game message seen, past the client's 50-message window; the tick hook reads it each tick.
+    const tally = messageTally(() => st()?.gameMessages);
+    const pullMessages = tally.pull, msgCount = tally.count;
 
     // Auto retaliate off (controls:com_3): a goblin hit never turns a walk or a loc click into a fight.
     await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
