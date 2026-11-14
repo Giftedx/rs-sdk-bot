@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794654852639,
+ "at": 1794654927619,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -351,6 +351,31 @@
    ]
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -487,29 +512,6 @@
    ]
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
-   ]
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -529,17 +531,27 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-6502bede-75cf-4896-abb5-707b6b96de43"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-wandwaver-20261114t110509z [task-6502bede-75cf-4896-abb5-707b6b96de43]",
-   "role": "combat"
+   "account": "Sausagefest",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
   }
  ]
 }
