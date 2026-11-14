@@ -304,6 +304,13 @@ test('an order is only made between listed accounts on one server', () => {
     expect(() => makeOrder('Giver', 'Far', 1, 'Lobster', 0, 15, 40, owners)).toThrow();
 });
 
+test('an order of an untradeable item is refused before any account walks: the ammo mould, alone or as a --with line', () => {
+    const owners = new Map([['giver', { side: 'local' as const, server: 's' }], ['taker', { side: 'local' as const, server: 's' }]]);
+    expect(() => makeOrder('Giver', 'Taker', 1, 'Ammo mould', 0, 15, 40, owners)).toThrow('not tradeable: Ammo mould');
+    expect(() => makeOrder('Giver', 'Taker', 150, 'Cannonball', 0, 15, 40, owners, undefined, [{ item: 'ammo mould', count: 1 }])).toThrow('not tradeable: ammo mould');
+    expect(makeOrder('Giver', 'Taker', 150, 'Cannonball', 0, 15, 40, owners).item).toBe('Cannonball');
+});
+
 test('a snapshot holds only this side’s accounts and no credentials', () => {
     const owners = new Map([['taker', { side: 'cloud' as const, server: 's' }], ['giver', { side: 'local' as const, server: 's' }]]);
     const snap = snapshot([{ name: 'Practicebot', server: 'localhost:8888' }, { name: 'Giver', server: 's', bank: [{ id: 379, name: 'Lobster', count: 9 }], password: 'x', skills: [{ name: 'Fishing', level: 99, xp: 1 }] }, { name: 'Taker', server: 's' }], 'local', owners, 7);
