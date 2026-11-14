@@ -181,6 +181,13 @@ try {
     // ended, 5 to 10 tiles nearer to the gap, so the last forms often have no such tile.
     const kolodionHome = (n: any) => ({ start: { x: n.x, z: n.z }, safe: { x: n.x - LEASH, z: ROW } });
 
+    // 0. An account that starts at the hut above the cellar (Wilderness level 55) goes down its ladder first: the walker
+    // has no record of the ladder (locs 2871/2872 are not in knowledge/transports.json), so a walk ends at the hut.
+    if (!inCellar() && q.near(LADDER_DOWN.x, LADDER_DOWN.z, 8)) {
+        await q.climb('ladder down', () => q.locAt(LADDER_DOWN.x, LADDER_DOWN.z), /climb-down/i, inCellar);
+        q.milestone('cellar');
+    }
+
     // 1. Kolodion. At %magearena 0 to 5 he sends the player into the arena; at 6 or more he does not.
     let fought = false;
     if (!held(ITEM.cape) && !held(ITEM.staff)) {
