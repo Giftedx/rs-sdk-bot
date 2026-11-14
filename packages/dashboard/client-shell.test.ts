@@ -729,6 +729,19 @@ test('pickpocket: the followed account\'s chance, the XP a try and the stun, or 
  expect(t('Goblin')).toBe('');
 });
 
+test('gather chance: the best held axe on a tree, the roll of a rock, or no axe held',()=>{
+ const code=shell.slice(shell.indexOf("  // Gather chance (RuneLite's Woodcutting and Mining overlays"),shell.indexOf('  const bestSpotLine=(b,lvl)=>{'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>({'Willow logs':{tool:[['Bronze axe',16,50],['Rune axe',56,175]]},'Iron ore':{roll:[96,350]}})})};
+ const t=new Function(...Object.keys(env),`${code};return gatherText;`)(...Object.values(env));
+ // Rune axe at 40: floor(56*59/98) + floor(175*39/98) + 1 = 33 + 69 + 1 = 103 of 256: 40%.
+ expect(t({equipment:[{name:'Rune axe',count:1}],inventory:[{name:'Bronze axe',count:1}]},'Willow logs',40)).toBe('40% a try with the rune axe');
+ // Iron ore at 40: floor(96*59/98) + floor(350*39/98) + 1 = 57 + 139 + 1 = 197 of 256: 77%.
+ expect(t({},'Iron ore',40)).toBe('77% a try');
+ expect(t({inventory:[]},'Willow logs',40)).toBe('no axe held');
+ expect(t({},'Magic logs',75)).toBe('');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
