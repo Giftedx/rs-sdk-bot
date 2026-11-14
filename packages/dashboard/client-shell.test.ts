@@ -787,6 +787,18 @@ test('melee hit chance: the best style from the worn bonuses, and the range over
  expect(t('Banker')).toBe('');
 });
 
+test('NPC hits: its max hit and its chance through the account\'s Defence and worn defence of its damage type',()=>{
+ const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const bon=[0,0,0,0,0,30,35,40,0,0,0,0,0];
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>({'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2]],'Archer':[[30,20,1,0,0,0,0,0,25,25,0,0,-1]],'Old row':[[5,3,1,0,0,0,0,0]]})}),account:()=>({}),wornBonuses:()=>bon,curLevel:()=>60};
+ const t=new Function(...Object.keys(env),`${code};return npcHitsText;`)(...Object.values(env));
+ // Crush 40 at Defence 60: D = 68 x 104 = 7,072; A = 39 x 97 = 3,783: 3,783 / 14,146 = 27%. Max floor((39 x 95 + 320) / 640) = 6.
+ expect(t('Moss giant')).toBe('It hits up to 6 · lands 27% on your Defence 60');
+ expect(t('Archer')).toBe('');
+ expect(t('Old row')).toBe('');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};

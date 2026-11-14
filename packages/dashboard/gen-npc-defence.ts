@@ -1,15 +1,19 @@
 // Writes client-assets/npc-defence.json: the defence of each attackable NPC of the pinned server, by its name, as a list of
-// its variants [combat, defence level, magic level, stab, slash, crush, magic, range defence bonus], lowest combat first.
+// its variants [combat, defence level, magic level, stab, slash, crush, magic, range defence bonus, attack level, strength
+// level, attack bonus, strength bonus, damage type (0 stab, 1 slash, 2 crush, -1 other)], lowest combat first.
 // From the content's .npc configs: defence= and magic= (a missing level is 1), param=stabdefence and the rest (a missing
 // bonus is 0, skill_combat/configs/combat.param). The combat level is knowledge/npcs.json's. An NPC is attackable when
 // one of its ops is Attack.
 // The page rolls as the server does (npc_combat.rs2 npc_defence_roll_specific, player_combat_stat.rs2): the NPC's roll is
 // (level + 9) x (bonus + 64), with the magic level for magic; the player's is (level + 8 + style) x (bonus + 64).
+// Its melee (npc_combat_melee.rs2): attack roll (attack + 9) x (attack bonus + 64) against the player's (Defence + 8) x
+// (defence bonus of its damage type + 64); max hit floor(((strength + 9) x (strength bonus + 64) + 320) / 640).
 // Run: bun packages/dashboard/gen-npc-defence.ts
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export type Defence = [number, number, number, number, number, number, number, number];
+export type Defence = [number, number, number, number, number, number, number, number, number, number, number, number, number];
+const DAMAGE: Record<string, number> = { '^stab_style': 0, '^slash_style': 1, '^crush_style': 2 };
 const BONUS = ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence'];
 
 export function npcDefence(files: string[], combat: Map<string, number>): Record<string, Defence[]> {
@@ -19,7 +23,8 @@ export function npcDefence(files: string[], combat: Map<string, number>): Record
         const name = field('name');
         if (!name || !/^op\d=Attack\s*$/m.test(block)) continue;
         const param = (k: string) => Number(block.match(new RegExp(`^param=${k},(-?\\d+)\\s*$`, 'm'))?.[1] ?? 0);
-        const row: Defence = [combat.get(debug) ?? 0, Number(field('defence') ?? 1) || 1, Number(field('magic') ?? 1) || 1, ...BONUS.map(param)] as Defence;
+        const lvl = (k: string) => Number(field(k) ?? 1) || 1, damage = block.match(/^param=damagetype,(\S+)\s*$/m)?.[1] ?? '';
+        const row: Defence = [combat.get(debug) ?? 0, lvl('defence'), lvl('magic'), ...BONUS.map(param), lvl('attack'), lvl('strength'), param('attackbonus'), param('strengthbonus'), DAMAGE[damage] ?? -1] as Defence;
         const list = (out[name] ??= []);
         if (!list.some(r => r.every((v, i) => v === row[i]))) list.push(row);
     }
