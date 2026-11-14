@@ -1788,6 +1788,15 @@ test('prayer potions ride as food when base Prayer covers the points the quest u
  expect(prayerCovers('tree',43)).toBe(false);
  expect(prayerCovers('grandtree',62)).toBe(true);
  expect(prayerCovers('zanaris',99)).toBe(false);
+ // Monkey Madness used 384 points in its bench (21 sips at Prayer 43): even Prayer 99 keeps its potions.
+ expect(prayerCovers('mm',99)).toBe(false);
+});
+test('a preset antipoison is a food row, never a need: Monkey Madness carries its superantipoison only when held', async () => {
+ const {ANTIPOISONS}=await import('./quest-sweep');
+ const preset=presetFor('mm');
+ expect((preset.inventory??[]).some(i=>i.id===2448)).toBe(true);
+ expect(ANTIPOISONS).toContain(2448);
+ expect(ANTIPOISONS).not.toContain(2446);
 });
 test('Tree Gnome Village and The Grand Tree need the staff of fire worn', () => {
  for(const quest of ['tree','grandtree']){
