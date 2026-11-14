@@ -3,7 +3,7 @@
 // Eating at 4 HP leaves room for one knight stun hit of 3 while reducing overheal.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { openBot, finish, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
+import { openBot, finish, randomEventsOf, serverFromEnv, sessionDied } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
@@ -287,17 +287,16 @@ if (import.meta.main) {
         let shopTrips = 0, shopTicks = 0, bought = 0;
         let hpMin = hp(), died = false, bankEmpty = false, lastFail = '', lastPickTick = s.tick(), lastCourierCheck = -100_000;
         let progress = { picks, fails, food: foodCount() };
-        let last = pos();
+        // A death is the server's (sessionDied). A disconnect blanks the state for a moment, so an HP of 0 or a far
+        // position read then is no death.
+        const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
 
         const off = s.onTick(() => {
             const next = { picks, fails, food: foodCount() };
             lastPickTick = farmProgressTick(lastPickTick, s.tick(), progress, next);
             progress = next;
-            const p = pos();
             hpMin = Math.min(hpMin, hp());
-            if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
-            if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) died = true;
-            last = p;
+            if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
         });
 
         let ending: Promise<never> | undefined;

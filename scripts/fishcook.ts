@@ -12,7 +12,7 @@
 // the bank, wait up to WAIT (default 900) ticks for GIVE_TO, hand off and stop.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { openBot, finish, countItems, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
+import { openBot, finish, countItems, randomEventsOf, serverFromEnv, sessionDied } from '../packages/core/src/bot';
 import { sendHandoff } from './courier-handoff';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { depositObserved } from '../packages/core/src/deposit';
@@ -280,7 +280,9 @@ try {
     const initialHp=hp(),initialLife=pos()?.lifeId,initialRespawns=pos()?.respawnCount;let finiteHurt=false,netCaught=0,flyCaught=0,lastRawNet=0,lastRawFly=0,lastCatchTick=s.tick();let activeFishingIndex:number|undefined;
     const rawIds=(ids:number[])=>inv().filter(i=>ids.includes(i.id)).reduce((n,i)=>n+i.count,0);
     lastRawNet=rawIds([317,321]);lastRawFly=rawIds([335,331]);
-    let last = pos();
+    // A death is the server's (sessionDied). A disconnect blanks the state for a moment, so an HP of 0 or a far
+    // position read then is no death.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
@@ -292,9 +294,7 @@ try {
          if(b>0){const state=st();console.log('FINITE_CATCH '+JSON.stringify({tick:s.tick(),delta:b,player:p,spot:state?.nearbyNpcs.find(n=>n.index===activeFishingIndex)??null,spiders:state?.nearbyNpcs.filter(n=>n.id===59).slice(0,8)}));}
          lastRawNet=net;lastRawFly=fly;
         }
-        if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
-        if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20 && cheb({ x: 3222, z: 3218 }, p) <= 3) died = true;
-        last = p;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
     });
 
     let fishTicks = 0, cookTicks = 0, walkTicks = 0, bankTicks = 0, chickenTicks = 0, idleTicks = 0, giveTicks = 0;

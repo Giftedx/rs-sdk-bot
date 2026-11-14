@@ -17,7 +17,7 @@
 // Preset goldfarm_knights (goldfarm_nofood for the stall). Copies the 2-tick direct click and eating inside the stun from scripts/generated/thieving60.ts.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { openBot, finish, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
+import { openBot, finish, randomEventsOf, serverFromEnv, sessionDied } from '../packages/core/src/bot';
 import { walkTargetPersist } from './walk-to';
 import { depositPack } from '../packages/core/src/deposit';
 import { waitTicks } from '../packages/core/src/ticks';
@@ -180,14 +180,12 @@ try {
     // session at full CPU, finish() never prints RESULT, and the stale status row blocks every login on the side.
     let ended = '';
     void s.ended.then(e => { ended = e.reason || 'ended'; });
-    let last = pos();
+    // A death is the server's: isDead, a higher respawnCount or a new lifeId (sessionDied). A disconnect blanks the
+    // state for a moment, and an HP of 0 or a far position read then counted a living account as dead.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
-        const p = pos();
         hpMin = Math.min(hpMin, hp());
-        if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
-        // A respawn moves the player far in one tick.
-        if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) died = true;
-        last = p;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
     });
 
     const end = async (ok: boolean, why: string): Promise<never> => {
