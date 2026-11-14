@@ -32,6 +32,7 @@ const RAILINGS = [
     { id: 18, x: 2559, z: 3462 }, { id: 19, x: 2564, z: 3460 }, { id: 20, x: 2572, z: 3460 },
 ];
 const ITEM = { remains: 0, toolkit: 1, notes: 3, mould: 4, railing: 14, lobster: 379 };
+const MEALS = [385, 373, 379, 365, 361, 333, 329, 1891, 1893, 1895, 2309];
 const PARTS = ['Pipe', 'Barrel', 'Axle', 'Shaft'];
 const LAWGOF = { x: 2571, z: 3463 };
 const NULODION = { x: 3011, z: 3453 };
@@ -108,7 +109,9 @@ try {
             if (line !== lastTrace) { console.log(`TRACE ${T()} ${line}`); lastTrace = line; }
         }
         if (h > 0 && h <= EAT_AT) {
-            const food = inv().find(i => i.id === ITEM.lobster);
+            // Any held meal, best heal first (quest-sweep MEALS: shark, swordfish, lobster, ...): an account with sharks
+            // and no lobsters otherwise takes the railing cuts (up to 3 HP each at Crafting 1) unfed.
+            const food = MEALS.map(id => inv().find(i => i.id === id)).find(Boolean);
             if (food) { eats++; void s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' }); }
         }
     });
