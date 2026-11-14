@@ -8,8 +8,9 @@
 // worth a walk now, by shop, the largest first. A bid far above a shop price is filled by other players within hours,
 // so this file is where a session looks first.
 // Usage: bun scripts/market-cache.ts
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 export const MARKET_FILE = '.practice/market-all.json';
 export const MARKET_CACHE_MS = 30 * 60_000;
@@ -19,6 +20,16 @@ const DEMO = 'https://rs-sdk-demo.fly.dev';
 // `base`: the item's base (shop) price; `want`: the units the open bids want; `sell`: the units offered for sale.
 export type MarketItem = { name: string; price: number | null; bid: number | null; ask: number | null; trades: number; base?: number; want?: number; sell?: number };
 export type MarketQuote = { at: number; ask: number | null; bid: number | null; sell: number };
+// A dashboard and a fleet refresh can finish together. Each publishes a complete file through its own temporary path.
+export function writeMarketCache(base: string, items: Readonly<Record<number, MarketItem>>, at = Date.now()): void {
+    if (!Number.isSafeInteger(at) || at <= 0) throw Error('invalid market observation time');
+    const file = join(base, MARKET_FILE), tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+    mkdirSync(join(base, '.practice'), { recursive: true });
+    try {
+        writeFileSync(tmp, JSON.stringify({ at, items }), { flag: 'wx' });
+        renameSync(tmp, file);
+    } finally { rmSync(tmp, { force: true }); }
+}
 // Acquisition needs an observed seller count as well as the ask. Older caches that omit it remain unknown.
 export function marketQuotes(raw: unknown, now = Date.now()): Record<number, MarketQuote> {
     const cache = raw as any, out: Record<number, MarketQuote> = {};
@@ -83,12 +94,10 @@ export async function fetchMarket(get: (url: string) => Promise<any> = async url
 }
 
 if (import.meta.main) {
-    const root = resolve(import.meta.dir, '..'), file = join(root, MARKET_FILE);
+    const root = resolve(import.meta.dir, '..');
     try {
         const items = await fetchMarket();
-        mkdirSync(join(root, '.practice'), { recursive: true });
-        writeFileSync(file + '.tmp', JSON.stringify({ at: Date.now(), items }));
-        renameSync(file + '.tmp', file);
+        writeMarketCache(root, items);
         const priced = Object.values(items).filter(i => i.price !== null).length;
         // The shop-to-bid lots: optional, so a failure here never loses the price cache.
         let best = 'none';

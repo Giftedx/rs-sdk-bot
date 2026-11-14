@@ -1,5 +1,104 @@
 import { expect, test } from 'bun:test';
-import { groupOrders, heldBack, heldCount, orderInWay, parseLine, planStage } from './route-stage';
+import { groupOrders, heldBack, heldCount, orderInWay, parseLine, planStage, stageJobs, stageObservations } from './route-stage';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { swarmBusy } from './fleet-trade';
+
+test('route donor availability follows current enabled jobs and coordinator overlays instead of older published jobs', () => {
+    const base = mkdtempSync(join(tmpdir(), 'route-stage-jobs-')), fleetDir = join(base, 'fleet'), side = 'cloud';
+    mkdirSync(join(fleetDir, 'plans'), { recursive: true }); mkdirSync(join(base, '.practice/coordinator'), { recursive: true });
+    const published = [{ account: 'Disabled', script: 'scripts/goldfarm.ts', enabled: true },
+        { account: 'Enabled', script: 'scripts/goldfarm.ts', enabled: false, autopilot: side }];
+    try {
+        writeFileSync(join(fleetDir, 'plans/cloud.json'), JSON.stringify({ side, jobs: published }));
+        writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 3, jobs: [
+            { account: 'Disabled', script: 'scripts/goldfarm.ts', enabled: false, autopilot: side },
+            { account: 'Enabled', script: 'scripts/goldfarm.ts', enabled: true },
+            { account: 'Overlay', script: 'scripts/goldfarm.ts', enabled: true, autopilot: side },
+        ] }));
+        writeFileSync(join(base, '.practice/coordinator/jobs.json'), JSON.stringify({ jobs: [
+            { account: 'Overlay', script: 'scripts/quest-chain.ts', enabled: true, coordinatorOwner: 'coordinator' },
+        ] }));
+        const options = { base, fleetDir, localSide: side }, jobs = stageJobs(side, options);
+        const busy = swarmBusy(jobs), owned = swarmBusy(jobs.filter(j => typeof j.autopilot === 'string'));
+        expect([...busy].sort()).toEqual(['enabled', 'overlay']); expect([...owned]).toEqual([]);
+        expect(heldBack('Disabled', jobs, undefined)).toBeUndefined();
+        expect(jobs.find(j => j.account === 'Overlay').script).toBe('scripts/quest-chain.ts');
+        const staged = planStage([{ item: 'oak logs', count: 10 }], () => 0, () => ['Disabled', 'Enabled', 'Overlay']
+            .map(name => ({ name, count: 10, busy: busy.has(name.toLowerCase()), blocked: busy.has(name.toLowerCase()) && !owned.has(name.toLowerCase()) })), true);
+        expect(staged.orders).toEqual([{ from: 'Disabled', item: 'oak logs', count: 10, busy: false }]);
+        expect(staged.short).toEqual([]);
+        expect(stageJobs(side, { ...options, localSide: 'local' })).toEqual(published);
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
+test('route availability retains published holds when the local plan or overlay cannot be read, and refuses unknown availability', () => {
+    const base = mkdtempSync(join(tmpdir(), 'route-stage-job-fallback-')), fleetDir = join(base, 'fleet'), side = 'cloud';
+    mkdirSync(join(fleetDir, 'plans'), { recursive: true }); mkdirSync(join(base, '.practice/coordinator'), { recursive: true });
+    const published = [{ account: 'Held', script: '', enabled: false }], options = { base, fleetDir, localSide: side };
+    try {
+        writeFileSync(join(fleetDir, 'plans/cloud.json'), JSON.stringify({ side, jobs: published }));
+        expect(stageJobs(side, options)).toEqual(published);
+        for (const source of ['{', JSON.stringify({ jobs: 'unreadable' })]) {
+            writeFileSync(join(base, 'swarm.json'), source);
+            expect(heldBack('Held', stageJobs(side, options), undefined)).toBe('reserved (a job with no script)');
+        }
+        writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 3, jobs: [] }));
+        writeFileSync(join(base, '.practice/coordinator/jobs.json'), '{');
+        expect(stageJobs(side, options)).toEqual(published);
+        writeFileSync(join(fleetDir, 'plans/cloud.json'), '{');
+        expect(() => stageJobs(side, options)).toThrow('no readable job plan');
+        rmSync(join(base, '.practice/coordinator/jobs.json'));
+        expect(stageJobs(side, options)).toEqual([]);
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
+test('route staging orders only the remaining stock from current local observations before the next sync', () => {
+    const base = mkdtempSync(join(tmpdir(), 'route-stage-observations-')), fleetDir = join(base, 'fleet'), side = 'cloud', server = 'rs-sdk-demo.fly.dev';
+    const statusDir = join(base, '.practice/status'), snapshotDir = join(fleetDir, 'snapshots');
+    mkdirSync(statusDir, { recursive: true }); mkdirSync(snapshotDir, { recursive: true });
+    const owners = new Map(['haggis', 'donor'].map(name => [name, { side, server }]));
+    const row = (name: string, at: number, count: number) => ({ name, server, at, bankAt: 50, inventory: [], bank: [{ name: 'Oak logs', count }] });
+    try {
+        writeFileSync(join(snapshotDir, 'cloud.json'), JSON.stringify({ side, at: 300, accounts: [row('Haggis', 100, 0), row('Donor', 100, 50)] }));
+        writeFileSync(join(statusDir, 'Haggis.json'), JSON.stringify(row('Haggis', 200, 30)));
+        writeFileSync(join(statusDir, 'Donor.json'), JSON.stringify(row('Donor', 200, 20)));
+        const rows = stageObservations(side, server, { base, fleetDir, owners, localSide: side });
+        const receiver = rows.find(r => r.name === 'Haggis');
+        const staged = planStage([{ item: 'oak logs', count: 50 }], item => heldCount(receiver, item),
+            item => rows.filter(r => r.name !== 'Haggis').map(r => ({ name: r.name, count: heldCount(r, item), busy: false })), false);
+        expect(receiver).toMatchObject({ at: 200, bankAt: 50 });
+        expect(staged.held).toEqual([{ item: 'oak logs', count: 30 }]);
+        expect(staged.orders).toEqual([{ from: 'Donor', item: 'oak logs', count: 20, busy: false }]);
+        expect(staged.short).toEqual([]);
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
+test('route staging uses canonical adoption fallback and excludes foreign, practice and mismatched local data', () => {
+    const base = mkdtempSync(join(tmpdir(), 'route-stage-domain-')), fleetDir = join(base, 'fleet'), side = 'cloud', server = 'rs-sdk-demo.fly.dev';
+    const statusDir = join(base, '.practice/status'), snapshotDir = join(fleetDir, 'snapshots');
+    mkdirSync(statusDir, { recursive: true }); mkdirSync(snapshotDir, { recursive: true });
+    const names = ['Donor', 'Practice', 'WrongServer', 'Mismatch', 'Adopted', 'Mover'];
+    const owners = new Map<string, { side: string; server: string }>([...names.map(name => [name.toLowerCase(), { side, server }] as const), ['foreign', { side: 'local', server }] as const]);
+    const row = (name: string, at: number, count: number) => ({ name, server, at, bankAt: 50, inventory: [], bank: [{ name: 'Oak logs', count }] });
+    try {
+        writeFileSync(join(snapshotDir, 'cloud.json'), JSON.stringify({ side, at: 1000, accounts: [
+            row('Donor', 100, 10), row('Practice', 100, 10), row('WrongServer', 100, 20), row('Mismatch', 100, 30), row('Mover', 50, 5), row('Foreign', 100, 100),
+        ] }));
+        writeFileSync(join(snapshotDir, 'old-side.json'), JSON.stringify({ side: 'old-side', accounts: [row('Adopted', 200, 40), row('Mover', 900, 90)] }));
+        writeFileSync(join(statusDir, 'Practice.json'), JSON.stringify({ ...row('Practice', 900, 900), practice: true }));
+        writeFileSync(join(statusDir, 'WrongServer.json'), JSON.stringify({ ...row('WrongServer', 900, 900), server: 'localhost:8888' }));
+        writeFileSync(join(statusDir, 'Mismatch.json'), JSON.stringify(row('Donor', 900, 900)));
+        const options = { base, fleetDir, owners, localSide: side };
+        const rows = stageObservations(side, server, options);
+        const counts = Object.fromEntries(rows.map(r => [r.name, heldCount(r, 'oak logs')]));
+        expect(counts).toEqual({ Donor: 10, Practice: 10, WrongServer: 20, Mismatch: 30, Mover: 5, Adopted: 40 });
+        expect(rows.find(r => r.name === 'Adopted')).toMatchObject({ side: 'old-side', at: 200, bankAt: 50 });
+        writeFileSync(join(statusDir, 'Donor.json'), JSON.stringify(row('Donor', 900, 900)));
+        expect(heldCount(stageObservations(side, server, { ...options, localSide: 'local' }).find(r => r.name === 'Donor'), 'oak logs')).toBe(10);
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
 
 test('free holders give first, then the largest busy stock; the held count is not ordered', () => {
     const holders = (item: string) => item === 'magic logs'

@@ -20,13 +20,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync,
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
-import { canonicalRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
+import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -70,6 +70,15 @@ export function liveRetirements(retired: Readonly<Record<string, Retirement>>, s
 }
 
 const readJson = (f: string, fallback: any) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return fallback; } };
+// A filename binds its local observation to the requested account. Shared observations use the same live server
+// and ownership rule as supply planning, so a newer practice status cannot hide an account's published skills or stock.
+export function observedAccount(name: string, local: any, files: readonly SnapshotFile[], owners: ReturnType<typeof loadOwners>, side: string): any {
+    const key = name.toLowerCase(), owner = owners.get(key);
+    if (!owner) return null;
+    const bound = typeof local?.name === 'string' && local.name.toLowerCase() === key ? [local] : [];
+    return fleetStatusRows(bound, files, n => owners.get(n.toLowerCase())?.side, side, owner.server)
+        .find(row => row.name.toLowerCase() === key) ?? null;
+}
 const loadState = (side: string): State => ({ assigned: {}, retired: {}, ...readJson(join(prac, 'autopilot', `${side}.json`), {}) });
 const writeAtomic = (f: string, text: string) => { writeFileSync(`${f}.tmp`, text); renameSync(`${f}.tmp`, f); };
 export function readJobResultLines(file: string, offset: number, job: Parameters<typeof matchingJobLines>[1]): string[] {
@@ -394,10 +403,10 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     // container has no status files, an account adopted from another side has its last row there, and a Thieving 99
     // account must not plan as a level-1 start).
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
-    const published = canonicalRows(readSnapshotFiles(join(FLEET_DIR(), 'snapshots')), n => owners.get(n.toLowerCase())?.side);
+    const published = readSnapshotFiles(join(FLEET_DIR(), 'snapshots'));
     const observed = (n: string) => {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        return freshest(f ? readJson(join(statusDir, f), null) : null, published.get(n.toLowerCase()));
+        return observedAccount(n, f ? readJson(join(statusDir, f), null) : null, published, owners, side);
     };
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), Date.now()));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as

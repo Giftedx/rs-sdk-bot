@@ -1,6 +1,8 @@
 import {expect,test} from 'bun:test';
-import {readFileSync} from 'node:fs';
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {marketRows,writeMarketCache,MARKET_FILE} from '../../scripts/market-cache';
 
 const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
@@ -25,8 +27,13 @@ test('failed rank reads preserve the last observation and have a request deadlin
 test('a failed market page cannot publish fresh prices or partial data',async()=>{
  const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
  const marketIds=new Map([['old',1]]),marketById=new Map(),prices=new Map([['old',10]]);let calls=0;
- const run=new Function('fetch','Bun','marketIds','marketById','prices',`const DEMO='http://example.test';let pricesAt=1;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>++calls===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):Response.json({error:'unavailable'},{status:503}),{sleep:async()=>{}},marketIds,marketById,prices);
- expect(await run()).toBe(1);expect(prices.has('new')).toBe(false);expect(marketIds.has('new')).toBe(false);
+ const root=mkdtempSync(join(tmpdir(),'dashboard-market-failure-'));
+ try{
+  const items=marketRows([{id:1,name:'Old',ask:10,bid:5,sellQuantity:2}]);writeMarketCache(root,items,1);
+  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root',`const DEMO='http://example.test';let pricesAt=1;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>++calls===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):Response.json({error:'unavailable'},{status:503}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root);
+  expect(await run()).toBe(1);expect(prices.has('new')).toBe(false);expect(marketIds.has('new')).toBe(false);
+  expect(JSON.parse(readFileSync(join(root,MARKET_FILE),'utf8'))).toEqual({at:1,items});
+ }finally{rmSync(root,{recursive:true,force:true});}
 });
 
 test('opponent information retries a failed NPC table load',async()=>{
@@ -48,8 +55,20 @@ test('slow rank refreshes cannot overlap on the minute timer',async()=>{
 test('a complete market refresh replaces removed listings and publishes its timestamp',async()=>{
  const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
  const marketIds=new Map([['old',1]]),marketById=new Map([[1,{}]]),prices=new Map([['old',10]]);
- const run=new Function('fetch','Bun','marketIds','marketById','prices',`const DEMO='http://example.test';let pricesAt=1;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[{id:2,name:'New',basePrice:20}]}),{sleep:async()=>{}},marketIds,marketById,prices);
- expect(await run()).toBeGreaterThan(1);expect([...prices]).toEqual([['new',20]]);expect([...marketIds]).toEqual([['new',2]]);expect(marketById.has(1)).toBe(false);
+ const root=mkdtempSync(join(tmpdir(),'dashboard-market-success-'));
+ try{
+  const row={id:2,name:'New',basePrice:20,vwap:999,trades:1,ask:20,bid:15,sellQuantity:0,buyQuantity:3};
+  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root',`const DEMO='http://example.test';let pricesAt=1;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[row]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root);
+  const at=await run();expect(at).toBeGreaterThan(1);expect([...prices]).toEqual([['new',20]]);expect([...marketIds]).toEqual([['new',2]]);expect(marketById.has(1)).toBe(false);
+  expect(JSON.parse(readFileSync(join(root,MARKET_FILE),'utf8'))).toEqual({at,items:marketRows([row])});
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('a shared-cache write failure does not hide a successful dashboard market refresh',async()=>{
+ const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const marketIds=new Map(),marketById=new Map(),prices=new Map();let writes=0;
+ const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root',`const DEMO='http://example.test';let pricesAt=1;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[{id:2,name:'New',basePrice:20}]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,()=>{writes++;throw Error('read-only cache');},'/unused');
+ expect(await run()).toBeGreaterThan(1);expect(writes).toBe(1);expect([...prices]).toEqual([['new',20]]);
 });
 
 test('market holdings keep different item IDs with the same display name separate',()=>{

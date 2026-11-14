@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchMarket, marketQuotes, marketRows, MARKET_CACHE_MS, MARKET_FILE } from './market-cache';
+import { BIDS_FILE, fetchMarket, marketQuotes, marketRows, writeMarketCache, MARKET_CACHE_MS, MARKET_FILE } from './market-cache';
 import { marketStale } from './fleet-agent';
 import { fileTables, marketValue, unitValue } from '../packages/core/src/loot';
 
@@ -27,6 +27,34 @@ test('shared acquisition quotes keep their age and require explicit valid supply
     expect(marketQuotes({ at, items }, now)).toEqual({ 1: { at, ask: 8, bid: 3, sell: 7 }, 2: { at, ask: null, bid: null, sell: 0 } });
     for (const stamp of [0, now + 1, now - MARKET_CACHE_MS]) expect(marketQuotes({ at: stamp, items }, now)).toEqual({});
     for (const raw of [null, {}, { at, items: [] }]) expect(marketQuotes(raw, now)).toEqual({});
+});
+
+test('publishing a market cache preserves its observation time and leaves unrelated temporary files alone', () => {
+    const root = mkdtempSync(join(tmpdir(), 'market-publish-')), at = 123456;
+    try {
+        const items = marketRows([{ id: 1, name: 'Supply', ask: 8, bid: 3, sellQuantity: 0 }]);
+        mkdirSync(join(root, '.practice'));
+        writeFileSync(join(root, MARKET_FILE) + '.tmp', 'another writer');
+        writeMarketCache(root, items, at);
+        expect(JSON.parse(readFileSync(join(root, MARKET_FILE), 'utf8'))).toEqual({ at, items });
+        expect(readFileSync(join(root, MARKET_FILE) + '.tmp', 'utf8')).toBe('another writer');
+        expect(readdirSync(join(root, '.practice')).sort()).toEqual(['market-all.json', 'market-all.json.tmp']);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('concurrent market publishers expose one complete snapshot without temporary-file collisions', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'market-concurrent-'));
+    try {
+        const source = new URL('./market-cache.ts', import.meta.url).href;
+        const records = [1, 2].map(id => ({ at: id * 1000, items: marketRows([{ id, name: `writer${id}`, ask: 8, bid: 3, sellQuantity: id }]) }));
+        const children = records.map(record => Bun.spawn([process.execPath, '--eval',
+            `import {writeMarketCache} from ${JSON.stringify(source)};for(let i=0;i<32;i++)writeMarketCache(${JSON.stringify(root)},${JSON.stringify(record.items)},${record.at});`,
+        ], { stdout: 'pipe', stderr: 'pipe', windowsHide: true }));
+        const results = await Promise.all(children.map(async child => ({ code: await child.exited, error: await new Response(child.stderr).text() })));
+        expect(results).toEqual([{ code: 0, error: '' }, { code: 0, error: '' }]);
+        expect(records).toContainEqual(JSON.parse(readFileSync(join(root, MARKET_FILE), 'utf8')));
+        expect(readdirSync(join(root, '.practice'))).toEqual(['market-all.json']);
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test('fetchMarket reads every page of 100 and pauses between them', async () => {
@@ -59,15 +87,23 @@ test('the loot tables value an item at its market price over the alchemy floor',
     expect(unitValue(1163, t)).toBe(Math.floor(35200 * 0.6));
 });
 
-test('the market cache is stale when missing or older than 30 minutes', () => {
+test('fresh dashboard quotes cannot hide missing or stale shop-to-bid recommendations', () => {
     const root = mkdtempSync(join(tmpdir(), 'market-stale-'));
-    expect(marketStale(root)).toBe(true);
-    mkdirSync(join(root, '.practice'));
-    writeFileSync(join(root, MARKET_FILE), '{}');
-    expect(marketStale(root)).toBe(false);
-    const old = (Date.now() - MARKET_CACHE_MS - 60_000) / 1000;
-    utimesSync(join(root, MARKET_FILE), old, old);
-    expect(marketStale(root)).toBe(true);
+    try {
+        expect(marketStale(root)).toBe(true);
+        writeMarketCache(root, {});
+        expect(marketStale(root)).toBe(true);
+        writeFileSync(join(root, BIDS_FILE), '{}');
+        expect(marketStale(root)).toBe(false);
+        const now = Date.now(), old = (now - MARKET_CACHE_MS - 60_000) / 1000;
+        utimesSync(join(root, BIDS_FILE), old, old);
+        writeMarketCache(root, {}, now);
+        expect(marketStale(root, now)).toBe(true);
+        utimesSync(join(root, BIDS_FILE), now / 1000, now / 1000);
+        expect(marketStale(root, now)).toBe(false);
+        utimesSync(join(root, MARKET_FILE), old, old);
+        expect(marketStale(root, now)).toBe(true);
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test('shopLots lists the shops whose open bids make a lot worth a walk, the largest first', async () => {

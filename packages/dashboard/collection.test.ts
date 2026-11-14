@@ -88,6 +88,29 @@ test('bounded operation distinguishes safe partial stops, fulfilled buffers and 
     expect(boundedOperation({result:'ok boughtTotal=7',phase:'old spentTotal=999'}).counters.spentTotal).toBeUndefined();
 });
 
+test('bounded operation reads late result counters without mixing phases or changing item units', () => {
+    const result = ('ok boughtTotal=12 detail=' + 'x'.repeat(400) + ' bankedTotal=12 spentTotal=56 targetMet=0 noBuyTicks=25 noBuyLimit=25').slice(0, 293);
+    const proof = boundedOperation({ result, counters: { boughtTotal: 12, bankedTotal: 12, spentTotal: 56, noBuyTicks: 25, noBuyLimit: 25, targetMet: 0, banked: 999, unknown: 99 } });
+    expect(proof.counters).toEqual({ boughtTotal: 12, bankedTotal: 12, spentTotal: 56, noBuyTicks: 25, noBuyLimit: 25 });
+    expect(proof.targetMet).toBe(false);
+    expect(proof.label).toBe('Partial stock · target unmet');
+    expect(boundedOperation({ result: 'ok boughtTotal=0', counters: { boughtTotal: 0, targetMet: 1 } }).label).toBe('Buffer ready · no new purchases');
+    const ongoing = boundedOperation({ result: '', phase: 'bank boughtTotal=2 bankedTotal=2', counters: { boughtTotal: 999, bankedTotal: 999, targetMet: 1 } });
+    expect(ongoing.counters).toEqual({ boughtTotal: 2, bankedTotal: 2 });
+    expect(ongoing.targetMet).toBeNull();
+    expect(boundedOperation({ result: 'ok mode=headless', counters: { made: 390, banked: 390, planned: 390, xpGain: 9750 } }).counters)
+        .toEqual({ made: 390, banked: 390, planned: 390, xpGain: 9750 });
+});
+
+test('bounded operation accepts only finite nonnegative structured counters and explicit numeric fulfillment', () => {
+    const proof = boundedOperation({ result: 'ok boughtTotal=7', counters: { boughtTotal: -1, bankedTotal: NaN, spentTotal: Infinity, maxItems: '20', noBuyTicks: null } });
+    expect(proof.counters).toEqual({ boughtTotal: 7 });
+    for (const targetMet of [2, -1, NaN, Infinity, '1', true, null])
+        expect(boundedOperation({ result: 'ok', counters: { targetMet } }).targetMet).toBeNull();
+    expect(boundedOperation({ result: 'ok targetMet=true', counters: { targetMet: 2 } }).targetMet).toBe(true);
+    expect(boundedOperation({ result: 'ok spentTotal=' + '9'.repeat(400) }).counters).toEqual({});
+});
+
 test('actual bounded headless result reports390 output and explicit boolean fulfillment', () => {
     const result='ok mode=headless ok=true ticks=76 made=390 banked=390 planned=390 actions=26 bankTrips=2 xpGain=9750 shaftBank=330 featherBank=110 headlessBank=390 heldHeadless=0 reserveMet=true preserved=true targetMet=true stop=max-make hpMin=11 died=false failure=-';
     const proof=boundedOperation({result});

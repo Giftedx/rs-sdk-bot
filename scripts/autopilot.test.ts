@@ -7,7 +7,7 @@ import { aioTemplates, BLOOD_FOOD, BLOOD_MEALS, BOUGHT_BONE_XP, CANNON_BARS, SWE
 import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { missionSignature, startable } from './swarm';
-import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 import { existsSync } from 'node:fs';
 import { resolveAioStep } from './aio';
@@ -636,6 +636,41 @@ test('the plan gives a build account the quest route of its kit; a kit with no r
 
 import { mountainWalk, offlinePlace, MOUNTAIN } from './autopilot';
 import { accountFrom, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
+
+test('autopilot plans from shared live skills when a newer local file belongs to practice or another account', () => {
+    const server = 'rs-sdk-demo.fly.dev', owners = new Map([['worker', { side, server }]]);
+    const published = { name: 'Worker', server, at: 100, bankAt: 50, bank: [], inventory: [],
+        skills: [{ name: 'Thieving', level: 55 }, { name: 'Hitpoints', level: 20 }] };
+    const files = [{ side, at: 1000, accounts: [published] }];
+    for (const local of [
+        { ...published, at: 200, server: 'localhost:8888', skills: [{ name: 'Thieving', level: 1 }] },
+        { ...published, at: 200, practice: true, skills: [{ name: 'Thieving', level: 1 }] },
+        { ...published, at: 200, name: 'Other', skills: [{ name: 'Thieving', level: 1 }] },
+    ]) {
+        const observed = observedAccount('worker', local, files, owners, side);
+        expect(observed).toMatchObject({ name: 'Worker', at: 100, bankAt: 50, side });
+        const [assignment] = plan(inputs(accountFrom('Worker', side, observed, () => undefined)));
+        expect(assignment!.template!.id).toMatch(/^goldfarm@/);
+    }
+    const local = { ...published, at: 200, skills: [{ name: 'Thieving', level: 1 }, { name: 'Hitpoints', level: 20 }], result: 'ok' };
+    const observed = observedAccount('Worker', local, files, owners, side);
+    expect(observed).toMatchObject({ at: 200, result: 'ok' });
+    expect(plan(inputs(accountFrom('Worker', side, observed, () => undefined)))[0]!.template!.id).toBe('thieving55');
+    expect(observedAccount('Worker', local, [{ ...files[0], accounts: [{ ...published, at: 200 }] }], owners, side).result).toBe('ok');
+});
+
+test('autopilot retains same-side and adopted observations while obeying the owner and expected server', () => {
+    const server = 'rs-sdk-demo.fly.dev', owners = new Map([['worker', { side, server }]]);
+    const row = (at: number, level: number) => ({ name: 'Worker', server, at, bankAt: 50,
+        bank: [{ id: 995, name: 'Coins', count: level }], inventory: [], skills: [{ name: 'Thieving', level }] });
+    const adopted = { side: 'old-side', accounts: [row(300, 99)] }, owned = { side, at: 900, accounts: [row(100, 55)] };
+    expect(observedAccount('Worker', null, [adopted, owned], owners, side)).toMatchObject({ side, at: 100, bankAt: 50 });
+    expect(observedAccount('Worker', null, [adopted], owners, side)).toMatchObject({ side: 'old-side', at: 300, bankAt: 50 });
+    expect(observedAccount('Worker', null, [{ ...owned, accounts: [{ ...row(900, 1), server: 'other-server' }] }, adopted], owners, side))
+        .toMatchObject({ side: 'old-side', at: 300 });
+    expect(observedAccount('Unknown', row(400, 1), [adopted], owners, side)).toBeNull();
+    expect(observedAccount('Worker', { ...row(400, 1), name: 'Other' }, [], owners, side)).toBeNull();
+});
 import { walkWithFerryFallback } from './walk-to';
 import { loadHunters } from '../packages/core/src/danger';
 import { loadTravel } from '../packages/core/src/travel';

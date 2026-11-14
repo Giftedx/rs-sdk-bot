@@ -1,5 +1,5 @@
 // Stages the supplies of one route step at the bank that the route account visits next. For each item line, the
-// accounts of this side that hold the item (fleet/snapshots/<side>.json) give it by fleet orders that meet at that
+// accounts of this side that hold the item (live status and canonical fleet snapshots) give it by fleet orders that meet at that
 // bank (scripts/coin-courier.ts BANK_MEETS). Accounts with no enabled job give first. An account with an enabled job
 // gives only with --allow-busy: the autopilot then takes it off its job while the order is open (scripts/autopilot.ts
 // inOpenOrder) and plans it again after the trade. An account whose enabled job the autopilot does not own (no
@@ -19,9 +19,11 @@
 //   or:  bun scripts/route-stage.ts <account> --route <route.json> --step <step id> [--dry] [--allow-busy]
 // A route file step names its batch as "stage": {"bank": "draynor", "items": [{"item": "oak logs", "count": 125}]}.
 // Env: IN (minutes to the first window, default 10), MINUTES (window length, default 90).
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
+import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
+import { fleetStatusRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
+import { readMergedPlan } from '../packages/core/src/coordinator-jobs';
 import { BANK_MEETS } from './coin-courier';
 import { makeOrder, orderMeet } from './fleet-order';
 import { pickOrder, swarmBusy, validOrder, type Order } from './fleet-trade';
@@ -100,6 +102,34 @@ export function heldBack(name: string, jobs: readonly any[], stopText: string | 
 
 const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
 
+// Availability follows the current merged jobs on this host's side. A fresh container or unreadable local plan
+// keeps the published plan's holds; without either source, staging cannot establish that any account is free.
+export function stageJobs(side: string, options: { base?: string; fleetDir?: string; localSide?: string } = {}): any[] {
+    const base = options.base ?? resolve(import.meta.dir, '..'), fleetDir = options.fleetDir ?? FLEET_DIR();
+    if (side === (options.localSide ?? mySide()) && Array.isArray(readJson(join(base, 'swarm.json'))?.jobs)) {
+        try { const plan = readMergedPlan(base); if (Array.isArray(plan?.jobs)) return plan.jobs; } catch { /* published holds remain */ }
+    }
+    const published = readJson(join(fleetDir, 'plans', `${side}.json`));
+    if (!Array.isArray(published?.jobs)) throw Error(`route staging has no readable job plan for side ${side}`);
+    return published.jobs;
+}
+
+// Current observations for the receiver's side and server, including an adopted account's last published row.
+// Local files belong to this host's side and must name their file's account; another side's staging uses shared rows.
+export function stageObservations(side: string, server: string, options: {
+    base?: string; fleetDir?: string; owners?: ReturnType<typeof loadOwners>; localSide?: string;
+} = {}): any[] {
+    const base = options.base ?? resolve(import.meta.dir, '..'), fleetDir = options.fleetDir ?? FLEET_DIR();
+    const owners = options.owners ?? loadOwners(join(fleetDir, 'owners.json')), localSide = options.localSide ?? mySide();
+    const dir = join(base, '.practice/status');
+    const local = side === localSide && existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => {
+        const row = readJson(join(dir, f));
+        return typeof row?.name === 'string' && row.name.toLowerCase() === f.slice(0, -5).toLowerCase() ? [row] : [];
+    }) : [];
+    return fleetStatusRows(local, readSnapshotFiles(join(fleetDir, 'snapshots')), n => owners.get(n.toLowerCase())?.side, localSide, server)
+        .filter(row => owners.get(row.name.toLowerCase())?.side === side && owners.get(row.name.toLowerCase())?.server === server.toLowerCase());
+}
+
 if (import.meta.main) {
     const argv = process.argv.slice(2), flag = (n: string) => argv.includes(n);
     const value = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
@@ -117,10 +147,10 @@ if (import.meta.main) {
     }
     const meet = orderMeet(bank);
     if (!meet) throw Error(`unknown bank ${bank}: ${BANK_MEETS.map(r => r.bank).join(', ')}`);
-    const owners = loadOwners(), side = owners.get(account.toLowerCase())?.side;
+    const owners = loadOwners(), receiver = owners.get(account.toLowerCase()), side = receiver?.side;
     if (!side) throw Error(`${account} is not in fleet/owners.json`);
-    const snapshot = readJson(join(FLEET_DIR(), 'snapshots', `${side}.json`))?.accounts ?? [];
-    const plan = readJson(join(FLEET_DIR(), 'plans', `${side}.json`))?.jobs ?? [];
+    const snapshot = stageObservations(side, receiver!.server, { owners });
+    const plan = stageJobs(side);
     const busy = swarmBusy(plan), owned = swarmBusy(plan.filter((j: any) => typeof j?.autopilot === 'string'));
     const fromList = value('--from'), from = fromList ? new Set(fromList.split(',').map(norm)) : undefined;
     const stopText = (name: string) => { for (const n of [name, name.toLowerCase()]) { try { return readFileSync(join('.practice', `stop-${n}`), 'utf8'); } catch { /* none */ } } return undefined; };

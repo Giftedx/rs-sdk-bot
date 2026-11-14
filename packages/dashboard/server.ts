@@ -29,6 +29,7 @@ import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
 import { RosterFeed } from '../core/src/roster-feed';
 import { canonicalSnapshots, ownerOfIn } from '../core/src/fleet-snapshots';
+import { marketRows, writeMarketCache, type MarketItem } from '../../scripts/market-cache';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 // DASH_ROOT lets a server in a worktree read the data of another checkout.
@@ -602,6 +603,7 @@ let pricesAt = 0;
 async function refreshPrices() {
     try {
         const nextIds = new Map<string, number>(), nextMarket = new Map<number, typeof marketById extends Map<number, infer T> ? T : never>(), nextPrices = new Map<string, number>();
+        const shared: Record<number, MarketItem> = {};
         // 100 items per page (the API refuses more); about 15 pages.
         for (let offset = 0, total = 1; offset < total; offset += 100) {
             const response = await fetch(`${DEMO}/api/market/items?limit=100&offset=${offset}`, { signal: AbortSignal.timeout(15_000) });
@@ -609,6 +611,7 @@ async function refreshPrices() {
             const j = await response.json() as { items: any[]; total: number };
             if (!Number.isSafeInteger(j.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('Invalid market page');
             total = Math.min(j.total ?? 0, 5000);
+            Object.assign(shared, marketRows(j.items));
             // The market is thin: one trade set Bread's lastPrice to 1,000,000. Use the 7-day VWAP when the item
             // traded at least 3 times, else the shop base price.
             for (const i of j.items ?? []) {
@@ -622,6 +625,7 @@ async function refreshPrices() {
         marketById.clear();for (const [key,value] of nextMarket) marketById.set(key,value);
         prices.clear();for (const [key,value] of nextPrices) prices.set(key,value);
         pricesAt = Date.now();
+        try { writeMarketCache(root, shared, pricesAt); } catch { /* Dashboard prices remain available when the cache cannot be written. */ }
     } catch { /* next round */ }
 }
 setInterval(() => void refreshPrices(), 600_000);

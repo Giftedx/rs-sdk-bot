@@ -10,11 +10,13 @@ import {projectRoot,coordinationDir,atomicJson,capabilitySource,publishCapabilit
 import {deliveryConflictRoots} from './delivery-pr';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PROOF_TIMING} from './build-fault';
-import {liveRows,readFreshControllerState} from './coordinator-live';
+import {readFreshControllerState} from './coordinator-live';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
 import {liveHelperStatuses,observedStock,overallSupplyDemand,supplyBill} from '../../planner/src/supply-bill';
+import {FLEET_DIR,mySide} from '../../core/src/fleet';
+import {fleetStatusRows,ownerOfIn,readSnapshotFiles} from '../../core/src/fleet-snapshots';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -173,13 +175,29 @@ export function readPlannerControllerCapacity(base=projectRoot,now=Date.now()){
    freeGB:memory(state.freeGB),minFreeGB:memory(state.minFreeGB),maxBots:count(state.maxBots)};
  }catch{return null;}
 }
-export function readPlannerStatuses(base=projectRoot){
- if(!existsSync(join(base,'.practice/status')))return [];
- return liveRows(base).filter(s=>s?.server==='rs-sdk-demo.fly.dev'&&!s.practice).map(s=>({
-  name:s.name,server:s.server,at:s.at,result:s.result,started:s.started,workRevision:s.workRevision,goal:s.goal,
-  skills:s.skills,quests:s.quests,questsAt:s.questsAt,inventory:s.inventory,bank:s.bank,bankAt:s.bankAt,
-  equipment:s.equipment,equipmentObserved:s.equipmentObserved,hp:s.hp,pos:s.pos,combat:s.combat,guildFacts:s.guildFacts,counters:s.counters,
- }));
+export function readPlannerStatuses(base=projectRoot,fleetDir=FLEET_DIR(),side=mySide()){
+ const dir=join(base,'.practice/status'),ownerOf=ownerOfIn(fleetDir);
+ const local=existsSync(dir)?readdirSync(dir).filter(f=>f.endsWith('.json')).flatMap(f=>{
+  try{const s=JSON.parse(readFileSync(join(dir,f),'utf8'));
+   return typeof s?.name==='string'&&s.name.toLowerCase()===f.slice(0,-5).toLowerCase()
+    &&typeof s.server==='string'&&s.server.toLowerCase()==='rs-sdk-demo.fly.dev'&&!s.practice?[s]:[];
+  }catch{return [];}
+ }):[];
+ const byName=new Map(local.map(s=>[s.name.toLowerCase(),s]));
+ return fleetStatusRows(local,readSnapshotFiles(join(fleetDir,'snapshots')),ownerOf,side)
+  .filter(s=>(ownerOf(s.name)??s.side)===side).map(s=>{
+   const current=byName.get(s.name.toLowerCase()),isLocal=s.side===side&&current?.at===s.at&&current!==undefined;
+   return{
+    name:s.name,server:s.server,side,at:s.at,observation:isLocal?'local-status':'fleet-snapshot',snapshotOnly:!isLocal,
+    skills:s.skills,quests:Array.isArray(s.questJournal)?s.questJournal:s.quests,questsAt:s.questsAt,
+    inventory:s.inventory,bank:s.bank,bankAt:s.bankAt,equipment:s.equipment,equipmentObserved:s.equipmentObserved,
+    hp:s.hp,pos:s.pos,combat:s.combat,guildFacts:s.guildFacts,
+    // Shared snapshots describe saved account facts, never another container's executing session.
+    ...(isLocal?{result:current.result,started:current.started,sessionAttemptId:current.sessionAttemptId,
+     workRevision:current.workRevision,workEntry:current.workEntry,goal:current.goal,tick:current.tick,
+     counters:current.counters,ledger:current.ledger}:{}),
+   };
+  });
 }
 export function readWorld(){
  const plan=readMergedPlan(projectRoot);
@@ -245,7 +263,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
 export function assetSummary(statuses:readonly any[],protectedNames:readonly string[]=[],now=Date.now()){
  const names=new Map((JSON.parse(readFileSync(join(projectRoot,'knowledge/items.json'),'utf8')) as any[]).map(i=>[i.id,i.name]));
  const protectedAccounts=new Set(['haggis',...protectedNames.map(name=>name.toLowerCase())]);
- return statuses.filter(s=>typeof s?.name==='string'&&/^[A-Z]/.test(s.name)&&s.server==='rs-sdk-demo.fly.dev'
+ return statuses.filter(s=>typeof s?.name==='string'&&/^[A-Za-z0-9]{1,12}$/.test(s.name)&&s.server==='rs-sdk-demo.fly.dev'
   &&!s.practice&&!protectedAccounts.has(s.name.toLowerCase())).map(s=>{
   const observed=observedStock(s),fresh=observedStock(recentStockStatus(s,now));
   const coins=observed.get(995)??0,recentCoins=fresh.get(995)??0;
@@ -279,12 +297,23 @@ export function fleetLeads(rows:any[],side:string){
   return{skill:r.skill,best:r.best,side:r.side,account:r.account,local:mine,otherSideLeads:r.side!==side&&r.best-(mine?.level??1)>FLEET_BAND};
  });
 }
+export function plannerStatusSummary(s:any){
+ const number=(n:unknown)=>typeof n==='number'&&Number.isFinite(n)&&n>=0?n:undefined;
+ const text=(value:unknown,limit:number):string|undefined=>typeof value==='string'?clip(value,limit) as string:undefined;
+ const numeric=(raw:any,limit:number,keys?:readonly string[])=>Object.fromEntries(Object.entries(raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{})
+  .filter(([key,value])=>/^[A-Za-z][A-Za-z0-9]{0,47}$/.test(key)&&number(value)!==undefined&&(!keys||keys.includes(key))).slice(0,limit));
+ return{name:s.name,server:s.server,side:s.side,at:s.at,observation:s.observation,snapshotOnly:s.snapshotOnly,
+  result:text(s.result,160),goal:text(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt,
+  started:number(s.started),sessionAttemptId:text(s.sessionAttemptId,96),workRevision:text(s.workRevision,128),workEntry:text(s.workEntry,500),tick:number(s.tick),
+  counters:numeric(s.counters,64),ledger:numeric(s.ledger,12,['ticks','xp','inventory','move','anim','dialog','stun','idle','xpGain'])};
+}
 export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[],publicationConflicts:ReturnType<typeof deliveryConflictRoots>=[]){
- const compact={...world,ended:briefEnded(world.ended),coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
+ const compact={...world,ended:briefEnded(world.ended),coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map(plannerStatusSummary),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
  const recent=state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').sort((a,b)=>finishedAt(b)-finishedAt(a)).slice(0,48);
  return[
   'You are the autonomous director of this RuneScape project, working with Codex and Claude through one claimed task queue. Return ONLY a JSON object {reason:string,tasks:CoordTask[],capabilities:DeliveryTask[]}. Both tasks and capabilities must be JSON arrays, including when empty: {"reason":"No new work","tasks":[],"capabilities":[]}. Never use {} or null for either collection; capabilities is not a map of existing definitions.',
   'Do not edit files, launch processes or play the game. The coordinator owns execution. Read local sources as needed.',
+  'Status observations preserve their original ages. A fleet-snapshot row is saved account state, not an executing session. Structured counters and ledger summaries are advisory observations bound to their started/sessionAttemptId/workRevision/workEntry fields; acceptance still needs the coordinator\'s bound receipts.',
   'Goals: own useful and rare items and best-in-slot gear, earn the wealth to buy them, finish all quests and unlocks, finish the fresh completion account, reach specialist rank 1 on skill boards with a priced winning margin, and reach Haggis rank 1 Overall under the record. Goal IDs: '+GOALS.join(', ')+'. The main24 ID denotes the main Overall run. For specialist work, price each specialist route against the current board record before treating it as a target.',
   'Read AGENTS.md, docs/plans/joined-plan.md, docs/script-contract.md. All game mechanics are authorized. Missing supplies create acquisition tasks, never route exclusions. Preserve all current work, pauses and clocks. No paid APIs.',
   'Own a whole useful outcome through its consumer. Prefer existing workers and trained helpers. Parameterize simple scripts; compose them with dependency IDs. Research only an unresolved decision. Do not create notes/status tools as a substitute for game progress.',

@@ -90,18 +90,23 @@ export const isLoopback = (address: string) => /^(127\.|::1$|::ffff:127\.)/.test
 // Bounded supplier evidence is explicit. RESULT ok may mean a safe partial stop,
 // and a ready buffer may require no new purchases at all.
 export function boundedOperation(status: any) {
-    const text = String(status.result || status.phase || '');
+    const result = String(status.result || ''), text = result || String(status.phase || '');
+    // Result counters cover the full producer line, beyond the display excerpt. They belong to an ended result,
+    // so a current phase never draws from a previous result's counters.
+    const recorded = result && status.counters && typeof status.counters === 'object' && !Array.isArray(status.counters) ? status.counters : null;
     const counters: Record<string, number> = {};
     // Bounded fletching reports made/banked/planned item units. A generic
     // banked= elsewhere may be coins, so do not relabel every script's metrics.
     const outputFields = /\bmode=(?:headless|steel)(?=\s|$)/.test(text) ? ['made','banked','planned','xpGain'] : [];
     for (const field of ['boughtTotal','bankedTotal','spentTotal','coinsLeft','coinReserve','maxSpend','maxItems','noBuyTicks','noBuyLimit',...outputFields]) {
+        const value = recorded?.[field];
+        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) { counters[field] = value; continue; }
         const match = text.match(new RegExp(`\\b${field}=([0-9]+)(?=\\s|$)`));
-        if (match) counters[field] = Number(match[1]);
+        if (match && Number.isFinite(Number(match[1]))) counters[field] = Number(match[1]);
     }
-    const target = String(status.result || '').match(/\btargetMet=(true|false|[01])(?=\s|$)/);
-    const targetMet = target ? target[1] === '1' || target[1] === 'true' : null;
-    const stop = String(status.result || '').match(/\bstop=([^\s]+)/)?.[1] ?? null;
+    const target = result.match(/\btargetMet=(true|false|[01])(?=\s|$)/), recordedTarget = recorded?.targetMet;
+    const targetMet = recordedTarget === 0 ? false : recordedTarget === 1 ? true : target ? target[1] === '1' || target[1] === 'true' : null;
+    const stop = result.match(/\bstop=([^\s]+)/)?.[1] ?? null;
     return { counters, targetMet, stop, visible: Object.keys(counters).length > 0 || targetMet !== null,
         label: targetMet === true ? (counters.boughtTotal === 0 ? 'Buffer ready · no new purchases' : 'Stock target met')
             : targetMet === false ? (stop === 'stock-wait' ? 'Partial stock · waiting offline' : 'Partial stock · target unmet')
