@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794654927619,
+ "at": 1794655001568,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -512,6 +512,29 @@
    ]
   },
   {
+   "account": "Sausagefest",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -528,29 +551,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
    ]
   }
  ]
