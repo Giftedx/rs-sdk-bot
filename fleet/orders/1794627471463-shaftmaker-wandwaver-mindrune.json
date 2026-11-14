@@ -1,0 +1,22 @@
+{
+ "id": "1794627471463-shaftmaker-wandwaver-mindrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "Wandwaver",
+ "item": "Mind rune",
+ "count": 8,
+ "start": 1794627471463,
+ "end": 1794629871463,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
