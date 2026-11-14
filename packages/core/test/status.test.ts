@@ -136,9 +136,9 @@ test('long cow RESULT retains late efficiency counters and isolates two hosted a
     const a=`StatusLongA${process.pid}`,b=`StatusLongB${process.pid}`,folder=resolve(import.meta.dir,'../../../.practice/status');
     const long='RESULT ok mode=cow ok=true creditedKills=9 banked={"hide":9,"bones":9,"beef":9} trainSkill=Defence targetLevel=null startLevel=76 finalLevel=76 selectedXp=7200 attackXp=0 damageXp=7200 eaten=0 bankTrips=3 hpMin=70 died=false lifeId=1 respawns=0 ticks=417 preserved=true targetMet=true partial=false stop=max-kills failure=- diagnostics=[] bankProfile=north foodMode=banked healthCutoff=false walkTicks=173 walkedTiles=334 detourTiles=211 doorInteractions=2 houseInteractions=0 maxPackSlots=27 bankDistances=[45] walkLegs=[{"detail":"walkTicks=999 houseInteractions=999 maxPackSlots=999"}]';
     expect(long.indexOf('walkTicks=173')).toBeGreaterThan(300);
-    noteStatusLine(a,long);noteStatusLine(b,'MILESTONE waiting for own work');
     const session=(name:string):any=>({name,sdk:{getState:()=>({inventory:[],equipment:[],skills:[]})},tick:()=>1,onTick:()=>()=>{}});
     const sa=startStatus(session(a),'localhost:8888'),sb=startStatus(session(b),'localhost:8888');
+    noteStatusLine(a,long);noteStatusLine(b,'MILESTONE waiting for own work');
     const read=(name:string)=>JSON.parse(readFileSync(resolve(folder,`${name}.json`),'utf8'));
     try{
         console.log('RESULT ok globalOnly=888 walkTicks=999');sa.stop();sb.stop();

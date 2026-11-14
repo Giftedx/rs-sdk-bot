@@ -38,13 +38,12 @@ export function roleOf(name: string): string {
     return 'test';
 }
 
-let lastLine = '';
-let lastResult = '';
-let lastCounters: Record<string, number> = {};
 let patched = false;
-// Per-bot MILESTONE and RESULT lines, for processes that run several bots (packages/core/src/host.ts). A bot with no
-// entry here uses the process-wide lines above, as before.
-const perBot = new Map<string, { line: string; result: string; counters: Record<string, number> }>();
+type StatusLines = { line: string; result: string; counters: Record<string, number>; attributed: boolean };
+// Each login owns its lines. Hosted actors use attributed logs; standalone actors receive console.log while active.
+const perBot = new Map<string, StatusLines>();
+const activeLines = new Set<StatusLines>();
+const emptyLines = (attributed: boolean): StatusLines => ({ line: '', result: '', counters: {}, attributed });
 
 // Read only complete top-level scalar tokens. Diagnostic JSON and quoted text
 // may contain key=value strings; those are not worker counters. Keep parsing
@@ -70,11 +69,15 @@ export function renameRetry(from: string, to: string, rename: (a: string, b: str
         catch (e) { if (attempt >= 20 || !['EPERM', 'EBUSY', 'EACCES'].includes((e as NodeJS.ErrnoException).code ?? '')) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50); }
     }
 }
-export function noteStatusLine(name: string, line: string): void {
-    const e = perBot.get(name) ?? { line: '', result: '', counters: {} };
+function updateLines(e: StatusLines, line: string): void {
     if (line.startsWith('MILESTONE ')) e.line = line.slice(10);
     if (line.startsWith('RESULT ')) { e.result = line.slice(7, 300); e.counters=resultCounters(line.slice(7)); }
-    perBot.set(name, e);
+}
+export function noteStatusLine(name: string, line: string): void {
+    const key = name.toLowerCase(), e = perBot.get(key) ?? emptyLines(true);
+    e.attributed = true;
+    updateLines(e, line);
+    perBot.set(key, e);
 }
 function captureMilestones() {
     if (patched) return;
@@ -82,8 +85,7 @@ function captureMilestones() {
     const orig = console.log.bind(console);
     console.log = (...args: unknown[]) => {
         const line = args.map(String).join(' ');
-        if (line.startsWith('MILESTONE ')) lastLine = line.slice(10);
-        if (line.startsWith('RESULT ')) { lastResult = line.slice(7, 300); lastCounters=resultCounters(line.slice(7)); }
+        for (const e of activeLines) if (!e.attributed) updateLines(e, line);
         orig(...args);
     };
 }
@@ -127,6 +129,8 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
 
 export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
     captureMilestones();
+    const key = s.name.toLowerCase(), lines = emptyLines(perBot.get(key)?.attributed ?? false);
+    perBot.set(key, lines);
     mkdirSync(dir, { recursive: true });
     const file = join(dir, `${s.name}.json`);
     let bank: { id: number; baseId: number; name: string; count: number }[] | null = null;
@@ -186,16 +190,15 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         bot[method]=(...args:unknown[])=>{ observeBank(); return original(...args); };
     }
     const write = () => {
+        // A late callback or repeated stop from an earlier login cannot replace this account's current row.
+        if (perBot.get(key) !== lines) return;
         const st = s.sdk.getState();
         observeBank();
         const p = st?.player;
         const hp = (st?.skills ?? []).find((k: any) => k.name === 'Hitpoints');
-        const own = perBot.get(s.name);
-        const phaseNow = own ? own.line : lastLine;
-        const resultNow = own ? own.result : lastResult;
         const doc = {
             name: s.name, server, role: roleOf(s.name), goal: process.env.BOT_GOAL ?? process.argv[1]?.split(/[\\/]/).pop() ?? '',
-            phase: phaseNow, result: resultNow, at: Date.now(), started, tick: s.tick(), workRevision: process.env.WORKER_RELEASE ?? null, workEntry: process.env.WORKER_ENTRY || null,
+            phase: lines.line, result: lines.result, at: Date.now(), started, tick: s.tick(), workRevision: process.env.WORKER_RELEASE ?? null, workEntry: process.env.WORKER_ENTRY || null,
             coordinatorRunId: process.env.COORDINATOR_RUN_ID ?? null,
             // The producer's lifecycle attempt for this exact session (session-lifecycle.ts); null when absent.
             sessionAttemptId: (s as { lifecycle?: { attemptId?: unknown } }).lifecycle?.attemptId ?? null,
@@ -223,7 +226,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             // Inputs sent per tick (last 300 ticks, one digit each) and the top action sets with the XP they gained.
             inputs: inputs(),
             // Every key=value counter from the last RESULT line (shopTicks, walkTicks, stuns, eaten, ...).
-            counters: own ? own.counters : lastCounters,
+            counters: lines.counters,
             env: { target: process.env.TARGET ?? null, cap: process.env.CAP ?? null },
         };
         // The coordinator reads this file every second during a live run, and on Windows that read can block the
@@ -242,7 +245,8 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     // assertCompatibleWorkers) then reads an unfinished row older than 30 s as an unknown peer and refuses every other
     // login on the side. The row's `tick` still shows the stall.
     const beat = setInterval(write, statusHeartbeatMs());
-    return { stop: () => { clearInterval(beat); write(); off(); } };
+    activeLines.add(lines);
+    return { stop: () => { clearInterval(beat); write(); off(); activeLines.delete(lines); } };
 }
 export const GROUND_STATUS_MAX = 50;
 // The SDK lists the ground items of the player's own level, nearest first.
