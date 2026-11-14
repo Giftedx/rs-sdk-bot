@@ -8,22 +8,23 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { isNoProgressFailure, isPrerequisiteFailure, isTransportStall } from './supervise';
+import { failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 
-export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused';
+export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused';
 
 // The end an account's last RESULT line means, or null when the account must run again. Same order as supervise.ts.
 export function classify(result: string | undefined, stopFile: boolean): AccountEnd | null {
     const r = result ?? '(no RESULT)';
-    if (/^RESULT ok/.test(r)) return 'done';
+    if (/^RESULT ok\b/.test(r)) return 'done';
     if (stopFile || /stop file/.test(r)) return 'stopped';
     // A death means the route or the food plan failed; a blind restart repeats it.
     if (/died=true|RESULT fail died/.test(r)) return 'died';
     // Out of food: a restart only logs in again and finds the same empty bank.
     if (/RESULT fail no food/.test(r)) return 'stopped';
     if (isWorkerReleaseHold(r)) return 'release-paused';
+    if (isEntryRefusal(r)) return 'refused';
     if (!isTransportStall(r) && (isNoProgressFailure(r) || isPrerequisiteFailure(r))) return 'blocked';
     return null;
 }
@@ -47,9 +48,9 @@ export interface SuperviseHostDeps {
 }
 
 export async function superviseHost(accounts: string[], d: SuperviseHostDeps): Promise<{ ends: Record<string, AccountEnd>; runs: number }> {
-    const ends: Record<string, AccountEnd> = {};
+    const ends: Record<string, AccountEnd> = Object.create(null);
     const end = (a: string, why: AccountEnd, runs: number) => { ends[a] = why; d.log?.(`SUPERVISE-HOST account ${a} ${why} after ${runs} runs`); };
-    let fails = 0;
+    const fails = new Map<string, number>(), held = new Map<string, number>(), lastShape = new Map<string, string | null>();
     let runs = 0;
     for (;;) {
         // A stop file that appeared while the host was down ends that account before the next start.
@@ -59,18 +60,31 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
         runs++;
         const r = await d.run(active);
         const results = lastResults(r.stdout);
+        // A peer's work cannot reset this account's streak. Only its own last ledger counts, as in supervise.ts.
+        const ledgers = new Map<string, string>();
+        for (const line of r.stdout.split(/\r?\n/)) {
+            const match = line.match(/^\[([^\]]+)\] (LEDGER ticks=\d+.*)$/);
+            if (match) ledgers.set(match[1]!, match[2]!);
+        }
         let retry = 0;
         for (const a of active) {
             const res = results.get(a);
             d.log?.(`SUPERVISE-HOST run ${runs} exit ${r.exitCode} ${a}: ${(res ?? '(no RESULT)').slice(0, 200)}`);
             const why = classify(res, d.stopped(a));
-            if (why) end(a, why, runs); else retry++;
+            if (why) { end(a, why, runs); continue; }
+            const heldTries = res && isHeldClaimRefusal(res) ? (held.get(a) ?? 0) + 1 : 0;
+            held.set(a, heldTries);
+            if (heldTries >= HELD_CLAIM_TRIES) { end(a, 'gave-up', runs); continue; }
+            const worked = madeProgress(ledgers.get(a) ?? '');
+            const shape = !worked && res && repeatableFailure(res) ? failureShape(res) : null;
+            if (shape !== null && shape === lastShape.get(a)) { end(a, 'blocked', runs); continue; }
+            lastShape.set(a, shape);
+            const failures = worked ? 1 : (fails.get(a) ?? 0) + 1;
+            fails.set(a, failures);
+            if (failures > d.maxRestarts) { end(a, 'gave-up', runs); continue; }
+            retry++;
         }
         if (retry === 0) return { ends, runs };
-        if (++fails > d.maxRestarts) {
-            for (const a of accounts) if (!ends[a]) end(a, 'gave-up', runs);
-            return { ends, runs };
-        }
         await d.pause(10_000);
     }
 }

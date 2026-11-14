@@ -1,6 +1,6 @@
 import {expect, test} from 'bun:test';
 import {execFileSync} from 'node:child_process';
-import {existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, unlinkSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, relative, resolve} from 'node:path';
 import {loadOwners} from '../packages/core/src/fleet';
@@ -146,6 +146,66 @@ test('competing fleet sides reserve one name and retry only their own durable cl
         expect(readFileSync(orderFile, 'utf8')).toBe('local pending order\n');
     } finally {
         if (/^rsbot-owner-claim-[^/\\]+$/.test(relative(parent, scratch))) rmSync(scratch, {recursive: true, force: true});
+    }
+}, 60_000);
+
+function transferRepos(scratch: string) {
+    const remote = join(scratch, 'remote.git'), root = join(scratch, 'root'), worktree = join(scratch, 'data');
+    git(scratch, 'init', '--bare', remote);
+    git(scratch, 'init', root);
+    mkdirSync(join(root, 'fleet'));
+    writeFileSync(join(root, 'fleet', 'owners.json'), JSON.stringify({accounts: {Alpha: {side: 'local', server: 'rs-sdk-demo.fly.dev'}}}));
+    git(root, 'add', 'fleet/owners.json');
+    git(root, '-c', 'user.name=Test', '-c', 'user.email=test@localhost', 'commit', '-m', 'seed registry');
+    git(root, 'remote', 'add', 'origin', remote);
+    git(root, 'push', 'origin', 'HEAD:refs/heads/fleet-data');
+    git(root, 'worktree', 'add', '-b', 'fleet-data', worktree, 'origin/fleet-data');
+    return {remote, root, worktree};
+}
+const ownerMove = {account: 'Alpha', from: 'local', to: 'cloud', home: 'local'};
+
+test('owner transfers refuse a dirty or unpublished local registry before publishing any move', () => {
+    const parent = resolve(tmpdir()), scratch = mkdtempSync(join(parent, 'rsbot-owner-cache-'));
+    try {
+        const {remote, root, worktree} = transferRepos(scratch);
+        const before = git(root, '--git-dir=' + remote, 'rev-parse', 'fleet-data');
+        const owners = join(worktree, 'fleet', 'owners.json'), original = readFileSync(owners, 'utf8');
+        writeFileSync(owners, original + '\n');
+        expect(() => transferFleetOwnersLocked(root, [ownerMove], worktree)).toThrow('unresolved local edit');
+        expect(git(root, '--git-dir=' + remote, 'rev-parse', 'fleet-data')).toBe(before);
+        expect(readFileSync(owners, 'utf8')).toBe(original + '\n');
+        writeFileSync(owners, original);
+        writeFileSync(join(worktree, 'private.txt'), 'preserve local work');
+        git(worktree, 'add', 'private.txt');
+        git(worktree, '-c', 'user.name=Test', '-c', 'user.email=test@localhost', 'commit', '-m', 'unpublished work');
+        expect(() => transferFleetOwnersLocked(root, [ownerMove], worktree)).toThrow('unpublished commits');
+        expect(git(root, '--git-dir=' + remote, 'rev-parse', 'fleet-data')).toBe(before);
+        expect(readFileSync(join(worktree, 'private.txt'), 'utf8')).toBe('preserve local work');
+    } finally {
+        if (/^rsbot-owner-cache-[^/\\]+$/.test(relative(parent, scratch))) rmSync(scratch, {recursive: true, force: true});
+    }
+}, 60_000);
+
+test('a published owner move cannot report success before the local registry catches up', () => {
+    const parent = resolve(tmpdir()), scratch = mkdtempSync(join(parent, 'rsbot-owner-cache-'));
+    try {
+        const {remote, root, worktree} = transferRepos(scratch);
+        const lock = resolve(worktree, git(worktree, 'rev-parse', '--git-path', 'index.lock'));
+        const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
+        const hook = join(remote, 'hooks', 'post-receive');
+        writeFileSync(hook, '#!/bin/sh\ntouch -- ' + quote(lock.replaceAll('\\', '/')) + '\n', {mode: 0o755});
+        expect(() => transferFleetOwnersLocked(root, [ownerMove], worktree)).toThrow('published but local registry refresh failed');
+        expect(JSON.parse(git(root, '--git-dir=' + remote, 'show', 'fleet-data:fleet/owners.json')).accounts.Alpha.side).toBe('cloud');
+        expect(loadOwners(join(worktree, 'fleet', 'owners.json')).get('alpha')?.side).toBe('local');
+        unlinkSync(lock);
+        unlinkSync(hook);
+        const tip = git(root, '--git-dir=' + remote, 'rev-parse', 'fleet-data');
+        expect(transferFleetOwnersLocked(root, [ownerMove], worktree)).toEqual([]);
+        expect(loadOwners(join(worktree, 'fleet', 'owners.json')).get('alpha')?.side).toBe('cloud');
+        expect(git(worktree, 'rev-parse', 'HEAD')).toBe(tip);
+        expect(git(root, '--git-dir=' + remote, 'rev-parse', 'fleet-data')).toBe(tip);
+    } finally {
+        if (/^rsbot-owner-cache-[^/\\]+$/.test(relative(parent, scratch))) rmSync(scratch, {recursive: true, force: true});
     }
 }, 60_000);
 
