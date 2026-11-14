@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794646746066,
+ "at": 1794647059601,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -263,25 +263,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {
