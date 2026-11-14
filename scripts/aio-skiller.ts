@@ -345,7 +345,7 @@ export function planProgressiveSkiller(skillInput: string, currentLevel: number,
    unlockLevel: active.level,
    xpPerUnit: effectiveXp,
    unitsNeeded,
-   step: active.job ? bankJobStep({family:active.job.family,recipe:active.job.recipe,target:unitsNeeded,batch:13,cap:20000,returnTicks:300,members:active.job.members??false,reserve:0,...active.job.bank?{bank:active.job.bank}:{},...active.job.site?{site:active.job.site}:{}}) : resolveSkillerStep(skill, active.method, extra),
+   step: active.job ? bankJobStep({family:active.job.family,recipe:active.job.recipe,target:unitsNeeded,batch:13,cap:20000,returnTicks:300,members:active.job.members??false,reserve:0,...skill==='cooking'?{targetLevel:nextUnlock}:{},...active.job.bank?{bank:active.job.bank}:{},...active.job.site?{site:active.job.site}:{}}) : resolveSkillerStep(skill, active.method, extra),
   });
   cursor = nextUnlock;
  }

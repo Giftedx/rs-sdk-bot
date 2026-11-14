@@ -1,5 +1,6 @@
 import{test,expect}from'bun:test';
 import{fittingBankBatch,lavaGateTurn,lavaFishingSession,validateBankJob,fishingProtectionSession,runBankJob,runBankProfile,type BankJob}from'./microbot-bank-jobs';
+import{xpForLevel,levelForXp}from'../packages/planner/src/curve';
 test('bank refill sizes use native occupied slots rather than aggregate item counts',()=>{
  const stackable=(id:number)=>[995,554,561].includes(id);
  expect(fittingBankBatch({2357:1,1607:1},[1592],30,28,stackable)).toBe(13);
@@ -14,6 +15,44 @@ test('bank route cannot spend its reserved return budget as production time',()=
  const job:BankJob={family:'tanning',recipe:'soft',target:3,batch:1,cap:200,returnTicks:50,members:true};
  expect(()=>validateBankJob(job)).not.toThrow();
  for(const change of [{cap:50},{target:0},{batch:-1},{returnTicks:0},{reserve:-1},{bank:{x:1.5,z:2,level:0}},{family:'eval'}])expect(()=>validateBankJob({...job,...change}as BankJob)).toThrow();
+});
+
+function cookingLevelFixture(outcomes:boolean[],stock:number,wine=false){
+ let tick=0,generation=1,open=true,xp=wine?xpForLevel(35):0,calls=0,processed=0;
+ const raw=wine?1987:2138,product=wine?1993:2140,burnt=wine?1991:2144;
+ const stored=new Map<number,number>([[raw,stock],...wine?[[1937,stock]as[number,number]]:[]]);
+ const pack:{id:number;name:string;count:number;slot:number}[]=[],listeners=new Set<()=>void>();
+ const rows=()=>[...stored].map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
+ const player={name:'CookingGoalFixture',lifeId:1,level:0,worldX:3185,worldZ:3436};
+ const s:any={name:player.name,tick:()=>tick,ended:new Promise(()=>{}),onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bankObservation:()=>open?{generation,items:rows()}:null,
+  sdk:{getInventory:()=>pack,getSkill:(name:string)=>name==='Cooking'?{level:99,baseLevel:levelForXp(xp)}:{level:99,baseLevel:99},getState:()=>({player,inventory:pack,bank:{isOpen:open,items:open?rows():[]},interface:{isOpen:false},dialog:{isOpen:false}}),sendCloseModal:async()=>{}},client:{objType:()=>({stackable:false})},
+  bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;},withdrawItem:async(item:{id:number},n:number)=>{stored.set(item.id,stored.get(item.id)!-n);generation++;for(let i=0;i<n;i++)pack.push({id:item.id,name:'item-'+item.id,count:1,slot:pack.length});},depositItem:async(item:{id:number})=>{const n=pack.filter(i=>i.id===item.id).reduce((a,i)=>a+i.count,0);stored.set(item.id,(stored.get(item.id)??0)+n);for(let i=pack.length-1;i>=0;i--)if(pack[i]!.id===item.id)pack.splice(i,1);generation++;return{success:true};}}};
+ const bank={x:player.worldX,z:player.worldZ,level:0};
+ const p:BankProfile={bank,site:bank,inputs:{[raw]:1,...wine?{1937:1}:{}},tools:[],outputs:[product,burnt],run:async(n)=>{
+  calls++;
+  if(wine){if((stored.get(raw)??0)<n||(stored.get(1937)??0)<n)throw Error('wine inputs short of order and reserve');stored.set(raw,stored.get(raw)!-n);stored.set(1937,stored.get(1937)!-n);}
+  for(let i=0;i<n;i++){const good=outcomes[processed++]??false,id=good?product:burnt;if(good)xp+=wine?5000:750;
+   if(wine)stored.set(id,(stored.get(id)??0)+1);else{const slot=pack.findIndex(item=>item.id===raw);pack.splice(slot,1);pack.push({id,name:'item-'+id,count:1,slot:pack.length});}}
+  generation++;
+ }};
+ const j:BankJob={family:wine?'wine':'cooking',recipe:wine?'wine':'cooking_generic_chicken',target:wine?1:Math.ceil(xpForLevel(15)/750),targetLevel:wine?36:15,batch:13,cap:200,returnTicks:50,members:false};
+ const timer=setInterval(()=>{tick++;for(const f of [...listeners])f();},1);
+ return{s,p,j,stored,calls:()=>calls,level:()=>levelForXp(xp),close:()=>clearInterval(timer)};
+}
+
+test('cooking replaces burnt estimates until the observed base level unlocks the next recipe',async()=>{
+ for(const burn of[false,true]){const outcomes=Array(8).fill(true);if(burn)outcomes[0]=false;const f=cookingLevelFixture(outcomes,8);
+  try{const r=await runBankProfile(f.s,f.j,f.p);expect(r.ok).toBe(true);expect(f.level()).toBeGreaterThanOrEqual(15);expect(r.completed).toBe(f.j.target+Number(burn));expect(f.calls()).toBe(burn?2:1);expect(r.banked[2144]??0).toBe(Number(burn));expect(r.atBank).toBe(true);}finally{f.close();}}
+});
+
+test('exhausted cooking stock reports failure below its base-level target despite the estimated count',async()=>{
+ const f=cookingLevelFixture([false,true,true],3);
+ try{const r=await runBankProfile(f.s,f.j,f.p);expect(r.completed).toBe(f.j.target);expect(r.ok).toBe(false);expect(f.level()).toBeLessThan(15);expect(r.failure).toContain('stock short');expect(r.atBank).toBe(true);expect(f.stored.get(2138)).toBe(0);}finally{f.close();}
+});
+
+test('wine training retries reconciled bad wine and fails when replacement ingredients are absent',async()=>{
+ for(const stock of[1,2]){const f=cookingLevelFixture([false,true],stock,true);
+  try{const r=await runBankProfile(f.s,f.j,f.p);expect(r.ok).toBe(stock===2);expect(r.banked[1991]).toBe(1);expect(r.banked[1993]??0).toBe(stock===2?1:0);expect(f.level()>=36).toBe(stock===2);expect(r.atBank).toBe(true);if(stock===1)expect(r.failure).toContain('inputs short');}finally{f.close();}}
 });
 
 test('external bank profiles reject invented native items and invalid counts before session access',async()=>{

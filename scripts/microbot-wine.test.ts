@@ -5,6 +5,9 @@ test('fermentation conserves prepared stock and records bad wine separately',()=
  expect(wineOutcome({good:8,bad:2},{good:8,bad:16,raw:0},14).ok).toBe(false);
  expect(wineOutcome({good:8,bad:2},{good:18,bad:5,raw:1},14).ok).toBe(false);
  expect(wineOutcome({good:8,bad:2},{good:20,bad:6,raw:0},14).ok).toBe(false);
+ // A training controller can retry an exactly reconciled all-bad batch; ordinary production still fails it.
+ expect(wineOutcome({good:8,bad:2},{good:8,bad:16,raw:0},14,true)).toEqual({ok:true,good:0,bad:14});
+ expect(wineOutcome({good:8,bad:2},{good:8,bad:15,raw:0},14,true).ok).toBe(false);
 });
 import {runMixedWine} from './microbot-wine';
 import {inventoryRecipes} from './microbot-production';

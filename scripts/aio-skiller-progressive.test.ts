@@ -34,6 +34,7 @@ test('manufacturing and ore bands carry valid finite jobs with native unlocked r
    const job=readBankJobArgument(band.step.args[1]!);
    expect(()=>validateBankJob(job)).not.toThrow();
    expect(job.target).toBe(band.unitsNeeded);
+   if(skill==='cooking')expect(job.targetLevel).toBe(band.toLevel);
    expect(job.cap).toBeGreaterThan(job.returnTicks);
    const native=job.family==='inventory'?inventoryRecipes().find(r=>r.name===job.recipe):job.family==='jewellery'?jewelleryRecipes().find(r=>r.name===job.recipe):job.family==='mining'?miningProfiles().find(r=>r.name===job.recipe):undefined;
    if(native)expect(native.level).toBeLessThanOrEqual(band.fromLevel);
@@ -46,6 +47,12 @@ test('manufacturing and ore bands carry valid finite jobs with native unlocked r
  const lowCraft=planProgressiveSkiller('crafting',1,5)[0]!;
  expect(lowCraft.step.script).not.toBe('scripts/soften-clay.ts');
  expect(readBankJobArgument(lowCraft.step.args[1]!).recipe).toBe('leather:leather_gloves');
+});
+
+test('cooking progression retains a base-level goal for chicken, trout and random wine outcomes',()=>{
+ const bands=planProgressiveSkiller('cooking',1,99);
+ expect(bands.map(b=>readBankJobArgument(b.step.args[1]!).targetLevel)).toEqual([15,35,99]);
+ expect(bands.map(b=>readBankJobArgument(b.step.args[1]!).family)).toEqual(['cooking','cooking','wine']);
 });
 
 test('bank profiles resolve through AIO, survive chains and reject invalid recipes before login',()=>{

@@ -1219,6 +1219,10 @@ const SAME_JOB_CASES: BenchCase[] = [
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
 const EXTRA_CASES: BenchCase[] = [
+  {key: 'extra:progressive-cooking-entry', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge',
+    scriptArgs: planProgressiveSkiller('cooking',1,15)[0]!.step.args,
+    presetConfig: {position:{x:2809,z:3441,level:0},skills:{Cooking:1},inventory:[],bank:[{id:2138,count:12}]},
+    pass: s => ok(s) && Number(/"level":(\d+)/.exec(s)?.[1]??0)>=15 && s.includes('LOGOUT logged-out')},
   {key: 'extra:progressive-crafting-entry', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge',
     scriptArgs: planProgressiveSkiller('crafting',1,2)[0]!.step.args,
     presetConfig: {position:{x:3269,z:3167,level:0},skills:{Crafting:1},inventory:[],bank:[{id:1741,count:1},{id:1733,count:1},{id:1734,count:5}]},

@@ -3,11 +3,11 @@ import type {Session} from '../packages/core/src/inprocess';
 import {openBot,finish} from '../packages/core/src/bot';
 import {waitUntil} from '../packages/core/src/ticks';
 import {inventoryRecipes,runInventoryBank} from './microbot-production';
-export function wineOutcome(before:{good:number;bad:number},after:{good:number;bad:number;raw:number},made:number){
+export function wineOutcome(before:{good:number;bad:number},after:{good:number;bad:number;raw:number},made:number,allowAllBad=false){
  const good=after.good-before.good,bad=after.bad-before.bad;
- return{ok:after.raw===0&&good>=0&&bad>=0&&good+bad===made&&good>0,good,bad};
+ return{ok:after.raw===0&&good>=0&&bad>=0&&good+bad===made&&(good>0||allowAllBad),good,bad};
 }
-export async function runMixedWine(s:Session,maximum:number,cap:number,stop:()=>boolean=()=>false,reserve=0){
+export async function runMixedWine(s:Session,maximum:number,cap:number,stop:()=>boolean=()=>false,reserve=0,options:{allowAllBad?:boolean}={}){
  if(!Number.isSafeInteger(reserve)||reserve<0)throw Error('invalid wine reserve');
  if(!Number.isSafeInteger(maximum)||maximum<1||!Number.isSafeInteger(cap)||cap<35)throw Error('wine requires positive count and at least 35 ticks');
  let ended=false;void s.ended.then(()=>{ended=true;});
@@ -36,7 +36,7 @@ export async function runMixedWine(s:Session,maximum:number,cap:number,stop:()=>
  if(stopped()||s.tick()-start>=cap) return{...production,ok:false,good:0,bad:0,failure:'wine stopped before fermentation audit'};
  await openFresh();
  if(!await waitUntil(s,()=>stopped()||bank(1995)===0,{timeoutTicks:8})||stopped()||s.tick()-start>=cap)throw Error('wine fermentation unfinished');
- const after={good:bank(1993),bad:bank(1991),raw:bank(1995)},outcome=wineOutcome(before,after,maximum);
+ const after={good:bank(1993),bad:bank(1991),raw:bank(1995)},outcome=wineOutcome(before,after,maximum,options.allowAllBad);
  await s.bot.closeBank();
  return{...production,...outcome,ticks:s.tick()-start,failure:outcome.ok?'-':'wine output accounting or useful product failed'};
 }
