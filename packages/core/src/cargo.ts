@@ -1,12 +1,28 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from './inprocess';
 import { ownedAccounts } from './tradeguard';
 
 export const cargoDir = resolve(import.meta.dir, '../../../.practice/cargo');
 export const exactItem = (name: string) => new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-export interface Cargo { name: string; at: number; bank: { x: number; z: number; level: number }; items: { id: number; name: string; count: number }[] }
-export interface CargoRequest { worker: string; courier: string; at: number; ready?: boolean }
+export interface Cargo { name: string; server?: string; at: number; bank: { x: number; z: number; level: number }; items: { id: number; name: string; count: number }[] }
+export interface CargoRequest { worker: string; courier: string; server?: string; at: number; ready?: boolean }
+export type CargoOptions = { dir?: string; owned?: ReadonlySet<string>; server?: string };
+
+// A caller without a Session can inspect configuration, but only authenticated
+// ownership on that endpoint grants a request. A live Session's endpoint wins.
+export function cargoAccountServer(name: string): string {
+    if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) throw Error('cargo: invalid account name');
+    const dir=resolve(import.meta.dir, '../../../vendor/rs-sdk/bots');
+    const matches=readdirSync(dir).filter(candidate=>candidate.toLowerCase()===name.toLowerCase());
+    if(matches.length!==1)throw Error('cargo: unique account configuration required for '+name);
+    const env = readFileSync(join(dir, matches[0]!, 'bot.env'), 'utf8');
+    return env.match(/^SERVER=(.*)$/m)?.[1]?.trim() || 'localhost:8888';
+}
+function cargoServer(name: string, options: CargoOptions, actual?: string): string | undefined {
+    if (actual && options.server && actual.toLowerCase() !== options.server.toLowerCase()) throw Error('cargo: session endpoint mismatch');
+    return actual ?? options.server ?? (options.owned ? undefined : cargoAccountServer(name));
+}
 // Like a resumable bank operation's cursor, this records an attempted request
 // before any withdrawal. It is not a transfer receipt or permission to retry an
 // uncertain trade. A newer demand token is required after restart too.
@@ -27,34 +43,37 @@ function recordAttempt(dir: string, req: CargoRequest): void {
     renameSync(temp, file);
 }
 
-export function validCargoRequest(value: unknown, worker: string, owned: ReadonlySet<string>, now = Date.now()): value is CargoRequest {
+export function validCargoRequest(value: unknown, worker: string, owned: ReadonlySet<string>, now = Date.now(), server?: string): value is CargoRequest {
     const req = value as CargoRequest | null;
     return !!req && typeof req.worker === 'string' && req.worker.toLowerCase() === worker.toLowerCase()
         && typeof req.courier === 'string' && owned.has(req.courier.toLowerCase())
+        && (server === undefined || typeof req.server === 'string' && req.server.toLowerCase() === server.toLowerCase())
         && req.courier.toLowerCase() !== worker.toLowerCase()
         && Number.isSafeInteger(req.at) && req.at > 0 && req.at <= now && now - req.at < 180_000;
 }
 
-export function courierWaiting(name: string, options: { dir?: string; owned?: ReadonlySet<string> } = {}): boolean {
+export function courierWaiting(name: string, options: CargoOptions = {}): boolean {
     try {
+        const server = cargoServer(name, options);
         const req = JSON.parse(readFileSync(join(options.dir ?? cargoDir, `request-${name}.json`), 'utf8'));
-        return validCargoRequest(req, name, options.owned ?? ownedAccounts('rs-sdk-demo.fly.dev')) && req.ready === true
+        return validCargoRequest(req, name, options.owned ?? ownedAccounts(server!), Date.now(), server) && req.ready === true
             && lastAttempt(options.dir ?? cargoDir, name) < req.at;
     } catch { return false; }
 }
 
 // The options isolate filesystem and account lookup in deterministic fake-session tests.
 export async function bankCargo(s: Session, patterns: RegExp[], reserve = 0,
-    options: { dir?: string; owned?: ReadonlySet<string> } = {}): Promise<void> {
+    options: CargoOptions = {}): Promise<void> {
     const st = s.sdk.getState();
     if (!st?.bank?.isOpen || !st.player) return;
+    const server = cargoServer(s.name, options, s.lifecycle?.server);
     const dir = options.dir ?? cargoDir;
     mkdirSync(dir, { recursive: true });
     const file = join(dir, `${s.name}.json`);
     const matches = (name: string) => !/^coins$/i.test(name) && patterns.some(p => p.test(name));
     const publish = (known: boolean) => {
         const state = s.sdk.getState();
-        const manifest: Cargo = { name: s.name, at: Date.now(),
+        const manifest: Cargo = { name: s.name, ...(server ? {server} : {}), at: Date.now(),
             bank: { x: st.player!.worldX, z: st.player!.worldZ, level: st.player!.level },
             items: known && state?.bank?.isOpen ? state.bank.items.filter(i => matches(i.name) && i.count > reserve)
                 .map(i => ({ id: i.id, name: i.name, count: i.count - reserve })) : [] };
@@ -64,7 +83,7 @@ export async function bankCargo(s: Session, patterns: RegExp[], reserve = 0,
     const manifest = publish(true);
     let req: unknown;
     try { req = JSON.parse(readFileSync(join(dir, `request-${s.name}.json`), 'utf8')); } catch { return; }
-    if (!validCargoRequest(req, s.name, options.owned ?? ownedAccounts('rs-sdk-demo.fly.dev')) || req.ready !== true) return;
+    if (!validCargoRequest(req, s.name, options.owned ?? ownedAccounts(server!), Date.now(), server) || req.ready !== true) return;
     // A single request gets one bank visit, even when a courier left or a trade failed.
     if (lastAttempt(dir, s.name) >= req.at) return;
     recordAttempt(dir, req);
