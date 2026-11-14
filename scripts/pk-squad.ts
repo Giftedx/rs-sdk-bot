@@ -241,6 +241,10 @@ if (import.meta.main) {
     // pair there, the refused accounts take the others (bench 3v3 at the post: 39 kills of 48, 80 HP a kill).
     if (wildernessLevel(post.z) === 0 || (!isMulti(post.x, post.z) && get('ALLOW_SINGLE', '0') !== '1')) { console.log(`RESULT fail post ${post.x},${post.z} is not a multi-way Wilderness tile (ALLOW_SINGLE=1 for a single-way one)`); process.exit(2); }
     const targets = new Set((gangSize ? gangNames : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
+    // A pause holds before any login: a stop file present at the start logs no account in (openBot checks stop files
+    // only after its login, and a login puts an account parked in the Wilderness back in the world).
+    const paused = ours.filter(n => existsSync(`.practice/stop-${n}`));
+    if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;
     const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };
