@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794626576755,
+ "at": 1794626624925,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -483,26 +483,16 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
-   ]
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-0544ab8e-4930-4f3b-b8be-b7163d5a1731"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-billionaire-20261113t155029z [task-0544ab8e-4930-4f3b-b8be-b7163d5a1731]",
+   "role": "thieving"
   }
  ]
 }
