@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794626287248,
+ "at": 1794626343516,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -19,21 +19,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
-   "role": "pk-trainee"
   },
   {
    "account": "Balls",
@@ -264,6 +249,25 @@
    ]
   },
   {
+   "account": "Swordinhand",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -486,17 +490,19 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-9bb461f2-b66a-4bff-bfca-737d9628e697"
+    "ROUNDS": "1"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-swordinhand-20261113t155029z [task-9bb461f2-b66a-4bff-bfca-737d9628e697]",
-   "role": "thieving"
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
   }
  ]
 }
