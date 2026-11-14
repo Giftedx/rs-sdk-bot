@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { contentRows, fishingRows, inputCounts, objParamRows, procCatches, skillActions } from './gen-skill-actions';
+import { contentRows, fishingRows, inputCounts, objParamRows, procCatches, skillActions, withEssence } from './gen-skill-actions';
 
 test('skill actions give the XP of one action on this server: base XP times the XP rate', () => {
     const names = new Map([['logs', 'Logs'], ['oak_logs', 'Oak logs']]);
@@ -89,4 +89,10 @@ test('a proc that rolls its own catches: the caller gate, each level step, the r
         'if ($level < 23) {', '    return;', '}', 'if (stat_random(fishing, 4, 55) = true) {', '    inv_add(inv, raw_cod, 1);', '    stat_advance(fishing, 450);', '}',
     ].join('\n');
     expect(procCatches([spot])).toEqual([{ fish: 'raw_mackerel', level: 16, xp: 200, roll: [5, 65] }, { fish: 'raw_cod', level: 23, xp: 450, roll: [4, 55] }]);
+});
+
+test('a runecraft row with no input takes rune essence, one an action; other rows keep their inputs', () => {
+    expect(withEssence({ skill: 'runecraft', row: 'runecraft_air', level: 1, xp: 5, outputs: ['airrune'] })).toEqual({ skill: 'runecraft', row: 'runecraft_air', level: 1, xp: 5, outputs: ['airrune'], inputs: ['blankrune'], counts: [1] });
+    const crafting = { skill: 'crafting', row: 'gloves', level: 1, xp: 13.8, inputs: ['leather'] };
+    expect(withEssence(crafting)).toBe(crafting);
 });
