@@ -239,14 +239,18 @@ async function talkToNulodion(s: Session, pick: RegExp, done: () => boolean, ref
 // Dwarf Cannon complete (quest_mcannon/scripts/npcs/nulodion.rs2:61-76, 145-160).
 export const CANNON_PRICE = 750_000;
 export async function buyCannon(s: Session, o: { walk: Walk }): Promise<{ ok: boolean; detail: string }> {
-    const held = () => s.sdk.getInventory().some(i => CANNON_PARTS[0].test(i.name));
-    if (held()) return { ok: true, detail: 'cannon base already in the pack' };
+    // setupCannon needs all four parts. A part already held makes a second full set a waste, so a partial kit is a
+    // failure that names the missing parts.
+    const missing = () => CANNON_PARTS.filter(re => !s.sdk.getInventory().some(i => re.test(i.name))).map(re => re.source.replace(/^\^|\$$/g, ''));
+    const held = () => missing().length === 0;
+    if (held()) return { ok: true, detail: 'cannon already in the pack' };
+    if (missing().length < CANNON_PARTS.length) return { ok: false, detail: `incomplete cannon in the pack: missing ${missing().join(', ')}` };
     const coins = s.sdk.getInventory().filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
     if (coins < CANNON_PRICE) return { ok: false, detail: `${coins} coins in the pack, ${CANNON_PRICE} needed` };
     if (s.sdk.getInventory().length > 28 - 6) return { ok: false, detail: 'the cannon needs 6 free pack slots' };
     if (!await o.walk({ x: NULODION_DOOR.x, z: NULODION_DOOR.z, level: 0 })) return { ok: false, detail: 'walk to Nulodion failed' };
     const r = await talkToNulodion(s, /sell me a cannon|take a cannon please/i, held, /don't have enough money|doesn't seem interested/i, 'buy cannon');
-    return held() ? { ok: true, detail: 'bought' } : { ok: false, detail: `no cannon: ${r}` };
+    return held() ? { ok: true, detail: 'bought' } : { ok: false, detail: `no cannon: ${r}${missing().length < CANNON_PARTS.length ? `, missing ${missing().join(', ')}` : ''}` };
 }
 // Get the cannon parts back into the pack, by the content's rules: pick up the standing cannon (from `at`, its
 // south-west tile, or the nearest cannon loc in view), else ask Nulodion, who replaces it once the loc is gone.

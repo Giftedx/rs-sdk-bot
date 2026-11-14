@@ -63,6 +63,17 @@ test('buyCannon opens the porch door, asks for the full set and holds the four p
     } finally { f.dispose(); }
 });
 
+test('buyCannon reports a partial kit with its missing parts, and a full kit as held, with no walk', async () => {
+    const f = fixture(760_000);
+    try {
+        f.inv.push({ id: 6, name: 'Cannon base', count: 1, slot: 1 }, { id: 10, name: 'Cannon barrels', count: 1, slot: 2 });
+        expect(await buyCannon(f.s, { walk: f.walk })).toEqual({ ok: false, detail: 'incomplete cannon in the pack: missing cannon stand, cannon furnace' });
+        f.inv.push({ id: 8, name: 'Cannon stand', count: 1, slot: 3 }, { id: 12, name: 'Cannon furnace', count: 1, slot: 4 });
+        expect(await buyCannon(f.s, { walk: f.walk })).toEqual({ ok: true, detail: 'cannon already in the pack' });
+        expect(f.walks).toEqual([]);
+    } finally { f.dispose(); }
+});
+
 test('buyCannon refuses before any walk with fewer than 750,000 coins', async () => {
     const f = fixture(749_999);
     try {
