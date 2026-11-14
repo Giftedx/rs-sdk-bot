@@ -1,0 +1,23 @@
+{
+ "id": "1794623876105-bigpackage-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "WeeQuickie",
+ "item": "Coins",
+ "count": 1000,
+ "start": 1794623876105,
+ "end": 1794627476105,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
