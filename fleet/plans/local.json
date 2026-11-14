@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794656795372,
+ "at": 1794656864670,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -257,21 +257,25 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -475,25 +479,21 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2669,3298"
    ]
   },
   {
