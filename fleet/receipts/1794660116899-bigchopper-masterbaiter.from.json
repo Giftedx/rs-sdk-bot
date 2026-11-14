@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794660116899-bigchopper-masterbaiter",
+ "account": "Bigchopper",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 2293,
+ "claim": "54f46698-6dca-430b-8f14-d6e9fe28ebad",
+ "count": 0,
+ "ok": false,
+ "at": 1794660129147,
+ "detail": "trade claimed"
+}
