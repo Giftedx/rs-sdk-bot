@@ -859,6 +859,13 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
  data['npc-defence.json']={'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]};
  const ranged=new Function(...Object.keys(env),'itemBonusData',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Bronze dart',slot:3}]})}),{'Bronze dart':[0,0,0,0,1,0,0,0,0,0,0,1,0]});
  expect(ranged('Moss giant')).toMatch(/^About 62 kills an hour \(ranged, max hit 7, speed 4\) · /);
+ // A staff with a castable spell casts it: Fire Bolt max 12 at Magic 60 with magic attack 10: the roll 69 x 74 = 5,106
+ // meets Moss giant's (1 + 9) x 64 = 640: 94%, 5.6 a cast, 10.7 casts x 5 ticks x 0.6 s = 32 s a kill: 112 kills an hour.
+ const mage=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]}),wornBonuses:()=>[0,0,0,10,0,0,0,0,0,0,0,0,0]}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>({name:'Fire Bolt',max:12,casts:50}));
+ expect(mage('Moss giant')).toMatch(/^About 11\d kills an hour \(magic, Fire Bolt, max hit 12, speed 5\) · /);
+ // A staff with no castable spell falls back to melee.
+ const noSpell=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]})}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>null);
+ expect(noSpell('Moss giant')).not.toContain('magic,');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
