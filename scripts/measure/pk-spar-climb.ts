@@ -133,11 +133,15 @@ if (import.meta.main) {
         // A candidate equal to the champion's own value measures nothing.
         const todo = knob.candidates.filter(patch => !Object.entries(patch).every(([k, v]) => JSON.stringify((champion as Record<string, unknown>)[k]) === JSON.stringify(v)));
         if (!todo.length) continue;
-        // Against a fixed opponent, the champion's own values on each seed come first, on all slots at once.
-        if (against) await Promise.all(Array.from({ length: maxRuns }, async (_, run) => {
-            const seed = firstSeed + run;
-            if (!baseline.has(seed)) { const own = await sample({}, seed, run % jobs); if (own) baseline.set(seed, own); }
-        }));
+        // Against a fixed opponent, the champion's own values on each seed come first: one worker a slot, each taking the
+        // next seed when its run ends, so no two runs share a slot's engine ports, row file or output directory.
+        if (against) {
+            const seeds = Array.from({ length: maxRuns }, (_, run) => firstSeed + run).filter(seed => !baseline.has(seed));
+            let nextSeed = 0;
+            await Promise.all(Array.from({ length: Math.min(jobs, seeds.length) }, async (_, slot) => {
+                while (nextSeed < seeds.length) { const seed = seeds[nextSeed++]!; const own = await sample({}, seed, slot); if (own) baseline.set(seed, own); }
+            }));
+        }
         const lines: Awaited<ReturnType<typeof evaluate>>[] = [];
         let next = 0;
         await Promise.all(Array.from({ length: Math.min(jobs, todo.length) }, async (_, slot) => { while (next < todo.length) lines.push(await evaluate(knob, todo[next++]!, slot)); }));

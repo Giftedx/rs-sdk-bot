@@ -1112,6 +1112,323 @@ The levers for our side: `cureNow` (an antipoison in the first tick after the po
 `chaseBelow` (a run after a target that flees with a low health bar), and `specBelow` (keep the special energy for a
 low target).
 
+### The roam's loot threshold
+
+`extra:roam-field` (four targets in rune with no food at Wilderness 6 to 17, the roam on the default options, 1,000
+ticks, seeds 1 to 8): picking up every stack worth 1,000 gp or more, 21 kills of 32 and about 2.30M gp of loot each 4
+runs; only stacks worth 20,000 gp or more, 24 kills and about 2.23M; no loot (`LOOT=0`), 30 kills; no freeze
+(`FREEZE=0`, seeds 1 to 4), 10 of 16 against the base's 11. The cheap stacks (sharks, runes) cost the ticks of a kill,
+so the roam's `LOOT_MIN` default is 20,000.
+
+### The hunt's fight options against a defender
+
+`extra:hunt-defend` (the hunt route against a target in rune that defends on the champion with 18 sharks and a glory,
+seeds 1 to 8, one fight a run): the default (`HUNT_PROFILE` auto, the champion) 6 kills and 2,712 HP lost in all;
+`ESCAPE_AT=25` 6 and 2,585; `HUNT_PROFILE=gang-hunter` 7 and 2,850; the hunt's own options (`HUNT_PROFILE=none`) 3
+and 2,642. The champion's options double the hunt's own; the other two sit within the noise, so the default stays.
+
+### The champion's kit against a melee build
+
+The champion against the maxed melee build (kit `melee`: rune, dragon dagger(p), kiteshield, 22 sharks, boosts and
+prayer potions; `extra:spar-duel-<kit>-vs-melee-x8`, seeds 1 to 8, 64 duels a row):
+
+| Kit | Kills | Deaths |
+| --- | --- | --- |
+| `tribrid-snare-sara` (rune) | 57 | 7 |
+| `tribrid-pray` | 50 | 12 |
+| `tribrid-dragon-sara` (the champion's) | 45 | 16 |
+| `tribrid-dragon` | 43 | 18 |
+| `tribrid-food` | 40 | 9 |
+| `tribrid-snare-sara-mlb` (magic longbow) | 55 | 9 |
+| `tribrid-sara-mace` (dragon mace) | 49 | 14 |
+| `tribrid-snare-sara-f14` (14 sharks) | 49 | 13 |
+| `tribrid-sara-dls` (dragon longsword) | 45 | 18 |
+| `tribrid-snare-swap` (armour swap) | 43 | 20 |
+| `tribrid-snare-dhide` (black dragonhide) | 42 | 22 |
+| `tribrid-snare-spear` (dragon spear) | 31 | 24 |
+
+On `tribrid-dragon-sara`: eating at 70, no magic in the rotation, a step back of 3 from a frozen target
+(`kiteFrozen`) or its corner tile (`diagonalFrozen`), and no food drop for the strip all gave 43 to 45 kills and 16 to
+18 deaths; the special held for 45% gave 46 and 11; a freeze on any target with a step back of 6 gave 24 and 29. With
+the rival builds (91 kills and 5 deaths of 96 in rune, 94 and 1 in dragon) the rune kit loses 12 of 160 and the dragon
+kit 17; the dragon kit catches more runners (34 of 64 against 28 to 30). Against a melee opponent, the dagger gang
+among them, the rune kit is the stronger kit. On the rune kit the special held for 45% loses: 55 kills and 9 deaths
+against melee, 87 and 8 against the rivals.
+
+### The champion's special against runners and rivals
+
+The champion in `tribrid-dragon-sara`, seeds 1 to 8: with the special held for a target at 45% or less
+(`"specBelow":0.45`) it catches 40 runners of 64 (`extra:spar-escape-tribrid-dragon-sara-x8`, `SPAR_B=base`) against
+34 on its own options, and 35 at 30%; against the rival builds (`extra:spar-rivals-tribrid-dragon-sara-x12`) it wins
+92 of 96 with 3 deaths against 94 with 1. A death loses the kit, so the champion keeps its own; a hunt after runners
+can pass `specBelow` 0.45.
+
+### Runners by depth and squad size
+
+A runner (kit `runner`, `SPAR_B_OPTS={"escapeAt":60}`: with its food gone at 60 HP or less it runs south and rubs its
+glory at Wilderness 30 or less) against our champions in `tribrid-dragon-sara` (`scripts/pk-team.ts`, seeds 1 to 8,
+16 meetings a row, no death of ours):
+
+| Ours | Tile | Runners killed | HP lost (all 16) |
+| --- | --- | --- | --- |
+| 1 | single-way, Wilderness 34 (3125, 3790) | 7 | 778 |
+| 2 | single-way, Wilderness 34 | 7 | 882 |
+| 4 | single-way, Wilderness 34 | 9 | 596 |
+| 1 | multi-way, Wilderness 43 (3010, 3864) | 16 | 935 |
+| 2 | multi-way, Wilderness 43 | 16 | 386 |
+| 4 | multi-way, Wilderness 43 | 16 | 188 |
+
+The depth decides the catch: from Wilderness 43 the runner has 13 levels to cross before its glory works and none
+got away, one of ours or four; from 34, 4 levels, and about half got away whatever our number, since on a single-way
+tile one of ours fights at a time. More of ours cut the HP of a catch only where they can all hit (multi-way). Cases
+`extra:team-<n>v1-runner-single-x2` and `-multi-x2`. Gap: depth and multi-way change together between the two tiles;
+the 1-of-ours rows, where multi-way does not matter, carry the depth result.
+
+### The cost of a kill
+
+What one kill of a gang account uses, against the live-like gang (profile `ganker-live`, kit `ganker-dds`: the gang
+walks out with its food gone and comes back). Our account has profile `gang-hunter` with the options
+`{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}`, the snare runes, a dragon dagger,
+a magic shortbow, iron arrows and an amulet of power. It drinks its boosts at the Edgeville bank and walks to the post
+(`SPAR_PRETRIP=1`). The cases are `extra:gang-live-fast-snare-x2` and `extra:gang-live-cheap-<kit>-x2`; each row is
+seeds 1 to 8 (16 meetings), run with `.practice/gang-cheap/set.sh` and summed by `use2.ts` in the same folder (raw
+lines in `round1.txt` to `round7.txt`). No account of ours died in any row. Worn gear is bought once and kept, so the
+cost of a kill is what it eats, shoots and drinks. Each HP lost is eaten back before the next meeting, so the food of a
+kill is its HP lost / 20 sharks.
+
+| Kit (`live-walker-iron-snare-...`) | Gang | Kills | HP lost a kill | Arrows a kill | Entangles a kill | Ticks a kill | Coins a kill |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| (base) adamant body and legs, 3 boosts, antipoison | 3 | 17 | 142 | 50 | 2.5 | 582 | 2,900 |
+| `nopot`: no boost | 3 | 16 | 146 | 44 | 1.8 | 592 | 2,700 |
+| `noanti`: no antipoison | 3 | 8 | 188 | - | - | 556 | - |
+| `bare`: neither | 3 | 8 | 197 | - | - | 589 | - |
+| `addy`: adamant arrows | 3 | 16 | 102 | 37 | 1.5 | 520 | 4,800 |
+| `rune`: rune arrows | 3 | 20 | 122 | - | - | - | - |
+| `snarep`: dagger (p), super antipoison | 3 | 16 | 110 | - | - | - | - |
+| `helm-nopot`: adamant helm too | 3 | 15 | 136 | - | - | - | - |
+| `runeshop-nopot`: adamant helm, rune body and legs | 3 | 15 | 114 | 45 | 1.4 | 590 | 2,000 |
+| `runeshop-cape-nopot`: the same, cape of legends | 3 | 16 | 104 | 42 | 1.6 | 576 | 2,000 |
+| `rune-nopot`: rune helm, body and legs | 3 | 15 | 97 | 40 | 1.7 | 577 | 1,900 |
+| `rune-nopot` (`-duo` case) | 2 | 16 | 89 | 38 | 1.6 | 491 | 1,700 |
+| `rune-nopot` (`-solo` case) | 1 | 15 | 75 | 29 | 1.6 | 260 | 1,500 |
+
+Coins are shop values (`knowledge/items.json`): a shark 300, an iron arrow 3, an adamant arrow 80, an Entangle 120
+(5 earth, 5 water, 4 nature runes), a dose of antipoison 96 and of the three boosts 213 together, one of each a
+meeting. A dash is not counted (4 seeds, or a log that a later run replaced). Gap: 15 to 20 kills a row; the base
+lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference under about 15 HP is noise.
+
+- **Rune armour is the largest cut.** Full rune loses 97 HP a kill where adamant body and legs lose 142 to 146: about
+  2 sharks less a kill. NPC shops sell the rune platebody (Oziach, `runeplateshop`, Dragon Slayer) and platelegs
+  (`runiteshop`), but no rune full helm (smithing only: `smithing_rune4`); the adamant helm is `helmetshop`.
+- **The antipoison pays; the boosts do not.** Without an antipoison our account loses about 45 HP more a kill (8
+  meetings a row). The boosts save nothing over 16 meetings (146 HP a kill without, 142 with), and they are the one
+  supply that no shop sells (super attack, strength and defence are herblore only); the regular antipoison is sold
+  by `junglestore`.
+- **Better arrows cost more than they save.** Adamant arrows save about 40 HP (2 sharks, 600 coins) a kill and cost
+  about 3,000 coins more in arrows. Four arrows in five land on the tile of the player hit (`pvp_ranged.rs2`
+  `ranged_dropammo_pvp`, `^dropammo_chance` 5) and a drop lasts 200 ticks (`lootdrop.constant`), less than a meeting.
+- **One or two of the gang at a time.** With one gang account a kill takes 260 ticks and 75 HP; with three, 577 ticks
+  and 97 HP. A gang account that is frozen hands the fight to the next one (the 8-tick takeover), so a freeze and a
+  step away (`"freeze":true,"kiteFrozen":3` or `6`) ends the meeting in 70 to 290 ticks with our account away and
+  1 kill in 16 (`round2.txt`).
+- **Three of ours against the three.** On the single-way post an account fights one enemy at a time, so three of
+  ours, each against its own gang account (`scripts/pk-team.ts` `SPAR_A_PICK=pair`, `SPAR_B_PICK=pair`), make three
+  solo meetings at once (`extra:team-3v3-gang-rune-x2`, profile `ganker-live`, seeds 1 to 8,
+  run with `.practice/gang-cheap/teamset.sh`): 16 of 16 groups won, 39 of the 48 gang accounts killed (the rest walked out),
+  no death of ours, 80 HP lost a kill, about 260 ticks a meeting. Without the freeze 37 kills and 93 HP a kill; in
+  the adamant kit (`live-walker-iron-snare-nopot`) 42 kills and 103 HP a kill. Two of ours against the three
+  (`extra:team-2v3-gang-rune-x2`, `SPAR_TEAM_B=3`): 16 of 16 groups won, 36 kills of 48, no death, 91 HP a kill; the
+  third gang account takes over a pair when its gang account dies or walks out. Each account taking the lowest health
+  bar in view (`-low`, seeds 1 to 4) won 7 of 8 groups, 15 kills of 24, 114 HP a kill. The team loop stops a fight on
+  a refused attack ("I'm already under attack.") and leaves that enemy out for 8 ticks; before that, two of ours
+  against three stood still in 6 runs of 16 until the bench stopped them.
+- **Bind does the freeze's work.** In the three-against-three case (seeds 1 to 8) the freeze capped at Snare
+  (`"freezeMagicCap":78`) gave 39 kills and 81 HP a kill, at Bind (`49`) 38 and 78, against Entangle's 39 and 80 and
+  no freeze's 37 and 93. A Bind (3 earth, 3 water, 2 nature runes) costs 64 coins where an Entangle costs 120, and it
+  needs Magic 20.
+- **Multi-way is cheaper still.** The same three against the three on a multi-way tile, each side on the lowest bar
+  (Bind for the freeze, seeds 1 to 8): at the team cases' (3150, 3560) 16 of 16 groups won, 45 kills of 48, no death,
+  54 HP a kill (`extra:team-3v3-gang-rune-multi-x2`); in the multi-way zone 12 tiles west of the post (x 3064 to
+  3071, z 3624 to 3663, Wilderness 14 to 18, `maps/multiway.csv`) 13 won and 3 drawn, 41 kills, no death, 65 HP a kill
+  (`extra:team-3v3-gang-rune-west-x2`). Three of ours hit one gang account at once and kill it before it eats. Two of
+  ours against three there leave at once (`escapeOutnumbered`), with no kill and no death
+  (`extra:team-2v3-gang-rune-west-x2`). Four of ours against the three there: 15 of 16 groups won, 47 kills of 48,
+  no death, 35 HP a kill, under 2 sharks (`extra:team-4v3-gang-rune-west-x2`); four in the adamant kit 48 kills and
+  53 HP a kill (`-addy-`), and four in adamant with no antipoison and no freeze 48 kills and 76 HP a kill (`-bare-`).
+  More of ours cut both the HP and the time of a kill (rune kit, Bind, seeds 1 to 8; the 6 and 9 cases hold one group
+  an engine): five 48 kills of 48 and 24 HP a kill, 168 ticks a meeting (`extra:team-5v3-gang-rune-west-x2`); six 24
+  of 24, 22 HP, 116 ticks (`-6v3-...-x1`); nine 24 of 24, 14 HP, 59 ticks (`-9v3-...-x1`); against four's 35 HP and
+  218 ticks. Account-ticks a kill fall from 290 with four to 177 with nine. No death of ours in any of them. Four on
+  the least build the post allows (combat 111: Attack 75, Prayer 43, Magic 49, kit
+  `live-walker-iron-snare-rune-nopot-b111`): 35 kills of 48, 68 HP a kill, 541 ticks a meeting.
+  Three in the adamant kit: 41 kills, 75
+  HP a kill (`extra:team-3v3-gang-addy-west-x2`). Gap: the bench gang follows its target into multi-way; no record
+  shows whether the live gang does.
+- **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
+  (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
+  (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at
+  login) and `SPAR_B_OPTS={"protectItem":false}`, our account with `SPAR_PICKUP=1` took the dragon dagger(p) after 8
+  of 8 kills (`extra:gang-live-cheap-rune-nopot-solo-skull-x2`, seeds 1 to 4): 24,000 coins at shop value, about 16
+  times the supplies of the kill, and the weapon of a PK account. Four of ours in the multi-way zone
+  (`extra:team-4v3-gang-skull-west-x2`, `scripts/pk-team.ts` `SPAR_PICKUP=1`, seeds 1 to 8) killed 44 of 48 with no
+  death, 36 HP a kill, and took 40 daggers and 49 sharks. The pickup takes the dearest item first and eats a shark to
+  free a slot (the rune kit fills 27 of the 28): taking the nearest first, a shark filled the pack and the dagger
+  stayed (31 of 48). It runs on after the last kill, which ends the meeting, and after any death of the account's
+  target, since the loop can stop on the death before the kill message comes. A gang with Protect Item keeps the dagger and drops a
+  hat, two robes (72 coins) and what food it has left. Whether the gang uses Protect Item does not show (no head icon).
+
+- **The squad script.** `scripts/pk-squad.ts` (`aio-pvp.ts squad`) runs the method on live accounts: the accounts
+  walk to the multi-way post (3067, 3640), every one fights the target account in view with the lowest health bar,
+  takes the dearest drops after each kill, and banks at Edgeville and walks back when its fight loop leaves; it stops
+  on `.practice/stop-pk-squad`, `MAX_MINUTES` or `MAX_KILLS`, refuses the main account and a post that is not
+  multi-way, and runs live only with `DEMO_OK=1` (openBot). Its default options turn off the champion's
+  `dropForStrip`, which dropped a shark before each account's first freeze. Against the bench gang (`SQUAD_GANG=3`,
+  seeds 1 to 4): four of ours killed all three in each run with no death, about 33 HP a kill
+  (`extra:squad-4-gang-x1`); six, all three, about 23 HP a kill (`extra:squad-6-gang-x1`); four against the skulled
+  gang with no Protect Item, 12 of 12 and 11 dragon daggers(p) (`extra:squad-4-gang-skull-x1`); four on the gang's
+  own single-way post (`POST=3075,3640 ALLOW_SINGLE=1`, for a gang that does not follow into multi-way), 11 of 12, no
+  death, about 37 HP a kill (`extra:squad-4-gang-single-x1`). Two of ours with 3 sharks each, outnumbered, made 4
+  bank trips in 8 minutes with no fault and no death (`extra:squad-2-gang-trips-x1`).
+- **The first live pilot** (four of ours, combat 126, rune chainbody, no antipoison, few water runes, 10 minutes):
+  4 gang deaths in the world feed, matching the 4 kill messages, no death of ours, 995 HP lost, about 249 a kill.
+  The gang met the squad on the walk in, at about (3072, 3610), one tile east of the multi-way area (x 3040-3071,
+  z 3600 and north). On single-way tiles each gang account took one of ours, so the kills were long one-on-one fights.
+  The same kit on the bench (`live-walker-iron-rune-chain-bare`, seeds 1 to 4): four on the lowest bar in multi-way,
+  20 kills of 24 at 36 HP a kill (`extra:team-4v3-gang-chainbare-west-x2`); four on single-way tiles, each gang
+  account on one of ours (`SPAR_*_PICK=pair`), 5 kills of 24 at 454 HP a kill (`-chainbare-split-`). Where the fight
+  happens costs more than the kit.
+- **One against one gang account, the fight the live split gives each of ours.** One of ours in the pilots' kit
+  (rune chainbody, no antipoison) against one gang account (`ganker-live`), seeds 1 to 8, 16 meetings a row, no death
+  in any. With no freeze runes (`extra:gang-live-chain-solo-x2`) the gang account walks out at low HP and gets away:
+  5 kills at about 350 HP a kill on the base options; the special at 45% (`specBelow`) 6; ranged only 4; the special
+  at once 3; eating at 50 or 70, or no chase, 1 each; melee only 0. With Bind runes (`-chainbind-solo-`): the freeze
+  on a runner (`"freeze":"flee"`) 12 kills at about 107 HP, with the special at 45% 13 at about 89, the freeze on a
+  low bar (`"low"`) 13 at about 106. pk-squad's default options hold the special for 45% (the squad case: 24 of 24
+  either way, 39 and 42 HP a kill).
+  Fire Blast cast with the dagger in hand (`live-walker-iron-rune-chain-blast`, `extra:gang-live-blast-solo-x2`) does
+  not pay. The bench gang's overhead follows the weapon it sees, so a spell from the dagger meets Protect from Melee.
+  Seeds 1 to 16, 32 meetings a row, Bind and the special at 45% in each, no death in any:
+  - ranged then melee (the control): 28 kills at about 108 HP a kill;
+  - magic first in the rotation: 29 kills at about 106;
+  - magic and melee only: 31 kills at about 180, with more than twice the sharks.
+  The rune helm, chainbody and legs cut the magic attack roll. Gap: the bench gang's prayer rule is a model; the live
+  gang's rule against a spell from a dagger is not measured.
+  A freeze at every chance loses even one on one (the same kit, ranged then melee, seeds 1 to 8):
+  - `"freeze":true`: 6 kills of 16 at about 577 HP a kill;
+  - with a step away while the target is held (`"kiteFrozen":3`): 2 at about 1,230;
+  - the same with the best freeze the runes allow (no `freezeMagicCap`): 0.
+  Each cast is a turn without damage while the gang account eats, so the freeze pays only on a runner.
+- **The east multi-way zone: no single-way tile on the walk in.** The Wilderness has two multi-way zones near
+  Edgeville (`multiway.csv`):
+  - west, x 3008 to 3071 from z 3600 (Wilderness 11), where the squad post (3067, 3640) is;
+  - east, x 3136 to 3327 from the ditch north of Varrock (z 3520), and x 3192 and east further north. The live gang
+    was there when `FOLLOW` moved the post in the second pilot, at (3192, 3679) and (3136, 3583).
+
+  A squad posted in the east zone and walking in from Varrock crosses no single-way tile. A gang account must come
+  into multi-way to fight it, so the live split on the walk in cannot happen there. The squad banks at Varrock West
+  from an east post (`bankNear`), and that walk keeps to multi-way tiles.
+
+  On the bench the hunting gang follows into multi-way at either post, and the west post is a little cheaper. Four of
+  ours, hunted, no death:
+  - west post, rune kit (`extra:squad-4-gang-hunted-x1`), seeds 1 to 8: 22 kills of 24 at about 29 HP a kill;
+  - east post at Wilderness 3 (3160, 3540; `-hunted-east-`), seeds 1 to 16: 44 of 48 at about 41;
+  - east post at Wilderness 13 (3200, 3620; `-hunted-east13-`), seeds 1 to 8: 23 of 24 at about 38;
+  - east post at Wilderness 3 in the live kit (`-hunted-east-chain-`), seeds 1 to 8: 18 of 24 at about 48, against
+    21 at about 42 at the west post.
+
+  A gang account that walks out near the ditch is out of the Wilderness in a few tiles. Gap: the live gang's choice
+  between the two posts is not measured.
+- **A bank trip after a teleport.** The fight loop's outnumbered escape casts Camelot Teleport, so the trip starts
+  about 430 tiles from Varrock West. The trip's walks had 400 ticks each and ended short (`extra:squad-2-gang-trips-east-x1`,
+  two of ours against three). The walk budget is 3 ticks a tile of distance plus 100, at least 400 (`bankTrip`).
+- **The least build that can fight the gang is combat 110.** The game allows an attack only within as many combat
+  levels as the Wilderness level, and the gang (combat 126) stands at level 16. A combat-83 squad (Attack 60,
+  Strength, Defence and Ranged 70) at the post made no attack in 8 runs. The combat-111 build
+  (`live-walker-iron-snare-rune-nopot-b111`, `extra:squad-<n>-gang-b111-x1`) in the multi-way zone, seeds 1 to 8, 24
+  gang accounts a row, no death of ours:
+
+  | Squad | Gang killed | HP lost a kill | Maxed squad, HP lost a kill |
+  | --- | --- | --- | --- |
+  | 4 | 13 | 84 | 35 |
+  | 6 | 19 | 33 | 22 |
+  | 9 | 24 | 16 | 14 |
+
+  So 6 to 9 accounts at combat 111 do what 4 to 6 maxed accounts do.
+- **Both refusals end a fight.** On a single-way tile the game refuses an attack with "I'm already under attack."
+  (someone else hit us) or "Someone else is already fighting your opponent." (someone else hit the target). The team
+  loop and pk-squad stop the fight on either and leave that target for 8 ticks. Stopping on the first alone kept an
+  account clicking a target held by another fight. Seeds 1 to 8, no death of ours:
+  - four of ours against the split gang (`extra:team-4v3-gang-chainbare-split-x2`): 7 kills of 48 at about 588 HP a
+    kill on the first alone, 19 at about 238 on both;
+  - pk-squad at the single-way post (`extra:squad-4-gang-single-x1`): 20 kills of 24 at about 48, and 22 at about 36;
+  - pk-squad hunted, in the live kit (`extra:squad-4-gang-hunted-chain-x1`): 22 at about 43, and 21 at about 42.
+- **No relay on single-way tiles.** The game lets a second attacker take a foe 8 ticks after the first one's last
+  attack (`pvp_in_combat_check`), and the foe must then fight the new one. A relay of a hurt account to a free one
+  loses: four of ours against the split gang (`extra:team-4v3-gang-chainbare-split-x2`, seeds 1 to 8), 19 kills of
+  48 at about 238 HP a kill with no relay, 4 at about 1,055 handing on below 60% HP, 9 at about 526 below 75%. The
+  8 ticks with no attack let the gang account eat and walk out.
+- **Marching and pulling.** The squad moves as a march: its post steps `STEP` (default 12) tiles at a time toward the
+  goal, and on only when every account stands within 4 tiles of the step or after 60 ticks there. A march to a
+  multi-way goal goes first to the nearest multi-way tile (`multiEntry`). An account on a single-way tile with a
+  target in view, while the goal is multi-way and within 40 tiles, walks on into multi-way and eats instead of
+  fighting (`PULL`), for at most 20 ticks at a stretch. A squad account takes only a target the game lets it attack
+  (`attackable`); one that walked out of the Wilderness held three of ours at its edge. With `SQUAD_GANG_HUNT=1` the
+  bench gang walks to the nearest of ours, as the live gang did. Seeds 1 to 8, no death in any:
+  - the walk-in from the Edgeville bank against the hunting gang: 24 of 24 at about 34 HP a kill
+    (`extra:squad-4-gang-hunted-x1`); with `MARCH=0 PULL=0`, 23 of 24 at about 31. The bench gang did not split
+    the squad on the way, so the bench shows no gain from the march and the pull; the live split is their reason.
+  - the same walk-in in the pilot's kit against `ganker-max` (23 sharks, boosts, prayer potions), each gang account
+    hunting its own one of ours (`SQUAD_GANG_SPLIT=1`, `extra:squad-4-gangmax-hunted-chain-x1`), seeds 1 to 8:
+    march and pull 19 kills at about 80 HP a kill, neither 20 at 78, pull only 22 at 72, march only 15 kills in 5
+    runs at 65. The four sit within the noise; this copy of the gang costs 65 to 80 HP a kill where the live split
+    cost about 249.
+  - `FOLLOW=1` from (3150, 3560), 110 tiles away, past the gang's single-way post: 19 of 24 at about 60 HP a kill
+    (`extra:squad-4-gang-follow-x1`; seeds 1 to 4: 38, seeds 5 to 8: 84). Seeds 1 to 4 only: straight in, 81;
+    gathered once 10 tiles short, 48.
+- **A dropped account.** In the third live pilot one account's connection dropped, and openBot's default ended the
+  process, logging the other three out in the Wilderness. pk-squad now stops only the dropped account, and at the end
+  logs it in again, eats, and leaves by Camelot Teleport (Magic 45, a law and 5 air runes, Wilderness 20 or less) or a
+  walk to the Edgeville bank (`RESCUE=1`); the RESULT names it (`dropped=`, `stranded=`). Bench (`SQUAD_DROP_AT=40`
+  closes the first account's session): the other three killed all three gang accounts, and the dropped one logged in
+  at Wilderness 15 and teleported out.
+- **Following the gang.** The gang roams (the first live pilot's feed showed it 250 tiles from its post). `FOLLOW=1`
+  marches the squad, once no target has been in view for 30 ticks, to the nearest multi-way tile within 24 tiles of
+  the targets that the world feed shows, at Wilderness level `MAX_WILD` or less (`meetTile`, the feed through
+  scripts/pk-roam.ts `Radar`). On the bench, which serves no world feed, the bench gang's own tiles fill the radar.
+- **The freeze matters most to a small squad.** Three of ours in rune chainbody (the kit of the first live pilot)
+  in the multi-way zone, seeds 1 to 8: with no freeze runes 25 kills of 48 and 7 of 16 groups, 74 HP a kill
+  (`extra:team-3v3-gang-chain-west-x2`); with Bind runes 44 kills and 14 groups, 64 HP a kill
+  (`-chainbind-`); four with no freeze runes 37 kills and 11 groups, 35 HP a kill (`extra:team-4v3-gang-chain-west-x2`).
+  No death in any. A gang account that walks out at low HP gets away unless a freeze holds it or more of ours hit it.
+- **The first live pilot.** One 10-minute pilot of four combat-126 accounts (side `claude-cloud`), kit short of the bench: rune chainbody
+  for want of Dragon Slayer, no antipoison (none on the Grand Exchange; `junglestore` only), few or no water runes
+  (Aubury's shelf empty), bronze arrows on two accounts. Result: 4 kills (Sugma twice, Goondelf, Ligma), no death in
+  the run, 995 HP lost, about 250 HP a kill against the bench's 35. The world feed shows 4 gang deaths, as many as the
+  kill messages. The gang met the squad on its walk in, at about (3072, 3610), and each gang account took one of ours,
+  so most kills were one-on-one fights of 114 to 386 ticks. No kill dropped a dragon dagger(p): the pickups were 40
+  bronze arrows. A deadline that logs an account out where it stands loses it: KnightRider, logged out at the post
+  with 4 HP, died skulled, with its whole kit, 31 ticks into its next login. So the script walks each live account to
+  the Edgeville bank before logout (`leaveWilderness`).
+  A second pilot, the same four with 50 water runes each (Bind), `FOLLOW=1`, stopped by hand at 11 minutes: 6 kills
+  (each gang account twice), 6 gang deaths in the feed, 1,562 HP lost, about 260 HP a kill. `FOLLOW` moved the post
+  twice to the gang, to (3192, 3679) and to (3136, 3583). KnightRider, with no leg armour (every rune, adamant and
+  mithril leg piece was gone from the shops and the Grand Exchange), died at Wilderness 8 with Ligma and Sugma both
+  on it. It clicked Camelot Teleport at 17, 14 and 8 HP with no law runes, since the kit it was given carried none
+  (the bench kits carry 2 law and 10 air runes). So the fight loop counts the escape spell only when
+  `escapeCastable` (scripts/teleport-runes.ts) says its runes, staff and level allow a cast, and otherwise runs
+  south. The three others walked out at the stop and logged out at the bank. Gap: two pilots; the gang still splits
+  one-on-one, so HP a kill stays near 7 times the bench's.
+
+The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
+regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
+at once, each against its own, or best, four such accounts on the multi-way tiles west of the post (35 HP a kill,
+about 700 coins of supplies), where the bench gang follows. Every
+consumable has a source with no Grand Exchange: sharks by fishing and cooking, iron arrows from the archery shops
+(`archeryshop` 1,500, `archeryshop2` 800), earth and water runes from the rune shops (`runeshop` 2,000), nature runes
+from `magearena_runeshop` and `magicguildshop`, the antipoison from `junglestore` (10). The gear: the dragon dagger
+from `dragonswordshop` (Lost City), the rune body and legs as above, the magic shortbow by fletching (no shop), the
+amulet of power by crafting and Enchant (the `amuletshop` holds none).
+
 ### Options against the gang
 
 Each lever of a meeting, with what is measured. A lever with no result is a test to run on `ganker-max`.
@@ -1125,7 +1442,8 @@ Each lever of a meeting, with what is measured. A lever with no result is a test
   - The lines at level 20 (teleport spells) and 30 (glory): the post is under both.
 - **The time.** One or two of the three are away at times (the Chaos Temple altar, the Monastery, the tile at
   (2934, 3516)), and the world feed shows where each one is. A meeting with one or two of them is `SPAR_GANG=1` or
-  `2` of `scripts/pk-gang.ts`. Not measured.
+  `2` of `scripts/pk-gang.ts`. Measured in "The cost of a kill": with one, a kill takes 260 ticks and 75 HP; with three,
+  577 ticks and 97 HP.
 - **Before the meeting.** The four boost potions drunk at the bank leave four pack slots for sharks. The server drops
   a boost at logout (`PlayerLoading.ts:99`), so a bench start state cannot hold one: the bench account goes to the
   bank first. Measured above.

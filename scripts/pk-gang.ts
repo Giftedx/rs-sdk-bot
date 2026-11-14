@@ -36,7 +36,7 @@ export function startsAttack(entity: { primaryAnim?: number; primaryAnimCycle?: 
 // margin of the method. `trips` counts the meetings: one, and one more after each trip to the bank. `gangTrips` counts
 // the trips of the gang to its bank. `prayerOut` is the tick of the meeting at which our account had no prayer points
 // left (-1: never).
-export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; kills: number; ticks: number; taken: number; eaten: number; specs: number; refused: number; foodLeft: number; prayerLeft: number; prayerDoses: number; trips: number; gangTrips: number; prayerOut: number;
+export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; picked?: Record<string, number>; kills: number; ticks: number; taken: number; eaten: number; specs: number; refused: number; foodLeft: number; prayerLeft: number; prayerDoses: number; trips: number; gangTrips: number; prayerOut: number;
     fights: FightResult[]; gang: FightResult[] };
 
 // The account of the gang to fight now: the one that hit us last, else the nearest in view that the game has not
@@ -72,7 +72,10 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
     // but the boosts.
     return async (a: Session, fresh = false): Promise<string | null> => {
         const deps = await sessionWalker(a);
-        const go = (to: { x: number; z: number }) => walkPath(deps, [{ ...to, tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: halt });
+        // The walk budget grows with the distance: an account that left a fight by teleport (Camelot, about 430 tiles
+        // from Varrock West) starts its trip far from both the bank and the post.
+        const go = (to: { x: number; z: number }) => { const p = a.sdk.getState()?.player, d = p ? Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) : 0;
+            return walkPath(deps, [{ ...to, tol: 2 }], { maxTicks: Math.max(400, 3 * d + 100), idleMs: 9000, stop: halt }); };
         const out = await go(at);
         if (!out.ok) return `no walk to the bank: ${out.detail ?? 'stopped'}`;
         const fault = fresh ? null : await restock(a, pack.food, pack.items, kit);
@@ -123,7 +126,7 @@ export type GangTrips = { count: number; resupply: (g: Session, ran: boolean) =>
 // `wait`: the ticks that our account waits on its tile with none of the gang in view (default 20); `idlePrayerOff`
 // (SPAR_IDLE_PRAYER_OFF=1): it turns its prayers off while it waits.
 export async function gang(a: Session, others: readonly Session[], optionsA: FightOptions, optionsB: FightOptions | ((member: number) => FightOptions), log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false,
-    trips?: { count: number; resupply: (a: Session, fresh?: boolean) => Promise<string | null>; bank?: { eaten: number } }, more: { wait?: number; gangTrips?: GangTrips; idlePrayerOff?: boolean } = {}): Promise<GangResult> {
+    trips?: { count: number; resupply: (a: Session, fresh?: boolean) => Promise<string | null>; bank?: { eaten: number } }, more: { wait?: number; gangTrips?: GangTrips; idlePrayerOff?: boolean; pickup?: ReadonlySet<number> } = {}): Promise<GangResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
     const start = a.tick(), cap = optionsA.cap ?? 900, self = () => a.sdk.getState()?.player, latch = { outnumbered: false };
@@ -201,6 +204,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     // A fight turns to a runner whose bar is lower by 5 points or more than the target's.
     const lowerRunner = (current: NearbyPlayer) => { const r = runner(); return !!r && r.index !== current.index && (health(r.index) ?? 1) < (health(current.index) ?? 1) - 0.05; };
     let end: GangResult['end'] = 'cap', unseen = 0, returns = 0, trip = 1;
+    const picked: Record<string, number> = {};
     for (;;) {
     while (alive.size && a.tick() - start < cap && !halt()) {
         reap();
@@ -237,6 +241,8 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         fights.push(r);
         // An attack click on an account that died can walk ours toward its respawn point: after a kill, back to the
         // meeting tile from more than 6 tiles.
+        // `pickup`: the stacks that the kill left within 3 tiles, before the walk back.
+        if (r.outcome === 'kill' && more.pickup) for (const [id, n] of Object.entries(await pickUp(a, more.pickup, { radius: 3, maxTicks: 16, wait: 6, stop: halt }))) picked[id] = (picked[id] ?? 0) + n;
         const here = self();
         if (here && spot && r.outcome === 'kill' && Math.max(Math.abs(here.worldX - spot.x), Math.abs(here.worldZ - spot.z)) > 6) void a.sdk.sendWalk(spot.x, spot.z);
         // The next choice leaves out each account that the game refused, until one attack goes through.
@@ -265,10 +271,39 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     const kills = others.length - alive.size;
     const state = a.sdk.getState(), foodLeft = (state?.inventory ?? []).filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text))).reduce((n, i) => n + i.count, 0);
     return { end, kills, ticks: a.tick() - start, taken, eaten: fights.reduce((n, f) => n + f.eaten, 0) + (trips?.bank?.eaten ?? 0), specs: fights.reduce((n, f) => n + f.specs, 0), refused: refusals, foodLeft,
-        trips: trip, gangTrips: gangBanked, prayerOut, prayerLeft: state?.prayers.prayerPoints ?? 0, prayerDoses: (state?.inventory ?? []).reduce((n, i) => n + (PRAYER_DOSES.get(i.id) ?? 0) * i.count, 0), fights, gang: gangResults };
+        ...(more.pickup ? { picked } : {}), trips: trip, gangTrips: gangBanked, prayerOut, prayerLeft: state?.prayers.prayerPoints ?? 0, prayerDoses: (state?.inventory ?? []).reduce((n, i) => n + (PRAYER_DOSES.get(i.id) ?? 0) * i.count, 0), fights, gang: gangResults };
 }
 
 // The counts of several meetings that ran at once.
+// What an account of ours takes back after a meeting: a gang account's dagger (it drops when the account dies with
+// no Protect Item: death.rs2 pvp_death_lose_items keeps none on a skulled account) and sharks.
+// Dearest first: a pickup takes them in this order.
+export const PICKUP_ITEMS = [1215, 1231, ITEMS.shark as number];
+// The stacks of `ids` within `radius` tiles, in the order of `ids` (dearest first), nearest first within an id; 4
+// arrows in 5 land on the tile of the player they hit (pvp_ranged.rs2 ranged_dropammo_pvp, ^dropammo_chance 5).
+export function plannedPickups<G extends { id: number; count: number; x: number; z: number; distance: number }>(ground: readonly G[], ids: ReadonlySet<number>, radius: number): G[] {
+    const rank = new Map([...ids].map((id, i) => [id, i]));
+    return ground.filter(g => ids.has(g.id) && g.distance <= radius).sort((a, b) => rank.get(a.id)! - rank.get(b.id)! || a.distance - b.distance);
+}
+// `wait`: ticks to wait for a first stack to show (a death drops its items 4 ticks after the kill message: death.rs2
+// player_death p_delay 1 and 3).
+export async function pickUp(a: Session, ids: ReadonlySet<number>, o: { radius?: number; maxTicks?: number; wait?: number; stop?: () => boolean } = {}): Promise<Record<string, number>> {
+    const got: Record<string, number> = {}, start = a.tick(), tried = new Set<string>();
+    if (process.env.PICKUP_TRACE === '1') { const g = a.sdk.getState()?.groundItems ?? [], me = a.sdk.getState()?.player; console.log(`PICKUP at ${me?.worldX},${me?.worldZ} ground ${g.length}: ${g.slice(0, 12).map(i => `${i.id}x${i.count}@${i.x},${i.z}d${i.distance}`).join(' ')}`); }
+    while (a.tick() - start < (o.maxTicks ?? 200) && !o.stop?.()) {
+        const inv = a.sdk.getInventory(), full = inv.length >= 28;
+        const edible = inv.find(i => i.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
+        // A full pack takes a stack it holds already, or eats a food for an item that is no food (`ids` order: dearer).
+        const next = plannedPickups((a.sdk.getState()?.groundItems ?? []) as { id: number; count: number; x: number; z: number; distance: number; name: string }[], ids, o.radius ?? 12)
+            .find(g => !tried.has(`${g.id}@${g.x},${g.z}`) && (!full || inv.some(i => i.id === g.id && i.count > 1) || (!!edible && edible.id !== g.id)));
+        if (!next) { if (a.tick() - start < (o.wait ?? 0) && await nextTick(a)) continue; break; }
+        if (full && edible && !inv.some(i => i.id === next.id && i.count > 1)) { const op = edible.optionsWithIndex.find(x => /^eat$/i.test(x.text)); if (op) { await a.sdk.sendUseItem(edible.slot, op.opIndex); await nextTick(a); } }
+        tried.add(`${next.id}@${next.x},${next.z}`);
+        const r = await a.bot.pickupItem(next as never);
+        if (r.success) got[next.id] = (got[next.id] ?? 0) + next.count;
+    }
+    return got;
+}
 export function gangSummary(results: readonly GangResult[]) {
     const ends = (end: GangResult['end']) => results.filter(r => r.end === end).length;
     return { groups: results.length, cleared: ends('cleared'), died: ends('died'), escaped: ends('escaped'), away: ends('away'), cap: ends('cap'),
@@ -329,18 +364,22 @@ if (import.meta.main) {
         return async (g: Session, out: boolean) => { const go = (out ? ran : went).get(g); return go ? go(g) : 'no start state'; };
     })() } : undefined;
     const gangTripsOf = groups.map(gangTrips);
-    for (const s of groups.flatMap((g, i) => [...(resupplies[i] ? [] : g.slice(0, 1)), ...(gangTripsOf[i] ? [] : g.slice(1))])) lean(s);
+    const pickup = env.SPAR_PICKUP === '1';
+    for (const s of groups.flatMap((g, i) => [...(resupplies[i] || pickup ? [] : g.slice(0, 1)), ...(gangTripsOf[i] ? [] : g.slice(1))])) lean(s);
     // SPAR_PRETRIP=1: each account of ours goes to the bank before the first meeting, as an account that comes from
     // the bank does: it drinks its boosts there and carries sharks in their slots.
     if (env.SPAR_PRETRIP === '1') {
         const faults = await Promise.all(groups.map(([a], i) => resupplies[i]?.resupply(a!, true) ?? null)); for (const fault of faults) if (fault) halted ??= `no trip before the meeting: ${fault}`;
         // With no later trip, our accounts need no loc and no ground item either.
-        if (tripCount <= 1) for (const [a] of groups) lean(a!); }
+        if (tripCount <= 1 && !pickup) for (const [a] of groups) lean(a!); }
+    // SPAR_PICKUP=1: after each kill our account takes what lies within 3 tiles: its own ammo (read before the meeting)
+    // and PICKUP_ITEMS. A drop lasts 200 ticks (lootdrop.constant), less than a meeting, so the end of one is too late.
+    const pickupOf = groups.map(([a]) => { const ammo = (a!.sdk.getEquipment?.() ?? []).find(e => /arrow|bolt/i.test(e.name))?.id; return pickup ? new Set([...(ammo ? [ammo] : []), ...PICKUP_ITEMS]) : undefined; });
     const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), (member: number) => options(1, i, member), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 },
-        { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1' })));
+        { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1', pickup: pickupOf[i] })));
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
-        + `valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
+        + `picked=${results.map(r => Object.values(r.picked ?? {}).reduce((n, c) => n + c, 0)).join(',')} valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
         + `food=${results.map(r => r.foodLeft).join(',')} prayer=${results.map(r => r.prayerLeft).join(',')} doses=${results.map(r => r.prayerDoses).join(',')} trips=${results.map(r => r.trips).join(',')} gangTrips=${results.map(r => r.gangTrips).join(',')} prayerOut=${results.map(r => r.prayerOut).join(',')} refused=${results.map(r => r.refused).join(',')}${halted ? ` halted=${halted}` : ''}`);
 }
