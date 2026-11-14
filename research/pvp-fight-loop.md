@@ -1162,6 +1162,9 @@ Gaps:
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).
+- Run energy does not drain on the practice bench: the engine's `NODE_INFINITE_RUN` defaults to true
+  (`server/engine/src/util/Environment.ts:47`), and a runner chase reads `run=100` on each of its ticks (`PK_TRACE=1`).
+  Every chase result here assumes that; a server with the flag off would slow a long chase to a walk.
 - The attackable gap is the shallower player's Wilderness level, (z - 3520) / 8 + 1 on the surface (`wilderness_levels.rs2:4-16`, `pvp_combat.rs2:32-48`).
 - The killer gets one of eleven messages naming the loser (`pvp_combat.rs2:203-222`); the SDK emits no kill event for a player.
 - Head icon bits (`player/configs/headicon.constant`): 0 skull, 3 Protect from Melee, 4 Protect from Missiles, 5 Protect from Magic.

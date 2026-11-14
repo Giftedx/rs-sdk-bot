@@ -876,7 +876,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         } else unattackableSince = -1;
         const seen = observePlayer(s.client, target.index);
         // PK_TRACE=1: one line for each tick of what the loop reads, to find where two runs with one seed part.
-        if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
+        if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
         const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
