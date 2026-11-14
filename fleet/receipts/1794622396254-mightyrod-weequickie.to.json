@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794622396254-mightyrod-weequickie",
  "account": "WeeQuickie",
  "partner": "Mightyrod",
@@ -12,6 +12,12 @@
  "claim": "7902c524-a525-4516-b961-0f786ce3863b",
  "count": 0,
  "ok": false,
- "at": 1794622724991,
- "detail": "trade claimed"
+ "at": 1794622733517,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794622724998-0000028184-0000000001",
+  "at": 1794622733506,
+  "sha256": "e9b153002fb409123f3acb91d5eb97f554c10fbc8219806359d7f9ad1ccf52e3"
+ },
+ "screen": false
 }
