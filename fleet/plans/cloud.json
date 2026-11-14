@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794641419115,
+ "at": 1794641424882,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -41,6 +41,26 @@
    ]
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "cloud",
+   "resources": [
+    "pen:3187,3277"
+   ]
+  },
+  {
    "account": "Porksword",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -61,26 +81,26 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "cloud",
    "resources": [
-    "pen:3187,3277"
+    "knight:2669,3298"
    ]
   },
   {
-   "account": "Spitroaster",
+   "account": "YewGotWood",
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
@@ -97,6 +117,46 @@
    "autopilot": "cloud",
    "resources": [
     "pen:3229,3298"
+   ]
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "cloud",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "cloud",
+   "resources": [
+    "knight:2671,3313"
    ]
   },
   {
@@ -141,22 +201,42 @@
   },
   {
    "account": "FullSporran",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "cloud",
    "resources": [
-    "pen:3017,3288"
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Heavyload",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "cloud",
+   "resources": [
+    "knight:2671,3313"
    ]
   },
   {
