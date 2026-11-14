@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794647639178,
+ "at": 1794647698334,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -285,6 +285,25 @@
    ]
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
    "account": "Magicwanda",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -388,19 +407,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-fa6029ee-d6bf-4026-b673-faaa7e453d7e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-billionaire-20261114t085012z [task-fa6029ee-d6bf-4026-b673-faaa7e453d7e]",
-   "role": "thieving"
   }
  ]
 }
