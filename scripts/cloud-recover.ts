@@ -143,7 +143,9 @@ export const MAX_ATTEMPTS = 2, MAX_WAITS = 6;
 // The dispatcher's cause names (session-recovery-dispatch.ts setupCauses) of a refusal that only waited.
 const WAIT_CAUSES = new Set(['recovery admission waiting: memory', 'recovery admission waiting: maxBots', 'recovery waits for runtime source owner']);
 // The coordinator's receipt of a run that preflight refused before it wrote the request (coordinator-live.ts preflight).
-const WAIT_ERROR = /^Error: live admission waiting: (?:memory|maxBots)$/;
+// A qualification of an older release has no current native delivery (recoveryQualification, called in the preflight
+// before installJob): the release moved after the qualification, and no lease or session was touched.
+const WAIT_ERROR = /^Error: (?:live admission waiting: (?:memory|maxBots)|authenticated recovery requires its current native delivery)$/;
 // The run ids that the dispatcher refused while it waited, from the lines of `.practice/swarm-repair.json.results.jsonl`.
 // The coordinator receipt keeps only the dispatcher's reason, not its cause. A line that cannot be read is skipped.
 export function waitRefusedRuns(results: string): Set<string> {
