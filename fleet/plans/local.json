@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794656649227,
+ "at": 1794656721689,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -90,6 +90,25 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "Bigchopper",
@@ -552,19 +571,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3143e617-ed96-44df-ba34-5b4288deefc4"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-pocketpython-20261114t113507z [task-3143e617-ed96-44df-ba34-5b4288deefc4]",
-   "role": "thieving"
   }
  ]
 }
