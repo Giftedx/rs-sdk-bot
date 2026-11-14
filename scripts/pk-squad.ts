@@ -83,6 +83,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
             const target = squadTarget(view, o.targets, health, new Set(skip.keys()));
             if (!target) {
+                // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
+                // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
+                if (s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
                 // Back to the post between fights.
                 if (Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 1 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health) });
                 else if (!await nextTick(s)) break;
