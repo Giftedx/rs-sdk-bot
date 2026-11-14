@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794660116899-bigchopper-masterbaiter",
  "account": "Bigchopper",
  "partner": "Masterbaiter",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 2293,
  "claim": "54f46698-6dca-430b-8f14-d6e9fe28ebad",
- "count": 0,
- "ok": false,
- "at": 1794660129147,
- "detail": "trade claimed"
+ "count": 2293,
+ "ok": true,
+ "at": 1794660213449,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7103,
+  "after": 4810
+ },
+ "logout": {
+  "attemptId": "1794660129155-0000025956-0000000001",
+  "at": 1794660213439,
+  "sha256": "30f3cc73809d0f875ba0255df1b3727373a12e1ce51a5621abe33fa0544203a9"
+ },
+ "screen": true
 }
