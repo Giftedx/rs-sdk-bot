@@ -4,7 +4,8 @@ import { goTo, walkPath, sessionWalker } from '../packages/core/src/walk';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { bankCargo } from '../packages/core/src/cargo';
 
-const s = await openBot(process.argv[2]!);
+let requestedStop = false;
+const s = await openBot(process.argv[2]!, {onStop:(session,reason)=>{requestedStop=true;return finish([session],false,reason);}});
 try {
     const CAP = Number(process.env.CAP ?? 15000);
     const first = s.sdk.getState()?.player;
@@ -18,7 +19,7 @@ try {
     let ended = false, died = false, gathered = 0, spun = 0, trips = 0, rawBanked = 0;
     const initial = s.sdk.getState()?.player;
     void s.ended.then(()=>{ ended=true; });
-    const over = () => ended || died || s.tick()-t0 >= CAP;
+    const over = () => requestedStop || ended || died || s.tick()-t0 >= CAP;
     const off = s.onTick(()=>{
         const p=s.sdk.getState()?.player;
         if (p?.isDead || (p?.respawnCount??0)>(initial?.respawnCount??0) || (initial?.lifeId !== undefined && (p?.lifeId ?? initial.lifeId) !== initial.lifeId)) died=true;
@@ -50,7 +51,7 @@ try {
         }
         await waitTicks(s,1);
         rawBanked=s.sdk.getState()?.bank?.items.find(i=>/^wool$/i.test(i.name))?.count??0;
-        await bankCargo(s,[/^wool$/i,/^ball of wool$/i]);
+        if(!over())await bankCargo(s,[/^wool$/i,/^ball of wool$/i],0,{stopped:over});
         await s.bot.closeBank();
         trips++;
         console.log(`MILESTONE wool bank gathered=${gathered} spun=${spun} rawBanked=${rawBanked} trips=${trips}`);

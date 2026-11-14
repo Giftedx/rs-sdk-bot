@@ -134,18 +134,18 @@ const must=async(run:Run,cmd:string[],cwd:string)=>{
 async function checkPrerequisites(pr:DeliveryPr,dir:string,mainRoot:string,run:Run){
  for(const id of pr.prerequisites??[]){
   const branch=deliveryBranch(id),file=join(dir,id+'.json');
-  if(!existsSync(file)){
-   // A missing receipt cannot prove an empty delivery. Look for its merged PR by head and base.
-   const merged=await must(run,['gh','pr','list','--head',branch,'--base','master','--state','merged',
-    '--json','number,isCrossRepository','--jq','map(select(.isCrossRepository == false)) | .[0].number // empty'],mainRoot);
-   if(!/^[1-9][0-9]*$/.test(merged.trim()))throw new DeliveryWait('waiting for earlier delivery '+branch+' (missing local record and no merge into master)');
-   continue;
+  const recorded=existsSync(file);
+  if(recorded){
+   const before:DeliveryPr=JSON.parse(readFileSync(file,'utf8'));
+   if(before.state==='empty')continue;
+   if(before.state!=='opened')throw new DeliveryWait('waiting for earlier delivery '+branch+' ('+before.state+(before.state==='conflict'?': resolve it by hand':'')+')');
   }
-  const before:DeliveryPr=JSON.parse(readFileSync(file,'utf8'));
-  if(before.state==='empty')continue;
-  if(before.state!=='opened')throw new DeliveryWait('waiting for earlier delivery '+before.branch+' ('+before.state+(before.state==='conflict'?': resolve it by hand':'')+')');
-  const state=(await must(run,['gh','pr','view',before.branch,'--json','state','--jq','.state'],mainRoot)).trim();
-  if(state!=='MERGED')throw new DeliveryWait('waiting for earlier delivery '+before.branch+' to merge ('+state+')');
+  // A branch can have PRs to other bases. Only its same-repository merge into master satisfies the dependency,
+  // whether or not the local receipt survived.
+  const merged=await must(run,['gh','pr','list','--head',branch,'--base','master','--state','merged',
+   '--json','number,isCrossRepository','--jq','map(select(.isCrossRepository == false)) | .[0].number // empty'],mainRoot);
+  if(!/^[1-9][0-9]*$/.test(merged.trim()))throw new DeliveryWait('waiting for earlier delivery '+branch
+   +(recorded?' to merge into master':' (missing local record and no merge into master)'));
  }
 }
 // The build's change to each file, merged onto master's version in `tree`. Overlapping master edits refuse the PR.
@@ -171,30 +171,44 @@ function applyChange(pr:DeliveryPr,tree:string){
  if(conflicts.length)throw new DeliveryConflict('delivery conflicts with origin/master: '+conflicts.join(', '));
  for(const [f,text] of merged){mkdirSync(dirname(join(tree,f)),{recursive:true});writeFileSync(join(tree,f),text);}
 }
-async function verifyQualifiedHead(pr:DeliveryPr,head:string|undefined,mainRoot:string,run:Run){
- if(pr.definitionBase===undefined)return;
+async function verifyDeliveryHead(pr:DeliveryPr,head:string|undefined,mainRoot:string,run:Run){
  if(!head||!(/^[0-9a-f]{40}$/.test(head)))throw Error('delivery: reused head is unverified');
- const file='packages/router/tasks/'+pr.capability+'.json';
- if(!/^[-a-z0-9]+$/.test(pr.capability)||!pr.files.includes(file))throw new DeliveryConflict('delivery is missing its staged qualified definition: '+file);
- const expected=readFileSync(join(pr.snapshot,file),'utf8').replaceAll('\r\n','\n');
+ if(typeof pr.base!=='string')throw new DeliveryConflict('delivery was staged without base snapshots; commit '+pr.snapshot+' by hand against origin/master');
+ const definition='packages/router/tasks/'+pr.capability+'.json';
+ if(pr.definitionBase!==undefined&&(!/^[-a-z0-9]+$/.test(pr.capability)||!pr.files.includes(definition)))throw new DeliveryConflict('delivery is missing its staged qualified definition: '+definition);
  // Check the observed commit, without changing a branch or the shared FETCH_HEAD.
  await must(run,['git','fetch','--no-write-fetch-head','origin',head],mainRoot);
- const entry=await must(run,['git','ls-tree','--full-tree',head,'--',file],mainRoot);
- if(!/^100(?:644|755) blob /.test(entry))throw new DeliveryConflict('delivery head is missing its qualified definition: '+file);
- const actual=await must(run,['git','show',head+':'+file],mainRoot);
- if(actual!==expected)throw new DeliveryConflict('delivery head differs from its qualified definition: '+file);
+ for(const file of pr.files){
+  if(!committable(file))throw new DeliveryConflict('delivery has an invalid staged file: '+file);
+  const entry=await must(run,['git','ls-tree','--full-tree',head,'--',file],mainRoot);
+  if(!/^100(?:644|755) blob /.test(entry))throw new DeliveryConflict('delivery head is missing its staged file: '+file);
+  const actual=(await must(run,['git','show',head+':'+file],mainRoot)).replaceAll('\r\n','\n');
+  const build=readFileSync(join(pr.snapshot,file),'utf8').replaceAll('\r\n','\n');
+  if(actual===build)continue;
+  if(pr.definitionBase!==undefined&&file===definition)throw new DeliveryConflict('delivery head differs from its qualified definition: '+file);
+  const basePath=join(pr.base,file),base=existsSync(basePath)?readFileSync(basePath,'utf8').replaceAll('\r\n','\n'):'';
+  // Reapplying the build's change must leave the head alone. This permits unrelated master changes while
+  // refusing a same-named branch or PR that lacks or replaces the delivered lines.
+  const merged=mergeText(base,actual,build);
+  if(!merged.ok||merged.text!==actual)throw new DeliveryConflict('delivery head differs from its staged change: '+file);
+ }
 }
 // Opens one staged delivery. If the branch already exists on the remote, it opens the PR from it without a push.
 export async function openDeliveryPr(pr:DeliveryPr,mainRoot:string,run:Run=spawnRun,parent=tmpdir(),dir?:string):Promise<{state:'opened'|'empty';url?:string}>{
- const listed=await run(['gh','pr','list','--head',pr.branch,'--state','all','--json','url,headRefOid','--jq','.[0] | select(. != null) | [.url,.headRefOid] | @tsv'],mainRoot);
- if(listed.code===0&&listed.stdout.trim()){
-  const [url,head]=listed.stdout.trim().split('\t');
-  await verifyQualifiedHead(pr,head,mainRoot,run);
-  return{state:'opened',url};
+ const listed=JSON.parse(await must(run,['gh','pr','list','--head',pr.branch,'--base','master','--state','all',
+  '--json','url,headRefOid,state,isCrossRepository,baseRefName,headRefName'],mainRoot));
+ if(!Array.isArray(listed))throw Error('delivery: invalid pull request lookup');
+ const matches=listed.filter(p=>p?.isCrossRepository===false&&p.baseRefName==='master'&&p.headRefName===pr.branch);
+ const existing=matches.find(p=>p.state==='OPEN')??matches.find(p=>p.state==='MERGED')??matches[0];
+ if(existing){
+  if(existing.state==='CLOSED')throw new DeliveryConflict('delivery PR was closed without merging: '+existing.url+'; reopen it and reset this delivery to pending, or reconcile it by hand');
+  if(!['OPEN','MERGED'].includes(existing.state)||typeof existing.url!=='string'||!existing.url)throw Error('delivery: invalid pull request result');
+  await verifyDeliveryHead(pr,existing.headRefOid,mainRoot,run);
+  return{state:'opened',url:existing.url};
  }
  if(dir)await checkPrerequisites(pr,dir,mainRoot,run);
  const remote=await must(run,['git','ls-remote','--heads','origin','refs/heads/'+pr.branch],mainRoot);
- if(remote.trim())await verifyQualifiedHead(pr,remote.trim().split('\t')[0],mainRoot,run);
+ if(remote.trim())await verifyDeliveryHead(pr,remote.trim().split('\t')[0],mainRoot,run);
  const work=mkdtempSync(join(parent,'delivery-')),tree=join(work,'tree');
  try{
   if(!remote.trim()){

@@ -163,7 +163,8 @@ const BANK_AT = Number(process.argv[4] ?? process.env.BANK_AT ?? 27);
 const botName = process.argv[2] ?? 'Bigchopper';
 if(draynor&&TREE==='oak')oakGrove(process.env.OAK_GROVE); // Reject unknown profiles before login.
 
-const s = await openBot(botName).catch(e => finish([], false, `login: ${String(e)}`));
+let requestedStop = false;
+const s = await openBot(botName,{onStop:(session,reason)=>{requestedStop=true;return finish([session],false,reason);}}).catch(e => finish([], false, `login: ${String(e)}`));
 if(grove?.name==='north'&&(s.sdk.getState()?.player?.combatLevel??0)<13)await finish([s],false,'no wood progress: northern grove requires combat13');
 if(draynor&&TREE==='oak'&&(process.env.PREPARE==='1'||process.env.MAX_MAKE)){
     try{const r=await runDraynorOak(s,{cap:CAP,maximum:Number(process.env.MAX_MAKE??25),prepare:process.env.PREPARE==='1',grove:process.env.OAK_GROVE});await finish([s],r.ok,`mode=draynor-oak ${Object.entries(r).map(([k,v])=>`${k}=${v}`).join(' ')}`);}catch(e){await finish([s],false,String(e));}
@@ -178,7 +179,7 @@ try {
     let ended = false, died = false;
     const life = pos()?.lifeId, respawns = pos()?.respawnCount ?? 0;
     void s.ended.then(() => { ended = true; });
-    const over = () => used() >= CAP || ended || died;
+    const over = () => requestedStop || used() >= CAP || ended || died;
 
     let hp0 = hp();
     let hpMin = hp0;
@@ -239,7 +240,7 @@ try {
         const after = yewLogs();
         banked += n - after;
         bankTrips++;
-        await bankCargo(s, [logRe]);
+        if(!over())await bankCargo(s, [logRe], 0, { stopped: over });
         if (draynor) {
             const logs = s.sdk.getState()?.bank?.items.find(i => /^logs$/i.test(i.name))?.count ?? 0;
             TREE = treeAfterBank(process.env.TREE,logs);

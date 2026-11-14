@@ -1,6 +1,6 @@
 // Runs the test files of the given folders in several `bun test` processes at once and prints each shard's output.
 // Usage: bun scripts/test-shards.ts [--shards n] [--changed <git ref>] <folder>...   (12 shards when not given)
-// The number of shards is n at most. It is less when the memory above the floor is less (scripts/heavy-admission.ts).
+// The number of shards is n at most, capped by CPU capacity and memory above the floor (scripts/heavy-admission.ts).
 // --changed runs only the test files that a change since <git ref> can reach (affectedTests below).
 // TEST_SHARDS_JUNIT=<path prefix> also writes a JUnit file for each shard, to measure the time of each file.
 // A file that fails in a shard runs once more alone: a test that fails only beside other processes then passes,
@@ -8,7 +8,7 @@
 import { Glob } from 'bun';
 import { dirname, join, resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
-import { TEST_SHARD_GB, floorGB, freeGB, sizedNote, unitsThatFit } from './heavy-admission';
+import { TEST_SHARD_GB, cpuCapacity, floorGB, freeGB, unitsThatFit } from './heavy-admission';
 
 const root = resolve(import.meta.dir, '..');
 let runs = 0;
@@ -24,6 +24,11 @@ export function shard(items: readonly string[], count: number, seconds: Readonly
         least.total += cost(file);
     }
     return out.map(s => s.files);
+}
+
+export function shardCount(wanted: number, free: number, floor: number, cpu: number): number {
+    const capacity = Number.isSafeInteger(cpu) && cpu > 0 ? cpu : 1;
+    return Math.min(unitsThatFit(wanted, TEST_SHARD_GB, free, floor), capacity);
 }
 
 // A change to one of these can reach any test, so every test runs.
@@ -115,10 +120,10 @@ if (import.meta.main) {
     const start = Date.now();
     const timesFile = resolve(import.meta.dir, 'test-shards.times.json');
     const seconds: Record<string, number> = existsSync(timesFile) ? JSON.parse(readFileSync(timesFile, 'utf8')) : {};
-    // The shards take the memory above the floor and no more (scripts/heavy-admission.ts). With little memory free
-    // the same files run in fewer processes, one at least.
-    const free = freeGB(), floor = floorGB(root), shards = unitsThatFit(count, TEST_SHARD_GB, free, floor);
-    if (shards < count) console.log(sizedNote('test-shards', `${shards} shards`, String(count), free, floor));
+    // Both CPU and memory constrain the same requested upper bound; one process remains possible below the floor.
+    const free = freeGB(), floor = floorGB(root), cpu = cpuCapacity(), memory = unitsThatFit(count, TEST_SHARD_GB, free, floor);
+    const shards = shardCount(count, free, floor, cpu);
+    if (shards < count) console.log(`test-shards: ${shards} shards in place of ${count}: CPU capacity ${cpu}, memory allows ${memory} (${free.toFixed(1)} GiB free, ${floor} GiB floor; scripts/heavy-admission.ts)`);
     const results = files.length ? await Promise.all(shard(files, shards, seconds).map(run)) : [];
     for (const r of results) process.stdout.write(r.output);
     const again = [...new Set(results.filter(r => r.code !== 0).flatMap(r => failedFiles(r.output)))];

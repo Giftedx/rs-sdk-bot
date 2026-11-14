@@ -19,6 +19,7 @@ import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
 import {processDeliveryPrs} from './delivery-pr';
 import {freshScoreboard} from './coverage';
+import {recoverConcurrentPlanWrite} from '../../core/src/plan-lock';
 
 const cli='packages/router/src/coordinator-cli.ts';
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
@@ -446,12 +447,13 @@ export async function claimCoordinatorState(nonce:string,directory=coordinationD
   const owner=activeOwner();if(owner)throw Error('coordinator already owned by PID '+owner.pid);
  };
  rejectActiveOwner();
+ // Cold starts can compete before a dispatcher owns the queue. Recover through the dead writer's unique intent.
  return withPlanWrite(()=>{
   rejectActiveOwner();
   const state=loadState(directory);
   atomicJson(lease,{pid:process.pid,nonce,at:Date.now()});
   return state;
- },directory);
+ },directory,15000,recoverConcurrentPlanWrite);
 }
 export async function pauseCoordinator(state:CoordinatorState,base=projectRoot,stopWorker=safeKill){
  const practice=join(base,'.practice'),directory=join(practice,'coordinator');

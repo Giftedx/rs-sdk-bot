@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
@@ -181,6 +181,165 @@ test('a fast-forward adopts files that already hold the bytes of master and refu
         expect(refused.ok).toBe(false);
         expect(readFileSync(join(main, 'late.txt'), 'utf8')).toBe('late\n');
         expect(readFileSync(join(main, 'keep.txt'), 'utf8')).toBe('local\n');
+    });
+});
+
+function adoptionFixture(dir: string) {
+    const origin = join(dir, 'origin'), main = join(dir, 'main'); mkdirSync(origin);
+    const run = (cwd: string, ...args: string[]) => {
+        const r = gitIn(cwd)('-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args);
+        if (!r.ok) throw Error(args.join(' ') + ': ' + r.out); return r.out;
+    };
+    run(origin, 'init', '--quiet', '--initial-branch=master');
+    for (const file of ['a.txt', 'b.txt', 'unrelated.txt']) writeFileSync(join(origin, file), 'base\n');
+    run(origin, 'add', '.'); run(origin, 'commit', '--quiet', '-m', 'base');
+    run(dir, 'clone', '--quiet', origin, main); run(main, 'config', 'core.autocrlf', 'false');
+    for (const file of ['a.txt', 'b.txt']) writeFileSync(join(origin, file), 'target ' + file + '\n');
+    run(origin, 'add', '.'); run(origin, 'commit', '--quiet', '-m', 'target'); run(main, 'fetch', '--quiet', 'origin', 'master');
+    writeFileSync(join(main, 'a.txt'), 'staged A\n'); run(main, 'add', 'a.txt');
+    writeFileSync(join(main, 'a.txt'), 'delivered A\r\n'); writeFileSync(join(main, 'b.txt'), 'delivered B\n');
+    writeFileSync(join(main, 'unrelated.txt'), 'keep staged\n'); run(main, 'add', 'unrelated.txt');
+    const git = gitIn(main), beforeIndex = git('diff', '--cached', '--binary').out, beforeHead = git('rev-parse', 'HEAD').out;
+    const beforeEntries = Object.fromEntries(['a.txt', 'b.txt'].map(file => [file, git('rev-parse', ':' + file).out]));
+    const adopt = [{ path: 'a.txt', untracked: false, sameAsTarget: false, rebase: 'rebased A\n' },
+        { path: 'b.txt', untracked: false, sameAsTarget: false, mergedDelivery: true }];
+    return { origin, main, git, adopt, beforeIndex, beforeHead, beforeEntries, run };
+}
+
+test('a refused merge restores delivered working bytes and exact staged contents without changing unrelated staging', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir);
+        const refused = applyUpdate((...args) => args[0] === 'merge' ? { ok: false, out: 'injected merge refusal' } : f.git(...args), f.main, 'origin/master', f.adopt);
+        expect(refused).toEqual({ ok: false, detail: 'merge refused: injected merge refusal' });
+        expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('delivered A\r\n');
+        expect(readFileSync(join(f.main, 'b.txt'), 'utf8')).toBe('delivered B\n');
+        expect(f.git('diff', '--cached', '--binary').out).toBe(f.beforeIndex);
+        expect(f.git('rev-parse', 'HEAD').out).toBe(f.beforeHead);
+    });
+});
+
+test('a refused update with a CRLF checkout restores the exact original delivery bytes and staging', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir); f.run(f.main, 'config', 'core.autocrlf', 'true');
+        let merged = false;
+        const refused = applyUpdate((...args) => {
+            if (args[0] !== 'merge') return f.git(...args);
+            merged = true;
+            expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('target a.txt\r\n');
+            return { ok: false, out: 'injected merge refusal' };
+        }, f.main, 'origin/master', f.adopt);
+        expect(merged).toBe(true);
+        expect(refused).toEqual({ ok: false, detail: 'merge refused: injected merge refusal' });
+        expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('delivered A\r\n');
+        expect(readFileSync(join(f.main, 'b.txt'), 'utf8')).toBe('delivered B\n');
+        expect(f.git('diff', '--cached', '--binary').out).toBe(f.beforeIndex);
+    });
+});
+
+test('a later adoption refusal rolls back every earlier adopted path', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir);
+        const refused = applyUpdate((...args) => args[0] === 'checkout' && args.at(-1) === 'b.txt'
+            ? { ok: false, out: 'injected checkout refusal' } : f.git(...args), f.main, 'origin/master', f.adopt);
+        expect(refused.detail).toBe('adopt b.txt: injected checkout refusal');
+        expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('delivered A\r\n');
+        expect(readFileSync(join(f.main, 'b.txt'), 'utf8')).toBe('delivered B\n');
+        expect(f.git('diff', '--cached', '--binary').out).toBe(f.beforeIndex);
+    });
+});
+
+test('an already-deleted adopted tracked file fast-forwards without reviving or staging the file', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir);
+        f.run(f.origin, 'rm', '--quiet', 'b.txt'); f.run(f.origin, 'commit', '--quiet', '-m', 'remove obsolete source');
+        f.run(f.main, 'fetch', '--quiet', 'origin', 'master');
+        // Keep only the independently staged file; b.txt already has the deletion master needs.
+        f.run(f.main, 'checkout', 'HEAD', '--', 'a.txt'); unlinkSync(join(f.main, 'b.txt'));
+        const out = applyUpdate(f.git, f.main, 'origin/master', [{ path: 'b.txt', untracked: false, sameAsTarget: true }]);
+        expect(out).toEqual({ ok: true, detail: '' });
+        expect(existsSync(join(f.main, 'b.txt'))).toBe(false);
+        expect(f.git('ls-files', '--', 'b.txt').out).toBe('');
+        expect(f.git('show', ':unrelated.txt').out).toBe('keep staged');
+    });
+});
+
+test('a held index lock does not prevent working-copy recovery and is preserved with durable original index entries', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir), lock = resolve(f.main, f.git('rev-parse', '--git-path', 'index.lock').out);
+        const refused = applyUpdate((...args) => {
+            if (args[0] !== 'merge') return f.git(...args);
+            writeFileSync(lock, 'another Git writer'); return { ok: false, out: 'index is locked' };
+        }, f.main, 'origin/master', f.adopt);
+        expect(refused.ok).toBe(false); expect(refused.detail).toContain('rollback incomplete:');
+        expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('delivered A\r\n');
+        expect(readFileSync(join(f.main, 'b.txt'), 'utf8')).toBe('delivered B\n');
+        expect(readFileSync(lock, 'utf8')).toBe('another Git writer');
+        const recovery = /; originals: (.+)$/.exec(refused.detail)![1]!;
+        const originals = JSON.parse(readFileSync(recovery, 'utf8'));
+        expect(Buffer.from(originals[0].work.base64, 'base64').toString()).toBe('delivered A\r\n');
+        expect(originals[0].index.object).toBe(f.beforeEntries['a.txt']!);
+        expect(Buffer.from(originals[0].index.base64, 'base64').toString()).toBe('staged A\n');
+        expect(originals.every((copy: any) => copy.index?.object)).toBe(true);
+        unlinkSync(lock);
+    });
+});
+
+test('an edit made immediately after checkout is not claimed by the updater or overwritten during rollback', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir);
+        const refused = applyUpdate((...args) => {
+            const result = f.git(...args);
+            if (args[0] === 'checkout' && args.at(-1) === 'a.txt' && result.ok) {
+                writeFileSync(join(f.main, 'a.txt'), 'concurrent after checkout\n');
+                const staged = f.git('add', '--', 'a.txt'); if (!staged.ok) throw Error(staged.out);
+            }
+            return result;
+        }, f.main, 'origin/master', f.adopt);
+        expect(refused.ok).toBe(false); expect(refused.detail).toContain('changed concurrently during adoption');
+        expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('concurrent after checkout\n');
+        expect(f.git('show', ':a.txt').out).toBe('concurrent after checkout');
+        expect(readFileSync(join(f.main, 'b.txt'), 'utf8')).toBe('delivered B\n');
+        expect(f.git('rev-parse', 'HEAD').out).toBe(f.beforeHead);
+        const recovery = /; originals: (.+)$/.exec(refused.detail)![1]!;
+        expect(JSON.parse(readFileSync(recovery, 'utf8'))[0].index.object).toBe(f.beforeEntries['a.txt']!);
+    });
+});
+
+test.skipIf(process.platform === 'win32')('a mode change immediately after checkout is not overwritten during rollback', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir); f.run(f.main, 'config', 'core.filemode', 'true');
+        const refused = applyUpdate((...args) => {
+            const result = f.git(...args);
+            if (args[0] === 'checkout' && args.at(-1) === 'a.txt' && result.ok) chmodSync(join(f.main, 'a.txt'), 0o755);
+            return result;
+        }, f.main, 'origin/master', f.adopt);
+        expect(refused.ok).toBe(false); expect(refused.detail).toContain('changed concurrently during adoption');
+        expect(statSync(join(f.main, 'a.txt')).mode & 0o111).not.toBe(0);
+        expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('target a.txt\n');
+        expect(f.git('rev-parse', 'HEAD').out).toBe(f.beforeHead);
+        const recovery = /; originals: (.+)$/.exec(refused.detail)![1]!;
+        expect(Buffer.from(JSON.parse(readFileSync(recovery, 'utf8'))[0].work.base64, 'base64').toString()).toBe('delivered A\r\n');
+    });
+});
+
+test('rollback preserves a concurrent edit and staged change and retains the displaced originals for recovery', () => {
+    scratch('rsbot-adopt-rollback-', dir => {
+        const f = adoptionFixture(dir);
+        const refused = applyUpdate((...args) => {
+            if (args[0] !== 'merge') return f.git(...args);
+            writeFileSync(join(f.main, 'a.txt'), 'concurrent A\n');
+            const staged = f.git('add', '--', 'a.txt'); if (!staged.ok) throw Error(staged.out);
+            return { ok: false, out: 'refused after another writer' };
+        }, f.main, 'origin/master', f.adopt);
+        expect(refused.ok).toBe(false); expect(refused.detail).toContain('changed concurrently');
+        expect(readFileSync(join(f.main, 'a.txt'), 'utf8')).toBe('concurrent A\n');
+        expect(f.git('show', ':a.txt').out).toBe('concurrent A');
+        expect(readFileSync(join(f.main, 'b.txt'), 'utf8')).toBe('delivered B\n');
+        expect(f.git('show', ':b.txt').out).toBe('base');
+        expect(f.git('show', ':unrelated.txt').out).toBe('keep staged');
+        const recovery = /; originals: (.+)$/.exec(refused.detail)![1]!;
+        const originals = JSON.parse(readFileSync(recovery, 'utf8'));
+        expect(Buffer.from(originals[0].work.base64, 'base64').toString()).toBe('delivered A\r\n');
     });
 });
 

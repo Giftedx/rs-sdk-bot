@@ -4,6 +4,9 @@ import { createShim,connectInProcess,clientTransportState,observeClientTransport
 import { tradeRefusal } from '../src/tradeguard';
 import { waitTicks } from '../src/ticks';
 import { equipmentObserved } from '../src/container-observation';
+import { bindActionScope } from '../src/action-scope';
+import { watchRandomEvents } from '../src/randomevents';
+import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 test('a nonlocal session cannot redirect its producer receipts into a local fixture',async()=>{
     await expect(connectInProcess({name:'fixture',password:'unused-local-test',server:'rs-sdk-demo.fly.dev',lifecycleRoot:'isolated-fixture'})).rejects.toThrow('lifecycle root override is local-only');
@@ -159,6 +162,63 @@ test('actions reach the client one at a time, in order', async () => {
     await Promise.all([a, b]);
     expect(c.executed.map((x: any) => x.x)).toEqual([1, 3]);
     shim.stop('stopped');
+});
+
+test('a cancelled action waiting in the queue cannot use the earlier action async context', async () => {
+    const c = fakeClient(), sdk = newSdk(), controller = new AbortController();
+    let guardCalls = 0;
+    const shim = createShim(c, sdk, () => { guardCalls++; return null; });
+    shim.start(); c.fire(); c.holdNext = true;
+    const first = sdk.sendWalk(1, 2);
+    const stale = { type: 'bankWithdraw', slot: 0, amount: -1, reason: 'SDK' };
+    bindActionScope(stale, () => { if (controller.signal.aborted) throw controller.signal.reason; });
+    const queued = executionContext.run({ signal: controller.signal }, () => (sdk as any).sendAction(stale));
+    const cancelled = queued.then(() => undefined, (error: unknown) => error);
+    try {
+        expect(c.executed).toHaveLength(1);
+        controller.abort(Error('cargo work closed'));
+        expect(await cancelled).toMatchObject({ message: 'cargo work closed' });
+        c.holdNext = false; c.release();
+        await first;
+        // This await also drains the stale action ahead of the unmarked one.
+        expect((await sdk.sendBankWithdraw(1, -1)).success).toBe(true);
+        expect(c.executed).toEqual([expect.objectContaining({ type: 'walkTo' }), expect.objectContaining({ type: 'bankWithdraw', slot: 1 })]);
+        expect(guardCalls).toBe(2);
+    } finally { c.release(); shim.stop('stopped'); }
+});
+
+test('the existing random-event gate cannot flush a cancelled action after its SDK send hook is restored', async () => {
+    const c = fakeClient(), sdk = newSdk(), shim = createShim(c, sdk), controller = new AbortController();
+    const state: any = { inGame: true, player: { worldX: 3233, worldZ: 3244, level: 0 }, skills: [],
+        inventory: [{ slot: 4, id: 3062, name: 'Strange box', count: 1, optionsWithIndex: [{ text: 'Open', opIndex: 1 }] }],
+        equipment: [], nearbyNpcs: [], nearbyPlayers: [], nearbyLocs: [], groundItems: [], gameMessages: [],
+        dialog: { isOpen: false }, modalInterface: -1, bank: { isOpen: false }, opFeedback: { opRejectedCount: 0 } };
+    c.collectBotState = tick => ({ ...state, tick });
+    shim.start(); c.fire();
+    const session = { ...shim, name: 'tester', sdk, bot: {}, client: c, ended: new Promise(() => {}) } as any;
+    const watcher = watchRandomEvents(session, { gate: true, pf: null, ifReader: { text: () => undefined, obj: () => undefined }, danger: null, log: () => {} });
+    const gatedSend = (sdk as any).send;
+    (sdk as any).send = function (message: any) {
+        if (message?.type === 'sdk_action') bindActionScope(message.action, () => {
+            if (controller.signal.aborted) throw controller.signal.reason;
+        });
+        return gatedSend.call(this, message);
+    };
+    try {
+        c.fire();
+        expect(watcher.busy()).toBe(true);
+        const held = executionContext.run({ signal: controller.signal }, () => sdk.sendBankWithdraw(0, -1));
+        const cancelled = held.then(() => undefined, error => error);
+        expect(c.executed.some(a => a.type === 'bankWithdraw')).toBe(false);
+        controller.abort(Error('cargo work closed'));
+        expect(await cancelled).toMatchObject({ message: 'cargo work closed' });
+        // Cargo has finished; the gate still owns the previously held message.
+        (sdk as any).send = gatedSend;
+        state.inventory = []; c.fire();
+        expect(watcher.busy()).toBe(false);
+        expect((await sdk.sendBankWithdraw(1, -1)).success).toBe(true);
+        expect(c.executed.filter(a => a.type === 'bankWithdraw').map(a => a.slot)).toEqual([1]);
+    } finally { (sdk as any).send = gatedSend; watcher.stop(); shim.stop('stopped'); }
 });
 
 test('a wait action of 3 ticks resolves only after 3 ticks', async () => {

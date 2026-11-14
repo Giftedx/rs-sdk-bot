@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { CAGED, combatLevel, dangerTiles, deadly, escapeTiles, liveHunters, loadHunters, parseHunter } from '../src/danger';
-import { createWorld, type PathLength } from '../src/world';
+import { createWorld, routeFares, type PathLength } from '../src/world';
 import type { Travel } from '../src/travel';
 
 const wolf = parseHunter({ name: 'White wolf', combat: 25, spawns: [{ x: 100, z: 100, level: 0 }] }, 'wanderrange=3\nattack=20\nhuntrange=2\nhuntmode=cowardly')!;
@@ -46,6 +46,52 @@ test('one boat needs one fare; two boats need both fares', () => {
     const two = createWorld({ transports: [], doors: [], travel: [boat, second], pathLength });
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 59 }).ok).toBe(false);
     expect(two.route(from, { x: 2010, z: 0, level: 0 }, { skills: {}, varps: {}, items: [], coins: 60 }).ok).toBe(true);
+});
+
+test('three paid crossings require their complete fare even when each retry edge is affordable', () => {
+    const dock = (x: number) => ({ x, z: 0, level: 0 });
+    const boats: Travel[] = [0, 1, 2].map(i => ({
+        id: `boat-${i}`, kind: 'boat', name: `Dock ${i} to ${i + 1}`, from: dock(i * 1000), to: dock((i + 1) * 1000),
+        coins: 30, needs: [], runes: [], run: { how: 'npc', npc: 'Captain', op: 1, options: [], deck: true }, cost: 40,
+    }));
+    const pathLength: PathLength = (a, b) => a.x === b.x && a.z === b.z ? 0 : null;
+    const world = createWorld({ transports: [], doors: [], travel: boats, pathLength });
+    for (const coins of [0, 29, 30, 59, 60, 89]) {
+        expect(world.route(dock(0), dock(3000), { skills: {}, varps: {}, items: [], coins })).toEqual({ ok: false, reason: 'no_route' });
+    }
+    for (const coins of [90, 91]) {
+        const route = world.route(dock(0), dock(3000), { skills: {}, varps: {}, items: [], coins });
+        expect(route.ok).toBe(true);
+        if (route.ok) {
+            expect(routeFares(route.legs)).toBe(90);
+            expect(route.legs.filter(l => l.kind === 'travel')).toHaveLength(3);
+        }
+    }
+});
+
+test('affordable fallback and cheaper walking routes keep their existing selection', () => {
+    const tile = (x: number) => ({ x, z: 0, level: 0 });
+    const boat = (id: string, from: number, to: number, coins: number, cost: number): Travel => ({
+        id, kind: 'boat', name: id, from: tile(from), to: tile(to), coins, cost, needs: [], runes: [],
+        run: { how: 'npc', npc: 'Captain', op: 1, options: [], deck: true },
+    });
+    const island: PathLength = (a, b) => a.x === b.x ? 0 : null;
+    // The cheapest first-pass route costs 50 + 20 coins. The retry drops the 50-coin edge and keeps the affordable 30 + 30 route.
+    const world = createWorld({ transports: [], doors: [], pathLength: island, travel: [
+        boat('expensive-first', 0, 1000, 50, 40), boat('expensive-second', 1000, 2000, 20, 40),
+        boat('affordable-first', 0, 3000, 30, 60), boat('affordable-second', 3000, 2000, 30, 60),
+    ] });
+    const account = { skills: {}, varps: {}, items: [], coins: 60 };
+    const fallback = world.route(tile(0), tile(2000), account);
+    expect(fallback.ok).toBe(true);
+    if (fallback.ok) {
+        expect(routeFares(fallback.legs)).toBe(60);
+        expect(fallback.legs.filter(l => l.kind === 'travel').map(l => l.travel.id)).toEqual(['affordable-first', 'affordable-second']);
+    }
+    const walking = createWorld({ transports: [], doors: [], pathLength: (a, b) => Math.abs(a.x - b.x), travel: [boat('unneeded', 0, 20, 30, 40)] });
+    const direct = walking.route(tile(0), tile(20), { ...account, coins: 0 });
+    expect(direct.ok).toBe(true);
+    if (direct.ok) { expect(routeFares(direct.legs)).toBe(0); expect(direct.cost).toBe(20); }
 });
 
 test('a live Karamja scorpion is a hunter to dodge for an HP 10 account, though not deadly', () => {

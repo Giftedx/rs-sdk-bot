@@ -80,15 +80,17 @@ export function recoverConcurrentPlanWrite(directory: string, alive = processAli
     let source = intent;
     if (!existsSync(intent)) {
         // A recoverer can die between taking the ticket and archiving the lock. Take over only that dead recoverer's ticket.
-        // A ticket name holds no time, so the signal check alone decides whether its recoverer runs.
+        // New ticket names retain their recoverer's time. Legacy names have no time and remain signal-check only.
         const ticket = readdirSync(directory).find(name => name.startsWith(prefix) && name.endsWith('.intent.json'));
-        const pid = ticket && Number(ticket.slice(prefix.length).split('-')[0]);
-        if (!ticket || !pid || !Number.isSafeInteger(pid) || pid < 1 || alive(pid)) return false;
+        const match = ticket?.slice(prefix.length).match(/^(\d+)-(?:(\d+)-)?([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.intent\.json$/);
+        const pid = Number(match?.[1]), at = match?.[2] === undefined ? undefined : Number(match[2]);
+        if (!ticket || !match || !Number.isSafeInteger(pid) || pid < 1 || at !== undefined && (!Number.isSafeInteger(at) || at < 1)
+            || !ownerGone(join(directory, ticket), {pid, nonce: ticket, at}, alive, starts, now)) return false;
         source = join(directory, ticket);
     }
     const archive = archivePath(directory), id = randomUUID();
     mkdirSync(archive, { recursive: true });
-    const owned = join(directory, `${prefix}${process.pid}-${id}.intent.json`);
+    const owned = join(directory, `${prefix}${process.pid}-${Date.now()}-${id}.intent.json`);
     // rename moves this exact, unique source once. A delayed recoverer cannot take a later writer's intent.
     try { renameSync(source, owned); } catch (error) { if (missing(error)) return false; throw error; }
     let removeTicket = false;

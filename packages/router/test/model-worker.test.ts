@@ -1,11 +1,11 @@
-import {test,expect} from 'bun:test';
-import {codexArgs,assignedWorker,rejectedReview,modelFailure} from '../src/model-worker';
+import {test,expect,spyOn} from 'bun:test';
+import {codexArgs,assignedWorker,rejectedReview,modelFailure,runModel} from '../src/model-worker';
 import {reviewDependencies,reviewVerdict} from '../src/model-worker';
 import {initialState,addTasks,validateTask} from '../src/coordinator';
 import {waitForWork} from '../src/coordinator-cli';
-import {mkdtempSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {dirname,join} from 'node:path';
 test('a completed job wakes dispatch without waiting for the fallback timer',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'queue-event-'));let deadlineElapsed=false;
  const marker=setTimeout(()=>{deadlineElapsed=true;},1500);
@@ -23,6 +23,38 @@ test('headless Codex uses stdin, captured results and ChatGPT auth without an AP
 test('failed model turns report their real structured cause instead of unrelated MCP shutdown warnings',()=>{
  const events=JSON.stringify({type:'turn.failed',error:{message:'Incomplete response returned, reason: max_output_tokens'}});
  expect(modelFailure(events,'MCP Auth required during shutdown',false)).toContain('max_output_tokens');expect(modelFailure(events,'other',true)).toBe('model deadline exceeded');
+});
+test.each([
+ {answer:undefined,events:'',expected:'MCP shutdown warning'},
+ ...[undefined,'',' \n\t'].map(answer=>({answer,events:JSON.stringify({type:'turn.failed',error:{message:'response incomplete'}})+'\n',expected:'response incomplete'})),
+])('a zero-exit Codex process without a nonempty answer cannot turn diagnostics into success: %j',async ({answer,events,expected})=>{
+ let directory:string|undefined;
+ const command=spyOn(Bun,'which').mockImplementation(()=>process.platform==='win32'?'C:\\fake\\codex.exe':'/fake/codex');
+ const spawn=spyOn(Bun,'spawn').mockImplementation(((args:string[])=>{
+  const output=args[args.indexOf('--output-last-message')+1]!;directory=dirname(output);
+  if(answer!==undefined)writeFileSync(output,answer);
+  writeFileSync(join(directory,'events.jsonl'),events);
+  writeFileSync(join(directory,'stderr.log'),'MCP shutdown warning');
+  return{stdin:{write:()=>{},end:()=>{}},exited:Promise.resolve(0)};
+ }) as any);
+ try{
+  const result=await runModel('codex','fixture prompt',1000,true);
+  expect(result).toMatchObject({ok:false,text:expected,costUsd:0});
+ }finally{spawn.mockRestore();command.mockRestore();if(directory)rmSync(directory,{recursive:true,force:true});}
+});
+test.each([0,7])('a real Codex answer requires a successful CLI exit: %i',async exit=>{
+ let directory:string|undefined;
+ const answer='{"approved":true,"reason":"checked"}';
+ const command=spyOn(Bun,'which').mockImplementation(()=>process.platform==='win32'?'C:\\fake\\codex.exe':'/fake/codex');
+ const spawn=spyOn(Bun,'spawn').mockImplementation(((args:string[])=>{
+  const output=args[args.indexOf('--output-last-message')+1]!;directory=dirname(output);
+  writeFileSync(output,answer);writeFileSync(join(directory,'events.jsonl'),'');writeFileSync(join(directory,'stderr.log'),'MCP shutdown warning');
+  return{stdin:{write:()=>{},end:()=>{}},exited:Promise.resolve(exit)};
+ }) as any);
+ try{
+  const result=await runModel('codex','fixture prompt',1000,true);
+  expect(result).toMatchObject({ok:exit===0,text:answer,costUsd:0});
+ }finally{spawn.mockRestore();command.mockRestore();if(directory)rmSync(directory,{recursive:true,force:true});}
 });
 test('both agents take builds from one queue and explicit ownership wins',()=>{
  expect(assignedWorker('build',[])).toBe('codex');
