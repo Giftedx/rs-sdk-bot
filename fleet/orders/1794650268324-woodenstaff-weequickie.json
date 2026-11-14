@@ -1,0 +1,23 @@
+{
+ "id": "1794650268324-woodenstaff-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "WeeQuickie",
+ "item": "Prayer potion(3)",
+ "count": 2,
+ "start": 1794650268324,
+ "end": 1794653868324,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
