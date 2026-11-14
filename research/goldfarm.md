@@ -106,6 +106,13 @@ The log has one `REFUGE` line for the move. The RESULT line has `spot=` (the spo
 - The knight rests (`idleBanned`): 7.6% to 15.9% of ticks at the market, 1.1% at the west. The cause is not
   measured.
 - A click near a knight gives no pick (`noopNear`): 6.9% to 9.1% of ticks at each spot. The cause is not measured.
+  One part of it is known: an NPC option is reached from a side tile only. The engine's reach check
+  (`reachedEntity`, rsmod `reached` with shape -2) gives true on the 4 side tiles of a 1x1 NPC and false on the 4
+  corner tiles (`.practice/goldfarm-noop/reach.ts`). `scripts/goldfarm.ts` counts a corner (Chebyshev distance 1)
+  as near, so a corner click spends a tick on a step. Waiting one more tick after a corner click does not help:
+  bench `skiller:thieving:knights`, seeds 7, 8, 9, 1,500 ticks: 16.56, 16.67, 15.58 coins a tick before; 15.23,
+  16.70, 13.47 with the wait (`noopNear` 59, 60, 71 before; 48, 49, 64 with it). Gap: a step to a side tile, or a
+  choice of the knight on a side tile, is not measured.
 - The planner gives each market spot four thieves and the west spot four (`KNIGHT_SHARE`). The refuge rule
   moves a thief inside its run. The spot list of the planner does not rank the west spot first.
 
