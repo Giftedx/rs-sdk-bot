@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794618840725-bigpackage-weequickie",
  "account": "WeeQuickie",
  "partner": "Bigpackage",
@@ -12,6 +12,16 @@
  "claim": "03aa9cf1-8757-41ba-8b9e-f73f8d4c431b",
  "count": 0,
  "ok": false,
- "at": 1794618860371,
- "detail": "trade claimed"
+ "at": 1794618875181,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794618860385-0000033732-0000000001",
+  "at": 1794618875171,
+  "sha256": "5e22c288d27a8473be8d2f2c7ceb815b527f15344272b84551e78af4b07bd508"
+ },
+ "screen": true
 }
