@@ -21,23 +21,39 @@ const SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const LEGACY_REF = 'refs/heads/fleet-data';
 type RemoteLease = { side: string; host: string; holder: string; epoch: string; pid: number; at: number };
 
-export function fleetGitWindow(root: string, authority = 'fleet controller lease authority', budgetMs = GIT_DEADLINE_MS) {
+// Git errors of the network, not of the refs: a retry inside the budget can pass. A rejected push (another writer moved
+// the ref) is never one of these, so a claim keeps exactly one winner.
+export const TRANSIENT_GIT = /Could not resolve host|Failed to connect|Connection (?:reset|refused|timed out)|Operation timed out|early EOF|unexpected disconnect|RPC failed|The requested URL returned error: 5\d\d|gnutls|SSL|TLS|schannel/i;
+export const NETWORK_RETRIES = 2;
+// The tail of Git's error text for the message, with any credential in a URL removed.
+export const gitErrorDetail = (text: string) => text.replace(/(https?:\/\/)[^\s/@]+@/gi, '$1').replace(/\s+/g, ' ').trim().slice(-160);
+const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+// Each Git command of an authority within one time budget. A failure names the authority and ends with Git's own error
+// text, so a log tells a network fault from a moved ref.
+export function fleetGitWindow(root: string, authority = 'fleet controller lease authority', budgetMs = GIT_DEADLINE_MS,
+    run: (args: string[], options: { input?: string; timeout: number }) => string = (args, { input, timeout }) => execFileSync('git', args, {
+        cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, killSignal: 'SIGKILL', windowsHide: true,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+    })) {
     const deadline = performance.now() + budgetMs;
     return (args: string[], input?: string): string => {
+        let network = 0;
         for (let attempt = 0; ; attempt++) {
             const timeout = Math.floor(deadline - performance.now());
             if (timeout <= 0) throw Error(authority + ' timed out');
             try {
-                return execFileSync('git', args, {
-                    cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, killSignal: 'SIGKILL', windowsHide: true,
-                    env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
-                }).trim();
+                return run(args, { input, timeout }).trim();
             } catch (error) {
                 const failure = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
                 // Windows Bun can report an empty timeout before Git starts after an idle period.
                 if (attempt === 0 && process.platform === 'win32' && failure.code === 'ETIMEDOUT'
                     && !failure.stdout?.length && !failure.stderr?.length && performance.now() < deadline) continue;
-                throw Error(authority + ' unavailable or changed');
+                const detail = gitErrorDetail(String(failure.stderr ?? '') || failure.message || '');
+                // A network fault: try again after a short pause while the budget lasts.
+                const wait = 300 * (network + 1);
+                if (network < NETWORK_RETRIES && TRANSIENT_GIT.test(detail) && performance.now() + wait < deadline) { network++; pause(wait); continue; }
+                throw Error(authority + ' unavailable or changed' + (detail ? ': ' + detail : ''));
             }
         }
     };

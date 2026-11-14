@@ -9,10 +9,10 @@ const transpile=(source:string)=>new Bun.Transpiler({loader:'ts'}).transformSync
 test('the asset route serves the NPC table requested by opponent information',async()=>{
  const start=server.indexOf("if(url.pathname.startsWith('/client-assets/'))"),end=server.indexOf("if (url.pathname === '/api/player')",start);
  // Bind the real dashboard directory without importing the long-running server.
- const run=new Function('url','Bun','join','BASE',transpile(server.slice(start,end)).replaceAll('import.meta.dir','BASE'));
- const response=run(new URL('http://localhost/client-assets/npc-names.json'),Bun,join,import.meta.dir);
+ const run=new Function('url','Bun','join','BASE','req',transpile(server.slice(start,end)).replaceAll('import.meta.dir','BASE'));
+ const response=run(new URL('http://localhost/client-assets/npc-names.json'),Bun,join,import.meta.dir,new Request('http://localhost/'));
  expect(response.status).toBe(200);expect(Array.isArray(await response.json())).toBe(true);
- expect(run(new URL('http://localhost/client-assets/private.env'),Bun,join,import.meta.dir).status).toBe(400);
+ expect(run(new URL('http://localhost/client-assets/private.env'),Bun,join,import.meta.dir,new Request('http://localhost/')).status).toBe(400);
 });
 
 test('failed rank reads preserve the last observation and have a request deadline',async()=>{
@@ -63,8 +63,13 @@ test('market holdings keep different item IDs with the same display name separat
 
 test('the asset route serves the item effect table that the item tooltip reads',()=>{
  const start=server.indexOf("if(url.pathname.startsWith('/client-assets/'))"),end=server.indexOf("if (url.pathname === '/api/player')",start);
- const run=new Function('url','Bun','join','BASE',transpile(server.slice(start,end)).replaceAll('import.meta.dir','BASE'));
- expect(run(new URL('http://localhost/client-assets/item-stats.json'),Bun,join,import.meta.dir).status).toBe(200);
+ const run=new Function('url','Bun','join','BASE','req',transpile(server.slice(start,end)).replaceAll('import.meta.dir','BASE'));
+ const first=run(new URL('http://localhost/client-assets/item-stats.json'),Bun,join,import.meta.dir,new Request('http://localhost/'));
+ expect(first.status).toBe(200);expect(first.headers.get('cache-control')).toBe('no-cache');
+ // The same ETag back gets a 304 with no body; an image keeps the hour.
+ const again=run(new URL('http://localhost/client-assets/item-stats.json'),Bun,join,import.meta.dir,new Request('http://localhost/',{headers:{'if-none-match':first.headers.get('etag')!}}));
+ expect(again.status).toBe(304);
+ expect(run(new URL('http://localhost/client-assets/runelite.png'),Bun,join,import.meta.dir,new Request('http://localhost/')).headers.get('cache-control')).toBe('public,max-age=3600');
 });
 
 test('the rank change of a day starts from the rank held 24 hours ago',()=>{

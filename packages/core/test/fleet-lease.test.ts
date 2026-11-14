@@ -3,7 +3,25 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetLease, fleetGitWindow, fleetLeaseAllowsWorker, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+import { acquireFleetLease, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+
+test('a network fault is tried again inside the budget; a rejected push fails at once with Git\'s text', () => {
+    const fail = (stderr: string) => Object.assign(Error('Command failed'), { stderr });
+    let calls = 0;
+    const flaky = fleetGitWindow('.', 'fleet swarm claim authority', 5000, () => { if (++calls === 1) throw fail('fatal: unable to access \'https://github.com/x/y.git/\': Could not resolve host: github.com'); return 'ok\n'; });
+    expect(flaky(['ls-remote'])).toBe('ok');
+    expect(calls).toBe(2);
+    let pushes = 0;
+    const rejected = fleetGitWindow('.', 'fleet swarm claim authority', 5000, () => { pushes++; throw fail(' ! [rejected]        HEAD -> fleet-trade-claim/a (fetch first)\nerror: failed to push some refs'); });
+    expect(() => rejected(['push'])).toThrow('fleet swarm claim authority unavailable or changed: ! [rejected] HEAD -> fleet-trade-claim/a (fetch first) error: failed to push some refs');
+    expect(pushes).toBe(1);
+    // A network fault that lasts ends after the retries with its text.
+    let down = 0;
+    const offline = fleetGitWindow('.', 'fleet swarm claim authority', 5000, () => { down++; throw fail('fatal: unable to access: Failed to connect to github.com port 443'); });
+    expect(() => offline(['ls-remote'])).toThrow(/unavailable or changed: fatal: unable to access: Failed to connect/);
+    expect(down).toBe(3);
+    expect(gitErrorDetail('fatal: unable to access \'https://user:token123@github.com/x.git\'')).toBe('fatal: unable to access \'https://github.com/x.git\'');
+});
 
 test('the remote lease excludes another checkout, fences old workers, and permits expired takeover', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
