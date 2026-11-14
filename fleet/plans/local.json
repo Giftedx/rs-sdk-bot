@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794655742063,
+ "at": 1794655810644,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -275,22 +275,22 @@
    ]
   },
   {
-   "account": "Pocketpython",
+   "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
+    "KNIGHT_SPOT": "2671,3313",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "knight:2671,3313"
    ]
   },
   {
@@ -535,17 +535,23 @@
    ]
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/session-check.ts",
+   "account": "Pocketpython",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-ba3b9551-cac0-4243-8a05-52514aff07e9"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-pickpockdick-20261114t112007z [task-ba3b9551-cac0-4243-8a05-52514aff07e9]",
-   "role": "thieving"
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
   }
  ]
 }
