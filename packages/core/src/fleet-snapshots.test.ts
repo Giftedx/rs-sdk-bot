@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { canonicalRows, canonicalSnapshots, type SnapshotFile } from './fleet-snapshots';
+import { canonicalRows, canonicalSnapshots, fleetStatusRows, type SnapshotFile } from './fleet-snapshots';
 
 const row = (name: string, at: number, coins = 0) => ({ name, server: 'rs-sdk-demo.fly.dev', at, bank: [{ id: 995, name: 'Coins', count: coins }] });
 
@@ -32,4 +32,22 @@ describe('fleet snapshots: one row for each account', () => {
         const coins = clean.flatMap(f => f.accounts ?? []).flatMap(a => a.bank).reduce((s, i) => s + i.count, 0);
         expect(coins).toBe(7_100_005);
     });
+});
+
+test('live consumers use owner observations, same-side fallback and valid local ties once', () => {
+    const local = [row('Mover', 300, 1), row('Local', 100, 2), { ...row('Practice', 400), practice: true },
+        { ...row('Wrong', 400), server: 'localhost:8888' }];
+    const files = [{ side: 'cloud', accounts: [row('Mover', 200, 10), row('Practice', 200, 20), row('Wrong', 200, 30)] },
+        { side: 'local', accounts: [row('Local', 100, 99), row('Carried', 90, 40)] }];
+    const rows = fleetStatusRows(local, files, name => name.toLowerCase() === 'mover' ? 'cloud' : undefined, 'local');
+    expect(rows.map(r => [r.name, r.side, r.bank[0].count])).toEqual([
+        ['Mover', 'cloud', 10], ['Local', 'local', 2], ['Practice', 'cloud', 20], ['Wrong', 'cloud', 30], ['Carried', 'local', 40],
+    ]);
+});
+
+test('publishing an undated snapshot does not replace a dated local observation', () => {
+    const rows = fleetStatusRows([row('Local', 100, 2)], [{ side: 'local', at: 200, accounts: [
+        { ...row('Local', 0, 99), at: undefined },
+    ] }], () => 'local', 'local');
+    expect(rows[0]).toMatchObject({ at: 100, bank: [{ count: 2 }] });
 });

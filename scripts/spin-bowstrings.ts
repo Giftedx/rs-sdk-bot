@@ -104,7 +104,7 @@ try {
     const xp0=s.sdk.getSkillXp('Crafting')??0;
     const protectedKit=s.sdk.getInventory().filter(i=>!/^flax$|^bow string$/i.test(i.name)).map(i=>({id:i.id,count:i.count}));
     let hpMin=s.sdk.getSkill('Hitpoints')?.level??10; const life=pos()?.lifeId;let died=false;
-    const off=s.onTick(()=>{hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(pos()?.isDead||life!==undefined&&pos()?.lifeId!==life)died=true;});unwatch=off;
+    const off=s.onTick(()=>{hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(pos()?.isDead||life!==undefined&&(pos()?.lifeId ?? life) !== life)died=true;});unwatch=off;
     let made=0;
     let spunTotal = 0;
     let bankTrips = 0;
@@ -167,7 +167,7 @@ try {
         }
 
         await waitTicks(s,1);
-        if(!cleaning)await bankCargo(s,[/^bow string$/i]);
+        if(!cleaning&&!over())await bankCargo(s,[/^bow string$/i],0,{stopped:over});
         if(!withdraw){const raw=s.sdk.getInventory().find(i=>i.id===1779);if(raw)await depositObserved(s,raw);}
 
         const stock=s.sdk.getState()?.bank?.items.find(i=>/^flax$/i.test(i.name))?.count??0;

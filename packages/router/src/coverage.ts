@@ -10,7 +10,7 @@ import type { GameAction } from '../../knowledge/src/actions';
 import { parseConfigs } from '../../knowledge/src/config';
 import { QUEST_SOURCE } from '../../core/src/quest-status';
 import { mySide } from '../../core/src/fleet';
-import { canonicalSnapshots, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
+import { canonicalSnapshots, fleetStatusRows, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
 
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'] as const;
 export const BANDS = [[1, 40], [40, 70], [70, 99]] as const;
@@ -19,7 +19,7 @@ const RANK: Record<Stage, number> = { none: 0, named: 1, practice: 2, live: 3 };
 export const better = (a: Stage, b: Stage): Stage => (RANK[a] >= RANK[b] ? a : b);
 
 type Held = { id?: number; baseId?: number; count?: number }[];
-export interface Status { name?: string; server?: string; at?: number; skills?: { name: string; level: number }[]; quests?: { name: string; state: string }[]; bank?: Held; inventory?: Held; equipment?: Held }
+export interface Status { name?: string; server?: string; at?: number; skills?: { name: string; level: number }[]; quests?: { name: string; state: string }[]; bank?: Held | null; inventory?: Held | null; equipment?: Held | null }
 
 // Items any owned account holds now: bank, pack or worn (an item used up earlier is not counted).
 export function itemsHeld(statuses: Status[], items: { id: number; tradeable?: boolean }[]) {
@@ -103,21 +103,40 @@ export function skillBands(statuses: Status[]) {
 // side's snapshot is skipped (its statuses are read directly), and so is an account seen longer ago than maxAgeMs
 // (FLEET_SNAPSHOT_MAX_AGE_H, default 24 h) and the protected main account Haggis.
 // quests lists completed journal names; a snapshot without the field leaves that account's quests unknown.
-export interface SideAccount { side: string; name: string; at: number; skills: { name: string; level: number }[]; quests?: string[] }
+export interface SideAccount { side: string; name: string; at: number; skills: { name: string; level: number }[]; quests?: string[]; bank?: Held | null; inventory?: Held | null; equipment?: Held | null }
 export const SNAPSHOT_MAX_AGE_MS = (Number(process.env.FLEET_SNAPSHOT_MAX_AGE_H) || 24) * 3_600_000;
+const observedAt = (at: unknown, now: number) => typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now;
+const recentObservation = (at: unknown, now: number, maxAgeMs: number) => observedAt(at, now) && now - (at as number) <= maxAgeMs;
+// Unknown containers stay unknown; only positive observed units can establish collection coverage.
+function containerRows(raw: unknown): Held | null {
+    return Array.isArray(raw) && raw.every(i => i && Number.isSafeInteger(i.baseId ?? i.id) && (i.baseId ?? i.id) >= 0
+        && Number.isSafeInteger(i.count) && i.count > 0) ? raw : null;
+}
+function coverageStatus(row: any): Status {
+    const quests = Array.isArray(row.questJournal) ? row.questJournal : Array.isArray(row.quests)
+        ? row.quests.map((q: any) => typeof q === 'string' ? { name: q, state: 'complete' } : q) : [];
+    return { name: row.name, server: row.server, at: row.at,
+        skills: (Array.isArray(row.skills) ? row.skills : []).filter((k: any) => typeof k?.name === 'string' && Number.isInteger(k.level) && k.level >= 1 && k.level <= 99),
+        quests: quests.filter((q: any) => typeof q?.name === 'string' && ['complete', 'started', 'not started', 'unknown'].includes(q.state)),
+        bank: containerRows(row.bank), inventory: containerRows(row.inventory), equipment: containerRows(row.equipment) };
+}
 export function sideSnapshots(dir: string, side: string, now = Date.now(), maxAgeMs = SNAPSHOT_MAX_AGE_MS, server = 'rs-sdk-demo.fly.dev') {
     const accounts: SideAccount[] = [], stale: string[] = [];
     if (!existsSync(dir)) return { accounts, stale };
     // One canonical row per account (packages/core/src/fleet-snapshots.ts); an account this side owns now is read from
     // its status files, even when another side's last snapshot still lists it.
     const ownerOf = ownerOfIn(dirname(dir));
-    for (const snap of canonicalSnapshots(readSnapshotFiles(dir), ownerOf)) {
+    const files = readSnapshotFiles(dir).map(snap => ({ ...snap, accounts: (snap.accounts ?? []).filter(a => !a?.practice && observedAt(a?.at, now)) }));
+    for (const snap of canonicalSnapshots(files, ownerOf)) {
         if (snap.side === side) continue;
         for (const a of snap.accounts ?? []) {
             if (typeof a?.name !== 'string' || a.name.toLowerCase() === 'haggis' || String(a.server).toLowerCase() !== server || ownerOf(a.name) === side) continue;
-            const at = Number(a.at ?? snap.at) || 0;
+            const at = a.at;
             if (now - at > maxAgeMs) { stale.push(`${snap.side}:${a.name}`); continue; }
-            accounts.push({ side: snap.side, name: a.name, at, skills: (a.skills ?? []).map((k: any) => ({ name: String(k.name), level: Number(k.level) || 1 })), ...(Array.isArray(a.quests) ? { quests: a.quests.map(String) } : {}) });
+            const projected = coverageStatus(a);
+            accounts.push({ side: snap.side, name: a.name, at, skills: projected.skills ?? [],
+                bank: projected.bank, inventory: projected.inventory, equipment: projected.equipment,
+                ...(Array.isArray(a.quests) ? { quests: a.quests.filter((q: any) => typeof q === 'string') } : {}) });
         }
     }
     return { accounts, stale };
@@ -189,13 +208,26 @@ export function ownedNames(file: string): Set<string> {
     return owned;
 }
 
-export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..')) {
+export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'), now = Date.now(), fleetDir = resolve(process.env.FLEET_DIR ?? join(root, '.practice', 'fleet-data', 'fleet'))) {
     const actions: GameAction[] = JSON.parse(readFileSync(join(root, 'knowledge', 'actions.json'), 'utf8'));
     const text = corpus(root);
     const owned = ownedNames(join(root, '.practice', 'owned-accounts.json'));
     const statusDir = join(root, '.practice', 'status');
-    const statuses: Status[] = (existsSync(statusDir) ? readdirSync(statusDir) : []).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } })
-        .filter((s: Status) => s.server === 'rs-sdk-demo.fly.dev' && owned.has((s.name ?? '').toLowerCase()));
+    const local = (existsSync(statusDir) ? readdirSync(statusDir) : []).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } })
+        .filter(s => typeof s?.name === 'string' && owned.has(s.name.toLowerCase()) && !s.practice
+            && typeof s.server === 'string' && s.server.toLowerCase() === 'rs-sdk-demo.fly.dev' && (s.at === undefined || observedAt(s.at, now)));
+    const side = mySide(), files = readSnapshotFiles(join(fleetDir, 'snapshots'));
+    const ownerOf = ownerOfIn(fleetDir);
+    const shared = sideSnapshots(join(fleetDir, 'snapshots'), side, now);
+    const validFiles = files.map(s => ({ ...s, accounts: (s.accounts ?? []).filter(a => observedAt(a?.at, now)) }));
+    // Ownership chooses the observation before age is considered. An expired owner row must not promote a
+    // former side's copy. Local durable achievements remain usable; equal-time rows prefer the local input.
+    const selectedLocally = (row: any) => row.side === side && local.some(s => s.name.toLowerCase() === row.name.toLowerCase() && s.at === row.at);
+    const rows = fleetStatusRows(local, validFiles, ownerOf, side).filter(r => r.name.toLowerCase() !== 'haggis'
+        && (selectedLocally(r) || recentObservation(r.at, now, SNAPSHOT_MAX_AGE_MS)));
+    const statuses = rows.map(coverageStatus);
+    const localStatuses = rows.filter(r => r.side === side).map(coverageStatus);
+    const otherStatuses: SideAccount[] = rows.filter(r => r.side !== side).map(r => ({ side: r.side, name: r.name, at: r.at, skills: coverageStatus(r).skills ?? [] }));
     // The 68 quest folders of the content are the quest list (knowledge/quests.json lacks 4 folders).
     const known = new Map<string, number>((JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')) as { folder: string | null; varp: string; questPoints: number }[])
         .map(q => [q.folder ?? VARP_FOLDER[q.varp] ?? q.varp, q.questPoints]));
@@ -207,15 +239,12 @@ export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'
     const byScript = new Map(quests.map(q => [questScript(q.folder), q.folder]));
     const practicePass = practicePasses(join(root, '.practice'), byScript);
     const domains = domainStages(actions, text, firedActions(join(root, '.practice', 'action-trace.log')));
-    const side = mySide(), shared = sideSnapshots(join(root, '.practice', 'fleet-data', 'fleet', 'snapshots'), side);
-    const sideQuests: Status[] = shared.accounts.map(a => ({ quests: (a.quests ?? []).map(name => ({ name, state: 'complete' })) }));
-    const board = { at: new Date().toISOString(), scope: 'Pinned rev 289 content; actionsFired counts actions a practice engine ran, actionsNamed is a text match; batch is not tracked yet.',
+    const board = { at: new Date(now).toISOString(), scope: 'Pinned rev 289 content across the fleet; actionsFired counts actions a practice engine ran, actionsNamed is a text match; batch is not tracked yet.',
         totals: { actions: actions.length, actionsFired: domains.reduce((n, d) => n + d.fired, 0), actionsNamed: domains.reduce((n, d) => n + d.named, 0), domains: domains.length, domainsUntouched: domains.filter(d => d.named === 0).length },
         items: itemsHeld(statuses, JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'))),
-        skills: skillBands(statuses), quests: questStages([...statuses, ...sideQuests], practicePass, scriptFolders, quests), domains, statuses: statuses.length,
-        // skills count this side only and fleetSkills adds the other sides' fresh snapshots; quests count every side.
-        fleetSkills: fleetSkills(statuses, shared.accounts, side),
-        fleet: { side, sides: [...new Set([side, ...shared.accounts.map(a => a.side)])].sort(), sharedAccounts: shared.accounts.length, stale: shared.stale, questsUnknown: [...new Set(shared.accounts.filter(a => !a.quests).map(a => a.side))].sort() } };
+        skills: skillBands(statuses), quests: questStages(statuses, practicePass, scriptFolders, quests), domains, statuses: statuses.length,
+        fleetSkills: fleetSkills(localStatuses, otherStatuses, side),
+        fleet: { side, sides: [...new Set([side, ...rows.map(a => a.side)])].sort(), sharedAccounts: otherStatuses.length, stale: shared.stale, questsUnknown: [...new Set(rows.filter(a => !Array.isArray(a.quests) && !Array.isArray(a.questJournal)).map(a => a.side))].sort() } };
     const full = { ...board, progress: progressOf(board) };
     writeFileSync(join(root, '.practice', 'coordinator', 'scoreboard.json'), JSON.stringify(full, null, 1) + '\n');
     return full;

@@ -15,7 +15,7 @@
 // The wilderness spider run (presets cannon_spiders_*) adds: CAP = ticks when no argument gives them; PROTECT=1 keeps
 // Protect from Melee on and drinks a prayer potion at 10 points; an antipoison goes down on "poisoned", at most once per
 // 150 ticks; STOP_LEVEL ends the run at that Ranged level; each Ranged level and each 100 ticks print a SAMPLE line.
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { setupCannon } from '../cannon-fight';
 
@@ -46,6 +46,7 @@ try {
     const slotOf = (re: RegExp) => inv().find((i: any) => re.test(i.name)) as any;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const maxHp = s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const xp = (k: string) => s.sdk.getSkillXp(k) ?? 0;
     const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
     const msgs: string[] = [];
@@ -174,7 +175,7 @@ try {
     });
     measuring = false;
     const ticks = s.tick() - t0;
-    const died = hp() <= 0 || /died/.test(stopped);
+    const died = sessionDied(life0, s.sdk.getState()?.player) || /died/.test(stopped);
     sample(s.tick());
     console.log(`SPIDERS ticks=${ticks} ranged=${xp('Ranged') - x0.Ranged!} balls=${balls0 - balls()} arrows=${arrows0 - arrows()} food=${food0 - countItems(s, FOOD)} potions=${potions} antis=${antis} hpMin=${hpMin} deaths=${died ? 1 : 0} kills=${kills} stop=${stopped || 'cap'} msPerTick=${((Date.now() - wall0) / Math.max(1, ticks)).toFixed(0)}`);
     if (died || stopped) await finish([s], false, `stopped ${stopped || 'died'} after ${ticks} ticks`);

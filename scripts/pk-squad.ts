@@ -80,6 +80,19 @@ export function marchRoute(from: { x: number; z: number }, to: { x: number; z: n
 // north of Varrock to x 3327, so the walk between it and the bank keeps to multi-way tiles; Edgeville west of it.
 export const VARROCK_WEST_BANK = { x: 3185, z: 3436 };
 export const bankNear = (x: number) => (x >= 3136 ? VARROCK_WEST_BANK : EDGEVILLE_BANK);
+
+// Connected members share one monotonic coordination clock after a member disconnects.
+export function watchSquadTicks(squad: readonly Session[], dropped: (name: string) => boolean, onTick: (tick: number) => void): () => void {
+    let last = -1;
+    const off = squad.map(s => s.onTick(() => {
+        if (dropped(s.name)) return;
+        const tick = s.tick();
+        if (tick <= last) return;
+        last = tick;
+        onTick(tick);
+    }));
+    return () => { for (const stop of off) stop(); };
+}
 // A dropped account logged in again: eat to near full, then Camelot Teleport where it can (Magic 45, a law rune and
 // 5 air runes, Wilderness 20 or less), else walk to the nearer bank (bankNear). The session when it ends out of the Wilderness, else null.
 export async function rescue(s: Session, log: (l: string) => void): Promise<Session | null> {
@@ -106,6 +119,20 @@ export async function rescue(s: Session, log: (l: string) => void): Promise<Sess
     return end && wildernessLevel(end.worldZ) === 0 ? s : null;
 }
 
+// A rescue login belongs to final logout even when its retreat fails or throws.
+export async function rescueDropped(names: Iterable<string>, sessions: Session[], open: (name: string) => Promise<Session>, log: (line: string) => void,
+    retreat: typeof rescue = rescue): Promise<string[]> {
+    const stranded: string[] = [];
+    for (const name of names) {
+        try {
+            const session = await open(name);
+            sessions.push(session);
+            if (!await retreat(session, log)) stranded.push(name);
+        } catch (error) { log(`[${name}] SQUAD rescue failed: ${String(error)}`); stranded.push(name); }
+    }
+    return stranded;
+}
+
 export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number };
 
 // The target of the squad: the target account in view with the lowest health bar, the nearest on a tie; one the game
@@ -125,9 +152,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const pack = packOf(st?.inventory ?? [], st?.equipment ?? []), kit = kitFrom(st?.equipment ?? [], st?.inventory ?? []);
     const ammo = (st?.equipment ?? []).find(e => /arrow|bolt/i.test(e.name))?.id;
     const wanted = new Set([...PICKUP_ITEMS, ...(ammo ? [ammo] : [])]);
-    const trip = bankTrip(bankNear(o.post.x), o.post, pack, kit, o.stopped);
-    const walker = await sessionWalker(s);
     const going = () => !o.stopped() && s.tick() < o.deadline && o.killsLeft();
+    const trip = bankTrip(bankNear(o.post.x), o.post, pack, kit, () => !going());
+    const walker = await sessionWalker(s);
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
@@ -215,7 +242,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
 export async function leaveWilderness(s: Session, diedBefore: boolean): Promise<{ died: boolean; why: string | null }> {
     const me = () => s.sdk.getState()?.player;
     const p = me();
-    if (!p || diedBefore || wildernessLevel(p.worldZ) === 0) return { died: false, why: null };
+    if (!p) return { died: false, why: 'player state unavailable at squad exit' };
+    if (diedBefore || wildernessLevel(p.worldZ) === 0) return { died: false, why: null };
     const life0 = p.lifeId;
     const died = () => { const q = me(); return !!q && ((life0 !== undefined && q.lifeId !== life0) || Math.max(Math.abs(q.worldX - 3222), Math.abs(q.worldZ - 3218)) <= 40); };
     for (let i = 0; i < 12 && !died(); i++) {
@@ -264,7 +292,8 @@ if (import.meta.main) {
     const gangLife = new Map(gang.map(g => [g, g.sdk.getState()?.player?.lifeId] as const));
     const gangDead = (g: Session) => { const p = g.sdk.getState()?.player; return !!p && ((gangLife.get(g) !== undefined && p.lifeId !== gangLife.get(g)) || Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40); };
     const gangOut = () => gang.length > 0 && gang.every(g => { const p = g.sdk.getState()?.player; return !p || gangDead(g) || wildernessLevel(p.worldZ) === 0; });
-    const stopped = () => halted !== undefined || existsSync('.practice/stop-pk-squad') || gangOut();
+    let squadDone = false;
+    const stopped = () => squadDone || halted !== undefined || existsSync('.practice/stop-pk-squad') || gangOut();
     const deadline = squad[0]!.tick() + Math.round(Number(get('MAX_MINUTES', '30')) * 100);
     const maxKills = Number(get('MAX_KILLS', '0'));
     let kills = 0;
@@ -309,31 +338,31 @@ if (import.meta.main) {
         const from = centroid(), entry = isMulti(to.x, to.z) ? multiEntry(from, to) : null;
         route = entry ? [...marchRoute(from, entry, step), ...marchRoute(entry, to, step)] : marchRoute(from, to, step);
         const next = route.shift() ?? to;
-        post.x = next.x; post.z = next.z; stepAt = squad[0]!.tick();
+        post.x = next.x; post.z = next.z; stepAt = Math.max(...squad.map(s => s.tick()));
         log(`SQUAD march to ${to.x},${to.z} in ${route.length + 1} steps`);
     };
-    squad[0]!.onTick(() => {
+    const unwatchMarch = watchSquadTicks(squad, name => dropped.has(name), tick => {
         if (!route.length) return;
         const close = squad.every(q => { const p = q.sdk.getState()?.player; return !p || wildernessLevel(p.worldZ) === 0 && wildernessLevel(post.z) > 0 ? true : !p || Math.max(Math.abs(p.worldX - post.x), Math.abs(p.worldZ - post.z)) <= 4; });
-        if (!close && squad[0]!.tick() - stepAt < 60) return;
+        if (!close && tick - stepAt < 60) return;
         const next = route.shift()!;
-        post.x = next.x; post.z = next.z; stepAt = squad[0]!.tick();
+        post.x = next.x; post.z = next.z; stepAt = tick;
     });
     // FOLLOW=1: with no target in view of any of ours for FOLLOW_WAIT ticks (default 30), the squad marches to the
     // meeting tile by the targets that the world feed shows (meetTile), at Wilderness level MAX_WILD or less (default 20).
-    let closeRadar: (() => void) | undefined;
+    let closeRadar: (() => void) | undefined, unwatchRadar: (() => void) | undefined, unwatchFollow: (() => void) | undefined;
     if (get('FOLLOW', '0') === '1') {
         const radar = new Radar(), maxWild = Number(get('MAX_WILD', '20')), wait = Number(get('FOLLOW_WAIT', '30'));
         const { accountServer } = await import('./pk-roam');
         // Bench: the practice engine serves no world feed, so the bench gang's own tiles fill the radar as roster frames.
-        if (gang.length) squad[0]!.onTick(() => radar.accept({ t: 'roster', k: squad[0]!.tick(), p: gang.flatMap((g, i) => { const q = g.sdk.getState()?.player; return q ? [[i, g.name, q.worldX, q.worldZ, 0, q.combatLevel] as [number, string, number, number, number, number]] : []; }) }));
+        if (gang.length) unwatchRadar = watchSquadTicks(squad, name => dropped.has(name), tick => radar.accept({ t: 'roster', k: tick, p: gang.flatMap((g, i) => { const q = g.sdk.getState()?.player; return q ? [[i, g.name, q.worldX, q.worldZ, 0, q.combatLevel] as [number, string, number, number, number, number]] : []; }) }));
         else closeRadar = connectRadar(accountServer(squad[0]!.name), radar);
         let unseen = 0, goal: { x: number; z: number } | null = null;
-        squad[0]!.onTick(() => {
+        unwatchFollow = watchSquadTicks(squad, name => dropped.has(name), tick => {
             const seen = squad.some(s => (s.sdk.getState()?.nearbyPlayers ?? []).some(q => targets.has(q.name.toLowerCase())));
             unseen = seen ? 0 : unseen + 1;
-            if (process.env.FOLLOW_TRACE === '1' && squad[0]!.tick() % 100 === 0) log(`SQUAD follow trace unseen=${unseen} fresh=${radar.fresh()} tracks=${radar.tracks.size}`);
-            if (unseen < wait || !radar.fresh() || squad[0]!.tick() % 10 !== 0) return;
+            if (process.env.FOLLOW_TRACE === '1' && tick % 100 === 0) log(`SQUAD follow trace unseen=${unseen} fresh=${radar.fresh()} tracks=${radar.tracks.size}`);
+            if (unseen < wait || !radar.fresh() || tick % 10 !== 0) return;
             const where = [...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase()) && wildernessLevel(t.z) > 0);
             const tile = meetTile(where, maxWild);
             if (!tile || (goal && Math.max(Math.abs(goal.x - tile.x), Math.abs(goal.z - tile.z)) <= 4)) return;
@@ -351,24 +380,24 @@ if (import.meta.main) {
     const results = await Promise.all(squad.map(s => hold(s, { targets, post, options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []), 1200),
         allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), deadline,
         stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); } })));
+    squadDone = true;
     await Promise.all(gangRuns);
+    unwatchMarch(); unwatchRadar?.(); unwatchFollow?.();
     closeRadar?.();
     // Live: no account logs out in the Wilderness. The deadline or a stop can end an account's hold mid-fight with
     // its food gone, and a later login on that tile met a PKer: live, KnightRider logged out at the post with 4 HP and
     // died 31 ticks into its next session, skulled, with its whole kit.
     // A dropped account has no session to walk; the rescue below logs it in again.
-    if (!gang.length) await Promise.all(squad.map(async (s, i) => { if (dropped.has(s.name)) return; const out = await leaveWilderness(s, results[i]!.died); if (out.died) results[i]!.died = true; if (out.why) log(`[${s.name}] SQUAD ${out.why}`); }));
+    const stranded: string[] = [];
+    if (!gang.length) await Promise.all(squad.map(async (s, i) => { if (dropped.has(s.name)) return; const out = await leaveWilderness(s, results[i]!.died); if (out.died) results[i]!.died = true; if (out.why) { log(`[${s.name}] SQUAD ${out.why}`); stranded.push(s.name); } }));
     for (const r of results) console.log(`SQUAD ${JSON.stringify(r)}`);
     const picked: Record<string, number> = {};
     for (const r of results) for (const [id, n] of Object.entries(r.picked)) picked[id] = (picked[id] ?? 0) + n;
     const sum = (f: (r: SquadStats) => number) => results.reduce((n, r) => n + f(r), 0);
     // RESCUE=1 (default): each dropped account logs in again, eats, and leaves the Wilderness by Camelot Teleport
     // (Wilderness 20 or less, runes held) or a walk to the Edgeville bank; one it cannot get out the RESULT names.
-    const stranded: string[] = [];
-    if (get('RESCUE', '1') === '1') for (const name of dropped.keys()) {
-        try { const r = await rescue(await openBot(name, { onStop: async () => {}, onSessionEnd: async () => {} }), log); if (!r) stranded.push(name); else all.push(r); }
-        catch (e) { log(`[${name}] SQUAD rescue failed: ${String(e)}`); stranded.push(name); }
-    } else stranded.push(...dropped.keys());
-    const ok = halted === undefined && sum(r => r.fights) > 0;
+    if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, name => openBot(name, { onStop: async () => {}, onSessionEnd: async () => {} }), log));
+    else stranded.push(...dropped.keys());
+    const ok = halted === undefined && stranded.length === 0 && sum(r => r.fights) > 0;
     await finish(all, ok, `squad accounts=${results.length} kills=${sum(r => r.kills)}${gang.length ? ` gangDied=${gang.filter(gangDead).length}` : ''} died=${results.filter(r => r.died).length} taken=${sum(r => r.taken)} trips=${sum(r => r.trips)} picked=${JSON.stringify(picked)}${dropped.size ? ` dropped=${[...dropped.keys()].join(',')}` : ''}${stranded.length ? ` stranded=${stranded.join(',')}` : ''}${halted ? ` halted=${halted}` : ''}`);
 }

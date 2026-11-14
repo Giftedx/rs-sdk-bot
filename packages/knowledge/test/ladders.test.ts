@@ -35,8 +35,22 @@ test('xpPerTick comes only from knowledge/rates.json', () => {
         const r = data.rates.find(x => x.method === m.rateMethod);
         expect(r?.xpPerTick).toBe(m.xpPerTick!);
         expect(r?.skill).toBe(m.skill);
+        expect(m.measuredRate).toEqual(r);
     }
-    for (const m of all.filter(x => x.xpPerTick === null)) expect(m.rateMethod).toBeNull();
+    for (const m of all.filter(x => x.xpPerTick === null)) {
+        expect(m.rateMethod).toBeNull();
+        expect(m.measuredRate).toBeUndefined();
+    }
+});
+
+test('measured conditions retain their observed level independently of the method unlock', () => {
+    const rate = { method: 'mine_copper', skill: 'mining', level: 55, xpPerTick: 26.35, runs: 3, tickMs: 300,
+        source: 'measured' as const, evidence: 'copper55.log: 2187 XP in 83 ticks', note: 'Bronze pickaxe; includes banking and travel' };
+    const methods = Object.values(buildLadders({ ...data, rates: [rate] }).ladders).flat();
+    const copper = methods.find(m => m.id === 'mining/copper_rock_table')!;
+    expect(copper.level).toBe(1);
+    expect(copper.measuredRate).toEqual(rate);
+    expect(copper.measuredRate).not.toBe(rate);
 });
 
 test('a worker is a scripts/*.ts file or a capability with an existing entry', () => {

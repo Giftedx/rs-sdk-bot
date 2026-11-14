@@ -1,6 +1,8 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {isLocalServer} from '../core/src/localserver';
+import {priceItemKey} from './item-prices';
+import {createVaultItems} from './vault-items';
 
 const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
 const transpile=(code:string)=>new Bun.Transpiler({loader:'ts'}).transformSync(code);
@@ -18,7 +20,7 @@ test('expired practice status is excluded for every supported loopback address',
 
 test('the wealth ledger excludes practice banks on IPv4 and IPv6 loopback',()=>{
  const code=transpile(server.slice(server.indexOf('function vault('),server.indexOf('// ---------- swarm controller')));
- const run=new Function('isLocalServer',`const cached=()=>[],FILES={},NL=String.fromCharCode(10),keyName=n=>n.toLowerCase(),BANKER='Banker',priceOf=()=>1,liveAccounts=()=>['Live'],existsSync=()=>false,pricesAt=0;${code};return vault;`)(isLocalServer);
+ const run=new Function('isLocalServer','createVaultItems','priceItemKey',`const cached=()=>[],FILES={},NL=String.fromCharCode(10),keyName=n=>n.toLowerCase(),BANKER='Banker',priceOf=()=>1,liveAccounts=()=>['Live'],existsSync=()=>false,pricesAt=0;${code};return vault;`)(isLocalServer,createVaultItems,priceItemKey);
  const bots=['rs-sdk-demo.fly.dev','127.0.0.1:21345','[::1]:8888'].map((server,i)=>({name:i?'Practice'+i:'Live',server,at:1,bank:[{name:'Coins',count:100}]}));
  expect(run(bots,Date.now()).coins).toBe(100);
 });

@@ -22,20 +22,25 @@ const setup=(capability='iron-progress-order')=>{
  return{base,main,coord,build};
 };
 const result={delivery:{ok:true,stage:'delivered',source:'abc',runtimeRevision:'rev1',directory:'.practice/deliveries/x'},review:{deferred:true,reason:'gate passed'}};
+const HEAD='a'.repeat(40),URL='https://github.com/Giftedx/rs-sdk-bot/pull/99';
+const existingPr=(branch:string,extra:Record<string,unknown>={})=>({url:URL,headRefOid:HEAD,state:'OPEN',isCrossRepository:false,baseRefName:'master',headRefName:branch,...extra});
 // A stub of git and gh. `master` is origin/master's content of FILE; `fail` names a command prefix that exits 1.
 const stub=(opts:{master?:string;definition?:string;fail?:string;prState?:string}={})=>{
  const calls:string[][]=[],committed:Record<string,string>={};
  const run:Run=async(cmd,cwd)=>{
   calls.push(cmd);const line=cmd.join(' ');
   if(opts.fail&&line.startsWith(opts.fail))return{code:1,stdout:'',stderr:'HTTP 502'};
+  if(cmd[0]==='gh'&&cmd[2]==='list'&&!cmd.includes('--jq'))return{code:0,stdout:'[]',stderr:''};
   if(cmd[0]==='git'&&cmd[1]==='worktree'&&cmd[2]==='add'){
    mkdirSync(join(cmd[4]!,'scripts'),{recursive:true});writeFileSync(join(cmd[4]!,FILE),opts.master??lines('a','b','c'));
    if(opts.definition!==undefined){mkdirSync(join(cmd[4]!,DEF,'..'),{recursive:true});writeFileSync(join(cmd[4]!,DEF),opts.definition);}
   }
   if(line.startsWith('git add'))for(const file of cmd.slice(3))committed[file]=readFileSync(join(cwd,file),'utf8');
   if(line.startsWith('git diff --cached --quiet'))return{code:1,stdout:'',stderr:''};
-  if(line.startsWith('gh pr view'))return{code:0,stdout:(opts.prState??'MERGED')+'\n',stderr:''};
+  if(cmd[0]==='gh'&&cmd[2]==='list'&&cmd.includes('--jq'))return{code:0,stdout:(opts.prState??'MERGED')==='MERGED'?'99\n':'',stderr:''};
   if(line.startsWith('gh pr create'))return{code:0,stdout:'https://github.com/Giftedx/rs-sdk-bot/pull/99\n',stderr:''};
+  if(cmd[1]==='ls-tree')return{code:0,stdout:'100644 blob '+'b'.repeat(40)+'\t'+cmd.at(-1)+'\n',stderr:''};
+  if(cmd[1]==='show')return{code:0,stdout:lines('a','b','C'),stderr:''};
   return{code:0,stdout:'',stderr:''};
  };
  return{calls,run,committed};
@@ -184,7 +189,7 @@ test('a build that started on an earlier unmerged delivery opens its PR after th
  const later=Date.now()+retryDelayMs(1)+PREREQUISITE_WAIT_MS;
  out=await processDeliveryPrs(s.coord,s.main,stub({prState:'OPEN'}).run,later,s.base);
  expect(out.opened.map(p=>p.taskId)).toEqual(['build-first']);
- expect(out.waiting[0]!.lastError).toContain('to merge (OPEN)');
+ expect(out.waiting[0]!.lastError).toContain('to merge into master');
  // After the first merges, master holds its change and the second PR carries only its own.
  const git=stub({master:lines('a','B','c')});
  out=await processDeliveryPrs(s.coord,s.main,git.run,later+PREREQUISITE_WAIT_MS,s.base);
@@ -198,7 +203,7 @@ test('a gh failure stays pending, is retried after its delay and reuses the push
  expect(failed.failed[0]).toMatchObject({state:'pending',attempts:1,nextAt:retryDelayMs(1)});
  expect(failed.failed[0]!.lastError).toContain('HTTP 502');
  expect((await processDeliveryPrs(s.coord,s.main,stub().run,retryDelayMs(1)-1,s.base)).opened).toEqual([]);
- const retry=stub(),remote:Run=async(cmd,cwd)=>cmd[1]==='ls-remote'?{code:0,stdout:'abc\trefs/heads/coordinator/build-one\n',stderr:''}:retry.run(cmd,cwd);
+ const retry=stub(),remote:Run=async(cmd,cwd)=>cmd[1]==='ls-remote'?{code:0,stdout:HEAD+'\trefs/heads/coordinator/build-one\n',stderr:''}:retry.run(cmd,cwd);
  const out=await processDeliveryPrs(s.coord,s.main,remote,retryDelayMs(1),s.base);
  expect(out.opened[0]).toMatchObject({state:'opened',attempts:2});
  expect(retry.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
@@ -223,11 +228,13 @@ test('a pushed branch still waits for its earlier delivery before opening a PR',
  expect(merged.calls.some(cmd=>cmd[1]==='push'||cmd[1]==='commit')).toBe(false);
 });
 
-test('a missing local prerequisite needs a same-repository merge into master',async()=>{
+test.each(['missing','opened'] as const)('a %s local prerequisite needs a same-repository merge into master',async(state)=>{
  const s=setup(),first=stage(s,s.build('first'),'build-first',[FILE],10)!;
  const now=Date.now()+1,second=stage(s,s.build('second'),'build-second',[FILE],now)!;
  expect(second.prerequisites).toEqual([first.taskId]);
- unlinkSync(join(deliveryPrDir(s.coord),first.taskId+'.json'));
+ const firstFile=join(deliveryPrDir(s.coord),first.taskId+'.json');
+ if(state==='missing')unlinkSync(firstFile);
+ else writeFileSync(firstFile,JSON.stringify({...first,state:'opened'}));
  const git=stub(),lookup:string[][]=[];
  let merged=false;
  const run:Run=async(cmd,cwd)=>{
@@ -247,7 +254,7 @@ test('a missing local prerequisite needs a same-repository merge into master',as
  const released=await processDeliveryPrs(s.coord,s.main,run,now+PREREQUISITE_WAIT_MS,s.base);
  expect(released.opened[0]).toMatchObject({taskId:second.taskId,state:'opened'});
  expect(lookup).toHaveLength(2);
- expect(existsSync(join(deliveryPrDir(s.coord),first.taskId+'.json'))).toBe(false);
+ expect(existsSync(firstFile)).toBe(state==='opened');
 });
 
 test.each(['branch','pull request'] as const)('reusing a %s requires the staged qualified definition at its exact head',async(kind)=>{
@@ -258,13 +265,13 @@ test.each(['branch','pull request'] as const)('reusing a %s requires the staged 
   writeFileSync(join(deliveryPrDir(s.coord),pr.taskId+'.json'),JSON.stringify({...pr,definitionBase:null,files:[...pr.files,DEF]}));
   const git=stub(),head='a'.repeat(40),url='https://github.com/Giftedx/rs-sdk-bot/pull/99';
   const run:Run=async(cmd,cwd)=>{
-   if(cmd[0]==='gh'&&cmd[1]==='pr'&&cmd[2]==='list')return {code:0,stdout:kind==='pull request'?url+'\t'+head+'\n':'',stderr:''};
+   if(cmd[0]==='gh'&&cmd[1]==='pr'&&cmd[2]==='list')return {code:0,stdout:JSON.stringify(kind==='pull request'?[existingPr(pr.branch)]:[]),stderr:''};
    if(cmd[1]==='ls-remote')return {code:0,stdout:head+'\trefs/heads/'+pr.branch+'\n',stderr:''};
-   if(cmd[1]==='ls-tree'){
+   if(cmd[1]==='ls-tree'&&cmd.at(-1)===DEF){
     expect(cmd).toContain(head);
     return {code:0,stdout:match==='missing'?'':'100644 blob '+'b'.repeat(40)+'\t'+DEF+'\n',stderr:''};
    }
-   if(cmd[1]==='show'){
+   if(cmd[1]==='show'&&cmd.at(-1)===head+':'+DEF){
     expect(cmd.at(-1)).toBe(head+':'+DEF);
     return {code:0,stdout:match==='exact'?definition:'{"id":"iron-progress-order","consumer":"Other work"}',stderr:''};
    }
@@ -275,6 +282,76 @@ test.each(['branch','pull request'] as const)('reusing a %s requires the staged 
   else {
    expect(out.opened).toEqual([]);
    expect(out.conflicts[0]?.lastError).toContain(DEF);
+   expect(git.calls.some(c=>c[0]==='gh'&&c[2]==='create')).toBe(false);
+  }
+  expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
+ }
+});
+
+test.each(['OPEN','MERGED'] as const)('an existing %s delivery PR is verified and reused',async(state)=>{
+ const s=setup(),pr=stage(s,s.build(),'build-existing')!,git=stub();
+ const run:Run=async(cmd,cwd)=>cmd[0]==='gh'&&cmd[2]==='list'
+  ?{code:0,stdout:JSON.stringify([existingPr(pr.branch,{state})]),stderr:''}:git.run(cmd,cwd);
+ const out=await processDeliveryPrs(s.coord,s.main,run,1000,s.base);
+ expect(out.opened[0]).toMatchObject({url:URL,state:'opened'});
+ expect(git.calls).toContainEqual(['git','fetch','--no-write-fetch-head','origin',HEAD]);
+ expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit'||c[0]==='gh'&&c[2]==='create')).toBe(false);
+});
+
+test('an unmerged closed delivery PR blocks publication with an actionable conflict',async()=>{
+ const s=setup(),pr=stage(s,s.build(),'build-closed')!,git=stub();
+ const run:Run=async(cmd,cwd)=>cmd[0]==='gh'&&cmd[2]==='list'
+  ?{code:0,stdout:JSON.stringify([existingPr(pr.branch,{state:'CLOSED'})]),stderr:''}:git.run(cmd,cwd);
+ const out=await processDeliveryPrs(s.coord,s.main,run,1000,s.base);
+ expect(out.opened).toEqual([]);
+ expect(out.conflicts[0]?.lastError).toBe('delivery PR was closed without merging: '+URL+'; reopen it and reset this delivery to pending, or reconcile it by hand');
+ expect(git.calls).toEqual([]);
+ expect((await processDeliveryPrs(s.coord,s.main,git.run,2000,s.base)).opened).toEqual([]);
+});
+
+test('a fork, different base or different head does not stand in for the delivery PR',async()=>{
+ const s=setup(),pr=stage(s,s.build(),'build-own')!,git=stub();
+ const run:Run=async(cmd,cwd)=>{
+  if(cmd[0]==='gh'&&cmd[2]==='list'){
+   expect(cmd).toContain('--base');expect(cmd[cmd.indexOf('--base')+1]).toBe('master');
+   return{code:0,stdout:JSON.stringify([
+    existingPr(pr.branch,{isCrossRepository:true}),existingPr(pr.branch,{baseRefName:'other'}),existingPr('other-branch'),
+   ]),stderr:''};
+  }
+  return git.run(cmd,cwd);
+ };
+ const out=await processDeliveryPrs(s.coord,s.main,run,1000,s.base);
+ expect(out.opened[0]).toMatchObject({state:'opened'});
+ expect(git.calls.some(c=>c[1]==='push')).toBe(true);
+ expect(git.calls.some(c=>c[0]==='gh'&&c[2]==='create')).toBe(true);
+});
+
+test('a PR lookup failure stays pending before any publication',async()=>{
+ const s=setup();stage(s,s.build(),'build-lookup');
+ const git=stub({fail:'gh pr list'}),out=await processDeliveryPrs(s.coord,s.main,git.run,1000,s.base);
+ expect(out.opened).toEqual([]);
+ expect(out.failed[0]).toMatchObject({state:'pending',attempts:1});
+ expect(out.failed[0]?.lastError).toContain('HTTP 502');
+ expect(git.calls.map(c=>c.slice(0,3))).toEqual([['gh','pr','list']]);
+});
+
+test.each(['branch','pull request'] as const)('a reused %s must contain its staged source change, allowing compatible context edits',async(kind)=>{
+ for(const match of ['missing','old','changed','compatible'] as const){
+  const s=setup(),base=lines('a','b','c','d','e','f','g'),build=lines('a','b','c','D','e','f','g');
+  writeFileSync(join(s.main,FILE),base);
+  const pr=stage(s,s.build('iron-progress-order',build),'build-source')!,git=stub();
+  const actual=match==='old'?base:match==='changed'?lines('a','b','c','different','e','f','g'):lines('prefix','a','b','c','D','e','f','g','suffix');
+  const run:Run=async(cmd,cwd)=>{
+   if(cmd[0]==='gh'&&cmd[2]==='list')return{code:0,stdout:JSON.stringify(kind==='pull request'?[existingPr(pr.branch)]:[]),stderr:''};
+   if(cmd[1]==='ls-remote')return{code:0,stdout:HEAD+'\trefs/heads/'+pr.branch+'\n',stderr:''};
+   if(cmd[1]==='ls-tree')return{code:0,stdout:match==='missing'?'':'100644 blob '+'b'.repeat(40)+'\t'+FILE+'\n',stderr:''};
+   if(cmd[1]==='show'){expect(cmd.at(-1)).toBe(HEAD+':'+FILE);return{code:0,stdout:actual,stderr:''};}
+   return git.run(cmd,cwd);
+  };
+  const out=await processDeliveryPrs(s.coord,s.main,run,1000,s.base);
+  if(match==='compatible')expect(out.opened[0]).toMatchObject({state:'opened',url:URL});
+  else{
+   expect(out.opened).toEqual([]);expect(out.conflicts[0]?.lastError).toContain(FILE);
    expect(git.calls.some(c=>c[0]==='gh'&&c[2]==='create')).toBe(false);
   }
   expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);

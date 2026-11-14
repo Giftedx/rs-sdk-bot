@@ -2,7 +2,7 @@
 // Preset thieve_knights (2654,3304,0 in Ardougne market, Thieving 55, Hitpoints 50, 20 lobsters 379 in the pack).
 // Knights spawn at (2652,3318) and (2653,3300) (knowledge/npcs.json knight_of_ardougne) and wander.
 // A fail stuns 8 ticks and hits for 3, so eat at 25 HP or below. Death shows as HP 0 or a jump far from the start.
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
 
 const SPOT = { x: 2654, z: 3306 };
@@ -23,10 +23,10 @@ try {
     console.log(`XP0 thieving ${xp0} eatAt ${EAT_AT}`);
     const t0 = s.tick();
     let died = false;
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const off = s.onTick(() => {
-        const p = s.sdk.getState()?.player;
-        if (hp() <= 0) died = true;
-        if (p && Math.max(Math.abs(p.worldX - SPOT.x), Math.abs(p.worldZ - SPOT.z)) > 40) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
     });
     let tries = 0, stuns = 0, eaten = 0;
     let lastFail = '';

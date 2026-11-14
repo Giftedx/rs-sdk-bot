@@ -45,7 +45,7 @@ const s=await openBot(name);
 try{
  await waitUntil(s,()=> (s.sdk.getSkill('Hitpoints')?.level??0)>0,{timeoutTicks:15});
  const t0=s.tick(),first=s.sdk.getState()!.player!;let hpMin=s.sdk.getSkill('Hitpoints')!.level,died=false;
- const off=s.onTick(()=>{const p=s.sdk.getState()?.player;hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(p?.isDead||(p?.respawnCount??0)>(first.respawnCount??0)||(first.lifeId!==undefined&&p?.lifeId!==first.lifeId))died=true;});
+ const off=s.onTick(()=>{const p=s.sdk.getState()?.player;hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);if(p?.isDead||(p?.respawnCount??0)>(first.respawnCount??0)||(first.lifeId!==undefined&&(p?.lifeId ?? first.lifeId) !== first.lifeId))died=true;});
  try{
   const waypoints=seersEntryRoute(config.reverse),start=waypoints[0]!,destination=waypoints[waypoints.length-1]!;
   if(first.level!==0 || Math.max(Math.abs(first.worldX-start.x),Math.abs(first.worldZ-start.z))>4)throw new Error(`requires ${config.reverse?'Seers':'Ardougne'} bank ground-floor start`);

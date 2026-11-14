@@ -2,7 +2,8 @@
 // Reuse: gather-ore Bob purchase, collect-wool north corridor, trainChickens.
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,serverFromEnv} from '../packages/core/src/bot';
+import {isLocalServer} from '../packages/core/src/localserver';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker} from '../packages/core/src/walk';
@@ -19,10 +20,20 @@ const NORTH=[[3218,3256],[3180,3258],[3140,3270],[3100,3270],[3089,3266],[3092,3
 const MEN=[{x:3222,z:3218,tol:2}];
 function requireThat(v:unknown,m:string):asserts v{if(!v)throw Error('supply bootstrap: '+m);}
 
+// This qualification discards starter assets. A public-server override never admits it.
+export function bootstrapPracticeServer(env:string):string{
+ const server=serverFromEnv(env);
+ requireThat(isLocalServer(server),'isolated loopback practice actor required');
+ return server;
+}
+export function bootstrapAccountServer(name:string):string{
+ requireThat(/^[A-Za-z0-9]{1,12}$/.test(name),'valid practice account required');
+ return bootstrapPracticeServer(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/bots',name,'bot.env'),'utf8'));
+}
+
 export async function bootstrapSupplyActor(s:Session,role:Role,checkpoint?:Checkpoint,phase:Phase='all'){
  requireThat(['producer','courier','receiver'].includes(role)&&['all','clean','earn'].includes(phase),'unknown role/phase');
- const env=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8');
- requireThat(/^SERVER=localhost:8888\r?$/m.test(env),'isolated localhost practice actor required');
+ bootstrapAccountServer(s.name);
  const parent=executionContext.getStore(),ac=new AbortController(),start=s.tick();let ended=false;
  const signal=parent?.signal?AbortSignal.any([parent.signal,ac.signal]):ac.signal;
  const timer=setTimeout(()=>ac.abort(Error('bootstrap30minute wall deadline')),30*60*1000);timer.unref?.();
@@ -30,7 +41,7 @@ export async function bootstrapSupplyActor(s:Session,role:Role,checkpoint?:Check
  const initialLife=s.sdk.getState()?.player,off=s.onTick(()=>{
   const p=s.sdk.getState()?.player;
   if(s.tick()-start>=20000)ac.abort(Error('bootstrap20000tick deadline'));
-  if(p?.isDead||(p?.respawnCount??0)>(initialLife?.respawnCount??0)||(initialLife?.lifeId!==undefined&&p?.lifeId!==initialLife.lifeId))ac.abort(Error('bootstrap actor died/respawned'));
+  if(p?.isDead||(p?.respawnCount??0)>(initialLife?.respawnCount??0)||(initialLife?.lifeId !== undefined&&(p?.lifeId ?? initialLife.lifeId) !== initialLife.lifeId))ac.abort(Error('bootstrap actor died/respawned'));
  });
  const state=()=>s.sdk.getState(),pack=()=>s.sdk.getInventory(),worn=()=>s.sdk.getEquipment(),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,fullHp=()=>s.sdk.getSkill('Hitpoints')?.baseLevel??0;
  const count=(id:number)=>pack().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -121,7 +132,12 @@ export async function bootstrapSupplyActor(s:Session,role:Role,checkpoint?:Check
 }
 
 if(import.meta.main){
- const role=process.env.ROLE as Role,phase=process.env.PHASE as Phase;
- requireThat(['producer','courier','receiver'].includes(role)&&['clean','earn'].includes(phase),'CLI requires ROLE=producer|courier|receiver PHASE=clean|earn');
- const s=await openBot(process.argv[2]!);try{const r=await bootstrapSupplyActor(s,role,undefined,phase);console.log('SUPPLY_BOOTSTRAP '+JSON.stringify(r));await finish([s],true,'ordinary zero-resource supply bootstrap '+role+' '+phase);}catch(e){await finish([s],false,String(e));}
+ let s:Session|undefined;
+ try{
+  const name=process.argv[2]??'',role=process.env.ROLE as Role,phase=process.env.PHASE as Phase;
+  requireThat(['producer','courier','receiver'].includes(role)&&['clean','earn'].includes(phase),'CLI requires ROLE=producer|courier|receiver PHASE=clean|earn');
+  bootstrapAccountServer(name);
+  s=await openBot(name);
+  const r=await bootstrapSupplyActor(s,role,undefined,phase);console.log('SUPPLY_BOOTSTRAP '+JSON.stringify(r));await finish([s],true,'ordinary zero-resource supply bootstrap '+role+' '+phase);
+ }catch(e){await finish(s?[s]:[],false,String(e));}
 }

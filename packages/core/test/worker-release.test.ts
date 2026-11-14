@@ -20,6 +20,32 @@ test('a new process answers the release from the disk cache until a release file
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 
+test('the pathfinder package, JavaScript and wasm invalidate proof and cached admission pins',()=>{
+ const root=fixture(),entry=['scripts/worker.ts'],pathfinder='vendor/rs-sdk/server/vendor/rsmod-pathfinder';
+ try{
+  const files=[pathfinder+'/package.json',pathfinder+'/rsmod-pathfinder.js',pathfinder+'/rsmod_bg.wasm'];
+  for(const file of files)expect(releaseFiles(entry,root)).toContain(file);
+  for(const file of files){
+   const original=readFileSync(join(root,file)),pin=capabilityRevision(entry,root),proof=workerSourceRevision(root);
+   expect(cachedReleaseFor(entry,root)).toBe(pin);
+   writeFileSync(join(root,file),Buffer.concat([original,Buffer.from('\n')]));
+   const changed=capabilityRevision(entry,root);
+   expect(changed).not.toBe(pin);
+   expect(workerSourceRevision(root)).not.toBe(proof);
+   expect(cachedReleaseFor(entry,root)).toBe(changed);
+   expect(()=>assertWorkerRelease({WORKER_ENTRY:entry[0],WORKER_RELEASE:pin},root)).toThrow('source changed');
+   writeFileSync(join(root,file),original);
+   expect(cachedReleaseFor(entry,root)).toBe(pin);
+   // Keep the old disk record, then change the file after dropping the process's memory cache.
+   forgetReleaseMemory();
+   writeFileSync(join(root,file),Buffer.concat([original,Buffer.from('\n')]));
+   expect(cachedReleaseFor(entry,root)).toBe(changed);
+   expect(()=>assertWorkerRelease({WORKER_ENTRY:entry[0],WORKER_RELEASE:pin},root)).toThrow('source changed');
+   writeFileSync(join(root,file),original);
+  }
+ }finally{forgetReleaseMemory();rmSync(root,{recursive:true,force:true});}
+});
+
 test('cached admission keeps entry closures separate and rejects changed bytes, new imports and removed files',()=>{
  const root=fixture(),entry=['scripts/worker.ts'];
  try{
@@ -51,11 +77,15 @@ test('cached admission keeps entry closures separate and rejects changed bytes, 
 });
 
 // A small repository: one worker with a helper and a knowledge read, an unrelated script and data file, the launch
-// entries and both runtime trees.
+// entries and the runtime trees.
 function fixture():string{
  const root=mkdtempSync(join(tmpdir(),'worker-release-'));
- for(const dir of [...runtimeTrees,'.practice/status','research','knowledge','scripts','packages/core/src','packages/practice/src','packages/dashboard'])mkdirSync(join(root,dir),{recursive:true});
+ for(const dir of [...runtimeTrees,'vendor/rs-sdk/server/vendor/rsmod-pathfinder','.practice/status','research','knowledge','scripts','packages/core/src','packages/practice/src','packages/dashboard'])mkdirSync(join(root,dir),{recursive:true});
  const files:Record<string,string>={'package.json':'{}','bun.lock':'','tsconfig.json':'{}','vendor/rs-sdk/sdk/helper.ts':'export {};','vendor/rs-sdk/server/webclient/src/client.ts':'export {};',
+  'vendor/rs-sdk/sdk/pathfinding.ts':"import * as rsmod from '../server/vendor/rsmod-pathfinder';",
+  'vendor/rs-sdk/server/vendor/rsmod-pathfinder/package.json':'{"main":"rsmod-pathfinder.js"}',
+  'vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod-pathfinder.js':"require('node:fs').readFileSync(require('node:path').join(__dirname,'rsmod_bg.wasm'));",
+  'vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm':'wasm fixture',
   'scripts/worker.ts':"import {shared} from '../packages/core/src/shared';\nimport {join} from 'node:path';\nexport const npcs=join(import.meta.dir,'..','knowledge','npcs.json');\n",
   'packages/core/src/shared.ts':'export const shared=1;\n','scripts/other.ts':'export const other=1;\n','knowledge/npcs.json':'[]','knowledge/quests.json':'[]',
   'packages/dashboard/server.ts':'export {};','scripts/swarm.ts':'export {};','packages/core/src/session-recovery.ts':'export {};',

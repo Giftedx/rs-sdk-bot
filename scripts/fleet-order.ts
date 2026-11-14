@@ -8,7 +8,8 @@
 // TAKER_WAITS=1 keeps the receiver offline until the giver is at the meet (both accounts on one side).
 // MEET=<bank x>,<bank z> or MEET=<bank name> meets at that bank's tile pair (scripts/coin-courier.ts BANK_MEETS) instead
 // of Varrock West: MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand; MEET=draynor.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { closeSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
 import { orderLines, validOrder, type Order } from './fleet-trade';
@@ -42,10 +43,25 @@ export function makeOrder(from: string, to: string, count: number, item: string,
     const a = owners.get(from.toLowerCase()), b = owners.get(to.toLowerCase());
     if (!a || !b) throw Error(`both accounts must be listed in fleet/owners.json: ${!a ? from : to}`);
     if (a.server !== b.server) throw Error('both accounts must use one server');
-    const start = now + inMin * 60_000, order: Order = { id: `${start}-${from}-${to}`.toLowerCase(), server: a.server, from, to, item, count, start, end: start + minutes * 60_000,
+    const start = now + inMin * 60_000, order: Order = { id: `${start}-${from}-${to}-${randomBytes(8).toString('hex')}`.toLowerCase(), server: a.server, from, to, item, count, start, end: start + minutes * 60_000,
         ...(meet ? { meet } : {}), ...(extra?.length ? { extra } : {}) };
     if (!validOrder(order)) throw Error('invalid order');
     return order;
+}
+
+// Publish a complete order once. Its id binds trade claims and receipts, so replacing its contents would change an
+// existing attempt. A hard link exposes the flushed file atomically and refuses a destination that already exists.
+export function writeFleetOrder(directory: string, order: Order): string {
+    if (!validOrder(order)) throw Error('invalid order');
+    mkdirSync(directory, { recursive: true });
+    const file = join(directory, `${order.id}.json`), temporary = join(directory, `.${order.id}-${randomUUID()}.tmp`);
+    const descriptor = openSync(temporary, 'wx');
+    try {
+        try { writeFileSync(descriptor, JSON.stringify(order, null, 1) + '\n'); fsyncSync(descriptor); }
+        finally { closeSync(descriptor); }
+        linkSync(temporary, file);
+        return file;
+    } finally { rmSync(temporary, { force: true }); }
 }
 
 // Why the sides' fleet agents may not run this order, from their published plans and snapshots. Plans change, so these
@@ -87,8 +103,7 @@ if (import.meta.main) {
     const partySides = new Set([made.from, made.to].map(n => loadOwners().get(n.toLowerCase())?.side ?? 'local'));
     if (process.env.TAKER_WAITS === '1' && partySides.size !== 1) throw Error('TAKER_WAITS needs both accounts on one side');
     const order: Order = process.env.TAKER_WAITS === '1' ? { ...made, takerWaits: true } : made;
-    mkdirSync(join(FLEET_DIR(), 'orders'), { recursive: true });
-    writeFileSync(join(FLEET_DIR(), 'orders', `${order.id}.json`), JSON.stringify(order, null, 1) + '\n');
+    writeFleetOrder(join(FLEET_DIR(), 'orders'), order);
     console.log(`FLEET_ORDER ${JSON.stringify(order)}`);
     const owners = loadOwners(), sides = [...new Set([order.from, order.to].map(n => owners.get(n.toLowerCase())?.side ?? 'local'))];
     const plans = Object.fromEntries(sides.map(s => [s, readJson(join(FLEET_DIR(), 'plans', `${s}.json`))])), snapshots = Object.fromEntries(sides.map(s => [s, readJson(join(FLEET_DIR(), 'snapshots', `${s}.json`))]));

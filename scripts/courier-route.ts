@@ -6,22 +6,14 @@
 // (.practice/swarm-logs/Bigpackage.log). So from Ardougne the courier always sails; it walks to Port Sarim only from
 // east of the mountain (Varrock West bank -> Port Sarim: one level-2 spider in reach, and a live run survived it).
 export type Tile = { x: number; z: number };
+import {COOKED_FOOD_BASE_IDS,foodStock,selectCookedFoodSource} from '../packages/core/src/bank-demand';
 // Choose one live owned supplier. A dated bank is stock evidence; current activity is arrival evidence.
-export function selectFoodSource(names: readonly string[], statuses: readonly any[], owned: ReadonlySet<string>, now: number, minimum = 1): string | undefined {
-    if (!names.length || !Number.isSafeInteger(minimum) || minimum < 1
-        || names.some(n => typeof n !== 'string' || !/^[A-Za-z0-9_ -]{1,12}$/.test(n) || !owned.has(n.toLowerCase()))) return undefined;
-    const available = names.flatMap(name => {
-        const s = statuses.find(s => typeof s?.name === 'string' && s.name.toLowerCase() === name.toLowerCase() && s.server === 'rs-sdk-demo.fly.dev');
-        if (!s || s.result || !Number.isFinite(s.at) || now - s.at < 0 || now - s.at >= 30000
-            || !Number.isFinite(s.bankAt) || s.bankAt <= 0 || s.bankAt > now || !Array.isArray(s.bank)
-            || !s.bank.every((i:any) => Number.isSafeInteger(i?.id) && i.id >= 0 && Number.isSafeInteger(i.count) && i.count > 0)) return [];
-        const stock = s.bank.reduce((n:number,i:any) => n + ([329,333,379].includes(i.id) ? i.count : 0), 0);
-        return Number.isSafeInteger(stock) && stock >= minimum ? [{name,stock}] : [];
-    });
-    return available.sort((a,b) => b.stock-a.stock)[0]?.name;
+export function selectFoodSource(names: readonly string[], statuses: readonly any[], owned: ReadonlySet<string>, now: number, minimum = 1, server='rs-sdk-demo.fly.dev'): string | undefined {
+    if(names.some(n=>typeof n!=='string'))return undefined;
+    return selectCookedFoodSource(names,statuses,owned,now,minimum,server);
 }
-export function featherPurchaseAmount(cap: number, name: string, status: any, now: number): number {
-    if (typeof status?.name !== 'string' || status.name.toLowerCase() !== name.toLowerCase() || status.server !== 'rs-sdk-demo.fly.dev'
+export function featherPurchaseAmount(cap: number, name: string, status: any, now: number, server='rs-sdk-demo.fly.dev'): number {
+    if (typeof status?.name !== 'string' || status.name.toLowerCase() !== name.toLowerCase() || status.server !== server
         || status.result || !Number.isFinite(status.at) || now - status.at < 0 || now - status.at >= 30000
         || !Array.isArray(status.inventory) || !status.inventory.every((i:any) => Number.isSafeInteger(i?.id) && i.id >= 0 && Number.isSafeInteger(i.count) && i.count > 0)) return cap;
     const stock = status.inventory.filter((i:any) => i.id === 314).reduce((n:number,i:any) => n + i.count, 0);
@@ -32,8 +24,7 @@ export function foodDeficit(name: string, status: any, now: number, buffer = 80,
     if (!Number.isSafeInteger(buffer) || buffer < 1 || typeof status?.name !== 'string' || status.name.toLowerCase() !== name.toLowerCase()
         || status.server !== server || status.result || !Number.isFinite(status.at) || now - status.at < 0 || now - status.at >= 30000
         || !Number.isFinite(status.bankAt) || status.bankAt <= 0 || status.bankAt > now || !rows(status.bank) || !rows(status.inventory)) return undefined;
-    const count = (v: any[], notes: boolean) => v.reduce((n, i) => n + ([329,333,379,...(notes ? [330,334,380] : [])].includes(i.id) ? i.count : 0), 0);
-    const food = count(status.bank, false) + count(status.inventory, true);
+    const food = foodStock(status.bank.filter((i:{id:number})=>COOKED_FOOD_BASE_IDS.has(i.id))) + foodStock(status.inventory);
     return Number.isSafeInteger(food) ? Math.max(0, buffer - food) : undefined;
 }
 // Keep wake and refill levels apart: a farm below 80 receives enough for 160, rather than one fish per login.

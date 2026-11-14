@@ -2,7 +2,8 @@
 // Usage:
 //   bun scripts/aio-market.ts <account> <mode> [arg ...] [KEY=value ...]
 import {runDirectChild} from '../packages/core/src/run-child';
-import {parseStep,type Step} from '../packages/core/src/chain-step';
+import type {Step} from '../packages/core/src/chain-step';
+import {resolveRouteStep} from './aio-route-step';
 import {
  orderQuantity,orderEscrow,orderAccounting,earthShopFallback,shopFallbackSpent,
  validateRequest,orderItemMatcher,orderPaths,type ItemRequest,type ItemOrder,
@@ -31,8 +32,8 @@ export interface MarketModeSpec {
 
 export const MARKET_MODES: readonly MarketModeSpec[] = [
  {mode:'shop-buy',script:'scripts/shop-buyer.ts',description:'Buy items from any mapped NPC shop (Aubury, Betty, Hickton, Harry, Lowe, Zeke, etc.) and bank'},
- {mode:'shop-trip',script:'scripts/microbot-shop-trip.ts',description:'Bank-staged NPC shop buying trip with exact coin/item reconciliation'},
- {mode:'shop-sell',script:'scripts/microbot-a-shop-sell.ts',description:'Sell inventory items to NPC shopkeeper with minimum stock/price rules'},
+ {mode:'shop-trip',script:'scripts/microbot-shop-trip.ts',description:'Bank-to-merchant surplus sale from an explicit job.json, with exact coin/item reconciliation'},
+ {mode:'shop-sell',script:'scripts/microbot-shop-trip.ts',description:'Sell banked surplus from an explicit job.json: open the exact native merchant, enforce price/reserve limits and bank proceeds'},
  {mode:'earth-shop',script:'scripts/earth-shop.ts',description:'Refill earth/elemental runes from magic shops'},
  {mode:'buy-sword',script:'scripts/buy-owned-sword.ts',description:'Buy owned training sword from Varrock sword shop'},
  {mode:'ge-buy',script:'scripts/buy-owned-ge-item.ts',description:'Place, track, collect, and bank a finite Grand Exchange buy order with journal accounting'},
@@ -96,9 +97,7 @@ export function resolveMarketStep(modeInput: string, rest: readonly string[] = [
  if (!spec) {
   throw Error(`aio-market: unknown mode "${mode}"; known: ${MARKET_MODES.map(m => m.mode).join(', ')}`);
  }
- const tokens = rest.length ? rest : [...(spec.defaultArgs ?? [])];
- const step = parseStep([spec.script, ...tokens].join(' '));
- return { script: step.script, args: step.args, env: { ...(spec.defaultEnv ?? {}), ...step.env } };
+ return resolveRouteStep(spec, rest);
 }
 
 export async function runAioMarket(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {

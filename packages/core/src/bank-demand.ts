@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 export interface DemandNear { x:number; z:number; radius:number }
 // Cooked/noted forms only. Raw and burnt sharks never satisfy food demand.
 export const COOKED_FOOD_IDS = new Set([329,330,333,334,379,380,385,386]);
+export const COOKED_FOOD_BASE_IDS = new Set([329,333,379,385]);
 export const COOKED_FOOD = /^(trout|salmon|lobster|shark)$/i;
 export function foodStock(rows:readonly {id:number;count:number}[]) {
     return rows.reduce((n,i)=>n+(COOKED_FOOD_IDS.has(i.id)?i.count:0),0);
@@ -13,7 +14,7 @@ export function selectCookedFoodSource(names:readonly string[],statuses:readonly
         const s=statuses.find(s=>typeof s?.name==='string'&&s.name.toLowerCase()===name.toLowerCase()&&s.server===server);
         if(!s||s.result||!Number.isFinite(s.at)||now-s.at<0||now-s.at>=30000||!Number.isFinite(s.bankAt)||s.bankAt<=0||s.bankAt>now
             ||!Array.isArray(s.bank)||!s.bank.every((i:any)=>Number.isSafeInteger(i?.id)&&i.id>=0&&Number.isSafeInteger(i.count)&&i.count>0))return [];
-        const stock=foodStock(s.bank);return Number.isSafeInteger(stock)&&stock>=minimum?[{name,stock}]:[];
+        const stock=foodStock(s.bank.filter((i:{id:number})=>COOKED_FOOD_BASE_IDS.has(i.id)));return Number.isSafeInteger(stock)&&stock>=minimum?[{name,stock}]:[];
     }).sort((a,b)=>b.stock-a.stock)[0]?.name;
 }
 export function cookedFoodRestock(name:string,s:any,now:number,server='rs-sdk-demo.fly.dev'):number|undefined {

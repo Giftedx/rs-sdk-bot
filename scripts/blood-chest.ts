@@ -28,7 +28,7 @@ export const FAR_RADIUS=100,TRAVEL_TICKS=3000;
 // A meal happens on the surface only. It raises Hitpoints to FED_SHARE of the base level before each trip.
 // One trip can cost 12 of 47 Hitpoints, so the player leaves the dungeon below LEAVE_SHARE of the base level.
 export const BANK_FOOD=['Shark','Swordfish','Lobster','Tuna','Salmon','Trout','Cake'];
-export const FED_SHARE=0.75,LEAVE_SHARE=0.6,MEAL_LIMIT=40;
+export const FED_SHARE=0.75,LEAVE_SHARE=0.6,MEAL_LIMIT=40,REGEN_TICKS=100;
 const EAT_DELAY_TICKS=3,PACK_SLOTS=28;
 
 export interface BloodOptions{maxLoots:number;cap:number;idleTicks:number;bankEvery:number}
@@ -151,7 +151,17 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
   for(let i=0;i<MEAL_LIMIT;i++){
    const s=observe(),food=edible(s);
    if(fed(s))return true;
-   if(!food){if(stocked)break;stocked=true;await bank(true);continue;}
+   if(!food&&!stocked){stocked=true;await bank(true);continue;}
+   if(!food){
+    // No food in the pack or the bank. The server heals 1 Hitpoint each REGEN_TICKS on a timer that starts at login
+    // (health_regen, login.rs2 and stat.rs2), so a run that ends here and logs in again never heals: wait on the surface.
+    const need=Math.ceil(baseHp(s)*FED_SHARE)-hp(s),ticks=(need+1)*REGEN_TICKS;
+    if(d.tick()-start+ticks>o.cap-EXIT_TICKS)break;
+    d.log(`BLOOD_REGEN ${JSON.stringify({hp:hp(s),need,ticks,tick:d.tick()-start})}`);
+    const healed=await d.wait(()=>fed(observe()),ticks);
+    progress=d.tick();
+    return healed;
+   }
    const before=hp(s),held=total(s,food.id);
    if(!(await d.eat(food)).success)throw Error('blood chest food refused');
    if(!(await d.wait(()=>{const n=observe();return hp(n)>before&&total(n,food.id)<held;},8)))throw Error('blood chest food effect unobserved');

@@ -59,7 +59,7 @@ if(FUND_ONLY&&(!FUND_FROM||HOME_ONLY||OUTBOUND_ONLY||START_DRAYNOR)||RESERVE_OPE
 if (SOURCES.some(n=>!/^[A-Za-z0-9_ -]{1,12}$/.test(n))) { console.log('RESULT fail invalid food source account'); process.exit(1); }
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
-    const courierServer=serverFromEnv(readFileSync(join(import.meta.dir,'..','vendor/rs-sdk/bots',s.name,'bot.env'),'utf8'));
+    const courierServer=s.lifecycle?.server??serverFromEnv(readFileSync(join(import.meta.dir,'..','vendor/rs-sdk/bots',s.name,'bot.env'),'utf8'));
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const pos = () => s.sdk.getState()?.player;
     const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
@@ -130,7 +130,7 @@ try {
     const buyFeathers = () => timed(n => featherTicks += n, async () => {
         let source: any;
         if (/^[A-Za-z0-9_ -]{1,12}$/.test(FROM)) try { source = JSON.parse(readFileSync(join(import.meta.dir, '..', '.practice', 'status', `${FROM}.json`), 'utf8')); } catch { /* unknown stock keeps the configured amount */ }
-        const wanted = featherPurchaseAmount(FEATHERS, FROM, source, Date.now());
+        const wanted = featherPurchaseAmount(FEATHERS, FROM, source, Date.now(),courierServer);
         if (wanted <= 0) { console.log(`MILESTONE feathers-sufficient t=${used()}`); return; }
         if (!(await walk([[3014, 3224, 2]]))) { console.log('WARN walk to Gerrant failed'); return; }
         const o = await s.bot.openShop(/^gerrant$/i);
@@ -163,7 +163,7 @@ try {
             try { return [JSON.parse(readFileSync(join(import.meta.dir, '..', '.practice', 'status', `${name}.json`), 'utf8'))]; }
             catch { return []; }
         });
-        const selected = selectFoodSource(SOURCES,statuses,ownedAccounts('rs-sdk-demo.fly.dev'),Date.now());
+        const selected = selectFoodSource(SOURCES,statuses,ownedAccounts(courierServer),Date.now(),1,courierServer);
         if (!selected) await fail('no active owned cook with banked food');
         FROM = selected!;
     }

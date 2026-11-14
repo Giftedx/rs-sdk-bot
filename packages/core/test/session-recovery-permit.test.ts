@@ -1,8 +1,8 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync,statSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
-import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,releaseExpiredRecoveryLease,releaseExpiredRecoveryLeases,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,cachedProcessStarts,releaseExpiredRecoveryLease,releaseExpiredRecoveryLeases,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
@@ -399,12 +399,15 @@ test('the controller releases only an exact expired held lease with a dead bound
   for(const [p,raw] of Object.entries(kept))expect(readFileSync(p,'utf8'),fault+' '+p).toBe(raw);
  }
 });
-test('the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect',()=>{
+test('the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect',async()=>{
  // 'not-connected-open': the old session is still held and the child began none. The lease then refuses each new
  // recovery of that session, so it is released. 'not-connected-open-logout': a receipt that names a logout keeps it.
  const reasons:Record<string,string>={'superseded-open':'producer logout not confirmed','superseded-same-run':'producer proof mismatched','not-connected-open-logout':'producer logout not confirmed',
   'not-connected-receipt-logout':'producer proof mismatched','no-attempt':'producer logout not confirmed'};
- const other={pid:4321,coordinatorRunId:null,workerRelease:source,script:'scripts/other.ts',role:null,participants:null};
+ // A synthetic fixed PID may belong to an unrelated host process; this owner has an observed process exit.
+ const previousOwner=Bun.spawn([process.execPath,'-e',''],{stdin:'ignore',stdout:'ignore',stderr:'ignore',windowsHide:true});
+ expect(await previousOwner.exited).toBe(0);
+ const other={pid:previousOwner.pid,coordinatorRunId:null,workerRelease:source,script:'scripts/other.ts',role:null,participants:null};
  for(const fault of ['superseded','superseded-open','superseded-same-run','not-connected','not-connected-no-receipt','not-connected-open','not-connected-open-logout','not-connected-receipt-logout','no-attempt']){
   const f=fixture(),root=join(f.base,'.practice/session-lifecycle'),connected=fault.startsWith('superseded'),identity={account:'Rod',server:f.request.server};
   const owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
@@ -426,7 +429,7 @@ test('the controller also releases a held lease that a later session of a differ
    const own=beginSessionAttempt(identity,{root,owner,now:()=>issued+5});own.record('ended','logged-out');
    const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
    f.put(relative(f.base,receiptFile),{...receipt,logout:'logged-out',attemptId:own.attemptId,lifecycleSha256:proof.receiptSha256,proof});
-   const later=beginSessionAttempt(identity,{root,owner:fault==='superseded-same-run'?{...owner,pid:4321}:other,now:()=>issued+30});
+   const later=beginSessionAttempt(identity,{root,owner:fault==='superseded-same-run'?{...owner,pid:other.pid}:other,now:()=>issued+30});
    if(fault!=='superseded-open')later.record('ended','logged-out');
   }else if(fault!=='not-connected-no-receipt')f.put(relative(f.base,receiptFile),{...receipt,logout:fault==='not-connected-receipt-logout'||fault==='not-connected-open-logout'?'logged-out':'not-attempted',attemptId:null,lifecycleSha256:null});
   const checks={now:()=>issued+150000,matches:()=>true,childAlive:()=>false};
@@ -518,10 +521,26 @@ test('an exact pre-request lease refusal waits while the controller archives onl
 });
 test('restart counts inherited children without replay, ignores dead children, and retains every lease',()=>{
  const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,1234,f.base,f.options);
- expect(heldRecoveryOwners(f.base,[],pid=>pid===1234,now)).toEqual([{account:'Rod',pid:1234,started:now,source}]);
- expect(heldRecoveryOwners(f.base,['rod'],()=>true,now)).toEqual([]);
- expect(heldRecoveryOwners(f.base,[],()=>false,now)).toEqual([]);
+ const noTable=()=>new Map<number,number>();
+ expect(heldRecoveryOwners(f.base,[],pid=>pid===1234,now,noTable)).toEqual([{account:'Rod',pid:1234,started:now,source}]);
+ expect(heldRecoveryOwners(f.base,['rod'],()=>true,now,noTable)).toEqual([]);
+ expect(heldRecoveryOwners(f.base,[],()=>false,now,noTable)).toEqual([]);
  expect(()=>assertNoRecoveryLease('Rod',f.base)).toThrow('lease');expect(existsSync(recoveryPermitPaths(f.request,f.base).used)).toBe(false);
+});
+test('a later process that holds the id of a dead recovery child is not the child',()=>{
+ const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,1234,f.base,f.options);
+ const written=statSync(recoveryPermitPaths(f.request,f.base).child).mtimeMs;
+ expect(heldRecoveryOwners(f.base,[],()=>true,now,()=>new Map([[1234,written+60_000]]))).toEqual([]);
+ expect(heldRecoveryOwners(f.base,[],()=>true,now,()=>new Map([[1234,written-60_000]]))).toHaveLength(1);
+ expect(heldRecoveryOwners(f.base,[],()=>true,now,()=>null)).toHaveLength(1);
+});
+test('cachedProcessStarts reads each id once a minute and keeps a failed read',()=>{
+ let reads=0;const read=(ids:readonly number[])=>{reads++;return new Map(ids.map(i=>[i,i*10]));};
+ expect(cachedProcessStarts([90001],read,1_000)?.get(90001)).toBe(900010);
+ expect(cachedProcessStarts([90001],read,30_000)?.get(90001)).toBe(900010);expect(reads).toBe(1);
+ cachedProcessStarts([90001],read,61_000);expect(reads).toBe(2);
+ expect(cachedProcessStarts([90002],()=>null,1_000)).toBeNull();
+ expect(cachedProcessStarts([90002],read,2_000)).toBeNull();
 });
 
 test('authenticated cleanup admits a stopped end and still honours owner stops and exact end identity',()=>{

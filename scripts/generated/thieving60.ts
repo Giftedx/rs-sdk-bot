@@ -8,7 +8,7 @@
 // HP_RESERVE + 1: room for a stray hit (a watchman event, a Lumbridge spider) and for the walk to the boat.
 // Food: bread from the Baker (2654,3311, shop 'bakery', 12 coins), eaten at 5 Hitpoints or less.
 import { existsSync } from 'node:fs';
-import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { depositObserved } from '../../packages/core/src/deposit';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../../packages/core/src/walk';
@@ -72,15 +72,14 @@ try {
     let died = false;
     const jumps: string[] = [];
     let last = pos();
+    // A death is the server's (sessionDied): a blank state in a disconnect reads HP 0 and no position.
+    const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
     const watch = () => s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
-        // HP reads 0 until the stats arrive, so only trust it once max HP is known.
-        if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
+        if (sessionDied(life0, s.sdk.getState()?.player)) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) {
             jumps.push(`${now() - t0}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
-            const boat = p.level === 1 && (cheb(MUSA_DECK, p) <= 8 || cheb(ARDY_DECK, p) <= 8);
-            if (!boat) died = true;
         }
         last = p;
     });

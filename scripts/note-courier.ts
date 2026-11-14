@@ -3,27 +3,47 @@
 // to the central banker (Moneyshot) at Ardougne South Bank.
 // Zero boat fares, zero boat menus: pure 2-tile-per-tick overland running across Kandarin.
 // Usage: bun scripts/note-courier.ts [courier=Bigpackage] [banker=Moneyshot] [CAP ticks, default 15000]
-// Environment: DEMO_OK=1 for live server.
-import { openBot, finish, countItems } from '../packages/core/src/bot';
+// MAX_DELIVERIES=<n> ends after that many bank deliveries; DEMO_OK=1 admits the live server.
+import { openBot, finish } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { readFileSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { cargoDir, exactItem, type Cargo } from '../packages/core/src/cargo';
+import { cargoDir, cargoAccountServer, exactItem, type Cargo } from '../packages/core/src/cargo';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import {courierCargo, retainedTrout, separateTroutNotes} from './courier-cargo';
 
 const ARDY_BANK = { x: 2654, z: 3283 };
 
-const courierName = process.argv[2] ?? 'Bigpackage';
-const bankerName = process.argv[3] ?? 'Moneyshot';
-const CAP = Number(process.argv[4] ?? process.env.CAP ?? 15000);
-const reserve=retainedTrout(process.env);
-const owned = ownedAccounts('rs-sdk-demo.fly.dev');
-if (!owned.has(courierName.toLowerCase()) || !owned.has(bankerName.toLowerCase())) throw new Error('courier and banker must be owned accounts');
+export function noteCourierPreflight(argv:readonly string[], env:Record<string,string|undefined>=process.env,
+    deps:{serverOf:(name:string)=>string;owned:(server:string)=>ReadonlySet<string>}={serverOf:cargoAccountServer,owned:ownedAccounts}){
+    const courierName=argv[0]??'Bigpackage',bankerName=argv[1]??'Moneyshot';
+    if(![courierName,bankerName].every(name=>/^[A-Za-z0-9_ -]{1,12}$/.test(name))||courierName.toLowerCase()===bankerName.toLowerCase())
+        throw Error('note courier requires distinct valid courier and banker accounts');
+    const cap=Number(argv[2]??env.CAP??15000),maxDeliveries=env.MAX_DELIVERIES===undefined?undefined:Number(env.MAX_DELIVERIES);
+    if(!Number.isSafeInteger(cap)||cap<1||maxDeliveries!==undefined&&(!Number.isSafeInteger(maxDeliveries)||maxDeliveries<1))
+        throw Error('note courier CAP and MAX_DELIVERIES must be positive safe integers');
+    const reserve=retainedTrout(env),server=deps.serverOf(courierName);
+    if(deps.serverOf(bankerName).toLowerCase()!==server.toLowerCase())throw Error('note courier and banker must use the same server');
+    if(!deps.owned(server).has(bankerName.toLowerCase()))throw Error('note courier banker must be an authenticated owned account on its server');
+    return{courierName,bankerName,cap,maxDeliveries,reserve,server};
+}
 
+export function noteCourierOwned(courierName:string,bankerName:string,server:string,actualServer:string|undefined,
+    lookup:(server:string)=>ReadonlySet<string>=ownedAccounts):ReadonlySet<string>{
+    if(actualServer?.toLowerCase()!==server.toLowerCase())throw Error('note courier authenticated endpoint mismatch');
+    const owned=lookup(server);
+    if(!owned.has(courierName.toLowerCase())||!owned.has(bankerName.toLowerCase()))
+        throw Error('note courier and banker must be authenticated owned accounts on their server');
+    return owned;
+}
+
+export async function noteCourierMain(argv:readonly string[]=process.argv.slice(2)){
+const {courierName,bankerName,cap:CAP,maxDeliveries,reserve,server}=noteCourierPreflight(argv);
 const s = await openBot(courierName).catch(e => finish([], false, `login: ${String(e)}`));
 try {
+    const currentOwned=()=>noteCourierOwned(courierName,bankerName,server,s.lifecycle?.server);
+    currentOwned();
     await waitTicks(s,5); // Inventory arrives after player/skills on a resumed session.
     const pos = () => s.sdk.getState()?.player;
     const inv = () => s.sdk.getInventory();
@@ -39,10 +59,10 @@ try {
     let ended = false, died = false;
     const life = pos()?.lifeId, respawns = pos()?.respawnCount ?? 0;
     void s.ended.then(() => { ended = true; });
-    const over = () => used() >= CAP || ended || died;
+    const over = () => used() >= CAP || ended || died || maxDeliveries!==undefined&&cycles>=maxDeliveries;
     const off = s.onTick(() => {
         const p = pos();
-        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && p?.lifeId !== life)) died = true;
+        if (p?.isDead || (p?.respawnCount ?? 0) > respawns || (life !== undefined && (p?.lifeId ?? life) !== life)) died = true;
     });
 
     let cycles = 0;
@@ -68,6 +88,7 @@ try {
 
     // Trades with a target bot if nearby: takes what they offer, or gives what we have
     const tradeNearby = async (targetBot: string, role: 'collect' | 'deposit'): Promise<number> => {
+        if(!currentOwned().has(targetBot.toLowerCase()))throw Error('note courier trade partner is not authenticated on its server');
         if(role==='deposit'&&courierCargo(inv(),reserve).blocked.includes('Trout: need-bank-separation')) {
             const readyBank=async()=>{
                 if(s.sdk.getState()?.bank?.isOpen&&s.bankObservation?.()) return true;
@@ -151,20 +172,22 @@ try {
     console.log(`START note-courier ${courierName} -> banker ${bankerName}`);
     const attempted = new Map<string, number>();
     const sources = () => {
+        const owned=currentOwned();
         let files: string[];
         try { files = readdirSync(cargoDir); } catch { return []; }
         const p = pos();
         return files.filter(f => !f.startsWith('request-') && f.endsWith('.json')).flatMap(f => {
             try {
                 const c: Cargo = JSON.parse(readFileSync(join(cargoDir, f), 'utf8'));
-                if (typeof c.name !== 'string' || f !== `${c.name}.json` || !owned.has(c.name.toLowerCase())
+                if (typeof c.name !== 'string' || f !== `${c.name}.json` || c.server?.toLowerCase()!==server.toLowerCase() || !owned.has(c.name.toLowerCase())
                     || c.name.toLowerCase() === courierName.toLowerCase() || c.name.toLowerCase() === bankerName.toLowerCase()
                     || c.bank?.level !== 0 || !Number.isFinite(c.bank.x) || !Number.isFinite(c.bank.z)
                     || !Number.isFinite(c.at) || c.at > Date.now() || Date.now() - c.at > 1800_000
                     || !Array.isArray(c.items) || c.items.some(i => typeof i.name !== 'string' || !Number.isSafeInteger(i.count) || i.count <= 0)) return [];
                 if (!p || (p.worldX < 3000) !== (c.bank.x < 3000)) return [];
                 const status = JSON.parse(readFileSync(join(cargoDir, '../status', `${c.name}.json`), 'utf8'));
-                if (!Number.isFinite(status.at) || status.at > Date.now() || Date.now() - status.at > 30_000 || Date.now() - (attempted.get(c.name) ?? 0) < 60_000) return [];
+                if (status.server?.toLowerCase()!==server.toLowerCase() || status.name?.toLowerCase()!==c.name.toLowerCase()
+                    || !Number.isFinite(status.at) || status.at > Date.now() || Date.now() - status.at > 30_000 || Date.now() - (attempted.get(c.name) ?? 0) < 60_000) return [];
                 if (c.items.reduce((n,i) => n+i.count,0) < Number(process.env.MIN_CARGO ?? 20)) return [];
                 return [c];
             } catch { return []; }
@@ -180,17 +203,18 @@ try {
             if (!deposited) { await waitTicks(s, 15); continue; }
             cycles++;
             console.log(`MILESTONE delivered=${deposited} deliveries=${cycles} collected=${itemsCollected}`);
+            if(over())break;
         }
         else if(carried.blocked.length) delivery(); // Unknown identity keeps the offline fallback.
         const cargo = sources()[0];
         if (!cargo) { await waitTicks(s, 25); continue; }
         // Keep the first live service on one land mass. The food courier handles the boat route separately.
         const request = join(cargoDir, `request-${cargo.name}.json`);
-        writeFileSync(request, JSON.stringify({ worker: cargo.name, courier: courierName, at: Date.now() }));
+        writeFileSync(request, JSON.stringify({ worker: cargo.name, courier: courierName, server, at: Date.now() }));
         console.log(`MILESTONE pickup ${cargo.name} items=${cargo.items.map(i=>`${i.count} ${i.name}`).join(', ')}`);
         try {
             if (await walk(cargo.bank.x, cargo.bank.z, 2)) {
-                writeFileSync(request, JSON.stringify({ worker: cargo.name, courier: courierName, at: Date.now(), ready: true }));
+                writeFileSync(request, JSON.stringify({ worker: cargo.name, courier: courierName, server, at: Date.now(), ready: true }));
                 await tradeNearby(cargo.name, 'collect');
             }
         } finally {
@@ -205,7 +229,9 @@ try {
     }
 
     off();
-    await finish([s], cycles > 0 && !died && !ended, `ticks=${used()} died=${died} deliveries=${cycles} itemsCollected=${itemsCollected} trades=${tradesCompleted}`);
+    await finish([s], cycles > 0 && (maxDeliveries===undefined||cycles===maxDeliveries) && !died && !ended, `ticks=${used()} died=${died} deliveries=${cycles} itemsCollected=${itemsCollected} trades=${tradesCompleted}`);
 } catch (e) {
     await finish([s], false, String(e));
 }
+}
+if(import.meta.main)void noteCourierMain().catch(error=>finish([],false,String(error)));

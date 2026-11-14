@@ -82,7 +82,7 @@ export async function runDruidMeats(s:Session,o:{cap?:number;stop?:()=>boolean;t
  const acquired:number[]=[],skipped:number[]=[];
  void s.ended.then(()=>{ended=true;ac.abort('session-ended');});
  const observe=()=>{
-  hpMin=Math.min(hpMin,hp());died ||= sessionDied(initial,state()?.player)||hp()<=0;
+  hpMin=Math.min(hpMin,hp());died ||= sessionDied(initial,state()?.player);
   failure ||= died?'life-lost':ended?'session-ended':o.stop?.()?'stop-requested':s.tick()-start>=cap?'tick-budget':admitted&&hp()<35?'low-hp-cutoff':'';
   if(failure&&!ac.signal.aborted)ac.abort(failure);
  };

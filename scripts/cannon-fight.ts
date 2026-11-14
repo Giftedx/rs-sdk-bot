@@ -22,7 +22,7 @@
 //   937-947). A level-up message is a chat modal (levelup/scripts/levelup.rs2:54), so each open one stops the cannon
 //   and the attack until it closes. The fight closes it on the tick it sees it.
 // - In single-way combat the cannon hits only the NPC the player fights (player_combat.rs2:101-126): use multiway spots.
-import { openBot, finish, countItems } from '../packages/core/src/bot';
+import { openBot, finish, countItems, sessionDied } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { componentId } from '../packages/core/src/logout';
@@ -312,7 +312,8 @@ export async function runCannonFight(s: Session, o: CannonFightOptions) {
     const eatAt = o.eatAt ?? Math.max(Math.floor(maxHp * 0.4), Math.min(maxHp - 12, 8));
     const walk: Walk = o.walk ?? (async to => (await s.bot.walkTo(to.x, to.z, 1)).success);
     const life0 = { respawn: me().respawnCount, life: me().lifeId };
-    const died = () => hp() <= 0 || !!me().isDead || me().respawnCount > life0.respawn || (life0.life !== undefined && me().lifeId !== life0.life);
+    // sessionDied reads the state's player with no assertion: a blank state is no death and no throw.
+    const died = () => sessionDied({ respawnCount: life0.respawn, lifeId: life0.life }, s.sdk.getState()?.player);
     const feed = messageFeed(s);
     let phase = o.phases.findIndex((ph, i) => i === o.phases.length - 1 || !levelsMet(level, ph.until));
     let targetIndex = -1;

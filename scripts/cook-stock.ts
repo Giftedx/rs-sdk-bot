@@ -55,7 +55,7 @@ async function main() {
     const off = s.onTick(() => {
         const p = st()?.player;
         hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin);
-        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > respawns || (life !== undefined && p?.lifeId !== life)) died = true;
+        if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > respawns || (life !== undefined && (p?.lifeId ?? life) !== life)) died = true;
     });
     void s.ended.then(() => { ended = true; });
     const over = () => died || ended || (!returning && requestedStop) || used() >= CAP + (returning ? 200 : 0);
@@ -103,7 +103,8 @@ async function main() {
             lastBank = (st()?.bank?.items ?? []).map(i => ({ ...i }));
             trips++;
             if (!initial) console.log(`MILESTONE banked=${banked} burntBanked=${burntBanked} processed=${processed} trips=${trips} ticks=${used()}`);
-            await bankCargo(s, [FOOD]);
+            const cargoStopped = () => requestedStop || died || ended || used() >= CAP;
+            if (!cargoStopped()) await bankCargo(s, [FOOD], 0, { stopped: cargoStopped });
             lastBank = (st()?.bank?.items ?? []).map(i => ({ ...i }));
         } finally { bankTicks += s.tick() - t; }
     };

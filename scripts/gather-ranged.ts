@@ -57,7 +57,7 @@ export async function runRanged(s:Session,o:{cap:number;maximum:number;ammo:numb
  let cleanup=false,armed=false,lastObservedAmmo=0,ammoUnknown=false;
  let ended=false,died=false,hpMin=hp(),kills=0,eaten=0,pickedAmmo=0,shotsObserved=0,bankTrips=0,failure='',stop='cap';
  void s.ended.then(()=>{ended=true;});
- const off=s.onTick(()=>{const p=st()?.player;hpMin=Math.min(hpMin,hp());if(armed){const amount=rangedAmmo(inv(),eq());if(amount===null)ammoUnknown=true;else{shotsObserved+=Math.max(0,lastObservedAmmo-amount);lastObservedAmmo=amount;}}if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||(p0.lifeId!==undefined&&p?.lifeId!==p0.lifeId))died=true;});
+ const off=s.onTick(()=>{const p=st()?.player;hpMin=Math.min(hpMin,hp());if(armed){const amount=rangedAmmo(inv(),eq());if(amount===null)ammoUnknown=true;else{shotsObserved+=Math.max(0,lastObservedAmmo-amount);lastObservedAmmo=amount;}}if(p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||(p0.lifeId!==undefined&&(p?.lifeId ?? p0.lifeId) !== p0.lifeId))died=true;});
  const over=()=>ended||died||(!cleanup&&!!o.stop?.())||s.tick()-start>=o.cap;
  let snapshot:Item[]|undefined,initial:Map<number,number>|undefined;
  const capture=()=>{const b=s.bankObservation?.();if(!b)throw Error('ranged bank observation unknown');snapshot=b.items.map(i=>({id:i.id,count:i.count}));};
