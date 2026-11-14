@@ -9,6 +9,7 @@ import { waitUntil } from './ticks';
 import { stalled, startLedger, formatLedger } from './ledger';
 import { startTickStallWatch } from './tick-stall';
 import { assertSideOwns, loadOwners } from './fleet';
+import { ensureCredential } from './fleet-vault';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { loadDanger, watchRandomEvents, type RandomEventWatch } from './randomevents';
@@ -94,6 +95,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Never log in an account the other fleet side owns (fleet/owners.json): two machines would fight over it.
     assertSideOwns(name);
     const log = opts.log ?? ((l: string) => console.log(l));
+    // Any session can log in any account fleet/owners.json gives its side: a bot.env this machine lacks comes from
+    // the fleet credential vault (fleet-vault.ts) when FLEET_VAULT_KEY is set.
+    ensureCredential(name);
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
     if (!password) throw new Error(`no PASSWORD in bots/${name}/bot.env`);

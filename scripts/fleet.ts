@@ -5,6 +5,9 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHmac, randomBytes } from 'node:crypto';
 import type { Job } from './swarm';
+import { putCredential, restoreCredential, vaultKey } from '../packages/core/src/fleet-vault';
+import { FLEET_WORKTREE } from '../packages/core/src/fleet';
+import { MAIN_ACCOUNT } from '../packages/core/src/haggisgate';
 
 const repoRoot = resolve(import.meta.dir, '..');
 const botsDir = join(repoRoot, 'vendor', 'rs-sdk', 'bots');
@@ -227,7 +230,14 @@ export function createAccount(name: string, server = 'rs-sdk-demo.fly.dev'): str
     const dir = join(botsDir, name);
     mkdirSync(dir, { recursive: true });
     const envFile = join(dir, 'bot.env');
+    const shared = server === 'rs-sdk-demo.fly.dev' && name.toLowerCase() !== MAIN_ACCOUNT;
+    // An account another machine created has its real password in the fleet vault: restore it rather than write a
+    // seed-derived or random one that the server would refuse.
+    if (!existsSync(envFile) && shared) restoreCredential(name);
     if (!existsSync(envFile)) writeFileSync(envFile, `SERVER=${server}\nPASSWORD=${accountPassword(name, server)}\n`);
+    // Seal it so every other session can log it in too; fleet sync publishes the file.
+    const key = shared ? vaultKey() : null;
+    if (key && existsSync(join(FLEET_WORKTREE, '.git'))) putCredential(name, key);
     return dir;
 }
 

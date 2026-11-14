@@ -93,3 +93,17 @@ test('default shared snapshots use FLEET_DIR and prevent a covered global arrow 
         expect(supplyBill([{item:'headless arrows',count:3615}],[{id:53,name:'Headless arrow'}],explicit)[0]).toMatchObject({owned:280,short:3335});
     }finally{if(old===undefined)delete process.env.FLEET_DIR;else process.env.FLEET_DIR=old;rmSync(base,{recursive:true,force:true});}
 });
+
+test('an account that changed side counts once, from the side that owns it', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const base = mkdtempSync(join(tmpdir(), 'bill-')), fleet = join(base, 'fleet'), snaps = join(fleet, 'snapshots');
+    mkdirSync(join(base, '.practice/status'), { recursive: true }); mkdirSync(snaps, { recursive: true });
+    writeFileSync(join(fleet, 'owners.json'), JSON.stringify({ accounts: { Mover: { side: 'cloud', server: 'rs-sdk-demo.fly.dev' } } }));
+    // Mover ran on claude-cloud, which stopped; cloud adopted it. Both files list it.
+    writeFileSync(join(snaps, 'claude-cloud.json'), JSON.stringify({ side: 'claude-cloud', accounts: [{ name: 'Mover', server: 'rs-sdk-demo.fly.dev', at: 9, bank: [{ id: 995, count: 1000 }] }] }));
+    writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [{ name: 'Mover', server: 'rs-sdk-demo.fly.dev', at: 9, bank: [{ id: 995, count: 1000 }] }] }));
+    const rows = liveHelperStatuses(base, snaps, 'local');
+    expect(rows.map(s => s.name)).toEqual(['Mover']);
+});

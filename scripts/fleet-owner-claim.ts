@@ -32,7 +32,7 @@ async function requiredGit(cwd: string, args: string[], options?: GitOptions): P
     return result;
 }
 
-type Registry = {accounts: Record<string, Owner & {reservation?: string}>};
+type Registry = {accounts: Record<string, Owner & {reservation?: string; home?: string}>};
 
 function registryFrom(raw: string): Registry {
     const registry = JSON.parse(raw) as Registry;
@@ -41,10 +41,76 @@ function registryFrom(raw: string): Registry {
     for (const [name, row] of Object.entries(registry.accounts)) {
         const lower = name.toLowerCase();
         if (!/^[A-Za-z0-9]{1,12}$/.test(name) || seen.has(lower) || typeof row?.side !== 'string' || !SIDE_NAME.test(row.side)
-            || typeof row.server !== 'string' || (row.reservation !== undefined && typeof row.reservation !== 'string')) throw Error('invalid fleet owner registry');
+            || typeof row.server !== 'string' || (row.reservation !== undefined && typeof row.reservation !== 'string')
+            || (row.home !== undefined && (typeof row.home !== 'string' || !SIDE_NAME.test(row.home)))) throw Error('invalid fleet owner registry');
         seen.add(lower);
     }
     return registry;
+}
+
+export type OwnerMove = {account: string; from: string; to: string; home: string | null};
+
+// Applies the moves whose row still names `from` (another side may have moved it first) to a registry copy.
+export function applyMoves(registry: Registry, moves: readonly OwnerMove[]): OwnerMove[] {
+    const applied: OwnerMove[] = [];
+    for (const m of moves) {
+        const name = Object.keys(registry.accounts).find(k => k.toLowerCase() === m.account.toLowerCase());
+        const row = name ? registry.accounts[name] : undefined;
+        if (!name || !row || row.side !== m.from || row.reservation || !SIDE_NAME.test(m.to) || m.to === m.from) continue;
+        const next: Owner & {home?: string} = {side: m.to, server: row.server};
+        if (m.home && m.home !== m.to) next.home = m.home;
+        registry.accounts[name] = next;
+        applied.push({...m, account: name});
+    }
+    return applied;
+}
+
+const gitSync = (cwd: string, args: string[], options: GitOptions = {}): string | null => {
+    const p = Bun.spawnSync(['git', ...args], {cwd, windowsHide: true, timeout: GIT_TIMEOUT_MS,
+        stdin: options.input === undefined ? 'ignore' : Buffer.from(options.input), stdout: 'pipe', stderr: 'ignore',
+        env: {...process.env, GIT_TERMINAL_PROMPT: '0', ...(options.index ? {GIT_INDEX_FILE: options.index} : {})}});
+    return p.exitCode === 0 ? p.stdout.toString().trimEnd() : null;
+};
+const mustSync = (cwd: string, args: string[], options?: GitOptions) => {
+    const r = gitSync(cwd, args, options);
+    if (r === null) throw Error('fleet registry git ' + args[0] + ' failed');
+    return r;
+};
+
+/**
+ * Moves owner rows on the published fleet-data branch (fleet adoption, packages/core/src/fleet-assign.ts). Each try
+ * reads the remote tip, keeps only the moves whose row still names the expected side, and pushes one commit as a
+ * fast-forward: the compare-and-swap. The caller holds the fleet-data write lock and has no unpublished fleet-data
+ * commits; the worktree then fast-forwards to the result. Returns the moves that landed.
+ */
+export function transferFleetOwnersLocked(root: string, moves: readonly OwnerMove[], worktree = FLEET_WORKTREE): OwnerMove[] {
+    if (!moves.length) return [];
+    for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+        mustSync(root, ['fetch', '--no-tags', '--no-write-fetch-head', 'origin', REF + ':' + TRACKING]);
+        const tip = mustSync(root, ['rev-parse', TRACKING]);
+        const registry = registryFrom(mustSync(root, ['show', tip + ':' + OWNERS]));
+        const applied = applyMoves(registry, moves);
+        if (!applied.length) return [];
+        const scratch = mkdtempSync(join(tmpdir(), 'rsbot-owner-index-')), index = join(scratch, 'index');
+        let commit: string;
+        try {
+            const blob = mustSync(root, ['hash-object', '-w', '--stdin'], {input: JSON.stringify(registry, null, 1) + '\n'});
+            mustSync(root, ['read-tree', tip], {index});
+            mustSync(root, ['update-index', '--cacheinfo', '100644,' + blob + ',' + OWNERS], {index});
+            const tree = mustSync(root, ['write-tree'], {index});
+            const to = [...new Set(applied.map(m => m.to))].join('+');
+            commit = mustSync(root, ['-c', 'user.name=Fleet adoption', '-c', 'user.email=fleet@localhost', 'commit-tree', tree, '-p', tip,
+                '-m', `fleet: ${to} takes ${applied.map(m => `${m.account} (${m.from})`).join(', ')}`]);
+        } finally {
+            if (existsSync(index)) unlinkSync(index);
+            rmdirSync(scratch);
+        }
+        if (gitSync(root, ['push', 'origin', commit + ':' + REF]) !== null) {
+            gitSync(worktree, ['merge', '--ff-only', '--quiet', commit]);
+            return applied;
+        }
+    }
+    throw Error('fleet owner transfer lost the race three times; the next sync tries again');
 }
 
 export interface FleetOwnerClaim {

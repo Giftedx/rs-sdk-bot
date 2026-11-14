@@ -3,7 +3,8 @@
 // Usage: bun packages/planner/src/supply-bill.ts [hiscores snapshot]   writes .practice/coordinator/supply-bill.json
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { FLEET_DIR, mySide } from '../../core/src/fleet';
-import { join, resolve } from 'node:path';
+import { canonicalSnapshots, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
+import { dirname, join, resolve } from 'node:path';
 import { boardsFromSnapshot, haggisActivities, haggisTravel, overallRequirementsFor, scheduleOverall, TRICKS } from './haggis';
 
 const root = resolve(import.meta.dir, '../../..');
@@ -93,9 +94,12 @@ export function supplyBill(
 
 // This machine's live statuses, plus the accounts the other fleet side published in fleet/snapshots (scripts/fleet-sync.ts),
 // so the bill counts every published side. These holdings are owned observations, not reserved or staged stock.
+// Each account counts once: its canonical row (packages/core/src/fleet-snapshots.ts), so an account that changed side
+// is not counted again from its old side's last snapshot.
 export function liveHelperStatuses(base = root, fleetDir = join(FLEET_DIR(), 'snapshots'), side = mySide()): any[] {
     const read = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
-    const mine = read(join(base, '.practice/status')), theirs = read(fleetDir).filter(x => x?.side && x.side !== side).flatMap(x => x.accounts ?? []);
+    const mine = read(join(base, '.practice/status'));
+    const theirs = canonicalSnapshots(readSnapshotFiles(fleetDir), ownerOfIn(dirname(fleetDir))).filter(x => x.side !== side).flatMap(x => x.accounts ?? []);
     const names = new Set(mine.map(s => String(s?.name).toLowerCase()));
     return [...mine, ...theirs.filter(a => !names.has(String(a?.name).toLowerCase()))]
         .filter(s => s?.server === 'rs-sdk-demo.fly.dev' && typeof s.name === 'string' && s.name.toLowerCase() !== 'haggis');

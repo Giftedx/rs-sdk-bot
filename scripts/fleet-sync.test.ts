@@ -2,7 +2,8 @@ import { test, expect } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { activeAccounts, keepPublished, planView, reattach, snapshot } from './fleet-sync';
+import { activeAccounts, carriedPrior, keepPublished, planView, reattach, sideCapacity, sideCard, snapshot } from './fleet-sync';
+import { SWARM_STOP } from './swarm';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
 
@@ -83,4 +84,33 @@ test('a detached worktree goes back on its branch with its commits, and a diverg
         run('checkout', '-q', '--detach', first);
         expect(() => reattach(dir, 'fleet-data')).toThrow('holds commits that HEAD lacks');
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a side card carries the plan\'s capacity and only the owner\'s pauses of its own accounts', () => {
+    expect(sideCapacity({ maxBots: 4 })).toBe(4);
+    expect(sideCapacity({ maxBots: 4, fleetCapacity: 9 })).toBe(9);
+    expect(sideCapacity(null)).toBeNull();
+    // The stop files carry the registry spelling (stop-Fatstack), as the swarm writes them; the card names them in lower case.
+    const owned = ['Fatstack', 'Bravo', 'Charlie'];
+    const stops: Record<string, string> = { Fatstack: 'owner: hold for the quest', Bravo: SWARM_STOP.job, charlie: 'owner hold', Kilo: 'owner hold' };
+    expect(sideCard('claude-cloud', 4, owned, n => stops[n])).toEqual({ side: 'claude-cloud', capacity: 4, paused: ['charlie', 'fatstack'], died: [], stopped: false });
+    expect(sideCard('claude-cloud', 4, owned, n => n === 'swarm' ? 'owner stopped the side' : undefined).stopped).toBe(true);
+    expect(sideCard('claude-cloud', 4, owned, n => n === 'swarm' ? SWARM_STOP.all : undefined).stopped).toBe(false);
+});
+
+test('an adopted account keeps its last row from the side that ran it; a row this side has stays', () => {
+    const owners = new Map([['fatstack', { side: 'local', server: 'rs-sdk-demo.fly.dev' }], ['kilo', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['other', { side: 'cloud', server: 'rs-sdk-demo.fly.dev' }]]);
+    const files = [{ side: 'claude-cloud', at: 9, accounts: [{ name: 'Fatstack', server: 'rs-sdk-demo.fly.dev', at: 9, skills: [{ name: 'Thieving', level: 99 }] }, { name: 'Kilo', at: 9 }] },
+        { side: 'cloud', at: 9, accounts: [{ name: 'Other', at: 9 }] }];
+    const prior = [{ name: 'Kilo', at: 5 }];
+    const out = carriedPrior(prior, files, 'local', owners);
+    expect(out.map(r => [r.name, r.at])).toEqual([['Kilo', 5], ['Fatstack', 9]]);
+    expect(out[1]).not.toHaveProperty('side');
+    // The snapshot this side publishes then holds it, so every reader sees Thieving 99 before its first login here.
+    expect(snapshot([], 'local', owners, 10, out).accounts.find(a => a.name === 'Fatstack')?.skills).toEqual([{ name: 'Thieving', level: 99 }]);
+});
+
+test('a side card lists its accounts whose last end was a death', () => {
+    expect(sideCard('local', 4, ['Fatstack', 'Kilo'], () => undefined, ['fatstack', 'Stranger']).died).toEqual(['fatstack']);
 });

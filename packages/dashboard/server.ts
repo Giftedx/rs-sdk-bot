@@ -28,6 +28,7 @@ import {folderScan} from './folder-scan';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
 import { RosterFeed } from '../core/src/roster-feed';
+import { canonicalSnapshots, ownerOfIn } from '../core/src/fleet-snapshots';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 // DASH_ROOT lets a server in a worktree read the data of another checkout.
@@ -1189,7 +1190,8 @@ function buildState() {
 // Each side's last fleet-data sync (snapshots) and the cross-side orders not yet done (orders and receipts); a side with no snapshot is not listed.
 // Declarations, not consts: refreshRanks runs at load, above this point.
 function fleetList(dir: string): any[] { return every(10_000, dir, () => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : []); }
-function snapshotFiles() { return fleetList(join(FILES.fleet, 'snapshots')); }
+// One row per account: an account that changed side shows once, under the side that owns it (packages/core/src/fleet-snapshots.ts).
+function snapshotFiles() { return canonicalSnapshots(fleetList(join(FILES.fleet, 'snapshots')).filter(s => typeof s?.side === 'string'), ownerOfIn(FILES.fleet)); }
 function remoteNames(): string[] { return snapshotFiles().filter(s => s?.side !== (process.env.FLEET_SIDE ?? 'local')).flatMap(s => (s?.accounts ?? []).map((a: any) => String(a?.name ?? ''))).filter(n => /^[A-Za-z0-9]{1,12}$/.test(n)); }
 function fleetSides(now: number) {
     return fleetSidesView(snapshotFiles(), fleetList(join(FILES.fleet, 'orders')), now, fleetList(join(FILES.fleet, 'receipts')));
