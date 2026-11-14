@@ -679,6 +679,8 @@ const ROUTE_CASES: BenchCase[] = [
   teamCase('extra:team-2v2-spear-x4', 'tribrid-snare-spear', 'tribrid-snare', 4, {x: 3150, z: 3560}),
   // Side A one spear and one dragon dagger (the spear holds, the dagger hits), against the snare kit.
   teamCase('extra:team-2v2-mixed-x4', 'tribrid-snare-spear+tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // Side A in dragon armour with the Saradomin cape (finding 72) against the snare kit.
+  teamCase('extra:team-2v2-dragon-x4', 'tribrid-dragon-sara', 'tribrid-snare', 4, {x: 3150, z: 3560}),
   teamCase('extra:team-3v3-multi-x3', 'tribrid-snare', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
