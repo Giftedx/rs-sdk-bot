@@ -62,7 +62,24 @@ try {
         if (d?.text && re.test(d.text)) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
     };
-    const msgCount = (re: RegExp): number => (st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).length;
+    // The client publishes only the last 50 game messages (webclient StateCollector.ts MAX_GAME_MESSAGES). A count over
+    // that window stops rising once an old match drops out as a new one comes in, so every message seen is kept here.
+    // Messages group by observationId (one publication can hold several), else by tick. The k-th message of a group is
+    // new when the group never held k messages before; only the oldest group in the window can lose messages, and that
+    // lowers its count, never raises it.
+    const seenText: string[] = [];
+    const perGroup = new Map<string, number>();
+    const pullMessages = (): void => {
+        const nth = new Map<string, number>();
+        for (const m of (st()?.gameMessages ?? []) as any[]) {
+            if (m.type !== 0) continue;
+            const g = typeof m.observationId === 'number' ? `o${m.observationId}` : `t${m.tick}`;
+            const k = (nth.get(g) ?? 0) + 1;
+            nth.set(g, k);
+            if (k > (perGroup.get(g) ?? 0)) { perGroup.set(g, k); seenText.push(m.text); }
+        }
+    };
+    const msgCount = (re: RegExp): number => { pullMessages(); return seenText.filter(t => re.test(t)).length; };
 
     // Auto retaliate off (controls:com_3): a goblin hit never turns a walk or a loc click into a fight.
     await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
@@ -90,6 +107,7 @@ try {
     };
 
     const off = s.onTick(() => {
+        pullMessages();
         const p = pos();
         const h = hp();
         if (h > 0 && h < hpMin) {
@@ -217,6 +235,11 @@ try {
 
     const walker = await sessionWalker(s as any);
 
+    // FROM=8 resumes after the cannon repair: the SDK state has no varps, so the caller names the last milestone the
+    // account passed (a MILESTONE line of the run that stopped). Only 0 and 8 are resume points.
+    const FROM = Number(process.env.FROM ?? 0);
+    if (FROM !== 0 && FROM !== 8) await fail(`FROM=${process.env.FROM}: only 0 and 8 are resume points`);
+    if (FROM < 8) {
     // 1. Commander: "Yeah, I'd love to help." sets 1 and gives six railings (lawgof2.rs2:30-41).
     await talk('commander 1', /^dwarf commander$/i, [/love to help/i], () => cnt(ITEM.railing) >= 6);
     milestone(1);
@@ -348,6 +371,7 @@ try {
         await waitUntil(s, () => working() || died, { timeoutTicks: 6 });
     }, working, 3, 4);
     milestone(8);
+    }
 
     // 9. Commander: "Ok then, just for you!" sets 9 (lawgof2.rs2:139-175). The shed door shuts behind the bot
     // (~open_and_close_door) and no planned walk opens it, so the bot ops it from inside (west wall of 2576,3461).
