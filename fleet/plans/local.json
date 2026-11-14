@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794667411410,
+ "at": 1794667621443,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -93,21 +93,24 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "shop:catherby"
    ]
   },
   {
@@ -134,44 +137,41 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "15000",
-    "headless"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "BANK_PACK": "1",
-    "MAX_MAKE": "390"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "pen:3187,3277"
+   ]
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "shop:catherby"
+    "knight:2582,3297"
    ]
   },
   {
@@ -296,21 +296,25 @@
   },
   {
    "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -495,25 +499,21 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2671,3313"
    ]
   },
   {
