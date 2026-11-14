@@ -7,7 +7,8 @@
 // phases, see parsePhases; default one phase of STYLE, or the current style), SPECIAL=0 (no magic shortbow special;
 // default on: research/combat-measure.md 6c), RELOAD (ticks between top-ups, default 20), PRAYER (a sdk PrayerName kept on, with a prayer
 // potion at 10 points; `none` for no prayer; default from the spot), EAT_AT (hitpoints; default 40% of the base level).
-// MODE=reclaim [CANNON_AT=x,z] only gets the cannon parts back (reclaimCannon) and ends.
+// MODE=reclaim [CANNON_AT=x,z] only gets the cannon parts back (reclaimCannon) and ends. MODE=buy only buys the full
+// cannon from Nulodion with 750,000 coins in the pack (buyCannon) and ends.
 //
 // Server facts (vendor/rs-sdk/server/content/scripts/quests/quest_mcannon/scripts):
 // - Set-up: the player's tile is the centre of the 3x3 cannon, the loc sits on its south-west tile and the player steps
@@ -205,6 +206,48 @@ export const specialDue = (o: { special: boolean; weapon: number | undefined; en
     o.special && o.weapon === MSB && o.fighting && o.enabled === 0 && (o.energy ?? 0) >= MSB_SPECIAL_COST;
 
 type Walk = (to: Tile) => Promise<boolean>;
+
+// From the porch (east of NULODION_DOOR), opens the door, steps in and talks to Nulodion. Each open page clicks the
+// first option that `pick` matches, else continues, until `done` holds (60 ticks at most). 'refused' when a page
+// matches `refuse`; 'absent' when he is not in view.
+async function talkToNulodion(s: Session, pick: RegExp, done: () => boolean, refuse: RegExp, reason: string): Promise<'done' | 'refused' | 'absent' | 'timeout'> {
+    const me = () => s.sdk.getState()?.player;
+    if ((me()?.worldX ?? NULODION_DOOR.x) >= NULODION_DOOR.x) {
+        const door = (s.sdk.getState()?.nearbyLocs ?? []).find(l => l.id === NULODION_DOOR.id && l.x === NULODION_DOOR.x && l.z === NULODION_DOOR.z);
+        const open = door?.optionsWithIndex.find(p => /^open$/i.test(p.text));
+        if (door && open) { await s.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: open.opIndex, reason: 'Nulodion door' }); await waitTicks(s, 2); }
+        await s.bot.walkTo(NULODION.x + 1, NULODION.z, 0);
+        await waitUntil(s, () => (me()?.worldX ?? NULODION_DOOR.x) < NULODION_DOOR.x, { timeoutTicks: 10 });
+    }
+    const npc = (s.sdk.getState()?.nearbyNpcs ?? []).find(n => /^nulodion$/i.test(n.name));
+    const talk = npc?.optionsWithIndex.find(p => /talk/i.test(p.text));
+    if (!npc || !talk) return 'absent';
+    await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: talk.opIndex, reason: `Nulodion: ${reason}` });
+    for (let t = 0; t < 60 && !done(); t++) {
+        await waitTicks(s, 1);
+        const d = s.sdk.getDialog();
+        if (!d?.isOpen || d.isWaiting) continue;
+        const option = d.options.find(p => pick.test(p.text));
+        if (option) await s.sdk.sendClickDialog(option.index);
+        else if (refuse.test([d.text ?? '', ...(d.allComponents ?? []).map(c => c.text)].join(' '))) return 'refused';
+        else await s.sdk.sendClickDialog(0);
+    }
+    return done() ? 'done' : 'timeout';
+}
+
+// The full cannon from Nulodion: 750,000 coins for the four parts, an ammo mould and the manual, to an account with
+// Dwarf Cannon complete (quest_mcannon/scripts/npcs/nulodion.rs2:61-76, 145-160).
+export const CANNON_PRICE = 750_000;
+export async function buyCannon(s: Session, o: { walk: Walk }): Promise<{ ok: boolean; detail: string }> {
+    const held = () => s.sdk.getInventory().some(i => CANNON_PARTS[0].test(i.name));
+    if (held()) return { ok: true, detail: 'cannon base already in the pack' };
+    const coins = s.sdk.getInventory().filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
+    if (coins < CANNON_PRICE) return { ok: false, detail: `${coins} coins in the pack, ${CANNON_PRICE} needed` };
+    if (s.sdk.getInventory().length > 28 - 6) return { ok: false, detail: 'the cannon needs 6 free pack slots' };
+    if (!await o.walk({ x: NULODION_DOOR.x, z: NULODION_DOOR.z, level: 0 })) return { ok: false, detail: 'walk to Nulodion failed' };
+    const r = await talkToNulodion(s, /sell me a cannon|take a cannon please/i, held, /don't have enough money|doesn't seem interested/i, 'buy cannon');
+    return held() ? { ok: true, detail: 'bought' } : { ok: false, detail: `no cannon: ${r}` };
+}
 // Get the cannon parts back into the pack, by the content's rules: pick up the standing cannon (from `at`, its
 // south-west tile, or the nearest cannon loc in view), else ask Nulodion, who replaces it once the loc is gone.
 // `placedAt` is the tick of the last set-up: when the cannon cannot be reached, the loc still stands until
@@ -240,27 +283,10 @@ export async function reclaimCannon(s: Session, o: { at?: { x: number; z: number
                 }
             }
         }
-        if ((me()?.worldX ?? NULODION_DOOR.x) >= NULODION_DOOR.x) {
-            const door = (s.sdk.getState()?.nearbyLocs ?? []).find(l => l.id === NULODION_DOOR.id && l.x === NULODION_DOOR.x && l.z === NULODION_DOOR.z);
-            const open = door?.optionsWithIndex.find(p => /^open$/i.test(p.text));
-            if (door && open) { await s.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: open.opIndex, reason: 'Nulodion door' }); await waitTicks(s, 2); }
-            await s.bot.walkTo(NULODION.x + 1, NULODION.z, 0);
-            await waitUntil(s, () => (me()?.worldX ?? NULODION_DOOR.x) < NULODION_DOOR.x, { timeoutTicks: 10 });
-        }
-        const npc = (s.sdk.getState()?.nearbyNpcs ?? []).find(n => /^nulodion$/i.test(n.name));
-        const talk = npc?.optionsWithIndex.find(p => /talk/i.test(p.text));
-        if (!npc || !talk) return { ok: false, how: 'nulodion', detail: 'Nulodion not in view' };
         const m0 = feed.mark();
-        await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: talk.opIndex, reason: 'Nulodion: lost cannon' });
-        for (let t = 0; t < 60 && !held(); t++) {
-            await waitTicks(s, 1);
-            const d = s.sdk.getDialog();
-            if (!d?.isOpen || d.isWaiting) continue;
-            const pick = d.options.find(p => /lost my cannon/i.test(p.text));
-            if (pick) await s.sdk.sendClickDialog(pick.index);
-            else if (/only allowed to replace|happily parked/i.test([d.text ?? '', ...(d.allComponents ?? []).map(c => c.text)].join(' '))) return { ok: false, how: 'nulodion', detail: 'refused: the cannon loc still stands' };
-            else await s.sdk.sendClickDialog(0);
-        }
+        const r = await talkToNulodion(s, /lost my cannon/i, held, /only allowed to replace|happily parked/i, 'lost cannon');
+        if (r === 'absent') return { ok: false, how: 'nulodion', detail: 'Nulodion not in view' };
+        if (r === 'refused') return { ok: false, how: 'nulodion', detail: 'refused: the cannon loc still stands' };
         return held() ? { ok: true, how: 'nulodion', detail: feed.all.slice(m0).join(' | ') || 'parts given' } : { ok: false, how: 'nulodion', detail: `no parts: ${feed.all.slice(m0).join(' | ')}` };
     } finally { feed.off(); }
 }
@@ -459,7 +485,7 @@ if (import.meta.main) {
     const [bot] = process.argv.slice(2);
     const env = process.env;
     const spot = CANNON_SPOTS[env.SPOT ?? 'spiders'];
-    if (!bot || !spot) { console.log(`RESULT fail usage: bun scripts/cannon-fight.ts <account> SPOT=${Object.keys(CANNON_SPOTS).join('|')} [MODE=reclaim CANNON_AT=x,z]`); process.exit(2); }
+    if (!bot || !spot) { console.log(`RESULT fail usage: bun scripts/cannon-fight.ts <account> SPOT=${Object.keys(CANNON_SPOTS).join('|')} [MODE=reclaim CANNON_AT=x,z | MODE=buy]`); process.exit(2); }
     const prayer = (env.PRAYER ?? spot.prayer) as PrayerName | 'none';
     if (prayer !== 'none' && !PRAYER_NAMES.includes(prayer)) { console.log(`RESULT fail unknown PRAYER ${prayer}`); process.exit(2); }
     let halted = false;
@@ -472,6 +498,10 @@ if (import.meta.main) {
             const at = env.CANNON_AT ? env.CANNON_AT.split(',').map(Number) : undefined;
             const r = await reclaimCannon(s, { ...(at && at.length === 2 && at.every(Number.isSafeInteger) ? { at: { x: at[0]!, z: at[1]! } } : {}), walk });
             await finish([s], r.ok, `cannon-reclaim how=${r.how} detail=${r.detail}`);
+        }
+        if (env.MODE === 'buy') {
+            const r = await buyCannon(s, { walk });
+            await finish([s], r.ok, `cannon-buy ${r.detail}`);
         }
         const stop = env.STOP ? parseLevels(env.STOP) : { [env.STOP_SKILL ?? 'Ranged']: Number(env.STOP_LEVEL ?? 99) };
         const phases = env.PHASES ? parsePhases(env.PHASES) : [{ ...(env.STYLE === undefined ? {} : { style: Number(env.STYLE) }) }];
