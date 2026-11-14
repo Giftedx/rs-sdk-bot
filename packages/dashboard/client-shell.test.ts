@@ -955,13 +955,15 @@ test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spa
  // The live tile goes with the live sight: the status file keeps b.pos at 3170, the roster sees 3182 (out of both
  // areas, still 12 tiles from the Moss giant): a new count, not "safe".
  d.live={seen:1002e3,x:3182,z:9900,level:0};expect(t.aggroText(d,1002e3).text).toBe('6:40');
+ // An offline practice row of the same name keeps its own key: the live record stays.
+ t.aggroTrack({name:'C',practice:true,inWorld:false},1003e3);expect(t.aggroText(c,1004e3).title).not.toContain('at most');
  // Combat 85 is too strong for the Moss giant outside the Wilderness.
  expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
 });
 
 test('regeneration meter: the heal and restore timers, their phase from a 1-point step, at most until seen',()=>{
  const code=shell.slice(shell.indexOf("  // Regeneration meter (RuneLite's"),shell.indexOf('  function infoboxes(){'));
- const t=new Function('S',`${code};return {regenTrack,regenHpText,regenStatText};`)({world:{tickMs:400}});
+ const t=new Function('S','trackKey',`${code};return {regenTrack,regenHpText,regenStatText};`)({world:{tickMs:400}},(b:any)=>(b?.practice?'practice:':'')+b?.name);
  const b:any={name:'A',inWorld:true,hp:{now:20,max:30},skills:[{name:'Attack',currentLevel:50,level:60},{name:'Prayer',currentLevel:1,level:40}]};
  t.regenTrack(b,0);
  // 10 missing x 100 ticks x 400 ms = 400 s; the phase is not seen yet.
@@ -986,6 +988,12 @@ test('regeneration meter: the heal and restore timers, their phase from a 1-poin
  const g:any={name:'G',inWorld:true,hp:{now:30,max:30},skills:[{name:'Attack',currentLevel:50,level:60},{name:'Strength',currentLevel:70,level:60}]};t.regenTrack(g,0);
  g.skills[0].currentLevel=51;t.regenTrack(g,10e3);
  expect(t.regenStatText(g,g.skills[0],10e3)).toBe(' · back to 60 in 6:00');expect(t.regenStatText(g,g.skills[1],10e3)).toBe(' · back to 60 in at most 6:40');
+ // An offline practice row of the same name does not delete the live record.
+ t.regenTrack({...b,practice:true,inWorld:false},30e3);expect(t.regenHpText(b,30e3)).not.toBe('');
+ // The clock stops 10 s after the stat read (b.at); a live sight (b.live.seen) does not move it. Heal at 2 s, clock
+ // stopped at 12 s: the next heal 30 s away, then 8 x 40 s.
+ const h:any={name:'H',inWorld:true,at:1,live:{seen:200e3},hp:{now:20,max:30},skills:[]};t.regenTrack(h,1);
+ h.hp={now:21,max:30};h.at=2e3;t.regenTrack(h,2e3);expect(t.regenHpText(h,200e3)).toBe(' · next heal in 0:30 · full in 5:50');
  // Logged out: the record goes.
  t.regenTrack({...b,inWorld:false},40e3);expect(t.regenHpText(b,40e3)).toBe('');
 });
