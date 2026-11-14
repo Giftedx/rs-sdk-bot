@@ -1,25 +1,7 @@
 {
  "side": "local",
- "at": 1794679216238,
+ "at": 1794679313056,
  "jobs": [
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 1500 lobster"
-   ],
-   "env": {
-    "ROUNDS": "0",
-    "RUN": "2"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
   {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
@@ -90,6 +72,28 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
+   "autopilot": "local",
+   "resources": [
+    "aio:seers-flax"
+   ]
   },
   {
    "account": "Bigchopper",
@@ -526,36 +530,35 @@
    ]
   },
   {
-   "account": "Bigpackage",
+   "account": "BowBeforeMe",
    "script": "scripts/session-check.ts",
    "args": [],
    "env": {
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-776f6348-5673-459b-921d-17d989474429"
+    "COORDINATOR_RUN_ID": "task-df4e3cc8-f0a3-4a75-995a-a17f7b3048e9"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "local-recover-bigpackage-20261114t175019z [task-776f6348-5673-459b-921d-17d989474429]",
-   "role": "crafting"
+   "goal": "local-recover-bowbeforeme-20261114t175019z [task-df4e3cc8-f0a3-4a75-995a-a17f7b3048e9]",
+   "role": "thieving"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "ROUNDS": "0",
+    "RUN": "2"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
   }
  ]
 }
