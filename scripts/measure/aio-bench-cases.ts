@@ -1372,6 +1372,16 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:upass-pure-iban', script: 'scripts/aio-quester.ts', preset: 'quest_upass', scriptArgs: ['upass'], pass: questKeepsBuild('pure-iban', levelsBeforeRoute('pure-iban')), timeoutMs: 900_000,
     known: 'the fights of the quest give 53,400 XP and 17,690 Hitpoints XP; the build has no skill at 99 to take them and Hitpoints 10',
     presetConfig: {...PRESETS.quest_upass!, skills: {...PRESETS.quest_upass!.skills, ...levelsBeforeRoute('pure-iban')}}},
+  // A routed arrival reaches the hut above the cellar. Keep the full quest kit and prove the ladder entry before
+  // the cape, staff and outside-arena spell unlock, with no death and a confirmed logout.
+  {key: 'extra:magearena-from-hut', script: 'scripts/aio-quester.ts', preset: 'quest_magearena', scriptArgs: ['magearena'], timeoutMs: 900_000,
+    presetConfig: {...PRESETS.quest_magearena!, position: {x: 3090, z: 3956, level: 0}},
+    pass: s => {
+      const line = s.match(/^RESULT ok\b.*$/m)?.[0] ?? '';
+      const milestones = (line.match(/\bmilestones=(\S+)/)?.[1] ?? '').split(',');
+      return milestones[0] === 'cellar' && milestones.includes('complete') && /\bdied=false\b/.test(line)
+        && /\bcape=true staff=true unlocked=true\b/.test(line) && s.includes('LOGOUT logged-out');
+    }},
   // The Mage Arena on the two builds with Flames of Zamorak, at their levels before the arena: the pack of
   // quest_magearena and a staff of fire worn. `pure-god` has Prayer 37 and prays. `pure-rock` has Prayer 1: the
   // case runs the leash method (MA_MODE=leash) with 23 sharks in the place of the prayer potions.
