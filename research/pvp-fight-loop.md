@@ -1845,7 +1845,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     94, 1 and `tribrid-snare-sara` 31, 91, 5; the champion takes it. The melee style: one combat style index serves
     every weapon (index 1 is the bow's rapid and the dagger's aggressive stab, +3 Strength; `combat.dbrow`
     `weapon_stab_table`); `meleeStyle: 0` (accurate stab, +3 Attack, on melee turns and specials, rapid on bow turns,
-    a packet for each change) gives `tribrid-dragon-sara` 33, 94, 2: no gain. Gap: 8 seeds; the hunt, roam and army
+    a packet for each change) gives `tribrid-dragon-sara` 33, 94, 2: no gain. The champion's knobs on
+    `tribrid-dragon-sara`: `freezeBelow` 0.6 34, 95, 1; `specReserve` 750 36, 93, 3; neither is clear of 34, 94, 1. Gap: 8 seeds; the hunt, roam and army
     routes still stage the rune kit.
 73. **Dragon armour wins more team fights; in the hunt it takes about as much damage as rune. The hunt's fixed kit
     dropped any other shield.** `extra:hunt-defend` (the hunt route against a target defending on the champion with 18
