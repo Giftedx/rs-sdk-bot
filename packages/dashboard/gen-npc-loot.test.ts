@@ -37,3 +37,32 @@ test('a handler that drops its bones itself gets no second death drop; a ranged 
     ], npcBlocks(['[skeleton_armed]\nname=Skeleton\nop2=Attack\n']), d => names.get(d) ?? d);
     expect(sk['Skeleton']).toEqual([['coins', 5], ['Bones', 1]]);
 });
+
+test('exact item ids keep same-name expected drops distinct without changing quantities, order or NPC variant choice', () => {
+    const npcs = npcBlocks(['[canifis_man]\nname=Man\nop2=Attack\n\n[man]\nname=Man\nop2=Attack\n']);
+    const drops: DropEntry[] = [
+        { trigger: 'canifis_man', always: [{ item: 'coins', count: 999 }], rolls: [] },
+        { trigger: 'man', always: [{ item: 'unidentified_guam', count: 2 }], rolls: [
+            { item: 'unidentified_guam', count: 1, countMax: 3, chance: 0.25 },
+            { item: 'unidentified_marrentill', count: 1, chance: 0.5 },
+            { item: 'unidentified_tarromin', count: 100, chance: 1, conditional: true },
+        ] },
+    ];
+    const names = (d: string) => d.startsWith('unidentified_') ? 'Herb' : 'Coins';
+    const ids = new Map([['unidentified_guam', 199], ['unidentified_marrentill', 201], ['unidentified_tarromin', 203], ['coins', 995]]);
+    const spawns = new Map([['man', 40], ['canifis_man', 8]]);
+    const legacy = npcLoot(drops, npcs, names, spawns);
+    const exact = npcLoot(drops, npcs, names, spawns, d => ids.get(d));
+    expect(exact['Man']).toEqual([['Herb', 2.5, 199], ['Herb', 0.5, 201]]);
+    expect(exact['Man']!.map(row => row.slice(0, 2))).toEqual(legacy['Man']!);
+    expect(legacy['Man']).toEqual([['Herb', 2.5], ['Herb', 0.5]]);
+});
+
+test('an explicit resolver keeps unresolved or invalid item ids unknown, while legacy calls and zero ids are preserved', () => {
+    const npcs = npcBlocks(['[goblin]\nname=Goblin\nop2=Attack\n']);
+    for (const id of [undefined, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
+        expect(npcLoot([], npcs, () => 'Bones', undefined, () => id)['Goblin']).toEqual([['Bones', 1, null]]);
+    expect(npcLoot([], npcs, () => 'Bones')['Goblin']).toEqual([['Bones', 1]]);
+    expect(npcLoot([], npcs, () => 'Bones', undefined, () => 0)['Goblin']).toEqual([['Bones', 1, 0]]);
+    expect(npcLoot([], npcs, () => 'Bones', undefined, () => 526)['Goblin']).toEqual([['Bones', 1, 526]]);
+});

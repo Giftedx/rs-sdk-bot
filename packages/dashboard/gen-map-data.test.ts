@@ -2,11 +2,105 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { actionLabel, itemSources, mapIcons, npcDrops, pretty, type SourceCost } from './gen-map-data';
 
-test('npc drops: the route items each NPC drops, most likely first, the higher chance for two NPCs of one name', () => {
-    expect(npcDrops([
-        { item: 'big_bones', sources: [{ kind: 'drop', npc: 'giant', chance: 1 }, { kind: 'shop', owners: [] }] },
-        { item: 'iron_bar', sources: [{ kind: 'drop', npc: 'giant', chance: 0.01 }, { kind: 'drop', npc: 'giant', chance: 0.02 }, { kind: 'drop', npc: 'hickton', chance: 0, blocked: null }] },
-    ], { npc: (d: string) => pretty(d), item: (d: string) => pretty(d) })).toEqual({ Giant: [['Big bones', 'always'], ['Iron bar', '1/50']] });
+test('npc drops retain exact spawn identities and separate source facts instead of the highest chance', () => {
+    const out = npcDrops([
+        { item: 'big_bones', id: 532, sources: [{ kind: 'drop', npc: 'death_drop', chance: 1, countMin: 1, countMax: 1, conditional: false, places: [{ npc: 'giant' }] }] },
+        { item: 'iron_bar', id: 2351, sources: [0.01, 0.02].map((chance, i) => ({ kind: 'drop', npc: 'giant', chance, countMin: 1, countMax: 1, conditional: false, src: 'table:' + i, places: [{ npc: 'giant' }] })) },
+    ], names, [{ id: 111, debugname: 'giant', name: 'Giant' }, { id: 112, debugname: 'giant2', name: 'Giant' }]);
+    expect(Object.keys(out.byId)).toEqual(['111']);
+    expect(out.byId['111']![0]).toMatchObject({ id: 532, name: 'Big bones', summary: 'quantity 1 · always' });
+    const iron = out.byId['111']![1]!;
+    expect(iron.summary).toBe('multiple table entries');expect(iron.facts.map(f => f.chance)).toEqual([0.01, 0.02]);
+    expect(out.byName.giant).toBeUndefined();
+});
+
+test('NPC names alias only complete equal facts across every catalogue variant, including unspawned variants', () => {
+    const catalogue = [{ id: 1, debugname: 'one', name: 'Same' }, { id: 2, debugname: 'two', name: 'Same' }];
+    const source = { kind: 'drop', npc: 'death_drop', chance: 1, countMin: 1, countMax: 1, conditional: false, src: 'table:1', places: [{ npc: 'one' }, { npc: 'two' }] };
+    const item = { item: 'big_bones', id: 532, sources: [source] };
+    const equal = npcDrops([item], names, catalogue);
+    expect(equal.byName.same).toEqual(equal.byId['1']);
+    expect(npcDrops([item], names, [...catalogue, { id: 3, debugname: 'unspawned', name: 'Same' }]).byName.same).toBeUndefined();
+    const differing = npcDrops([{ ...item, sources: [{ ...source, places: [{ npc: 'one' }] }, { ...source, countMin: 3, countMax: 3, places: [{ npc: 'two' }] }] }], names, catalogue);
+    expect(differing.byName.same).toBeUndefined();
+    expect(differing.byId['1']![0]!.facts[0]!.quantity).toBe('quantity 1');
+    expect(differing.byId['2']![0]!.facts[0]!.quantity).toBe('quantity 3');
+    const unresolved = npcDrops([{ ...item, sources: [{ ...source, npc: 'one', places: [{ npc: 'unknown' }] }] }], names, catalogue);
+    expect(unresolved).toEqual({ byId: {}, byName: {} });
+});
+
+test('drop display keeps common entries before alphabetical rare entries without combining their rates', () => {
+    const rows = npcDrops([
+        { id: 1, item: 'aardvark', sources: [{ kind: 'drop', chance: 0.01, conditional: false, places: [{ npc: 'one' }] }] },
+        { id: 2, item: 'zebra', sources: [0.5, 0.1].map(chance => ({ kind: 'drop', chance, conditional: false, places: [{ npc: 'one' }] })) },
+    ], names, [{ id: 1, name: 'One', debugname: 'one' }]).byId['1']!;
+    expect(rows.map(row => row.id)).toEqual([2, 1]);
+    expect(rows[0]!.summary).toBe('multiple table entries');
+    expect(rows[0]!.facts.map(fact => fact.chance).sort()).toEqual([0.1, 0.5]);
+});
+
+test('pinned Jogre big-bone branches remain conditional quantity facts with their source traces', () => {
+    const knowledge = JSON.parse(readFileSync(new URL('../../knowledge/item-sources.json', import.meta.url), 'utf8'));
+    const catalogue = JSON.parse(readFileSync(new URL('../../knowledge/npcs.json', import.meta.url), 'utf8'));
+    const item = knowledge.items.find((i: any) => i.item === 'big_bones');
+    const row = npcDrops([item], names, catalogue).byId['113']!.find(r => r.id === item.id)!;
+    expect(row.summary).toBe('multiple table entries');expect(row.facts).toHaveLength(2);
+    expect(row.facts.map(f => f.countMin).sort()).toEqual([1, 3]);
+    expect(row.facts.every(f => f.chance === 1 && f.conditional === true && f.countMin === f.countMax)).toBe(true);
+    expect(row.facts.map(f => f.condition).sort()).toEqual(['} else if ($random < 75) {', '} else if ($random < 77) {']);
+    for (const fact of row.facts) {
+        expect(fact.text).toContain('conditional');expect(fact.text).not.toContain('always');
+        expect(fact.src).toMatch(/jogre\.rs2:/);expect(fact.text).toContain(fact.src!);
+    }
+    const sources = item.sources.filter((s: any) => s.kind === 'drop' && !s.blocked && s.places?.some((p: any) => p.npc === 'jogre'));
+    const labels = itemSources([{ ...item, sources }], names)[String(item.id)]!.map(r => r[1]);
+    expect(labels).toHaveLength(2);expect(labels.some(label => label.includes('quantity 1'))).toBe(true);
+    expect(labels.some(label => label.includes('quantity 3'))).toBe(true);
+    expect(labels.every(label => label.includes('conditional') && !label.includes('always'))).toBe(true);
+});
+
+test('drop source provenance, gates and quantity ranges stay attached to each separate fact', () => {
+    const source = { kind: 'drop', npc: 'category', chance: 0.5, countMin: 2, countMax: 5, conditional: true,
+        condition: 'quest stage < 5', gate: 'members access', src: 'table:1', via: 'rare_table', places: [{ npc: 'one' }] };
+    const row = npcDrops([{ item: 'big_bones', id: 532, sources: [source, { ...source, via: 'other_table' }] }], names,
+        [{ id: 1, name: 'One', debugname: 'one' }]).byId['1']![0]!;
+    expect(row.summary).toBe('multiple table entries');expect(row.facts).toHaveLength(2);
+    for (const fact of row.facts) {
+        expect(fact).toMatchObject({ chance: 0.5, countMin: 2, countMax: 5, quantity: 'quantity 2–5', conditional: true,
+            condition: source.condition, gate: source.gate, src: source.src, trigger: source.npc });
+        expect(fact.text).toContain('Condition: quest stage < 5');expect(fact.text).toContain('Requires: members access');
+        expect(fact.text).toContain('Source: table:1');expect(fact.text).toContain('Via: ' + fact.via);
+    }
+    const single = npcDrops([{ item: 'big_bones', id: 532, sources: [source] }], names,
+        [{ id: 1, name: 'One', debugname: 'one' }]).byId['1']![0]!;
+    expect(single.summary).toBe('quantity 2–5 · 1/2 · conditional');
+    expect(single.summary).not.toMatch(/stage|access|table/);
+});
+
+test('drop facts retain full long conditions for identity and aliases while display strings stay bounded', () => {
+    const prefix = '<condition> '.repeat(100), catalogue = [{ id: 1, debugname: 'one', name: 'Same' }, { id: 2, debugname: 'two', name: 'Same' }];
+    const source = { kind: 'drop', npc: 'death_drop', chance: 1, countMin: 1, countMax: 1, conditional: true, src: 'table:1' };
+    const sources = ['one', 'two'].map((npc, i) => ({ ...source, condition: prefix + i, places: [{ npc, tiles: [{ x: i + 1, z: 2, level: 0 }] }] }));
+    const item = { item: 'big_bones', id: 532, sources };
+    const out = npcDrops([item], names, catalogue);
+    expect(out.byName.same).toBeUndefined();
+    expect(out.byId['1']![0]!.facts[0]!.condition).toBe(prefix + '0');
+    expect(out.byId['2']![0]!.facts[0]!.condition).toBe(prefix + '1');
+    expect(out.byId['1']![0]!.summary.length).toBeLessThanOrEqual(201);
+    const rows = itemSources([item], names)['532']!;
+    expect(rows).toHaveLength(2);expect(rows.map(r => r[2])).toEqual([[1, 2, 0], [2, 2, 0]]);
+    expect(rows[0]![1]).toContain(prefix.slice(0, 800) + '…');expect(rows[0]![1]).not.toContain('always');
+});
+
+test('unknown drop chances and conditions do not become guarantees and blocked sources stay excluded', () => {
+    const catalogue = [{ id: 1, debugname: 'one', name: 'One' }], source = { kind: 'drop', npc: 'category', places: [{ npc: 'one' }] };
+    for (const chance of [-1, NaN, Infinity, '1', undefined, 2]) {
+        const fact = npcDrops([{ item: 'big_bones', id: 532, sources: [{ ...source, chance }] }], names, catalogue).byId['1']![0]!.facts[0]!;
+        expect(fact.chance).toBeNull();expect(fact.text).toContain('chance unknown');expect(fact.text).not.toContain('always');
+    }
+    const missing = npcDrops([{ item: 'big_bones', id: 532, sources: [{ ...source, chance: 1 }] }], names, catalogue).byId['1']![0]!;
+    expect(missing.summary).toContain('conditions unknown');expect(missing.summary).not.toContain('always');
+    expect(npcDrops([{ item: 'big_bones', id: 532, sources: [{ ...source, chance: 1, blocked: 'no spawn' }] }], names, catalogue)).toEqual({ byId: {}, byName: {} });
 });
 
 const names = { npc: (d: string) => ({ hickton: 'Hickton', giant: 'Giant' } as Record<string, string>)[d] ?? pretty(d), item: (d: string) => ({ iron_bar: 'Iron bar', rune_arrow: 'Rune arrow' } as Record<string, string>)[d] ?? pretty(d) };
@@ -47,28 +141,28 @@ test('map icons: one icon for each destination option of a teleport, named with 
 test('item sources: by item id, with a label for each kind and the places as flat tiles; blocked sources left out', () => {
     const out = itemSources([{ item: 'rune_arrow', id: 892, sources: [
         { kind: 'shop', shop: 'archeryshop2', basePrice: 40, owners: [{ npc: 'hickton', tiles: [{ x: 2822, z: 3442, level: 0 }] }] },
-        { kind: 'drop', npc: 'giant', combat: 28, chance: 0.0078125, places: [{ tiles: [{ x: 3100, z: 9840, level: 0 }] }] },
+        { kind: 'drop', npc: 'giant', combat: 28, chance: 0.0078125, countMin: 1, countMax: 1, conditional: false, places: [{ tiles: [{ x: 3100, z: 9840, level: 0 }] }] },
         { kind: 'make', skill: 'smithing', level: 75, inputs: [{ item: 'iron_bar', count: 1 }] },
         { kind: 'ge', blocked: '0 sellers' },
     ] }], names);
     expect(out).toEqual({ '892': [
         ['shop', 'Shop: Hickton · base value 40 gp', [2822, 3442, 0]],
         ['make', 'Smithing 75: from Iron bar', []],
-        ['drop', 'Drop: Giant (level 28) · 1/128', [3100, 9840, 0]],
+        ['drop', 'Drop: Giant (level 28) · quantity 1 · 1/128', [3100, 9840, 0]],
     ] });
 });
 
 test('item sources: drops by chance, and two NPC variants of one name are one row with both places', () => {
     const out = itemSources([{ item: 'big_bones', id: 532, sources: [
-        { kind: 'drop', npc: 'giant', combat: 28, chance: 0.5, places: [{ tiles: [{ x: 1, z: 1, level: 0 }] }] },
-        { kind: 'drop', npc: 'jogre', combat: 53, chance: 1, places: [{ tiles: [{ x: 2, z: 2, level: 0 }] }] },
-        { kind: 'drop', npc: 'jogre', combat: 53, chance: 1, places: [{ tiles: [{ x: 3, z: 3, level: 0 }] }] },
+        { kind: 'drop', npc: 'giant', combat: 28, chance: 0.5, countMin: 1, countMax: 1, conditional: false, places: [{ tiles: [{ x: 1, z: 1, level: 0 }] }] },
+        { kind: 'drop', npc: 'jogre', combat: 53, chance: 1, countMin: 1, countMax: 1, conditional: false, places: [{ tiles: [{ x: 2, z: 2, level: 0 }] }] },
+        { kind: 'drop', npc: 'jogre', combat: 53, chance: 1, countMin: 1, countMax: 1, conditional: false, places: [{ tiles: [{ x: 3, z: 3, level: 0 }] }] },
         { kind: 'gather', skill: 'mining', level: 30, rung: 'mining/coal', places: [{ loc: 'coalrock1', tiles: [] }, { loc: 'macro_coalrock', tiles: [] }] },
     ] }], names);
     expect(out['532']).toEqual([
         ['gather', 'Mining 30: Coal rock', []],
-        ['drop', 'Drop: Jogre (level 53) · always', [2, 2, 0, 3, 3, 0]],
-        ['drop', 'Drop: Giant (level 28) · 1/2', [1, 1, 0]],
+        ['drop', 'Drop: Jogre (level 53) · quantity 1 · always', [2, 2, 0, 3, 3, 0]],
+        ['drop', 'Drop: Giant (level 28) · quantity 1 · 1/2', [1, 1, 0]],
     ]);
 });
 

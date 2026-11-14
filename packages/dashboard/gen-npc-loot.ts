@@ -1,5 +1,5 @@
 // Writes client-assets/npc-loot.json: the expected drops of one kill of each attackable NPC of the pinned server, by its
-// name, as [[item name, expected count], ...] most first. From knowledge/drops.json: an entry's trigger is an NPC
+// name, as [[item name, expected count, optional item id], ...] most first. From knowledge/drops.json: an entry's trigger is an NPC
 // (debugname) or, with a leading _, an NPC category (category= of the .npc configs); `uses` names the shared drop proc
 // whose entry holds the rolls. The expected count of an item is its chance times its count, summed: `always` items at
 // chance 1, rolls at their chance, and a table's items at their own chance (already the table's chance times the item's);
@@ -14,6 +14,8 @@ import { join } from 'node:path';
 type Roll = { item?: string; count?: number; countMax?: number; chance?: number; conditional?: boolean; table?: string; items?: Roll[] };
 export type DropEntry = { trigger: string; always: Roll[]; rolls: Roll[]; uses?: string };
 export type NpcBlock = { debug: string; name: string; category?: string; deathDrop: string; attackable: boolean };
+// A resolver makes identity explicit: null is unresolved; only legacy calls omit the third field.
+export type ExpectedLoot = [string, number, (number | null)?];
 
 export function npcBlocks(files: string[]): NpcBlock[] {
     const out: NpcBlock[] = [];
@@ -25,7 +27,7 @@ export function npcBlocks(files: string[]): NpcBlock[] {
     return out;
 }
 
-export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: string) => string, spawns: Map<string, number> = new Map()): Record<string, [string, number][]> {
+export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: string) => string, spawns: Map<string, number> = new Map(), itemId?: (d: string) => number | undefined): Record<string, ExpectedLoot[]> {
     const byTrigger = new Map(drops.map(d => [d.trigger, d]));
     // A ranged quantity (count to countMax) counts its mean.
     const mean = (r: Roll) => r.countMax != null && r.countMax > (r.count ?? 1) ? ((r.count ?? 1) + r.countMax) / 2 : (r.count ?? 1);
@@ -34,7 +36,7 @@ export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: stri
         const targets = d.trigger.startsWith('_') ? npcs.filter(n => n.category === d.trigger.slice(1)) : npcs.filter(n => n.debug === d.trigger);
         for (const n of targets) forNpc.set(n.debug, [...(forNpc.get(n.debug) ?? []), d]);
     }
-    const out: Record<string, [string, number][]> = {}, kept = new Map<string, number>();
+    const out: Record<string, ExpectedLoot[]> = {}, kept = new Map<string, number>();
     // A shared proc or label is listed as `label:name` or `proc:name`.
     // The explicit label: or proc: entry comes first: a label can share its name with an NPC handler (skeleton_armed),
     // and the bare name would read the empty handler again.
@@ -55,7 +57,11 @@ export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: stri
         if (!exp.size) continue;
         // Variants of one name keep the one with the most spawns in the world (the Canifis werewolves are named Man
         // too), then the one with the most drop items (a quest copy with no drop entry).
-        const list = [...exp].map(([d, e]) => [itemName(d), Number(e.toPrecision(4))] as [string, number]).sort((a, b) => b[1] - a[1]);
+        const list = [...exp].map(([d, e]): ExpectedLoot => {
+            const row: ExpectedLoot = [itemName(d), Number(e.toPrecision(4))], id = itemId?.(d);
+            if (itemId) row[2] = Number.isSafeInteger(id) && id! >= 0 ? id! : null;
+            return row;
+        }).sort((a, b) => b[1] - a[1]);
         const sp = spawns.get(n.debug) ?? 0, cur = kept.get(n.name);
         if (!out[n.name] || sp > cur! || (sp === cur && list.length > out[n.name]!.length)) { out[n.name] = list; kept.set(n.name, sp); }
     }
@@ -65,12 +71,13 @@ export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: stri
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..'), scripts = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts');
     const npcFiles = (d: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? npcFiles(p) : f.endsWith('.npc') ? [readFileSync(p, 'utf8')] : []; });
-    const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { debugname?: string; name?: string }[];
+    const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { id?: number; debugname?: string; name?: string }[];
     const names = new Map(items.filter(i => i.debugname && i.name).map(i => [i.debugname!, i.name!]));
+    const ids = new Map(items.filter(i => i.debugname && Number.isSafeInteger(i.id) && i.id! >= 0).map(i => [i.debugname!, i.id!]));
     const drops = JSON.parse(readFileSync(join(root, 'knowledge', 'drops.json'), 'utf8')) as DropEntry[];
     const npcs = JSON.parse(readFileSync(join(root, 'knowledge', 'npcs.json'), 'utf8')) as { debugname?: string; spawns?: unknown[] }[];
     const spawns = new Map(npcs.filter(n => n.debugname).map(n => [n.debugname!, n.spawns?.length ?? 0]));
-    const out = npcLoot(drops, npcBlocks(npcFiles(scripts)), d => names.get(d) ?? d.replace(/_/g, ' '), spawns);
+    const out = npcLoot(drops, npcBlocks(npcFiles(scripts)), d => names.get(d) ?? d.replace(/_/g, ' '), spawns, d => ids.get(d));
     writeFileSync(join(import.meta.dir, 'client-assets', 'npc-loot.json'), JSON.stringify(out));
     console.log(`npc-loot.json: ${Object.keys(out).length} NPC names`);
 }

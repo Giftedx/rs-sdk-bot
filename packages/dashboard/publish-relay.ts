@@ -2,7 +2,8 @@
 // (server.ts /api/state, already masked: every string has the main account's name replaced by ⟦MAIN⟧) and its
 // operator metadata (/api/control). control.json is for the signed-in owner; public.json is a whitelist of the
 // same data without the main account (see publicView).
-import {priceName,projectItemPrices,type ItemPrice,type ItemPrices} from './item-prices';
+import {priceName,projectItemPrices,type ItemPrice,type ItemPrices,type PriceIdentity} from './item-prices';
+import {examineName,projectItemExamine,type ExamineTables} from './item-examine';
 
 export const MAIN_ACCOUNT='Haggis';
 export const MAIN_MARK='⟦MAIN⟧';
@@ -81,7 +82,23 @@ function publicPrices(economy:any,visible:any[]){
  if(Object.hasOwn(economy??{},'itemPricesByName'))out.itemPricesByName=record(economy.itemPricesByName)?prices.byName:null;
  return out;
 }
-export function publicView(state:any,main=MAIN_ACCOUNT){
+function publicExamines(economy:any,visible:any[]){
+ const record=(value:any)=>value&&typeof value==='object'&&!Array.isArray(value);
+ const table=(raw:any,ids:boolean)=>{
+  const out:Record<string,string>={};
+  if(record(raw))for(const [key,value]of Object.entries(raw)){
+   const id=Number(key);
+   if(typeof value==='string'&&value.trim()&&(ids?Number.isSafeInteger(id)&&id>=0&&String(id)===key:key!==''&&examineName(key)===key))out[key]=value;
+  }
+  return out;
+ };
+ const source:ExamineTables={byId:table(economy?.itemExamineById,true),byName:table(economy?.itemExamineByName,false)};
+ const selected=projectItemExamine(source,visible),out:any={};
+ for(const field of ['itemExamineById','itemExamineByName']as const)
+  if(Object.hasOwn(economy??{},field))out[field]=record(economy[field])?selected[field]:null;
+ return out;
+}
+export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (PriceIdentity|string)[]=[]){
  const s=trimState(state);
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
  const pick=(o:any,keys:readonly string[])=>Object.fromEntries(keys.filter(k=>o&&k in o).map(k=>[k,o[k]]));
@@ -106,8 +123,9 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  const groundItems=(value:any)=>items(value).flatMap((row:any)=>Array.isArray(row)
   ?row.length===5&&row.every(Number.isSafeInteger)&&row[3]>=0&&row[4]>=1?[{id:row[3]}]:[]
   :row&&typeof row==='object'?[row]:[]);
- const prices=publicPrices(s.economy,[...bots.flatMap((b:any)=>[...items(b.inventory),...items(b.equipment),...groundItems(b.ground)]),...items(s.economy?.supplies)]);
- out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues:Object.fromEntries(Object.entries(s.economy.itemValues??{}).filter(([n])=>carried.has(n))),itemExamine:Object.fromEntries(Object.entries(s.economy.itemExamine??{}).filter(([n])=>carried.has(n))),...prices,goldPerTick:0,farmers:[],trend:[]}:null;
+ const prices=publicPrices(s.economy,[...bots.flatMap((b:any)=>[...items(b.inventory),...items(b.equipment),...groundItems(b.ground)]),...items(s.economy?.supplies),...expectedDrops]);
+ const examines=publicExamines(s.economy,bots.flatMap((b:any)=>[...items(b.inventory),...items(b.equipment)]));
+ out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues:Object.fromEntries(Object.entries(s.economy.itemValues??{}).filter(([n])=>carried.has(n))),itemExamine:Object.fromEntries(Object.entries(s.economy.itemExamine??{}).filter(([n])=>carried.has(n))),...prices,...examines,goldPerTick:0,farmers:[],trend:[]}:null;
  // The queue's counts and agents stay; the task texts are the agents' working notes.
  out.coordination=s.coordination&&typeof s.coordination==='object'?{available:s.coordination.available,fresh:s.coordination.fresh,paused:s.coordination.paused,counts:s.coordination.counts,agents:s.coordination.agents,tasks:[]}:null;
  // Other sides' accounts and sync times are public; their coins are bank stock.

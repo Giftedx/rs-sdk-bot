@@ -21,7 +21,8 @@ import { flowView, trackFlow } from './flow';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerEntry } from './viewer';
 import {coordinationView} from './coordination';
 import {dashboardStatuses,fleetSidesView,healthObservation,localDisplayNames,remoteBots,scoreboardView} from './fleet-view';
-import {buildItemPrices,itemPrice,priceItemKey,projectItemPrices,type ItemPrices,type PriceCatalogItem,type PriceIdentity} from './item-prices';
+import {buildItemPrices,expectedLootPrices,itemPrice,priceItemKey,projectItemPrices,type ItemPrices,type PriceCatalogItem,type PriceIdentity} from './item-prices';
+import {buildItemExamine,catalogueIconAliases,projectItemExamine} from './item-examine';
 import {createVaultItems,type VaultItem} from './vault-items';
 import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
@@ -538,7 +539,7 @@ const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'resea
 // asks through /api/player; in the background each board's 10 rivals and the strangers at our spots (about 200
 // names, 10 a minute against the 30-minute cache) are kept fresh, because the hosted page cannot reach the hiscores
 // itself (no CORS) and reads these from its published state.
-type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; name: string }[] | null; wornAt: number | null };
+type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; id:number; name: string }[] | null; wornAt: number | null };
 const lookups = new Map<string, Lookup>();
 // Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
 const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
@@ -603,6 +604,8 @@ const marketById = new Map<number, { name: string; ask: number | null; bid: numb
 // Key supplies for the main run: the ids in research/market-2026-10-23.json.
 const KEY_SUPPLY_FILE = join(root, 'research', 'market-2026-10-23.json');
 const keySupplyIds = () => cached<number[]>(KEY_SUPPLY_FILE, t => Object.values(JSON.parse(t).items ?? {}).map((x: any) => Number(x.id)).filter(n => !isNaN(n)), []);
+// Finder loot estimates need prices even when no account currently holds the expected drop.
+const npcLootPrices = () => cached<(PriceIdentity | string)[]>(join(import.meta.dir, 'client-assets', 'npc-loot.json'), text => expectedLootPrices(JSON.parse(text)), []);
 let pricesAt = 0;
 async function refreshPrices() {
     try {
@@ -1144,8 +1147,8 @@ function buildState() {
     const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
     const visiblePrices: (PriceIdentity | string)[] = [...(bots as any[]).flatMap(b => [b.inventory,b.bank,b.equipment,b.flow?.loot,b.flow?.used].flatMap(l => l ?? []).filter(Boolean)),
         ...(bots as any[]).flatMap(b => (b.ground ?? []).filter((row:any) => Array.isArray(row) && row.length >= 5).map((row:any) => ({id:row[3]}))),
-        ...v.items,...v.log.flatMap(t => t.items),...v.flow.flatMap(f => f.items),...keySupplyIds().map(id => ({id}))];
-    for (const f of flows.values()) for (const m of [f.loot,f.used]) for (const name of m?.keys?.() ?? []) visiblePrices.push(name);
+        ...v.items,...v.log.flatMap(t => t.items),...v.flow.flatMap(f => f.items),...keySupplyIds().map(id => ({id})),...npcLootPrices()];
+    for (const f of flows.values()) for (const m of [f.loot,f.used]) for (const item of m?.values?.() ?? []) visiblePrices.push(item);
     const projectedPrices = projectItemPrices(itemPrices,visiblePrices);
     const economy = {
         goldPerTick: farmers.reduce((n, b) => n + (b.fresh && b.role4.coinsPerTick > 0 ? b.role4.coinsPerTick : 0), 0),
@@ -1158,17 +1161,13 @@ function buildState() {
         // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
         // else the shop base price), for the page's item prices and bank value.
         // The game's examine text of each held item (obj configs), for the page's Examine option.
-        itemExamine: (() => { const out: Record<string, string> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const d = Number.isInteger(i?.id) ? OBJS.get(i.id)?.desc : undefined; if (d && i.name) out[i.name] = d; } return out; })(),
+        ...projectItemExamine(buildItemExamine(OBJS),(bots as any[]).flatMap(b=>[b.inventory,b.bank,b.equipment].flatMap(l=>l??[]).filter(Boolean))),
         // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
         itemValues: (() => { const out: Record<string, number> = {}; for (const i of visiblePrices) { const name=typeof i==='string'?i:i.name; if(!name)continue; const p=itemPrice({byId:{},byName:projectedPrices.byName},name); if(p)out[name]=p.value; } return out; })(),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
         gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
     };
-    const icons: Record<string, number | null> = {};
-    const see = (l: any) => { for (const i of l ?? []) if (i?.name && !(i.name in icons)) icons[i.name] = iconId(i.name); };
-    for (const b of bots as any[]) { see(b.inventory); see(b.bank); }
-    for (const l of lookups.values()) see(l.worn);
-    see(v.items); see([{ name: 'Coins' }]); for (const t of v.log) see(t.items); for (const f of v.flow) see(f.items);
+    const icons=catalogueIconAliases(OBJS);
     const prac = practiceNames();
     const sys = {
         freeGB: freemem() / 2 ** 30, totalGB: totalmem() / 2 ** 30, cpu: cpuPct, cores: cpus().length, buildMs,

@@ -5,6 +5,18 @@ export type ItemPrice = { name: string; value: number; ask: number | null; bid: 
 export type ItemPrices = { byId: Record<string, ItemPrice>; byName: Record<string, ItemPrice> };
 export type PriceCatalogItem = { id: number; name: string; debugname?: string };
 
+// Static expected-drop identities are public content, independent of the fleet's private held-item list.
+export function expectedLootPrices(raw: unknown): (PriceIdentity | string)[] {
+    const out: (PriceIdentity | string)[] = [];
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    for (const rows of Object.values(raw)) if (Array.isArray(rows)) for (const row of rows) {
+        if (!Array.isArray(row) || typeof row[0] !== 'string' || !row[0].trim()
+            || typeof row[1] !== 'number' || !Number.isFinite(row[1]) || row[1] <= 0) continue;
+        out.push(row.length > 2 ? { id: row[2], name: row[0] } : row[0]);
+    }
+    return out;
+}
+
 export const priceName = (name: unknown): string => typeof name === 'string' ? name.replace(/\s*\(noted\)\s*$/i, '').trim().toLowerCase() : '';
 export const hasPriceId = (item: PriceIdentity | string | null | undefined): boolean => !!item && typeof item === 'object'
     && (Object.hasOwn(item, 'id') || Object.hasOwn(item, 'baseId'));

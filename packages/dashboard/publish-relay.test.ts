@@ -1,6 +1,7 @@
 import {describe,expect,test} from 'bun:test';
 import {controlView,publicView,trimState,withSides,MAIN_MARK,WHY_LIMIT,FINISHED_KEEP,stateWarm} from './publish-relay';
 import {buildItemPrices} from './item-prices';
+import {buildItemExamine,projectItemExamine} from './item-examine';
 import {questPointObservation} from './goals';
 
 const state=()=>({now:1,bots:[
@@ -88,6 +89,21 @@ test('public item values cover only what public bots carry or wear',()=>{
  const p=publicView({bots:[{name:'CoinCock',inventory:[{name:'Lobster',count:2}],equipment:[{name:'Bronze axe'}],bank:[{name:'Rune bar',count:9}]}],
   economy:{supplies:[],pricesAt:1,itemValues:{Lobster:150,'Bronze axe':16,'Rune bar':5000},itemExamine:{Lobster:'This looks tasty.','Rune bar':'A bar of rune.'}}});
  expect(p.economy.itemValues).toEqual({Lobster:150,'Bronze axe':16});expect(p.economy.itemExamine).toEqual({Lobster:'This looks tasty.'});
+});
+
+test('public examine facts retain exact carried IDs without selecting hidden same-name bank or main descriptions',()=>{
+ const catalogue=new Map([[2399,{name:'Key',desc:'Wizard key.'}],[2400,{name:'Key',desc:'Captain key.'}],
+  [2401,{name:'Key',desc:'Drain key.'}],[1,{name:'Safe',desc:'Shared description.'}],[2,{name:'Safe',desc:'Shared description.'}]]);
+ const examines=projectItemExamine(buildItemExamine(catalogue),[2399,2400,2401,1,2].map(id=>({id,name:catalogue.get(id)!.name})));
+ const p=publicView({bots:[{name:'Worker',inventory:[{id:2399,name:'Key'}],equipment:[{id:1,name:'Safe'}],bank:[{id:2400,name:'Key'},{id:2,name:'Safe'}]},
+  {name:MAIN_MARK,inventory:[{id:2401,name:'Key'}]}],economy:{...examines}});
+ expect(p.economy.itemExamineById).toEqual({2399:'Wizard key.',1:'Shared description.'});
+ expect(p.economy.itemExamineByName).toEqual({safe:'Shared description.'});
+ expect(JSON.stringify(p.economy)).not.toContain('Captain key.');expect(JSON.stringify(p.economy)).not.toContain('Drain key.');
+ const unknown=publicView({bots:[{name:'Worker',inventory:[{id:999,baseId:2399,name:'Key (noted)'}]}],economy:examines});
+ expect(unknown.economy.itemExamineById).toEqual({});expect(unknown.economy.itemExamineByName).toEqual({});
+ const invalid=publicView({bots:[{name:'Worker',inventory:[{id:2399,name:'Key'}]}],economy:{itemExamineById:null,itemExamineByName:[]}});
+ expect(invalid.economy.itemExamineById).toBeNull();expect(invalid.economy.itemExamineByName).toBeNull();
 });
 
 test('public exact prices follow visible base IDs and route supplies while aliases retain the full catalogue proof',()=>{
