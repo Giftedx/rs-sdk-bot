@@ -40,8 +40,8 @@ export const CANNON_SPOTS: Readonly<Record<string, CannonSpot>> = {
     // stab attacks, wanderrange 10, respawnrate 60, huntmode cowardly, huntrange 1 (_unpack/225/all.npc:3476-3498);
     // cowardly attacks any player in the Wilderness (all.hunt:37-45). Spawn density puts 7.8 of the 8 cannon directions
     // over a spider within 3 tiles of this centre (.practice/cannon-spiders/placement.ts).
-    // The walk before logout leaves the map square to the south (z < 3776, beyond the wander range 10): live, an 18-tile
-    // walk kept WeeQuickie among the spiders and the logout timed out.
+    // The walk before logout leaves the map square to the south (z < 3776, beyond the wander range 10): a walk that stays
+    // in the square stays in reach of spiders that attack any player in the Wilderness, and the logout waits on combat.
     spiders: { label: 'Wilderness poison spiders', centre: { x: 3287, z: 3810, level: 0 }, target: '^poison spider$', prayer: 'protect_from_melee', near: 10, clear: { x: 3287, z: 3755, level: 0 } },
     // Gnome battlefield, multiway (maps/multiway.csv "gnome battlefield"), 23 khazard_troop and 16 khazard_troop_spearmen
     // (maps/m39_50.jm2); research/combat-measure.md section 6.
