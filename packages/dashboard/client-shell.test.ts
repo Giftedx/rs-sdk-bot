@@ -745,6 +745,19 @@ test('gather chance: the best held axe on a tree, the roll of a rock, or no axe 
  expect(withCur({},'Iron ore',30,'Mining')).toBe('77% a try');
 });
 
+test('agility label: the fail chance at the current Agility level, none when the roll always passes',()=>{
+ const start=shell.indexOf('  // An obstacle that can fail carries [low, high]'),code=shell.slice(start,shell.indexOf('\n',shell.indexOf('% fail',start)));
+ let lv:any=52;
+ const label=new Function('curLevel',`${code};return agilityLabel;`)(()=>lv);
+ // Agility 52 on [200, 250]: floor(200*47/98) + floor(250*51/98) + 1 = 95 + 130 + 1 = 226 of 256: 12% fail.
+ expect(label('Swing-on',[200,250],{})).toBe('Swing-on · 12% fail');
+ lv=99;expect(label('Swing-on',[200,250],{})).toBe('Swing-on · 2% fail');
+ // [65, 355] passes every roll at 72: floor(65*27/98) + floor(355*71/98) + 1 = 17 + 257 + 1 of 256.
+ lv=72;expect(label('Walk-across',[65,355],{})).toBe('Walk-across');
+ expect(label('Climb',undefined,{})).toBe('Climb');
+ lv=null;expect(label('Swing-on',[200,250],{})).toBe('Swing-on');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
