@@ -14,8 +14,12 @@
 //   - each changed file that is edited or untracked here already holds the bytes of origin/master. A coordinator build
 //     publishes its files here before its pull request merges, so that state is usual. Such a file is adopted.
 // A changed file that holds the exact snapshot of a coordinator delivery whose PR merged is adopted too
-// (mergedDeliveryCopies): master holds its change. Any other local edit to a changed file stops the update, and the
-// RESULT line names the file.
+// (mergedDeliveryCopies): master holds its change. A changed file that holds the snapshot of a delivery that has not
+// merged yet (or the merge result written for it by an earlier update) moves on top of master when a three-way merge
+// of its edit and master's change is clean (rebasableDeliveryEdits): the update takes master's version, writes the
+// merged text and records its hash in .practice/live-update-rebased.json, so a later update knows the file. The
+// delivery itself merges from its own snapshot, not from this file. Any other local edit to a changed file stops the
+// update, and the RESULT line names the file.
 //
 // The SDK patch (patches/rs-sdk-working.patch) is applied to vendor/rs-sdk, and git does not move those files. When an
 // update changes the patch, this script takes the old patch off vendor/rs-sdk after the move and applies the new
@@ -42,7 +46,8 @@ import { patchNewFiles, patchState, type PatchState } from '../../../scripts/wor
 // `mergedDelivery`: the local bytes are the snapshot of a coordinator delivery whose pull request merged (or had nothing
 // to commit). The build published the file here before the merge; master now holds its change, so the copy is
 // obsolete and the update takes master's version (mergedDeliveryCopies).
-export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean; mergedDelivery?: boolean };
+// `rebase`: the merged text that the update writes after the move (rebasableDeliveryEdits).
+export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean; mergedDelivery?: boolean; rebase?: string };
 // `vendorRelease`: the worker release files that the update changes through the SDK patch (vendorReleaseFiles).
 // `qualifications`: the running qualifications (`qualification <id> runs`); they hold only an update that changes a
 // file they can check (qualificationSource).
@@ -72,7 +77,7 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
     // Each worker runs on the SDK release trees, so each live run loads them.
     if (i.vendorRelease?.length && i.liveRuns?.length) return { action: 'wait', reason: `the live run of ${i.liveRuns[0]!.name} loads ${few(i.vendorRelease)} (changed by the SDK patch)` };
     const touched = i.dirty.filter(d => incoming.has(d.path));
-    const differs = touched.filter(d => !d.sameAsTarget && !d.mergedDelivery).map(d => d.path);
+    const differs = touched.filter(d => !d.sameAsTarget && !d.mergedDelivery && d.rebase === undefined).map(d => d.path);
     if (differs.length) return { action: 'wait', reason: `local edit differs from master: ${few(differs)}` };
     return { action: 'update', adopt: touched };
 }
@@ -84,21 +89,75 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
 // MERGED) or was `empty`. Any other local edit still stops the update. `merged(url)` asks GitHub; a merged PR stays
 // merged, so the caller caches a yes.
 export function mergedDeliveryCopies(root: string, dirty: readonly Dirty[], merged: (url: string) => boolean,
-    hash: (path: string) => string | null = path => { const p = Bun.spawnSync(['git', 'hash-object', '--', path], { stdout: 'pipe', stderr: 'pipe', windowsHide: true }); return p.exitCode === 0 ? p.stdout.toString().trim() : null; }): Set<string> {
-    const out = new Set<string>(), dir = join(root, '.practice', 'coordinator', 'delivery-prs');
+    hash: (path: string) => string | null = gitHash, rebased: RebasedFiles = readRebased(root)): Set<string> {
+    const out = new Set<string>();
     const candidates = dirty.filter(d => !d.untracked && !d.sameAsTarget);
-    if (!candidates.length || !existsSync(dir)) return out;
-    const records = readdirSync(dir).filter(n => n.endsWith('.json')).flatMap(n => { try { return [JSON.parse(readFileSync(join(dir, n), 'utf8'))]; } catch { return []; } })
-        .filter(r => typeof r?.snapshot === 'string' && Array.isArray(r.files) && (r.state === 'empty' || (r.state === 'opened' && typeof r.url === 'string')));
+    if (!candidates.length) return out;
+    const records = deliveryRecords(root).filter(r => r.state === 'empty' || (r.state === 'opened' && typeof r.url === 'string'));
     for (const d of candidates) {
         const local = hash(join(root, d.path));
         if (!local) continue;
         for (const r of records) {
-            if (!r.files.includes(d.path) || hash(join(r.snapshot, d.path)) !== local) continue;
-            if (r.state === 'empty' || merged(r.url)) { out.add(d.path); break; }
+            if (!r.files.includes(d.path) || !deliveryCopy(r, d.path, local, hash, rebased)) continue;
+            if (r.state === 'empty' || (typeof r.url === 'string' && merged(r.url))) { out.add(d.path); break; }
         }
     }
     return out;
+}
+
+// The merged text that an update wrote over a delivery's file, by path: the hash of that text and the delivery task.
+export type RebasedFiles = Record<string, { hash: string; taskId: string }>;
+export const REBASED_FILE = join('.practice', 'live-update-rebased.json');
+export function readRebased(root: string): RebasedFiles {
+    try { const r = JSON.parse(readFileSync(join(root, REBASED_FILE), 'utf8')); return r && typeof r === 'object' ? r : {}; } catch { return {}; }
+}
+const gitHash = (path: string): string | null => { const p = Bun.spawnSync(['git', 'hash-object', '--', path], { stdout: 'pipe', stderr: 'pipe', windowsHide: true }); return p.exitCode === 0 ? p.stdout.toString().trim() : null; };
+type DeliveryRecord = { taskId?: string; state?: string; url?: string; snapshot: string; files: string[] };
+function deliveryRecords(root: string): DeliveryRecord[] {
+    const dir = join(root, '.practice', 'coordinator', 'delivery-prs');
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir).filter(n => n.endsWith('.json')).flatMap(n => { try { return [JSON.parse(readFileSync(join(dir, n), 'utf8'))]; } catch { return []; } })
+        .filter(r => typeof r?.snapshot === 'string' && Array.isArray(r.files));
+}
+// The local bytes are this delivery's: its snapshot of the file, or the merged text an earlier update wrote for it.
+function deliveryCopy(r: DeliveryRecord, path: string, local: string, hash: (path: string) => string | null, rebased: RebasedFiles): boolean {
+    if (hash(join(r.snapshot, path)) === local) return true;
+    const mark = rebased[path];
+    return !!mark && mark.hash === local && !!r.taskId && mark.taskId === r.taskId;
+}
+
+// Changed files that hold the edit of a delivery that has not merged yet, with a clean three-way merge of that edit
+// (base: this checkout's HEAD, ours: the local bytes) and master's change (theirs: the target). `merge` returns the
+// merged text, or null when the merge has a conflict.
+export function rebasableDeliveryEdits(root: string, dirty: readonly Dirty[], incoming: readonly string[],
+    read: { head: (path: string) => string | null; target: (path: string) => string | null; local: (path: string) => string | null },
+    merge: (ours: string, base: string, theirs: string) => string | null,
+    hash: (path: string) => string | null = gitHash, rebased: RebasedFiles = readRebased(root)): Map<string, { text: string; taskId: string }> {
+    const out = new Map<string, { text: string; taskId: string }>(), changed = new Set(incoming);
+    const candidates = dirty.filter(d => changed.has(d.path) && !d.untracked && !d.sameAsTarget && !d.mergedDelivery);
+    if (!candidates.length) return out;
+    const records = deliveryRecords(root).filter(r => (r.state === 'pending' || r.state === 'opened') && typeof r.taskId === 'string');
+    for (const d of candidates) {
+        const local = hash(join(root, d.path));
+        const record = local ? records.find(r => r.files.includes(d.path) && deliveryCopy(r, d.path, local, hash, rebased)) : undefined;
+        if (!record) continue;
+        const ours = read.local(d.path), theirs = read.target(d.path), base = read.head(d.path) ?? '';
+        if (ours === null || theirs === null) continue;
+        const text = merge(ours, base, theirs);
+        if (text !== null) out.set(d.path, { text, taskId: record.taskId! });
+    }
+    return out;
+}
+
+// A three-way merge with git merge-file: the merged text, or null on a conflict or an error.
+export function mergeText(ours: string, base: string, theirs: string): string | null {
+    const dir = mkdtempSync(join(tmpdir(), 'live-update-merge-'));
+    try {
+        const [o, b, t] = ['ours', 'base', 'theirs'].map(n => join(dir, n));
+        writeFileSync(o!, ours); writeFileSync(b!, base); writeFileSync(t!, theirs);
+        const p = Bun.spawnSync(['git', 'merge-file', '-p', o!, b!, t!], { stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+        return p.exitCode === 0 ? p.stdout.toString() : null;
+    } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 
 export const SDK = 'vendor/rs-sdk', SDK_PATCH = 'patches/rs-sdk-working.patch';
@@ -313,7 +372,13 @@ if (import.meta.main) {
             return yes;
         };
         const copies = read.behind ? mergedDeliveryCopies(root, read.dirty.filter(d => read.incoming.includes(d.path)), merged) : new Set<string>();
-        const checkout = { ...read, dirty: read.dirty.map(d => copies.has(d.path) ? { ...d, mergedDelivery: true } : d) };
+        const marked = read.dirty.map(d => copies.has(d.path) ? { ...d, mergedDelivery: true } : d);
+        // Edits of deliveries that have not merged yet: moved on top of master when the merge is clean.
+        // The exact blob bytes: the git helper trims its output, which would change a file's last line in the merge.
+        const show = (rev: string) => (path: string) => { const p = Bun.spawnSync(['git', 'show', `${rev}:${path}`], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true }); return p.exitCode === 0 ? p.stdout.toString() : null; };
+        const rebases = read.behind ? rebasableDeliveryEdits(root, marked, read.incoming,
+            { head: show('HEAD'), target: show(target), local: path => { try { return readFileSync(join(root, path), 'utf8'); } catch { return null; } } }, mergeText) : new Map();
+        const checkout = { ...read, dirty: marked.map(d => rebases.has(d.path) ? { ...d, rebase: rebases.get(d.path)!.text } : d) };
         const holds = () => coordinatorHolds(root, c => workspaceRoot(root, c));
         // An update that changes the SDK patch: what vendor/rs-sdk holds before the move, and the worker release files
         // that the new patch changes. Only an exact `applied` or `clean` folder gets the new patch.
@@ -349,6 +414,17 @@ if (import.meta.main) {
             const before = Object.fromEntries(Object.entries(DAEMONS).map(([name, starts]) => [name, importClosure(starts, root)]));
             const applied = applyUpdate(git, root, target, plan.adopt);
             if (!applied.ok) done(`RESULT fail live-update ${applied.detail}`, 1);
+            // Each delivery edit goes back on top of master's version, and its hash is recorded for the next update.
+            const rebased = plan.adopt.filter(d => d.rebase !== undefined);
+            if (rebased.length) {
+                const marks = readRebased(root);
+                for (const d of rebased) {
+                    writeFileSync(join(root, d.path), d.rebase!);
+                    const h = gitHash(join(root, d.path));
+                    if (h) marks[d.path] = { hash: h, taskId: rebases.get(d.path)!.taskId };
+                }
+                try { writeFileSync(join(root, REBASED_FILE), JSON.stringify(marks, null, 1)); } catch { /* the next update then waits on these files */ }
+            }
             const closures = Object.fromEntries(Object.entries(DAEMONS).map(([name, starts]) => [name, [...before[name]!, ...importClosure(starts, root)]]));
             const reload = reloadsFor(checkout.incoming, closures), to = git('rev-parse', '--short', 'HEAD').out;
             const mark: LiveUpdateMark = { at: Date.now(), from, to, files: checkout.incoming.length, reload };

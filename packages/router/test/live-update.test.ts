@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, parseStatus, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
+import { applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
 import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
 
 const base: UpdateInput = { branch: 'master', ahead: 0, behind: 2, incoming: ['scripts/swarm.ts', 'docs/a.md'], dirty: [], holds: [], heldFiles: [] };
@@ -17,6 +17,44 @@ test('an update moves only a clean master checkout that nothing holds', () => {
     expect(planUpdate({ ...base, heldFiles: ['scripts/other.ts'] }).action).toBe('update');
     expect(planUpdate({ ...base, incoming: ['tsconfig.json'] }).action).toBe('wait');
     expect(planUpdate({ ...base, incoming: ['packages/core/package.json'] })).toEqual({ action: 'wait', reason: 'dependency change needs bun install: packages/core/package.json' });
+});
+
+test('an unmerged delivery edit moves on top of master when the three-way merge is clean', () => {
+    const root = mkdtempSync(join(tmpdir(), 'rebase-delivery-')), snap = join(root, 'snap'), dir = join(root, '.practice', 'coordinator', 'delivery-prs');
+    try {
+        mkdirSync(join(snap, 'scripts'), { recursive: true }); mkdirSync(dir, { recursive: true }); mkdirSync(join(root, 'scripts'));
+        const head = 'a\nb\nc\nd\ne\n', build = 'A\nb\nc\nd\ne\n', master = 'a\nb\nc\nd\nE\n', clash = 'X\nb\nc\nd\ne\n';
+        writeFileSync(join(snap, 'scripts', 'q.ts'), build); writeFileSync(join(root, 'scripts', 'q.ts'), build);
+        const record = (state: string) => writeFileSync(join(dir, 't9.json'), JSON.stringify({ taskId: 't9', files: ['scripts/q.ts'], snapshot: snap, state }));
+        const hash = (p: string) => existsSync(p) ? readFileSync(p, 'utf8') : null;
+        const files = { head: () => head, target: (p: string) => p === 'scripts/q.ts' ? master : null, local: (p: string) => hash(join(root, p)) };
+        const dirty = [{ path: 'scripts/q.ts', sameAsTarget: false, untracked: false }];
+        record('pending');
+        const r = rebasableDeliveryEdits(root, dirty, ['scripts/q.ts'], files, mergeText, hash, {});
+        expect(r.get('scripts/q.ts')).toEqual({ text: 'A\nb\nc\nd\nE\n', taskId: 't9' });
+        // Master changed the same line: a conflict waits as before.
+        expect(rebasableDeliveryEdits(root, dirty, ['scripts/q.ts'], { ...files, target: () => clash }, mergeText, hash, {}).size).toBe(0);
+        // A local edit that is not the delivery's waits as before.
+        writeFileSync(join(root, 'scripts', 'q.ts'), 'someone else\n');
+        expect(rebasableDeliveryEdits(root, dirty, ['scripts/q.ts'], files, mergeText, hash, {}).size).toBe(0);
+        // The merged text written by an earlier update is still the delivery's while it waits, and once it merged
+        // the copy is adopted.
+        writeFileSync(join(root, 'scripts', 'q.ts'), 'A\nb\nc\nd\nE\n');
+        const marks = { 'scripts/q.ts': { hash: 'A\nb\nc\nd\nE\n', taskId: 't9' } };
+        expect(rebasableDeliveryEdits(root, dirty, ['scripts/q.ts'], { ...files, head: () => master, target: () => 'a\nb\nc\nd\nE\nf\n' }, mergeText, hash, marks).get('scripts/q.ts')?.text)
+            .toBe('A\nb\nc\nd\nE\nf\n');
+        writeFileSync(join(dir, 't9.json'), JSON.stringify({ taskId: 't9', files: ['scripts/q.ts'], snapshot: snap, state: 'opened', url: 'https://x/pull/9' }));
+        expect([...mergedDeliveryCopies(root, dirty, () => true, hash, marks)]).toEqual(['scripts/q.ts']);
+        expect([...mergedDeliveryCopies(root, dirty, () => true, hash, { 'scripts/q.ts': { hash: 'A\nb\nc\nd\nE\n', taskId: 'other' } })]).toEqual([]);
+        // The plan moves a file that carries a merge result.
+        expect(planUpdate({ ...base, incoming: ['scripts/q.ts'], dirty: [{ ...dirty[0]!, rebase: 'x' }] }).action).toBe('update');
+        expect(planUpdate({ ...base, incoming: ['scripts/q.ts'], dirty })).toEqual({ action: 'wait', reason: 'local edit differs from master: scripts/q.ts' });
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('mergeText returns the clean merge, or null on a conflict', () => {
+    expect(mergeText('A\nb\nc\nd\ne\n', 'a\nb\nc\nd\ne\n', 'a\nb\nc\nd\nE\n')).toBe('A\nb\nc\nd\nE\n');
+    expect(mergeText('X\nb\n', 'a\nb\n', 'Y\nb\n')).toBeNull();
 });
 
 test('a local copy of a merged coordinator delivery is adopted; an unmerged or edited copy still waits', () => {
