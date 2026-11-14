@@ -78,7 +78,8 @@ export function launchRequest(s: SideConfig, token?: string): { kind: 'http'; ur
     if ((s.via ?? 'routine') === 'cli') return { kind: 'exec', cmd: [s.bin ?? 'claude', '--cloud', sessionPrompt('claude', s.side, s.watchMinutes)] };
     if (!token) throw Error(`cloud-launch: no token for ${s.side}`);
     return { kind: 'http', url: `https://api.anthropic.com/v1/claude_code/routines/${s.routine}/fire`,
-        headers: { authorization: `Bearer ${token}`, 'anthropic-beta': ROUTINE_BETA, 'content-type': 'application/json' },
+        // The API refuses a request with no anthropic-version (HTTP 400 "anthropic-version: header is required").
+        headers: { authorization: `Bearer ${token}`, 'anthropic-version': '2023-06-01', 'anthropic-beta': ROUTINE_BETA, 'content-type': 'application/json' },
         body: JSON.stringify({ text: `fleet side ${s.side}` }) };
 }
 
