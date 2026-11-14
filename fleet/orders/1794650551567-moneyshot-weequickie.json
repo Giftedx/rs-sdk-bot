@@ -1,0 +1,23 @@
+{
+ "id": "1794650551567-moneyshot-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "WeeQuickie",
+ "item": "Ball of wool",
+ "count": 1,
+ "start": 1794650551567,
+ "end": 1794654151567,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
