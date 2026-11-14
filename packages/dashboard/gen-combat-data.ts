@@ -40,8 +40,8 @@ export function itemBonuses(blocks: { debug: string; name: string | null; bonus:
 // max hit, [[rune, count], ...], staff worn or null]. A row with no data=name takes its name from its header
 // (magic_spell_iban_blast: Iban Blast; the staff spells have none). Crumble Undead is left out: it hits only undead,
 // so it is no general best spell.
-export function combatSpells(text: string, names: Map<string, string>): [string, number, number, [string, number][], string | null][] {
-    const n = (d: string) => names.get(d) ?? d, out: [string, number, number, [string, number][], string | null][] = [];
+export function combatSpells(text: string, names: Map<string, string>): [string, number, number, [string, number][], string | null, number][] {
+    const n = (d: string) => names.get(d) ?? d, out: [string, number, number, [string, number][], string | null, number][] = [];
     for (const block of text.split(/^\[/m).slice(1)) {
         const field = (k: string) => block.match(new RegExp(`^data=${k},(.*)$`, 'm'))?.[1]?.trim();
         const header = block.slice(0, block.indexOf(']')).replace(/^magic_spell_/, '').split('_').map((w, i) => i && w === 'of' ? w : w.replace(/^./, c => c.toUpperCase())).join(' ');
@@ -51,7 +51,8 @@ export function combatSpells(text: string, names: Map<string, string>): [string,
         const parts = (field('runesrequired') ?? '').split(','), runes: [string, number][] = [];
         for (let i = 0; i + 1 < parts.length; i += 2) if (parts[i] && parts[i] !== 'null') runes.push([n(parts[i]!), Number(parts[i + 1])]);
         const worn = field('wornrequired');
-        out.push([name, lv, max, runes, worn && worn !== 'null' ? n(worn) : null]);
+        // The sixth field is the cast XP in tenths (experience): pvm_spell_cast gives it on every cast, hit or splash.
+        out.push([name, lv, max, runes, worn && worn !== 'null' ? n(worn) : null, Number(field('experience')) || 0]);
     }
     return out.sort((a, b) => a[1] - b[1]);
 }

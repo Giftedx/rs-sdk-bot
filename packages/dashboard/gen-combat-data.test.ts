@@ -25,8 +25,8 @@ test('combat spells: rows with a max hit, level, runes and the staff worn; Crumb
         + '[magic_spell_iban]\ndata=name,Iban Blast\ndata=levelrequired,50\ndata=runesrequired,deathrune,1,firerune,5,null,null\ndata=wornrequired,iban_staff\ndata=maxhit,25\n\n'
         + '[magic_spell_bind]\ndata=name,Bind\ndata=levelrequired,20\n';
     expect(combatSpells(text, new Map([['deathrune', 'Death rune'], ['firerune', 'Fire rune'], ['airrune', 'Air rune'], ['iban_staff', "Iban's staff"]]))).toEqual([
-        ['Iban Blast', 50, 25, [['Death rune', 1], ['Fire rune', 5]], "Iban's staff"],
-        ['Fire Blast', 59, 16, [['Death rune', 1], ['Fire rune', 5], ['Air rune', 4]], null],
+        ['Iban Blast', 50, 25, [['Death rune', 1], ['Fire rune', 5]], "Iban's staff", 0],
+        ['Fire Blast', 59, 16, [['Death rune', 1], ['Fire rune', 5], ['Air rune', 4]], null, 0],
     ]);
 });
 
