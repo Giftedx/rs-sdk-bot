@@ -45,3 +45,30 @@ test('route planning cancels the caller and stops a worker with no surviving req
   expect(stderr).toBe('');expect(code).toBe(0);
  }finally{clearTimeout(deadline);}
 });
+
+test('route worker can retry after native initialization fails',async()=>{
+ const probe=`
+  import assert from 'node:assert/strict';
+  import {mock} from 'bun:test';
+  import {resolve} from 'node:path';
+  let loads=0;
+  mock.module(resolve('packages/core/src/pathcache.ts'),()=>({loadPathfinding:async()=>{if(++loads===1)throw Error('native initialization failed');}}));
+  mock.module(resolve('packages/core/src/world.ts'),()=>({rsPathLength:async()=>()=>1,createWorld:()=>({})}));
+  mock.module(resolve('packages/core/src/trip.ts'),()=>({planTrip:()=>({cost:7,legs:[]})}));
+  const messages=[];
+  globalThis.self={onmessage:null,postMessage:message=>messages.push(message)};
+  await import('./packages/core/src/route-worker');
+  const data={from:{x:1,z:1,level:0},to:{x:2,z:2,level:0},acct:{}};
+  await self.onmessage({data:{...data,id:1}});
+  assert.match(messages[0].error,/native initialization failed/);
+  await self.onmessage({data:{...data,id:2}});
+  assert.deepEqual(messages[1],{id:2,plan:{cost:7,legs:[]}});
+  assert.equal(loads,2);
+ `;
+ const child=Bun.spawn([process.execPath,'-e',probe],{cwd:resolve(import.meta.dir,'../../..'),stdout:'pipe',stderr:'pipe',windowsHide:true});
+ const deadline=setTimeout(()=>child.kill(),5000);
+ try{
+  const [code,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
+  expect({code,stdout,stderr}).toEqual({code:0,stdout:'',stderr:''});
+ }finally{clearTimeout(deadline);}
+});

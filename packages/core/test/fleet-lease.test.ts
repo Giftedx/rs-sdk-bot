@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { acquireFleetLease, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
@@ -169,6 +169,43 @@ test('a renewal whose push landed but whose answer was lost is taken as landed',
         clock += FLEET_LEASE_RENEW_MS;
         lease.renew();
         expect(git(remote, 'rev-parse', 'refs/heads/fleet-lease/local^')).toBe(second);
+    } finally {
+        if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
+    }
+}, 30_000);
+
+for (const landed of [false, true]) test(`an uncertain initial lease push requires exact remote confirmation: landed=${landed}`, () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
+    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
+    try {
+        const remote = join(base, 'origin.git'), root = join(base, 'checkout');
+        git(base, 'init', '--bare', remote);
+        mkdirSync(root); git(root, 'init'); git(root, 'remote', 'add', 'origin', remote);
+        let clock = Date.now(), drop = true;
+        const window: typeof fleetGitWindow = (directory, authority, budget) => {
+            const run = fleetGitWindow(directory, authority, budget);
+            return (args, input) => {
+                if (drop && args.includes('push')) {
+                    drop = false;
+                    if (landed) run(args, input);
+                    throw Error('initial lease push reply lost');
+                }
+                return run(args, input);
+            };
+        };
+        if (!landed) {
+            expect(() => acquireFleetLease(root, 'local', () => clock, window)).toThrow('initial lease push reply lost');
+            expect(existsSync(join(root, '.practice/fleet-controller-fence.json'))).toBe(false);
+            expect(acquireFleetLease(root, 'local', () => clock).allows()).toBe(true);
+        } else {
+            const lease = acquireFleetLease(root, 'local', () => clock, window);
+            const ref = 'refs/heads/fleet-lease/local', first = git(remote, 'rev-parse', ref);
+            expect(lease.allows()).toBe(true);
+            expect(fleetLeaseAllowsWorker(root, lease.holder, clock)).toBe(true);
+            clock += FLEET_LEASE_RENEW_MS;
+            lease.renew();
+            expect(git(remote, 'rev-parse', ref + '^')).toBe(first);
+        }
     } finally {
         if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }

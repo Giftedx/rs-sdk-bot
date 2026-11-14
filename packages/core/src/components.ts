@@ -4,6 +4,7 @@
 // way. Labelling the map takes about 5 s for 7.7M tiles in 20,763 areas.
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { pathfindingSourceKey } from './pathcache';
 
 export type Labels = { area(level: number, x: number, z: number): number; areas: number; tiles: number; zones: Map<number, Int32Array> };
@@ -44,26 +45,52 @@ function fromZones(label: Map<number, Int32Array>, areas: number, tiles: number)
     return { area: (l, x, z) => { const v = get(l, x, z); return v < 0 ? (v === -2 ? -2 : -1) : v; }, areas, tiles, zones: label };
 }
 
-// File: u32 header length, JSON header {source, areas, tiles, n}, n Int32 zone keys, n*64 Uint16 labels
+// File: u32 header length, JSON header {source, areas, tiles, n, sha256}, n Int32 zone keys, n*64 Uint16 labels
 // (0xffff = not walkable). Labels fit in 16 bits while the map has under 65,535 areas.
 export function writeLabels(file: string, source: string, l: Labels): void {
-    const keys = [...l.zones.keys()], header = Buffer.from(JSON.stringify({ source, areas: l.areas, tiles: l.tiles, n: keys.length }));
+    const keys = [...l.zones.keys()];
     const ids = new Uint16Array(keys.length * 64);
     keys.forEach((k, i) => { const z = l.zones.get(k)!; for (let c = 0; c < 64; c++) ids[i * 64 + c] = z[c]! < 0 ? 0xffff : z[c]!; });
+    const keyBytes = Buffer.from(new Int32Array(keys).buffer), idBytes = Buffer.from(ids.buffer);
+    const sha256 = createHash('sha256').update(keyBytes).update(idBytes).digest('hex');
+    const header = Buffer.from(JSON.stringify({ source, areas: l.areas, tiles: l.tiles, n: keys.length, sha256 }));
     const len = Buffer.alloc(4); len.writeUInt32LE(header.length);
     mkdirSync(dirname(file), { recursive: true });
     const tmp = `${file}.${process.pid}.tmp`;
-    writeFileSync(tmp, Buffer.concat([len, header, Buffer.from(new Int32Array(keys).buffer), Buffer.from(ids.buffer)]));
+    writeFileSync(tmp, Buffer.concat([len, header, keyBytes, idBytes]));
     renameSync(tmp, file);
 }
 export function readLabels(file: string, source: string): Labels | null {
     try {
-        const b = readFileSync(file), hl = b.readUInt32LE(0), h = JSON.parse(b.subarray(4, 4 + hl).toString()) as { source: string; areas: number; tiles: number; n: number };
-        if (h.source !== source || h.areas >= 0xffff) return null;
-        const at = 4 + hl, keys = new Int32Array(b.buffer.slice(b.byteOffset + at, b.byteOffset + at + h.n * 4));
+        const b = readFileSync(file), hl = b.readUInt32LE(0);
+        if (hl > b.length - 4) return null;
+        const h = JSON.parse(b.subarray(4, 4 + hl).toString()) as { source: string; areas: number; tiles: number; n: number; sha256: string };
+        const at = 4 + hl;
+        if (!h || h.source !== source || !Number.isSafeInteger(h.n) || h.n < 0
+            || !Number.isSafeInteger(h.areas) || h.areas < 0 || h.areas >= 0xffff
+            || !Number.isSafeInteger(h.tiles) || h.tiles < 0 || h.tiles > h.n * 64
+            || b.length - at !== h.n * 132) return null;
+        if (typeof h.sha256 !== 'string' || createHash('sha256').update(b.subarray(at)).digest('hex') !== h.sha256) return null;
+        const keys = new Int32Array(b.buffer.slice(b.byteOffset + at, b.byteOffset + at + h.n * 4));
         const ids = new Uint16Array(b.buffer.slice(b.byteOffset + at + h.n * 4, b.byteOffset + at + h.n * 4 + h.n * 128));
-        const label = new Map<number, Int32Array>();
-        keys.forEach((k, i) => { const z = new Int32Array(64); for (let c = 0; c < 64; c++) { const v = ids[i * 64 + c]!; z[c] = v === 0xffff ? -1 : v; } label.set(k, z); });
+        const label = new Map<number, Int32Array>(), seen = new Uint8Array(h.areas);
+        let tiles = 0, areas = 0;
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i]!;
+            if (label.has(k)) return null;
+            const z = new Int32Array(64);
+            for (let c = 0; c < 64; c++) {
+                const v = ids[i * 64 + c]!;
+                if (v === 0xffff) z[c] = -1;
+                else {
+                    if (v >= h.areas) return null;
+                    z[c] = v; tiles++;
+                    if (!seen[v]) { seen[v] = 1; areas++; }
+                }
+            }
+            label.set(k, z);
+        }
+        if (tiles !== h.tiles || areas !== h.areas) return null;
         return fromZones(label, h.areas, h.tiles);
     } catch { return null; }
 }
