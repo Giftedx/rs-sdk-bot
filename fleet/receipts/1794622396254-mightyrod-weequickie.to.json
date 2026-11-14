@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794622396254-mightyrod-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 4,
+ "claim": "7902c524-a525-4516-b961-0f786ce3863b",
+ "count": 0,
+ "ok": false,
+ "at": 1794622724991,
+ "detail": "trade claimed"
+}
