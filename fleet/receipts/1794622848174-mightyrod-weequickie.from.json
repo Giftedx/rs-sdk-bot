@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794622848174-mightyrod-weequickie",
  "account": "Mightyrod",
  "partner": "WeeQuickie",
@@ -10,8 +10,18 @@
  "item": "Law rune",
  "requested": 3,
  "claim": "dde0a0f0-cf2e-4cfe-8e04-4781610ffbbb",
- "count": 0,
- "ok": false,
- "at": 1794622863596,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1794622891307,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794622863861-0000033712-0000000001",
+  "at": 1794622891086,
+  "sha256": "23fc16175d3c7650aed9d712c8a71e7db234a14f3ef5b65fa0a400680fb6734c"
+ },
+ "screen": true
 }

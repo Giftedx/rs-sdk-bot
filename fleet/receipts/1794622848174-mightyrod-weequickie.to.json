@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1794622848174-mightyrod-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 3,
+ "claim": "2b873b8d-55c7-4e26-b451-d17e7ed25b9f",
+ "count": 3,
+ "ok": false,
+ "at": 1794622891859,
+ "detail": "Error: receiver bank observation unavailable",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "logout": {
+  "attemptId": "1794622876762-0000009556-0000000001",
+  "at": 1794622891846,
+  "sha256": "4a1b4cdb626bef95489655c6f264206265a1dacaebd882b7c745ce12d031082d"
+ },
+ "screen": true
+}
