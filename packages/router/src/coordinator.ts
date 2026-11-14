@@ -92,10 +92,17 @@ export function replaceTasks(state:CoordinatorState,replacements:{from:string;to
  for(const r of state.tasks)visit(r.spec.id);
 }
 
+// Session recoveries share one repair slot, so they queue as a chain: each recovery run depends on the one before it.
+// That earlier recovery is an order, not a proof: once it ended (succeeded, failed or superseded), the next recovery
+// may start, so one failed account never strands the accounts behind it. Every other dependency must still succeed.
+export const orderOnlyDependency=(task:CoordTask,dep:TaskRecord|undefined):boolean=>!!dep&&task.kind==='run'&&!!task.sessionRecovery
+ &&dep.spec.kind==='run'&&!!dep.spec.sessionRecovery&&(dep.status==='succeeded'||dep.status==='failed'||dep.status==='superseded');
+export const dependencyMet=(task:CoordTask,dep:TaskRecord|undefined):boolean=>dep?.status==='succeeded'||orderOnlyDependency(task,dep);
+
 /** Qualify demanded capabilities only. Old failed refreshes must not poison new consumers. */
 export function qualificationDemand(state:CoordinatorState){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
- return state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&[...r.spec.dependsOn.filter(id=>!id.startsWith('refresh-'+r.spec.capability+'-')),...provisionRefs(r.spec)].every(id=>records.get(id)?.status==='succeeded'));
+ return state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&[...r.spec.dependsOn.filter(id=>!id.startsWith('refresh-'+r.spec.capability+'-')),...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id))));
 }
 export function refreshQualifications(state:CoordinatorState,fingerprints:Record<string,string>){
  const runs=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run');
@@ -256,7 +263,7 @@ export function deadRoots(state:CoordinatorState,records:ReadonlyMap<string,Task
    const next=records.get(dep);
    let candidate:{root:string;at:number}|null=null;
    if(!next)candidate={root:dep,at:0};
-   else if(next.status==='failed'||next.status==='superseded')candidate={root:dep,at:finishedAt(next)};
+   else if((next.status==='failed'||next.status==='superseded')&&!orderOnlyDependency(record.spec,next))candidate={root:dep,at:finishedAt(next)};
    else if(next.status==='pending')candidate=visit(next);
    if(candidate&&(!found||candidate.at<found.at))found=candidate;
   }
@@ -305,7 +312,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   focusCaps.add(resources.focusCapability);
   for(const record of state.tasks)if(['pending','running'].includes(record.status)&&record.spec.capability===resources.focusCapability)includeFocus(record.spec.id);
  }
- const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>records.get(id)?.status==='succeeded'));
+ const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id))));
  if(!pending.length)return null;
  const dead=deadRoots(state,records),consumerCounts=new Map<string,number>(),liveDependencies=new Set<string>();
  for(const r of state.tasks){
