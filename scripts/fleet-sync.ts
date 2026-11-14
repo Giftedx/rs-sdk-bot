@@ -21,7 +21,8 @@ import { readAllFleetAccountClaims, readHeldFleetTradeClaims, releaseFleetTradeC
 import { allLeaseLastSeen, fleetGitWindow } from '../packages/core/src/fleet-lease';
 import { describeMoves, planTransfers, type OwnerRow, type SideView } from '../packages/core/src/fleet-assign';
 import { hasCredential } from '../packages/core/src/fleet-vault';
-import { swarmWroteStop } from './swarm';
+import { canonicalRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
+import { loadEnded, swarmWroteStop } from './swarm';
 import { terminalTradeReceipt, validOrder } from './fleet-trade-settlement';
 
 const root = resolve(import.meta.dir, '..');
@@ -44,6 +45,16 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
     }
     // Published rows keep their order and a replaced row its place; new accounts follow in status order.
     return { side, at: now, accounts: [...by.values()] };
+}
+// This side's published rows, plus the canonical row (packages/core/src/fleet-snapshots.ts) of each account it owns and
+// has no row for: an account it adopted keeps its last observation from the side that ran it, so no reader sees it
+// start from nothing before its first login here.
+export function carriedPrior(prior: readonly any[], files: readonly SnapshotFile[], side: string, owners: ReturnType<typeof loadOwners>): any[] {
+    const have = new Set(prior.filter(r => typeof r?.name === 'string').map(r => r.name.toLowerCase()));
+    const rows = canonicalRows(files.filter(f => f.side !== side), n => owners.get(n.toLowerCase())?.side);
+    const carried = [...rows.values()].filter(r => owners.get(r.name.toLowerCase())?.side === side && !have.has(r.name.toLowerCase()))
+        .map(({ side: _from, ...r }) => r);
+    return [...prior, ...carried];
 }
 // A session whose plan has no jobs has nothing to publish: it keeps this side's claim and plan while the published claim
 // is fresh and holds resources, or the published plan is fresh and holds jobs (a Ranged or quest job holds no exclusive
@@ -208,7 +219,7 @@ export function runSync(push = true): string {
     mkdirSync(join(dir, 'fleet', 'snapshots'), { recursive: true });
     const file = join(dir, 'fleet', 'snapshots', `${mySide()}.json`);
     const prior: any[] = (() => { try { const a = JSON.parse(readFileSync(file, 'utf8')).accounts; return Array.isArray(a) ? a : []; } catch { return []; } })();
-    const snap = snapshot(statuses, mySide(), owners, Date.now(), prior);
+    const snap = snapshot(statuses, mySide(), owners, Date.now(), carriedPrior(prior, readSnapshotFiles(join(dir, 'fleet', 'snapshots')), mySide(), owners));
     // Write only when an account changed: the time stamp alone makes no commit.
     if (JSON.stringify(prior) !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
     // The claim's time stamp is its freshness, so every sync rewrites it. An unreadable plan writes nothing: the old
@@ -242,7 +253,8 @@ export function runSync(push = true): string {
         // The registry spelling: the swarm names a stop file after the job's account, and Linux paths are case sensitive.
         const raw = (() => { try { return JSON.parse(readFileSync(join(dir, 'fleet', 'owners.json'), 'utf8')).accounts ?? {}; } catch { return {}; } })() as Record<string, { side?: string }>;
         const owned = Object.keys(raw).filter(n => owners.get(n.toLowerCase())?.side === snap.side);
-        const card = sideCard(snap.side, capacity, owned, (n: string) => { try { return readFileSync(join(root, '.practice', `stop-${n}`), 'utf8'); } catch { return undefined; } });
+        const died = (() => { try { return [...loadEnded(join(root, '.practice', 'swarm-deaths.json'))].filter(([, e]) => /^died\b/.test(e.reason)).map(([n]) => n); } catch { return []; } })();
+        const card = sideCard(snap.side, capacity, owned, (n: string) => { try { return readFileSync(join(root, '.practice', `stop-${n}`), 'utf8'); } catch { return undefined; } }, died);
         const cardFile = join(dir, 'fleet', 'sides', `${snap.side}.json`);
         if (JSON.stringify(published(cardFile)) !== JSON.stringify(card)) { mkdirSync(join(dir, 'fleet', 'sides'), { recursive: true }); writeFileSync(cardFile, JSON.stringify(card) + '\n'); }
     }
@@ -272,12 +284,15 @@ export function sideCapacity(plan: any): number | null {
 // This side's card: its capacity, the accounts it owns that an owner's stop file pauses, and whether the owner
 // stopped its whole swarm (a stop file the swarm wrote itself is no owner's pause).
 // `owned`: the registry spelling of each account this side owns; a stop file is looked up under that spelling and in
-// lower case, and published in lower case.
-export function sideCard(side: string, capacity: number, owned: readonly string[], stopText: (name: string) => string | undefined) {
+// lower case, and published in lower case. `died`: the accounts whose swarm end is a death (scripts/swarm.ts never
+// starts one again until a person repairs it), so no other side adopts and restarts one either.
+export function sideCard(side: string, capacity: number, owned: readonly string[], stopText: (name: string) => string | undefined, died: readonly string[] = []) {
     const ownerStop = (n: string) => [n, n.toLowerCase()].some(s => { const t = stopText(s); return t !== undefined && !swarmWroteStop(t); });
     const paused = [...new Set(owned.filter(ownerStop).map(n => n.toLowerCase()))].sort();
+    const mine = new Set(owned.map(n => n.toLowerCase()));
+    const dead = [...new Set(died.map(n => n.toLowerCase()).filter(n => mine.has(n)))].sort();
     const swarm = stopText('swarm');
-    return { side, capacity, paused, stopped: swarm !== undefined && !swarmWroteStop(swarm) };
+    return { side, capacity, paused, died: dead, stopped: swarm !== undefined && !swarmWroteStop(swarm) };
 }
 
 // One adoption pass (packages/core/src/fleet-assign.ts) after this side's sync has pushed: reads every side's lease,
@@ -299,7 +314,7 @@ export function planAdoption(dir: string, side: string, capacity: number) {
         let card: any = null;
         try { card = JSON.parse(readFileSync(join(dir, 'fleet', 'sides', `${s}.json`), 'utf8')); } catch { /* no card: no room, no pauses */ }
         sides[s] = { seen: seen.get(s) ?? null, capacity: Number.isSafeInteger(card?.capacity) ? card.capacity : undefined,
-            paused: Array.isArray(card?.paused) ? card.paused : undefined, stopped: card?.stopped === true };
+            paused: Array.isArray(card?.paused) ? card.paused : undefined, died: Array.isArray(card?.died) ? card.died : undefined, stopped: card?.stopped === true };
     }
     return planTransfers({ side, capacity, owners: raw, sides, claims: readAllFleetAccountClaims(git), canLogin: n => hasCredential(n), now: Date.now() });
 }

@@ -31,6 +31,8 @@ describe('fleet adoption', () => {
         const owners = { Haggis: row('local'), Alpha: row('local'), Bravo: row('local'), Charlie: row('local'), Echo: { ...row('local'), reservation: 'task-x' } };
         expect(base({ owners, capacity: 9, sides: { local: { seen: NOW - STRANDED_MS, paused: ['bravo'] } }, canLogin: n => n !== 'Charlie' }).map(m => m.account)).toEqual(['Alpha']);
         expect(base({ owners, capacity: 9, sides: { local: { seen: NOW - STRANDED_MS, stopped: true } } })).toEqual([]);
+        // A death on the side that ran it holds the account there for a person.
+        expect(base({ owners, capacity: 9, sides: { local: { seen: NOW - STRANDED_MS, died: ['alpha'] } }, canLogin: n => n !== 'Charlie' }).map(m => m.account)).toEqual(['Bravo']);
     });
 
     test('a held trade claim or a fresh swarm claim holds the account; an hour-old swarm claim of a silent side does not', () => {

@@ -9,8 +9,9 @@
 //    claim is free (not held, or a swarm claim the orphan rule in fleet-trade-claim.ts lets it replace) and whose
 //    credential it holds. Its own accounts coming home go first, then by name.
 // Never moved: the main account, the specialist accounts (they run under their own launch gates on the PC), an
-// account its side's owner paused (a stop file the side published), every account of a side whose owner stopped its
-// swarm, and an account in a held trade claim (the order settles first).
+// account its side's owner paused (a stop file the side published), an account whose last end was a death (it waits
+// for a person), every account of a side whose owner stopped its swarm, and an account in a held trade claim (the
+// order settles first).
 import { MAIN_ACCOUNT } from './haggisgate';
 import { SPECIALIST_BOARDS } from './specialist-launch';
 
@@ -21,7 +22,7 @@ export const LIVE_MS = 15 * 60_000;
 export type OwnerRow = { side: string; server: string; home?: string; reservation?: string };
 export type ClaimRow = { phase: 'held' | 'released'; kind?: string; side: string; at: number } | null;
 // A side's card (fleet/sides/<side>.json) and its newest lease renewal.
-export type SideView = { seen?: number | null; capacity?: number; paused?: string[]; stopped?: boolean };
+export type SideView = { seen?: number | null; capacity?: number; paused?: string[]; died?: string[]; stopped?: boolean };
 export type Move = { account: string; from: string; to: string; home: string | null };
 
 export function exempt(name: string): boolean {
@@ -41,7 +42,7 @@ export function planTransfers(v: {
     const count = new Map<string, number>();
     for (const n of names) count.set(owners[n]!.side, (count.get(owners[n]!.side) ?? 0) + 1);
     const held = (n: string) => { const c = claims.get(n.toLowerCase()); return c === null || c?.phase === 'held'; };
-    const paused = (n: string, s: string) => !!sides[s]?.stopped || (sides[s]?.paused ?? []).some(p => p.toLowerCase() === n.toLowerCase());
+    const paused = (n: string, s: string) => !!sides[s]?.stopped || [...(sides[s]?.paused ?? []), ...(sides[s]?.died ?? [])].some(p => p.toLowerCase() === n.toLowerCase());
 
     const handback: Move[] = [];
     for (const n of names) {
