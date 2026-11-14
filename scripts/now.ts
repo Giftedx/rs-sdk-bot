@@ -1,6 +1,7 @@
 // Prints the state of this PC and the fleet on one screen. A session reads it first, so that it starts from the
 // facts: free memory, the heavy jobs, stop files, the controllers, the swarm, the coordinator queue, alerts, the
-// board, the fleet sides, the open pull requests, and this checkout and the main checkout against origin/master.
+// board, the fleet sides, the open pull requests, the fast-fail loops of the main checkout's results
+// (scripts/fail-loops.ts), and this checkout and the main checkout against origin/master.
 // It reads the local dashboard (http://127.0.0.1:<DASH_PORT>/api/state) for the fleet. It reads by itself what must
 // be fresh or what the dashboard does not hold: the process list, the stop files, the git state and the SDK patch.
 // It changes nothing.
@@ -9,6 +10,7 @@
 import {existsSync,readFileSync,statSync} from 'node:fs';
 import {uptime} from 'node:os';
 import {join,resolve} from 'node:path';
+import {failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type FailLoop} from './fail-loops';
 
 type Task={id:string;kind:string;status:string;agent:string|null;account:string|null;startedAt:number|null;timeoutMs?:number|null};
 type Bot={name:string;job?:{enabled?:boolean;state?:string}|null};
@@ -30,7 +32,8 @@ export type DashState={
 export type Proc={scripts:string[];up:number};
 export type Checkout={path:string;branch:string;head:string;dirty:number;behind:number|null;ahead:number|null;fetchedAt:number|null;patch:'applied'|'not applied'|'no vendor/rs-sdk'};
 // `procs` is null when the process scan failed. Then the heavy jobs and the controllers are not known.
-export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null};
+// `loops`: the fast-fail loops of the main checkout's results (scripts/fail-loops.ts); null when they were not read.
+export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null};
 
 export function age(ms:number):string{
     const s=Math.max(0,ms)/1000;
@@ -120,6 +123,12 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
             return `prs     ${prs.length} open`+(prs.length?': '+prs.map(p=>`${p.number} ${p.branch}${p.draft?' (draft)':''}`).join(', '):'');
         });
     }else out.push('dashboard: no answer, so the fleet lines are missing. The other lines come from this PC.');
+    add('loops',()=>{
+        const loops=local.loops;
+        if(loops==null)return null;
+        const window=age(LOOP_WINDOW_MS);
+        return loops.length?[`loops   ${loops.length} fast-fail loops in ${window} (bun scripts/fail-loops.ts):`,...loopLines(loops).map(l=>`  loop  ${l}`)]:`loops   none in ${window}`;
+    });
     add('here',()=>checkoutLine('here   ',local.here,now));
     add('main',()=>local.main?checkoutLine('main   ',local.main,now):null);
     return out;
@@ -188,5 +197,7 @@ if(import.meta.main){
     // 127.0.0.1: the dashboard listens on IPv4 (DASH_HOST default), and localhost can resolve to ::1 first.
     const state=await fetch(`http://127.0.0.1:${port}/api/state`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json() as Promise<DashState>:null).catch(()=>null);
     const same=main.toLowerCase()===here.toLowerCase(),now=Date.now();
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs:scanProcs(now),stops,here:readCheckout(here),main:same?null:readCheckout(main)},now))console.log(line);
+    let loops:FailLoop[]|null=null;
+    try{loops=failLoops(readRecentResults(join(main,'.practice','results.jsonl')),now);}catch{/* an unreadable results file hides only this line */}
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs:scanProcs(now),stops,here:readCheckout(here),main:same?null:readCheckout(main),loops},now))console.log(line);
 }

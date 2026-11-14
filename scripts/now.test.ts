@@ -105,3 +105,12 @@ test('with no dashboard the local facts still print, and a worktree also shows t
         'here    claude/t @ abc1234, 0 changed files, origin/master not known (never fetched), SDK patch no vendor/rs-sdk',
         'main    master @ abc1234, 2 changed files, 7 behind, 0 ahead of origin/master (fetched 2 min ago), SDK patch applied']);
 });
+
+test('the loops line names each fast-fail loop, says none, or is left out when not read', () => {
+    const loop = { name: 'Shaftmaker', goal: 'headless arrows', error: 'Error: bank did not open', runs: 6, medianSec: 3, lastAt: NOW };
+    const lines = nowLines(state(), local({ loops: [loop] }), NOW);
+    expect(lines).toContain('loops   1 fast-fail loops in 2.0 h (bun scripts/fail-loops.ts):');
+    expect(lines).toContain('  loop  Shaftmaker 6x 3 s: headless arrows | Error: bank did not open');
+    expect(nowLines(state(), local({ loops: [] }), NOW)).toContain('loops   none in 2.0 h');
+    expect(nowLines(state(), local(), NOW).some(l => l.startsWith('loops'))).toBe(false);
+});
