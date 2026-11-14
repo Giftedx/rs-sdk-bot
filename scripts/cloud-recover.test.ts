@@ -277,6 +277,18 @@ test('a run that the controller refused while it waited for memory or a bot slot
     expect(MAX_WAITS).toBeGreaterThan(MAX_ATTEMPTS);
 });
 
+test('a run refused for a qualification of an older release spends no attempt', () => {
+    const target = { account: 'Sausagefest', endedAt: 1794632675457 };
+    const run = (id: string, error: string) => ({ ...task(id, 'failed', [], target), runId: `task-${id}`, receipt: { ok: false, output: null, error } });
+    const stale = 'Error: authenticated recovery requires its current native delivery';
+    const tasks = [run('a', stale), run('b', stale)];
+    expect(spentAttempts(tasks, target)).toBe(0);
+    expect(waitedAttempts(tasks, target)).toBe(2);
+    // A held child and other errors still count.
+    const childHeld = 'Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry';
+    expect(spentAttempts([run('c', childHeld), run('d', `${stale} now`)], target)).toBe(2);
+});
+
 test('a refusal for any other cause, or a setup failure after the lease, still spends an attempt', () => {
     const waits = waitRefusedRuns([
         resultLine('owner', refused('recovery previous session owner still alive')),
