@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794618840725-bigpackage-weequickie",
+ "account": "Bigpackage",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Death rune",
+ "requested": 110,
+ "claim": "ff2a5c5b-eedc-4e9d-9902-c042544ba8e5",
+ "count": 0,
+ "ok": false,
+ "at": 1794618846501,
+ "detail": "trade claimed"
+}
