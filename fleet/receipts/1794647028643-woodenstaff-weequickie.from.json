@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794647028643-woodenstaff-weequickie",
  "account": "Woodenstaff",
  "partner": "WeeQuickie",
@@ -10,30 +10,76 @@
  "item": "Prayer potion(3)",
  "requested": 5,
  "claim": "0821891b-1231-4ab9-829b-151afa3667dc",
- "count": 0,
- "ok": false,
- "at": 1794647119393,
- "detail": "trade claimed",
+ "count": 5,
+ "ok": true,
+ "at": 1794647287908,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Gold bar",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794647170388
+   }
   },
   {
    "item": "Blood rune",
    "requested": 200,
-   "count": 0
+   "count": 200,
+   "inventory": {
+    "before": 200,
+    "after": 0
+   },
+   "bank": {
+    "count": 200,
+    "at": 1794647172145
+   }
   },
   {
    "item": "Air rune",
    "requested": 1000,
-   "count": 0
+   "count": 1000,
+   "inventory": {
+    "before": 1000,
+    "after": 0
+   },
+   "bank": {
+    "count": 1000,
+    "at": 1794647173138
+   }
   },
   {
    "item": "Law rune",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 3,
+    "after": 0
+   },
+   "bank": {
+    "count": 3,
+    "at": 1794647174037
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1794647169448
+ },
+ "logout": {
+  "attemptId": "1794647119399-0000027948-0000000001",
+  "at": 1794647287898,
+  "sha256": "e4ee1b52e7c51d5d2b7ab03f3b6a835cce4d96b764688687d5501500b380207b"
+ },
+ "screen": true
 }
