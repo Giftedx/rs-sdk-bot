@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794660905256,
+ "at": 1794661620908,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -115,23 +115,25 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/fletch-arrows.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "15000",
-    "headless"
+    "sarim"
    ],
    "env": {
+    "ITEMS": "feather",
     "BANK_PACK": "1",
-    "MAX_MAKE": "390"
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "shop:sarim"
+   ]
   },
   {
    "account": "Hocuspokeus",
@@ -239,21 +241,25 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -277,25 +283,21 @@
   },
   {
    "account": "PickpockDick",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2582,3297"
    ]
   },
   {
