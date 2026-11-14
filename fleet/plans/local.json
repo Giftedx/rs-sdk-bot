@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794627132660,
+ "at": 1794627176603,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,29 +71,6 @@
    "enabled": false,
    "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
-   ]
   },
   {
    "account": "Bigchopper",
@@ -324,6 +301,25 @@
    ]
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
    "account": "Magicwanda",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -347,21 +343,25 @@
   },
   {
    "account": "SporranBulge",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
