@@ -18,6 +18,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/autopilot.ts': 'fleet control: writes the planner jobs into swarm.json',
  'scripts/check-no-diary.ts': 'developer tool: checks the docs for history wording',
  'scripts/check-pin.ts': 'developer tool: checks the commit of vendor/rs-sdk',
+ 'scripts/gear.ts': 'developer tool: looks up each wearable item and its bonuses in knowledge/gear.json',
  'scripts/ci-gate.ts': 'developer tool: runs the CI checks on this PC',
  'scripts/claim-account.ts': 'fleet control: registers a new account name',
  'scripts/cloud-recover.ts': 'fleet control: recovers held live sessions',

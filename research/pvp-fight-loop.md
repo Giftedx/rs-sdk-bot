@@ -80,16 +80,18 @@ climber and the ladder put each profile on both sides.
 ### What each build is worth
 
 Each build against the standard tribrid, 16 spars (8 on each side of the map), both sides on the base profile
-(`extra:spar-duel-<build>-x8`, seeds 1 and 2). Net is the build's net damage for each 100 ticks.
+(`extra:spar-duel-<build>-x8`, seeds 1 and 2). Net is the build's net damage for each 100 ticks. The two mace rows ran
+with Heroes' Quest set (`kitVarps`), so the mace goes back on after a bow turn; the other rows need no quest but
+Lost City and Dragon Slayer.
 
 | Build | Shop cost | Sharks | Wins of 16 | Net |
 |---|---|---|---|---|
 | `melee` (dagger, strength amulet, super attack and strength) | 252,755 | 22 | 13 | -8.5 |
 | `tribrid-pots` (three boost potions) | 441,315 | 15 | 11 | +13.6 |
 | `ranger` (d'hide, magic shortbow, ranging potion) | 241,915 | 23 | 10 | -21.4 |
+| `tribrid-mace-pots` | 467,315 | 15 | 6 | -9.1 |
 | `tribrid-dlong` (dragon longsword) | 517,355 | 18 | 5 | +6.3 |
-| `tribrid-mace-pots` | 467,315 | 15 | 2 | +1.8 |
-| `tribrid-mace` (dragon mace) | 467,355 | 18 | 1 | -7.3 |
+| `tribrid-mace` (dragon mace) | 467,355 | 18 | 1 | -19.3 |
 | `tribrid-bare` (no helm, body or legs) | 222,755 | 18 | 1 | -25.1 |
 | `tribrid-bare-pots` | 222,715 | 15 | 1 | -15.5 |
 | `mage` (splitbark, Fire Wave) | 177,555 | 20 | 0 | -5.1 |
@@ -375,43 +377,47 @@ and `sim-def.txt` in the worktree that ran it). Mean is the mean win rate agains
 
 Bench ranking. Conditions: lockstep practice engine, Wilderness level 34 at (3125, 3790), both sides on the profile
 `snap` (`predictPrayer`, `snapPrayer`; it sets no rotation, so each kit attacks with its own styles), cap 600 ticks,
-each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence: `.practice/pk-builds/set1.txt` and
-`rank1.txt` in the worktree that ran them. A build of both brackets has 36 fights, the others 21. Net is the net
-damage for each 100 ticks.
+each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`, the repeatable setup, the fight loop with the
+event fix of finding 71. No kit of the bracket needs a quest that `kitVarps` did not set (`pure-hally` sets Regicide
+and the viking helm builds The Fremennik Trials in their own varps; `dragon` wears a rune kiteshield). Evidence:
+`.practice/kits/builds-matrix.log` (`.practice/kits/matrix-from-seeds.ts` from the seed rows, then
+`bun scripts/measure/pk-build-rank.ts`). A build of both brackets has 36 fights, the others 21. Net is the net damage
+for each 100 ticks.
 
 | Kit | Combat | Fights | Wins | Losses | Draws | Net |
 |---|---|---|---|---|---|---|
-| `zerker` | 96 | 21 | 18 | 3 | 0 | +68.9 |
-| `range-tank` | 91 | 21 | 16 | 4 | 1 | +52.5 |
-| `pure-hally` | 80 | 21 | 15 | 5 | 1 | +52.2 |
-| `pure-pray` | 80 | 36 | 23 | 12 | 1 | +69.1 |
-| `dragon` | 96 | 21 | 13 | 8 | 0 | +45.5 |
-| `rune-pure` | 91 | 21 | 13 | 8 | 0 | +44.0 |
-| `pure-dds-msb` | 75 | 36 | 19 | 17 | 0 | -26.6 |
-| `pure-ranger` | 69 | 36 | 18 | 18 | 0 | -8.8 |
-| `pure-dds` | 72 | 21 | 10 | 11 | 0 | -8.8 |
-| `pure-tribrid` | 76 | 21 | 6 | 15 | 0 | -31.8 |
-| `pure-r2h` | 71 | 21 | 4 | 17 | 0 | -78.4 |
-| `mage-tank` | 89 | 21 | 2 | 18 | 1 | -59.7 |
-| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -142.1 |
+| `dragon` | 96 | 21 | 18 | 3 | 0 | +75.0 |
+| `zerker` | 96 | 21 | 15 | 6 | 0 | +65.0 |
+| `pure-pray` | 80 | 36 | 25 | 11 | 0 | +75.8 |
+| `range-tank` | 91 | 21 | 14 | 6 | 1 | +59.5 |
+| `pure-hally` | 80 | 21 | 12 | 9 | 0 | +41.8 |
+| `rune-pure` | 91 | 21 | 12 | 9 | 0 | +29.5 |
+| `pure-ranger` | 69 | 36 | 20 | 15 | 1 | -22.1 |
+| `pure-dds` | 72 | 21 | 11 | 10 | 0 | +4.3 |
+| `pure-dds-msb` | 75 | 36 | 18 | 18 | 0 | -31.3 |
+| `pure-tribrid` | 76 | 21 | 7 | 14 | 0 | -24.1 |
+| `pure-r2h` | 71 | 21 | 4 | 17 | 0 | -89.0 |
+| `mage-tank` | 89 | 21 | 2 | 19 | 0 | -57.1 |
+| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -143.2 |
 
-- **Defence 1: Prayer 43 wins.** The two builds with it lead the bracket: `pure-hally` won 15 of 21 and `pure-pray`
-  17 of 21 against the Defence 1 builds. They drew level with each other (1 to 1 and a draw). `pure-dds-msb`, the
-  bow and dagger with no prayer, won 3 of 3 against `pure-hally` and 2 of 3 against `pure-pray`, and lost 8 of 9 to
-  the rune, zerker and dragon builds.
-- **A pure against Defence 40 to 60.** `pure-pray` won 6 of 15 against those builds, 9 to 16 combat levels above it:
-  3 of 3 against `mage-tank`, 1 of 3 against `rune-pure`, `dragon` and `range-tank`, and 0 of 3 against `zerker`.
-- **Defence 40 to 60: no build is clear.** `zerker` won 18 of 21, `range-tank` 16, `dragon` 13 and `rune-pure` 13.
-  `zerker` won 3 of 3 against `dragon`, which wears the same body and legs; a run of the same cases before this one
-  gave `dragon` 2 of 3 against `zerker` and both builds 16 of 21. So the order inside this bracket is not decided.
+- **Defence 1: Prayer 43 wins.** `pure-pray` won 18 of 21 against the Defence 1 builds and `pure-hally` 12;
+  `pure-hally` took 2 of 3 from `pure-pray`. `pure-dds-msb`, the bow and dagger with no prayer, won 3 of 3 against
+  `pure-hally` and 1 of 3 against `pure-pray`.
+- **A pure against Defence 40 to 60.** `pure-pray` won 7 of 15 against those builds, 9 to 16 combat levels above it:
+  3 of 3 against `mage-tank`, 2 of 3 against `rune-pure`, 1 of 3 against `zerker` and `range-tank`, 0 of 3 against
+  `dragon`.
+- **Defence 40 to 60: no build is clear.** In this run `dragon` won 18 of 21 (2 of 3 against `zerker`, 1 of 3
+  against `range-tank`), `zerker` 15, `range-tank` 14, `rune-pure` 12; an earlier loop gave `zerker` 18 and `dragon`
+  13, and a run before that both 16. The order inside this bracket swings between runs.
 - **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 2 of 21. `pure-ranger` won
-  0 of 18 against the two Prayer 43 pures and the rune, zerker, dragon and range-tank builds, and every fight
-  against the other builds.
+  2 of 17 against the two Prayer 43 pures and the rune, zerker, dragon and range-tank builds (both from
+  `pure-hally`), and every fight against the other builds.
 - **The two-handed sword loses.** `pure-r2h` won 4 of 21. The loop alternates the bow and the 7-tick weapon; a loop
   that keeps the slow weapon for the kill is not measured. The halberd has the same attack time, and its build
-  wins with Prayer 43.
-- The simulator and the bench agree on the Prayer 43 pures at the top of the Defence 1 bracket and on the last
-  build of each bracket. They differ on the order of the Defence 40 to 60 bracket.
+  wins 12 of 21 with Prayer 43.
+- The simulator and the bench agree on `pure-pray` at the top of the Defence 1 bracket and on the last build of
+  each bracket; this run also has the simulator's order `dragon`, `zerker`, `range-tank`, `rune-pure`, which the
+  bench runs do not hold from run to run.
 - Control for the side of a pair: the same build on both sides (`extra:spar-kit-dragon-x8` and
   `extra:spar-kit-pure-pray-x8`, profile `snap`, seeds 1, 2, 3, 48 fights). Side A won 26, lost 21 and drew 1
   (`dragon` 11 to 13, `pure-pray` 15 to 8). 26 of 47 is inside the chance range of an even fight, so the table has
@@ -1156,6 +1162,9 @@ Gaps:
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).
+- Run energy does not drain on the practice bench: the engine's `NODE_INFINITE_RUN` defaults to true
+  (`server/engine/src/util/Environment.ts:47`), and a runner chase reads `run=100` on each of its ticks (`PK_TRACE=1`).
+  Every chase result here assumes that; a server with the flag off would slow a long chase to a walk.
 - The attackable gap is the shallower player's Wilderness level, (z - 3520) / 8 + 1 on the surface (`wilderness_levels.rs2:4-16`, `pvp_combat.rs2:32-48`).
 - The killer gets one of eleven messages naming the loser (`pvp_combat.rs2:203-222`); the SDK emits no kill event for a player.
 - Head icon bits (`player/configs/headicon.constant`): 0 skull, 3 Protect from Melee, 4 Protect from Missiles, 5 Protect from Magic.
@@ -1405,3 +1414,454 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `reachedEntity` to its target (`inOperableDistance` in the engine's `Player.ts`, `rsmod.reached` with shape -2).
     Gap: whether that rule refuses a target on the attacker's own tile is not measured; no fight option steps under
     a target, and no spar tests line of sight or two against one.
+40. **A dagger user that never gives up cannot be kept out of reach by freezes alone.** `kiteMelee` (freezes and
+    steps only: a freeze within 10 tiles with a line of sight, the account still until the hold shows, a run away
+    while the target is free or immune) takes 41 to 162 damage a meeting of 650 to 1,500 ticks; the champion kills
+    the same attacker in about 150 ticks for 20 to 107. Conditions: `extra:kite-chase-x4` (the gang meeting with a gang
+    of 1, `ganker` profile, so the attacker walks back to our tile each time it loses sight), seed 1, the lockstep
+    engine. The leak is the freeze hit rate: of the freezes cast, 22% hold in rune armour (`castArmour: 'keep'`), 40%
+    with the cast armour stripped and 46% in the mage kit (`extra:kite-chase-mage-x4`). The magic roll is
+    (Magic + 9) x (bonus + 64) against (0.7 Magic + 0.3 Defence + 8) x (bonus + 64), with no magic prayer
+    (`player_combat_stat.rs2`), so plate leaves the roll near 0. Each miss costs the 5-tick spell delay and a tick
+    stood still, and an attacker beside us at equal speed is not shaken by a run. Four faults that kept freezes from
+    going out are fixed in `scripts/pk.ts`: a walk click in the ticks after the cast clears the spell while the server
+    re-queues it for our attack delay (`pvp_magic.rs2` `pvp_combat_spell_checks`); the chase walked back to the
+    target; an eat or a potion click (`OpHeld`) cleared the spell; and a cast with no line of sight
+    (`GameMap.ts` `isApproached`) walks the account toward the target. Evidence: `.practice/climb/kite-*.log`, engine
+    traces `.practice/climb/ktrace*/`. Gap: seed 1 only; the hold rate varies from run to run (12% to 40% in rune);
+    no kit with a magic bonus and melee defence was tried.
+41. **A spar batch with many accounts does not repeat exactly on one seed.** `extra:spar-rivals-tribrid-snare-x12`
+    (24 accounts in one process), seed 1, the same options: 9 kills and 3 deaths, then 10 and 2, run alone; 11 and 1,
+    then 10 and 2 with the lockstep client of `master`. The fight loop's own choices are seeded (`mixSeed`); the lite
+    client ages animations on its 20 ms loop, not on game ticks (`patches/rs-sdk.md` item 10), and the attack and prayer
+    reads use those animations. The 4-account gang case (`extra:gang-live-fast-x1`) repeated exactly in two runs.
+    Consequence: a comparison of spar batches needs 8 seeds or more, or the paired statistics of
+    `scripts/measure/pk-spar-climb.ts`; a gap of 3 or 4 kills in 32 fights is within the noise. Causes found with
+    the engine traces (`BENCH_TRACE`, two runs of seed 1 aligned on the last login): npcs wander and draw random
+    numbers through the login phase, whose length in ticks follows the machine (81 and 85 ticks); a session answers a
+    tick before its script acts when any other session of the process waits; a fight starts 11 to 14 ticks after the
+    last login; the prayer guard of each account flicks on a 3-tick cycle counted from its own login; and the
+    client's wall clock ages animations. The repeatable setup takes these out: `SPAR_NPC_NEAR=1` (the bench
+    engine's `SIM_NPC_NEAR`), `SPAR_SERIAL_LOGIN=1` (one login after another, and every fight starts when the last
+    account in has seen `SPAR_START_TICK` ticks), `PRAYER_GUARD=0` and `EAT_GUARD=0` (the fight loop does both), and
+    the tick clock of `packages/core/src/inprocess.ts` and the engine's timer restart at the anchor login
+    (`patches/rs-sdk.md` item 10: a player's hitpoint regen and other timers ran from its own login tick, and
+    `PK_TRACE=1` showed 83 and 84 HP at fight tick 71 with the same hits). Two runs of seed 1 then give the same
+    fight trace line for line (12,157 lines, `PK_TRACE=1`); four seeds at once, run twice, give the same kills and
+    deaths and differ in two fights' scores of 48 (`.practice/climb/set-det2-*`). The route cases (hunt, roam, army:
+    `pvp-with-targets.ts` with the route in a second process) repeat too once the fight loop seeds its random
+    choices from `BENCH_SEED` and the account's role when it has no `mixSeed` (it used `Math.random`), the bench
+    engine's `SIM_NPC_NEAR` is 1, and the count-dialog wait holds the tick from the dialog's opening to its submit:
+    two runs of `extra:hunt-defend` with seed 1 differ in 4 of 3,852 engine inputs, at the end. Gap: under the load
+    of parallel seeds a little remains.
+42. **Freezes need their own armour rule, and the champion freezes once from half health.** With `castArmour: 'keep'`
+    the freeze kept plate on too, and the champion killed 0 of 64 runners (`extra:spar-escape-tribrid-snare-x8`, seeds
+    1-8, runner on `base`). `freezeArmour` (default `'torso'`) now rules a freeze. Against the runner, seeds 1-4: freeze
+    from 70% health with the armour off and at most 2 early freezes, 14 of 32 (12 of 32 on seeds 5-8); the same
+    without the cap, 11 and 7. The champion's rule (freeze from 50% health, at most 1 early freeze, armour off)
+    gives 7 of 32 against the runner and, seeds 1-8 against the three rival builds
+    (`extra:spar-rivals-tribrid-snare-x12`), 94 kills and 1 death in 96 fights against 87 and 5 without it; mirror
+    neutral (mean +3.1, t 0.67). The gang set (snare kit, freeze flee, `focusRunner` 0.4) kills 15 of 16 over seeds
+    1-8 with the torso rule, 12 of 16 before. Gap: finding 41's noise; the rival comparison is one run per seed.
+43. **A mirror winner can lose to every real opponent.** The mirror climb on the champion of finding 42 accepted
+    `standOff: 5` (mean +22.7, t 2.86, 16 samples, `extra:spar-x8`). Seeds 1-8 against the three rival builds it gave
+    12 kills and 39 deaths in 60 fights where the champion had 85 and 8 in 96, and against the runner 12 of 64 where
+    the champion had 26. The champion keeps no stand-off. Rule: a patch joins the champion only after the mirror and
+    the rival and runner cases (`.practice/climb/dual.sh`, 8 seeds) agree. Gap: one seed of the rival batch at
+    stand-off 5 gave no result (12 fights in the first half).
+44. **A hold on a runner shows two ticks after the cast, and reading it one tick early halves the catches.** The
+    server casts in the tick after our click, and a runner can step once more before the freeze stops it
+    (`pvp_magic.rs2` `pvp_freeze_effect`: `p_walk` to its own tile and a 0-delay queue). The loop read a hold from the
+    target's tile at the cast, so a hold that landed read as a splash and the next turn went on a held target. With the
+    tile taken two ticks after the cast: 36 of 128 runners (`extra:spar-escape-tribrid-snare-x8`, seeds 1-16, runner
+    on `base`, `SPAR_CAP=900`) against 25, and 178 kills and 12 deaths in 192 rival fights
+    (`extra:spar-rivals-tribrid-snare-x12`) against 175 and 15. Of the freezes cast at a fled runner, about 45% hold.
+    A hold at level 30 or lower converts nothing (0 of 14, seeds 13-16): the runner rubs its glory while frozen;
+    above level 30, 4 of 14. The champion's 4 dragon dagger specials all go out near 53% health, before the runner
+    breaks, so a hold above 30 meets bow shots only. `freezeStill` (a freeze only within 10 tiles with a line of
+    sight, from a stand, no walk or item click until the hold shows) gives 13 of 128 runners and 179 and 13 against
+    the rivals: a cast past 10 tiles makes the server walk the account in and cast on arrival, a chase that costs no
+    click. Special energy kept for the runner costs the fights that need it: no special above 30% health unless the
+    target fled gives 43 of 128 runners and 168 kills, 23 deaths against the rivals; above 0%, 44 and 156, 32.
+    `specReserve` 250 gives 38 and 168, 21; `specReserve` 500 gives 83 of 248 runners (seeds 1-32) against 73 of 256,
+    178 and 13 against the rivals, and in the mirror (`extra:spar-x8`, `SPAR_B=champion`, seeds 1-16) 40 kills and
+    68 deaths in 128 fights where the champion has 49 and 67, so it stays out of the champion (finding 43 rule).
+    Evidence: `.practice/climb/still2.out`, `save.out`, `reserve.out`, `reserve2.out`, `mirror-res.out`,
+    `.practice/climb/fix-logs/`, `.practice/climb/held-escape.ts`. Gap: finding 41's noise; one run per seed.
+45. **A Saradomin cape in the snare kit catches more runners at no cost elsewhere.** The snare kit freezes with the
+    glory's +10 magic attack alone once its plate is off; the Saradomin cape (Mage Arena) adds +10 magic attack and
+    +10 magic defence for the Legends cape's +7 to each defence. `tribrid-snare-sara` against the runner
+    (`extra:spar-escape-tribrid-snare-sara-x8`, champion against `base`, `SPAR_CAP=900`, seeds 1-8, the repeatable
+    setup of finding 41): 26 of 64 where `tribrid-snare` has 19; against the rival builds 92 kills, 4 deaths in 96
+    where `tribrid-snare` has 93 and 3; head to head (`extra:spar-head-snare-sara-x12`, both champion, sides swapped
+    every two pairs) 46 wins and 50 losses in 96. The same kit with a mystic fire staff in hand for each freeze
+    (`freezeWithStaff`, one shark less) gives 22 of 64 runners and 88 kills, 8 deaths against the rivals. The game
+    has no mystic robes; the wearables with magic attack of 5 or more are the staves, the glory, the amulet of magic
+    and the god capes (+10 each), the splitbark body (+9), the Zamorak book (+8) and the splitbark legs (+6).
+    Poisoned dagger(p) carries 255 in every bonus but is a staff item (`appearance.rs2` checks `staffmodlevel >= 3`)
+    with no drop or shop. Evidence: `.practice/climb/kit-esc.out`, `kit-riv.out`, `set-head-sara-*`. Gap: one run
+    per seed; the god cape needs the Mage Arena (Magic 60, Kolodion), a supply step outside this test.
+46. **Three maxed tribrids kill one maxed tribrid in multi-way combat at no loss; in single-way combat they lose
+    accounts and take three times as long.** `extra:army-tribrid-x4` (four groups of three `tribrid-snare` against
+    one `tribrid-snare` on the champion, `GANKER_POST`, Wilderness level 16, single-way) and
+    `extra:army-tribrid-multi-x4` (the same at 3150,3560, level 6, multi-way), seeds 1-4, the repeatable setup.
+    Single-way: on the `ganker` profile the army kills 13 of 16 and loses 8 accounts, the batch ends at the 900-tick
+    cap; on the champion it kills 16 and loses 7 in 515 to 836 ticks. Multi-way: 16 kills and no losses on both
+    profiles, the batch over in 252 to 370 ticks on `ganker` and 188 to 252 on the champion. In single-way combat
+    one attacker at a time can hit (`pvp_combat.rs2:103-133`), and the target eats all 18 sharks in every meeting
+    (about 450 damage taken). The champion's three accounts read the same health bar, so their specials go out on
+    the same tick. Evidence: `.practice/climb/set-army-*`, `set-armym-*`. Gap: the batch tick is the slowest group;
+    one run per seed; no army option of its own (a style for each member, a special stack held for a knock-out).
+47. **A dragon spear stunner does not speed the army's kill; waiting to stack the specials does a little.** In the
+    multi-way army case the target eats 17.1 of its sharks on average before it dies (16 meetings, seeds 1-4, the
+    repeatable setup, army on the champion). With the army's specials from 35% target health (`specBelow: 0.35`)
+    it eats 14.9, from 45% 15.9; seeds 5-8 repeat it (15.4 and 13.9). The `army` profile of `scripts/pk-spar.ts` is
+    the champion with `specBelow: 0.35`. With one army account on `tribrid-snare-spear` (`extra:army-spear-multi-x4`,
+    `SPAR_KITS` naming a kit for each account) the target eats 19.1 when the spear's special goes out at once and
+    18.2 when it goes out from 55% health: the special holds the target 5 ticks with no input
+    (`pvp_dragon_spear.rs2` `p_delay(4)`), and the spear account gives up the dagger's specials and hits every 6
+    ticks. No meeting lost an army account. Evidence: `.practice/climb/set-army-*`. Against a target that leaves,
+    three or four spears of five accounts are what kill (finding 67). Gap: one run per seed.
+48. **A lone account in multi-way combat survives three maxed attackers only by leaving at once.** On the champion
+    our account dies in all 16 army meetings (`extra:army-tribrid-multi-x4`, army on `army`, seeds 1-4). With
+    `escapeOutnumbered: 2` (in multi-way combat, hits from two players within 8 ticks start the escape whatever the
+    food: the worn glory comes off and is rubbed at level 6) it escapes in all 16, 22 to 60 ticks into the meeting.
+    Without the multi-way test the option throws fights away: against the dagger gang in single-way combat
+    (`extra:gang-ganker-x4`) the champion clears 16 of 16 groups (48 kills), and with the option escapes from them
+    (1 kill at threshold 2, 19 at threshold 3); with the test it clears 16 of 16 again. In single-way combat one
+    player at a time can hit (`pvp_combat.rs2:103-133`). The champion takes `escapeOutnumbered: 2`; of the bench
+    spots only the army spot (3150,3560) is multi-way (`scripts/pk.ts` `isMulti`, `maps/multiway.csv`). The escape
+    counts the allies in view (finding 49), so the `army` profile keeps it. Evidence: `.practice/climb/set-esc-out*`, `set-gk-out*`. Gap: no case of two of ours
+    against two, where a hit from both enemies sends an account away from its ally.
+49. **Two against two in multi-way combat: leaving once outnumbered halves the deaths for fewer kills.**
+    `extra:team-2v2-multi-x4` (`scripts/pk-team.ts`: four groups of two `tribrid-snare` against two at 3150,3560,
+    each account on the lowest health bar in view), side B on the champion, seeds 1-8, 64 accounts a side, the
+    repeatable setup. Side A on the champion: 17 wins, 15 losses, 15 of its accounts dead and 19 of side B's. Side A
+    with `escapeOutnumbered: null`: 16 wins, 14 losses, 2 draws, 35 dead and 31 of side B's. The champion's escape
+    counts its allies (`allies`: each own account within 10 tiles takes one attacker off the count), so an account
+    stays while its ally stands with it and leaves once the ally is down and two enemies hit it. Evidence:
+    `.practice/climb/set-team-*`. Side A on `army` (specials from 35% target health): 12 wins, 20 losses, 24 dead
+    and 15 of side B's, so the held specials pay only when the army outnumbers its target (finding 47). Three
+    against three (`extra:team-3v3-multi-x3`, three groups, seeds 1-8, 72 accounts a side): with the escape 11 wins,
+    7 losses, 6 draws, 22 dead and 24 of side B's; with it off 11, 9, 4, 33 dead and 30. Focus fire pays: on the
+    repeatable runs two against two, side A taking the lowest health bar in view wins 20, loses 10, with 16 dead and
+    26 of side B's; taking the nearest enemy (`SPAR_A_PICK=near`) 14, 16, with 18 and 17 (side A stands two tiles
+    east, so the mirror is not even). Gap: no run of the escape with the allies not counted.
+50. **On repeatable runs two specials kept for a runner catch a third more runners for a fight or two elsewhere.**
+    With the timer restart of finding 41, `specReserve: 500` on the champion with `tribrid-snare-sara`
+    (`.practice/climb/dual-sara.sh`, seeds 1-8): 30 of 64 runners where the champion catches 22, 91 kills and 5
+    deaths against the rival builds where it has 92 and 4, and in the mirror against the champion (`extra:spar-x8`)
+    35 kills and 29 deaths where the champion has 37 and 27. Finding 44's numbers for the same option came from runs
+    that did not repeat. The champion takes `specReserve: 500`. Gap: 8 seeds; the mirror and the rivals each lose 1
+    or 2 fights.
+51. **No single knob of the champion beats it on the runner and the rivals at once.** Repeatable runs, the champion
+    with `tribrid-snare-sara`, seeds 1-8 (`.practice/climb/dual-sara.sh`): the champion catches 30 of 64 runners and
+    has 91 kills, 5 deaths in 96 rival fights, and a second run gives the same. Each change (runner of 64; rival kills
+    and deaths of 96): `eatAt` 55: 28; 87, 9. `eatAt` 65: 35; 87, 8. `chaseBelow` 0.5: 30; 91, 5 (no change).
+    `mixStyles: false`: 21; 91, 5. `adaptStyles: false`: 29; 87, 8. `freezeEarlyMax` 0: 19; 90, 6.
+    `freezeBelow` 0.4: 18; 92, 4. `freezeBelow` 0.55: 28; 88, 8. `specReserve` 750: 34; 90, 6. The early freeze from
+    half health holds 11 of the 30 runner kills. A special in the tick after the target's eat animation
+    (`human_eat`, seq 829: it cannot eat again for 3 ticks), past `specBelow` and `specReserve`, while its health
+    bar shows 70% or lower: 27; 84, 12. At 50%: 26; 89, 7. At 30%: 30; 91, 5, the champion's own result, since at
+    30% its specials already go out. Gap: one knob at a time; 8 seeds.
+52. **The PK army runs as one route: a roaming leader and followers that fight its target.** `scripts/pk-army.ts`
+    (aio-pvp mode `army`): the leader runs the roam hunt (`scripts/pk-roam.ts` `huntOnce`, the army in its friends);
+    each follower keeps within `FOLLOW` tiles of it and, while the leader's target is in view, fights that target on
+    the `army` profile with the other accounts as allies; when the leader escapes, dies or ends its hunt the
+    followers leave by glory or a run south. `pvp:army` (leader and two followers at the Edgeville ditch, one target
+    with no food in multi-way combat at level 6): a kill and no death on seeds 1-5, 17 to 42 s a run; the first hit
+    is the leader's freeze, and the kill falls to the leader or a follower. Gap: practice only; one target; the
+    follower walks to the leader's tile with no formation, and `MAX_MINUTES` runs on the wall clock.
+53. **A target that leaves by its glory when two hit it escapes the army at low level.** `extra:army-route-defend`
+    (the army route of finding 52 against a target with 10 sharks and a glory on the champion's fight loop:
+    `pvp-with-targets.ts` `TARGET_PROFILE=champion`): the target escapes on seeds 1-3, rubbing its glory at 98 or 99
+    HP once the leader and a follower have hit it. With the followers on `army-alpha` (every special on contact) it
+    escapes on seeds 1-3 too: the followers walk in after the leader's first hit, and a teleport is not interrupted.
+    Gap: the army opens one account at a time; no run above level 30, where a glory does not work, or with all three
+    striking in one tick.
+54. **Above level 30 the defending target still outruns three maxed tribrids: it leaves at once, eats, and reaches
+    level 30 in about 16 ticks of running.** `extra:army-route-defend-deep` (the target of finding 53 at 3166,3784,
+    Wilderness level 34, multi-way; the army from level 28; seeds 1-4): the target escapes in every run, 19 to 60
+    ticks after the first hit, with 52 to 66 HP on `army` followers, 56 to 94 on `army-alpha`, and 57 to 62 with
+    followers that only hit (`ARMY_OPTS={"freeze":false}`, the leader's freeze alone). All three accounts cast a
+    freeze at the same target on the same ticks, so two of three casts meet a held or immune target. The target's
+    10 sharks heal 200 HP, more than the army deals in a 16-tick hold. One freeze for the army (`freezeShare`, on
+    by default in `scripts/pk-army.ts`, `FREEZE_SHARE=0` turns it off: no cast before the last freeze and its
+    immunity end) changes little: escapes at 53, 83, 54 and 44 HP. The army's prey is a target that does not leave
+    at the first two hits or has no food. `OPEN_TOGETHER=1` (the army holds its fire on a new target until all
+    three stand within 3 tiles of it, 10 ticks at most; followers on `army-alpha`): escapes at 55, 72, 87 and 58 HP.
+    The opening still spreads over about 20 ticks: the leader's chase froze before the hold took hold, and the
+    followers' first specials, armed out of melee reach, went out 7 ticks later. Gap: more accounts; the leader's
+    first freeze (pk-roam's chase) does not use the shared freeze.
+55. **Three, four or five maxed tribrids all let the target go that leaves a crowd at level 34.**
+    `extra:army-deep-x3`, `-x4` and `-x5` (gang mode at 3166,3784, Wilderness level 34, multi-way; our account on
+    the champion with 18 sharks, a glory and its escape from a crowd, a run south to level 30; the army on `army`;
+    two groups; seeds 1-4): each size kills the target in 1 of 8 meetings, and it escapes in 7. Gang mode starts a
+    new fight of the loop for our account whenever another of the gang hits it (`pvp_combat.rs2` single-way rule),
+    and an escape begun in one call was lost in the next: with that, the sizes killed it in 2, 4 and 6 of 8. The
+    loop takes `escapeLatch`, and gang mode passes one for each meeting and stops no fight once the escape has
+    begun. The army lost no account. Gap: one run per seed.
+56. **In the army route five accounts lose the running target as well.** `extra:army-route-defend-deep-x5` (the route of finding 52 with a leader and four followers
+    from level 28 against the target of finding 54 at level 34, multi-way; seeds 1-4): the target escapes in every
+    run, 21 to 23 ticks after the first hit, with 56 to 68 HP. With `OPEN_TOGETHER=1` the hold releases when all
+    five stand within 3 tiles (14 to 15 ticks after the leader first sees the target) and the target still escapes
+    with 39 to 79 HP; with the gang target's kit (`TARGET_KIT=tribrid-snare`: glory worn, 18 sharks) it escapes 31
+    to 37 ticks in with 53 to 67 HP, and with the army started next to the target (`ARMY_AT=near`) with 41 to 87.
+    Gang mode agrees once the target's escape outlives a fight restart (finding 55).
+57. **A crowd's attackers are counted by facing, not by hit source: the client names a hit's source by the entity we
+    face.** `StateCollector` gives each damage splat the player we face as its source, so in a crowd every hit
+    counted for one player: `escapeOutnumbered` fired at 49 to 65 HP against five, and the overhead protected
+    against the player we faced. The fight loop now reads each nearby non-ally player's `faceEntity`: one that faces
+    an index not in our own nearby list faces us (we are not in it) and counts for the escape; one that faces us or
+    an ally sets the crowd's prayer; one that faces some other visible player (another fight close by) counts for
+    neither. `crowdPrayer` (multi-way combat, two or more of those: the overhead covers the style most of them hold)
+    joins the champion. Two against two, side B on the champion, seeds 1-8: side A on the champion wins 17, loses 11,
+    draws 4, with 5 dead and 16 of side B's; without `crowdPrayer` 9, 17, 6, with 18 dead and 9. Three against three
+    (`extra:team-3v3-multi-x3`, seeds 1-8): 8, 11, 5, with 10 dead and 17 of side B's; without it 5, 14, 5, with 11
+    dead and 12. Against five at level 34
+    (`extra:army-deep-x5`, seeds 1-4) the champion sees the crowd at 99 HP in half the meetings and leaves alive in
+    4 of 8 where the hit count let it leave in 2 (both without the escape latch of finding 55). The army case of finding 46 holds: 16 kills, no losses, the target
+    eats 15.5 sharks. Gap: a target out of view counts as us; no run on the live server.
+58. **A maxed roamer fights better on the champion's options, and an unknown hit source is not a second
+    attacker.** `extra:roam-defend` (the roam route against a target with 18 sharks and a glory on the champion's
+    fight loop, Wilderness level 8, single-way; seeds 1-6): every fight of the roam ended on `PK danger: 2 players
+    hitting`. A hit's source is the entity the player faces (finding 57), and -1, no one, counted as a second
+    player; `dangerReason` and the crowd escape now leave out a source below 0. The roam's own fight options then
+    deal 307 and take 404 in the first fight, summed over the six seeds; with the champion's (`ROAM_PROFILE=champion`)
+    379 and 360. No fight ends in a kill within the roam's 120-tick cap: two maxed accounts with food need longer.
+    `ROAM_PROFILE` defaults to `auto`: the champion for an account of combat 115 or more, the roam's own options
+    below that (finding 37); the army leader (`scripts/pk-army.ts`) takes the same rule. Gap: six seeds.
+59. **The hunt route fights better on the champion's options too.** `extra:hunt-defend` (the hunt route from the
+    Edgeville bank against a target with 18 sharks and a glory on the champion's fight loop, Wilderness level 3,
+    single-way; seeds 1-6): on the hunt's own options the hunter's first fight deals 320 and takes 419, summed; on
+    the champion's (`HUNT_PROFILE`, default `auto`: the champion for combat 115 or more) 1,024 and 715. Every fight
+    ends with the hunter leaving on its danger check (`exitOnDanger`, "losing the race": 30 or more taken, twice what
+    it dealt, in the last 30 ticks, under 60% HP), and none ends in a kill. With the race read over 60 ticks
+    (`raceWindow`, `HUNT_RACE_WINDOW=60`) the fights go 859 dealt, 779 taken, and still end on the check. Gap: six
+    seeds.
+60. **The danger check's damage race costs the hunter its kills: without it the hunter wins the even fight and
+    most of the hard one.** `extra:hunt-defend` (finding 59, the hunter on the champion's options; seeds 1-6): with
+    the race (`raceExit` on) every first fight ends on the danger check and none in a kill. With `raceExit: false`
+    (the check keeps its no-food, two-attacker and no-prayer rules) the hunter kills the even target in 5 of 6 and
+    leaves once on no food; with no danger check at all, 6 of 6, no death. Against a stronger target
+    (`TARGET_STRONG=1`: boost potions and 24 sharks) the race gives 6 danger exits and no kill; without it, 3 kills
+    in one run of six and 2 in another, with one death of the hunter (seed 4) and the other fights left on no food.
+    A kill drops the target's kit (about 250,000 coins of loot in `pvp:army`), a death costs ours. The champion
+    takes `raceExit: false`, so the hunt, the roam and the army leader (champion options for combat 115 or more)
+    fight on past a lost race; with it from the profile the hunter kills the even target in 3 of 6 and leaves on no
+    food in 3 (route cases run several processes and repeat less exactly than spar batches); a later run of the same
+    setup, counting the target's outcome too, gives 5 kills and no death against the even target and 4 kills and no
+    death against the stronger one. On repeatable route runs (finding 41: `SPAR_NPC_NEAR=1`, the bench-seeded
+    choices) the champion's hunter kills the even target in 3 of 6 with one death (seed 1: it left on no food and
+    died on the way out) and the stronger target in 3 of 6 with none. `pressLow: 0.3` (the no-food exit waits while
+    the target's bar shows 30% or less and no one else hits us) gives the same seed for seed against both, and stays
+    off. Leaving with no food at twice the opponent's estimated max hit (`noFoodAt: 2`, the check's default 1.5)
+    keeps every target dead (3 of 6 against each, one of them after the hunter has left) and the hunter alive in all
+    12 fights, where 1.5 lost it once; the champion takes `noFoodAt: 2`. Gap: six seeds; no target stronger than
+    potions and food.
+61. **The hunt left a danger exit standing where it was; with the escape in place it kills the softer target first.**
+    `extra:hunt-pick` (the hunt route against two targets at its first spot, both on the champion's fight loop: one
+    in rune with 18 sharks and a glory next to the spot, one in monk robes, kit `ganker-dds`, four tiles on; seeds
+    1-6): a fight that ended on the danger check (no food at twice the opponent's max hit) left the hunter beside its
+    attacker, and each new hit started a fight that stopped at the same check, so it died there. The hunt now runs
+    the fight loop's escape at once after a danger exit (glory, teleport or a run; the glory took it out in 7 ticks).
+    Taking the softest armour first (`HUNT_PICK`, default `soft`) kills 10 targets of 12 (all six soft ones) for one
+    death of the hunter; the nearest first 9 for one. That death came after the hunt's own tick cap ended a fight
+    (`timeout`): the hunt stopped beside its attacker. The hunt now also escapes after a timeout in the Wilderness,
+    with `flee` (the fight loop only escapes, whatever the food) and its own 200-tick cap: 8 targets of 12 (all six
+    soft ones) and no death. `HUNT_MIN_FOOD` (no fight of the hunter's own choosing below
+    that much food) changes nothing here, because the first kill costs little food. Pure builds: in the
+    `pure-dds` mirror (`extra:spar-kit-pure-dds-x8`, seeds 1-8, against `base`) `base` and `snap` give 32 kills and
+    30 deaths in 64, the champion 30 and 32, `specBelow` 1 or 0.5 31 to 33 kills, and `hunter` (a freeze on flight
+    with no freeze runes) 15 and 46. The roam picks its prey from the world feed's roster before the target is in
+    view, so the client shows no armour then: an armour term in `preyScore` left the first pick unchanged on
+    `extra:roam-pick` (the same two targets at level 8, seeds 1-6; the roam took the armoured one first in all six)
+    and is not kept. Two runs of `extra:roam-pick` with seed 1 part at tick 8 after the last login, at the roam's
+    first walk: `scripts/pk-roam.ts` `Radar` holds the last world-feed frame, which comes on its own socket, so
+    whether a tick's frame is read before or after that tick's game packets follows the machine, and the game socket
+    carries no engine tick to align them by. Gap: six seeds; one pair of targets; a repeatable roam needs the feed
+    frames tied to the game tick.
+62. **The roam takes the softer of two targets once both are in view: 6 kills in 6 seeds, against 1 in 6.**
+    `extra:roam-pick` (two targets defending on the champion at Wilderness level 8: one in rune with 18 sharks and a
+    glory, 219 stab defence; one in monk robes with a dragon dagger, 0; seeds 1-6, `.practice/roam-switch/`): the
+    roam picks the rune one from the feed by reach in every seed. With the switch (`scripts/pk-roam.ts` chase: before
+    its first fight, an idle attackable player in view with at least `ROAM_SOFTER` (40) less stab defence takes the
+    chase) it kills the robed one in all six and dies in none; with `ROAM_SWITCH=0`, 1 kill and no death. The
+    single-target roam cases, the hunt cases and the army routes pass at seed 1 and none of them switches. Six seeds
+    run in 55 to 59 s on `--seeds 1,2,3,4,5,6 --seed-jobs 6`, so a roam change is measured over seeds although one
+    seed does not repeat (finding 61). Gap: one pair of targets; a softer target that fights back harder than its
+    armour shows (a pure with a godsword) is not in a case.
+63. **The roam's danger exit walked out with no prayer, and its own check read every fight as a lost race.**
+    `extra:roam-defend-low` (the roam with 4 sharks and a worn glory against the rune target with 18 sharks and a
+    glory, defending on the champion at Wilderness level 8; seeds 1-6, `.practice/roam-switch/low-*`). The roam's
+    `escape` walks south and rubs only a glory in the pack, so with the glory worn it ran: on its no-food exits it lost
+    7 to 38 HP on the way out. The fight loop's escape (`flee`, as the hunt uses since finding 61: protect prayer, food,
+    the worn glory) loses 0 to 6 HP in five of six and 30 in one; `ROAM_FLEE=0` restores the walk. Between fights the
+    roam's `survive` has no count of damage dealt, so a race check there reads `dealt 0` after any fight and ends the
+    hunt on `losing the race` at about HP 50 (three of six seeds with `ROAM_RACE=1`); `survive` runs no race check and
+    takes the profile's `noFoodAt`. Then every exit is a no-food exit and every
+    roam escapes alive. Damage dealt before the exit is within noise: means of 120 (walk), 100 (flee) and 110 (flee,
+    no race) a seed. Gap: no kill in any of these runs (4 sharks against 18 and a glory); six seeds.
+64. **A hold spell's result shows as a graphic on its target in the tick the server casts it, and the tile read takes
+    a target that stands still for a hold.** `pvp_magic.rs2` puts `entangle_impact` (179), `snare_impact` (180) or
+    `bind_impact` (181) on a target that a hold spell hits and `failedspell_impact` (85) on one it splashes
+    (`magic_combat_spells.dbrow`, `pack/spotanim.pack`); the client keeps it as the player's `spotanimId`
+    (`observePlayer` `spotanim`). The fight loop reads holds and splashes from it first, for every caster's hold
+    (`SPOT_READ=0` leaves the tile read alone). At an army's opening (`extra:army-route-defend-deep`, the target
+    still standing) the tile read took a splash for a hold and blocked the others' freezes. In single fights the
+    graphic read changes nothing: the champion with `tribrid-snare-sara` catches 30 of 64 runners and has 91 kills
+    and 5 deaths in 96 rival fights with it and without it (seeds 1-8, the repeatable setup of finding 41,
+    `.practice/climb/set-spot*`). A hold also ends once its caster stands more than 10 tiles from the target
+    (`pvp_frozen` walk trigger). Gap: the graphic of a later spell or arrow on the target replaces the impact
+    graphic, so a hold that another graphic hides is read by the tile.
+65. **No opening of three or five maxed tribrids kills the target that eats 10 sharks and leaves a crowd at level 34.**
+    `extra:army-route-defend-deep` (three accounts) and `-x5` (five), seeds 1-6, `.practice/roam-switch/`. The
+    target defends on the champion and runs as soon as two of the army face it; it reaches level 30, where its glory
+    works, in 16 to 20 ticks. Held casts land at level 29 or 30 when the freeze waits for the run (the champion's
+    `freeze: 'low'`). Options added to `scripts/pk-army.ts`, each off by default: `VOLLEY=1` (the first special on
+    a target waits until every account stands next to it with one ready), `FREEZE_STAGGER=1` (a cast blocks the
+    others for one tick until its caster sees the hold), `BURST_HOLD=1` (every special goes while the shared freeze
+    holds the target), `OPEN_FREEZE=1` (each account's first turn is a freeze) and `OPEN_TOGETHER=1`. Kills of 6,
+    three accounts: none 0, `VOLLEY` 1, `VOLLEY` with `FREEZE_STAGGER` 0, with `OPEN_TOGETHER` too 0, `BURST_HOLD`
+    with `FREEZE_STAGGER` and `OPEN_TOGETHER` 0, all five with the graphic read 0; five accounts: none 1, all five
+    0. With all five and the graphic read the army holds the target at level 33 or 34 in three seeds of six and
+    lands 13 specials, and it still leaves with 54 to 70 HP: three dragon dagger specials into Protect from Melee
+    and rune armour deal less than the target heals from its sharks. Escape HP (three accounts, mean of 6): none 78,
+    `OPEN_FREEZE` set 61, all five with the graphic read 76. The army's prey stays the target with no food or no
+    escape (findings 52 to 56). Gap: no kit with another special weapon (`pvp_special_attack.rs2` also has the dragon longsword, dragon mace, rune claws and dragon halberd) was tried; 6 seeds a setup.
+66. **The roam and the army left the Wilderness on foot with their glory worn.** The game rubs a glory only from the
+    pack (`amulet_of_glory.rs2` has no worn option). The roam's escape rubbed only a glory in the pack, so with the
+    glory worn it ran south; on `extra:army-route-defend-deep` seed 1 a blocked walk stood 908 ticks at level 14 and the
+    bench's no-progress check failed the run. The army's `leave` took a worn glory off first, but into a pack full of
+    kit, so the removal failed and the follower stood 120 ticks. Both now eat a food to free a slot when the pack is
+    full, take the glory off (three tries), rub it, and else walk, stepping 10 tiles to the side when a walk moves
+    them nowhere. `extra:army-route-defend-deep` seeds 1-6: the leader and both followers reach Edgeville at the end
+    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. Gap: the fight loop's own escape
+    is not checked with a full pack.
+67. **Spears on a melee tile at the opening kill the target that eats and leaves a crowd at level 34: 18 of 18.**
+    The dragon spear's special has no hit roll: it pushes the target a tile and holds it with `p_delay(4)`, no
+    move, no eat and no glory rub, for 25% energy (`pvp_dragon_spear.rs2`). `extra:army-route-defend-deep-x5` (the
+    target of finding 54 with 10 sharks and a glory, Wilderness level 34, multi-way; leader on the dragon dagger,
+    four followers; `.practice/roam-switch/x5*`), kills of the target: followers on `army-alpha`, `OPEN_TOGETHER=1`
+    and `OPEN_RANGE=1` (the army walks onto melee tiles with its fire held, then opens), with `ARMY_SPEARS` (the
+    first n followers on kit `tribrid-snare-spear`) 0: 1 of 12; 1: 0 of 6; 2: 6 of 12; 3: 15 of 18; 4: 18 of 18;
+    with the fight loop's event fix of finding 71 (on both sides: the target fights with the same loop) four spears
+    kill 10 of 12 (seeds 1-12), and in the two misses the target leaves at 25 HP once the spears' energy is spent;
+    with the leader's specials at any health as well (`LEADER_SPEC=all`, the default with the lock) 17 of 18.
+    Four spears with no opening options: 1 of 6; with `army-alpha` alone: 0 of 6; with the opening but not
+    `army-alpha`: 0 of 6; without `LEADER_SPEC=all` (the leader's specials at any health), before the event fix: 6 of 6. The two spear
+    specials a tick or two apart keep the target from acting between them; on `army` the specials wait for low
+    health and the lock never starts. Three accounts (two spears) kill none of 6: the leader's hits alone are too
+    few in the lock. No account of the army died. `army-alpha`'s `specBelow: 1` holds before the target's first
+    hit since `lowHealth` takes a fraction of 1 as any health; a check that needs the health bar to show makes the
+    first special of the opening wait 5 ticks for the first hit. Case `extra:army-route-spear-x5` (four spears).
+    `scripts/pk-army.ts` opens with the lock by default when two or more followers wield a dragon spear: four
+    spears with no settings given, 6 of 6. Where the glory works (`extra:army-route-spear-low-x5`, the same army
+    and target at 3150,3560, Wilderness level 6, multi-way; seeds 1-6): four spears 6 of 6 with no glory rub by the
+    target, no spears 2 of 6 with 10 rubs: a held target cannot rub. A leader and three followers (`extra:army-route-spear-x4`, seeds 1-6):
+    three spears 2 of 6, two 1 of 6, three with `LEADER_SPEC=all` 1 of 6: the lock needs five accounts. Spears that stun in turn on one shared clock (`STUN_SHARE=1`: a spear specials
+    only once the last hold has ended, and hits between) kill 0 of 6 with four spears of five accounts and 1 of 6
+    with three of four: the next spear is often still in its attack delay when a hold ends, and the target eats
+    or runs in the gap; overlapping holds leave none. In an even fight the spear loses: two of ours against two on the snare
+    kit in multi-way combat (`extra:team-2v2-multi-x4` and `extra:team-2v2-spear-x4`, seeds 1-4, side B on the
+    champion), wins, losses and draws of 16 groups: dragon dagger on the champion 10, 4, 2; spear on the champion
+    5, 8, 3; spear on `army-alpha` 4, 11, 1; one spear and one dagger (`extra:team-2v2-mixed-x4`, kits joined by `+`
+    in `scripts/pk-team.ts`) on the champion 5, 11, 0. No account dies in these fights: each ends when one side
+    leaves, and a hold deals no damage. Supply: the only drop of a dragon spear is the mega-rare table, 3 of its 128
+    rolls (`shared_droptables.rs2` `megararetable`), so the army's four spears are a market purchase. Gap: a
+    single-way spot (one attacker at a time) has no lock; the target's own escape does not answer the lock; four
+    spears leave the army with one dagger.
+68. **Against two targets together the spear army kills 10 of 12, once its leader stops banking an empty pack.**
+    `extra:army-route-spear-pair-x5` (the spear army of finding 67 against two of finding 54's targets two tiles
+    apart at Wilderness level 34, multi-way; seeds 1-6): four spears 8 of 12 targets and no death of ours, no spears
+    0 of 12. Between the targets the leader walked to the bank and back (156 ticks) with nothing to deposit: the
+    roam banked whenever 2 slots or fewer were free, and the fight kit leaves no more. It banks a full pack only
+    with loot in it: 10 of 12. The roam's escape and the army's leave take a worn glory off to rub it; the rubbed
+    glory is a new item, so the bank trip deposited it as loot and the next trip had none. They wear it again after
+    the teleport (`wearGlory`). The roam's 120-tick fight cap costs nothing here: `LEADER_CAP=400` kills 8 of 12.
+    Gap: 6 seeds.
+69. **The spear lock catches a target that runs at its first hit, and nothing catches one that leaves on sight.**
+    The spear army of finding 67 (`extra:army-route-spear-x5` at level 34 and `-low-x5` at level 6, seeds 1-6)
+    against its target set to escape only (`TARGET_OPTS={"flee":true}`): 6 of 6 at each level and no glory rub,
+    since the first contact is a spear's hold and a held target cannot run or rub. With the target leaving as soon
+    as any other player is within 12 tiles (`TARGET_SIGHT=12`, `scripts/measure/pvp-with-targets.ts`): 0 of 6 at
+    each level, with or without the opening hold (`OPEN_TOGETHER=0`). At level 6 it rubs its glory at full health
+    and is gone 6 ticks after it sees the army, before any account is within the 10 tiles of a freeze; at level 34
+    it runs to level 30 and rubs there. The army's prey is a target that is busy (skilling, fighting) or slow to
+    see it. A delay before it leaves (`TARGET_SIGHT_DELAY`) of 3, 6 or 10 ticks still gives 0 of 6 at level 6: from
+    the first sight at 12 tiles the army takes about 15 ticks to stand all on melee tiles (`"open"` at t61 after the
+    rub); at 16 ticks 5 of 6, at 22 ticks 6 of 6. The time goes to the followers: they keep with the leader by
+    walks to its last tile, and when the leader stands at the target they are 15 tiles behind it (`ARMY_TRACE=1`,
+    each account's distance on each tick of the hold). With the leader's chase waiting while a follower is more
+    than 4 tiles from it (`PACE`, default 4 with the opening hold) and the followers running to the target's tile
+    as the leader sees it (`FOLLOW_TARGET`), all five come into view together and stand on melee tiles 6 ticks later:
+    a delay of 10 ticks gives 4 of 6, 16 ticks 6 of 6, 6 ticks 0 of 6, and the target that does not run 6 of 6.
+    The opening hold also ends when the target runs (its tile moves 2 tiles in a tick, `OPEN_ON_RUN`), and the pace
+    holds only until the fight opens; above level 30 the target that leaves on sight still gets away (0 of 6, every
+    hold at level 30): with 12 tiles' start at the army's speed it never comes within a freeze's 10 tiles before it
+    reaches level 30. The army comes from the south, the side the target runs to, and the target runs past it: the
+    casts go out at 8, 12 and 14 tiles as it passes (`.practice/roam-switch/run-open34b`). Gap: a target that leaves
+    within 6 ticks of the first sight; an army that waits in the runner's path; the test target runs straight south
+    where a player picks its way round.
+70. **The roam's bank trips deposited nothing: its loot is the same items as its kit.** `extra:roam-field` (the
+    roam against four maxed targets with no food at levels 6, 6, 17 and 17, two single-way and two multi-way spots;
+    seeds 1-6, `.practice/roam-switch/field*`): 3 kills in its minute in every seed, no death, a kill about every
+    300 ticks (kills at ticks 183 to 283, 408 to 599, 668 to 927). Each kill's loot (rune arrows, a mystic staff,
+    rune armour, a dragon dagger, a glory, runes: about 256,000 gp) set off a bank trip that deposited nothing,
+    because the bank kept every item id of the kit, and the loot stayed in the pack. The kit is the pack's count of
+    each item at the start, by name without its dose or charge (a drunk Prayer potion(2) or a rubbed glory is
+    kit); the bank takes the rest. Then each trip deposits the loot (`Rune arrow x307`, `Dragon dagger(p) x1`, ...)
+    and keeps the kit's potions; the third kill comes at a mean of 911 ticks against 832 (four seeds of six reach
+    it). Of the 300 ticks between kills, the loot takes 30 to 40 and the bank trip about 50. Gap: the targets stand
+    still; 6 seeds.
+71. **The fight loop counted the last fight's hits as its own, and a roam that does not loot kills 28% faster.**
+    The loop read every combat event in the client's history at its first tick as new: the hits of a fight that had
+    just ended came in as damage taken now and as attackers. A fight that starts soon after another (the roam with
+    no loot pause, the army, gang mode's restarts) then met a false danger: in `extra:roam-field` with `LOOT=0` every
+    second fight ended in its third tick on `2 players hitting` with nothing taken, and the roam left after one
+    kill in each seed. The loop skips events from before its start, as it skips messages. The field case runs
+    1,000 game ticks (`MAX_TICKS`, `scripts/pk-roam.ts`; one minute of wall time gave 213 to 3,169 ticks). Kills
+    in 1,000 ticks, seeds 1-6: loot and bank (default) 18, the third kill at a mean of 826 ticks; `LOOT=0` 21, the
+    third at 596; `BANK_AT=2000000` (bank only a big load) 19, the third at 860. The worn glory counts as kit too,
+    so one that the escape rubbed is not banked. The quick sweep (20) and the gang cases (23) pass. Gap: the loot
+    is the supply of arrows, runes and food that a long hunt needs; no case prices that against the kills.
+72. **Dragon armour with the Saradomin cape beats the rune kit on the runner and the rivals at once.** The champion
+    with each kit (`.practice/kits/run.sh`, `extra:spar-escape-<kit>-x8` against a `base` runner and
+    `extra:spar-rivals-<kit>-x12`, seeds 1-8, the repeatable setup; bonuses from `bun scripts/gear.ts kit`), runners
+    caught of 64 and rival kills and deaths of 96: `tribrid-snare-sara` (rune, Saradomin cape) 28 to 30, 91, 5;
+    `tribrid-dragon-sara` (dragon med helm, chainbody, platelegs and square shield, Saradomin cape) 31, 94, 1;
+    `tribrid-dragon` (the same with the Legends cape and black dragonhide vambraces) 22, 95, 1; the dragon kit with
+    14 sharks 31, 88, 8; the dragon kit that wears the Saradomin cape for each freeze (`freezeWear`,
+    `tribrid-dragon-capeswap`) 26, 92, 4; `tribrid-snare-dhide` (black dragonhide body and chaps) 23, 93, 3;
+    `tribrid-snare-swap` (rune for melee, dragonhide for bow turns) 17, 90, 5; `tribrid-snare-sara-mlb` (magic
+    longbow special: no hit roll, 10 tiles, `pvp_magic_longbow.rs2`) 27, 89, 7; `tribrid-sara-mace` 21, 89, 7;
+    `tribrid-sara-dls` 24, 89, 7. A kit's fixture sets the completion varp of each quest its items need
+    (`kitVarps`, `QUEST_VARP`): a dragon mace or square shield put back on after the two-handed bow is checked by
+    `levelrequire.rs2`, and without Legends' Quest the dragon kits fought with no shield after their first bow turn
+    (dragon with the Saradomin cape then 28, 88, 7; the mace kit 1, 0, 81). The runner is caught by freezes, set by
+    what stays on at the cast: with 18 sharks the pack has one free slot, so the strip takes off one piece, the
+    largest penalty first (each item's own from `knowledge/gear.json`). `dropForStrip` (a freeze on a target that
+    fled, at 70% health or more with 8 food kept, drops a food until 5 slots are free) gives `tribrid-dragon-sara` 34,
+    94, 1 and `tribrid-snare-sara` 31, 91, 5; the champion takes it. The melee style: one combat style index serves
+    every weapon (index 1 is the bow's rapid and the dagger's aggressive stab, +3 Strength; `combat.dbrow`
+    `weapon_stab_table`); `meleeStyle: 0` (accurate stab, +3 Attack, on melee turns and specials, rapid on bow turns,
+    a packet for each change) gives `tribrid-dragon-sara` 33, 94, 2: no gain. The champion's knobs on
+    `tribrid-dragon-sara`: `freezeBelow` 0.6 34, 95, 1; `specReserve` 750 36, 93, 3; neither is clear of 34, 94, 1. Gap: 8 seeds; the hunt, roam and army
+    routes still stage the rune kit.
+73. **Dragon armour wins more team fights; in the hunt it takes about as much damage as rune. The hunt's fixed kit
+    dropped any other shield.** `extra:hunt-defend` (the hunt route against a target defending on the champion with 18
+    sharks and a glory, seeds 1-12), the hunter in rune (the fixture) or in `tribrid-dragon-sara`'s armour
+    (`HUNTER_KIT`, which gives the fixture a kit's equipment and quest varps): kills 11 and 11, deaths 0 and 0, damage
+    dealt 5,224 and 5,310, damage taken 4,493 and 4,130 (seeds 1-6: 2,655 against 1,954; seeds 7-12: 1,838 against
+    2,176, so the difference is in the noise; the `HUNT` lines of `.practice/roam-switch/hunt-*`). The hunt's kits
+    name the rune kiteshield in their melee lists, so a hunter in any other shield lost it at its first bow turn for
+    good; the hunt puts the shield it wears at its start in that place. Two against two in multi-way combat (side B on
+    the snare kit, both sides on the champion, seeds 1-8, 32 groups): side A in `tribrid-dragon-sara` wins 21, loses
+    9, draws 2 (`extra:team-2v2-dragon-x4`); on the snare kit 16, 9, 7 (`extra:team-2v2-multi-x4`, the same runs).
+    Three against three (seeds 1-4, 12 groups): side A in dragon armour 4, 4, 4 (`extra:team-3v3-dragon-x3`), on the
+    snare kit 4, 4, 4, and one dragon spear with two in dragon armour 4, 6, 2 (`extra:team-3v3-spear-x3`). Supply (the drop scripts; `knowledge/drops.json` leaves out
+    the shared tables): dragon platelegs from a steel, iron or bronze dragon 1 in 256, 512 or 1,024 kills
+    (`steel_dragon.rs2` and the others), the dragon chainbody from the Kalphite Queen 1 in 128 (`kalphite_queen.rs2`),
+    the dragon med helm from the King Black Dragon 1 in 128 (`king_black_dragon.rs2`) and the shared rare table, the
+    left half of the dragon square shield (`dragonshield_a`) 4 in 128 rolls of the mega-rare table. Gap: the roam and
+    the army in dragon armour; the square shield's other half is not traced.

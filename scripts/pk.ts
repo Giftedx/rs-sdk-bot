@@ -48,7 +48,8 @@ const PRAYER_REQ: Record<number, number> = {
 
 export type Style = 'magic' | 'ranged' | 'melee';
 export type Kit = { [S in Style]?: number[] };
-export type SpecConfig = { kit: number[]; bar: string; cost: number; below: number; style?: Style };
+// stun: the ticks the special holds the target with no input (the dragon spear's, 4).
+export type SpecConfig = { kit: number[]; bar: string; cost: number; below: number; style?: Style; stun?: number };
 export type FightOptions = {
     kit: Kit;
     // Style turns in order; a style with no kit is skipped. Melee walks to the target.
@@ -76,6 +77,8 @@ export type FightOptions = {
     // Armour that cuts the attack roll of a cast or a shot (negativeCastArmour). 'torso' (default) takes the torso off
     // for the turn while HP is safe; 'keep' takes nothing off; 'strip' takes every such piece off.
     castArmour?: 'torso' | 'keep' | 'strip';
+    // The same rule for a freeze (default 'torso', whatever castArmour says): the freeze needs its magic roll.
+    freezeArmour?: 'torso' | 'keep' | 'strip';
     // false: no Defence prayer (Steel Skin and the lower ones). It saves prayer points and gives up their defence.
     defencePrayer?: boolean;
     // false: no Protect Item. An account with no skull keeps its three best items without it, and a melee turn then
@@ -133,7 +136,73 @@ export type FightOptions = {
     // In place of the step back: stand on the corner tile of a frozen target that holds a melee weapon. Melee reaches
     // the 4 side tiles only (RectangleBoundary.ts), so it cannot hit us there, and the bow shoots with no walk.
     diagonalFrozen?: boolean;
+    // Against a target that holds a melee weapon: freezes and steps only, no hit and no special. A freeze goes out
+    // whenever one can (the target is free and not immune, within 10 tiles); while the target is held the account keeps
+    // this many tiles from it (at most 10: past 10 the hold breaks, pvp_magic.rs2 pvp_frozen); while it is free or
+    // immune (5 ticks after a hold) the account runs straight away from it. The test of a melee attacker kept out of
+    // reach for good: a melee hit needs a side tile (RectangleBoundary.ts), and each cast costs one tick stood still.
+    kiteMelee?: number;
+    // Any freeze goes out the way a kiteMelee freeze does: only within 10 tiles and with a line of sight to the target
+    // (GameMap.ts isApproached), from a stand (a moving account stops on one tick and casts on the next), and no walk,
+    // food or potion click until the hold shows or 3 ticks pass (a walk or item click clears the queued spell).
+    // It loses runners (research/pvp-fight-loop.md finding 44): past 10 tiles the server walks the account in and
+    // casts on arrival, a chase that costs no click.
+    freezeStill?: boolean;
     fledSpec?: boolean;
+    // In multi-way combat, hits from this many different players within 8 ticks start the escape (escapeWalk, glory,
+    // escapeSpell) at once, whatever the food: a lone account against three cannot win (research finding 48).
+    escapeOutnumbered?: number | null;
+    // Our own accounts in this fight (lower case): each one within 10 tiles takes one attacker off the count of
+    // escapeOutnumbered, so an account does not leave an ally that stands with it.
+    allies?: readonly string[];
+    // An escape that outlives one call of the loop: a harness that starts a new fight for each attacker passes the
+    // same object, so an escape begun against one attacker goes on against the next.
+    escapeLatch?: { outnumbered: boolean };
+    // The loop only escapes: glory, escapeSpell or a run south (escapeWalk), from the first tick, whatever the food.
+    flee?: boolean;
+    // One freeze for a group of our accounts on one target: `clock` is a tick count they share, `at` the tick of the
+    // last freeze one of them cast and `until` the tick to which it holds the target and keeps it immune (the hold,
+    // then 5 ticks). An account casts no freeze before `until`, and the caster sets `until` back to now when it sees
+    // the freeze splash, so the others' turns go to damage in place of casts on a held or immune target.
+    // stagger: a cast blocks the others for that many ticks only, until its caster sees the hold (3 ticks after the
+    // cast); then for the rest of the freeze and its immunity. Absent: the whole freeze from the cast.
+    // heldUntil: the tick of `clock` to which a hold that its caster saw stops the target.
+    freezeShare?: { clock: () => number; until: number; stagger?: number; heldUntil?: number };
+    // While the shared freeze holds the target (freezeShare.heldUntil), every special goes as soon as it can, whatever
+    // the target's health or the special reserve: the group's hits land while the target cannot run (pk-army BURST_HOLD).
+    burstOnHold?: boolean;
+    // always: on every freeze, not only on a target that fled.
+    dropForStrip?: { free: number; minFood: number; hpAbove: number; always?: boolean };
+    freezeWear?: string[];
+    meleeStyle?: number;
+    // One stun for a group on one target: a special that stuns (SpecConfig.stun) goes only once the last one's hold
+    // ends (`until`, on the shared `clock`), so the group's spears hold the target in turn and hit between.
+    stunShare?: { clock: () => number; until: number };
+    // The first turn of the fight is a freeze, whatever the freeze rule: a group's opening holds the target before it
+    // sees itself outnumbered and runs (pk-army OPEN_FREEZE).
+    openFreeze?: boolean;
+    // While holdFire() is true the loop attacks and casts nothing; it walks to within 3 tiles of the target and eats
+    // and prays as usual (a group's opening in one tick).
+    holdFire?: () => boolean;
+    holdRange?: number;
+    // The army's volley (scripts/pk-army.ts VOLLEY=1): the first special on a target waits, attacks and all, until
+    // `members` accounts stand next to the target with a special ready, or `window` ticks of `clock` after the first
+    // did; then every one of them specials at once, so the hits land inside the target's eat delay.
+    volley?: { state: (target: string) => VolleyState; members: number; window: number; clock: () => number };
+    // In multi-way combat, against two or more players that face us or an ally, the overhead prayer covers the style
+    // most of them hold (a crowd's hits all carry the source we face, so the last hitter names no one).
+    crowdPrayer?: boolean;
+    // The ticks over which exitOnDanger's damage race is read (default 30).
+    raceWindow?: number;
+    // false: exitOnDanger leaves on no food, two attackers and no prayer, not on a lost damage race.
+    raceExit?: boolean;
+    // exitOnDanger's no-food exit waits while the target's health bar shows this fraction or lower.
+    pressLow?: number;
+    // exitOnDanger leaves with no food at this many times the opponent's estimated max hit or less (default 1.5).
+    noFoodAt?: number;
+    // Special energy kept back (0-1000) for a target that has fled or is at 30% of its health or lower (the champion
+    // keeps 500: research/pvp-fight-loop.md finding 50).
+    specReserve?: number;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
     // false: no protect prayer over the head, whatever the opponent holds.
@@ -198,7 +267,7 @@ export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1)
 
 // The style a worn weapon attacks with, from its object name (content pack/obj.pack). No weapon is melee (fists).
 let objNames: Map<number, string> | undefined;
-const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
+export const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
     .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })));
 // The style of a weapon by its name: a bow or a thrown weapon is ranged, a staff magic. The simulator
 // (scripts/pk-sim.ts) and the prayer guard use the same rule (packages/core/src/opponent.ts).
@@ -238,15 +307,32 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (n === 'dragon_longsword') return { kit: kit.melee!, bar: 'combat_hacksword:specbar', cost: 250, below: 0.6, style: 'melee' };
         if (n === 'dragon_mace') return { kit: kit.melee!, bar: 'combat_spiked:specbar', cost: 250, below: 0.6, style: 'melee' };
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
+        // The dragon spear's special does no damage: it holds the target 5 ticks with no input (pvp_dragon_spear.rs2
+        // p_delay(4)), so it cannot eat or change its prayer: it goes out when the target is low enough to want food.
+        if (n === 'dragon_spear') return { kit: kit.melee!, bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 };
     }
     return bowSpec(kit, names);
 }
 // The magic shortbow special of a kit: the burst against a target out of melee reach.
+// A weapon's reach in tiles from knowledge/gear.json (param attackrange: magic shortbow 7, magic longbow 10).
+let gearRange: Map<string, number> | undefined;
+export function weaponRange(id: number, names = getObjNames()): number | undefined {
+    gearRange ??= new Map((JSON.parse(readFileSync(join(resolve(import.meta.dir, '..'), 'knowledge', 'gear.json'), 'utf8')) as { debugname: string; attackRange?: number }[])
+        .filter(g => g.attackRange).map(g => [g.debugname, g.attackRange!]));
+    return gearRange.get(names.get(id) ?? '');
+}
+// The bow special: the magic longbow's when the kit carries one (pvp_magic_longbow.rs2: no hit roll, +10 Ranged levels
+// to its max hit, 10 tiles), else the magic shortbow's (two arrows, accuracy x10/7, 7 tiles). Both cost 35%.
 export function bowSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
-    for (const id of kit.ranged ?? []) {
-        if ((names.get(id) ?? '') === 'magic_shortbow') return { kit: kit.ranged!, bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged' };
-    }
-    return undefined;
+    const ids = kit.ranged ?? [];
+    const bow = ids.find(id => names.get(id) === 'magic_longbow') ?? ids.find(id => names.get(id) === 'magic_shortbow');
+    return bow === undefined ? undefined : { kit: [bow], bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged' };
+}
+// A turn's ranged weapons: the magic shortbow when the kit carries it with the longbow (4 ticks, 3 on rapid, against
+// the longbow's 6); the longbow is the special's.
+export function shootingKit(kit: Kit, names = getObjNames()): number[] {
+    const ids = kit.ranged ?? [];
+    return ids.some(id => names.get(id) === 'magic_shortbow') ? ids.filter(id => names.get(id) !== 'magic_longbow') : ids;
 }
 
 // Metal/leather armour pieces that penalize a magic or ranged attack roll on the cast/shot tick (kiteshields.obj,
@@ -254,30 +340,41 @@ export function bowSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined
 // legs -21, shield -8, helm -6); unequipped on the attack tick before the hit roll and re-equipped on the next tick.
 export function negativeCastArmour(worn: readonly { id: number; slot: number }[], style: Style, kitIds: ReadonlySet<number>, names = getObjNames()): { id: number; slot: number }[] {
     if (style === 'melee') return [];
-    const re = style === 'magic'
-        ? /(^|_)(platebody|chainbody|dragonhide_body|leather_body|studded_body|platelegs|plateskirt|dragonhide_chaps|studded_chaps|kiteshield|sq_shield|full_helm|med_helm|coif)(_|$)/
-        : /(^|_)(platebody|chainbody|platelegs|plateskirt|full_helm)(_|$)/;
-    const rank = (slot: number) => (slot === 4 ? 0 : slot === 7 ? 1 : slot === 5 ? 2 : 3);
-    return worn
-        .filter(e => !kitIds.has(e.id) && re.test(names.get(e.id) ?? ''))
-        .sort((a, b) => rank(a.slot) - rank(b.slot))
+    // Each worn item's own penalty to this attack (knowledge/gear.json magicAttack or rangeAttack), the largest first:
+    // the vambraces' -10 magic counts as the plate's does. The weapon and shield of the turn's kit stay.
+    const key = style === 'magic' ? 'magicAttack' : 'rangeAttack';
+    return worn.map(e => ({ id: e.id, slot: e.slot, p: gearBonus(e.id, key, names) }))
+        .filter(e => !kitIds.has(e.id) && e.p < 0)
+        .sort((a, b) => a.p - b.p || a.slot - b.slot)
         .map(e => ({ id: e.id, slot: e.slot }));
+}
+let gearBonuses: Map<string, Record<string, number>> | undefined;
+export function gearBonus(id: number, bonus: string, names = getObjNames()): number {
+    gearBonuses ??= new Map((JSON.parse(readFileSync(join(resolve(import.meta.dir, '..'), 'knowledge', 'gear.json'), 'utf8')) as { debugname: string; bonuses: Record<string, number> }[]).map(g => [g.debugname, g.bonuses]));
+    return gearBonuses.get(names.get(id) ?? '')?.[bonus] ?? 0;
 }
 
 // Another player's head icons and worn items, read from the in-process client's player entity (webclient
 // dash3d/ClientPlayer.ts headicons, appearance: a part at 512 or more is an object id + 512). The SDK state leaves them
 // out, and reading them here keeps the swarm's launch release unchanged.
 // Its health bar (ClientEntity health, totalHealth) holds the values of the last hit it took.
-export type Observed = { headicons: number; worn: number[]; health: number; totalHealth: number };
+// spotanim: the graphic on the player, -1 for none. A hold spell that lands shows its impact on its target in the tick
+// the server casts it (entangle_impact 179, snare_impact 180, bind_impact 181), and one that splashes
+// failedspell_impact (85) (pvp_magic.rs2, magic_combat_spells.dbrow, pack/spotanim.pack).
+export type Observed = { headicons: number; worn: number[]; health: number; totalHealth: number; spotanim: number };
+export const HOLD_IMPACT: readonly number[] = [179, 180, 181], SPLASH_IMPACT = 85;
+// The hold spell of each impact graphic (magic_combat_spells.dbrow spotanim_target): its freeze_time sets the hold.
+export const IMPACT_SPELL: Readonly<Record<number, number>> = { 179: SPELLS.entangle, 180: SPELLS.snare, 181: SPELLS.bind };
 export function observePlayer(client: unknown, index: number): Observed | null {
-    const p = (client as { players?: ({ headicons?: number; appearance?: ArrayLike<number>; health?: number; totalHealth?: number } | null)[] } | undefined)?.players?.[index];
+    const p = (client as { players?: ({ headicons?: number; appearance?: ArrayLike<number>; health?: number; totalHealth?: number; spotanimId?: number } | null)[] } | undefined)?.players?.[index];
     if (!p) return null;
-    return { headicons: p.headicons ?? 0, worn: Array.from(p.appearance ?? [], part => (part >= 512 ? part - 512 : -1)), health: p.health ?? 0, totalHealth: p.totalHealth ?? 0 };
+    return { headicons: p.headicons ?? 0, worn: Array.from(p.appearance ?? [], part => (part >= 512 ? part - 512 : -1)), health: p.health ?? 0, totalHealth: p.totalHealth ?? 0, spotanim: p.spotanimId ?? -1 };
 }
 // Special attack energy (0-1000) and the bar's on state, client vars 300 and 301 (scripts/microbot-c-qol.ts enableSpecial).
 const special = (client: unknown) => { const v = (client as { var?: number[] } | undefined)?.var; return { energy: v?.[300] ?? 0, on: v?.[301] === 1 }; };
 // A health bar at or under the fraction, from a hit that showed one.
-export const lowHealth = (seen: Observed | null, fraction: number) => !!seen && seen.totalHealth > 0 && seen.health / seen.totalHealth <= fraction;
+// A fraction of 1 or more holds at any health, also before the target's health bar shows (its first hit).
+export const lowHealth = (seen: Observed | null, fraction: number) => !!seen && (fraction >= 1 || (seen.totalHealth > 0 && seen.health / seen.totalHealth <= fraction));
 
 // The new hit splats on another player since the last call, read from the client's player entity (ClientEntity
 // damageCycles and damageValues, four slots). The SDK publishes a damage_dealt event only while our player faces the
@@ -327,13 +424,16 @@ export const estMaxHit = (combatLevel: number) => Math.max(10, Math.round(combat
 // - losing the damage race: over the last 30 ticks we took 30+ and at least twice what we dealt, at under 60% HP;
 // - no prayer points left at under 50% HP.
 export function dangerReason(o: { hp: number; maxHp: number; food: boolean; prayer: number; oppMax: number;
-    hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number }): string | null {
-    if (!o.food && o.hp <= o.oppMax * 1.5) return `no food at HP ${o.hp}`;
-    const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10).map(h => h.src));
+    hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number; window?: number; race?: boolean; noFoodAt?: number }): string | null {
+    if (!o.food && o.hp <= o.oppMax * (o.noFoodAt ?? 1.5)) return `no food at HP ${o.hp}`;
+    // A hit's source is the entity the player faced (StateCollector); -1 is no one, not a second player.
+    const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10 && h.src >= 0).map(h => h.src));
     if (attackers.size >= 2) return `${attackers.size} players hitting`;
-    const taken = o.hits.filter(h => o.now - h.tick <= 30).reduce((n, h) => n + h.damage, 0);
-    const dealt = o.dealt.filter(h => o.now - h.tick <= 30).reduce((n, h) => n + h.damage, 0);
-    if (taken >= 30 && taken >= 2 * dealt && o.hp < o.maxHp * 0.6) return `losing the race: took ${taken}, dealt ${dealt}`;
+    // The race over the last `window` ticks (default 30).
+    const window = o.window ?? 30;
+    const taken = o.hits.filter(h => o.now - h.tick <= window).reduce((n, h) => n + h.damage, 0);
+    const dealt = o.dealt.filter(h => o.now - h.tick <= window).reduce((n, h) => n + h.damage, 0);
+    if (o.race !== false && taken >= 30 && taken >= 2 * dealt && o.hp < o.maxHp * 0.6) return `losing the race: took ${taken}, dealt ${dealt}`;
     if (o.prayer <= 0 && o.hp < o.maxHp * 0.5) return 'no prayer points';
     return null;
 }
@@ -350,6 +450,22 @@ export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean>
         const off = s.onTick(() => end(true));
         void s.ended.then(() => end(false));
     });
+}
+
+// Multi-combat zones: maps/multiway.csv lists 8x8 zones as level_mapX_mapZ_localX_localZ (engine GameMap.loadCsvMap).
+let multi: Set<string> | undefined;
+export function isMulti(x: number, z: number, root = resolve(import.meta.dir, '..')): boolean {
+    if (!multi) {
+        multi = new Set();
+        try {
+            for (const line of readFileSync(join(root, 'vendor/rs-sdk/server/content/maps/multiway.csv'), 'ascii').split(/\r?\n/)) {
+                if (!line || line.startsWith('//')) continue;
+                const [y, mx, mz, lx, lz] = line.split('_').map(Number);
+                if (y === 0) multi.add((((mx! << 6) + lx!) >> 3) + ',' + (((mz! << 6) + lz!) >> 3));
+            }
+        } catch { /* no map: everything single-way */ }
+    }
+    return multi.has((x >> 3) + ',' + (z >> 3));
 }
 
 export const wildernessLevel = (z: number) => (z >= 9920 ? Math.floor((z - 9920) / 8) + 1 : z >= 3520 ? Math.floor((z - 3520) / 8) + 1 : 0);
@@ -409,6 +525,19 @@ const BOW_RANGE = 7;
 // Adjacent, not diagonal: where a melee attack lands.
 const adjacent = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z) === 1;
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+// kiteMelee: the 8 step directions, and the SDK's path search, loaded on the first kite step only (it holds the
+// collision map).
+const KITE_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
+let kitePaths: typeof import('../vendor/rs-sdk/sdk/pathfinding') | null = null;
+let kiteLos: typeof import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder') | null = null;
+// A spell goes out only with a line of sight to the target (GameMap.ts isApproached, rsmod hasLineOfSight with
+// CollisionFlag.PLAYER, the engine's BLOCK_NPC_AND_PLAYERS 0x100000).
+async function lineOfSight(level: number, from: { x: number; z: number }, to: { x: number; z: number }): Promise<boolean> {
+    kitePaths ??= await import('../vendor/rs-sdk/sdk/pathfinding');
+    kiteLos ??= await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+    kitePaths.initPathfinding();
+    return kiteLos.hasLineOfSight(level, from.x, from.z, to.x, to.z, 1, 1, 1, 1, kiteLos.CollisionFlag.PLAYER);
+}
 
 // A style is usable only with a non-empty kit: an empty list casts damage spells with whatever is wielded
 // (a dagger, a bow), which hits for a fraction of the staff's max hit and wastes the turn. kits built by
@@ -433,6 +562,9 @@ export function kitRotation(asked: readonly Style[] | undefined, kit: Kit): read
 
 // The fight loop times each eat against its attacks, so it holds the session's eat guard (packages/core/src/eat-guard.ts)
 // for the fight.
+export type VolleyState = { ready: Set<string>; first: number; fired: boolean; done: Set<string> };
+export const newVolley = (): VolleyState => ({ ready: new Set(), first: -1, fired: false, done: new Set() });
+
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
     const eater = holdSessionEater(s.sdk);
     try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { eater.release(); }
@@ -447,14 +579,19 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const startLife = sdk.getState()?.player?.lifeId;
     let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
     let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
-    let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
+    let freezeReady = start, frozenUntil = start, freezeCastAt = -10, freezeDur = 0, lastSpot = -1, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, gloryOffAt = -10, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
-    const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
+    // A bench run (BENCH_SEED) with no mixSeed seeds its random choices from the seed and the account name, so a route
+    // case (hunt, roam, army) repeats on its seed; a live run keeps Math.random.
+    const benchSeed = o.mixSeed === undefined && process.env.BENCH_SEED !== undefined
+        // A bench name is aiob…x<4-character token><role>; the role (1, 1b, …) is the same on every run.
+        ? Number(process.env.BENCH_SEED) * 100_003 + [...(s.name.toLowerCase().match(/^aiob[a-z0-9]*x[a-z0-9]{4}(.+)$/)?.[1] ?? s.name.toLowerCase())].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) : undefined;
+    const rand = o.mixSeed !== undefined ? seededRandom(o.mixSeed) : benchSeed !== undefined ? seededRandom(benchSeed) : Math.random;
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
-    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false;
+    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10, outnumbered = o.escapeLatch?.outnumbered ?? false;
     // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.
     let lagWant: number | null | undefined, lagAt = start, lagHas: number | null | undefined;
     let lastStyle: Style | null = null, arm: StyleArm = 'avoid', lastArm: StyleArm = 'avoid';
@@ -486,14 +623,37 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         prevSelf = { x: at.x, z: at.z };
         let maxEvent = seenEvent;
         const eventDealt: number[] = [];
+        // Events from before this fight are not its own: the history still holds the last fight's hits, and counted
+        // as new they ended the next fight at once on "2 players hitting" (extra:roam-field with LOOT=0, finding 71).
         for (const e of state.combatEvents) {
             const id = e.observationId ?? e.tick;
-            if (id <= seenEvent) continue;
+            if (id <= seenEvent || e.tick < start) continue;
             if (id > maxEvent) maxEvent = id;
             if (e.type === 'damage_dealt' && e.targetType === 'other_player') eventDealt.push(e.damage);
             if (e.type === 'damage_taken') { result.taken += e.damage; if (e.sourceType === 'other_player') hits.push({ tick: now, damage: e.damage, src: e.sourceIndex }); }
         }
         seenEvent = maxEvent;
+        // escapeOutnumbered: in multi-way combat, hits from that many players in 8 ticks start the escape for good, food
+        // or not. In single-way combat one player at a time can hit (pvp_combat.rs2:103-133), so a crowd is no danger.
+        const allyNear = o.allies?.length ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && p.distance <= 10) : [];
+        const alliesNear = allyNear.length;
+        // The attackers: the client names a hit's source by the entity we face, so in a crowd every hit counts for one
+        // player. A player within 10 tiles, not an ally, faces us when the index it faces is not in our own list of
+        // nearby players (we are not in it); it faces an ally when that index is an ally's. Another fight close by (a
+        // player facing some other visible player) counts for neither.
+        const allyIdx = new Set(allyNear.map(p => p.index)), visibleIdx = new Set(state.nearbyPlayers.map(p => p.index));
+        const faceOf = (index: number) => (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players?.[index]?.faceEntity ?? -1;
+        const hostile = o.escapeOutnumbered != null || o.crowdPrayer
+            ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase())).map(p => ({ p, f: faceOf(p.index) - 32768 })).filter(x => x.f >= 0)
+            : [];
+        // Those that face us count for the escape; those that face us or an ally set the crowd's prayer.
+        const facing = hostile.filter(x => !visibleIdx.has(x.f)).length;
+        const facers = hostile.filter(x => !visibleIdx.has(x.f) || allyIdx.has(x.f)).map(x => x.p);
+        const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8 && h.src >= 0).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
+        if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
+            outnumbered = true; if (o.escapeLatch) o.escapeLatch.outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
+        }
+        const escapeNow = (pack: typeof state.inventory) => o.flee === true || outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));
         let maxMessage = seenMessage;
         for (const m of state.gameMessages) {
             const id = m.observationId ?? m.tick;
@@ -531,16 +691,43 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 heading = { x: Math.sign(target.x - prevTarget.x), z: Math.sign(target.z - prevTarget.z) };
             }
             prevTarget = { x: target.x, z: target.z }; prevGap = gap;
-            if (frozenTile && now > freezeCastAt + 1 && (target.x !== frozenTile.x || target.z !== frozenTile.z)) {
+            // The graphic on the target names a hold spell's result in the tick the server casts it, whoever cast it:
+            // an impact graphic a hold, failedspell_impact a splash (of ours only within 3 ticks of our cast). The tile read
+            // below cannot tell a hold from a target that stands still (SPOT_READ=0 leaves only the tile read).
+            const spotRead = process.env.SPOT_READ !== '0', seenNow = observePlayer(s.client, target.index), spot = spotRead ? seenNow?.spotanim ?? -1 : -1;
+            if (spot !== lastSpot && HOLD_IMPACT.includes(spot)) {
+                const dur = freezeDuration(IMPACT_SPELL[spot]!, protectedStyles(seenNow?.headicons).has('magic'));
+                frozenUntil = Math.max(frozenUntil, now + dur); freezeReady = Math.max(freezeReady, now + dur + 5); frozenTile = null;
+                if (o.freezeShare) { o.freezeShare.until = Math.max(o.freezeShare.until, o.freezeShare.clock() + dur + 5); o.freezeShare.heldUntil = o.freezeShare.clock() + dur; }
+                log(`PK freeze held (graphic) at distance ${cheb(at, target)}, wilderness level ${wildernessLevel(target.z)}`);
+            } else if (spot !== lastSpot && spot === SPLASH_IMPACT && now - freezeCastAt <= 3 && frozenTile) {
+                if (o.freezeShare) { o.freezeShare.until = o.freezeShare.clock(); o.freezeShare.heldUntil = Math.min(o.freezeShare.heldUntil ?? -1, o.freezeShare.clock()); }
+                frozenUntil = now; freezeReady = now; frozenTile = null;
+                log(`PK freeze missed (graphic) at distance ${cheb(at, target)}`);
+            }
+            if (spot !== lastSpot && process.env.PK_TRACE === '1') log(`PKS target graphic ${spot}`);
+            lastSpot = spot;
+            // The server casts in the tick after our click, and a target that runs can step once more before it: the tile
+            // of a hold is where the target stands two ticks after the cast.
+            if (frozenTile && now === freezeCastAt + 2) frozenTile = { x: target.x, z: target.z };
+            if (frozenTile && now > freezeCastAt + 2 && (target.x !== frozenTile.x || target.z !== frozenTile.z)) {
                 // Target moved after the freeze cast: if it moved right away the spell splashed (no immunity); else it wore off (5-tick immunity).
                 const splashed = now <= freezeCastAt + 3;
+                if (splashed && fled) log(`PK freeze missed at distance ${gap}`);
+                if (splashed && o.freezeShare) o.freezeShare.until = o.freezeShare.clock();
+                if (o.freezeShare?.heldUntil !== undefined) o.freezeShare.heldUntil = Math.min(o.freezeShare.heldUntil, o.freezeShare.clock());
                 frozenUntil = now;
                 freezeReady = splashed ? now : Math.min(freezeReady, now + 5);
                 frozenTile = null;
+            } else if (frozenTile && now === freezeCastAt + 3) {
+                if (fled) log(`PK freeze held at distance ${gap}, wilderness level ${wildernessLevel(target.z)}`);
+                // With the graphic read on, a target that only stood still is no hold: the graphic confirms a hold.
+                if (!spotRead && o.freezeShare?.stagger !== undefined) o.freezeShare.until = Math.max(o.freezeShare.until, o.freezeShare.clock() + freezeDur + 2);
+                if (!spotRead && o.freezeShare) o.freezeShare.heldUntil = o.freezeShare.clock() + freezeDur - 3;
             }
             if (o.maxDistance !== undefined && target.distance > o.maxDistance) { result.outcome = 'lost'; return result; }
             if (o.maxWild !== undefined && (wildernessLevel(at.z) > o.maxWild || wildernessLevel(target.z) > o.maxWild)) { result.outcome = 'lost'; return result; }
-        } else if (now - lastSeen > 10 && !(o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(state.inventory))) {
+        } else if (now - lastSeen > 10 && !escapeNow(state.inventory)) {
             // While it escapes, a target out of view is the aim: the loop goes on until it is out of the Wilderness.
             result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result;
         }
@@ -548,8 +735,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));
         const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
         const oppMax = estMaxHit(oppCombat || me.combatLevel);
-        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now });
-        if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
+        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now, window: o.raceWindow, race: o.raceExit, noFoodAt: o.noFoodAt });
+        // pressLow: a danger with food gone waits while the target's health bar shows this fraction or lower and the
+        // target is the only one hitting us: one more hit or special may end it.
+        const pressing = o.pressLow !== undefined && !!target && !!danger && /^no food/.test(danger) && lowHealth(observePlayer(s.client, target.index), o.pressLow)
+            && !hits.some(h => now - h.tick <= 10 && h.src >= 0 && h.src !== target?.index);
+        if (danger && o.exitOnDanger && !pressing) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
         // While suspended by p_delay (DDS spec p_delay(0), potion p_delay(1), karambwan p_delay(2)), processClientsIn
         // drops OpHeld/InvButton/OpPlayer/MoveClick and protected scripts fail p_finduid(uid); wait until un-delayed.
         if (now < delayedUntil) continue;
@@ -575,7 +766,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         // Food before anything, any food best first; eating adds 3 ticks to %action_delay on the server (consume.rs2:130).
         // An account with few Hitpoints is under every threshold at full health, so full health never eats.
-        if (me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
+        // kiteMelee: an inventory click (OpHeld) in the two ticks of a cast clears the spell before the server casts it,
+        // so food and potions wait unless the next hit could kill.
+        const castShield = (o.kiteMelee !== undefined || o.freezeStill === true) && now <= freezeCastAt + 2 && me.hp > oppMax;
+        // freezeStill: the ticks after a cast until the hold shows (the target stood: held two ticks after the cast).
+        const freezeHolding = o.freezeStill === true && now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2 && !!frozenTile);
+        if (!castShield && me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
             if (food) {
                 use(food, /^Eat$/i);
@@ -598,7 +794,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
         }
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
-        if (o.escapeAt !== undefined && o.escapeWalk !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= o.escapeWalk) {
+        if (o.escapeWalk !== undefined && escapeNow(inv) && wildernessLevel(at.z) <= o.escapeWalk) {
             if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; }
             continue;
         }
@@ -606,24 +802,30 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // the amulet that an account wears is then its way out, and its pack needs no second one.
         const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
         const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : o.escapeSpell !== undefined ? 20 : 0;
-        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && reach && wildernessLevel(at.z) > reach) {
+        // No teleport at all (no glory, no escape spell): the way out is a run south, at any level, or the escape
+        // stands beside its attacker until its cap (review of PR #804).
+        const runSouth = () => { if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; } };
+        if (escapeNow(inv) && !reach && wildernessLevel(at.z) > 0) { runSouth(); continue; }
+        if (escapeNow(inv) && reach && wildernessLevel(at.z) > reach) {
             if (now - ranAt > 3) { if (ranAt < 0) log(`PK run south at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
             continue;
         }
-        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= 30) {
+        if (escapeNow(inv) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
             else if (!glory && wornGlory && inv.length < 28 && typeof sdk.sendUseEquipmentItem === 'function') { if (now - gloryOffAt > 2) { log(`PK takes its glory off at HP ${me.hp}`); void sdk.sendUseEquipmentItem(wornGlory.slot, 1); gloryOffAt = now; } }
             else if (!glory && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
                 log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
             }
+            // A worn glory with a full pack, or a spell out of its reach: nothing to click, so run south.
+            else if (!glory && (!wornGlory || inv.length >= 28) && (o.escapeSpell === undefined || wildernessLevel(at.z) > 20) && !state.dialog?.isOpen) runSouth();
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
             continue;
         }
         const prayers = state.prayers;
         // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
         // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
-        if (now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (o.cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
+        if (!castShield && now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (o.cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
             let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
             if (!potion && poisoned) {
                 potion = slotOf(ITEMS.antipoison);
@@ -650,19 +852,31 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // would cancel an approach that the server has in hand, so it is sent only while we stand still.
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
         if (o.chaseBelow !== undefined && target) chaseLow = lowHealth(observePlayer(s.client, target.index), o.chaseBelow);
-        if ((o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
+        if (o.kiteMelee === undefined && !freezeHolding && (o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
             const ahead = o.cutOff !== undefined && now < fleeingUntil;
             const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
             if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
         }
         if (!target) continue;
+        if (o.holdFire?.()) {
+            // To within holdRange (default 3) tiles; at 1, onto the side tile toward us (a melee tile, not a corner).
+            const range = o.holdRange ?? 3;
+            if (cheb(at, target) > range && stoodStill && now - stepAt >= 2) {
+                const dx = Math.sign(at.x - target.x), dz = Math.sign(at.z - target.z);
+                const side = range <= 1 ? (Math.abs(at.x - target.x) >= Math.abs(at.z - target.z) ? { x: dx, z: 0 } : { x: 0, z: dz }) : { x: dx * (range - 1), z: dz * (range - 1) };
+                void sdk.sendWalk(target.x + side.x, target.z + side.z); stepAt = now;
+            }
+            continue;
+        }
         if (!attackable({ z: at.z, combatLevel: me.combatLevel }, target)) {
             if (wildernessLevel(target.z) === 0) { result.outcome = 'lost'; return result; }
             if (unattackableSince < 0) unattackableSince = now;
             else if (now - unattackableSince >= 6) { result.outcome = 'lost'; return result; }
         } else unattackableSince = -1;
         const seen = observePlayer(s.client, target.index);
+        // PK_TRACE=1: one line for each tick of what the loop reads, to find where two runs with one seed part.
+        if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
         const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
@@ -679,7 +893,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const left = [...predictor.seen()].filter(st => st !== shownGuard);
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
-        let wantedOverhead = o.overheadPrayer === false ? null : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        // crowdPrayer: two or more players face us: the overhead covers the style that most of them hold.
+        const crowdStyle = o.crowdPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
+            const n = new Map<Style, number>();
+            for (const p of facers) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
+            return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+        })() : null;
+        let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         if (o.prayerLag?.length) {
             if (lagHas === undefined) lagWant = lagHas = wantedOverhead;
             else if (wantedOverhead !== lagWant) { lagWant = wantedOverhead; lagAt = now + pickWeighted(o.prayerLag, rand); }
@@ -693,7 +913,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // does not go out and kite an opponent that is not held.
         const meleeOnly = !!o.adapt && hits.filter(h => h.src === target!.index).length >= 6 && [...predictor.seen()].every(st => st === 'melee')
             && castableFreeze(state.skills.find(k => k.name === 'Magic')?.level ?? 1, inv) !== null;
-        const kiteTiles = o.kiteFrozen ?? (meleeOnly ? 3 : 0), freezeRule: FightOptions['freeze'] = o.freeze || (meleeOnly ? true : false);
+        const kiteTiles = o.kiteFrozen ?? (meleeOnly ? 3 : 0), freezeRule: FightOptions['freeze'] = o.kiteMelee !== undefined ? true : o.freeze || (meleeOnly ? true : false);
         // A chase: the target flees, or stands frozen more than 2 tiles away. A melee turn then spends the freeze on a
         // walk, so an account with a ranged or magic kit attacks from where it stands. Within 2 tiles a melee turn or
         // a melee special costs one step.
@@ -721,7 +941,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             : o.mixStyles ? open[Math.floor(rand() * open.length)]! : null;
         const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
         const burstBow = o.bowBurst !== undefined ? bowSpec(o.kit, names) : undefined;
-        const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= BOW_RANGE;
+        const burstRange = burstBow ? weaponRange(burstBow.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
+        const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= burstRange;
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
@@ -741,6 +962,50 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     nextAttack = now + 8;
                     continue;
                 }
+            }
+        }
+        // kiteMelee: against a target that holds a melee weapon, freezes and steps only (see the option). The freeze goes
+        // out through the attack turn below; on every other tick the account keeps its distance: up to kiteMelee tiles
+        // (never past the 10-tile hold, pvp_magic.rs2 pvp_frozen) while the target is held, a run straight away from it
+        // while it is free or immune. The run stays 10 tiles inside the Wilderness, so an escape never counts as a dodge.
+        const kiteTarget = o.kiteMelee !== undefined && weaponStyle(seen?.worn[3]) === 'melee';
+        let kiteCast = false;
+        if (kiteTarget) {
+            const gap = cheb(at, target), held = now < frozenUntil;
+            const kiteRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
+            const kiteMagic = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+            kitePaths ??= await import('../vendor/rs-sdk/sdk/pathfinding');
+            kiteLos ??= await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+            kitePaths.initPathfinding();
+            const level = me.level ?? 0;
+            // The server casts only with a line of sight to the target (GameMap.ts isApproached); without one it walks the
+            // account toward the target to find one. CollisionFlag.PLAYER is the engine's BLOCK_NPC_AND_PLAYERS (0x100000).
+            const foe = target, sight = (from: { x: number; z: number }) => kiteLos!.hasLineOfSight(level, from.x, from.z, foe.x, foe.z, 1, 1, 1, 1, kiteLos!.CollisionFlag.PLAYER);
+            kiteCast = !held && now >= freezeReady && now >= nextAttack && gap <= 10 && sight(at)
+                && (kiteRunes ? castableFreeze(kiteMagic, inv) : hasStyle(o.kit, 'magic') ? freezeSpell(kiteMagic) : null) !== null;
+            // A spell click while the account still runs is re-pathed and mostly never cast (Player.ts tryInteract: the
+            // ap trigger runs only within the approach distance after movement). So the account stops first, and casts on
+            // the next tick, stood still.
+            if (kiteCast && !stoodStill) { void sdk.sendWalk(at.x, at.z); kiteCast = false; stepAt = now; kiteStopAt = now; }
+            const want = held ? Math.min(o.kiteMelee!, 10) : 10;
+            // After a cast the account holds still until the hold shows (the target stood a tick: held two ticks after the
+            // cast), 3 ticks at most: the server re-queues the spell while our attack delay runs (pvp_magic.rs2
+            // pvp_combat_spell_checks), and a walk click clears it.
+            const casting = now <= freezeCastAt + 3 && !(held && now >= freezeCastAt + 2);
+            if (!kiteCast && !casting && kiteStopAt !== now && gap < want && now >= selfFrozenUntil) {
+                // The step: of the tiles 6 out in the 8 directions, the one with a path whose end is farthest from the
+                // target. A tile behind a wall has no path, and the client sends no click for it.
+                let best: { x: number; z: number } | null = null, bestScore = -Infinity;
+                for (const [ddx, ddz] of KITE_DIRS) {
+                    const to = { x: at.x + ddx * 6, z: Math.max(3530, at.z + ddz * 6) };
+                    const path = kitePaths.findLongPath(level, at.x, at.z, to.x, to.z, 40);
+                    const end = path[path.length - 1];
+                    if (!end) continue;
+                    // Farthest from the target, then a tile with a line of sight for the next cast, then straight away.
+                    const score = cheb(end, target) * 2 + (sight(end) ? 3 : 0) + (ddx * Math.sign(at.x - target.x) + ddz * Math.sign(at.z - target.z));
+                    if (score > bestScore) { bestScore = score; best = { x: end.x, z: end.z }; }
+                }
+                if (best && cheb(best, target) > gap) { void sdk.sendWalk(best.x, best.z); stepAt = now; }
             }
         }
         // Cooldown ticks: never send OpHeld/InvButton (which call clearPendingAction on the server), but configure
@@ -794,6 +1059,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
             continue;
         }
+        // kiteMelee: an attack tick with no freeze to cast is a step, not a hit.
+        if (kiteTarget && !kiteCast) continue;
         // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
         // that the server still has in hand. One try each 6 ticks, until the game confirms it.
         if (o.charge && !charged && now - chargeAt >= 6) {
@@ -811,7 +1078,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
         const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
-            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)));
+            && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
+            && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until)
+            && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
+        // freezeStill: a moving account stops on this tick and casts from its stand on the next.
+        if (castFreeze && o.freezeStill === true && !stoodStill && !kiteTarget) { void sdk.sendWalk(at.x, at.z); continue; }
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
         const energy = special(s.client);
@@ -825,8 +1096,20 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // that runs beyond the bow's range (7 tiles for a shortbow, bows.obj attackrange) never leaves the bow: the
         // special stays armed with its energy, and each such turn is lost.
         const running = now < fleeingUntil;
-        const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > BOW_RANGE));
-        if (spec && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
+        const specRange = specStyle === 'ranged' && spec ? weaponRange(spec.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
+        const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > specRange));
+        const vs = o.volley && spec ? o.volley.state(targetName.toLowerCase()) : undefined, myKey = (s.name ?? '').toLowerCase();
+        if (vs && !vs.fired) {
+            const readyNow = energy.energy >= spec!.cost && now >= nextAttack && cheb(at, target) <= (specStyle === 'melee' ? 1 : specRange);
+            if (readyNow) { vs.ready.add(myKey); if (vs.first < 0) vs.first = o.volley!.clock(); } else vs.ready.delete(myKey);
+            if (vs.ready.size >= o.volley!.members || (vs.first >= 0 && o.volley!.clock() - vs.first >= o.volley!.window)) {
+                vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
+            } else if (readyNow) continue;
+        }
+        const stunWaits = !!spec?.stun && !!o.stunShare && o.stunShare.clock() < o.stunShare.until;
+        const volleying = (!!vs?.fired && !vs.done.has(myKey)) || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1));
+        if (spec && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
+            && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
@@ -836,6 +1119,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 if (item && toWield.length < budget) toWield.push(item);
             }
             budget -= toWield.length;
+            if (o.meleeStyle !== undefined && specStyle === 'melee' && state.combatStyle && state.combatStyle.currentStyle !== o.meleeStyle && budget > 0) { void sdk.sendSetCombatStyle?.(o.meleeStyle); budget--; }
             if (prayers.prayerPoints > 0 && budget > 0) {
                 const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting, o.protectItem !== false);
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
@@ -845,6 +1129,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;
+            if (vs) vs.done.add(myKey);
+            if (spec.stun && o.stunShare) o.stunShare.until = o.stunShare.clock() + spec.stun + (specStyle === 'melee' ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : 0);
             last = Math.max(0, rotation.indexOf(specStyle));
             const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
             // pvp_special_attack.rs2:35 always uses oc_param($weapon, attackrate) (4 for MSB/DDS/claws, 5 for longsword/mace), ignoring Rapid.
@@ -877,18 +1163,38 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         let budget = 5 - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
         const keepWeapon = castFreeze && hasFreezeRunes && o.freezeWithStaff !== true;
-        for (const id of keepWeapon ? [] : [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
+        // freezeWear: items (debugnames) worn for a freeze cast, such as a god cape (magic attack +10); the other turns'
+        // switch lists put the usual ones back (pk-kits tribrid-dragon-capeswap).
+        const freezeWear = castFreeze && o.freezeWear ? inv.filter(i => o.freezeWear!.includes(names.get(i.id) ?? '')).map(i => i.id) : [];
+        for (const id of [...freezeWear, ...(keepWeapon ? [] : [...(turn.style === 'ranged' ? shootingKit(o.kit, names) : o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
             if (item && toWield.length < budget) toWield.push(item);
         }
         budget -= toWield.length;
+        // meleeStyle: the combat style of a melee turn (dagger 0 Stab accurate +3 Attack, 1 Lunge aggressive +3
+        // Strength); a bow turn goes back to 1 (rapid). One index serves every weapon, so each change costs a packet.
+        if (o.meleeStyle !== undefined && state.combatStyle && state.combatStyle.styles.length > 1 && budget > 0) {
+            const want = turn.style === 'melee' ? o.meleeStyle : turn.style === 'ranged' ? 1 : state.combatStyle.currentStyle;
+            if (state.combatStyle.currentStyle !== want) { void sdk.sendSetCombatStyle?.(want); budget--; }
+        }
+        // dropForStrip: a freeze on a target that fled, at high health with food to spare, drops one food a tick until
+        // the pack has `free` slots, so the strip before the cast takes off more penalising armour (finding 72: the
+        // dragon kit catches 32 runners with 14 sharks and 17 with 18, but 14 sharks lose the rival fights).
+        const dfs = o.dropForStrip, foods = dfs ? inv.filter(i => i.optionsWithIndex.some(op => /^eat$/i.test(op.text))) : [];
+        if (dfs && castFreeze && (fled || dfs.always === true) && 28 - inv.length < dfs.free && foods.length > dfs.minFood && me.hp >= me.maxHp * dfs.hpAbove && budget > 1 && typeof sdk.sendDropItem === 'function') {
+            void sdk.sendDropItem(foods[foods.length - 1]!.slot); budget--; log(`PK drops a food for the strip, ${foods.length - 1} left`);
+        }
         const freeSlots = 28 - inv.length - (switching2H ? 1 : 0);
+        const armourStrip = (castFreeze ? (o.freezeArmour ?? 'torso') : (o.castArmour ?? 'torso')) === 'strip';
         // A freeze on a target that has fled decides the chase, and the runner does not hit back: every piece that
         // cuts the magic attack roll comes off for it (platelegs -21, kiteshield -8, full helm -6), as far as the
         // packets and free pack slots of this tick allow. Any other cast takes off the torso alone.
-        const strip = (castFreeze && fled && o.freezeStrip !== false) || (o.castArmour === 'strip' && me.hp > oppMax + 12);
-        const toRemove = o.castArmour !== 'keep' && turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
+        const strip = (castFreeze && fled && o.freezeStrip !== false) || (armourStrip && me.hp > oppMax + 12);
+        // castArmour governs a shot or a damage spell, freezeArmour a freeze (default 'torso'): a freeze that misses lets
+        // a runner go, and plate leaves the magic roll near 0. The freeze on a fled target strips under freezeStrip.
+        const armourRule = castFreeze ? (o.freezeArmour ?? 'torso') : (o.castArmour ?? 'torso');
+        const toRemove = (armourRule !== 'keep' || strip) && turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
             ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => !(torsoLocked && DRAGON_SLAYER_BODY.test(names.get(eq.id) ?? '')))
                 .filter(eq => strip || eq.slot === 4).slice(0, strip ? Math.min(budget, freeSlots) : 1)
             : [];
@@ -910,6 +1216,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 result.freezes++;
                 if (now >= fleeingUntil) earlyFreezes++;
                 const dur = freezeDuration(freeze!, guarded.has('magic'));
+                if (o.freezeShare) o.freezeShare.until = o.freezeShare.clock() + (o.freezeShare.stagger ?? dur + 5);
+                freezeDur = dur;
                 frozenUntil = now + dur;
                 freezeReady = now + dur + 5;
                 freezeCastAt = now;

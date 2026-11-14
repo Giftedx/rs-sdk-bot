@@ -27,13 +27,16 @@ export async function runKitStage(s:Session,cap=1800,stop=()=>false){
  const born={...p()!},start=s.tick(),hpStart=born.hp,initialXp=JSON.stringify(state()!.skills.map(i=>[i.name,i.experience]));
  if(born.level!==0||Math.max(Math.abs(born.worldX-2807),Math.abs(born.worldZ-3441))>3||hpStart!==10||eq().length)throw Error('kit stage needs fullHP10 Catherby bank start and empty equipment');
  let ended=false,hpMin=hpStart,failure='',spent=0,fares=0,foodSpent=0,bought=0;
+ // The ticks spent standing while a route plans do not count against the cap: on a loaded practice machine the
+ // off-thread plan from Port Sarim took 1,913 ticks and the deadline gate ended a run that alone takes 601.
+ let planned=0,planFrom=-1;const planTicks=()=>planned+(planFrom>=0?s.tick()-planFrom:0);
  let decks:{x:number;z:number;level:number}[]=[];
  void s.ended.then(()=>{ended=true;});
  const cancel=new AbortController();
  const unsafe=()=>{
   const q=p();hpMin=Math.min(hpMin,q?.hp??0);
   return ended||!q||q.hp!==hpStart||q.isDead||(q.respawnCount??0)!==(born.respawnCount??0)||
-   born.lifeId!==undefined&&q.lifeId!==born.lifeId||q.worldZ>=3520||q.level!==0&&!decks.some(t=>q.level===t.level+1&&Math.max(Math.abs(q.worldX-t.x),Math.abs(q.worldZ-t.z))<=12)||s.tick()-start>=cap||stop()||existsSync('.practice/stop-'+s.name);
+   born.lifeId!==undefined&&q.lifeId!==born.lifeId||q.worldZ>=3520||q.level!==0&&!decks.some(t=>q.level===t.level+1&&Math.max(Math.abs(q.worldX-t.x),Math.abs(q.worldZ-t.z))<=12)||s.tick()-start-planTicks()>=cap||stop()||existsSync('.practice/stop-'+s.name);
  };
  const check=()=>{if(unsafe())throw Error('kit stage health/life/route/deadline/stop gate');};
  const off=s.onTick(()=>{if(unsafe())cancel.abort('kit stage safety gate');});
@@ -48,8 +51,9 @@ export async function runKitStage(s:Session,cap=1800,stop=()=>false){
  const assets=()=>[...bank,...inv(),...eq()].map(i=>({id:i.id,count:i.count}));
  const travel=async(x:number,z:number)=>{
   check();const q=p()!,actor=accountOf(s),cash=count(inv(),995);
+  planFrom=s.tick();
   const plan=await planTripOffThread({x:q.worldX,z:q.worldZ,level:q.level},{x,z,level:0},
-   {...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:cash});
+   {...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:cash}).finally(()=>{planned+=s.tick()-planFrom;planFrom=-1;});
   check();
   if(!plan||plan.bank||plan.legs.some(l=>l.kind==='travel'&&(l.travel.runes.length||l.travel.needs.some(n=>'held' in n))))throw Error('kit stage cash-only route unavailable');
   const fare=routeFares(plan.legs);

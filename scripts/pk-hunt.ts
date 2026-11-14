@@ -15,8 +15,25 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { armourDefence } from './pk-read';
 import { itemCost } from './pk-roam';
+
+// HUNT_PROFILE=<profile of scripts/pk-spar.ts>: that profile's fight options for each fight of the hunt (the kit,
+// special weapon, escape and caps stay the hunt's). auto (default): the champion for a hunter of combat 115 or more,
+// as the roam (research/pvp-fight-loop.md finding 58); none: the hunt's own options.
+const huntProfileCache: Record<string, Partial<FightOptions>> = {};
+async function huntProfile(combat: number): Promise<Partial<FightOptions>> {
+    const want = process.env.HUNT_PROFILE ?? 'auto';
+    const name = want === 'auto' ? (combat >= 115 ? 'champion' : '') : want === 'none' ? '' : want;
+    if (!name) return {};
+    if (!huntProfileCache[name]) {
+        const { PROFILES } = await import('./pk-spar');
+        const { specBelow: _below, ...profile } = PROFILES[name] ?? (() => { throw new Error(`unknown HUNT_PROFILE ${name}`); })();
+        huntProfileCache[name] = profile;
+    }
+    return huntProfileCache[name]!;
+}
 
 export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
 // Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
@@ -55,10 +72,13 @@ export function verdict(me: { z: number; combatLevel: number }, p: Seen, ours: S
     return 'attackable';
 }
 // The player to fight: whoever is hitting us first, else the nearest attackable stranger who is not fighting someone else.
-export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null): P | undefined {
+// The hunt's choice (HUNT_PICK, default soft): of the attackable players, the one whose worn armour gives the least
+// melee defence (read from what the client shows it wearing), then the nearest; HUNT_PICK=near takes the nearest.
+export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null,
+    armour?: (p: P) => number): P | undefined {
     const attacker = attackerIndex === null ? undefined : players.find(p => p.index === attackerIndex);
     if (attacker) return attacker;
-    return [...players].filter(p => verdict(me, p, ours) === 'attackable').sort((a, b) => a.distance - b.distance)[0];
+    return [...players].filter(p => verdict(me, p, ours) === 'attackable').sort((a, b) => (armour ? armour(a) - armour(b) : 0) || a.distance - b.distance)[0];
 }
 
 // A hit we took from another player. The SDK also reports an NPC's damage from someone else as damage_taken, with
@@ -139,6 +159,11 @@ export async function hunt(s: Session, o: HuntOptions) {
     // the staff trip (research/pvp-fight-loop.md, finding 25).
     const auto = !o.kit && !o.trip, sighted = new Map<string, string>();
     let kit = o.kit ?? TRIBRID_KIT;
+    // The shield the hunter wears at the start takes the rune kiteshield's place in the melee list: a fixed list put
+    // no other shield back on after a two-handed bow turn (a dragon square shield came off for good).
+    const startShield = s.sdk.getEquipment().find(e => e.slot === 5)?.id;
+    const ownKit = (k: Kit): Kit => (startShield === undefined || startShield === KIT_IDS.runeKiteshield ? k
+        : { ...k, melee: (k.melee ?? []).map(id => (id === KIT_IDS.runeKiteshield ? startShield : id)) });
     const shallow = (o.spots ?? HUNT_SPOTS).every(sp => wildernessLevel(sp.z) <= 30);
     let spot = 0;
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
@@ -202,8 +227,12 @@ export async function hunt(s: Session, o: HuntOptions) {
                 sighted.set(p.name, v);
                 log(`HUNT seen ${p.name} combat ${p.combatLevel} at ${p.x},${p.z} wild ${wildernessLevel(p.z)} ${v}${p.inCombat ? ` fighting ${p.combatTargetType}` : ''}`);
             }
-            if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20)) continue;
-            const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex);
+            // HUNT_MIN_FOOD=<n>: no new fight of our own choosing with fewer than n pieces of food (an attacker is still
+            // fought): a hunter that has spent its food on one kill does not take on the next target.
+            const foodLeft = state.inventory.filter(i => i.optionsWithIndex?.some(op => /^eat$/i.test(op.text))).reduce((n, i) => n + i.count, 0);
+            if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20 || foodLeft < Number(process.env.HUNT_MIN_FOOD ?? 0))) continue;
+            const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex, process.env.HUNT_PICK !== 'near'
+                ? p => { const o = observePlayer(s.client, p.index); return o ? armourDefence(o.worn.map(id => objNames().get(id) ?? '')).melee : 0; } : undefined);
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
@@ -212,16 +241,40 @@ export async function hunt(s: Session, o: HuntOptions) {
                 // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
                 // The overhead changes one tick before the target's next attack: 42 kills to 6 in mirror spars against 24 to 24.
-                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true, counterRead: true, adaptStyles: true,
+                kit: ownKit(kit), spec: defaultSpec(ownKit(kit)), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true, counterRead: true, adaptStyles: true,
                 escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, stop: over, log,
                 // A stand-up fight with bow and dagger only: a spell takes 5 ticks, the bow 3 and the dagger 4. Magic stays
                 // for the freeze. Random styles: an overhead that predicts cannot follow them.
                 rotation: o.rotation ?? (kit.ranged?.length && kit.melee?.length ? ['ranged', 'melee'] : undefined), mixStyles: true,
+                ...(await huntProfile(me.combatLevel)),
+                // HUNT_RACE_WINDOW: the ticks of the danger check's damage race (default the fight loop's 30).
+                ...(process.env.HUNT_RACE_WINDOW ? { raceWindow: Number(process.env.HUNT_RACE_WINDOW) } : {}),
+                // HUNT_EXIT=0: no danger exit; the fight goes on to its own escape rules (escapeAt and the crowd escape).
+                ...(process.env.HUNT_EXIT === '0' ? { exitOnDanger: false } : {}),
+                // HUNT_RACE=0: the danger exit keeps its food, crowd and prayer rules and leaves the damage race out.
+                ...(process.env.HUNT_RACE === '0' ? { raceExit: false } : {}),
+                // HUNT_PRESS=<fraction>: the no-food exit waits while the target's health bar is at that or lower.
+                ...(process.env.HUNT_PRESS ? { pressLow: Number(process.env.HUNT_PRESS) } : {}),
+                // HUNT_NOFOOD=<multiple>: the no-food exit at that many times the opponent's max hit (default 1.5).
+                ...(process.env.HUNT_NOFOOD ? { noFoodAt: Number(process.env.HUNT_NOFOOD) } : {}),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
                 tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
                 log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
+            }
+            // A danger exit (no food, two attackers) leaves the fight but not the place: the escape (glory, teleport or a
+            // run, the fight loop's own) goes at once, or each hit starts a new fight that stops at the danger check
+            // again and the hunter stands until it dies (extra:hunt-pick).
+            // So does a fight that the hunt's tick cap or stop ended (timeout): the hunt ends, and an account left
+            // standing beside its attacker dies there. This escape has its own 200-tick cap and stops only out of the
+            // Wilderness.
+            if (r.outcome === 'danger' || (r.outcome === 'timeout' && wildernessLevel(s.sdk.getState()?.player?.worldZ ?? 0) > 0)) {
+                const e = await fightPlayer(s, target.name, { kit: ownKit(kit), exitOnDanger: false, escapeSpell: o.teleSpell, cap: 200, log,
+                    predictPrayer: true, snapPrayer: true, flee: true });
+                log(`HUNT escape after danger: ${e.outcome}`);
+                if (e.outcome === 'escaped') tally.escapes++;
+                if (e.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
             }
             if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
             if (r.outcome === 'session ended') return { ...tally, end: 'session ended' };

@@ -25,6 +25,14 @@ export const CHAMPION: Profile = JSON.parse(readFileSync(resolve(import.meta.dir
 export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
     champion: CHAMPION,
+    // The PK army in multi-way combat, for a fight where it outnumbers its target (two against two it loses to the
+    // champion, finding 49): the champion with its specials held until the target is at 35% health, so the
+    // three accounts' specials land together where the target cannot eat back between them (finding 47). Its escape
+    // is the champion's, which counts the allies in view (finding 49).
+    army: { ...CHAMPION, specBelow: 0.35 },
+    // The army's opening strike: every special on contact, so the damage lands before a target that leaves by its
+    // glory (in 2004 a teleport is not interrupted) is gone.
+    'army-alpha': { ...CHAMPION, specBelow: 1, specReserve: 0 },
     freeze: { freeze: true },
     'freeze-flee': { freeze: 'flee' },
     // Keeps its special for a target at 40% health or one that has fled, and freezes a target that runs.
@@ -128,7 +136,9 @@ export const sparValid = (r: SparResult) => [r.a, r.b].every(f => f.attacks.magi
 export async function spar(a: Session, b: Session, optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false): Promise<SparResult> {
     const self = (s: Session) => s.sdk.getState()?.player;
     // A new practice world refuses player attacks for its first 8 ticks ("I'm already under attack.", pvp_combat.rs2:110).
-    for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
+    // Both sides wait, so on a lockstep engine each side's first actions go out with the acknowledgement of the tick
+    // they answer (packages/core/src/inprocess.ts scriptTick) and the fight starts on the same tick on every run.
+    for (let i = 0; i < 10; i++) { const [x, y] = await Promise.all([nextTick(a), nextTick(b)]); if (!x || !y) break; }
     const pa = self(a), pb = self(b), start = a.tick(), hp0 = [pa?.hp, pb?.hp];
     const startGap = pa && pb ? Math.max(Math.abs(pa.worldX - pb.worldX), Math.abs(pa.worldZ - pb.worldZ)) : undefined;
     let opening: number | null = null;
@@ -234,7 +244,12 @@ if (import.meta.main) {
     const tFirst0 = Date.now();
     const first = env.SPAR_LOGIN === 'b' ? null as unknown as Session : await openBot(botA, { onStop });
     const firstMs = Date.now() - tFirst0;
-    const pairs: [Session, Session][] = await Promise.all(names.map(async ([x, y], i): Promise<[Session, Session]> => {
+    // SPAR_SERIAL_LOGIN=1: one login after another, so each account gets the same player index on every run (the
+    // engine acts on players in index order each tick); parallel logins finish in the order the machine gives.
+    const serial = env.SPAR_SERIAL_LOGIN === '1';
+    let loginChain: Promise<unknown> = Promise.resolve();
+    const inTurn = <T,>(f: () => Promise<T>): Promise<T> => { if (!serial) return f(); const run = loginChain.then(f); loginChain = run.catch(() => {}); return run; };
+    const pairs: [Session, Session][] = await Promise.all(names.map(async ([x, y], i): Promise<[Session, Session]> => inTurn(async () => {
         // SPAR_LOGIN=b logs side B in before side A (after the first account, which the bench needs first): the engine
         // gives the earlier login the lower player index, and it acts on that player first in each tick.
         const order = env.SPAR_LOGIN === 'b';
@@ -251,7 +266,16 @@ if (import.meta.main) {
             if (collector && typeof collector.collectNearbyLocs === 'function') { collector.collectNearbyLocs = () => []; collector.collectGroundItems = () => []; }
         }
         return [a, b];
-    })).finally(() => { tickWaits.active--; });
+    }))).finally(() => { tickWaits.active--; });
+    // Serial logins: the engine's seed counts ticks from the last login (SIM_SEED_ANCHOR), and an account's login takes
+    // as many ticks as the machine's speed gives. Every account waits until the last one in has seen SPAR_START_TICK
+    // ticks (default 30), so the fights start the same number of ticks after the anchor on every run.
+    if (serial && pairs.length) {
+        const lastIn = pairs.at(-1)![env.SPAR_LOGIN === 'b' ? 0 : 1], startTick = Number(env.SPAR_START_TICK ?? 30);
+        const all = pairs.flat();
+        while (lastIn.tick() < startTick) if ((await Promise.all(all.map(x => nextTick(x)))).some(ok => !ok)) break;
+        if (lastIn.tick() !== startTick) console.log(`SPAR start tick ${lastIn.tick()} is not ${startTick}: the logins took longer`);
+    }
     const t1 = Date.now();
     // SPAR_SWAP=1: every second pair fights with the two profiles on swapped sides, and its result is turned back, so
     // side A in the results is always the profile SPAR_A and the side of the map has no part in the comparison.

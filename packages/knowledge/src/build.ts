@@ -5,6 +5,7 @@ import { parseJm2, type LocSpawn, type Spawn } from './jm2';
 import { parsePack } from './pack';
 import { contentRoot, knowledgeDir } from './paths';
 import { buildItems } from './items';
+import { buildGear, paramDefaults, parsePvpSpecials, parseRequirements, parseStaffItems } from './gear';
 import { buildNpcs } from './npcs';
 import { buildShops } from './shops';
 import { buildTransports, parseTransportHandlers, monkLadderSpawn, type Handler } from './transports';
@@ -24,6 +25,9 @@ const pack = (name: string) => parsePack(read(`pack/${name}.pack`));
 const objPack = pack('obj');
 const items = buildItems(blocksOf('.obj'), objPack);
 const certs = [...objPack.values()].filter(n => n.startsWith('cert_')).length;
+const requireFiles = listConfigFiles('.rs2').filter(f => f.includes('/levelrequire/')).map(f => ({ text: read(f), file: f }));
+const pvpSpecialFile = 'scripts/skill_combat/scripts/pvp/pvp_special_attack.rs2';
+const gear = buildGear(blocksOf('.obj'), objPack, parseRequirements(requireFiles), parsePvpSpecials(read(pvpSpecialFile)), paramDefaults(blocksOf('.param')), parseStaffItems(listConfigFiles('.rs2').map(f => ({ text: read(f) }))));
 
 const npcSpawns: Spawn[] = [];
 const locSpawns: LocSpawn[] = [];
@@ -120,6 +124,7 @@ const out = knowledgeDir();
 mkdirSync(out, { recursive: true });
 const write = (name: string, data: unknown) => writeFileSync(join(out, name), JSON.stringify(data, null, 1) + '\n');
 write('items.json', items);
+write('gear.json', gear);
 write('npcs.json', npcs);
 write('shops.json', shops);
 write('transports.json', edges);
@@ -132,6 +137,7 @@ write('pickables.json', pickables);
 
 const counts = {
     items: items.length,
+    gear: gear.length,
     certsExcluded: certs,
     npcs: npcs.length,
     npcSpawns: npcSpawns.length,

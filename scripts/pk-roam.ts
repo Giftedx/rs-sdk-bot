@@ -5,6 +5,7 @@
 //
 // usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO]
 //        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000]
+//        [FRIENDS=name,name] (the accounts never to attack, in place of the owned and listed accounts; FRIENDS= is none)
 // The account starts south of the Wilderness with its gear worn and food in its inventory.
 // Stop files: .practice/stop-<account>, .practice/stop-pk-hunt (shared with scripts/pk-hunt.ts).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -17,7 +18,8 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
-import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, type Kit } from './pk';
+import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, getObjNames, isMulti, observePlayer, type FightOptions, type Kit } from './pk';
+import { armourDefence } from './pk-read';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
 export function wildLevel(x: number, z: number): number {
@@ -40,21 +42,8 @@ export type Track = {
     fighting?: 'npc' | 'player'; skulled?: boolean; protect?: readonly string[]; hpFrac?: number; weapon?: number;
 };
 
-// Multi-combat zones: maps/multiway.csv lists 8x8 zones as level_mapX_mapZ_localX_localZ (engine GameMap.loadCsvMap).
-let multi: Set<string> | undefined;
-export function isMulti(x: number, z: number, root = resolve(import.meta.dir, '..')): boolean {
-    if (!multi) {
-        multi = new Set();
-        try {
-            for (const line of readFileSync(join(root, 'vendor/rs-sdk/server/content/maps/multiway.csv'), 'ascii').split(/\r?\n/)) {
-                if (!line || line.startsWith('//')) continue;
-                const [y, mx, mz, lx, lz] = line.split('_').map(Number);
-                if (y === 0) multi.add((((mx! << 6) + lx!) >> 3) + ',' + (((mz! << 6) + lz!) >> 3));
-            }
-        } catch { /* no map: everything single-way */ }
-    }
-    return multi.has((x >> 3) + ',' + (z >> 3));
-}
+// Multi-combat zones (scripts/pk.ts isMulti).
+export { isMulti };
 
 // Lower is better: ticks to meet, less a bonus for prey that is weak, busy, carrying everything or unable to teleport.
 // A skulled player drops all its items; a player fighting an NPC or another player is already losing HP and looking
@@ -196,8 +185,26 @@ export function freezeSpell(magic: number): number | null {
     return magic >= 79 ? 1592 : magic >= 50 ? 1582 : magic >= 20 ? 1572 : null;
 }
 
+// Wear the glory in the pack (after a rub: the game rubs a glory only from the pack).
+export async function wearGlory(s: Session): Promise<void> {
+    const g = s.sdk.getInventory().find(i => /^amulet of glory\([1-4]\)$/i.test(i.name));
+    const op = g?.optionsWithIndex?.find((o: { text: string }) => /^wear$/i.test(o.text));
+    if (g && op && !s.sdk.getEquipment().some(i => /^amulet of glory/i.test(i.name))) { await s.sdk.sendUseItem(g.slot, op.opIndex); await s.sdk.waitForTicks(1); }
+}
+
 // friends replaces the fleet list of accounts never to attack (practice passes its own target's absence).
-type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
+export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
+    // Fight options added to each fight of the hunt (the army's allies and shared freeze, scripts/pk-army.ts).
+    fight?: Partial<FightOptions>;
+    // While hold() is true the chase closes to 3 tiles of its target and casts and attacks nothing (the army's
+    // opening in one tick, scripts/pk-army.ts).
+    hold?: () => boolean;
+    // The tiles the hold closes to (default 3).
+    holdRange?: number;
+    // While true, the chase toward a target out of view waits (the army's pace, scripts/pk-army.ts PACE).
+    pace?: () => boolean;
+    specAll?: boolean;
+    maxTicks?: number;
     // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
     lootMin?: number; bankAt?: number };
 
@@ -268,6 +275,10 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const radar = new Radar();
     const closeRadar = connectRadar(server, radar);
     const end = Date.now() + cfg.maxMs;
+    // cfg.maxTicks: the hunt also ends after that many game ticks, so a practice run gets the same game time whatever
+    // the machine's speed (the wall clock gave 213 to 3,169 ticks to one minute, extra:roam-field).
+    const tickEnd = cfg.maxTicks ? session.tick() + cfg.maxTicks : Infinity;
+    const going = () => Date.now() < end && session.tick() < tickEnd;
     const food = () => sdk.getInventory().filter(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
     const magic = sdk.getSkill('Magic')?.baseLevel ?? 1;
     // The fight loop casts the freeze the level allows, so it freezes only when that one is castable.
@@ -313,17 +324,29 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const kit = kitFrom(sdk.getEquipment(), sdk.getInventory(), cfg.ranged);
     emit({ e: 'kit', kit });
     // Loot and banking: everything staged at the start is kit; anything else carried is loot.
-    const keep = new Set([...sdk.getInventory(), ...sdk.getEquipment()].map(i => i.id));
+    // The kit is the pack's count of each item at the start: loot often is the same items (a maxed target drops rune
+    // arrows, a staff, rune armour, a dagger, a glory and runes), so an id kept as kit left all of it in the pack
+    // and each bank trip deposited nothing (extra:roam-field, finding 70). An item counts in any dose or charge (a
+    // drunk Prayer potion(2) or a rubbed glory is still kit): the key is its name without the "(n)".
+    const GLORY = /^amulet of glory\([1-4]\)$/i;
+    const kitKey = (i: { id: number; name: string }) => i.name.replace(/\(\d\)$/, '').toLowerCase();
+    const startPack = new Map<string, number>();
+    // Worn items count too: the fight loop's escape takes a worn glory off to rub it and leaves it in the pack.
+    for (const i of [...sdk.getInventory(), ...sdk.getEquipment()]) startPack.set(kitKey(i), (startPack.get(kitKey(i)) ?? 0) + i.count);
+    const extraLoot = () => { const now = new Map<string, number>(); for (const i of [...sdk.getInventory(), ...sdk.getEquipment()]) now.set(kitKey(i), (now.get(kitKey(i)) ?? 0) + i.count); return [...now].some(([k, n]) => n > (startPack.get(k) ?? 0)); };
     const startFood = food()[0];
     const foodCount = startFood ? sdk.getInventory().filter(i => i.id === startFood.id).length : 0;
     const valuer = makeValuer(server);
     const lootMin = cfg.lootMin ?? 1000, bankAt = cfg.bankAt ?? 30_000;
     let carried = 0;
     const loot = async (at: { x: number; z: number }) => { carried += await lootAt(session, at, { value: valuer, min: lootMin, stats, emit }); };
-    const needBank = () => carried >= bankAt || 28 - sdk.getInventory().length <= 2;
+    // A full pack sends the hunt to the bank only with loot to put there: the fight kit itself (18 sharks, runes,
+    // potions, the bow) leaves 2 slots or fewer, and each chase then ended in a 156-tick walk to the bank and back
+    // with nothing deposited (extra:army-route-spear-pair-x5, finding 68).
+    const needBank = () => carried >= bankAt || (carried > 0 && 28 - sdk.getInventory().length <= 2);
     const bank = async (why: string) => {
         emit({ e: 'bank-trip', why, carried });
-        const ok = await bankTrip(session, walker, keep, startFood?.id, foodCount, stopped, emit);
+        const ok = await bankTrip(session, walker, startPack, kitKey, startFood?.id, foodCount, stopped, emit);
         if (ok) { stats.banked += carried; carried = 0; }
         return ok;
     };
@@ -341,7 +364,6 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         }
         seenHit = maxHit;
     };
-    const GLORY = /^amulet of glory\([1-4]\)$/i;
     const canTeleport = () => (sdk.getSkill('Magic')?.level ?? 1) >= 25 && sdk.getInventory().some(i => /^law rune$/i.test(i.name))
         && sdk.getInventory().some(i => /^air rune$/i.test(i.name) && i.count >= 3)
         && (sdk.getInventory().some(i => /^fire rune$/i.test(i.name)) || sdk.getEquipment().some(i => /staff of fire|fire battlestaff/i.test(i.name)));
@@ -350,24 +372,42 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         stats.escapes++;
         emit({ e: 'escape', why, hp: me()?.hp, wild: me() ? wildLevel(me()!.x, me()!.z) : 0 });
         // A stop request does not end the escape: live, a stop file froze Mightyrod at level 36 and it died.
+        let blocked = 0, removeTries = 0;
         for (let step = 0; step < 120; step++) {
             const m = me();
             if (!m) { await sdk.waitForTicks(1); continue; }
             if (m.hp * 100 <= m.maxHp * cfg.eatAt) { const meal = bestFood(sdk.getInventory() as any); if (meal) await bot.eatFood(meal as any); }
             const glory = sdk.getInventory().find(i => GLORY.test(i.name));
-            const how = escapeStep(wildLevel(m.x, m.z), { glory: !!glory, teleport: canTeleport() });
+            const worn = sdk.getEquipment().find(i => GLORY.test(i.name));
+            const how = escapeStep(wildLevel(m.x, m.z), { glory: !!glory || (!!worn && removeTries < 3), teleport: canTeleport() });
             if (how === 'out') { emit({ e: 'escaped', at: [m.x, m.z], hp: m.hp }); return true; }
+            // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option): a worn one comes off
+            // first, into a free slot (a full pack eats a food for one). Without this a roam with its glory worn
+            // walked out, and a blocked walk stood 908 ticks at level 14. Three tries, then the walk.
+            if (how === 'glory' && !glory) {
+                const meal = sdk.getInventory().length >= 28 ? bestFood(sdk.getInventory() as any) : undefined;
+                if (meal) await bot.eatFood(meal as any);
+                else { removeTries++; await sdk.sendUseEquipmentItem?.(worn!.slot, 1); }
+                await sdk.waitForTicks(1); continue;
+            }
             if (how === 'glory') {
                 const op = glory!.optionsWithIndex?.find((o: any) => /^rub$/i.test(o.text));
                 await sdk.sendUseItem(glory!.slot, op?.opIndex ?? 4);
                 for (let i = 0; i < 6 && !sdk.getDialog()?.isOpen; i++) await sdk.waitForTicks(1);
                 await sdk.clickDialogByText(/^Edgeville/i);
                 await sdk.waitForTicks(6);
+                // A glory that came off to be rubbed goes back on: left in the pack, the rubbed one (a new item id)
+                // read as loot and the next bank trip deposited it.
+                if (removeTries > 0) await wearGlory(session);
             } else if (how === 'teleport') {
                 await sdk.sendClickComponent(componentId('magic:varrock_teleport'));
                 await sdk.waitForTicks(6);
             } else {
-                await walkPath(walker, [{ x: m.x, z: Math.max(3510, m.z - 20), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
+                // A walk that moved us nowhere goes 10 tiles to the side, east and west in turn, before south again.
+                const side = blocked ? (blocked % 2 ? 10 : -10) : 0;
+                await walkPath(walker, [{ x: m.x + side, z: Math.max(3510, m.z - (side ? 4 : 20)), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
+                const n = me();
+                blocked = n && n.x === m.x && n.z === m.z ? blocked + 1 : 0;
             }
         }
         return false;
@@ -385,7 +425,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             stats.eats++; emit({ e: 'eat', hp: m.hp, ok: r.success });
         }
         const danger = wildLevel(m.x, m.z) > 0 ? dangerReason({ hp: m.hp, maxHp: m.maxHp, food: food().length > 0, prayer: sdk.getState()?.prayers?.prayerPoints ?? 1,
-            oppMax, hits, dealt: [], now: session.tick() }) : null;
+            // No race here: this check does not see the damage dealt, so every fight's hits read as a lost race
+            // (dealt 0) and ended the hunt after its first timeout (finding 63). The fight loop runs the race itself.
+            oppMax, hits, dealt: [], now: session.tick(), race: process.env.ROAM_RACE === '1', noFoodAt: cfg.fight?.noFoodAt }) : null;
         if (danger) { await escape(danger); return 'flee'; }
         if (wildLevel(m.x, m.z) > 0) {
             const seen = new Map(readOpponents(session.client).map(o => [o.name.toLowerCase(), o]));
@@ -398,11 +440,20 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     };
 
     // Fight one target until it dies, logs out, leaves the Wilderness, or the chase stalls.
-    const chase = async (name: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
+    // The feed shows no armour, so the first pick is by reach. Once the target is in view, the chase moves, before its
+    // first fight, to an idle player in view whose melee armour is at least ROAM_SOFTER (40) stab defence lower
+    // (research/pvp-fight-loop.md finding 62). ROAM_SWITCH=0 keeps the first pick.
+    const switchOn = process.env.ROAM_SWITCH !== '0', softer = Number(process.env.ROAM_SOFTER ?? 40);
+    // cfg.specAll: every special goes at any health and with no reserve (the army leader's LEADER_SPEC=all).
+    const specAll = <T extends { below: number } | undefined>(spec: T): T => (cfg.specAll && spec ? { ...spec, below: 1 } : spec);
+    const stabOf = (index: number) => { const o = observePlayer(session.client, index); return o ? armourDefence(o.worn.map(id => getObjNames().get(id) ?? '')).melee : null; };
+    let chasing = '';
+    const chase = async (first: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
+        let name = chasing = first, fought = false;
         stats.chases++;
         let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, contactAt = session.tick();
         let held = false, freezeReady = 0, lastSeenAt: { x: number; z: number } | null = null;
-        while (!stopped() && Date.now() < end) {
+        while (!stopped() && going()) {
             // A pass that used no game tick waits one, so the client and other sessions keep running.
             if (session.tick() === spun) await sdk.waitForTicks(1);
             spun = session.tick();
@@ -432,6 +483,18 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             if (wildLevel(pos.x, pos.z) > cfg.maxWild || wildLevel(m.x, m.z) > cfg.maxWild) { emit({ e: 'too-deep', target: name, wild: wildLevel(m.x, m.z) }); return 'left'; }
             lastTile = { x: pos.x, z: pos.z };
 
+            if (near && near.distance <= 15 && switchOn && !fought) {
+                const mine = stabOf(near.index);
+                const soft = mine === null ? undefined : (sdk.getState()?.nearbyPlayers ?? [])
+                    .filter(p => p.index !== near.index && !friends.has(p.name.toLowerCase()) && !skip.has(p.name.toLowerCase()) && p.distance <= 15 && !p.inCombat && canAttack(m, p))
+                    .map(p => ({ p, stab: stabOf(p.index) })).filter(x => x.stab !== null && x.stab + softer <= mine)
+                    .sort((a, b) => a.stab! - b.stab! || a.p.distance - b.p.distance)[0];
+                if (soft) {
+                    emit({ e: 'switch', from: name, to: soft.p.name, stab: [mine, soft.stab] });
+                    release(name); name = chasing = soft.p.name; claim(name); stats.targets.push(name);
+                    lastDist = Infinity; held = false; lastSeenAt = null; continue;
+                }
+            }
             if (near && near.distance <= 15) {
                 contactAt = session.tick();
                 const fleeing = near.distance > lastDist && near.distance >= 2;
@@ -442,6 +505,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 lastSeenAt = { x: near.x, z: near.z };
                 // Freeze first, at first reach, before the target can run; freeze again whenever it moves.
                 const castable = freezeNow();
+                if (cfg.hold?.()) {
+                    const range = cfg.holdRange ?? 3;
+                    if (near.distance > range && !cfg.pace?.()) await walkPath(walker, [{ x: near.x, z: near.z, tol: range }], { maxTicks: 2, idleMs: 9000, stop: stopped });
+                    else await sdk.waitForTicks(1);
+                    continue;
+                }
                 if (castable && canAttack(m, near) && session.tick() >= freezeReady && !held) {
                     // A cast on an immune or held target gives no XP; the SDK then waits out its timeout, so keep it short:
                     // 2.4 s is 6 live ticks (400 ms). Live, 1 s (2.5 ticks) reported every Snare as unproved.
@@ -459,13 +528,13 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // The tribrid fight itself: scripts/pk.ts fightPlayer (style off the overhead, gear switch per turn,
                 // special, food, prayer, glory escape). It exits immediately if the target leaves range or the
                 // Wilderness, exceeds maxWild, or a stop condition fires.
-                stats.attacks++;
+                stats.attacks++; fought = true;
                 const fight = await fightPlayer(session, name, {
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
-                    kit, spec: defaultSpec(kit), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
+                    kit, spec: specAll(defaultSpec(kit)), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell),
-                    cap: 120, maxWild: cfg.maxWild, maxDistance: 15, stop: () => stopped() || Date.now() >= end,
+                    cap: 120, maxWild: cfg.maxWild, maxDistance: 15, ...cfg.fight, stop: () => stopped() || !going(),
                     log: line => emit({ e: "fight", line }),
                 });
                 emit({ e: "fight-end", target: name, outcome: fight.outcome, ticks: fight.ticks, dealt: fight.dealt, taken: fight.taken, eaten: fight.eaten });
@@ -480,17 +549,34 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 }
                 if (fight.outcome === "died") { stats.deaths++; return "dead"; }
                 if (fight.outcome === "escaped") return "flee";
-                if (fight.outcome === "danger") { await escape(fight.danger ?? "danger"); return "flee"; }
+                if (fight.outcome === "danger") {
+                    // The fight loop's own escape first (ROAM_FLEE, default on): protect prayer off the attacker's style,
+                    // food, glory or the teleport spell, else a run with freezes on a chaser; as the hunt does (finding 61).
+                    if (process.env.ROAM_FLEE !== '0') {
+                        stats.escapes++;
+                        emit({ e: 'escape', why: fight.danger ?? 'danger', hp: me()?.hp, wild: me() ? wildLevel(me()!.x, me()!.z) : 0, flee: true });
+                        const e = await fightPlayer(session, name, { kit, exitOnDanger: false, cap: 200, predictPrayer: true, snapPrayer: true, flee: true,
+                            eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), maxDistance: 15,
+                            escapeSpell: canTeleport() ? componentId('magic:varrock_teleport') : undefined, log: line => emit({ e: 'fight', line }) });
+                        emit({ e: 'flee-end', outcome: e.outcome, hp: me()?.hp });
+                        if (e.outcome === 'died') { stats.deaths++; return 'dead'; }
+                        const m2 = me();
+                        if (m2 && wildLevel(m2.x, m2.z) === 0) return 'flee';
+                    }
+                    await escape(fight.danger ?? "danger"); return "flee";
+                }
                 lastDist = Infinity;
                 continue;
             }
             // Out of view: run to the cut-off tile, re-aimed on each new roster frame.
             if (session.tick() - contactAt > 400) { emit({ e: 'stall', target: name }); return 'stall'; }
+            // A group's pace: while pace() is true (someone is behind) the chase waits a tick for it.
+            if (cfg.pace?.()) { await sdk.waitForTicks(1); continue; }
             const aim = track ? intercept(m, track) : { ...pos, ticks: 0 };
             const frame = radar.tick;
             await walkPath(walker, [{ x: aim.x, z: aim.z, tol: 2 }], {
                 maxTicks: 40, idleMs: 9000,
-                stop: () => stopped() || radar.tick !== frame ||
+                stop: () => stopped() || radar.tick !== frame || !!cfg.pace?.() ||
                     !!sdk.getState()?.nearbyPlayers.some(p => p.name.toLowerCase() === name.toLowerCase() && p.distance <= 15),
             });
         }
@@ -498,7 +584,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     };
 
     try {
-        while (!stopped() && Date.now() < end) {
+        while (!stopped() && going()) {
             // A pass that used no game tick waits one, so the client and other sessions keep running.
             if (session.tick() === spun) await sdk.waitForTicks(1);
             spun = session.tick();
@@ -526,11 +612,11 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             stats.targets.push(name);
             emit({ e: 'target', target: name, combat: pick.track.combatLevel, wild: wildLevel(pick.track.x, pick.track.z), meetIn: Math.round(pick.at.ticks), at: [pick.track.x, pick.track.z] });
             claim(name);
-            const outcome = await chase(name).finally(() => release(name));
-            emit({ e: 'chase-end', target: name, outcome });
+            const outcome = await chase(name).finally(() => release(chasing));
+            emit({ e: 'chase-end', target: chasing, outcome });
             if (outcome === 'dead' || outcome === 'stop') break;
             if (outcome === 'flee') break;
-            if (outcome === 'stall' || outcome === 'left') skip.add(name.toLowerCase());
+            if (outcome === 'stall' || outcome === 'left') skip.add(chasing.toLowerCase());
             if (needBank() && !(await bank(carried >= bankAt ? 'loot value' : 'pack full'))) break;
         }
         // Bank whatever loot is carried before logging out; with none, just leave the Wilderness.
@@ -538,7 +624,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         if (m && stats.deaths === 0) {
             // Out of the Wilderness first, whatever ended the hunt (a stop request included).
             if (wildLevel(m.x, m.z) > 0) await escape(stopped() ? 'stop requested' : 'end of hunt');
-            if (sdk.getInventory().some(i => !keep.has(i.id))) await bank('end of hunt');
+            if (extraLoot()) await bank('end of hunt');
         }
     } finally { closeRadar(); }
     return stats;
@@ -600,16 +686,24 @@ async function lootAt(session: Session, at: { x: number; z: number }, ctx: { val
 
 export const EDGEVILLE_BANK_TILE = { x: 3094, z: 3492 };
 // Walks to Edgeville bank, deposits everything that is not kit, takes food back to its staged count. True when banked.
-async function bankTrip(session: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, keep: ReadonlySet<number>, foodId: number | undefined, foodCount: number, stopped: () => boolean, emit: (e: object) => void): Promise<boolean> {
+async function bankTrip(session: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, startPack: ReadonlyMap<string, number>, kitKey: (i: { id: number; name: string }) => string,
+    foodId: number | undefined, foodCount: number, stopped: () => boolean, emit: (e: object) => void): Promise<boolean> {
     const { sdk, bot } = session;
     const walk = await walkPath(walker, [{ ...EDGEVILLE_BANK_TILE, tol: 3 }], { maxTicks: 900, idleMs: 9000, stop: stopped });
     if (!walk.ok) { emit({ e: 'bank-failed', why: 'walk', detail: walk.detail }); return false; }
     if (!(await bot.openBank()).success) { emit({ e: 'bank-failed', why: 'open' }); return false; }
+    // Each item beyond the pack's count at the start goes in the bank.
     const deposited: string[] = [];
-    for (const item of [...sdk.getInventory()]) {
-        if (keep.has(item.id) || deposited.includes(item.name)) continue;
-        const r = await bot.depositItem(item, -1);
-        if (r.success) deposited.push(item.name);
+    const held = new Map<number, { item: ReturnType<typeof sdk.getInventory>[number]; count: number }>();
+    for (const i of sdk.getInventory()) { const h = held.get(i.id); held.set(i.id, { item: h?.item ?? i, count: (h?.count ?? 0) + i.count }); }
+    const kitLeft = new Map(startPack);
+    for (const w of sdk.getEquipment()) kitLeft.set(kitKey(w), (kitLeft.get(kitKey(w)) ?? 0) - w.count);
+    for (const { item, count } of held.values()) {
+        const k = kitKey(item), keepN = Math.min(count, kitLeft.get(k) ?? 0);
+        kitLeft.set(k, (kitLeft.get(k) ?? 0) - keepN);
+        if (count - keepN <= 0) continue;
+        const r = await bot.depositItem(item, count - keepN);
+        if (r.success) deposited.push(`${item.name} x${count - keepN}`);
     }
     let restocked = 0;
     const have = foodId === undefined ? 0 : sdk.getInventory().filter(i => i.id === foodId).length;
@@ -626,7 +720,7 @@ const arg = (args: string[], key: string, d: string) => args.find(a => a.startsW
 
 if (import.meta.main) {
     const [name, ...args] = process.argv.slice(2);
-    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000]');
+    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000] [MAX_TICKS=n] [FRIENDS=name,name]');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
     if (stop()) throw new Error('PK stop file present');
     const ranged = arg(args, 'RANGED', '');
@@ -636,8 +730,23 @@ if (import.meta.main) {
         spell: arg(args, 'SPELL', 'AUTO'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
         loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
         lootMin: Number(arg(args, 'LOOT_MIN', '1000')), bankAt: Number(arg(args, 'BANK_AT', '30000')),
+        ...(arg(args, 'MAX_TICKS', '') ? { maxTicks: Number(arg(args, 'MAX_TICKS', '')) } : {}),
+        // A practice run registers its accounts as owned (tradeguard.ts), so its target is a friend unless FRIENDS names the list.
+        ...(args.some(a => a.startsWith('FRIENDS=')) ? { friends: arg(args, 'FRIENDS', '').split(',').filter(Boolean) } : {}),
     };
+    // ROAM_PROFILE=<profile of scripts/pk-spar.ts>: that profile's fight options (its reading, prayers, freezes,
+    // armour, reserve and crowd rules) for each fight of the hunt; the kit, spec weapon and caps stay the roam's.
+    // auto (default): the champion for a maxed account (combat 115 or more), whose fights against a target that
+    // defends on the champion went 379 dealt, 360 taken where the roam's own options went 307, 404 (research finding
+    // 58); the roam's own options for a lower build (finding 37). none: the roam's own options.
     const session = await openBot(name);
+    const roamProfile = arg(args, 'ROAM_PROFILE', 'auto'), combat = session.sdk.getState()?.player?.combatLevel ?? 0;
+    const chosen = roamProfile === 'auto' ? (combat >= 115 ? 'champion' : '') : roamProfile === 'none' ? '' : roamProfile;
+    if (chosen) {
+        const { PROFILES } = await import('./pk-spar');
+        const { specBelow: _below, ...profile } = PROFILES[chosen] ?? (() => { throw new Error(`unknown ROAM_PROFILE ${chosen}`); })();
+        cfg.fight = { ...cfg.fight, ...profile };
+    }
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: session.tick(), ...e }));
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     try { result = await huntOnce(session, cfg, stop, emit); }

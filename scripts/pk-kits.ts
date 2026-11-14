@@ -32,7 +32,7 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear'>;
     // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
     // Dragon Slayer and full special energy.
     skills?: Record<string, number>;
@@ -109,6 +109,66 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-snare': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit with a Saradomin cape (Mage Arena) in place of the Legends cape: magic attack +10 for each freeze,
+    // magic defence +10, the other defences 6 lower. The magic roll of a freeze is (Magic + 9) x (bonus + 64)
+    // (player_combat_stat.rs2), and the snare kit casts with the glory's +10 alone once its plate is off.
+    'tribrid-snare-sara': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit in black dragonhide (body, chaps, vambraces) in place of the rune platebody and platelegs: ranged
+    // attack +47 against -17, magic attack -25 against -51 (the freeze roll), magic defence +78 against -10, stab
+    // defence 86 against 133 and ranged defence 86 against 129 (all.obj params). Defence 40 and Ranged 70 to wear.
+    'tribrid-snare-dhide': { worn: { ...RUNE, torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit that changes body and legs with the turn: rune for a melee turn, black dragonhide for a bow turn
+    // (ranged attack +64, magic defence +88 against rune), the other pair in the pack, so 2 sharks fewer.
+    'tribrid-snare-swap': { worn: { ...RUNE, hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 16,
+        switches: { ranged: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps'], melee: ['dragon_dagger_p', 'rune_kiteshield', 'rune_platebody', 'rune_platelegs'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit in the best armour for each slot of a maxed tribrid (bun scripts/gear.ts best): dragon med helm,
+    // dragon chainbody (magic attack -15 against the rune platebody's -30, slash and crush defence higher), dragon
+    // platelegs (stab defence 68 against 51), dragon square shield (Legends' Quest) and black dragonhide vambraces
+    // (ranged attack +11). Defence 60 and Ranged 70 to wear; no Dragon Slayer.
+    'tribrid-dragon': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The Saradomin-cape kit with a magic longbow for the bow special (pvp_magic_longbow.rs2: no hit roll, +10 Ranged
+    // levels, 10 tiles against the shortbow's 7; both 35% energy); the shortbow still shoots each bow turn. One shark fewer.
+    'tribrid-snare-sara-mlb': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', 'magic_longbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 17,
+        switches: { ranged: ['magic_shortbow', 'magic_longbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The dragon kit with the Saradomin cape (magic attack +10) and no vambraces (-10): the strip takes off one piece
+    // a cast with 18 sharks in the pack, so what stays on decides the freeze roll (finding 72).
+    'tribrid-dragon-sara': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The Saradomin-cape and dragon kits with 14 sharks: 5 free slots, so the strip before a freeze takes off up to
+    // five penalising pieces in place of one (finding 72).
+    'tribrid-snare-sara-f14': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 14,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    'tribrid-dragon-f14': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 14,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The dragon kit that wears the Saradomin cape (magic attack +10) for each freeze and the Legends cape (+7 to every
+    // defence) for the other turns; the god cape in the pack, so 17 sharks (finding 72).
+    'tribrid-dragon-capeswap': { worn: { ...RUNE, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs', hands: 'black_dragon_vambraces', weapon: 'dragon_dagger_p', shield: 'dragon_sq_shield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', 'saradomin_cape', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 17,
+        switches: { ranged: ['magic_shortbow', 'cape_of_legends'], melee: ['dragon_dagger_p', 'dragon_sq_shield', 'cape_of_legends'] }, options: { rotation: ['ranged', 'melee'], freezeWear: ['saradomin_cape'] } },
+    // The Saradomin-cape kit with another special weapon in place of the dragon dagger (pvp_dragon_mace.rs2: one hit,
+    // damage x1.5, accuracy x1.25, 5 ticks; pvp_dragon_longsword.rs2: one hit, damage x1.25, 5 ticks; both 25%).
+    'tribrid-sara-mace': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_mace', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_mace', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    'tribrid-sara-dls': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_longsword', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_longsword', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The army's stunner: the snare kit with a dragon spear (two-handed) in place of the dagger and shield. Its special
+    // holds the target 5 ticks with no input, so in multi-way combat the others hit a target that cannot eat.
+    'tribrid-snare-spear': { worn: { ...RUNE, weapon: 'dragon_spear', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_spear'] }, options: { rotation: ['ranged', 'melee'] } },
     // The snare kit with adamant arrows: 300 rune arrows are 120,000 of the kit's 392,715 coins, 300 adamant arrows 24,000.
     'tribrid-snare-addy': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['adamant_arrow', 300] },
         carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
@@ -348,12 +408,19 @@ export function combatLevel(s: Record<string, number>): number {
 }
 const MAXED = { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99 };
 export const kitSkills = (name: string): Record<string, number> => ({ ...(kitOf(name).skills ?? MAXED) });
-// Full special energy, Lost City and Dragon Slayer done when the route of the kit has them, then the varps of the
-// build. A kit gets no quest that its route does not have.
+// Full special energy and each quest of the kit's route done, then the varps of the build. A kit gets no quest that
+// its route does not have.
+// Each quest's varp and the value that completes it (pack/varp.pack; the quests' ^<quest>_complete constants), the
+// value the wear checks of levelrequire.rs2 compare: a kit worn at the start skips them, but a weapon or shield put
+// back on after a two-handed bow is checked, so a kit whose quest was not set fought with no dragon mace or square
+// shield after its first bow turn (finding 72).
+export const QUEST_VARP: Readonly<Record<string, readonly [number, number]>> = {
+    'Lost City': [147, 6], 'Dragon Slayer': [176, 10], "Heroes' Quest": [188, 15], "Legends' Quest": [139, 75], Regicide: [328, 15],
+    'The Fremennik Trials': [347, 10], 'Underground Pass': [161, 10],
+};
 export const kitVarps = (name: string): Record<number, number> => {
-    const quests = kitRoute(name).quests, varps: Record<number, number> = { 300: 1000 };
-    if (quests.includes('Lost City')) varps[147] = 6;
-    if (quests.includes('Dragon Slayer')) varps[176] = 10;
+    const varps: Record<number, number> = { 300: 1000 };
+    for (const q of kitRoute(name).quests) { const v = QUEST_VARP[q]; if (v) varps[v[0]] = v[1]; }
     return { ...varps, ...kitOf(name).varps };
 };
 

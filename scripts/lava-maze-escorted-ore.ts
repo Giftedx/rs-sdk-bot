@@ -147,7 +147,7 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
         rocks:[] as {tick:number;x:number;z:number;id:number}[],attempts:[] as Awaited<ReturnType<typeof mineRock>>[],
         actors:[] as {name:string;ticks:number;wallMs:number;foodUsed:number;hpStart:number;hpMin:number;hpEnd:number;prayerStart:number;prayerEnd:number;position:Tile|undefined}[]};
     let feed:ReturnType<typeof radar>|undefined,failure:string|undefined,abort:string|undefined,holding=false;
-    let escort:Session|undefined,miner:Session|undefined,previousEscortHp=0;
+    let escort:Session|undefined,miner:Session|undefined,previousEscortHp=0,meleeProtectAt=-10;
     const starts=new Map<Session,{tick:number;wall:number;hp:number;min:number;prayer:number;food:number;inventory:Record<number,number>;equipment:string}>();
     const walkers=new Map<Session,Awaited<ReturnType<typeof sessionWalker>>>();
     const lastTicks=new Map<Session,number>();
@@ -207,6 +207,10 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
             lastTicks.set(s,Date.now());
             offs.push(s.onTick(()=>{
                 lastTicks.set(s,Date.now());const initial=starts.get(s)!;initial.min=Math.min(initial.min,hp(s));
+                // An npc of the maze (a deadly red spider) can walk to the stage and attack: Protect from Melee goes up
+                // while one within 3 tiles has a player as its target (index 32768 and up), before its first hit.
+                if(holding&&s===escort&&!s.sdk.isPrayerActive('protect_from_melee')&&prayer(s)>=10&&s.tick()-meleeProtectAt>=2&&
+                    (s.sdk.getState()?.nearbyNpcs??[]).some(n=>n.distance<=3&&n.targetIndex>=32768)){meleeProtectAt=s.tick();void s.sdk.sendTogglePrayer('protect_from_melee');}
                 if(holding&&s===escort&&hp(s)<previousEscortHp)abort??='Escort HP dropped';
                 if(holding&&s===escort)previousEscortHp=hp(s);
                 if(holding)checkOutbound();
@@ -261,11 +265,15 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
             ((l.x===3059&&l.z===3885)||(l.x===3060&&l.z===3884))&&l.reachable!==false&&l.optionsWithIndex.some(o=>/^mine$/i.test(o.text)));
         requireThat(await waitUntil(miner!,()=>checkOutbound()||!!rock(),{timeoutTicks:120})&&!checkOutbound()&&rock(),'Counted Runite rock unavailable');
         const startXp=miner!.sdk.getSkillXp('mining')??0,start=miner!.tick();
-        for(let i=0;i<8&&miner!.tick()-start<105&&held(miner!,ORE)===0;i++){
+        // MINE_TICKS (default 210) bounds the time at the rock. Runite succeeds 18 in 256 a swing at Mining 99
+        // (mine.dbrow rock_successchance 1,18; stat_random), a swing each 3 ticks: no ore in 105 ticks is 8% of
+        // trips, in 210 ticks 0.6%. A threat still ends the wait on any tick (checkOutbound).
+        const mineTicks=Math.max(25,Math.min(600,Number(process.env.MINE_TICKS??210)));
+        for(let i=0;i<Math.ceil(mineTicks/25)+1&&miner!.tick()-start<mineTicks&&held(miner!,ORE)===0;i++){
             requireThat(!checkOutbound(),abort??'Mining stopped');
             await heal(miner!);const loc=rock();if(!loc)break;
             report.rocks.push({tick:miner!.tick(),x:loc.x,z:loc.z,id:loc.id});
-            report.attempts.push(await mineRock(miner!,loc,()=>checkOutbound()||held(miner!,ORE)>=1,Math.min(25,105-(miner!.tick()-start)),/^runite ore$/i));
+            report.attempts.push(await mineRock(miner!,loc,()=>checkOutbound()||held(miner!,ORE)>=1,Math.min(25,mineTicks-(miner!.tick()-start)),/^runite ore$/i));
         }
         requireThat(await waitUntil(miner!,()=>held(miner!,ORE)===1&&(miner!.sdk.getSkillXp('mining')??0)>startXp,{timeoutTicks:2}),'Exactly one new ore and Mining XP required');
         report.mined=1;

@@ -93,6 +93,10 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // runes of Varrock Teleport; `potions` swaps 3 sharks for a super attack, a super strength and a ranging potion;
 // `god` is the potion kit with the Zamorak cape and staff, fire runes, and the Mage Arena done with Flames of
 // Zamorak learnt (varps 267 and 270), for one more shark.
+// The army route's settings from the environment (scripts/pk-army.ts): `--set VOLLEY=1` and the like reach the route.
+const armyEnv = () => ['ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE', 'BURST_HOLD', 'OPEN_FREEZE', 'OPEN_RANGE', 'OPEN_TICKS', 'LEADER_SPEC', 'STUN_SHARE', 'LEADER_CAP', 'TARGET_PROFILE', 'TARGET_OPTS', 'TARGET_SIGHT', 'TARGET_SIGHT_DELAY', 'ARMY_TRACE', 'FOLLOW_TARGET', 'PACE', 'OPEN_ON_RUN'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []));
+// A fixture that wears a kit's equipment (and has the kit's quest varps) in place of its own, its pack and bank kept.
+const wearKit = (cfg: SaveConfig, kit?: string): SaveConfig => (kit ? {...cfg, equipment: kitItems(kit).equipment, varps: {...cfg.varps, ...kitVarps(kit)}} : cfg);
 export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean; noDragonSlayer?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
@@ -153,7 +157,7 @@ export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
 // One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
 // A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
 // tiles of a player (patches/rs-sdk.md, item 10).
-const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
+const SPAR_ENGINE = {SIM_NPC_NEAR: process.env.SPAR_NPC_NEAR ?? '64'};
 // A tile at Wilderness level 1 north of Edgeville, and the bank of an account that fights there: sharks, the four
 // boosts, antipoison and steel arrows for six trips.
 export const GANG_EDGE = {x: 3087, z: 3522};
@@ -189,7 +193,19 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
   const fixture = (): SaveConfig => { const c = {...kitFixture(kit, at.x + 2, at.z), ...(bank ? {bank} : {})}; return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: fixture(), output: /kills=(\d+)/,
     scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : {...kitFixture(gangKit, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
+    // gangKit may name one kit for each account of a group (kit+kit+kit, scripts/pk-gang.ts SPAR_KITS).
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture()
+      : {...kitFixture(gangKit.split('+')[((i + 1) % (size + 1) - 1) % gangKit.split('+').length]!, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
+};
+// Teams of own accounts (scripts/pk-team.ts): `groups` groups of `size` against `size`, side A two tiles east.
+const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = []): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * 2 * size - 1).split('');
+  const sideA = (i: number) => i % (2 * size) < size;
+  const kitOf = (kits: string, member: number) => { const list = kits.split('+'); return list[member % list.length]!; };
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kitOf(kitA, 0), at.x + 2, at.z), output: /wins=(\d+)/,
+    scriptArgs: ['team', ...letters.map(l => `{bot:${l}}`), '900', `SPAR_TEAM=${size}`, `SPAR_KITS=${kitA}:${kitB}`, ...args],
+    // A side's kits joined by `+` go to its members in turn (scripts/pk-team.ts).
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitOf(kitA, (i + 1) % (2 * size)), at.x + 2, at.z) : kitFixture(kitOf(kitB, (i + 1) % (2 * size) - size), at.x, at.z)}))};
 };
 // Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
 // (SPAR_POST): one walk of 150 tiles, not two.
@@ -454,6 +470,158 @@ const ROUTE_CASES: BenchCase[] = [
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
   // The gang (scripts/pk-gang.ts): the snare kit against three dagger gang on their post tile.
   gangCase('pvp:gang', 'tribrid-snare', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker']),
+  // A dagger account that never gives up, one against one, four meetings: the gang meeting with a gang of 1 sends it
+  // back to our account's tile each time it loses sight. The test of kiteMelee (freezes and steps, no hit) over 1,500
+  // ticks; run it with SPAR_A_OPTS {"kiteMelee":8}, and with no options for the champion as it fights.
+  gangCase('extra:kite-chase-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=champion', 'SPAR_CAP=1500', 'SPAR_WAIT=60'], 1),
+  // The same with the mage kit (splitbark, mystic fire staff, freeze runes): a magic attack bonus above 0, where rune
+  // armour leaves the freeze's attack roll near 0 (player_combat_stat.rs2: (Magic + 9) x (bonus + 64)).
+  gangCase('extra:kite-chase-mage-x4', 'mage', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=champion', 'SPAR_CAP=1500', 'SPAR_WAIT=60'], 1),
+  // The routes that need a player to fight, through scripts/measure/pvp-with-targets.ts: the target is a second account
+  // of the run with no food that stands on its tile and hits back by auto-retaliate. Each passes on a kill.
+  // fight: scripts/pk.ts with its own kit (staff, bow, dagger(p) and kiteshield: sparFixture) at Wilderness level 3.
+  {key: 'pvp:fight', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'fight', '{targets}', '600'],
+    pass: s => ok(s) && /"outcome":"kill"/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
+  // hunt: scripts/pk-hunt.ts from the Edgeville bank with an empty pack and the staff trip in the bank; the target
+  // stands at the first hunt spot.
+  {key: 'pvp:hunt', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'hunt', '900'],
+    pass: s => ok(s) && /kills [1-9]/.test(s), output: /kills (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]},
+  // roam: scripts/pk-roam.ts reads the world feed roster (WORLD_FEED=true on the engine) and goes to the target at
+  // Wilderness level 8 from just south of the Wilderness (roam takes no target within 40 tiles of its escape,
+  // MIN_ESCAPE_TILES); 18 s of wall time at most.
+  // escort-ore: scripts/lava-maze-escorted-ore.ts, the archer escort and the miner of its practice proof
+  // (packages/practice/src/lava-maze-escorted-ore-proof.ts) at the Edgeville bank, one runite ore, the world feed on.
+  // The hunt against a target that defends on the champion's fight loop (HUNT_PROFILE, environment, sets the hunter's options).
+  {key: 'extra:hunt-defend', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'hunt', '900', 'TARGET_PROFILE=champion'],
+    pass: ok, output: /kills (\d+)/,
+    // HUNTER_KIT=<kit of scripts/pk-kits.ts>: the hunter wears that kit's equipment, with its quests.
+    presetConfig: wearKit({...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]}, process.env.HUNTER_KIT),
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {glory: true, ...(process.env.TARGET_STRONG === '1' ? {potions: true, food: 24} : {})})}]},
+    // Two targets that defend on the champion at the first hunt spot: one in rune with 18 sharks and a glory next to
+  // the spot, one in monk robes (kit ganker-dds) four tiles on. HUNT_PICK=soft sends the hunter to the softer one.
+  {key: 'extra:hunt-pick', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b},{bot:c}', 'hunt', '900', 'TARGET_PROFILE=champion'],
+    pass: ok, output: /kills (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: kitFixture('ganker-dds', 3098, 3543)}]},
+  // roam: scripts/pk-roam.ts reads the world feed roster (WORLD_FEED=true on the engine) and goes to the target at
+  // Wilderness level 8 from just south of the Wilderness (roam takes no target within 40 tiles of its escape,
+  // MIN_ESCAPE_TILES); 18 s of wall time at most.
+  // escort-ore: scripts/lava-maze-escorted-ore.ts, the archer escort and the miner of its practice proof
+  // (packages/practice/src/lava-maze-escorted-ore-proof.ts) at the Edgeville bank, one runite ore, the world feed on.,
+  {key: 'pvp:escort-ore', engineEnv: {WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['escort-ore', '{bot:b}', 'CAP=1800', 'MAX_ORE=1', 'EXPECTED_BANK_ORE=0'], pass: ok,
+    presetConfig: {position: {x: 3094, z: 3492, level: 0}, skills: {Attack: 65, Defence: 10, Strength: 11, Hitpoints: 69, Ranged: 99, Prayer: 65, Magic: 50},
+      inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}], equipment: [{id: 861, count: 1, slot: 3}, {id: 1131, count: 1, slot: 4}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 47, Hitpoints: 33, Prayer: 43, Mining: 99},
+      inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}, {id: 1275, count: 1}], equipment: [{id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}]}}]},
+  // The same trip through the skiller's mining route.
+  {key: 'skiller:mining:lava-maze', engineEnv: {WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['mining', 'lava-maze', '{bot:b}', 'CAP=1800', 'MAX_ORE=1', 'EXPECTED_BANK_ORE=0'], pass: ok,
+    presetConfig: {position: {x: 3094, z: 3492, level: 0}, skills: {Attack: 65, Defence: 10, Strength: 11, Hitpoints: 69, Ranged: 99, Prayer: 65, Magic: 50},
+      inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}], equipment: [{id: 861, count: 1, slot: 3}, {id: 1131, count: 1, slot: 4}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 47, Hitpoints: 33, Prayer: 43, Mining: 99},
+      inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}, {id: 1275, count: 1}], equipment: [{id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}]}}]},
+  // The army route: a leader and two followers from the Edgeville wilderness ditch against one target with no food in
+  // multi-way combat at Wilderness level 6 (east of x 3136), so all three can hit it.
+  {key: 'pvp:army', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=0.5', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK army: [1-9]\d* kills/.test(s), output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3150, 3560, {food: 0})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3095, 3515)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3093, 3515)}]},
+  // The army against a target that defends: 10 sharks and a glory, the champion's fight loop when hit (it eats, prays,
+  // hits back and leaves by its glory when two of the army hit it in multi-way combat).
+  {key: 'extra:army-route-defend', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3150, 3560, {food: 10, glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3095, 3515)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3093, 3515)}]},
+  // The same at Wilderness level 34 in multi-way combat (east of x 3158), where a glory does not work: the army starts
+  // at level 28 a short walk away, and the target's escape is a run south.
+  // The same with both followers on the dragon spear (kit tribrid-snare-spear): its special always lands and holds
+  // the target 4 ticks with no input, no eat and no glory (pvp_dragon_spear.rs2 p_delay) (finding 67).
+  {key: 'extra:army-route-defend-deep-spear', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3166, 3784, {food: 10, glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: kitFixture('tribrid-snare-spear', 3163, 3745)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: kitFixture('tribrid-snare-spear', 3161, 3745)}]},
+  {key: 'extra:army-route-defend-deep', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3166, 3784, {food: 10, glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: sparFixture(3163, 3745)}, {suffix: 'd', preset: 'fresh_lumbridge', presetConfig: sparFixture(3161, 3745)}]},
+  // The deep defend case with five accounts: the leader and four followers.
+  {key: 'extra:army-route-defend-deep-x5', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3168, 3784) : sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
+      ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 0)
+        ? kitFixture('tribrid-snare-spear', process.env.ARMY_AT === 'near' ? 3164 + (i % 2) : 3160 + i, process.env.ARMY_AT === 'near' ? 3782 + (i >> 1) : 3746)
+        : process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
+  // The army that kills the target of finding 54 at level 34: the four followers on the dragon spear (ARMY_SPEARS
+  // sets how many), all on army-alpha, the opening held until each account stands on a melee tile (finding 67).
+  {key: 'extra:army-route-spear-x5', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', 'ARMY_PROFILE=army-alpha', 'OPEN_TOGETHER=1', 'OPEN_RANGE=1', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3168, 3784) : sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
+      ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 4)
+        ? kitFixture('tribrid-snare-spear', process.env.ARMY_AT === 'near' ? 3164 + (i % 2) : 3160 + i, process.env.ARMY_AT === 'near' ? 3782 + (i >> 1) : 3746)
+        : process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
+  // The spear army against two such targets two tiles apart, both defending (finding 68).
+  {key: 'extra:army-route-spear-pair-x5', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b},{bot:g}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', 'ARMY_PROFILE=army-alpha', 'OPEN_TOGETHER=1', 'OPEN_RANGE=1', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3168, 3784) : sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
+      {suffix: 'g', preset: 'fresh_lumbridge', presetConfig: sparFixture(3168, 3786, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
+      ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 4)
+        ? kitFixture('tribrid-snare-spear', process.env.ARMY_AT === 'near' ? 3164 + (i % 2) : 3160 + i, process.env.ARMY_AT === 'near' ? 3782 + (i >> 1) : 3746)
+        : process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
+  // The spear army at Wilderness level 6 in multi-way combat (3150,3560), where the target's glory works: the target of
+  // finding 53 left by its glory once two had hit it (finding 67).
+  {key: 'extra:army-route-spear-low-x5', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', '{bot:f}', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', 'ARMY_PROFILE=army-alpha', 'OPEN_TOGETHER=1', 'OPEN_RANGE=1', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3150, 3560) : sparFixture(3150, 3560, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
+      ...(['c', 'd', 'e', 'f'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 4)
+        ? kitFixture('tribrid-snare-spear', 3095 + i, 3515)
+        : sparFixture(3095 + i, 3515)}))]},
+  // The same with a leader and three followers (finding 67).
+  {key: 'extra:army-route-spear-x4', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'army', '{bot:c}', '{bot:d}', '{bot:e}', 'MAX_MINUTES=1', 'MAX_WILD=36', 'FRIENDS=', 'TARGET_PROFILE=champion', 'ARMY_PROFILE=army-alpha', 'OPEN_TOGETHER=1', 'OPEN_RANGE=1', ...armyEnv()], pass: ok, output: /PK army: (\d+) kills/,
+    presetConfig: process.env.ARMY_AT === 'near' ? sparFixture(3168, 3784) : sparFixture(3162, 3745), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: process.env.TARGET_KIT ? kitFixture(process.env.TARGET_KIT, 3166, 3784) : sparFixture(3166, 3784, {food: 10, glory: true})},
+      // ARMY_AT=near starts the army two tiles from the target, as gang mode does, in place of level 28.
+      // ARMY_SPEARS=<n>: the first n followers carry the dragon spear (kit tribrid-snare-spear, finding 67).
+      ...(['c', 'd', 'e'] as const).map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < Number(process.env.ARMY_SPEARS ?? 3)
+        ? kitFixture('tribrid-snare-spear', process.env.ARMY_AT === 'near' ? 3164 + (i % 2) : 3160 + i, process.env.ARMY_AT === 'near' ? 3782 + (i >> 1) : 3746)
+        : process.env.ARMY_AT === 'near' ? sparFixture(3164 + (i % 2), 3782 + (i >> 1)) : sparFixture(3160 + i, 3746)}))]},
+  // The roam against a target that defends: 18 sharks and the champion's fight loop when hit, at Wilderness level 8
+  // in single-way combat. ROAM_PROFILE (environment) gives the roamer a profile's fight options.
+  {key: 'extra:roam-defend', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})}]},
+  // The same with 4 sharks for the roam: its danger exit (no food) comes inside the minute. The roam wears its glory;
+  // `--set ROAM_FLEE=0` leaves the exit to the roam's own walk out (research/pvp-fight-loop.md finding 63).
+  {key: 'extra:roam-defend-low', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion'], pass: ok, output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515, {food: 4}), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})}]},
+  // Two targets that defend on the champion at Wilderness level 8: one in rune with 18 sharks and a glory, one in monk
+  // robes (kit ganker-dds) six tiles on. The roam takes the rune one by reach and switches to the robes once both are
+  // in view; `--set ROAM_SWITCH=0` keeps the first pick.
+  // A field: four maxed targets with no food spread over Wilderness levels 6 to 17 (two single-way, two multi-way
+  // spots), standing and hitting back; the roam's kills in 1,000 game ticks and the ticks between them (finding 70).
+  {key: 'extra:roam-field', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b},{bot:c},{bot:d},{bot:e}', 'roam', 'MAX_MINUTES=5', 'MAX_TICKS=1000', 'MAX_WILD=20', 'FRIENDS=', ...['LOOT', 'LOOT_MIN', 'BANK_AT'].flatMap(k => (process.env[k] ? [`${k}=${process.env[k]}`] : []))], pass: ok, output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [[3094, 3580], [3150, 3560], [3240, 3650], [3140, 3650]].map(([x, z], i) => ({suffix: 'bcde'[i]!, preset: 'fresh_lumbridge', presetConfig: sparFixture(x!, z!, {food: 0})}))},
+  {key: 'extra:roam-pick', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b},{bot:c}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: kitFixture('ganker-dds', 3100, 3584)}]},
+  {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=0.3', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK hunt: [1-9]\d* kills/.test(s), output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {food: 0})}]},
   // The mirror with Dragon Slayer not done: the loop must leave the rune platebody on, because the game does not let
   // such an account put it back.
   // Hill giants with Prayer 60: the prayer guard (packages/core/src/prayer-guard.ts) shows its counts in the
@@ -580,6 +748,34 @@ const ROUTE_CASES: BenchCase[] = [
   sparMatrix('extra:spar-ganker-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker'], GANKER_POST),
   sparMatrix('extra:spar-ganker-bare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'ganker-dds'] as const), ['SPAR_B_PROFILES=ganker-bare'], GANKER_POST),
   gangCase('extra:gang-ganker-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker']),
+  // The PK army: three maxed snare tribrids (the gang side, SPAR_B) against one maxed snare tribrid, four groups.
+  // A meeting the gang wins ends with our side's account dead (died=), so died counts the army's kills. SPAR_B names
+  // the army's profile; SPAR_A_OPTS={"escapeOutnumbered":null} keeps the champion target in the fight.
+  gangCase('extra:army-tribrid-x4', 'tribrid-snare', 'tribrid-snare', 4, GANKER_POST),
+  // The same in multi-way combat east of Edgeville (Wilderness level 6), where all three can hit at once.
+  gangCase('extra:army-tribrid-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // The team route: one group of two against two, both sides on the champion.
+  teamCase('pvp:team', 'tribrid-snare', 'tribrid-snare', 1, {x: 3150, z: 3560}, 2, ['SPAR_A=champion', 'SPAR_B=champion']),
+  // Two of ours against two in multi-way combat, four groups: side A on SPAR_A, side B on SPAR_B.
+  teamCase('extra:team-2v2-multi-x4', 'tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // Three of ours against three, three groups.
+  // Side A on the dragon spear (its special holds the target 4 ticks, finding 67) against the snare kit.
+  teamCase('extra:team-2v2-spear-x4', 'tribrid-snare-spear', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // Side A one spear and one dragon dagger (the spear holds, the dagger hits), against the snare kit.
+  teamCase('extra:team-2v2-mixed-x4', 'tribrid-snare-spear+tribrid-snare', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // Side A in dragon armour with the Saradomin cape (finding 72) against the snare kit.
+  teamCase('extra:team-2v2-dragon-x4', 'tribrid-dragon-sara', 'tribrid-snare', 4, {x: 3150, z: 3560}),
+  // Three against three: side A one dragon spear and two in dragon armour (findings 67, 72), side B the snare kit.
+  teamCase('extra:team-3v3-spear-x3', 'tribrid-snare-spear+tribrid-dragon-sara+tribrid-dragon-sara', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
+  teamCase('extra:team-3v3-dragon-x3', 'tribrid-dragon-sara', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
+  teamCase('extra:team-3v3-multi-x3', 'tribrid-snare', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
+  // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
+  // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
+  gangCase('extra:army-deep-x3', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 3),
+  gangCase('extra:army-deep-x4', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 4),
+  gangCase('extra:army-deep-x5', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 5),
+  // The same army with a stunner: one dragon spear and two daggers in each group.
+  gangCase('extra:army-spear-multi-x4', 'tribrid-snare', 'tribrid-snare-spear+tribrid-snare+tribrid-snare', 4, {x: 3150, z: 3560}),
   gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
   // The same meeting for the kits with more food, and each kit against the most that the gang can be (`ganker-max`:
   // potions and a full pack of sharks), with a cap that leaves time for the 1,677 HP of that gang.
@@ -643,10 +839,12 @@ const ROUTE_CASES: BenchCase[] = [
       {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}, ...(kit === 'staff' ? [{id: 1401, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}] : [])]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),
   // A hunter in each kit against a target that leaves by its glory at 60 health, at Wilderness level 34.
-  ...['tribrid-pots', 'tribrid-snare'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
+  ...['tribrid-pots', 'tribrid-snare', 'tribrid-snare-sara', 'tribrid-snare-dhide', 'tribrid-snare-swap', 'tribrid-dragon', 'tribrid-snare-sara-mlb', 'tribrid-dragon-sara', 'tribrid-snare-sara-f14', 'tribrid-dragon-f14', 'tribrid-dragon-capeswap', 'tribrid-sara-mace', 'tribrid-sara-dls'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
   sparMatrix('extra:spar-escape-tribrid-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790}),
+  // The Saradomin cape snare kit against the Legends cape snare kit, the sides swapped every two pairs.
+  sparMatrix('extra:spar-head-snare-sara-x12', Array.from({length: 12}, (_, i) => ((i >> 1) % 2 ? ['tribrid-snare', 'tribrid-snare-sara'] : ['tribrid-snare-sara', 'tribrid-snare']) as [string, string])),
   // The same rivals against the kits with more food.
-  ...['tribrid-snare', 'tribrid-snare-addy', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
+  ...['tribrid-snare', 'tribrid-snare-addy', 'tribrid-snare-sara', 'tribrid-snare-dhide', 'tribrid-snare-swap', 'tribrid-dragon', 'tribrid-snare-sara-mlb', 'tribrid-dragon-sara', 'tribrid-snare-sara-f14', 'tribrid-dragon-f14', 'tribrid-dragon-capeswap', 'tribrid-sara-mace', 'tribrid-sara-dls', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
   sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
   ...Object.keys(KITS).filter(kit => kit !== 'melee' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => ((i >> 1) % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
@@ -1053,8 +1251,6 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'skiller:woodcutting:loop': 'worker scripts/wc-loop.ts needs the lite runner, not the in-process client',
   'skiller:cooking:ge-cook': 'needs the Grand Exchange service',
   'skiller:firemaking:ge': 'needs the Grand Exchange service',
-  'skiller:mining:lava-maze': 'needs escort accounts in the Wilderness',
-  'pvp:escort-ore': 'the engine must start with WORLD_FEED=true, and the bench gives each engine a fixed environment',
   'market:shop-sell': 'the worker needs its shop open at entry and never opens one; market:shop-trip runs the same sale after it opens the shop',
   'logistics:coin-courier': 'both accounts must be in the owned-account registry before login; a new bench account is not',
   'logistics:coin-fanout': 'both accounts must be in the owned-account registry before login; a new bench account is not',
@@ -1069,9 +1265,6 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'quester:mode:legends-owned': 'needs an order file that names the owned account',
   'logistics:loadout-import': 'dispatcher mismatch: an offline converter with no account argument',
   'logistics:relocate-knight': 'the worker admits three named live accounts only',
-  'pvp:roam': 'needs other players in the Wilderness',
-  'pvp:fight': 'needs a second logged-in player as the target',
-  'pvp:hunt': 'needs attackable players in the Wilderness',
   'pvp:pilot': 'a live run by design',
   'logistics:banker': 'a standing service with no finite end',
   'logistics:food-chain': 'a standing controller for named accounts',
