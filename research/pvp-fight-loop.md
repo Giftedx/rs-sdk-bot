@@ -1849,5 +1849,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     gives the fixture a kit's equipment and quest varps): kills 5 and 5, deaths 0 and 0, damage dealt 2,580 and 2,683,
     damage taken 2,655 and 1,954 (the `HUNT` lines of `.practice/roam-switch/hunt-*`). The hunt's kits name the rune
     kiteshield in their melee lists, so a hunter in any other shield lost it at its first bow turn for good; the hunt
-    puts the shield it wears at its start in that place. Gap: 6 seeds; the roam and the army in dragon armour; the
-    dragon pieces are rare drops (supply).
+    puts the shield it wears at its start in that place. Supply (the drop scripts; `knowledge/drops.json` leaves out
+    the shared tables): dragon platelegs from a steel, iron or bronze dragon 1 in 256, 512 or 1,024 kills
+    (`steel_dragon.rs2` and the others), the dragon chainbody from the Kalphite Queen 1 in 128 (`kalphite_queen.rs2`),
+    the dragon med helm from the King Black Dragon 1 in 128 (`king_black_dragon.rs2`) and the shared rare table, the
+    left half of the dragon square shield (`dragonshield_a`) 4 in 128 rolls of the mega-rare table. Gap: 6 seeds; the
+    roam and the army in dragon armour; the square shield's other half is not traced.
