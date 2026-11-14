@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794626412568,
+ "at": 1794626425569,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -497,7 +497,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-731cbb0d-be1b-4e61-905a-83246789eeab"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "local-recover-woodpecker-20261113t155029z [task-731cbb0d-be1b-4e61-905a-83246789eeab]",
    "role": "pk-trainee"
