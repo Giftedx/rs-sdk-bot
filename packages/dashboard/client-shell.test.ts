@@ -870,6 +870,12 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
  // 720 casts x 22.5 = 16,200 cast XP plus kills x 60 x 50 damage XP, in Magic.
  const mx=Number((mageXp('Moss giant').match(/· ([\d,]+) XP\/h in Magic/)||[])[1]?.replace(/,/g,''));
  expect(mx).toBeGreaterThan(16200+100*3000);expect(mx).toBeLessThan(16200+115*3000);
+ // One spawn with a 700-tick respawn: 420 s a kill, 8.6 kills an hour. The cast XP is that of those kills' casts
+ // (8.6 x 10.7 x 22.5 = 2,070), not of a full hour of casting (16,200): about 2,070 + 8.6 x 3,000 = 27,800.
+ data['npc-defence.json']={'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,700]]};
+ const slow=new Function(...Object.keys(env),'itemBonusData','bestSpell','npcSpawns',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]}),wornBonuses:()=>[0,0,0,10,0,0,0,0,0,0,0,0,0]}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>({name:'Fire Bolt',max:12,casts:50,xp:22.5}),[['Moss giant',42,42,[3000,3000,0]]]);
+ const sx=Number((slow('Moss giant').match(/· ([\d,]+) XP\/h in Magic/)||[])[1]?.replace(/,/g,''));
+ expect(slow('Moss giant')).toMatch(/^About 9 kills an hour/);expect(sx).toBeGreaterThan(26000);expect(sx).toBeLessThan(30000);
  // A dagger has magic attack +1 too, but it is no staff: it stays melee with runes in the pack.
  const dagger=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Rune dagger',slot:3}]})}),{'Rune dagger':[25,12,-4,1,0,0,0,0,1,0,24,0,0]},()=>({name:'Wind Strike',max:2,casts:50,xp:137.5}));
  expect(dagger('Moss giant')).not.toContain('magic,');expect(dagger('Moss giant')).toMatch(/^About \d+ kills an hour \(max hit/);

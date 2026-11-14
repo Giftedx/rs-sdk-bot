@@ -832,15 +832,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Each variant's kill rate times its own XP a kill: the extremes of two lists belong to different variants.
     // Magic XP: the spell's cast XP on every cast (pvm_spell_cast, hit or splash) plus 2 XP a damage point (combat.rs2,
     // style_magic_normal: 20 tenths) x the XP rate, i.e. 50, times the NPC's multiplier / 1000. Melee and ranged: 100 a
-    // damage point in one style.
-    const castsPerHour=3600/(speed*tickSec);
+    // damage point in one style. The casts are those of the kills (hitpoints / damage a cast), so time spent on the
+    // death and on the respawn wait gives no cast XP.
     // Overkill: a hit of 0 to max takes no more than the NPC has, so a swing does chance x the mean of min(hit, hitpoints)
     // (an 8 hitpoint cow wastes most of a 14 hit). The last swing of a kill can still overkill more; this counts the cap.
     const capped=hp=>{let t=0;for(let d=0;d<=max;d++)t+=Math.min(d,hp);return t/(max+1);};
     // A kill cycle is the swings of a kill, plus 2 ticks for the death and the next target, and no shorter than the respawn
     // time over the spawns of that name (npc-spawns.json; few spawns make the account wait). Walking is not counted.
     const spawnRow=typeof npcSpawns!=='undefined'&&npcSpawns?npcSpawns.find(r=>r[0]===name):null,spawns=spawnRow?Math.max(1,spawnRow[3].length/3):0;
-    const rates=list.map(v=>{const dmg=chance(v)*capped(v[13]),kill=dmg>0?(v[13]/dmg)*speed*tickSec+2*tickSec:0,wait=spawns&&v.length>15?v[15]*tickSec/spawns:0,k=kill>0?3600/Math.max(kill,wait):0;return {k,xp:magic?castsPerHour*spell.xp+k*v[13]*50*v[14]/1000:k*v[13]*100*v[14]/1000};}).filter(r=>r.k>0);
+    const rates=list.map(v=>{const dmg=chance(v)*capped(v[13]),kill=dmg>0?(v[13]/dmg)*speed*tickSec+2*tickSec:0,wait=spawns&&v.length>15?v[15]*tickSec/spawns:0,k=kill>0?3600/Math.max(kill,wait):0;return {k,xp:magic?k*((v[13]/dmg)*spell.xp+v[13]*50*v[14]/1000):k*v[13]*100*v[14]/1000};}).filter(r=>r.k>0);
     if(!rates.length)return null;const ks=rates.map(r=>r.k),xs=rates.map(r=>r.xp);
     return {lo:Math.min(...ks),hi:Math.max(...ks),xLo:Math.min(...xs),xHi:Math.max(...xs),magic,ranged,spell,max,speed,loot};}
   function hourText(name){const r=hourRates(name);if(!r)return '';const span=(a,z)=>Math.round(a)===Math.round(z)?nf(Math.round(a)):nf(Math.round(a))+'–'+nf(Math.round(z));
