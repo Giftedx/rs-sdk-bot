@@ -232,6 +232,15 @@ function releaseSyncedTrades(dir: string, side: string) {
     }
 }
 
+// The pull comes before this sync commits, so files that a trade wrote since the last sync are still uncommitted. A
+// receipt that the last sync committed and a later trade step rewrote is a tracked change, and `pull --rebase` refuses
+// it ("cannot pull with rebase: You have unstaged changes"); every later sync then fails the same way. --autostash
+// sets those changes aside for the rebase and puts them back, so this sync commits them.
+export function pullFleetData(dir: string): void {
+    const pull = git(dir, 'pull', '--rebase', '--autostash', 'origin', BRANCH);
+    if (!pull.ok) throw Error(`pull: ${pull.out}`);
+}
+
 export function runSync(push = true): string {
     const dir = ensureWorktree();
     git(root, ...FETCH_FLEET_DATA);
@@ -239,7 +248,7 @@ export function runSync(push = true): string {
     if (problem) throw Error(`fleet worktree ${dir}: ${problem}; scripts/cloud-side.ts replaces it, or remove it with git worktree remove --force`);
     reattach(dir);
     const hasRemote = git(dir, 'ls-remote', '--exit-code', '--heads', 'origin', BRANCH).ok;
-    if (hasRemote) { const pull = git(dir, 'pull', '--rebase', 'origin', BRANCH); if (!pull.ok) throw Error(`pull: ${pull.out}`); }
+    if (hasRemote) pullFleetData(dir);
     const statusDir = join(root, '.practice', 'status');
     const statuses = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } }) : [];
     const owners = loadOwners(join(dir, 'fleet', 'owners.json'));
