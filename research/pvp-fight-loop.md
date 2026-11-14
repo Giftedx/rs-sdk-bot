@@ -1112,6 +1112,27 @@ The levers for our side: `cureNow` (an antipoison in the first tick after the po
 `chaseBelow` (a run after a target that flees with a low health bar), and `specBelow` (keep the special energy for a
 low target).
 
+### Runners by depth and squad size
+
+A runner (kit `runner`, `SPAR_B_OPTS={"escapeAt":60}`: with its food gone at 60 HP or less it runs south and rubs its
+glory at Wilderness 30 or less) against our champions in `tribrid-dragon-sara` (`scripts/pk-team.ts`, seeds 1 to 8,
+16 meetings a row, no death of ours):
+
+| Ours | Tile | Runners killed | HP lost (all 16) |
+| --- | --- | --- | --- |
+| 1 | single-way, Wilderness 34 (3125, 3790) | 7 | 778 |
+| 2 | single-way, Wilderness 34 | 7 | 882 |
+| 4 | single-way, Wilderness 34 | 9 | 596 |
+| 1 | multi-way, Wilderness 43 (3010, 3864) | 16 | 935 |
+| 2 | multi-way, Wilderness 43 | 16 | 386 |
+| 4 | multi-way, Wilderness 43 | 16 | 188 |
+
+The depth decides the catch: from Wilderness 43 the runner has 13 levels to cross before its glory works and none
+got away, one of ours or four; from 34, 4 levels, and about half got away whatever our number, since on a single-way
+tile one of ours fights at a time. More of ours cut the HP of a catch only where they can all hit (multi-way). Cases
+`extra:team-<n>v1-runner-single-x2` and `-multi-x2`. Gap: depth and multi-way change together between the two tiles;
+the 1-of-ours rows, where multi-way does not matter, carry the depth result.
+
 ### The cost of a kill
 
 What one kill of a gang account uses, against the live-like gang (profile `ganker-live`, kit `ganker-dds`: the gang
