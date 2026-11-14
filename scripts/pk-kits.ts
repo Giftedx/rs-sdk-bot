@@ -299,6 +299,12 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'live-walker-iron-rune-chain-bare': { worn: { hat: 'rune_full_helm', torso: 'rune_chainbody', legs: 'rune_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', ['lawrune', 2], ['airrune', 10]], food: 24,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // live-walker-iron-rune-chain-bare with Fire Blast runes (Aubury sells death runes) cast with the dagger in hand:
+    // the gang's overhead follows the weapon that it sees (FightOptions prayerLag), so a spell from the dagger meets
+    // Protect from Melee. Bind runes too.
+    'live-walker-iron-rune-chain-blast': { worn: { hat: 'rune_full_helm', torso: 'rune_chainbody', legs: 'rune_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', ['lawrune', 2], ['airrune', 250], ['firerune', 300], ['deathrune', 60], ['earthrune', 50], ['waterrune', 50], ['naturerune', 40]], food: 19,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'], magic: ['dragon_dagger'] }, options: { rotation: ['magic', 'ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },

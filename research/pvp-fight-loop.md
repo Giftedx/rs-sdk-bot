@@ -1305,6 +1305,14 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   on a runner (`"freeze":"flee"`) 12 kills at about 107 HP, with the special at 45% 13 at about 89, the freeze on a
   low bar (`"low"`) 13 at about 106. pk-squad's default options hold the special for 45% (the squad case: 24 of 24
   either way, 39 and 42 HP a kill).
+  Fire Blast cast with the dagger in hand (`live-walker-iron-rune-chain-blast`, `extra:gang-live-blast-solo-x2`) does
+  not pay. The bench gang's overhead follows the weapon it sees, so a spell from the dagger meets Protect from Melee.
+  Seeds 1 to 16, 32 meetings a row, Bind and the special at 45% in each, no death in any:
+  - ranged then melee (the control): 28 kills at about 108 HP a kill;
+  - magic first in the rotation: 29 kills at about 106;
+  - magic and melee only: 31 kills at about 180, with more than twice the sharks.
+  The rune helm, chainbody and legs cut the magic attack roll. Gap: the bench gang's prayer rule is a model; the live
+  gang's rule against a spell from a dagger is not measured.
 - **Marching and pulling.** The squad moves as a march: its post steps `STEP` (default 12) tiles at a time toward the
   goal, and on only when every account stands within 4 tiles of the step or after 60 ticks there. A march to a
   multi-way goal goes first to the nearest multi-way tile (`multiEntry`). An account on a single-way tile with a
