@@ -867,6 +867,9 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
  // 720 casts x 22.5 = 16,200 cast XP plus kills x 60 x 50 damage XP, in Magic.
  const mx=Number((mageXp('Moss giant').match(/· ([\d,]+) XP\/h in Magic/)||[])[1]?.replace(/,/g,''));
  expect(mx).toBeGreaterThan(16200+110*3000);expect(mx).toBeLessThan(16200+120*3000);
+ // A dagger has magic attack +1 too, but it is no staff: it stays melee with runes in the pack.
+ const dagger=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Rune dagger',slot:3}]})}),{'Rune dagger':[25,12,-4,1,0,0,0,0,1,0,24,0,0]},()=>({name:'Wind Strike',max:2,casts:50,xp:137.5}));
+ expect(dagger('Moss giant')).not.toContain('magic,');expect(dagger('Moss giant')).toMatch(/^About \d+ kills an hour \(max hit/);
  // A staff with no castable spell falls back to melee.
  const noSpell=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]})}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>null);
  expect(noSpell('Moss giant')).not.toContain('magic,');
