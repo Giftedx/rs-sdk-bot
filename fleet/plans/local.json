@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794651241744,
+ "at": 1794653219297,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -152,22 +152,23 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "15000",
+    "headless"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "BANK_PACK": "1",
+    "MAX_MAKE": "390"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
    "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
+   "resources": []
   },
   {
    "account": "Hocuspokeus",
@@ -342,22 +343,23 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "15000",
+    "headless"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "BANK_PACK": "1",
+    "MAX_MAKE": "390"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
    "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "resources": []
   },
   {
    "account": "Swordinhand",
