@@ -740,6 +740,10 @@ const ROUTE_CASES: BenchCase[] = [
   // The gang hunts (SQUAD_GANG_HUNT=1: it walks to the nearest of ours in the Wilderness, as the live gang did): the
   // walk-in from Edgeville with the march and pull, or with neither (MARCH=0 PULL=0).
   squadCase('extra:squad-4-gang-hunted-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // The same walk-in in the first live pilot's kit (chainbody, no antipoison, no freeze runes).
+  squadCase('extra:squad-4-gang-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // Against the most the gang can carry (ganker-max: 23 sharks, the boosts, prayer potions): the live fights ran long.
+  squadCase('extra:squad-4-gangmax-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-max', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
   squadCase('extra:squad-4-gang-skull-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 4),
   teamCase('extra:team-3v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   teamCase('extra:team-3v3-gang-chainbind-west-x2', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),

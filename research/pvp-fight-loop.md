@@ -1235,6 +1235,11 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   - the walk-in from the Edgeville bank against the hunting gang: 24 of 24 at about 34 HP a kill
     (`extra:squad-4-gang-hunted-x1`); with `MARCH=0 PULL=0`, 23 of 24 at about 31. The bench gang did not split
     the squad on the way, so the bench shows no gain from the march and the pull; the live split is their reason.
+  - the same walk-in in the pilot's kit against `ganker-max` (23 sharks, boosts, prayer potions), each gang account
+    hunting its own one of ours (`SQUAD_GANG_SPLIT=1`, `extra:squad-4-gangmax-hunted-chain-x1`), seeds 1 to 8:
+    march and pull 19 kills at about 80 HP a kill, neither 20 at 78, pull only 22 at 72, march only 15 kills in 5
+    runs at 65. The four sit within the noise; this copy of the gang costs 65 to 80 HP a kill where the live split
+    cost about 249.
   - `FOLLOW=1` from (3150, 3560), 110 tiles away, past the gang's single-way post: 19 of 24 at about 60 HP a kill
     (`extra:squad-4-gang-follow-x1`; seeds 1 to 4: 38, seeds 5 to 8: 84). Seeds 1 to 4 only: straight in, 81;
     gathered once 10 tiles short, 48.

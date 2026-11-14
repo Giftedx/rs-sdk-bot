@@ -208,17 +208,22 @@ if (import.meta.main) {
     const optsJson = get('SQUAD_OPTS', JSON.stringify(SQUAD_OPTS));
     const log = (l: string) => console.log(l);
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
-    const gangRuns = gang.map(async g => {
+    // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
+    // pilot's walk-in, in place of the nearest of ours.
+    const split = env.SQUAD_GANG_SPLIT === '1';
+    const gangRuns = gang.map(async (g, gi) => {
+        const mine = squad[gi % squad.length]!.name.toLowerCase();
         const opts = sparOptions('ganker-live', env.SPAR_B_OPTS, kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200);
         while (!stopped() && g.tick() < deadline) {
             const me = g.sdk.getState()?.player;
             if (!me || wildernessLevel(me.worldZ) === 0) break;
-            const prey = (g.sdk.getState()?.nearbyPlayers ?? []).filter(q => ours.some(n => n.toLowerCase() === q.name.toLowerCase())).sort((a, b) => a.distance - b.distance)[0];
+            const seenOurs = (g.sdk.getState()?.nearbyPlayers ?? []).filter(q => ours.some(n => n.toLowerCase() === q.name.toLowerCase())).sort((a, b) => a.distance - b.distance);
+            const prey = split ? seenOurs.find(q => q.name.toLowerCase() === mine) ?? seenOurs[0] : seenOurs[0];
             if (!prey) {
                 // SQUAD_GANG_HUNT=1: like the live gang, which the world feed takes to its target (it met the first live
                 // pilot 30 tiles from the post), it walks toward the nearest of ours in the Wilderness.
                 if (env.SQUAD_GANG_HUNT === '1' && g.tick() % 4 === 0) {
-                    const far = squad.map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
+                    const far = (split ? [squad[gi % squad.length]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
                         .sort((a, b) => Math.max(Math.abs(a.worldX - me.worldX), Math.abs(a.worldZ - me.worldZ)) - Math.max(Math.abs(b.worldX - me.worldX), Math.abs(b.worldZ - me.worldZ)))[0];
                     if (far) void g.sdk.sendWalk(far.worldX, far.worldZ);
                 }
