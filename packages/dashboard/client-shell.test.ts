@@ -740,6 +740,9 @@ test('gather chance: the best held axe on a tree, the roll of a rock, or no axe 
  expect(t({},'Iron ore',40)).toBe('77% a try');
  expect(t({inventory:[]},'Willow logs',40)).toBe('no axe held');
  expect(t({},'Magic logs',75)).toBe('');
+ // A boosted or drained level counts: Mining current 40 over a base of 30.
+ const withCur=new Function(...Object.keys(env),'curLevel',`${code};return gatherText;`)(...Object.values(env),()=>40);
+ expect(withCur({},'Iron ore',30,'Mining')).toBe('77% a try');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
