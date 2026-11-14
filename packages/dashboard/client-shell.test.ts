@@ -870,12 +870,13 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
  // 720 casts x 22.5 = 16,200 cast XP plus kills x 60 x 50 damage XP, in Magic.
  const mx=Number((mageXp('Moss giant').match(/· ([\d,]+) XP\/h in Magic/)||[])[1]?.replace(/,/g,''));
  expect(mx).toBeGreaterThan(16200+100*3000);expect(mx).toBeLessThan(16200+115*3000);
- // One spawn with a 700-tick respawn: 420 s a kill, 8.6 kills an hour. The cast XP is that of those kills' casts
- // (8.6 x 10.7 x 22.5 = 2,070), not of a full hour of casting (16,200): about 2,070 + 8.6 x 3,000 = 27,800.
+ // One spawn with a 700-tick respawn: the fight (33 s) and then the respawn (420 s), 453 s a kill, 7.9 kills an hour.
+ // The cast XP is that of those kills' casts (7.9 x 10.7 x 22.5 = 1,910), not of a full hour of casting (16,200):
+ // about 1,910 + 7.9 x 3,000 = 25,700.
  data['npc-defence.json']={'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,700]]};
  const slow=new Function(...Object.keys(env),'itemBonusData','bestSpell','npcSpawns',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]}),wornBonuses:()=>[0,0,0,10,0,0,0,0,0,0,0,0,0]}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>({name:'Fire Bolt',max:12,casts:50,xp:22.5}),[['Moss giant',42,42,[3000,3000,0]]]);
  const sx=Number((slow('Moss giant').match(/· ([\d,]+) XP\/h in Magic/)||[])[1]?.replace(/,/g,''));
- expect(slow('Moss giant')).toMatch(/^About 9 kills an hour/);expect(sx).toBeGreaterThan(26000);expect(sx).toBeLessThan(30000);
+ expect(slow('Moss giant')).toMatch(/^About 8 kills an hour/);expect(sx).toBeGreaterThan(24500);expect(sx).toBeLessThan(27000);
  // A dagger has magic attack +1 too, but it is no staff: it stays melee with runes in the pack.
  const dagger=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Rune dagger',slot:3}]})}),{'Rune dagger':[25,12,-4,1,0,0,0,0,1,0,24,0,0]},()=>({name:'Wind Strike',max:2,casts:50,xp:137.5}));
  expect(dagger('Moss giant')).not.toContain('magic,');expect(dagger('Moss giant')).toMatch(/^About \d+ kills an hour \(max hit/);
@@ -901,7 +902,15 @@ test('combat training: the NPCs with the most XP an hour that spawn, leaving out
  // (8 hitpoints, defence 20) wastes most of each hit and is harder to hit, so the Moss giant ranks first.
  expect(rows.map((r:any)=>r.name)).toEqual(['Moss giant','Cow']);
  expect(rows[0].xp).toBeGreaterThan(rows[1].xp);
- expect(t.trainBox()).toContain('data-finder-pick="Moss giant"');
+ expect(t.trainBox()).toContain('data-finder-pick="Moss giant" data-finder-safe');
+});
+
+test('a safe pick (a Combat training row) keeps only the spawns outside the Wilderness',()=>{
+ const code=shell.slice(shell.indexOf('  let finderSafe=false;'),shell.indexOf('  const finderRow=')).concat(shell.slice(shell.indexOf('  const finderRow='),shell.indexOf('\n',shell.indexOf('    const pts=[];'))));
+ const wildLevel=(p:any)=>p.x>=2944&&p.x<=3391&&p.z>=3520&&p.z<=6399?1:0;
+ const f=new Function('npcSpawns','finderPick','wildLevel',`${code};return (s:boolean)=>{finderSafe=s;return finderRow();};`.replace('(s:boolean)','(s)'))([['Moss giant',42,42,[3100,3927,0,2550,3405,0]]],'Moss giant',wildLevel);
+ expect(f(false)[3]).toEqual([3100,3927,0,2550,3405,0]);
+ expect(f(true)[3]).toEqual([2550,3405,0]);
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
