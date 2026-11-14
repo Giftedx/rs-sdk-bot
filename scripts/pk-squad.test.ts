@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { bankNear, leaveWilderness, rescueDropped, squadTarget, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { bankNear, leaveWilderness, openSquad, rescueDropped, squadTarget, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable } from './pk';
 
 const session = (z: number) => ({ sdk: { getState: () => ({ player: { worldX: 3092, worldZ: z, hp: 50, maxHp: 99 } }), getInventory: () => [] } }) as any;
@@ -30,6 +30,24 @@ test('a rescue session remains owned for logout when retreat fails or throws', a
         });
     expect(sessions).toEqual(opened);
     expect(stranded).toEqual(['failed', 'threw']);
+});
+
+test('a refused squad login settles earlier sessions and skips remaining logins', async () => {
+    const first = { name: 'first' } as any, opened: string[] = [], cleanup: string[] = [];
+    const settledFailure = Error('settled startup failure');
+    await expect(openSquad(['first', 'refused', 'unused'], async name => {
+        opened.push(name);
+        if (name === 'refused') throw Error('account ownership refused');
+        return first;
+    }, async (sessions, detail) => {
+        expect(sessions).toEqual([first]);
+        expect(detail).toContain('squad startup refused: Error: account ownership refused');
+        await Promise.resolve();
+        cleanup.push(...sessions.map(s => s.name));
+        throw settledFailure;
+    })).rejects.toBe(settledFailure);
+    expect(opened).toEqual(['first', 'refused']);
+    expect(cleanup).toEqual(['first']);
 });
 
 test('a surviving squad member advances coordination after the first disconnects', () => {
