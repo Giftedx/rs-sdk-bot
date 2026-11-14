@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { bidPlan, chunkTooDear, fetchMarket, floatNeed, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
+import { bidPlan, chunkTooDear, fetchMarket, floatNeed, tickPackets, fetchQuote, netPerUnit, parseItems, scanProfiles } from './shop-to-bid';
 
 const bait = { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334 };
 
@@ -78,4 +78,13 @@ test('fetchMarket reads every page', async () => {
     }, async () => {});
     expect(asked.length).toBe(2);
     expect(rows.map(r => [r.id, r.bid])).toEqual([[313, 218], [560, null]]);
+});
+
+test('one tick of shop packets holds at most 5 buys of 10, 5 or 1', () => {
+    expect(tickPackets(300)).toEqual([10, 10, 10, 10, 10]);
+    expect(tickPackets(23)).toEqual([10, 10, 1, 1, 1]);
+    expect(tickPackets(7)).toEqual([5, 1, 1]);
+    expect(tickPackets(2)).toEqual([1, 1]);
+    expect(tickPackets(0)).toEqual([]);
+    expect(tickPackets(-3)).toEqual([]);
 });
