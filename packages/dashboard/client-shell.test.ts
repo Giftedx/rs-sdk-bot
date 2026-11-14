@@ -915,6 +915,34 @@ test('a safe pick (a Combat training row) keeps only the spawns outside the Wild
  expect(f(true)[3]).toEqual([2550,3405,0]);
 });
 
+test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spawn near and would attack',()=>{
+ const code=shell.slice(shell.indexOf("  // NPC aggression timer (RuneLite's"),shell.indexOf('  function infoboxes(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ // npc-hunt.json rows: [name, kind, vislevel, tiles]. Worker has a never-stopping variant far away and a kind-1 one near.
+ const hunt=[['Moss giant',1,42,[3170,9900,0]],['Dark wizard',1,7,[3175,9905,1]],['Worker',1,10,[3168,9898,0]],['Worker',3,10,[3300,9900,0]]];
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>hunt}),wildLevel:()=>0,S:{world:{tickMs:400}}};
+ const t=new Function(...Object.keys(env),`${code};return {aggroTrack,aggroText,aggroHunters};`)(...Object.values(env));
+ const b:any={name:'A',inWorld:true,combat:60,pos:{x:3170,z:9900,level:0}};
+ // Combat 20: Moss giant (up to 84) and the near Worker (up to 20) hunt it, with a timer, not the far Worker's never.
+ expect(t.aggroHunters({...b,combat:20})).toEqual([{name:'Moss giant',never:false},{name:'Worker',never:false}]);
+ // Combat 60: Moss giant only. Dark wizard is on another plane.
+ expect(t.aggroHunters(b).map((h:any)=>h.name)).toEqual(['Moss giant']);
+ // 1,000 ticks x 400 ms = 400 s. The first read gives the most time left.
+ expect(t.aggroText(b,0)).toMatchObject({text:'6:40',red:true});
+ expect(t.aggroText(b,0).title).toContain('at most 6:40');
+ // 10 tiles east is still in the first area: the count goes on. 100 s later, 5:00 left.
+ b.pos.x=3180;expect(t.aggroText(b,100e3).text).toBe('5:00');
+ // One more tile east leaves the area: a new count, no longer "at most".
+ b.pos.x=3181;const a=t.aggroText(b,150e3);expect(a.text).toBe('6:40');expect(a.title).not.toContain('at most');
+ // Back west into the old area (kept as the second area): the count goes on.
+ b.pos.x=3165;expect(t.aggroText(b,200e3).text).toBe('5:50');
+ expect(t.aggroText(b,550e3)).toMatchObject({text:'safe',red:false});
+ // A logout drops the record: back at the same tile much later, a new "at most" count, not "safe".
+ t.aggroTrack({...b,inWorld:false},600e3);const back=t.aggroText(b,5000e3);expect(back.text).toBe('6:40');expect(back.title).toContain('at most');
+ // Combat 85 is too strong for the Moss giant outside the Wilderness.
+ expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
