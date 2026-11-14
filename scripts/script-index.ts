@@ -26,6 +26,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/cloud-side.ts': 'fleet control: sets up a cloud side and keeps its swarm, fleet agent and planner running',
  'scripts/fleet-vault.ts': 'fleet control: seals and restores account credentials in the fleet vault',
  'scripts/courier-route-evidence.ts': 'evidence check for one recorded courier return; it starts no game work',
+ 'scripts/eat-to-full.ts': 'hand tool: eats the pack\'s meals to full hitpoints out of combat, before a walk onto dangerous ground',
  'scripts/fleet-agent.ts': 'fleet control: syncs fleet data and runs this side of each order',
  'scripts/fleet-inspect.ts': 'fleet tool: refreshes the saved state of one account',
  'scripts/fleet-order.ts': 'fleet control: places a transfer order between two sides',
