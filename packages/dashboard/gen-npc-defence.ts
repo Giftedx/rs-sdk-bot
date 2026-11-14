@@ -1,7 +1,8 @@
 // Writes client-assets/npc-defence.json: the defence of each attackable NPC of the pinned server, by its name, as a list of
 // its variants [combat, defence level, magic level, stab, slash, crush, magic, range defence bonus, attack level, strength
 // level, attack bonus, strength bonus, damage type (0 stab, 1 slash, 2 crush, -1 other), hitpoints, combat XP multiplier
-// (param=combat_xp_multiplier, default 1000; random-event NPCs give 25)], lowest combat first.
+// (param=combat_xp_multiplier, default 1000; random-event NPCs give 25), respawn rate in ticks (respawnrate=, default
+// 100: one minute, engine NpcType.ts)], lowest combat first.
 // From the content's .npc configs: defence= and magic= (a missing level is 1), param=stabdefence and the rest (a missing
 // bonus is 0, skill_combat/configs/combat.param). The combat level is knowledge/npcs.json's. An NPC is attackable when
 // one of its ops is Attack.
@@ -13,7 +14,7 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export type Defence = [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
+export type Defence = [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
 const DAMAGE: Record<string, number> = { '^stab_style': 0, '^slash_style': 1, '^crush_style': 2 };
 const BONUS = ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence'];
 
@@ -25,7 +26,7 @@ export function npcDefence(files: string[], combat: Map<string, number>): Record
         if (!name || !/^op\d=Attack\s*$/m.test(block)) continue;
         const param = (k: string) => Number(block.match(new RegExp(`^param=${k},(-?\\d+)\\s*$`, 'm'))?.[1] ?? 0);
         const lvl = (k: string) => Number(field(k) ?? 1) || 1, damage = block.match(/^param=damagetype,(\S+)\s*$/m)?.[1] ?? '';
-        const row: Defence = [combat.get(debug) ?? 0, lvl('defence'), lvl('magic'), ...BONUS.map(param), lvl('attack'), lvl('strength'), param('attackbonus'), param('strengthbonus'), DAMAGE[damage] ?? -1, lvl('hitpoints'), Number(block.match(/^param=combat_xp_multiplier,(\d+)\s*$/m)?.[1] ?? 1000)] as Defence;
+        const row: Defence = [combat.get(debug) ?? 0, lvl('defence'), lvl('magic'), ...BONUS.map(param), lvl('attack'), lvl('strength'), param('attackbonus'), param('strengthbonus'), DAMAGE[damage] ?? -1, lvl('hitpoints'), Number(block.match(/^param=combat_xp_multiplier,(\d+)\s*$/m)?.[1] ?? 1000), Number(field('respawnrate') ?? 100) || 100] as Defence;
         const list = (out[name] ??= []);
         if (!list.some(r => r.every((v, i) => v === row[i]))) list.push(row);
     }

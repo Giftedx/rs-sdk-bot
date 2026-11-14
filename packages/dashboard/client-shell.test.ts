@@ -815,6 +815,9 @@ test('kill XP: one style and Hitpoints from the hitpoints and the multiplier, an
  expect(t('Zombie')).toContain('A kill: 2,200–3,000 XP in one style + about 732–998 Hitpoints');
  // A name with only event variants keeps them: 10 x 100 x 25 / 1000 = 25.
  expect(t('Swarm')).toContain('A kill: 25 XP in one style');
+ // A row with the respawn rate: 60 ticks x 0.6 = 36 s.
+ const t2=new Function(...Object.keys(env),`${code};return killXpText;`)(...Object.values({...env,fetch:()=>sync({ok:true,json:()=>({'Giant spider':[[27,21,1,0,0,0,0,0,20,24,0,0,0,30,1000,60]]})})}));
+ expect(t2('Giant spider')).toContain('A kill: 3,000 XP in one style + about 998 Hitpoints · respawns in 36 s');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
