@@ -489,3 +489,10 @@ test('a buy that starts on the Gnome battlefield walks to the Ardougne north ban
   await expect(leaveBattlefield(fixture({worldX:2529,worldZ:3236,level:0},10).s,()=>false,async()=>({ok:true}))).rejects.toThrow('10 HP or less');
  }finally{log.mockRestore();}
 });
+
+test('the health preparation eats the cheapest owned meal, sharks included', async () => {
+  const {HEAL_FOOD}=await import('./buy-owned-ge-item');
+  expect(HEAL_FOOD[0]).toBe(333);
+  expect(HEAL_FOOD).toContain(385);
+  expect(HEAL_FOOD.indexOf(329)).toBeLessThan(HEAL_FOOD.indexOf(385));
+});
