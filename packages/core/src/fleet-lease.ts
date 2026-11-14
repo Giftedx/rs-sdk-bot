@@ -235,7 +235,17 @@ export function acquireFleetLease(root: string, side: string, now = Date.now, wi
         at = p.at;
         deadline = p.deadline;
     };
-    { const first = propose(git); pushFleetGitRecord(git, ref, first.commit); confirm(first); }
+    {
+        const first = propose(git);
+        try { pushFleetGitRecord(git, ref, first.commit); }
+        catch (error) {
+            // A lost push reply is not a lost acquisition when the authority names this exact proposal.
+            let remote: string | undefined;
+            try { remote = readFleetGitRefs(window(root, undefined, REF_CHECK_MS), [ref]).get(ref); } catch { /* unconfirmed */ }
+            if (remote !== first.commit) throw error;
+        }
+        confirm(first);
+    }
     const allows = () => !lost && performance.now() < deadline && now() < at + FLEET_LEASE_TTL_MS - DRAIN_MS
         && fleetLeaseAllowsWorker(root, workerHolder, now());
     // Records sent whose push was not seen to land. One of them can turn up on the ref later, when the remote applied

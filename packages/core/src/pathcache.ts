@@ -1,4 +1,4 @@
-import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -6,13 +6,14 @@ import { createHash } from 'node:crypto';
 // rsmod's wasm memory (measured). Every proof run and every bot process paid it. This saves that wasm
 // memory once after a cold build and copies it back into a fresh instance before initPathfinding() runs. The
 // zones are then already present, so allocateIfAbsent returns at once; __set and the door unmasking are
-// idempotent and rebuild pathfinding.ts's own JS-side door index. The snapshot is keyed on the wasm and
-// collision-data bytes, so an input change rebuilds it even when size/mtime match.
+// idempotent and rebuild pathfinding.ts's own JS-side door index. The snapshot is keyed on the wasm,
+// collision data and initializer policy bytes, so an input change rebuilds it even when size/mtime match.
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const vendor = (p: string) => join(repoRoot, 'vendor', 'rs-sdk', p);
 const WASM = vendor('server/vendor/rsmod-pathfinder/rsmod_bg.wasm');
 const DATA = vendor('sdk/collision-data.json');
+const INITIALIZER = vendor('sdk/pathfinding.ts');
 export const DEFAULT_CACHE = join(repoRoot, '.practice', 'cache', 'rsmod-pathfinding.snap');
 const PAGE=65536;
 const MAX_HEADER=65536;
@@ -30,8 +31,8 @@ export function openDiagonalDoors(rsmod:{changeLoc(x:number,z:number,y:number,w:
     return doors.length;
 }
 
-export function pathfindingSourceKey(wasmFile=WASM,collisionFile=DATA,doorsFile=DOORS): string {
-    return JSON.stringify({v:3,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
+export function pathfindingSourceKey(wasmFile=WASM,collisionFile=DATA,doorsFile=DOORS,initializerFile=INITIALIZER): string {
+    return JSON.stringify({v:4,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),initializer:sha256(readFileSync(initializerFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
 }
 
 type SnapshotHeader={format:2;key:string;bytes:number;sha256:string};
@@ -87,6 +88,26 @@ export function verifyPathfindingSnapshotFile(file:string,key:string):boolean {
     }finally{closeSync(fd);}
 }
 
+// Stage the checked payload before changing WASM memory. A failed read remains
+// an optional cache miss, even when it happens after some payload bytes arrive.
+// This uses one transient payload buffer, bounded by the checked file length.
+export function restorePathfindingSnapshotFile(file:string,key:string,memory:WebAssembly.Memory):boolean {
+    let fd:number|undefined,payload:Buffer|undefined;
+    try {
+        fd=openSync(file,'r');
+        const total=fstatSync(fd).size,head=Buffer.alloc(Math.min(total,4+MAX_HEADER));
+        const parsed=readFully(fd,head,0)?snapshotHeader(head,total,key):null;
+        if(!parsed)return false;
+        payload=Buffer.alloc(parsed.header.bytes);
+        if(!readFully(fd,payload,parsed.offset)||sha256(payload)!==parsed.header.sha256)return false;
+    } catch { return false; }
+    finally { if(fd!==undefined)try{closeSync(fd);}catch{/* The cache is optional. */} }
+    const need=payload.length/PAGE-memory.buffer.byteLength/PAGE;
+    if(need>0)try{memory.grow(need);}catch{return false;}
+    new Uint8Array(memory.buffer,0,payload.length).set(payload);
+    return true;
+}
+
 export function writePathfindingSnapshot(file:string,key:string,payload:Uint8Array):void {
     if(payload.length<=0||payload.length%PAGE!==0)throw Error('Invalid pathfinding snapshot memory length');
     const head=Buffer.from(JSON.stringify({format:2,key,bytes:payload.length,sha256:sha256(payload)}));
@@ -104,7 +125,7 @@ export function writePathfindingSnapshot(file:string,key:string,payload:Uint8Arr
 let loaded: Promise<{ restored: boolean; ms: number }> | null = null;
 
 export function loadPathfinding(opts: { cacheFile?: string } = {}): Promise<{ restored: boolean; ms: number }> {
-    loaded ??= load(opts.cacheFile ?? DEFAULT_CACHE);
+    loaded ??= load(opts.cacheFile ?? DEFAULT_CACHE).catch(error=>{loaded=null;throw error;});
     return loaded;
 }
 
@@ -114,38 +135,15 @@ async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     const rsmod: any = await import(vendor('server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'));
     const memory: WebAssembly.Memory = rsmod.__wasm.memory;
     const k = pathfindingSourceKey();
-    let restored = false;
-    // Streamed: the header, then the payload hashed in chunks, then read straight into wasm memory. Reading the
-    // 104 MB file whole kept a second copy in the process's resident memory.
-    const fd = existsSync(file) ? openSync(file, 'r') : -1;
-    if (fd >= 0) try {
-        const total = fstatSync(fd).size, head = Buffer.alloc(Math.min(total, 4 + MAX_HEADER));
-        const parsed = readFully(fd, head, 0) ? snapshotHeader(head, total, k) : null;
-        let ok = false;
-        if (parsed) {
-            const hash = createHash('sha256'), chunk = Buffer.alloc(8 * 2 ** 20);
-            for (let at = 0; at < parsed.header.bytes; at += chunk.length) {
-                const part = chunk.subarray(0, Math.min(chunk.length, parsed.header.bytes - at));
-                if (!readFully(fd, part, parsed.offset + at)) break;
-                hash.update(part);
-                ok = at + part.length === parsed.header.bytes;
-            }
-            ok &&= hash.digest('hex') === parsed.header.sha256;
-        }
-        if (parsed && ok) {
-            const need = parsed.header.bytes / PAGE - memory.buffer.byteLength / PAGE;
-            if (need > 0) memory.grow(need);
-            if (!readFully(fd, new Uint8Array(memory.buffer, 0, parsed.header.bytes) as unknown as Buffer, parsed.offset)) throw Error('pathfinding snapshot read short after its hash matched');
-            restored = true;
-            // collision-lazy.ts then skips parsing zones and tiles: the restored grid already holds them.
-            (globalThis as { __rsPathRestored?: boolean }).__rsPathRestored = true;
-        }
-    } finally { closeSync(fd); }
+    const restored=restorePathfindingSnapshotFile(file,k,memory);
+    // collision-lazy.ts then skips parsing zones and tiles: the restored grid already holds them.
+    if(restored)(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored = true;
     const { initPathfinding } = await import(vendor('sdk/pathfinding.ts'));
     initPathfinding();
     openDiagonalDoors(rsmod);
     if (!restored) {
-        writePathfindingSnapshot(file,k,new Uint8Array(memory.buffer));
+        try { writePathfindingSnapshot(file,k,new Uint8Array(memory.buffer)); }
+        catch { /* A cache write failure does not invalidate the initialized grid. */ }
     }
     return { restored, ms: Date.now() - t0 };
 }
