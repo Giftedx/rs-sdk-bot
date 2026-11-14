@@ -61,6 +61,17 @@ export function laterProcessHolds(pid: number, savedAt: number, starts: Readonly
     return start !== undefined && Number.isFinite(savedAt) && start > savedAt + PID_START_SLACK_MS;
 }
 
+// A light process that sleeps `seconds` and carries `label` on its command line, for a check that matches a live
+// process by command line (processMatchesRecent). On Windows its cmd.exe and ping tree measured 21 MB, where a Bun
+// runtime that sleeps measured 74 MB. End it with killTree: the sleep is a child process.
+export function sleeperCommand(label: string, seconds = 900): string[] {
+    if (!/^[-A-Za-z0-9_.]+$/.test(label)) throw Error('sleeper label must be letters, digits, dots, dashes or underscores');
+    return process.platform === 'win32'
+        // `rem` makes the rest of its line a comment, so the label comes after the sleep.
+        ? ['cmd.exe', '/d', '/s', '/c', `ping -n ${seconds + 1} -w 1000 127.0.0.1 >nul & rem ${label}`]
+        : ['sh', '-c', `sleep ${seconds} # ${label}`];
+}
+
 export async function killTree(pid: number): Promise<void> {
     if (process.platform === 'win32') {
         Bun.spawnSync(['taskkill', '/PID', String(pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});
