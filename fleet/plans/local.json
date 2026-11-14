@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794677476809,
+ "at": 1794678089013,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -19,6 +19,21 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
   },
   {
    "account": "Balls",
@@ -75,25 +90,6 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
   },
   {
    "account": "Bigchopper",
@@ -394,6 +390,44 @@
    ]
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
    "account": "Billionaire",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -531,40 +565,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
-   "role": "pk-trainee"
   }
  ]
 }
