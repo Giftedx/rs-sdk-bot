@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794625975185,
+ "at": 1794626200584,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -503,6 +503,19 @@
    "resources": [
     "knight:2671,3313"
    ]
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ea9f27fe-712e-4f55-b7b2-4b8274abe538"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-moneyshot-20261113t102024z [task-ea9f27fe-712e-4f55-b7b2-4b8274abe538]",
+   "role": "helper"
   }
  ]
 }
