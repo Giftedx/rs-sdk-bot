@@ -1,0 +1,23 @@
+{
+  "id": "1794621595315-mightyrod-weequickie",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Mightyrod",
+  "to": "WeeQuickie",
+  "item": "Law rune",
+  "count": 4,
+  "start": 1794621595315,
+  "end": 1794626995315,
+  "meet": [
+    {
+      "x": 2968,
+      "z": 2975,
+      "level": 0
+    },
+    {
+      "x": 2969,
+      "z": 2975,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
