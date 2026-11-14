@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794642953428-weequickie-oreelse",
+ "account": "OreElse",
+ "partner": "WeeQuickie",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ammo mould",
+ "requested": 1,
+ "claim": "e901d05c-bec9-4dbf-bd7c-b9b15c7476a0",
+ "count": 0,
+ "ok": false,
+ "at": 1794643058888,
+ "detail": "trade claimed"
+}
