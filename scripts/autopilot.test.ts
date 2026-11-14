@@ -22,6 +22,7 @@ import { jewelleryOrderFromEnv, planJewelleryOrder, validateJewelleryOrder } fro
 import { smithRecipe } from './smith-batch';
 import { parseStep } from '../packages/core/src/chain-step';
 import { PROFILES, maximumUnitCost, selectItems } from './shop-buyer';
+import { sideCard } from './fleet-sync';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -345,15 +346,50 @@ test('a kit send becomes an item order and a vacant account; a party to an open 
 });
 
 test('another side gives only from accounts its fresh plan leaves free and no open order holds', () => {
+    const server = 'rs-sdk-demo.fly.dev';
     const snapshot = { accounts: [
         { name: 'Free', inventory: [{ name: 'Mind rune', count: 374 }], bank: [{ name: 'Coins', count: 4_000_000 }] },
-        { name: 'Working', bank: [{ name: 'Mind rune', count: 335 }] }, { name: 'Trading', bank: [{ name: 'Mind rune', count: 50 }] }, { name: 'Haggis', bank: [] }] };
+        { name: 'Working', bank: [{ name: 'Mind rune', count: 335 }] }, { name: 'Trading', bank: [{ name: 'Mind rune', count: 50 }] }, { name: 'Haggis', bank: [] }].map(row => ({ ...row, server })) };
+    const context = { server, owners: new Map(snapshot.accounts.map(row => [row.name.toLowerCase(), { side: 'claude-cloud', server }])) };
     const plan = { at: 1_000_000, jobs: [{ account: 'Working', enabled: true }, { account: 'Free', enabled: false }] };
-    const stock = (at: number) => sideStock('claude-cloud', snapshot, { ...plan, at }, new Set(['trading']), 1_000_000 + 60_000, 30 * 60_000, () => undefined);
+    const stock = (at: number) => sideStock('claude-cloud', snapshot, { ...plan, at }, new Set(['trading']), 1_000_000 + 60_000, 30 * 60_000, () => undefined, context);
     expect(stock(1_000_000)).toEqual([{ name: 'Free', side: 'claude-cloud', items: { 'mind rune': 374, coin: 4_000_000 } }]);
     // A side with no fresh plan has no running fleet agent to trade.
     expect(stock(1_000_000 - 31 * 60_000)).toEqual([]);
-    expect(sideStock('claude-cloud', snapshot, null, new Set(), 0, 1, () => undefined)).toEqual([]);
+    expect(sideStock('claude-cloud', snapshot, null, new Set(), 0, 1, () => undefined, context)).toEqual([]);
+    expect(stock(1_000_000 + 60_001)).toEqual([]);
+});
+
+test('published owner pauses and death holds keep remote kit orders on an available live donor', () => {
+    const server = 'rs-sdk-demo.fly.dev', remote = 'local', now = 1_000_000;
+    const row = (name: string, count: number) => ({ name, server, inventory: [{ name: 'Mind rune', count }], bank: [] });
+    const rows = [row('Paused', 1000), row('Dead', 900), row('Free', 100)];
+    const owners = new Map<string, { side: string; server: string }>([...rows.map(r => [r.name.toLowerCase(), { side: remote, server }] as const), ['needy', { side, server }] as const]);
+    const card = sideCard(remote, 5, rows.map(r => r.name), n => n === 'Paused' ? 'owner pause' : undefined, ['Dead']);
+    const stockFor = (card?: unknown) => sideStock(remote, { accounts: rows }, { at: now, jobs: [] }, new Set(), now, 30 * 60_000, () => undefined, { owners, server, card });
+    const recipient: Acct = { name: 'Needy', side, skills: { Hitpoints: 20, Magic: 1 }, items: {} };
+    const band = { ...catalogue().find(t => t.id === 'army-strike-magic-21')!, needs: { items: { 'mind rune': 20 } }, resources: [] };
+    const [assignment] = plan({ ...inputs(recipient), owners, templates: [band], army: new Set(['needy']), stock: stockFor(card), market: {} });
+    expect(assignment!.send?.from).toBe('Free');
+    const funded = fundOrders([assignment!], new Set(), () => { throw Error('unexpected coin order'); }, send => itemOrder(send.from, send.to, send.item, send.count, server, now));
+    expect(funded.orders).toHaveLength(1); expect(funded.orders[0]).toMatchObject({ from: 'Free', to: 'Needy', server });
+    expect(stockFor(card).map(s => s.name)).toEqual(['Free']);
+    expect(stockFor({ ...card, paused: ['PAUSED'], died: ['DEAD'] }).map(s => s.name)).toEqual(['Free']);
+    expect(stockFor({ ...card, stopped: true })).toEqual([]);
+    expect(stockFor().map(s => s.name)).toEqual(['Paused', 'Dead', 'Free']);
+    expect(stockFor({ ...card, side: 'another-side', stopped: true }).map(s => s.name)).toEqual(['Paused', 'Dead', 'Free']);
+});
+
+test('remote donor observations must belong to the registered live server and current side', () => {
+    const server = 'rs-sdk-demo.fly.dev', remote = 'local', now = 1_000_000;
+    const row = (name: string) => ({ name, server, inventory: [{ name: 'Mind rune', count: 100 }], bank: [] });
+    const rows = [row('Live'), { ...row('Practice'), practice: true }, { ...row('WrongServer'), server: 'localhost:8888' },
+        row('WrongOwner'), row('Moved'), row('Unregistered'), { ...row('UndatedServer'), server: undefined }];
+    const owners = new Map(rows.filter(r => r.name !== 'Unregistered').map(r => [r.name.toLowerCase(), {
+        side: r.name === 'Moved' ? side : remote, server: r.name === 'WrongOwner' ? 'localhost:8888' : server,
+    }]));
+    const stock = sideStock(remote, { accounts: rows }, { at: now, jobs: [] }, new Set(), now, 30 * 60_000, () => undefined, { owners, server });
+    expect(stock.map(s => s.name)).toEqual(['Live']);
 });
 
 import { failedSends, kitBuyRunning, SEND_RETRY_MS } from './autopilot';

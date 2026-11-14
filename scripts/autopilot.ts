@@ -21,6 +21,7 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
+import { publishedSideHold } from '../packages/core/src/fleet-side-card';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
@@ -122,18 +123,24 @@ export function itemOrder(from: string, to: string, item: string, count: number,
 }
 // A side's free accounts as kit donors, from its published snapshot and plan (fleet/snapshots, fleet/plans): the side
 // published a plan within `maxAgeMs` (SIDE_STOCK_MAX_AGE_MS: its fleet agent syncs every 10 minutes, so it runs and
-// will trade), and the account has no enabled job in that
-// plan and is in no open order. That side's planner keeps a party to an open order vacant until the order closes.
+// will trade), and the account has no enabled job, open order or published owner hold. Registered and observed
+// servers must match the live recipient's server. That side's planner keeps an open order's parties vacant.
 export const SIDE_STOCK_MAX_AGE_MS = 30 * 60_000;
-export function sideStock(side: string, snapshot: any, plan: any, open: ReadonlySet<string>, now: number, maxAgeMs: number, itemName: (id: number) => string | undefined): Stock[] {
-    if (!Array.isArray(snapshot?.accounts) || !Array.isArray(plan?.jobs) || !(now - plan.at < maxAgeMs)) return [];
+export function sideStock(side: string, snapshot: any, plan: any, open: ReadonlySet<string>, now: number, maxAgeMs: number, itemName: (id: number) => string | undefined,
+    context: { owners: ReturnType<typeof loadOwners>; server: string; card?: unknown }): Stock[] {
+    if (!Array.isArray(snapshot?.accounts) || !Array.isArray(plan?.jobs) || !Number.isFinite(plan.at) || plan.at > now || !(now - plan.at < maxAgeMs)) return [];
     const busy = enabledAccounts(plan.jobs);
-    return snapshot.accounts.filter((r: any) => typeof r?.name === 'string' && !busy.has(r.name.toLowerCase()) && !open.has(r.name.toLowerCase()) && r.name.toLowerCase() !== 'haggis')
+    const server = context.server.toLowerCase();
+    return snapshot.accounts.filter((r: any) => {
+        if (typeof r?.name !== 'string' || !/^[A-Za-z0-9]{1,12}$/.test(r.name) || typeof r.server !== 'string' || r.server.toLowerCase() !== server || r.practice) return false;
+        const name = r.name.toLowerCase(), owner = context.owners.get(name);
+        return owner?.side === side && owner.server.toLowerCase() === server && !publishedSideHold(context.card, side, name)
+            && !busy.has(name) && !open.has(name) && name !== 'haggis';
+    })
         .map((r: any) => { const a = accountFrom(r.name, side, r, itemName); return { name: a.name, side, items: a.items }; });
 }
 // Donor and recipient pairs whose item order failed or needs reconciliation in the last `windowMs`, as `from>to` in lower
-// case. The same donor would fail the same way (an owner pause the published plan does not show, a tile it cannot
-// reach), so the planner asks another donor.
+// case. The same donor would fail the same way (an unpublished pause or a tile it cannot reach), so the planner asks another donor.
 export const SEND_RETRY_MS = 24 * 3600_000;
 export function failedSends(orders: readonly Order[], receipts: readonly Receipt[], now: number, windowMs = SEND_RETRY_MS): Set<string> {
     const out = new Set<string>();
@@ -438,8 +445,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
         const other = f.slice(0, -'.json'.length);
-        if (other !== side && !silent.has(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id))
-            .filter(s => owners.get(s.name.toLowerCase())?.side === other));
+        if (other !== side && !silent.has(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id),
+            { owners, server: 'rs-sdk-demo.fly.dev', card: readJson(join(fleetDir, 'sides', f), null) }));
     }
     const market: Record<string, { id: number; name: string; limit: number }> = {};
     for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)

@@ -23,7 +23,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
-import { readMergedPlan } from '../packages/core/src/coordinator-jobs';
+import { publishedSideHold } from '../packages/core/src/fleet-side-card';
+import { mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { BANK_MEETS } from './coin-courier';
 import { makeOrder, orderMeet } from './fleet-order';
 import { pickOrder, swarmBusy, validOrder, type Order } from './fleet-trade';
@@ -104,14 +105,25 @@ const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8'
 
 // Availability follows the current merged jobs on this host's side. A fresh container or unreadable local plan
 // keeps the published plan's holds; without either source, staging cannot establish that any account is free.
-export function stageJobs(side: string, options: { base?: string; fleetDir?: string; localSide?: string } = {}): any[] {
+export function stageJobs(side: string, options: { base?: string; fleetDir?: string; localSide?: string; planFile?: string } = {}): any[] {
     const base = options.base ?? resolve(import.meta.dir, '..'), fleetDir = options.fleetDir ?? FLEET_DIR();
-    if (side === (options.localSide ?? mySide()) && Array.isArray(readJson(join(base, 'swarm.json'))?.jobs)) {
-        try { const plan = readMergedPlan(base); if (Array.isArray(plan?.jobs)) return plan.jobs; } catch { /* published holds remain */ }
+    if (side === (options.localSide ?? mySide())) {
+        const owner = readJson(resolve(options.planFile ?? process.env.SWARM_PLAN ?? join(base, 'swarm.json')));
+        if (Array.isArray(owner?.jobs)) try {
+            const plan = mergedPlan(owner, readCoordinatorJobs(base));
+            if (Array.isArray(plan.jobs)) return plan.jobs;
+        } catch { /* published holds remain */ }
     }
     const published = readJson(join(fleetDir, 'plans', `${side}.json`));
     if (!Array.isArray(published?.jobs)) throw Error(`route staging has no readable job plan for side ${side}`);
     return published.jobs;
+}
+
+// Remote sides publish their owner pauses and death holds separately from their jobs. Local staging keeps its
+// direct stop/assignment checks. Main-account observations remain usable for the receiver, never as donor stock.
+export function stageDonorRows(rows: readonly any[], side: string, options: { fleetDir?: string; localSide?: string } = {}): any[] {
+    const card = side === (options.localSide ?? mySide()) ? null : readJson(join(options.fleetDir ?? FLEET_DIR(), 'sides', `${side}.json`));
+    return rows.filter(row => typeof row?.name === 'string' && row.name.toLowerCase() !== 'haggis' && !publishedSideHold(card, side, row.name));
 }
 
 // Current observations for the receiver's side and server, including an adopted account's last published row.
@@ -165,8 +177,9 @@ if (import.meta.main) {
     // The fleet agent skips an account with an enabled job, and the autopilot frees only its own jobs: givers would wait
     // at the bank until their orders end.
     if (busy.has(norm(account)) && !owned.has(norm(account))) throw Error(`${account} has an enabled job that the autopilot does not own: its fleet agent takes no order`);
-    const staged = planStage(lines, item => heldCount(row(account), item), item => snapshot
-        .filter((a: any) => typeof a?.name === 'string' && norm(a.name) !== norm(account) && norm(a.name) !== 'haggis' && owners.get(norm(a.name))?.side === side && !waiting(a.name)
+    const donors = stageDonorRows(snapshot, side);
+    const staged = planStage(lines, item => heldCount(row(account), item), item => donors
+        .filter((a: any) => norm(a.name) !== norm(account) && owners.get(norm(a.name))?.side === side && !waiting(a.name)
             && (from ? from.has(norm(a.name)) : !heldBack(a.name, plan, stopText(a.name))))
         .map((a: any) => {
             const name = norm(a.name);

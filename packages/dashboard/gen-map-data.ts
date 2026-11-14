@@ -64,12 +64,13 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
         const rows: Source[] = [];
         const sorted = (it.sources ?? []).filter((s: any) => !s.blocked).sort((a: any, b: any) => (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) || (b.chance ?? 0) - (a.chance ?? 0));
         for (const s of sorted) {
-            if (s.kind === 'shop') rows.push(['shop', `Shop: ${(s.owners ?? []).map((o: any) => names.npc(o.npc)).join(', ') || pretty(s.shop)} · ${s.basePrice} gp`, places(s.owners)]);
-            else if (s.kind === 'drop') rows.push(['drop', `Drop: ${names.npc(s.npc)}${s.combat ? ' (level ' + s.combat + ')' : ''} · ${s.chance >= 1 ? 'always' : '1/' + Math.round(1 / s.chance)}`, places(s.places)]);
-            else if (s.kind === 'gather') rows.push(['gather', `${cap(s.skill)} ${s.level}: ${(s.places ?? []).filter((p: any) => !/^macro_|dummy/.test(p.loc ?? '')).map((p: any) => pretty(p.loc ?? p.npc ?? '')).filter((v: string, i: number, a: string[]) => v && v !== 'Loc' && a.indexOf(v) === i).slice(0, 2).join(', ') || pretty(s.rung.split('/')[1] ?? '')}`, places(s.places)]);
-            else if (s.kind === 'make') rows.push(['make', `${cap(s.skill)} ${s.level}: from ${(s.inputs ?? []).map((i: any) => (i.count > 1 ? i.count + ' ' : '') + names.item(i.item)).join(', ') || 'nothing'}`, []]);
-            else if (s.kind === 'pickup') rows.push(['pickup', `Floor spawn${s.spawns > 1 ? 's (' + s.spawns + ')' : ''}`, flat(s.tiles ?? [])]);
-            else if (s.kind === 'action') { const label = actionLabel(String(s.trigger), String(s.subject), names); if (label) rows.push(['action', label, places(s.places)]); }
+            const add = (kind: string, label: string, tiles: number[]) => rows.push([kind, label + (typeof s.gate === 'string' && s.gate.trim() ? ` · Requires: ${s.gate.trim()}` : ''), tiles]);
+            if (s.kind === 'shop') add('shop', `Shop: ${(s.owners ?? []).map((o: any) => names.npc(o.npc)).join(', ') || pretty(s.shop)} · ${s.basePrice} gp`, places(s.owners));
+            else if (s.kind === 'drop') add('drop', `Drop: ${names.npc(s.npc)}${s.combat ? ' (level ' + s.combat + ')' : ''} · ${s.chance >= 1 ? 'always' : '1/' + Math.round(1 / s.chance)}`, places(s.places));
+            else if (s.kind === 'gather') add('gather', `${cap(s.skill)} ${s.level}: ${(s.places ?? []).filter((p: any) => !/^macro_|dummy/.test(p.loc ?? '')).map((p: any) => pretty(p.loc ?? p.npc ?? '')).filter((v: string, i: number, a: string[]) => v && v !== 'Loc' && a.indexOf(v) === i).slice(0, 2).join(', ') || pretty(s.rung.split('/')[1] ?? '')}`, places(s.places));
+            else if (s.kind === 'make') add('make', `${cap(s.skill)} ${s.level}: from ${(s.inputs ?? []).map((i: any) => (i.count > 1 ? i.count + ' ' : '') + names.item(i.item)).join(', ') || 'nothing'}`, []);
+            else if (s.kind === 'pickup') add('pickup', `Floor spawn${s.spawns > 1 ? 's (' + s.spawns + ')' : ''}`, flat(s.tiles ?? []));
+            else if (s.kind === 'action') { const label = actionLabel(String(s.trigger), String(s.subject), names); if (label) add('action', label, places(s.places)); }
         }
         // Two NPC variants of one name give one row, with the places of both.
         const byLabel = new Map<string, Source>();

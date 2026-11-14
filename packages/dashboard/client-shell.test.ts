@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
+const equipmentValue=new Function(`${shell.slice(shell.indexOf('  function equipmentValue('),shell.indexOf('  function wornBonuses('))};return equipmentValue;`)();
 
 test('the fleet search shortcut focuses the visible search control',()=>{
  const code=shell.slice(shell.lastIndexOf("  window.addEventListener('keydown'"),shell.indexOf('  window.atlasClient='));
@@ -837,9 +838,9 @@ test('loot of a kill: expected count times the item value, the top items, and th
 test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hitpoints, then XP and gold an hour',()=>{
  const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
  const sync=(v:any)=>({then(f:any){return sync(f(v));}});
- const data:any={'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{'Moss giant':[['Coins',20]]},'weapon-speed.json':{'Rune longsword':5}};
+ const data:any={'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{'Moss giant':[['Coins',20]]},'weapon-speed.json':{'Rune longsword':5,'Bronze dart':4,'Rune dagger':4,'Staff of fire':4}};
  const bon=[0,67,0,0,0,0,0,0,0,0,66,0,0];
- const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[{name:'Rune longsword',slot:3}]}),wornBonuses:()=>bon,curLevel:()=>60,
+ const env:any={equipmentValue,asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[{name:'Rune longsword',slot:3}]}),wornBonuses:()=>bon,curLevel:()=>60,
   maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:(n:string)=>n==='Coins'?{value:1}:null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{}};
  const t=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env));
  // Max floor((68 x 130 + 320) / 640) = 14; slash hit 86% (A = 68 x 131 = 8,908 against 2,496): 0.86 x 7 = 6.02 a swing;
@@ -1492,6 +1493,40 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20,xp:750});
  // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
+});
+test('equipment identity reaches max hits and training estimates without choosing an ambiguous name',()=>{
+ const equipment=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const combat=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const data:any={
+  'item-bonuses.json':JSON.parse(readFileSync(new URL('./client-assets/item-bonuses.json',import.meta.url),'utf8')),
+  'weapon-speed.json':JSON.parse(readFileSync(new URL('./client-assets/weapon-speed.json',import.meta.url),'utf8')),
+  'spellbook.json':{spells:[],staffs:{},combat:[]},
+  'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{},
+ };
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const b:any={skills:[{name:'Strength',level:99},{name:'Attack',level:60},{name:'Ranged',level:60},{name:'Magic',level:1}],
+  equipment:[{id:746,name:'Black dagger',slot:3}],inventory:[]};
+ const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),E:String,account:()=>b,price:()=>null,nf:String,S:{world:{tickMs:400}},window:{}};
+ const t=new Function(...Object.keys(env),`${equipment}${combat};return {equipmentValue,wornBonuses,equipStats,hourRates};`)(...Object.values(env));
+ const quest=t.hourRates('Moss giant');
+ expect(t.wornBonuses(b)[10]).toBe(0);expect(t.equipStats(b)).toContain('Melee 11–11');expect(quest.max).toBe(11);
+ b.equipment=[{id:1217,name:'Black dagger',slot:3}];
+ const ordinary=t.hourRates('Moss giant');
+ expect(t.wornBonuses(b)[10]).toBe(7);expect(t.equipStats(b)).toContain('Melee 12–12');expect(ordinary.max).toBe(12);expect(ordinary.lo).toBeGreaterThan(quest.lo);
+ // A projected item's base ID is authoritative over the raw ID and the display name.
+ b.equipment=[{id:746,baseId:1217,name:'Black dagger',slot:3}];expect(t.wornBonuses(b)[10]).toBe(7);
+ for(const [id,range,defence] of [[1135,15,40],[2499,20,45],[2501,25,50],[2503,30,55]]){
+  b.equipment=[{id:1217,name:'Black dagger',slot:3},{id,name:'Dragonhide body',slot:4}];
+  const bonuses=t.wornBonuses(b);expect(bonuses[4]).toBe(range);expect(bonuses[5]).toBe(defence);
+ }
+ b.equipment=[{name:'Black dagger',slot:3}];expect(t.wornBonuses(b)).toBeNull();expect(t.equipStats(b)).toBe('');expect(t.hourRates('Moss giant')).toBeNull();
+ b.equipment=[{id:999999,name:'Rune scimitar',slot:3}];expect(t.wornBonuses(b)).toBeNull();
+ b.equipment=[{name:'Rune scimitar',slot:3}];expect(t.wornBonuses(b)[10]).toBe(44);expect(t.hourRates('Moss giant').speed).toBe(4);
+ expect(t.equipmentValue({100:4,101:7},{id:100,name:'Same blade'})).toBe(4);
+ expect(t.equipmentValue({100:4,101:7},{id:101,name:'Same blade'})).toBe(7);
+ expect(t.equipmentValue({100:4,101:7},{name:'Same blade'})).toBeNull();
+ // The hour model uses its exact weapon speed ahead of any name alias.
+ data['weapon-speed.json']['Black dagger']=9;b.equipment=[{id:1217,name:'Black dagger',slot:3}];expect(t.hourRates('Moss giant').speed).toBe(4);
 });
 test('logout line: the session length, the most XP gained and the top loot with its value',()=>{
  const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));

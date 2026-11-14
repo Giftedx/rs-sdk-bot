@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { actionLabel, itemSources, mapIcons, npcDrops, pretty } from './gen-map-data';
 
 test('npc drops: the route items each NPC drops, most likely first, the higher chance for two NPCs of one name', () => {
@@ -69,4 +70,21 @@ test('item sources: drops by chance, and two NPC variants of one name are one ro
         ['drop', 'Drop: Jogre (level 53) · always', [2, 2, 0, 3, 3, 0]],
         ['drop', 'Drop: Giant (level 28) · 1/2', [1, 1, 0]],
     ]);
+});
+
+test('item-source labels retain access gates and map pins while blocked sources remain excluded', () => {
+    const gate = 'quest script: may give the item once or only at a quest stage';
+    const out = itemSources([{ item: 'blankrune', id: 1436, sources: [
+        { kind: 'gather', skill: 'mining', level: 1, rung: 'mining/blankrunestone', gate: 'quest Rune Mysteries', places: [{ loc: 'blankrunestone', tiles: [{ x: 2891, z: 4847, level: 0 }] }] },
+        { kind: 'action', trigger: 'opnpc1', subject: 'head_wizard', gate, places: [{ tiles: [{ x: 3100, z: 3100, level: 0 }] }] },
+        { kind: 'action', trigger: 'opnpc1', subject: 'head_wizard', places: [{ tiles: [{ x: 3200, z: 3200, level: 0 }] }] },
+        { kind: 'shop', gate: 'quest access', blocked: 'no owner spawn' },
+    ] }], names);
+    expect(out['1436']).toEqual([
+        ['gather', 'Mining 1: Blankrunestone · Requires: quest Rune Mysteries', [2891, 4847, 0]],
+        ['action', `Talk to Head wizard · Requires: ${gate}`, [3100, 3100, 0]],
+        ['action', 'Talk to Head wizard', [3200, 3200, 0]],
+    ]);
+    const shipped = JSON.parse(readFileSync(new URL('./client-assets/item-sources.json', import.meta.url), 'utf8'));
+    expect(shipped['1436'][0][1]).toContain('quest Rune Mysteries');
 });

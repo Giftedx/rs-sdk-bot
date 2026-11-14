@@ -119,14 +119,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   fetch(asset('item-bonuses.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')itemBonusData=j;},()=>{});
   fetch(asset('spellbook.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.spells))spellbookData=j;},()=>{});
   const curLevel=(b,n)=>{const s=(b?.skills||[]).find(x=>x.name===n);return Number.isFinite(s?.currentLevel)?s.currentLevel:s?.level;};
-  function wornBonuses(b){if(!itemBonusData||!Array.isArray(b?.equipment)||b.equipmentObserved===false)return null;const t=new Array(13).fill(0);for(const it of b.equipment){const v=itemBonusData[it?.name];if(Array.isArray(v))v.forEach((x,i)=>{t[i]+=x;});}return t;}
+  // Exact item IDs are authoritative. Name-only legacy rows use aliases whose variants all share the same facts.
+  function equipmentValue(data,it){if(!data||!it)return null;const id=Number.isInteger(it.baseId)?it.baseId:it.id;return Number.isInteger(id)&&id>=0?data[id]??null:data[it.name]??null;}
+  function wornBonuses(b){if(!itemBonusData||!Array.isArray(b?.equipment)||b.equipmentObserved===false)return null;const t=new Array(13).fill(0);for(const it of b.equipment){const v=equipmentValue(itemBonusData,it);if(!Array.isArray(v)||v.length!==13||!v.every(Number.isFinite))return null;v.forEach((x,i)=>{t[i]+=x;});}return t;}
   // prayer is the server's percent (100 none, 115 for +15%): floor(level × prayer / 100) before the +8. The active prayer
   // is not reported, so the range shown is without one, and the melee top with +15% follows it.
   const maxHit=(level,bonus,style,prayer=100)=>Math.floor(((Math.floor(level*Math.max(100,prayer)/100)+8+style)*(bonus+64)+320)/640);
   function equipStats(b){
     const t=wornBonuses(b);if(!t)return '';
     const sg=v=>(v>0?'+':'')+v,cells=(from,names)=>names.map((n,i)=>'<i title="'+n+'">'+sg(t[from+i])+'</i>').join('');
-    const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),weapon=b.equipment.find(e=>e.slot===3),ranged=(itemBonusData[weapon?.name]?.[4]||0)>0;
+    const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),weapon=b.equipment.find(e=>e.slot===3),ranged=(equipmentValue(itemBonusData,weapon)?.[4]||0)>0;
     const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' · prayer '+maxHit(str,t[10],3,115):'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
     {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+' ×'+sp.casts);}
     const names=['Stab','Slash','Crush','Magic','Range'];
@@ -821,7 +823,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // A ranged weapon (a range attack bonus, as equipStats tells it) rolls ranged: the max hit is the current Ranged with
     // the worn ranged strength (ammo counts), and its roll (Ranged + 8) x (range attack + 64) meets the NPC's (defence + 9)
     // x (range defence + 64). Other weapons roll melee, the best of stab, slash and crush.
-    const weapon=(b.equipment||[]).find(e=>e?.slot===3)?.name,wb=weapon&&typeof itemBonusData!=='undefined'?itemBonusData?.[weapon]:null,ranged=(wb?.[4]||0)>0;
+    const wornWeapon=(b.equipment||[]).find(e=>e?.slot===3),weapon=wornWeapon?.name,wb=wornWeapon&&typeof itemBonusData!=='undefined'?equipmentValue(itemBonusData,wornWeapon):null,ranged=(wb?.[4]||0)>0;
     // A weapon with a magic attack bonus (a staff) and a combat spell the account can cast now (bestSpell: level, runes,
     // staff) casts it: the spell's max hit, 5 ticks a cast (player_magic.rs2 action_delay), and the roll (Magic + 9: magic's
     // style bonus of 1) x (magic attack + 64) against the NPC's (magic level + 9) x (magic defence + 64).
@@ -829,7 +831,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // the server has staff in its name (Staff, Magic staff, the battlestaves, the mystic staves, Iban's, the god staves).
     const spell=!ranged&&(wb?.[3]||0)>0&&/staff/i.test(weapon||'')&&typeof bestSpell==='function'?bestSpell(b):null,magic=!!spell;
     const A=curLevel(b,'Attack'),St=curLevel(b,'Strength'),R=curLevel(b,'Ranged'),M=curLevel(b,'Magic');if(magic?!Number.isFinite(M):ranged?!Number.isFinite(R):(!Number.isFinite(A)||!Number.isFinite(St)))return null;
-    const speed=magic?5:(weapon&&weaponSpeedData[weapon])||4,tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000,max=magic?spell.max:ranged?maxHit(R,bon[11],0):maxHit(St,bon[10],0);if(!(max>0))return null;
+    const speed=magic?5:wornWeapon?equipmentValue(weaponSpeedData,wornWeapon):4;if(!(speed>0))return null;
+    const tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000,max=magic?spell.max:ranged?maxHit(R,bon[11],0):maxHit(St,bon[10],0);if(!(max>0))return null;
     const hit=(At,D)=>At>D?1-(D+2)/(2*(At+1)):At/(2*(D+1)),loot=lootTotal(name);
     const chance=v=>magic?hit((M+9)*(bon[3]+64),(v[2]+9)*(v[6]+64)):ranged?hit((R+8)*(bon[4]+64),(v[1]+9)*(v[7]+64)):Math.max(...[0,1,2].map(i=>hit((A+8)*(bon[i]+64),(v[1]+9)*(v[3+i]+64))));
     // Each variant's kill rate times its own XP a kill: the extremes of two lists belong to different variants.

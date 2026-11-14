@@ -1,9 +1,37 @@
 import { expect, test } from 'bun:test';
-import { groupOrders, heldBack, heldCount, orderInWay, parseLine, planStage, stageJobs, stageObservations } from './route-stage';
+import { groupOrders, heldBack, heldCount, orderInWay, parseLine, planStage, stageDonorRows, stageJobs, stageObservations } from './route-stage';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { swarmBusy } from './fleet-trade';
+import { sideCard } from './fleet-sync';
+
+test('remote route staging honors published owner holds without discarding the main receiver stock', () => {
+    const base = mkdtempSync(join(tmpdir(), 'route-stage-side-holds-')), fleetDir = join(base, 'fleet'), side = 'cloud';
+    mkdirSync(join(fleetDir, 'sides'), { recursive: true });
+    const rows = ['Haggis', 'Paused', 'Dead', 'Free'].map(name => ({ name, bank: [{ name: 'Oak logs', count: name === 'Haggis' ? 5 : 10 }] }));
+    const file = join(fleetDir, 'sides/cloud.json'), options = { fleetDir, localSide: 'local' };
+    const card = sideCard(side, 5, rows.map(r => r.name), n => n === 'Paused' ? 'owner pause' : undefined, ['Dead']);
+    const stage = () => {
+        const donors = stageDonorRows(rows, side, options);
+        return planStage([{ item: 'oak logs', count: 10 }], item => heldCount(rows[0], item), item => donors
+            .map(r => ({ name: r.name, count: heldCount(r, item), busy: false })), false);
+    };
+    try {
+        writeFileSync(file, JSON.stringify(card));
+        expect(stageDonorRows(rows, side, options).map(r => r.name)).toEqual(['Free']);
+        expect(stage().held).toEqual([{ item: 'oak logs', count: 5 }]);
+        expect(stage().orders).toEqual([{ from: 'Free', item: 'oak logs', count: 5, busy: false }]);
+        expect(rows[0]!.name).toBe('Haggis');
+        expect(stageDonorRows(rows, side, { ...options, localSide: side }).map(r => r.name)).toEqual(['Paused', 'Dead', 'Free']);
+        writeFileSync(file, JSON.stringify({ ...card, stopped: true }));
+        expect(stage().orders).toEqual([]); expect(stage().short).toEqual([{ item: 'oak logs', count: 5, blocked: [] }]);
+        writeFileSync(file, JSON.stringify({ ...card, side: 'other-side', stopped: true }));
+        expect(stageDonorRows(rows, side, options).map(r => r.name)).toEqual(['Paused', 'Dead', 'Free']);
+        rmSync(file);
+        expect(stageDonorRows(rows, side, options).map(r => r.name)).toEqual(['Paused', 'Dead', 'Free']);
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
 
 test('route donor availability follows current enabled jobs and coordinator overlays instead of older published jobs', () => {
     const base = mkdtempSync(join(tmpdir(), 'route-stage-jobs-')), fleetDir = join(base, 'fleet'), side = 'cloud';
@@ -52,6 +80,34 @@ test('route availability retains published holds when the local plan or overlay 
         rmSync(join(base, '.practice/coordinator/jobs.json'));
         expect(stageJobs(side, options)).toEqual([]);
     } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
+test('route availability follows the cloud handoff plan and coordinator overlay selected by SWARM_PLAN or an explicit file', () => {
+    const base = mkdtempSync(join(tmpdir(), 'route-stage-cloud-plan-')), fleetDir = join(base, 'fleet'), side = 'cloud';
+    const custom = join(base, '.practice/cloud-handoff/swarm.json'), priorEnv = process.env.SWARM_PLAN;
+    for (const dir of [join(fleetDir, 'plans'), join(base, '.practice/coordinator'), join(base, '.practice/cloud-handoff')]) mkdirSync(dir, { recursive: true });
+    const published = [{ account: 'Published', script: 'scripts/goldfarm.ts', enabled: false }];
+    const options = { base, fleetDir, localSide: side };
+    try {
+        writeFileSync(join(fleetDir, 'plans/cloud.json'), JSON.stringify({ side, jobs: published }));
+        writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 3, jobs: [{ account: 'RootOnly', script: 'scripts/goldfarm.ts', enabled: false }] }));
+        writeFileSync(custom, JSON.stringify({ maxBots: 3, jobs: [{ account: 'CloudDonor', script: 'scripts/goldfarm.ts', enabled: true, autopilot: side },
+            { account: 'Overlay', script: 'scripts/goldfarm.ts', enabled: true, autopilot: side }] }));
+        writeFileSync(join(base, '.practice/coordinator/jobs.json'), JSON.stringify({ jobs: [{ account: 'Overlay', script: 'scripts/quest-chain.ts', enabled: true, coordinatorOwner: 'coordinator' }] }));
+        process.env.SWARM_PLAN = custom;
+        const jobs = stageJobs(side, options);
+        expect(jobs.map(j => j.account)).toEqual(['CloudDonor', 'Overlay']);
+        expect(jobs.find(j => j.account === 'Overlay').script).toBe('scripts/quest-chain.ts');
+        expect([...swarmBusy(jobs)].sort()).toEqual(['clouddonor', 'overlay']);
+        process.env.SWARM_PLAN = join(base, 'swarm.json');
+        expect(stageJobs(side, { ...options, planFile: custom })).toEqual(jobs);
+        process.env.SWARM_PLAN = custom;
+        writeFileSync(custom, '{');
+        expect(stageJobs(side, options)).toEqual(published);
+    } finally {
+        if (priorEnv === undefined) delete process.env.SWARM_PLAN; else process.env.SWARM_PLAN = priorEnv;
+        rmSync(base, { recursive: true, force: true });
+    }
 });
 
 test('route staging orders only the remaining stock from current local observations before the next sync', () => {
