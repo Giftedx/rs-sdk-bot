@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794628599327-moneyshot-weequickie",
  "account": "Moneyshot",
  "partner": "WeeQuickie",
@@ -10,15 +10,37 @@
  "item": "Law rune",
  "requested": 4,
  "claim": "161d31e0-88ce-4ea8-bd42-e86327f21093",
- "count": 0,
- "ok": false,
- "at": 1794628608338,
- "detail": "trade claimed",
+ "count": 4,
+ "ok": true,
+ "at": 1794628948391,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Water rune",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   },
+   "bank": {
+    "count": 2,
+    "at": 1794628882504
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1794628880995
+ },
+ "logout": {
+  "attemptId": "1794628608346-0000020624-0000000001",
+  "at": 1794628948381,
+  "sha256": "c9a3d96bdca1e12d04e355e2fa2eb343b373cb793b265f92dcd07f7a88fab802"
+ },
+ "screen": true
 }
