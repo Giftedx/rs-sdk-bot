@@ -30,4 +30,10 @@ test('a handler that drops its bones itself gets no second death drop; a ranged 
     expect(out['King Black Dragon']).toEqual([['Dragon bones', 1]]);
     expect(out['Kalphite Soldier']).toEqual([['Nature rune', 0.03906]]);
     expect(out['Goblin']).toEqual([['Bones', 1]]);
+    // A label with the same name as the NPC handler: the label's rolls count, not the empty handler.
+    const sk = npcLoot([
+        { trigger: 'skeleton_armed', always: [], rolls: [], uses: 'skeleton_armed' },
+        { trigger: 'label:skeleton_armed', always: [{ item: 'bones', count: 1 }], rolls: [{ item: 'coins', count: 10, chance: 0.5 }] },
+    ], npcBlocks(['[skeleton_armed]\nname=Skeleton\nop2=Attack\n']), d => names.get(d) ?? d);
+    expect(sk['Skeleton']).toEqual([['coins', 5], ['Bones', 1]]);
 });

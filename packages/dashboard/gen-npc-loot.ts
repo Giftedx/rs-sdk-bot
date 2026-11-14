@@ -36,7 +36,9 @@ export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: stri
     }
     const out: Record<string, [string, number][]> = {}, kept = new Map<string, number>();
     // A shared proc or label is listed as `label:name` or `proc:name`.
-    const shared = (u: string) => byTrigger.get(u) ?? byTrigger.get('label:' + u) ?? byTrigger.get('proc:' + u);
+    // The explicit label: or proc: entry comes first: a label can share its name with an NPC handler (skeleton_armed),
+    // and the bare name would read the empty handler again.
+    const shared = (u: string) => byTrigger.get('label:' + u) ?? byTrigger.get('proc:' + u) ?? byTrigger.get(u);
     for (const n of npcs.filter(n => n.attackable)) {
         const exp = new Map<string, number>(), add = (item: string | undefined, chance: number, count = 1) => { if (!item || item === 'null' || !(chance > 0)) return; const d = item === 'death_drop' ? n.deathDrop : item; if (d === 'null') return; exp.set(d, (exp.get(d) ?? 0) + chance * count); };
         const entries = (forNpc.get(n.debug) ?? []).flatMap(e => { const s = e.uses ? shared(e.uses) : undefined; return s ? [e, s] : [e]; });
