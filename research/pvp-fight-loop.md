@@ -1145,7 +1145,8 @@ On `tribrid-dragon-sara`: eating at 70, no magic in the rotation, a step back of
 18 deaths; the special held for 45% gave 46 and 11; a freeze on any target with a step back of 6 gave 24 and 29. With
 the rival builds (91 kills and 5 deaths of 96 in rune, 94 and 1 in dragon) the rune kit loses 12 of 160 and the dragon
 kit 17; the dragon kit catches more runners (34 of 64 against 28 to 30). Against a melee opponent, the dagger gang
-among them, the rune kit is the stronger kit.
+among them, the rune kit is the stronger kit. On the rune kit the special held for 45% loses: 55 kills and 9 deaths
+against melee, 87 and 8 against the rivals.
 
 ### The champion's special against runners and rivals
 
