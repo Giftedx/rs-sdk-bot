@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794626635240,
+ "at": 1794626642058,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,6 +71,29 @@
    "enabled": false,
    "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
   },
   {
    "account": "Bigchopper",
@@ -480,19 +503,6 @@
    "resources": [
     "knight:2671,3313"
    ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-0544ab8e-4930-4f3b-b8be-b7163d5a1731"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-billionaire-20261113t155029z [task-0544ab8e-4930-4f3b-b8be-b7163d5a1731]",
-   "role": "thieving"
   }
  ]
 }
