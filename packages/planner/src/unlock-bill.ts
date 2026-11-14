@@ -11,6 +11,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { liveHelperStatuses } from './supply-bill';
+import { MARKET_FILE, marketQuotes } from '../../../scripts/market-cache';
 
 const root = resolve(import.meta.dir, '../../..');
 export type Rung = { id: string; skill: string; level: number; label: string; kind: string; xpPerAction: number | null; xpPerTick: number | null;
@@ -148,24 +149,32 @@ export function toolRecords(file: any): Tool[] {
 }
 
 export const PRICE_TTL_MS = 6 * 3600_000;
-// GE prices for every item the ladders use, from the saved file where fresh, else from the market API.
-export async function marketPrices(base = root, now = Date.now()): Promise<Prices> {
+// Reuse the fleet agent's fresh all-item quotes without refreshing their observation time; fetch missing prices.
+export async function marketPrices(base = root, now = Date.now(), get: (url: string) => Promise<any> = async url => {
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw Error(`market HTTP ${response.status}`);
+    return response.json();
+}, pause: (ms: number) => Promise<void> = ms => Bun.sleep(ms)): Promise<Prices> {
     const file = join(base, '.practice/coordinator/market-prices.json');
     let saved: Prices = {};
     try { saved = JSON.parse(readFileSync(file, 'utf8')); } catch { /* none yet */ }
+    let shared: ReturnType<typeof marketQuotes> = {};
+    try { shared = marketQuotes(JSON.parse(readFileSync(join(base, MARKET_FILE), 'utf8')), now); } catch { /* absent or partial cache */ }
     const items = JSON.parse(readFileSync(join(base, 'knowledge/items.json'), 'utf8')) as { id: number; debugname: string }[];
     const ladders = (JSON.parse(readFileSync(join(base, 'knowledge/ladders.json'), 'utf8')) as { ladders: Record<string, Rung[]> }).ladders;
     const names = new Set<string>();
     for (const list of Object.values(ladders)) for (const r of list) for (const i of [...r.inputs, ...r.requires]) names.add(i.debugname);
     for (const n of names) {
-        if (saved[n] && now - saved[n]!.at < PRICE_TTL_MS) continue;
         const id = items.find(i => i.debugname === n)?.id;
         if (id === undefined) continue;
+        const quote = shared[id];
+        if (quote && !(saved[n] && saved[n]!.at >= quote.at && saved[n]!.at <= now)) saved[n] = quote;
+        if (saved[n] && saved[n]!.at <= now && now - saved[n]!.at < PRICE_TTL_MS) continue;
         try {
-            const r = await (await fetch(`https://rs-sdk-demo.fly.dev/api/market/items/${id}`, { signal: AbortSignal.timeout(10000) })).json() as any;
+            const r = await get(`https://rs-sdk-demo.fly.dev/api/market/items/${id}`);
             saved[n] = { at: now, ask: r.ask ?? null, bid: r.bid ?? null, sell: r.sellQuantity ?? 0 };
         } catch { /* unpriced */ }
-        await Bun.sleep(550);
+        await pause(550);
     }
     mkdirSync(join(base, '.practice/coordinator'), { recursive: true });
     writeFileSync(file, JSON.stringify(saved));

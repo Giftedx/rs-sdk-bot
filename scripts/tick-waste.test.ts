@@ -18,6 +18,8 @@ test('--latest counts each family only on the release of its newest run', () => 
     const lines = [...run(null, 900), ...run('aaaaaaaaaaaa', 800), ...run('bbbbbbbbbbbb', 100), ...run('bbbbbbbbbbbb', 300)];
     expect(report(lines).get('gather-feathers')?.idle).toBe(2100);
     expect(report(lines, true).get('gather-feathers')).toMatchObject({ runs: 2, idle: 400, release: 'bbbbbbbbbbbb' });
+    expect(wasteShare(report(lines, true))['gather-feathers']).toBe(0.2);
+    expect(wasteShare(report(lines))['gather-feathers']).toBe(0.525);
     // A run from before RELEASE lines in a new job is `unknown`, not the release of the job before it.
     expect(report([...run('cccccccccccc', 50), ...run(null, 70)], true).get('gather-feathers')).toMatchObject({ runs: 1, idle: 70, release: 'unknown' });
 });

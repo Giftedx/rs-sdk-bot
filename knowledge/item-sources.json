@@ -2235,7 +2235,7 @@
      "cost": {
       "helperTicksPerUnit": 0.704,
       "ticksBasis": "measured",
-      "ticksNote": "runecraft/runecraft_air rate from knowledge/rates.json via ladders.json",
+      "ticksNote": "runecraft/runecraft_air rate from knowledge/rates.json via ladders.json; craft_air_runes_trade_loop, measured level 1, 3 runs, 300 ms ticks; scripts/generated/rcair.ts, 3/3 runs: 27 essence -> 3375 XP in 5-7 ticks at the altar; plus the measured 12-tick helper trade (scripts/measure/trade-supply.ts) = 19 ticks per pack; assumes a helper inside the altar trades each pack; excludes level-up dialogs (research/levelup-cost.md)",
       "coinsPerUnit": null,
       "coinsBasis": "unknown",
       "coinsNote": "the sum of the inputs' costs; see each input",
@@ -37566,7 +37566,7 @@
        "wilderness": false
       }
      ],
-     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:912",
+     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:923",
      "gate": "quest script: may give the item once or only at a quest stage",
      "blocked": null,
      "cost": {
@@ -41864,7 +41864,7 @@
      "cost": {
       "helperTicksPerUnit": 16.603,
       "ticksBasis": "measured",
-      "ticksNote": "mining/copper_rock_table rate from knowledge/rates.json via ladders.json",
+      "ticksNote": "mining/copper_rock_table rate from knowledge/rates.json via ladders.json; mine_copper, measured level 1, 3 runs, 300 ms ticks; scripts/generated/copper5.ts, 3/3 runs: 2187 XP for 5 ores in 75 / 83 / 123 ticks (median 83); SE Varrock mine, bronze pickaxe, rocks deplete after one ore",
       "coinsPerUnit": 0,
       "coinsBasis": "content",
       "coinsNote": "no coins spent; tools are separate items",
@@ -49193,7 +49193,7 @@
      "cost": {
       "helperTicksPerUnit": 0.704,
       "ticksBasis": "measured",
-      "ticksNote": "crafting/dragonstone_cutting rate from knowledge/rates.json via ladders.json",
+      "ticksNote": "crafting/dragonstone_cutting rate from knowledge/rates.json via ladders.json; cut_dragonstone_trade_loop, measured level 55, 2 runs, 300 ms ticks; scripts/measure/gems.ts (27 cuts in 7 ticks, +92812 XP, 2 runs) + scripts/measure/trade-supply.ts (12-tick resupply, 2 runs) = 19 ticks per pack; excludes level-up dialogs, about 2.7 ticks per level when a trade or bank follows (research/levelup-cost.md)",
       "coinsPerUnit": null,
       "coinsBasis": "unknown",
       "coinsNote": "the sum of the inputs' costs; see each input",
@@ -65875,7 +65875,7 @@
        "wilderness": false
       }
      ],
-     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:922",
+     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:933",
      "gate": "quest script: may give the item once or only at a quest stage",
      "blocked": null,
      "cost": {
@@ -94306,7 +94306,7 @@
        "wilderness": false
       }
      ],
-     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:902",
+     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:913",
      "gate": "quest script: may give the item once or only at a quest stage",
      "blocked": null,
      "cost": {
@@ -112514,7 +112514,7 @@
        "wilderness": false
       }
      ],
-     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:892",
+     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:903",
      "gate": "quest script: may give the item once or only at a quest stage",
      "blocked": null,
      "cost": {
@@ -114392,7 +114392,7 @@
        "wilderness": false
       }
      ],
-     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:882",
+     "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:893",
      "gate": "quest script: may give the item once or only at a quest stage",
      "blocked": null,
      "cost": {
