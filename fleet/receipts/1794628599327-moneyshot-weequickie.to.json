@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794628599327-moneyshot-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 4,
+ "claim": "ea43a524-ca05-43ed-925b-b3192affca0e",
+ "count": 0,
+ "ok": false,
+ "at": 1794628892391,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Water rune",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}
