@@ -2,7 +2,7 @@ import {existsSync,readFileSync,writeFileSync,appendFileSync,statSync,truncateSy
 import {basename,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,preparedProvisionClaims,needsFreshQualification,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,preparedProvisionClaims,needsFreshQualification,recoverySlotBusy,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
 import {buildFailureEvidence} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
@@ -394,7 +394,7 @@ async function tick(state:CoordinatorState,config:any){
  const sources=new Map<string,string|null>();
  const sourceOf=(cap:string)=>{if(!sources.has(cap)){let s:string|null=null;try{s=deliveryFingerprint(deliveryTask(cap));}catch{/* no source now: hold */}sources.set(cap,s);}return sources.get(cap)!;};
  const staleRun=(task:CoordTask)=>task.kind==='run'&&!!task.capability&&needsFreshQualification(task,new Map(state.tasks.map(r=>[r.spec.id,r])),sourceOf(task.capability));
- const liveRunHeld=(task:CoordTask)=>runHeld(task)||recoveryWaitsForMemory(task,capacity)||staleRun(task);
+ const liveRunHeld=(task:CoordTask)=>runHeld(task)||recoveryWaitsForMemory(task,capacity)||staleRun(task)||recoverySlotBusy(task,state.tasks);
  for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
   let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
