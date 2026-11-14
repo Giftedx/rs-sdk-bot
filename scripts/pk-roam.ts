@@ -156,7 +156,7 @@ export class Radar {
     fresh(now = Date.now()) { return now - this.at < 15_000; }
 }
 
-function connectRadar(server: string, radar: Radar) {
+export function connectRadar(server: string, radar: Radar) {
     const url = `${isLocalServer(server) ? 'ws' : 'wss'}://${server}/worldfeed`;
     const socket = new WebSocket(url), feed = new RosterFeed();
     let beat: ReturnType<typeof setInterval> | undefined;

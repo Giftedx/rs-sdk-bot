@@ -20,3 +20,12 @@ test('squadTarget takes the lowest bar of the targets in view, not a skipped one
     expect(squadTarget(view, targets, p => bars[p.index]!, new Set(['ligma']))?.name).toBe('Goondelf');
     expect(squadTarget([view[2]!], targets, p => bars[p.index]!)).toBeUndefined();
 });
+
+test('meetTile: the nearest multi-way tile by the targets, under the depth limit', async () => {
+    const { meetTile } = await import('./pk-squad');
+    const multi = (x: number, z: number) => x <= 3071 && x >= 3064 && z >= 3624 && z <= 3663;
+    expect(meetTile([{ x: 3078, z: 3640 }, { x: 3080, z: 3642 }], 20, 24, multi)).toEqual({ x: 3071, z: 3641 });
+    expect(meetTile([{ x: 3066, z: 3640 }], 20, 24, multi)).toEqual({ x: 3066, z: 3640 });
+    expect(meetTile([{ x: 3078, z: 3640 }], 10, 24, multi)).toBeNull();
+    expect(meetTile([], 20, 24, multi)).toBeNull();
+});

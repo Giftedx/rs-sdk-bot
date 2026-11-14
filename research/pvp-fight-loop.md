@@ -1217,6 +1217,12 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   own single-way post (`POST=3075,3640 ALLOW_SINGLE=1`, for a gang that does not follow into multi-way), 11 of 12, no
   death, about 37 HP a kill (`extra:squad-4-gang-single-x1`). Two of ours with 3 sharks each, outnumbered, made 4
   bank trips in 8 minutes with no fault and no death (`extra:squad-2-gang-trips-x1`).
+- **Following the gang.** The gang roams (the first live pilot's feed showed it 250 tiles from its post). `FOLLOW=1`
+  moves the squad's post, once no target has been in view for 30 ticks, to the nearest multi-way tile within 24 tiles
+  of the targets that the world feed shows, at Wilderness level `MAX_WILD` or less (`meetTile`, the feed through
+  scripts/pk-roam.ts `Radar`). On the bench, which serves no world feed, the bench gang's own tiles fill the radar.
+  Four of ours starting at (3150, 3560), 110 tiles away: the post moved to (3071, 3640) in each run, and 11 of 12 gang
+  accounts died with no death of ours, about 74 HP a kill (`extra:squad-4-gang-follow-x1`, seeds 1 to 4).
 - **The freeze matters most to a small squad.** Three of ours in rune chainbody (the kit of the first live pilot)
   in the multi-way zone, seeds 1 to 8: with no freeze runes 25 kills of 48 and 7 of 16 groups, 74 HP a kill
   (`extra:team-3v3-gang-chain-west-x2`); with Bind runes 44 kills and 14 groups, 64 HP a kill

@@ -11,6 +11,7 @@
 //   TARGETS=goondelf,ligma,sugma  POST=3067,3640  MAX_MINUTES=30  MAX_KILLS=0 (no limit)  SQUAD_PROFILE=gang-hunter
 //   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null}
 //   PICKUP=1  TRIPS=10 (bank trips an account may make)  ALLOW_SINGLE=1 (a single-way post)
+//   FOLLOW=1 (move the post to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30)
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
@@ -20,7 +21,7 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { fightPlayer, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { EDGEVILLE_BANK } from './pk-hunt';
-import { kitFrom } from './pk-roam';
+import { connectRadar, kitFrom, Radar } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
 export const GANG = ['goondelf', 'ligma', 'sugma'];
@@ -28,6 +29,22 @@ export const SQUAD_POST = { x: 3067, z: 3640 };
 const MAIN = new Set(['haggis']);
 // dropForStrip off: the profile's champion base drops a shark before a freeze to free slots for its armour strip.
 export const SQUAD_OPTS = { cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null } as const;
+
+// FOLLOW=1: where the squad goes when the targets stay out of view. The nearest multi-way Wilderness tile, at
+// Wilderness level `maxWild` or less, within `radius` tiles of the targets' middle (their own tile when it is multi-way),
+// or null. The world feed (scripts/pk-roam.ts Radar) gives the targets' tiles.
+export function meetTile(targets: readonly { x: number; z: number }[], maxWild: number, radius = 24, multi: (x: number, z: number) => boolean = isMulti): { x: number; z: number } | null {
+    if (!targets.length) return null;
+    const cx = Math.round(targets.reduce((n, t) => n + t.x, 0) / targets.length), cz = Math.round(targets.reduce((n, t) => n + t.z, 0) / targets.length);
+    let best: { x: number; z: number } | null = null, bestD = Infinity;
+    for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+        // Nearest by steps, then straight across: a tie goes to the tile with the smaller sum of both gaps.
+        const x = cx + dx, z = cz + dz, level = wildernessLevel(z), d = Math.max(Math.abs(dx), Math.abs(dz)) + (Math.abs(dx) + Math.abs(dz)) / 1000;
+        if (level < 1 || level > maxWild || d >= bestD || !multi(x, z)) continue;
+        best = { x, z }; bestD = d;
+    }
+    return best;
+}
 
 export type SquadStats = { name: string; fights: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number };
 
@@ -150,12 +167,33 @@ if (import.meta.main) {
             if (!await nextTick(g)) break;
         }
     });
+    // FOLLOW=1: with no target in view of any of ours for FOLLOW_WAIT ticks (default 30), the post moves to the
+    // meeting tile by the targets that the world feed shows (meetTile), at Wilderness level MAX_WILD or less (default 20).
+    let closeRadar: (() => void) | undefined;
+    if (get('FOLLOW', '0') === '1') {
+        const radar = new Radar(), maxWild = Number(get('MAX_WILD', '20')), wait = Number(get('FOLLOW_WAIT', '30'));
+        const { accountServer } = await import('./pk-roam');
+        // Bench: the practice engine serves no world feed, so the bench gang's own tiles fill the radar as roster frames.
+        if (gang.length) squad[0]!.onTick(() => radar.accept({ t: 'roster', k: squad[0]!.tick(), p: gang.flatMap((g, i) => { const q = g.sdk.getState()?.player; return q ? [[i, g.name, q.worldX, q.worldZ, 0, q.combatLevel] as [number, string, number, number, number, number]] : []; }) }));
+        else closeRadar = connectRadar(accountServer(squad[0]!.name), radar);
+        let unseen = 0;
+        squad[0]!.onTick(() => {
+            const seen = squad.some(s => (s.sdk.getState()?.nearbyPlayers ?? []).some(q => targets.has(q.name.toLowerCase())));
+            unseen = seen ? 0 : unseen + 1;
+            if (process.env.FOLLOW_TRACE === '1' && squad[0]!.tick() % 100 === 0) log(`SQUAD follow trace unseen=${unseen} fresh=${radar.fresh()} tracks=${radar.tracks.size} targets=${[...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase())).map(t => `${t.name} ${t.x},${t.z}`).join(' ')}`);
+            if (unseen < wait || !radar.fresh() || squad[0]!.tick() % 10 !== 0) return;
+            const where = [...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase()) && wildernessLevel(t.z) > 0);
+            const tile = meetTile(where, maxWild);
+            if (tile && Math.max(Math.abs(tile.x - post.x), Math.abs(tile.z - post.z)) > 4) { log(`SQUAD post moves to ${tile.x},${tile.z} (targets at ${where.map(t => `${t.name} ${t.x},${t.z}`).join(' ')})`); post.x = tile.x; post.z = tile.z; }
+        });
+    }
     // Our accounts walk to the post first.
     await Promise.all(squad.map(async s => { const r = await walkPath(await sessionWalker(s), [{ ...post, tol: 2 }], { maxTicks: 600, idleMs: 9000, stop: stopped }); if (!r.ok) log(`[${s.name}] SQUAD no walk to the post: ${r.detail ?? 'stopped'}`); }));
     const results = await Promise.all(squad.map(s => hold(s, { targets, post, options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []), 1200),
         allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', trips: Number(get('TRIPS', '10')), deadline,
         stopped: () => stopped() || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); } })));
     await Promise.all(gangRuns);
+    closeRadar?.();
     for (const r of results) console.log(`SQUAD ${JSON.stringify(r)}`);
     const picked: Record<string, number> = {};
     for (const r of results) for (const [id, n] of Object.entries(r.picked)) picked[id] = (picked[id] ?? 0) + n;
