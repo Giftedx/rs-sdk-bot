@@ -219,7 +219,10 @@ if (import.meta.main) {
         const size = Math.ceil(names.length / procs), children: { out: Promise<string>; exited: Promise<number> }[] = [];
         for (let at = 0; at < names.length; at += size) {
             const child = Bun.spawn(['bun', import.meta.path, ...names.slice(at, at + size).flat().flatMap((n, i) => (i === 2 ? [String(cap), n] : [n]))],
-                { env: { ...env, SPAR_CHILD: '1', SPAR_PAIR_OFFSET: String(at), SPAR_CAP: String(cap) }, stdout: 'pipe', stderr: 'inherit', windowsHide: true });
+                // The no-progress guard (packages/core/src/bot.ts, STALL_TICKS default 900) past the cap: a splashed spell gives
+                // no XP (pvp_magic.rs2 pvp_spell_fail), so a mage in a mirror of magic tanks can go the whole cap without any,
+                // and the guard then stopped the child at the cap with exit code 1 (extra:spar-kit-mage-tank-x8).
+                { env: { ...env, SPAR_CHILD: '1', SPAR_PAIR_OFFSET: String(at), SPAR_CAP: String(cap), STALL_TICKS: env.STALL_TICKS ?? String(cap + 300) }, stdout: 'pipe', stderr: 'inherit', windowsHide: true });
             children.push({ out: new Response(child.stdout).text(), exited: child.exited });
         }
         const outs = await Promise.all(children.map(c => c.out)), codes = await Promise.all(children.map(c => c.exited));
