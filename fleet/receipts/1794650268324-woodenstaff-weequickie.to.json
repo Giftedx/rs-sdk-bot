@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794650268324-woodenstaff-weequickie",
  "account": "WeeQuickie",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(3)",
  "requested": 2,
  "claim": "bfdb35d1-d95b-4b99-ad75-8f51f0499be5",
- "count": 0,
- "ok": false,
- "at": 1794650345017,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1794650456930,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1794650456235
+ },
+ "logout": {
+  "attemptId": "1794650345026-0000029152-0000000001",
+  "at": 1794650456922,
+  "sha256": "8c602d880dace987c529646dc4bd818286601a9d03171b3b020a76d3ef46a771"
+ },
+ "screen": true
 }
