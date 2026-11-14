@@ -904,6 +904,29 @@ test('combat training: the NPCs with the most XP an hour that spawn, leaving out
  expect(t.trainBox()).toContain('data-finder-pick="Moss giant"');
 });
 
+test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spawn near and would attack',()=>{
+ const code=shell.slice(shell.indexOf("  // NPC aggression timer (RuneLite's"),shell.indexOf('  function infoboxes(){'));
+ const row=(kind:number,vis:number)=>[...new Array(16).fill(1),kind,vis];
+ const env:any={npcSpawns:[['Moss giant',42,42,[3170,9900,0]],['Goblin',2,2,[3172,9902,0]],['Dark wizard',7,7,[3175,9905,1]]],
+  npcDefData:{'Moss giant':[row(1,42)],'Goblin':[row(0,2)],'Dark wizard':[row(1,7)]},wildLevel:()=>0,S:{world:{tickMs:400}}};
+ const t=new Function(...Object.keys(env),`${code};return {aggroTrack,aggroText,aggroHunters};`)(...Object.values(env));
+ const b:any={name:'A',inWorld:true,combat:60,pos:{x:3170,z:9900,level:0}};
+ // Moss giant: kind 1, vislevel 42, hunts combat up to 84. Goblin does not hunt. Dark wizard is on another plane.
+ expect(t.aggroHunters(b).map((h:any)=>h.name)).toEqual(['Moss giant']);
+ // 1,000 ticks x 400 ms = 400 s. The first read gives the most time left.
+ expect(t.aggroText(b,0)).toMatchObject({text:'6:40',red:true});
+ expect(t.aggroText(b,0).title).toContain('at most 6:40');
+ // 10 tiles east is still in the first area: the count goes on. 100 s later, 5:00 left.
+ b.pos.x=3180;expect(t.aggroText(b,100e3).text).toBe('5:00');
+ // One more tile east leaves the area: a new count, no longer "at most".
+ b.pos.x=3181;const a=t.aggroText(b,150e3);expect(a.text).toBe('6:40');expect(a.title).not.toContain('at most');
+ // Back west into the old area (kept as the second area): the count goes on.
+ b.pos.x=3165;expect(t.aggroText(b,200e3).text).toBe('5:50');
+ expect(t.aggroText(b,550e3)).toMatchObject({text:'safe',red:false});
+ // Combat 85 is too strong for the Moss giant outside the Wilderness.
+ expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
