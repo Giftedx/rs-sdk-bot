@@ -799,6 +799,24 @@ test('NPC hits: its max hit and its chance through the account\'s Defence and wo
  expect(t('Old row')).toBe('');
 });
 
+test('kill XP: one style and Hitpoints from the hitpoints and the multiplier, and the kills to the next Hitpoints level',()=>{
+ const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const row=(hp:number,m:number)=>[42,30,1,0,0,0,0,0,30,30,33,31,2,hp,m];
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>({'Moss giant':[row(60,1000)],'Zombie':[row(22,1000),row(30,1000),row(120,25)],'Swarm':[row(10,25)]})}),
+  account:()=>({skills:[{name:'Hitpoints',level:50,xp:X.xpForLevel(50)}]}),wornBonuses:()=>null,curLevel:()=>50,nf:(n:number)=>n.toLocaleString('en-GB'),window:{atlasXp:X}};
+ const t=new Function(...Object.keys(env),`${code};return killXpText;`)(...Object.values(env));
+ const left=X.xpForLevel(51)-X.xpForLevel(50);
+ // Moss giant: 60 x 100 = 6,000 in one style, 60 x 33.25 = 1,995 Hitpoints.
+ const k=Math.ceil(left/1995);
+ expect(t('Moss giant')).toBe('A kill: 6,000 XP in one style + about 1,995 Hitpoints · '+k.toLocaleString('en-GB')+(k===1?' kill':' kills')+' to Hitpoints 51');
+ // The event Zombie (multiplier 25) is left out beside the normal ones.
+ expect(t('Zombie')).toContain('A kill: 2,200–3,000 XP in one style + about 732–998 Hitpoints');
+ // A name with only event variants keeps them: 10 x 100 x 25 / 1000 = 25.
+ expect(t('Swarm')).toContain('A kill: 25 XP in one style');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
