@@ -197,14 +197,15 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
       : {...kitFixture(gangKit.split('+')[((i + 1) % (size + 1) - 1) % gangKit.split('+').length]!, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
 };
 // Teams of own accounts (scripts/pk-team.ts): `groups` groups of `size` against `size`, side A two tiles east.
-const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = []): BenchCase => {
-  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * 2 * size - 1).split('');
-  const sideA = (i: number) => i % (2 * size) < size;
+// `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
+const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
+  const group = size + sizeB, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * group - 1).split('');
+  const sideA = (i: number) => i % group < size;
   const kitOf = (kits: string, member: number) => { const list = kits.split('+'); return list[member % list.length]!; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kitOf(kitA, 0), at.x + 2, at.z), output: /wins=(\d+)/,
-    scriptArgs: ['team', ...letters.map(l => `{bot:${l}}`), '900', `SPAR_TEAM=${size}`, `SPAR_KITS=${kitA}:${kitB}`, ...args],
+    scriptArgs: ['team', ...letters.map(l => `{bot:${l}}`), '900', `SPAR_TEAM=${size}`, ...(sizeB !== size ? [`SPAR_TEAM_B=${sizeB}`] : []), `SPAR_KITS=${kitA}:${kitB}`, ...args],
     // A side's kits joined by `+` go to its members in turn (scripts/pk-team.ts).
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitOf(kitA, (i + 1) % (2 * size)), at.x + 2, at.z) : kitFixture(kitOf(kitB, (i + 1) % (2 * size) - size), at.x, at.z)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitOf(kitA, (i + 1) % group), at.x + 2, at.z) : kitFixture(kitOf(kitB, (i + 1) % group - size), at.x, at.z)}))};
 };
 // Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
 // (SPAR_POST): one walk of 150 tiles, not two.
@@ -689,6 +690,7 @@ const ROUTE_CASES: BenchCase[] = [
   // one fight a pair, as the solo meeting (scripts/pk-kits.ts live-walker-iron-snare-rune-nopot against ganker-dds).
   teamCase('extra:team-3v3-gang-rune-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
   teamCase('extra:team-3v3-gang-addy-x2', 'live-walker-iron-snare-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
+  teamCase('extra:team-2v3-gang-rune-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 2, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.

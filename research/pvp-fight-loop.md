@@ -1164,9 +1164,12 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   solo meetings at once (`extra:team-3v3-gang-rune-x2`, profile `ganker-live`, seeds 1 to 8,
   run with `.practice/gang-cheap/teamset.sh`): 16 of 16 groups won, 39 of the 48 gang accounts killed (the rest walked out),
   no death of ours, 80 HP lost a kill, about 260 ticks a meeting. Without the freeze 37 kills and 93 HP a kill; in
-  the adamant kit (`live-walker-iron-snare-nopot`) 42 kills and 103 HP a kill. Each account taking the lowest health
-  bar in view (`-low`) won 5 of 8 groups: 3 runs stood still until the bench stopped them, with all three of ours on
-  one gang account and the game refusing two of them.
+  the adamant kit (`live-walker-iron-snare-nopot`) 42 kills and 103 HP a kill. Two of ours against the three
+  (`extra:team-2v3-gang-rune-x2`, `SPAR_TEAM_B=3`): 16 of 16 groups won, 36 kills of 48, no death, 91 HP a kill; the
+  third gang account takes over a pair when its gang account dies or walks out. Each account taking the lowest health
+  bar in view (`-low`, seeds 1 to 4) won 7 of 8 groups, 15 kills of 24, 114 HP a kill. The team loop stops a fight on
+  a refused attack ("I'm already under attack.") and leaves that enemy out for 8 ticks; before that, two of ours
+  against three stood still in 6 runs of 16 until the bench stopped them.
 - **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
   (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
   (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at

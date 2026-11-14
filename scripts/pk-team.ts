@@ -52,19 +52,29 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     const side = (mine: readonly Session[], foes: readonly Session[], sideOptions: SideOptions, key: 'a' | 'b') => mine.map(async (s, member) => {
         const options = typeof sideOptions === 'function' ? sideOptions(member) : sideOptions;
         const allies = mine.filter(x => x !== s).map(x => x.name.toLowerCase());
+        // The game refuses an attack on an enemy while another one has hit us in the last 8 ticks (pvp_combat.rs2:104-112:
+        // "I'm already under attack."): the fight stops on the refusal and the pick leaves that enemy out for 8 ticks.
+        let seenMessage = 0, refusedAt = -100;
+        const skip = new Map<Session, number>();
+        const unwatchRefusals = s.onTick(() => { for (const msg of s.sdk.getState()?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
+            if (msg.tick >= start && /already under attack/i.test(msg.text)) refusedAt = s.tick(); } });
+        try {
         while (!ended() && !isOut(s)) {
             // The enemy with the lowest health bar in view, the nearest on a tie.
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
-            const live = foes.filter(f => !isOut(f)).map(f => ({ f, p: view.find(v => v.name.toLowerCase() === f.name.toLowerCase()) })).filter(x => x.p);
+            const live = foes.filter(f => !isOut(f) && (skip.get(f) ?? -100) < s.tick()).map(f => ({ f, p: view.find(v => v.name.toLowerCase() === f.name.toLowerCase()) })).filter(x => x.p);
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
             const pick = pickEnemy(live, foes[member], picks[key], health);
             if (!pick) { if (!await nextTick(s)) return; continue; }
-            const r = await fightPlayer(s, pick.f.name, { ...options, allies, cap: Math.max(1, cap - (s.tick() - start)), stop: () => ended() || isOut(pick.f),
+            const began = s.tick();
+            const r = await fightPlayer(s, pick.f.name, { ...options, allies, cap: Math.max(1, cap - (s.tick() - start)), stop: () => ended() || isOut(pick.f) || refusedAt > began,
                 log: l => log(`[${s.name}] ${l}`) });
+            if (refusedAt > began) skip.set(pick.f, s.tick() + 8);
             attacks[key] += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
             if (r.outcome === 'died' || r.outcome === 'escaped' || r.outcome === 'session ended') return;
             if (!await nextTick(s)) return;
         }
+        } finally { unwatchRefusals(); }
     });
     await Promise.all([...side(a, b, optionsA, 'a'), ...side(b, a, optionsB, 'b')]);
     over = true;
@@ -76,9 +86,10 @@ export async function team(a: readonly Session[], b: readonly Session[], options
 }
 
 if (import.meta.main) {
-    const env = process.env, size = Math.max(1, Number(env.SPAR_TEAM ?? 2));
+    // SPAR_TEAM_B: the accounts of side B when it is not SPAR_TEAM (two of ours against three).
+    const env = process.env, size = Math.max(1, Number(env.SPAR_TEAM ?? 2)), sizeB = Math.max(1, Number(env.SPAR_TEAM_B ?? size)), group = size + sizeB;
     const args = process.argv.slice(2), capArg = args.find(x => /^\d+$/.test(x)), bots = args.filter(x => x !== capArg);
-    if (!bots.length || bots.length % (2 * size)) { console.log(`RESULT fail usage: bun scripts/pk-team.ts <${2 * size} bots a group> [CAP ticks]`); process.exit(2); }
+    if (!bots.length || bots.length % group) { console.log(`RESULT fail usage: bun scripts/pk-team.ts <${group} bots a group> [CAP ticks]`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base';
     const [kitA, kitB] = (env.SPAR_KITS ?? '').split(':');
@@ -97,7 +108,7 @@ if (import.meta.main) {
     const first = await openBot(bots[0]!, { onStop });
     const groups: Session[][] = [];
     try {
-        for (let at = 0; at < bots.length; at += 2 * size) groups.push(await Promise.all(bots.slice(at, at + 2 * size).map((name, i) => (at === 0 && i === 0 ? first : openBot(name, { onStop })))));
+        for (let at = 0; at < bots.length; at += group) groups.push(await Promise.all(bots.slice(at, at + group).map((name, i) => (at === 0 && i === 0 ? first : openBot(name, { onStop })))));
     } finally { tickWaits.active--; }
     for (const s of groups.flat()) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
     // SPAR_A_PICK, SPAR_B_PICK: low (default), near or pair.
