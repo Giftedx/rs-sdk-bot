@@ -834,6 +834,21 @@ test('loot of a kill: expected count times the item value, the top items, and th
  expect(t('Nobody')).toBe('');
 });
 
+test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hitpoints, then XP and gold an hour',()=>{
+ const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const data:any={'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{'Moss giant':[['Coins',20]]},'weapon-speed.json':{'Rune longsword':5}};
+ const bon=[0,67,0,0,0,0,0,0,0,0,66,0,0];
+ const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[{name:'Rune longsword',slot:3}]}),wornBonuses:()=>bon,curLevel:()=>60,
+  maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:(n:string)=>n==='Coins'?{value:1}:null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{}};
+ const t=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env));
+ // Max floor((68 x 130 + 320) / 640) = 14; slash hit 86% (A = 68 x 131 = 8,908 against 2,496): 0.86 x 7 = 6.02 a swing;
+ // 60 / 6.02 = 9.97 swings x 5 ticks x 0.6 s = 29.9 s a kill: 120 kills an hour, 120 x 6,000 = 722k XP, 120 x 20 gp.
+ const out=t('Moss giant');
+ expect(out).toMatch(/^About 12\d kills an hour \(max hit 14, speed 5\) · 72\d,\d{3} XP\/h in one style · 2,4\d\d gp\/h$/);
+ expect(new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values({...env,wornBonuses:()=>null}))('Moss giant')).toBe('');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
