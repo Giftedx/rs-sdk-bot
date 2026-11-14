@@ -1,6 +1,6 @@
 // Bounded Ardy imp708 bead pilot. No quest hand-in, remote route, or all-four-bead promise.
 // MAX_KILLS1..3 (default1), CAP<=1500, NO_PROGRESS<=120. Route admission is fixed below.
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,sessionDied} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,expandPath,type PathDeps,type PathPoint,type PathTile} from '../packages/core/src/walk';
@@ -105,7 +105,7 @@ export async function runImps(s:Session,o:ImpOptions){
     const bankCount=(id:number)=>count(snapshot??[],id);
     const totals=()=>{const m=new Map<number,number>();for(const i of [...(snapshot??[]),...inv(),...s.sdk.getEquipment()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
     const capture=(phase:string)=>{const n=state()?.nearbyNpcs.find(n=>n.index===activeIndex);if(diagnostics.length>=24)diagnostics.splice(2,1);diagnostics.push({tick:s.tick()-start,phase,index:activeIndex,anchor:[activeX,activeZ],corpse,xp:xp()-initialXp,hp:hp(),npc:n?{id:n.id,x:n.tileX??n.x,z:n.tileZ??n.z,hp:n.hp,anim:n.animId,inCombat:n.inCombat}:null,ground:(state()?.groundItems??[]).filter(i=>IMP_LOOT.includes(i.id as any)).map(i=>({id:i.id,x:i.x,z:i.z,count:i.count})),players:(state()?.nearbyPlayers??[]).map(p=>({index:p.index,x:p.x,z:p.z}))});};
-    const observe=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(hp()<=0||p?.isDead||p?.lifeId!==initialPlayer.lifeId||(p?.respawnCount??0)>(initialPlayer.respawnCount??0))died=true;
+    const observe=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(sessionDied(initialPlayer,p))died=true;
         const n=state()?.nearbyNpcs.find(n=>n.index===activeIndex&&n.id===IMP);
         const targetJump=!!n&&Math.max(Math.abs((n.tileX??n.x)-activeX),Math.abs((n.tileZ??n.z)-activeZ))>2;
         if(activeBaseline&&!corpse&&p&&!combatHalt&&((n&&!interior({x:n.tileX??n.x,z:n.tileZ??n.z},3))||targetJump||!interior({x:p.worldX,z:p.worldZ},2))){

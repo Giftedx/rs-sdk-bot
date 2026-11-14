@@ -1,7 +1,7 @@
 // bun scripts/train-prayer.ts <account> [target, default43]
 // Owned Bones526 by default; BONE_ID=532 buries owned big bones and BONE_ID=536 dragon bones. MAX_BURY=175,
 // BONE_RESERVE=6, CAP=1500 ticks by default.
-import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
+import {openBot,finish,getWorld,accountOf,sessionDied} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
@@ -61,7 +61,7 @@ export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach
     let snapshot:{id:number;count:number}[]|undefined,initial:Map<number,number>|undefined;
     const bankCount=()=>count(snapshot??[],BONE),goalReached=()=>level()>=goal||xp()>=targetXp;
     const stopped=()=>stopRequested||=!!o.stop?.();
-    const off=s.onTick(()=>{stopped();const p=state()?.player;hpMin=Math.min(hpMin,hp());if(hp()<=0||p?.isDead||p?.lifeId!==p0.lifeId||(p?.respawnCount??0)>(p0.respawnCount??0))died=true;if(hp()<initialHp||!p||p.level!==0||!travelling&&!nearBank())unsafe=true;});
+    const off=s.onTick(()=>{stopped();const p=state()?.player;hpMin=Math.min(hpMin,hp());if(sessionDied(p0,p))died=true;if(hp()<initialHp||!p||p.level!==0||!travelling&&!nearBank())unsafe=true;});
     void s.ended.then(()=>{ended=true;});
     const over=()=>ended||died||unsafe||stopped()||s.tick()-start>=o.cap;
     const capture=()=>{const b=s.bankObservation?.();if(!b)throw new Error('no prayer progress: bank data unknown');snapshot=b.items.map(i=>({id:i.id,count:i.count}));bankObservedAt=b.at;};
