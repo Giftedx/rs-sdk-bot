@@ -133,6 +133,17 @@ export async function rescueDropped(names: Iterable<string>, sessions: Session[]
     return stranded;
 }
 
+// A later login refusal still settles every earlier login before the failed result.
+export async function openSquad(names: readonly string[], open: (name: string) => Promise<Session>,
+    fail: (sessions: Session[], detail: string) => Promise<never>): Promise<Session[]> {
+    const sessions: Session[] = [];
+    let opening = '';
+    try {
+        for (const name of names) { opening = name; sessions.push(await open(name)); }
+    } catch (error) { return fail(sessions, `squad startup ${opening}: ${String(error)}`); }
+    return sessions;
+}
+
 export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number };
 
 // The target of the squad: the target account in view with the lowest health bar, the nearest on a tie; one the game
@@ -285,8 +296,7 @@ if (import.meta.main) {
     // finishes the process, and in the third live pilot one account's drop logged the other three out in the Wilderness.
     const dropped = new Map<string, string>();
     const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); console.log(`[${s.name}] SQUAD session ended: ${detail}`); } };
-    const all: Session[] = [];
-    for (const n of names) all.push(await openBot(n, { onStop, onSessionEnd }));
+    const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd }), (sessions, detail) => finish(sessions, false, detail));
     const squad = all.slice(0, ours.length), gang = all.slice(ours.length);
     // Bench: a gang account is out when it died (a new life, or at the Lumbridge spawn) or left the Wilderness.
     const gangLife = new Map(gang.map(g => [g, g.sdk.getState()?.player?.lifeId] as const));
