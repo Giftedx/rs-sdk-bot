@@ -1,0 +1,22 @@
+{
+ "id": "1794661317093-weequickie-bigchopper-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "WeeQuickie",
+ "to": "Bigchopper",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1794661317093,
+ "end": 1794663717093,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
