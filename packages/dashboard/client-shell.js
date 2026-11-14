@@ -815,7 +815,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function lootTotal(name){const list=npcLootData[name];if(!list?.length||typeof price!=='function')return 0;let t=0;for(const [item,e] of list){const p=price(item);if(p)t+=p.value*e;}return t;}
   function hourText(name){let list=(npcDefData[name]||[]).filter(v=>v.length>14&&v[13]>0);if(list.some(v=>v[14]>=1000))list=list.filter(v=>v[14]>=1000);const b=typeof account==='function'?account():null;
     if(!list.length||typeof wornBonuses!=='function'||typeof maxHit!=='function')return '';const bon=wornBonuses(b),A=curLevel(b,'Attack'),St=curLevel(b,'Strength');if(!bon||!Number.isFinite(A)||!Number.isFinite(St))return '';
-    const weapon=(b.equipment||[]).find(e=>e?.slot===3)?.name,speed=(weapon&&weaponSpeedData[weapon])||4,tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000,max=maxHit(St,bon[10],0);if(!(max>0))return '';
+    // A ranged weapon (a range attack bonus, as equipStats tells it) gets no melee estimate.
+    const weapon=(b.equipment||[]).find(e=>e?.slot===3)?.name;if(weapon&&typeof itemBonusData!=='undefined'&&(itemBonusData?.[weapon]?.[4]||0)>0)return '';
+    const speed=(weapon&&weaponSpeedData[weapon])||4,tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000,max=maxHit(St,bon[10],0);if(!(max>0))return '';
     const hit=(At,D)=>At>D?1-(D+2)/(2*(At+1)):At/(2*(D+1)),loot=lootTotal(name);
     // Each variant's kill rate times its own XP a kill: the extremes of two lists belong to different variants.
     const rates=list.map(v=>{const p=Math.max(...[0,1,2].map(i=>hit((A+8)*(bon[i]+64),(v[1]+9)*(v[3+i]+64)))),dmg=p*max/2,k=dmg>0?3600/((v[13]/dmg)*speed*tickSec):0;return {k,xp:k*v[13]*100*v[14]/1000};}).filter(r=>r.k>0);

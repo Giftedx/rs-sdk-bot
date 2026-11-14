@@ -853,6 +853,9 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
  const g=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env))('Goblin');
  const xp=(g.match(/· ([\d,]+)–([\d,]+) XP\/h/)||[]).slice(1).map((x:string)=>Number(x.replace(/,/g,'')));
  expect(xp.length).toBe(2);expect(xp[1]/xp[0]).toBeLessThan(1.5);
+ // A ranged weapon (range attack bonus above 0) gets no melee estimate.
+ const ranged=new Function(...Object.keys(env),'itemBonusData',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Bronze dart',slot:3}]})}),{'Bronze dart':[0,0,0,0,1,0,0,0,0,0,0,1,0]});
+ expect(ranged('Moss giant')).toBe('');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
