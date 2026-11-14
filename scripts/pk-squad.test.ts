@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { bankNear, leaveWilderness, openSquad, rescueDropped, squadTarget, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
-import { escapeCastable } from './pk';
+import { bankNear, leaveWilderness, openSquad, rescueDropped, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { escapeCastable, nextTick } from './pk';
+import { assertActionScope } from '../packages/core/src/action-scope';
 
 const session = (z: number) => ({ sdk: { getState: () => ({ player: { worldX: 3092, worldZ: z, hp: 50, maxHp: 99 } }), getInventory: () => [] } }) as any;
 
@@ -48,6 +49,91 @@ test('a refused squad login settles earlier sessions and skips remaining logins'
     })).rejects.toBe(settledFailure);
     expect(opened).toEqual(['first', 'refused']);
     expect(cleanup).toEqual(['first']);
+});
+
+function rescueSession(name = 'rescue') {
+    const listeners = new Set<() => void>(), inputs: string[] = [];
+    let end!: (value: { reason: string }) => void, tick = 0;
+    const ended = new Promise<{ reason: string }>(resolve => { end = resolve; });
+    const raw: any = { name, ended, tick: () => tick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+        sdk: { getState: () => ({ player: { worldX: 3092, worldZ: 3640, hp: 30, maxHp: 99 }, skills: [], inventory: [] }),
+            getInventory: () => [{ slot: 0, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }] },
+        direct: async (action: any) => { assertActionScope(action); inputs.push(action.type); },
+        close: async () => { end({ reason: 'closed' }); },
+    };
+    return { raw, inputs, listeners, advance: () => { tick++; for (const listener of [...listeners]) listener(); } };
+}
+
+test('a tick-stalled squad waiter ends even if close hangs while another member finishes', async () => {
+    const stalled = rescueSession('stalled'), other = rescueSession('other'), halted: string[] = [];
+    stalled.raw.close = () => new Promise(() => {});
+    const waiting = nextTick(squadWorkSession(stalled.raw)), completing = nextTick(squadWorkSession(other.raw));
+    const stopping = stopSquadSession(stalled.raw, 'tick stream stalled: 120 s without a game tick', reason => halted.push(reason), 5);
+    other.advance();
+    expect(await Promise.all([waiting, completing, stopping])).toEqual([false, true, undefined]);
+    expect(halted).toEqual(['tick stream stalled: 120 s without a game tick']);
+    expect(stalled.listeners.size).toBe(0);
+});
+
+test('account and squad pause files each prevent rescue login and remain in place', async () => {
+    for (const file of ['.practice/stop-rescue', '.practice/stop-pk-squad']) {
+        const files = new Set([file]), sessions: any[] = [];
+        let logins = 0;
+        const stranded = await rescueDropped(['rescue'], sessions, async () => { logins++; throw Error('must not log in'); }, () => {}, undefined,
+            name => squadPaused(name, path => files.has(path)));
+        expect(stranded).toEqual(['rescue']);
+        expect([logins, sessions.length]).toEqual([0, 0]);
+        expect([...files]).toEqual([file]);
+    }
+});
+
+test('a pause arriving during rescue login retains the session and sends no game input', async () => {
+    const { raw, inputs } = rescueSession(), sessions: any[] = [];
+    let paused = false;
+    expect(await rescueDropped(['rescue'], sessions, async () => { paused = true; return raw; }, () => {}, undefined, () => paused)).toEqual(['rescue']);
+    expect(sessions).toEqual([raw]);
+    expect(inputs).toEqual([]);
+});
+
+test('a rescue pause releases a tick wait without another game tick or game input', async () => {
+    const { raw, inputs, listeners } = rescueSession(), sessions: any[] = [];
+    let paused = false;
+    const rescuing = rescueDropped(['rescue'], sessions, async () => raw, () => {}, undefined, () => paused);
+    await Bun.sleep(0);
+    expect(listeners.size).toBe(1);
+    paused = true;
+    expect(await rescuing).toEqual(['rescue']);
+    expect(sessions).toEqual([raw]);
+    expect(inputs).toEqual([]);
+    expect(listeners.size).toBe(0);
+});
+
+test('a pause guards an already issued rescue input at its deferred dispatch', async () => {
+    const { raw, inputs, advance } = rescueSession(), sessions: any[] = [];
+    let paused = false;
+    raw.direct = async (action: any) => {
+        paused = true;
+        await Bun.sleep(0);
+        assertActionScope(action);
+        inputs.push(action.type);
+    };
+    const rescuing = rescueDropped(['rescue'], sessions, async () => raw, () => {}, undefined, () => paused);
+    for (let i = 0; i < 3; i++) { await Bun.sleep(0); advance(); }
+    expect(await rescuing).toEqual(['rescue']);
+    expect(sessions).toEqual([raw]);
+    expect(inputs).toEqual([]);
+});
+
+test('a rescue stop callback releases its pending wait and retains the raw session for logout', async () => {
+    const { raw, inputs } = rescueSession(), sessions: any[] = [];
+    let stop!: (s: any, reason: string) => Promise<void>;
+    const rescuing = rescueDropped(['rescue'], sessions, async (_name, onStop) => { stop = onStop; return raw; }, () => {}, undefined, () => false);
+    await Bun.sleep(0);
+    await stop(raw, 'stop file');
+    expect(await rescuing).toEqual(['rescue']);
+    expect(sessions).toEqual([raw]);
+    expect(inputs).toEqual([]);
 });
 
 test('a surviving squad member advances coordination after the first disconnects', () => {

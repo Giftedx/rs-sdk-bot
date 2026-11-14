@@ -20,6 +20,8 @@
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
+import { closeWithin } from '../packages/core/src/bot';
+import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
@@ -81,6 +83,30 @@ export function marchRoute(from: { x: number; z: number }, to: { x: number; z: n
 export const VARROCK_WEST_BANK = { x: 3185, z: 3436 };
 export const bankNear = (x: number) => (x >= 3136 ? VARROCK_WEST_BANK : EDGEVILLE_BANK);
 
+// Work can stop locally even when a broken transport never confirms its end. Logout keeps the raw session.
+const workSessions = new WeakMap<Session, { session: Session; cancel(reason: string): void }>();
+export function squadWorkSession(raw: Session): Session {
+    let work = workSessions.get(raw);
+    if (!work) {
+        let cancel!: (end: { reason: string }) => void;
+        const stopped = new Promise<{ reason: string }>(resolve => { cancel = resolve; });
+        work = { session: { ...raw, ended: Promise.race([raw.ended, stopped]) }, cancel: reason => cancel({ reason }) };
+        workSessions.set(raw, work);
+    }
+    return work.session;
+}
+const cancelSquadWork = (raw: Session, reason: string) => { squadWorkSession(raw); workSessions.get(raw)!.cancel(reason); };
+
+export async function stopSquadSession(raw: Session, reason: string, halt: (reason: string) => void, closeMs = 1000): Promise<void> {
+    if (reason === 'died') return;
+    halt(reason);
+    if (/^tick stream stalled:/.test(reason)) {
+        cancelSquadWork(raw, reason);
+        await closeWithin([raw], closeMs);
+    }
+}
+export const squadPaused = (name: string, exists: (path: string) => boolean = existsSync) => exists('.practice/stop-pk-squad') || exists(`.practice/stop-${name}`);
+
 // Connected members share one monotonic coordination clock after a member disconnects.
 export function watchSquadTicks(squad: readonly Session[], dropped: (name: string) => boolean, onTick: (tick: number) => void): () => void {
     let last = -1;
@@ -95,40 +121,58 @@ export function watchSquadTicks(squad: readonly Session[], dropped: (name: strin
 }
 // A dropped account logged in again: eat to near full, then Camelot Teleport where it can (Magic 45, a law rune and
 // 5 air runes, Wilderness 20 or less), else walk to the nearer bank (bankNear). The session when it ends out of the Wilderness, else null.
-export async function rescue(s: Session, log: (l: string) => void): Promise<Session | null> {
+export async function rescue(s: Session, log: (l: string) => void, stopped: () => boolean = () => false): Promise<Session | null> {
     const me = () => s.sdk.getState()?.player;
-    for (let i = 0; i < 3; i++) if (!await nextTick(s)) return null;
+    const tick = async () => !stopped() && await nextTick(s) && !stopped();
+    for (let i = 0; i < 3; i++) if (!await tick()) return null;
     const start = me();
     if (!start) return null;
     log(`[${s.name}] SQUAD rescue at ${start.worldX},${start.worldZ} wild ${wildernessLevel(start.worldZ)} hp ${start.hp}`);
     if (wildernessLevel(start.worldZ) > 0) {
         for (let i = 0; i < 6; i++) {
             const q = me(), food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))), op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+            if (stopped()) return null;
             if (!q || !food || !op || q.hp >= q.maxHp - 20) break;
-            await s.sdk.sendUseItem(food.slot, op.opIndex);
-            for (let t = 0; t < 3; t++) if (!await nextTick(s)) return null;
+            await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: op.opIndex, reason: 'SDK' });
+            for (let t = 0; t < 3; t++) if (!await tick()) return null;
         }
         const st = s.sdk.getState(), magic = st?.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const held = (id: number) => (st?.inventory ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
         if (st && wildernessLevel(start.worldZ) <= 20 && magic >= 45 && held(ITEMS.lawRune) >= 1 && held(ITEMS.airRune) >= 5)
-            for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) { await s.sdk.sendClickComponent(1174); for (let t = 0; t < 6; t++) if (!await nextTick(s)) return null; }
-        if (wildernessLevel(me()?.worldZ ?? 0) > 0) await walkPath(await sessionWalker(s), [{ ...bankNear(me()?.worldX ?? start.worldX), tol: 2 }], { maxTicks: 500, idleMs: 9000 });
+            for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) { if (stopped()) return null; await s.direct({ type: 'clickComponent', componentId: 1174, reason: 'SDK' }); for (let t = 0; t < 6; t++) if (!await tick()) return null; }
+        if (stopped()) return null;
+        if (wildernessLevel(me()?.worldZ ?? 0) > 0) await walkPath(await sessionWalker(s), [{ ...bankNear(me()?.worldX ?? start.worldX), tol: 2 }], { maxTicks: 500, idleMs: 9000, stop: stopped });
     }
     const end = me();
     log(`[${s.name}] SQUAD rescue ends at ${end?.worldX},${end?.worldZ} wild ${wildernessLevel(end?.worldZ ?? 0)}`);
-    return end && wildernessLevel(end.worldZ) === 0 ? s : null;
+    return !stopped() && end && wildernessLevel(end.worldZ) === 0 ? s : null;
 }
 
 // A rescue login belongs to final logout even when its retreat fails or throws.
-export async function rescueDropped(names: Iterable<string>, sessions: Session[], open: (name: string) => Promise<Session>, log: (line: string) => void,
-    retreat: typeof rescue = rescue): Promise<string[]> {
+export async function rescueDropped(names: Iterable<string>, sessions: Session[], open: (name: string, onStop: (s: Session, reason: string) => Promise<void>) => Promise<Session>, log: (line: string) => void,
+    retreat: typeof rescue = rescue, paused: (name: string) => boolean = squadPaused): Promise<string[]> {
     const stranded: string[] = [];
     for (const name of names) {
+        if (paused(name)) { log(`[${name}] SQUAD rescue paused`); stranded.push(name); continue; }
+        let interrupted = false, watch: ReturnType<typeof setInterval> | undefined;
+        const stopped = () => interrupted || paused(name);
         try {
-            const session = await open(name);
+            const session = await open(name, async (s, reason) => {
+                interrupted = true;
+                cancelSquadWork(s, reason);
+                await stopSquadSession(s, reason, () => {});
+            });
             sessions.push(session);
-            if (!await retreat(session, log)) stranded.push(name);
+            const work = squadWorkSession(session);
+            watch = setInterval(() => { if (stopped()) cancelSquadWork(session, 'squad rescue stopped'); }, 25);
+            const guarded: Session = { ...work, direct: action => {
+                const check = () => { if (stopped()) throw Error('squad rescue stopped'); };
+                check(); bindActionScope(action, check);
+                return session.direct(action);
+            } };
+            if (stopped() || !await retreat(guarded, log, stopped)) stranded.push(name);
         } catch (error) { log(`[${name}] SQUAD rescue failed: ${String(error)}`); stranded.push(name); }
+        finally { clearInterval(watch); }
     }
     return stranded;
 }
@@ -291,13 +335,13 @@ if (import.meta.main) {
     if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;
-    const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };
+    const onStop = (s: Session, reason: string) => stopSquadSession(s, reason, detail => { halted ??= detail; });
     // A session that ends with no logout of ours (a dropped connection) stops that account only. openBot's default
     // finishes the process, and in the third live pilot one account's drop logged the other three out in the Wilderness.
     const dropped = new Map<string, string>();
     const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); console.log(`[${s.name}] SQUAD session ended: ${detail}`); } };
     const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd }), (sessions, detail) => finish(sessions, false, detail));
-    const squad = all.slice(0, ours.length), gang = all.slice(ours.length);
+    const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
     // Bench: a gang account is out when it died (a new life, or at the Lumbridge spawn) or left the Wilderness.
     const gangLife = new Map(gang.map(g => [g, g.sdk.getState()?.player?.lifeId] as const));
     const gangDead = (g: Session) => { const p = g.sdk.getState()?.player; return !!p && ((gangLife.get(g) !== undefined && p.lifeId !== gangLife.get(g)) || Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40); };
@@ -406,7 +450,7 @@ if (import.meta.main) {
     const sum = (f: (r: SquadStats) => number) => results.reduce((n, r) => n + f(r), 0);
     // RESCUE=1 (default): each dropped account logs in again, eats, and leaves the Wilderness by Camelot Teleport
     // (Wilderness 20 or less, runes held) or a walk to the Edgeville bank; one it cannot get out the RESULT names.
-    if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, name => openBot(name, { onStop: async () => {}, onSessionEnd: async () => {} }), log));
+    if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, (name, onStop) => openBot(name, { onStop, onSessionEnd: (s, detail) => onStop(s, detail) }), log));
     else stranded.push(...dropped.keys());
     const ok = halted === undefined && stranded.length === 0 && sum(r => r.fights) > 0;
     await finish(all, ok, `squad accounts=${results.length} kills=${sum(r => r.kills)}${gang.length ? ` gangDied=${gang.filter(gangDead).length}` : ''} died=${results.filter(r => r.died).length} taken=${sum(r => r.taken)} trips=${sum(r => r.trips)} picked=${JSON.stringify(picked)}${dropped.size ? ` dropped=${[...dropped.keys()].join(',')}` : ''}${stranded.length ? ` stranded=${stranded.join(',')}` : ''}${halted ? ` halted=${halted}` : ''}`);
