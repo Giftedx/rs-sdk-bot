@@ -1174,6 +1174,14 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   (`"freezeMagicCap":78`) gave 39 kills and 81 HP a kill, at Bind (`49`) 38 and 78, against Entangle's 39 and 80 and
   no freeze's 37 and 93. A Bind (3 earth, 3 water, 2 nature runes) costs 64 coins where an Entangle costs 120, and it
   needs Magic 20.
+- **Multi-way is cheaper still.** The same three against the three on a multi-way tile, each side on the lowest bar
+  (Bind for the freeze, seeds 1 to 8): at the team cases' (3150, 3560) 16 of 16 groups won, 45 kills of 48, no death,
+  54 HP a kill (`extra:team-3v3-gang-rune-multi-x2`); in the multi-way zone 12 tiles west of the post (x 3064 to
+  3071, z 3624 to 3663, Wilderness 14 to 18, `maps/multiway.csv`) 13 won and 3 drawn, 41 kills, no death, 65 HP a kill
+  (`extra:team-3v3-gang-rune-west-x2`). Three of ours hit one gang account at once and kill it before it eats. Two of
+  ours against three there leave at once (`escapeOutnumbered`), with no kill and no death
+  (`extra:team-2v3-gang-rune-west-x2`). Gap: the bench gang follows its target into multi-way; no record shows
+  whether the live gang does.
 - **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
   (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
   (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at
@@ -1184,7 +1192,7 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
 
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
 regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
-at once, each against its own. Every
+at once, each against its own, or on the multi-way tiles west of the post where the gang follows. Every
 consumable has a source with no Grand Exchange: sharks by fishing and cooking, iron arrows from the archery shops
 (`archeryshop` 1,500, `archeryshop2` 800), earth and water runes from the rune shops (`runeshop` 2,000), nature runes
 from `magearena_runeshop` and `magicguildshop`, the antipoison from `junglestore` (10). The gear: the dragon dagger

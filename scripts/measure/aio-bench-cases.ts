@@ -691,6 +691,12 @@ const ROUTE_CASES: BenchCase[] = [
   teamCase('extra:team-3v3-gang-rune-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
   teamCase('extra:team-3v3-gang-addy-x2', 'live-walker-iron-snare-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
   teamCase('extra:team-2v3-gang-rune-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 2, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 3),
+  // The same three against the three on a multi-way tile (the team cases' (3150, 3560)): each side on the lowest bar.
+  teamCase('extra:team-3v3-gang-rune-multi-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3150, z: 3560}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  // The multi-way zone 12 tiles west of the gang's post (maps/multiway.csv: x 3064-3071, z 3624-3663, Wilderness 14-18):
+  // the gang comes to its target, so the target picks this ground.
+  teamCase('extra:team-3v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
+  teamCase('extra:team-2v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 2, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
