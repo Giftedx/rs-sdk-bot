@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794626270786,
+ "at": 1794626287248,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -487,22 +487,16 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-9bb461f2-b66a-4bff-bfca-737d9628e697"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-swordinhand-20261113t155029z [task-9bb461f2-b66a-4bff-bfca-737d9628e697]",
+   "role": "thieving"
   }
  ]
 }
