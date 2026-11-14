@@ -1127,6 +1127,14 @@ seeds 1 to 8, one fight a run): the default (`HUNT_PROFILE` auto, the champion) 
 `ESCAPE_AT=25` 6 and 2,585; `HUNT_PROFILE=gang-hunter` 7 and 2,850; the hunt's own options (`HUNT_PROFILE=none`) 3
 and 2,642. The champion's options double the hunt's own; the other two sit within the noise, so the default stays.
 
+### The champion's special against runners and rivals
+
+The champion in `tribrid-dragon-sara`, seeds 1 to 8: with the special held for a target at 45% or less
+(`"specBelow":0.45`) it catches 40 runners of 64 (`extra:spar-escape-tribrid-dragon-sara-x8`, `SPAR_B=base`) against
+34 on its own options, and 35 at 30%; against the rival builds (`extra:spar-rivals-tribrid-dragon-sara-x12`) it wins
+92 of 96 with 3 deaths against 94 with 1. A death loses the kit, so the champion keeps its own; a hunt after runners
+can pass `specBelow` 0.45.
+
 ### Runners by depth and squad size
 
 A runner (kit `runner`, `SPAR_B_OPTS={"escapeAt":60}`: with its food gone at 60 HP or less it runs south and rubs its
