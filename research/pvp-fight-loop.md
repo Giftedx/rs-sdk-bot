@@ -1159,6 +1159,14 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   and 97 HP. A gang account that is frozen hands the fight to the next one (the 8-tick takeover), so a freeze and a
   step away (`"freeze":true,"kiteFrozen":3` or `6`) ends the meeting in 70 to 290 ticks with our account away and
   1 kill in 16 (`round2.txt`).
+- **Three of ours against the three.** On the single-way post an account fights one enemy at a time, so three of
+  ours, each against its own gang account (`scripts/pk-team.ts` `SPAR_A_PICK=pair`, `SPAR_B_PICK=pair`), make three
+  solo meetings at once (`extra:team-3v3-gang-rune-x2`, profile `ganker-live`, seeds 1 to 8,
+  run with `.practice/gang-cheap/teamset.sh`): 16 of 16 groups won, 39 of the 48 gang accounts killed (the rest walked out),
+  no death of ours, 80 HP lost a kill, about 260 ticks a meeting. Without the freeze 37 kills and 93 HP a kill; in
+  the adamant kit (`live-walker-iron-snare-nopot`) 42 kills and 103 HP a kill. Each account taking the lowest health
+  bar in view (`-low`) won 5 of 8 groups: 3 runs stood still until the bench stopped them, with all three of ours on
+  one gang account and the game refusing two of them.
 - **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
   (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
   (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at
@@ -1168,7 +1176,8 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   hat, two robes (72 coins) and what food it has left. Whether the gang uses Protect Item does not show (no head icon).
 
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, the snare runes, a
-regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away. Every
+regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
+at once, each against its own. Every
 consumable has a source with no Grand Exchange: sharks by fishing and cooking, iron arrows from the archery shops
 (`archeryshop` 1,500, `archeryshop2` 800), earth and water runes from the rune shops (`runeshop` 2,000), nature runes
 from `magearena_runeshop` and `magicguildshop`, the antipoison from `junglestore` (10). The gear: the dragon dagger

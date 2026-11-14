@@ -685,6 +685,11 @@ const ROUTE_CASES: BenchCase[] = [
   teamCase('extra:team-3v3-spear-x3', 'tribrid-snare-spear+tribrid-dragon-sara+tribrid-dragon-sara', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   teamCase('extra:team-3v3-dragon-x3', 'tribrid-dragon-sara', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
   teamCase('extra:team-3v3-multi-x3', 'tribrid-snare', 'tribrid-snare', 3, {x: 3150, z: 3560}, 3),
+  // Three of ours against the three of the gang on its single-way post, each account against its own (SPAR_*_PICK=pair):
+  // one fight a pair, as the solo meeting (scripts/pk-kits.ts live-walker-iron-snare-rune-nopot against ganker-dds).
+  teamCase('extra:team-3v3-gang-rune-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
+  teamCase('extra:team-3v3-gang-addy-x2', 'live-walker-iron-snare-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200']),
+  teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
   gangCase('extra:army-deep-x3', 'tribrid-snare', 'tribrid-snare', 2, {x: 3166, z: 3784}, [], 3),

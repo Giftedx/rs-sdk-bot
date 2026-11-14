@@ -12,7 +12,7 @@ import { TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
 
-export type TeamResult = { winner: 'a' | 'b' | 'draw'; ticks: number; standing: { a: number; b: number }; died: { a: number; b: number }; attacks: { a: number; b: number } };
+export type TeamResult = { winner: 'a' | 'b' | 'draw'; ticks: number; standing: { a: number; b: number }; died: { a: number; b: number }; attacks: { a: number; b: number }; taken: { a: number; b: number } };
 
 // An account died when it has a new life id or stands at the Lumbridge spawn; it is out when it died or left the
 // Wilderness.
@@ -26,8 +26,15 @@ const out = (s: Session, life0: number | undefined) => {
     return !p || dead(s, life0) || wildernessLevel(p.worldZ) === 0;
 };
 
-// How an account takes its next enemy: `low` the lowest health bar in view (the nearest on a tie), `near` the nearest.
-export type TeamPick = 'low' | 'near';
+// How an account takes its next enemy: `low` the lowest health bar in view (the nearest on a tie), `near` the nearest,
+// `pair` the enemy in its own place on the other side while that one is in, else as `low`. On a single-way tile an
+// account fights one enemy at a time (pvp_combat.rs2:104-131), so pairs on both sides make one fight of each pair.
+export type TeamPick = 'low' | 'near' | 'pair';
+// The enemy that an account takes from those in view (`own`: the enemy in its own place on the other side).
+export function pickEnemy<F, X extends { f: F; p?: { distance: number } }>(live: readonly X[], own: F | undefined, pick: TeamPick, health: (x: X) => number): X | undefined {
+    return (pick === 'pair' ? live.find(x => x.f === own) : undefined)
+        ?? [...live].sort((x, y) => (pick !== 'near' ? health(x) - health(y) : 0) || x.p!.distance - y.p!.distance)[0];
+}
 // optionsA and optionsB: one side's options, or a function of the member's place on its side (per-member kits).
 type SideOptions = FightOptions | ((member: number) => FightOptions);
 export async function team(a: readonly Session[], b: readonly Session[], optionsA: SideOptions, optionsB: SideOptions, cap: number,
@@ -36,7 +43,10 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     for (let i = 0; i < 10; i++) if ((await Promise.all([...a, ...b].map(s => nextTick(s)))).some(t => !t)) break;
     const lives = new Map([...a, ...b].map(s => [s, s.sdk.getState()?.player?.lifeId] as const));
     const isOut = (s: Session) => out(s, lives.get(s));
-    const start = a[0]!.tick(), attacks = { a: 0, b: 0 };
+    const start = a[0]!.tick(), attacks = { a: 0, b: 0 }, taken = { a: 0, b: 0 };
+    // HP lost by each side: the sum of each account's drops, read each tick.
+    const lastHp = new Map<Session, number>();
+    const unwatch = [...a, ...b].map(s => s.onTick(() => { const hp = s.sdk.getState()?.player?.hp; if (hp === undefined) return; const was = lastHp.get(s); if (was !== undefined && hp < was) taken[a.includes(s) ? 'a' : 'b'] += was - hp; lastHp.set(s, hp); }));
     let over = false;
     const ended = () => over || halt() || a.every(isOut) || b.every(isOut) || a[0]!.tick() - start >= cap;
     const side = (mine: readonly Session[], foes: readonly Session[], sideOptions: SideOptions, key: 'a' | 'b') => mine.map(async (s, member) => {
@@ -47,7 +57,7 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const live = foes.filter(f => !isOut(f)).map(f => ({ f, p: view.find(v => v.name.toLowerCase() === f.name.toLowerCase()) })).filter(x => x.p);
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
-            const pick = live.sort((x, y) => (picks[key] === 'low' ? health(x) - health(y) : 0) || x.p!.distance - y.p!.distance)[0];
+            const pick = pickEnemy(live, foes[member], picks[key], health);
             if (!pick) { if (!await nextTick(s)) return; continue; }
             const r = await fightPlayer(s, pick.f.name, { ...options, allies, cap: Math.max(1, cap - (s.tick() - start)), stop: () => ended() || isOut(pick.f),
                 log: l => log(`[${s.name}] ${l}`) });
@@ -58,10 +68,11 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     });
     await Promise.all([...side(a, b, optionsA, 'a'), ...side(b, a, optionsB, 'b')]);
     over = true;
+    for (const u of unwatch) u();
     const standing = { a: a.filter(s => !isOut(s)).length, b: b.filter(s => !isOut(s)).length };
     const died = { a: a.filter(s => dead(s, lives.get(s))).length, b: b.filter(s => dead(s, lives.get(s))).length };
     const winner = standing.a > 0 && standing.b === 0 ? 'a' : standing.b > 0 && standing.a === 0 ? 'b' : 'draw';
-    return { winner, ticks: a[0]!.tick() - start, standing, died, attacks };
+    return { winner, ticks: a[0]!.tick() - start, standing, died, attacks, taken };
 }
 
 if (import.meta.main) {
@@ -89,13 +100,13 @@ if (import.meta.main) {
         for (let at = 0; at < bots.length; at += 2 * size) groups.push(await Promise.all(bots.slice(at, at + 2 * size).map((name, i) => (at === 0 && i === 0 ? first : openBot(name, { onStop })))));
     } finally { tickWaits.active--; }
     for (const s of groups.flat()) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
-    // SPAR_A_PICK, SPAR_B_PICK: low (default) or near.
-    const pickOf = (v?: string): TeamPick => (v === 'near' ? 'near' : 'low');
+    // SPAR_A_PICK, SPAR_B_PICK: low (default), near or pair.
+    const pickOf = (v?: string): TeamPick => (v === 'near' || v === 'pair' ? v : 'low');
     const results = await Promise.all(groups.map((g, i) => team(g.slice(0, size), g.slice(size), options(false, i), options(true, i), cap, undefined, () => halted !== undefined,
         { a: pickOf(env.SPAR_A_PICK), b: pickOf(env.SPAR_B_PICK) })));
     for (const r of results) console.log(`TEAM ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
     const wins = results.filter(r => r.winner === 'a').length, losses = results.filter(r => r.winner === 'b').length;
     const ok = halted === undefined && results.every(r => r.attacks.a > 0 && r.attacks.b > 0);
     await finish(groups.flat(), ok, `team groups=${results.length} size=${size} wins=${wins} losses=${losses} draws=${results.length - wins - losses} ticks=${Math.max(0, ...results.map(r => r.ticks))} a=${nameA} b=${nameB} `
-        + `standing=${results.map(r => `${r.standing.a}-${r.standing.b}`).join(',')} diedA=${results.reduce((n, r) => n + r.died.a, 0)} diedB=${results.reduce((n, r) => n + r.died.b, 0)}${halted ? ` halted=${halted}` : ''}`);
+        + `standing=${results.map(r => `${r.standing.a}-${r.standing.b}`).join(',')} diedA=${results.reduce((n, r) => n + r.died.a, 0)} diedB=${results.reduce((n, r) => n + r.died.b, 0)} takenA=${results.reduce((n, r) => n + r.taken.a, 0)}${halted ? ` halted=${halted}` : ''}`);
 }
