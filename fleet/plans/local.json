@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794627273038,
+ "at": 1794627309305,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,26 +71,6 @@
    "enabled": false,
    "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
   },
   {
    "account": "Bigchopper",
@@ -166,6 +146,29 @@
    "autopilot": "local",
    "resources": [
     "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -359,29 +362,6 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
-   ]
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
    ]
   },
   {
