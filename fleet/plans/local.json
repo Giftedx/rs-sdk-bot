@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794626500205,
+ "at": 1794626555205,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -302,26 +302,22 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "account": "YewFirst",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2671,3313"
    ]
   },
   {
@@ -486,17 +482,27 @@
    ]
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8e6d8360-4eb4-430e-9420-d2d1d05c7b9c"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "local-recover-yewfirst-20261113t155029z [task-8e6d8360-4eb4-430e-9420-d2d1d05c7b9c]",
-   "role": "thieving"
+   "account": "Billionaire",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
   }
  ]
 }
