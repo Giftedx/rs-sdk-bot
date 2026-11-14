@@ -52,6 +52,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/microbot-catalog.ts': 'report: lists the Microbot plugins and the port decisions',
  'scripts/monitor.ts': 'fleet control: the watchdog of the machine and the swarm',
  'scripts/now.ts': 'developer tool: prints the state of this PC and the fleet on one screen; it changes nothing',
+ 'scripts/pray-at-altar.ts': 'fleet control: restores prayer points at an altar before a walk onto melee hunter ground; started by hand for one account',
  'scripts/pk-live/walk-edge.ts': 'hand tool: walks one account to Edgeville bank with a long route budget',
  'scripts/pk-sim.ts': 'offline fight simulator; it starts no game work',
  'scripts/preparation-report.ts': 'report: owned gear and supplies against the inputs of the workers',

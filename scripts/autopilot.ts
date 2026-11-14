@@ -418,9 +418,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         if (order) for (const name of [order.from, order.to]) open.add(name.toLowerCase());
     }
     // An account whose last session has no confirmed logout cannot log in for a trade: its held swarm claim refuses the
-    // trade claim ("fleet account claim held by swarm"), so its partner waits for nothing and the order fails (live:
-    // three orders from mmtha0205 to Masterbaiter failed "partner failed: no trade"). It gives nothing until a recovery
-    // confirms its logout.
+    // trade claim ("fleet account claim held by swarm"), so its partner waits for nothing and the order fails. It gives
+    // nothing until a recovery confirms its logout.
     const stranded = strandedAccounts(listed, n => readLogoutProof(n, owners.get(n.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev').state);
     const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open, stranded].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
