@@ -44,6 +44,12 @@ const journalRows = (raw: unknown) => Array.isArray(raw) && raw.length > 0
         && ['not started', 'started', 'complete', 'unknown'].includes(q.state))
     && new Set(raw.map(q => q.id)).size === raw.length && raw.some(q => q.state !== 'unknown')
     ? raw.map(q => ({ id: q.id, name: q.name, state: q.state })) : null;
+// Legacy statuses name quests without component IDs. Preserve their summary without inventing full-journal proof.
+const legacyJournalNames = (raw: unknown): string[] | undefined => Array.isArray(raw) && raw.length > 0
+    && raw.every(q => q && typeof q === 'object' && !Array.isArray(q) && !('id' in q)
+        && typeof q.name === 'string' && q.name.trim() && ['not started', 'started', 'complete', 'unknown'].includes(q.state))
+    && new Set(raw.map(q => q.name.trim().toLowerCase())).size === raw.length && raw.some(q => q.state !== 'unknown')
+    ? raw.filter(q => q.state === 'complete').map(q => q.name) : undefined;
 // These actor facts are durable lower bounds and admissions. Team, door and session state stays on its producer.
 function durableGuildFacts(raw: any) {
     const qp = raw?.varps?.qp;
@@ -67,8 +73,9 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
         if (kept && Number.isFinite(kept.at) && !(Number(s.at) >= kept.at)) continue;
         const incomingBank = rows(s.bank), bank = incomingBank ?? rows(kept?.bank), equipment = rows(s.equipment, 'equipment'), inventory = rows(s.inventory, 'inventory'), p = s.pos;
         const incomingJournal = journalRows(s.quests), journal = incomingJournal ?? journalRows(kept?.questJournal);
-        const legacyQuests = kept?.questJournal == null && Array.isArray(kept?.quests)
-            && kept.quests.every((q: unknown) => typeof q === 'string' && q.trim()) ? [...new Set(kept.quests)] : undefined;
+        const incomingLegacyQuests = kept?.questJournal == null ? legacyJournalNames(s.quests) : undefined;
+        const legacyQuests = incomingLegacyQuests ?? (kept?.questJournal == null && Array.isArray(kept?.quests)
+            && kept.quests.every((q: unknown) => typeof q === 'string' && q.trim()) ? [...new Set(kept.quests)] : undefined);
         const completed = journal ? journal.filter(q => q.state === 'complete').map(q => q.name) : legacyQuests;
         const guildFacts = durableGuildFacts(s.guildFacts);
         by.set(s.name.toLowerCase(), {
@@ -85,7 +92,7 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
             ...(p && nonnegativeInteger(p.x) && nonnegativeInteger(p.z) && nonnegativeInteger(p.level) && p.level <= 3
                 ? { pos: { x: p.x, z: p.z, level: p.level } } : {}),
             ...(guildFacts ? { guildFacts } : {}),
-            questJournal: journal, questsAt: incomingJournal ? observationAt(s.questsAt, s.at)
+            questJournal: journal, questsAt: incomingJournal || incomingLegacyQuests !== undefined ? observationAt(s.questsAt, s.at)
                 : journal || completed ? observationAt(kept?.questsAt, kept?.at) : null,
             // No field when the journal was never read, so readers see unknown and not zero completed.
             ...(completed ? { quests: completed } : {}),

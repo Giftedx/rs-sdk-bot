@@ -329,6 +329,7 @@ test('a snapshot lists completed quests and leaves an unread journal unknown', (
     ], 'local', owners, 7).accounts;
     expect(accounts.map(a => (a as { quests?: string[] }).quests)).toEqual([['Cook'], [], undefined, undefined]);
     expect(accounts.filter(a => 'quests' in a).map(a => a.name)).toEqual(['Read', 'None']);
+    expect(accounts.every(a => a.questJournal === null && a.questsAt === null)).toBe(true);
 });
 
 test('the agent acts only for its own side, skips busy and running accounts, and frees the rest', async () => {

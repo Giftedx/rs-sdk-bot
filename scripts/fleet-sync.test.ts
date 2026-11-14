@@ -192,6 +192,39 @@ test('legacy-only completed names survive unknown statuses without inventing jou
     expect(full).not.toHaveProperty('quests');
 });
 
+test('current name-only quest statuses retain legacy summaries and only explicit observation ages', () => {
+    const owners = new Map([['worker', { side: 'cloud', server: 's' }]]);
+    const current = { name: 'Worker', server: 's', at: 2_000, quests: [
+        { name: "Cook's Assistant", state: 'complete' }, { name: 'Rune Mysteries', state: 'started' },
+    ] };
+    const [undated] = snapshot([current], 'cloud', owners, 3_000).accounts;
+    expect(undated).toMatchObject({ quests: ["Cook's Assistant"], questJournal: null, questsAt: null });
+    const [dated] = snapshot([{ ...current, questsAt: 1_800 }], 'cloud', owners, 3_000).accounts;
+    expect(dated).toMatchObject({ quests: ["Cook's Assistant"], questJournal: null, questsAt: 1_800 });
+    const old = { name: 'Worker', server: 's', at: 1_000, questJournal: null, quests: ['Old quest'], questsAt: 800 };
+    const [replaced] = snapshot([{ ...current, quests: [{ name: "Cook's Assistant", state: 'not started' }], questsAt: 1_900 }], 'cloud', owners, 3_000, [old]).accounts;
+    expect(replaced).toMatchObject({ quests: [], questJournal: null, questsAt: 1_900 });
+    const full = { ...old, questJournal: [{ id: 7333, name: "Cook's Assistant", state: 'complete' }], quests: ["Cook's Assistant"] };
+    const [retained] = snapshot([{ ...current, quests: [{ name: "Cook's Assistant", state: 'not started' }], questsAt: 1_900 }], 'cloud', owners, 3_000, [full]).accounts;
+    expect(retained).toMatchObject({ quests: ["Cook's Assistant"], questJournal: full.questJournal, questsAt: 800 });
+});
+
+test('malformed or mixed explicit quest IDs cannot become name-only completion summaries', () => {
+    const owners = new Map([['worker', { side: 'cloud', server: 's' }]]);
+    const entry = { name: "Cook's Assistant", state: 'complete' };
+    const invalid = [
+        ...[undefined, null, -1, '7333', NaN].map(id => [{ ...entry, id }]),
+        [{ ...entry, id: 7333 }, { name: 'Rune Mysteries', state: 'complete', id: 7333 }],
+        [{ ...entry, id: 7333 }, { name: 'Rune Mysteries', state: 'complete' }],
+        [entry, { ...entry, state: 'started' }], [{ ...entry, name: '' }], [{ ...entry, state: 'invalid' }],
+    ];
+    for (const quests of invalid) {
+        const [account] = snapshot([{ name: 'Worker', server: 's', at: 2_000, quests, questsAt: 1_800 }], 'cloud', owners, 3_000).accounts;
+        expect(account).not.toHaveProperty('quests');
+        expect(account.questJournal).toBeNull(); expect(account.questsAt).toBeNull();
+    }
+});
+
 test('snapshots share only supported current guild lower bounds and durable unlocks', () => {
     const owners = new Map([['worker', { side: 'cloud', server: 's' }]]);
     const current = { name: 'Worker', server: 's', at: 1_000, guildFacts: {
