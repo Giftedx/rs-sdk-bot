@@ -62,6 +62,9 @@ export type FightOptions = {
     // already held.
     freeze?: boolean | 'flee' | 'low';
     freezeBelow?: number;
+    // The freeze spell as for this Magic level at most: 78 casts Snare at most (4 earth, 4 water, 3 nature runes), 49
+    // Bind (3, 3, 2), against Entangle's 5, 5, 4 (freezeSpell). Default the account's level.
+    freezeMagicCap?: number;
     // With 'low': at most this many freeze casts on a target that has not run (default no limit). Each cast takes a
     // turn of 5 ticks, and against a target that stands and fights the turns cost more than the freeze gives.
     freezeEarlyMax?: number;
@@ -1075,7 +1078,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
-        const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
+        const freezeMagic = Math.min(magicLevel, o.freezeMagicCap ?? magicLevel);
+        const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
         const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
             && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))

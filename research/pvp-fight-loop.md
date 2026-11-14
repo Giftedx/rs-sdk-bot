@@ -1170,6 +1170,10 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   bar in view (`-low`, seeds 1 to 4) won 7 of 8 groups, 15 kills of 24, 114 HP a kill. The team loop stops a fight on
   a refused attack ("I'm already under attack.") and leaves that enemy out for 8 ticks; before that, two of ours
   against three stood still in 6 runs of 16 until the bench stopped them.
+- **Bind does the freeze's work.** In the three-against-three case (seeds 1 to 8) the freeze capped at Snare
+  (`"freezeMagicCap":78`) gave 39 kills and 81 HP a kill, at Bind (`49`) 38 and 78, against Entangle's 39 and 80 and
+  no freeze's 37 and 93. A Bind (3 earth, 3 water, 2 nature runes) costs 64 coins where an Entangle costs 120, and it
+  needs Magic 20.
 - **The loot.** The live gang skulls. A skulled account keeps no item at death, or its dearest one with Protect Item
   (`death.rs2` `pvp_death_lose_items`); one with no skull keeps its 3 dearest, which is why a bench gang account
   (`ganker-dds`) drops its hat and bones only. With the kit `ganker-dds-skull` (varp 78, `%pk_skull`, put back on at
@@ -1178,7 +1182,7 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   times the supplies of the kill, and the weapon of a PK account. A gang with Protect Item keeps the dagger and drops a
   hat, two robes (72 coins) and what food it has left. Whether the gang uses Protect Item does not show (no head icon).
 
-The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, the snare runes, a
+The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
 regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
 at once, each against its own. Every
 consumable has a source with no Grand Exchange: sharks by fishing and cooking, iron arrows from the archery shops
