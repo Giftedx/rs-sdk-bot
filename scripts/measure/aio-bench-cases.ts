@@ -828,6 +828,9 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-4-gang-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
   // Against the most the gang can carry (ganker-max: 23 sharks, the boosts, prayer potions): the live fights ran long.
   squadCase('extra:squad-4-gangmax-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-max', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // The combat-111 build, the least that can attack the gang at its post (Wilderness 16 against combat 126), at 4, 6
+  // and 9 of ours.
+  ...[4, 6, 9].map(n => squadCase(`extra:squad-${n}-gang-b111-x1`, 'live-walker-iron-snare-rune-nopot-b111', 'ganker-dds', n)),
   squadCase('extra:squad-4-gang-skull-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 4),
   teamCase('extra:team-3v3-gang-chain-west-x2', 'live-walker-iron-rune-chain', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   teamCase('extra:team-3v3-gang-chainbind-west-x2', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),

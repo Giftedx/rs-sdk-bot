@@ -1318,6 +1318,19 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   - with a step away while the target is held (`"kiteFrozen":3`): 2 at about 1,230;
   - the same with the best freeze the runes allow (no `freezeMagicCap`): 0.
   Each cast is a turn without damage while the gang account eats, so the freeze pays only on a runner.
+- **The least build that can fight the gang is combat 110.** The game allows an attack only within as many combat
+  levels as the Wilderness level, and the gang (combat 126) stands at level 16. A combat-83 squad (Attack 60,
+  Strength, Defence and Ranged 70) at the post made no attack in 8 runs. The combat-111 build
+  (`live-walker-iron-snare-rune-nopot-b111`, `extra:squad-<n>-gang-b111-x1`) in the multi-way zone, seeds 1 to 8, 24
+  gang accounts a row, no death of ours:
+
+  | Squad | Gang killed | HP lost a kill | Maxed squad, HP lost a kill |
+  | --- | --- | --- | --- |
+  | 4 | 13 | 84 | 35 |
+  | 6 | 19 | 33 | 22 |
+  | 9 | 24 | 16 | 14 |
+
+  So 6 to 9 accounts at combat 111 do what 4 to 6 maxed accounts do.
 - **Both refusals end a fight.** On a single-way tile the game refuses an attack with "I'm already under attack."
   (someone else hit us) or "Someone else is already fighting your opponent." (someone else hit the target). The team
   loop and pk-squad stop the fight on either and leave that target for 8 ticks. Stopping on the first alone kept an
