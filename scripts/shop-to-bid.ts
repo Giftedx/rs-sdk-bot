@@ -13,9 +13,9 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openBot, finish, serverFromEnv } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
-import { waitTicks } from '../packages/core/src/ticks';
+import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkTargetPersist } from './walk-to';
-import { PROFILES, buyWithBudget } from './shop-buyer';
+import { PROFILES, maximumUnitCost } from './shop-buyer';
 import { runOwnedSale, saleStopRequested } from './sell-owned-ge-item';
 import { orderPaths } from './buy-owned-ge-item';
 
@@ -95,6 +95,32 @@ export async function fetchMarket(get: Get = getJson, pause = (ms: number) => Bu
 const held = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
 const coins = (s: Session) => held(s, 995);
 
+// The server decodes 5 user packets a tick (lostcity ClientGameProtCategory USER_EVENT) and a shop buy is one, with
+// an amount of 10, 5 or 1. bot.buyFromShop sends one packet and waits for the pack before the next, about 3 units a
+// tick. One tick of packets buys up to 50.
+export const PACKETS_PER_TICK = 5;
+export function tickPackets(want: number, perTick = PACKETS_PER_TICK): number[] {
+    const out: number[] = [];
+    for (let left = Math.floor(want); left > 0 && out.length < perTick;) { const n = left >= 10 ? 10 : left >= 5 ? 5 : 1; out.push(n); left -= n; }
+    return out;
+}
+
+// One tick of shop buys for up to `want` units, bounded by the shelf, the coins above the reserve and the spend left
+// at the shop's highest unit price. The result counts the pack and the coins, never the requests.
+async function tickBuy(s: Session, q: Quote, want: number, reserve: number, spendLeft: number): Promise<{ bought: number; spent: number }> {
+    const shop = s.sdk.getState()?.shop, item = shop?.shopItems.find(i => i.name.toLowerCase() === q.name.toLowerCase());
+    if (!shop?.isOpen || !item || item.count <= 0) return { bought: 0, spent: 0 };
+    const unit = maximumUnitCost(item, shop.shopConfig), wallet = coins(s), before = held(s, q.id);
+    const packets = tickPackets(Math.min(want, item.count, Math.floor(Math.min(wallet - reserve, spendLeft) / unit)));
+    if (!packets.length) return { bought: 0, spent: 0 };
+    for (const amount of packets) await s.direct({ type: 'shopBuy', slot: item.slot, amount, reason: 'SDK' });
+    await waitUntil(s, () => held(s, q.id) > before, { timeoutTicks: 3 });
+    await waitTicks(s, 1); // the last packets of the tick publish with the next state
+    const spent = Math.max(0, wallet - coins(s));
+    if (coins(s) < reserve || spent > spendLeft) throw Error('shop budget violated: observed server cost exceeded reserved maximum');
+    return { bought: Math.max(0, held(s, q.id) - before), spent };
+}
+
 async function main() {
     const num = (key: string, d: number) => { const v = Number(process.env[key] ?? d); if (!Number.isSafeInteger(v) || v < 0) throw Error(`${key} must be a whole number`); return v; };
     const maxUnits = num('UNITS', 5000), minNet = num('MIN_NET', 50), reserve = num('COIN_RESERVE', 10_000), maxSpend = num('MAX_SPEND', 200_000), wait = num('WAIT_TICKS', 0);
@@ -144,7 +170,7 @@ async function main() {
             // The first buy is 2 units: 2 slots mean the item does not stack, and the sale needs at most 26 used slots.
             let cap = plan.units, probe = true;
             for (let idle = 0; lot.bought < cap && !stop();) {
-                const b = await buyWithBudget(s.bot, s.sdk, q.name, Math.min(probe ? 2 : CHUNK, cap - lot.bought), reserve, maxSpend - spent);
+                const b = await tickBuy(s, q, Math.min(probe ? 2 : CHUNK, cap - lot.bought), reserve, maxSpend - spent);
                 lot.bought += b.bought; lot.spent += b.spent; spent += b.spent;
                 if (probe && b.bought > 0) {
                     probe = false;
