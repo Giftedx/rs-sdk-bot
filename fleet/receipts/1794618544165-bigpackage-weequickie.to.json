@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1794618544165-bigpackage-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Death rune",
+ "requested": 110,
+ "claim": "63f47c68-09d2-44c0-9ca3-f89628f88fa5",
+ "count": 0,
+ "ok": false,
+ "at": 1794618699622,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794618642667-0000031616-0000000001",
+  "at": 1794618699612,
+  "sha256": "d5147e189bdd787ca284c0e82bf4b164b203382fd6c6a49e7cb77be9bdb55451"
+ },
+ "screen": true
+}
