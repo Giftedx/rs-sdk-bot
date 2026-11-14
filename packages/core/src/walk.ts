@@ -435,6 +435,7 @@ export interface PathOptions {
     look?: number;          // tiles ahead to click (default 20; the client routes inside its 104x104 scene)
     reclickAt?: number;     // click again when this many tiles of the last click remain (default 6: 3 ticks running)
     maxTicks?: number;      // tick budget (default: path tiles + 60)
+    immediateHunterDetours?: boolean; // take a complete live-hunter detour immediately instead of waiting for a short one
     stop?: () => boolean;   // checked on every tick (death, abort)
     log?: (msg: string) => void;
 }
@@ -526,7 +527,7 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     let held = 0;
     const buildAround = (from: PathTile, firstPoint: number) => {
         if (squares.length && build(from, firstPoint, closed())) {
-            if (held >= HOLD) return;
+            if (opts.immediateHunterDetours || held >= HOLD) return;
             const round = { tiles, seg };
             build(from, firstPoint);
             if (!tiles.length || round.tiles.length <= tiles.length + DETOUR) { tiles = round.tiles; seg = round.seg; }

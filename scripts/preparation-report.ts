@@ -1,4 +1,4 @@
-import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {haggisActivities,haggisTravel,loadSnapshot,overallRequirementsFor,scheduleOverall,TRICKS} from '../packages/planner/src/haggis';
@@ -9,6 +9,9 @@ import {goalReadiness} from './goal-readiness';
 import {ownedLoadout,fireKit,type GearSlot,type GearCount} from '../packages/planner/src/owned-loadout';
 import {orderAccounting,validateRequest,type ItemOrder} from './buy-owned-ge-item';
 import {observedRouteResources,type RouteActor} from './preparation-route-state';
+import {FLEET_DIR,loadOwners,mySide,sideOf} from '../packages/core/src/fleet';
+import {fleetStatusRows,type SnapshotFile} from '../packages/core/src/fleet-snapshots';
+import {coordinatorJobsPath,mergedPlan,readCoordinatorJobs,readMergedPlan} from '../packages/core/src/coordinator-jobs';
 
 type Requirement={item:string;count:number;itemId?:number;consumers?:string[]};
 type Holder={name:string;count:number;at:number;state:'recent'|'stale'};
@@ -25,6 +28,83 @@ function gearJobAccounts(job:GearJob):string[]{
  if(!names.length||names.some(n=>typeof n!=='string'||!n)||job.accounts&&job.account)throw Error('Gear assignment needs exactly one account or accounts list');
  return names;
 }
+
+type PreparationSource={path:string;sha256:string|null};
+type ObservationSource=PreparationSource&{kind:'status'|'snapshot';side:string;ownerSide:string};
+// Preparation uses the same account observations as the fleet planners. Input hashes bind the actual registry,
+// merged job files and selected observations; a fresh container needs no local status to retain shared stock.
+export function readPreparationInputs(options:{base?:string;fleetDir?:string;side?:string;planFile?:string;fallbackAccounts?:readonly {name:string;server:string;role:string}[]}={}){
+ const base=options.base??resolve(import.meta.dir,'..'),fleetDir=options.fleetDir??FLEET_DIR(),side=options.side??mySide(),server='rs-sdk-demo.fly.dev';
+ const inputSources:Record<string,PreparationSource>={},issues:string[]=[],sources:Record<string,string>={},observationSources:Record<string,ObservationSource>={};
+ const hash=(raw:string|Uint8Array)=>createHash('sha256').update(raw).digest('hex');
+ const read=(path:string,key=path):string|null=>{
+  try{const raw=readFileSync(path);inputSources[key]={path,sha256:hash(raw)};return raw.toString('utf8');}
+  catch{inputSources[key]={path,sha256:null};return null;}
+ };
+ const defaultPlan=join(base,'swarm.json'),ownerPlan=resolve(base,options.planFile??process.env.SWARM_PLAN??defaultPlan),overlay=coordinatorJobsPath(base);
+ const planInputs=[['ownerPlan',ownerPlan],['coordinatorJobs',overlay]] as const;
+ for(const[key,path]of planInputs)read(path,key);
+ const merged=ownerPlan===defaultPlan?readMergedPlan(base):mergedPlan(JSON.parse(readFileSync(ownerPlan,'utf8')),readCoordinatorJobs(base));
+ if(!Array.isArray(merged.jobs))throw Error('Preparation needs a readable jobs array');
+ for(const[key,path]of planInputs){
+  const after=existsSync(path)?hash(readFileSync(path)):null;
+  if(after!==inputSources[key]!.sha256)throw Error('Preparation plan changed while reading: '+path);
+ }
+ const registry=join(fleetDir,'owners.json'),ownerRaw=read(registry,'owners'),owners=loadOwners(registry);
+ if((existsSync(registry)?hash(readFileSync(registry)):null)!==inputSources.owners!.sha256)throw Error('Preparation owner registry changed while reading');
+ const registered=ownerRaw?Object.keys(JSON.parse(ownerRaw).accounts??{}):[];
+ const fallback=options.fallbackAccounts??FLEET;
+ const protectedNames=new Set(['haggis',...fallback.filter(a=>a.role==='main').map(a=>a.name.toLowerCase()),
+  ...merged.jobs.filter((j:GearJob)=>j.role==='main').flatMap(gearJobAccounts).map((n:string)=>n.toLowerCase())]);
+ const named=new Map<string,string>();
+ for(const name of [...registered,...fallback.filter(a=>a.role!=='main'&&a.server===server).map(a=>a.name),
+  ...merged.jobs.filter((j:GearJob)=>j.role!=='main').flatMap(gearJobAccounts)]){
+  if(typeof name!=='string'||!/^[a-z0-9]{1,12}$/i.test(name)||protectedNames.has(name.toLowerCase()))continue;
+  const owner=owners.get(name.toLowerCase());
+  if(owner&&owner.server!==server)continue;
+  if(!named.has(name.toLowerCase()))named.set(name.toLowerCase(),name);
+ }
+ const jobs:GearJob[]=merged.jobs.filter((j:GearJob)=>j.role!=='main'&&gearJobAccounts(j).every(name=>{
+  const owner=owners.get(name.toLowerCase());return !protectedNames.has(name.toLowerCase())&&sideOf(name,owners)===side&&(!owner||owner.server===server);
+ }));
+ const candidates:{row:any;side:string;source:PreparationSource&{kind:'status'|'snapshot'}}[]=[],local:any[]=[],files:SnapshotFile[]=[];
+ const statusDir=join(base,'.practice/status');
+ for(const file of existsSync(statusDir)?readdirSync(statusDir).filter(f=>f.endsWith('.json')):[]){
+  const path=join(statusDir,file),raw=read(path);
+  try{
+   const row=raw===null?null:JSON.parse(raw);
+   if(typeof row?.name!=='string'||row.name.toLowerCase()!==file.slice(0,-5).toLowerCase()){issues.push(file+': local status identity mismatch');continue;}
+   local.push(row);candidates.push({row,side,source:{...inputSources[path]!,kind:'status'}});
+  }catch{issues.push(file+': unreadable local status');}
+ }
+ const snapshotDir=join(fleetDir,'snapshots');
+ for(const file of existsSync(snapshotDir)?readdirSync(snapshotDir).filter(f=>f.endsWith('.json')):[]){
+  const path=join(snapshotDir,file),raw=read(path);
+  try{
+   const snapshot=raw===null?null:JSON.parse(raw);
+   if(typeof snapshot?.side!=='string'||!Array.isArray(snapshot.accounts)){issues.push(file+': invalid fleet snapshot');continue;}
+   files.push(snapshot);
+   for(const row of snapshot.accounts)candidates.push({row,side:snapshot.side,source:{...inputSources[path]!,kind:'snapshot'}});
+  }catch{issues.push(file+': unreadable fleet snapshot');}
+ }
+ const selected=fleetStatusRows(local,files,name=>owners.get(name.toLowerCase())?.side,side,server)
+  .filter(row=>named.has(row.name.toLowerCase()));
+ const statuses=selected.map(row=>{
+  const key=row.name.toLowerCase(),source=candidates.find(c=>c.side===row.side&&typeof c.row?.name==='string'&&c.row.name.toLowerCase()===key
+   &&typeof c.row.server==='string'&&c.row.server.toLowerCase()===server&&!c.row.practice&&c.row.at===row.at);
+  if(!source)throw Error('Preparation observation source missing: '+row.name);
+  sources[row.name]=source.source.sha256!;
+  observationSources[row.name]={...source.source,side:source.side,ownerSide:owners.get(key)?.side??source.side};
+  // Legacy fleet packs normalized notes to base IDs. Only local status or the raw-ID snapshot schema can
+  // establish carried items; a known empty legacy pack is still empty. Bank observations retain their own meaning.
+  const rawInventory=source.source.kind==='status'||row.inventoryIds==='raw'||Array.isArray(row.inventory)&&row.inventory.length===0;
+  named.set(key,row.name);return{...row,server,inventory:rawInventory?row.inventory:null};
+ });
+ const observed=new Set(statuses.map(row=>row.name.toLowerCase()));
+ for(const[key,name]of named)if(!observed.has(key))issues.push(name+': missing live observation');
+ const plan:{jobs:GearJob[];[key:string]:unknown}={...merged,jobs};
+ return{plan,names:[...named.values()],statuses,issues,sources,observationSources,inputSources};
+}
 // These are the installed workers' input contracts, not release/route gates.
 // Ranged and cow equipment remain exact. Fire keeps its existing alternatives.
 export function preparationGear(jobs:GearJob[],statuses:any[],ownedNames:string[],now=Date.now(),reservations:GearReservation[]=[],orderJournals:Record<string,ItemOrder>={}){
@@ -35,15 +115,15 @@ export function preparationGear(jobs:GearJob[],statuses:any[],ownedNames:string[
  const validItems=(items:any)=>Array.isArray(items)&&items.every(i=>integer(i?.id)&&integer(i?.count)&&i.count>0&&(i.baseId===undefined||integer(i.baseId)));
  const snapshots=new Map([...owned].map(name=>{
   const s=rowFor(name),current=!!s&&fresh(s.at);
-  const heldKnown=current&&validItems(s.inventory)&&validItems(s.equipment);
+  const packKnown=current&&validItems(s.inventory),wornKnown=current&&s.equipmentObserved!==false&&validItems(s.equipment);
   const bankKnown=current&&fresh(s.bankAt)&&s.bankAt<=s.at&&validItems(s.bank);
   const counts=(items:any[],canonical:boolean)=>{const m=new Map<number,number>();for(const i of items){const id=canonical?(i.baseId??i.id):i.id,n=(m.get(id)??0)+i.count;if(!integer(n))throw Error('Gear stock overflow');m.set(id,n);}return m;};
-  const held=counts(heldKnown?[...s.inventory,...s.equipment]:[],false),bank=counts(bankKnown?s.bank:[],true),stock=new Map<number,number>();
+  const held=counts([...(packKnown?s.inventory:[]),...(wornKnown?s.equipment:[])],false),bank=counts(bankKnown?s.bank:[],true),stock=new Map<number,number>();
   // A dated bank can precede pack changes. Use the larger independently seen
   // amount, never add potentially repeated stock across these snapshots.
   for(const id of new Set([...held.keys(),...bank.keys()]))stock.set(id,Math.max(held.get(id)??0,bank.get(id)??0));
   const skill=(name:string)=>{const rows=current&&Array.isArray(s.skills)?s.skills.filter((k:any)=>k?.name===name):[];return rows.length===1&&integer(rows[0].level)&&rows[0].level>=1&&rows[0].level<=99?rows[0].level as number:null;};
-  return[name,{stock:[...stock].map(([id,count])=>({id,count})),complete:!!heldKnown&&!!bankKnown,skill,at:current?s.at:null,bankAt:bankKnown?s.bankAt:null}] as const;
+  return[name,{stock:[...stock].map(([id,count])=>({id,count})),complete:!!packKnown&&!!wornKnown&&!!bankKnown,skill,at:current?s.at:null,bankAt:bankKnown?s.bankAt:null}] as const;
  }));
  const exact=(key:string,id:number,count=1,equippable:boolean|null=true):GearSlot=>({key,options:[{id,count,preference:0,equippable}]});
  const spent=new Map<string,GearCount[]>();
@@ -156,11 +236,8 @@ if(import.meta.main){
  const activities=haggisActivities(),planResult=scheduleOverall(loadSnapshot(snapshot),activities,opts);
  const goals=overallRequirementsFor(activities,opts,planResult);
  const requirements=goals.supplies;
- const plan=JSON.parse(readFileSync(join(root,'swarm.json'),'utf8')) as {jobs:GearJob[]};
- const names=[...new Set([...FLEET.filter(a=>a.role!=='main'&&a.server==='rs-sdk-demo.fly.dev').map(a=>a.name),...plan.jobs.filter(j=>j.role!=='main').flatMap(gearJobAccounts)])];
- const sources:Record<string,string>={},issues:string[]=[];
+ const {plan,names,statuses,sources,observationSources,inputSources,issues}=readPreparationInputs({base:root});
  const hash=(f:string)=>createHash('sha256').update(readFileSync(f)).digest('hex');
- const statuses=names.flatMap(name=>{const file=join(root,'.practice/status',name+'.json');if(!existsSync(file)){issues.push(name+': missing status');return[];}try{const raw=readFileSync(file);sources[name]=createHash('sha256').update(raw).digest('hex');return[JSON.parse(raw.toString())];}catch{issues.push(name+': unreadable status');return[];}});
  const stock=reconcilePreparation(requirements,statuses,names);
  const orderJournals:Record<string,ItemOrder>={},orderSources:Record<string,{path:string;sha256:string}>={};
  for(const job of plan.jobs.filter(j=>j.script==='scripts/buy-owned-ge-item.ts'))for(const account of gearJobAccounts(job)){
@@ -174,7 +251,7 @@ if(import.meta.main){
  const requestPath=process.argv[4]?resolve(process.argv[4]):null;
  const request=requestPath?JSON.parse(readFileSync(requestPath,'utf8')):null;
  const route=request?preparationRoute(stock,opts.travel,request.item,request):null;
- const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/buy-owned-ge-item.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
+ const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,observationSources,inputSources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/buy-owned-ge-item.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','packages/core/src/fleet.ts','packages/core/src/fleet-snapshots.ts','packages/core/src/coordinator-jobs.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
  mkdirSync(resolve(out,'..'),{recursive:true});writeFileSync(out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({output:out,requirements:report.items.length,coveredByRecentBanks:report.items.filter(i=>i.shortfall===0).length,unknownBanks:report.banks.filter(b=>b.state==='unknown').length,staged:false}));
 }

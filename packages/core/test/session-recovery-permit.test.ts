@@ -399,12 +399,15 @@ test('the controller releases only an exact expired held lease with a dead bound
   for(const [p,raw] of Object.entries(kept))expect(readFileSync(p,'utf8'),fault+' '+p).toBe(raw);
  }
 });
-test('the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect',()=>{
+test('the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect',async()=>{
  // 'not-connected-open': the old session is still held and the child began none. The lease then refuses each new
  // recovery of that session, so it is released. 'not-connected-open-logout': a receipt that names a logout keeps it.
  const reasons:Record<string,string>={'superseded-open':'producer logout not confirmed','superseded-same-run':'producer proof mismatched','not-connected-open-logout':'producer logout not confirmed',
   'not-connected-receipt-logout':'producer proof mismatched','no-attempt':'producer logout not confirmed'};
- const other={pid:4321,coordinatorRunId:null,workerRelease:source,script:'scripts/other.ts',role:null,participants:null};
+ // A synthetic fixed PID may belong to an unrelated host process; this owner has an observed process exit.
+ const previousOwner=Bun.spawn([process.execPath,'-e',''],{stdin:'ignore',stdout:'ignore',stderr:'ignore',windowsHide:true});
+ expect(await previousOwner.exited).toBe(0);
+ const other={pid:previousOwner.pid,coordinatorRunId:null,workerRelease:source,script:'scripts/other.ts',role:null,participants:null};
  for(const fault of ['superseded','superseded-open','superseded-same-run','not-connected','not-connected-no-receipt','not-connected-open','not-connected-open-logout','not-connected-receipt-logout','no-attempt']){
   const f=fixture(),root=join(f.base,'.practice/session-lifecycle'),connected=fault.startsWith('superseded'),identity={account:'Rod',server:f.request.server};
   const owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
@@ -426,7 +429,7 @@ test('the controller also releases a held lease that a later session of a differ
    const own=beginSessionAttempt(identity,{root,owner,now:()=>issued+5});own.record('ended','logged-out');
    const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
    f.put(relative(f.base,receiptFile),{...receipt,logout:'logged-out',attemptId:own.attemptId,lifecycleSha256:proof.receiptSha256,proof});
-   const later=beginSessionAttempt(identity,{root,owner:fault==='superseded-same-run'?{...owner,pid:4321}:other,now:()=>issued+30});
+   const later=beginSessionAttempt(identity,{root,owner:fault==='superseded-same-run'?{...owner,pid:other.pid}:other,now:()=>issued+30});
    if(fault!=='superseded-open')later.record('ended','logged-out');
   }else if(fault!=='not-connected-no-receipt')f.put(relative(f.base,receiptFile),{...receipt,logout:fault==='not-connected-receipt-logout'||fault==='not-connected-open-logout'?'logged-out':'not-attempted',attemptId:null,lifecycleSha256:null});
   const checks={now:()=>issued+150000,matches:()=>true,childAlive:()=>false};

@@ -20,8 +20,10 @@ import { spawn as spawnChild } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { freemem } from 'node:os';
 import { renameRetry } from '../packages/core/src/status';
-import { payoutWaiting, type DemandNear } from '../packages/core/src/bank-demand';
+import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../packages/core/src/bank-demand';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
+import {cargoAccountServer} from '../packages/core/src/cargo';
+import {parseStep,tokenizeStep} from '../packages/core/src/chain-step';
 import { courierDeliveryWaiting } from './courier-cargo';
 import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
 import {assertWorkerRelease,capabilityRevision,workerEntries} from '../packages/core/src/worker-release';
@@ -82,23 +84,51 @@ export function ownedPayoutWaiting(statuses: readonly any[], near?: DemandNear,
     return names.length > 0 && check(names, near);
 }
 
+function foodCourierRoute(step:{script:string;args?:readonly string[]},depth=0):boolean{
+    if(depth>8)return false;
+    const script=step.script.replace(/\\/g,'/').replace(/^\.\//,''),args=step.args??[];
+    if(script==='scripts/foodcourier.ts')return true;
+    if(script==='scripts/chain.ts')return args.map(parseStep).some(s=>foodCourierRoute(s,depth+1));
+    if(script==='scripts/aio-logistics.ts')return args[0]?.toLowerCase().replace(/^--role=/,'')==='food-courier';
+    if(script!=='scripts/aio.ts')return false;
+    const category=args[0]?.toLowerCase().replace(/^--category=/,'');
+    if(category==='logistics')return foodCourierRoute({script:'scripts/aio-logistics.ts',args:args.slice(1)},depth+1);
+    if(category!=='pipeline')return false;
+    const steps=args.slice(1).map(text=>{const [head,...rest]=tokenizeStep(text);return{script:'scripts/aio.ts',args:[...(head?.split(':')??[]),...rest]};});
+    return steps.some(s=>foodCourierRoute(s,depth+1));
+}
+
+// A hosted mission starts all of its workers, so one configured endpoint must cover the whole group.
+export function foodSupplyServer(job:Job,serverFor:(account:string)=>string=cargoAccountServer):string|null{
+    const parsed=parseJob(job);if('error'in parsed||job.orchestrate)return null;
+    try{const servers=parsed.accounts.map(serverFor);return servers.length&&servers.every(s=>typeof s==='string'&&s.length>0&&s===servers[0])?servers[0]!:null;}catch{return null;}
+}
+
 // Food-courier admission only. Unknown bank snapshots are not an empty food buffer.
-export function foodSupplyDemand(job:Job,statuses:readonly any[],owned:ReadonlySet<string>=ownedAccounts('rs-sdk-demo.fly.dev'),now=Date.now()):boolean{
-    if(job.script.replace(/\\/g,'/').replace(/^\.\//,'')!=='scripts/foodcourier.ts'||!Array.isArray(job.whenFoodLowFrom)||job.whenFoodLowFrom.length===0)return false;
+export function foodSupplyDemand(job:Job,statuses:readonly any[],owned?:ReadonlySet<string>,now=Date.now(),endpoint?:string|null):boolean{
+    try{if(!foodCourierRoute(job))return false;}catch{return false;}
+    if(!Array.isArray(job.whenFoodLowFrom)||job.whenFoodLowFrom.length===0||job.orchestrate)return false;
+    const parsed=parseJob(job);if('error'in parsed)return false;
+    const server=endpoint===undefined?(owned?'rs-sdk-demo.fly.dev':foodSupplyServer(job)):endpoint;
+    if(!server)return false;
+    const ownership=owned??ownedAccounts(server);
     const below=job.foodLowBelow??80,minimum=job.sourceFoodMinimum??100;
     const sources=job.foodSourceAccounts??(job.foodSourceAccount?[job.foodSourceAccount]:[]);
     if(!Number.isSafeInteger(below)||below<1||!Number.isSafeInteger(minimum)||minimum<1||!Array.isArray(sources)||!sources.length
-        ||sources.some(n=>typeof n!=='string'||!ACCOUNT.test(n)||!owned.has(n.toLowerCase())))return false;
+        ||sources.some(n=>typeof n!=='string'||!ACCOUNT.test(n)||!ownership.has(n.toLowerCase())))return false;
     const validRows=(rows:any)=>Array.isArray(rows)&&rows.every(i=>Number.isSafeInteger(i?.id)&&i.id>=0&&Number.isSafeInteger(i.count)&&i.count>0);
-    const courier=typeof job.account==='string'&&owned.has(job.account.toLowerCase())?statuses.find(s=>typeof s?.name==='string'&&s.name.toLowerCase()===job.account!.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'):undefined;
-    const held=courier&&Number.isFinite(courier.at)&&courier.at>0&&courier.at<=now&&validRows(courier.inventory)
-        ?courier.inventory.reduce((n:number,i:any)=>n+([330,334,380].includes(i.id)?i.count:0),0):0;
-    const resume=!!deliveryResume(courier?.pos?{worldX:courier.pos.x,worldZ:courier.pos.z,level:courier.pos.level}:undefined,held,job.whenFoodLowFrom.length);
-    if(!resume&&!selectFoodSource(sources,statuses,owned,now,minimum))return false;
+    const source=selectFoodSource(sources,statuses,ownership,now,minimum,server);
+    const allReady=parsed.accounts.every(account=>{
+        const courier=ownership.has(account.toLowerCase())?statuses.find(s=>typeof s?.name==='string'&&s.name.toLowerCase()===account.toLowerCase()&&s.server===server):undefined;
+        const held=courier&&Number.isFinite(courier.at)&&courier.at>0&&courier.at<=now&&validRows(courier.inventory)
+            ?courier.inventory.reduce((n:number,i:any)=>n+(COOKED_FOOD_IDS.has(i.id)&&!COOKED_FOOD_BASE_IDS.has(i.id)?i.count:0),0):0;
+        return !!source||!!deliveryResume(courier?.pos?{worldX:courier.pos.x,worldZ:courier.pos.z,level:courier.pos.level}:undefined,held,job.whenFoodLowFrom!.length);
+    });
+    if(!allReady)return false;
     return job.whenFoodLowFrom.some(name=>{
-        if(typeof name!=='string'||!ACCOUNT.test(name)||!owned.has(name.toLowerCase()))return false;
-        const farm=statuses.find(s=>typeof s?.name==='string'&&s.name.toLowerCase()===name.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev');
-        const deficit = foodDeficit(name, farm, now, below);
+        if(typeof name!=='string'||!ACCOUNT.test(name)||!ownership.has(name.toLowerCase()))return false;
+        const farm=statuses.find(s=>typeof s?.name==='string'&&s.name.toLowerCase()===name.toLowerCase()&&s.server===server);
+        const deficit = foodDeficit(name, farm, now, below,server);
         return deficit !== undefined && deficit > 0;
     });
 }

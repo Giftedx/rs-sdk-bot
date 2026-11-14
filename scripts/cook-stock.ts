@@ -103,7 +103,8 @@ async function main() {
             lastBank = (st()?.bank?.items ?? []).map(i => ({ ...i }));
             trips++;
             if (!initial) console.log(`MILESTONE banked=${banked} burntBanked=${burntBanked} processed=${processed} trips=${trips} ticks=${used()}`);
-            await bankCargo(s, [FOOD]);
+            const cargoStopped = () => requestedStop || died || ended || used() >= CAP;
+            if (!cargoStopped()) await bankCargo(s, [FOOD], 0, { stopped: cargoStopped });
             lastBank = (st()?.bank?.items ?? []).map(i => ({ ...i }));
         } finally { bankTicks += s.tick() - t; }
     };

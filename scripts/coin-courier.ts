@@ -7,9 +7,9 @@ import type { Tile } from '../packages/core/src/world';
 import { waitUntil } from '../packages/core/src/ticks';
 import { depositObserved } from '../packages/core/src/deposit';
 import { exactItem } from '../packages/core/src/cargo';
-import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { createHandoff } from './courier-handoff';
-import { parseHandoff, assertAccountOwnership, acquireAccountLeases, assertRecoverableStatus } from './handoff-inputs';
+import { parseHandoff, acquireAccountLeases } from './handoff-inputs';
+import {checkTransferAccounts,transferOrderKey} from './transfer-admission';
 
 export function parseCoins(args: string[]) {
     const [from, to, amount, ...options] = args;
@@ -181,14 +181,12 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
 
 export async function main() {
     const c = parseCoins(process.argv.slice(2)), root = resolve(import.meta.dir, '..'), dir = join(root, '.practice');
-    const read = (p: string, fallback: any) => existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : fallback;
     const host = (name: string) => serverFromEnv(readFileSync(join(root, 'vendor/rs-sdk/bots', name, 'bot.env'), 'utf8'));
     const server = host(c.donor);
     if (host(c.receiver) !== server) throw Error('coin accounts must use the same server');
     assertServerAllowed(server);
     const runId = process.env.COORDINATOR_RUN_ID ?? '';
-    const key = process.env.COIN_ORDER ?? (runId || crypto.randomUUID());
-    if (!/^[a-zA-Z0-9-]{1,80}$/.test(key)) throw Error('invalid COIN_ORDER');
+    const key = transferOrderKey(process.env.COIN_ORDER ?? (runId || crypto.randomUUID()),'COIN_ORDER');
     const journal = join(dir, 'coin-courier', key);
     if (existsSync(join(journal, 'before.json'))) throw Error('coin order already attempted; reconcile before retry');
     const sessions: Session[] = [];
@@ -196,12 +194,7 @@ export async function main() {
     const cancel = () => { cancelled = true; };
     const check = () => {
         if (cancelled) throw Error('coin courier cancelled');
-        assertAccountOwnership([c.donor, c.receiver], read(join(dir, 'coordinator/state.json'), null), read(join(root, 'swarm.json'), {}).jobs, n => existsSync(join(dir, 'stop-' + n)), runId);
-        const owned = ownedAccounts(server);
-        for (const n of [c.donor, c.receiver]) {
-            if (!owned.has(n.toLowerCase())) throw Error('not authenticated owned: ' + n);
-            if (!sessions.some(s => s.name.toLowerCase() === n.toLowerCase())) assertRecoverableStatus(read(join(dir, 'status', n + '.json'), null), null, () => true);
-        }
+        checkTransferAccounts(root,[c.donor,c.receiver],server,sessions,runId);
     };
     try {
         check(); release = acquireAccountLeases([c.donor, c.receiver], runId);

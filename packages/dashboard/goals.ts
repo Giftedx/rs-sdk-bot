@@ -22,6 +22,26 @@ type Lane = { title:string; metric:string; meta:string; level:string; blocker:st
 export type GoalInputs = { requirements:{item:string;count:number;itemId?:number}[]|null; items:any[]; quests:any[]; questConstants:string; receipts:Record<string,any> };
 const validAt=(at:any,now:number)=>Number.isFinite(at)&&at>0&&at<=now;
 const fresh=(at:any,now:number,limit=300000)=>validAt(at,now)&&now-at<limit;
+export type QuestPointObservation={points:number;at:number;source:'status'|'hiscores'};
+// Quest points are account observations, never a substitute for individual quest flags. Prefer the newest dated
+// source, with direct server state winning a tie; an explicit unknown source date cannot borrow another timestamp.
+export function questPointObservation(bot:any,now:number):QuestPointObservation|null{
+ const server='rs-sdk-demo.fly.dev',name=typeof bot?.name==='string'?bot.name.toLowerCase():'';
+ const points=(value:unknown):value is number=>Number.isSafeInteger(value)&&Number(value)>=0;
+ const compatible=(value:any)=>value&&typeof value==='object'&&!value.practice
+  &&(!Object.hasOwn(value,'server')||typeof value.server==='string'&&value.server.toLowerCase()===server)
+  &&['name','account'].every(key=>!Object.hasOwn(value,key)||typeof value[key]==='string'&&value[key].toLowerCase()===name);
+ if(!/^[a-z0-9_ -]{1,12}$/.test(name)||typeof bot.server!=='string'||bot.server.toLowerCase()!==server
+  ||!compatible(bot)||!Number.isFinite(now)||now<=0)return null;
+ const facts=bot.guildFacts,qp=facts?.varps?.qp;
+ let selected:QuestPointObservation|null=compatible(facts)&&points(qp)&&validAt(bot.at,now)?{points:qp,at:bot.at,source:'status'}:null;
+ for(const rank of Array.isArray(bot.ranks)?bot.ranks:[]){
+  if(rank?.board!=='Quest Points'||!compatible(rank)||!points(rank.level))continue;
+  const at=Object.hasOwn(rank,'at')?rank.at:bot.ranksAt;
+  if(validAt(at,now)&&(!selected||at>selected.at))selected={points:rank.level,at,source:'hiscores'};
+ }
+ return selected;
+}
 const nameKey=(s:string)=>s.trim().toLowerCase().replace(/\s*\(noted\)$/,'').replace(/^feathers$/,'feather').replace(/^headless arrows$/,'headless arrow');
 const boardKey=(s:string)=>s.toLowerCase().replace(/^lava maze /,'').replace(/[^a-z]/g,'');
 const num=(v:number)=>Number.isFinite(v)?Number(v.toFixed(2)).toLocaleString('en-US'):'?';
@@ -82,12 +102,13 @@ export function goalProgress(state:any,input:GoalInputs):Lane[]{
  const skillRows=SKILLS.map(skill=>{const candidates=snapshotBots.flatMap((b:any)=>(b.skills??[]).filter((s:any)=>s.name?.toLowerCase()===skill&&Number.isFinite(s.level)&&Number.isFinite(s.xp)).map((s:any)=>({...s,account:b.name,at:b.at}))).sort((a:any,b:any)=>b.level-a.level||b.xp-a.xp);return {skill,best:candidates[0]};});
  const maxed=skillRows.filter(s=>s.best?.level>=99),pairs=snapshotBots.reduce((n:number,b:any)=>n+(b.skills??[]).filter((s:any)=>SKILLS.includes(s.name?.toLowerCase())&&s.level>=99).length,0);
 
- const qp=bots.flatMap((b:any)=>(b.ranks??[]).filter((q:any)=>q.board==='Quest Points'&&validAt(b.ranksAt,now)&&Number.isFinite(q.level)).map((q:any)=>({name:b.name,points:q.level,at:b.ranksAt})));
+ const qp=bots.flatMap((b:any)=>{const value=questPointObservation(b,now);return value?[{name:b.name,...value,
+  path:value.source==='hiscores'?'hiscore snapshot':b.remote||b.snapshotOnly?`fleet/snapshots/${b.side??'unknown'}.json`:statusPath(b)}]:[];});
  const a=r.apron,g=r.guildPractice,gl=r.guildLive;
  const apronOK=validAt(a?.at,now)&&a.ok===true&&a.assetCheck===true&&a.code===0&&a.after?.server==='rs-sdk-demo.fly.dev'&&owned.has(String(a.after?.name).toLowerCase())&&Array.isArray(a.result?.bank?.items)&&a.result.bank.items.some((i:any)=>i&&i.id===1757&&i.count>0);
  const practiceOK=g?.ok===true&&g.code===0&&g.assetCheck===true&&g.result?.gained>0&&validAt(g.result?.bankAfter?.at,now);
  const liveGuild=validAt(gl?.at,now)&&gl.ok===false?'failed / stopped':'unproved';
- const questRows=[...questFlags.rows.slice(0,2),row('Reward extract',`${input.quests.length}/${sourceQP.length||'?'} · ${parsedQP}/${maxQP||'?'} QP`,'knowledge/quests.json; vendor/rs-sdk/server/content/scripts/general/configs/quest.constant',undefined,input.quests.length!==sourceQP.length?'warn':'dm'),row('Rune Mysteries · live',r.rune?.ok===false&&validAt(r.rune?.status?.at,now)?r.rune.status.result:'No accepted completion',GOAL_RECEIPTS.rune,r.rune?.status?.at,'warn'),...questFlags.rows.slice(2),...qp.map((q:any)=>row(`${q.name} recorded QP`,`${q.points}/${maxQP||'?'} · not a quest census`,'hiscore snapshot',q.at)),row('99s observed',`${pairs} skill-account pairs · ${maxed.length}/${SKILLS.length} skill types`,'.practice/status'),row('Brown apron',apronOK?'acquired + banked live':'unproved',GOAL_RECEIPTS.apron,a?.at,apronOK?'good':'warn'),row('Guild chain · practice',practiceOK?`${g.result.gained} ore · cloned inputs`:'unproved',GOAL_RECEIPTS.guildPractice,g?.result?.bankAfter?.at,practiceOK?'good':'warn'),row('Guild chain · live',liveGuild,GOAL_RECEIPTS.guildLive,gl?.at,'warn'),...skillRows.map(s=>row(s.skill,s.best?`${s.best.level}/99 · ${s.best.account} · ${num(Math.max(0,xpForLevel(99)-s.best.xp))} XP left`:'no observation',s.best?`.practice/status/${s.best.account}.json`:'.practice/status',s.best?.at,s.best?.level>=99?'good':'dm'))];
+ const questRows=[...questFlags.rows.slice(0,2),row('Reward extract',`${input.quests.length}/${sourceQP.length||'?'} · ${parsedQP}/${maxQP||'?'} QP`,'knowledge/quests.json; vendor/rs-sdk/server/content/scripts/general/configs/quest.constant',undefined,input.quests.length!==sourceQP.length?'warn':'dm'),row('Rune Mysteries · live',r.rune?.ok===false&&validAt(r.rune?.status?.at,now)?r.rune.status.result:'No accepted completion',GOAL_RECEIPTS.rune,r.rune?.status?.at,'warn'),...questFlags.rows.slice(2),...qp.map((q:any)=>row(`${q.name} recorded QP`,`${q.points}/${maxQP||'?'} · not a quest census`,q.path,q.at)),row('99s observed',`${pairs} skill-account pairs · ${maxed.length}/${SKILLS.length} skill types`,'.practice/status'),row('Brown apron',apronOK?'acquired + banked live':'unproved',GOAL_RECEIPTS.apron,a?.at,apronOK?'good':'warn'),row('Guild chain · practice',practiceOK?`${g.result.gained} ore · cloned inputs`:'unproved',GOAL_RECEIPTS.guildPractice,g?.result?.bankAfter?.at,practiceOK?'good':'warn'),row('Guild chain · live',liveGuild,GOAL_RECEIPTS.guildLive,gl?.at,'warn'),...skillRows.map(s=>row(s.skill,s.best?`${s.best.level}/99 · ${s.best.account} · ${num(Math.max(0,xpForLevel(99)-s.best.xp))} XP left`:'no observation',s.best?`.practice/status/${s.best.account}.json`:'.practice/status',s.best?.at,s.best?.level>=99?'good':'dm'))];
  const specialist=(state.boards??[]).map((b:any)=>{const ranks=bots.flatMap((a:any)=>(a.ranks??[]).filter((x:any)=>boardKey(x.board)===boardKey(b.board)&&fresh(x.at??a.ranksAt,now,600000)&&Number.isSafeInteger(x.rank)&&x.rank>0).map((x:any)=>({...x,account:a.name,at:x.at??a.ranksAt}))).sort((a:any,b:any)=>a.rank-b.rank);return {board:b.board,best:ranks[0],top:b.top,kind:b.kind,cutoff:b.cutoff};});
  const known=specialist.filter((s:any)=>s.best),first=known.filter((s:any)=>s.best.rank===1),contender=known.filter((s:any)=>s.best.rank>1).sort((a:any,b:any)=>a.best.rank-b.best.rank)[0];
  const rankRows=specialist.map((s:any)=>row(s.board,s.best?`#${s.best.rank} · ${s.best.account} · level ${s.best.level}`:s.kind==='value'?(s.cutoff?`Not in the top ${s.cutoff.rank} (#${s.cutoff.rank} holds ${s.cutoff.text})`:'Board not read'):'Recent rank missing',s.best?'hiscore snapshot':'packages/dashboard/server.ts',s.best?.at,s.best?'dm':'warn'));

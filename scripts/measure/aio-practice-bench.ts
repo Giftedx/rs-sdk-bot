@@ -34,7 +34,7 @@
 import {simStatFile, startStack} from '../../packages/practice/src/stack';
 import {proveInProcess} from '../../packages/practice/src/prove';
 import {createBot} from '../../packages/practice/src/bots';
-import {applyPreset, PRESETS} from '../../packages/practice/src/presets';
+import {applyPreset, preparePresetDirectory, PRESETS} from '../../packages/practice/src/presets';
 import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type BenchCase} from './aio-bench-cases';
 import {FISHING_BENCH_CASES} from './fishing-bench-cases';
 import {practiceDir, rsSdkRoot} from '../../packages/practice/src/paths';
@@ -346,19 +346,24 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
         // applyPreset writes the varps above 308 itself; a case that sets one keeps the one-account path.
         const plain = everyConf.every(x => x && !Object.keys(x.varps ?? {}).some(k => Number(k) >= 309));
         if (name === bot && (c.companions?.length ?? 0) >= 4 && plain) {
-          const all = [{ name: bot, conf }, ...c.companions!.map(k => ({ name: bot + k.suffix, conf: k.presetConfig ?? PRESETS[k.preset]! }))];
+          const saveDir = preparePresetDirectory();
+          const all = [{ name: bot, conf }, ...c.companions!.map(k => ({ name: bot + k.suffix, conf: k.presetConfig ?? PRESETS[k.preset]! }))]
+            .map(a => ({ ...a, path: join(saveDir, `${a.name.toLowerCase()}.sav`) }));
           const missing = all.filter(a => !existsSync(join(rsSdkRoot(), 'bots', a.name, 'bot.env')));
           for (let i = 0; i < missing.length; i += 8) await Promise.all(missing.slice(i, i + 8).map(a =>
             Bun.spawn(['bun', 'bots/create-bot.ts', a.name, '--local', '--no-chat'], { cwd: rsSdkRoot(), stdout: 'ignore', stderr: 'ignore', windowsHide: true }).exited));
           const code = `import { generateSave } from './sdk/test/utils/save-generator.ts';
-for (const a of JSON.parse(await Bun.file(process.env.BULK_FILE).text())) await generateSave(a.name, a.conf);
+for (const a of JSON.parse(await Bun.file(process.env.BULK_FILE).text())) {
+  const path = await generateSave(a.name, a.conf);
+  if (path !== a.path || !await Bun.file(a.path).exists()) throw Error('unexpected preset save path: ' + path);
+}
 console.log('SAVES_DONE');`;
           const bulk = resolve('.practice/aio-bench', `bulk-${bot}.json`);
           mkdirSync(dirname(bulk), { recursive: true });
           writeFileSync(bulk, JSON.stringify(all));
           const made = Bun.spawnSync(['bun', '-e', code], { cwd: rsSdkRoot(), env: { ...process.env, BULK_FILE: bulk }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
           rmSync(bulk, { force: true });
-          if (made.stdout.toString().includes('SAVES_DONE')) for (const a of all) bulkReady.add(a.name);
+          if (made.exitCode === 0 && made.stdout.toString().includes('SAVES_DONE')) for (const a of all) bulkReady.add(a.name);
         }
         const account = await createBot(name);
         if (!bulkReady.has(name)) await applyPreset(name, conf);

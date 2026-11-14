@@ -1,6 +1,13 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
+import {questPointObservation} from './goals';
+import {healthObservation,remoteBots} from './fleet-view';
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
+const pricingSource=shell.slice(shell.indexOf('  const priceName='),shell.indexOf('  // Item stats (RuneLite'));
+const pricing=(S:any)=>new Function('S','window',`${pricingSource};return {price,priceKey};`)(S,{});
+const healthSource=shell.slice(shell.indexOf('  function recordedHp('),shell.indexOf('  const curLevel='));
+const questPointSource=shell.slice(shell.indexOf('  function questPointsOf('),shell.indexOf('  function questReqs('));
+const equipmentValue=new Function(`${shell.slice(shell.indexOf('  function equipmentValue('),shell.indexOf('  function wornBonuses('))};return equipmentValue;`)();
 
 test('the fleet search shortcut focuses the visible search control',()=>{
  const code=shell.slice(shell.lastIndexOf("  window.addEventListener('keydown'"),shell.indexOf('  window.atlasClient='));
@@ -78,9 +85,9 @@ test('an open bank redraws newer observations and closes when its account change
  current={name:'Other',bank:[]};node('input').oninput();expect(removed).toBe(true);
 });
 
-function questPanel(bot:any,filter='all'){
+function questPanel(bot:any,filter='all',now=Date.now()){
  const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'&&questScope==='fleet')"),shell.indexOf("    if(selectedTab==='friends')"));
- return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String);
+ return new Function('b','questFilter','E','age','S',`${questPointSource};const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String,{now});
 }
 
 test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
@@ -96,6 +103,49 @@ test('quest points need a point observation, not the number of completed quests'
  const bot={quests:[{name:'One quest',state:'complete'}]};
  expect(questPanel(bot)).toContain('Quest Points: —');
  expect(questPanel({...bot,ranks:[{board:'Quest Points',level:4}]})).toContain('Quest Points: 4');
+});
+
+test('quest requirements, journal and chat use the backend selected QP, including explicit unknown',()=>{
+ const now=1_000_000,server='rs-sdk-demo.fly.dev';
+ const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
+ const data={Gate:{s:[],q:[],qp:[55,1]}},sync=(v:any):any=>({then:(f:any)=>sync(f(v))});
+ const t=new Function('S','asset','fetch','E',`${code};return {questPointsOf,questReqs,questReady};`)({now},String,()=>sync({ok:true,json:()=>data}),String);
+ let current:any={name:'Worker',server,at:now-10,guildFacts:{varps:{qp:55}},ranksAt:now-1000,ranks:[{board:'Quest Points',level:50,rank:12}],quests:[]};
+ current.questPoints=questPointObservation(current,now);
+ const chat=shell.slice(shell.indexOf('  function chatLookup(text){'),shell.indexOf('  // Opponent information',shell.indexOf('  function chatLookup(text){')));
+ const lookup=new Function('S','account','safeName','nf',`${questPointSource};${chat};return chatLookup;`)({now},()=>current,String,String);
+ expect(t.questReqs(current,'Gate')).toEqual([{text:'55 quest points',ok:true,have:55,src:1}]);
+ expect(t.questReady(current,{name:'Gate',state:'not started'})).toBe(true);
+ expect(questPanel(current,'all',now)).toContain('Quest Points: 55');
+ expect(lookup('!qp')).toBe('Worker: 55 quest points.');
+ expect(current.quests).toEqual([]);
+ current={...current,questPoints:null};
+ expect(t.questReqs(current,'Gate')[0]).toMatchObject({have:null,ok:null});
+ expect(t.questReady(current,{name:'Gate',state:'not started'})).toBe(false);
+ expect(questPanel(current,'all',now)).toContain('Quest Points: —');
+ expect(lookup('!qp')).toBe('Worker: quest points not reported.');
+ current={...current,questPoints:{points:0,at:now-10,source:'status'}};
+ expect(t.questReqs(current,'Gate')[0]).toMatchObject({have:0,ok:false});
+ expect(questPanel(current,'all',now)).toContain('Quest Points: 0');expect(lookup('!qp')).toBe('Worker: 0 quest points.');
+ current={...current,ranksAt:now-1,ranks:[{board:'Quest Points',level:60,rank:4}],questPoints:{points:60,at:now-1,source:'hiscores'}};
+ expect(lookup('!qp')).toBe('Worker: 60 quest points · rank #4.');
+});
+
+test('current QP cannot fall back after invalid values while old APIs retain compatible safe rank display',()=>{
+ const now=1_000_000,t=new Function('S',`${questPointSource};return questPointsOf;`)({now});
+ const base={name:'Worker',server:'rs-sdk-demo.fly.dev',ranks:[{board:'Quest Points',level:55,rank:12}]};
+ expect(t(base)).toEqual({points:55,at:null,source:'hiscores',rank:12});
+ for(const questPoints of [null,undefined,{points:-1,at:now-1,source:'status'},{points:1.5,at:now-1,source:'status'},
+  {points:Number.MAX_SAFE_INTEGER+1,at:now-1,source:'status'},{points:55,at:now+1,source:'status'},{points:55,at:null,source:'status'},
+  {points:55,at:now-1,source:'unknown'}])expect(t({...base,questPoints})).toBeNull();
+ for(const change of [{practice:true},{server:'foreign'},{server:null},{account:'Other'}])expect(t({...base,...change})).toBeNull();
+ for(const at of [null,undefined,0,now+1]){
+  expect(t({...base,ranksAt:at})).toBeNull();
+  expect(t({...base,ranksAt:now-1,ranks:[{...base.ranks[0],at}]})).toBeNull();
+ }
+ for(const change of [{account:'Other'},{server:'foreign'},{practice:true},{level:'55'},{level:-1}])
+  expect(t({...base,ranks:[{...base.ranks[0],...change}]})).toBeNull();
+ expect(t({...base,ranks:[...base.ranks,{board:'Quest Points',level:60}]})).toBeNull();
 });
 
 test('unknown quest flags stay separate from observed started quests',()=>{
@@ -708,7 +758,7 @@ test('!price answers from the market, then from the item value',()=>{
  expect(priceLine(' ')).toContain('Usage: !price');
  // With the alchemy table: the high alch value on each answer, and an item that only has an alch value.
  const itemAlch={'Cannonball':5,'Rune scimitar':25600,'Rune platebody':65000};
- const alchOf=(n:string)=>itemAlch[n as keyof typeof itemAlch]?Math.max(Math.floor(itemAlch[n as keyof typeof itemAlch]*6/10),1):null;
+ const alchOf=(item:any)=>{const n=typeof item==='string'?item:item?.name;return itemAlch[n as keyof typeof itemAlch]?Math.max(Math.floor(itemAlch[n as keyof typeof itemAlch]*6/10),1):null;};
  const withHa=new Function('S','nf','alchOf','itemAlch',`${code};return priceLine;`)(S,(n:number)=>n.toLocaleString('en-US'),alchOf,itemAlch);
  expect(withHa('cannon')).toBe('Cannonball: ask 7,320 gp · bid none · 18,118 in stock · high alch 3 gp.');
  expect(withHa('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · high alch 15,360 gp · no market offer.');
@@ -837,9 +887,9 @@ test('loot of a kill: expected count times the item value, the top items, and th
 test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hitpoints, then XP and gold an hour',()=>{
  const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
  const sync=(v:any)=>({then(f:any){return sync(f(v));}});
- const data:any={'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{'Moss giant':[['Coins',20]]},'weapon-speed.json':{'Rune longsword':5}};
+ const data:any={'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{'Moss giant':[['Coins',20]]},'weapon-speed.json':{'Rune longsword':5,'Bronze dart':4,'Rune dagger':4,'Staff of fire':4}};
  const bon=[0,67,0,0,0,0,0,0,0,0,66,0,0];
- const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[{name:'Rune longsword',slot:3}]}),wornBonuses:()=>bon,curLevel:()=>60,
+ const env:any={equipmentValue,asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[{name:'Rune longsword',slot:3}]}),wornBonuses:()=>bon,curLevel:()=>60,
   maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:(n:string)=>n==='Coins'?{value:1}:null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{}};
  const t=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env));
  // Max floor((68 x 130 + 320) / 640) = 14; slash hit 86% (A = 68 x 131 = 8,908 against 2,496): 0.86 x 7 = 6.02 a swing;
@@ -891,11 +941,12 @@ test('combat training: the NPCs with the most XP an hour that spawn, leaving out
  const row=(hp:number,str:number,sb:number)=>[10,1,1,0,0,0,0,0,1,str,0,sb,2,hp,1000,60];
  const cow=row(8,1,0);cow[1]=20;
  const data:any={'npc-defence.json':{'Cow':[cow],'Moss giant':[row(60,30,31)],'Ogre':[row(60,60,80)],'Ghost town':[row(30,1,0)],'Wild giant':[row(60,30,31)]},'npc-loot.json':{},'weapon-speed.json':{}};
- const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[]}),wornBonuses:()=>[0,50,0,0,0,0,0,0,0,0,50,0,0],curLevel:()=>40,
+ const now=1_000_000,account:any={equipment:[],inWorld:true,at:now,hpAt:now,hp:{now:40,max:40}};
+ const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>account,Date:{now:()=>now},wornBonuses:()=>[0,50,0,0,0,0,0,0,0,0,50,0,0],curLevel:()=>40,
   maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:()=>null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{},E:(x:string)=>x,
   wildLevel:(p:any)=>p.x>=2944&&p.x<=3391&&p.z>=3520&&p.z<=6399?Math.floor((p.z-3520)/8)+1:0,
   npcSpawns:[['Cow',0,0,[3253,3270,0]],['Moss giant',0,0,[3100,3927,0,2550,3405,0]],['Ogre',0,0,[2500,3000,0]],['Wild giant',0,0,[3100,3927,0]]]};
- const t=new Function(...Object.keys(env),`${code};return {trainRows,trainBox,hourRates};`)(...Object.values(env));
+ const t=new Function(...Object.keys(env),`${healthSource}${code};return {trainRows,trainBox,hourRates};`)(...Object.values(env));
  // The training rate counts only Moss giant's safe spawn: one spawn, so the respawn wait counts in full.
  expect(t.hourRates('Moss giant',true).lo).toBeLessThan(t.hourRates('Moss giant').lo);
  const rows=t.trainRows();
@@ -905,6 +956,9 @@ test('combat training: the NPCs with the most XP an hour that spawn, leaving out
  expect(rows.map((r:any)=>r.name)).toEqual(['Moss giant','Cow']);
  expect(rows[0].xp).toBeGreaterThan(rows[1].xp);
  expect(t.trainBox()).toContain('data-finder-pick="Moss giant" data-finder-safe');
+ account.hpAt=now-10_001;account.live={seen:now};expect(t.trainRows()).toEqual([]);
+ account.hpAt=null;expect(t.trainRows()).toEqual([]);
+ delete account.hpAt;delete account.hp;account.skills=[{name:'Hitpoints',level:40}];expect(t.trainRows()).toEqual([]);
 });
 
 test('a safe pick (a Combat training row) keeps only the spawns outside the Wilderness',()=>{
@@ -963,39 +1017,43 @@ test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spa
 
 test('regeneration meter: the heal and restore timers, their phase from a 1-point step, at most until seen',()=>{
  const code=shell.slice(shell.indexOf("  // Regeneration meter (RuneLite's"),shell.indexOf('  function infoboxes(){'));
- const t=new Function('S','trackKey',`${code};return {regenTrack,regenHpText,regenStatText};`)({world:{tickMs:400}},(b:any)=>(b?.practice?'practice:':'')+b?.name);
- const b:any={name:'A',inWorld:true,hp:{now:20,max:30},skills:[{name:'Attack',currentLevel:50,level:60},{name:'Prayer',currentLevel:1,level:40}]};
- t.regenTrack(b,0);
+ const t=new Function('S','trackKey',`${healthSource}${code};return {regenTrack,regenHpText,regenStatText};`)({world:{tickMs:400}},(b:any)=>(b?.practice?'practice:':'')+b?.name);
+ const start=1_000_000,read=(b:any,at:number)=>{b.at=b.hpAt=start+at;return t.regenTrack(b,start+at);},text=(b:any,at:number)=>t.regenHpText(b,start+at);
+ const b:any={name:'A',inWorld:true,hp:{now:20,max:30},skills:[]};read(b,0);
  // 10 missing x 100 ticks x 400 ms = 400 s; the phase is not seen yet.
- expect(t.regenHpText(b,0)).toBe(' · full in at most 6:40');
- // Hitpoints 20 -> 21 at 10 s: the timer ticked. At 25 s the next heal is 40 - 15 = 25 s away, then 8 more x 40 s.
- b.hp.now=21;t.regenTrack(b,10e3);expect(t.regenHpText(b,25e3)).toBe(' · next heal in 0:25 · full in 5:45');
+ expect(text(b,0)).toBe(' · full in at most 6:40');
+ // Hitpoints 20 -> 21 at 10 s sets the phase; another read at 20 s keeps the observation current at 25 s.
+ b.hp.now=21;read(b,10e3);read(b,20e3);expect(text(b,25e3)).toBe(' · next heal in 0:25 · full in 5:45');
  // +1 with a changed pack (a hit and a cake bite) is no timer tick: the phase stays.
- const e:any={...b,name:'E',hp:{now:20,max:30},inventory:[{name:'Cake',count:1}]};t.regenTrack(e,0);
- e.hp={now:21,max:30};e.inventory=[{name:'2/3 cake',count:1}];t.regenTrack(e,10e3);expect(t.regenHpText(e,10e3)).toBe(' · full in at most 6:00');
+ const e:any={...b,name:'E',hp:{now:20,max:30},inventory:[{name:'Cake',count:1}]};read(e,0);
+ e.hp={now:21,max:30};e.inventory=[{name:'2/3 cake',count:1}];read(e,10e3);expect(text(e,10e3)).toBe(' · full in at most 6:00');
  // +1 while coins come in (loot only adds) is a timer tick.
- e.inventory=[{name:'2/3 cake',count:1},{name:'Coins',count:50}];e.hp={now:22,max:30};t.regenTrack(e,20e3);expect(t.regenHpText(e,20e3)).toBe(' · next heal in 0:40 · full in 5:20');
+ e.inventory=[{name:'2/3 cake',count:1},{name:'Coins',count:50}];e.hp={now:22,max:30};read(e,20e3);expect(text(e,20e3)).toBe(' · next heal in 0:40 · full in 5:20');
  // A heal of 5 (food) is no timer tick: the phase stays. 4 missing: 20 s, then 3 more x 40 s.
- b.hp.now=26;t.regenTrack(b,30e3);expect(t.regenHpText(b,30e3)).toBe(' · next heal in 0:20 · full in 2:20');
+ b.hp.now=26;read(b,30e3);expect(text(b,30e3)).toBe(' · next heal in 0:20 · full in 2:20');
  // Attack 50 / 60: at most 400 s; 51 at 12 s sets the phase: at 12 s, 40 s to the next and 8 more.
- expect(t.regenStatText(b,b.skills[0],0)).toBe(' · back to 60 in at most 6:40');
- b.skills[0].currentLevel=51;t.regenTrack(b,12e3);expect(t.regenStatText(b,b.skills[0],12e3)).toBe(' · back to 60 in 6:00');
+ const a:any={name:'Stats',inWorld:true,hp:{now:20,max:30},skills:[{name:'Attack',currentLevel:50,level:60}]};read(a,0);
+ expect(t.regenStatText(a,a.skills[0],start)).toBe(' · back to 60 in at most 6:40');
+ a.skills[0].currentLevel=51;read(a,12e3);expect(t.regenStatText(a,a.skills[0],start+12e3)).toBe(' · back to 60 in 6:00');
  // Rapid Heal: heals at 0 s and 20 s (50 ticks) set a 50-tick period: at 20 s the next heal is 20 s away, then 17 x 20 s.
- const f:any={name:'F',inWorld:true,hp:{now:10,max:30},skills:[]};t.regenTrack(f,-5e3);
- f.hp={now:11,max:30};t.regenTrack(f,0);f.hp={now:12,max:30};t.regenTrack(f,20e3);
- expect(t.regenHpText(f,20e3)).toBe(' · next heal in 0:20 · full in 6:00');
+ const f:any={name:'F',inWorld:true,hp:{now:10,max:30},skills:[]};read(f,-5e3);
+ f.hp={now:11,max:30};read(f,0);f.hp={now:12,max:30};read(f,20e3);
+ expect(text(f,20e3)).toBe(' · next heal in 0:20 · full in 6:00');
  // A drained and a boosted stat use two timers: a rise of the drained one does not set the boosted one's phase.
- const g:any={name:'G',inWorld:true,hp:{now:30,max:30},skills:[{name:'Attack',currentLevel:50,level:60},{name:'Strength',currentLevel:70,level:60}]};t.regenTrack(g,0);
- g.skills[0].currentLevel=51;t.regenTrack(g,10e3);
- expect(t.regenStatText(g,g.skills[0],10e3)).toBe(' · back to 60 in 6:00');expect(t.regenStatText(g,g.skills[1],10e3)).toBe(' · back to 60 in at most 6:40');
+ const g:any={name:'G',inWorld:true,hp:{now:30,max:30},skills:[{name:'Attack',currentLevel:50,level:60},{name:'Strength',currentLevel:70,level:60}]};read(g,0);
+ g.skills[0].currentLevel=51;read(g,10e3);
+ expect(t.regenStatText(g,g.skills[0],start+10e3)).toBe(' · back to 60 in 6:00');expect(t.regenStatText(g,g.skills[1],start+10e3)).toBe(' · back to 60 in at most 6:40');
  // An offline practice row of the same name does not delete the live record.
- t.regenTrack({...b,practice:true,inWorld:false},30e3);expect(t.regenHpText(b,30e3)).not.toBe('');
- // The clock stops 10 s after the stat read (b.at); a live sight (b.live.seen) does not move it. Heal at 2 s, clock
- // stopped at 12 s: the next heal 30 s away, then 8 x 40 s.
- const h:any={name:'H',inWorld:true,at:1,live:{seen:200e3},hp:{now:20,max:30},skills:[]};t.regenTrack(h,1);
- h.hp={now:21,max:30};h.at=2e3;t.regenTrack(h,2e3);expect(t.regenHpText(h,200e3)).toBe(' · next heal in 0:30 · full in 5:50');
+ t.regenTrack({...b,practice:true,inWorld:false},start+30e3);expect(text(b,30e3)).not.toBe('');
+ // A current roster sight cannot keep a historical health prediction alive.
+ const h:any={name:'H',inWorld:true,live:{seen:start+200e3},hp:{now:20,max:30},skills:[]};read(h,1);
+ h.hp={now:21,max:30};read(h,2e3);expect(text(h,200e3)).toBe('');expect(t.regenTrack(h,start+200e3)).toBeNull();
+ // Redrawing the same dated sample, even with an inconsistent value, cannot manufacture a timer phase.
+ const same:any={name:'Same',inWorld:true,hp:{now:20,max:30},skills:[]};read(same,0);same.hp.now=21;
+ t.regenTrack(same,start+1000);expect(text(same,1000)).toBe(' · full in at most 6:00');
+ read(same,2000);expect(text(same,2000)).toBe(' · next heal in 0:40 · full in 6:00');
  // Logged out: the record goes.
- t.regenTrack({...b,inWorld:false},40e3);expect(t.regenHpText(b,40e3)).toBe('');
+ t.regenTrack({...b,inWorld:false},start+40e3);expect(text(b,40e3)).toBe('');
 });
 
 test('prayer time left: the server drain counter, the resistance from the prayer bonus',()=>{
@@ -1031,7 +1089,7 @@ test('banked XP line: every skill the bank holds XP for, the most first, with th
 test('GE sort: the flip margin after the 5% tax, and the high alch profit after a nature rune',()=>{
  const code=shell.slice(shell.indexOf('  // GE sort (RuneLite'),shell.indexOf("  function gePanel(){"));
  const S:any={economy:{supplies:[{name:'Nature rune',ask:260,bid:240}]}};
- const alchOf=(n:string)=>({'Rune platebody':39000} as any)[n]??null;
+ const alchOf=(item:any)=>({'Rune platebody':39000} as any)[typeof item==='string'?item:item?.name]??null;
  const geProfit=new Function('S','alchOf','price',`${code};return geProfit;`)(S,alchOf,()=>null);
  // Sell at 1,999: 99 tax, 1,900 net; buy at 1,501: 399 a flip.
  expect(geProfit({ask:2000,bid:1500,vwap:2500},'flip')).toBe(399);
@@ -1141,7 +1199,7 @@ test('high alch: the server value, the profit of a cast after the market buy and
  const data={'Rune platebody':65000,'Coins':1,'Steel arrow':12,'Cabbage':1};
  const sync=(v:any)=>({then(f:any){const r=f(v);return sync(r);}});
  const prices:Record<string,any>={'Rune platebody':{value:38000,ask:37000,bid:36000},'Nature rune':{value:250,ask:260,bid:240},'Steel arrow':{value:5,ask:null,bid:null}};
- const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:(n:string)=>/^coins$/i.test(n)?{value:1}:prices[n]??null,nf:(n:number)=>n.toLocaleString('en-US'),gp:(n:number)=>n.toLocaleString('en-US')+' gp'};
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:(i:any)=>{const n=typeof i==='string'?i:i?.name;return /^coins$/i.test(n)?{value:1}:prices[n]??null;},nf:(n:number)=>n.toLocaleString('en-US'),gp:(n:number)=>n.toLocaleString('en-US')+' gp'};
  const t=new Function(...Object.keys(env),`${code};return {alchOf,alchTip,priceTip};`)(...Object.values(env));
  expect(t.alchOf('Rune platebody')).toBe(39000);
  expect(t.alchOf('Cabbage')).toBe(1);
@@ -1159,6 +1217,49 @@ test('high alch: the server value, the profit of a cast after the market buy and
  expect(t.priceTip({name:'Rune platebody',count:1})).toContain('market buy 39,500 / sell 39,000 · high alch 39,000');
 });
 
+test('exact alchemy identity reaches tooltips, GE profit, chat and the displayed bank HA total',()=>{
+ const alchemy=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const ge=shell.slice(shell.indexOf('  function geProfit(i,mode){'),shell.indexOf('  function gePanel(){'));
+ const chat=shell.slice(shell.indexOf('  function priceLine(q){'),shell.indexOf('  function chatLookup(text){'));
+ const data=JSON.parse(readFileSync(new URL('./client-assets/item-alch.json',import.meta.url),'utf8'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}}),nf=(n:number)=>n.toLocaleString('en-US'),gp=(n:number)=>nf(n)+' gp';
+ const green={id:1135,name:'Dragonhide body',count:2,ask:4000,bid:3000},black={id:2503,name:'Dragonhide body',count:1,ask:4000,bid:3000};
+ const noted={id:1136,baseId:1135,name:'Dragonhide body',count:3},ambiguous={name:'Dragonhide body',count:1};
+ const S={economy:{supplies:[{id:561,name:'Nature rune',ask:260},green,black],itemValues:{}}};
+ const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:()=>null,nf,gp,S};
+ const t=new Function(...Object.keys(env),`${alchemy}${ge}${chat};return {alchOf,alchTip,geProfit,priceLine};`)(...Object.values(env));
+ expect(t.alchOf(green)).toBe(4680);expect(t.alchOf(black)).toBe(8088);expect(t.alchOf(noted)).toBe(4680);
+ expect(t.alchOf(ambiguous)).toBeNull();expect(t.alchOf('Dragonhide body')).toBeNull();
+ expect(t.alchOf({id:999999,name:'Rune platebody'})).toBeNull();expect(t.alchOf('Rune platebody')).toBe(39000);
+ expect(t.alchOf({id:995,name:'Other'})).toBeNull();
+ expect(t.alchTip(green)).toBe(' · high alch 4,680 (9,360 gp for 2) · alch profit +420 a cast after the market buy and a nature rune');
+ expect(t.alchTip(black)).toBe(' · high alch 8,088 · alch profit +3,828 a cast after the market buy and a nature rune');expect(t.alchTip(ambiguous)).toBe('');
+ expect(t.geProfit(green,'alch')).toBe(420);expect(t.geProfit(black,'alch')).toBe(3828);expect(t.geProfit({...ambiguous,ask:4000},'alch')).toBeNull();
+ expect(t.priceLine('dragonhide body')).toContain('high alch 4,680 gp');
+ const bank=shell.slice(shell.indexOf('  function openBank(){'),shell.indexOf('  // Orbs as RuneLite'));
+ const current={name:'Worker',bankAt:1,bank:[green,black,noted,ambiguous]},nodes:any={};
+ const node=(s:string)=>nodes[s]??=(s==='input'?{value:''}:{insertAdjacentHTML:()=>{},innerHTML:'',textContent:''});
+ const modal:any={dataset:{},setAttribute:()=>{},querySelector:node,remove:()=>{}};
+ new Function('account','document','hud','window','E','safeName','age','stackValue','gp','icon','qty','priceTip','statTip','alchOf',`${bank};openBank();`)(()=>current,{createElement:()=>modal},{querySelector:()=>null,append:()=>{}},{atlasOperator:()=>true},String,String,String,()=>({value:0,unpriced:0}),gp,()=>'',String,()=>'',()=>'',t.alchOf);
+ // Five green bodies (two plain, three noted) and one black body: 5 × 4,680 + 8,088.
+ expect(node('.bank-value').textContent).toBe('0 gp · HA 31,488 gp');
+});
+
+test('alchemy tooltip profit uses the exact item ask and never borrows a same-name quote',()=>{
+ const code=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const data={900001:1000,900002:1000,Ring:1000},sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const first={id:900001,name:'Ring',count:1},second={id:900002,name:'Ring',count:1};
+ const S={economy:{supplies:[{id:900001,name:'Ring',ask:100},{id:900002,name:'Ring',ask:500},{id:561,name:'Nature rune',ask:260}]}};
+ const prices:Record<string,any>={Ring:{value:1000,ask:500},'Nature rune':{value:999,ask:999}};
+ const env:any={S,asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),price:(i:any)=>prices[typeof i==='string'?i:i?.name]??null,nf:String,gp:String};
+ const alchTip=new Function(...Object.keys(env),`${code};return alchTip;`)(...Object.values(env));
+ expect(alchTip(first)).toBe(' · high alch 600 · alch profit +240 a cast after the market buy and a nature rune');
+ expect(alchTip(second)).toBe(' · high alch 600');
+ expect(alchTip({id:900003,baseId:900001,name:'Ring',count:1})).toBe(alchTip(first));
+ S.economy.supplies=S.economy.supplies.filter(q=>q.id!==900001);prices.Ring.ask=1;
+ expect(alchTip(first)).toBe(' · high alch 600');
+});
+
 test('the Wilderness level counts 8 tiles for each level from the south edge of each zone',()=>{
  const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
  const wildLevel=new Function(`${code};return wildLevel;`)();
@@ -1174,9 +1275,80 @@ test('the Wilderness level counts 8 tiles for each level from the south edge of 
 test('the inventory value is the sum of the item values, and the tooltip counts the items with no value',()=>{
  const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf("  // Equipment Stats (the game's"));
  const vals:any={Coins:1,Lobster:150};
- const invWorth=new Function('price','gp',`${code};return invWorth;`)((n:string)=>vals[n]!=null?{value:vals[n]}:null,(n:number)=>String(n));
- expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp</p>');
- expect(invWorth([{name:'Odd thing',count:1}])).toBe('');
+ const invWorth=new Function('price','gp',`${code};return invWorth;`)((i:any)=>vals[i.name]!=null?{value:vals[i.name]}:null,(n:number)=>String(n));
+ expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp + 1 unpriced</p>');
+ expect(invWorth([{name:'Odd thing',count:1}])).toContain('Worth 0 gp + 1 unpriced');
+});
+
+test('exact valuation reaches bank totals, inventory, market tooltips and alchemy value comparisons',()=>{
+ const S:any={economy:{itemPricesById:{1:{name:'Ring',value:100,ask:null,bid:80},2:{name:'Ring',value:900,ask:null,bid:800},5:{name:'Zero',value:0,ask:null,bid:null}},
+  itemPricesByName:{zero:{name:'Zero',value:0,ask:null,bid:null}},itemValues:{Ring:99999},supplies:[]}};
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}}),nf=(n:number)=>n.toLocaleString('en-US'),gp=nf;
+ const alchemy=shell.slice(shell.indexOf("  // High alchemy (RuneLite's item prices"),shell.indexOf('  function stackValue(items){'));
+ const readers=['stackValue','invWorth'].map(name=>shell.split('\n').find(l=>l.startsWith('  function '+name+'('))).join('\n');
+ const t=new Function('S','window','fetch','asset','nf','gp',`${pricingSource}${alchemy}${readers};return {price,stackValue,invWorth,priceTip,alchTip};`)
+  (S,{},()=>sync({ok:true,json:()=>({1:1000,2:1000,Ring:1000})}),String,nf,gp);
+ const first={id:1,name:'Ring',count:2},second={id:2,name:'Ring',count:3},note={id:3,baseId:1,name:'Ring (noted)',count:1};
+ const unknown=[{name:'Ring',count:1},{id:999,name:'Ring',count:1},{id:-1,name:'Coins',count:100},{id:1,baseId:undefined,name:'Ring',count:1}];
+ const held=[first,second,note,{id:995,name:'Coins',count:10},{id:5,name:'Zero',count:1},...unknown];
+ expect(t.stackValue(held)).toEqual({value:3010,unpriced:4});expect(t.invWorth(held)).toContain('Worth 3,010 gp + 4 unpriced');
+ expect(t.priceTip(first)).toContain('value 100 gp (200 for 2)');expect(t.priceTip(second)).toContain('value 900 gp (2,700 for 3)');
+ expect(t.alchTip(first)).toContain('alch pays 500 more than the value');expect(t.alchTip(second)).not.toContain('more than the value');
+ expect(t.price('Ring')).toBeNull();for(const i of unknown)expect(t.price(i)).toBeNull();
+ expect(t.price({id:617,name:'Coins'})).toBeNull();expect(t.price({...first,unconfirmed:true})).toBeNull();
+ const bank=shell.slice(shell.indexOf('  function openBank(){'),shell.indexOf('  // Orbs as RuneLite'));
+ const nodes:any={},node=(s:string)=>nodes[s]??=(s==='input'?{value:''}:{insertAdjacentHTML:()=>{},innerHTML:'',textContent:''}),modal:any={dataset:{},setAttribute:()=>{},querySelector:node,remove:()=>{}};
+ new Function('account','document','hud','window','E','safeName','age','stackValue','gp','icon','qty','priceTip','statTip',`${bank};openBank();`)
+  (()=>({name:'Worker',bankAt:1,bank:held}),{createElement:()=>modal},{querySelector:()=>null,append:()=>{}},{atlasOperator:()=>true},String,String,String,t.stackValue,gp,()=>'',String,t.priceTip,()=> '');
+ expect(node('.bank-value').textContent).toBe('3,010 + 4 unpriced');
+});
+
+test('explicit unknown name-price tables and visible variants block legacy name borrowing',()=>{
+ for(const itemPricesByName of [null,undefined,{}]){
+  const S={economy:{itemPricesByName,itemValues:{Ring:9999}}};expect(pricing(S).price('Ring')).toBeNull();
+ }
+ const S:any={economy:{itemValues:{Ring:100}},bots:[]};expect(pricing(S).price('Ring')?.value).toBe(100);
+ S.bots=[{inventory:[{id:1,name:'Ring'}],bank:[{id:2,name:'Ring'}]}];expect(pricing(S).price('Ring')).toBeNull();
+ S.bots=[{inventory:[{id:1,name:'Ring'}],bank:[{id:3,baseId:1,name:'Ring (noted)'}]}];expect(pricing(S).price('Ring')?.value).toBe(100);
+ S.economy.supplies=[{id:2,name:'Ring',ask:100}];expect(pricing(S).price('Ring')).toBeNull();
+});
+
+test('restock and the fleet coin summary expose incomplete valuation',()=>{
+ const start=shell.indexOf('  let pkKits='),end=shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)");
+ const code=shell.slice(start,end),S={economy:{itemPricesByName:{},itemValues:{Ring:9999}}};
+ const t=new Function('localStorage','fetch','asset','E','icon','nf','price',`${code};return {setupPanel,set:()=>{pkKits=[{name:'kit',worn:{},carried:[['Ring',2]]}];setupKit='kit';}};`)
+  ({getItem:()=>null},()=>new Promise(()=>{}),String,String,()=>'',String,pricing(S).price);
+ t.set();expect(t.setupPanel({equipment:[],inventory:[],bank:[]})).toContain('≈ 0 gp + 1 unpriced');
+ const summary=shell.split('\n').find(l=>l.startsWith('    if(!b){const fleet='))!;
+ let html='';new Function('S','window','line','gp','set',`const b=null,race='';${summary}`)
+  ({bots:[],vault:{coins:0,countsComplete:false}},{atlasOperator:()=>true},(label:string,value:string)=>label+': '+value,String,(value:string)=>html=value);
+ expect(html).toContain('Known vault coins: 0 · partial');
+});
+
+test('same-name PvP stock keeps exact values and ambiguous stock suppresses definite kept-item marks',()=>{
+ const S:any={economy:{itemPricesById:{1:{name:'Ring',value:100},2:{name:'Ring',value:900}},itemPricesByName:{}},bots:[{name:'Worker'}],roster:[]};
+ const pvp=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
+ const marks=shell.slice(shell.indexOf("  // Items kept on death (RuneLite's"),shell.indexOf('  function itemCell(item,i,extra'));
+ const t=new Function('S','price','priceKey',`${pvp}${marks};return {pvpState,deathMarks,deathCls};`)(S,pricing(S).price,pricing(S).priceKey);
+ const b:any={name:'Worker',inWorld:true,pos:{x:3100,z:3600},equipment:[],inventory:[{id:1,name:'Ring',count:3},{id:2,name:'Ring',count:2}]};
+ const p=t.pvpState(b);expect(p.risk).toBe(2100);expect(p.kept.map((i:any)=>i.id)).toEqual([2,2,1]);expect(p.keptValue).toBe(1900);
+ const known=t.deathMarks(b);expect(t.deathCls(known,b.inventory[0])).toBe(' death-part');expect(t.deathCls(known,b.inventory[1])).toBe(' death-kept');
+ b.inventory.push({name:'Ring',count:1});expect(t.pvpState(b).unpriced).toBe(1);expect(t.deathMarks(b)).toBeNull();
+});
+
+test('loot screenshots and logout value use existing exact IDs and retain unknown coverage',()=>{
+ const S:any={economy:{itemPricesById:{1:{name:'Ring',value:100},2:{name:'Ring',value:900}},itemPricesByName:{}}};
+ const b:any={name:'Worker',flow:{loot:[{id:1,name:'Ring',count:1}]}};
+ const code=shell.slice(shell.indexOf('  function lootShots(){'),shell.indexOf('  window.atlasShots=')),shots:any[]=[];
+ const lootShots=new Function('account','lootSeen','shotCfg','price','priceKey','shotFor','gp',`${code};return lootShots;`)
+  (()=>b,new Map(),{loot:500},pricing(S).price,pricing(S).priceKey,(_b:any,_kind:any,text:string)=>shots.push(text),String);
+ lootShots();b.flow.loot=[{id:1,name:'Ring',count:2}];lootShots();expect(shots).toEqual([]);
+ b.flow.loot=[{id:1,name:'Ring',count:2},{id:2,name:'Ring',count:1}];lootShots();expect(shots).toEqual(['Ring (900)']);
+ b.flow.loot.push({name:'Ring',count:100});lootShots();expect(shots.length).toBe(1);
+ const session=shell.slice(shell.indexOf('  function sessionText(name){'),shell.indexOf('  function moments(){'));
+ const sessionText=new Function('sessionXp','sessionLast','price','nf','gp','dur',`${session};return sessionText;`)
+  (new Map([['Worker',{}]]),new Map([['Worker',{xp:{},loot:b.flow.loot}]]),pricing(S).price,String,String,String);
+ expect(sessionText('Worker')).toBe(': 100 Ring, ≈ 1100 gp of loot + 1 unpriced');
 });
 
 test('one of our names in a public chat line is marked, and the mark does not touch other text',()=>{
@@ -1211,7 +1383,7 @@ test('PvP Tools: risk, the 3 kept items, and only the players the server lets at
  const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
  const S={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Amulet of power':3000}},bots:[{name:'Ours1'},{name:'Mate'}],
   roster:[['Near',3100,3700,0,72],['Far',3100,3740,0,72],['Strong',3101,3701,0,95],['Mate',3100,3701,0,70],['Outside',3100,3500,0,70],['Upstairs',3100,3700,1,70]]};
- const {pvpState}=new Function('S',`${code};return {pvpState};`)(S);
+ const {pvpState}=new Function('S','price',`${code};return {pvpState};`)(S,pricing(S).price);
  // Wilderness level at z 3700 is 23: combat 70 can fight 47-93.
  const p=pvpState({name:'Ours1',inWorld:true,combat:70,pos:{x:3102,z:3702,level:0},equipment:[{name:'Rune scimitar',count:1},{name:'Amulet of power',count:1}],inventory:[{name:'Shark',count:20}]});
  expect(p.wild).toBe(23);
@@ -1225,7 +1397,7 @@ test('PvP Tools: risk, the 3 kept items, and only the players the server lets at
 test('the death recap card shows the tile, the last hit, hitsplats and what the death took',()=>{
  const code=shell.slice(shell.indexOf('  let recap={name:null'),shell.indexOf('  // Quest Journal, Fleet view'));
  const wild=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  const canAttack='));
- const {recapHtml}=new Function('E','safeName','age','icon','qty','document','window','put','minimap',`${wild};${code};return {recapHtml};`)(String,(s:any)=>s,()=>'5m',(n:string)=>`[${n}]`,(n:number)=>`(${n})`,{createElement:()=>({})},{atlasOperator:()=>true},()=>{},()=>{});
+ const {recapHtml}=new Function('E','safeName','age','icon','qty','document','window','put','minimap',`${wild};${code};return {recapHtml};`)(String,(s:any)=>s,()=>'5m',(n:any)=>`[${typeof n==='string'?n:n.name}]`,(n:number)=>`(${n})`,{createElement:()=>({})},{atlasOperator:()=>true},()=>{},()=>{});
  const html=recapHtml({name:'Alpha',state:'ok',data:{at:1,pos:{x:3100,z:3700,level:0},killer:'Goondelf (level 80)',hits:[{tick:11,damage:6,source:'Goondelf (level 80)'},{tick:12,damage:0,source:'Goondelf (level 80)'}],hp:[[10,10],[11,4],[12,0]],actions:[{tick:11,type:'eatFood'}],carried:[{name:'Shark',count:5}],kept:[],lost:[{name:'Shark',count:5}],script:'scripts/pk.ts',tick:12}});
  expect(html).toContain('Tile 3100, 3700');expect(html).toContain('Wilderness 23');
  expect(html).toContain('Last hit: <b>Goondelf (level 80)</b>');
@@ -1251,17 +1423,42 @@ test('the death recap is read again for a newer death, and while it waits for th
 });
 test('Party: a card per PK account with hitpoints, prayer, run, food and a red edge when hurt',()=>{
  const code=shell.slice(shell.indexOf('  const PK_GOAL='),shell.indexOf('  function worldPanel(){'));
+ const now=1_000_000;
  const S={bots:[
-  {name:'Tribrid1',inWorld:true,combat:90,goal:'pk roam edgeville',pos:{x:3093,z:3500,level:0},hp:{now:30,max:99},runEnergy:55,skills:[{name:'Prayer',level:70,currentLevel:40}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Rune scimitar',count:1}]},
+  {name:'Tribrid1',inWorld:true,at:now,hpAt:now,combat:90,goal:'pk roam edgeville',pos:{x:3093,z:3500,level:0},hp:{now:30,max:99},runEnergy:55,skills:[{name:'Prayer',level:70,currentLevel:40}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Rune scimitar',count:1}]},
   {name:'Fisher',inWorld:true,goal:'fish sharks',pos:{x:2600,z:3400,level:0}},
   {name:'Offline',inWorld:false,goal:'pk'},
  ]};
- const {partyBox}=new Function('S','E','safeName','itemStats','wildLevel','pvpState',`${code};return {partyBox};`)(S,String,(s:any)=>s,{Shark:'heals 20'},()=>0,()=>null);
+ const {partyBox}=new Function('S','E','safeName','itemStats','wildLevel','pvpState','Date',`${healthSource}${code};return {partyBox};`)(S,String,(s:any)=>s,{Shark:'heals 20'},()=>0,()=>null,{now:()=>now});
  const html=partyBox();
  expect(html).toContain('1 PK account');expect(html).toContain('Tribrid1');expect(html).not.toContain('Fisher');expect(html).not.toContain('Offline');
  expect(html).toContain('party-card party-alert');
  expect(html).toContain('<span>30 / 99</span>');expect(html).toContain('<span>40 / 70</span>');
  expect(html).toContain('Run <b>55%</b>');expect(html).toContain('Food <b>2</b>');
+});
+test('historical shared HP stays dated in the party and orb without becoming current danger or full health',()=>{
+ const now=1_000_000,old=now-400_000,server='rs-sdk-demo.fly.dev';
+ const [row]=remoteBots([{side:'cloud',at:now,accounts:[{name:'Worker',server,at:old,skills:[{name:'Hitpoints',level:30,currentLevel:0}]}]}],
+  new Set(),new Map([['worker',{x:3200,z:3200,level:0,combat:20,seen:now}]]),new Map(),now);
+ row.goal='pk';expect(row.inWorld).toBe(true);expect(row.fresh).toBe(true);expect(row.hpAt).toBe(old);
+ const code=shell.slice(shell.indexOf('  const PK_GOAL='),shell.indexOf('  function worldPanel(){'));
+ const card=new Function('S','E','safeName','itemStats','wildLevel','pvpState','Date',`${healthSource}${code};return partyCard;`)
+  ({bots:[row]},String,String,{},()=>0,()=>null,{now:()=>now});
+ expect(card(row)).toContain('<span>0 / 30</span>');expect(card(row)).toContain('Hitpoints · observed 6m ago');expect(card(row)).not.toContain('party-alert');
+ const start=shell.indexOf('    const health=recordedHp(b)'),orbs=shell.slice(start,shell.indexOf('if(orbBox._h!==orbHtml)',start));
+ const orb=new Function('b','Date','hud','level','orbColour','E',`${healthSource}${orbs};return orbHtml;`);
+ const render=(b:any)=>orb(b,{now:()=>now},{querySelector:()=>({})},()=>null,()=> 'red',String);
+ expect(render(row)).toContain('Hitpoints: 0 / 30 · observed 6m ago');expect(render(row)).toContain('color:#b8b8b8');
+ const fresh={...row,at:now,hpAt:now};expect(card(fresh)).toContain('party-alert');expect(render(fresh)).not.toContain('observed');expect(render(fresh)).toContain('color:red');
+ for(const hpAt of [null,undefined,0,now+1]){
+  const unknown={...fresh,hpAt};expect(card(unknown)).toContain('<span>? / ?</span>');expect(card(unknown)).not.toContain('party-alert');expect(render(unknown)).not.toContain('orb-hp');
+ }
+ const skills=[{name:'Hitpoints',level:30}],baseOnly={name:'Worker',at:now,skills,...healthObservation({at:now,skills},now)};
+ expect(render(baseOnly)).not.toContain('orb-hp');
+ const skillStart=shell.indexOf("    if(selectedTab==='skills')"),skillCode=shell.slice(skillStart,shell.indexOf('\n    else if',skillStart));
+ const skillHtml=new Function('b','Date',`${healthSource}const selectedTab='skills',skills=['Hitpoints'],reported=()=>true,level=()=>b.skills[0],asset=String,skillFile=String,realSkill=()=>true,combatLine=()=>'',bankedLine=()=>'';let html='';${skillCode};return html;`)
+  (baseOnly,{now:()=>now});
+ expect(skillHtml).toContain('<span>—<small>／30</small>');expect(skillHtml).not.toContain('<span>30<small>／30</small>');
 });
 test('respawn timers: the time left is the base scaled by the players online, less the time since the rock was taken',()=>{
  const code=shell.slice(shell.indexOf("  // Respawn timers (RuneLite's Mining"),shell.indexOf("  // Party (RuneLite's Party panel)"));
@@ -1430,7 +1627,7 @@ test('items kept on death: in the Wilderness the 3 kept items are green, other i
  const code=shell.slice(shell.indexOf("  // Items kept on death (RuneLite's"),shell.indexOf('  function itemCell(item,i,extra'));
  const S:any={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Coins':1}}};
  const b:any={inWorld:true,pos:{x:3100,z:3600},equipment:[{name:'Rune scimitar',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Shark',count:1},{name:'Bones',count:1}]};
- const env:any={S,wildLevel:()=>5,pvpState:()=>({kept:[{name:'Rune scimitar'},{name:'Shark'},{name:'Shark'}]})};
+ const env:any={S,...pricing(S),wildLevel:()=>5,pvpState:()=>({kept:[{name:'Rune scimitar'},{name:'Shark'},{name:'Shark'}]})};
  const t=new Function(...Object.keys(env),`${code};return {deathMarks,deathCls};`)(...Object.values(env));
  const m=t.deathMarks(b);
  expect(t.deathCls(m,b.equipment[0])).toBe(' death-kept');
@@ -1438,7 +1635,7 @@ test('items kept on death: in the Wilderness the 3 kept items are green, other i
  expect(new Function('S','wildLevel','pvpState',`${code};return deathMarks;`)(S,()=>0,()=>null)(b)).toBe(null);
  // A stack keeps only the counted units: 3 of 100,000 coins is part kept, and a second stack keeps nothing.
  const coins:any={inWorld:true,pos:{x:3100,z:3600},equipment:[],inventory:[{name:'Coins',count:100000},{name:'Coins',count:5}]};
- const c=new Function('S','wildLevel','pvpState',`${code};return {deathMarks,deathCls};`)(S,()=>5,()=>({kept:[{name:'Coins'},{name:'Coins'},{name:'Coins'}]}));
+ const c=new Function('S','wildLevel','pvpState','price','priceKey',`${code};return {deathMarks,deathCls};`)(S,()=>5,()=>({kept:[{name:'Coins'},{name:'Coins'},{name:'Coins'}]}),pricing(S).price,pricing(S).priceKey);
  const cm=c.deathMarks(coins);
  expect(coins.inventory.map((i:any)=>c.deathCls(cm,i))).toEqual([' death-part',' death-lost']);
 });
@@ -1462,7 +1659,7 @@ test('best training spot: the best rock the account can mine now, and the neares
 });
 test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from the pack',()=>{
  const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
- const t=new Function('asset','fetch','E',`${code};return {wornBonuses,maxHit,equipStats,teleCasts,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String);
+ const t=new Function('asset','fetch','E','window',`${code};return {wornBonuses,maxHit,equipStats,teleCasts,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{});
  t.set({'Rune scimitar':[7,45,-2,0,0,0,1,0,0,0,44,0,0],'Amulet of strength':[0,0,0,0,0,0,0,0,0,0,10,0,0]},
   {spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]],['Falador teleport',37,[['Water rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']}});
  const b:any={skills:[{name:'Strength',level:99,currentLevel:99},{name:'Magic',level:30}],equipment:[{slot:3,name:'Rune scimitar'},{slot:2,name:'Amulet of strength'}],
@@ -1480,7 +1677,7 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  // A wielded Staff of fire gives fire runes without limit.
  b.equipment[0]={slot:3,name:'Staff of fire'};expect(t.teleCasts(b)[0].casts).toBe(4);
  // The magic max hit: the best combat spell for the current Magic level, runes and worn staff.
- const t2=new Function('asset','fetch','E',`${code};return {bestSpell,equipStats,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String);
+ const t2=new Function('asset','fetch','E','window',`${code};return {bestSpell,equipStats,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{});
  t2.set({'Staff of fire':[0,0,0,10,0,0,0,0,10,0,0,0,0]},{spells:[],staffs:{'Fire rune':['Staff of fire']},combat:[['Fire Strike',13,8,[['Mind rune',1],['Fire rune',3],['Air rune',2]],null],['Fire Bolt',35,12,[['Chaos rune',1],['Fire rune',4],['Air rune',3]],null],['Iban Blast',50,25,[['Death rune',1],['Fire rune',5]],"Iban's staff"],['Fire Blast',59,16,[['Death rune',1],['Fire rune',5],['Air rune',4]],null]]});
  const mage:any={skills:[{name:'Magic',level:55,currentLevel:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Air rune',count:30},{name:'Chaos rune',count:6},{name:'Mind rune',count:50},{name:'Death rune',count:20}]};
  // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
@@ -1493,15 +1690,49 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
 });
+test('equipment identity reaches max hits and training estimates without choosing an ambiguous name',()=>{
+ const equipment=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const combat=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const data:any={
+  'item-bonuses.json':JSON.parse(readFileSync(new URL('./client-assets/item-bonuses.json',import.meta.url),'utf8')),
+  'weapon-speed.json':JSON.parse(readFileSync(new URL('./client-assets/weapon-speed.json',import.meta.url),'utf8')),
+  'spellbook.json':{spells:[],staffs:{},combat:[]},
+  'npc-defence.json':{'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]},'npc-loot.json':{},
+ };
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const b:any={skills:[{name:'Strength',level:99},{name:'Attack',level:60},{name:'Ranged',level:60},{name:'Magic',level:1}],
+  equipment:[{id:746,name:'Black dagger',slot:3}],inventory:[]};
+ const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),E:String,account:()=>b,price:()=>null,nf:String,S:{world:{tickMs:400}},window:{}};
+ const t=new Function(...Object.keys(env),`${equipment}${combat};return {equipmentValue,wornBonuses,equipStats,hourRates};`)(...Object.values(env));
+ const quest=t.hourRates('Moss giant');
+ expect(t.wornBonuses(b)[10]).toBe(0);expect(t.equipStats(b)).toContain('Melee 11–11');expect(quest.max).toBe(11);
+ b.equipment=[{id:1217,name:'Black dagger',slot:3}];
+ const ordinary=t.hourRates('Moss giant');
+ expect(t.wornBonuses(b)[10]).toBe(7);expect(t.equipStats(b)).toContain('Melee 12–12');expect(ordinary.max).toBe(12);expect(ordinary.lo).toBeGreaterThan(quest.lo);
+ // A projected item's base ID is authoritative over the raw ID and the display name.
+ b.equipment=[{id:746,baseId:1217,name:'Black dagger',slot:3}];expect(t.wornBonuses(b)[10]).toBe(7);
+ for(const [id,range,defence] of [[1135,15,40],[2499,20,45],[2501,25,50],[2503,30,55]]){
+  b.equipment=[{id:1217,name:'Black dagger',slot:3},{id,name:'Dragonhide body',slot:4}];
+  const bonuses=t.wornBonuses(b);expect(bonuses[4]).toBe(range);expect(bonuses[5]).toBe(defence);
+ }
+ b.equipment=[{name:'Black dagger',slot:3}];expect(t.wornBonuses(b)).toBeNull();expect(t.equipStats(b)).toBe('');expect(t.hourRates('Moss giant')).toBeNull();
+ b.equipment=[{id:999999,name:'Rune scimitar',slot:3}];expect(t.wornBonuses(b)).toBeNull();
+ b.equipment=[{name:'Rune scimitar',slot:3}];expect(t.wornBonuses(b)[10]).toBe(44);expect(t.hourRates('Moss giant').speed).toBe(4);
+ expect(t.equipmentValue({100:4,101:7},{id:100,name:'Same blade'})).toBe(4);
+ expect(t.equipmentValue({100:4,101:7},{id:101,name:'Same blade'})).toBe(7);
+ expect(t.equipmentValue({100:4,101:7},{name:'Same blade'})).toBeNull();
+ // The hour model uses its exact weapon speed ahead of any name alias.
+ data['weapon-speed.json']['Black dagger']=9;b.equipment=[{id:1217,name:'Black dagger',slot:3}];expect(t.hourRates('Moss giant').speed).toBe(4);
+});
 test('logout line: the session length, the most XP gained and the top loot with its value',()=>{
  const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
  const chat:any[]=[],b:any={name:'Alpha',inWorld:true,uptime:600_000,skills:[{name:'Woodcutting',xp:1000},{name:'Firemaking',xp:50}],flow:{loot:[]}};
  const env:any={S:{bots:[b],boards:[],economy:{itemValues:{'Yew logs':200}}},chat,renderChat:()=>{},safeName:String,nf:(n:number)=>n.toLocaleString('en-GB'),gp:(n:number)=>String(n),dur:(ms:number)=>Math.round(ms/60000)+'m'};
- const moments=new Function(...Object.keys(env),`${code};return moments;`)(...Object.values(env));
+ const moments=new Function(...Object.keys(env),'price',`${code};return moments;`)(...Object.values(env),pricing(env.S).price);
  moments();
  b.uptime=4_200_000;b.skills=[{name:'Woodcutting',xp:46000},{name:'Firemaking',xp:150}];b.flow={loot:[{name:'Yew logs',count:412},{name:'Logs',count:3}]};moments();
  b.inWorld=false;b.flow=null;moments();
- expect(chat.map(c=>c.text)).toEqual(['Alpha has logged out after 70m: +45,000 Woodcutting XP, 412 Yew logs, ≈ 82400 gp of loot.']);
+ expect(chat.map(c=>c.text)).toEqual(['Alpha has logged out after 70m: +45,000 Woodcutting XP, 412 Yew logs, ≈ 82400 gp of loot + 1 unpriced.']);
 });
 test('rank lines: a move of the same account, and another account taking the best rank, never "up from" another account',()=>{
  const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
@@ -1561,7 +1792,7 @@ test('player finder: online players by name, a hidden name never offered, the li
  expect(shell).toContain('tiles:flatTiles(src[2])};finderPick=null;finderPlayer=null;');
 });
 test('food: the healing items in the pack, most first',()=>{
- const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier(b){'));
+ const code=shell.slice(shell.indexOf("  // The food items in an account's pack"),shell.indexOf('  function idleNotifier('));
  const foodOf=new Function('itemStats',`${code};return foodOf;`)({Shark:'heals 20',Lobster:'heals 12','Jug of wine':'Attack -2 · heals 11','Prayer potion(4)':'restores 7 + 25% Prayer'});
  expect(foodOf({inventory:[{name:'Shark',count:1},{name:'Lobster',count:1},{name:'Shark',count:1},{name:'Prayer potion(4)',count:1},{name:'Coins',count:500}]}))
   .toEqual({items:[{name:'Shark',count:2},{name:'Lobster',count:1}],total:3});
@@ -1607,7 +1838,7 @@ test('Screenshot: a level-up, a death or valuable loot of the watched account as
  const code=shell.slice(shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"),shell.indexOf('  // Tick efficiency (one box under Overall'));
  const posted:any[]=[];const b:any={name:'Alpha',flow:{loot:[{name:'Rune scimitar',count:1}]}};
  const env:any={localStorage:{getItem:()=>null,setItem:()=>{}},indexedDB:{open:()=>{throw new Error('none');}},VIEWER:{state:'ready'},$:()=>({contentWindow:{postMessage:(m:any)=>posted.push(m)}}),location:{origin:''},account:()=>b,S:{economy:{itemValues:{'Rune scimitar':15000,'Dragon chainbody':500000}}},gp:(n:number)=>String(n),selectedPlugin:'xp',window:{atlasOperator:()=>false},body:{}};
- const t=new Function(...Object.keys(env),`${code};return {shotFor,shotReply,lootShots,list:()=>shots};`)(...Object.values(env));
+ const t=new Function(...Object.keys(env),'price','priceKey',`${code};return {shotFor,shotReply,lootShots,list:()=>shots};`)(...Object.values(env),pricing(env.S).price,pricing(env.S).priceKey);
  // A signed-out viewer takes no picture: it has no Activity plugin to see them.
  t.shotFor(b,'level','Level 70 Woodcutting');expect(posted.length).toBe(0);
  env.window.atlasOperator=()=>true;
