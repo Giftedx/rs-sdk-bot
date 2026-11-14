@@ -163,6 +163,13 @@ export function procCatches(spots: string[]): { fish: string; level: number; xp:
     return [...out.values()];
 }
 
+// A runecraft row of knowledge/skills.json lists no input, but every rune is crafted from rune essence: runecraft.rs2
+// removes the essence (inv_del(inv, blankrune, $total_ess)) and gives the row's XP for each one
+// (stat_advance(runecraft, $total_ess * experience)). The essence is the input, one an action, so banked XP counts it.
+export function withEssence(r: SkillRow): SkillRow {
+    return r.skill === 'runecraft' && !(r.inputs?.length) ? { ...r, inputs: ['blankrune'], counts: [1] } : r;
+}
+
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..');
     const items: { debugname?: string; name?: string; tradeable?: boolean }[] = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'));
@@ -172,7 +179,7 @@ if (import.meta.main) {
     // Each knowledge row points at its dbrow line (src.row); the block from there holds the input counts.
     const content = join(root, 'vendor', 'rs-sdk', 'server', 'content'), fileCache = new Map<string, string[]>();
     const block = (src?: string) => { const m = src?.match(/^(.*):(\d+)$/); if (!m) return ''; const lines = fileCache.get(m[1]!) ?? readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/); fileCache.set(m[1]!, lines); const from = Number(m[2]) - 1, end = lines.findIndex((l, k) => k > from && l.startsWith('[')); return lines.slice(from, end < 0 ? undefined : end).join('\n'); };
-    const knowledge = (JSON.parse(readFileSync(join(root, 'knowledge', 'skills.json'), 'utf8')) as (SkillRow & { src?: { row?: string } })[]).map(r => ({ ...r, counts: inputCounts(r.inputs ?? [], block(r.src?.row)) }));
+    const knowledge = (JSON.parse(readFileSync(join(root, 'knowledge', 'skills.json'), 'utf8')) as (SkillRow & { src?: { row?: string } })[]).map(r => withEssence({ ...r, counts: inputCounts(r.inputs ?? [], block(r.src?.row)) }));
     const scripts = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts'), read = (p: string) => readFileSync(join(scripts, p), 'utf8');
     const files = (d: string, ext: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? files(p, ext) : f.endsWith(ext) ? [readFileSync(p, 'utf8')] : []; });
     const objs = (d: string): [string, string][] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? objs(p) : f.endsWith('.obj') ? [[p, readFileSync(p, 'utf8')] as [string, string]] : []; });
