@@ -22,3 +22,9 @@ test('the asset route revalidates JSON data files and caches images', () => {
     expect(server).toContain("if(req.headers.get('if-none-match')===tag)return new Response(null,{status:304");
     expect(server).toContain("return new Response(file,{headers:{etag:tag,'cache-control':'no-cache'}});");
 });
+
+// The To level chance belongs to the gathering skills: Firemaking's logs are its input.
+test('the Skills tab tooltip adds a gather chance for Fishing, Mining and Woodcutting only', () => {
+    const shell = readFileSync(new URL('./client-shell.js', import.meta.url), 'utf8');
+    expect(shell).toContain("typeof gatherText==='function'&&/^(fishing|mining|woodcutting)$/i.test(sk.dataset.skill)?gatherText(");
+});
