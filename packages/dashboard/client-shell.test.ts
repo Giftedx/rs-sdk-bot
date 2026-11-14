@@ -843,36 +843,59 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
   maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:(n:string)=>n==='Coins'?{value:1}:null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{}};
  const t=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env));
  // Max floor((68 x 130 + 320) / 640) = 14; slash hit 86% (A = 68 x 131 = 8,908 against 2,496): 0.86 x 7 = 6.02 a swing;
- // 60 / 6.02 = 9.97 swings x 5 ticks x 0.6 s = 29.9 s a kill: 120 kills an hour, 120 x 6,000 = 722k XP, 120 x 20 gp.
+ // 60 / 6.02 = 9.97 swings x 5 ticks x 0.6 s = 29.9 s, plus 2 ticks (1.2 s) for the death and the next target: 31.1 s a
+ // kill, 116 kills an hour, 116 x 6,000 = 694k XP, 116 x 20 gp.
  const out=t('Moss giant');
- expect(out).toMatch(/^About 12\d kills an hour \(max hit 14, speed 5\) · 72\d,\d{3} XP\/h in one style · 2,4\d\d gp\/h$/);
+ expect(out).toMatch(/^About 116 kills an hour \(max hit 14, speed 5\) · 69\d,\d{3} XP\/h in one style · 2,3\d\d gp\/h$/);
  expect(new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values({...env,wornBonuses:()=>null}))('Moss giant')).toBe('');
  // Two variants: a weak one with few hitpoints (many kills, little XP) and a strong one (few kills, much XP). XP/h is
  // each variant's own product, so the range is narrow, not the product of the two extremes.
  data['npc-defence.json']={'Goblin':[[2,1,1,0,0,0,0,0,1,1,0,0,2,5,1000,60],[13,10,1,0,0,0,0,0,10,10,0,0,2,16,1000,60]]};
  const g=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env))('Goblin');
  const xp=(g.match(/· ([\d,]+)–([\d,]+) XP\/h/)||[]).slice(1).map((x:string)=>Number(x.replace(/,/g,'')));
- expect(xp.length).toBe(2);expect(xp[1]/xp[0]).toBeLessThan(1.5);
+ // The 5 hitpoint variant loses most of a 14 hit to overkill, so its XP is lower; the range stays far from the product
+ // of the two extremes (about 10x).
+ expect(xp.length).toBe(2);expect(xp[1]/xp[0]).toBeLessThan(2);
  // A ranged weapon (range attack bonus above 0) rolls ranged, not melee: with Ranged 60, range attack 0 and ranged
  // strength 0 the max is floor((68 x 64 + 320) / 640) = 7; the roll 68 x 64 = 4,352 meets Moss giant's 39 x 64 = 2,496:
- // 71%, 2.5 a swing, 24 swings x 4 ticks x 0.6 s = 57.7 s a kill: 62 kills an hour.
+ // 71%, 2.5 a swing, 24 swings x 4 ticks x 0.6 s = 57.7 s plus 1.2 s a kill: 61 kills an hour.
  data['npc-defence.json']={'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]};
  const ranged=new Function(...Object.keys(env),'itemBonusData',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Bronze dart',slot:3}]})}),{'Bronze dart':[0,0,0,0,1,0,0,0,0,0,0,1,0]});
- expect(ranged('Moss giant')).toMatch(/^About 62 kills an hour \(ranged, max hit 7, speed 4\) · /);
+ expect(ranged('Moss giant')).toMatch(/^About 61 kills an hour \(ranged, max hit 7, speed 4\) · /);
  // A staff with a castable spell casts it: Fire Bolt max 12 at Magic 60 with magic attack 10: the roll 69 x 74 = 5,106
- // meets Moss giant's (1 + 9) x 64 = 640: 94%, 5.6 a cast, 10.7 casts x 5 ticks x 0.6 s = 32 s a kill: 112 kills an hour.
+ // meets Moss giant's (1 + 9) x 64 = 640: 94%, 5.6 a cast, 10.7 casts x 5 ticks x 0.6 s = 32 s plus 1.2 s: 108 kills an hour.
  const mage=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]}),wornBonuses:()=>[0,0,0,10,0,0,0,0,0,0,0,0,0]}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>({name:'Fire Bolt',max:12,casts:50}));
- expect(mage('Moss giant')).toMatch(/^About 11\d kills an hour \(magic, Fire Bolt, max hit 12, speed 5\) · /);
+ expect(mage('Moss giant')).toMatch(/^About 10\d kills an hour \(magic, Fire Bolt, max hit 12, speed 5\) · /);
  const mageXp=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]}),wornBonuses:()=>[0,0,0,10,0,0,0,0,0,0,0,0,0]}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>({name:'Fire Bolt',max:12,casts:50,xp:22.5}));
  // 720 casts x 22.5 = 16,200 cast XP plus kills x 60 x 50 damage XP, in Magic.
  const mx=Number((mageXp('Moss giant').match(/· ([\d,]+) XP\/h in Magic/)||[])[1]?.replace(/,/g,''));
- expect(mx).toBeGreaterThan(16200+110*3000);expect(mx).toBeLessThan(16200+120*3000);
+ expect(mx).toBeGreaterThan(16200+100*3000);expect(mx).toBeLessThan(16200+115*3000);
  // A dagger has magic attack +1 too, but it is no staff: it stays melee with runes in the pack.
  const dagger=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Rune dagger',slot:3}]})}),{'Rune dagger':[25,12,-4,1,0,0,0,0,1,0,24,0,0]},()=>({name:'Wind Strike',max:2,casts:50,xp:137.5}));
  expect(dagger('Moss giant')).not.toContain('magic,');expect(dagger('Moss giant')).toMatch(/^About \d+ kills an hour \(max hit/);
  // A staff with no castable spell falls back to melee.
  const noSpell=new Function(...Object.keys(env),'itemBonusData','bestSpell',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Staff of fire',slot:3}]})}),{'Staff of fire':[0,0,0,10,0,0,0,0,0,0,0,0,0]},()=>null);
  expect(noSpell('Moss giant')).not.toContain('magic,');
+});
+
+test('combat training: the NPCs with the most XP an hour that spawn, leaving out the ones that hit too hard',()=>{
+ const code=shell.slice(shell.indexOf("  // Melee hit chance (RuneLite's opponent information"),shell.indexOf('  function finderList(){'));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const row=(hp:number,str:number,sb:number)=>[10,1,1,0,0,0,0,0,1,str,0,sb,2,hp,1000,60];
+ const cow=row(8,1,0);cow[1]=20;
+ const data:any={'npc-defence.json':{'Cow':[cow],'Moss giant':[row(60,30,31)],'Ogre':[row(60,60,80)],'Ghost town':[row(30,1,0)],'Wild giant':[row(60,30,31)]},'npc-loot.json':{},'weapon-speed.json':{}};
+ const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),account:()=>({equipment:[]}),wornBonuses:()=>[0,50,0,0,0,0,0,0,0,0,50,0,0],curLevel:()=>40,
+  maxHit:(l:number,b:number,st:number)=>Math.floor(((l+8+st)*(b+64)+320)/640),price:()=>null,nf:(n:number)=>n.toLocaleString('en-GB'),S:{world:{tickMs:600}},window:{},E:(x:string)=>x,
+  wildLevel:(p:any)=>p.x>=2944&&p.x<=3391&&p.z>=3520&&p.z<=6399?Math.floor((p.z-3520)/8)+1:0,
+  npcSpawns:[['Cow',0,0,[3253,3270,0]],['Moss giant',0,0,[3100,3927,0,2550,3405,0]],['Ogre',0,0,[2500,3000,0]],['Wild giant',0,0,[3100,3927,0]]]};
+ const t=new Function(...Object.keys(env),`${code};return {trainRows,trainBox};`)(...Object.values(env));
+ const rows=t.trainRows();
+ // Ogre max floor((69 x 144 + 320) / 640) = 16: 48 is over 40 Hitpoints, left out. Ghost town does not spawn. Wild giant
+ // spawns only in the Wilderness, left out. Moss giant has one spawn outside it, kept. The Cow
+ // (8 hitpoints, defence 20) wastes most of each hit and is harder to hit, so the Moss giant ranks first.
+ expect(rows.map((r:any)=>r.name)).toEqual(['Moss giant','Cow']);
+ expect(rows[0].xp).toBeGreaterThan(rows[1].xp);
+ expect(t.trainBox()).toContain('data-finder-pick="Moss giant"');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
