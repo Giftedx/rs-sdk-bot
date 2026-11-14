@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { contentRows, fishingRows, inputCounts, objParamRows, skillActions } from './gen-skill-actions';
+import { contentRows, fishingRows, inputCounts, objParamRows, procCatches, skillActions } from './gen-skill-actions';
 
 test('skill actions give the XP of one action on this server: base XP times the XP rate', () => {
     const names = new Map([['logs', 'Logs'], ['oak_logs', 'Oak logs']]);
@@ -79,4 +79,14 @@ test('Fishing actions from the spot scripts: the gate level, the second fish at 
         ['Raw trout', 20, 1250, ['Feather'], ['Raw trout'], [0]],
         ['Raw salmon', 30, 1750, ['Feather'], ['Raw salmon'], [0]],
     ] });
+});
+
+test('a proc that rolls its own catches: the caller gate, each level step, the roll and the XP of each raw fish', () => {
+    const spot = [
+        '[label,fish_mackerel]', 'if (stat(fishing) < 16) {', '    return;', '}', '~fish_roll_big_net;', '',
+        '[proc,fish_roll_big_net]', 'if (stat_random(fishing, 10, 10) = true) {', '    inv_add(inv, leather_boots, 1);', '    stat_advance(fishing, 10);', '}',
+        'if (stat_random(fishing, 5, 65) = true) {', '    inv_add(inv, raw_mackerel, 1);', '    stat_advance(fishing, 200);', '}',
+        'if ($level < 23) {', '    return;', '}', 'if (stat_random(fishing, 4, 55) = true) {', '    inv_add(inv, raw_cod, 1);', '    stat_advance(fishing, 450);', '}',
+    ].join('\n');
+    expect(procCatches([spot])).toEqual([{ fish: 'raw_mackerel', level: 16, xp: 200, roll: [5, 65] }, { fish: 'raw_cod', level: 23, xp: 450, roll: [4, 55] }]);
 });

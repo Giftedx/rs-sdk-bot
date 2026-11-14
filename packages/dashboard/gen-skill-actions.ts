@@ -122,8 +122,8 @@ export function contentRows(c: { smelting: string; smithingStruct: string; smith
 // (productexp, in tenths), and the spot scripts (skill_fishing/scripts/fishing_spots) hold the levels: in a
 // [label,fish_...] block the first `stat(fishing) < N` gates the catch, and `stat(fishing) >= M` before
 // `~fish_roll(a, b, tool, bait)` lets the second fish b in at M (trout at 20, salmon at 30). The bait is the input.
-// Left out: the big-net catches (cod, mackerel, bass: inv_add in their own label) and fish that fishing.obj does not
-// define (lava eel).
+// The big net rolls its catches in its own proc (procCatches). Left out: fish that fishing.obj does not define and no
+// proc adds (lava eel).
 export function fishingRows(spots: string[], fishObj: string, fishStruct: string): SkillRow[] {
     const xp = new Map(configBlocks(fishStruct).map(b => [b.name, num(b.p.get('productexp'))]));
     const fishXp = new Map(configBlocks(fishObj).filter(b => b.p.get('fishing_struct')).map(b => [b.name, xp.get(b.p.get('fishing_struct')!) ?? 0]));
@@ -138,7 +138,29 @@ export function fishingRows(spots: string[], fishObj: string, fishStruct: string
             if (m[3] && m[3] !== 'null') put(m[3], Math.max(gate, second), bait && bait !== 'null' ? bait : null);
         }
     }
-    return [...best].map(([fish, { level, bait }]) => ({ skill: 'fishing', row: fish, level, xp: fishXp.get(fish)! / 10, inputs: bait ? [bait] : [], outputs: [fish] }));
+    const rows: SkillRow[] = [...best].map(([fish, { level, bait }]) => ({ skill: 'fishing', row: fish, level, xp: fishXp.get(fish)! / 10, inputs: bait ? [bait] : [], outputs: [fish] }));
+    for (const c of procCatches(spots)) if (!best.has(c.fish)) rows.push({ skill: 'fishing', row: c.fish, level: c.level, xp: c.xp / 10, inputs: [], outputs: [c.fish] });
+    return rows;
+}
+
+// A fishing proc that rolls its own catches (memberfish.rs2 [proc,fish_roll_big_net]): each
+// `stat_random(fishing, low, high)` followed by `inv_add(inv, raw_..., 1)` and `stat_advance(fishing, xp)` is a catch.
+// The level starts at the gate of the labels that call the proc (`stat(fishing) < 16` before ~fish_roll_big_net) and
+// rises at each `if ($level < N)` (cod 23, bass 46). A fish rolled twice keeps its first roll. XP is in tenths.
+export function procCatches(spots: string[]): { fish: string; level: number; xp: number; roll: [number, number] }[] {
+    const all = spots.join('\n'), blocks = all.split(/^\[/m), out = new Map<string, { fish: string; level: number; xp: number; roll: [number, number] }>();
+    for (const block of blocks.filter(b => b.startsWith('proc,'))) {
+        const name = block.slice(5, block.indexOf(']'));
+        const callers = blocks.filter(b => b.startsWith('label,') && b.includes(`~${name}`)).map(b => Number(b.match(/stat\(fishing\)\s*<\s*(\d+)/)?.[1] ?? 1));
+        if (!callers.length) continue;
+        let level = Math.min(...callers);
+        for (const m of block.matchAll(/\$level\s*<\s*(\d+)|stat_random\(\s*fishing\s*,\s*(\d+)\s*,\s*(\d+)\s*\)[^]*?inv_add\(\s*inv\s*,\s*([a-z0-9_]+)[^]*?stat_advance\(\s*fishing\s*,\s*(\d+)\s*\)/g)) {
+            if (m[1]) { level = Math.max(level, Number(m[1])); continue; }
+            const fish = m[4]!;
+            if (/^raw_/.test(fish) && !out.has(fish)) out.set(fish, { fish, level, xp: Number(m[5]), roll: [Number(m[2]), Number(m[3])] });
+        }
+    }
+    return [...out.values()];
 }
 
 if (import.meta.main) {
