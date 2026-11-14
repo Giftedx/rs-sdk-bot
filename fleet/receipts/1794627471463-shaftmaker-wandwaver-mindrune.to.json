@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794627471463-shaftmaker-wandwaver-mindrune",
+ "account": "Wandwaver",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 8,
+ "claim": "af2bfe5e-d1e4-4331-a040-652ca6ecddd7",
+ "count": 0,
+ "ok": false,
+ "at": 1794627603133,
+ "detail": "trade claimed"
+}
