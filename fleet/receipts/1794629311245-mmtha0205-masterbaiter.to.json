@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794629311245-mmtha0205-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 58186,
+ "claim": "3149995a-c150-4959-a97b-f301c711f846",
+ "count": 0,
+ "ok": false,
+ "at": 1794629319538,
+ "detail": "trade claimed"
+}
