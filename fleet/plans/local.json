@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794654009316,
+ "at": 1794654421725,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -199,25 +199,6 @@
    ]
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -349,26 +330,6 @@
    "resources": [
     "knight:2671,3313"
    ]
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "15000",
-    "headless"
-   ],
-   "env": {
-    "BANK_PACK": "1",
-    "MAX_MAKE": "390"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Swordinhand",
