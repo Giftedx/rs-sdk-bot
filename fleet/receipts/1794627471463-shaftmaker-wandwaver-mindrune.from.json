@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794627471463-shaftmaker-wandwaver-mindrune",
  "account": "Shaftmaker",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Mind rune",
  "requested": 8,
  "claim": "43d3c93b-571f-4ffd-b769-c4d92330728e",
- "count": 0,
- "ok": false,
- "at": 1794627526454,
- "detail": "trade claimed"
+ "count": 8,
+ "ok": true,
+ "at": 1794627632433,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8,
+  "after": 0
+ },
+ "bank": {
+  "count": 8,
+  "at": 1794627606442
+ },
+ "logout": {
+  "attemptId": "1794627526462-0000021100-0000000001",
+  "at": 1794627632424,
+  "sha256": "772992f0439e1599d2e24353660e65de36d622f9890e1abfbfd73ac5be69c3c2"
+ },
+ "screen": true
 }
