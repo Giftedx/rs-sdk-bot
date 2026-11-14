@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794622903770,
+ "at": 1794623117020,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -64,6 +64,13 @@
    "enabled": false,
    "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
    "role": "crafter"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
+   "role": "pvp"
   },
   {
    "account": "Bigchopper",
@@ -295,6 +302,25 @@
    ]
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -433,13 +459,6 @@
    "resources": [
     "knight:2669,3298"
    ]
-  },
-  {
-   "account": "Mightyrod",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
-   "role": "pvp"
   },
   {
    "account": "Ballspinner",
