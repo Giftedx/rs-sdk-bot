@@ -1,0 +1,29 @@
+{
+ "id": "1794636316764-nabtheknob-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "WeeQuickie",
+ "item": "Coins",
+ "count": 760000,
+ "start": 1794636316764,
+ "end": 1794639916764,
+ "meet": [
+  {
+   "x": 3013,
+   "z": 3356,
+   "level": 0
+  },
+  {
+   "x": 3014,
+   "z": 3356,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Adamant scimitar",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}

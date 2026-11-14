@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794631029924,
+ "at": 1794636988286,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -73,58 +73,63 @@
    "role": "pvp"
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit7-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Abracadickra",
    "script": "scripts/shop-to-bid.ts",
    "args": [
-    "sarim,harry_bait",
-    "313"
+    "sarim,aubury",
+    "313,560,562,559,558,555,557"
    ],
    "env": {
     "UNITS": "1500",
     "MAX_SPEND": "40000",
-    "LOTS": "6"
+    "LOTS": "6",
+    "MIN_NET": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "sell Port Sarim and Catherby fishing bait into the open GE bid (scripts/shop-to-bid.ts)",
+   "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
   },
   {
    "account": "Bigpackage",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
+   "autopilot": "local",
+   "resources": [
+    "aio:seers-flax"
+   ]
+  },
+  {
+   "account": "Bigchopper",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
+    "KNIGHT_SPOT": "2652,3318",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "goldfarm knights at 2652,3318",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2652,3318"
    ]
   },
   {
@@ -132,18 +137,37 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
    ]
   },
   {
@@ -204,22 +228,22 @@
    ]
   },
   {
-   "account": "NabTheKnob",
+   "account": "Moneyshot",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "knight:2582,3297"
    ]
   },
   {
@@ -227,18 +251,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "knight:2582,3297"
    ]
   },
   {
@@ -277,6 +301,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
    ]
   },
   {
@@ -356,25 +399,6 @@
    ]
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -416,7 +440,48 @@
    ]
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "local",
+   "resources": [
+    "shop:sarim"
+   ]
+  },
+  {
    "account": "SporranBulge",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Sausagefest",
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
@@ -439,47 +504,6 @@
    ]
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
-   "autopilot": "local",
-   "resources": [
-    "aio:seers-flax"
-   ]
-  },
-  {
    "account": "CoinCock",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -499,44 +523,6 @@
    "autopilot": "local",
    "resources": [
     "shop:catherby"
-   ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
    ]
   },
   {

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794633004654-mmtha0205-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 18186,
+ "claim": "15226138-391c-4ad5-a7c1-7fe1bf48707f",
+ "count": 0,
+ "ok": false,
+ "at": 1794634606736,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794633011265-0000023640-0000000001",
+  "at": 1794634606724,
+  "sha256": "cab60e9ba6c66f233d46899f6dbbfbc258982958e1eb0488e624c01b986ca670"
+ },
+ "screen": false
+}

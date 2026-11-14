@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794636316764-nabtheknob-weequickie",
+ "account": "WeeQuickie",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 760000,
+ "claim": "0b00159d-7daf-46d1-8b2a-75d14035319c",
+ "count": 760000,
+ "ok": true,
+ "at": 1794636935779,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Adamant scimitar",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794636934566
+   }
+  }
+ ],
+ "inventory": {
+  "before": 500,
+  "after": 760500
+ },
+ "bank": {
+  "count": 760000,
+  "at": 1794636934120
+ },
+ "logout": {
+  "attemptId": "1794636870877-0000029604-0000000001",
+  "at": 1794636935768,
+  "sha256": "e41654f617750369af90e9cea2a052f03780fa85fc5071a578b0d37d842bb6d6"
+ },
+ "screen": true
+}
