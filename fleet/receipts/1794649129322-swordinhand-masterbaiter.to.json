@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794649129322-swordinhand-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 18186,
+ "claim": "8d1f7f6d-5f2d-43bf-aa38-89bf03e92f50",
+ "count": 0,
+ "ok": false,
+ "at": 1794649135224,
+ "detail": "trade claimed"
+}
