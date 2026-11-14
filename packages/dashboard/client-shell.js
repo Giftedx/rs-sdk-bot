@@ -1008,15 +1008,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // move or a relog, so it does not count toward the 1,000 ticks.
   const aggroSeen=b=>Math.max(Number(b?.at)||0,Number(b?.live?.seen)||0);
   const aggroNow=(b,now)=>{const at=aggroSeen(b);return at>0?Math.min(now,at+10e3):now;};
-  function aggroTrack(b,now){if(!b?.inWorld||!b.pos){if(b?.name)aggro.delete(b.name);return null;}now=aggroNow(b,now);const seen=aggroSeen(b),x=b.pos.x,z=b.pos.z,inside=c=>x>=c[0]&&x<c[0]+21&&z>=c[1]&&z<c[1]+21,c=[x-10,z-10];
+  // The tile goes with its read: the live roster's tile (b.live, server.ts or withLiveRoster) when its sight is the
+  // newer read, else the status file's b.pos.
+  const aggroPos=b=>{const l=b?.live;return l&&Number.isFinite(l.x)&&Number.isFinite(l.z)&&(Number(l.seen)||0)>=(Number(b.at)||0)?{x:l.x,z:l.z,level:l.level||0}:b?.pos;};
+  function aggroTrack(b,now){const p=aggroPos(b);if(!b?.inWorld||!p){if(b?.name)aggro.delete(b.name);return null;}now=aggroNow(b,now);const seen=aggroSeen(b),x=p.x,z=p.z,inside=c=>x>=c[0]&&x<c[0]+21&&z>=c[1]&&z<c[1]+21,c=[x-10,z-10];
     let t=aggro.get(b.name);if(t&&seen>0&&t.seen>0&&seen-t.seen>30e3)t=null;if(t)t.seen=seen;
     if(!t){const n={zones:[c,c],since:now,first:true,last:[x,z],seen};aggro.set(b.name,n);return n;}
     const jump=Math.max(Math.abs(x-t.last[0]),Math.abs(z-t.last[1]))>40;t.last=[x,z];
     if(inside(t.zones[0])||inside(t.zones[1]))return t;
     t.zones=[c,jump?c:t.zones[0]];t.since=now;t.first=false;return t;}
-  function aggroHunters(b){loadHunt();if(!b?.inWorld||!b.pos||!npcHunt)return [];const lv=b.pos.level||0,wild=typeof wildLevel==='function'&&wildLevel(b.pos)>0,cb=Number(b.combat)||0,by=new Map();
+  function aggroHunters(b){loadHunt();const pos=aggroPos(b);if(!b?.inWorld||!pos||!npcHunt)return [];const lv=pos.level||0,wild=typeof wildLevel==='function'&&wildLevel(pos)>0,cb=Number(b.combat)||0,by=new Map();
     for(const r of npcHunt){if(!(r[1]>=2||r[1]===1&&(wild||cb<=2*r[2])))continue;
-      for(let i=0;i+2<r[3].length;i+=3)if(r[3][i+2]===lv&&Math.max(Math.abs(r[3][i]-b.pos.x),Math.abs(r[3][i+1]-b.pos.z))<=12){by.set(r[0],by.get(r[0])||r[1]===3);break;}}
+      for(let i=0;i+2<r[3].length;i+=3)if(r[3][i+2]===lv&&Math.max(Math.abs(r[3][i]-pos.x),Math.abs(r[3][i+1]-pos.z))<=12){by.set(r[0],by.get(r[0])||r[1]===3);break;}}
     return [...by].map(([name,never])=>({name,never}));}
   function aggroText(b,now){const h=aggroHunters(b);if(!h.length)return null;const t=aggroTrack(b,now);if(!t)return null;now=aggroNow(b,now);const tick=Number(S?.world?.tickMs)||600,left=1000*tick-(now-t.since),names=h.map(x=>x.name).slice(0,6).join(', ');
     if(h.some(x=>x.never))return {text:'∞',title:'NPC aggression: '+names+(h.length===1?' hunts you here and never stops.':' hunt you here and never stop.'),red:true};

@@ -952,6 +952,9 @@ test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spa
  // The roster keeps seeing it every 2 s: the clock runs, and after 400 s the account is safe.
  for(let s=602e3;s<=1000e3;s+=2e3){d.live={seen:s};t.aggroTrack(d,s);}
  expect(t.aggroText(d,1000e3)).toMatchObject({text:'safe'});
+ // The live tile goes with the live sight: the status file keeps b.pos at 3170, the roster sees 3182 (out of both
+ // areas, still 12 tiles from the Moss giant): a new count, not "safe".
+ d.live={seen:1002e3,x:3182,z:9900,level:0};expect(t.aggroText(d,1002e3).text).toBe('6:40');
  // Combat 85 is too strong for the Moss giant outside the Wilderness.
  expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
 });
