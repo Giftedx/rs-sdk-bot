@@ -6,10 +6,15 @@ const session = (z: number) => ({ sdk: { getState: () => ({ player: { worldX: 30
 
 describe('leaveWilderness', () => {
     test('an account out of the Wilderness stays where it is', async () => {
-        expect(await leaveWilderness(session(3496), () => false)).toBeNull();
+        expect(await leaveWilderness(session(3496), false)).toEqual({ died: false, why: null });
     });
-    test('a dead account does not walk', async () => {
-        expect(await leaveWilderness(session(3640), () => true)).toBeNull();
+    test('an account the hold saw die does not walk', async () => {
+        expect(await leaveWilderness(session(3640), true)).toEqual({ died: false, why: null });
+    });
+    test('a death on the way out is reported, not taken for an escape', async () => {
+        let reads = 0;
+        const s = { sdk: { getState: () => ({ player: { worldX: 3092, worldZ: 3640, hp: 5, maxHp: 99, lifeId: reads++ === 0 ? 1 : 2 } }), getInventory: () => [] } } as any;
+        expect(await leaveWilderness(s, false)).toEqual({ died: true, why: 'died walking out of the Wilderness' });
     });
 });
 
