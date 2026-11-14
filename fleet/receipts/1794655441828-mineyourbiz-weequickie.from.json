@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794655441828-mineyourbiz-weequickie",
  "account": "MineYourBiz",
  "partner": "WeeQuickie",
@@ -12,13 +12,19 @@
  "claim": "a5526ba1-ce7f-4a53-a309-9c29b0c3a991",
  "count": 0,
  "ok": false,
- "at": 1794655685757,
- "detail": "trade claimed",
+ "at": 1794655834810,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
  "lines": [
   {
    "item": "Coins",
    "requested": 1200000,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1794655685766-0000017568-0000000001",
+  "at": 1794655834798,
+  "sha256": "c8a24bb26935eece292820cc7044e567691bbf9fc0f8155715fbd10dc5b38d8d"
+ },
+ "screen": false
 }
