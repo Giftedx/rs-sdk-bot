@@ -28,7 +28,8 @@ function cookingLevelFixture(outcomes:boolean[],stock:number,wine=false){
   sdk:{getInventory:()=>pack,getSkill:(name:string)=>name==='Cooking'?{level:99,baseLevel:levelForXp(xp)}:{level:99,baseLevel:99},getState:()=>({player,inventory:pack,bank:{isOpen:open,items:open?rows():[]},interface:{isOpen:false},dialog:{isOpen:false}}),sendCloseModal:async()=>{}},client:{objType:()=>({stackable:false})},
   bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;},withdrawItem:async(item:{id:number},n:number)=>{stored.set(item.id,stored.get(item.id)!-n);generation++;for(let i=0;i<n;i++)pack.push({id:item.id,name:'item-'+item.id,count:1,slot:pack.length});},depositItem:async(item:{id:number})=>{const n=pack.filter(i=>i.id===item.id).reduce((a,i)=>a+i.count,0);stored.set(item.id,(stored.get(item.id)??0)+n);for(let i=pack.length-1;i>=0;i--)if(pack[i]!.id===item.id)pack.splice(i,1);generation++;return{success:true};}}};
  const bank={x:player.worldX,z:player.worldZ,level:0};
- const p:BankProfile={bank,site:bank,inputs:{[raw]:1,...wine?{1937:1}:{}},tools:[],outputs:[product,burnt],run:async(n)=>{
+ const inputs:Record<number,number>={[raw]:1};if(wine)inputs[1937]=1;
+ const p:BankProfile={bank,site:bank,inputs,tools:[],outputs:[product,burnt],run:async(n)=>{
   calls++;
   if(wine){if((stored.get(raw)??0)<n||(stored.get(1937)??0)<n)throw Error('wine inputs short of order and reserve');stored.set(raw,stored.get(raw)!-n);stored.set(1937,stored.get(1937)!-n);}
   for(let i=0;i<n;i++){const good=outcomes[processed++]??false,id=good?product:burnt;if(good)xp+=wine?5000:750;
