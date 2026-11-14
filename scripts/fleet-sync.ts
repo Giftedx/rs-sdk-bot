@@ -239,7 +239,10 @@ export function runSync(push = true): string {
     const plan = (() => { try { return JSON.parse(readFileSync(planFile, 'utf8')); } catch { return null; } })();
     const capacity = sideCapacity(plan);
     if (mine && capacity !== null) {
-        const card = sideCard(snap.side, capacity, owners, (n: string) => { try { return readFileSync(join(root, '.practice', `stop-${n}`), 'utf8'); } catch { return undefined; } });
+        // The registry spelling: the swarm names a stop file after the job's account, and Linux paths are case sensitive.
+        const raw = (() => { try { return JSON.parse(readFileSync(join(dir, 'fleet', 'owners.json'), 'utf8')).accounts ?? {}; } catch { return {}; } })() as Record<string, { side?: string }>;
+        const owned = Object.keys(raw).filter(n => owners.get(n.toLowerCase())?.side === snap.side);
+        const card = sideCard(snap.side, capacity, owned, (n: string) => { try { return readFileSync(join(root, '.practice', `stop-${n}`), 'utf8'); } catch { return undefined; } });
         const cardFile = join(dir, 'fleet', 'sides', `${snap.side}.json`);
         if (JSON.stringify(published(cardFile)) !== JSON.stringify(card)) { mkdirSync(join(dir, 'fleet', 'sides'), { recursive: true }); writeFileSync(cardFile, JSON.stringify(card) + '\n'); }
     }
@@ -268,8 +271,11 @@ export function sideCapacity(plan: any): number | null {
 
 // This side's card: its capacity, the accounts it owns that an owner's stop file pauses, and whether the owner
 // stopped its whole swarm (a stop file the swarm wrote itself is no owner's pause).
-export function sideCard(side: string, capacity: number, owners: ReturnType<typeof loadOwners>, stopText: (name: string) => string | undefined) {
-    const paused = [...owners].filter(([, o]) => o.side === side).map(([n]) => n).filter(n => { const t = stopText(n); return t !== undefined && !swarmWroteStop(t); }).sort();
+// `owned`: the registry spelling of each account this side owns; a stop file is looked up under that spelling and in
+// lower case, and published in lower case.
+export function sideCard(side: string, capacity: number, owned: readonly string[], stopText: (name: string) => string | undefined) {
+    const ownerStop = (n: string) => [n, n.toLowerCase()].some(s => { const t = stopText(s); return t !== undefined && !swarmWroteStop(t); });
+    const paused = [...new Set(owned.filter(ownerStop).map(n => n.toLowerCase()))].sort();
     const swarm = stopText('swarm');
     return { side, capacity, paused, stopped: swarm !== undefined && !swarmWroteStop(swarm) };
 }

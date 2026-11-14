@@ -90,10 +90,10 @@ test('a side card carries the plan\'s capacity and only the owner\'s pauses of i
     expect(sideCapacity({ maxBots: 4 })).toBe(4);
     expect(sideCapacity({ maxBots: 4, fleetCapacity: 9 })).toBe(9);
     expect(sideCapacity(null)).toBeNull();
-    const owners = new Map([['alpha', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }], ['bravo', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }],
-        ['kilo', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]);
-    const stops: Record<string, string> = { alpha: 'owner: hold for the quest', bravo: SWARM_STOP.job, kilo: 'owner hold' };
-    expect(sideCard('claude-cloud', 4, owners, n => stops[n])).toEqual({ side: 'claude-cloud', capacity: 4, paused: ['alpha'], stopped: false });
-    expect(sideCard('claude-cloud', 4, owners, n => n === 'swarm' ? 'owner stopped the side' : undefined).stopped).toBe(true);
-    expect(sideCard('claude-cloud', 4, owners, n => n === 'swarm' ? SWARM_STOP.all : undefined).stopped).toBe(false);
+    // The stop files carry the registry spelling (stop-Fatstack), as the swarm writes them; the card names them in lower case.
+    const owned = ['Fatstack', 'Bravo', 'Charlie'];
+    const stops: Record<string, string> = { Fatstack: 'owner: hold for the quest', Bravo: SWARM_STOP.job, charlie: 'owner hold', Kilo: 'owner hold' };
+    expect(sideCard('claude-cloud', 4, owned, n => stops[n])).toEqual({ side: 'claude-cloud', capacity: 4, paused: ['charlie', 'fatstack'], stopped: false });
+    expect(sideCard('claude-cloud', 4, owned, n => n === 'swarm' ? 'owner stopped the side' : undefined).stopped).toBe(true);
+    expect(sideCard('claude-cloud', 4, owned, n => n === 'swarm' ? SWARM_STOP.all : undefined).stopped).toBe(false);
 });

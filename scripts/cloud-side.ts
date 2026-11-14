@@ -66,6 +66,10 @@ export function daemonCommand(name: Daemon, plan: string): string[] {
 export function mayRestart(restarts: readonly number[], now: number): boolean {
     return restarts.filter(t => now - t < 60 * 60_000).length < MAX_RESTARTS_PER_HOUR;
 }
+// .practice/stop-swarm text an owner wrote (any text the swarm does not write itself) holds the side.
+export const ownerStop = (text: string | undefined) => text !== undefined && !swarmWroteStop(text);
+// Whether the end of a --stop-at-end watch writes the swarm's stop text: never over an owner's file.
+export const endStopWrites = (existing: string | undefined) => !ownerStop(existing);
 // A new side plan: the repository's admission limits, no jobs (the planner writes one per account).
 export function newPlan(capacity: number) {
     return { maxBots: 4, minFreeGB: 4, fleetCapacity: capacity, jobs: [] as unknown[] };
@@ -130,7 +134,7 @@ if (import.meta.main) {
     const stopSwarm = join(root, '.practice', 'stop-swarm');
     if (existsSync(stopSwarm)) {
         const text = readFileSync(stopSwarm, 'utf8');
-        if (!swarmWroteStop(text)) { console.log(`RESULT stop cloud-side side=${o.side} owner stop file: ${text.trim().slice(0, 120)}`); process.exit(0); }
+        if (ownerStop(text)) { console.log(`RESULT stop cloud-side side=${o.side} owner stop file: ${text.trim().slice(0, 120)}`); process.exit(0); }
         unlinkSync(stopSwarm);
     }
 
@@ -156,22 +160,29 @@ if (import.meta.main) {
     tend();
     const began = Date.now(), end = began + o.watchMinutes * 60_000;
     log(`watching ${o.watchMinutes} min, ${mine.length} accounts, free ${(freemem() / 2 ** 30).toFixed(1)} GB`);
+    const readStop = () => { try { return readFileSync(stopSwarm, 'utf8'); } catch { return undefined; } };
+    // An owner's stop file made during the watch ends it: the swarm stops its workers itself, nothing restarts it, and
+    // the RESULT stop line tells the session to stop starting this command.
+    let ownerStopped = false;
     while (Date.now() < end) {
         await Bun.sleep(Math.min(60_000, Math.max(0, end - Date.now())));
+        if (ownerStop(readStop())) { ownerStopped = true; log('owner stop file: watch ends'); break; }
         tend();
     }
     if (o.stopAtEnd) {
         // The swarm's own stop text: each worker finishes its step and logs out, the swarm exits once none runs, and no
-        // other side reads the file as an owner's pause. A Codex task's default 50-minute watch plus this wait ends
-        // within the hour.
-        writeFileSync(stopSwarm, SWARM_STOP.all);
+        // other side reads the file as an owner's pause. An owner's file is never replaced or removed; this run removes
+        // only the file it wrote, and only while its text is unchanged. A Codex task's default 50-minute watch plus this
+        // wait ends within the hour.
+        const wrote = endStopWrites(readStop());
+        if (wrote) writeFileSync(stopSwarm, SWARM_STOP.all);
         const stopBy = Date.now() + 6 * 60_000;
         while (Date.now() < stopBy && records.swarm && alive(records.swarm.pid, 'scripts/swarm.ts')) await Bun.sleep(5_000);
         for (const name of DAEMONS) { const r = records[name]; if (r && alive(r.pid, daemonCommand(name, plan)[0]!)) try { process.kill(r.pid, 'SIGTERM'); } catch { /* gone */ } }
-        try { unlinkSync(stopSwarm); } catch { /* gone */ }
+        if (wrote && readStop() === SWARM_STOP.all) try { unlinkSync(stopSwarm); } catch { /* gone */ }
         log('stopped at end');
     }
     const up = DAEMONS.map(n => `${n}=${records[n] && alive(records[n]!.pid, daemonCommand(n, plan)[0]!) ? 'up' : 'down'}`).join(' ');
     const starts = DAEMONS.reduce((s, n) => s + (records[n]?.restarts.filter(t => t >= began).length ?? 0), 0);
-    console.log(`RESULT ok cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${o.stopAtEnd ? ' stopped' : ''}`);
+    console.log(`RESULT ${ownerStopped ? 'stop' : 'ok'} cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${ownerStopped ? ' owner stop file' : ''}${o.stopAtEnd ? ' stopped' : ''}`);
 }

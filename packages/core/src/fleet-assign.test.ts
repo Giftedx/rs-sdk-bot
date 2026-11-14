@@ -63,5 +63,7 @@ describe('fleet adoption', () => {
         expect(base({ owners, capacity: 9, sides: { ...sides, local: { seen: NOW - LIVE_MS, capacity: 5 } } }).map(m => m.account)).toEqual(['Kilo']);
         expect(base({ owners, capacity: 9, sides: { ...sides, local: { seen: NOW, capacity: 0 } } }).map(m => m.account)).toEqual(['Kilo']);
         expect(base({ owners, capacity: 9, sides: { ...sides, local: { seen: NOW, capacity: 5, stopped: true } } }).map(m => m.account)).toEqual(['Kilo']);
+        // Paused by the owner of the side holding it: the stop file is here, so it stays here.
+        expect(base({ owners, capacity: 9, sides: { ...sides, 'claude-cloud': { seen: NOW, paused: ['alpha'] } } })).toEqual([{ account: 'Bravo', from: 'claude-cloud', to: 'local', home: null }]);
     });
 });

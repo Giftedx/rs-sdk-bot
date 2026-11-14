@@ -4,7 +4,7 @@
 // A side that runs its controller, in its own fleet sync:
 //  - hands an account it adopted back to the account's home side once that side is live again (a lease renewal
 //    within LIVE_MS), publishes room for it (fleet/sides/<side>.json capacity) and the account is idle (its fleet claim
-//    is not held); a side that hands back adopts nothing in the same pass;
+//    is not held) and not paused by this side's owner; a side that hands back adopts nothing in the same pass;
 //  - otherwise adopts, up to its own capacity, accounts whose side has gone STRANDED_MS without a lease renewal, whose
 //    claim is free (not held, or a swarm claim the orphan rule in fleet-trade-claim.ts lets it replace) and whose
 //    credential it holds. Its own accounts coming home go first, then by name.
@@ -46,7 +46,8 @@ export function planTransfers(v: {
     const handback: Move[] = [];
     for (const n of names) {
         const o = owners[n]!;
-        if (o.side !== side || !o.home || o.home === side || held(n)) continue;
+        // An account this side's owner paused stays here: its stop file is on this machine, not the home side's.
+        if (o.side !== side || !o.home || o.home === side || held(n) || paused(n, side)) continue;
         const home = sides[o.home];
         if (!live(home, now) || home!.stopped) continue;
         if ((home!.capacity ?? 0) - (count.get(o.home) ?? 0) <= 0) continue;

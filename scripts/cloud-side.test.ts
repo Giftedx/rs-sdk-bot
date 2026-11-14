@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { DEFAULT_WATCH_MINUTES, MAX_RESTARTS_PER_HOUR, daemonCommand, mayRestart, newPlan, parseOptions, sessionPrompt } from './cloud-side';
+import { DEFAULT_WATCH_MINUTES, MAX_RESTARTS_PER_HOUR, daemonCommand, endStopWrites, mayRestart, newPlan, ownerStop, parseOptions, sessionPrompt } from './cloud-side';
+import { SWARM_STOP } from './swarm';
 
 describe('cloud side bootstrap', () => {
     test('options: the side comes from the flag or FLEET_SIDE, never local', () => {
@@ -29,5 +30,14 @@ describe('cloud side bootstrap', () => {
         expect(mayRestart(recent, now)).toBe(false);
         expect(mayRestart(recent.map(t => t - 60 * 60_000), now)).toBe(true);
         expect(newPlan(6)).toEqual({ maxBots: 4, minFreeGB: 4, fleetCapacity: 6, jobs: [] });
+    });
+
+    test('an owner\'s stop file holds the side and is never replaced at the end of a watch', () => {
+        expect(ownerStop(undefined)).toBe(false);
+        expect(ownerStop(SWARM_STOP.all)).toBe(false);
+        expect(ownerStop('owner: pause for the quest')).toBe(true);
+        expect(endStopWrites(undefined)).toBe(true);
+        expect(endStopWrites(SWARM_STOP.all)).toBe(true);
+        expect(endStopWrites('owner: pause for the quest')).toBe(false);
     });
 });
