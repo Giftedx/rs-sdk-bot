@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794621318370,
+ "at": 1794621873171,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -34,13 +34,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
-   "role": "pvp"
   },
   {
    "account": "Balls",
