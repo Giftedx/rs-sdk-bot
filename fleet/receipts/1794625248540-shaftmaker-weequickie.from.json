@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794625248540-shaftmaker-weequickie",
+ "account": "Shaftmaker",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Death rune",
+ "requested": 4,
+ "claim": "fa64022f-6a70-42a6-bc97-e685f32812c3",
+ "count": 0,
+ "ok": false,
+ "at": 1794625449464,
+ "detail": "trade claimed"
+}
