@@ -306,7 +306,7 @@ const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...need
 // not have) stops the job: no item fixes that. The coin line is not a kit line (coinShort). Of several `anyOf`
 // kits the account takes one whose every line it `can` get (a buy: 250 fire runes, not a fire staff no market sells),
 // then the one with the fewest missing units.
-export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) => boolean = () => true): Lack[] | null {
+export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string, count: number) => boolean = () => true): Lack[] | null {
     if ((a.combat ?? combatLevel(a.skills)) < (needs?.combat ?? 0) || !(needs?.quests ?? []).every(q => questDone(a, q))
         || (a.questPoints ?? 0) < (needs?.questPoints ?? 0)
         || !Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
@@ -324,7 +324,7 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) 
     const frail = frailShort(a, needs);
     if (frail > 0) out.push({ of: needs!.frail!.of.map(norm), count: frail });
     if (needs?.anyOf) {
-        const units = (lacks: readonly Lack[]) => lacks.reduce((n, l) => n + l.count, 0), blocked = (lacks: readonly Lack[]) => lacks.filter(l => !l.of.some(can)).length;
+        const units = (lacks: readonly Lack[]) => lacks.reduce((n, l) => n + l.count, 0), blocked = (lacks: readonly Lack[]) => lacks.filter(l => !l.of.some(i => can(i, l.count))).length;
         const kits = needs.anyOf.map(alt => kitLacks(a, alt, can)).filter((k): k is Lack[] => k !== null).sort((x, y) => blocked(x) - blocked(y) || units(x) - units(y));
         if (!kits.length) return null;
         out.push(...kits[0]!);
@@ -635,11 +635,15 @@ export function plan(inp: Inputs): Assignment[] {
         // place is known must have a way there and hold the fare of that way. A party with no known place has no rule.
         const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
         if (!reachesMeet(c.account)) return;
+        const donorFor = (item: string, count: number) => stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= count
+            && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
+        // A market alternative can be unaffordable while a donor holds another complete kit. Reconsider the choice
+        // against this pass's reachable, unreserved stock, including donors already taken by another account.
+        const lacks = kitLacks(a, c.template.needs, (item, count) => !!donorFor(item, count)) ?? [];
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
-        for (const l of [...c.lacks!].filter(l => !own(l)).sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
-            const from = stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
-                && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
+        for (const l of lacks.filter(l => !own(l)).sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
+            const from = donorFor(item, l.count);
             if (!from) continue;
             // A donor of this side sends the band's batch, as a buy would bring it, as far as its spare stock goes: one
             // trade, not one for every start amount. Another side's donor sends what the band needs to start.
