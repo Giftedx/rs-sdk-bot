@@ -1,0 +1,29 @@
+{
+ "id": "1794653942698-mineyourbiz-weequickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "WeeQuickie",
+ "item": "Blood rune",
+ "count": 200,
+ "start": 1794653942698,
+ "end": 1794657542698,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Coins",
+   "count": 120000
+  }
+ ],
+ "takerWaits": true
+}
