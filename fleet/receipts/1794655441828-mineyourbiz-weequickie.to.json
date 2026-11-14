@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794655441828-mineyourbiz-weequickie",
  "account": "WeeQuickie",
  "partner": "MineYourBiz",
@@ -12,13 +12,19 @@
  "claim": "02738bee-3ce5-4ffe-a4e4-6de4543c1046",
  "count": 0,
  "ok": false,
- "at": 1794655838936,
- "detail": "trade claimed",
+ "at": 1794655913604,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Coins",
    "requested": 1200000,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1794655838946-0000024956-0000000001",
+  "at": 1794655913594,
+  "sha256": "5c90c3d6c490c26e5ad4eaf90a186d9bc08ef116b343f84f84654df172600ca9"
+ },
+ "screen": false
 }
