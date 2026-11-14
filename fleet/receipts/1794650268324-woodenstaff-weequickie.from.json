@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794650268324-woodenstaff-weequickie",
+ "account": "Woodenstaff",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(3)",
+ "requested": 2,
+ "claim": "9087d193-c54c-4ac3-bc42-d05c3cae4713",
+ "count": 0,
+ "ok": false,
+ "at": 1794650289119,
+ "detail": "trade claimed"
+}
