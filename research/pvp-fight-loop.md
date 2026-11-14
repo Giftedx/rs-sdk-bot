@@ -1205,6 +1205,16 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   target, since the loop can stop on the death before the kill message comes. A gang with Protect Item keeps the dagger and drops a
   hat, two robes (72 coins) and what food it has left. Whether the gang uses Protect Item does not show (no head icon).
 
+- **The squad script.** `scripts/pk-squad.ts` (`aio-pvp.ts squad`) runs the method on live accounts: the accounts
+  walk to the multi-way post (3067, 3640), every one fights the target account in view with the lowest health bar,
+  takes the dearest drops after each kill, and banks at Edgeville and walks back when its fight loop leaves; it stops
+  on `.practice/stop-pk-squad`, `MAX_MINUTES` or `MAX_KILLS`, refuses the main account and a post that is not
+  multi-way, and runs live only with `DEMO_OK=1` (openBot). Its default options turn off the champion's
+  `dropForStrip`, which dropped a shark before each account's first freeze. Against the bench gang (`SQUAD_GANG=3`,
+  seeds 1 to 4): four of ours killed all three in each run with no death, about 33 HP a kill
+  (`extra:squad-4-gang-x1`); six, all three, about 23 HP a kill (`extra:squad-6-gang-x1`); four against the skulled
+  gang with no Protect Item, 12 of 12 and 11 dragon daggers(p) (`extra:squad-4-gang-skull-x1`).
+
 The cheapest method measured: full rune (or the shop set with the cape of legends), iron arrows, Bind runes, a
 regular antipoison and no boost, against one or two gang accounts when the world feed shows the others away, or three such accounts against the three
 at once, each against its own, or best, four such accounts on the multi-way tiles west of the post (35 HP a kill,

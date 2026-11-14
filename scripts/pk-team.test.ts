@@ -10,3 +10,13 @@ test('pickEnemy: pair takes its own enemy while in view, else the lowest bar; ne
     expect(pickEnemy(live, 'c', 'near', health)?.f).toBe('a');
     expect(pickEnemy([], 'c', 'pair', health)).toBeUndefined();
 });
+
+test('squadTarget takes the lowest bar of the targets in view, not a skipped one', async () => {
+    const { squadTarget } = await import('./pk-squad');
+    const view = [{ name: 'Goondelf', index: 1, distance: 2 }, { name: 'Ligma', index: 2, distance: 5 }, { name: 'Bystander', index: 3, distance: 1 }];
+    const bars: Record<number, number> = { 1: 0.8, 2: 0.3, 3: 0.1 };
+    const targets = new Set(['goondelf', 'ligma', 'sugma']);
+    expect(squadTarget(view, targets, p => bars[p.index]!)?.name).toBe('Ligma');
+    expect(squadTarget(view, targets, p => bars[p.index]!, new Set(['ligma']))?.name).toBe('Goondelf');
+    expect(squadTarget([view[2]!], targets, p => bars[p.index]!)).toBeUndefined();
+});
