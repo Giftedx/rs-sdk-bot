@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794649129322-swordinhand-masterbaiter",
  "account": "Swordinhand",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 18186,
  "claim": "a4f97422-95e2-4e98-9571-38b8d13e4059",
- "count": 0,
- "ok": false,
- "at": 1794649138595,
- "detail": "trade claimed"
+ "count": 18186,
+ "ok": true,
+ "at": 1794649181703,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 18186,
+  "after": 0
+ },
+ "bank": {
+  "count": 6536,
+  "at": 1794649166590
+ },
+ "logout": {
+  "attemptId": "1794649138604-0000024980-0000000001",
+  "at": 1794649181693,
+  "sha256": "95d04da1ee3091076a9f0232c71db87b0e61592b1e15f88624a9f6b3e1d84969"
+ },
+ "screen": true
 }
