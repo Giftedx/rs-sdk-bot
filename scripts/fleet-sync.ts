@@ -105,15 +105,19 @@ export function ensureWorktree(dir = FLEET_WORKTREE, base = root): string {
 }
 
 // Why the fleet-data worktree cannot sync, or null: a rebase or merge stopped in it, an unmerged file, or a HEAD that
-// holds more than STRAY_COMMITS commits the published branch lacks, which no sync makes (it is a branch made from the
-// code, see ensureWorktree). The caller fetched origin/fleet-data first.
+// holds more than STRAY_COMMITS commits of the code history (origin/master) that the published branch lacks. The
+// fleet-data branch never merges master, so only a branch made from the code holds those (see ensureWorktree);
+// unpublished fleet data, however many commits, never counts. The caller fetched origin/fleet-data and holds the
+// fleet-data write lock, so a rebase marker here is one no running sync owns.
 export const STRAY_COMMITS = 200;
 export function worktreeProblem(dir: string, stray = STRAY_COMMITS): string | null {
     const gitDir = git(dir, 'rev-parse', '--absolute-git-dir').out;
     if (['rebase-merge', 'rebase-apply', 'MERGE_HEAD'].some(f => existsSync(join(gitDir, f)))) return 'a rebase or merge stopped in it';
     if (git(dir, 'diff', '--name-only', '--diff-filter=U').out) return 'it has unmerged files';
-    const ahead = Number(git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out);
-    if (Number.isFinite(ahead) && ahead > stray) return `HEAD holds ${ahead} commits that origin/${BRANCH} lacks: it is not the fleet-data branch`;
+    // Commits HEAD has beyond the published branch, less those that are not in origin/master either: the code ones.
+    const count = (...not: string[]) => { const r = git(dir, 'rev-list', '--count', 'HEAD', '--not', ...not); return r.ok ? Number(r.out) : NaN; };
+    const fromCode = git(dir, 'rev-parse', '--verify', '-q', 'origin/master').ok ? count(`origin/${BRANCH}`) - count(`origin/${BRANCH}`, 'origin/master') : NaN;
+    if (Number.isFinite(fromCode) && fromCode > stray) return `HEAD holds ${fromCode} commits of origin/master that origin/${BRANCH} lacks: it is not the fleet-data branch`;
     return null;
 }
 

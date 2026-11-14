@@ -135,5 +135,8 @@ test('a clone of master alone gets the published fleet-data branch, never one ma
         const bogus = join(clone, 'bogus');
         g(clone, 'worktree', 'add', '-q', '-b', 'stray', bogus, 'master');
         expect(worktreeProblem(bogus, 0)).toContain('not the fleet-data branch');
+        // Unpublished fleet data (pushes refused, say) is never taken for the code, however many commits.
+        for (const n of [1, 2, 3]) { writeFileSync(join(wt, `receipt-${n}.json`), '{}\n'); g(wt, 'add', '.'); g(wt, 'commit', '-qm', `receipt ${n}`); }
+        expect(worktreeProblem(wt, 0)).toBeNull();
     } finally { rmSync(base, { recursive: true, force: true }); }
 });

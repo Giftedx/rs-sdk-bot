@@ -20,6 +20,7 @@ import { restoreCredential, vaultKey, putCredential } from '../packages/core/src
 import { MAIN_ACCOUNT } from '../packages/core/src/haggisgate';
 import { SWARM_STOP, swarmWroteStop } from './swarm';
 import { FETCH_FLEET_DATA, worktreeProblem } from './fleet-sync';
+import { withFleetDataWrite } from './fleet-owner-claim';
 
 const root = resolve(import.meta.dir, '..');
 export const DEFAULT_WATCH_MINUTES = 110;
@@ -110,22 +111,26 @@ if (import.meta.main) {
     if (!run(['bun', 'scripts/worktree-setup.ts'], root, 1_200_000)) fail('worktree setup failed');
     run(['git', 'config', 'submodule.vendor/rs-sdk.ignore', 'dirty']);
     for (const d of ['cloud-handoff', 'status', 'swarm-logs']) mkdirSync(join(root, '.practice', d), { recursive: true });
-    // A cached container can hold a fleet-data worktree that cannot sync. A stopped rebase or merge is aborted, which
-    // keeps the worktree's unpublished commits (a trade receipt among them must survive). One that is not the
-    // fleet-data branch at all (worktreeProblem: a branch made from the code) is replaced; it holds no fleet data.
+    // A cached container can hold a fleet-data worktree that cannot sync. Under the fleet-data write lock, so a sync
+    // the fleet agent is running finishes first and any marker left is an abandoned one: a stopped rebase or merge is
+    // aborted, which keeps the worktree's unpublished commits (a trade receipt among them must survive), and one that
+    // is not the fleet-data branch at all (worktreeProblem: a branch made from the code) is replaced; it holds no
+    // fleet data.
     run(['git', ...FETCH_FLEET_DATA]);
-    if (existsSync(join(FLEET_WORKTREE, '.git')) && worktreeProblem(FLEET_WORKTREE)) {
+    const unrepaired = await withFleetDataWrite(root, () => {
+        if (!existsSync(join(FLEET_WORKTREE, '.git')) || !worktreeProblem(FLEET_WORKTREE)) return null;
         run(['git', '-C', FLEET_WORKTREE, 'rebase', '--abort']);
         run(['git', '-C', FLEET_WORKTREE, 'merge', '--abort']);
         const problem = worktreeProblem(FLEET_WORKTREE);
-        if (problem?.includes('not the fleet-data branch')) {
-            log(`fleet worktree replaced: ${problem}`);
-            run(['git', 'worktree', 'remove', '--force', FLEET_WORKTREE]);
-            rmSync(FLEET_WORKTREE, { recursive: true, force: true });
-            run(['git', 'worktree', 'prune']);
-            run(['git', 'branch', '-D', 'fleet-data']);
-        } else if (problem) fail(`fleet worktree: ${problem}`);
-    }
+        if (!problem?.includes('not the fleet-data branch')) return problem;
+        log(`fleet worktree replaced: ${problem}`);
+        run(['git', 'worktree', 'remove', '--force', FLEET_WORKTREE]);
+        rmSync(FLEET_WORKTREE, { recursive: true, force: true });
+        run(['git', 'worktree', 'prune']);
+        run(['git', 'branch', '-D', 'fleet-data']);
+        return null;
+    });
+    if (unrepaired) fail(`fleet worktree: ${unrepaired}`);
     if (!run(['bun', 'scripts/fleet-sync.ts', '--no-push'])) fail('fleet sync failed');
     run(['git', '-C', FLEET_WORKTREE, 'config', 'rebase.autoStash', 'true']);
     const plan = join(root, '.practice', 'cloud-handoff', 'swarm.json');
