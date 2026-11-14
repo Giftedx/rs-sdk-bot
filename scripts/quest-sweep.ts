@@ -217,6 +217,9 @@ export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7},PR
 // The generated quests drink any antipoison dose they hold (quest-mm.ts ANTIPOISON), and no shop sells one: a preset's
 // antipoison goes with the food rows, taken when the bank holds it and never a missing item.
 export const ANTIPOISONS=[2448,181,183,185,175,177,179];
+// Items a quest script gets for itself when the account holds none, so they go with the food rows too: Monkey Madness
+// kills a Karamja monkey by the Gandius glider for its bones (quest-mm.ts monkeyBones).
+export const QUEST_FINDS:Record<string,readonly number[]>={mm:[3183]};
 export const prayerCovers=(quest:string,prayer:number)=>PRAYER_USED[quest]!==undefined&&prayer>=PRAYER_USED[quest]!+PRAYER_MARGIN;
 // The quests whose scripts cast scripts/fire-spells.ts fireSpell: only their packs' cast runes follow the Magic level.
 // Other presets keep their runes (Mage Arena's blood runes cast Flames of Zamorak).
@@ -1249,7 +1252,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  // the Gnome course to the Ardougne north bank for the three potions alone).
  // The current points decide, not the base level: a drained Prayer-99 account still takes the potions.
  if(prayerCovers(quest,prayerPoints()))for(const id of PRAYER_POTIONS)base.delete(id);
- for(const id of ANTIPOISONS)if(base.has(id)){food.set(id,(food.get(id)??0)+base.get(id)!);base.delete(id);}
+ for(const id of [...ANTIPOISONS,...QUEST_FINDS[quest]??[]])if(base.has(id)){food.set(id,(food.get(id)??0)+base.get(id)!);base.delete(id);}
  if(FIRE_QUESTS.has(quest))base=fireRunesFor(base,baseLevel('Magic'));
  const build=buildPack(quest,baseLevel);
  for(const i of build)base.set(i.id,(base.get(i.id)??0)+i.count);
