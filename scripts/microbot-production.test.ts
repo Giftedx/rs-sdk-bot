@@ -142,6 +142,47 @@ test('cached bank rows without a fresh open generation never authorize a withdra
  const s:any={tick:()=>tick,ended:new Promise(()=>{}),onTick:(f:()=>void)=>{callbacks.add(f);return()=>callbacks.delete(f)},sdk:{getInventory:()=>[],getSkill:()=>({level:99}),getSkillXp:()=>0,getState:()=>({player:{lifeId:1},inventory:[],bank:{isOpen:bankOpen,noteMode:false,items:[]},interface:{isOpen:false}})},bankObservation:()=>({generation:1,items:[]}),bot:{openBank:async()=>{bankOpen=true;return{success:true}},closeBank:async()=>{bankOpen=false},withdrawItem:async()=>{withdrawals++;return{success:true}}}};
  const timer=setInterval(()=>{tick++;for(const f of callbacks)f();},1);try{const result=await runInventoryBank(s,r,{maximum:1,cap:40,maxAttempts:1});expect(result.ok).toBe(false);expect(result.failure).toContain('fresh bank');expect(withdrawals).toBe(0);}finally{clearInterval(timer)}
 });
+
+for(const stopAt of ['open','withdraw'] as const)test('inventory preparation stops after an awaited bank '+stopAt,async()=>{
+ const recipe=inventoryRecipes().find(r=>r.name==='pie-shell')!,player={lifeId:1,respawnCount:0};
+ const stock=new Map(recipe.inputs.map(i=>[i.id,i.units])),pack:{id:number;slot:number;name:string;count:number}[]=[];
+ const inputs:string[]=[];let stopped=false,bankOpen=false,generation=0;
+ const bankItems=()=>[...stock].map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
+ const s:any={name:'Owned',tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getInventory:()=>pack,getSkill:()=>({level:99}),getSkillXp:()=>0,getDialog:()=>({isOpen:false}),
+   getState:()=>({player,inventory:pack,bank:{isOpen:bankOpen,items:bankItems()},interface:{isOpen:false},dialog:{isOpen:false}}),
+   sendUseItemOnItem:async()=>{inputs.push('produce');return{success:true};}},
+  bankObservation:()=>({generation,items:bankItems()}),
+  bot:{openBank:async()=>{inputs.push('open');bankOpen=true;generation++;await Promise.resolve();if(stopAt==='open')stopped=true;return{success:true};},
+   withdrawItem:async(item:{id:number},count:number)=>{inputs.push('withdraw:'+item.id);stock.set(item.id,stock.get(item.id)!-count);pack.push({id:item.id,count,slot:pack.length,name:'item-'+item.id});generation++;await Promise.resolve();if(stopAt==='withdraw')stopped=true;return{success:true};},
+   closeBank:async()=>{inputs.push('close');bankOpen=false;}},direct:async()=>{inputs.push('control');return{success:true};}};
+ const result=await runInventoryBank(s,recipe,{maximum:1,cap:40,maxAttempts:1,stop:()=>stopped});
+ expect(result).toMatchObject({ok:false,made:0,banked:0,attempts:0,failure:'production session stopped'});
+ expect(inputs).toEqual(stopAt==='open'?['open']:['open','withdraw:'+recipe.inputs[0]!.id]);
+ for(const input of recipe.inputs)expect((stock.get(input.id)??0)+pack.filter(i=>i.id===input.id).reduce((n,i)=>n+i.count,0)).toBe(input.units);
+});
+for(const [name,stopAt] of [['pie-shell','modal-close'],['identify:guam_leaf','modal-close'],['pie-shell','deposit-open']] as const)test('inventory adapter stops during '+stopAt+' for '+name,async()=>{
+ const recipe=inventoryRecipes().find(r=>r.name===name)!;
+ const pack=recipe.inputs.map((i,slot)=>({id:i.id,count:i.units,slot,name:'item-'+i.id})),stock=new Map<number,number>();
+ const inputs:string[]=[];let stopped=false,bankOpen=false,modal=false,generation=0,opens=0,xp=100;
+ const inventory=()=>pack.filter(i=>i.count>0),items=()=>[...stock].map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
+ const produce=async()=>{inputs.push('produce');for(const i of recipe.inputs)pack.find(p=>p.id===i.id)!.count-=i.units;pack.push({id:recipe.product,count:1,slot:pack.length,name:'item-'+recipe.product});if(recipe.xp)xp+=25;return{success:true};};
+ const s:any={name:'Owned',tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getInventory:inventory,getSkill:()=>({level:99}),getSkillXp:()=>xp,getDialog:()=>({isOpen:modal}),
+   getState:()=>({player:{lifeId:1,respawnCount:0},inventory:inventory(),bank:{isOpen:bankOpen,items:items()},interface:{isOpen:modal},dialog:{isOpen:modal}}),
+   sendUseItemOnItem:produce,sendUseItem:produce},
+  bankObservation:()=>({generation,items:items()}),
+  bot:{openBank:async()=>{inputs.push('open');opens++;bankOpen=true;generation++;await Promise.resolve();if(stopAt==='deposit-open'&&opens===2)stopped=true;return{success:true};},
+   closeBank:async()=>{inputs.push('close');bankOpen=false;modal=stopAt==='modal-close';},
+   depositItem:async(item:{id:number})=>{inputs.push('deposit');const p=pack.find(i=>i.id===item.id)!;stock.set(p.id,(stock.get(p.id)??0)+p.count);p.count=0;generation++;return{success:true};}},
+  direct:async()=>{inputs.push('closeModal');modal=false;await Promise.resolve();stopped=true;return{success:true};}};
+ const result=await runInventoryBank(s,recipe,{maximum:1,cap:40,maxAttempts:1,members:true,stop:()=>stopped});
+ expect(result).toMatchObject({ok:false,made:stopAt==='modal-close'?0:1,banked:0,attempts:1,failure:'production session stopped'});
+ expect(inputs).toEqual(stopAt==='modal-close'?['open','close','closeModal']:['open','close','produce','open']);
+ if(stopAt==='modal-close')for(const input of recipe.inputs)expect(inventory().find(i=>i.id===input.id)?.count).toBe(input.units);
+ else expect(inventory()).toEqual([{id:recipe.product,count:1,slot:recipe.inputs.length,name:'item-'+recipe.product}]);
+ expect(stock.size).toBe(0);
+});
 test('dough checks the actual 28 occupied inventory slots before native menu dispatch',async()=>{
  const r=inventoryRecipes().find(r=>r.name==='dough:bread:jug_water')!;let uses=0,open=true;
  const pack=[...Array.from({length:26},(_,slot)=>({id:590,count:1,slot,name:'Tinderbox'})),...r.inputs.map((i,n)=>({id:i.id,count:1,slot:26+n,name:'input'}))];

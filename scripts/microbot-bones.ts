@@ -74,10 +74,11 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
  const result=await runBonesConversion({tick:()=>s.tick(),stopped,level:()=>s.sdk.getSkill('Magic')?.level??0,read,costs,
   prepare:async maximum=>{
    await open();
+   if(stopped())return false;
    if((s.bankObservation?.()?.items??[]).filter(i=>i.id===ids.bones).reduce((n,i)=>n+i.count,0)+count(ids.bones)-reserve<maximum)return false;
    for(const [name,need] of Object.entries(costs()) as [keyof BonesCosts,number][]){
     const id=ids[name],missing=Math.max(0,need-count(id));
-    if(missing){const stock=(s.bankObservation?.()?.items??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);if(stock-missing<reserve)return false;const before=count(id);const r=await s.bot.withdrawItem(new RegExp(`^${name} rune$`,'i'),missing,{asNote:false});
+    if(missing){const stock=(s.bankObservation?.()?.items??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);if(stock-missing<reserve||stopped())return false;const before=count(id);const r=await s.bot.withdrawItem(new RegExp(`^${name} rune$`,'i'),missing,{asNote:false});
      if(!r.success||!await waitUntil(s,()=>count(id)===before+missing,{timeoutTicks:10}))return false;}
    }
    const owned=count(ids.bones);
@@ -86,10 +87,11 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
     const available=(s.bankObservation?.()?.items??[]).filter(i=>i.id===ids.bones).reduce((n,i)=>n+i.count,0);
     if(available-reserve<maximum)return false;
     const amount=Math.min(maximum,available-reserve,28-inv().length);
-    if(amount<1)return false;
+    if(amount<1||stopped())return false;
     const r=await s.bot.withdrawItem(/^bones$/i,amount,{asNote:false});
     if(!r.success||!await waitUntil(s,()=>count(ids.bones)===amount,{timeoutTicks:10}))return false;
    }
+   if(stopped())return false;
    await s.bot.closeBank();if(!await waitUntil(s,()=>!state()?.bank?.isOpen,{timeoutTicks:8}))return false;
    return !stopped();
   },
@@ -101,7 +103,7 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
    if(o.cap-(s.tick()-conversionStart)<=3)throw Error('bones conversion bank budget exhausted');
    await waitTicks(s,3);
    if(stopped()||s.tick()-conversionStart>=o.cap)throw Error('bones conversion stopped before bank');
-   await open();const item=inv().find(i=>i.id===ids.bananas);return item?depositObserved(s,item):0;
+   await open();if(stopped())throw Error('bones conversion session stopped');const item=inv().find(i=>i.id===ids.bananas);return item?depositObserved(s,item):0;
   },
   close:async()=>{if(!stopped())await s.bot.closeBank();},
  },o);

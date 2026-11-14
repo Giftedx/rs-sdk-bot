@@ -12,6 +12,7 @@ export type Leg =
 // The search does not carry coins spent along a route. It first lets each boat take one fare and keeps the route
 // when its fares add up to the coins held (OreElse: 40 coins, one 30-coin boat off Karamja). Otherwise it
 // searches again with a fare and one more held for every boat: an Ardougne to Port Sarim trip takes two boats.
+// That conservative retry may miss a slower affordable alternative; its complete fare must still fit before returning a route.
 const oneFare = (t: Travel, a: Account) => travelAllowed(t, a);
 const fareAndOne = (t: Travel, a: Account) => travelAllowed(t, t.coins > 0 ? { ...a, coins: (a.coins ?? 0) - t.coins } : a);
 export const routeFares = (legs: readonly Leg[]) => legs.reduce((n, l) => n + (l.kind === 'travel' ? l.travel.coins : 0), 0);
@@ -429,7 +430,13 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                 const b=backward.next();if(b.done)return b.value;
             } } finally { forward.return({ok:false,reason:'no_route'}); backward.return({ok:false,reason:'no_route'}); cache.clear(); }
             };
-            const fares=()=>{const r=search(oneFare);return r.ok&&routeFares(r.legs)<=(acct.coins??0)?r:search(fareAndOne);};
+            const fares=():ReturnType<World['route']>=>{
+                const r=search(oneFare);
+                if(r.ok&&routeFares(r.legs)<=(acct.coins??0))return r;
+                const fallback=search(fareAndOne);
+                if(!fallback.ok)return fallback;
+                return routeFares(fallback.legs)<=(acct.coins??0)?fallback:{ok:false,reason:'no_route'};
+            };
             const policed=()=>opts.pathLength.withPolicy?opts.pathLength.withPolicy(blocked,fares):fares();
             return opts.pathLength.withDanger?opts.pathLength.withDanger(acct,from,to,policed):policed();
         },
