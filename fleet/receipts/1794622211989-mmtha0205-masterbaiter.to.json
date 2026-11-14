@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794622211989-mmtha0205-masterbaiter",
  "account": "Masterbaiter",
  "partner": "mmtha0205",
@@ -12,6 +12,16 @@
  "claim": "40818a6c-71e7-4246-a2a5-c3dd0fa989a5",
  "count": 0,
  "ok": false,
- "at": 1794622220388,
- "detail": "trade claimed"
+ "at": 1794624612824,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794622220396-0000026992-0000000001",
+  "at": 1794624612785,
+  "sha256": "40c64a8bf346de91f231eaac1c347569fc053a5a8348c042ce496fcdf8ff19d3"
+ },
+ "screen": false
 }
