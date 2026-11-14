@@ -413,9 +413,12 @@ export function orphanedSessionEnds(accounts: readonly string[], ended: Readonly
         if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt)) continue;
         const prior = [...ended].find(([name]) => name.toLowerCase() === key);
         // An older orphan end yields to a later update. A successful end yields to an attempt that started after it: that
-        // end cannot describe the attempt and holds nothing. Every other end stays, because a repair reads its reason.
-        const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt ');
-        if (prior && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
+        // end cannot describe the attempt and holds nothing. An `exit unknown` end yields too: it is what the swarm writes
+        // for a run whose process it lost (a reboot ends every live run so), it holds no repair facts, and without this the
+        // account stays held for good, since a held session is never retried. Every other end stays, because a repair
+        // reads its reason.
+        const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt '), unknown = prior?.[1].reason === 'exit unknown';
+        if (prior && !unknown && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
         found.push({ end: [prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`], pid: receipt.pid, createdAt: receipt.createdAt, answers: alive(receipt.pid) });
     }
     const answering = found.filter(f => f.answers).map(f => f.pid), table = answering.length ? starts(answering) : null;
