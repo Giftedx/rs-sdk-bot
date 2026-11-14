@@ -1075,6 +1075,7 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'market:ge-plan': 'needs Grand Exchange market data',
   'market:bank-seller': 'needs buyers on the Grand Exchange',
   'market:ge-sell': 'needs a buyer on the Grand Exchange',
+  'market:shop-to-bid': 'needs an open bid on the Grand Exchange above the shop price; the practice server has no buyers',
   'market:ge-buy': 'needs a seller on the Grand Exchange, or two runs for the shop fallback',
 };
 
