@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 
 // The command line of a live process, or null. Used to check that a saved PID is still our process:
 // Windows reuses PIDs, so a stale pids.json could otherwise point at an unrelated program.
@@ -9,7 +9,10 @@ export function commandLine(pid: number): string | null {
         const out = r.stdout.toString().trim();
         return out.length > 0 ? out : null;
     }
-    if (existsSync(`/proc/${pid}/cmdline`)) return readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim() || null;
+    if (process.platform === 'linux') {
+        try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim() || null; }
+        catch { return null; } // A process can end between observation and the read.
+    }
     const r = Bun.spawnSync(['ps', '-o', 'command=', '-p', String(pid)], { stdout: 'pipe', stderr: 'ignore' ,windowsHide:true});
     return r.stdout.toString().trim() || null;
 }
@@ -72,11 +75,67 @@ export function sleeperCommand(label: string, seconds = 900): string[] {
         : ['sh', '-c', `sleep ${seconds} # ${label}`];
 }
 
-export async function killTree(pid: number): Promise<void> {
+type UnixProcess = { pid: number; parent: number; birth: string };
+function unixProcess(pid: number): UnixProcess | null {
+    if (process.platform === 'linux') {
+        try {
+            // comm can contain spaces and parentheses. The fields after its closing parenthesis start with state.
+            const stat = readFileSync(`/proc/${pid}/stat`, 'utf8'), fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+            if (fields[0] === 'Z' || fields[0] === 'X' || !fields[19]) return null;
+            return { pid, parent: Number(fields[1]), birth: fields[19] };
+        } catch { return null; }
+    }
+    const r = Bun.spawnSync(['ps', '-o', 'ppid=,lstart=', '-p', String(pid)], { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
+    const row = /^(\d+)\s+(.+)$/.exec(r.stdout.toString().trim());
+    return r.exitCode === 0 && row ? { pid, parent: Number(row[1]), birth: row[2]! } : null;
+}
+
+// Snapshot descendants before their parent ends and they are reparented. Each signal checks the birth identity
+// again: an exited child whose PID has been reused is never a target. No process-group ownership is assumed.
+function unixTree(pid: number): UnixProcess[] {
+    const root = unixProcess(pid);
+    if (!root) return [];
+    const r = Bun.spawnSync(['ps', '-ax', '-o', 'pid=,ppid='], { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
+    if (unixProcess(pid)?.birth !== root.birth) return [];
+    const children = new Map<number, number[]>();
+    if (r.exitCode === 0) for (const line of r.stdout.toString().trim().split(/\r?\n/)) {
+        const [child, parent] = line.trim().split(/\s+/).map(Number);
+        if (!Number.isSafeInteger(child) || !Number.isSafeInteger(parent)) continue;
+        const entries = children.get(parent!) ?? []; entries.push(child!); children.set(parent!, entries);
+    }
+    const tree = [root], seen = new Set([pid]);
+    for (let i = 0; i < tree.length; i++) for (const child of children.get(tree[i]!.pid) ?? []) {
+        if (seen.has(child)) continue;
+        seen.add(child);
+        const identity = unixProcess(child);
+        if (identity?.parent === tree[i]!.pid) tree.push(identity);
+    }
+    return tree.reverse();
+}
+const sameUnixProcess = (p: UnixProcess) => unixProcess(p.pid)?.birth === p.birth;
+function signalUnixProcess(p: UnixProcess, signal: NodeJS.Signals): void {
+    if (sameUnixProcess(p)) try { process.kill(p.pid, signal); } catch { /* exited after the identity check */ }
+}
+
+// ownsProcessGroup is valid only for a child launched with detached:true on POSIX. Its group remains addressable
+// when the child exits before its descendants; ordinary callers authorize individual descendant identities instead.
+export async function killTree(pid: number, ownsProcessGroup = false): Promise<void> {
+    // POSIX treats zero and negative PIDs as process groups, which this function never owns.
+    if (!Number.isSafeInteger(pid) || pid <= 0) return;
     if (process.platform === 'win32') {
         Bun.spawnSync(['taskkill', '/PID', String(pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});
+    } else if (ownsProcessGroup) {
+        const signal = (value: NodeJS.Signals | 0) => { try { process.kill(-pid, value); return true; } catch { return false; } };
+        if (!signal('SIGTERM')) return;
+        const deadline = performance.now() + 1000;
+        while (signal(0) && performance.now() < deadline) await Bun.sleep(50);
+        signal('SIGKILL');
     } else {
-        try { process.kill(pid, 'SIGTERM'); } catch {}
+        const tree = unixTree(pid);
+        for (const p of tree) signalUnixProcess(p, 'SIGTERM');
+        const deadline = performance.now() + 1000;
+        while (tree.some(sameUnixProcess) && performance.now() < deadline) await Bun.sleep(50);
+        for (const p of tree) signalUnixProcess(p, 'SIGKILL');
     }
 }
 

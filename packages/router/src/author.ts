@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { DeliveryTask, DeliveryResult } from './delivery';
+import { killTree } from '../../practice/src/proc';
 
 // Phase 3 v1: a model writes a game script, the practice harness proves it, and failures go back to the model.
 // The model runs through the owner's subscription CLI (`claude -p`), headless, with only file and bun tools.
@@ -82,14 +83,36 @@ export function parseClaudeJson(out: string): { ok: boolean; text: string; costU
 export async function runClaude(prompt: string, timeoutMs = 900_000, readOnly=false): Promise<{ ok: boolean; text: string; costUsd: number }> {
     // Use stdin: a whole-game snapshot can exceed Windows' command-line limit.
     const args=readOnly?['-p','--output-format','json','--strict-mcp-config','--mcp-config','{"mcpServers":{}}','--permission-mode','plan','--tools','Read,Glob,Grep','--allowedTools','Read','Glob','Grep']:claudeArgs(prompt).filter((_,i)=>i!==1);
-    const proc = Bun.spawn(['claude', ...args], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe', stdin: 'pipe' ,windowsHide:true});
+    const detached = process.platform !== 'win32';
+    const proc = Bun.spawn(['claude', ...args], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe', stdin: 'pipe', detached, windowsHide:true});
     proc.stdin.write(prompt);proc.stdin.end();
-    const timer = setTimeout(() => proc.kill(), timeoutMs);
-    const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
-    await proc.exited;
-    clearTimeout(timer);
-    const r = parseClaudeJson(out);
-    return r.ok ? r : { ...r, text: `${r.text}\n${err.slice(-500)}` };
+    const stdout = proc.stdout.getReader(), stderr = proc.stderr.getReader();
+    const read = async (reader: ReadableStreamDefaultReader<Uint8Array>) => {
+        const decoder = new TextDecoder(); let text = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) return text + decoder.decode();
+            text += decoder.decode(value, { stream: true });
+        }
+    };
+    let expired = false, termination: Promise<void> | undefined;
+    const timer = setTimeout(() => {
+        expired = true;
+        termination = killTree(proc.pid, detached).finally(async () => {
+            // An escaped descendant can keep an inherited pipe open even after the owned process tree ends.
+            await Promise.all([stdout.cancel().catch(() => {}), stderr.cancel().catch(() => {})]);
+        });
+    }, timeoutMs);
+    try {
+        const [out, err, exit] = await Promise.all([read(stdout), read(stderr), proc.exited]);
+        const r = parseClaudeJson(out);
+        if (expired || exit !== 0) return { ...r, ok: false, text: `${expired ? 'model deadline exceeded' : `model exit ${exit}`}\n${r.text}\n${err.slice(-500)}` };
+        return r.ok ? r : { ...r, text: `${r.text}\n${err.slice(-500)}` };
+    } finally {
+        clearTimeout(timer);
+        await termination;
+        stdout.releaseLock(); stderr.releaseLock();
+    }
 }
 
 export interface AuthorDeps {
