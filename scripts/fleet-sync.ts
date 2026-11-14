@@ -239,6 +239,10 @@ function releaseSyncedTrades(dir: string, side: string) {
 export function pullFleetData(dir: string): void {
     const pull = git(dir, 'pull', '--rebase', '--autostash', 'origin', BRANCH);
     if (!pull.ok) throw Error(`pull: ${pull.out}`);
+    // When an incoming commit and a local change touch the same file, the stash pop leaves conflict markers and the
+    // pull still exits 0. The sync stops here, before it stages fleet/; git keeps the local changes in the stash.
+    const unmerged = git(dir, 'diff', '--name-only', '--diff-filter=U');
+    if (!unmerged.ok || unmerged.out) throw Error(`pull: local changes conflict with the fetched fleet data in ${unmerged.out || 'an unknown path'}; git keeps them in the stash`);
 }
 
 export function runSync(push = true): string {

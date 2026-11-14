@@ -139,6 +139,12 @@ test('the pull keeps a rewritten committed receipt and a staged order removal, a
         // core.autocrlf=true (Git for Windows' system default) puts the restored file back with CRLF ends.
         expect(require('node:fs').readFileSync(join(here, 'receipt.json'), 'utf8').replace(/\r/g, '')).toBe('{"phase":"failed"}\n');
         expect(require('node:fs').existsSync(join(here, 'order.json'))).toBe(false);
+        // The other side rewrites the same receipt: the stash pop conflicts, the pull exits 0, and pullFleetData stops.
+        g(here, 'add', '.'); g(here, 'commit', '-qm', 'sync 2'); g(here, 'push', '-q', 'origin', 'fleet-data');
+        g(other, 'pull', '-q', '--rebase', 'origin', 'fleet-data');
+        writeFileSync(join(other, 'receipt.json'), '{"phase":"settled"}\n'); g(other, 'add', '.'); g(other, 'commit', '-qm', 'other side 2'); g(other, 'push', '-q', 'origin', 'fleet-data');
+        writeFileSync(join(here, 'receipt.json'), '{"phase":"reconcile"}\n');
+        expect(() => pullFleetData(here)).toThrow('local changes conflict with the fetched fleet data in receipt.json');
     } finally {
         for (const [k, v] of [['GIT_AUTHOR_NAME', saved.name], ['GIT_AUTHOR_EMAIL', saved.email], ['GIT_COMMITTER_NAME', saved.cname], ['GIT_COMMITTER_EMAIL', saved.cemail]] as const) if (v === undefined) delete process.env[k]; else process.env[k] = v;
         rmSync(base, { recursive: true, force: true });
