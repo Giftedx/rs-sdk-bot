@@ -947,6 +947,14 @@ test('NPC aggression timer: two 21 x 21 areas, 1,000 ticks, the hunters that spa
  // A replayed snapshot: the last read (at) is 0, so the clock stops at 10 s, however late the page draws.
  const d:any={name:'D',inWorld:true,combat:20,at:1,pos:{x:3170,z:9900,level:0}};t.aggroTrack(d,1);
  expect(t.aggroText(d,900e3).text).toBe('6:30');
+ // An old snapshot (read at 1 ms), then the live roster at 600 s: the unseen gap starts a new "at most" count.
+ d.live={seen:600e3};const r1=t.aggroText(d,600e3);expect(r1.text).toBe('6:40');expect(r1.title).toContain('at most');
+ // The roster keeps seeing it every 2 s: the clock runs, and after 400 s the account is safe.
+ for(let s=602e3;s<=1000e3;s+=2e3){d.live={seen:s};t.aggroTrack(d,s);}
+ expect(t.aggroText(d,1000e3)).toMatchObject({text:'safe'});
+ // The live tile goes with the live sight: the status file keeps b.pos at 3170, the roster sees 3182 (out of both
+ // areas, still 12 tiles from the Moss giant): a new count, not "safe".
+ d.live={seen:1002e3,x:3182,z:9900,level:0};expect(t.aggroText(d,1002e3).text).toBe('6:40');
  // Combat 85 is too strong for the Moss giant outside the Wilderness.
  expect(t.aggroText({...b,name:'B',combat:85},0)).toBeNull();
 });
@@ -980,6 +988,25 @@ test('regeneration meter: the heal and restore timers, their phase from a 1-poin
  expect(t.regenStatText(g,g.skills[0],10e3)).toBe(' · back to 60 in 6:00');expect(t.regenStatText(g,g.skills[1],10e3)).toBe(' · back to 60 in at most 6:40');
  // Logged out: the record goes.
  t.regenTrack({...b,inWorld:false},40e3);expect(t.regenHpText(b,40e3)).toBe('');
+});
+
+test('prayer time left: the server drain counter, the resistance from the prayer bonus',()=>{
+ const code=shell.slice(shell.indexOf("  // Prayer time left (RuneLite's"),shell.indexOf('  function infoboxes(){'));
+ const bon=(p:number)=>[0,0,0,0,0,0,0,0,0,0,0,0,p];
+ const t=new Function('S','wornBonuses',`${code};return {prayerLasts,prayerText};`)({world:{tickMs:400}},(b:any)=>b.bon);
+ // Bonus 0: resistance 60, a protect prayer (12) adds 60 each 5 ticks: one point each 5 ticks; 43 points = 215 ticks.
+ expect(t.prayerLasts(43,0,12)).toBe(215);
+ // Bonus +5: resistance 70; 60 a cycle: a point most cycles, 43 points in 51 cycles = 255 ticks.
+ expect(t.prayerLasts(43,5,12)).toBe(255);
+ // 36 a tick x 5 = 180 a cycle at resistance 60: 3 points a cycle; 43 points in 15 cycles = 75 ticks.
+ expect(t.prayerLasts(43,0,36)).toBe(75);
+ const b:any={skills:[{name:'Prayer',currentLevel:43,level:43}],bon:bon(5)};
+ // 255 x 400 ms = 102 s = 1:42. The set of 36: 180 a cycle at 70, 43 points in 17 cycles = 85 ticks = 34 s.
+ expect(t.prayerText(b)).toBe(' · lasts (prayer bonus +5): a protect prayer 1:42 · with Ultimate Strength and Incredible Reflexes 0:34');
+ // Prayer 36: no protect prayer yet (Protect from Magic is 37), no text.
+ expect(t.prayerText({...b,skills:[{name:'Prayer',currentLevel:36,level:36}]})).toBe('');
+ // Unseen gear: no bonus, no text.
+ expect(t.prayerText({...b,bon:null})).toBe('');
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
