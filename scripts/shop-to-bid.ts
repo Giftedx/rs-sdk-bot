@@ -148,10 +148,12 @@ async function main() {
     const stop = () => saleStopRequested(bot);
     const lots: { q: Quote; startHeld: number; bought: number; spent: number }[] = [];
     try {
-        // Accounts keep their coins in the bank: take the float at the profile's bank before the shop.
+        // Accounts keep their coins in the bank: take the float before the shop. A bank in view (the exchange stands at
+        // Varrock West bank, where the last run ended) needs no walk; else the profile's bank.
         const need = floatNeed(coins(s), reserve, maxSpend);
         if (need > 0) {
-            if (!(await walkTargetPersist(s, { x: conf.bankSpot.x, z: conf.bankSpot.z, level: 0 })).ok) await finish([s], false, 'shop-to-bid: bank walk failed');
+            const near = !!(s.sdk.findNearbyNpc(/^banker$/i) || s.sdk.findNearbyLoc(/^bank booth$/i));
+            if (!near && !(await walkTargetPersist(s, { x: conf.bankSpot.x, z: conf.bankSpot.z, level: 0 })).ok) await finish([s], false, 'shop-to-bid: bank walk failed');
             const b = await s.bot.openBank();
             if (!b.success) await finish([s], false, `shop-to-bid: openBank failed: ${b.message}`);
             await s.bot.withdrawItem(/^coins$/i, need);
