@@ -1313,6 +1313,11 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   - magic and melee only: 31 kills at about 180, with more than twice the sharks.
   The rune helm, chainbody and legs cut the magic attack roll. Gap: the bench gang's prayer rule is a model; the live
   gang's rule against a spell from a dagger is not measured.
+  A freeze at every chance loses even one on one (the same kit, ranged then melee, seeds 1 to 8):
+  - `"freeze":true`: 6 kills of 16 at about 577 HP a kill;
+  - with a step away while the target is held (`"kiteFrozen":3`): 2 at about 1,230;
+  - the same with the best freeze the runes allow (no `freezeMagicCap`): 0.
+  Each cast is a turn without damage while the gang account eats, so the freeze pays only on a runner.
 - **Marching and pulling.** The squad moves as a march: its post steps `STEP` (default 12) tiles at a time toward the
   goal, and on only when every account stands within 4 tiles of the step or after 60 ticks there. A march to a
   multi-way goal goes first to the nearest multi-way tile (`multiEntry`). An account on a single-way tile with a
