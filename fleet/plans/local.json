@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794665821062,
+ "at": 1794666420885,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -134,23 +134,23 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "15000",
+    "headless"
+   ],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "BANK_PACK": "1",
+    "MAX_MAKE": "390"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
    "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
+   "resources": []
   },
   {
    "account": "Hocuspokeus",
@@ -258,21 +258,25 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
