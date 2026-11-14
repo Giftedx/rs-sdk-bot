@@ -345,7 +345,8 @@ if (import.meta.main) {
     // Live: no account logs out in the Wilderness. The deadline or a stop can end an account's hold mid-fight with
     // its food gone, and a later login on that tile met a PKer: live, KnightRider logged out at the post with 4 HP and
     // died 31 ticks into its next session, skulled, with its whole kit.
-    if (!gang.length) await Promise.all(squad.map(async (s, i) => { const out = await leaveWilderness(s, results[i]!.died); if (out.died) results[i]!.died = true; if (out.why) log(`[${s.name}] SQUAD ${out.why}`); }));
+    // A dropped account has no session to walk; the rescue below logs it in again.
+    if (!gang.length) await Promise.all(squad.map(async (s, i) => { if (dropped.has(s.name)) return; const out = await leaveWilderness(s, results[i]!.died); if (out.died) results[i]!.died = true; if (out.why) log(`[${s.name}] SQUAD ${out.why}`); }));
     for (const r of results) console.log(`SQUAD ${JSON.stringify(r)}`);
     const picked: Record<string, number> = {};
     for (const r of results) for (const [id, n] of Object.entries(r.picked)) picked[id] = (picked[id] ?? 0) + n;
