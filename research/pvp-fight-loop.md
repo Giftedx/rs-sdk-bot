@@ -1120,6 +1120,13 @@ runs; only stacks worth 20,000 gp or more, 24 kills and about 2.23M; no loot (`L
 (`FREEZE=0`, seeds 1 to 4), 10 of 16 against the base's 11. The cheap stacks (sharks, runes) cost the ticks of a kill,
 so the roam's `LOOT_MIN` default is 20,000.
 
+### The hunt's fight options against a defender
+
+`extra:hunt-defend` (the hunt route against a target in rune that defends on the champion with 18 sharks and a glory,
+seeds 1 to 8, one fight a run): the default (`HUNT_PROFILE` auto, the champion) 6 kills and 2,712 HP lost in all;
+`ESCAPE_AT=25` 6 and 2,585; `HUNT_PROFILE=gang-hunter` 7 and 2,850; the hunt's own options (`HUNT_PROFILE=none`) 3
+and 2,642. The champion's options double the hunt's own; the other two sit within the noise, so the default stays.
+
 ### Runners by depth and squad size
 
 A runner (kit `runner`, `SPAR_B_OPTS={"escapeAt":60}`: with its food gone at 60 HP or less it runs south and rubs its
