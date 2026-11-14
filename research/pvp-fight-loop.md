@@ -1139,6 +1139,13 @@ prayer potions; `extra:spar-duel-<kit>-vs-melee-x8`, seeds 1 to 8, 64 duels a ro
 | `tribrid-dragon-sara` (the champion's) | 45 | 16 |
 | `tribrid-dragon` | 43 | 18 |
 | `tribrid-food` | 40 | 9 |
+| `tribrid-snare-sara-mlb` (magic longbow) | 55 | 9 |
+| `tribrid-sara-mace` (dragon mace) | 49 | 14 |
+| `tribrid-snare-sara-f14` (14 sharks) | 49 | 13 |
+| `tribrid-sara-dls` (dragon longsword) | 45 | 18 |
+| `tribrid-snare-swap` (armour swap) | 43 | 20 |
+| `tribrid-snare-dhide` (black dragonhide) | 42 | 22 |
+| `tribrid-snare-spear` (dragon spear) | 31 | 24 |
 
 On `tribrid-dragon-sara`: eating at 70, no magic in the rotation, a step back of 3 from a frozen target
 (`kiteFrozen`) or its corner tile (`diagonalFrozen`), and no food drop for the strip all gave 43 to 45 kills and 16 to
