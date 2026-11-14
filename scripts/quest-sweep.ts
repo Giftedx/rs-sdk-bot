@@ -209,9 +209,13 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
 // The prayer points a quest's fights used in its bench case (quester_quest_<quest>): the preset's Prayer 43, plus 17 for
 // each sip (7 + 25% of 43, consume_effects.dbrow prayer_potion_effect), less the points left. Tree Gnome Village
-// 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47; Fight Arena 43 - 36 = 7. An account whose base Prayer covers that by PRAYER_MARGIN
+// 43 + 2 x 17 - 13 = 64; The Grand Tree 43 + 17 - 13 = 47; Fight Arena 43 - 36 = 7; Monkey Madness 43 + 3 x 17 - 16 = 78
+// (potions=3 prayerLeft=16). An account whose base Prayer covers that by PRAYER_MARGIN
 // leaves the preset's prayer potions out of its pack. No shop sells them.
-export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
+export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7,mm:78},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
+// The generated quests drink any antipoison dose they hold (quest-mm.ts ANTIPOISON), and no shop sells one: a preset's
+// antipoison goes with the food rows, taken when the bank holds it and never a missing item.
+export const ANTIPOISONS=[2448,181,183,185,175,177,179];
 export const prayerCovers=(quest:string,prayer:number)=>PRAYER_USED[quest]!==undefined&&prayer>=PRAYER_USED[quest]!+PRAYER_MARGIN;
 // The quests whose scripts cast scripts/fire-spells.ts fireSpell: only their packs' cast runes follow the Magic level.
 // Other presets keep their runes (Mage Arena's blood runes cast Flames of Zamorak).
@@ -1244,6 +1248,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  // the Gnome course to the Ardougne north bank for the three potions alone).
  // The current points decide, not the base level: a drained Prayer-99 account still takes the potions.
  if(prayerCovers(quest,prayerPoints()))for(const id of PRAYER_POTIONS)base.delete(id);
+ for(const id of ANTIPOISONS)if(base.has(id)){food.set(id,(food.get(id)??0)+base.get(id)!);base.delete(id);}
  if(FIRE_QUESTS.has(quest))base=fireRunesFor(base,baseLevel('Magic'));
  const build=buildPack(quest,baseLevel);
  for(const i of build)base.set(i.id,(base.get(i.id)??0)+i.count);
