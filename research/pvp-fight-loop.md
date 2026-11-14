@@ -1856,7 +1856,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     name the rune kiteshield in their melee lists, so a hunter in any other shield lost it at its first bow turn for
     good; the hunt puts the shield it wears at its start in that place. Two against two in multi-way combat (side B on
     the snare kit, both sides on the champion, seeds 1-8, 32 groups): side A in `tribrid-dragon-sara` wins 21, loses
-    9, draws 2 (`extra:team-2v2-dragon-x4`); on the snare kit 16, 9, 7 (`extra:team-2v2-multi-x4`, the same runs). Supply (the drop scripts; `knowledge/drops.json` leaves out
+    9, draws 2 (`extra:team-2v2-dragon-x4`); on the snare kit 16, 9, 7 (`extra:team-2v2-multi-x4`, the same runs).
+    Three against three (seeds 1-4, 12 groups): side A in dragon armour 4, 4, 4 (`extra:team-3v3-dragon-x3`), on the
+    snare kit 4, 4, 4, and one dragon spear with two in dragon armour 4, 6, 2 (`extra:team-3v3-spear-x3`). Supply (the drop scripts; `knowledge/drops.json` leaves out
     the shared tables): dragon platelegs from a steel, iron or bronze dragon 1 in 256, 512 or 1,024 kills
     (`steel_dragon.rs2` and the others), the dragon chainbody from the Kalphite Queen 1 in 128 (`kalphite_queen.rs2`),
     the dragon med helm from the King Black Dragon 1 in 128 (`king_black_dragon.rs2`) and the shared rare table, the
