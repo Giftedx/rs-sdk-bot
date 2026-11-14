@@ -194,6 +194,7 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
  const result=await runInventoryProduction({tick:()=>s.tick(),stopped,level:()=>s.sdk.getSkill(r.skill)?.level??0,read,
   prepare:async()=>{
    await open();
+   if(stopped())return false;
    // 'spent' only for an input that the fresh bank observation does not hold above its reserve. A missing tool is a fault.
    for(const need of [...[...r.tools,...r.optionalInputs??[]].map(id=>({id,units:1,input:false})),...r.inputs.map(i=>({...i,input:true}))]){
     const missing=Math.max(0,need.units-count(need.id));if(!missing)continue;
@@ -201,14 +202,15 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
     if(!item||item.count-missing<(reserves[need.id]??0))return need.input?'spent':false;
     const target=s.sdk.getState()?.bank?.items.find(i=>i.id===need.id);
     if(!target||!Number.isSafeInteger(target.slot))return false;
-    const before=count(need.id);const response=await s.bot.withdrawItem(target,missing,{asNote:false});
+    const before=count(need.id);if(stopped())return false;const response=await s.bot.withdrawItem(target,missing,{asNote:false});
     if(!response.success||!await waitUntil(s,()=>count(need.id)===before+missing,{timeoutTicks:8}))return false;
    }
-   if(r.extraSlot&&inv().length>=28)return false;
+   if(stopped()||r.extraSlot&&inv().length>=28)return false;
    await s.bot.closeBank();if(!await waitUntil(s,()=>!s.sdk.getState()?.bank?.isOpen,{timeoutTicks:8}))return false;return !stopped();
   },
   use:async()=>{
    if(s.sdk.getDialog()?.isOpen||s.sdk.getState()?.interface?.isOpen)await s.direct({type:'closeModal',reason:'SDK'});
+   if(stopped())throw Error('production session stopped');
    const source=inv().find(i=>i.id===(r.tools[0]??r.inputs[0]!.id));
    if(r.itemOption!==undefined){if(!source)throw Error('production item action missing');return s.sdk.sendUseItem(source.slot,r.itemOption);}
    const target=inv().find(i=>i.id===(r.tools.length?r.inputs[0]!.id:r.inputs[1]!.id));
@@ -222,7 +224,7 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
    return response;
   },
   wait:done=>waitUntil(s,done,{timeoutTicks:10}),
-  deposit:async id=>{await open();const item=inv().find(i=>i.id===id);return item?depositObserved(s,item):0;},
+  deposit:async id=>{await open();if(stopped())throw Error('production session stopped');const item=inv().find(i=>i.id===id);return item?depositObserved(s,item):0;},
   close:async()=>{if(!stopped())await s.bot.closeBank();}
  },r,o);
  if(stopped()){result.ok=false;result.failure='production session stopped';}
