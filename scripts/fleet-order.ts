@@ -23,7 +23,22 @@ export function orderMeet(text: string | undefined): Order['meet'] {
     return pair;
 }
 
+// The item names that the server never lets a player trade: every item of that name has tradeable:false in
+// knowledge/items.json (the ammo mould among them). A trade of one ends `reconcile 0/1` on both sides after both
+// accounts walked to the meet. A name that one tradeable item shares stays allowed.
+let untradeableNames: Set<string> | undefined;
+export function untradeable(item: string): boolean {
+    if (!untradeableNames) {
+        const rows = JSON.parse(readFileSync(join(import.meta.dir, '..', 'knowledge', 'items.json'), 'utf8')) as { name?: string; tradeable?: boolean }[];
+        const tradeable = new Set(rows.filter(i => i.tradeable !== false && typeof i.name === 'string').map(i => i.name!.toLowerCase()));
+        untradeableNames = new Set(rows.filter(i => i.tradeable === false && typeof i.name === 'string').map(i => i.name!.toLowerCase()).filter(n => !tradeable.has(n)));
+    }
+    return untradeableNames.has(item.toLowerCase());
+}
+
 export function makeOrder(from: string, to: string, count: number, item: string, now: number, inMin: number, minutes: number, owners = loadOwners(), meet?: Order['meet'], extra?: OrderLine[]): Order {
+    const refused = [item, ...(extra ?? []).map(l => l.item)].filter(untradeable);
+    if (refused.length) throw Error(`not tradeable: ${refused.join(', ')}`);
     const a = owners.get(from.toLowerCase()), b = owners.get(to.toLowerCase());
     if (!a || !b) throw Error(`both accounts must be listed in fleet/owners.json: ${!a ? from : to}`);
     if (a.server !== b.server) throw Error('both accounts must use one server');
