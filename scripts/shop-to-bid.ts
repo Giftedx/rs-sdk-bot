@@ -73,9 +73,10 @@ export function parseItems(arg: string): number[] | null {
 const exactly = (re: RegExp) => new RegExp(re.source.replace(/^\^?/, '^').replace(/\$?$/, '$'), re.flags);
 
 // The coins one lot at this shop could clear at the base price: each quoted item the profile sells, its margin times
-// the units the bid wants, up to `cap` units (the most a shelf holds). The shop price rises as the shelf empties, so
-// this is an upper bound; it rules out a walk to a shop that sells none of the items, or too little of them.
-export function lotValue(items: readonly { re: RegExp }[], quotes: readonly Quote[], cap = 1500): number {
+// the units the bid wants, up to `cap` units (the most one lot buys of an item: UNITS, default 5000). The shop price
+// rises as the shelf empties, so this is an upper bound; it rules out a walk to a shop that sells none of the items, or
+// too little of them.
+export function lotValue(items: readonly { re: RegExp }[], quotes: readonly Quote[], cap = 5000): number {
     let total = 0;
     for (const q of quotes) if (q.bid && items.some(({ re }) => exactly(re).test(q.name))) total += Math.max(0, netPerUnit(q.bid) - q.basePrice) * Math.min(cap, q.buyQuantity);
     return Math.floor(total);
@@ -246,7 +247,7 @@ async function main() {
         for (let n = 0; n < lotsWanted && !stop(); n++) {
             const key = profiles[n % profiles.length]!, quotes = n === 0 ? await quotesNow(false) : await quotesNow(true);
             if (!quotes.length) { console.log('LOT_STOP no item clears MIN_NET'); break; }
-            const value = lotValue(PROFILES[key]!.items, quotes);
+            const value = lotValue(PROFILES[key]!.items, quotes, maxUnits);
             if (value < minLot) {
                 console.log(`LOT_SKIP ${key}: at most ${value} coins at the base price, under MIN_LOT ${minLot}`);
                 empty++;

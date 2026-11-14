@@ -114,8 +114,9 @@ test('lotValue counts only the quoted items the shop sells, at the base price, u
         { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334 },
         { id: 560, name: 'Death rune', basePrice: 30, bid: 250, buyQuantity: 100_000 },
     ];
-    // Bait: (207.1 - 3) x 1,500. The death rune is not sold here.
-    expect(lotValue(sarim, quotes)).toBe(306_150);
+    // Bait: (207.1 - 3) x 5,000 (UNITS). The death rune is not sold here.
+    expect(lotValue(sarim, quotes)).toBe(1_020_500);
+    expect(lotValue(sarim, quotes, 1500)).toBe(306_150);
     expect(lotValue(sarim, quotes.slice(1))).toBe(0);
     expect(lotValue(sarim, [{ ...quotes[0]!, buyQuantity: 10 }])).toBe(2041);
     expect(lotValue(sarim, [{ ...quotes[0]!, bid: null }])).toBe(0);

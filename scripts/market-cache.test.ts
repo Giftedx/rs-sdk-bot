@@ -63,7 +63,7 @@ test('shopLots lists the shops whose open bids make a lot worth a walk, the larg
     expect(items[313]).toMatchObject({ base: 3, want: 38_334 });
     const profiles = { sarim: { items: [{ re: /^fishing bait$/i }] }, betty: { items: [{ re: /death rune/i }, { re: /air rune/i }] } };
     const lots = shopLots(items, profiles, scanProfiles, lotValue);
-    // Bait clears 306,150 at most; 40 death runes clear 8,284, under the 20,000 floor; air runes lose money.
-    expect(lots).toEqual([{ profile: 'sarim', value: 306_150, items: [{ id: 313, name: 'Fishing bait', bid: 218, want: 38_334, margin: 204 }] }]);
+    // Bait clears 1,020,500 at most (5,000 units); 40 death runes clear 8,300, under the 20,000 floor; air runes lose money.
+    expect(lots).toEqual([{ profile: 'sarim', value: 1_020_500, items: [{ id: 313, name: 'Fishing bait', bid: 218, want: 38_334, margin: 204 }] }]);
     expect(shopLots(items, profiles, scanProfiles, lotValue, 5000).map(l => l.profile)).toEqual(['sarim', 'betty']);
 });
