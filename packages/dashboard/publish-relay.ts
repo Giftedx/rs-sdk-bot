@@ -2,6 +2,8 @@
 // (server.ts /api/state, already masked: every string has the main account's name replaced by ⟦MAIN⟧) and its
 // operator metadata (/api/control). control.json is for the signed-in owner; public.json is a whitelist of the
 // same data without the main account (see publicView).
+import {priceName,projectItemPrices,type ItemPrice,type ItemPrices} from './item-prices';
+
 export const MAIN_ACCOUNT='Haggis';
 export const MAIN_MARK='⟦MAIN⟧';
 export const WHY_LIMIT=400,DETAIL_LIMIT=300,FINISHED_KEEP=200;
@@ -31,7 +33,7 @@ export function controlView(state:any,controlMeta:any,main=MAIN_ACCOUNT){
 // (where each bot stands, its levels, quests, worn items and ranks, other players), plus each bot's pack and goal,
 // which the spectator view shows. Banks, coins and income, the plan and its strategy, scripts, jobs, pull requests of
 // the private repository and this PC's resources stay with the owner (control.json).
-const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','started','fresh','inWorld','operation','pos','live','hp','combat',
+const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','started','fresh','inWorld','operation','pos','live','hp','hpAt','combat','questPoints',
  'skills','quests','questsAt','equipment','equipmentObserved','inventory','ranks','ranksAt','role','goal','currentGoal','goalSkill','goalLevel',
  'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt','ground'] as const;
 const PUBLIC_KEYS=['now','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
@@ -50,12 +52,48 @@ const publicGoal=(g:any)=>{
 // The server has read the market and the board tops since it started: what the public page shows first.
 // The server starts with pricesAt 0 and sets it when a market read finishes.
 export const stateWarm=(s:any)=>Array.isArray(s?.rivals)&&s.rivals.length>0&&Number(s?.economy?.pricesAt)>0;
+const observedAt=(at:any,now:any):number|null=>Number.isFinite(now)&&now>0&&Number.isFinite(at)&&at>0&&at<=now?at:null;
+function publicQuestPoints(value:any,now:any){
+ const at=observedAt(value?.at,now);
+ return value&&typeof value==='object'&&!Array.isArray(value)&&Number.isSafeInteger(value.points)&&value.points>=0&&at!==null&&(value.source==='status'||value.source==='hiscores')
+  ?{points:value.points,at,source:value.source}:null;
+}
+function publicPrice(value:any):ItemPrice|null{
+ if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.name!=='string'||!value.name.trim()
+  ||typeof value.value!=='number'||!Number.isFinite(value.value)||value.value<0)return null;
+ const quote=(n:any)=>Number.isSafeInteger(n)&&n>0?n:null;
+ return{name:value.name,value:value.value,ask:quote(value.ask),bid:quote(value.bid)};
+}
+function publicPrices(economy:any,visible:any[]){
+ const record=(value:any)=>value&&typeof value==='object'&&!Array.isArray(value);
+ const table=(raw:any,ids:boolean):Record<string,ItemPrice>=>{
+  const out:Record<string,ItemPrice>=Object.create(null);
+  if(record(raw))for(const [key,row]of Object.entries(raw)){
+   const value=publicPrice(row),id=Number(key);
+   if(value&&(ids?Number.isSafeInteger(id)&&id>=0&&String(id)===key:key!==''&&priceName(key)===key&&priceName(value.name)===key))out[key]=value;
+  }
+  return out;
+ };
+ const source={byId:table(economy?.itemPricesById,true),byName:table(economy?.itemPricesByName,false)},prices=projectItemPrices(source,visible);
+ for(const id of Object.keys(prices.byId))if(!Object.hasOwn(source.byId,id))delete prices.byId[id];
+ const out:{itemPricesById?:ItemPrices['byId']|null;itemPricesByName?:ItemPrices['byName']|null}={};
+ if(Object.hasOwn(economy??{},'itemPricesById'))out.itemPricesById=record(economy.itemPricesById)?prices.byId:null;
+ if(Object.hasOwn(economy??{},'itemPricesByName'))out.itemPricesByName=record(economy.itemPricesByName)?prices.byName:null;
+ return out;
+}
 export function publicView(state:any,main=MAIN_ACCOUNT){
  const s=trimState(state);
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
  const pick=(o:any,keys:readonly string[])=>Object.fromEntries(keys.filter(k=>o&&k in o).map(k=>[k,o[k]]));
  // Practice bots play on this PC's local test server, not the public world: their runs are the owner's testing.
- const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{const copy:any=pick(b,PUBLIC_BOT);for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);if(copy.death)copy.death={at:copy.death.at,text:'died'};return copy;});
+ const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{
+  const copy:any=pick(b,PUBLIC_BOT);
+  if(Object.hasOwn(b,'hpAt')){const at=observedAt(copy.hpAt,s.now),accountAt=observedAt(copy.at,s.now);copy.hpAt=at!==null&&accountAt!==null&&at<=accountAt?at:null;}else delete copy.hpAt;
+  if(Object.hasOwn(b,'questPoints'))copy.questPoints=publicQuestPoints(copy.questPoints,s.now);else delete copy.questPoints;
+  for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);
+  if(copy.death)copy.death={at:copy.death.at,text:'died'};
+  return copy;
+ });
  const out:any=pick(s,PUBLIC_KEYS);
  out.bots=bots;
  // A finished or stopped run, by its goal: the run's counters (coins banked, items bought) are the owner's.
@@ -64,7 +102,12 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  // Market prices are public; the fleet's income and its farmers are the owner's.
  // Item values only for what a public bot carries or wears: the bank's item list is the owner's.
  const carried=new Set(bots.flatMap((b:any)=>[...(b.inventory??[]),...(b.equipment??[])]).map((i:any)=>i?.name).filter(Boolean));
- out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues:Object.fromEntries(Object.entries(s.economy.itemValues??{}).filter(([n])=>carried.has(n))),itemExamine:Object.fromEntries(Object.entries(s.economy.itemExamine??{}).filter(([n])=>carried.has(n))),goldPerTick:0,farmers:[],trend:[]}:null;
+ const items=(value:any)=>Array.isArray(value)?value:[];
+ const groundItems=(value:any)=>items(value).flatMap((row:any)=>Array.isArray(row)
+  ?row.length===5&&row.every(Number.isSafeInteger)&&row[3]>=0&&row[4]>=1?[{id:row[3]}]:[]
+  :row&&typeof row==='object'?[row]:[]);
+ const prices=publicPrices(s.economy,[...bots.flatMap((b:any)=>[...items(b.inventory),...items(b.equipment),...groundItems(b.ground)]),...items(s.economy?.supplies)]);
+ out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues:Object.fromEntries(Object.entries(s.economy.itemValues??{}).filter(([n])=>carried.has(n))),itemExamine:Object.fromEntries(Object.entries(s.economy.itemExamine??{}).filter(([n])=>carried.has(n))),...prices,goldPerTick:0,farmers:[],trend:[]}:null;
  // The queue's counts and agents stay; the task texts are the agents' working notes.
  out.coordination=s.coordination&&typeof s.coordination==='object'?{available:s.coordination.available,fresh:s.coordination.fresh,paused:s.coordination.paused,counts:s.coordination.counts,agents:s.coordination.agents,tasks:[]}:null;
  // Other sides' accounts and sync times are public; their coins are bank stock.

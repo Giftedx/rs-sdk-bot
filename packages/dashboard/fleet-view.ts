@@ -51,9 +51,21 @@ export function fleetSidesView(snapshots:any[],orders:any[],now:number,receipts:
 
 type Seen={x:number;z:number;level:number;combat:number;seen:number};
 const dated=(at:any,now:number)=>Number.isFinite(at)&&at>0&&at<=now;
+// Explicit HP dates stay intact; legacy HP uses the status recording time. Roster and publication times never refresh it.
+export function healthObservation(bot:any,now:number):{hp:{now:number;max:number}|null;hpAt:number|null}{
+ const unknown={hp:null,hpAt:null},at=Object.hasOwn(bot??{},'hpAt')?bot.hpAt:bot?.at;
+ if(!Number.isFinite(now)||now<=0||!dated(bot?.at,now)||!dated(at,now)||at>bot.at)return unknown;
+ let hp=bot.hp;
+ if(!Object.hasOwn(bot,'hp')){
+  const skills=(Array.isArray(bot.skills)?bot.skills:[]).filter((s:any)=>s?.name==='Hitpoints');
+  hp=skills.length===1?{now:skills[0].currentLevel,max:skills[0].level}:null;
+ }
+ return hp&&Number.isSafeInteger(hp.now)&&hp.now>=0&&Number.isSafeInteger(hp.max)&&hp.max>0
+  ?{hp:{now:hp.now,max:hp.max},hpAt:at}:unknown;
+}
 function snapshotObservation(a:any,snapshotAt:any,now:number){
  const at=dated(a.at,now)?a.at:null,observedAt=(value:any)=>at!==null&&dated(value,now)&&value<=at?value:null;
- return{name:String(a.name??''),server:String(a.server??''),at,snapshotAt:dated(snapshotAt,now)?snapshotAt:null,
+ return{name:String(a.name??''),server:String(a.server??''),at,snapshotAt:dated(snapshotAt,now)?snapshotAt:null,...healthObservation(a,now),
   skills:Array.isArray(a.skills)?a.skills.map((k:any)=>({name:String(k.name),level:Number(k.level)||1,xp:Number.isFinite(k.xp)&&k.xp>=0?k.xp:null,...(Number.isSafeInteger(k.currentLevel)&&k.currentLevel>=0?{currentLevel:k.currentLevel}:{})})):[],
   inventory:Array.isArray(a.inventory)?a.inventory:null,equipment:Array.isArray(a.equipment)?a.equipment:null,bank:Array.isArray(a.bank)?a.bank:null,bankAt:Array.isArray(a.bank)?observedAt(a.bankAt):null,
   equipmentObserved:Array.isArray(a.equipment)&&a.equipmentObserved===true,

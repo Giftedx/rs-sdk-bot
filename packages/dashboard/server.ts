@@ -20,7 +20,9 @@ import { deathRecap, type DeathRecap } from './death-recap';
 import { flowView, trackFlow } from './flow';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerEntry } from './viewer';
 import {coordinationView} from './coordination';
-import {dashboardStatuses,fleetSidesView,localDisplayNames,remoteBots,scoreboardView} from './fleet-view';
+import {dashboardStatuses,fleetSidesView,healthObservation,localDisplayNames,remoteBots,scoreboardView} from './fleet-view';
+import {buildItemPrices,itemPrice,priceItemKey,projectItemPrices,type ItemPrices,type PriceCatalogItem,type PriceIdentity} from './item-prices';
+import {createVaultItems,type VaultItem} from './vault-items';
 import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
@@ -138,7 +140,7 @@ setTimeout(buildMap, 100);
 
 // ---------- bots ----------
 type Status = Record<string, any> & { name: string; at: number; server: string };
-type Item = { name: string; count: number };
+type Item = PriceIdentity & { name: string; count: number; unconfirmed?: true };
 // The bots folder holds every practice bot ever made, so a bot.env is read once and then again only in the scan's slice.
 const accountScan = folderScan(botsDir, { cycle: 20, listMs: 0 }), accountLive = new Map<string, boolean>();
 let accountsCache = { at: 0, names: [] as string[] };
@@ -595,6 +597,8 @@ const itemIds = new Map<string, number>(Object.entries((() => { try { return JSO
 const marketIds = new Map<string, number>();
 const iconId = (name: string) => marketIds.get(name.toLowerCase()) ?? itemIds.get(name.toLowerCase()) ?? null;
 const prices = new Map<string, number>();
+const priceCatalogue = cached<PriceCatalogItem[]>(join(root, 'knowledge', 'items.json'), JSON.parse, []);
+let itemPrices: ItemPrices = buildItemPrices([], priceCatalogue);
 const marketById = new Map<number, { name: string; ask: number | null; bid: number | null; stock: number; vwap: number | null; base: number | null }>();
 // Key supplies for the main run: the ids in research/market-2026-10-23.json.
 const KEY_SUPPLY_FILE = join(root, 'research', 'market-2026-10-23.json');
@@ -602,7 +606,8 @@ const keySupplyIds = () => cached<number[]>(KEY_SUPPLY_FILE, t => Object.values(
 let pricesAt = 0;
 async function refreshPrices() {
     try {
-        const nextIds = new Map<string, number>(), nextMarket = new Map<number, typeof marketById extends Map<number, infer T> ? T : never>(), nextPrices = new Map<string, number>();
+        const nextIds = new Map<string, number>(), nextMarket = new Map<number, typeof marketById extends Map<number, infer T> ? T : never>();
+        const rows: any[] = [];
         const shared: Record<number, MarketItem> = {};
         // 100 items per page (the API refuses more); about 15 pages.
         for (let offset = 0, total = 1; offset < total; offset += 100) {
@@ -612,25 +617,26 @@ async function refreshPrices() {
             if (!Number.isSafeInteger(j.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('Invalid market page');
             total = Math.min(j.total ?? 0, 5000);
             Object.assign(shared, marketRows(j.items));
+            rows.push(...j.items);
             // The market is thin: one trade set Bread's lastPrice to 1,000,000. Use the 7-day VWAP when the item
             // traded at least 3 times, else the shop base price.
             for (const i of j.items ?? []) {
                 if (i.id != null) { nextIds.set(String(i.name).toLowerCase(), Number(i.id)); nextMarket.set(Number(i.id), { name: i.name, ask: i.ask ?? null, bid: i.bid ?? null, stock: i.sellQuantity ?? 0, vwap: i.vwap ?? null, base: i.basePrice ?? null }); }
-                const p = i.vwap != null && (i.trades ?? 0) >= 3 ? i.vwap : i.basePrice;
-                if (p != null) nextPrices.set(String(i.name).toLowerCase(), Number(p));
             }
             await Bun.sleep(500); // 2 requests a second at most
         }
+        const nextPrices = buildItemPrices(rows, priceCatalogue);
         marketIds.clear();for (const [key,value] of nextIds) marketIds.set(key,value);
         marketById.clear();for (const [key,value] of nextMarket) marketById.set(key,value);
-        prices.clear();for (const [key,value] of nextPrices) prices.set(key,value);
+        itemPrices = nextPrices;
+        prices.clear();for (const [key,value] of Object.entries(nextPrices.byName)) if (key !== 'coins') prices.set(key,value.value);
         pricesAt = Date.now();
         try { writeMarketCache(root, shared, pricesAt); } catch { /* Dashboard prices remain available when the cache cannot be written. */ }
     } catch { /* next round */ }
 }
 setInterval(() => void refreshPrices(), 600_000);
 void refreshPrices();
-const priceOf = (name: string) => name === 'Coins' ? 1 : prices.get(name.toLowerCase()) ?? null;
+const priceOf = (item: PriceIdentity | string) => itemPrice(itemPrices, item)?.value ?? null;
 
 // ---------- role inference for accounts the names list does not know ----------
 const NO_ROLE = new Set(['unknown', 'test', '', undefined, null]);
@@ -659,14 +665,13 @@ function vault(bots: any[], now: number) {
     const byKey = new Map(live.map(b => [keyName(b.name), b]));
     const names = new Set<string>([...live.filter(b => b.at).map(b => keyName(b.name))]);
     for (const t of log) { names.add(keyName(t.from)); names.add(keyName(t.to)); }
-    const totals = new Map<string, { count: number; holders: Map<string, number> }>();
+    const totals = new Map<string, VaultItem & { holders: Map<string, number> }>();
     const holders = [];
     for (const k of names) {
         const b = byKey.get(k);
         const name = b?.name ?? log.find(t => keyName(t.from) === k)?.from ?? log.find(t => keyName(t.to) === k)?.to ?? k;
         const isBanker = keyName(BANKER) === k;
-        const mine = new Map<string, number>();
-        const add = (l: Item[] | null | undefined, sign = 1) => { for (const i of l ?? []) if (i?.name && i.count > 0) mine.set(i.name, (mine.get(i.name) ?? 0) + sign * i.count); };
+        const mine = createVaultItems(), add = mine.add;
         const mineLog = log.filter(t => keyName(t.from) === k || keyName(t.to) === k);
         const lastLog = mineLog.reduce((n, t) => Math.max(n, t.at), 0);
         let source: 'snapshot' | 'log' | 'snapshot+log';
@@ -684,40 +689,42 @@ function vault(bots: any[], now: number) {
             for (const t of after) add(t.items, keyName(t.to) === k ? 1 : -1);
             source = after.length ? 'snapshot+log' : 'snapshot';
         }
-        for (const [n, c] of [...mine]) if (c <= 0) mine.delete(n);
-        let value = 0;
-        for (const [n, c] of mine) {
-            const t = totals.get(n) ?? { count: 0, holders: new Map() };
-            t.count += c; t.holders.set(name, c); totals.set(n, t);
-            value += (priceOf(n) ?? 0) * c;
+        const held = mine.rows();
+        let value = 0, unpriced = 0;
+        for (const i of held) {
+            const key = (i.unconfirmed ? 'unconfirmed:' : '') + priceItemKey(i), t = totals.get(key) ?? { ...i, count: 0, holders: new Map<string,number>() };
+            t.count += i.count; t.holders.set(name, i.count); totals.set(key, t);
+            const p = i.unconfirmed ? null : priceOf(i);
+            if(p == null) unpriced++; else value += p * i.count;
         }
         holders.push({
             name, banker: isBanker, age: b?.at ? now - b.at : null, bankSeen: !!b?.bank || source === 'log', bankAt: b?.bankAt ?? null, source,
-            coins: mine.get('Coins') ?? 0, value,
-            items: [...mine].filter(([n]) => n !== 'Coins').sort((a, z) => z[1] - a[1]).map(([name, count]) => ({ name, count })),
+            coins: held.filter(i => !i.unconfirmed && priceItemKey(i) === 'id:995').reduce((n,i) => n+i.count,0), value, unpriced, valueComplete: !unpriced && !mine.unconfirmed(), countsComplete: !mine.unconfirmed(),
+            items: held.filter(i => i.unconfirmed || priceItemKey(i) !== 'id:995').sort((a, z) => z.count - a.count),
         });
     }
     holders.sort((a, z) => Number(z.banker) - Number(a.banker) || z.value - a.value || a.name.localeCompare(z.name));
-    const items = [...totals].filter(([n]) => n !== 'Coins').map(([name, t]) => {
-        const p = priceOf(name);
-        return { name, count: t.count, price: p, value: p != null ? p * t.count : null, holders: [...t.holders].sort((a, z) => z[1] - a[1]).map(([n, c]) => ({ name: n, count: c })) };
+    const items = [...totals].filter(([key]) => key !== 'id:995').map(([, t]) => {
+        const p = t.unconfirmed ? null : priceOf(t);
+        return { ...t, price: p, value: p != null ? p * t.count : null, holders: [...t.holders].sort((a, z) => z[1] - a[1]).map(([n, c]) => ({ name: n, count: c })) };
     }).sort((a, z) => (z.value ?? 0) - (a.value ?? 0) || z.count - a.count || a.name.localeCompare(z.name));
-    const coins = totals.get('Coins')?.count ?? 0;
+    const coins = totals.get('id:995')?.count ?? 0;
     // Flow: one link per giver -> receiver pair, with coins, value and item counts.
-    const links = new Map<string, { from: string; to: string; coins: number; value: number; items: Map<string, number>; n: number; last: number }>();
+    const links = new Map<string, { from: string; to: string; coins: number; value: number; unpriced: number; items: Map<string, Item>; n: number; last: number }>();
     // The vault log spells some accounts with a capital first letter; use the account's own spelling.
     const accts = liveAccounts(), canon = (n: string) => accts.find(a => a.toLowerCase() === n.toLowerCase()) ?? n;
     for (const t0 of log) {
         const t = { ...t0, from: canon(t0.from), to: canon(t0.to) };
-        const k = t.from + '>' + t.to, l = links.get(k) ?? { from: t.from, to: t.to, coins: 0, value: 0, items: new Map(), n: 0, last: 0 };
-        for (const i of t.items) { l.items.set(i.name, (l.items.get(i.name) ?? 0) + i.count); l.value += (priceOf(i.name) ?? 0) * i.count; if (i.name === 'Coins') l.coins += i.count; }
+        const k = t.from + '>' + t.to, l = links.get(k) ?? { from: t.from, to: t.to, coins: 0, value: 0, unpriced: 0, items: new Map<string,Item>(), n: 0, last: 0 };
+        for (const i of t.items) { const key=priceItemKey(i),held=l.items.get(key)??{...i,count:0};held.count+=i.count;l.items.set(key,held);const p=i.unconfirmed?null:priceOf(i);if(p==null)l.unpriced++;else l.value+=p*i.count;if(key==='id:995'&&!i.unconfirmed)l.coins+=i.count; }
         l.n++; l.last = Math.max(l.last, t.at); links.set(k, l);
     }
     return {
         coins, value: coins + items.reduce((n, i) => n + (i.value ?? 0), 0), unpriced: items.filter(i => i.price == null).length,
+        valueComplete: holders.every(h => h.valueComplete), countsComplete: holders.every(h => h.countsComplete),
         items, holders, log: log.slice(-20).reverse(), logExists: existsSync(FILES.vault), banker: BANKER, pricesAt,
         lastTransferAt: log.reduce((n, t) => Math.max(n, t.at), 0) || null,
-        flow: [...links.values()].map(l => ({ ...l, items: [...l.items].map(([name, count]) => ({ name, count })).sort((a, z) => z.count - a.count) })),
+        flow: [...links.values()].map(l => ({ ...l, valueComplete: !l.unpriced, items: [...l.items.values()].sort((a, z) => z.count - a.count) })),
     };
 }
 
@@ -1108,7 +1115,7 @@ function buildState() {
     const local = new Set(bots.map(b => b.name.toLowerCase()));
     for (const r of remoteBots(snapshots, local, roster, firstSeen, now, side, fleetList(join(FILES.fleet, 'plans')), ownerOf))
         (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: [...(ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), ...valueRanks(r.name)], spark: [], rateSkill: 'all skills' });
-    for (const bot of bots as any[]) bot.questPoints=questPointObservation(bot,now);
+    for (const bot of bots as any[]) { bot.questPoints=questPointObservation(bot,now); Object.assign(bot,healthObservation(bot,now)); }
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
@@ -1135,18 +1142,25 @@ function buildState() {
     const collection = collectionState(bots, [...new Set([...liveAccounts(), ...remoteNames()])], cargo, tailJsonl<any>(FILES.vault, 100_000), now);
     if (!vaultTrend.length || now - vaultTrend[vaultTrend.length - 1]!.at > 60_000) { vaultTrend.push({ at: now, value: Math.round(v.value), coins: v.coins }); if (vaultTrend.length > 240) vaultTrend.shift(); }
     const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
+    const visiblePrices: (PriceIdentity | string)[] = [...(bots as any[]).flatMap(b => [b.inventory,b.bank,b.equipment,b.flow?.loot,b.flow?.used].flatMap(l => l ?? []).filter(Boolean)),
+        ...(bots as any[]).flatMap(b => (b.ground ?? []).filter((row:any) => Array.isArray(row) && row.length >= 5).map((row:any) => ({id:row[3]}))),
+        ...v.items,...v.log.flatMap(t => t.items),...v.flow.flatMap(f => f.items),...keySupplyIds().map(id => ({id}))];
+    for (const f of flows.values()) for (const m of [f.loot,f.used]) for (const name of m?.keys?.() ?? []) visiblePrices.push(name);
+    const projectedPrices = projectItemPrices(itemPrices,visiblePrices);
     const economy = {
         goldPerTick: farmers.reduce((n, b) => n + (b.fresh && b.role4.coinsPerTick > 0 ? b.role4.coinsPerTick : 0), 0),
         farmers: farmers.map(b => ({ name: b.name, fresh: b.fresh, ...b.role4 })),
         trend: vaultTrend.map(t => t.value),
         supplies: keySupplyIds().map(id => ({ id, ...(marketById.get(id) ?? { name: '?', ask: null, bid: null, stock: 0, vwap: null, base: null }) })).filter(x => x.name !== '?'),
         pricesAt,
+        itemPricesById: projectedPrices.byId,
+        itemPricesByName: projectedPrices.byName,
         // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
         // else the shop base price), for the page's item prices and bank value.
         // The game's examine text of each held item (obj configs), for the page's Examine option.
         itemExamine: (() => { const out: Record<string, string> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const d = Number.isInteger(i?.id) ? OBJS.get(i.id)?.desc : undefined; if (d && i.name) out[i.name] = d; } return out; })(),
         // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
-        itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } for (const f of flows.values()) for (const m of [f.loot, f.used]) for (const name of m?.keys?.() ?? []) { const p = prices.get(String(name).toLowerCase()); if (p != null) out[name] = p; } return out; })(),
+        itemValues: (() => { const out: Record<string, number> = {}; for (const i of visiblePrices) { const name=typeof i==='string'?i:i.name; if(!name)continue; const p=itemPrice({byId:{},byName:projectedPrices.byName},name); if(p)out[name]=p.value; } return out; })(),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
         gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
     };

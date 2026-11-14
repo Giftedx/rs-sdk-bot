@@ -7,7 +7,7 @@
 // - client-assets/npc-drops.json for the opponent box: the route items each NPC drops (npcDrops below).
 // - client-assets/item-sources.json for the Grand Exchange plugin's item sources: for each route item of
 //   knowledge/item-sources.json, by item id (items that share a display name, such as the four dragonhides, keep
-//   their own sources), up to 12 sources as [kind, label, [x, z, level, ...], optional helper-time evidence].
+//   their own sources), up to 12 sources as [kind, label, [x, z, level, ...], optional cost evidence].
 // Run: bun packages/dashboard/gen-map-data.ts
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -16,7 +16,13 @@ type Tile = { x: number; z: number; level?: number };
 // An icon may end with its skill requirement [skill, level] (a teleport spell's Magic level, a shortcut's Agility level).
 export type Icon = [number, number, number, 't' | 'p' | 'a' | 's', string] | [number, number, number, 't' | 'p' | 'a' | 's', string, [string, number]];
 const ANYWHERE = new Set(['spell', 'jewellery', 'item']);
-export type SourceCost = { helperTicksPerUnit: number; ticksBasis: 'content' | 'model' | 'measured'; ticksNote?: string };
+type CostBasis = 'content' | 'model' | 'measured';
+// Each known dimension has its own basis and conditions; helper time and conditional wall wait stay separate.
+export type SourceCost = {
+    helperTicksPerUnit?: number; ticksBasis?: CostBasis; ticksNote?: string;
+    coinsPerUnit?: number; coinsBasis?: CostBasis; coinsNote?: string;
+    realSecondsPerUnit?: number; realBasis?: CostBasis; realNote?: string;
+};
 export type Source = [string, string, number[], SourceCost?];
 type Names = { npc: (d: string) => string; item: (d: string) => string };
 
@@ -26,12 +32,21 @@ export const pretty = (d: string) => cap(String(d).replace(/\d+$/, '').replace(/
 // Shops, skills, floor spawns and actions first, then drops by chance (most likely first).
 const ORDER: Record<string, number> = { shop: 0, gather: 1, make: 2, pickup: 3, action: 4, drop: 5 };
 const flat = (tiles: Tile[]) => tiles.filter(t => Number.isInteger(t?.x) && Number.isInteger(t?.z)).flatMap(t => [t.x, t.z, t.level ?? 0]);
-function sourceCost(raw: any): SourceCost | undefined {
-    if (typeof raw?.helperTicksPerUnit !== 'number' || !Number.isFinite(raw.helperTicksPerUnit) || raw.helperTicksPerUnit < 0
-        || !['content', 'model', 'measured'].includes(raw.ticksBasis)) return undefined;
-    return { helperTicksPerUnit: raw.helperTicksPerUnit, ticksBasis: raw.ticksBasis,
-        ...(typeof raw.ticksNote === 'string' && raw.ticksNote.trim()
-            ? { ticksNote: raw.ticksNote.length > 800 ? raw.ticksNote.slice(0, 800) + '…' : raw.ticksNote } : {}) };
+function sourceCost(raw: any, boundedNotes = true): SourceCost | undefined {
+    const out: SourceCost = {};
+    for (const [valueKey, basisKey, noteKey] of [
+        ['helperTicksPerUnit', 'ticksBasis', 'ticksNote'],
+        ['coinsPerUnit', 'coinsBasis', 'coinsNote'],
+        ['realSecondsPerUnit', 'realBasis', 'realNote'],
+    ] as const) {
+        const value = raw?.[valueKey], basis = raw?.[basisKey], note = raw?.[noteKey];
+        if (typeof value !== 'number' || !Number.isFinite(value) || value < 0
+            || !['content', 'model', 'measured'].includes(basis)) continue;
+        Object.assign(out, { [valueKey]: value, [basisKey]: basis },
+            typeof note === 'string' && note.trim()
+                ? { [noteKey]: boundedNotes && note.length > 800 ? note.slice(0, 800) + '…' : note } : {});
+    }
+    return Object.keys(out).length ? out : undefined;
 }
 
 export function mapIcons(teleports: any[], edges: any[], items: any[], names: Names): Icon[] {
@@ -76,18 +91,21 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
             const add = (kind: string, label: string, tiles: number[]) => {
                 const title = label + (typeof s.gate === 'string' && s.gate.trim() ? ` · Requires: ${s.gate.trim()}` : '');
                 // Full conditions identify a fact even when its display note needs truncation.
-                const identity = cost && typeof s.cost?.ticksNote === 'string' && s.cost.ticksNote.trim()
-                    ? { ...cost, ticksNote: s.cost.ticksNote } : cost;
+                const identity = sourceCost(s.cost, false);
                 rows.push({ row: cost ? [kind, title, tiles, cost] : [kind, title, tiles], key: JSON.stringify([title, identity ?? null]) });
             };
-            if (s.kind === 'shop') add('shop', `Shop: ${(s.owners ?? []).map((o: any) => names.npc(o.npc)).join(', ') || pretty(s.shop)} · ${s.basePrice} gp`, places(s.owners));
+            if (s.kind === 'shop') {
+                const base = typeof s.basePrice === 'number' && Number.isFinite(s.basePrice) && s.basePrice >= 0
+                    ? ` · base value ${s.basePrice} gp` : '';
+                add('shop', `Shop: ${(s.owners ?? []).map((o: any) => names.npc(o.npc)).join(', ') || pretty(s.shop)}${base}`, places(s.owners));
+            }
             else if (s.kind === 'drop') add('drop', `Drop: ${names.npc(s.npc)}${s.combat ? ' (level ' + s.combat + ')' : ''} · ${s.chance >= 1 ? 'always' : '1/' + Math.round(1 / s.chance)}`, places(s.places));
             else if (s.kind === 'gather') add('gather', `${cap(s.skill)} ${s.level}: ${(s.places ?? []).filter((p: any) => !/^macro_|dummy/.test(p.loc ?? '')).map((p: any) => pretty(p.loc ?? p.npc ?? '')).filter((v: string, i: number, a: string[]) => v && v !== 'Loc' && a.indexOf(v) === i).slice(0, 2).join(', ') || pretty(s.rung.split('/')[1] ?? '')}`, places(s.places));
             else if (s.kind === 'make') add('make', `${cap(s.skill)} ${s.level}: from ${(s.inputs ?? []).map((i: any) => (i.count > 1 ? i.count + ' ' : '') + names.item(i.item)).join(', ') || 'nothing'}`, []);
             else if (s.kind === 'pickup') add('pickup', `Floor spawn${s.spawns > 1 ? 's (' + s.spawns + ')' : ''}`, flat(s.tiles ?? []));
             else if (s.kind === 'action') { const label = actionLabel(String(s.trigger), String(s.subject), names); if (label) add('action', label, places(s.places)); }
         }
-        // Variants share places only when their labels and timing conditions describe the same fact.
+        // Variants share places only when their labels and each cost dimension describe the same fact.
         const byLabel = new Map<string, Source>();
         for (const { row: r, key } of rows) {
             const seen = byLabel.get(key);

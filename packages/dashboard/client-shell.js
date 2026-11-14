@@ -72,10 +72,20 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const qty=n=>n>=10000000?`<span class="qty qty-m">${Math.floor(n/1e6)}M</span>`:n>=100000?`<span class="qty qty-k">${Math.floor(n/1000)}K</span>`:`<span class="qty">${n}</span>`;
   // Item prices (RuneLite itemprices, bank value): the server's item value (the vault's: 7-day VWAP after 3 trades,
   // else the shop base price), and the market's ask and bid where it is a route supply. Coins are 1 gp.
-  let priceAt=-1,prices=new Map();
-  function price(name){if(S.economy?.pricesAt!==priceAt){priceAt=S.economy?.pricesAt;prices=new Map((S?.economy?.supplies||[]).map(s=>[String(s.name).toLowerCase(),s]));}
-    if(/^coins$/i.test(name))return {value:1};const s=prices.get(String(name).toLowerCase());
-    const value=S.economy?.itemValues?.[name]??null;return value==null?null:{value,ask:s?.ask??null,bid:s?.bid??null};}
+  const priceName=n=>String(n||'').replace(/\s*\(noted\)\s*$/i,'').trim().toLowerCase();
+  function priceIdentity(item){const has=!!item&&typeof item==='object'&&(Object.hasOwn(item,'id')||Object.hasOwn(item,'baseId')),raw=has?(Object.hasOwn(item,'baseId')?item.baseId:item.id):null;
+    return {has,id:Number.isSafeInteger(raw)&&raw>=0?raw:null,name:priceName(typeof item==='string'?item:item?.name)};}
+  function priceKey(item){const {has,id,name}=priceIdentity(item);return id!=null?'id:'+id:has?'invalid:'+name:name==='coins'?'id:995':'name:'+name;}
+  function price(item){if(item?.unconfirmed)return null;const {has,id,name}=priceIdentity(item),economy=S?.economy||{};
+    if(id===995||!has&&name==='coins')return {value:1,ask:null,bid:null};
+    if(has)return id==null?null:economy.itemPricesById?.[id]??null;
+    if(Object.hasOwn(economy,'itemPricesByName'))return economy.itemPricesByName?.[name]??null;
+    const identities=new Set([...(economy.supplies||[]),...(S?.bots||[]).flatMap(b=>[b.inventory,b.bank,b.equipment,b.ground].flatMap(l=>l??[]))].filter(i=>priceName(i?.name)===name&&priceIdentity(i).has).map(i=>priceIdentity(i).id));
+    if(identities.has(null)||identities.size>1)return null;
+    const aliases=Object.entries(economy.itemValues||{}).filter(([key])=>priceName(key)===name);if(!aliases.length||aliases.some(([,value])=>value!==aliases[0][1]))return null;
+    const quotes=(economy.supplies||[]).filter(s=>priceName(s.name)===name),same=key=>quotes.length&&quotes.every(s=>s[key]===quotes[0][key])?quotes[0][key]??null:null;
+    return {value:aliases[0][1],ask:same('ask'),bid:same('bid')};}
+  window.atlasItemPrice=price;window.atlasPriceKey=priceKey;
   // Item stats (RuneLite's item stats): what a food or a potion does, from the server's consumption table (client-assets/item-stats.json, made by gen-item-stats.ts). The tooltip of an item shows it.
   let itemStats={};fetch(asset('item-stats.json')).then(r=>r.ok?r.json():{}).then(j=>{itemStats=j||{};},()=>{});
   window.atlasItemStats=()=>itemStats;
@@ -95,16 +105,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // (skill_magic/scripts/spells/alchemy.rs2), with the cost from client-assets/item-alch.json (gen-item-alch.ts). Coins cannot be alched.
   // The profit of one cast buys the item at the market ask and pays one nature rune; a fire staff gives the fire runes. Only a profit shows.
   let itemAlch={};fetch(asset('item-alch.json')).then(r=>r.ok?r.json():{}).then(j=>{itemAlch=j||{};},()=>{});
-  function alchOf(item){const name=typeof item==='string'?item:item?.name,id=Number.isInteger(item?.baseId)?item.baseId:item?.id;if(id===995||/^coins$/i.test(name||''))return null;const c=Number.isInteger(id)&&id>=0?itemAlch[id]:itemAlch[name];return c>0?Math.max(Math.floor(c*6/10),1):null;}
-  function alchTip(item){const h=alchOf(item);if(!h)return '';const p=price(item.name),nat=price('Nature rune'),supplies=typeof S!=='undefined'?(S?.economy?.supplies||[]):[];
-    const id=Number.isInteger(item.baseId)?item.baseId:item.id,identified=Number.isInteger(id)&&id>=0,quote=identified?supplies.find(q=>q.id===id):null;
-    const rune=supplies.find(q=>q.id===561)?.ask??(nat?(nat.ask??nat.value):null),buy=identified?quote?.ask??null:p?.ask??null;
+  function alchOf(item){const name=typeof item==='string'?item:item?.name,has=!!item&&typeof item==='object'&&(Object.hasOwn(item,'id')||Object.hasOwn(item,'baseId')),id=has?(Object.hasOwn(item,'baseId')?item.baseId:item.id):null;if(id===995||!has&&/^coins$/i.test(name||''))return null;const c=has?(Number.isSafeInteger(id)&&id>=0?itemAlch[id]:null):itemAlch[name];return c>0?Math.max(Math.floor(c*6/10),1):null;}
+  function alchTip(item){const h=alchOf(item);if(!h)return '';const p=price(item),nat=price('Nature rune'),supplies=typeof S!=='undefined'?(S?.economy?.supplies||[]):[];
+    const id=Object.hasOwn(item,'baseId')?item.baseId:item.id,identified=Number.isSafeInteger(id)&&id>=0,quote=identified?supplies.find(q=>q.id===id):null;
+    const rune=supplies.find(q=>q.id===561)?.ask??(nat?(nat.ask??nat.value):null),buy=identified?(typeof S!=='undefined'&&Object.hasOwn(S?.economy||{},'itemPricesById')?p?.ask??null:quote?.ask??null):p?.ask??null;
     const profit=buy!=null&&rune!=null?Math.round(h-buy-rune):null;
     return ' · high alch '+nf(h)+(item.count>1?' ('+gp(h*item.count)+' for '+nf(item.count)+')':'')+(profit!=null?(profit>0?' · alch profit +'+nf(profit)+' a cast after the market buy and a nature rune':''):p&&h>p.value?' · alch pays '+nf(Math.round(h-p.value))+' more than the value':'');}
-  function priceTip(item){const a=typeof alchTip==='function'?alchTip(item):'',p=price(item.name);if(!p||/^coins$/i.test(item.name))return a;return ' · value '+nf(Math.round(p.value))+' gp'+(item.count>1?' ('+gp(Math.round(p.value*item.count))+' for '+nf(item.count)+')':'')+(p.ask!=null||p.bid!=null?' · market buy '+(p.ask!=null?nf(p.ask):'—')+' / sell '+(p.bid!=null?nf(p.bid):'—'):'')+a;}
-  function stackValue(items){let value=0,unpriced=0;for(const it of items||[]){const p=price(it.name);if(p)value+=p.value*it.count;else unpriced++;}return {value:Math.round(value),unpriced};}
+  function priceTip(item){const a=typeof alchTip==='function'?alchTip(item):'',p=price(item);if(!p||p.value===1&&(item.id===995||!Object.hasOwn(item,'id')&&!Object.hasOwn(item,'baseId')&&/^coins$/i.test(item.name)))return a;return ' · value '+nf(Math.round(p.value))+' gp'+(item.count>1?' ('+gp(Math.round(p.value*item.count))+' for '+nf(item.count)+')':'')+(p.ask!=null||p.bid!=null?' · market buy '+(p.ask!=null?nf(p.ask):'—')+' / sell '+(p.bid!=null?nf(p.bid):'—'):'')+a;}
+  function stackValue(items){let value=0,unpriced=0;for(const it of items||[]){if(!it)continue;const p=price(it);if(p)value+=p.value*it.count;else unpriced++;}return {value:Math.round(value),unpriced};}
   // Inventory value (RuneLite's bank value, for the inventory): the sum of the item values under the grid. A coin counts as 1 gp. An item with no value adds nothing, and the tooltip says how many have none.
-  function invWorth(items){let total=0,none=0;for(const it of items){if(!it)continue;const p=price(it.name);if(p)total+=p.value*(it.count||1);else none++;}return total?`<p class="game-muted inv-worth" title="The sum of the item values${none?' · '+none+(none===1?' item has':' items have')+' no value':''}">Worth ${gp(Math.round(total))} gp</p>`:'';}
+  function invWorth(items){let total=0,none=0;for(const it of items){if(!it)continue;const p=price(it);if(p)total+=p.value*(it.count||1);else none++;}return total||none?`<p class="game-muted inv-worth" title="The sum of the item values${none?' · '+none+(none===1?' item has':' items have')+' no value':''}">Worth ${gp(Math.round(total))} gp${none?' + '+none+' unpriced':''}</p>`:'';}
   // Item charges (RuneLite's Item Charges): the charges or doses in an item's name, "Amulet of glory(4)" or
   // "Strength potion(3)", drawn in the icon's corner as the plugin does. A stack keeps its count instead.
   const itemCharges=name=>{const m=String(name||'').match(/\((\d+)\)$/);return m?Number(m[1]):null;};
@@ -120,6 +130,19 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let itemBonusData=null,spellbookData=null;
   fetch(asset('item-bonuses.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')itemBonusData=j;},()=>{});
   fetch(asset('spellbook.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.spells))spellbookData=j;},()=>{});
+  window.atlasCurrentHp=currentHp;window.atlasRecordedHp=recordedHp;
+  // Dated hitpoints may be shown after they age out. Current danger and timer estimates require a recent sample.
+  function recordedHp(b,now=Date.now()){
+    const hp=b?.hp,at=b&&Object.hasOwn(b,'hpAt')?b.hpAt:b?.at;
+    return Number.isFinite(now)&&hp&&Number.isSafeInteger(hp.now)&&hp.now>=0&&Number.isSafeInteger(hp.max)&&hp.max>0
+      &&Number.isFinite(b.at)&&b.at>0&&b.at<=now&&Number.isFinite(at)&&at>0&&at<=b.at?{now:hp.now,max:hp.max,at}:null;
+  }
+  function currentHp(b,now=Date.now()){const hp=recordedHp(b,now);return b?.inWorld&&hp&&now-hp.at<=10e3?hp:null;}
+  function healthNote(b,now=Date.now()){
+    const hp=recordedHp(b,now);if(!hp||currentHp(b,now))return '';
+    const seconds=Math.floor((now-hp.at)/1000),elapsed=seconds<60?seconds+'s':seconds<3600?Math.floor(seconds/60)+'m':seconds<86400?Math.floor(seconds/3600)+'h':Math.floor(seconds/86400)+'d';
+    return ' · observed '+elapsed+' ago';
+  }
   const curLevel=(b,n)=>{const s=(b?.skills||[]).find(x=>x.name===n);return Number.isFinite(s?.currentLevel)?s.currentLevel:s?.level;};
   // Exact item IDs are authoritative. Name-only legacy rows use aliases whose variants all share the same facts.
   function equipmentValue(data,it){if(!data||!it)return null;const id=Number.isInteger(it.baseId)?it.baseId:it.id;return Number.isInteger(id)&&id>=0?data[id]??null:data[it.name]??null;}
@@ -161,14 +184,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // green) and the items of value it loses (red), on the worn items and the pack. deathMarks gives the kept units by name
   // (pvpState counts each unit of a stack once); deathCls uses them up by the stack's count, in the order the cells are
   // drawn (worn items first). A stack with only some units kept is death-part: green border, red tint.
-  function deathMarks(b){try{const p=b?.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null;if(!p)return null;const keep=new Map();for(const k of p.kept)keep.set(k.name,(keep.get(k.name)||0)+1);return keep;}catch{return null;}}
+  function deathMarks(b){try{const p=b?.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null;if(!p||p.unpriced)return null;const keep=new Map();for(const k of p.kept){const key=priceKey(k);keep.set(key,(keep.get(key)||0)+1);}return keep;}catch{return null;}}
   function deathCls(marks,item){
     if(!marks||!item?.name)return '';
-    const count=Math.max(1,item.count||1),left=marks.get(item.name)||0,take=Math.min(left,count);
-    if(take>0)marks.set(item.name,left-take);
+    const key=priceKey(item),count=Math.max(1,item.count||1),left=marks.get(key)||0,take=Math.min(left,count);
+    if(take>0)marks.set(key,left-take);
     if(take>=count)return ' death-kept';
     if(take>0)return ' death-part';
-    return (S?.economy?.itemValues?.[item.name]??(item.name==='Coins'?1:0))>0?' death-lost':'';
+    return (price(item)?.value??0)>0?' death-lost':'';
   }
   // Item identification (RuneLite's Item Identification): the game names every unidentified herb "Herb" (obj.pack
   // unidentified_*), so the item id gives its short name; a potion (a name ending in its doses, "(3)") shows its type:
@@ -250,7 +273,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function gamePanel(){
     const b=account(),panel=$('#game-panel');let html='';
     if(selectedTab==='inventory'){const dm=deathMarks(b);if(dm)for(const it of b.equipment||[])deathCls(dm,it);html=b?.inventory?'<div class="inventory-grid">'+Array.from({length:28},(_,i)=>itemCell(b.inventory[i],i,deathCls(dm,b.inventory[i]))).join('')+'</div>'+invWorth(b.inventory)+teleLine(b):'<p class="game-muted">Select an account with a reported inventory.</p>';}
-    if(selectedTab==='skills'){html='<div class="skill-grid">'+skills.filter(n=>reported(b,n)).map(n=>{const s=level(n);return `<button class="game-skill" data-skill="${n}" title="${n}${s?(s.xp!=null?' · '+s.xp.toLocaleString()+' XP':' · level '+s.level):' · not reported by this game'}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt=""><span>${s?s.currentLevel??s.level:'—'}<small>／${s?s.level:'—'}</small></span></button>`;}).join('')+'</div><div class="skill-total">Total level: '+(b?.skills?.filter(realSkill).reduce((n,s)=>n+s.level,0)??'—')+'</div>'+combatLine(b)+bankedLine(b);}
+    if(selectedTab==='skills'){html='<div class="skill-grid">'+skills.filter(n=>reported(b,n)).map(n=>{const s=level(n);return `<button class="game-skill" data-skill="${n}" title="${n}${s?(s.xp!=null?' · '+s.xp.toLocaleString()+' XP':' · level '+s.level):' · not reported by this game'}${n==='Hitpoints'?healthNote(b):''}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt=""><span>${s?n==='Hitpoints'?recordedHp(b)?.now??'—':s.currentLevel??s.level:'—'}<small>／${s?s.level:'—'}</small></span></button>`;}).join('')+'</div><div class="skill-total">Total level: '+(b?.skills?.filter(realSkill).reduce((n,s)=>n+s.level,0)??'—')+'</div>'+combatLine(b)+bankedLine(b);}
     if(selectedTab==='equipment'&&b?.equipment?.length&&b.equipment.every(e=>e.slot==null)){html='<div class="game-list">'+b.equipment.map(it=>`<span class="equip-row">${icon(it.name,32)}<span>${E(it.name)}</span></span>`).join('')+'</div><p class="game-muted">The '+E(b.side||'other')+' side reports worn items without their slots. Snapshot '+age(b.at)+' old.</p>';}
     else if(selectedTab==='equipment'){const slots=[[0,'Head',78,4,0],[1,'Cape',37,43,1],[2,'Neck',78,43,2],[13,'Ammo',119,43,10],[3,'Weapon',22,82,3],[4,'Body',78,82,5],[5,'Shield',134,82,6],[7,'Legs',78,122,7],[9,'Hands',22,162,8],[10,'Feet',78,162,9],[12,'Ring',134,162,4]];const dm=deathMarks(b);html='<div class="equipment-doll">'+slots.map(([id,name,x,y,f])=>{const it=b?.equipment?.find(e=>e.slot===id),su=setupSlot(b,id,it);return `<button class="equipment-slot${su.cls}${deathCls(dm,it)}" style="left:${x}px;top:${y}px" data-equipment="${id}" title="${(it?E(it.name)+(it.count>1?' × '+E(it.count):''):name+' · '+(b?.equipment?'empty':'not reported'))+E(su.tip)}">${it?icon(it.name,32)+(it.count>1?qty(it.count):'')+chargeTag(it):'<i class="worn-icon" style="background-position:-'+32*(f%4)+'px -'+32*Math.floor(f/4)+'px"></i>'}</button>`;}).join('')+'</div>'+(b?'<p class="game-muted">'+(b.equipment?(window.atlasOperator()?'Observed ':'Updated ')+''+age(b.at)+' ago':'Equipment is not reported for this account.')+'</p>':'<p class="game-muted">Select an account in the title bar.</p>')+equipStats(b)+setupPanel(b);}
     if(selectedTab==='quests'&&questScope==='fleet')html=fleetQuests();
@@ -343,8 +366,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       rows='<p class="game-muted">'+(b.equipment?differ?differ+' worn slot'+(differ===1?'':'s')+' differ from the kit':'Every worn slot matches the kit':'Equipment is not reported.')+'</p>'+k.carried.map(([n,c])=>{const h=have(n),bk=banked(n);return `<div class="setup-row ${h>=c?'setup-have':'setup-short'}" title="${E(n)}: ${nf(h)} held, ${nf(c)} in the kit${bk==null?'':', '+nf(bk)+' in the bank'}">${icon(n,24)}<span>${E(n)}</span><span>${nf(h)} / ${nf(c)}${bk==null?'':` <small class="setup-bank${h+bk<c?' setup-bank-short':''}">bank ${nf(bk)}</small>`}</span></div>`;}).join('');
     }
     // Restock: what the pack and the bank together miss for the kit, with the cost at the GE price (itemValues).
-    if(k&&b&&Array.isArray(b.bank)){const price=n=>(typeof S!=='undefined'&&S?.economy?.itemValues?.[n])||0,miss=k.carried.map(([n,c])=>{const own=(b.inventory||[]).filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0)+b.bank.filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0);return [n,Math.max(0,c-own)];}).filter(([,m])=>m>0);
-      if(miss.length){const cost=miss.reduce((t,[n,m])=>t+price(n)*m,0),unpriced=miss.filter(([n])=>!price(n)).length;rows+='<p class="setup-restock" title="'+E(miss.map(([n,m])=>nf(m)+' '+n+(price(n)?' at '+nf(Math.round(price(n)))+' gp':' (no GE price)')).join(', '))+'">Restock: '+E(miss.slice(0,3).map(([n,m])=>nf(m)+' '+n).join(', '))+(miss.length>3?' +'+(miss.length-3):'')+' · ≈ '+nf(Math.round(cost))+' gp'+(unpriced?' + '+unpriced+' unpriced':'')+'</p>';}}
+    if(k&&b&&Array.isArray(b.bank)){const unit=n=>typeof price==='function'?price(n)?.value??null:null,miss=k.carried.map(([n,c])=>{const own=(b.inventory||[]).filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0)+b.bank.filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0);return [n,Math.max(0,c-own)];}).filter(([,m])=>m>0);
+      if(miss.length){const cost=miss.reduce((t,[n,m])=>t+(unit(n)??0)*m,0),unpriced=miss.filter(([n])=>unit(n)==null).length;rows+='<p class="setup-restock" title="'+E(miss.map(([n,m])=>nf(m)+' '+n+(unit(n)!=null?' at '+nf(Math.round(unit(n)))+' gp':' (no GE price)')).join(', '))+'">Restock: '+E(miss.slice(0,3).map(([n,m])=>nf(m)+' '+n).join(', '))+(miss.length>3?' +'+(miss.length-3):'')+' · ≈ '+nf(Math.round(cost))+' gp'+(unpriced?' + '+unpriced+' unpriced':'')+'</p>';}}
     return `<div class="setup"><label>Setup <select data-setup-kit aria-label="Inventory setup">${opts}</select></label>${rows}</div>`;
   }
   // Screenshot (RuneLite's Screenshot plugin): the 3D view of the watched account is captured on a level-up, a death and
@@ -369,9 +392,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Loot shots: a loot item of the watched account that gained at least the chosen value since the last refresh.
   function lootShots(){
     const b=account();if(!b?.flow||!shotCfg.loot)return;
-    const prev=lootSeen.get(b.name),now=new Map((b.flow.loot||[]).map(i=>[i.name,i.count]));lootSeen.set(b.name,now);
+    const prev=lootSeen.get(b.name),now=new Map((b.flow.loot||[]).map(i=>[priceKey(i),i]));lootSeen.set(b.name,now);
     if(!prev)return;
-    for(const [n,c] of now){const d=c-(prev.get(n)??0),v=(S?.economy?.itemValues?.[n]??0)*d;if(d>0&&v>=shotCfg.loot){shotFor(b,'loot',n+(d>1?' × '+d:'')+' ('+gp(v)+')');break;}}
+    for(const [key,i] of now){const d=i.count-(prev.get(key)?.count??0),v=(price(i)?.value??0)*d;if(d>0&&v>=shotCfg.loot){shotFor(b,'loot',i.name+(d>1?' × '+d:'')+' ('+gp(v)+')');break;}}
   }
   window.atlasShots=()=>({shots,cfg:shotCfg});
   // Tick efficiency (one box under Overall, and the waste sort of the account list): the last ticks of the status
@@ -880,7 +903,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // the most XP an hour (hourRates, the low end of each name's range) among the names that spawn in the world. A name
   // whose melee max hit is a third of the account's current Hitpoints or more is left out as too risky to train on. Gear
   // that the dashboard has not seen (equipmentObserved false, an account offline) gives no estimate, so no box.
-  function trainRows(){const b=typeof account==='function'?account():null,hp=typeof curLevel==='function'?curLevel(b,'Hitpoints'):null;if(!Number.isFinite(hp)||!npcSpawns)return [];
+  function trainRows(){const b=typeof account==='function'?account():null,hp=currentHp(b)?.now;if(!Number.isFinite(hp)||!npcSpawns)return [];
     // A name counts when one of its spawns is outside the Wilderness: a training tip never sends an account into PvP.
     const wild=typeof wildLevel==='function'?wildLevel:()=>0,safe=r=>{for(let i=0;i+1<r[3].length;i+=3)if(!wild({x:r[3][i],z:r[3][i+1]}))return true;return false;};
     const spawned=new Set(npcSpawns.filter(safe).map(r=>r[0])),out=[];
@@ -933,10 +956,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const PK_GOAL=/\b(pk|pvp|pker|spar|tribrid|wilderness)\b/i;
   function partyMembers(){return (S?.bots||[]).filter(x=>!x.practice&&!x.reserved&&x.inWorld&&(wildLevel(x.pos)||PK_GOAL.test(String(x.currentGoal||x.goal||''))||PK_GOAL.test(String(x.role||''))));}
   function partyCard(x){
-    const sk=n=>x.skills?.find(s=>s.name===n),pr=sk('Prayer'),hp=x.hp,food=(x.inventory||[]).filter(i=>i&&/\bheals\b/i.test(itemStats[i.name]||'')).reduce((n,i)=>n+(i.count||1),0);
-    const w=wildLevel(x.pos),threats=w?pvpState(x)?.threats.length??0:0,low=hp&&hp.max?hp.now/hp.max<0.4:false;
+    const sk=n=>x.skills?.find(s=>s.name===n),pr=sk('Prayer'),hp=recordedHp(x),current=currentHp(x),food=(x.inventory||[]).filter(i=>i&&/\bheals\b/i.test(itemStats[i.name]||'')).reduce((n,i)=>n+(i.count||1),0);
+    const w=wildLevel(x.pos),threats=w?pvpState(x)?.threats.length??0:0,low=current?current.now/current.max<0.4:false;
     const bar=(now,max,cls)=>`<div class="party-bar ${cls}"><i style="width:${max?Math.max(0,Math.min(100,Math.round(100*now/max))):0}%"></i><span>${now??'?'} / ${max??'?'}</span></div>`;
-    return `<button class="party-card${threats||low?' party-alert':''}" data-world-follow="${E(x.name)}" title="Watch ${E(safeName(x.name))}"><div class="xp-head"><span>${E(safeName(x.name))}</span><span class="xp-muted">combat ${x.combat??'?'}${w?' · wildy '+w:''}</span></div>${bar(hp?.now,hp?.max,'party-hp')}${bar(pr?.currentLevel??pr?.level,pr?.level,'party-prayer')}<div class="xp-meta"><span>Run <b>${x.runEnergy??'?'}%</b></span><span>Food <b>${food}</b></span><span class="${threats?'xp-bad':''}">${threats} can attack</span></div></button>`;
+    return `<button class="party-card${threats||low?' party-alert':''}" data-world-follow="${E(x.name)}" title="Watch ${E(safeName(x.name))}"><div class="xp-head"><span>${E(safeName(x.name))}</span><span class="xp-muted">combat ${x.combat??'?'}${w?' · wildy '+w:''}</span></div>${bar(hp?.now,hp?.max,'party-hp')}${hp&&!current?'<small class="xp-muted">Hitpoints'+E(healthNote(x))+'</small>':''}${bar(pr?.currentLevel??pr?.level,pr?.level,'party-prayer')}<div class="xp-meta"><span>Run <b>${x.runEnergy??'?'}%</b></span><span>Food <b>${food}</b></span><span class="${threats?'xp-bad':''}">${threats} can attack</span></div></button>`;
   }
   function partyBox(){const m=partyMembers();return m.length?`<div class="xp-box"><div class="xp-head"><span>Party</span><span class="xp-muted">${m.length} PK account${m.length===1?'':'s'}</span></div><div class="party-grid">${m.map(partyCard).join('')}</div></div>`:'';}
   function worldPanel(){
@@ -946,7 +969,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // PvP Tools: each of our accounts in the Wilderness, with its risk and the players who can attack it now.
     const wild=S.bots.filter(x=>!x.practice&&!x.reserved&&x.inWorld&&wildLevel(x.pos)).map(x=>({b:x,p:pvpState(x)})).filter(v=>v.p);
     const party=partyBox();
-    const pvp=wild.length?`<div class="xp-box"><div class="xp-head"><span>Attackable now</span><span class="xp-muted">in the Wilderness</span></div>${wild.map(({b:x,p})=>`<details class="spot-row" data-k="pvp:${E(x.name)}"><summary title="${E('Wilderness '+p.wild+' · risk '+gp(p.risk)+' · kept '+gp(p.keptValue))}"><span class="xp-name">${E(safeName(x.name))} <i class="xp-muted">lvl ${p.wild}</i></span><span class="${p.threats.length?'xp-bad':'xp-muted'}">${p.threats.length} can attack · risk ${gp(p.risk)}</span></summary>${p.threats.map(t=>`<div class="xp-meta"><span>${E(t.name)}</span><span>combat ${t.combat} · ${t.dist} tiles</span></div>`).join('')||'<div class="xp-meta"><span>Nobody in attack range within 30 tiles.</span></div>'}</details>`).join('')}</div>`:'';
+    const pvp=wild.length?`<div class="xp-box"><div class="xp-head"><span>Attackable now</span><span class="xp-muted">in the Wilderness</span></div>${wild.map(({b:x,p})=>`<details class="spot-row" data-k="pvp:${E(x.name)}"><summary title="${E('Wilderness '+p.wild+' · risk '+gp(p.risk)+(p.unpriced?' + '+p.unpriced+' unpriced · kept unknown':' · kept '+gp(p.keptValue)))}"><span class="xp-name">${E(safeName(x.name))} <i class="xp-muted">lvl ${p.wild}</i></span><span class="${p.threats.length?'xp-bad':'xp-muted'}">${p.threats.length} can attack · risk ${gp(p.risk)}${p.unpriced?' + '+p.unpriced+' unpriced':''}</span></summary>${p.threats.map(t=>`<div class="xp-meta"><span>${E(t.name)}</span><span>combat ${t.combat} · ${t.dist} tiles</span></div>`).join('')||'<div class="xp-meta"><span>Nobody in attack range within 30 tiles.</span></div>'}</details>`).join('')}</div>`:'';
     return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Online now</span><span class="xp-gain">${nf(roster.length)}</span></div><div class="xp-meta"><span>${ours} of them are ours</span>${owner?'<span>world feed, every 6 s</span>':''}</div></div>`+party+pvp+respawnBox()+highlightsBox()+markersBox()+finderBox()+(typeof trainBox==='function'?trainBox():'')+
       `<div class="xp-box"><div class="xp-head" title="Other players within 10 tiles of a tile our accounts use, on the ground floor."><span>Our spots</span><span class="xp-muted">other players</span></div>${spots.map(s=>`<details class="spot-row" data-k="spot:${owner?s.x+','+s.z+':'+E(s.side):E(s.label)}"><summary title="${E(s.others.length+' other players, '+s.ours.length+' of ours'+(owner?' · '+s.x+', '+s.z:''))}"><span>${E(s.label)}</span><span class="spot-ours" title="${s.ours.length} of our accounts here">${'<i></i>'.repeat(Math.min(s.ours.length,6))}</span><span class="spot-bar"><i style="width:${Math.round(s.others.length/most*100)}%"></i></span><b>${s.others.length}</b></summary>${owner?`<div class="xp-meta"><span>claimed by ${E(s.side)}</span><span>${s.x}, ${s.z}</span></div>`:''}<div class="spot-names">${nameButtons(s.others,24)||'<span class="xp-muted">No other player is here.</span>'}</div></details>`).join('')||`<span class="xp-muted">${owner?'No claimed spot has a tile.':'No spot is in use.'}</span>`}${named.length&&owner?`<p class="xp-muted">Claimed without a tile: ${named.map(s=>E(s.resource)).join(', ')}</p>`:''}</div>`+
       farmsBox(spots)+'</div>';
@@ -1006,13 +1029,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const canAttack=(a,b)=>{const w=Math.min(wildLevel(a.pos),wildLevel(b.pos));return w>=1&&Number.isFinite(a.combat)&&Number.isFinite(b.combat)&&Math.abs(a.combat-b.combat)<=w;};
   function pvpState(b){
     if(!b?.inWorld||!b.pos)return null;
-    const price=n=>S.economy?.itemValues?.[n]??(n==='Coins'?1:0),carried=[...(b.equipment||[]),...(b.inventory||[])].filter(i=>i&&i.count>0&&i.name);
-    const risk=carried.reduce((n,i)=>n+price(i.name)*i.count,0);
-    const kept=carried.flatMap(i=>Array.from({length:Math.min(i.count,3)},()=>({name:i.name,value:price(i.name)}))).sort((x,y)=>y.value-x.value).slice(0,3);
+    const carried=[...(b.equipment||[]),...(b.inventory||[])].filter(i=>i&&i.count>0&&i.name),unpriced=carried.filter(i=>!price(i)).length;
+    const risk=carried.reduce((n,i)=>n+(price(i)?.value??0)*i.count,0);
+    const kept=carried.flatMap(i=>Array.from({length:Math.min(i.count,3)},()=>({...i,value:price(i)?.value??0}))).sort((x,y)=>y.value-x.value).slice(0,3);
     const keptValue=kept.reduce((n,i)=>n+i.value,0),fleet=new Set(S.bots.map(x=>x.name.toLowerCase()));
     const threats=(S.roster||[]).filter(r=>r[3]===(b.pos.level||0)&&String(r[0]).toLowerCase()!==b.name.toLowerCase()).map(r=>({name:String(r[0]),pos:{x:r[1],z:r[2]},combat:r[4],dist:Math.max(Math.abs(r[1]-b.pos.x),Math.abs(r[2]-b.pos.z)),ours:fleet.has(String(r[0]).toLowerCase())}))
       .filter(p=>p.dist<=30&&!p.ours&&canAttack({pos:b.pos,combat:b.combat},p)).sort((x,y)=>x.dist-y.dist);
-    return {wild:wildLevel(b.pos),risk,kept,keptValue,lost:Math.max(0,risk-keptValue),threats};
+    return {wild:wildLevel(b.pos),risk,kept,keptValue,lost:Math.max(0,risk-keptValue),unpriced,threats};
   }
   // NPC aggression timer (RuneLite's NPC Aggression Timer, with the server's rule, Player.ts zonesAfk): a player who stays
   // in two 21 x 21 areas for 1,000 ticks is no longer hunted. A step out of both areas makes a new area at the player
@@ -1062,27 +1085,26 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // state has no prayers, so each timer measures its period: two counted steps 50 ticks apart (within 6) set it to 50,
   // 100 apart set it back to 100. A drained stat (stat_regen) and a boosted stat (stat_boost_restore) have two timers.
   const regen=new Map(),regenTick=()=>Number(S?.world?.tickMs)||600;
-  // The clock stops 10 s after the status file (b.at), which holds Hitpoints and the levels; the live roster's sight
-  // moves only the tile.
-  const regenNow=(b,now)=>{const at=Number(b?.at)||0;return at>0?Math.min(now,at+10e3):now;};
+  // The health observation owns the clock; a live roster sight moves only the tile.
+  const regenNow=(b,now)=>Math.min(now,(recordedHp(b,now)?.at??now)+10e3);
   const regenStep=(t,now)=>{if(t.at!=null){const gap=(now-t.at)/regenTick();if(Math.abs(gap-50)<=6)t.ticks=50;else if(Math.abs(gap-100)<=6)t.ticks=100;}t.at=now;};
-  function regenTrack(b,now){if(!b?.inWorld||!b.hp||!Number.isFinite(b.hp.now)){if(b?.name)regen.delete(trackKey(b));return null;}now=regenNow(b,now);
+  function regenTrack(b,now){const hp=currentHp(b,now);if(!hp){if(b?.name)regen.delete(trackKey(b));return null;}now=hp.at;
     const lv={};for(const s of b.skills||[])if(s&&s.name!=='Hitpoints'&&s.name!=='Prayer'&&Number.isFinite(s.currentLevel)&&Number.isFinite(s.level))lv[s.name]=[s.currentLevel,s.level];
     // A step counts only when no item of the pack fell in count between the two reads: food and potions take one away
     // (a cake bite leaves a smaller slice), so a hit and a bite that net +1 are not taken for a timer tick. Loot only adds.
     const inv=new Map();for(const i of b.inventory||[])if(i?.name)inv.set(i.name,(inv.get(i.name)||0)+(i.count||1));
-    const r=regen.get(trackKey(b));if(!r){const n={hp:b.hp.now,lv,inv,heal:{at:null,ticks:100},up:{at:null,ticks:100},down:{at:null,ticks:100}};regen.set(trackKey(b),n);return n;}
+    const r=regen.get(trackKey(b));if(!r){const n={hp:hp.now,at:hp.at,lv,inv,heal:{at:null,ticks:100},up:{at:null,ticks:100},down:{at:null,ticks:100}};regen.set(trackKey(b),n);return n;}if(hp.at<=r.at)return r;r.at=hp.at;
     let still=true;for(const [k,c] of r.inv)if((inv.get(k)||0)<c){still=false;break;}
-    if(still&&b.hp.now===r.hp+1)regenStep(r.heal,now);r.hp=b.hp.now;
+    if(still&&hp.now===r.hp+1)regenStep(r.heal,now);r.hp=hp.now;
     let up=false,down=false;for(const k in lv){const p=r.lv[k];if(still&&p&&p[1]===lv[k][1]&&Math.abs(lv[k][0]-p[0])===1&&Math.abs(lv[k][0]-lv[k][1])<Math.abs(p[0]-p[1])){if(lv[k][0]>p[0])up=true;else down=true;}}
     if(up)regenStep(r.up,now);if(down)regenStep(r.down,now);
     r.lv=lv;r.inv=inv;return r;}
   // The time (ms) until `steps` more ticks of a timer {at, ticks}; at null: the most time ("at most").
   function regenTime(t,steps,now){const period=t.ticks*regenTick();if(steps<=0)return {ms:0,most:false};if(t.at==null)return {ms:steps*100*regenTick(),most:true};const next=period-((now-t.at)%period);return {ms:next+(steps-1)*period,most:false,next};}
   const regenClock=ms=>Math.floor(ms/6e4)+':'+String(Math.floor(ms%6e4/1e3)).padStart(2,'0');
-  function regenHpText(b,now){const r=regen.get(trackKey(b));if(!r||!b.hp||!(b.hp.max>b.hp.now))return '';const t=regenTime(r.heal,b.hp.max-b.hp.now,regenNow(b,now));
+  function regenHpText(b,now){const r=regen.get(trackKey(b)),hp=currentHp(b,now);if(!r||!hp||!(hp.max>hp.now))return '';const t=regenTime(r.heal,hp.max-hp.now,regenNow(b,now));
     return (t.most?' · full in at most ':' · next heal in '+regenClock(t.next)+' · full in ')+regenClock(t.ms);}
-  function regenStatText(b,s,now){const r=regen.get(trackKey(b));if(!r)return '';const t=regenTime(s.currentLevel<s.level?r.up:r.down,Math.abs(s.currentLevel-s.level),regenNow(b,now));return ' · back to '+s.level+' in '+(t.most?'at most ':'')+regenClock(t.ms);}
+  function regenStatText(b,s,now){const r=regen.get(trackKey(b));if(!r||!currentHp(b,now))return '';const t=regenTime(s.currentLevel<s.level?r.up:r.down,Math.abs(s.currentLevel-s.level),regenNow(b,now));return ' · back to '+s.level+' in '+(t.most?'at most ':'')+regenClock(t.ms);}
   // Prayer time left (RuneLite's Prayer plugin, with the server's drain, prayer.rs2 [timer,prayer_drain]): every 5 ticks
   // a counter grows by 5 x the sum of the active prayers' drain effects (prayers.enum prayer_drain_effects: 12 for a
   // protect prayer and the top three); each time it reaches the resistance, 60 + 2 x the prayer bonus (equip.rs2), one
@@ -1167,11 +1189,17 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   // The sources of one item, under its row: each with "Show on map" when it has places.
   function geSourceCost(cost){
-    const ticks=cost?.helperTicksPerUnit,basis=cost?.ticksBasis;
-    if(typeof ticks!=='number'||!Number.isFinite(ticks)||ticks<0||!['content','model','measured'].includes(basis))return '';
-    const label=ticks.toLocaleString('en-US',{maximumSignificantDigits:3})+' helper ticks/item ('+(basis==='model'?'estimate':basis)+')';
-    const note=typeof cost.ticksNote==='string'?cost.ticksNote.trim():'';
-    return '<small class="xp-muted" title="'+E(label+(note?' · '+note:''))+'"> · '+E(label)+'</small>';
+    const parts=[],add=(key,basisKey,noteKey,unit,prefix='')=>{
+      const value=cost?.[key],basis=cost?.[basisKey];
+      if(typeof value!=='number'||!Number.isFinite(value)||value<0||!['content','model','measured'].includes(basis))return;
+      const label=prefix+value.toLocaleString('en-US',{maximumSignificantDigits:6})+' '+unit+' ('+(basis==='model'?'estimate':basis)+')';
+      const note=typeof cost[noteKey]==='string'?cost[noteKey].trim():'';
+      parts.push('<small class="xp-muted" title="'+E(label+(note?' · '+note:''))+'"> · '+E(label)+'</small>');
+    };
+    add('helperTicksPerUnit','ticksBasis','ticksNote','helper ticks/item');
+    add('coinsPerUnit','coinsBasis','coinsNote','gp/item','Cash: ');
+    add('realSecondsPerUnit','realBasis','realNote','s/item',cost?.realSecondsPerUnit>0?'Conditional wait: ':'Wait: ');
+    return parts.join('');
   }
   function geSources(id){
     loadItemSources();const list=itemSourcesData?.[id];
@@ -1410,7 +1438,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const other=window.atlasFollowOther;
     if(other){const l=S.lookups?.[other.toLowerCase()],ov=l?.rows?.find(r=>r.board==='Overall'),seen=S.roster?.find(r=>String(r[0]).toLowerCase()===other.toLowerCase());
       set('<h4>'+E(other)+'</h4>'+line('Status',seen?'online':'not in the roster')+line('Combat',String(l?.combat??seen?.[4]??'—'))+(ov?line('Overall','#'+nf(ov.rank)+' · '+ov.level):'')+(l?.worn?.length?line('Wears',l.worn.map(w=>w.name).join(', ').slice(0,60)):'')+line('Account','not ours')+race);return;}
-    if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;set('<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&S.vault?.coins?line('Vault coins',gp(S.vault.coins)):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):'')+race);return;}
+    if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;set('<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&(S.vault?.coins||S.vault?.countsComplete===false)?line(S.vault.countsComplete===false?'Known vault coins':'Vault coins',gp(S.vault.coins)+(S.vault.countsComplete===false?' · partial':'')):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):'')+race);return;}
     const [,state]=st(b);
     // Attack range (RuneLite's combat level plugin): in the Wilderness, the combat levels that can fight the account (pvp_combat.rs2: the difference is at most the Wilderness level).
     // Skilling session (RuneLite's Woodcutting, Mining and Fishing session boxes): the account's top loot item since its
@@ -1419,7 +1447,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const sessionLine=b=>{const t=(b.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0];if(!t)return '';const hours=Math.max(1/60,((b.flow.at??Date.now())-b.flow.since)/3.6e6);const burnt=(b.flow?.loot||[]).filter(i=>/^burnt /i.test(i.name)).reduce((n,i)=>n+i.count,0),cooked=new Set(Object.values(typeof cookData==='object'?cookData:{}).map(r=>r.c)),made=burnt?(b.flow?.loot||[]).filter(i=>cooked.has(i.name)).reduce((n,i)=>n+i.count,0):0;
       return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr')+(burnt&&made?line('Burnt',nf(burnt)+' · '+Math.round(burnt*100/(burnt+made))+'% burn rate'):'');};
     // PvP Tools lines: in the Wilderness, the risk, what a death keeps and loses, and the players who can attack now.
-    const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):''))+line('Risk',gp(p.risk))+line('Kept · lost',gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
+    const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):''))+line('Risk',gp(p.risk)+(p.unpriced?' + '+p.unpriced+' unpriced':''))+line('Kept · lost',p.unpriced?'unknown':gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
     const goalText=(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60);
     set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+(goalText||window.atlasOperator()?line('Goal',goalText||'—'):'')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):'')+sessionLine(b)+wildLine(b)+race);
   }
@@ -1467,10 +1495,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let idleFor=null,idleAt=null,idleRun=0,idleTold=false,hpTold=false,lastFood=null,foodTold=false;
   // The food items in an account's pack, most first (item-stats.json says what heals).
   function foodOf(b){const by=new Map();for(const i of b?.inventory||[])if(i&&/\bheals\b/i.test(itemStats[i.name]||''))by.set(i.name,(by.get(i.name)||0)+(i.count||1));const items=[...by].map(([name,count])=>({name,count})).sort((x,y)=>y.count-x.count);return {items,total:items.reduce((n,i)=>n+i.count,0)};}
-  function idleNotifier(b){
+  function idleNotifier(b,now=Date.now()){
     if(!b||b.practice||b.name!==idleFor){idleFor=b&&!b.practice?b.name:null;idleAt=null;idleRun=0;idleTold=false;hpTold=false;lastFood=null;foodTold=false;}
     if(!b||b.practice||!b.fresh||!Number.isFinite(b.at)||idleAt!==null&&b.at<=idleAt)return;idleAt=b.at;
-    const low=b.fresh&&b.hp?.max>0&&b.hp.now<=Math.ceil(b.hp.max/4);if(low&&!hpTold){hpTold=true;notify(safeName(b.name)+' has low hitpoints: '+b.hp.now+' / '+b.hp.max);desktopNotify(safeName(b.name)+' has low hitpoints!');}else if(!low)hpTold=false;
+    const hp=currentHp(b,now),low=hp&&hp.now<=Math.ceil(hp.max/4);if(low&&!hpTold){hpTold=true;notify(safeName(b.name)+' has low hitpoints: '+hp.now+' / '+hp.max);desktopNotify(safeName(b.name)+' has low hitpoints!');}else if(!low)hpTold=false;
     // Low food: the pack goes from more than 2 food items to 2 or fewer.
     const food=foodOf(b).total;if(food<=2&&lastFood!==null&&lastFood>2&&!foodTold){foodTold=true;notify(safeName(b.name)+' is low on food: '+food+' left');desktopNotify(safeName(b.name)+' is low on food!');}else if(food>2)foodTold=false;lastFood=food;
     if(b.fresh&&b.action==='idle'){idleRun++;if(idleRun>=3&&!idleTold){idleTold=true;notify(safeName(b.name)+' is now idle!');desktopNotify(safeName(b.name)+' is now idle!');}}else{idleRun=0;idleTold=false;}
@@ -1499,9 +1527,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const start=sessionXp.get(name),last=sessionLast.get(name);sessionXp.delete(name);sessionLast.delete(name);
     if(!start||!last)return '';
     const gains=Object.entries(last.xp).map(([k,v])=>[k,v-(start[k]??v)]).filter(([,d])=>d>0).sort((a,b)=>b[1]-a[1]);
-    const top=[...last.loot].sort((a,b)=>(b.count||0)-(a.count||0))[0],price=n=>S?.economy?.itemValues?.[n]??(n==='Coins'?1:0);
-    const value=last.loot.reduce((t,i)=>t+price(i.name)*(i.count||0),0);
-    const parts=[gains[0]?'+'+nf(Math.round(gains[0][1]))+' '+gains[0][0]+' XP':'',top&&top.count>0?nf(top.count)+' '+top.name:'',value>=1?'≈ '+gp(Math.round(value))+' gp of loot':''].filter(Boolean);
+    const top=[...last.loot].sort((a,b)=>(b.count||0)-(a.count||0))[0],unpriced=last.loot.filter(i=>!price(i)).length;
+    const value=last.loot.reduce((t,i)=>t+(price(i)?.value??0)*(i.count||0),0);
+    const parts=[gains[0]?'+'+nf(Math.round(gains[0][1]))+' '+gains[0][0]+' XP':'',top&&top.count>0?nf(top.count)+' '+top.name:'',value>=1||unpriced?'≈ '+gp(Math.round(value))+' gp of loot'+(unpriced?' + '+unpriced+' unpriced':''):''].filter(Boolean);
     return (last.uptime?' after '+dur(last.uptime):'')+(parts.length?': '+parts.join(', '):'');
   }
   function moments(){let n=0;const say=(kind,text)=>{chat.push({kind,text,at:Date.now()});if(chat.length>200)chat.shift();n++;};
@@ -1617,7 +1645,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const b=account(),name=b?.name??null;
     if(name!==questAccount){questAccount=name;questDetail=null;}
     app.classList.toggle('public-view',!window.atlasOperator());if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();moments();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)put(head,boardSummary()+progressPanel());const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))put(rw,rivalsPanel());refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();infoboxes();setText(title.querySelector('.connection'),$('#connection').textContent);focusPaint();warmPlaces();respawnSync();trackTrails();overlaySync();lootShots();welcomeCard();setText($('#chat-name'),(b?safeName(b.name):'Spectator')+':');
-    const orbBox=hud.querySelector('.game-orbs'),orbHtml=!b?'':[['hp','Hitpoints',b.hp?.now,b.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','Run energy',b.runEnergy,100]].filter(o=>o[2]!=null).map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${Math.floor(value)} / ${max}${id==='hp'&&typeof regenHpText==='function'?regenHpText(b,Date.now()):''}${id==='prayer'&&typeof prayerText==='function'?E(prayerText(b)):''}"><canvas class="orb-art" width="60" height="34" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas><span class="orb-num" style="color:${orbColour(value,max)}">${Math.floor(value)}</span></div>`).join('');if(orbBox._h!==orbHtml){orbBox._h=orbHtml;orbBox.innerHTML=orbHtml;orbBox.querySelectorAll('canvas').forEach(drawOrb);}if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
+    const health=recordedHp(b),healthCurrent=currentHp(b);
+    const orbBox=hud.querySelector('.game-orbs'),orbHtml=!b?'':[['hp','Hitpoints',health?.now,health?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','Run energy',b.runEnergy,100]].filter(o=>o[2]!=null).map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${Math.floor(value)} / ${max}${id==='hp'?healthNote(b)+(typeof regenHpText==='function'?regenHpText(b,Date.now()):''):''}${id==='prayer'&&typeof prayerText==='function'?E(prayerText(b)):''}"><canvas class="orb-art" width="60" height="34" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas><span class="orb-num" style="color:${id==='hp'&&!healthCurrent?'#b8b8b8':orbColour(value,max)}">${Math.floor(value)}</span></div>`).join('');if(orbBox._h!==orbHtml){orbBox._h=orbHtml;orbBox.innerHTML=orbHtml;orbBox.querySelectorAll('canvas').forEach(drawOrb);}if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
   const previousPick=pick;pick=function(name){wallEnd(false);if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
@@ -2237,7 +2266,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   hud.onchange=e=>{if(e.target.id==='game-display'){app.classList.toggle('client-collapsed',e.target.value==='closed');app.classList.toggle('mobile-plugin',e.target.value!=='closed');syncSidebar();}if(e.target.id==='game-quality'){$('#atlas-quality').value=e.target.value;$('#atlas-quality').onchange();}if(e.target.id==='game-roofs')window.atlasSetRoofsOff(e.target.value==='off');};
   hud.addEventListener('contextmenu',e=>{const cell=e.target.closest('[data-item],[data-equipment]');if(!cell)return;e.preventDefault();const b=account(),it=cell.dataset.item!==undefined?b?.inventory?.[Number(cell.dataset.item)]:b?.equipment?.find(i=>i.slot===Number(cell.dataset.equipment));if(!it)return;context?.remove();context=document.createElement('div');context.className='game-context';context.style.left=Math.min(e.clientX,innerWidth-220)+'px';context.style.top=Math.min(e.clientY,innerHeight-110)+'px';const worn=cell.dataset.equipment!==undefined,n=String(it.name),verb=worn?'Remove':/\b(sword|axe|bow|dagger|mace|staff|scimitar|pickaxe|harpoon|rod|net|hammer|chisel|knife|spear|halberd|whip|wand|crossbow|blade|club|warhammer)\b/i.test(n)?'Wield':/\b(helm|hat|cape|amulet|body|chainbody|platebody|platelegs|plateskirt|legs|boots|gloves|shield|ring|coif|robe|hood|vambraces|chaps|mask|kiteshield|sq shield|necklace)\b/i.test(n)?'Wear':/\b(potion|brew|beer|wine|tea|milk|juice|water)\b/i.test(n)?'Drink':/\b(bread|cake|pie|stew|fish|shark|lobster|trout|salmon|tuna|swordfish|shrimps|anchovies|sardine|herring|pike|cod|bass|meat|chicken|kebab|pizza|cheese|apple|banana|bananas|peach|onion|tomato|cabbage|potato|egg|monkfish)\b/i.test(n)?'Eat':null;
     const options=worn?[['Remove',null]]:[['Use',null],...(verb?[[verb,null]]:[]),['Drop',null]];
-    context.innerHTML='<strong>Choose Option</strong>'+options.map(([o])=>'<button data-view-action="'+E(o)+'">'+E(o)+' <span>'+E(n)+'</span></button>').join('')+'<button data-examine>Examine <span>'+E(n)+'</span></button><button data-cancel>Cancel</button>';context.onclick=e=>{if(e.target.closest('[data-examine]')){const p=price(n),desc=S.economy?.itemExamine?.[n];notify((desc||n)+(p&&!/^coins$/i.test(n)?' Price of '+(it.count>1?nf(it.count)+' x ':'')+n+': '+gp(Math.round(p.value*(it.count||1)))+' gp'+(it.count>1?' ('+nf(Math.round(p.value))+' each)':'')+'.':''));}else{const v=e.target.closest('[data-view-action]');if(v)toast(v.dataset.viewAction+' · spectator view; no game input sent');}context.remove();};document.body.append(context);});
+    context.innerHTML='<strong>Choose Option</strong>'+options.map(([o])=>'<button data-view-action="'+E(o)+'">'+E(o)+' <span>'+E(n)+'</span></button>').join('')+'<button data-examine>Examine <span>'+E(n)+'</span></button><button data-cancel>Cancel</button>';context.onclick=e=>{if(e.target.closest('[data-examine]')){const p=price(it),desc=S.economy?.itemExamine?.[n];notify((desc||n)+(p&&!/^coins$/i.test(n)?' Price of '+(it.count>1?nf(it.count)+' x ':'')+n+': '+gp(Math.round(p.value*(it.count||1)))+' gp'+(it.count>1?' ('+nf(Math.round(p.value))+' each)':'')+'.':''));}else{const v=e.target.closest('[data-view-action]');if(v)toast(v.dataset.viewAction+' · spectator view; no game input sent');}context.remove();};document.body.append(context);});
   document.addEventListener('click',e=>{if(context&&!context.contains(e.target))context.remove();});
   const map=document.getElementById('map');
   if(map)map.addEventListener('contextmenu',e=>{
@@ -2275,8 +2304,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // !price <item> (RuneLite chatcommands): the market's ask, bid and stock for an item, or its value when the market has no offer.
   function priceLine(q){q=q.trim().toLowerCase();if(!q)return 'Usage: !price <item>, for example !price cannonball.';const all=(S?.economy?.supplies||[]).filter(x=>x.name),n=x=>String(x.name).toLowerCase(),hit=all.find(x=>n(x)===q)||all.find(x=>n(x).startsWith(q))||all.find(x=>n(x).includes(q)),gp=v=>v==null?'none':nf(Math.round(v))+' gp';
     const ha=item=>{const h=typeof alchOf==='function'?alchOf(item):null;return h?' · high alch '+gp(h):'';};
-    if(hit)return hit.name+': ask '+gp(hit.ask)+' · bid '+gp(hit.bid)+(hit.stock!=null?' · '+nf(hit.stock)+' in stock':'')+ha(hit)+'.';
-    const v=Object.entries(S?.economy?.itemValues||{}).find(([k])=>k.toLowerCase()===q);if(v)return v[0]+': value '+gp(v[1])+ha(v[0])+' · no market offer.';
+    if(hit){const variants=all.filter(x=>n(x)===n(hit));return variants.map(x=>x.name+(variants.length>1?' [item '+x.id+']':'')+': ask '+gp(x.ask)+' · bid '+gp(x.bid)+(x.stock!=null?' · '+nf(x.stock)+' in stock':'')+ha(x)+'.').join(' ');}
+    const entries=Object.hasOwn(S?.economy||{},'itemPricesByName')?Object.entries(S.economy.itemPricesByName||{}).map(([name,p])=>[p.name||name,p.value]):Object.entries(S?.economy?.itemValues||{}),v=entries.find(([k])=>k.toLowerCase()===q);if(v)return v[0]+': value '+gp(v[1])+ha(v[0])+' · no market offer.';
     const a=typeof itemAlch==='object'?Object.keys(itemAlch).find(k=>k.toLowerCase()===q):null;return a&&ha(a)?a+ha(a).replace(' · ',': ')+' · no market offer.':'No price for '+q+'.';}
   function chatLookup(text){if(/^!price\b/i.test(text))return priceLine(text.replace(/^!price\s*/i,''));const b=account();if(!b)return 'Follow an account first (title bar or ::focus <name>).';const [cmd,...rest]=text.slice(1).toLowerCase().split(/\s+/),arg=rest.join(' '),who=safeName(b.name),rank=board=>b.ranks?.find(r=>r.board===board),fmt=(board,level)=>{const r=rank(board);return level+(r?.rank?' · rank #'+nf(r.rank):'');};
     if(cmd==='cmb'){const lv=Object.fromEntries((b.skills||[]).map(s=>[s.name,s.level])),c=window.atlasXp?.combat?.(lv);return c?who+': combat level '+c.level+'.':who+': no levels reported.';}

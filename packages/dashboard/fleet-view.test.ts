@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {dashboardStatuses,fleetSidesView,localDisplayNames,remoteBots,scoreboardView,SIDE_SYNC_MS} from './fleet-view';
+import {dashboardStatuses,fleetSidesView,healthObservation,localDisplayNames,remoteBots,scoreboardView,SIDE_SYNC_MS} from './fleet-view';
 import {questProgress} from './goal-details';
 import {questDefinitions} from '../core/src/quest-status';
 
@@ -27,6 +27,64 @@ test('fleet sides give each side its sync age, accounts, total levels and coins;
  expect(v.sides[1]!.accounts[0]).toEqual({name:'Zed',at:now-60_000,total:22,coins:105});expect(v.sides[0]!.accounts[1]!.total).toBeNull();
  expect(v.orders[0]).toEqual({id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1,state:'open',late:true});
  expect(v.orders.map(o=>o.id+':'+o.state)).toEqual(['o1:open','o3:half','o4:failed']);
+});
+
+test('recorded health preserves native vitals or one explicit current Hitpoints skill with its original date',()=>{
+ const now=1_000_000,at=now-100,hpAt=now-200,skills=[{name:'Hitpoints',level:30,currentLevel:20}];
+ expect(healthObservation({at,hpAt,hp:{now:12,max:30},skills},now)).toEqual({hp:{now:12,max:30},hpAt});
+ expect(healthObservation({at,hp:{now:0,max:30}},now)).toEqual({hp:{now:0,max:30},hpAt:at});
+ expect(healthObservation({at,skills},now)).toEqual({hp:{now:20,max:30},hpAt:at});
+ expect(healthObservation({at,hpAt,skills:[{name:'Attack',level:60,currentLevel:60},{name:'Hitpoints',level:30,currentLevel:0}]},now))
+  .toEqual({hp:{now:0,max:30},hpAt});
+ expect(healthObservation({at,skills:[{name:'Hitpoints',level:30,currentLevel:42}]},now)).toEqual({hp:{now:42,max:30},hpAt:at});
+});
+
+test('health does not infer full vitals from base-only skills or replace explicit unknown or invalid native vitals',()=>{
+ const now=1_000_000,at=now-100,skills=[{name:'Hitpoints',level:30,currentLevel:20}],unknown={hp:null,hpAt:null};
+ for(const hp of [null,undefined,{},[],{now:-1,max:30},{now:1.5,max:30},{now:'20',max:30},{now:NaN,max:30},
+  {now:Number.MAX_SAFE_INTEGER+1,max:30},{now:20,max:0},{now:20,max:-1},{now:20,max:30.5},{now:20,max:'30'},
+  {now:20,max:Infinity},{now:20,max:Number.MAX_SAFE_INTEGER+1}]){
+  expect(healthObservation({at,hp,skills},now)).toEqual(unknown);
+ }
+ for(const currentLevel of [undefined,null,-1,1.5,'20',NaN,Infinity,Number.MAX_SAFE_INTEGER+1])
+  expect(healthObservation({at,skills:[{name:'Hitpoints',level:30,currentLevel}]},now)).toEqual(unknown);
+ for(const level of [undefined,null,0,-1,30.5,'30',NaN,Infinity,Number.MAX_SAFE_INTEGER+1])
+  expect(healthObservation({at,skills:[{name:'Hitpoints',level,currentLevel:20}]},now)).toEqual(unknown);
+ expect(healthObservation({at,skills:[{name:'Hitpoints',level:30}]},now)).toEqual(unknown);
+ expect(healthObservation({at,skills:[...skills,{name:'Hitpoints',level:30,currentLevel:20}]},now)).toEqual(unknown);
+ expect(healthObservation({at,skills:[{name:'Attack',level:30,currentLevel:20}]},now)).toEqual(unknown);
+});
+
+test('health dates cannot borrow a snapshot publication or feed time, or a heartbeat after an explicit unknown date',()=>{
+ const now=1_000_000,at=now-100,hp={now:0,max:30},unknown={hp:null,hpAt:null};
+ for(const hpAt of [undefined,null,0,-1,'999999',NaN,Infinity,at+1,now+1])
+  expect(healthObservation({at,hpAt,hp,snapshotAt:now,live:{seen:now}},now)).toEqual(unknown);
+ for(const accountAt of [undefined,null,0,-1,'999999',NaN,Infinity,now+1])
+  expect(healthObservation({at:accountAt,hpAt:now-200,hp,snapshotAt:now,live:{seen:now}},now)).toEqual(unknown);
+ expect(healthObservation({at:now-400_000,hp,snapshotAt:now,live:{seen:now}},now))
+  .toEqual({hp,hpAt:now-400_000});
+});
+
+test('remote and own-side snapshot rows retain recorded health age while a fresh world feed changes only presence',()=>{
+ const now=1_000_000,at=now-400_000,hpAt=at-100,server='rs-sdk-demo.fly.dev';
+ const account={name:'Worker',server,at,hpAt,skills:[{name:'Hitpoints',level:30,currentLevel:0}]};
+ const snapshot={side:'cloud',at:now-1,accounts:[account]};
+ const [offline]=remoteBots([snapshot],new Set(),new Map(),new Map(),now);
+ expect(offline.hp).toEqual({now:0,max:30});expect(offline.hpAt).toBe(hpAt);expect(offline.inWorld).toBe(false);
+ const feed=new Map([['worker',{x:3200,z:3200,level:0,combat:30,seen:now-1}]]);
+ const [online]=remoteBots([snapshot],new Set(),feed,new Map(),now);
+ expect(online.inWorld).toBe(true);expect(online.fresh).toBe(true);expect(online.lastSeen).toBe(now-1);
+ expect(online.hp).toEqual(offline.hp);expect(online.hpAt).toBe(hpAt);expect(online.at).toBe(at);
+ const own=dashboardStatuses(new Map(),[snapshot],()=> 'cloud','cloud',now).get('Worker');
+ expect(own.snapshotOnly).toBe(true);expect(own.hp).toEqual(offline.hp);expect(own.hpAt).toBe(hpAt);expect(own.at).toBe(at);
+ const native={...snapshot,accounts:[{...account,hp:{now:9,max:30}}]};
+ expect(remoteBots([native],new Set(),feed,new Map(),now)[0].hp).toEqual({now:9,max:30});
+ expect(dashboardStatuses(new Map(),[native],()=> 'cloud','cloud',now).get('Worker').hp).toEqual({now:9,max:30});
+ for(const change of [{hpAt:null},{hpAt:now},{at:undefined},{skills:[{name:'Hitpoints',level:30}]},{hp:null}]){
+  const raw={...snapshot,accounts:[{...account,...change}]};
+  const [row]=remoteBots([raw],new Set(),feed,new Map(),now);
+  expect(row.hp).toBeNull();expect(row.hpAt).toBeNull();
+ }
 });
 
 test('other sides become fleet rows with snapshot levels and items, a world-feed position, and no XP',()=>{

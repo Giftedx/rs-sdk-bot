@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { actionLabel, itemSources, mapIcons, npcDrops, pretty } from './gen-map-data';
+import { actionLabel, itemSources, mapIcons, npcDrops, pretty, type SourceCost } from './gen-map-data';
 
 test('npc drops: the route items each NPC drops, most likely first, the higher chance for two NPCs of one name', () => {
     expect(npcDrops([
@@ -52,7 +52,7 @@ test('item sources: by item id, with a label for each kind and the places as fla
         { kind: 'ge', blocked: '0 sellers' },
     ] }], names);
     expect(out).toEqual({ '892': [
-        ['shop', 'Shop: Hickton · 40 gp', [2822, 3442, 0]],
+        ['shop', 'Shop: Hickton · base value 40 gp', [2822, 3442, 0]],
         ['make', 'Smithing 75: from Iron bar', []],
         ['drop', 'Drop: Giant (level 28) · 1/128', [3100, 9840, 0]],
     ] });
@@ -114,6 +114,77 @@ test('unknown or malformed helper times never become zero-cost facts and notes s
         expect(source({ helperTicksPerUnit: 0, ticksBasis })).toHaveLength(3);
     expect(source({ helperTicksPerUnit: 0, ticksBasis: 'measured' })[3]).toEqual({ helperTicksPerUnit: 0, ticksBasis: 'measured' });
     expect(source({ helperTicksPerUnit: 1, ticksBasis: 'content', ticksNote: 'x'.repeat(1000) })[3]?.ticksNote).toBe('x'.repeat(800) + '…');
+});
+
+test('the apple pie shop keeps its modeled purchase cost and conditional restock apart from base value', () => {
+    const knowledge = JSON.parse(readFileSync(new URL('../../knowledge/item-sources.json', import.meta.url), 'utf8'));
+    const item = knowledge.items.find((i: any) => i.item === 'apple_pie');
+    const shop = item.sources.find((s: any) => s.kind === 'shop' && s.shop === 'generallegends');
+    expect(shop.basePrice).toBe(30);
+    expect(shop.priceAtFullStock).toBe(46);
+    const row = itemSources([{ ...item, sources: [shop] }], names)['2323']![0]!;
+    expect(row[1]).toBe('Shop: Fionella · base value 30 gp');
+    expect(row[2]).toEqual([2725, 3378, 1]);
+    expect(row[3]).toEqual({
+        helperTicksPerUnit: 0.1, ticksBasis: 'model', ticksNote: 'buy-10 button at one click per tick; travel and banking not included',
+        coinsPerUnit: 46.6, coinsBasis: 'model', coinsNote: 'mean price of the first 5 bought from full stock (shop.rs2 calc_shop_value, obj cost 30, sell 1550, delta 10)',
+        realSecondsPerUnit: 80, realBasis: 'content', realNote: 'after the 5 in stock: +1 unit per 200 ticks (World.ts restock) at 0.4 s per tick',
+    });
+    expect(row[3]).not.toHaveProperty('risk');
+});
+
+test('known cash and wall wait survive unknown helper timing independently, including explicit zero', () => {
+    const cost = { helperTicksPerUnit: null, ticksBasis: 'unknown', ticksNote: 'trip not measured',
+        coinsPerUnit: 0, coinsBasis: 'content', coinsNote: 'no coins spent',
+        realSecondsPerUnit: 0, realBasis: 'model', realNote: 'no additional wait under this condition',
+        risk: 0, riskBasis: 'content', privateValue: 'excluded' };
+    const row = itemSources([{ id: 526, sources: [{ kind: 'pickup', spawns: 1, tiles: [], cost }] }], names)['526']![0]!;
+    expect(row[3]).toEqual({ coinsPerUnit: 0, coinsBasis: 'content', coinsNote: 'no coins spent',
+        realSecondsPerUnit: 0, realBasis: 'model', realNote: 'no additional wait under this condition' });
+    const priced = { coinsPerUnit: 12, coinsBasis: 'measured', coinsNote: 'source snapshot', realSecondsPerUnit: null, realBasis: 'unknown' };
+    expect(itemSources([{ id: 526, sources: [{ kind: 'pickup', tiles: [], cost: priced }] }], names)['526']![0]![3])
+        .toEqual({ coinsPerUnit: 12, coinsBasis: 'measured', coinsNote: 'source snapshot' });
+});
+
+test('unknown or malformed cash and wall wait do not become zero or suppress valid helper evidence', () => {
+    const project = (cost: unknown) => itemSources([{ id: 526, sources: [{ kind: 'pickup', tiles: [], cost }] }], names)['526']![0]!;
+    const ticks: SourceCost = { helperTicksPerUnit: 1, ticksBasis: 'content' };
+    for (const [valueKey, basisKey] of [['coinsPerUnit', 'coinsBasis'], ['realSecondsPerUnit', 'realBasis']]) {
+        for (const value of [undefined, null, '0', -1, NaN, Infinity]) {
+            expect(project({ [valueKey!]: value, [basisKey!]: 'model' })).toHaveLength(3);
+            expect(project({ ...ticks, [valueKey!]: value, [basisKey!]: 'model' })[3]).toEqual(ticks);
+        }
+        for (const basis of [undefined, null, 'unknown', 'estimated', 1])
+            expect(project({ [valueKey!]: 0, [basisKey!]: basis })).toHaveLength(3);
+    }
+    expect(itemSources([{ id: 526, sources: [{ kind: 'shop', shop: 'shop', basePrice: -1, owners: [] }] }], names)['526']![0]![1]).toBe('Shop: Shop');
+});
+
+test('same shop labels retain distinct cash and restock facts with their own places', () => {
+    const base: SourceCost = { helperTicksPerUnit: 0.1, ticksBasis: 'model', coinsPerUnit: 4.107, coinsBasis: 'model', coinsNote: 'first 28 bought from full stock',
+        realSecondsPerUnit: 4, realBasis: 'content', realNote: 'after the 2000 in stock' };
+    const costs: SourceCost[] = [base, base, { ...base, coinsPerUnit: 5.179 }, { ...base, coinsBasis: 'measured' }, { ...base, coinsNote: 'first 5 bought from full stock' },
+        { ...base, realSecondsPerUnit: 20 }, { ...base, realBasis: 'model' }, { ...base, realNote: 'after the 200 in stock' }];
+    const sources = costs.map((cost, index) => ({ kind: 'shop', shop: 'shop', basePrice: 4, cost,
+        owners: [{ npc: 'hickton', tiles: [{ x: index + 1, z: 3000, level: 0 }] }] }));
+    const rows = itemSources([{ id: 556, sources }], names)['556']!;
+    expect(rows).toHaveLength(7);
+    expect(rows.map(r => r[2])).toEqual([[1, 3000, 0, 2, 3000, 0], [3, 3000, 0], [4, 3000, 0], [5, 3000, 0], [6, 3000, 0], [7, 3000, 0], [8, 3000, 0]]);
+    expect(rows.map(r => r[3])).toEqual([base, ...costs.slice(2)]);
+});
+
+test('full cash and wall-wait conditions identify sources while their emitted notes stay bounded', () => {
+    const prefix = 'shared condition; '.repeat(60);
+    for (const noteKey of ['coinsNote', 'realNote']) {
+        const sources = ['full stock', 'depleted stock'].map((condition, index) => ({
+            kind: 'shop', shop: 'shop', basePrice: 10, owners: [{ npc: 'hickton', tiles: [{ x: index + 1, z: 3000, level: 0 }] }],
+            cost: { coinsPerUnit: 10, coinsBasis: 'model', realSecondsPerUnit: 40, realBasis: 'content', [noteKey]: prefix + condition },
+        }));
+        const rows = itemSources([{ id: 526, sources }], names)['526']!;
+        expect(rows).toHaveLength(2);
+        expect(rows.map(r => r[2])).toEqual([[1, 3000, 0], [2, 3000, 0]]);
+        expect(rows.map(r => r[3]?.[noteKey as 'coinsNote' | 'realNote'])).toEqual([prefix.slice(0, 800) + '…', prefix.slice(0, 800) + '…']);
+    }
 });
 
 test('item-source labels retain access gates and map pins while blocked sources remain excluded', () => {

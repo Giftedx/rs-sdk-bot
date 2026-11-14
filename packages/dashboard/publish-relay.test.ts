@@ -1,5 +1,7 @@
 import {describe,expect,test} from 'bun:test';
 import {controlView,publicView,trimState,withSides,MAIN_MARK,WHY_LIMIT,FINISHED_KEEP,stateWarm} from './publish-relay';
+import {buildItemPrices} from './item-prices';
+import {questPointObservation} from './goals';
 
 const state=()=>({now:1,bots:[
   {name:'CoinCock',env:{target:null},sessionAttemptId:'1-2',workRevision:'abc',inputs:{},coordinatorRunId:null,bank:[{name:'Coins',count:5}],pos:{x:1,z:2},reserved:false},
@@ -86,6 +88,95 @@ test('public item values cover only what public bots carry or wear',()=>{
  const p=publicView({bots:[{name:'CoinCock',inventory:[{name:'Lobster',count:2}],equipment:[{name:'Bronze axe'}],bank:[{name:'Rune bar',count:9}]}],
   economy:{supplies:[],pricesAt:1,itemValues:{Lobster:150,'Bronze axe':16,'Rune bar':5000},itemExamine:{Lobster:'This looks tasty.','Rune bar':'A bar of rune.'}}});
  expect(p.economy.itemValues).toEqual({Lobster:150,'Bronze axe':16});expect(p.economy.itemExamine).toEqual({Lobster:'This looks tasty.'});
+});
+
+test('public exact prices follow visible base IDs and route supplies while aliases retain the full catalogue proof',()=>{
+ const rows=[
+  {id:1135,name:'Dragonhide body',basePrice:7800},{id:2503,name:'Dragonhide body',basePrice:13480},
+  {id:1277,name:'Bronze sword',basePrice:26},{id:526,name:'Bones',basePrice:1},{id:561,name:'Nature rune',basePrice:180},
+  {id:6,name:'Ring',basePrice:1000,ask:100,bid:90},{id:7,name:'Ring',basePrice:1000,ask:500,bid:90},
+  {id:10,name:'Bank only',basePrice:10},{id:11,name:'Main only',basePrice:11},
+  {id:12,name:'Practice only',basePrice:12},{id:13,name:'Reserved only',basePrice:13},
+ ];
+ const prices=buildItemPrices(rows,rows);
+ const p=publicView({bots:[
+  {name:'Worker',inventory:[{id:1136,baseId:1135,name:'Dragonhide body (noted)'},{id:6,name:'Ring'}],equipment:[{id:1277,name:'Bronze sword'}],ground:[[3200,3201,0,526,2]],bank:[{id:2503,name:'Dragonhide body'},{id:7,name:'Ring'},{id:10,name:'Bank only'}]},
+  {name:MAIN_MARK,ground:[[3200,3201,0,11,1]]},
+  {name:'Testworker',practice:true,ground:[[3200,3201,0,12,1]]},
+  {name:'Heldworker',reserved:true,ground:[{id:13,name:'Reserved only'}]},
+ ],economy:{supplies:[{id:561,name:'Nature rune'}],itemPricesById:prices.byId,itemPricesByName:prices.byName}});
+ expect(Object.keys(p.economy.itemPricesById).sort()).toEqual(['1135','1277','526','561','6']);
+ expect(p.economy.itemPricesById[1135]).toEqual({name:'Dragonhide body',value:7800,ask:null,bid:null});
+ expect(p.economy.itemPricesById[1136]).toBeUndefined();
+ expect(Object.keys(p.economy.itemPricesByName).sort()).toEqual(['bones','bronze sword','nature rune','ring']);
+ expect(p.economy.itemPricesByName.ring).toEqual({name:'Ring',value:1000,ask:null,bid:90});
+ expect(p.economy.itemPricesByName['dragonhide body']).toBeUndefined();
+ for(const word of ['Bank only','Main only','Practice only','Reserved only'])expect(JSON.stringify(p)).not.toContain(word);
+ expect(p.bots).toHaveLength(1);expect('bank'in p.bots[0]).toBe(false);
+});
+
+test('public ground tuples require valid observations and never infer note base IDs',()=>{
+ const rows=[{id:954,name:'Rope',basePrice:18},{id:10,name:'Bank only',basePrice:10},{id:1135,name:'Dragonhide body',basePrice:7800}];
+ const prices=buildItemPrices(rows,rows);
+ const ground=[[3200,3201,0,955,1],[3200,3201,0,10,0],[3200,3201,0,10],[3200,3201,0,'10',1],[NaN,3201,0,10,1],{id:1136,baseId:1135,name:'Dragonhide body (noted)'}];
+ const p=publicView({bots:[{name:'Worker',ground,bank:[{id:10,name:'Bank only'},{id:954,name:'Rope'}]}],economy:{itemPricesById:prices.byId,itemPricesByName:prices.byName}});
+ expect(p.economy.itemPricesById).toEqual({1135:{name:'Dragonhide body',value:7800,ask:null,bid:null}});
+ expect(p.economy.itemPricesByName).toEqual({'dragonhide body':{name:'Dragonhide body',value:7800,ask:null,bid:null}});
+});
+
+test('public price tables whitelist valid values and exact keys without deriving aliases',()=>{
+ const row={name:'Visible',value:0,ask:25,bid:20,bankCount:9000,account:'private owner',futureField:{stock:12}};
+ const p=publicView({bots:[{name:'Worker',inventory:[{id:1,name:'Visible'},{id:2,name:'Bad value'},{id:3,name:'Bad name'},{id:4,name:'Quotes'},{id:5,name:'Alias absent'},{id:6,name:'Miskeyed'}]}],economy:{
+  itemPricesById:{1:row,2:{...row,value:Infinity},3:{...row,name:''},4:{...row,name:'Quotes',ask:'25',bid:-1},5:{...row,name:'Alias absent'},'06':{...row,name:'Miskeyed'}},
+  itemPricesByName:{visible:row,'Bad value':{...row,name:'Bad value'},'bad name':{...row,name:'Bad name',value:-1},miskeyed:{...row,name:'Bank only'},quotes:{...row,name:'Quotes',value:2,ask:NaN,bid:1.5}},
+ }});
+ expect(p.economy.itemPricesById).toEqual({1:{name:'Visible',value:0,ask:25,bid:20},4:{name:'Quotes',value:0,ask:null,bid:null},5:{name:'Alias absent',value:0,ask:25,bid:20}});
+ expect(p.economy.itemPricesByName).toEqual({visible:{name:'Visible',value:0,ask:25,bid:20},quotes:{name:'Quotes',value:2,ask:null,bid:null}});
+ expect(JSON.stringify(p)).not.toMatch(/bankCount|private owner|futureField|Bank only/);
+});
+
+test('public omitted price maps stay omitted while explicit unknown and empty maps remain authoritative',()=>{
+ const bots=[{name:'Worker',inventory:[{id:995,name:'Coins'},{id:1,name:'Visible'}]}],economy={itemValues:{Coins:1,Visible:2}};
+ const old=publicView({bots,economy}).economy;
+ expect(Object.hasOwn(old,'itemPricesById')).toBe(false);expect(Object.hasOwn(old,'itemPricesByName')).toBe(false);
+ expect(old.itemValues).toEqual({Coins:1,Visible:2});
+ for(const unknown of [null,undefined,'unknown',[]]){
+  const current=publicView({bots,economy:{...economy,itemPricesById:unknown,itemPricesByName:unknown}}).economy;
+  expect(Object.hasOwn(current,'itemPricesById')).toBe(true);expect(current.itemPricesById).toBeNull();
+  expect(Object.hasOwn(current,'itemPricesByName')).toBe(true);expect(current.itemPricesByName).toBeNull();
+ }
+ const empty=publicView({bots,economy:{...economy,itemPricesById:{},itemPricesByName:{}}}).economy;
+ expect(empty.itemPricesById).toEqual({});expect(empty.itemPricesByName).toEqual({});
+ const one=publicView({bots,economy:{...economy,itemPricesById:null}}).economy;
+ expect(one.itemPricesById).toBeNull();expect(Object.hasOwn(one,'itemPricesByName')).toBe(false);
+});
+
+test('public health and selected quest points keep source dates and drop raw guild facts and extra fields',()=>{
+ const now=1_000_000,at=now-100,hpAt=now-1000;
+ const bot:any={name:'Worker',server:'rs-sdk-demo.fly.dev',at,hpAt,hp:{now:0,max:20},guildFacts:{varps:{qp:0,privateFlag:999}},ranksAt:now-1000,ranks:[{board:'Quest Points',level:50,rank:3}],live:{seen:now},snapshotAt:now};
+ bot.questPoints={...questPointObservation(bot,now),bankCount:9000,guildFacts:bot.guildFacts};
+ const p=publicView({now,bots:[bot]});
+ expect(p.bots[0].hp).toEqual({now:0,max:20});expect(p.bots[0].hpAt).toBe(hpAt);
+ expect(p.bots[0].questPoints).toEqual({points:0,at,source:'status'});
+ expect('guildFacts'in p.bots[0]).toBe(false);expect(JSON.stringify(p)).not.toMatch(/privateFlag|bankCount/);
+ const newer={points:60,at:now-1,source:'hiscores',privateField:12};
+ expect(publicView({now,bots:[{...bot,questPoints:newer}]}).bots[0].questPoints).toEqual({points:60,at:now-1,source:'hiscores'});
+});
+
+test('public explicit unknown health and quest points cannot borrow heartbeat dates or legacy observations',()=>{
+ const now=1_000_000,at=now-100,bot={name:'Worker',at,hp:{now:1,max:20},live:{seen:now},snapshotAt:now,guildFacts:{varps:{qp:55}},ranksAt:now-1,ranks:[{board:'Quest Points',level:55}]};
+ for(const hpAt of [null,undefined,0,-1,'999900',NaN,Infinity,at+1,now+1]){
+  const row=publicView({now,bots:[{...bot,hpAt}]}).bots[0];
+  expect(Object.hasOwn(row,'hpAt')).toBe(true);expect(row.hpAt).toBeNull();
+ }
+ for(const questPoints of [null,undefined,{points:-1,at,source:'status'},{points:1.5,at,source:'status'},
+  {points:'55',at,source:'status'},{points:Number.MAX_SAFE_INTEGER+1,at,source:'status'},
+  {points:55,at:null,source:'status'},{points:55,at:now+1,source:'status'},{points:55,at,source:'guild'}]){
+  const row=publicView({now,bots:[{...bot,questPoints}]}).bots[0];
+  expect(Object.hasOwn(row,'questPoints')).toBe(true);expect(row.questPoints).toBeNull();
+ }
+ const legacy=publicView({now,bots:[bot]}).bots[0];
+ expect(Object.hasOwn(legacy,'hpAt')).toBe(false);expect(Object.hasOwn(legacy,'questPoints')).toBe(false);
 });
 
 test('a state is warm once the server has read the market and the board tops',()=>{

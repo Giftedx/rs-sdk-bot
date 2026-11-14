@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { goalPlan,goalProgress,questPointObservation,type GoalInputs } from './goals';
-import { remoteBots } from './fleet-view';
+import { healthObservation,remoteBots } from './fleet-view';
 test('dashboard goals come from the current plan, not the historical request ledger', () => {
     const text=readFileSync(new URL('../../docs/plans/joined-plan.md',import.meta.url),'utf8');
     const plan=goalPlan(text);
@@ -71,9 +71,9 @@ test('server projection attaches selected dated QP after local and remote rank o
  const bots:any[]=[local,{...bot('Practice'),practice:true,guildFacts:{varps:{qp:999}}}];
  const snapshots=[{side:'cloud',at:now,accounts:[{name:'Remote',server,at:now-100,guildFacts:{varps:{qp:35}}}]}];
  const ranks=new Map([['Remote',{at:now-2000,rows:[{board:'Quest Points',level:30}]}]]);
- const run=new Function('bots','snapshots','ranks','now','remoteBots','questPointObservation',
+ const run=new Function('bots','snapshots','ranks','now','remoteBots','questPointObservation','healthObservation',
   `const roster=new Map(),firstSeen=new Map(),side='local',FILES={fleet:'fleet'},join=(...parts)=>parts.join('/'),fleetList=()=>[],ownerOf=()=>undefined,rankDelta=()=>({}),valueRanks=()=>[];${code};return bots;`);
- const projected=run(bots,snapshots,ranks,now,remoteBots,questPointObservation);
+ const projected=run(bots,snapshots,ranks,now,remoteBots,questPointObservation,healthObservation);
  expect(projected.find((b:any)=>b.name==='Local').questPoints).toEqual({points:55,at:local.at,source:'status'});
  expect(projected.find((b:any)=>b.name==='Remote').questPoints).toEqual({points:35,at:now-100,source:'status'});
  expect(projected.find((b:any)=>b.name==='Practice').questPoints).toBeNull();
