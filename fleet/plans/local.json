@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794641165883,
+ "at": 1794641213387,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -152,6 +152,25 @@
    ]
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -169,6 +188,26 @@
    "resources": [
     "knight:2669,3298"
    ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "mmthv2350",
@@ -247,6 +286,25 @@
    ]
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
    "account": "Pocketrocket",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -304,22 +362,41 @@
    ]
   },
   {
-   "account": "Wandwaver",
+   "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
    ]
   },
   {
@@ -368,19 +445,19 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
+    "PEN": "3017,3288",
     "TICKS": "3000",
     "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
+   "goal": "feathers at the chicken pen 3017,3288",
    "role": "helper",
-   "template": "feathers@3187,3277",
+   "template": "feathers@3017,3288",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "pen:3017,3288"
    ]
   },
   {
