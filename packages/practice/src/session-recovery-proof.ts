@@ -19,7 +19,7 @@ import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../..
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {canBind} from './ports';
-import {killTree,safeKill} from './proc';
+import {killTree,safeKill,sleeperCommand} from './proc';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
@@ -633,7 +633,9 @@ async function run(directory:string){
   type Fixture=Awaited<ReturnType<typeof fixture>>;
   const task=async(f:Fixture,id:string)=>{
    const runId=`native-rcv-${id}-${stamp}`;
-   const owner=Bun.spawn([process.execPath,'-e','await Bun.sleep(900000)',runId],{cwd:root,stdout:'ignore',stderr:'ignore',windowsHide:true});children.push(owner);
+   // The task owner only has to run with its runId on the command line (permit check processMatchesRecent): a light
+   // sleeper, not a Bun runtime. Fifteen of them run at once.
+   const owner=Bun.spawn(sleeperCommand(runId),{cwd:root,stdout:'ignore',stderr:'ignore',windowsHide:true});children.push(owner);
    tasks.set(runId,{status:'running',runId,pid:owner.pid,spec:{kind:'run',capability,account:f.name,...(f.completed?{env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500'}}:{}),repairs:[{account:f.name,endedAt:f.endedAt}],sessionRecovery:{account:f.name,endedAt:f.endedAt}}});
    put('.practice/coordinator/runs/'+runId+'/owner.json',{pid:owner.pid,runId});writeState();
    return {runId,owner};
