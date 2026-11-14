@@ -853,9 +853,12 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
  const g=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env))('Goblin');
  const xp=(g.match(/· ([\d,]+)–([\d,]+) XP\/h/)||[]).slice(1).map((x:string)=>Number(x.replace(/,/g,'')));
  expect(xp.length).toBe(2);expect(xp[1]/xp[0]).toBeLessThan(1.5);
- // A ranged weapon (range attack bonus above 0) gets no melee estimate.
+ // A ranged weapon (range attack bonus above 0) rolls ranged, not melee: with Ranged 60, range attack 0 and ranged
+ // strength 0 the max is floor((68 x 64 + 320) / 640) = 7; the roll 68 x 64 = 4,352 meets Moss giant's 39 x 64 = 2,496:
+ // 71%, 2.5 a swing, 24 swings x 4 ticks x 0.6 s = 57.7 s a kill: 62 kills an hour.
+ data['npc-defence.json']={'Moss giant':[[42,30,1,0,0,0,0,0,30,30,33,31,2,60,1000,60]]};
  const ranged=new Function(...Object.keys(env),'itemBonusData',`${code};return hourText;`)(...Object.values({...env,account:()=>({equipment:[{name:'Bronze dart',slot:3}]})}),{'Bronze dart':[0,0,0,0,1,0,0,0,0,0,0,1,0]});
- expect(ranged('Moss giant')).toBe('');
+ expect(ranged('Moss giant')).toMatch(/^About 62 kills an hour \(ranged, max hit 7, speed 4\) · /);
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
