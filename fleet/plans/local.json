@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794627176603,
+ "at": 1794627201377,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -486,23 +486,16 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-f40ccdb3-82b3-4471-971e-6e48f2ad1483"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "local-recover-mmsmk1232-20261113t190531z [task-f40ccdb3-82b3-4471-971e-6e48f2ad1483]",
+   "role": "helper"
   }
  ]
 }
