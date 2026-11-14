@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794658057975-mineyourbiz-weequickie",
+ "account": "WeeQuickie",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Blood rune",
+ "requested": 300,
+ "claim": "61e832d8-3f4f-4f60-8313-91901b7b2258",
+ "count": 0,
+ "ok": false,
+ "at": 1794658417237,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Coins",
+   "requested": 700000,
+   "count": 0
+  }
+ ]
+}
