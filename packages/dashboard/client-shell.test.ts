@@ -758,6 +758,17 @@ test('agility label: the fail chance at the current Agility level, none when the
  lv=null;expect(label('Swing-on',[200,250],{})).toBe('Swing-on');
 });
 
+test('runes per essence: the count at the current level and the next step, 1 with no multiplier',()=>{
+ const code=shell.slice(shell.indexOf("  // Runes per essence (RuneLite's Runecraft overlay"),shell.indexOf("  // Skill guide (RuneLite's Skill Calculator,"));
+ const sync=(v:any)=>({then(f:any){return sync(f(v));}});
+ const t=new Function('asset','fetch',`${code};return perEssence;`)((n:string)=>n,()=>sync({ok:true,json:()=>({'Air rune':[1,11],'Nature rune':[44,91],'Law rune':[54,0]})}));
+ expect(t('Air rune',33)).toBe('4 per essence (5 at 44)');
+ expect(t('Air rune',99)).toBe('10 per essence');
+ expect(t('Nature rune',60)).toBe('1 per essence (2 at 91)');
+ expect(t('Law rune',80)).toBe('1 per essence');
+ expect(t('Blood rune',80)).toBe('');
+});
+
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
  const code=shell.slice(shell.indexOf("  // Banked XP line (RuneLite's Banked Experience panel)"),shell.indexOf("  // Death recap (RuneLite's Death Indicator"));
  const banked:any={Prayer:{xp:4725,level:20},Firemaking:{xp:4000,level:22},Cooking:null};
