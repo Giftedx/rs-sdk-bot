@@ -226,8 +226,9 @@ if (import.meta.main) {
         const results: SparResult[] = [];
         for (const out of outs) for (const line of out.split(/\r?\n/)) {
             if (line.startsWith('SPAR {')) results.push(JSON.parse(line.slice(5)) as SparResult);
-            // One RESULT line for the batch: the parent writes it.
+            // One RESULT line for the batch: the parent writes it. SPAR_CHILD_RESULTS=1 shows each child's as CHILD RESULT.
             if (line && !line.startsWith('RESULT ')) console.log(line);
+            else if (line && env.SPAR_CHILD_RESULTS === '1') console.log(`CHILD ${line}`);
         }
         const s = batchSummary(results), ok = results.length === names.length && results.every(sparValid) && codes.every(code => code === 0);
         console.log(`SPAR_TIMING procs=${procs} wallMs=${Date.now() - t0} pairs=${results.length} ticks=${s.ticks}`);

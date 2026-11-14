@@ -1183,6 +1183,12 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   (`extra:team-2v3-gang-rune-west-x2`). Four of ours against the three there: 15 of 16 groups won, 47 kills of 48,
   no death, 35 HP a kill, under 2 sharks (`extra:team-4v3-gang-rune-west-x2`); four in the adamant kit 48 kills and
   53 HP a kill (`-addy-`), and four in adamant with no antipoison and no freeze 48 kills and 76 HP a kill (`-bare-`).
+  More of ours cut both the HP and the time of a kill (rune kit, Bind, seeds 1 to 8; the 6 and 9 cases hold one group
+  an engine): five 48 kills of 48 and 24 HP a kill, 168 ticks a meeting (`extra:team-5v3-gang-rune-west-x2`); six 24
+  of 24, 22 HP, 116 ticks (`-6v3-...-x1`); nine 24 of 24, 14 HP, 59 ticks (`-9v3-...-x1`); against four's 35 HP and
+  218 ticks. Account-ticks a kill fall from 290 with four to 177 with nine. No death of ours in any of them. Four on
+  the least build the post allows (combat 111: Attack 75, Prayer 43, Magic 49, kit
+  `live-walker-iron-snare-rune-nopot-b111`): 35 kills of 48, 68 HP a kill, 541 ticks a meeting.
   Three in the adamant kit: 41 kills, 75
   HP a kill (`extra:team-3v3-gang-addy-west-x2`). Gap: the bench gang follows its target into multi-way; no record
   shows whether the live gang does.

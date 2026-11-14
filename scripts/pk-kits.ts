@@ -280,6 +280,13 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'live-walker-iron-snare-runeshop-cape-nopot': { worn: { hat: 'adamant_full_helm', torso: 'rune_platebody', legs: 'rune_platelegs', cape: 'cape_of_legends', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', '3doseantipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 50], ['waterrune', 50], ['naturerune', 40]], food: 20,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The rune kit on the least build that the gang's post lets fight it: combat 111 (Attack 75, Prayer 43 for Protect
+    // from Melee, Magic 49 for Bind), within the Wilderness level 16 of the multi-way zone west of the post from the
+    // gang's 126 (pvp_combat.rs2:32-48). About 25 million XP less than the maxed build.
+    'live-walker-iron-snare-rune-nopot-b111': { worn: { hat: 'rune_full_helm', torso: 'rune_platebody', legs: 'rune_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '3doseantipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 50], ['waterrune', 50], ['naturerune', 40]], food: 20,
+        skills: trained({ Attack: 75, Strength: 99, Defence: 99, Ranged: 99, Magic: 49, Prayer: 43 }),
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },

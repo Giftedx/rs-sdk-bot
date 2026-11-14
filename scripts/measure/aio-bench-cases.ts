@@ -699,7 +699,11 @@ const ROUTE_CASES: BenchCase[] = [
   teamCase('extra:team-2v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 2, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-4v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-3v3-gang-addy-west-x2', 'live-walker-iron-snare-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
-  ...([['addy', 'live-walker-iron-snare-nopot'], ['bare', 'live-walker-iron-snare-bare']] as const).map(([name, kit]) => teamCase(`extra:team-4v3-gang-${name}-west-x2`, kit, 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3)),
+  ...([['addy', 'live-walker-iron-snare-nopot'], ['bare', 'live-walker-iron-snare-bare'], ['b111', 'live-walker-iron-snare-rune-nopot-b111']] as const).map(([name, kit]) => teamCase(`extra:team-4v3-gang-${name}-west-x2`, kit, 'ganker-dds', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3)),
+  // Larger squads against the three in the same zone: one group a case for 6 and 9 (an engine holds 7 or 10 accounts).
+  teamCase('extra:team-5v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 5, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-6v3-gang-rune-west-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, {x: 3066, z: 3640}, 6, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  teamCase('extra:team-9v3-gang-rune-west-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, {x: 3066, z: 3640}, 9, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-3v3-gang-rune-low-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, GANKER_POST, 3, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200']),
   // The army against a champion that leaves a crowd (its escape is a run south to level 30, then its glory) at
   // Wilderness level 34 in multi-way combat: three and five accounts, two groups each.
