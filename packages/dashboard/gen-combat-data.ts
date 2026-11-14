@@ -69,6 +69,19 @@ export function spellbook(tp: { teleports: any[]; staffs?: any[] }, names: Map<s
 
 const objFiles = (dir: string): string[] => readdirSync(dir).flatMap(f => { const p = join(dir, f); return statSync(p).isDirectory() ? objFiles(p) : f.endsWith('.obj') ? [p] : []; });
 
+// The attack speed of each weapon in ticks (param=attackrate of the .obj config; an item without it attacks at the
+// combat.param default 4), by display name: client-assets/weapon-speed.json. A name with two speeds keeps the first.
+export function weaponSpeeds(texts: string[], names: Map<string, string>): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const text of texts) for (const block of text.split(/^\[/m).slice(1)) {
+        const rate = Number(block.match(/^param=attackrate,(\d+)\s*$/m)?.[1]);
+        if (!(rate > 0)) continue;
+        const debug = block.slice(0, block.indexOf(']')), name = block.match(/^name=(.*)$/m)?.[1]?.trim() ?? names.get(debug);
+        if (name && out[name] == null) out[name] = rate;
+    }
+    return out;
+}
+
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..'), content = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts');
     const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { debugname?: string; name?: string }[];
@@ -77,5 +90,7 @@ if (import.meta.main) {
     const book = spellbook(JSON.parse(readFileSync(join(root, 'knowledge', 'teleports.json'), 'utf8')), names, readFileSync(join(content, 'skill_combat', 'configs', 'magic', 'magic_combat_spells.dbrow'), 'utf8'));
     writeFileSync(join(import.meta.dir, 'client-assets', 'item-bonuses.json'), JSON.stringify(bonuses));
     writeFileSync(join(import.meta.dir, 'client-assets', 'spellbook.json'), JSON.stringify(book));
-    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} items; spellbook.json: ${book.spells.length} teleports, ${book.combat.length} combat spells`);
+    const speeds = weaponSpeeds(objFiles(content).map(f => readFileSync(f, 'utf8')), names);
+    writeFileSync(join(import.meta.dir, 'client-assets', 'weapon-speed.json'), JSON.stringify(speeds));
+    console.log(`item-bonuses.json: ${Object.keys(bonuses).length} items; spellbook.json: ${book.spells.length} teleports, ${book.combat.length} combat spells; weapon-speed.json: ${Object.keys(speeds).length} weapons`);
 }
