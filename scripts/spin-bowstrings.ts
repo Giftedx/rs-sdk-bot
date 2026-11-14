@@ -167,7 +167,7 @@ try {
         }
 
         await waitTicks(s,1);
-        if(!cleaning)await bankCargo(s,[/^bow string$/i]);
+        if(!cleaning&&!over())await bankCargo(s,[/^bow string$/i],0,{stopped:over});
         if(!withdraw){const raw=s.sdk.getInventory().find(i=>i.id===1779);if(raw)await depositObserved(s,raw);}
 
         const stock=s.sdk.getState()?.bank?.items.find(i=>/^flax$/i.test(i.name))?.count??0;

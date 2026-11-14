@@ -20,6 +20,7 @@ import { setEquipmentObserved } from './container-observation';
 import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from './session-lifecycle';
 import { assertSpentRecoveryConnection, type RecoveryConnectionAdmission } from './session-recovery-permit';
 import { assertWorkerRelease } from './worker-release';
+import { assertActionScope } from './action-scope';
 import type { TickRecorder } from './tick-record';
 // The wait checks of every lockstep session of this process (selfWaiting in createShim).
 const waitingSessions = new Set<() => boolean>();
@@ -134,6 +135,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         deliver({ type: 'sdk_state', state, stateReceivedAt: Date.now() });
     };
     const execute = (action: unknown) => {
+        assertActionScope(action);
         const refusal = guard?.(action);
         if (refusal) return { success: false, reason: 'unowned_partner', message: refusal };
         const dispatched = (result: unknown) => {

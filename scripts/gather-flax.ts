@@ -20,7 +20,7 @@ export interface FlaxOptions {
     // The walk to the field from a far start or another floor. Default: the shared walker (stairs, doors, ferries).
     approach?: (stop: () => boolean) => Promise<boolean>;
     walk?: (x: number, z: number, tol: number, stop: () => boolean, remaining: number) => Promise<boolean>;
-    cargo?: (s: Session) => Promise<void>;
+    cargo?: (s: Session, stopped: () => boolean) => Promise<void>;
     waiting?: () => boolean;
 }
 // Production CAP ends picking. Final return gets a separate bounded budget; it never overrides a user stop.
@@ -104,12 +104,12 @@ export async function runFlax(s: Session, o: FlaxOptions) {
         }
         bankTrips++;
         if (stop()) return false;
-        await (o.cargo ?? (session => bankCargo(session, [/^flax$/i])))(s);
+        await (o.cargo ?? ((session, stopped) => bankCargo(session, [/^flax$/i], 0, { stopped })))(s, stop);
         // Cargo may withdraw notes and reopen the bank. Verify its cleanup too, before closing the UI.
         const observed = s.bankObservation?.();
         const confirmed = !stop() && !!s.sdk.getState()?.bank?.isOpen && !!observed && flaxCount() === 0;
         if (confirmed) bankObservedAt = observed!.at;
-        await s.bot.closeInterface();
+        if (!stop()) await s.bot.closeInterface();
         console.log(`MILESTONE bank t=${used()} banked=${banked} totalPicks=${picks}`);
         return confirmed;
     };

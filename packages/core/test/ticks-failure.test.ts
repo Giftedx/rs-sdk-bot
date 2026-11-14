@@ -41,6 +41,19 @@ test('an invalid initial observation returns a rejected wait promise', async () 
     expect(s.listeners.size).toBe(0);
 });
 
+test('a state read failure rejects its waiter without breaking later tick consumers', async () => {
+    const s = source();
+    const failure = new Error('state unavailable');
+    s.sdk.getState = () => { if (s.tick()) throw failure; return { tick: 0 }; };
+    const pending = waitUntil(s, () => false, { timeoutTicks: 3 }).catch(error => error);
+    let otherTicks = 0;
+    s.onTick(() => { otherTicks++; });
+    expect(() => s.step()).not.toThrow();
+    expect(await pending).toBe(failure);
+    expect(otherTicks).toBe(1);
+    expect(s.listeners.size).toBe(1);
+});
+
 test('a settled wait never evaluates retained callbacks again', async () => {
     const s = source();
     let calls = 0;

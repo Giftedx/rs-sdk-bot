@@ -28,11 +28,12 @@ test('a server-scoped cargo request needs the same endpoint and current authenti
 
 test('a current same-endpoint authenticated request transfers only its reserved surplus once',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'cargo-scoped-')),server='127.0.0.1:21000',owned=new Set(['courier']);
- let bankOpen=true,stored=30,trades=0;const inventory:{id:number;name:string;count:number}[]=[{id:995,name:'Coins',count:42}];
- const s={name:'Producer',lifecycle:{server},sdk:{getInventory:()=>inventory,getState:()=>({
-  player:{worldX:2727,worldZ:3492,level:0},nearbyPlayers:[{name:'Courier',distance:1}],bank:{isOpen:bankOpen,items:[{id:1779,name:'Flax',count:stored}]},
- })},bot:{
-  withdrawItem:async(_item:RegExp,n:number)=>{stored-=n;inventory.push({id:1780,name:'Flax',count:n});return{success:true};},
+ let bankOpen=true,stored=30,trades=0,tick=0;const inventory:{id:number;name:string;count:number}[]=[{id:995,name:'Coins',count:42}];
+ const state=()=>({tick,trade:{isOpen:false},player:{worldX:2727,worldZ:3492,level:0},nearbyPlayers:[{name:'Courier',distance:1}],bank:{isOpen:bankOpen,items:[{id:1779,name:'Flax',count:stored}]}});
+ const s={name:'Producer',lifecycle:{server},sdk:{getInventory:()=>inventory,getState:state,
+  waitForCondition:async(test:(value:ReturnType<typeof state>)=>boolean)=>{tick+=2;if(!test(state()))throw Error('fixture closure unconfirmed');return state();},
+ },bot:{
+  withdrawItem:async(_item:RegExp,n:number)=>{stored-=n;const held=inventory.find(i=>i.id===1780);if(held)held.count+=n;else inventory.push({id:1780,name:'Flax',count:n});return{success:true};},
   closeBank:async()=>{bankOpen=false;},openBank:async()=>{bankOpen=true;return{success:true};},
   serveTrades:async()=>{trades++;const item=inventory.find(i=>i.id===1780)!;inventory.splice(inventory.indexOf(item),1);return{trades:[{success:true,gave:[item]}]};},
  }} as unknown as Session;

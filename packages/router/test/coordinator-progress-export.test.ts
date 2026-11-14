@@ -3,7 +3,7 @@ import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync,rmSync} from
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {initialState,type TaskRecord} from '../src/coordinator';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {workerSourceRevision,workerSourceRoots} from '../../core/src/worker-release';
 import {summarizeProgress,exportProgress,acquireExporterLock,STALE_MS} from '../src/coordinator-progress';
 const now=1793487000000;
 function record(id:string,overrides:Partial<TaskRecord>={}):TaskRecord{return{spec:{id,goal:'wealth',kind:'run',capability:'earn',dependsOn:[],priority:1,estimatedMs:1000,why:'fixture',agent:'codex'},status:'pending',runId:'run-'+id,createdAt:now-10000,attempts:0,...overrides};}
@@ -104,7 +104,7 @@ test('singleton lock refuses another exporter and releases only its own bytes',(
 test('deploying router progress tooling leaves the gameplay worker fingerprint unchanged',()=>{
  const root=mkdtempSync(join(tmpdir(),'progress-release-'));
  try{
-  for(const path of ['scripts','packages','vendor/rs-sdk/sdk','vendor/rs-sdk/server/webclient/src'])mkdirSync(join(root,path),{recursive:true});
+  for(const path of workerSourceRoots)mkdirSync(join(root,path),{recursive:true});
   for(const path of ['package.json','bun.lock','tsconfig.json'])writeFileSync(join(root,path),'{}');
   writeFileSync(join(root,'scripts/worker.ts'),'export const worker=1;');const before=workerSourceRevision(root);
   mkdirSync(join(root,'packages/router/src'),{recursive:true});

@@ -3,7 +3,57 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
-import { MIN_HEAP_MB, SWARM_FRESH_MS, TEST_SHARD_GB, TOOL_FLOOR_GB, floorGB, heapThatFits, sizedNote, swarmRuns, unitsThatFit } from './heavy-admission';
+import { MIN_HEAP_MB, SWARM_FRESH_MS, TEST_SHARD_GB, TOOL_FLOOR_GB, cpuCapacity, cpuQuota, floorGB, heapThatFits, sizedNote, swarmRuns, unitsThatFit } from './heavy-admission';
+
+test('CPU time quotas round down to whole capacity while permitting one process under a fractional quota', () => {
+    expect(cpuQuota('400000 100000\n')).toBe(4);
+    expect(cpuQuota('250000 100000')).toBe(2);
+    expect(cpuQuota('50000 100000')).toBe(1);
+    for (const value of [null, 'max 100000', '-1 100000', '', 'broken', '0 100000', '100000 0', '-2 100000', '100000 -1', '1.5 100000'])
+        expect(cpuQuota(value)).toBeNull();
+});
+
+test('CPU capacity respects both affinity and a stricter root container quota', () => {
+    const files = new Map([['/proc/self/cgroup', '0::/\n'], ['/sys/fs/cgroup/cpu.max', '400000 100000']]);
+    const read = (file: string) => files.get(file) ?? null;
+    expect(cpuCapacity({ available: 5, platform: 'linux', read })).toBe(4);
+    expect(cpuCapacity({ available: 2, platform: 'linux', read })).toBe(2);
+});
+
+test('an unlimited cgroup child retains its parent quota and a stricter child lowers it further', () => {
+    const files = new Map([
+        ['/proc/self/cgroup', '0::/tenant/job\n'], ['/sys/fs/cgroup/cpu.max', 'max 100000'],
+        ['/sys/fs/cgroup/tenant/cpu.max', '200000 100000'], ['/sys/fs/cgroup/tenant/job/cpu.max', 'max 100000'],
+    ]);
+    const options = { available: 16, platform: 'linux' as const, read: (file: string) => files.get(file) ?? null };
+    expect(cpuCapacity(options)).toBe(2);
+    files.set('/sys/fs/cgroup/tenant/job/cpu.max', '100000 100000');
+    expect(cpuCapacity(options)).toBe(1);
+});
+
+test('the mounted root quota remains a fallback when the membership path is not exposed', () => {
+    const files = new Map([['/proc/self/cgroup', '0::/unexposed/container/path'], ['/sys/fs/cgroup/cpu.max', '400000 100000']]);
+    expect(cpuCapacity({ available: 16, platform: 'linux', read: file => files.get(file) ?? null })).toBe(4);
+});
+
+test('cgroup v1 CPU controller quotas include limited parents', () => {
+    const files = new Map([
+        ['/proc/self/cgroup', '7:cpu,cpuacct:/tenant/job\n'],
+        ['/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us', '-1'], ['/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us', '100000'],
+        ['/sys/fs/cgroup/cpu,cpuacct/tenant/cpu.cfs_quota_us', '300000'], ['/sys/fs/cgroup/cpu,cpuacct/tenant/cpu.cfs_period_us', '100000'],
+        ['/sys/fs/cgroup/cpu,cpuacct/tenant/job/cpu.cfs_quota_us', '250000'], ['/sys/fs/cgroup/cpu,cpuacct/tenant/job/cpu.cfs_period_us', '100000'],
+    ]);
+    expect(cpuCapacity({ available: 16, platform: 'linux', read: file => files.get(file) ?? null })).toBe(2);
+});
+
+test('missing or malformed quotas use effective CPU availability and non-Linux platforms read no cgroups', () => {
+    expect(cpuCapacity({ available: 6, platform: 'linux', read: () => { throw Error('unavailable'); } })).toBe(6);
+    expect(cpuCapacity({ available: 6, platform: 'linux', read: () => 'malformed' })).toBe(6);
+    let reads = 0;
+    expect(cpuCapacity({ available: 3, platform: 'win32', read: () => { reads++; return '100000 100000'; } })).toBe(3);
+    expect(reads).toBe(0);
+    expect(cpuCapacity({ available: NaN, platform: 'darwin' })).toBe(1);
+});
 
 test('a job takes the memory above the floor, the wanted size at most and one unit at least', () => {
     // 12 shards of 0.75 GiB want 9 GiB above the floor: 13 GiB free with the fleet floor of 4.
