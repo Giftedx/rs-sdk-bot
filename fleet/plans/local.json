@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794658689250,
+ "at": 1794659235633,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -432,25 +432,6 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "Ballspinner",
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
@@ -470,6 +451,25 @@
    "autopilot": "local",
    "resources": [
     "aio:ardougne-blood-chests"
+   ]
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
    ]
   },
   {

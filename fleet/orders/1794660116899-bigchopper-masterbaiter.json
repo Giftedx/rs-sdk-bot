@@ -1,0 +1,22 @@
+{
+ "id": "1794660116899-bigchopper-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 2293,
+ "start": 1794660116899,
+ "end": 1794662516899,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
