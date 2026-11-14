@@ -62,8 +62,13 @@ function lineage(byPid: ReadonlyMap<number, Proc>, pid: number): Proc[] {
 // `--watch` or a test started is a part of the job that started it.
 export function ownJob(procs: readonly Proc[], selfPid: number): Set<number> {
     const byPid = new Map(procs.map(p => [p.pid, p]));
-    const own = new Set([selfPid, ...lineage(byPid, selfPid).map(p => p.pid)]);
-    const under = new Set([selfPid]);
+    const line = lineage(byPid, selfPid);
+    const own = new Set([selfPid, ...line.map(p => p.pid)]);
+    // Everything under the nearest bench above this one is the job: the seed children of one --seed-jobs run are
+    // siblings, and each saw the other as a second heavy job and refused to start (exit 2). Only a bench parent
+    // joins its children: two benches that two test shards of one gate start stay two jobs.
+    const parentBench = line.slice(1).find(p => heavyScript(p) === BENCH_SCRIPT)?.pid;
+    const under = new Set([selfPid, ...(parentBench !== undefined ? [parentBench] : [])]);
     for (let grew = true; grew;) {
         grew = false;
         for (const p of procs) if (!under.has(p.pid) && under.has(parentOf(byPid, p)?.pid ?? -1)) { under.add(p.pid); grew = true; }

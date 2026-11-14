@@ -130,3 +130,8 @@ test('in-process mode passes extra script arguments after the bot name', async (
     await proveInProcess({ bot: 'm', script: 's', scriptArgs: ['oaks', '600'], runs: 1, preset: 'wc_lumbridge', pass: () => true }, deps);
     expect(seen).toEqual(['oaks', '600']);
 });
+
+test('runBotName gives a new name on each call, whatever the clock', () => {
+    const names = new Set(Array.from({ length: 200 }, () => runBotName('aiobf', 1)));
+    expect(names.size).toBeGreaterThan(195);
+});

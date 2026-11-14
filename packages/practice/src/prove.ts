@@ -34,11 +34,11 @@ export function wcPass(stdout: string): boolean {
 }
 
 // rs-sdk usernames are at most 12 alphanumeric chars. A name that played before can keep its old save over a
-// fresh preset (seen: florr1 started where the previous run ended), so every name gets a token
-// from the clock and a counter and is never reused.
-let nameCounter = 0;
+// fresh preset (seen: florr1 started where the previous run ended; a spar batch whose accounts started where an
+// earlier batch's runners rubbed their glories), so every name gets 4 random base-36 characters (1,679,616 tokens).
+// A token from the clock and a counter repeats every 46.7 s when each process starts its counter at 0.
 export function runBotName(base: string, i: number): string {
-    const token = ((Date.now() % 1_679_616) * 36 + (nameCounter++ % 36)).toString(36).slice(-4);
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(4)), b => (b % 36).toString(36)).join('');
     const suffix = `${token}${i}`;
     return base.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12 - suffix.length - 1) + 'x' + suffix;
 }

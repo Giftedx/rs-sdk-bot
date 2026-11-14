@@ -32,6 +32,9 @@ export interface StackOptions {
     enginePreload?: { module: string; env: Record<string, string> };
     // A second stack beside the shared one: its own pids-<instance>.json, <service>-<instance>.log and stop.
     instance?: string;
+    // How long a busy port may take to come free before the start fails (default 0: fail at once). A bench slot starts
+    // its next case as soon as the last engine's process ended, and the port can stay bound a moment longer.
+    portWaitMs?: number;
 }
 
 // The engine command line keeps MARKERS.engine, so safeKill still identifies the server.
@@ -44,7 +47,7 @@ export function engineCommand(opts: StackOptions, port: number): { cmd: string[]
         ACTION_TRACE_FILE: join(practiceDir(), 'action-trace.log'),
     };
     if (opts.lockstep) {
-        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: join(practiceDir(), 'logs', 'sim-stat.log') });
+        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: simStatFile(opts.instance) });
         if (opts.lockstep.seed !== undefined) env.SIM_SEED = String(opts.lockstep.seed);
         if (opts.lockstep.anchor) env.SIM_SEED_ANCHOR = opts.lockstep.anchor;
         if (opts.lockstep.traceFile) env.SIM_TRACE_FILE = opts.lockstep.traceFile;
@@ -88,6 +91,11 @@ export { killTree } from './proc';
 export const MARKERS = { engine: 'src/app.ts', gateway: 'gateway.ts' } as const;
 type Saved = Record<string, { pid: number; marker: string }>;
 
+// The engine's lockstep stat file of a stack instance (SIM_STAT_FILE): aio-practice-bench --profile reads it.
+export function simStatFile(instance?: string): string {
+    return join(practiceDir(), 'logs', `sim-stat${suffix(instance)}.log`);
+}
+
 function suffix(instance?: string): string {
     if (instance === undefined) return '';
     if (!/^[a-z0-9-]{1,32}$/.test(instance)) throw new Error(`invalid stack instance ${instance}`);
@@ -101,6 +109,7 @@ export function pidsFile(instance?: string): string {
 export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const ports = opts.ports ?? DEFAULT_PORTS;
     for (const port of opts.gateway === false ? [ports.engine] : [ports.engine, ports.gateway]) {
+        for (let waited = 0; waited < (opts.portWaitMs ?? 0) && !canBind(port); waited += 100) await Bun.sleep(100);
         if (!canBind(port)) throw new Error(`port ${port} in use`);
     }
     const root = rsSdkRoot();
