@@ -766,6 +766,45 @@ test('with no fire staff the alchemy kit buys fire runes, not a staff no market 
     expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs, i => !/staff/.test(i))!.at(-1)).toEqual({ of: ['fire rune'], count: 250 });
 });
 
+test('a market quote cannot hide a compatible donor kit when the account cannot afford the buy', () => {
+    const templates = catalogue().filter(t => t.id === 'army-alch-magic-99');
+    const caster = mage('Caster', { 'nature rune': 50, feather: 50 }, { Magic: 30 }), army = new Set(['caster']);
+    const fire: Market = { 'fire rune': { id: 554, name: 'Fire rune', limit: KIT_PRICE_CAPS['fire rune']! } };
+    for (const donorSide of [side, 'local']) {
+        const stock = [{ name: 'StaffMule', side: donorSide, items: { 'staff of fire': 2 } }];
+        for (const market of [{}, fire]) {
+            const [next] = plan(inputs([caster], { templates, army, stock, market }));
+            expect(next!.send).toEqual({ from: 'StaffMule', to: 'Caster', item: 'staff of fire', count: 1, template: 'army-alch-magic-99' });
+        }
+        expect(plan(inputs([caster], { templates, army, stock: [{ ...stock[0]!, items: { 'staff of fire': 1 } }], market: fire }))[0]!.send).toBeUndefined();
+    }
+});
+
+test('affordable market kit buys remain ahead of sending a donor alternative', () => {
+    const templates = catalogue().filter(t => t.id === 'army-alch-magic-99');
+    const caster = mage('Caster', { coin: 50_000, 'nature rune': 50, feather: 50 }, { Magic: 30 });
+    const market: Market = { 'fire rune': { id: 554, name: 'Fire rune', limit: KIT_PRICE_CAPS['fire rune']! } };
+    const [next] = plan(inputs([caster], { templates, army: new Set(['caster']), market, stock: [{ name: 'StaffMule', side, items: { 'staff of fire': 2 } }] }));
+    expect(next!.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
+    expect(next!.template!.args![0]).toContain('ITEM_ID=554 QUANTITY=250');
+    expect(next!.send).toBeUndefined();
+});
+
+test('donor alternatives reconsider quantities and donors taken by an earlier account', () => {
+    const templates = catalogue().filter(t => t.id === 'army-alch-magic-99');
+    const accounts = ['CasterA', 'CasterB'].map(name => mage(name, { 'nature rune': 50, feather: 50 }, { Magic: 30 }));
+    const market: Market = { 'fire rune': { id: 554, name: 'Fire rune', limit: KIT_PRICE_CAPS['fire rune']! } };
+    const stock: Stock[] = [{ name: 'StaffMule', side, items: { 'staff of fire': 2 } }, { name: 'RuneMule', side, items: { 'fire rune': 500 } }];
+    const next = plan(inputs(accounts, { templates, army: new Set(['castera', 'casterb']), market, stock }));
+    expect(next.map(x => x.send)).toEqual([
+        { from: 'StaffMule', to: 'CasterA', item: 'staff of fire', count: 1, template: 'army-alch-magic-99' },
+        { from: 'RuneMule', to: 'CasterB', item: 'fire rune', count: 250, template: 'army-alch-magic-99' },
+    ]);
+    // A donor's retained 250 runes cannot cover the alternative, and the staff can fund only one account.
+    const short = plan(inputs(accounts, { templates, army: new Set(['castera', 'casterb']), market, stock: [stock[0]!, { ...stock[1]!, items: { 'fire rune': 499 } }] }));
+    expect(short.filter(x => x.send)).toHaveLength(1);
+});
+
 test('an army account with no other band to start buys the bones its Prayer still needs, dragon bones first, and buries them', () => {
     const army = new Set(['monk']);
     const bones: Market = { ...market, 'dragon bone': { id: 536, name: 'Dragon bones', limit: KIT_PRICE_CAPS['dragon bone']! }, 'big bone': { id: 532, name: 'Big bones', limit: KIT_PRICE_CAPS['big bone']! } };

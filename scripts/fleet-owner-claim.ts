@@ -85,9 +85,21 @@ const mustSync = (cwd: string, args: string[], options?: GitOptions) => {
  */
 export function transferFleetOwnersLocked(root: string, moves: readonly OwnerMove[], worktree = FLEET_WORKTREE): OwnerMove[] {
     if (!moves.length) return [];
+    if (mustSync(worktree, ['symbolic-ref', 'HEAD']) !== REF
+        || mustSync(worktree, ['status', '--porcelain', '--', OWNERS]) !== ''
+        || mustSync(worktree, ['diff', '--cached', '--name-only']) !== '')
+        throw Error('fleet-data worktree has an unresolved local edit');
+    const refreshCache = (revision: string, published = false) => {
+        if (gitSync(worktree, ['merge', '--ff-only', '--quiet', revision]) === null)
+            throw Error(`fleet owner transfer ${published ? 'published but ' : ''}local registry refresh failed`);
+        if (mustSync(worktree, ['rev-parse', 'HEAD']) !== revision)
+            throw Error('fleet-data worktree has unpublished commits');
+    };
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
         mustSync(root, ['fetch', '--no-tags', '--no-write-fetch-head', 'origin', REF + ':' + TRACKING]);
         const tip = mustSync(root, ['rev-parse', TRACKING]);
+        // A lost race still refreshes the authority local login admission reads.
+        refreshCache(tip);
         const registry = registryFrom(mustSync(root, ['show', tip + ':' + OWNERS]));
         const applied = applyMoves(registry, moves);
         if (!applied.length) return [];
@@ -106,7 +118,7 @@ export function transferFleetOwnersLocked(root: string, moves: readonly OwnerMov
             rmdirSync(scratch);
         }
         if (gitSync(root, ['push', 'origin', commit + ':' + REF]) !== null) {
-            gitSync(worktree, ['merge', '--ff-only', '--quiet', commit]);
+            refreshCache(commit, true);
             return applied;
         }
     }
