@@ -817,9 +817,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!list.length||typeof wornBonuses!=='function'||typeof maxHit!=='function')return '';const bon=wornBonuses(b),A=curLevel(b,'Attack'),St=curLevel(b,'Strength');if(!bon||!Number.isFinite(A)||!Number.isFinite(St))return '';
     const weapon=(b.equipment||[]).find(e=>e?.slot===3)?.name,speed=(weapon&&weaponSpeedData[weapon])||4,tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000,max=maxHit(St,bon[10],0);if(!(max>0))return '';
     const hit=(At,D)=>At>D?1-(D+2)/(2*(At+1)):At/(2*(D+1)),loot=lootTotal(name);
-    const kph=list.map(v=>{const p=Math.max(...[0,1,2].map(i=>hit((A+8)*(bon[i]+64),(v[1]+9)*(v[3+i]+64)))),dmg=p*max/2;return dmg>0?3600/((v[13]/dmg)*speed*tickSec):0;}).filter(k=>k>0);
-    if(!kph.length)return '';const lo=Math.min(...kph),hi=Math.max(...kph),xp=list.map(v=>v[13]*100*v[14]/1000),span=(a,z)=>Math.round(a)===Math.round(z)?nf(Math.round(a)):nf(Math.round(a))+'–'+nf(Math.round(z));
-    return 'About '+span(lo,hi)+' kills an hour (max hit '+max+', speed '+speed+') · '+span(lo*Math.min(...xp),hi*Math.max(...xp))+' XP/h in one style'+(loot>0?' · '+span(lo*loot,hi*loot)+' gp/h':'');}
+    // Each variant's kill rate times its own XP a kill: the extremes of two lists belong to different variants.
+    const rates=list.map(v=>{const p=Math.max(...[0,1,2].map(i=>hit((A+8)*(bon[i]+64),(v[1]+9)*(v[3+i]+64)))),dmg=p*max/2,k=dmg>0?3600/((v[13]/dmg)*speed*tickSec):0;return {k,xp:k*v[13]*100*v[14]/1000};}).filter(r=>r.k>0);
+    if(!rates.length)return '';const ks=rates.map(r=>r.k),xs=rates.map(r=>r.xp),lo=Math.min(...ks),hi=Math.max(...ks),span=(a,z)=>Math.round(a)===Math.round(z)?nf(Math.round(a)):nf(Math.round(a))+'–'+nf(Math.round(z));
+    return 'About '+span(lo,hi)+' kills an hour (max hit '+max+', speed '+speed+') · '+span(Math.min(...xs),Math.max(...xs))+' XP/h in one style'+(loot>0?' · '+span(lo*loot,hi*loot)+' gp/h':'');}
   function finderList(){
     if(finderPlayer){const p=playerRow(),c=miniView.PX?{x:miniView.cx,z:miniView.cz}:null,d=p&&c?Math.max(Math.abs(p[1]-c.x),Math.abs(p[2]-c.z)):null;
       return '<div class="finder-pick"><b>'+E(p?String(p[0]):finderPlayer)+'</b> <span class="xp-muted">'+(p?'combat '+(p[4]??'?')+' · '+p[1]+', '+p[2]+(d!=null?' · '+nf(d)+' tiles away':''):'not online')+'</span>'+(p?'<button class="xp-reset" data-finder-go="'+p[1]+','+p[2]+'" title="Move the camera there (2D)">Go</button><button class="xp-reset" data-lookup="'+E(String(p[0]))+'">Hiscores</button>':'')+'<button class="xp-reset" data-finder-clear>Clear</button></div>';}

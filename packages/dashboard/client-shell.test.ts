@@ -847,6 +847,12 @@ test('kills an hour: hit chance x max hit / 2 a swing, the weapon speed, the hit
  const out=t('Moss giant');
  expect(out).toMatch(/^About 12\d kills an hour \(max hit 14, speed 5\) · 72\d,\d{3} XP\/h in one style · 2,4\d\d gp\/h$/);
  expect(new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values({...env,wornBonuses:()=>null}))('Moss giant')).toBe('');
+ // Two variants: a weak one with few hitpoints (many kills, little XP) and a strong one (few kills, much XP). XP/h is
+ // each variant's own product, so the range is narrow, not the product of the two extremes.
+ data['npc-defence.json']={'Goblin':[[2,1,1,0,0,0,0,0,1,1,0,0,2,5,1000,60],[13,10,1,0,0,0,0,0,10,10,0,0,2,16,1000,60]]};
+ const g=new Function(...Object.keys(env),`${code};return hourText;`)(...Object.values(env))('Goblin');
+ const xp=(g.match(/· ([\d,]+)–([\d,]+) XP\/h/)||[]).slice(1).map((x:string)=>Number(x.replace(/,/g,'')));
+ expect(xp.length).toBe(2);expect(xp[1]/xp[0]).toBeLessThan(1.5);
 });
 
 test('banked XP line: every skill the bank holds XP for, the most first, with the levels gained',()=>{
