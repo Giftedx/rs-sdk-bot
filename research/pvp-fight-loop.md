@@ -1318,6 +1318,19 @@ lost 115 HP a kill on seeds 1 to 4 and 171 on seeds 5 to 8, so a difference unde
   - with a step away while the target is held (`"kiteFrozen":3`): 2 at about 1,230;
   - the same with the best freeze the runes allow (no `freezeMagicCap`): 0.
   Each cast is a turn without damage while the gang account eats, so the freeze pays only on a runner.
+- **Both refusals end a fight.** On a single-way tile the game refuses an attack with "I'm already under attack."
+  (someone else hit us) or "Someone else is already fighting your opponent." (someone else hit the target). The team
+  loop and pk-squad stop the fight on either and leave that target for 8 ticks. Stopping on the first alone kept an
+  account clicking a target held by another fight. Seeds 1 to 8, no death of ours:
+  - four of ours against the split gang (`extra:team-4v3-gang-chainbare-split-x2`): 7 kills of 48 at about 588 HP a
+    kill on the first alone, 19 at about 238 on both;
+  - pk-squad at the single-way post (`extra:squad-4-gang-single-x1`): 20 kills of 24 at about 48, and 22 at about 36;
+  - pk-squad hunted, in the live kit (`extra:squad-4-gang-hunted-chain-x1`): 22 at about 43, and 21 at about 42.
+- **No relay on single-way tiles.** The game lets a second attacker take a foe 8 ticks after the first one's last
+  attack (`pvp_in_combat_check`), and the foe must then fight the new one. A relay of a hurt account to a free one
+  loses: four of ours against the split gang (`extra:team-4v3-gang-chainbare-split-x2`, seeds 1 to 8), 19 kills of
+  48 at about 238 HP a kill with no relay, 4 at about 1,055 handing on below 60% HP, 9 at about 526 below 75%. The
+  8 ticks with no attack let the gang account eat and walk out.
 - **Marching and pulling.** The squad moves as a march: its post steps `STEP` (default 12) tiles at a time toward the
   goal, and on only when every account stands within 4 tiles of the step or after 60 ticks there. A march to a
   multi-way goal goes first to the nearest multi-way tile (`multiEntry`). An account on a single-way tile with a

@@ -104,7 +104,7 @@ export async function rescue(s: Session, log: (l: string) => void): Promise<Sess
 export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number };
 
 // The target of the squad: the target account in view with the lowest health bar, the nearest on a tie; one the game
-// refused leaves the pick for 8 ticks.
+// refused ("I'm already under attack.", "Someone else is already fighting your opponent.") leaves the pick for 8 ticks.
 // `me`: the squad account; a target is taken only where the game lets it attack (both in the Wilderness, the combat gap
 // within the shallower level: pk.ts attackable). A target that walked out of the Wilderness held the squad at its edge.
 export function squadTarget<P extends { name: string; index: number; distance: number; z?: number; combatLevel?: number }>(view: readonly P[], targets: ReadonlySet<string>, health: (p: P) => number, skip: ReadonlySet<string> = new Set(), me?: { z: number; combatLevel: number }): P | undefined {
@@ -127,7 +127,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
         const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
-        for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack/i.test(m.text)) refusedAt = s.tick(); }
+        for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
     });
     try {
         while (going()) {

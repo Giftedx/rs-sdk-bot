@@ -57,11 +57,12 @@ export async function team(a: readonly Session[], b: readonly Session[], options
         const options = typeof sideOptions === 'function' ? sideOptions(member) : sideOptions;
         const allies = mine.filter(x => x !== s).map(x => x.name.toLowerCase());
         // The game refuses an attack on an enemy while another one has hit us in the last 8 ticks (pvp_combat.rs2:104-112:
-        // "I'm already under attack."): the fight stops on the refusal and the pick leaves that enemy out for 8 ticks.
+        // "I'm already under attack.", and "Someone else is already fighting your opponent." for an enemy that another one
+        // hit): the fight stops on the refusal and the pick leaves that enemy out for 8 ticks.
         let seenMessage = 0, refusedAt = -100, unseen = 0;
         const skip = new Map<Session, number>();
         const unwatchRefusals = s.onTick(() => { for (const msg of s.sdk.getState()?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
-            if (msg.tick >= start && /already under attack/i.test(msg.text)) refusedAt = s.tick(); } });
+            if (msg.tick >= start && /already under attack|already fighting your opponent/i.test(msg.text)) refusedAt = s.tick(); } });
         try {
         while (!ended() && !isOut(s)) {
             // The enemy with the lowest health bar in view, the nearest on a tie.
