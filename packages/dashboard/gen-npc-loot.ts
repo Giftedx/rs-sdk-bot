@@ -2,14 +2,16 @@
 // name, as [[item name, expected count], ...] most first. From knowledge/drops.json: an entry's trigger is an NPC
 // (debugname) or, with a leading _, an NPC category (category= of the .npc configs); `uses` names the shared drop proc
 // whose entry holds the rolls. The expected count of an item is its chance times its count, summed: `always` items at
-// chance 1, rolls at their chance, and a table's items at their own chance (already the table's chance times the item's).
-// Only unconditional drops count (a members-only or quest branch is left out). death_drop stands for the NPC's
+// chance 1, rolls at their chance, and a table's items at their own chance (already the table's chance times the item's);
+// a ranged quantity (count to countMax) counts its mean.
+// Only unconditional drops count (a members-only or quest branch is left out). An NPC with no drop handler drops its
+// death drop alone (as item-sources.ts takes the default death). death_drop stands for the NPC's
 // param=death_drop (default bones, npc_combat.param). One name keeps the variant with the most spawns.
 // Run: bun packages/dashboard/gen-npc-loot.ts
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-type Roll = { item?: string; count?: number; chance?: number; conditional?: boolean; table?: string; items?: Roll[] };
+type Roll = { item?: string; count?: number; countMax?: number; chance?: number; conditional?: boolean; table?: string; items?: Roll[] };
 export type DropEntry = { trigger: string; always: Roll[]; rolls: Roll[]; uses?: string };
 export type NpcBlock = { debug: string; name: string; category?: string; deathDrop: string; attackable: boolean };
 
@@ -25,6 +27,8 @@ export function npcBlocks(files: string[]): NpcBlock[] {
 
 export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: string) => string, spawns: Map<string, number> = new Map()): Record<string, [string, number][]> {
     const byTrigger = new Map(drops.map(d => [d.trigger, d]));
+    // A ranged quantity (count to countMax) counts its mean.
+    const mean = (r: Roll) => r.countMax != null && r.countMax > (r.count ?? 1) ? ((r.count ?? 1) + r.countMax) / 2 : (r.count ?? 1);
     const forNpc = new Map<string, DropEntry[]>();
     for (const d of drops) {
         const targets = d.trigger.startsWith('_') ? npcs.filter(n => n.category === d.trigger.slice(1)) : npcs.filter(n => n.debug === d.trigger);
@@ -36,13 +40,14 @@ export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: stri
     for (const n of npcs.filter(n => n.attackable)) {
         const exp = new Map<string, number>(), add = (item: string | undefined, chance: number, count = 1) => { if (!item || item === 'null' || !(chance > 0)) return; const d = item === 'death_drop' ? n.deathDrop : item; if (d === 'null') return; exp.set(d, (exp.get(d) ?? 0) + chance * count); };
         const entries = (forNpc.get(n.debug) ?? []).flatMap(e => { const s = e.uses ? shared(e.uses) : undefined; return s ? [e, s] : [e]; });
-        if (!entries.some(e => e.always.some(a => a.item === 'death_drop'))) add('death_drop', 1);
+        // An NPC with no drop handler drops its death drop (the default death); a handler drops what it lists.
+        if (!entries.length) add('death_drop', 1);
         for (const e of entries) {
-            for (const a of e.always) if (!a.conditional) add(a.item, 1, a.count);
+            for (const a of e.always) if (!a.conditional) add(a.item, 1, mean(a));
             for (const r of e.rolls) {
                 if (r.conditional) continue;
-                if (r.table) { for (const it of r.items ?? []) if (!it.conditional) add(it.item, it.chance ?? 0, it.count); }
-                else add(r.item, r.chance ?? 0, r.count);
+                if (r.table) { for (const it of r.items ?? []) if (!it.conditional) add(it.item, it.chance ?? 0, mean(it)); }
+                else add(r.item, r.chance ?? 0, mean(r));
             }
         }
         if (!exp.size) continue;
