@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794714689466,
+ "at": 1794715688040,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -109,6 +109,25 @@
    "resources": [
     "knight:2582,3297"
    ]
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "60"
+   ],
+   "env": {
+    "BONE_ID": "526",
+    "MAX_BURY": "414",
+    "BONE_RESERVE": "468",
+    "CAP": "3000",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-d2e71531-1c37-4717-b7d8-0de6198297a8"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-prayer-nabtheknob-owned60 [task-d2e71531-1c37-4717-b7d8-0de6198297a8]",
+   "role": "helper"
   }
  ],
  "army": [

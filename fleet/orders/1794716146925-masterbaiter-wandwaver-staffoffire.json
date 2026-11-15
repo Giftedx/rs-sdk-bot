@@ -1,0 +1,22 @@
+{
+ "id": "1794716146925-masterbaiter-wandwaver-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Wandwaver",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1794716146925,
+ "end": 1794718546925,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
