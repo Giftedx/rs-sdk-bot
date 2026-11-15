@@ -11,7 +11,7 @@ test('a restart uses the recorded plan of the autopilot and starts nothing witho
     for (const args of [[], ['C:/fleet/gone.json'], ['--dry'], [plan, '--dry'], [plan, plan]]) expect(restartCommand('autopilot', { args, env: {} }, there), args.join(' ')).toMatch(/^its recorded plan is not a file/);
 });
 
-const p =(skillLevels: number, questsLive = 3) => ({ skillLevels, skills99: 7, questsLive, questTotal: 68, itemsHeld: 94, actionsNamed: 2325, done: false, remaining: [] });
+const p =(skillLevels: number, questsLive = 3) => ({ skillLevels, skills99: 7, questsLive, questTotal: 68, itemsHeld: 94, actionsNamed: 2325, goalVersion: 1 as const, goalMetrics: { 'army.levels': skillLevels, 'quests.complete': questsLive }, done: false, remaining: [] });
 
 test('a stall needs STALL_MS without any progress number rising', () => {
     const h = [{ at: 0, progress: p(100) }, { at: 1000, progress: p(101) }, { at: STALL_MS, progress: p(101) }];
@@ -21,11 +21,27 @@ test('a stall needs STALL_MS without any progress number rising', () => {
     expect(improved(p(100), p(100, 4))).toBe(true);
 });
 
-test('done needs every skill at 99, every quest live, every tradeable item and every action', () => {
+test('coverage totals cannot complete the owner goals or hide a goal stall', () => {
     const b = (level: number, live: number) => ({ skills: [{ skill: 'Magic', bestLive: level }], quests: { liveComplete: Array(live).fill('q'), folders: [{ qp: 1 }, { qp: 1 }] }, items: { held: 2, tradeable: 2, tradeableHeld: 2 }, totals: { actions: 5, actionsNamed: 5 } });
-    expect(progressOf(b(99, 2)).done).toBe(true);
-    expect(progressOf(b(98, 2)).remaining).toEqual(['Magic 98/99']);
-    expect(progressOf(b(99, 1)).remaining).toEqual(['quests 1/2 live']);
+    expect(progressOf(b(99, 2)).done).toBe(false);
+    expect(progressOf(b(99, 2)).remaining).toContain('Owner goal observations unavailable');
+    const before=p(100), after={...p(100),skillLevels:1881,skills99:19,itemsHeld:2756,actionsNamed:5807};
+    expect(improved(before,after)).toBe(false);
+    expect(stalled([{at:0,progress:before},{at:STALL_MS,progress:after}],STALL_MS)).not.toBeNull();
+    expect(improved(before,{...after,goalMetrics:{...before.goalMetrics,'main.gap':-100}})).toBe(false);
+    expect(improved({...before,goalMetrics:{'main.gap':-100}}, {...after,goalMetrics:{'main.gap':-50}})).toBe(true);
+});
+
+test('legacy coverage history cannot claim progress under the owner goal contract',()=>{
+    const legacy={...p(100),goalVersion:undefined,goalMetrics:undefined};
+    expect(improved(legacy,{...legacy,actionsNamed:5807,skillLevels:1881})).toBe(false);
+    expect(stalled([{at:0,progress:legacy},{at:STALL_MS,progress:p(100)}],STALL_MS)).toBeNull();
+});
+
+test('a restored observation below the recorded high water does not clear a stall',()=>{
+ const history=[{at:0,progress:p(100)},{at:1000,progress:p(0)},{at:STALL_MS,progress:p(100)}];
+ expect(stalled(history,STALL_MS)).toEqual({since:0,last:p(100)});
+ expect(stalled([...history,{at:STALL_MS+1,progress:p(101)}],STALL_MS+1)).toBeNull();
 });
 
 test('the hidden launcher runs the watchdog with window style 0 from the repo', () => {

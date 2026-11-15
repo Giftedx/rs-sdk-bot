@@ -6,6 +6,8 @@ Decision map. Scope: projects/providers named across repository research, suppli
 
 ## Find and port a solution
 
+Owner-goal selection: `coverage.ts`, the Overall planner and supply bill, fleet snapshots, specialist launch evidence and declared PK kits -> `goal-scoreboard.ts`, `goal-work.ts`, coordinator dispatch and autopilot -> adapt the existing projections and selectors; reject fleet maxima, surplus value and source-name matches as goal progress -> goal-scoreboard, goal-work, watchdog, autopilot and dashboard regressions. Full useful-item and best-in-slot scope, credited player-kill receipts and Wilderness-control acceptance remain explicit evidence gaps.
+
 **Implementation:** [source decisions and actual integrations](repo-reuse.md). Rewrites reach worker cancellation/session cleanup, real tick dispatch, quest food/walking, finite nonbronze smelting, directed resource-aware routes, cache integrity, counted gear, cumulative GE accounting and exact drop ranges. Local native observations prove27essence->27air runes and an exact2gold-bar order with1ore reserved; saved bytes and source hashes are linked. Coverage, failed attempts, final check state and remaining source comparisons stay explicit there. Named boundary review does not mean every file was read. Live workers and release holds remain unchanged.
 
 Apply the [look-before-you-build gate](../AGENTS.md#look-before-you-build) when choosing or changing an approach. Continue from an inspected decision while its assumptions hold. This map selects code to inspect; summaries alone do not validate a port.

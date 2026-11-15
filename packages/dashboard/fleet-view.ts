@@ -11,8 +11,9 @@ export const SIDE_SYNC_MS=10*60_000;
 export function scoreboardView(raw:any){
  if(!raw||!Array.isArray(raw.skills)||!raw.progress)return{available:false};
  const at=Date.parse(raw.at);
+ const goals=raw.goals?.version===1?raw.goals:null;
  return{available:true,at:Number.isFinite(at)?at:null,
-  remaining:(raw.progress.remaining??[]).map(String),done:raw.progress.done===true,
+  remaining:(goals?.remaining??raw.progress.remaining??[]).map(String),done:goals?.done===true,goals,
   skillLevels:raw.progress.skillLevels??null,skills99:raw.progress.skills99??null,
   quests:{live:raw.progress.questsLive??null,total:raw.progress.questTotal??null},
   items:{held:raw.items?.tradeableHeld??null,total:raw.items?.tradeable??null},

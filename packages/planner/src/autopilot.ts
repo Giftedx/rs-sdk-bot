@@ -4,9 +4,9 @@
 // never more accounts on one resource (a knight spot, a chicken pen, a shop) across all sides than its capacity
 // (CAPACITY: four farmers to a knight spot, one to a pen or a shop). A job on a resource other accounts already hold
 // keeps that resource's shared rate of its value once per holder (SHARED), so the empty spots fill first.
-// Value is an estimate in coins per game tick: each output's rate times its unit value, minus coin spend, times the
-// script family's measured work share (1 - idle - move, scripts/tick-waste.ts). A training template is worth a share
-// of the best job it unlocks, and reserves that job's resource. assess() reads a job's recent log lines and retires
+// Value estimates the finite route or army supply a job brings before the next planning pass, minus its spend,
+// times the script family's measured work share (1 - idle - move, scripts/tick-waste.ts). A training template is
+// worth a share of the needed job it unlocks, and reserves that job's resource and supply. assess() reads recent logs and retires
 // it after repeated fail RESULTs or a run that was nearly all idle and walking. finishedTrainers() names the accounts
 // whose trainer reached its target, so the next pass needs no timer. scripts/autopilot.ts applies it.
 import type { BillRow } from './supply-bill';
@@ -109,6 +109,9 @@ export type Inputs = {
     shared?: Readonly<Record<string, number>>;
     // The template each account holds now, by lower-case name: on a value tie the account keeps it.
     current?: ReadonlyMap<string, string>;
+    // Lower-case accounts whose current matching job has a confirmed live session. This only keeps an existing
+    // army band through consumed kit stock; an enabled or parked job alone is not a running session.
+    running?: ReadonlySet<string>;
     // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
     donors?: readonly { name: string; coins: number }[];
     // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
@@ -131,8 +134,12 @@ export type Inputs = {
     stock?: readonly Stock[];
     // The items a kit buy may order. Absent: the planner plans no buy.
     market?: Market;
-    // What one coin is worth to this side now (coinValueFor; default 1).
+    // Standalone jobValue callers may price coins differently. plan derives finite funding demand and prices a
+    // required coin at one; a bank balance does not change the value of funding a missing kit.
     coinValue?: number;
+    // Legacy aggregate balance. Funding uses each recipient's own coins and usable donors; excluded or reserved
+    // wealth cannot pay another account's kit. This value does not override those funding limits.
+    sideCoins?: number;
     // Each account's kit-buy count, by lower-case name (kitBuyTemplate `seq`; default 0).
     kitSeq?: ReadonlyMap<string, number>;
     // Donor and recipient pairs whose item order failed lately, as `from>to` in lower case: no new order for them.
@@ -232,13 +239,18 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     coal: 600,
 };
 
-// A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
-// is worth half, the price a sale would fetch. A share of a job a training run unlocks counts for the training.
-export const BILL_PREMIUM = 2, SURPLUS = 0.5, TRAIN_SHARE = 0.25;
+// Only a finite consumer gives an output value. Shop prices compare needed supplies; an unpriced needed item keeps
+// a value of one so missing price data cannot turn a route requirement into surplus.
+export const BILL_PREMIUM = 2, TRAIN_SHARE = 0.25;
+// scripts/autopilot.ts plans every ten minutes: 1,000 game ticks at 600 ms per tick. This is an output estimate,
+// not a claim that a worker stops at this bound; the next pass reads its actual holdings.
+export const VALUE_TICKS = 1000;
 // Inputs that feed a bill line: a feather is needed while headless arrows are short, even with the feather line met.
 // A steel bar is on no line of the bill: it is needed while cannonballs are short (one bar casts 4, cannonballs.rs2).
 export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'],
     log: ['arrow shaft', 'headless arrow'], flax: ['bow string'], 'rune essence': ['air rune'], 'steel bar': ['cannonball'] };
+const feedUnits = (item: string, output: string) => !(FEEDS[item] ?? []).includes(output) ? 0
+    : item === 'log' ? 1 / 15 : item === 'steel bar' ? 1 / 4 : 1;
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
 // HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
@@ -248,17 +260,14 @@ export const FOOD_HEAL: Readonly<Record<string, number>> = {
 };
 export const foodHeal = (a: Acct) => Object.entries(FOOD_HEAL).reduce((n, [item, hp]) => n + (a.items[item] ?? 0) * hp, 0);
 
-// Gold is a supply, never a goal (AGENTS.md). A side that banks COIN_GLUT coins or more holds more than its kits and
-// supplies cost, so one more coin is worth COIN_GLUT_VALUE: a coin job then ranks under every job that makes a short
-// bill line, and stays only as the last job for an account nothing else fits. Estimate: the level is not priced from
-// the bill.
-export const COIN_GLUT = 10_000_000, COIN_GLUT_VALUE = 0.01;
-export const coinValueFor = (sideCoins: number) => sideCoins >= COIN_GLUT ? COIN_GLUT_VALUE : 1;
+const billUnits = (item: string, bill: readonly BillRow[]) => bill.reduce((n, r) => {
+    const names = [r.item, ...(r.aliases ?? [])].map(norm);
+    return n + Math.max(0, r.short) * (names.includes(item) ? 1 : Math.max(0, ...names.map(name => feedUnits(item, name))));
+}, 0);
 export function unitValue(item: string, bill: readonly BillRow[], prices: Readonly<Record<string, number>>, coin = 1): number {
     const k = norm(item);
-    if (k === 'coin') return coin;
-    const short = new Set(bill.filter(r => r.short > 0).flatMap(r => [r.item, ...(r.aliases ?? [])].map(norm)));
-    return (prices[k] ?? 0) * (short.has(k) || (FEEDS[k] ?? []).some(f => short.has(f)) ? BILL_PREMIUM : SURPLUS);
+    if (billUnits(k, bill) <= 0) return 0;
+    return k === 'coin' ? coin : Math.max(1, prices[k] ?? 0) * BILL_PREMIUM;
 }
 // The shop values that unitValue reads, by norm() name: the cost of the first item with each name. A bill line whose
 // name is no item's name takes the highest cost of the item ids of the line (supply-bill.ts idsFor): every unfinished
@@ -366,11 +375,66 @@ export function kitBuyTemplate(band: Template, account: string, lines: readonly 
         goal: `buy ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} on the Grand Exchange to ${band.goal}`, repeats: false, yields: () => [] };
 }
 
-export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste' | 'coinValue'>): number {
+export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste' | 'coinValue'>,
+    needed: (item: string) => number = item => billUnits(norm(item), inp.bill)): number {
     const coin = inp.coinValue ?? 1;
-    const gross = t.yields(a).reduce((v, f) => v + f.perTick * unitValue(f.item, inp.bill, inp.prices, coin), 0);
+    const flows = t.yields(a).filter(f => f.perTick > 0);
+    const work = Math.min(VALUE_TICKS, Math.max(0, ...flows.map(f => needed(norm(f.item)) / f.perTick)));
+    const gross = flows.reduce((v, f) => v + Math.min(f.perTick * work, needed(norm(f.item))) * unitValue(f.item, inp.bill, inp.prices, coin), 0) / VALUE_TICKS;
     const cost = (t.spends?.(a) ?? []).reduce((v, f) => v + f.perTick * (norm(f.item) === 'coin' ? coin : (inp.prices[norm(f.item)] ?? 0)), 0);
-    return (gross - cost) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
+    return (gross - cost * work / VALUE_TICKS) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
+}
+
+type GoalNeed = { names: string[]; short: number; consumer: string; account?: string; bought?: number; budget?: () => number };
+// Route shortages and the missing kits of eligible army bands are the consumers. Army purchase budgets retain
+// their recipient, so wealth that account cannot spend or receive cannot hide its funding gap.
+function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
+    const route: GoalNeed[] = inp.bill.filter(r => r.short > 0).map(r => ({ names: [r.item, ...(r.aliases ?? [])].map(norm), short: r.short, consumer: `Overall route: ${r.item}` }));
+    const needs = [...route];
+    const budget = (consumer: string, cost: () => number, account?: string) => {
+        const coins = cost();
+        if (coins > 0) needs.push({ names: ['coin'], short: coins, consumer, budget: cost, account });
+    };
+    const price = (item: string) => inp.market?.[item]?.limit ?? KIT_PRICE_CAPS[item] ?? inp.prices[item] ?? 0;
+    for (const a of mine) {
+        const lower = a.name.toLowerCase();
+        if (!inp.army?.has(lower)) continue;
+        const kit = new Map<string, { count: number; bands: Set<string> }>();
+        let cash = 0, keep = 0;
+        for (const listed of inp.templates) {
+            const t = buildBand(listed, a, inp.builds?.get(lower), inp.buildQuests?.get(lower), inp.buildBefore?.get(lower));
+            if (!t || t.tier !== 'goal' || bandLeft(t, a) <= 0 || (t.pilot && !inp.pilots?.has(t.id)) || inp.retired?.has(pairKey(a.name, t.id))) continue;
+            const lacks = kitLacks(a, t.needs, item => !!inp.market?.[item]);
+            if (lacks === null) continue;
+            cash = Math.max(cash, ...Object.entries(t.needs?.items ?? {}).filter(([item]) => norm(item) === 'coin').map(([, count]) => count));
+            keep = Math.max(keep, t.keepCoins?.(a) ?? 0);
+            const batch = t.batchFor?.(a) ?? t.batch;
+            for (const lack of lacks) {
+                const choices = [...lack.of].sort((x, y) => Number(!!inp.market?.[y]) - Number(!!inp.market?.[x]) || (price(x) || Infinity) - (price(y) || Infinity) || x.localeCompare(y));
+                const item = choices[0];
+                if (!item) continue;
+                const count = Math.max(lack.count, (batch?.[item] ?? 0) - (a.items[item] ?? 0));
+                const entry = kit.get(item) ?? { count: 0, bands: new Set<string>() };
+                entry.count = Math.max(entry.count, count); entry.bands.add(t.id); kit.set(item, entry);
+            }
+        }
+        if ((a.skills.Attack ?? 1) >= WEAPON.attack && !WEAPON_HELD.some(item => (a.items[item] ?? 0) > 0)
+            && !inp.retired?.has(pairKey(a.name, KIT_BUY + WEAPON.id))) kit.set(WEAPON.item, { count: 1, bands: new Set([WEAPON.id]) });
+        const lines = [...kit].map(([item, entry]) => {
+            const need: GoalNeed = { names: [item], short: entry.count, consumer: `army kit ${a.name}: ${[...entry.bands].join(', ')}`, account: lower };
+            needs.push(need);
+            return { need, price: price(item) };
+        });
+        budget(`army kit ${a.name}`, () => {
+            const cost = lines.reduce((n, l) => n + (l.need.short + (l.need.bought ?? 0)) * l.price, 0);
+            return cash + keep + cost + (cost > 0 ? KIT_CASH_RESERVE : 0);
+        }, lower);
+    }
+    for (const need of route) if (!need.names.includes('coin')) {
+        const cost = Math.max(0, ...need.names.map(item => inp.market?.[item]?.limit ?? inp.prices[item] ?? 0));
+        if (cost > 0) budget(need.consumer, () => (need.short + (need.bought ?? 0)) * cost);
+    }
+    return needs;
 }
 
 // The quest route of each PK build (scripts/pk-kits.ts), by kit name: the quests that the items and varps of the kit
@@ -437,9 +501,96 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
+    const demand = goalNeeds(inp, mine), fed = new Map<string, number>();
+    const values = { ...inp, coinValue: 1, bill: demand.map(d => ({ item: d.names[0]!, aliases: d.names.slice(1), short: d.short, need: d.short, owned: 0, ids: [], holders: [] })) };
+    const localByName = new Map(mine.map(a => [a.name.toLowerCase(), a]));
+    const earnedCoins = new Map<string, number>();
+    const bridges = new Map<string, { recipient: string; target: number }>(), bridged = new Set<string>();
+    const fundingDonors = (inp.donors ?? []).filter(d => !inp.unfundable?.has(d.name.toLowerCase()) && !inp.running?.has(d.name.toLowerCase())
+        && (inp.owners.get(d.name.toLowerCase())?.side ?? inp.side) === inp.side);
+    const canGiveCoins = (name: string, recipient: string) => {
+        const lower = recipient.toLowerCase(), to = localByName.get(lower), from = localByName.get(name.toLowerCase());
+        if (!to || name.toLowerCase() === lower || inp.unfundable?.has(lower)) return false;
+        const meet = meetFor(to.pos);
+        if (meet === null) return false;
+        const fare = wayCost(from?.pos, meet === 'ardougne' ? ARMY_BANK : PLACES['shop:zaff'], from ? inp.mountain?.(from) ?? true : true);
+        return fare !== null && (fare === 0 || (from?.items.coin ?? 0) >= fare);
+    };
+    // Own kit cash stays with its recipient. A free donor contributes only transferable surplus, once across all
+    // recipients. One donor must be able to give each credited share: several small, unusable trades are no funding.
+    const funding = () => {
+        const army = new Map<string, number>();
+        let route = 0;
+        for (const d of demand) if (d.budget) {
+            if (d.account) army.set(d.account, (army.get(d.account) ?? 0) + d.budget());
+            else route += d.budget();
+        }
+        const cash = new Map(mine.map(a => [a.name.toLowerCase(), (a.items.coin ?? 0) + (earnedCoins.get(a.name.toLowerCase()) ?? 0)]));
+        const pool = new Map(fundingDonors.map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE - (army.get(d.name.toLowerCase()) ?? 0))]));
+        const given = new Map<string, number>(), lacks = new Map<string, number>();
+        for (const [name, cost] of [...army].sort(([x], [y]) => x.localeCompare(y))) {
+            let short = Math.max(0, cost - (cash.get(name) ?? 0));
+            const donor = [...pool].filter(([from, left]) => left > 0 && canGiveCoins(from, name)).sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]))[0];
+            if (donor && short > 0) {
+                const coins = Math.min(short, donor[1]);
+                short -= coins; pool.set(donor[0], donor[1] - coins);
+                given.set(donor[0].toLowerCase(), (given.get(donor[0].toLowerCase()) ?? 0) + coins);
+            }
+            lacks.set(name, short);
+        }
+        let available = [...cash].reduce((n, [name, coins]) => n + Math.max(0, coins - Math.max(army.get(name) ?? 0, bridges.get(name)?.target ?? 0) - (given.get(name) ?? 0)), 0);
+        for (const [name, coins] of pool) if (!cash.has(name.toLowerCase()) && mine.some(a => canGiveCoins(name, a.name))) available += coins;
+        return { army: lacks, kits: army, route: Math.max(0, route - available) };
+    };
+    // Banked inputs already cover their downstream need. Reserve direct bill stock and army kits before treating
+    // an input as spare; producing it again would count the same route requirement twice.
+    const inputStock = new Map<string, number>();
+    for (const item of Object.keys(FEEDS)) {
+        const holders = new Map<string, number>();
+        for (const a of inp.accounts) holders.set(a.name.toLowerCase(), a.items[item] ?? 0);
+        for (const s of inp.stock ?? []) holders.set(s.name.toLowerCase(), Math.max(holders.get(s.name.toLowerCase()) ?? 0, s.items[item] ?? 0));
+        const rows = inp.bill.filter(r => [r.item, ...(r.aliases ?? [])].some(name => norm(name) === item));
+        const held = Math.max([...holders.values()].reduce((n, count) => n + count, 0), rows.reduce((n, r) => n + r.owned, 0));
+        const army = mine.filter(a => inp.army?.has(a.name.toLowerCase())).reduce((n, a) => n + Math.min(a.items[item] ?? 0,
+            kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a)[item] ?? 0), 0);
+        inputStock.set(item, Math.max(0, held - rows.reduce((n, r) => n + r.need, 0) - army));
+    }
+    const direct = (item: string) => demand.reduce((n, d) => n + (!d.budget && d.names.includes(item) ? d.short : 0), 0);
+    const downstream = (item: string) => demand.reduce((n, d) => n + (d.names.includes(item) ? 0 : d.short * Math.max(0, ...d.names.map(name => feedUnits(item, name)))), 0);
+    const needed = (item: string, account?: string) => {
+        if (item !== 'coin') return direct(item) + Math.max(0, downstream(item) - (inputStock.get(item) ?? 0) - (fed.get(item) ?? 0));
+        const cash = funding();
+        const lower = account?.toLowerCase(), bridge = lower ? bridges.get(lower) : undefined;
+        const own = lower ? bridged.has(lower) ? 0 : cash.army.get(lower) ?? 0 : [...cash.army.values()].reduce((n, coins) => n + coins, 0);
+        const gift = bridge ? Math.max(0, bridge.target - (localByName.get(lower!)?.items.coin ?? 0) - (earnedCoins.get(lower!) ?? 0)) : 0;
+        return direct(item) + cash.route + own + gift;
+    };
+    const consume = (item: string, count: number, account?: string, bought = false) => {
+        for (const d of demand) if (count > 0 && !d.budget && d.names.includes(item) && (account === undefined || d.account === account.toLowerCase())) {
+            const used = Math.min(d.short, count); d.short -= used; count -= used;
+            if (bought) d.bought = (d.bought ?? 0) + used;
+        }
+        return count;
+    };
+    const reserveKit = (account: string, lines: readonly { item: string; quantity: number }[], bought = true) => {
+        for (const l of lines) consume(norm(l.item), l.quantity, account, bought);
+    };
+    const reserveOutput = (t: Template, a: Acct) => {
+        for (const f of t.yields(a)) {
+            const item = norm(f.item), count = Math.min(Math.max(0, f.perTick) * VALUE_TICKS, needed(item, a.name));
+            const rest = consume(item, count);
+            if (item === 'coin') earnedCoins.set(a.name.toLowerCase(), (earnedCoins.get(a.name.toLowerCase()) ?? 0) + rest);
+            else if (rest > 0) fed.set(item, (fed.get(item) ?? 0) + rest);
+        }
+    };
+    const valueOf = (t: Template, a: Acct) => jobValue(t, a, values, item => needed(item, a.name));
     // `fare`: the ferry fare inside the coin need of the candidate's template.
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; fare?: number; goal?: { band: number; left: number }; lacks?: Lack[] };
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; fare?: number; goal?: { band: number; left: number }; lacks?: Lack[];
+        supply?: { template: Template; account: Acct; share: number }; kit?: readonly KitLine[] };
     const cands: Cand[] = [];
+    // Keep qualified coin opportunities until the kit tier has used existing funds. A helper gets value only if
+    // the finite transfer below chooses it; a coin opportunity alone never gives an account work.
+    const makesCoins = (t: Template, a: Acct) => t.yields(a).some(f => norm(f.item) === 'coin' && f.perTick > 0);
     const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
     // A donor can fund the account: it has no enabled job, and a meeting place that it can reach (meetFor).
@@ -461,8 +612,8 @@ export function plan(inp: Inputs): Assignment[] {
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };
             for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(after, u.needs)) continue;
-                const value = TRAIN_SHARE * jobValue(u, after, inp);
-                if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}` });
+                const value = TRAIN_SHARE * valueOf(u, after);
+                if (value > 0 || makesCoins(u, after)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}`, supply: { template: u, account: after, share: TRAIN_SHARE } });
             }
             continue;
         }
@@ -473,6 +624,12 @@ export function plan(inp: Inputs): Assignment[] {
             const left = bandLeft(t, a);
             if (!inp.army?.has(a.name.toLowerCase()) || left <= 0) continue;
             const goal = { band: t.band ?? 0, left }, reason = t.trains ? `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}` : t.quest ? `army band ${goal.band}: ${t.quest.name}` : `army band ${goal.band}: ${t.stock!.to} ${t.stock!.item}`;
+            // Keep only a confirmed live instance of this exact band. A parked enabled job still needs its full kit
+            // before a new start. kitLacks preserves the band's level, quest and under-target admission rules.
+            if (inp.running?.has(a.name.toLowerCase()) && inp.current?.get(a.name.toLowerCase()) === t.id && kitLacks(a, t.needs) !== null) {
+                cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
+                continue;
+            }
             if (fare && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) lacksFare(a, t, fare);
             if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
             else if (fundable(a) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
@@ -490,7 +647,7 @@ export function plan(inp: Inputs): Assignment[] {
                 const lines = afford(sized(true)) ? sized(true) : sized(false), cost = price(lines);
                 if (lines.length && afford(lines) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
                     cands.push({ account: a.name, template: kitBuyTemplate(t, a.name, lines, inp.kitSeq?.get(a.name.toLowerCase()) ?? 0), value: 0, resources: [],
-                        reason: `army band ${goal.band}: buys ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} for ${t.id}, at most ${cost} coins`, goal });
+                        reason: `army band ${goal.band}: buys ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} for ${t.id}, at most ${cost} coins`, goal, kit: lines });
                 else if (lacks?.length && !t.shopKit) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
             }
             continue;
@@ -501,16 +658,16 @@ export function plan(inp: Inputs): Assignment[] {
             for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 // The frail rule counts what the account holds when the unlocked job starts, which is not known yet.
                 if (!meets(a, { ...u.needs, frail: undefined }, t.trains)) continue;
-                const value = TRAIN_SHARE * jobValue(u, trained, inp);
-                if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `trains ${t.trains.skill} ${t.trains.to} for ${u.id}` });
+                const value = TRAIN_SHARE * valueOf(u, trained);
+                if (value > 0 || makesCoins(u, trained)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `trains ${t.trains.skill} ${t.trains.to} for ${u.id}`, supply: { template: u, account: trained, share: TRAIN_SHARE } });
             }
         } else if (meets(a, t.needs)) {
-            const value = jobValue(t, a, inp);
-            if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+') });
+            const value = valueOf(t, a);
+            if (value > 0 || makesCoins(t, a)) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), supply: { template: t, account: a, share: 1 } });
         } else if (coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
-            const value = jobValue(t, a, inp);
+            const value = valueOf(t, a);
             if (value > 0 && fare) lacksFare(a, t, fare);
-            if (value > 0 && fundable(a)) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs), fare });
+            if ((value > 0 || makesCoins(t, a)) && fundable(a)) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs), fare, supply: { template: t, account: a, share: 1 } });
         } else if (t.needs?.frail && frailShort(a, t.needs) > 0 && meets(a, { ...t.needs, frail: undefined })) {
             // The account lacks only the food of the frail rule. It buys FRAIL_FOOD_BUY units with its own coins: the
             // cheapest food of the job that the market lists. One buy id serves each spot of the job, so two failed
@@ -518,10 +675,10 @@ export function plan(inp: Inputs): Assignment[] {
             // holds the spot of the job that it is for: with each spot full there is no buy, and the spot stays free
             // for the buyer until the food is in its bank.
             const pick = t.needs.frail.of.map(norm).filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0];
-            const m = pick ? inp.market![pick]! : undefined, value = TRAIN_SHARE * jobValue(t, a, inp), buyer = { ...t, id: FRAIL_FOOD_BUY_ID };
-            if (m && value > 0 && (a.items.coin ?? 0) >= FRAIL_FOOD_BUY * m.limit + KIT_CASH_RESERVE && !inp.retired?.has(pairKey(a.name, KIT_BUY + FRAIL_FOOD_BUY_ID)))
+            const m = pick ? inp.market![pick]! : undefined, value = TRAIN_SHARE * valueOf(t, a), buyer = { ...t, id: FRAIL_FOOD_BUY_ID };
+            if (m && (value > 0 || makesCoins(t, a)) && (a.items.coin ?? 0) >= FRAIL_FOOD_BUY * m.limit + KIT_CASH_RESERVE && !inp.retired?.has(pairKey(a.name, KIT_BUY + FRAIL_FOOD_BUY_ID)))
                 cands.push({ account: a.name, template: kitBuyTemplate(buyer, a.name, [{ item: m.name, id: m.id, held: a.items[pick!] ?? 0, limit: m.limit, quantity: FRAIL_FOOD_BUY }], inp.kitSeq?.get(a.name.toLowerCase()) ?? 0),
-                    value, resources: t.resources ?? [], reason: `buys ${FRAIL_FOOD_BUY} ${m.name} for ${t.family}, at most ${FRAIL_FOOD_BUY * m.limit} coins` });
+                    value, resources: t.resources ?? [], reason: `buys ${FRAIL_FOOD_BUY} ${m.name} for ${t.family}, at most ${FRAIL_FOOD_BUY * m.limit} coins`, supply: { template: t, account: a, share: TRAIN_SHARE } });
         }
     }
     // The weapon buy (WEAPON): a kit buy made for the account, offered as a goal candidate so it comes before the melee
@@ -533,7 +690,8 @@ export function plan(inp: Inputs): Assignment[] {
             || (a.items.coin ?? 0) < m.limit + KIT_CASH_RESERVE || inp.retired?.has(pairKey(a.name, KIT_BUY + WEAPON.id))) continue;
         const template = kitBuyTemplate({ ...WEAPON, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [] }, a.name,
             [{ item: m.name, id: m.id, held: 0, limit: m.limit, quantity: 1 }], inp.kitSeq?.get(lower) ?? 0);
-        cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: buys 1 ${m.name}, at most ${m.limit} coins`, goal: { band: WEAPON_BAND, left: 0 } });
+        cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: buys 1 ${m.name}, at most ${m.limit} coins`, goal: { band: WEAPON_BAND, left: 0 },
+            kit: [{ item: m.name, id: m.id, held: 0, limit: m.limit, quantity: 1 }] });
     }
     // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
@@ -543,25 +701,29 @@ export function plan(inp: Inputs): Assignment[] {
     // rate, so a third farmer on a spot is worth less than a second and new farmers spread over the spots. The place an
     // account already holds keeps its full worth: crowding counts only against a move, so a farmer stays put until its
     // spot is full (capacity is a hard limit below), and sides do not chase each other's lagging claims.
-    const worth = (c: Cand) => c.resources.reduce((v, r) => v * (inp.shared?.[r] ?? 1) ** (keeps(c) ? 0 : (used.get(r) ?? 0)), c.value);
+    const worth = (c: Cand) => c.resources.reduce((v, r) => v * (inp.shared?.[r] ?? 1) ** (keeps(c) ? 0 : (used.get(r) ?? 0)),
+        c.supply ? c.supply.share * valueOf(c.supply.template, c.supply.account) : c.value);
     const order = (x: Cand, y: Cand) => worth(y) - worth(x) || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
-    const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
+    const pool = new Map(fundingDonors.map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
     // Accounts that give an item this pass, and accounts that leave a coin job so a kit order can reach them.
     const gaveItems = new Set<string>(), vacated = new Map<string, string>();
     const take = (c: Cand, value: number) => {
-        if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        if ((!c.goal && value <= 0) || done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         let fund: Funding | undefined;
         if (c.coins) {
-            const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
+            const from = [...pool].filter(([n, left]) => canGiveCoins(n, c.account) && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
             if (!from) return;
             pool.set(from, pool.get(from)! - c.coins); gave.add(from);
             fund = { from, to: c.account, coins: c.coins, template: c.template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) };
         }
         pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
-        done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}${c.fare ? `, ferry fare ${c.fare}` : ''}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
+        const bridge = bridges.get(c.account.toLowerCase()), reason = bridge ? `${c.reason} for ${bridge.recipient}'s army kit, up to ${bridge.target} coins including donor reserve` : c.reason;
+        done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${reason}, funded ${c.coins} coins by ${fund.from}${c.fare ? `, ferry fare ${c.fare}` : ''}` : reason, resources: c.resources, ...(fund ? { fund } : {}) });
+        if (c.supply) reserveOutput(c.supply.template, c.supply.account);
+        if (c.kit) reserveKit(c.account, c.kit);
     };
     // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
     // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
@@ -620,17 +782,18 @@ export function plan(inp: Inputs): Assignment[] {
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
-            if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); return; }
+            if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); reserveKit(c.account, lines); return; }
             if (!busy && meetOf.get(c.account) !== null) {
                 // A coin donor of this side, else a free account of another side with coins above the reserve.
                 const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
-                const own = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && !gaveItems.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
+                const own = [...pool].filter(([n, left]) => canGiveCoins(n, c.account) && !done.has(n) && !gaveItems.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
                 const other = own || !far ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
                 const from = own ?? other;
                 if (from) {
                     if (own) pool.set(own, pool.get(own)! - short);
                     gave.add(from); pool.delete(c.account);
                     done.set(c.account, { account: c.account, template, value: 0, reason: `${c.reason}, funded ${short} coins by ${from} to buy ${what}`, resources: [], fund: { from, to: c.account, coins: short, template: template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) } });
+                    reserveKit(c.account, lines);
                     return;
                 }
             }
@@ -660,6 +823,7 @@ export function plan(inp: Inputs): Assignment[] {
             if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); pool.delete(from.name); } return; }
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(c.account);
             done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count, template: c.template.id } });
+            reserveKit(c.account, [{ item, quantity: count }], false);
             return;
         }
     };
@@ -668,12 +832,38 @@ export function plan(inp: Inputs): Assignment[] {
     // bones, while this side's maxed accounts held what they needed).
     const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
     // The accounts with a job of any tier that they can start now with what they hold.
-    const ready = new Set(cands.filter(c => !c.lacks && !c.coins).map(c => c.account));
+    const ready = new Set(cands.filter(c => !c.lacks && !c.coins && (c.goal || worth(c) > 0)).map(c => c.account));
     for (const far of [false, true]) for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, far);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
-    // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
-    // its resource.
+    // A recipient that cannot earn its kit may need a helper to become a donor. Reserve one helper for one finite
+    // recipient, including the donor's retained cash. Compare full estimated ticks: earning on the recipient avoids
+    // that reserve and wins whenever it costs less. Existing donors and kit orders have already had their turn.
+    const cash = funding();
+    const coinOptions = cands.filter(c => !c.goal && c.supply && makesCoins(c.supply.template, c.supply.account));
+    const free = (c: Cand) => !done.has(c.account) && !gave.has(c.account) && !gaveItems.has(c.account) && !vacated.has(c.account)
+        && c.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1))
+        && (!c.coins || [...pool].some(([name, coins]) => !done.has(name) && coins >= c.coins! && canGiveCoins(name, c.account)));
+    for (const [recipient, short] of [...cash.army].sort(([x], [y]) => x.localeCompare(y))) {
+        const owner = localByName.get(recipient)!;
+        if (short <= 0 || done.has(owner.name) || gave.has(owner.name) || gaveItems.has(owner.name) || vacated.has(owner.name)) continue;
+        const gap = Math.max(0, (cash.kits.get(recipient) ?? 0) - (owner.items.coin ?? 0) - (earnedCoins.get(recipient) ?? 0));
+        const options = coinOptions.filter(c => free(c) && !bridges.has(c.account.toLowerCase())
+            && (c.account.toLowerCase() === recipient || (!(cash.army.get(c.account.toLowerCase()) ?? 0) && canGiveCoins(c.account, recipient)
+                && (!inp.unfundable?.has(c.account.toLowerCase()) || (inp.current?.get(c.account.toLowerCase()) === c.template.id && c.template.id === c.supply!.template.id)))))
+            .map(c => {
+                const lower = c.account.toLowerCase(), own = lower === recipient, target = FUND_RESERVE + gap;
+                const coins = own ? short : Math.max(0, target - (localByName.get(lower)?.items.coin ?? 0) - (earnedCoins.get(lower) ?? 0));
+                const rate = c.resources.reduce((v, r) => v * (inp.shared?.[r] ?? 1) ** (keeps(c) ? 0 : used.get(r) ?? 0),
+                    c.supply!.share * jobValue(c.supply!.template, c.supply!.account, values, item => item === 'coin' ? Infinity : 0));
+                return { c, own, target, ticks: rate > 0 ? coins / rate : Infinity };
+            }).filter(x => Number.isFinite(x.ticks))
+            .sort((x, y) => x.ticks - y.ticks || Number(y.own) - Number(x.own) || keeps(y.c) - keeps(x.c) || x.c.account.localeCompare(y.c.account) || x.c.template.id.localeCompare(y.c.template.id));
+        const chosen = options[0];
+        if (chosen && !chosen.own) { bridges.set(chosen.c.account.toLowerCase(), { recipient: owner.name, target: chosen.target }); bridged.add(recipient); }
+    }
+    // The supply tier, re-sorted after every assignment: each job reserves the useful output it can bring before
+    // the next pass, and each resource holder lowers the worth of candidates that share its resource.
     for (const rest = cands.filter(c => !c.goal); rest.length;) {
         rest.sort(order);
         const c = rest.shift()!;
@@ -683,7 +873,8 @@ export function plan(inp: Inputs): Assignment[] {
     const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
         return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass'
-        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? 'vacant: no template meets its skills and holdings with a free resource' });
+        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? (demand.some(d => d.short > 0)
+            ? 'vacant: no template meets finite demand, its skills and holdings with a free resource' : 'vacant: no finite route or army supply demand') });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.

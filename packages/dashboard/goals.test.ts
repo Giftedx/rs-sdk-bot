@@ -2,6 +2,7 @@ import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { goalPlan,goalProgress,questPointObservation,type GoalInputs } from './goals';
 import { healthObservation,remoteBots } from './fleet-view';
+import type {OwnerGoals} from '../router/src/goal-scoreboard';
 test('dashboard goals come from the current plan, not the historical request ledger', () => {
     const text=readFileSync(new URL('../../docs/plans/joined-plan.md',import.meta.url),'utf8');
     const plan=goalPlan(text);
@@ -23,6 +24,44 @@ const now=1_000_000;
 const bot=(name='Worker')=>({name,server:'rs-sdk-demo.fly.dev',at:now-1000,bankAt:now-1000,bank:[{id:314,name:'Feather',count:100}],equipment:[],skills:[{name:'Mining',level:99,xp:2_000_000},{name:'Stat18',level:99,xp:2_000_000}],ranks:[],operation:'observed'});
 const inputs=():GoalInputs=>({requirements:[{item:'Feathers',count:100},{item:'Bronze sword',count:1}],items:[{id:314,name:'Feather'},{id:1277,name:'Bronze sword'}],quests:[{questPoints:1}],questConstants:'^first_questpoints = 1\n^second_questpoints = 2',receipts:{}});
 const state=(bots:any[]=[bot()]):any=>({now,bots,boards:[{board:'Mining'},{board:'Equipment',kind:'value'}],objectives:{paused:true},race:null,gates:null});
+function ownerLedger():OwnerGoals{
+ const levels={Attack:99,Strength:99,Defence:99,Ranged:99,Magic:99,Prayer:99,Hitpoints:99};
+ const evidence=[{source:'research/hiscores-live.json',at:now-1000,ageMs:1000}];
+ return{version:1,at:now-500,
+  main:{modelTicks:50,recordTicks:100,launchTargetTicks:98,gapTicks:0,rank:null,rankAt:null,rank1:null,evidence},
+  specialists:{targets:[{account:'candidate',board:'Ranged',planTicks:80,recordTicks:100,rehearsalTicks:90,marginTicks:10,rank:null,rankAt:null,rank1:null,evidence}],rank1s:[{account:'winner',board:'Fishing',rank:1,at:now-1000,source:'research/hiscores-live.json'}],scopeKnown:false,evidence},
+  quests:{complete:2,total:3,remaining:['Sheep'],observedAccounts:2,evidence},
+  collection:{targets:2,held:1,missing:[{item:'Shark',id:385,need:10,owned:3,verifyOwned:2,consumer:'army:other:tribrid'}],scopeKnown:false,evidence},
+  army:{roster:['soldier','other'],accounts:[{account:'soldier',levels,missingLevels:0,maxed:true,at:now-1000},{account:'other',levels:{...levels,Prayer:98},missingLevels:1,maxed:false,at:now-1000}],maxed:1,missingLevels:1,creditedKills:null,wildernessControl:null,evidence},
+  metrics:{},remaining:['Useful item scope unknown','Player kill proof unknown'],done:false};
+}
+test('owner goal cards use the exact ledger instead of wealth, fleet skill maxima or model board wins',()=>{
+ const s={...state(),scoreboard:{available:true,goals:ownerLedger()},race:{wins:24,rows:[{id:'overall',real:{finish:9999,slack:-9999},deadline:1}]}};
+ const cards=goalProgress(s,inputs());
+ expect(cards.map(c=>c.title)).toEqual(['Main Overall rank 1','Specialist board wins','All quests','Useful items & best gear','Maxed PK army','Named supply support']);
+ expect(cards[0]!.metric).toBe('Rank unknown');
+ expect(cards[0]!.rows.find(r=>r.label==='Model / launch target')).toMatchObject({value:'50 / 98 ticks',source:'research/hiscores-live.json',at:now-1000});
+ expect(cards[1]!.metric).toBe('1 board held');
+ expect(cards[2]!.metric).toBe('2/3 complete');
+ expect(JSON.stringify(cards)).not.toMatch(/24 boards|\/24|Fleet & wealth|Tick efficiency|1\/19 at 99/);
+});
+test('army cards require all seven skills on each roster account and preserve unknown fight proof',()=>{
+ const cards=goalProgress({...state(),scoreboard:{available:true,goals:ownerLedger()}},inputs()),army=cards[4]!;
+ expect(army.metric).toBe('1/2 maxed');
+ expect(army.rows.find(r=>r.label==='other · Prayer')).toMatchObject({value:'98/99',at:now-1000});
+ expect(army.rows.filter(r=>r.label.startsWith('soldier · '))).toHaveLength(7);
+ expect(army.rows.find(r=>r.label==='Credited player kills')?.value).toBe('Unknown');
+ expect(army.rows.find(r=>r.label==='Wilderness control')?.value).toBe('Unknown');
+});
+test('named supply support never becomes proof of the whole useful-item and best-gear collection',()=>{
+ const cards=goalProgress({...state(),scoreboard:{available:true,goals:ownerLedger()}},inputs());
+ expect(cards[3]!.metric).toBe('Scope unknown');
+ expect(cards[3]!.blocker).toContain('full useful-item and best-in-slot');
+ expect(cards[5]!.metric).toBe('1/2 lines');
+ expect(cards[5]!.rows.find(r=>r.label==='Shark')).toMatchObject({value:'3/10 recent · 2 need verification',source:'army:other:tribrid'});
+ const invalid={...ownerLedger(),version:2};
+ expect(goalProgress({...state(),scoreboard:{available:true,goals:invalid}},inputs())[0]!.title).toBe('Fleet & wealth');
+});
 test('quest points prefer the newest dated account observation and direct state wins ties, including zero',()=>{
  const base={...bot(),guildFacts:{varps:{qp:55}},ranksAt:now-2000,ranks:[{board:'Quest Points',level:50}]};
  expect(questPointObservation(base,now)).toEqual({points:55,at:base.at,source:'status'});

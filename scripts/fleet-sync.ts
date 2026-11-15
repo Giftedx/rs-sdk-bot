@@ -129,10 +129,17 @@ export function activeAccounts(rows: readonly any[], now = Date.now()): (account
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
 // uncommitted while it runs; this copy is what other sides read.
 const PLAN_FIELDS = ['account', 'accounts', 'script', 'args', 'env', 'enabled', 'standing', 'repeat', 'goal', 'role', 'template', 'autopilot', 'resources'] as const;
-export function planView(jobs: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now()) {
+export function planView(jobs: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), goals?: {army?: unknown;builds?: unknown}) {
     const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter((n: unknown): n is string => typeof n === 'string');
     const own = jobs.filter(j => j?.role !== 'main' && names(j).length > 0 && names(j).every(n => owners.get(n.toLowerCase())?.side === side));
-    return { side, at: now, jobs: own.map(j => Object.fromEntries(PLAN_FIELDS.filter(k => j[k] !== undefined).map(k => [k, j[k]]))) };
+    const army = Array.isArray(goals?.army) ? goals.army.filter(entry => {
+        const account=typeof entry==='string'?entry:entry?.account;
+        return typeof account==='string' && account.toLowerCase()!=='haggis' && owners.get(account.toLowerCase())?.side===side;
+    }) : undefined;
+    const roster=new Set((army??[]).map(entry=>String(typeof entry==='string'?entry:entry.account).toLowerCase()));
+    const builds=goals?.builds&&typeof goals.builds==='object'&&!Array.isArray(goals.builds)
+        ? Object.fromEntries(Object.entries(goals.builds).filter(([account,build])=>roster.has(account.toLowerCase())&&typeof build==='string')) : undefined;
+    return { side, at: now, jobs: own.map(j => Object.fromEntries(PLAN_FIELDS.filter(k => j[k] !== undefined).map(k => [k, j[k]]))), ...(army ? {army} : {}), ...(builds ? {builds} : {}) };
 }
 const git = (cwd: string, ...args: string[]) => {
     const p = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true,
@@ -320,7 +327,8 @@ export function runSync(push = true): string {
     // The claim's time stamp is its freshness, so every sync rewrites it. An unreadable plan writes nothing: the old
     // claim ages out instead of releasing spots the plan may still hold.
     const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
-    const jobs = (() => { try { const p = JSON.parse(readFileSync(planFile, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } })();
+    const sourcePlan = (() => { try { return JSON.parse(readFileSync(planFile, 'utf8')); } catch { return null; } })();
+    const jobs: any[] | null = Array.isArray(sourcePlan?.jobs) ? sourcePlan.jobs : null;
     let claim: ReturnType<typeof claimFor> | null = null;
     const claimFile = join(dir, 'fleet', 'claims', `${snap.side}.json`), out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
     const published = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
@@ -328,10 +336,10 @@ export function runSync(push = true): string {
         const coordinatorJobs = readCoordinatorJobs(root).jobs, merged = mergeJobs(jobs, coordinatorJobs);
         claim = claimFor([...merged, ...recoveringOwnerJobs(jobs, coordinatorJobs)], snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local', Date.now(), activeAccounts(snap.accounts));
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(claimFile, JSON.stringify(claim) + '\n');
-        const view = planView(merged, snap.side, owners);
+        const view = planView(merged, snap.side, owners, Date.now(), sourcePlan);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
-        const was = JSON.stringify(published(out)?.jobs ?? '');
-        if (was !== JSON.stringify(view.jobs)) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
+        const prior=published(out), was = JSON.stringify([prior?.jobs,prior?.army,prior?.builds]);
+        if (was !== JSON.stringify([view.jobs,view.army,view.builds])) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
     }
     // A controller heartbeat older than HEARTBEAT_MAX_AGE_MS is a dead controller's last write, not a running one.
     const state = published(join(root, '.practice', 'swarm-state.json'));

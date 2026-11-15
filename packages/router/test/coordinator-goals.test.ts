@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {initialState} from '../src/coordinator';
+import {initialState,addTasks} from '../src/coordinator';
 import {plannerPrompt,gameCoverage,supplyBillSummary} from '../src/coordinator-planner';
 import * as planner from '../src/coordinator-planner';
 
@@ -10,6 +10,15 @@ import {snapshot} from '../../../scripts/fleet-sync';
 import {supplyBill} from '../../planner/src/supply-bill';
 
 const world={coverage:{scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]} as any;
+
+test('planner receives deterministic goal values and reasons for its pending work',()=>{
+ const state=initialState();
+ addTasks(state,[{id:'quest',goal:'quests',kind:'run',capability:'quest-worker',account:'Helper',dependsOn:[],priority:1,estimatedMs:60000,why:'Finish Cook',accept:{quests:['Cook']}}]);
+ const goals={version:1,main:{rank1:null},specialists:{targets:[]},quests:{remaining:['Cook']},collection:{missing:[]},army:{roster:[],accounts:[]}};
+ const prompt=plannerPrompt(state,{...world,at:1000,scoreboard:{goals}});
+ expect(prompt).toContain('"goalWork":[{"id":"quest","value":1');
+ expect(prompt).toContain('quest Cook');
+});
 
 test('live status projection keeps dated stock available to the planner',()=>{
  const base=mkdtempSync(join(tmpdir(),'planner-assets-'));
@@ -78,7 +87,7 @@ test('planner asset summaries expose shared holders without refreshing their ban
  expect(assets).toEqual([{account:'Remote',side:'cloud',at:null,statusAt:now,bankAt:100,
   recent:{coins:0,stacks:['Blood rune 50']},verify:{coins:2000,stacks:[]}}]);
  const prompt=plannerPrompt(initialState(),world);
- expect(prompt).toContain('bestLive and progress count the fleet');
+ expect(prompt).toContain('Fleet best skill levels are diagnostics, not goals');
  expect(prompt).toContain('request another side\'s supplies through fleet orders');
  expect(planner.assetSummary([{name:'lowercase',side:'cloud',server:'rs-sdk-demo.fly.dev',at:now,bankAt:now,bank:[{id:995,count:2000}]}],[],now))
   .toEqual([{account:'lowercase',side:'cloud',at:null,statusAt:now,bankAt:now,recent:{coins:2000,stacks:[]},verify:{coins:0,stacks:[]}}]);
@@ -111,23 +120,25 @@ test('planner separates the main Overall record from specialist board wins',()=>
  expect(gameCoverage([],[],[],[],[]).otherGoals).toContain('main Overall record');
 });
 
-test('planner completion requires the fresh account and bosses, not fleet coverage totals',()=>{
+test('planner uses the five owner goals and keeps generic coverage diagnostic',()=>{
  const prompt=plannerPrompt(initialState(),world);
- expect(prompt).toContain('one fresh completion account');
- expect(prompt).toContain('every available boss defeated');
- expect(prompt).toContain('fleet-wide coverage, not completion proof');
+ expect(prompt).toContain('world.scoreboard.goals');
+ expect(prompt).toContain('PK army of maxed tribrids');
+ expect(prompt).toContain('diagnostic, not completion proof');
+ expect(prompt).not.toContain('one fresh completion account');
  expect(prompt).toContain('current game state and scoreboards');
  expect(prompt).not.toContain('the project ends only when world.scoreboard.progress.done is true');
 });
 
-test('cross-side helper leads do not bar required completion or scored progression',()=>{
+test('cross-side helper leads do not bar army or scored progression',()=>{
  const led={...world,statuses:[{name:'Haggis',skills:[{name:'Mining',level:1}]}],
   scoreboard:{fleet:{side:'local'},fleetSkills:[{skill:'Mining',best:85,side:'cloud',account:'OtherMiner'}]}};
  const prompt=plannerPrompt(initialState(),led as any);
  expect(prompt).toContain('For ordinary helper batches, do not queue work');
- expect(prompt).toContain('The fresh completion account and scored main/specialist routes follow their own required progression and clocks');
+ expect(prompt).toContain('Scored main/specialist routes follow their own required progression and clocks');
+ expect(prompt).toContain('An army account remains useful below another account at 99');
  expect(prompt).toContain('Ordinary helper batches target the next unlock');
- expect(prompt).toContain('Completion and scored routes may span a qualified method-switching ladder');
+ expect(prompt).toContain('Army and scored routes may span a qualified method-switching ladder');
 });
 
 test('planner keeps old or undated supplies visible for verification and uses the original cross-side bank time', () => {

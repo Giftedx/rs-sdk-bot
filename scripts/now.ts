@@ -24,7 +24,7 @@ export type DashState={
     coordination?:{available:boolean;at:number|null;fresh?:boolean;paused?:boolean;counts:Record<string,number>;tasks:Task[]}|null;
     bots?:Bot[];
     alerts?:{name:string;kind:string;practice:boolean}[];
-    scoreboard?:{available:boolean;at?:number|null;skills99?:number|null;remaining?:string[]}|null;
+    scoreboard?:{available:boolean;at?:number|null;skills99?:number|null;remaining?:string[];goals?:{version:number;main:{rank:number|null;gapTicks:number|null};specialists:{rank1s:unknown[]};quests:{complete:number;total:number};collection:{scopeKnown:boolean};army:{maxed:number;roster:string[]}}|null}|null;
     fleetSides?:{sides:{side:string;at:number;late:boolean}[]}|null;
     prs?:{number:number;branch:string;draft:boolean;state:string}[];
 };
@@ -112,6 +112,8 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
         add('board',()=>{
             const sb=state.scoreboard;
             if(!sb?.available)return 'board   no state';
+            const g=sb.goals;
+            if(g?.version===1)return `board   Overall rank ${g.main.rank??'unknown'}; launch gap ${g.main.gapTicks??'unknown'} ticks; specialist wins ${g.specialists.rank1s.length}; quests ${g.quests.complete}/${g.quests.total}; army ${g.army.maxed}/${g.army.roster.length} maxed; collection ${g.collection.scopeKnown?'scoped':'scope unknown'}; ${sb.at==null?'time not known':age(now-sb.at)+' old'}`;
             return `board   99s ${sb.skills99??'?'}; ${(sb.remaining??[]).join('; ')}; ${sb.at==null?'time not known':age(now-sb.at)+' old'}`;
         });
         add('sides',()=>{

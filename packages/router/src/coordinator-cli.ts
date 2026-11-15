@@ -19,6 +19,8 @@ import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
 import {processDeliveryPrs} from './delivery-pr';
 import {freshScoreboard} from './coverage';
+import {goalWork,ruleGoalValue} from './goal-work';
+import {liveHelperStatuses} from '../../planner/src/supply-bill';
 import {recoverConcurrentPlanWrite} from '../../core/src/plan-lock';
 
 const cli='packages/router/src/coordinator-cli.ts';
@@ -204,7 +206,9 @@ function runRules(state:CoordinatorState,liveLimit:number){
  try{
   let board:any;try{board=freshScoreboard(projectRoot,RULE_BOARD_MAX_AGE_MS);}catch{board=null;}
   const fleetSkills:any[]|undefined=Array.isArray(board?.fleetSkills)?board.fleetSkills:undefined;
+  const goalStatuses=liveHelperStatuses(projectRoot),entryOf=(capability:string)=>{try{return deliveryTask(capability).entry;}catch{return undefined;}};
   const added=applyRules(state,{fingerprint:cap=>deliveryFingerprint(deliveryTask(cap)),unlocks:unlocks??=skillUnlocks(projectRoot),maxOpen:liveLimit,
+   goalValue:board?.goals?ruleGoalValue(state,board.goals,goalStatuses,now,{entryOf}):()=>({value:null,reason:'Owner goal observations unavailable'}),
    side:board?.fleet?.side??process.env.FLEET_SIDE??'local',
    fleetBest:skill=>fleetSkills?.find(r=>String(r.skill).toLowerCase()===skill.toLowerCase()),
    skipped:skip=>{const key=JSON.stringify(skip);if(!ruleSkips.has(key)){ruleSkips.add(key);event('rule-skipped',{rule:'next-band',...skip});}},
@@ -396,10 +400,15 @@ async function tick(state:CoordinatorState,config:any){
  const sourceOf=(cap:string)=>{if(!sources.has(cap)){let s:string|null=null;try{s=deliveryFingerprint(deliveryTask(cap));}catch{/* no source now: hold */}sources.set(cap,s);}return sources.get(cap)!;};
  const staleRun=(task:CoordTask)=>task.kind==='run'&&!!task.capability&&needsFreshQualification(task,new Map(state.tasks.map(r=>[r.spec.id,r])),sourceOf(task.capability));
  const liveRunHeld=(task:CoordTask)=>runHeld(task)||recoveryWaitsForMemory(task,capacity)||staleRun(task)||recoverySlotBusy(task,state.tasks);
+ let goalValues:ReturnType<typeof goalWork>=new Map();
+ try{
+  const observedAt=Date.now(),board=freshScoreboard(projectRoot);
+  goalValues=goalWork(state,board.goals,liveHelperStatuses(projectRoot),observedAt,{entryOf:capability=>{try{return deliveryTask(capability).entry;}catch{return undefined;}}});
+ }catch(error){event('goal-observation-wait',String(error));}
  for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
   let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld:liveRunHeld,
+  const task=chooseTask(state,Date.now(),{goalValue:candidate=>goalValues.get(candidate.id)?.value??null,sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld:liveRunHeld,
    provisionRunHeld:(run,records)=>provisionParticipantHold(run,records,()=>deliveryTask(run.capability!).entry)!==null});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children

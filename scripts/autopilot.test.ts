@@ -25,7 +25,9 @@ import { PROFILES, maximumUnitCost, selectItems } from './shop-buyer';
 import { sideCard } from './fleet-sync';
 
 const side = 'claude-cloud';
-const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
+// Admission and skill-transition cases have a finite route funding request. Supply-value cases set their own bill.
+const coinBill = [{ item: 'coins', need: 1_000_000, owned: 0, short: 1_000_000, ids: [995], holders: [] }];
+const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: coinBill, templates: catalogue(), prices: {} });
 const settled = () => 60_000;
 
 test('a trainer at its target stays ended for the swarm, and the next pass starts the account on its next template', () => {
@@ -493,13 +495,16 @@ test('a maker of a short bill line has the value of that line for an account tha
             lacks: { name: 'A', side, skills: { Smithing: 15 }, items: { 'iron ore': 27 } } },
     };
     for (const [id, m] of Object.entries(makers)) {
-        const run = (a: Acct, rows = bill) => plan({ ...inputs(a), templates: aioTemplates(), bill: rows, prices, pilots: new Set([id]), coinValue: 0 })[0]!;
+        const run = (a: Acct, rows = bill) => plan({ ...inputs({...a,items:{...a.items,
+            coin:rows.reduce((n,r)=>n+r.short*(prices[norm(r.item)]??0),0)}}), templates: aioTemplates(), bill: rows, prices, pilots: new Set([id]) })[0]!;
         const price = prices[norm(m.item)]!;
         expect(`${id} ${price > 0}`).toBe(`${id} true`);
         expect(`${id} ${run(m.meets).template?.id}`).toBe(`${id} ${id}`);
-        // Twice the shop value while the line is short, half of it once the line is met.
-        expect(run(m.meets).value).toBeCloseTo(m.perTick * price * 2);
-        expect(run(m.meets, bill.map(r => ({ ...r, short: 0 }))).value).toBeCloseTo(m.perTick * price * 0.5);
+        // Only needed units in the 1,000-tick planning window count, at twice the shop value.
+        const short = bill.find(r => norm(r.item) === norm(m.item))!.short;
+        expect(run(m.meets).value).toBeCloseTo(Math.min(m.perTick, short / 1000) * price * 2);
+        expect(run(m.meets, bill.map(r => ({ ...r, short: 0 }))).value).toBe(0);
+        expect(run(m.meets, bill.map(r => ({ ...r, short: 0 }))).template).toBeUndefined();
         expect(run(m.lacks)).toMatchObject({ value: 0 });
         expect(run(m.lacks).template).toBeUndefined();
     }
@@ -513,7 +518,7 @@ test('the steel bar template has the value of a short line only while the bill i
     const line = (item: string, short: number) => ({ item, need: 1700, owned: 1700 - short, short, ids: [], holders: [] });
     const id = 'aio-steel-bars', t = aioTemplates().find(t => t.id === id)!;
     const smith = (level: number, ore: number, coal: number): Acct => ({ name: 'A', side, skills: { Smithing: level }, items: { 'iron ore': ore, coal } });
-    const run = (a: Acct, bill: Inputs['bill']) => plan({ ...inputs(a), templates: aioTemplates(), bill, prices, pilots: new Set([id]), coinValue: 0 })[0]!;
+    const run = (a: Acct, bill: Inputs['bill']) => plan({ ...inputs(a), templates: aioTemplates(), bill, prices, pilots: new Set([id]) })[0]!;
     // The worker's own table: the level and the two ingredients of the bar, and one pack load of them in `needs`.
     const recipe = smeltRecipe('steel'), units = (item: number) => recipe.ingredients.find(i => i.id === item)!.units;
     const load = Math.floor(28 / (units(440) + units(453)));
@@ -525,9 +530,11 @@ test('the steel bar template has the value of a short line only while the bill i
     // No bill line names the bar. Short of cannonballs: twice the shop value of the bar.
     expect(run(smith(30, 9, 18), [line('cannonball', 1700)]).template?.id).toBe(id);
     expect(run(smith(30, 9, 18), [line('cannonball', 1700)]).value).toBeCloseTo(made!.perTick * price * 2);
-    // The cannonball line met, another line short, or no bill: half the shop value, as for an item nobody needs.
-    for (const bill of [[line('cannonball', 0)], [line('cannonball', 0), line('iron bar', 2), line('mithril bar', 280)], []])
-        expect(run(smith(30, 9, 18), bill).value).toBeCloseTo(made!.perTick * price * 0.5);
+    // A met cannonball line, an unrelated shortage, or no bill gives this bar no consumer.
+    for (const bill of [[line('cannonball', 0)], [line('cannonball', 0), line('iron bar', 2), line('mithril bar', 280)], []]) {
+        expect(run(smith(30, 9, 18), bill).value).toBe(0);
+        expect(run(smith(30, 9, 18), bill).template).toBeUndefined();
+    }
     // A level under the bar, or a load short of one ore or one coal: no job.
     for (const a of [smith(29, 9, 18), smith(30, 8, 18), smith(30, 9, 17)]) {
         expect(run(a, [line('cannonball', 1700)])).toMatchObject({ value: 0 });
@@ -557,7 +564,8 @@ test('the makers of the unfinished potion, dust, ring and axe lines ask what the
         const price = items.find(i => i.id === recipe.product)!.cost!;
         expect(`${id} ${price > 0} ${prices[norm(line)]}`).toBe(`${id} true ${price}`);
         const brewer: Acct = { name: 'A', side, skills: { Herblore: level }, items: { [norm(item)]: 1, 'vial of water': 1 } };
-        expect(plan({ ...inputs(brewer), templates: aioTemplates(), bill, prices, pilots: new Set([id]), coinValue: 0 })[0]!.value).toBeCloseTo(0.1 * price * 2);
+        const short = bill.find(r => r.item === line)!.short;
+        expect(plan({ ...inputs(brewer), templates: aioTemplates(), bill, prices, pilots: new Set([id]) })[0]!.value).toBeCloseTo(short / 1000 * price * 2);
     }
     expect(prices[norm('mort myre fungus')]).toBe(items.find(i => i.name === 'Mort myre fungi')!.cost!);
     for (const [id, raw, dust] of [['aio-unicorn-horn-dust', 'unicorn horn', 'unicorn horn dust'], ['aio-dragon-scale-dust', 'blue dragon scale', 'dragon scale dust']] as const) {
@@ -671,6 +679,16 @@ test('the plan gives a build account the quest route of its kit; a kit with no r
 });
 
 import { mountainWalk, offlinePlace, MOUNTAIN } from './autopilot';
+import { runningAssignments } from './autopilot';
+
+test('only a recent bound live assignment can keep its running goal through a stock dip',()=>{
+ const job={account:'Worker',script:'scripts/train.ts',template:'army-magic',enabled:true};
+ const live={name:'Worker',server:'rs-sdk-demo.fly.dev',at:99999,sessionAttemptId:'attempt',workEntry:'scripts/train.ts'};
+ expect([...runningAssignments([job],()=>live,100000)]).toEqual(['worker']);
+ for(const patch of [{practice:true},{server:'localhost:8888'},{at:100001},{at:1},{result:'RESULT ok'},{name:'Other'},{sessionAttemptId:null},{workEntry:'scripts/other.ts'}])
+  expect(runningAssignments([job],()=>({...live,...patch}),100000).size).toBe(0);
+ expect(runningAssignments([{...job,enabled:false}],()=>live,100000).size).toBe(0);
+});
 import { accountFrom, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
 
 test('autopilot plans from shared live skills when a newer local file belongs to practice or another account', () => {
@@ -719,8 +737,9 @@ const statusAt = (name: string, pos: { x: number; z: number; level: number }, sk
     inventory: coins ? [{ id: 995, name: 'Coins', count: coins }] : [], bank: bank ? [{ id: 995, name: 'Coins', count: bank }] : [], equipment: [],
 });
 const fromStatus = (s: ReturnType<typeof statusAt>) => offlinePlace(accountFrom(s.name, side, s, () => undefined), s, 60_000_000);
+const featherBill = [{ item: 'feathers', need: 800, owned: 0, short: 800, ids: [314], holders: [] }];
 const reach = (a: Acct, templates: string[], extra: Partial<Inputs> = {}) => plan({ ...inputs(a), templates: catalogue().filter(t => templates.includes(t.id)), prices: { flax: 5, feather: 2 },
-    bill: [{ item: 'feathers', need: 800, owned: 0, short: 800, ids: [314], holders: [] }], mountain: mountainWalk(), pilots: new Set(['aio-flax']), ...extra })[0]!;
+    bill: featherBill, mountain: mountainWalk(), pilots: new Set(['aio-flax']), ...extra })[0]!;
 const strongThief = { Thieving: 89, Hitpoints: 54, Attack: 40, Strength: 40, Defence: 30 };
 
 test('a status file gives the account its place, and a live session gives none', () => {
@@ -749,7 +768,7 @@ test('the walker lets a strong account over White Wolf Mountain and refuses an a
 test('an account at Taverley with 1 coin gets a coin order for the ferry fare, then the knight spot', () => {
     const thief = fromStatus(statusAt('Abracadickra', { x: 2877, z: 3501, level: 0 }, strongThief, 1));
     const donors = [{ name: 'Billionaire', coins: 2_000_000 }];
-    const out = reach(thief, ['goldfarm@2652,3318'], { donors });
+    const out = reach(thief, ['goldfarm@2652,3318'], { donors, bill: coinBill });
     expect(out.fund).toEqual({ from: 'Billionaire', to: 'Abracadickra', coins: 59, template: 'goldfarm@2652,3318' });
     // The order is for 59 coins and names no meeting place: scripts/fleet-trade.ts then meets at Varrock West.
     const placed = fundOrders([out], new Set(), (from, to, coins, meet) => coinOrder(from, to, coins, 'rs-sdk-demo.fly.dev', 1_000, meet === 'ardougne' ? ARMY_MEET : undefined));
@@ -757,22 +776,23 @@ test('an account at Taverley with 1 coin gets a coin order for the ferry fare, t
     expect(placed.assignments[0]!.reason).toBe('vacant: awaits 59 coins from Billionaire for goldfarm@2652,3318');
     // The coins arrived: the next pass gives the spot with no order.
     const paid = fromStatus(statusAt('Abracadickra', { x: 3182, z: 3440, level: 0 }, strongThief, 60));
-    expect(reach(paid, ['goldfarm@2652,3318'], { donors })).toMatchObject({ template: { id: 'goldfarm@2652,3318' }, reason: 'coins' });
+    expect(reach(paid, ['goldfarm@2652,3318'], { donors, bill: coinBill })).toMatchObject({ template: { id: 'goldfarm@2652,3318' }, reason: 'coins' });
     // With no donor it takes a job on its own side.
-    expect(reach(thief, ['goldfarm@2652,3318', 'feathers@3017,3288']).template?.id).toBe('feathers@3017,3288');
+    expect(reach(thief, ['goldfarm@2652,3318', 'feathers@3017,3288'], { bill: [...coinBill, ...featherBill] }).template?.id).toBe('feathers@3017,3288');
 });
 
 test('an account with 10 Hitpoints east of the mountain is not offered the flax field at Seers', () => {
     const weak = fromStatus(statusAt('Billionaire', { x: 3087, z: 3250, level: 0 }, { Thieving: 99 }, 1_508, 2_195_386));
-    expect(reach(weak, ['aio-flax']).template).toBeUndefined();
-    expect(reach(weak, ['aio-flax', 'feathers@3017,3288']).template?.id).toBe('feathers@3017,3288');
+    const flaxBill = [{ item: 'flax', need: 1000, owned: 0, short: 1000, ids: [1779], holders: [] }];
+    expect(reach(weak, ['aio-flax'], { bill: flaxBill }).template).toBeUndefined();
+    expect(reach(weak, ['aio-flax', 'feathers@3017,3288'], { bill: [...flaxBill, ...featherBill] }).template?.id).toBe('feathers@3017,3288');
     // The strong thief is offered it: the walk over the mountain costs no fare.
-    expect(reach(fromStatus(statusAt('Abracadickra', { x: 3092, z: 3242, level: 0 }, strongThief, 1)), ['aio-flax']).template?.id).toBe('aio-flax');
+    expect(reach(fromStatus(statusAt('Abracadickra', { x: 3092, z: 3242, level: 0 }, strongThief, 1)), ['aio-flax'], { bill: flaxBill }).template?.id).toBe('aio-flax');
 });
 
 test('an account at Ardougne with no coins needs no fare for a knight spot', () => {
     const there = fromStatus(statusAt('Hocuspokeus', { x: 2654, z: 3283, level: 0 }, strongThief, 0));
-    const out = reach(there, ['goldfarm@2652,3318'], { donors: [{ name: 'Billionaire', coins: 2_000_000 }] });
+    const out = reach(there, ['goldfarm@2652,3318'], { donors: [{ name: 'Billionaire', coins: 2_000_000 }], bill: coinBill });
     expect(out).toMatchObject({ template: { id: 'goldfarm@2652,3318' }, reason: 'coins' });
     expect(out.fund).toBeUndefined();
 });

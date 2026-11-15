@@ -9,23 +9,26 @@ const acct = (name: string, skills: Record<string, number> = {}, items: Record<s
 const row = (item: string, short: number) => ({ item, need: short, owned: 0, short, ids: [1], holders: [] });
 const prices = { feather: 2, 'headless arrow': 1, lobster: 150, 'fire rune': 4, 'air rune': 4, 'earth rune': 4, 'rune arrowtip': 200, 'adamant arrowtip': 80, 'arrow shaft': 1 };
 const bill = [row('feathers', 800), row('headless arrows', 3615), row('lobster', 610), row('fire rune', 2000)];
+// These cases test admission, ownership and shared resources with a finite route funding request. Cases about
+// whether work has a consumer supply their own bill; autopilot-goals.test.ts covers an empty bill.
+const fundedRouteBill = [...bill, row('coins', 1_000_000)];
 const inputs = (accounts: Acct[], extra: Partial<Inputs> = {}): Inputs => ({
-    side, accounts, owners: new Map(accounts.map(a => [a.name.toLowerCase(), { side: a.side }])), bill, templates: catalogue(), prices, ...extra,
+    side, accounts, owners: new Map(accounts.map(a => [a.name.toLowerCase(), { side: a.side }])), bill: fundedRouteBill, templates: catalogue(), prices, ...extra,
 });
 const ids = (xs: ReturnType<typeof plan>) => Object.fromEntries(xs.map(x => [x.account, x.template?.id ?? 'vacant']));
 
-test('a bill line still short, or one it feeds, is worth the premium; coins are worth one', () => {
+test('a bill line still short, or one it feeds, has value; surplus and unneeded coins have none', () => {
     expect(unitValue('Feather', bill, prices)).toBe(4);
     expect(unitValue('Feather', [row('feathers', 0), row('headless arrows', 10)], prices)).toBe(4);
-    expect(unitValue('Feather', [row('feathers', 0)], prices)).toBe(1);
-    expect(unitValue('coins', [], prices)).toBe(1);
-    // A steel bar is on no bill line. It has the premium while the bill is short of cannonballs, and the surplus half
-    // with the cannonball line met, with another line short, or with no bill.
+    expect(unitValue('Feather', [row('feathers', 0)], prices)).toBe(0);
+    expect(unitValue('coins', [], prices)).toBe(0);
+    expect(unitValue('coins', [row('coins', 10)], prices)).toBe(1);
+    // Steel bars are useful while cannonballs are short, and have no value with that line met.
     const bars = { 'steel bar': 100, cannonball: 5 };
     expect(unitValue('Steel bar', [row('cannonball', 1700)], bars)).toBe(200);
-    expect(unitValue('Steel bar', [row('cannonball', 0)], bars)).toBe(50);
-    expect(unitValue('Steel bar', [row('cannonball', 0), row('iron bar', 2)], bars)).toBe(50);
-    expect(unitValue('Steel bar', [], bars)).toBe(50);
+    expect(unitValue('Steel bar', [row('cannonball', 0)], bars)).toBe(0);
+    expect(unitValue('Steel bar', [row('cannonball', 0), row('iron bar', 2)], bars)).toBe(0);
+    expect(unitValue('Steel bar', [], bars)).toBe(0);
 });
 
 test('a bill line that no item is named after takes the price of its item ids, so its maker has the value of the line', () => {
@@ -40,10 +43,10 @@ test('a bill line that no item is named after takes the price of its item ids, s
     // An item name keeps the cost of its first item that is not a note; a line with no item id gets no price.
     expect(table).toEqual({ 'unfinished potion': 3, 'mort myre fungi': 7, feather: 2, 'yew shortbow': 400, 'torstol potion (unf)': 25, 'guam potion (unf)': 3, 'mort myre fungu': 7 });
     expect(unitValue('torstol potion (unf)', lines, table)).toBe(50);
-    expect(unitValue('torstol potion (unf)', [line('torstol potion (unf)', [111], 0)], table)).toBe(12.5);
+    expect(unitValue('torstol potion (unf)', [line('torstol potion (unf)', [111], 0)], table)).toBe(0);
     expect(unitValue('Mort myre fungus', lines, table)).toBe(14);
-    // Without the line's own entry the lookup finds no price: the name of the item is "Unfinished potion".
-    expect(unitValue('torstol potion (unf)', lines, priceTable(items, []))).toBe(0);
+    // A missing price keeps a needed output useful, at the fallback value of one before the bill premium.
+    expect(unitValue('torstol potion (unf)', lines, priceTable(items, []))).toBe(2);
     // A second name of a line gets the same price.
     expect(priceTable(items, [{ ...line('unf torstol', [111]), aliases: ['torstol potion (unf)'] }])['torstol potion (unf)']).toBe(25);
 });
@@ -725,17 +728,10 @@ test('a donor that gives a kit item takes no job on that pass', () => {
     expect(giver.reason).toBe('vacant: gives a kit item this pass');
 });
 
-import { COIN_GLUT, COIN_GLUT_VALUE, coinValueFor } from '../src/autopilot';
-test('a side that banks the glut level counts a coin as almost nothing, so a short bill line beats a coin job', () => {
-    expect(coinValueFor(COIN_GLUT - 1)).toBe(1);
-    expect(coinValueFor(COIN_GLUT)).toBe(COIN_GLUT_VALUE);
-    expect(unitValue('coins', [], prices, COIN_GLUT_VALUE)).toBe(COIN_GLUT_VALUE);
+test('held coins cover a finite purchase bill so the planner supplies the missing item', () => {
     const thief = acct('Thief', { Thieving: 99 }, { coin: 5_000_000 }), shortTips = [row('rune arrowtips', 1588)];
-    const pick = (coinValue?: number) => ids(plan(inputs([thief], { bill: shortTips, coinValue })))['Thief'];
-    expect(pick()).toMatch(/^goldfarm@/);
-    expect(pick(COIN_GLUT_VALUE)).toBe('shop-arrowtips');
-    // With nothing else to do, the coin job stays as the last job.
-    expect(ids(plan(inputs([thief], { templates: catalogue().filter(t => t.family === 'goldfarm'), coinValue: COIN_GLUT_VALUE })))['Thief']).toMatch(/^goldfarm@/);
+    expect(ids(plan(inputs([thief], { bill: shortTips })))['Thief']).toBe('shop-arrowtips');
+    expect(ids(plan(inputs([thief], { bill: shortTips, templates: catalogue().filter(t => t.family === 'goldfarm') })))['Thief']).toBe('vacant');
 });
 
 test('a kit buy RESULT with "died":false is not a death, and a real death still is', () => {
@@ -1007,8 +1003,9 @@ test('an account that cannot pay for the batch buys only the start kit', () => {
 // AIO routes (aioTemplates): practice-proved options the plan's `aio` list admits.
 const aioIds = aioTemplates().map(t => t.id);
 const aioPrices = { flax: 5, 'iron ore': 17, 'copper ore': 3, 'tin ore': 3, 'rune essence': 4, 'air rune': 4, 'bow string': 10, 'arrow shaft': 1, 'yew log': 160, 'steel bar': 100 };
+const aioDemand = [...new Set(aioTemplates().flatMap(t => [acct('Demand'), acct('Demand', { Mining: 15 })].flatMap(a => t.yields(a).map(f => f.item))))].map(item => row(item, 10_000));
 const aioInputs = (accounts: Acct[], pilots: string[], extra: Partial<Inputs> = {}): Inputs =>
-    inputs(accounts, { templates: aioTemplates(), bill: [], prices: aioPrices, pilots: new Set(pilots), capacity: CAPACITY, ...extra });
+    inputs(accounts, { templates: aioTemplates(), bill: aioDemand, prices: aioPrices, pilots: new Set(pilots), capacity: CAPACITY, ...extra });
 const sweepKit = { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1, trout: 4, 'bronze pickaxe': 1 };
 
 test('every AIO template is in the catalogue as a pilot that runs the dispatcher with its category first', () => {
@@ -1033,14 +1030,14 @@ test('an unfinished potion is mixed at its Herblore level from one herb and one 
     const brewer = acct('A', { Herblore: 78 }, { torstol: 1, 'vial of water': 1, 'dwarf weed': 5 });
     expect(UNF_POTIONS.map(([herb]) => herb)).toEqual(['guam', 'marrentill', 'tarromin', 'harralander', 'ranarr', 'toadflax', 'irit', 'avantoe', 'kwuarm', 'snapdragon', 'cadantine', 'lantadyme', 'dwarf weed', 'torstol']);
     expect(run(brewer, 'aio-unf-torstol', { bill: short, prices: potionPrices }).template?.id).toBe('aio-unf-torstol');
-    // Twice the price of the line while it is short, half of it after.
+    // Twice the price of the line while it is short, zero after it is met or for a different output.
     expect(run(brewer, 'aio-unf-torstol', { bill: short, prices: potionPrices }).value).toBeCloseTo(0.1 * 25 * 2);
-    expect(run(brewer, 'aio-unf-torstol', { bill: [row('torstol potion (unf)', 0)], prices: potionPrices }).value).toBeCloseTo(0.1 * 25 * 0.5);
-    expect(run(brewer, 'aio-unf-dwarf-weed', { bill: short, prices: potionPrices }).value).toBeCloseTo(0.1 * 70 * 0.5);
+    expect(run(brewer, 'aio-unf-torstol', { bill: [row('torstol potion (unf)', 0)], prices: potionPrices }).value).toBe(0);
+    expect(run(brewer, 'aio-unf-dwarf-weed', { bill: short, prices: potionPrices }).value).toBe(0);
     // A level under the potion, no herb, or no vial: no job.
     for (const a of [acct('A', { Herblore: 77 }, { torstol: 1, 'vial of water': 1 }), acct('A', { Herblore: 78 }, { 'vial of water': 1 }), acct('A', { Herblore: 78 }, { torstol: 1 })])
         expect(run(a, 'aio-unf-torstol', { bill: short, prices: potionPrices }).template).toBeUndefined();
-    expect(jobFor(run(brewer, 'aio-unf-dwarf-weed', { bill: short, prices: potionPrices }), side)).toMatchObject({ script: 'scripts/aio.ts',
+    expect(jobFor(run(brewer, 'aio-unf-dwarf-weed', { bill: [row('dwarf weed potion (unf)', 100)], prices: potionPrices }), side)).toMatchObject({ script: 'scripts/aio.ts',
         args: ['skiller', 'crafting', 'inventory', 'brew:unf_dwarf_weed_potion', `MAX_MAKE=${MAKE_BATCH}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'], repeat: true });
     // The dusts: a pestle and mortar and one horn or scale.
     const dustPrices = { 'unicorn horn dust': 20, 'dragon scale dust': 52 };
@@ -1063,7 +1060,7 @@ test('a ring trip needs its Crafting level, the mould and a whole batch of gold 
         .toEqual(['skiller', 'crafting', 'jewellery-trip', 'RECIPE=diamond_ring', 'TARGET=13', 'BATCH=13', 'CAP=1500']);
     const smith = (level: number, items: Record<string, number>) => acct('A', { Smithing: level }, { hammer: 1, 'runite bar': 1, coin: 10, ...items });
     expect(run(smith(86, {}), 'aio-rune-axe').template?.args).toEqual(['skiller', 'smithing', 'anvil', '1500', 'PRODUCT_ID=1359', 'MAX_MAKE=1', 'BAR_RESERVE=0']);
-    expect(run(smith(86, {}), 'aio-rune-axe').value).toBeCloseTo(0.003 * 12800 * 0.5);
+    expect(run(smith(86, {}), 'aio-rune-axe').value).toBeCloseTo(0.003 * 12800 * 2);
     // A level under the axe, no bar, no hammer, or an axe already held: no job.
     for (const a of [smith(85, {}), smith(86, { 'runite bar': 0 }), smith(86, { hammer: 0 }), smith(86, { 'rune axe': 1 })]) expect(run(a, 'aio-rune-axe').template).toBeUndefined();
 });
@@ -1079,7 +1076,7 @@ test('the two-recipe makers are pilots that run the bank-standing worker twice i
         expect(t.args).toHaveLength(2);
         for (const step of t.args!) expect(step).toMatch(/^scripts\/aio\.ts skiller crafting inventory \S+ MAX_MAKE=\d+ CAP=\d+ MEMBERS=1 ORDER_MODE=best-effort$/);
     }
-    const run = (a: Acct, id: string, pilots = [id]) => plan(inputs([a], { templates: makerChains(), bill: [], prices: { 'yew shortbow': 400, 'uncooked stew': 10 }, pilots: new Set(pilots) }))[0]!;
+    const run = (a: Acct, id: string, pilots = [id]) => plan(inputs([a], { templates: makerChains(), bill: [row('yew shortbow', 1), row('uncooked stew', STEW_BATCH)], prices: { 'yew shortbow': 400, 'uncooked stew': 10 }, pilots: new Set(pilots) }))[0]!;
     const fletcher = (level: number, items: Record<string, number>) => acct('A', { Fletching: level }, { knife: 1, 'yew log': 1, 'bow string': 1, ...items });
     expect(run(fletcher(65, {}), 'make-yew-shortbow').template?.id).toBe('make-yew-shortbow');
     expect(run(fletcher(65, {}), 'make-yew-shortbow', []).template).toBeUndefined();
@@ -1108,9 +1105,9 @@ test('an account under a top-up of rune arrows buys them at the Ranging Guild sh
     const buyer = (name: string, ranged: number, items: Record<string, number>) => acct(name, { Ranged: ranged }, { coin: RUNE_ARROW_SPEND + 2000, ...items });
     const [x] = run([buyer('A', 40, {})]);
     expect(x!.template!.id).toBe('shop-rune-arrows');
-    // ARROW_LOW arrows in the 800 ticks of the cap at twice the shop value, less the coins of a top-up off a full shelf.
+    // Only the 38 needed arrows count over the 1,000-tick planning window; spend scales with that useful work.
     expect(RUNE_ARROW_COST).toBe(Array.from({ length: ARROW_LOW }, (_, k) => 400 + 4 * k).reduce((a, b) => a + b, 0));
-    expect(x!.value).toBeCloseTo(ARROW_LOW / 800 * 400 * 2 - RUNE_ARROW_COST / 800);
+    expect(x!.value).toBeCloseTo((ARROW_LOW / 800 * 400 * 2 - RUNE_ARROW_COST / 800) * 38 / (ARROW_LOW / 800 * 1000));
     expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['dargaud', '800'], resources: ['shop:dargaud'],
         env: { ITEMS: 'rune arrow', STOCK_TARGET: String(ARROW_LOW), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', MAX_SPEND: String(RUNE_ARROW_SPEND), COIN_RESERVE: '500' } });
     // Not admitted, under the level of the guild door, with the top-up held, or with the line met and coins at full worth: no run.
@@ -1170,7 +1167,7 @@ test('Rune Mysteries is planned for the essence mine it unlocks, once, and only 
     const [x] = plan(aioInputs([acct('A', {}, sweepKit)], both));
     expect(x!.template!.id).toBe('aio-quest-runemysteries');
     expect(x!.reason).toBe('completes Rune Mysteries Quest for aio-essence');
-    expect(x!.value).toBeCloseTo(TRAIN_SHARE * 0.03 * 4 * 0.5);
+    expect(x!.value).toBeCloseTo(TRAIN_SHARE * 0.03 * 4 * 2);
     expect(x!.resources).toEqual([AIO_PLACES.essence]);
     expect(jobFor(x!, side)).toMatchObject({ args: ['quester', 'sweep', 'runemysteries'], repeat: false });
     // No essence route admitted, a missing rune, three meals, or no pickaxe for the mine: no quest run.
@@ -1956,7 +1953,7 @@ test('an account at Taverley with 1 coin gets the ferry fare for a knight spot f
 });
 
 test('an account with 10 Hitpoints gets no job behind White Wolf Mountain', () => {
-    const flax = { templates: only('aio-flax'), pilots: new Set(['aio-flax']), prices: { ...prices, flax: 5 } };
+    const flax = { templates: only('aio-flax'), pilots: new Set(['aio-flax']), bill: [row('flax', 1000)], prices: { ...prices, flax: 5 } };
     const weak = at(acct('Weak', { Thieving: 99, Hitpoints: 10 }, { coin: 2_000_000, cake: 2 }), DRAYNOR);
     expect(plan(inputs([weak], { ...flax, mountain: () => false, donors: big }))[0]!.template).toBeUndefined();
     // An account the walker lets over the mountain gets the job, and so does the weak account once it stands in Kandarin.
