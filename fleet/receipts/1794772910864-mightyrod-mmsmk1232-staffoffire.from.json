@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794772910864-mightyrod-mmsmk1232-staffoffire",
  "account": "Mightyrod",
  "partner": "mmsmk1232",
@@ -12,6 +12,20 @@
  "claim": "0690231e-804a-49b1-a978-daba342d1d51",
  "count": 0,
  "ok": false,
- "at": 1794772923351,
- "detail": "trade claimed"
+ "at": 1794775314422,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794773207199
+ },
+ "logout": {
+  "attemptId": "1794772923364-0000016236-0000000001",
+  "at": 1794775314407,
+  "sha256": "a12b2a4be37ae8e7d98ea672b1c6939720819ca714040e22e2da59647d65268f"
+ },
+ "screen": false
 }
