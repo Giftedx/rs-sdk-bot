@@ -22,6 +22,7 @@ import { walkTargetPersist } from './walk-to';
 import { PROFILES, maximumUnitCost } from './shop-buyer';
 import { runOwnedSale, saleStopRequested } from './sell-owned-ge-item';
 import { orderPaths } from './buy-owned-ge-item';
+import { gameDialAddress } from '../packages/core/src/websocket-proxy';
 
 const DEMO = 'https://rs-sdk-demo.fly.dev';
 // A tile inside marketTileSafe (scripts/buy-owned-ge-item.ts): the sale starts only from Varrock West.
@@ -103,7 +104,7 @@ const getJson: Get = async url => {
 const toQuote = (j: any): Quote => ({ id: j.id, name: j.name, basePrice: j.basePrice, bid: Number.isSafeInteger(j.bid) && j.bid > 0 ? j.bid : null, buyQuantity: Number.isSafeInteger(j.buyQuantity) ? j.buyQuantity : 0 });
 
 export async function fetchQuote(item: number, get: Get = getJson): Promise<Quote> {
-    const j = await get(`${DEMO}/api/market/items/${item}`);
+    const j = await get(gameDialAddress(`${DEMO}/api/market/items/${item}`));
     if (j?.id !== item || typeof j.name !== 'string' || !Number.isSafeInteger(j.basePrice)) throw Error(`invalid market quote for ${item}`);
     return toQuote(j);
 }
@@ -111,7 +112,7 @@ export async function fetchQuote(item: number, get: Get = getJson): Promise<Quot
 export async function fetchMarket(get: Get = getJson, pause = (ms: number) => Bun.sleep(ms)): Promise<Quote[]> {
     const all: Quote[] = [];
     for (let offset = 0, total = 1; offset < total; offset += 100) {
-        const j = await get(`${DEMO}/api/market/items?limit=100&offset=${offset}`);
+        const j = await get(gameDialAddress(`${DEMO}/api/market/items?limit=100&offset=${offset}`));
         if (!Number.isSafeInteger(j?.total) || !Array.isArray(j.items)) throw Error('invalid market page');
         total = Math.min(j.total, 5000);
         all.push(...j.items.filter((i: any) => Number.isSafeInteger(i?.id) && typeof i.name === 'string' && Number.isSafeInteger(i.basePrice)).map(toQuote));

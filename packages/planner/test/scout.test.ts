@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { parseBoard, boardGaps, observeProfile } from '../src/scout';
+import { parseBoard, boardGaps, observeProfile, fetchBoard } from '../src/scout';
 
 const span = (t: number, s: string) => `<span title="${t.toLocaleString()} ticks" style="font-variant-numeric: tabular-nums">${s}</span>`;
 const PAGE = `<html><body><table><tr>
@@ -43,7 +43,7 @@ test('boardGaps ranks boards by how much faster our plan is than the current #1'
 
 
 test('profile freshness observes the exact lowercase account and rejects a generic 404', async () => {
-    const base='https://rs-sdk-demo.fly.dev', url=base+'/hiscores/player/shaftshooter?profile=main';
+    const base='https://rs-sdk-demo.fly.dev', url='https://rs-sdk.maxbittker.com/hiscores/player/shaftshooter?profile=main';
     const request=(body:string,status:number)=>(async (input:unknown,init:RequestInit)=>{
         expect(input).toBe(url);
         expect(init.redirect).toBe('error');
@@ -53,4 +53,17 @@ test('profile freshness observes the exact lowercase account and rejects a gener
         .toMatchObject({name:'shaftshooter',status:404});
     expect(await observeProfile(base,'Shaftshooter',request('profile',200))).toMatchObject({status:200});
     await expect(observeProfile(base,'Shaftshooter',request('Not Found',404))).rejects.toThrow('invalid 404');
+    expect(base).toBe('https://rs-sdk-demo.fly.dev');
+});
+
+test('public board fetch dials the canonical demo while custom bases and the supplied identity stay intact',async()=>{
+ const original=globalThis.fetch,urls:string[]=[];
+ globalThis.fetch=(async input=>{urls.push(String(input));return new Response(PAGE);}) as typeof fetch;
+ try{
+  const bases=['https://rs-sdk-demo.fly.dev','http://localhost:8888','https://custom.example:7443','https://rs-sdk-demo.fly.dev:443'];
+  for(const base of bases)await fetchBoard(base,0);
+  expect(urls).toEqual(['https://rs-sdk.maxbittker.com/hiscores?category=0&profile=main',
+   ...bases.slice(1).map(base=>base+'/hiscores?category=0&profile=main')]);
+  expect(bases[0]).toBe('https://rs-sdk-demo.fly.dev');
+ }finally{globalThis.fetch=original;}
 });

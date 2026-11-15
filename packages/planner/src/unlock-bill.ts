@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { liveHelperStatuses } from './supply-bill';
 import { MARKET_FILE, marketQuotes } from '../../../scripts/market-cache';
+import { gameDialAddress } from '../../core/src/websocket-proxy';
 import type { Rate } from '../../knowledge/src/ladders';
 
 const root = resolve(import.meta.dir, '../../..');
@@ -194,7 +195,7 @@ export async function marketPrices(base = root, now = Date.now(), get: (url: str
         if (quote && !(saved[n] && saved[n]!.at >= quote.at && saved[n]!.at <= now)) saved[n] = quote;
         if (saved[n] && saved[n]!.at <= now && now - saved[n]!.at < PRICE_TTL_MS) continue;
         try {
-            const r = await get(`https://rs-sdk-demo.fly.dev/api/market/items/${id}`);
+            const r = await get(gameDialAddress(`https://rs-sdk-demo.fly.dev/api/market/items/${id}`));
             saved[n] = { at: now, ask: r.ask ?? null, bid: r.bid ?? null, sell: r.sellQuantity ?? 0 };
         } catch { /* unpriced */ }
         await pause(550);

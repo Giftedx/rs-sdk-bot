@@ -21,6 +21,13 @@ export function narrowConfig(root:string,files:string[],typeRoot:string){
     return {extends:slash(join(root,'tsconfig.json')),compilerOptions:{typeRoots:[slash(typeRoot)]},include:[] as string[],files:files.map(f=>slash(resolve(root,f)))};
 }
 
+export function compilerModules(root:string,mainRoot:()=>string):string|undefined{
+    const local=join(root,'node_modules');
+    if(existsSync(join(local,'typescript','lib','tsc.js')))return local;
+    const main=join(mainRoot(),'node_modules');
+    return existsSync(join(main,'typescript','lib','tsc.js'))?main:undefined;
+}
+
 if(import.meta.main){
     const root=join(import.meta.dir,'..'),argv=process.argv.slice(2),h=argv.indexOf('--heap');
     const heap=h>=0?Number(argv.splice(h,2)[1]):2560;
@@ -36,9 +43,8 @@ if(import.meta.main){
     const files=tsFiles(listed).filter(f=>existsSync(resolve(root,f)));
     if(!files.length){console.log('typecheck-narrow: no changed .ts file, nothing to check');process.exit(0);}
     // A worktree with no install uses the compiler of the main checkout.
-    const main=dirname(resolve(root,git('rev-parse','--git-common-dir').trim()));
-    const modules=[root,main].map(r=>join(r,'node_modules')).find(m=>existsSync(join(m,'typescript','lib','tsc.js')));
-    if(!modules){console.error(`typecheck-narrow: node_modules/typescript is missing in ${root} and in ${main}. Run bun install.`);process.exit(2);}
+    const modules=compilerModules(root,()=>dirname(resolve(root,git('rev-parse','--git-common-dir').trim())));
+    if(!modules){console.error(`typecheck-narrow: node_modules/typescript is missing in ${root} and its main checkout. Run bun install.`);process.exit(2);}
     const dir=join(root,'.practice','typecheck-narrow'),config=join(dir,'tsconfig.json');
     mkdirSync(dir,{recursive:true});
     writeFileSync(config,JSON.stringify(narrowConfig(root,files,join(modules,'@types')),null,1));

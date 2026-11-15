@@ -14,6 +14,7 @@ import { openBot, serverFromEnv, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { RosterFeed } from '../packages/core/src/roster-feed';
+import { gameDialAddress } from '../packages/core/src/websocket-proxy';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
@@ -158,7 +159,7 @@ export class Radar {
 
 export function connectRadar(server: string, radar: Radar) {
     const url = `${isLocalServer(server) ? 'ws' : 'wss'}://${server}/worldfeed`;
-    const socket = new WebSocket(url), feed = new RosterFeed();
+    const socket = new WebSocket(gameDialAddress(url)), feed = new RosterFeed();
     let beat: ReturnType<typeof setInterval> | undefined;
     socket.addEventListener('open', () => {
         socket.send(JSON.stringify({ t: 'roster', on: true }));
@@ -646,7 +647,7 @@ export function makeValuer(server: string, get: (url: string) => Promise<any> = 
         if (cache.has(id)) return cache.get(id)!;
         let price = 0;
         if (!isLocalServer(server)) {
-            try { const r = await get(`https://${server}/api/market/items/${id}`); price = r?.referencePrice ?? r?.lastPrice ?? r?.basePrice ?? 0; }
+            try { const r = await get(gameDialAddress(`https://${server}/api/market/items/${id}`)); price = r?.referencePrice ?? r?.lastPrice ?? r?.basePrice ?? 0; }
             catch { /* market down: cost below */ }
         }
         if (!(price > 0)) price = itemCost(id);

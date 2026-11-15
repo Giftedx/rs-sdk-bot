@@ -13,6 +13,7 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { xpForLevel } from '../packages/planner/src/curve';
+import { gameDialAddress } from '../packages/core/src/websocket-proxy';
 
 const ROOT = join(import.meta.dir, '..');
 const CONTENT = join(ROOT, 'vendor/rs-sdk/server/content');
@@ -286,7 +287,7 @@ async function get(path: string): Promise<any> {
     const wait = last + 500 - Date.now(); // at most 2 requests per second
     if (wait > 0) await Bun.sleep(wait);
     last = Date.now();
-    const res = await fetch(BASE + path, { method: 'GET' });
+    const res = await fetch(gameDialAddress(BASE + path), { method: 'GET' });
     const text = await res.text();
     if (!res.ok) return { error: res.status, body: text.slice(0, 200) };
     return path.startsWith('/api/') ? JSON.parse(text) : text;

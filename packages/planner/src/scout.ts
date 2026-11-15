@@ -1,6 +1,7 @@
 // Reads public hiscore boards and compares our planned scored time with the current #1.
 // Page shape: server/engine/src/web/pages/hiscores.ts:364-370 (rank, name, level and time columns, one
 // value per `<br>`; the time cell carries the exact tick count as `title="N ticks"`).
+import { gameDialAddress } from '../../core/src/websocket-proxy';
 
 export interface BoardRow { rank: number; name: string; level: number; ticks: number }
 
@@ -26,7 +27,7 @@ export function parseBoard(html: string, expectedTickMs?: number): BoardRow[] {
 }
 
 export async function fetchBoard(base: string, category: number, profile = 'main', expectedTickMs?: number): Promise<BoardRow[]> {
-    const res = await fetch(`${base}/hiscores?category=${category}&profile=${profile}`, { signal: AbortSignal.timeout(15_000), cache: 'no-store' });
+    const res = await fetch(gameDialAddress(`${base}/hiscores?category=${category}&profile=${profile}`), { signal: AbortSignal.timeout(15_000), cache: 'no-store' });
     if (!res.ok) throw new Error(`hiscores ${category}: HTTP ${res.status}`);
     return parseBoard(await res.text(), expectedTickMs);
 }
@@ -34,7 +35,7 @@ export async function fetchBoard(base: string, category: number, profile = 'main
 export async function observeProfile(base:string,name:string,request:typeof fetch=fetch){
     const account=name.toLowerCase();
     if(!/^[a-z0-9]{1,12}$/.test(account))throw Error('invalid fresh account name');
-    const response=await request(base+'/hiscores/player/'+account+'?profile=main',
+    const response=await request(gameDialAddress(base+'/hiscores/player/'+account+'?profile=main'),
         {signal:AbortSignal.timeout(15_000),cache:'no-store',redirect:'error'});
     if(response.status===404){
         if(await response.text()!==`Player "${account}" not found.`)throw Error('hiscore profile '+account+': invalid 404 response');

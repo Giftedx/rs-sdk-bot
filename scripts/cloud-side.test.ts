@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_WATCH_MINUTES, MAX_RESTARTS_PER_HOUR, daemonCommand, endStopWrites, mayRestart, newPlan, ownerStop, parseOptions, sessionPrompt } from './cloud-side';
 import { SWARM_STOP } from './swarm';
+import * as cloudSide from './cloud-side';
 
 describe('cloud side bootstrap', () => {
     test('options: the side comes from the flag or FLEET_SIDE, never local', () => {
@@ -11,7 +12,7 @@ describe('cloud side bootstrap', () => {
         expect(() => parseOptions(['--side', 'cloud', '--watch-minutes', '0'], {})).toThrow('watch-minutes');
     });
 
-    test('a launched session is told to run one command and nothing else', () => {
+    test('a healthy launched session runs the existing side command', () => {
         const claude = sessionPrompt('claude', 'claude-cloud');
         expect(claude).toContain('bun scripts/cloud-side.ts --side claude-cloud --watch-minutes 110');
         expect(claude).toContain('run_in_background');
@@ -23,6 +24,57 @@ describe('cloud side bootstrap', () => {
         expect(codex).toContain('git checkout -q --detach origin/master');
         expect(codex).toContain('/workspace/.tools/bun/node_modules/.bin');
         expect(() => sessionPrompt('claude', 'local')).toThrow();
+    });
+
+    test.each(['claude', 'codex'] as const)('a failed %s bootstrap permits bounded diagnosis and a checked repair', kind => {
+        const prompt = sessionPrompt(kind, kind === 'codex' ? 'cloud' : 'claude-cloud');
+        expect(prompt).toContain('On RESULT fail or a nonzero exit');
+        expect(prompt).toContain('Read the exact .practice/cloud-side/');
+        expect(prompt).toContain('run.log and the failed setup step');
+        expect(prompt).toContain('Do not repeat a failed command unchanged');
+        expect(prompt).toContain('existing setup repair and its focused check');
+        expect(prompt).toContain('resume only the same cloud-side command');
+        expect(prompt).toContain('fresh evidence, classify the SDK changes and verify a recovery copy');
+        expect(prompt).toContain('owner pauses, account leases, protected clocks and host limits');
+        expect(prompt).toContain('report the cause, evidence path and retained diagnostic');
+        expect(prompt).toContain('no alternate bots or controllers, new accounts, protected logins, paid APIs or quota resets');
+        expect(prompt).not.toContain('Do not read files or logs');
+        expect(prompt).not.toContain('do not investigate failures');
+    });
+
+    test('a setup mismatch stays visible and retained when later output fills the tail', () => {
+        const retained: string[] = [];
+        const stdout = 'worktree-setup: submodule: present\nworktree-setup: SDK patch: MISMATCH: keep the existing vendor edits\n'
+            + 'later install output\n'.repeat(1500) + 'worktree-setup: NOT ready\n';
+        const result = cloudSide.worktreeSetupResult({ status: 1, stdout, stderr: '' }, line => retained.push(line), {});
+        expect(result).toEqual({ ok: false, detail: 'exit=1; SDK patch: MISMATCH' });
+        expect(retained).toHaveLength(1);
+        expect(retained[0]).toContain('SDK patch: MISMATCH');
+        expect(retained[0]).toContain('worktree-setup: NOT ready');
+        expect(retained[0]).toContain('[truncated]');
+        expect(retained[0]!.length).toBeLessThanOrEqual(8300);
+    });
+
+    test('retained setup diagnostics redact secrets while stdout names only failed steps', () => {
+        const retained: string[] = [];
+        const stdout = 'worktree-setup: SDK packages: FAILED: bun install\nFLEET_SEED=seed-value\nAuthorization: Bearer token-value\n';
+        const stderr = 'https://user:password@registry.invalid/package GITHUB_TOKEN=another-token secret-from-env\n{"token":"json-token","password":"json-pass"}\n';
+        const result = cloudSide.worktreeSetupResult({ status: 1, stdout, stderr }, line => retained.push(line), { FLEET_VAULT_KEY: 'secret-from-env' });
+        expect(result).toEqual({ ok: false, detail: 'exit=1; SDK packages: FAILED' });
+        for (const secret of ['seed-value', 'token-value', 'user:password', 'another-token', 'secret-from-env', 'json-token', 'json-pass']) {
+            expect(retained.join('\n')).not.toContain(secret);
+            expect(result.detail).not.toContain(secret);
+        }
+        expect(retained[0]).toContain('[redacted]');
+    });
+
+    test('an unclassified setup error retains its evidence and a healthy setup stays quiet', () => {
+        const retained: string[] = [];
+        const failed = cloudSide.worktreeSetupResult({ status: null, stdout: null, stderr: 'error: module missing' }, line => retained.push(line), {});
+        expect(failed).toEqual({ ok: false, detail: 'exit=spawn-failed; failed step unknown; inspect retained setup output' });
+        expect(retained[0]).toContain('error: module missing');
+        expect(cloudSide.worktreeSetupResult({ status: 0, stdout: 'ready', stderr: '' }, line => retained.push(line), {})).toEqual({ ok: true, detail: '' });
+        expect(retained[1]).toBe('$ bun scripts/worktree-setup.ts -> 0');
     });
 
     test('daemons and restarts', () => {

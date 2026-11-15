@@ -1,4 +1,4 @@
-import {installGameWebSocketProxy} from './websocket-proxy';
+import {gameDialAddress,installGameWebSocketProxy} from './websocket-proxy';
 import { appendFileSync, existsSync, mkdirSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
@@ -530,7 +530,7 @@ export function loginJitterFor(host: string): number | undefined {
 
 // The shim has no gateway connection, but SDK market reads still need the game HTTP origin.
 export function inProcessSdkConfig(opts: {name:string;password:string;server?:string}): SDKConfig {
-    const host=opts.server??'localhost:8888';
+    const host=gameDialAddress(opts.server??'localhost:8888');
     return {botUsername:opts.name,password:opts.password,autoLaunchBrowser:false,autoReconnect:false,
         browserLaunchUrl:`${isLocalServer(host)?'http':'https'}://${host}/bot`};
 }
@@ -673,7 +673,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     };
     try {
         session = await startSession({
-        host,
+        host: gameDialAddress(host),
         username: opts.name,
         password: opts.password,
         cacheDir,

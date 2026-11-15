@@ -10,6 +10,7 @@
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { RosterFeed } from '../../packages/core/src/roster-feed';
+import { gameDialAddress } from '../../packages/core/src/websocket-proxy';
 
 // The name, combat level and worn objects of a feed appearance block (the server's player_info appearance,
 // engine/entity/Player.ts generateAppearance): a worn item is 0x200 + its obj id in its wear slot, an empty slot one 0
@@ -158,7 +159,7 @@ if (import.meta.main) {
         const sockets: (WebSocket | undefined)[] = [];
         let done = false, ticks = 0;
         const connect = (r: number) => {
-            const ws = new WebSocket(process.env.FEED_URL ?? 'wss://rs-sdk-demo.fly.dev/worldfeed'), feed = new RosterFeed();
+            const ws = new WebSocket(process.env.FEED_URL ?? gameDialAddress('wss://rs-sdk-demo.fly.dev/worldfeed')), feed = new RosterFeed();
             sockets[r] = ws;
             ws.onopen = () => { ws.send(JSON.stringify({ t: 'sub', ...rects[r] })); if (r === 0) ws.send(JSON.stringify({ t: 'roster', on: true })); };
             ws.onmessage = e => {
