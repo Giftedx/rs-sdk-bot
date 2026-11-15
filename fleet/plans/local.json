@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794708687715,
+ "at": 1794709078816,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -112,21 +112,25 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -169,19 +173,22 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=44 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit8-536-0to44 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 44 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
    "autopilot": "local",
    "resources": []
   },
