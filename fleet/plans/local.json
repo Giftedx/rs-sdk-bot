@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794703989474,
+ "at": 1794704386238,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -112,21 +112,25 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -169,20 +173,28 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "MineYourBiz",
@@ -423,25 +435,21 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2653,3300"
    ]
   },
   {
