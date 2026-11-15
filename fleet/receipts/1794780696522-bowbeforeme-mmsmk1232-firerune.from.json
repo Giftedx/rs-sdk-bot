@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794780696522-bowbeforeme-mmsmk1232-firerune",
  "account": "BowBeforeMe",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 250,
  "claim": "c234231c-ad47-427c-b88b-fce7333340f7",
- "count": 0,
- "ok": false,
- "at": 1794780703287,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1794780740957,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1794780724935
+ },
+ "logout": {
+  "attemptId": "1794780703296-0000034836-0000000001",
+  "at": 1794780740943,
+  "sha256": "da49ec858d31efda322e1c4fc137bbcc110292d47150d31139a017351dbac994"
+ },
+ "screen": true
 }
