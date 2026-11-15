@@ -1440,9 +1440,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // The box is written only when its text changes. The infoboxes sit below the box, whatever its height.
     const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;const ib=hud.querySelector('.game-infoboxes');if(ib&&el.offsetHeight)ib.style.top=el.offsetTop+el.offsetHeight+4+'px';}};
     const line=(k,v)=>`<div><span>${E(k)}</span><b>${E(v)}</b></div>`;
-    // The race the team runs, under every state of the box: the boards it holds at #1 and the board nearest to #1.
+    // Owner targets come from the goal ledger. Public hiscores describe observations without an all-board target.
     const ranked=(S.boards||[]).filter(x=>x.best?.rank),near=ranked.filter(x=>x.gap&&!x.gap.ahead&&x.best.rank>1).sort((a,b)=>(b.gap.close||0)-(a.gap.close||0))[0];
-    const race=ranked.length?'<h4 class="race">Race to #1</h4>'+line('Boards at #1',ranked.filter(x=>x.best.rank===1).length+' / '+S.boards.length)+(near?line('Closest',near.board+' '+Math.round((near.gap.close||0)*100)+'%'):''):'';
+    const goals=window.atlasOperator()?S.scoreboard?.goals:null,now=Number.isFinite(S.hosted?.at)&&Number.isFinite(S.hostedAge)?S.hosted.at+S.hostedAge:Number.isFinite(S.now)?S.now:Date.now(),recent=at=>Number.isFinite(at)&&at>0&&at<=now&&now-at<3600000;
+    const main=goals?.main,mainRank=main?.rank==null?'Rank unknown':recent(main.rankAt)?'#'+nf(main.rank):'Rank stale';
+    const held=new Set((goals?.specialists?.rank1s||[]).filter(r=>recent(r.at)).map(r=>String(r.board).toLowerCase())).size;
+    const race=goals?.version===1?'<h4 class="race">Project goals</h4>'+line('Main Overall',mainRank)+line('Specialist #1s',held+' observed')+line('Quests',(goals.quests?.complete??'—')+' / '+(goals.quests?.total??'—'))+line('Maxed tribrids',(goals.army?.maxed??'—')+' / '+(goals.army?.roster?.length??'—')):ranked.length?'<h4 class="race">Hiscores</h4>'+line('Boards at #1',ranked.filter(x=>x.best.rank===1).length)+(near?line('Closest',near.board+' '+Math.round((near.gap.close||0)*100)+'%'):''):'';
     // The 3D camera on another player (a lookup's Follow in 3D): what the page knows of them, from the lookup.
     const other=window.atlasFollowOther;
     if(other){const l=S.lookups?.[other.toLowerCase()],ov=l?.rows?.find(r=>r.board==='Overall'),seen=S.roster?.find(r=>String(r[0]).toLowerCase()===other.toLowerCase());

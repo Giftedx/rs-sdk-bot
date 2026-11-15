@@ -30,8 +30,8 @@
 // On a checkout that is current, an unpatched vendor/rs-sdk gets the patch, with the same waits, and a vendor/rs-sdk
 // with other edits gets a RESULT line that names it.
 //
-// After the move it writes .practice/live-update.json (packages/core/src/live-reload.ts). The fleet agent and the
-// autopilot restart themselves from it. The coordinator gets its reload request (`coordinator-cli.ts --restart`,
+// After the move it writes .practice/live-update.json (packages/core/src/live-reload.ts). The fleet agent, autopilot,
+// dashboard collector and publisher restart themselves from it. The coordinator gets its reload request (`coordinator-cli.ts --restart`,
 // which keeps its children). The coordinator restarts the swarm itself when the swarm's files change (ensureSwarm).
 // This file is tooling: runtime code starts it as a process and never imports it (packages/core/src/worker-release.ts).
 //
@@ -40,7 +40,7 @@ import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { liveUpdateFile, type LiveUpdateMark } from '../../core/src/live-reload';
+import { writeLiveUpdate, type LiveUpdateMark } from '../../core/src/live-reload';
 import { releaseEntries, runtimeTrees, standingAccounts, standingPeer, workerSourceRoots } from '../../core/src/worker-release';
 import { patchNewFiles, patchState, type PatchState } from '../../../scripts/worktree-setup';
 
@@ -457,10 +457,12 @@ export function liveRuns(root: string, server: string, closure: (entries: string
 // A live session rewrites its status every few seconds, and the server drops a lost session after 200 s.
 export const LIVE_ROW_MS = 200_000, LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 
-const DAEMONS: Record<string, string[]> = {
+export const DAEMONS: Record<string, string[]> = {
     coordinator: ['packages/router/src/coordinator-cli.ts'],
     autopilot: ['scripts/autopilot.ts'],
     'fleet-agent': ['scripts/fleet-agent.ts'],
+    dashboard: ['packages/dashboard/server.ts'],
+    'dashboard-publish': ['packages/dashboard/publish.ts'],
 };
 
 if (import.meta.main) {
@@ -546,7 +548,7 @@ if (import.meta.main) {
             const closures = Object.fromEntries(Object.entries(DAEMONS).map(([name, starts]) => [name, [...before[name]!, ...importClosure(starts, root)]]));
             const reload = reloadsFor(checkout.incoming, closures), to = git('rev-parse', '--short', 'HEAD').out;
             const mark: LiveUpdateMark = { at: Date.now(), from, to, files: checkout.incoming.length, reload };
-            writeFileSync(liveUpdateFile(root), JSON.stringify(mark));
+            writeLiveUpdate(root, mark);
             if (reload.includes('coordinator')) {
                 let pid = 0; try { pid = JSON.parse(readFileSync(join(root, '.practice', 'coordinator', 'owner.json'), 'utf8')).pid; } catch { /* no coordinator ran here */ }
                 let alive = false; try { if (pid) { process.kill(pid, 0); alive = true; } } catch { /* gone: the watchdog starts current code */ }

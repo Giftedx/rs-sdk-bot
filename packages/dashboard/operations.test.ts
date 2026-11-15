@@ -7,6 +7,15 @@ const healthSource=shell.slice(shell.indexOf('  function recordedHp('),shell.ind
 const currentHp=new Function('window',`${healthSource};return currentHp;`)({});
 const recordedHp=new Function('window',`${healthSource};return recordedHp;`)({});
 const now=1_000_000;
+
+test('the command centre names owner goal gaps and opens Project goals',()=>{
+ const source=operations.slice(operations.indexOf(' function operations(){'),operations.indexOf(' // Why a new bot'));
+ const scoreboard={available:true,remaining:['Main rank unknown','Quest gap'],quests:{live:45,total:68},goals:{version:1,done:false}};
+ const html=new Function('S','bots','issues','meta','page','title','startBlock','E','incidentCards','badge','button','age','metaError','message',`${source};return operations();`)
+  ({scoreboard},()=>[],()=>[],null,(s:string)=>s,()=>'',()=>'',String,()=>'',()=>'',()=>'',String,'','');
+ expect(html).toContain('goal gaps');expect(html).toContain('quests 45 / 68 live');
+ expect(html).toContain('data-value="goals"');expect(html).not.toContain('board goals left');
+});
 function publicRow(bot:any,withHelper=true){
  const code=operations.slice(operations.indexOf(' function publicRow('),operations.indexOf(' function fleet(){'));
  const window=withHelper?{atlasCurrentHp:(b:any)=>currentHp(b,now)}:{};
