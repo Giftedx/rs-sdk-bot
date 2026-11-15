@@ -1,6 +1,6 @@
 // Focused local proof reader. Layout: engine/entity/PlayerLoading.ts; CRC: presets-mm.ts. Version 10 appends
 // millisecond playtimes after the parts read here, so versions 5-10 share this layout.
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,realpathSync} from 'node:fs';
 import {basename,dirname,resolve} from 'node:path';
 function checked(b:Buffer){if(b.length<140||b.readUInt16BE(0)!==0x2004)throw new Error('invalid local player save');if((Bun.hash.crc32(b.subarray(0,-4))>>>0)!==b.readUInt32BE(b.length-4))throw new Error('local player save CRC mismatch');return b;}
 function bytes(path:string){return checked(readFileSync(path));}
@@ -18,10 +18,11 @@ export function parsePracticeSave(raw:Uint8Array){
 }
 // Only a just-generated practice fixture may receive exact source XP. Never reads live credentials.
 export function setPracticeSkills(path:string,skills:{level:number;xp:number}[]){
- if(dirname(resolve(path))!==resolve(import.meta.dir,'../../vendor/rs-sdk/server/engine/data/players/main')||!/^fl[a-z0-9]+\.sav$/i.test(basename(path))||skills.length!==21)throw new Error('requires generated fleet practice save and21skills');
+ const canonical=realpathSync(path),practice=realpathSync(resolve(import.meta.dir,'../../vendor/rs-sdk/server/engine/data/players/main'));
+ if(dirname(canonical)!==practice||!/^fl[a-z0-9]+\.sav$/i.test(basename(path))||!/^fl[a-z0-9]+\.sav$/i.test(basename(canonical))||skills.length!==21)throw new Error('requires generated fleet practice save and21skills');
  // The saved byte is the current level. Prayer can be drained to zero while
  // its XP still gives a base level of 43. Living fixtures still need positive HP.
- const b=bytes(path);for(const [i,s] of skills.entries()){if(!Number.isSafeInteger(s.xp)||s.xp<0||!Number.isSafeInteger(s.level)||(i===3?s.level<1:s.level<0)||s.level>99)throw new Error('invalid exact practice skill');b.writeInt32BE(s.xp*10,28+i*5);b.writeUInt8(s.level,32+i*5);}b.writeUInt32BE(Bun.hash.crc32(b.subarray(0,-4))>>>0,b.length-4);writeFileSync(path,b);
+ const b=bytes(canonical);for(const [i,s] of skills.entries()){if(!Number.isSafeInteger(s.xp)||s.xp<0||!Number.isSafeInteger(s.level)||(i===3?s.level<1:s.level<0)||s.level>99)throw new Error('invalid exact practice skill');b.writeInt32BE(s.xp*10,28+i*5);b.writeUInt8(s.level,32+i*5);}b.writeUInt32BE(Bun.hash.crc32(b.subarray(0,-4))>>>0,b.length-4);writeFileSync(canonical,b);
 }
 
 // Logout acknowledgement can precede the engine's final .sav publication.
