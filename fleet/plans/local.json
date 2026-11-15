@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794785499961,
+ "at": 1794785741626,
  "jobs": [
   {
    "account": "Balls",
@@ -163,6 +163,90 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "2351",
+    "QUANTITY": "2",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "9999",
+    "CASH_RESERVE": "1500000",
+    "ORDER_KEY": "bigpackage-overall-ironbars2",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-e13249d1-e91b-4726-9b36-9642bc437a3f"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-bigpackage-ironbars2-capacity [task-e13249d1-e91b-4726-9b36-9642bc437a3f]",
+   "role": "supply"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "1619",
+    "QUANTITY": "3",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "66666",
+    "CASH_RESERVE": "3500000",
+    "ORDER_KEY": "pickpockdick-overall-uncutruby3",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-06f236c5-1f89-4a14-b865-896a5da0e0f4"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-pickpockdick-uncutruby3-capacity [task-06f236c5-1f89-4a14-b865-896a5da0e0f4]",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "245",
+    "QUANTITY": "13",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "19999",
+    "CASH_RESERVE": "9000000",
+    "ORDER_KEY": "pocketrocket-overall-zammywine13",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-8ad5e2bd-02b6-4fb2-8457-27afc9d5b562"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-pocketrocket-zammywine13-capacity [task-8ad5e2bd-02b6-4fb2-8457-27afc9d5b562]",
+   "role": "supply"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "231",
+    "QUANTITY": "6",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "149683",
+    "CASH_RESERVE": "3800000",
+    "ORDER_KEY": "moneyshot-overall-snape6",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-07b1947c-8d88-4e7c-bbbd-b150720c88d0"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-moneyshot-snape6-capacity [task-07b1947c-8d88-4e7c-bbbd-b150720c88d0]",
    "role": "supply"
   }
  ],
