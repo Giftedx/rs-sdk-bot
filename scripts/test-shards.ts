@@ -3,6 +3,8 @@
 // The number of shards is n at most, capped by CPU capacity and memory above the floor (scripts/heavy-admission.ts).
 // --changed runs only the test files that a change since <git ref> can reach (affectedTests below).
 // TEST_SHARDS_JUNIT=<path prefix> also writes a JUnit file for each shard, to measure the time of each file.
+// Windows runs each file in a fresh process inside its shard. Bun 1.3.14's cached sync-spawn clock can otherwise
+// spend a child's timeout on idle time in another file. The shard count still bounds concurrent processes.
 // A file that fails in a shard runs once more alone: a test that fails only beside other processes then passes,
 // and a real failure fails twice and is reported.
 import { Glob } from 'bun';
@@ -84,10 +86,21 @@ export function failedFiles(output: string): string[] {
 
 // A test with no limit of its own gets 20 s, not the default 5 s: beside other shards a test that takes 3 s alone
 // can take 6 s, and that is load, not a hang.
-async function run(files: string[]): Promise<{ code: number; output: string }> {
+export async function runShard(files: string[]): Promise<{ code: number; output: string; unknownFailure: boolean }> {
+    if (process.platform === 'win32' && files.length > 1) {
+        let code = 0, output = '', unknownFailure = false;
+        for (const file of files) {
+            const result = await runShard([file]);
+            if (result.code !== 0) code = 1;
+            unknownFailure ||= result.unknownFailure;
+            output += result.output;
+        }
+        return { code, output, unknownFailure };
+    }
     const child = Bun.spawn(['bun', 'test', '--timeout', '20000', ...(process.env.TEST_SHARDS_JUNIT ? ['--reporter=junit', `--reporter-outfile=${process.env.TEST_SHARDS_JUNIT}-${++runs}.xml`] : []), ...files.map(f => `./${f}`)], { cwd: root, env: { ...process.env }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
     const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
-    return { code, output: out + err };
+    const output = out + err;
+    return { code, output, unknownFailure: code !== 0 && !failedFiles(output).length };
 }
 
 if (import.meta.main) {
@@ -124,13 +137,13 @@ if (import.meta.main) {
     const free = freeGB(), floor = floorGB(root), cpu = cpuCapacity(), memory = unitsThatFit(count, TEST_SHARD_GB, free, floor);
     const shards = shardCount(count, free, floor, cpu);
     if (shards < count) console.log(`test-shards: ${shards} shards in place of ${count}: CPU capacity ${cpu}, memory allows ${memory} (${free.toFixed(1)} GiB free, ${floor} GiB floor; scripts/heavy-admission.ts)`);
-    const results = files.length ? await Promise.all(shard(files, shards, seconds).map(run)) : [];
+    const results = files.length ? await Promise.all(shard(files, shards, seconds).map(runShard)) : [];
     for (const r of results) process.stdout.write(r.output);
     const again = [...new Set(results.filter(r => r.code !== 0).flatMap(r => failedFiles(r.output)))];
-    const unknown = results.some(r => r.code !== 0 && !failedFiles(r.output).length);
+    const unknown = results.some(r => r.unknownFailure);
     let failed = unknown ? ['a shard exited with an error and named no failed test'] : [];
     for (const file of again) {
-        const r = await run([file]);
+        const r = await runShard([file]);
         process.stdout.write(`\n--- alone: ${file}\n${r.output}`);
         if (r.code !== 0) failed.push(file);
     }
