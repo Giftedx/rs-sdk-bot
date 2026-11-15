@@ -27,7 +27,7 @@
    kpi(c.counts?.running??'—','jobs marked running',(c.counts?.pending??'—')+' waiting · queue '+(c.fresh?'fresh':'stale'),'jobs-open','running',c.available&&!c.fresh)+
    kpi(c.counts?.failed??'—','failed jobs','retained in the queue','jobs-open','failed')+
    kpi(cap?.headroomGB!=null?cap.headroomGB.toFixed(1):'—','GiB RAM headroom',(cap?.active??'—')+' / '+(cap?.cap??'—')+' bots · '+(cap?.freeGB!=null?cap.freeGB.toFixed(1):'—')+' GiB free','open','machine',cap?.headroomGB<0)+
-   kpi(board?.available?(board.done?'done':board.remaining.length):'—','board goals left',board?.available?'quests '+(board.quests.live??'—')+' / '+(board.quests.total??'—')+' live':'scoreboard not available','open','boards')+
+   kpi(board?.goals?.version===1?(board.done?'done':board.remaining.length):'—','goal gaps',board?.available?'quests '+(board.quests.live??'—')+' / '+(board.quests.total??'—')+' live':'scoreboard not available','open','goals')+
    kpi(late.length,'fleet sides late',sides.length?sides.map(x=>x.side+' '+(x.at?age(x.at):'never')).join(' · '):'no fleet-data snapshot','fleet-open','all',late.length>0)+
    kpi(meta?.controllers?down.length:'—','controllers down',meta?.controllers?ctl.map(x=>x.label+' '+(x.state==='down'?'down'+(x.seenAt?', seen '+age(x.seenAt)+' ago':''):x.state==='stopped'?'stopped by owner':x.state==='never'?'not used here':'running')).join(' · '):'checking','open','machine',down.length>0)+
    '</div>'+incidentCards()+

@@ -32,11 +32,13 @@ import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
 import { RosterFeed } from '../core/src/roster-feed';
 import { gameDialAddress } from '../core/src/websocket-proxy';
+import { reloadDue, respawnDaemon } from '../core/src/live-reload';
 import { canonicalSnapshots, ownerOfIn } from '../core/src/fleet-snapshots';
 import { marketRows, writeMarketCache, type MarketItem } from '../../scripts/market-cache';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 // DASH_ROOT lets a server in a worktree read the data of another checkout.
+const sourceRoot = resolve(import.meta.dir, '..', '..'), startedAt = Date.now();
 const root = resolve(process.env.DASH_ROOT ?? join(import.meta.dir, '..', '..'));
 const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
 const practice = join(root, '.practice');
@@ -1306,7 +1308,7 @@ function viewerAsset(pathname:string):Response|null {
         return new Response(Bun.file(file),{headers:{...VIEWER_ISO,'cache-control':route.root==='static'?'public,max-age=3600':'no-cache'}});
     }catch{return new Response('not found',{status:404});}
 }
-Bun.serve({
+const dashboardServer = Bun.serve({
     hostname: HOST,
     port: PORT,
     idleTimeout: 0,
@@ -1388,5 +1390,18 @@ Bun.serve({
         return new Response('not found', { status: 404 });
     },
 });
+// Reload the collector's imported code as well as the files the browser reads from disk.
+const reloadTimer = setInterval(async () => {
+    if (!reloadDue(sourceRoot, 'dashboard', startedAt)) return;
+    clearInterval(reloadTimer);
+    const stopped = dashboardServer.stop();
+    // SSE streams otherwise keep graceful shutdown open. Let ordinary requests finish before exiting.
+    for (const client of clients) { try { client.close(); } catch { /* already closed */ } }
+    clients.clear();
+    await stopped;
+    const pid = respawnDaemon(sourceRoot, [join(sourceRoot, 'packages/dashboard/server.ts'), ...process.argv.slice(2)], join(sourceRoot, '.practice/dashboard.out.log'));
+    console.log(`dashboard: reload after a live update: successor pid ${pid}`);
+    process.exit(0);
+}, 5_000);
 // The listening host, not "localhost": that name can resolve to ::1 first on this PC, and HOST is IPv4.
 console.log(`dashboard: http://${HOST}:${PORT} (listening on ${HOST})`);
