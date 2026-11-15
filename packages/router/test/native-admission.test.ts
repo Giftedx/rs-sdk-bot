@@ -56,6 +56,27 @@ test('only audited saved-result commands can run without a practice turn',()=>{
  }
 });
 
+test('the declared Scorpion saved consumer accepts only audited bounded case selectors',()=>{
+ const check=deliveryTask('quest-sweep').checks.find(c=>c.id==='quest-sweep-saved')!;
+ expect(isSavedProofVerifier(check)).toBe(true);
+ const base=['bun','packages/practice/src/quest-sweep-proof.ts','--verify'];
+ const cases=['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal'];
+ for(const id of cases)expect(isSavedProofVerifier({...check,command:[...base,`--case=${id}`]})).toBe(true);
+ expect(isSavedProofVerifier({...check,command:[...base,...cases.map(id=>`--case=${id}`)]})).toBe(true);
+ for(const extra of [
+  ['--case='],['--case=unknown'],['--case=ball-worn-kit'],['--case'],['scorpion-barcrawl'],
+  ['--case','scorpion-barcrawl'],['--case=scorpion-barcrawl','--case=scorpion-barcrawl'],
+  ['--case=scorpion-barcrawl','--snapshot'],['--case=scorpion-barcrawl','--verify'],
+  [...cases.map(id=>`--case=${id}`),'--case=other'],
+ ])expect(isSavedProofVerifier({...check,command:[...base,...extra]})).toBe(false);
+ expect(isSavedProofVerifier({...check,phase:'practice'})).toBe(false);
+ expect(isSavedProofVerifier({...check,id:'other-consumer'})).toBe(false);
+ expect(isSavedProofVerifier({...check,command:['bun','scripts/other.ts','--verify','--case=scorpion-barcrawl']})).toBe(false);
+ expect(isSavedProofVerifier({...check,command:['bun',base[1]!,'--case=scorpion-barcrawl','--verify']})).toBe(false);
+ const other=deliveryTask('prayer-order').checks.find(c=>c.phase==='consumer')!;
+ expect(isSavedProofVerifier({...other,command:[...other.command,'--case=scorpion-barcrawl']})).toBe(false);
+});
+
 test('an expired practice queue wait preserves the host-deferral path without running a check',async()=>{
  const f=fixture(),file=join(mkdtempSync(join(tmpdir(),'native-turn-defer-')),'turn.lock');
  writeFileSync(file,JSON.stringify({pid:999999,at:0}));
