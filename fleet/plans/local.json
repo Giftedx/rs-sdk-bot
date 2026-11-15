@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794717057507,
+ "at": 1794719162115,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -138,7 +138,7 @@
     "CAP": "6000",
     "COORDINATOR_RUN_ID": "task-11e07527-d0b6-413c-9c2a-21f27e56b097"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-scorpion-bigchopper-controller-handoff [task-11e07527-d0b6-413c-9c2a-21f27e56b097]",
    "role": "helper"
@@ -155,7 +155,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-98a7cf6b-a890-4019-aac5-217ce2a36ee1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-plague-masterbaiter-biohazard-gate [task-98a7cf6b-a890-4019-aac5-217ce2a36ee1]",
    "role": "helper"
