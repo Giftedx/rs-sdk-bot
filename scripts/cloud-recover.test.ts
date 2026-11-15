@@ -8,6 +8,7 @@ import { accountDir, DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session
 import { RECOVERY_SCRIPT } from '../packages/core/src/session-recovery-permit';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 import { recoveryPlanningProblem, requestRecoveryPlanning, type RecoveryPlanningProblem } from './cloud-recover';
+import { readRecoveryProblems } from '../packages/router/src/coordinator-planner';
 
 const held: LogoutProof = { state: 'held', account: 'kiltlifter', server: 'rs-sdk-demo.fly.dev', domain: 'live', attemptId: 'a', reason: 'disconnected' };
 const claim: ClaimView = { phase: 'held', kind: 'swarm', pid: 41, host: 'box' };
@@ -292,6 +293,31 @@ test('equivalent recovery failures wake the existing planner once; changed sourc
         rmSync(signal);
         expect(requestRecoveryPlanning(root, { ...problem, failures: [{ ...problem.failures[0]!, error: 'native proof could not reach logout' }] })).toBe(true);
         expect(existsSync(join(root, '.practice/cloud-recover/planning'))).toBe(true);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a new settled recovery failure remains visible after qualification hides the same older fault', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-fresh-feedback-')), account = 'Bigchopper', endedAt = 1794718686078;
+    const end = { at: endedAt, reason: 'gave-up after 1 runs' }, error = 'Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry';
+    const failed = (id: string, at: number) => ({ ...task(id, 'failed', [], { account, endedAt }), runId: 'run-' + id,
+        spec: { ...task(id, 'failed', [], { account, endedAt }).spec, account, capability: 'session-recovery-only' }, receipt: { at, ok: false, error } });
+    const first = failed('first-recovery', endedAt + 100), next = failed('next-recovery', endedAt + 300);
+    const qualified = { ...task('qualified', 'succeeded', []), spec: { ...task('qualified', 'succeeded', []).spec, capability: 'session-recovery-only' },
+        receipt: { at: endedAt + 200, ok: true, output: { delivery: { ok: true, source: 'a'.repeat(64) } } } };
+    const signal = join(root, '.practice/coordinator/plan-request');
+    try {
+        const oldProblem = recoveryPlanningProblem(root, account, end, [first])!;
+        expect(requestRecoveryPlanning(root, oldProblem)).toBe(true);
+        expect(readRecoveryProblems(root, { [account]: end }, [first] as any)[0]?.failures[0]?.taskId).toBe('first-recovery');
+        expect(readRecoveryProblems(root, { [account]: end }, [first, qualified] as any)).toEqual([]);
+        rmSync(signal);
+        const freshProblem = recoveryPlanningProblem(root, account, end, [first, qualified, next])!;
+        expect(requestRecoveryPlanning(root, freshProblem)).toBe(true);
+        expect(freshProblem.failures[0]).toMatchObject({ taskId: 'next-recovery', settledAt: endedAt + 300 });
+        expect(readRecoveryProblems(root, { [account]: end }, [first, qualified, next] as any)[0]?.failures[0]?.taskId).toBe('next-recovery');
+        rmSync(signal);
+        expect(requestRecoveryPlanning(root, recoveryPlanningProblem(root, account, end, [first, qualified, next])!)).toBe(false);
+        expect(existsSync(signal)).toBe(false);
     } finally { rmSync(root, { recursive: true, force: true }); }
 });
 

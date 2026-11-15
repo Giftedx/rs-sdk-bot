@@ -3,7 +3,7 @@ import {initialState,addTasks} from '../src/coordinator';
 import {plannerPrompt,gameCoverage,supplyBillSummary} from '../src/coordinator-planner';
 import * as planner from '../src/coordinator-planner';
 
-import {copyFileSync,mkdirSync,mkdtempSync,writeFileSync} from 'node:fs';
+import {copyFileSync,mkdirSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {snapshot} from '../../../scripts/fleet-sync';
@@ -42,6 +42,30 @@ test('recovery planning reads current failures once per account and excludes set
  writeFileSync(join(dir,'e'.repeat(64)+'.json'),JSON.stringify({...problem,account:'UnknownEnd',endedAt:null,lineage:{unknown:'end record unavailable'}}));
  expect(planner.readRecoveryProblems(base,{})).toMatchObject([{account:'UnknownEnd',endedAt:null}]);
  expect(planner.readRecoveryProblems(base,{unknownend:{at:9}})).toEqual([]);
+});
+
+test('recovery planning retains failure occurrence age after task compaction and keeps unknown legacy age explicit',()=>{
+ const base=mkdtempSync(join(tmpdir(),'planner-recovery-compaction-')),dir=join(base,'.practice/cloud-recover/planning'),file=join(dir,'a'.repeat(64)+'.json');
+ const problem={schema:'recovery-planning/1',account:'Helper',server:'rs-sdk-demo.fly.dev',endedAt:7,lineage:{ends:[7]},reason:'recovery failed',
+  failures:[{taskId:'archived-failure',kind:'run',error:'same retained fault',settledAt:10}],pendingTaskIds:[]};
+ const qualification=(at:number)=>({spec:{id:'qualified',capability:'session-recovery-only'},status:'succeeded',receipt:{at,output:{delivery:{ok:true}}}});
+ mkdirSync(dir,{recursive:true});
+ try{
+  writeFileSync(file,JSON.stringify(problem));
+  expect(planner.readRecoveryProblems(base,{helper:{at:7}},[qualification(20)] as any)).toEqual([]);
+  writeFileSync(file,JSON.stringify({...problem,failures:[{...problem.failures[0],taskId:'new-failure',settledAt:30}]}));
+  expect(planner.readRecoveryProblems(base,{helper:{at:7}},[qualification(20)] as any)[0]?.failures[0]?.taskId).toBe('new-failure');
+  expect(planner.readRecoveryProblems(base,{helper:{at:7}},[qualification(40)] as any)).toEqual([]);
+  // A current task receipt owns its time even when persisted optional metadata disagrees.
+  const current={spec:{id:'new-failure',capability:'session-recovery-only'},status:'failed',receipt:{at:15}};
+  expect(planner.readRecoveryProblems(base,{helper:{at:7}},[qualification(20),current] as any)).toEqual([]);
+  const unsettled={spec:{id:'new-failure',capability:'session-recovery-only'},status:'pending'};
+  expect(planner.readRecoveryProblems(base,{helper:{at:7}},[qualification(40),unsettled] as any)).toHaveLength(1);
+  for(const settledAt of [undefined,0,-1,Infinity,NaN,'10']){
+   writeFileSync(file,JSON.stringify({...problem,failures:[{...problem.failures[0],settledAt}]}));
+   expect(planner.readRecoveryProblems(base,{helper:{at:7}},[qualification(40)] as any)).toHaveLength(1);
+  }
+ }finally{rmSync(base,{recursive:true,force:true});}
 });
 
 test('planner turns recovery failures into diagnosis and practice work instead of passive manual recovery',()=>{

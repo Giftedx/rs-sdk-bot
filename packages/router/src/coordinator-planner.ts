@@ -221,7 +221,11 @@ export function readRecoveryProblems(base:string,ended:Record<string,{at:number}
     ||!row.lineage||(row.endedAt===null?current.has(row.account.toLowerCase()):current.get(row.account.toLowerCase())!==row.endedAt)
     ||selected.has(row.account.toLowerCase()))continue;
    if(readLogoutProof(row.account,row.server,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed')continue;
-   const failures=row.failures.filter(f=>!(deliveredAt>(records.get(f.taskId)?.receipt?.at??Infinity)));
+   const failures=row.failures.filter(f=>{
+    const retained=typeof f.settledAt==='number'&&Number.isFinite(f.settledAt)&&f.settledAt>0?f.settledAt:Infinity;
+    const record=records.get(f.taskId),at=record?record.receipt?.at??Infinity:retained;
+    return !(deliveredAt>at);
+   });
    if(row.failures.length&&!failures.length)continue;
    selected.set(row.account.toLowerCase(),{...row,reason:row.reason.slice(0,600),failures:failures.slice(0,8),
     pendingTaskIds:row.pendingTaskIds.slice(0,24),evidence:'.practice/cloud-recover/planning/'+name});
