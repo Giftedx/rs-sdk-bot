@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {EventEmitter} from 'node:events';
+import * as recoveryProof from '../src/session-recovery-proof';
 import {accountDir,beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout,serveAnyHost,worldHost} from '../src/session-recovery-proof';
 import {recoveryCloseModal} from '../../core/src/session-recovery';
@@ -316,7 +317,7 @@ test('low memory delays the recovery request until admission allows one start, a
   await expect(expired(low)).rejects.toThrow(/memory wait expired.*no request submitted/);
   polls=0;await expect(expired(low)).rejects.toThrow(/memory wait expired/);expect(polls).toBe(1);
   expect(RECOVERY_MEMORY_WAIT_MS).toBeLessThan(300000);
-  expect(readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8')).toContain('await recoveryMemory(f.name);await beforeSubmit(r);');
+  expect(readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8')).toContain('await recoveryMemory(f.name);await beforeSubmit(r);const submittedAt=Date.now(),sub=submit(d,r,taskOwner.pid);');
  }finally{rmSync(base,{recursive:true,force:true});}
 });
 
@@ -772,6 +773,33 @@ test('a recovery login inside the open takeover window must be refused with resp
  expect(classifyCooldownWindow(warmLog(500,3),'Rod',W)).toEqual({ok:true,reason:'recovery login refused with response 3 inside the open takeover window',windowMs:1000,takeoverReplyAt:21,recoveryRequestAt:500,gapMs:479,response:3});
  const accepted=classifyCooldownWindow(warmLog(500,0),'rod',W);expect(accepted.ok).toBe(false);expect(accepted.reason).toBe('recovery login inside the window was not refused with response 3');
 });
+test('a warm takeover after submit excludes only its own request and retains the recovery window checks',()=>{
+ const afterSubmit={...W,since:10};
+ expect(classifyCooldownWindow(warmLog(500,3),'rod',afterSubmit)).toMatchObject({ok:true,gapMs:479,response:3});
+ const extra=[...authHead(),authLine('AUTH_CONNECTION',{at:2,connection:2}),request(3,'first'),reply(4,'first'),request(20,'warm'),reply(21,'warm'),request(35,'warm','rod','player_login',2),reply(36,'warm',3,2),request(500,'recovery'),reply(501,'recovery',3)].join('\n');
+ expect(classifyCooldownWindow(extra,'rod',afterSubmit).reason).toBe('recovery login request missing or ambiguous');
+ expect(classifyCooldownWindow(warmLog(1021,3),'rod',afterSubmit)).toMatchObject({ok:false,reason:'window expired before recovery',gapMs:1000});
+});
+test('runtime observation waits for a complete current child identity before the owner takeover',async()=>{
+ const wait=recoveryProof.waitRecoveryRuntime;
+ expect(typeof wait).toBe('function');
+ const root=join(tmpdir(),'recovery-runtime'),expected={pid:321,runner:join(root,'recovery.ts'),root,since:40};
+ const row={at:42,pid:321,runner:expected.runner,cwd:root,repoRoot:root},line=(value:object)=>'RECOVERY_RUNTIME '+JSON.stringify(value)+'\n';
+ const logs=['',line({...row,pid:123}),line({...row,at:39}),line(row).trimEnd(),line(row)];
+ let elapsed=0,reads=0;
+ const observed=await wait(()=>logs[Math.min(reads++,logs.length-1)]!,expected,{timeoutMs:250,now:()=>elapsed,pause:async ms=>{elapsed+=ms;}});
+ expect(observed).toMatchObject(row);expect(reads).toBe(5);expect(elapsed).toBe(200);
+});
+test('runtime observation refuses a crossed checkout and has a finite wait for missing evidence',async()=>{
+ const wait=recoveryProof.waitRecoveryRuntime;
+ expect(typeof wait).toBe('function');
+ const root=join(tmpdir(),'recovery-runtime'),expected={pid:321,runner:join(root,'recovery.ts'),root,since:40};
+ const row={at:42,pid:321,runner:expected.runner,cwd:root,repoRoot:root},line=(value:object)=>'RECOVERY_RUNTIME '+JSON.stringify(value)+'\n';
+ await expect(wait(()=>line({...row,repoRoot:join(root,'other')}),expected,{timeoutMs:100})).rejects.toThrow('recovery runtime identity mismatch');
+ let elapsed=0;
+ await expect(wait(()=>'',expected,{timeoutMs:100,now:()=>elapsed,pause:async ms=>{elapsed+=ms;}})).rejects.toThrow('recovery runtime observation timeout');
+ expect(elapsed).toBe(100);
+});
 test('a gap exactly at the bound is expired; one millisecond less is open',()=>{
  expect(classifyCooldownWindow(warmLog(1021,3),'rod',W)).toMatchObject({ok:false,reason:'window expired before recovery',gapMs:1000});
  expect(classifyCooldownWindow(warmLog(1020,3),'rod',W)).toMatchObject({ok:true,gapMs:999});
@@ -884,12 +912,10 @@ test('orphan recovery final logout is the recovery session logout, never the pre
  expect(recoverySessionAuth([cleanup,login,{...login,replyTo:'second',at:login.at+9,requestAt:login.at+5},final],a)).toEqual({loginAcknowledged:false,logoutAcknowledged:false});
  expect(recoverySessionAuth([cleanup],a)).toEqual({loginAcknowledged:false,logoutAcknowledged:false});
 });
-test('the native proof binds the private takeover window and opens it just before the recovery submit',()=>{
+test('the native proof keeps its private takeover window and server-side outcome evidence',()=>{
  const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');
- expect(TAKEOVER_WINDOW_MS).toBeGreaterThan(30000);
+ expect(TAKEOVER_WINDOW_MS).toBe(60000);
  expect(text).toContain("LOGIN_TAKEOVER_MIN_MS:String(TAKEOVER_WINDOW_MS)");expect(text).toContain('takeoverWindowMs:TAKEOVER_WINDOW_MS');
- expect(text).toContain("held('cooldown',C,d8890,async()=>{warm=await o.takeover();})");
- expect(text).toContain('await beforeSubmit(r);const submittedAt=Date.now(),sub=submit(d,r,taskOwner.pid);');
  // The client getState() view never decides a session outcome.
  expect(text).not.toMatch(/after\.inGame|stillOwned/);
 });
