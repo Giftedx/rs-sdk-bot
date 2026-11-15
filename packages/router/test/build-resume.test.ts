@@ -4,8 +4,9 @@ import{initialState,addTasks,startTask,finishTask,preparedNativeDelivery,validat
 import type{DeliveryResult}from'../src/delivery';
 import * as modelWorker from'../src/model-worker';
 import * as deliveryCli from'../src/delivery-cli';
-import{coordinationDir}from'../src/coordinator-store';
+import{coordinationDir,projectRoot}from'../src/coordinator-store';
 import{existsSync,mkdirSync,mkdtempSync,readFileSync,rmSync}from'node:fs';
+import{createHash}from'node:crypto';
 import{tmpdir}from'node:os';import{join}from'node:path';
 const source='a'.repeat(64);
 function fixture(){let author=0,delivered=0,reviewed=0,current=source;const records:any[]=[];
@@ -88,9 +89,12 @@ async function authorPipeline(replies:({ok:boolean;text:string;costUsd:number}|E
  const delivery=spyOn(deliveryCli,'runDeliveryTask').mockImplementation(async definition=>{
   deliveries++;
   if(!options.regressionRepair)throw Error('fixture must not start delivery');
-  return{ok:deliveries>1,stage:deliveries>1?'delivered':'failed',evidence:'native',consumer:'mocked fixture only',
+  const report:Awaited<ReturnType<typeof deliveryCli.runDeliveryTask>>={ok:deliveries>1,stage:deliveries>1?'delivered':'failed',evidence:'native',consumer:'mocked fixture only',
    source:deliveryCli.deliveryFingerprint(definition),reason:'fixture regression',checks:deliveries>1?[]:[{id:'fixture',phase:'regression',exitCode:1,timedOut:false,detail:'fixture only'}],
-   ...(deliveries===1?{failedCheck:'fixture'}:{})} as DeliveryResult;
+   id:definition.id,goal:definition.goal,at,runtimeRevision:source,directory,
+   files:definition.files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(projectRoot,path))).digest('hex')})),
+   ...(deliveries===1?{failedCheck:'fixture'}:{})};
+  return report;
  });
  try{
   const result=await executeTask({id:'author-quota-fixture',kind:'build',goal:'skills',capability:'prayer-order',dependsOn:[],priority:1,
