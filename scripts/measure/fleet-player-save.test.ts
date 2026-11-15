@@ -1,8 +1,9 @@
 import {expect,test} from 'bun:test';
 import {waitPracticeSave,readPracticeSave,setPracticeSkills} from './fleet-player-save';
-import {mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdirSync,writeFileSync,rmSync,realpathSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {applyPreset} from '../../packages/practice/src/presets';
 const saved=(stage:number):ReturnType<typeof readPracticeSave>=>({version:9,position:{x:0,z:0,level:0},skills:[],vars:{65:stage},inventories:{}});
 test('waits for the real quest save after a stale logout acknowledgement',async()=>{
  let stage=3;const timer=setTimeout(()=>{stage=10;},15);
@@ -19,6 +20,20 @@ function fixture(){
  for(let i=0;i<21;i++)b.writeUInt8(i===3?10:1,32+i*5);
  b.writeUInt32BE(Bun.hash.crc32(b.subarray(0,-4))>>>0,136);writeFileSync(path,b);return path;
 }
+test('the generated path returned by applyPreset reaches the exact practice skill helper',async()=>{
+ const name='flst'+randomUUID().replaceAll('-','').slice(0,8);
+ const path=await applyPreset(name,{position:{x:3000,z:3200,level:0},skills:{Hitpoints:10},bank:[{id:995,count:2000}]});
+ try{
+  const before=readPracticeSave(path),skills=before.skills.map(s=>({level:s.index===3?3:s.level,xp:s.xp}));
+  expect(path).toBe(resolve(realpathSync(resolve(import.meta.dir,'../../vendor/rs-sdk')),'server/engine/data/players/main',name+'.sav'));
+  setPracticeSkills(path,skills);
+  const after=readPracticeSave(path);
+  expect(after.skills.map(s=>({level:s.level,xp:s.xp}))).toEqual(skills);
+  expect(after.version).toBe(before.version);expect(after.position).toEqual(before.position);
+  expect(after.inventories).toEqual(before.inventories);expect(after.vars).toEqual(before.vars);
+ }finally{rmSync(path);}
+});
+
 test('an exact native fixture retains drained Prayer0 and its base-level XP',()=>{
  const path=fixture();try{
   const skills=readPracticeSave(path).skills.map(s=>({level:s.level,xp:s.xp}));skills[5]={level:0,xp:19687};

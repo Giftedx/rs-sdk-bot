@@ -1,7 +1,7 @@
 // One owned item/order of an exact quantity. Persistent intent, capped unit price and observed bank settlement.
 import {readFileSync,writeFileSync,existsSync,mkdirSync,renameSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {resolve} from 'node:path';import {createHash} from 'node:crypto';
-import {openBot,settle,serverFromEnv,getWorld,accountOf} from '../packages/core/src/bot';import type {Session} from '../packages/core/src/inprocess';
+import {openBot,settle,serverFromEnv,getWorld,accountOf,randomEventsOf} from '../packages/core/src/bot';import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath,goTo} from '../packages/core/src/walk';
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
@@ -276,6 +276,12 @@ export function expectedRescueStop(s:Session,detail:string,c:RescueControl){
  return detail==='died'&&c.active&&s.tick()-c.start<240&&!!p&&s.sdk.getStateAge()<=5000
   &&p.lifeId>=c.lifeId&&p.lifeId<=c.lifeId+1&&p.respawnCount>=c.respawnCount&&p.respawnCount<=c.respawnCount+1;
 }
+export function openOrderSession(actor:string,request:ItemRequest,rescue:RescueControl,onStop:()=>void){
+ validateRequest(request);
+ // openBot captures this process-local policy before registering its corpse walk.
+ if(request.rescueMode==='npc-respawn-once')process.env.DEATH_RECOVERY='0';
+ return openBot(actor,{onStop:async(session,detail)=>{if(!expectedRescueStop(session,detail,rescue))onStop();},onSessionEnd:async()=>{onStop();}});
+}
 export async function rescueMarketEntry(s:Session,request:ItemRequest,journalPath:string,stop:()=>boolean,c:RescueControl,
  suppliedSnapshot:ReturnType<typeof rescueBank>|undefined=undefined,stage:(signal:AbortSignal)=>Promise<{ok:boolean}>=async signal=>{
   return walkPath(await sessionWalker(s),LUMBRIDGE_TO_DRAYNOR.map(([x,z,tol])=>({x,z,tol})),{signal,maxTicks:500});
@@ -301,18 +307,22 @@ export async function rescueMarketEntry(s:Session,request:ItemRequest,journalPat
   if(halted()||!rescueKit(s)||!rescuePocket(s.sdk.getState()?.player))throw Error('rescue pre-engagement state changed');
   save();Object.assign(c,{active:true,start, ...initial});
   marketEntryTrace(s,'rescue-intent',{targetIndex:wolf.index,lifeId:initial.lifeId,respawnCount:initial.respawnCount});
-  // The attempted marker precedes the only attack call, including a call that mutates then throws.
-  try{await s.sdk.sendInteractNpc(wolf.index,wolf.optionsWithIndex.find(o=>/^attack$/i.test(o.text))!.opIndex);}catch(error){marketEntryTrace(s,'rescue-attack-return',{error:String(error)});}
-  const observed=await waitUntil(s,()=>{
-   const q=s.sdk.getState()?.player;
-   if(halted())throw Error('rescue stopped/disconnected/deadline');
-   if(s.sdk.getStateAge()>5000||!q)throw Error('rescue state unknown');
-   if(q.lifeId>initial.lifeId+1||q.respawnCount>initial.respawnCount+1)throw Error('rescue unexpected second death');
-   return q.lifeId===initial.lifeId+1&&q.respawnCount===initial.respawnCount+1&&!q.isDead
-    &&q.level===0&&Math.max(Math.abs(q.worldX-3221),Math.abs(q.worldZ-3218))<=3
-    &&s.sdk.getSkill('Hitpoints')?.level===baseHp&&rescueKit(s);
-  },{timeoutTicks:Math.max(1,240-(s.tick()-start))});
-  if(!observed||halted()||s.tick()-start>=240)throw Error('rescue single Lumbridge respawn/retained kit/restored HP unproved');
+  const respawnOnce=async()=>{
+   // The attempted marker precedes the only attack call, including a call that mutates then throws.
+   try{await s.sdk.sendInteractNpc(wolf.index,wolf.optionsWithIndex.find(o=>/^attack$/i.test(o.text))!.opIndex);}catch(error){marketEntryTrace(s,'rescue-attack-return',{error:String(error)});}
+   const observed=await waitUntil(s,()=>{
+    const q=s.sdk.getState()?.player;
+    if(halted())throw Error('rescue stopped/disconnected/deadline');
+    if(s.sdk.getStateAge()>5000||!q)throw Error('rescue state unknown');
+    if(q.lifeId>initial.lifeId+1||q.respawnCount>initial.respawnCount+1)throw Error('rescue unexpected second death');
+    return q.lifeId===initial.lifeId+1&&q.respawnCount===initial.respawnCount+1&&!q.isDead
+     &&q.level===0&&Math.max(Math.abs(q.worldX-3221),Math.abs(q.worldZ-3218))<=3
+     &&s.sdk.getSkill('Hitpoints')?.level===baseHp&&rescueKit(s);
+   },{timeoutTicks:Math.max(1,240-(s.tick()-start))});
+   if(!observed||halted()||s.tick()-start>=240)throw Error('rescue single Lumbridge respawn/retained kit/restored HP unproved');
+  };
+  // The validated rescue owns this fight; the flee watcher resumes before staging.
+  const watch=randomEventsOf(s);if(watch)await watch.exclusive(respawnOnce);else await respawnOnce();
   c.active=false;receipt.phase='respawned';save();marketEntryTrace(s,'rescue-respawned',{...initial});
   const ac=new AbortController(),q0={...s.sdk.getState()!.player!},stageStart=s.tick();
   const guard=()=>{const q=s.sdk.getState()?.player;if(halted()||s.tick()-stageStart>=500||!q||q.isDead||q.lifeId!==q0.lifeId||q.respawnCount!==q0.respawnCount||s.sdk.getSkill('Hitpoints')?.level!==baseHp||!rescueKit(s))ac.abort('rescue staging health/stop/state');};
@@ -519,7 +529,7 @@ if(import.meta.main){
    unlinkSync(lock);process.exit(code);
   }
   const rescue:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
-  s=await openBot(actor,{onStop:async(session,detail)=>{if(!expectedRescueStop(session,detail,rescue))stopped=true;},onSessionEnd:async()=>{stopped=true;}});
+  s=await openOrderSession(actor,request,rescue,()=>{stopped=true;});
   const stop=()=>stopped||existsSync(resolve('.practice',`stop-${actor}`));
   const result=await runOwnedItem(s,request,journalPath,stop,process.env.CANCEL==='1',fillWaitTicks,rescue);console.log('OWNED_GE_ITEM '+JSON.stringify(result));const ok=await settle([s],result.ok,JSON.stringify(result));unlinkSync(lock);process.exit(ok?0:1);
  }catch(error){if(s){await settle([s],false,String(error));if(existsSync(lock))unlinkSync(lock);process.exit(1);}if(existsSync(lock))unlinkSync(lock);throw error;}
