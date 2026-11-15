@@ -301,6 +301,17 @@ export function clearSwarmStop(file: string): boolean {
     rmSync(file, { force: true });
     return true;
 }
+export function runningJobState(parsed:ParsedJob,run:Pick<Run,'accounts'|'started'|'revision'>,ended:ReadonlyMap<string,EndRecord>,pendingResume:ReadonlySet<string>,stopAll:boolean,stopFile:(account:string)=>string):Record<string,string>{
+    const state:Record<string,string>={},stop=!parsed.job.enabled||stopAll;
+    for(const account of parsed.accounts){
+        if(!run.accounts.some(name=>name.toLowerCase()===account.toLowerCase()))state[account]='waiting: current mission still running';
+        else if(ended.has(account)&&ended.get(account)!.at>=run.started)state[account]=`ended: ${ended.get(account)!.reason}`;
+        else if(stop){writeSwarmStop(stopFile(account),SWARM_STOP.job);state[account]='stopping';}
+        else state[account]=pendingResume.has(account.toLowerCase())?'stopping; resume queued'
+            :run.revision!==missionSignature(parsed.job)?'running; updated mission queued':'running';
+    }
+    return state;
+}
 // The ends a standing job retries by itself once the account is offline: a block or give-up, a stop that a stop file
 // caused (an owner's file still blocks the start, the controller's own is gone), or a process the controller lost
 // track of (its own restart). A supervisor ends `stopped` for a stop file or for `RESULT fail no food`
@@ -917,14 +928,7 @@ if (import.meta.main) {
             if (r && foreignRun(planned, p, r) && !stopAll) {
                 for (const a of p.accounts) st[a] = 'waiting: another job of this account is running';
             } else if (r) {
-                const stop = !job.enabled || stopAll;
-                for (const a of p.accounts) {
-                    if (!r.accounts.some(name => name.toLowerCase() === a.toLowerCase())) st[a] = 'waiting: current mission still running';
-                    else if (ended.has(a) && ended.get(a)!.at >= r.started) st[a] = `ended: ${ended.get(a)!.reason}`;
-                    else if (stop) { writeFileSync(stopFile(a), SWARM_STOP.job); st[a] = 'stopping'; }
-                    else st[a] = pendingResume.has(a.toLowerCase()) ? 'stopping; resume queued'
-                        : r.revision !== missionSignature(job) ? 'running; updated mission queued' : 'running';
-                }
+                Object.assign(st,runningJobState(p,r,ended,pendingResume,stopAll,stopFile));
             } else if (!job.enabled || stopAll) for (const a of p.accounts) st[a] = 'disabled';
             else if (!endStateOk) for (const a of p.accounts) st[a] = 'paused: repair or source ownership unresolved';
             else {
