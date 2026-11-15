@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794780730333,
+ "at": 1794780845108,
  "jobs": [
   {
    "account": "Balls",
@@ -144,27 +144,6 @@
    "role": "combat"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "2361",
-    "QUANTITY": "345",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "2500",
-    "CASH_RESERVE": "4000000",
-    "ORDER_KEY": "billionaire-overall-adamant345",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-e0fc6ef8-72e9-4ae0-8bf3-0612e14ee196"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-billionaire-overall-adamant345-approved-rescue [task-e0fc6ef8-72e9-4ae0-8bf3-0612e14ee196]",
-   "role": "supply"
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -180,7 +159,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-76cf5cae-3b9b-4e02-aa07-44f740bcb35d"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-ge-mineyourbiz-overall-runearrows36-approved-rescue [task-76cf5cae-3b9b-4e02-aa07-44f740bcb35d]",
    "role": "supply"
