@@ -2,7 +2,7 @@ import {existsSync,readFileSync,writeFileSync,appendFileSync,statSync,truncateSy
 import {basename,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,preparedProvisionClaims,needsFreshQualification,recoverySlotBusy,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationRefreshCapabilities,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,preparedProvisionClaims,needsFreshQualification,recoverySlotBusy,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
 import {buildFailureEvidence} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
@@ -356,8 +356,8 @@ async function tick(state:CoordinatorState,config:any){
  reconcile(state);
  intakeRequests(state);
  // Reuse current evidence; refresh only capabilities with waiting live consumers.
- if(!state.tasks.some(r=>r.status==='running'&&r.spec.kind==='build')){
-  const caps=[...new Set(qualificationDemand(state).map(r=>r.spec.capability!))];
+ {
+  const caps=qualificationRefreshCapabilities(state,cap=>deliveryTask(cap).files);
   const fingerprints:Record<string,string>={};
   for(const cap of caps)try{fingerprints[cap]=deliveryFingerprint(deliveryTask(cap));sourceErrors.delete(cap);}
   catch(error){const detail=String(error);if(sourceErrors.get(cap)!==detail)event('qualification-source-unavailable',{cap,error:detail});sourceErrors.set(cap,detail);}
