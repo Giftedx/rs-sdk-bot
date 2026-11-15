@@ -1675,6 +1675,15 @@ test('an army account takes Merlin\'s Crystal and Holy Grail for its Prayer: the
 });
 
 
+test('army combat jobs leave optional loot to the worker that reconciles its assets', () => {
+    const training = catalogue().filter(t => t.tier === 'goal' && t.script === 'scripts/gather-combat.ts');
+    expect(training.length).toBeGreaterThan(5);
+    for (const template of training) {
+        const job = jobFor({ account: 'Soldier', template, reason: 'train a missing army level', value: 0, resources: template.resources ?? [] }, side);
+        expect(job.env?.LOOT_WATCH).toBe('0');
+    }
+});
+
 test('an account with a PK build trains to the levels of the build and no further', async () => {
     const { buildBand, catalogue: all } = await import('../src/autopilot');
     const dragon = { Attack: 60, Strength: 99, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }, pure = { ...dragon, Defence: 1, Prayer: 1 };
