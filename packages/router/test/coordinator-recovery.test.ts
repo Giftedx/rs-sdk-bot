@@ -410,6 +410,35 @@ test('a mismatched receipt cannot complete a different run',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-recovery-')),s=seed();atomicJson(join(runDirectory('recovery-run',dir),'receipt.json'),{taskId:'producer',runId:'other-run',ok:true,at:Date.now(),output:{}});
  reconcile(s,()=>false,dir);expect(s.tasks[0]!.status).toBe('failed');expect(s.goals[1]!.completedTasks).toBe(0);
 });
+test('a proved pre-install account deferral restores the exact run to pending without credit or lost receipt',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-live-defer-')),s=initialState();
+ addTasks(s,[{id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}}]);
+ const record=startTask(s,'live',Date.now()-1000,'busy-run'),before=s.latestReceiptSequence;
+ const receipt={taskId:'live',runId:'busy-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,
+  liveDeferred:{account:'Rod',reason:'active-session',attemptId:'1794777984832-0000029060-0000000001',pid:29060}}};
+ const file=join(runDirectory('busy-run',dir),'receipt.json');atomicJson(file,receipt);
+ reconcile(s,()=>{throw Error('receipt must settle without a process probe');},dir);
+ expect(record.status).toBe('pending');expect(record.attempts).toBe(1);expect(record.receipt).toBeUndefined();expect(record.runId).toBeUndefined();
+ expect(s.latestReceiptSequence).toBe(before);expect(s.goals.find(g=>g.id==='quests')!.completedTasks).toBe(0);
+ expect(JSON.parse(readFileSync(file,'utf8'))).toEqual(receipt);
+ const sequence=s.sequence;reconcile(s,()=>false,dir);expect(s.sequence).toBe(sequence);
+ expect(chooseTask(s,Date.now(),{runHeld:()=>true})).toBeNull();expect(chooseTask(s,Date.now(),{runHeld:()=>false})?.id).toBe('live');
+});
+for(const invalid of ['wrong account','wrong run','installed','other evidence','recovery','repair','qualification'])test('a live deferral cannot hide '+invalid,()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-live-defer-')),s=initialState(),task:any={id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}};
+ if(invalid==='recovery'){task.sessionRecovery={account:'Rod',endedAt:1};task.repairs=[{account:'Rod',endedAt:1}];}
+ if(invalid==='repair')task.repairs=[{account:'Rod',endedAt:1}];
+ if(invalid==='qualification'){task.kind='qualify';delete task.account;delete task.accept;}
+ addTasks(s,[task]);startTask(s,'live',Date.now()-1000,'busy-run');
+ const receipt:any={taskId:'live',runId:'busy-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,
+  liveDeferred:{account:'Rod',reason:'active-session',attemptId:'1794777984832-0000029060-0000000001',pid:29060}}};
+ if(invalid==='wrong account')receipt.output.liveDeferred.account='Other';
+ if(invalid==='wrong run')receipt.runId='different-run';
+ if(invalid==='installed')receipt.output.installed=true;
+ if(invalid==='other evidence')receipt.output.evidence='live';
+ atomicJson(join(runDirectory('busy-run',dir),'receipt.json'),receipt);reconcile(s,()=>false,dir);
+ expect(s.tasks[0]!.status).toBe('failed');expect(s.goals.find(g=>g.id==='quests')!.completedTasks).toBe(0);
+});
 test('live child polling does not launch command-line inspection while OS liveness is known',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-quiet-')),s=seed();
  atomicJson(join(runDirectory('recovery-run',dir),'owner.json'),{pid:123});
