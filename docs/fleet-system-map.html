@@ -34,7 +34,7 @@ nav.toc{display:flex;flex-wrap:wrap;gap:7px 16px;font-size:.92rem}.sec-head{disp
 .filters button[aria-pressed="true"],.map-tools button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 #path-status{color:var(--muted);font:.8rem var(--mono);margin-left:4px}figure{margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
 .scroll{overflow:auto;background:var(--surface);border:1px solid var(--rule);border-radius:8px;overscroll-behavior-x:contain}.map svg{display:block;width:100%;min-width:1280px;height:auto;font-family:var(--body)}
-.map.fit svg{min-width:0}.map .n rect{stroke-width:1.5}.map .proc rect{fill:var(--proc-bg);stroke:var(--proc)}.map .file rect{fill:var(--file-bg);stroke:var(--file)}
+.map.fit svg{min-width:0}.map.recovery svg{min-width:1000px}.map .n rect{stroke-width:1.5}.map .proc rect{fill:var(--proc-bg);stroke:var(--proc)}.map .file rect{fill:var(--file-bg);stroke:var(--file)}
 .map .ext rect{fill:var(--ext-bg);stroke:var(--ext)}.map .person rect{fill:var(--person-bg);stroke:var(--person)}.map text{fill:var(--fg)}.map .t{font-size:17px;font-weight:600}
 .map .s{font-size:14px;fill:var(--muted)}.map .l{font-size:13px;fill:var(--muted)}.map .mono{font-family:var(--mono);font-size:14px}.map .ln{fill:none;stroke:var(--line);stroke-width:1.5}
 .map .ln.d{stroke-dasharray:5 4}.map .ah{fill:var(--line)}.map .n,.map .e{transition:opacity .15s}.map[data-show] .n,.map[data-show] .e{opacity:.12}
@@ -110,7 +110,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
  <g class="n proc p-code"><rect x="725" y="305" width="135" height="85" rx="7"/><text class="t" x="738" y="332">live-update</text><text class="s" x="738" y="355">guarded master</text><text class="s" x="738" y="376">move + reloads</text></g>
  <g class="n proc p-trade p-cloud"><rect x="880" y="305" width="125" height="85" rx="7"/><text class="t" x="892" y="332">fleet-sync</text><text class="s" x="892" y="355">pull, write,</text><text class="s" x="892" y="376">commit, push</text></g>
  <g class="e p-code"><path class="ln" d="M790 255V305" marker-end="url(#ah)"/></g><g class="e p-trade"><path class="ln" d="M940 255V305" marker-end="url(#ah)"/></g>
- <g class="e p-watch"><path class="ln d" d="M1225 255V445" marker-start="url(#ah)" marker-end="url(#ah)"/><text class="l" x="1238" y="350">reads state, sends commands</text></g>
+ <g class="e p-watch"><path class="ln d" d="M1225 255V445" marker-start="url(#ah)" marker-end="url(#ah)"/><text class="l" x="1238" y="340">reads state</text><text class="l" x="1238" y="360">sends commands</text></g>
  <!-- Runtime and shared data -->
  <g class="n proc p-job p-code p-heal"><rect x="200" y="445" width="300" height="85" rx="7"/><text class="t" x="215" y="472">Swarm · every 2 s</text><text class="s" x="215" y="495">merges both plans, checks admission</text><text class="s" x="215" y="516">adopts saved detached supervisors</text></g>
  <g class="e p-job"><path class="ln d" d="M165 390V420H275V445" marker-end="url(#ah)"/><path class="ln d" d="M515 390V420H425V445" marker-end="url(#ah)"/></g>
@@ -372,7 +372,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
 <section id="fail">
  <div class="sec-head"><h2>When something fails</h2><p>A fault creates bounded repair work. A current owner pause still stops that work. A receipt records what actually happened.</p></div>
  <figure>
-  <div class="scroll map" tabindex="0" role="region" aria-label="Recovery feedback loop">
+  <div class="scroll map recovery" tabindex="0" role="region" aria-label="Recovery feedback loop">
    <svg viewBox="0 0 1240 335" role="img" aria-labelledby="recovery-title recovery-desc">
     <title id="recovery-title">A failed recovery returns evidence to the planner</title>
     <desc id="recovery-desc">The watchdog calls cloud-recover for a held session. Qualified cleanup runs through the owning controller. Confirmed logout supplies session proof. Qualification or recovery failure writes bounded facts and wakes the existing planner for diagnosis, practice repair and a finite consumer. Owner stops and admission still apply.</desc>
