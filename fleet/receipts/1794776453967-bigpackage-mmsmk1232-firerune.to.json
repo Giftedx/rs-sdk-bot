@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1794776453967-bigpackage-mmsmk1232-firerune",
+ "account": "mmsmk1232",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "59744f47-8701-43f2-b048-d554bb1825a8",
+ "count": 0,
+ "ok": false,
+ "at": 1794777107502,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794777093264-0000003096-0000000001",
+  "at": 1794777107490,
+  "sha256": "fd5036454d5a00cdb31fd70e2d74d01f3419ddf0a2db0d065fd51b7a650f530a"
+ },
+ "screen": true
+}

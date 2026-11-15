@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794777077124,
+ "at": 1794777110105,
  "jobs": [
   {
    "account": "Balls",
@@ -161,7 +161,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-34ea2439-7d90-4ec3-8039-035c3da06a7e"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "local-recover-mmsmk1232-20261115t192012z [task-34ea2439-7d90-4ec3-8039-035c3da06a7e]",
    "role": "helper"

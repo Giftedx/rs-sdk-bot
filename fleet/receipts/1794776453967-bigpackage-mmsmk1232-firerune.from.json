@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794776453967-bigpackage-mmsmk1232-firerune",
  "account": "Bigpackage",
  "partner": "mmsmk1232",
@@ -12,6 +12,20 @@
  "claim": "b726a41f-20f8-4aa4-8f4a-71fb7e7de76d",
  "count": 0,
  "ok": false,
- "at": 1794776460614,
- "detail": "trade claimed"
+ "at": 1794777107474,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 250,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1794776483525
+ },
+ "logout": {
+  "attemptId": "1794776460623-0000032772-0000000001",
+  "at": 1794777107461,
+  "sha256": "38b4c5de5d0ca4f074422d64ddb02c08fca65e3e1ed538d4ef812da5dc20eaa6"
+ },
+ "screen": true
 }
