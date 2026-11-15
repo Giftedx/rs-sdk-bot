@@ -1,0 +1,22 @@
+{
+ "id": "1794782219221-mightyrod-nabtheknob-trout",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "NabTheKnob",
+ "item": "Trout",
+ "count": 11,
+ "start": 1794782219221,
+ "end": 1794784619221,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
