@@ -7,6 +7,7 @@ import { archiveDir, archiveStaleLease, budgetRefusal, clearSwarmStops, cloudSid
 import { accountDir, DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import { RECOVERY_SCRIPT } from '../packages/core/src/session-recovery-permit';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
+import { recoveryPlanningProblem, requestRecoveryPlanning, type RecoveryPlanningProblem } from './cloud-recover';
 
 const held: LogoutProof = { state: 'held', account: 'kiltlifter', server: 'rs-sdk-demo.fly.dev', domain: 'live', attemptId: 'a', reason: 'disconnected' };
 const claim: ClaimView = { phase: 'held', kind: 'swarm', pid: 41, host: 'box' };
@@ -33,17 +34,17 @@ test('a held logout with no claim is eligible once the swarm has recorded that a
     const orphan = { at: 1794365516000, reason: `exit orphaned: attempt ${proof.attemptId} owner 1822 gone` };
     for (const c of [null, { phase: 'released', kind: 'trade' }] as ClaimView[])
         expect(eligibility({ ...base, proof, claim: c, end: orphan })).toEqual({ eligible: true, endedAt: orphan.at });
-    // An orphan end of another attempt, any other end, or no end: nothing to recover, quietly.
+    // Another attempt grants no recovery authority. A missing end needs diagnosis before any login.
     expect(eligibility({ ...base, proof, claim: null, end: { ...orphan, reason: 'exit orphaned: attempt 1794000000000-1-1 owner 9 gone' } })).toMatchObject({ eligible: false, reason: 'no held fleet account claim', log: false });
     expect(eligibility({ ...base, proof, claim: null })).toMatchObject({ eligible: false, log: false });
-    expect(eligibility({ ...base, proof, claim: null, end: undefined })).toMatchObject({ eligible: false, log: false });
+    expect(eligibility({ ...base, proof, claim: null, end: undefined })).toMatchObject({ eligible: false, log: true, diagnose: true });
     // An owner's stop file still holds the account.
     expect(eligibility({ ...base, proof, claim: null, end: orphan, stopText: 'held: owner pause' })).toMatchObject({ eligible: false, log: true, reason: 'owner stop file holds the account' });
 });
 
 test('held sessions that cannot be recovered safely are refused with a logged reason', () => {
     expect(eligibility({ ...base, end: undefined })).toMatchObject({ eligible: false, log: true, reason: expect.stringContaining('end record gone') });
-    expect(eligibility({ ...base, end: { at: 1, reason: 'died' } })).toMatchObject({ eligible: false, log: true, reason: 'death needs a person' });
+    expect(eligibility({ ...base, end: { at: 1, reason: 'died' } })).toMatchObject({ eligible: false, log: true, diagnose: true });
     expect(eligibility({ ...base, end: { at: 1, reason: 'done after 1 runs' } })).toMatchObject({ eligible: false, log: true });
     expect(eligibility({ ...base, stopText: 'held: owner pause' })).toMatchObject({ eligible: false, log: true, reason: 'owner stop file holds the account' });
     expect(eligibility({ ...base, claim: { phase: 'held' } })).toMatchObject({ eligible: false, log: true });
@@ -240,14 +241,85 @@ test('the dead-task rule matches the coordinator: missing or superseded dependen
     expect(deadTasks([refresh, run]).size).toBe(0);
 });
 
-test('an end is retried once after its run or its qualify failed, then left for a person', () => {
+test('a failed qualification spends no account login attempt; two failed recovery runs keep the login limit', () => {
     const target = { account: 'Quickhandjob', endedAt: 7 };
     const first = [task('q1', 'failed', []), task('a1', 'pending', ['q1'], target)];
-    expect(spentAttempts(first, target)).toBe(1);
+    expect(spentAttempts(first, target)).toBe(0);
     const second = [...first, task('q2', 'succeeded', []), task('a2', 'failed', ['q2'], { account: 'quickhandjob', endedAt: 7 })];
-    expect(spentAttempts(second, target)).toBe(MAX_ATTEMPTS);
+    expect(spentAttempts(second, target)).toBe(1);
+    expect(spentAttempts([...second, task('a3', 'failed', ['q2'], target)], target)).toBe(MAX_ATTEMPTS);
     expect(spentAttempts(second, { ...target, endedAt: 8 })).toBe(0);
     expect(spentAttempts([task('q', 'succeeded', []), task('a', 'running', ['q'], target)], target)).toBe(0);
+});
+
+test('a failed recovery qualification sends its retained consumer to planning without another login proposal', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-planning-')), account = 'Woodpecker', endedAt = 1794717996676;
+    const qualification = { ...task('q', 'failed', []), runId: 'qualify-run', receipt: { at: endedAt + 100, ok: false, output: {
+        delivery: { ok: false, source: 'a'.repeat(64), failedCheck: 'session-recovery-only-regressions', reason: 'check failed', directory: '/r/.practice/deliveries/recovery-1' },
+    } }, spec: { ...task('q', 'failed', []).spec, capability: 'session-recovery-only' } };
+    const run = { ...task('recover', 'pending', ['q'], { account, endedAt }), spec: { ...task('recover', 'pending', ['q'], { account, endedAt }).spec, account, capability: 'session-recovery-only' } };
+    try {
+        const problem = recoveryPlanningProblem(root, account, { at: endedAt, reason: 'gave-up after 1 runs' }, [qualification, run]);
+        expect(problem).toMatchObject({ schema: 'recovery-planning/1', account, server: LIVE_SERVER, endedAt, lineage: { ends: [endedAt] }, pendingTaskIds: ['recover'],
+            failures: [{ taskId: 'q', runId: 'qualify-run', kind: 'qualify', source: 'a'.repeat(64), failedCheck: 'session-recovery-only-regressions', error: 'check failed', deliveryDirectory: '/r/.practice/deliveries/recovery-1' }] });
+        expect(spentAttempts([qualification, run], { account, endedAt })).toBe(0);
+        // A later accepted native delivery gives the planner a qualified retry path without erasing this failure.
+        const passed = { ...qualification, status: 'succeeded', spec: { ...qualification.spec, id: 'q2' }, receipt: { at: endedAt + 200, ok: true,
+            output: { delivery: { ok: true, source: 'a'.repeat(64) } } } };
+        expect(recoveryPlanningProblem(root, account, { at: endedAt, reason: 'gave-up after 1 runs' }, [qualification, run, passed])).toBeUndefined();
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('equivalent recovery failures wake the existing planner once; changed source or failure evidence wakes it again', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-planning-dedupe-')), endedAt = 1794717996676;
+    const problem: RecoveryPlanningProblem = { schema: 'recovery-planning/1', account: 'Woodpecker', server: LIVE_SERVER, endedAt, lineage: { ends: [endedAt] }, reason: 'qualification failed', pendingTaskIds: ['recover'],
+        failures: [{ taskId: 'q', runId: 'run-1', kind: 'qualify', source: 'a'.repeat(64), failedCheck: 'regression', error: 'spawnSync git ETIMEDOUT', deliveryDirectory: '/r/.practice/deliveries/random-1' }] };
+    const signal = join(root, '.practice/coordinator/plan-request');
+    try {
+        expect(requestRecoveryPlanning(root, problem)).toBe(true);
+        expect(existsSync(signal)).toBe(true);
+        rmSync(signal);
+        // New task IDs, run IDs and delivery folder names do not change the current failed state.
+        const equivalent = { ...problem, pendingTaskIds: ['recover-2'],
+            failures: [{ ...problem.failures[0], taskId: 'q2', runId: 'run-2', deliveryDirectory: '/r/.practice/deliveries/random-2' }] };
+        expect(requestRecoveryPlanning(root, equivalent)).toBe(false);
+        expect(existsSync(signal)).toBe(false);
+        // A child-generated end needs its own fact because the planner matches the current exact end.
+        expect(requestRecoveryPlanning(root, { ...equivalent, endedAt: endedAt + 10, lineage: { ends: [endedAt + 10, endedAt] } })).toBe(true);
+        expect(existsSync(signal)).toBe(true);
+        rmSync(signal);
+        expect(requestRecoveryPlanning(root, { ...problem, failures: [{ ...problem.failures[0]!, source: 'b'.repeat(64) }] })).toBe(true);
+        rmSync(signal);
+        expect(requestRecoveryPlanning(root, { ...problem, failures: [{ ...problem.failures[0]!, error: 'native proof could not reach logout' }] })).toBe(true);
+        expect(existsSync(join(root, '.practice/cloud-recover/planning'))).toBe(true);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a failed recovery session requests diagnosis before another unchanged login and bounds its evidence', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-planning-child-')), account = 'Woodpecker', endedAt = 1794717996676;
+    const failed = { ...task('recover', 'failed', [], { account, endedAt }), runId: 'child-run', receipt: { at: endedAt + 100, ok: false, error: 'x'.repeat(5000) } };
+    try {
+        const problem = recoveryPlanningProblem(root, account, { at: endedAt, reason: 'gave-up after 1 runs' }, [failed]);
+        expect(problem?.failures[0]?.error).toHaveLength(600);
+        expect(problem?.failures[0]).toMatchObject({ taskId: 'recover', runId: 'child-run', kind: 'run' });
+        expect(spentAttempts([failed], { account, endedAt })).toBe(1);
+        expect(recoveryPlanningProblem(root, account, { at: endedAt, reason: 'gave-up after 1 runs' }, [{ ...failed,
+            receipt: { ...failed.receipt, error: 'Error: live admission waiting: memory' } }])).toBeUndefined();
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a held death or missing end requests diagnosis without granting recovery login authority', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-planning-no-end-'));
+    try {
+        expect(eligibility({ ...base, end: { at: 1, reason: 'died' } })).toMatchObject({ eligible: false, diagnose: true });
+        expect(eligibility({ ...base, end: undefined })).toMatchObject({ eligible: false, diagnose: true });
+        expect(eligibility({ ...base, claim: null, end: undefined })).toMatchObject({ eligible: false, diagnose: true });
+        const missing = recoveryPlanningProblem(root, 'Woodpecker', undefined, [], 'held session has no end record');
+        expect(missing).toMatchObject({ endedAt: null, lineage: { unknown: 'end record unavailable' }, failures: [], pendingTaskIds: [] });
+        expect(requestRecoveryPlanning(root, missing!)).toBe(true);
+        expect(requestRecoveryPlanning(root, missing!)).toBe(false);
+        expect(eligibility({ ...base, end: undefined, stopText: 'owner pause' })).toMatchObject({ eligible: false, reason: 'owner stop file holds the account' });
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test('a run that never started behind a failed earlier run of its chain spends no attempt and is submitted again', () => {
@@ -425,7 +497,7 @@ test('two failures across successive child-generated ends stop a third automatic
         const e2 = orphan(t0 + 400_000, attempt(t0 + 320_000, 202, child('run-2')));
         tasks.push(...run('r2', 'run-2', e1.at, childHeld));
         expect(spentAttempts(tasks, { account, endedAt: e2.at })).toBe(0);
-        expect(budgetRefusal(root, account, e2, tasks)).toBe(`${MAX_ATTEMPTS} recoveries of end ${e2.at} and the 2 earlier ends of its lineage (first ${e0.at}) failed; recover by hand`);
+        expect(budgetRefusal(root, account, e2, tasks)).toBe(`${MAX_ATTEMPTS} recoveries of end ${e2.at} and the 2 earlier ends of its lineage (first ${e0.at}) failed; planner diagnosis required`);
         // Compaction retains full outcomes. A replayed archive row and a row still in state count only once.
         const archive = join(root, '.practice/coordinator/archive/tasks.jsonl');
         mkdirSync(join(archive, '..'), { recursive: true });
@@ -450,7 +522,7 @@ test('two failures across successive child-generated ends stop a third automatic
         const e3 = orphan(t0 + 560_000, attempt(t0 + 500_000, 300, ordinary));
         expect(budgetRefusal(root, account, e3, tasks)).toBeUndefined();
         // Unknown links get no budget: an end that names an attempt with no receipt, a recovery child of a run with no retained request.
-        expect(budgetRefusal(root, account, orphan(t0 + 600_000, id(t0 + 590_000, 9)), tasks)).toMatch(/^recovery lineage of end \d+ unknown \(attempt .* has no lifecycle receipt\); recover by hand$/);
+        expect(budgetRefusal(root, account, orphan(t0 + 600_000, id(t0 + 590_000, 9)), tasks)).toMatch(/^recovery lineage of end \d+ unknown \(attempt .* has no lifecycle receipt\); planner diagnosis required$/);
         expect(budgetRefusal(root, account, orphan(t0 + 760_000, attempt(t0 + 700_000, 400, child('run-unknown'))), tasks)).toMatch(/no retained recovery request names/);
     } finally { rmSync(root, { recursive: true, force: true }); }
 });
