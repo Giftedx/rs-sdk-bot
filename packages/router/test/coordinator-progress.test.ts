@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {initialState,addTasks,replaceTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,compactState,ARCHIVE_AFTER_MS,type CoordTask} from '../src/coordinator';
+import {initialState,addTasks,replaceTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,qualificationRefreshCapabilities,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,compactState,ARCHIVE_AFTER_MS,type CoordTask} from '../src/coordinator';
 import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts,repairModelTask} from '../src/coordinator-planner';
 import {buildBrief} from '../src/author';
 import {fleetExpansionDemand,nativeDispatchReady} from '../src/coordinator-cli';
@@ -8,6 +8,30 @@ import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:5,estimatedMs:60000,why:'Finish useful quest',...extra});
 const run=(id:string,deps:string[]=[])=>task(id,{kind:'run',account:'Helper',dependsOn:deps,accept:{quests:["Cook's Assistant"]}});
 function complete(s:ReturnType<typeof initialState>,id:string,ok:boolean,at:number,output:any={}){startTask(s,id,at-1,id);finishTask(s,{taskId:id,runId:id,ok,at,output});}
+
+test('an isolated build leaves independent live qualification refreshes dispatchable',()=>{
+ const s=initialState();
+ addTasks(s,[task('cow-build',{kind:'build',capability:'cow-progress-order'}),run('cow-live'),run('ge-live'),run('ge-second'),run('prayer-live')]);
+ for(const r of s.tasks.filter(r=>r.spec.id.startsWith('ge-')))r.spec.capability='ge-bulk-order';
+ s.tasks.find(r=>r.spec.id==='cow-live')!.spec.capability='cow-progress-order';
+ s.tasks.find(r=>r.spec.id==='prayer-live')!.spec.capability='prayer-order';
+ startTask(s,'cow-build',1,'cow-run');
+ const files=(cap:string)=>[cap+'.ts'];
+ const caps=qualificationRefreshCapabilities(s,files);
+ expect(caps).toEqual(['ge-bulk-order','prayer-order']);
+ refreshQualifications(s,Object.fromEntries(caps.map(cap=>[cap,'current-source'])));
+ const next=chooseTask(s,2,{isolatedBuilds:true,nativeReady:true,sourceReady:true,developmentLimit:2,focusCapability:'cow-progress-order',ownedFiles:files});
+ expect(next?.kind).toBe('qualify');
+ expect(next?.id).toBe('refresh-ge-bulk-order-current-source');
+ expect(s.tasks.some(r=>r.spec.id==='refresh-cow-progress-order-current-source')).toBe(false);
+});
+
+test('qualification refresh waits on a different build that owns a shared file',()=>{
+ const s=initialState();addTasks(s,[task('build',{kind:'build',capability:'repair-order'}),run('live')]);startTask(s,'build',1,'build-run');
+ expect(qualificationRefreshCapabilities(s,()=>['scripts/shared-worker.ts'])).toEqual([]);
+ s.tasks.find(r=>r.spec.id==='build')!.status='succeeded';
+ expect(qualificationRefreshCapabilities(s,()=>['scripts/shared-worker.ts'])).toEqual(['quest-order']);
+});
 
 test('a model task with one repairable field fault is repaired, and a fault with no safe repair names its rule and task',()=>{
  const numbers=repairModelTask({...run('a'),args:[18000,'x'],env:null});
