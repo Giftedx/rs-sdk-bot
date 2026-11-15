@@ -1,0 +1,22 @@
+{
+ "id": "1794776453967-bigpackage-mmsmk1232-firerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "mmsmk1232",
+ "item": "Fire rune",
+ "count": 250,
+ "start": 1794776453967,
+ "end": 1794778853967,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
