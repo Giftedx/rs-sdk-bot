@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794777150653,
+ "at": 1794777517707,
  "jobs": [
   {
    "account": "Balls",
@@ -52,26 +52,6 @@
    "role": "market"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -89,21 +69,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "scorpion"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-11e07527-d0b6-413c-9c2a-21f27e56b097"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-scorpion-bigchopper-controller-handoff [task-11e07527-d0b6-413c-9c2a-21f27e56b097]",
-   "role": "helper"
   },
   {
    "account": "Masterbaiter",
@@ -152,6 +117,26 @@
    "repeat": false,
    "goal": "local-recover-wandwaver-20261115t082009z [task-fc72bc71-4301-4715-8081-a6d383b249af]",
    "role": "combat"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "local",
+   "resources": []
   }
  ],
  "army": [
