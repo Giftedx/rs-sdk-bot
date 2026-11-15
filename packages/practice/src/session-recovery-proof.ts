@@ -370,7 +370,8 @@ export function classifyCooldownWindow(log:string,account:string,w:{signalAt:num
  if(warm.length!==1)return fail('warm takeover reply missing or ambiguous');
  const takeover=warm[0]!,prior=mine.filter(r=>r.response===0&&r.at<takeover.requestAt).at(-1);
  if(prior?.type!=='player_login')return fail('warm login did not take over a live session',{takeoverReplyAt:takeover.at});
- const requests=auth.requests.filter(r=>r.account===a&&r.type==='player_login'&&r.at>=w.since);
+ const requests=auth.requests.filter(r=>r.account===a&&r.type==='player_login'&&r.at>=w.since
+  &&!(r.connection===takeover.connection&&r.replyTo===takeover.replyTo));
  if(requests.length!==1)return fail('recovery login request missing or ambiguous',{takeoverReplyAt:takeover.at});
  const req=requests[0]!,timing={takeoverReplyAt:takeover.at,recoveryRequestAt:req.at,gapMs:req.at-takeover.at};
  if(timing.gapMs<0)return fail('recovery login preceded the warm takeover',timing);
@@ -378,6 +379,26 @@ export function classifyCooldownWindow(log:string,account:string,w:{signalAt:num
  const answers=auth.replies.filter(r=>r.connection===req.connection&&r.replyTo===req.replyTo);
  if(answers.length!==1||answers[0]!.response!==3)return fail('recovery login inside the window was not refused with response 3',{...timing,response:answers[0]?.response??null});
  return {ok:true,reason:'recovery login refused with response 3 inside the open takeover window',windowMs:w.windowMs,...timing,response:3};
+}
+// The actual CLI emits this row after its source and permit checks, before it connects.
+export async function waitRecoveryRuntime(readLog:()=>string,expected:{pid:number;runner:string;root:string;since:number},
+ observation:{timeoutMs:number;now?:()=>number;pause?:(ms:number)=>Promise<unknown>}={timeoutMs:60000}){
+ if(!Number.isSafeInteger(observation.timeoutMs)||observation.timeoutMs<=0)throw Error('recovery runtime observation deadline invalid');
+ const now=observation.now??Date.now,pause=observation.pause??(ms=>Bun.sleep(ms)),until=now()+observation.timeoutMs;
+ for(;;){
+  const log=readLog();
+  for(const line of log.slice(0,log.lastIndexOf('\n')+1).split(/\r?\n/)){
+   if(!line.startsWith('RECOVERY_RUNTIME '))continue;
+   let row:any;try{row=JSON.parse(line.slice('RECOVERY_RUNTIME '.length));}catch{continue;}
+   if(row?.pid!==expected.pid||!Number.isSafeInteger(row.at)||row.at<expected.since)continue;
+   if(typeof row.runner!=='string'||typeof row.cwd!=='string'||typeof row.repoRoot!=='string'
+    ||resolve(row.runner)!==resolve(expected.runner)||resolve(row.cwd)!==resolve(expected.root)||resolve(row.repoRoot)!==resolve(expected.root))
+    throw Error('recovery runtime identity mismatch');
+   return row as {at:number;pid:number;runner:string;cwd:string;repoRoot:string};
+  }
+  const left=until-now();if(left<=0)throw Error('recovery runtime observation timeout: matching child not observed');
+  await pause(Math.min(50,left));
+ }
 }
 // The owner process can exit before the world receives its LoginServer logout acknowledgement.
 // Observe that reply without changing the session owner's cleanup or its deadline.
@@ -742,8 +763,6 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     ...extra(receipt),...more},{account:f.name,server:f.server,runId,childPid:sub.child,taskPid:taskOwner.pid,persistence:persisted?'fresh native save after confirmed producer logout':'missing',owner:ownerNote,
     firstRefusal:recoveryDiagnosticFromLog(existsSync(join(dir,'recovery-worker.err'))?readFileSync(join(dir,'recovery-worker.err'),'utf8'):'')})};
   };
-  // beforeSubmit runs after the task, permit inputs and request exist, immediately before the raw submit. The memory
-  // wait comes first, so a cooldown takeover stays inside its window.
   const held=async(id:string,f:Fixture,d=d8890,beforeSubmit:(r:ControlledRecoveryRequest)=>Promise<void>=async()=>{})=>{
    const dir=caseDir(id);copyFileSync(f.save,join(dir,'before.sav'));const ended=deathBytes(),since=Date.now(),before=listAttempts(f.name,f.server,{root:lifeRoot}).length;
    const {runId,owner:taskOwner}=await task(f,id),r=requestFor(f,runId,'one-'+id);
@@ -912,23 +931,25 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     noRecoveryLogin:noRecoveryLogin(loginLog(),since,B.name)},{account:B.name,ownerPid:o.ready.pid});
   }
   // 6 cooldown: an owner the controller cannot see holds a fresh takeover; the real server refuses and the outcome stays held.
-  // Task, permit inputs and request exist first. The owner then takes over its own session and the request is submitted at once.
+  // Observe the recovery child's actual runtime before the owner opens the window. Auth records decide whether the recovery enters in time.
   {
    const C=await fixture(HOST,preset),dir=caseDir('cooldown'),external=join(directory,'external-lifecycle'),o=await owner(C,dir,'warm',external);
-   let warm=undefined as Awaited<ReturnType<typeof o.takeover>>|undefined;
-   const h=await held('cooldown',C,d8890,async()=>{warm=await o.takeover();}),out=await h.finish();
-   const window=classifyCooldownWindow(loginLog(),C.name,{signalAt:warm!.signalAt,warmAt:warm!.at,since:h.submittedAt,windowMs:TAKEOVER_WINDOW_MS});
+   const h=await held('cooldown',C,d8890),workerLog=join(dirname(recoveryPermitPaths(h.r,base).input),'worker.log');
+   if(!h.sub.child)throw Error('cooldown recovery child not launched');
+   const runtime=await waitRecoveryRuntime(()=>existsSync(workerLog)?readFileSync(workerLog,'utf8'):'',{pid:h.sub.child,runner,root,since:h.submittedAt});
+   const warm=await o.takeover(),out=await h.finish();
+   const window=classifyCooldownWindow(loginLog(),C.name,{signalAt:warm.signalAt,warmAt:warm.at,since:h.submittedAt,windowMs:TAKEOVER_WINDOW_MS});
    const ownerLoginReplyAt=(window as {takeoverReplyAt?:number}).takeoverReplyAt;
    const ownerAttempts=listAttempts(C.name,C.server,{root:external}).map(a=>a.attemptId).sort(),releaseAt=await o.release();
    const ownerAuth=await waitOwnerAuthLogout(loginLog,C.name,{releaseAt,ownerLoginReplyAt});
    const proof=readLogoutProof(C.name,C.server,{root:lifeRoot}),ownerProof=readLogoutProof(C.name,C.server,{root:external});
-   const preserved=ownerSessionEvidence(ownerAuth,C.name,{since:h.submittedAt,releaseAt,ownerLoginReplyAt,ownerAttempt:warm!.attemptId,latestAttemptBeforeRelease:ownerAttempts.at(-1)});
+   const preserved=ownerSessionEvidence(ownerAuth,C.name,{since:warm.at,releaseAt,ownerLoginReplyAt,ownerAttempt:warm.attemptId,latestAttemptBeforeRelease:ownerAttempts.at(-1)});
    const replies=authReplies(ownerAuth,h.since,C.name);writeFileSync(join(dir,'auth-replies.json'),JSON.stringify(replies));
-   writeFileSync(join(dir,'cooldown-window.json'),JSON.stringify({warm,submittedAt:h.submittedAt,releaseAt,window,preserved,ownerAttempts,ownerProof},null,2));
+   writeFileSync(join(dir,'cooldown-window.json'),JSON.stringify({runtime,warm,submittedAt:h.submittedAt,releaseAt,window,preserved,ownerAttempts,ownerProof},null,2));
    record('cooldown','native-actual-cli',{takeoverWindowOpen:window.ok===true,serverCooldown:window.ok===true&&out.replies.filter((x:AttributedAuthReply)=>x.type==='player_login'&&x.account===C.name.toLowerCase()&&x.response===3).length===1,
     dispatcherHeld:out.result?.sessionRecovered===false,receiptHeld:out.receipt?.state==='held',
     leaseHeld:existsSync(out.paths.lease),producerHeld:proof.state==='held',notRecovered:!recoveredSessionForRun(C.name,C.server,h.runId,source,base),
-    activeOwnerPreserved:preserved.ok,ownerLogoutConfirmed:ownerProof.state==='confirmed'&&ownerProof.attemptId===warm!.attemptId,failureRetained:deathBytes()===h.ended},
+    activeOwnerPreserved:preserved.ok,ownerLogoutConfirmed:ownerProof.state==='confirmed'&&ownerProof.attemptId===warm.attemptId,failureRetained:deathBytes()===h.ended},
     {account:C.name,owner:'external private lifecycle root; invisible to the controller by design',reason:window.reason,window});
   }
   // 7 orphan: the owner process dies while its producer attempt is unresolved; the controller recovers after the takeover window.
@@ -963,8 +984,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // While it runs, a restarted dispatcher observes the inherited child, refuses a newer intent and the old bytes.
   {
    const T=await fixture(RELAY,preset),d1=dispatcher(RELAY);relay.set('stall');
-   const h=await held('timeout',T,d1),dir=h.dir,childPid=h.sub.child;
-   const until=Date.now()+30000;while(Date.now()<until&&!listAttempts(T.name,T.server,{root:lifeRoot}).some(a=>a.receipt?.owner.pid===childPid))await Bun.sleep(100);
+   // Relay acceptance follows producer publication. Do not replace the lease while the real child still loads.
+   const h=await afterStalledConnection(relay.stalled,()=>held('timeout',T,d1),120000),dir=h.dir,childPid=h.sub.child;
    // held() waited for this case. The held lease refuses the newer request before admission, and a second wait could
    // outlast the stalled child that this case observes.
    const late=caseDir('restart-late-callback'),d2=dispatcher(RELAY),inherited=heldRecoveryOwners(base);
