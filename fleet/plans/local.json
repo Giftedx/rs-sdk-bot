@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794781928856,
+ "at": 1794782127202,
  "jobs": [
   {
    "account": "Balls",
@@ -50,6 +50,23 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Bigchopper",
@@ -129,19 +146,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-fc72bc71-4301-4715-8081-a6d383b249af"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-wandwaver-20261115t082009z [task-fc72bc71-4301-4715-8081-a6d383b249af]",
-   "role": "combat"
   }
  ],
  "army": [
