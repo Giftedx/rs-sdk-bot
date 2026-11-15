@@ -11,6 +11,7 @@
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { renameRetry } from '../packages/core/src/status';
 
 export const MARKET_FILE = '.practice/market-all.json';
 export const MARKET_CACHE_MS = 30 * 60_000;
@@ -27,7 +28,7 @@ export function writeMarketCache(base: string, items: Readonly<Record<number, Ma
     mkdirSync(join(base, '.practice'), { recursive: true });
     try {
         writeFileSync(tmp, JSON.stringify({ at, items }), { flag: 'wx' });
-        renameSync(tmp, file);
+        renameRetry(tmp, file);
     } finally { rmSync(tmp, { force: true }); }
 }
 // Acquisition needs an observed seller count as well as the ask. Older caches that omit it remain unknown.
