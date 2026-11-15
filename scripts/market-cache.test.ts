@@ -120,6 +120,7 @@ test('fetchMarket reads every page of 100 and pauses between them', async () => 
     let pauses = 0;
     const page = (offset: number) => ({ total: 150, items: [{ id: offset + 1, name: `i${offset}`, vwap: 10, trades: 5 }] });
     const all = await fetchMarket(async url => { urls.push(url); return page(Number(url.match(/offset=(\d+)/)![1])); }, async () => { pauses++; });
+    expect(urls.every(url=>url.startsWith('https://rs-sdk.maxbittker.com/api/market/items?'))).toBe(true);
     expect(urls.map(u => u.replace(/^.*\?/, ''))).toEqual(['limit=100&offset=0', 'limit=100&offset=100']);
     expect(pauses).toBe(1);
     expect(Object.keys(all)).toEqual(['1', '101']);

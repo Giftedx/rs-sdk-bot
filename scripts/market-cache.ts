@@ -11,6 +11,7 @@
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { gameDialAddress } from '../packages/core/src/websocket-proxy';
 import { renameRetry } from '../packages/core/src/status';
 
 export const MARKET_FILE = '.practice/market-all.json';
@@ -85,7 +86,7 @@ export async function fetchMarket(get: (url: string) => Promise<any> = async url
 }, pause: (ms: number) => Promise<void> = ms => Bun.sleep(ms)): Promise<Record<number, MarketItem>> {
     const all: Record<number, MarketItem> = {};
     for (let offset = 0, total = 1; offset < total; offset += 100) {
-        const j = await get(`${DEMO}/api/market/items?limit=100&offset=${offset}`);
+        const j = await get(gameDialAddress(`${DEMO}/api/market/items?limit=100&offset=${offset}`));
         if (!Number.isSafeInteger(j?.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('invalid market page');
         total = Math.min(j.total, 5000);
         Object.assign(all, marketRows(j.items));

@@ -131,6 +131,7 @@ test('makeValuer: live market price, cost fallback, coins at 1, local server ski
     expect(await live(1215)).toBe(300000);
     expect(await live(1215)).toBe(300000);
     expect(calls.length).toBe(1); // cached
+    expect(calls[0]).toBe('https://rs-sdk.maxbittker.com/api/market/items/1215');
     expect(await live(526)).toBe(itemCost(526)); // market down: items.json cost
     expect(await live(995)).toBe(1);
     const local = makeValuer('localhost:8888', async () => { throw Error('must not call'); });

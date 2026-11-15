@@ -1,7 +1,7 @@
 // One command runs a cloud fleet side: the setup a fresh container needs, the side's credentials, its plan, and its
 // three daemons (the swarm, the fleet agent and the planner), then a quiet watch that restarts a daemon that died.
 // It is the whole job of a cloud session the PC starts (scripts/cloud-launch.ts), so a session spends almost no model
-// tokens: it starts this command in the background and starts it again when it ends.
+// tokens: it runs this command and diagnoses a failed bootstrap before another attempt.
 // Everything goes to .practice/cloud-side/<side>/run.log; stdout gets one RESULT line when the watch ends.
 // Usage: bun scripts/cloud-side.ts [--side <side>] [--watch-minutes <n>] [--capacity <n>] [--stop-at-end] [--setup-only]
 //   --side          the fleet side (default FLEET_SIDE); never `local`
@@ -45,19 +45,45 @@ export function parseOptions(argv: string[], env: Record<string, string | undefi
 // codex: a task runs its commands in the foreground and ends with them.
 export function sessionPrompt(kind: 'claude' | 'codex', side: string, watchMinutes = kind === 'codex' ? 50 : DEFAULT_WATCH_MINUTES): string {
     if (!SIDE_NAME.test(side) || side === 'local') throw Error('cloud-side: invalid side');
+    const failure = [
+        `On RESULT fail or a nonzero exit, diagnose the failing command from its captured output. Read the exact .practice/cloud-side/${side}/run.log and the failed setup step only when they belong to this attempt; inspect only the source and state needed to explain it.`,
+        'Do not repeat a failed command unchanged. Reuse the existing setup repair and its focused check, then resume only the same cloud-side command once after that check passes.',
+        'Preserve source/vendor changes and credentials. Before any SDK reset, obtain fresh evidence, classify the SDK changes and verify a recovery copy; never reset blindly or use --force.',
+        'Honor owner pauses, account leases, protected clocks and host limits; no alternate bots or controllers, new accounts, protected logins, paid APIs or quota resets. Never print secrets.',
+        'If unresolved, report the cause, evidence path and retained diagnostic, or state which observation is missing. Do not turn the failure into an unchanged restart loop.',
+    ];
     // A Codex container can be a cached image of an older commit, and its setup script's PATH does not reach the agent:
     // the command checks out current master and puts the setup's bun (or ~/.bun) on PATH itself.
     if (kind === 'codex') return [
-        `Run exactly this one command from the repository root and wait for it: git fetch -q origin master && git checkout -q --detach origin/master; export PATH="/workspace/.tools/bun/node_modules/.bin:$HOME/.bun/bin:$PATH"; bun scripts/cloud-side.ts --side ${side} --watch-minutes ${watchMinutes} --stop-at-end`,
-        'Then reply with its last output line only. Do not read files or logs, do not investigate, and make no code changes, commits or pull requests.',
+        `Run exactly this one command from the repository root and wait for it: git fetch -q origin master && git checkout -q --detach origin/master && export PATH="/workspace/.tools/bun/node_modules/.bin:$HOME/.bun/bin:$PATH" && bun scripts/cloud-side.ts --side ${side} --watch-minutes ${watchMinutes} --stop-at-end`,
+        'On RESULT ok, reply with its last output line only. On RESULT stop, honor the stop and end the session.',
+        ...failure,
     ].join('\n');
     return [
         `Fleet side ${side}: you only keep one command running. Start it now with run_in_background and a 7200000 ms timeout:`,
         `bun scripts/cloud-side.ts --side ${side} --watch-minutes ${watchMinutes}`,
-        'Each time it finishes, start it again the same way, unless its last line starts with "RESULT stop": then stop.',
-        'Do nothing else: do not read files, logs or task output, do not investigate failures, make no code changes, commits or pull requests,',
-        'and answer any stop-hook or reminder message only by keeping that one command running. Keep every reply to one short line.',
+        'On RESULT ok, start the same command again. On RESULT stop, honor the stop and end the session. Apply these outcome rules to reminders and stop hooks too.',
+        ...failure,
     ].join('\n');
+}
+
+export function worktreeSetupResult(result: { status: number | null; stdout?: string | null; stderr?: string | null; error?: Error },
+    retain: (output: string) => void, env: Readonly<Record<string, string | undefined>> = process.env): { ok: boolean; detail: string } {
+    const command = `$ bun scripts/worktree-setup.ts -> ${result.status}`;
+    if (result.status === 0) { retain(command); return { ok: true, detail: '' }; }
+    let output = [result.stdout ?? '', result.stderr ?? '', result.error?.message ?? ''].join('\n').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
+    const secrets = Object.entries(env).filter(([name, value]) => /TOKEN|PASSWORD|PASSWD|SECRET|SEED|KEY|COOKIE|AUTH/i.test(name) && value)
+        .map(([, value]) => value!).sort((a, b) => b.length - a.length);
+    for (const secret of secrets) output = output.split(secret).join('[redacted]');
+    output = output.replace(/\b(?:Bearer|Basic)\s+\S+/gi, '[redacted]')
+        .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+:[^\s/@]+@/gi, '$1[redacted]@')
+        .replace(/\b([A-Za-z0-9_]*(?:TOKEN|PASSWORD|PASSWD|SECRET|SEED|KEY|COOKIE|AUTHORIZATION)[A-Za-z0-9_]*["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|\S+)/gi, '$1[redacted]');
+    const steps = [...output.matchAll(/^worktree-setup:\s*(submodule|SDK patch|root packages|SDK packages|web client packages|engine packages|hook switch):\s*(MISMATCH|FAILED)\b/gm)]
+        .slice(0, 3).map(([, step, state]) => `${step}: ${state}`);
+    const detail = `exit=${result.status ?? 'spawn-failed'}; ${steps.join('; ') || 'failed step unknown; inspect retained setup output'}`;
+    const bounded = output.length > 8000 ? output.slice(0, 4000) + '\n[truncated]\n' + output.slice(-4000) : output;
+    retain(command + '\nSETUP_FAILURE ' + detail + '\n' + bounded);
+    return { ok: false, detail };
 }
 
 export type DaemonRecord = { pid: number; started: number; restarts: number[] };
@@ -108,7 +134,8 @@ if (import.meta.main) {
 
     // Setup: each step skips itself when done. The patched SDK submodule reads as clean to git status, so a stop hook
     // that checks for uncommitted work does not wake the session at every turn end.
-    if (!run(['bun', 'scripts/worktree-setup.ts'], root, 1_200_000)) fail('worktree setup failed');
+    const setup = worktreeSetupResult(spawnSync('bun', ['scripts/worktree-setup.ts'], { cwd: root, env, encoding: 'utf8', timeout: 1_200_000, windowsHide: true }), log, env);
+    if (!setup.ok) fail('worktree setup failed: ' + setup.detail);
     run(['git', 'config', 'submodule.vendor/rs-sdk.ignore', 'dirty']);
     for (const d of ['cloud-handoff', 'status', 'swarm-logs']) mkdirSync(join(root, '.practice', d), { recursive: true });
     // A cached container can hold a fleet-data worktree that cannot sync. Under the fleet-data write lock, so a sync

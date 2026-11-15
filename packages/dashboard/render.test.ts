@@ -1,6 +1,18 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
+import {gameDialAddress} from '../core/src/websocket-proxy';
 const html=readFileSync(process.env.DASH_PAGE || new URL('./index.html',import.meta.url),'utf8');
+
+test('the 3D viewer retains the canonical feed address supplied by its health URL',()=>{
+ const helpers=html.slice(html.indexOf('function viewerFrameUrl('),html.indexOf('function viewerMessage('));
+ const sync=html.slice(html.indexOf('function syncWorld(){'),html.indexOf('// Ground items:'));
+ const live=gameDialAddress('wss://rs-sdk-demo.fly.dev/worldfeed'),viewer='/viewer/?live='+encodeURIComponent(live);
+ const frame={getAttribute:()=>null,src:''},follow={textContent:''};
+ new Function('$','URL','location','viewer',`const S={bots:[{name:'Worker',at:1}]},sel='Worker',mode='3d',Q=new URLSearchParams(),VIEWER={url:viewer},window={},document={baseURI:location.origin},age=()=>'',showViewerStatus=()=>{},viewerMaxLevel=()=>3,syncGround=()=>{};let rswFor,sentMaxLevel;${helpers};${sync};syncWorld();`)
+  ((id:string)=>id==='#rsw'?frame:follow,URL,{origin:'http://127.0.0.1:3100'},viewer);
+ expect(new URL(frame.src).searchParams.get('live')).toBe('wss://rs-sdk.maxbittker.com/worldfeed');
+ expect(viewer).toBe('/viewer/?live='+encodeURIComponent(live));
+});
 
 function viewerReady(state:any,selected:string|null){
  const code=html.slice(html.indexOf("window.addEventListener('message',e=>{"),html.indexOf('function syncWorld(){'));

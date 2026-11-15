@@ -65,7 +65,7 @@ test('fetchQuote reads the public market row and refuses a row for another item'
     const row = { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38334, ask: 271 };
     let asked = '';
     expect(await fetchQuote(313, async url => { asked = url; return row; })).toEqual(bait);
-    expect(asked).toBe('https://rs-sdk-demo.fly.dev/api/market/items/313');
+    expect(asked).toBe('https://rs-sdk.maxbittker.com/api/market/items/313');
     expect(await fetchQuote(313, async () => ({ ...row, bid: null }))).toEqual({ ...bait, bid: null });
     await expect(fetchQuote(313, async () => ({ ...row, id: 314 }))).rejects.toThrow('invalid market quote for 313');
 });

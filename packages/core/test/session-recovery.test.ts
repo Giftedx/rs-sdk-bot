@@ -55,7 +55,9 @@ test('diagnostic publication cannot create a connection admission or a producer 
  expect(f.counts().connected).toBe(0);expect(listAttempts(f.request.account,server,{root:f.root})).toHaveLength(0);
 });
 test('actual CLI reports safe setup refusals before credentials, producer intent or output publication',async()=>{
- const dir=mkdtempSync(join(fixtureRoot,'recovery-cli-refusal-')),repo=resolve(import.meta.dir,'../../..'),source=launchRevision();
+ const deadline=performance.now()+30000,cleanupMs=1000;
+ const dir=mkdtempSync(join(fixtureRoot,'recovery-cli-refusal-')),repo=resolve(import.meta.dir,'../../..');
+ const sourceStarted=performance.now(),source=launchRevision(),sourceMs=performance.now()-sourceStarted;
  const body={schema:RECOVERY_SCHEMA,account:'Recoverme',server:'localhost:8888',runId:'offline-cli-test',nonce:'one',endedAt:1,source};
  const cases=[
   {input:null,phase:'request-read',reason:'io-enoent'},
@@ -67,13 +69,25 @@ test('actual CLI reports safe setup refusals before credentials, producer intent
  ];
  for(const [i,c] of cases.entries()){
   const path=join(dir,i+'.json'),out=join(dir,i+'-output');if(c.input!==null)writeFileSync(path,c.input);
+  // All six real CLI refusals share the existing case budget, including raw source hashing and child cleanup.
+  const budget=deadline-performance.now()-cleanupMs;
+  if(budget<=0)throw Error('recovery CLI case '+i+' exhausted the whole-case budget before launch; expected='+c.phase+'/'+c.reason+' sourceMs='+sourceMs);
+  const childStarted=performance.now();
   const p=Bun.spawn([process.execPath,join(repo,RECOVERY_SCRIPT),path,out,...(c.args??[])],{cwd:repo,stdout:'pipe',stderr:'pipe',windowsHide:true});
-  const timer=setTimeout(()=>p.kill(),8000);
-  const [code,stdout,stderr]=await Promise.all([p.exited,new Response(p.stdout).text(),new Response(p.stderr).text()]);clearTimeout(timer);
-  expect(code).toBe(1);expect(stdout).toBe('');expect(stderr).not.toContain('secret-value');
-  const lines=stderr.trim().split(/\r?\n/);expect(lines).toHaveLength(1);expect(lines[0]).toStartWith('RECOVERY_HELD ');
-  expect(JSON.parse(lines[0]!.slice('RECOVERY_HELD '.length))).toMatchObject({phase:c.phase,reason:c.reason,authorizesConnection:false,producerReceipt:false});
-  expect(existsSync(out)).toBe(false);
+  let expired=false;
+  const timer=setTimeout(()=>{if(p.exitCode===null){expired=true;p.kill();}},budget);
+  try{
+   const [code,stdout,stderr]=await Promise.all([p.exited,new Response(p.stdout).text(),new Response(p.stderr).text()]);
+   if(expired)throw Error('recovery CLI whole-case deadline: '+JSON.stringify({case:i,expectedPhase:c.phase,expectedReason:c.reason,
+    sourceMs,childMs:performance.now()-childStarted,refusalObserved:stderr.split(/\r?\n/).some(line=>line.startsWith('RECOVERY_HELD '))}));
+   expect(code).toBe(1);expect(stdout).toBe('');expect(stderr).not.toContain('secret-value');
+   const lines=stderr.trim().split(/\r?\n/);expect(lines).toHaveLength(1);expect(lines[0]).toStartWith('RECOVERY_HELD ');
+   expect(JSON.parse(lines[0]!.slice('RECOVERY_HELD '.length))).toMatchObject({phase:c.phase,reason:c.reason,authorizesConnection:false,producerReceipt:false});
+   expect(existsSync(out)).toBe(false);
+  }finally{
+   clearTimeout(timer);
+   if(p.exitCode===null){p.kill();await p.exited;}
+  }
  }
 },30000);
 function fixture(){
