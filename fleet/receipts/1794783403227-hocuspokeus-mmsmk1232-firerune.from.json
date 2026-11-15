@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794783403227-hocuspokeus-mmsmk1232-firerune",
+ "account": "Hocuspokeus",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 248,
+ "claim": "55c60d35-f6af-490d-b235-f6d6f38089db",
+ "count": 0,
+ "ok": false,
+ "at": 1794783713645,
+ "detail": "trade claimed"
+}

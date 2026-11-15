@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794783694620,
+ "at": 1794783770055,
  "jobs": [
   {
    "account": "Balls",
@@ -150,48 +150,6 @@
    "role": "supply"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "2",
-    "QUANTITY": "1700",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "375",
-    "CASH_RESERVE": "3300000",
-    "ORDER_KEY": "bowbeforeme-overall-cannonballs1700",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-051d37af-79b5-4b90-b5b8-0fd15ed3be3e"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-bowbeforeme-cannon1700-capacity [task-051d37af-79b5-4b90-b5b8-0fd15ed3be3e]",
-   "role": "supply"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "1513",
-    "QUANTITY": "106",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "2500",
-    "CASH_RESERVE": "2800000",
-    "ORDER_KEY": "yewfirst-overall-magiclogs106",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-645cd5c4-47ce-4895-914b-efbac4495259"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-yewfirst-magiclogs106-capacity [task-645cd5c4-47ce-4895-914b-efbac4495259]",
-   "role": "supply"
-  },
-  {
    "account": "Sausagefest",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -207,7 +165,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-81ea5b87-62c7-4540-af29-eb856047ddc9"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-ge-sausagefest-cannon-furnace1-capacity [task-81ea5b87-62c7-4540-af29-eb856047ddc9]",
    "role": "supply"
