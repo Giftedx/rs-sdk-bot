@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794716619676,
+ "at": 1794716875737,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -152,6 +152,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-prayer-nabtheknob-owned60 [task-d2e71531-1c37-4717-b7d8-0de6198297a8]",
+   "role": "helper"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "scorpion"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-11e07527-d0b6-413c-9c2a-21f27e56b097"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-scorpion-bigchopper-controller-handoff [task-11e07527-d0b6-413c-9c2a-21f27e56b097]",
    "role": "helper"
   }
  ],
