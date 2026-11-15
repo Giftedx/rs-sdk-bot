@@ -53,6 +53,8 @@ import { enabledByAccount, foreignRun, endedForGood, isReservation, parseJob, st
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
 import { createHash } from 'node:crypto';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
+import { installJob } from '../packages/router/src/coordinator-live';
+import { readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 
 const rev=(script:string)=>JSON.stringify([script,false,['x'],[]]);
 const proofRef={server:'rs-sdk-demo.fly.dev',proof:{kind:'producer' as const,attemptId:'A'}};
@@ -168,6 +170,52 @@ test('explicit resume preserves death/no-progress/exhausted retries and does not
         expect(applyResume(['Worker'],false,ended,pending,()=>{clears++;})).toBe(false);
         expect(clears).toBe(0);expect(ended.get('worker')?.reason).toBe(reason);
     }
+});
+
+test('coordinator stopped-mission handoff starts the installed changed mission without an enable edge',()=>{
+ const base=mkdtempSync(join(tmpdir(),'swarm-coordinator-resume-')),prac=join(base,'.practice'),account='Rod',runId='task-new-mission';
+ try{
+  mkdirSync(join(prac,'status'),{recursive:true});mkdirSync(join(prac,'coordinator/runs',runId),{recursive:true});
+  const oldJob:Job={account,script:'scripts/goldfarm.ts',enabled:false,repeat:true};
+  writeFileSync(join(base,'swarm.json'),JSON.stringify({maxBots:17,minFreeGB:4,jobs:[oldJob]}));
+  writeFileSync(join(prac,'status',account+'.json'),JSON.stringify({name:account,server:'rs-sdk-demo.fly.dev',at:Date.now()-1000,result:'fail stop file'}));
+  const lifecycle=join(prac,'session-lifecycle');beginSessionAttempt({account,server:'rs-sdk-demo.fly.dev'},{root:lifecycle}).record('ended','logged-out');
+  const endFile=join(prac,'swarm-deaths.json');persistEnded(endFile,new Map([[account,{at:100,reason:'stopped after 1 runs',revision:missionSignature(oldJob)}]]));
+  writeFileSync(join(prac,'stop-'+account),'swarm plan removed or stopped');
+  installJob({id:'quest-new',goal:'quests',account} as any,account,'scripts/quest.ts',runId,'source',{},{base,freeGB:64});
+  const job=readCoordinatorJobs(base).jobs[0] as Job,ended=loadEnded(endFile),pending=new Set<string>(),previous=new Map<string,boolean>();
+  observeEnabled([account],true,previous,pending);expect(pending.size).toBe(0);
+  expect(existsSync(join(prac,'stop-'+account))).toBe(false);
+  expect(startable([account],false,ended,()=>Infinity,undefined,missionSignature(job)).start).toEqual([]);
+  const handoff={job,paused:false,active:[] as string[],stopped:(name:string)=>existsSync(join(prac,'stop-'+name)),
+   settled:(name:string)=>readLogoutProof(name,'rs-sdk-demo.fly.dev',{root:lifecycle}).state==='confirmed'};
+  expect(applyResume([account],false,ended,pending,name=>clearSwarmStop(join(prac,'stop-'+name)),handoff)).toBe(true);
+  persistEnded(endFile,ended);
+  expect(loadEnded(endFile).size).toBe(0);
+  expect(startable([account],false,ended,()=>Infinity,undefined,missionSignature(job)).start).toEqual([account]);
+  ended.set(account,{at:200,reason:'stopped after 1 runs',revision:missionSignature(job)});
+  expect(applyResume([account],false,ended,pending,()=>{throw Error('same mission must stay stopped');},handoff)).toBe(false);
+  expect(startable([account],false,ended,()=>Infinity,undefined,missionSignature(job)).start).toEqual([]);
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
+for(const constraint of ['ordinary job','missing task','missing run','disabled job','repeat job','same mission','missing revision','empty revision','malformed revision','other account revision','owner stop','global stop','active predecessor','external predecessor','unconfirmed logout','lease held',
+ 'died','blocked after 1 runs','gave-up after 21 runs','exit unknown','exit 0','done after 1 runs','stopped unexpectedly'])test('coordinator stopped-mission handoff preserves '+constraint,()=>{
+ const job:Job & {coordinatorOwner?:string;coordinatorTask?:string}={account:'Rod',script:'scripts/quest.ts',enabled:true,repeat:false,
+  coordinatorOwner:'coordinator',coordinatorTask:'quest-new',env:{COORDINATOR_RUN_ID:'task-new-mission'}};
+ if(constraint==='ordinary job')delete job.coordinatorOwner;
+ if(constraint==='missing task')delete job.coordinatorTask;
+ if(constraint==='missing run')delete job.env!.COORDINATOR_RUN_ID;
+ if(constraint==='disabled job')job.enabled=false;
+ if(constraint==='repeat job')job.repeat=true;
+ const reason=['died','blocked after 1 runs','gave-up after 21 runs','exit unknown','exit 0','done after 1 runs','stopped unexpectedly'].includes(constraint)?constraint:'stopped after 1 runs';
+ const revision=constraint==='same mission'?missionSignature(job):constraint==='missing revision'?undefined:constraint==='empty revision'?'':constraint==='malformed revision'?'unknown':
+  missionSignature({account:constraint==='other account revision'?'Partner':'Rod',script:'scripts/goldfarm.ts',enabled:false});
+ const ended=new Map([['rod',{at:100,reason,revision}]]),before=[...ended],pending=new Set<string>();let clears=0;
+ const handoff={job,paused:constraint==='global stop',active:constraint==='external predecessor'?['rOd']:[],stopped:()=>constraint==='owner stop',
+  settled:()=>{if(constraint==='lease held')throw Error('recovery lease held');return constraint!=='unconfirmed logout';}};
+ expect(applyResume(['Rod'],constraint==='active predecessor',ended,pending,()=>{clears++;},handoff)).toBe(false);
+ expect([...ended]).toEqual(before);expect(pending.size).toBe(0);expect(clears).toBe(0);
 });
 
 test('mission identity includes actual work and canonical env but excludes display and enable fields', () => {

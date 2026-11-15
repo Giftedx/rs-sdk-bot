@@ -536,10 +536,31 @@ export function observeEnabled(accounts: readonly string[], enabled: boolean, pr
     }
 }
 
+type CoordinatorResumeContext = {job:Job;paused:boolean;active:readonly string[];stopped:(account:string)=>boolean;settled:(account:string)=>boolean};
+// A qualified coordinator install is an explicit new mission even when removing the old job hid its disable edge.
+// Its exact stopped end may resume after logout. Failures, unknown missions and the same mission keep their ends.
+function coordinatorResumeAccounts(accounts:readonly string[],ended:ReadonlyMap<string,EndRecord>,context:CoordinatorResumeContext):string[]{
+    const job=context.job as Job & {coordinatorOwner?:string;coordinatorTask?:string;standing?:boolean};
+    if(context.paused||!job.enabled||job.repeat!==false||job.standing||job.coordinatorOwner!=='coordinator'
+        ||!/^[-a-z0-9]+$/.test(job.coordinatorTask??'')||!/^task-[-a-z0-9]+$/.test(job.env?.COORDINATOR_RUN_ID??''))return[];
+    const revision=missionSignature(job),active=new Set(context.active.map(a=>a.toLowerCase()));
+    return accounts.filter(account=>{
+        const key=account.toLowerCase(),end=[...ended].find(([name])=>name.toLowerCase()===key)?.[1];
+        if(!end||!/^stopped(?: after [1-9]\d* runs)?$/.test(end.reason)||!end.revision||end.revision===revision||active.has(key)||context.stopped(account))return false;
+        try{
+            const prior=JSON.parse(end.revision);
+            if(!Array.isArray(prior)||typeof prior[0]!=='string'||!prior[0].trim()||typeof prior[1]!=='boolean'
+                ||!Array.isArray(prior[2])||!prior[2].every((a:unknown)=>typeof a==='string')||!prior[2].some((a:string)=>a.toLowerCase()===key)||!Array.isArray(prior[3]))return false;
+            return context.settled(account);
+        }catch{return false;}
+    });
+}
+
 // Consume a deliberate resume only after the old process and its output settle.
 // A persistent failure needs a separate repair, and done is not a pause to clear.
-export function applyResume(accounts: readonly string[], active: boolean, ended: Map<string, EndRecord>, pending: Set<string>, clearStop: (a: string) => void): boolean {
+export function applyResume(accounts: readonly string[], active: boolean, ended: Map<string, EndRecord>, pending: Set<string>, clearStop: (a: string) => void,coordinator?:CoordinatorResumeContext): boolean {
     if (active) return false;
+    if(coordinator)for(const account of coordinatorResumeAccounts(accounts,ended,coordinator))pending.add(account.toLowerCase());
     let changed=false;
     for (const a of accounts) {
         const key=a.toLowerCase();
@@ -858,6 +879,7 @@ if (import.meta.main) {
         const state: Record<string, unknown>[] = [];
         let owners: Map<string, Owner>;
         try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
+        const resumeOwners=activeExternalLive(statuses,[],Date.now()).concat(recoveryDispatch.active?[recoveryDispatch.active.account]:[],inheritedRecoveries.map(r=>r.account));
         for (const raw of plan.jobs) {
             if(!coordinatedAdmission(raw,!!coordinatorOwner)){
                 state.push({account:raw.account,accounts:raw.accounts,script:raw.script,state:'existing assignment; awaiting coordinator qualification'});
@@ -886,7 +908,10 @@ if (import.meta.main) {
             for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
             if(stopAll) for(const a of p.accounts) writeSwarmStop(stopFile(a),SWARM_STOP.all);
             const r = overlappingRun(runs.values(), p.accounts);
-            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearSwarmStop(stopFile(a))))
+            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearSwarmStop(stopFile(a)),{
+                job,paused:existsSync(join(prac,'stop-coordinator')),active:resumeOwners,
+                stopped:a=>existsSync(stopFile(a))||existsSync(stopFile(a.toLowerCase())),settled:a=>defaultRepairProofs.readProof(a,LIVE_SERVER).state==='confirmed',
+            }))
                 persistEnded(deathsFile, ended);
             const st: Record<string, string> = {};
             if (r && foreignRun(planned, p, r) && !stopAll) {
