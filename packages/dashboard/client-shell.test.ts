@@ -9,6 +9,39 @@ const healthSource=shell.slice(shell.indexOf('  function recordedHp('),shell.ind
 const questPointSource=shell.slice(shell.indexOf('  function questPointsOf('),shell.indexOf('  function questReqs('));
 const equipmentValue=new Function(`${shell.slice(shell.indexOf('  function equipmentValue('),shell.indexOf('  function wornBonuses('))};return equipmentValue;`)();
 
+function fleetOverlay(goals:any,owner=true,clock:any={now:Date.now()}){
+ const source=shell.slice(shell.indexOf('  function overlay(){'),shell.indexOf('  // Skills tab tooltip'));
+ const el={innerHTML:'',offsetHeight:0};
+ new Function('S','window','hud','account','E','nf','gp',`${source};overlay();`)
+  ({...clock,bots:[],boards:[{best:{rank:1}}],scoreboard:{goals}}, {atlasOperator:()=>owner},
+   {querySelector:(s:string)=>s==='.game-overlay'?el:null},()=>null,String,String,String);
+ return el.innerHTML;
+}
+
+test('the owner overlay shows current goal evidence without a target for every board',()=>{
+ const now=Date.now(),goals={version:1,main:{rank:2,rankAt:now-1000},specialists:{rank1s:[{board:'Mining',at:now-1000},{board:'Mining',at:now-2000},{board:'Fishing',at:now-3_600_001}]},quests:{complete:45,total:68},army:{maxed:2,roster:['A','B','C','D','E','F']}};
+ const html=fleetOverlay(goals);
+ expect(html).toContain('Project goals');expect(html).toContain('Main Overall');expect(html).toContain('#2');
+ expect(html).toContain('1 observed');expect(html).toContain('45 / 68');expect(html).toContain('2 / 6');
+ expect(html).not.toContain('Race to #1');expect(html).not.toContain(' / 1');
+ expect(fleetOverlay({...goals,main:{rank:1,rankAt:now-3_600_001}})).toContain('Rank stale');
+ expect(fleetOverlay({...goals,main:{rank:null,rankAt:null}})).toContain('Rank unknown');
+});
+
+test('the public overlay uses observed hiscores and omits private owner goals',()=>{
+ const html=fleetOverlay({version:1,main:{rank:2},quests:{complete:45,total:68}},false);
+ expect(html).toContain('Hiscores');expect(html).toContain('Boards at #1');
+ expect(html).not.toContain('Project goals');expect(html).not.toContain('45 / 68');
+ expect(html).not.toContain('Race to #1');expect(html).not.toContain(' / 1');
+});
+
+test('goal evidence uses the server clock and continues aging on a stale hosted snapshot',()=>{
+ const observed=Date.now()+7_200_000,goals={version:1,main:{rank:1,rankAt:observed-1000},specialists:{rank1s:[{board:'Mining',at:observed-1000}]}};
+ expect(fleetOverlay(goals,true,{now:observed})).toContain('1 observed');
+ const old=fleetOverlay(goals,true,{now:observed,hosted:{at:observed},hostedAge:3_600_001});
+ expect(old).toContain('Rank stale');expect(old).toContain('0 observed');
+});
+
 test('the fleet search shortcut focuses the visible search control',()=>{
  const code=shell.slice(shell.lastIndexOf("  window.addEventListener('keydown'"),shell.indexOf('  window.atlasClient='));
  let handler:any,focused='',opened='';

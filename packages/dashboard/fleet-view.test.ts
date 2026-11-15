@@ -23,6 +23,13 @@ test('owner goals are the completion source and coverage alone cannot mark done'
  expect(view.remaining).toEqual(['Wilderness control unknown']);
 });
 
+test('quest totals follow the owner ledger when legacy coverage disagrees',()=>{
+ const raw={at:'2026-11-15T00:00:00Z',skills:[],progress:{questsLive:42,questTotal:67},
+  goals:{version:1,quests:{complete:45,total:68}}};
+ expect((scoreboardView(raw) as any).quests).toEqual({live:45,total:68});
+ expect((scoreboardView({...raw,goals:{version:1,quests:{complete:0,total:68}}}) as any).quests).toEqual({live:0,total:68});
+});
+
 test('fleet sides give each side its sync age, accounts, total levels and coins; late orders and sides are marked; done orders drop out',()=>{
  const now=10_000_000;
  const v=fleetSidesView([
