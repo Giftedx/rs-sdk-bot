@@ -347,7 +347,9 @@ export function launchPermittedRecovery(r:ControlledRecoveryRequest,base:string,
  let bindError:unknown;try{bindRecoveryChild(r,child.pid,base,launch);}catch(error){bindError=error;}
  const completion=(async()=>{
   let timedOut=false;
-  const timer=setTimeout(()=>{timedOut=true;void safeKill(child.pid,r.nonce);},125000);timer.unref();
+  // Setup spends part of the immutable permit lifetime. Reap at that expiry so a later child session timer cannot
+  // lose its valid cleanup window to a second, earlier controller deadline. Admission remains bounded separately.
+  const timer=setTimeout(()=>{timedOut=true;void safeKill(child.pid,r.nonce);},Math.max(0,permit.expiresAt-(options.now??Date.now)()));timer.unref();
   try{
    try{if(!bindError)await child.stdin.write(JSON.stringify({pid:child.pid,nonce:r.nonce,runId:r.runId,source:r.source}));}
    catch(error){bindError??=error;}
