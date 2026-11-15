@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794731424844,
+ "at": 1794766936115,
  "jobs": [
   {
    "account": "Balls",
@@ -143,7 +143,7 @@
   "mmsmk1232"
  ],
  "builds": {
-  "NabTheKnob": "pure-pray",
-  "Bigchopper": "tank-range"
+  "NabTheKnob": "tribrid",
+  "Bigchopper": "tribrid"
  }
 }
