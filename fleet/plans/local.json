@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794778040886,
+ "at": 1794778271109,
  "jobs": [
   {
    "account": "Balls",
@@ -157,6 +157,23 @@
    "repeat": false,
    "goal": "local-recover-wandwaver-20261115t082009z [task-fc72bc71-4301-4715-8081-a6d383b249af]",
    "role": "combat"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "biohazard"
+   ],
+   "env": {
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-d828ab20-0b38-42d2-9350-5b885e241f6a"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-biohazard-mightyrod-after-catch-approach [task-d828ab20-0b38-42d2-9350-5b885e241f6a]",
+   "role": "helper"
   }
  ],
  "army": [
