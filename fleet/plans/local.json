@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794783845178,
+ "at": 1794783921303,
  "jobs": [
   {
    "account": "Balls",
@@ -147,27 +147,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "505",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "9000",
-    "CASH_RESERVE": "2000000",
-    "ORDER_KEY": "mmthv2350-overall-dragonbones505",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d3d4d4dd-a87f-4e3b-ace7-bd7d2764d5b3"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-mmthv2350-dragonbones505-capacity [task-d3d4d4dd-a87f-4e3b-ace7-bd7d2764d5b3]",
    "role": "supply"
   }
  ],
