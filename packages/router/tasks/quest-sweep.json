@@ -32,7 +32,7 @@
     "scripts/generated/quest-barcrawl.ts",
     "scripts/shop-buyer.test.ts"
   ],
-  "consumer": "run-scorpion-bigchopper-seer-dialog-r9 completes Scorpion Catcher on ordinary Bigchopper with args scorpion, CAP 6000 and quest completion acceptance. Practice invokes the real account-parameterized worker CLI from a save without Barcrawl varp 77=2 and checks that it stages and completes Barcrawl, passes the outpost gate, completes Scorpion Catcher, adds one quest point, reconciles assets, refuses an invalid start and logs out. Preserve existing quest callers and checks. The live result releases run-fight-arena-bigchopper-after-law-scorpion-r2.",
+  "consumer": "run-biohazard-mightyrod-after-catch-approach completes the missing Biohazard quest on ordinary Mightyrod with args biohazard and unchanged quest-only acceptance, then opens the Underground Pass route gate. Qualification exercises the Scorpion catch-C fault through both real account-parameterized melee and ranged worker CLIs: complete Barcrawl, pass the outpost, catch all three scorpions, complete Scorpion Catcher, reconcile assets, refuse a completed entry and confirm logout. Preserve existing callers. Bigchopper's retained Scorpion consumer requires separate accepted session recovery.",
   "checks": [
     {
       "id": "quest-sweep-regressions",

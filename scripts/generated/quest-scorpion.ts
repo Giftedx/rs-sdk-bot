@@ -32,6 +32,44 @@ const JAIL_DOOR = { id: 2631, x: 2931, z: 9690 };            // Velrak's cell do
 const VELRAK = { x: 2931, z: 9685 };
 const GATE = { id: 2623, x: 2924, z: 9803 };                 // deepdungeondoor, west wall of the tile, maps/m45_153.jm2
 
+type CatchQuest = Pick<Awaited<ReturnType<typeof openQuest>>, 'st' | 'has' | 'waitUntil' | 'walk' | 'dash' | 'step' | 'useOnNpc' | 'waitTicks' | 'milestone' | 'findLoc' | 'opLoc' | 'opIndex'>;
+
+export async function catchScorpion(q: CatchQuest, k: 'a' | 'b' | 'c', at: { x: number; z: number }): Promise<void> {
+    const cage = (): number | undefined => CAGES.find(id => q.has(id));
+    const caught = (): boolean => {
+        const c = cage();
+        if (c === CAGE.full) return true;
+        if (k === 'a') return c === CAGE.a || c === CAGE.ab || c === CAGE.ac;
+        if (k === 'b') return c === CAGE.b || c === CAGE.ab || c === CAGE.bc;
+        return c === CAGE.c || c === CAGE.ac || c === CAGE.bc;
+    };
+    const npc = (): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => n.id === NPC[k]).sort((a: any, b: any) => a.distance - b.distance)[0];
+    if (!npc()) await q.waitUntil(() => !!npc(), 10);
+    if (!npc()) await q.walk(`to scorpion ${k}`, [{ x: at.x, z: at.z, tol: 3 }]);
+    await q.step(`catch ${k}`, async () => {
+        if (k === 'c' && (!npc() || npc().reachable === false)) {
+            // maps/m47_54.jm2: the clear aisle is north of the rotated bedroom door.
+            await q.dash('scorpion c bedroom aisle', SCORP_C.x, SCORP_C.z, 0, 8);
+            const n = npc();
+            // At 3059,3486, bigtable2 blocks the north face. The open door blocks the west face.
+            // Close it from inside the room to release that face (doors/scripts/door_procs.rs2).
+            if (n?.reachable === false && n.x === 3059 && n.z === 3486) {
+                const opened = () => q.findLoc(l => l.id === 1531 && l.x === 3058 && l.z === 3486 && (l.optionsWithIndex ?? []).some((o: any) => /^close$/i.test(o.text)));
+                if (opened()) await q.step('scorpion c bedroom door close', () => {
+                    const d = opened();
+                    return d ? q.opLoc(d, q.opIndex(d, /^close$/i)) : q.waitTicks(1);
+                }, () => !!q.findLoc(l => l.id === 1530 && l.x === 3058 && l.z === 3485 && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text))), 8, 2);
+            }
+            await q.waitUntil(() => { const fresh = npc(); return !!fresh && fresh.reachable !== false; }, 5);
+        }
+        // Re-read both the NPC and cage after movement or a door change.
+        const n = npc(), c = cage();
+        return n && c && (k !== 'c' || n.reachable !== false) ? q.useOnNpc(c, n) : q.waitTicks(1);
+    }, caught, 15, 5);
+    q.milestone(`scorpion ${k}`);
+}
+
+if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
 // The eater takes any edible in the pack: an account without the preset's lobsters carries its own cake or fish, and the
 // dungeon's poison and the Jailer bleed it either way.
 const q = await openQuest({ cap: Number(process.env.CAP ?? 2500), eatAt: 50, lumbridgeOk: false });
@@ -39,21 +77,8 @@ try {
     const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage); 3: quest_scorpion_s3 (Taverley dungeon ladder, cage with B)
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+scorpion catcher/i) > 0) questDone = true; });
-    const cage = (): number | undefined => CAGES.find(id => q.has(id));
-    const caught = (k: 'a' | 'b' | 'c'): boolean => {
-        const c = cage();
-        if (c === CAGE.full) return true;
-        if (k === 'a') return c === CAGE.a || c === CAGE.ab || c === CAGE.ac;
-        if (k === 'b') return c === CAGE.b || c === CAGE.ab || c === CAGE.bc;
-        return c === CAGE.c || c === CAGE.ac || c === CAGE.bc;
-    };
     const npcId = (id: number): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => n.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
-    const catchScorp = async (k: 'a' | 'b' | 'c', at: { x: number; z: number }): Promise<void> => {
-        if (!npcId(NPC[k])) await q.waitUntil(() => !!npcId(NPC[k]), 10);
-        if (!npcId(NPC[k])) await q.walk(`to scorpion ${k}`, [{ x: at.x, z: at.z, tol: 3 }]);
-        await q.step(`catch ${k}`, () => { const n = npcId(NPC[k]); const c = cage(); return n && c ? q.useOnNpc(c, n) : q.waitTicks(1); }, () => caught(k), 15, 5);
-        q.milestone(`scorpion ${k}`);
-    };
+    const catchScorp = (k: 'a' | 'b' | 'c', at: { x: number; z: number }) => catchScorpion(q, k, at);
     const ladderAt = (at: { x: number; z: number }, re: RegExp) => () => q.findLoc(l => /ladder/i.test(l.name) && Math.max(Math.abs(l.x - at.x), Math.abs(l.z - at.z)) <= 1 && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
 
     if (FROM < 2) {
@@ -257,3 +282,4 @@ try {
     await q.end(questDone, `qp=1 questMsg=${questDone}`);
 
 } catch (e) { await q.fail(String(e)); }
+}

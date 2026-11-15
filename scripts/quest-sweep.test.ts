@@ -4,6 +4,7 @@ import {returnToAmik,finishBlackKnight,type AmikIO} from './quest-sweep';
 import {scorpionBarcrawlNeeds,scorpionEntryRefusal} from './quest-sweep';
 import {establishBarcrawlGate} from './generated/quest-barcrawl';
 import {clickDialoguePage} from './generated/quest-lib';
+import {catchScorpion} from './generated/quest-scorpion';
 import {questScriptId} from './quest-sweep';
 import {resolve} from 'node:path';
 
@@ -63,6 +64,78 @@ test('a completed Scorpion journal refuses before staging while client varp 76 s
  const refused=source.indexOf('if(refusal)return fail(refusal);'),staged=source.indexOf('base=scorpionBarcrawlNeeds(base,state);');
  expect(refused).toBeGreaterThan(0);expect(staged).toBeGreaterThan(refused);
  expect(source).not.toContain('var?.[76]===100');
+});
+
+function scorpionCatchFixture() {
+ let held=458,doorOpen=true;
+ let target:{id:number;index:number;x:number;z:number;distance:number;reachable?:boolean}={id:387,index:532,x:3059,z:3486,distance:1,reachable:false};
+ const calls:string[]=[],milestones:string[]=[];
+ const io:Parameters<typeof catchScorpion>[0]={
+  st:()=>({nearbyNpcs:[target]}) as ReturnType<Parameters<typeof catchScorpion>[0]['st']>,
+  has:id=>id===held,
+  waitUntil:async(ok)=>ok(),waitTicks:async()=>{},
+  walk:async()=>{calls.push('walk');},
+  dash:async(label,x,z,tol)=>{calls.push(`dash ${x},${z} tol=${tol}`);target={...target,distance:2};},
+  step:async(label,send,ok,ticks=20,tries=3)=>{for(let i=0;i<tries&&!ok();i++)await send();if(!ok())throw Error(`step ${label}`);},
+  useOnNpc:async(c,n)=>{calls.push(`cage ${c} npc=${n.index}`);if(n.reachable!==false)held=463;return{success:true};},
+  milestone:label=>{milestones.push(String(label));},
+  findLoc:pred=>{const d={id:doorOpen?1531:1530,x:3058,z:doorOpen?3486:3485,optionsWithIndex:[{text:doorOpen?'Close':'Open',opIndex:1}]};return pred(d)?d:undefined;},
+  opIndex:()=>1,
+  opLoc:async()=>{calls.push('close bedroom');doorOpen=false;target={...target,index:533,reachable:true};return{success:true};},
+ };
+ return{io,calls,milestones,target:()=>target};
+}
+
+test('Scorpion C enters the bedroom and releases the open-door pocket before a fresh cage action',async()=>{
+ // At 3059,3486 the east/south walls, table north and rotated door west enclose C.
+ const f=scorpionCatchFixture();
+ await catchScorpion(f.io,'c',{x:3058,z:3488});
+ expect(f.calls).toEqual(['dash 3058,3488 tol=0','close bedroom','cage 458 npc=533']);
+ expect(f.milestones).toEqual(['scorpion c']);
+});
+
+test('Scorpion C refuses a persistently unreachable target within the catch bound without a cage action',async()=>{
+ const f=scorpionCatchFixture();
+ f.io.opLoc=async()=>{f.calls.push('close refused');return{success:false};};
+ await expect(catchScorpion(f.io,'c',{x:3058,z:3488})).rejects.toThrow('step');
+ expect(f.calls.some(c=>c.startsWith('dash '))).toBe(true);
+ expect(f.calls.some(c=>c.startsWith('cage '))).toBe(false);
+ expect(f.calls.length).toBeLessThanOrEqual(30);
+ expect(f.milestones).toEqual([]);
+});
+
+test('Scorpion C keeps a reachable target and requires the cage transformation',async()=>{
+ const f=scorpionCatchFixture();f.target().reachable=true;
+ await catchScorpion(f.io,'c',{x:3058,z:3488});
+ expect(f.calls).toEqual(['cage 458 npc=532']);
+ const refused=scorpionCatchFixture();refused.target().reachable=true;
+ refused.io.useOnNpc=async()=>({success:true});
+ await expect(catchScorpion(refused.io,'c',{x:3058,z:3488})).rejects.toThrow('step catch c');
+ expect(refused.milestones).toEqual([]);
+});
+
+test('Scorpion C reobserves a moving target after arrival without closing an unneeded door',async()=>{
+ const f=scorpionCatchFixture();
+ f.io.dash=async()=>{f.calls.push('arrived');Object.assign(f.target(),{index:534,x:3057,z:3488,reachable:true});};
+ await catchScorpion(f.io,'c',{x:3058,z:3488});
+ expect(f.calls).toEqual(['arrived','cage 458 npc=534']);
+});
+
+test('Scorpion C propagates a failed approach and bounds an unresolved target without changing the door',async()=>{
+ const failed=scorpionCatchFixture();failed.io.dash=async()=>{throw Error('aisle arrival unobserved');};
+ await expect(catchScorpion(failed.io,'c',{x:3058,z:3488})).rejects.toThrow('aisle arrival unobserved');
+ expect(failed.calls).toEqual([]);expect(failed.milestones).toEqual([]);
+ const blocked=scorpionCatchFixture();blocked.io.findLoc=()=>undefined;
+ await expect(catchScorpion(blocked.io,'c',{x:3058,z:3488})).rejects.toThrow('step catch c');
+ expect(blocked.calls).toEqual(Array(5).fill('dash 3058,3488 tol=0'));
+ expect(blocked.milestones).toEqual([]);
+});
+
+test('Scorpion C preserves unknown reachability for SDK observations without that field',async()=>{
+ const f=scorpionCatchFixture();f.target().reachable=undefined;
+ await catchScorpion(f.io,'c',{x:3058,z:3488});
+ expect(f.calls).toEqual(['cage 458 npc=532']);
+ expect(f.milestones).toEqual(['scorpion c']);
 });
 
 test('only a started Black Knight journal selects the Amik return',()=>{
