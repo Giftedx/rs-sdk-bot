@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794780696522-bowbeforeme-mmsmk1232-firerune",
+ "account": "BowBeforeMe",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "c234231c-ad47-427c-b88b-fce7333340f7",
+ "count": 0,
+ "ok": false,
+ "at": 1794780703287,
+ "detail": "trade claimed"
+}
