@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs } from './fleet-lease';
+import { appendFleetGitRecord, commitFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs } from './fleet-lease';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive, savedProcessAlive } from './session-takeover';
 
@@ -179,6 +179,29 @@ export function releaseFleetTradeClaim(root: string, target: Identity & { nonce:
     if (!claim || isSwarmClaim(claim) || claim.nonce !== target.nonce) throw Error('fleet trade claim changed');
     if (claim.phase === 'released') return;
     appendClaim(git, ref, head, 'Fleet trade released', { ...claim, phase: 'released', at: now() });
+}
+
+// The caller proves every trade's outcome and logout before releasing a group. One remote transaction keeps a
+// reconciled pair together: a changed ref refuses the entire push, and a lost response can be checked by nonce.
+export function releaseFleetTradeClaims(root: string, targets: readonly (Identity & { nonce: string })[], now = Date.now): number {
+    if (!targets.length) return 0;
+    const git = gitForTrade(root), seen = new Set<string>();
+    const pending = targets.flatMap(target => {
+        const { account, server } = identity(target);
+        if (seen.has(account)) throw Error('duplicate fleet trade release account');
+        seen.add(account);
+        const { ref, head, claim } = loadClaim(git, account, server);
+        if (!claim || isSwarmClaim(claim) || claim.nonce !== target.nonce) throw Error('fleet trade claim changed');
+        return claim.phase === 'held' ? [{ ref, head, claim }] : [];
+    });
+    if (!pending.length) return 0;
+    const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], ''), at = now();
+    const updates = pending.map(({ ref, head, claim }) => {
+        const commit = commitFleetGitRecord(git, head, tree, 'Fleet trade released\n\n' + JSON.stringify({ ...claim, phase: 'released', at }));
+        return commit + ':' + ref;
+    });
+    git(['-c', 'push.followTags=false', 'push', '--quiet', '--atomic', 'origin', ...updates]);
+    return pending.length;
 }
 
 // Acquisition is the durable attempt intent. A held claim has no wall-clock

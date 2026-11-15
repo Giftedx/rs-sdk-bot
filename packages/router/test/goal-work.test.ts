@@ -59,6 +59,68 @@ test('old owned supply needs verification before making its replacement',()=>{
  expect(values.get('quest')!.value).toBeGreaterThan(0);
 });
 
+const geOrder=(patch:Partial<CoordTask>={}):CoordTask=>run('ge-supply',{goal:'main24',capability:'ge-bulk-order',dependsOn:['ge-qualified'],timeoutMs:2700000,
+ env:{ITEM_ID:'561',QUANTITY:'60',EXPECTED_OWNED:'0',LIMIT_PRICE:'250',CASH_RESERVE:'1000',ORDER_MS:'900000'},accept:{bank:{561:60}},...patch});
+const geProof:CoordTask={id:'ge-qualified',kind:'qualify',goal:'main24',capability:'ge-bulk-order',dependsOn:[],priority:50,estimatedMs:900000,why:'Qualify the finite supply consumer'};
+const geContext={entryOf:()=> 'scripts/buy-owned-ge-item.ts'};
+
+test('stale bank state can dispatch the bounded GE observation qualifier and its finite consumer without claiming supply progress',()=>{
+ const board=goals();board.collection.missing[0]!.verifyOwned=40;
+ const {state}=evaluate([geProof,geOrder()],board,[status('Helper',{bankAt:0})]);
+ const score=()=>goalWork(state,board,[status('Helper',{bankAt:0})],NOW,geContext);
+ let values=score();
+ expect(values.get('ge-supply')!.value).toBe(.01);
+ expect(values.get('ge-supply')!.reason).toContain('Observe Helper holdings');
+ expect(values.get('ge-supply')!.reason).toContain('not game progress');
+ expect(values.get('ge-qualified')!.value).toBe(.01);
+ expect(chooseTask(state,NOW,{goalValue:t=>values.get(t.id)?.value??null,nativeReady:false})).toBeNull();
+ expect(chooseTask(state,NOW,{goalValue:t=>values.get(t.id)?.value??null,nativeReady:true})?.id).toBe('ge-qualified');
+ const proof=state.tasks.find(t=>t.spec.id==='ge-qualified')!;
+ proof.status='succeeded';proof.receipt={taskId:proof.spec.id,runId:'proof',ok:true,at:NOW-1,output:{delivery:{ok:true}}};
+ values=score();
+ expect(chooseTask(state,NOW,{goalValue:t=>values.get(t.id)?.value??null,runHeld:()=>true})).toBeNull();
+ expect(chooseTask(state,NOW,{goalValue:t=>values.get(t.id)?.value??null,liveLimit:0})).toBeNull();
+ expect(chooseTask(state,NOW,{goalValue:t=>values.get(t.id)?.value??null})?.id).toBe('ge-supply');
+ expect(board.collection.missing[0]!.owned).toBe(0);
+ expect(state.goals.find(g=>g.id==='main24')!.completedTasks).toBe(0);
+});
+
+test('GE observation support requires a real bounded order within a confirmed named shortage',()=>{
+ const board=goals();board.collection.missing[0]!.verifyOwned=40;
+ const original=geOrder();
+ const refused:CoordTask[]=[
+  geOrder({timeoutMs:undefined}),
+  geOrder({env:{...original.env,ORDER_MS:'2700001'}}),
+  geOrder({env:{...original.env,ORDER_MS:'0'}}),
+  geOrder({env:{...original.env,QUANTITY:'61'},accept:{bank:{561:61}}}),
+  geOrder({env:{...original.env,ITEM_ID:'565'}}),
+  geOrder({env:{...original.env,LIMIT_PRICE:'0'}}),
+  geOrder({env:{...original.env,EXPECTED_OWNED:'1'}}),
+  geOrder({env:{...original.env,CASH_RESERVE:'-1'}}),
+ ];
+ for(const task of refused){const {state}=evaluate([geProof,task],board);expect(goalWork(state,board,[],NOW,geContext).get(task.id)!.value).toBeNull();}
+ const {state}=evaluate([geProof,original],board);
+ expect(goalWork(state,board,[],NOW,{entryOf:()=> 'scripts/goldfarm.ts'}).get(original.id)!.value).toBeNull();
+ const covered=goals();covered.collection.missing[0]!.verifyOwned=100;
+ expect(goalWork(state,covered,[],NOW,geContext).get(original.id)!.value).toBeNull();
+ const unnamed=goals();unnamed.collection.missing[0]!.consumer='unresolved named supply';
+ expect(goalWork(state,unnamed,[],NOW,geContext).get(original.id)!.value).toBe(0);
+ const coins=goals();coins.collection.missing=[{id:995,item:'Coins',need:60,owned:0,consumer:'main Overall'}];
+ const coinTask=geOrder({env:{...original.env,ITEM_ID:'995'},accept:{bank:{995:60}}});
+ const coinState=evaluate([geProof,coinTask],coins).state;
+ expect(goalWork(coinState,coins,[],NOW,geContext).get(coinTask.id)!.value).toBeNull();
+});
+
+test('GE observation support covers only the confirmed shortfall and duplicate consumers do not multiply it',()=>{
+ const board=goals();board.collection.missing[0]!.verifyOwned=40;
+ const first=geOrder(),duplicate=geOrder({id:'ge-supply-duplicate'}),{state}=evaluate([geProof,first,duplicate],board);
+ const values=goalWork(state,board,[status('Helper')],NOW,geContext);
+ expect(values.get('ge-qualified')!.value).toBe(.01);
+ expect(values.get(first.id)!.reason).toContain('previously observed');
+ const alreadyHeld=goalWork(state,board,[status('Helper',{bank:[{id:561,count:60}]})],NOW,geContext);
+ expect(alreadyHeld.get(first.id)!.value).toBeNull();
+});
+
 test('coins have value only for a finite named acquisition consumer',()=>{
  const board=goals();board.collection.missing=[{id:995,item:'Coins',need:100,owned:0,consumer:'main Overall'}];
  const task=run('fund',{goal:'wealth',accept:{bank:{995:100}}});

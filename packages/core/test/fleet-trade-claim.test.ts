@@ -1,5 +1,6 @@
-import { expect, test } from 'bun:test';
+import { expect, test, spyOn } from 'bun:test';
 import { execFileSync } from 'node:child_process';
+import * as childProcess from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -7,6 +8,7 @@ import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readFleetAccountClaim, 
 import { beginSessionAttempt, lifecycleOwner } from '../src/session-lifecycle';
 import { acquireFleetLease } from '../src/fleet-lease';
 import { ORPHAN_CLAIM_MS } from '../src/fleet-trade-claim';
+import * as claimApi from '../src/fleet-trade-claim';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true });
 const server = 'rs-sdk-demo.fly.dev';
@@ -27,6 +29,58 @@ async function withRepos(run: (a: string, b: string) => void | Promise<void>) {
         if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }
 }
+
+test('atomic trade claim release frees both exact nonces and rejects replacement claims', async () => {
+    await withRepos((a) => {
+        const giver = acquireFleetTradeClaim(a, input), taker = acquireFleetTradeClaim(a, { ...input, account: 'Receiver', role: 'to' });
+        expect(claimApi.releaseFleetTradeClaims(a, [giver, taker])).toBe(2);
+        expect([giver, taker].map(target => readFleetTradeClaim(a, target)?.phase)).toEqual(['released', 'released']);
+        expect(claimApi.releaseFleetTradeClaims(a, [giver, taker])).toBe(0);
+        const next = acquireFleetTradeClaim(a, { ...input, account: 'Receiver', role: 'to', orderId: 'next-order' });
+        expect(() => claimApi.releaseFleetTradeClaims(a, [giver, taker])).toThrow('changed');
+        expect(readFleetTradeClaim(a, next)?.nonce).toBe(next.nonce);
+        expect(readFleetTradeClaim(a, next)?.phase).toBe('held');
+    });
+}, 30_000);
+
+test('atomic trade claim release rejects the whole push if one account receives a concurrent new claim', async () => {
+    await withRepos((a, b) => {
+        const giver = acquireFleetTradeClaim(a, input), taker = acquireFleetTradeClaim(a, { ...input, account: 'Receiver', role: 'to' });
+        const original = childProcess.execFileSync; let raced = false, replacement: ReturnType<typeof acquireFleetTradeClaim> | undefined;
+        const run = spyOn(childProcess, 'execFileSync').mockImplementation(((file: string, args: string[], options: any) => {
+            if (!raced && args.includes('--atomic')) {
+                raced = true;
+                releaseFleetTradeClaim(b, taker);
+                replacement = acquireFleetTradeClaim(b, { ...input, account: 'Receiver', role: 'to', orderId: 'next-order' });
+            }
+            return original(file, args, options);
+        }) as any);
+        try { expect(() => claimApi.releaseFleetTradeClaims(a, [giver, taker])).toThrow(); }
+        finally { run.mockRestore(); }
+        expect(raced).toBe(true);
+        expect(readFleetTradeClaim(a, giver)?.phase).toBe('held');
+        expect(readFleetTradeClaim(a, giver)?.nonce).toBe(giver.nonce);
+        expect(readFleetTradeClaim(a, taker)?.nonce).toBe(replacement!.nonce);
+        expect(readFleetTradeClaim(a, taker)?.phase).toBe('held');
+    });
+}, 30_000);
+
+test('atomic trade claim release reads back both released claims after a lost response without replaying a release', async () => {
+    await withRepos((a) => {
+        const giver = acquireFleetTradeClaim(a, input), taker = acquireFleetTradeClaim(a, { ...input, account: 'Receiver', role: 'to' });
+        const original = childProcess.execFileSync; let pushed = false;
+        const run = spyOn(childProcess, 'execFileSync').mockImplementation(((file: string, args: string[], options: any) => {
+            const result = original(file, args, options);
+            if (args.includes('--atomic')) { pushed = true; throw Error('response lost after atomic push'); }
+            return result;
+        }) as any);
+        try { expect(() => claimApi.releaseFleetTradeClaims(a, [giver, taker])).toThrow('response lost'); }
+        finally { run.mockRestore(); }
+        expect(pushed).toBe(true);
+        expect([giver, taker].map(target => readFleetTradeClaim(a, target)?.phase)).toEqual(['released', 'released']);
+        expect(claimApi.releaseFleetTradeClaims(a, [giver, taker])).toBe(0);
+    });
+}, 30_000);
 
 test('two trade-only checkouts cannot claim the same account concurrently', async () => {
     await withRepos(async (a, b) => {
@@ -183,6 +237,7 @@ test('another side replaces a dead side\'s swarm claim only once the claim and t
     await withRepos(async (a, b) => {
         acquireFleetLease(a, 'claude-cloud-4', () => T0);
         const dead = acquireFleetSwarmClaim(a, oldSide, { now: () => T0 });
+        dead.armNetwork();
         // The container died holding the claim. Its own checkout recovers only through session recovery.
         expect(() => acquireFleetSwarmClaim(a, oldSide, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
         // The side that now owns the account: refused a millisecond early, admitted at the hour.

@@ -3,11 +3,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assertTradeAdmission, fleetTradeOutcome, partnerFailed, performFleetTransfer, pickOrder, validOrder, watchTradeScreen, type Order, type Receipt } from './fleet-trade';
-import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
+import { beginSessionAttempt, readLogoutProof } from '../packages/core/src/session-lifecycle';
 import type { Session } from '../packages/core/src/inprocess';
-import { terminalTradeReceipt, writeTradeReceipt, type TradeReceipt } from './fleet-trade-settlement';
+import { terminalTradeReceipt, windowClosures, writeTradeReceipt, type TradeReceipt } from './fleet-trade-settlement';
 import { makeOrder } from './fleet-order';
 import { DROPPED_CLAIM_MS, UNANSWERED_GRACE_MS, droppedTradeClaims, releasePublishedTradeClaims, snapshot } from './fleet-sync';
+import * as fleetSync from './fleet-sync';
 
 const order = (o: Partial<Order>): Order => ({ id: 'o1', server: 's', from: 'Giver', to: 'Taker', item: 'Lobster', count: 500, start: 1000, end: 5000, ...o });
 
@@ -107,6 +108,99 @@ test('a prepared receipt is exclusive, and only a published matched terminal rec
         expect(sync()).toBe(1);
         expect(releases).toEqual([nonce]);
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+function pairedZeroTrade() {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-paired-zero-')), lifecycle = join(base, '.practice/session-lifecycle');
+    const trade = order({ id: '1794643307780-nabtheknob-mmsmk1232-bones', server: 'rs-sdk-demo.fly.dev', from: 'NabTheKnob', to: 'mmsmk1232',
+        item: 'Bones', count: 94, start: 1794643307780, end: 1794645707780 });
+    let clock = trade.start + 1000;
+    const claims = (['from', 'to'] as const).map((role, i) => ({ account: trade[role].toLowerCase(), server: trade.server, side: 'local', orderId: trade.id, role,
+        nonce: i ? '99c89831-be5a-4746-a986-03c5c0caff82' : 'e78145d2-f894-4888-ab6d-f62aa172ce83', phase: 'held' as const, at: trade.start + 1,
+        pid: process.pid, host: 'PC', checkout: 'd75eb459-50b7-40ef-9883-f7c92f3a1c80' }));
+    const receipts = claims.map(claim => {
+        const producer = beginSessionAttempt({ account: trade[claim.role], server: trade.server }, { root: lifecycle, now: () => ++clock,
+            owner: { pid: process.pid, coordinatorRunId: null, workerRelease: 'a'.repeat(64), script: 'scripts/fleet-trade.ts', role: null, participants: null, sharedClaimNonce: claim.nonce } });
+        clock = Math.max(clock, Number(producer.attemptId.slice(0, 13)));
+        producer.record('connected'); producer.record('ready'); producer.record('ended', 'logged-out'); producer.record('logout', 'logged-out'); producer.record('closed');
+        const proof = readLogoutProof(trade[claim.role], trade.server, { root: lifecycle });
+        if (proof.state !== 'confirmed') throw Error('fixture logout not confirmed');
+        const held = claim.role === 'from' ? 94 : 0;
+        return { version: 2, state: 'reconcile', id: trade.id, account: trade[claim.role], partner: trade[claim.role === 'from' ? 'to' : 'from'], role: claim.role,
+            side: 'local', server: trade.server, item: 'Bones', requested: 94, claim: claim.nonce, count: 0, ok: false, at: ++clock,
+            detail: 'Error: transfer requires reconciliation', inventory: { before: held, after: held }, screen: true,
+            ...(claim.role === 'from' ? { bank: { count: 94, at: clock - 10 } } : {}),
+            logout: { attemptId: proof.attemptId, at: proof.loggedOutAt, sha256: proof.receiptSha256 } } as TradeReceipt;
+    });
+    const files = new Map<string, any>([['orders/' + trade.id + '.json', trade], ...receipts.map(r => ['receipts/' + trade.id + '.' + r.role + '.json', r] as [string, any])]);
+    const released: string[] = [];
+    const now = Math.max(trade.end + 1, clock + 1);
+    const release = (at = now, alive = false) => releasePublishedTradeClaims(claims, 'local', path => files.get(path), claim => released.push(claim.nonce), at,
+        (claim, receipt) => fleetSync.confirmedTradeLogout(base, claim, receipt, () => alive), pair => { released.push(...pair.map(claim => claim.nonce)); });
+    return { base, lifecycle, trade, claims, receipts, files, released, release, now, cleanup: () => rmSync(base, { recursive: true, force: true }) };
+}
+
+test('paired zero-transfer reconciliation releases exact claims after both source-bound logouts without rewriting receipts', () => {
+    const f = pairedZeroTrade();
+    try {
+        const raw = JSON.stringify(f.receipts);
+        expect(windowClosures([f.trade], f.receipts, f.trade.end + 1).has(f.trade.id)).toBe(false);
+        expect(f.release()).toBe(2);
+        expect(f.released).toEqual(f.claims.map(c => c.nonce));
+        expect(windowClosures([f.trade], f.receipts, f.trade.end + 1, claim => !f.released.includes(claim)).get(f.trade.id)?.state).toBe('failed');
+        expect(JSON.stringify(f.receipts)).toBe(raw);
+    } finally { f.cleanup(); }
+});
+
+test('paired zero-transfer reconciliation keeps uncertain movement, identity and logout evidence held', () => {
+    const faults: Record<string, (f: ReturnType<typeof pairedZeroTrade>) => void> = {
+        'partner missing': f => { f.files.delete('receipts/' + f.trade.id + '.to.json'); },
+        'wrong account': f => { f.receipts[1]!.account = 'Other'; },
+        'wrong partner': f => { f.receipts[1]!.partner = 'Other'; },
+        'wrong server': f => { f.receipts[1]!.server = 'other'; },
+        'wrong nonce': f => { f.receipts[1]!.claim = nonce; },
+        'crossed producer claim': f => { f.receipts[1]!.claim = nonce; f.claims[1]!.nonce = nonce; },
+        'other side': f => { f.claims[1]!.side = 'cloud'; f.receipts[1]!.side = 'cloud'; },
+        'missing claimed partner': f => { f.claims.splice(1, 1); },
+        'missing inventory': f => { delete f.receipts[1]!.inventory; },
+        'changed stack': f => { f.receipts[1]!.inventory!.after = 94; },
+        'counted item': f => { f.receipts[1]!.count = 1; },
+        'wrong item': f => { f.receipts[1]!.item = 'Dragon bones'; },
+        'wrong request': f => { f.receipts[1]!.requested = 93; },
+        'unobserved extra line': f => { f.trade.extra = [{ item: 'Coins', count: 10 }]; f.receipts.forEach(r => { r.lines = [{ item: 'Coins', requested: 10, count: 0 }]; }); },
+        'changed extra stack': f => { f.trade.extra = [{ item: 'Coins', count: 10 }]; f.receipts.forEach(r => { r.lines = [{ item: 'Coins', requested: 10, count: 0, inventory: { before: 10, after: 0 } }]; }); },
+        'missing logout': f => { delete f.receipts[1]!.logout; },
+        'wrong producer hash': f => { f.receipts[1]!.logout!.sha256 = 'b'.repeat(64); },
+        'wrong producer owner': f => { f.claims[1]!.pid++; },
+        'newer unresolved producer': f => { beginSessionAttempt({ account: f.trade.to, server: f.trade.server }, { root: f.lifecycle }); },
+    };
+    for (const [fault, change] of Object.entries(faults)) {
+        const f = pairedZeroTrade();
+        try { change(f); expect(f.release(), fault).toBe(0); expect(f.released, fault).toEqual([]); }
+        finally { f.cleanup(); }
+    }
+    const f = pairedZeroTrade();
+    try { expect(f.release(f.trade.end - 1)).toBe(0); expect(f.release(f.now, true)).toBe(0); expect(f.released).toEqual([]); }
+    finally { f.cleanup(); }
+});
+
+test('paired zero-transfer reconciliation uses one atomic callback and retries a failed batch without a partial release', () => {
+    const f = pairedZeroTrade();
+    const read = (path: string) => f.files.get(path), now = f.now;
+    const confirmed: NonNullable<Parameters<typeof releasePublishedTradeClaims>[5]> = (claim, receipt) => fleetSync.confirmedTradeLogout(f.base, claim, receipt, () => false);
+    let single = 0, batches = 0;
+    try {
+        expect(() => releasePublishedTradeClaims(f.claims, 'local', read, () => { single++; }, now, confirmed, pair => {
+            expect(pair).toEqual(f.claims); batches++; throw Error('atomic push failed');
+        })).toThrow('atomic push failed');
+        expect(single).toBe(0); expect(batches).toBe(1); expect(f.released).toEqual([]);
+        expect(releasePublishedTradeClaims(f.claims, 'local', read, () => { single++; }, now + 1, confirmed, pair => {
+            batches++; f.released.push(...pair.map(claim => claim.nonce));
+        })).toBe(2);
+        expect(single).toBe(0); expect(batches).toBe(2);
+        expect(f.released).toEqual(f.claims.map(claim => claim.nonce));
+        expect(windowClosures([f.trade], f.receipts, now + 1, claim => !f.released.includes(claim)).get(f.trade.id)?.state).toBe('failed');
+    } finally { f.cleanup(); }
 });
 
 test('a dropped trade session frees its claim only when the records prove nothing moved: the partner\'s failed receipt, or no claim by the partner at the window\'s end', () => {
