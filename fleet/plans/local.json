@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794786844330,
+ "at": 1794787047198,
  "jobs": [
   {
    "account": "Balls",
@@ -173,6 +173,52 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "109",
+    "QUANTITY": "13",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "20000",
+    "CASH_RESERVE": "9000000",
+    "ORDER_KEY": "pocketrocket-dwarfweedunf13-owned",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-d1682cc3-fbf4-4601-8a49-35e7bd22dd9e"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-pocketrocket-dwarfweedunf13-owned [task-d1682cc3-fbf4-4601-8a49-35e7bd22dd9e]",
+   "role": "supply"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "1617",
+    "QUANTITY": "11",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "15000",
+    "CASH_RESERVE": "2800000",
+    "ORDER_KEY": "yewfirst-uncutdiamond11-owned",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-a7abef6c-01de-4b1c-bb14-f9f8fc6f7d26"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-yewfirst-uncutdiamond11-owned [task-a7abef6c-01de-4b1c-bb14-f9f8fc6f7d26]",
    "role": "supply"
   }
  ],
