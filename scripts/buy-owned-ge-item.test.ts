@@ -4,10 +4,39 @@ import {mock,spyOn} from 'bun:test';
 import {mkdtempSync,readFileSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {prepareMarketEntry,marketEntryFailure,northEntryTile,northApproachTile,NORTH_APPROACH,rescueMarketEntry,expectedRescueStop,type RescueControl} from './buy-owned-ge-item';
+import {prepareMarketEntry,marketEntryFailure,northEntryTile,northApproachTile,NORTH_APPROACH,rescueMarketEntry,expectedRescueStop,openOrderSession,type RescueControl} from './buy-owned-ge-item';
 import type {Session} from '../packages/core/src/inprocess';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
 import {marketLeg} from './buy-owned-ge-item';import {walkWithFerryFallback} from './walk-to';import {ROUTE_BUDGET_MS} from '../packages/core/src/world';
+import * as botCore from '../packages/core/src/bot';
+import {watchRandomEvents} from '../packages/core/src/randomevents';
+import {FLEE_HP} from '../packages/core/src/death-recovery';
+
+test('session setup disables corpse recovery before opening only a validated rescue and retains stop ownership',async()=>{
+ const previous=process.env.DEATH_RECOVERY,opened:{policy:string|undefined;options:Parameters<typeof botCore.openBot>[1]}[]=[];
+ const s={tick:()=>1,sdk:{getState:()=>({player:{lifeId:1,respawnCount:0}}),getStateAge:()=>0}} as unknown as Session;
+ const open=spyOn(botCore,'openBot').mockImplementation(async(actor,options)=>{
+  expect(actor).toBe(request.actor.toLowerCase());opened.push({policy:process.env.DEATH_RECOVERY,options});return s;
+ });
+ try{
+  for(const rescueMode of [undefined,'npc-respawn-once'] as const)for(const policy of [undefined,'1','0']){
+   if(policy===undefined)delete process.env.DEATH_RECOVERY;else process.env.DEATH_RECOVERY=policy;
+   const control:RescueControl={active:!!rescueMode,start:0,lifeId:1,respawnCount:0};let stops=0;
+   expect(await openOrderSession(request.actor.toLowerCase(),{...request,rescueMode},control,()=>{stops++;})).toBe(s);
+   const setup=opened.at(-1)!;
+   // openBot captures this policy before installing its automatic corpse handler.
+   expect(setup.policy).toBe(rescueMode?'0':policy);
+   await setup.options!.onStop!(s,'died');expect(stops).toBe(rescueMode?0:1);
+   await setup.options!.onStop!(s,'stop file');expect(stops).toBe(rescueMode?1:2);
+   control.active=false;await setup.options!.onStop!(s,'died');expect(stops).toBe(rescueMode?2:3);
+   await setup.options!.onSessionEnd!(s,'died');expect(stops).toBe(rescueMode?3:4);
+  }
+  process.env.DEATH_RECOVERY='1';const calls=opened.length,control:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
+  for(const invalid of [{...request,rescueMode:'npc-respawn-once' as const,limit:0},{...request,rescueMode:'unsupported' as any}]){
+   expect(()=>openOrderSession(request.actor.toLowerCase(),invalid,control,()=>{})).toThrow();expect(opened.length).toBe(calls);expect(process.env.DEATH_RECOVERY).toBe('1');
+  }
+ }finally{open.mockRestore();if(previous===undefined)delete process.env.DEATH_RECOVERY;else process.env.DEATH_RECOVERY=previous;}
+});
 
 async function rescueFixture(mode='ok'){
  const dir=mkdtempSync(join(tmpdir(),'ge-rescue-')),path=join(dir,'order.json');
@@ -48,6 +77,41 @@ async function rescueFixture(mode='ok'){
 test('exact wolf pocket rescue records one intent, one death, retained kit and Draynor bank reconciliation',async()=>{
  const r=await rescueFixture();expect(r).toMatchObject({attacks:1,stages:1,error:'',active:false,callbacks:0});
  expect(r.journal).toMatchObject({phase:'entry',coinsBefore:19911,itemsBefore:0,rescue:{phase:'bank-reconciled',lifeId:1,respawnCount:0,targetIndex:7}});
+});
+test('authorized rescue crosses the active flee threshold without fleeing and releases the watcher before staging',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ge-rescue-flee-')),path=join(dir,'order.json'),client={};setEquipmentObserved(client,true);
+ const bank=[{id:995,count:19911},{id:557,count:4},{id:1351,count:1}],callbacks=new Set<()=>void>(),walks:unknown[]=[],lines:string[]=[];
+ const control:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};let tick=0,attacks=0,generation=0,stageBusy:boolean|undefined;
+ const player={worldX:2853,worldZ:3452,level:0,lifeId:1,respawnCount:0,isDead:false,hp:10,maxHp:10};
+ const wolf={kind:'npc',name:'White wolf',id:96,index:7,combatLevel:25,reachable:true,distance:1,x:2854,z:3452,targetIndex:32768,optionsWithIndex:[{text:'Attack',opIndex:2}]};
+ const state={player,isSkulled:false,equipment:[],inventory:[{id:590,count:1,optionsWithIndex:[]}],bank:{isOpen:false},nearbyNpcs:[wolf]};
+ const s={client,name:'Shaftmaker',tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},
+  direct:async(action:{type:string})=>{if(action.type==='interactNpc')attacks++;if(action.type==='walkTo')walks.push(action);return{success:true};},
+  sdk:{getState:()=>state,getStateAge:()=>0,getInventory:()=>state.inventory,getEquipment:()=>state.equipment,getSkill:()=>({level:player.hp,baseLevel:10}),
+   sendInteractNpc:async(index:number,option:number)=>{expect(index).toBe(7);expect(option).toBe(2);expect(JSON.parse(readFileSync(path,'utf8')).rescue.phase).toBe('attempted');return s.direct({type:'interactNpc',npcIndex:index,optionIndex:option});}},
+  bot:{openBank:async()=>{generation++;state.bank.isOpen=true;return{success:true};},closeBank:async()=>{state.bank.isOpen=false;}},
+  bankObservation:()=>state.bank.isOpen?{generation,items:bank}:null} as unknown as Session;
+ const watcher=watchRandomEvents(s,{pf:null,ifReader:null,danger:null,events:false,gate:true,log:line=>lines.push(line),flee:{hp:FLEE_HP,onSafe:()=>{}}});
+ const watch=spyOn(botCore,'randomEventsOf').mockImplementation(session=>session===s?watcher:undefined);
+ const step=async()=>{tick++;for(const cb of [...callbacks])cb();await Promise.resolve();await Promise.resolve();};
+ try{
+  const now=Date.now(),req={...request,actor:s.name,item:563,quantity:5,limit:1000,reserve:10000,rescueMode:'npc-respawn-once' as const,createdAt:now,reviewAt:now+10000,deadline:now+60000};
+  const work=rescueMarketEntry(s,req,path,()=>false,control,{bank,bankAt:1},async()=>{
+   stageBusy=watcher.busy();Object.assign(player,{worldX:3092,worldZ:3243});return{ok:true};
+  });
+  player.hp=1;await step();await step();
+  player.hp=0;player.isDead=true;await step();
+  const expectedDeath=expectedRescueStop(s,'died',control);
+  Object.assign(player,{worldX:3221,worldZ:3218,lifeId:2,respawnCount:1,isDead:false,hp:10});await step();
+  const journal=await work;
+  expect(attacks).toBe(1);expect(walks).toHaveLength(0);expect(lines).toEqual([]);expect(expectedDeath).toBe(true);
+  expect(stageBusy).toBe(false);expect(control.active).toBe(false);expect(watcher.busy()).toBe(false);
+  expect(journal.rescue?.phase).toBe('bank-reconciled');expect(journal.rescue?.bank).toEqual(bank);
+  // A later low-HP fight still triggers the same watcher's flee guard.
+  player.hp=1;Object.assign(wolf,{x:player.worldX+1,z:player.worldZ});await step();
+  expect(watcher.counts()['flee_guard:flee']).toBe(1);expect(walks.length).toBeGreaterThan(0);
+ }finally{watcher.stop();watch.mockRestore();rmSync(dir,{recursive:true,force:true});}
+ expect(callbacks.size).toBe(0);
 });
 for(const mode of ['unknown-skull','skulled','kit','equipped','unknown-equipment','wrong-pocket','unreachable','stale','prior'])test(`rescue refuses ${mode} before engagement`,async()=>{
  const r=await rescueFixture(mode);expect(r.attacks).toBe(0);expect(r.stages).toBe(0);expect(r.error).not.toBe('');expect(r.active).toBe(false);
