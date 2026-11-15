@@ -1,4 +1,4 @@
-import {test,expect} from 'bun:test';
+import {test,expect,spyOn} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync,statSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -10,6 +10,7 @@ import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
 import {recoveryHeldDiagnostic,recoveryBoundary,recoveryDiagnosticFromLog} from '../src/session-recovery';
 import {missionSignature,liveLogoutRef} from '../src/session-admission';
 import {budgetRefusal,MAX_WAITS,spentAttempts,waitedAttempts,retainedRecoveryTasks} from '../../../scripts/cloud-recover';
+import * as recoveryProcesses from '../../practice/src/proc';
 const source='a'.repeat(64),runner='b'.repeat(64),now=1793258000000;
 const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
 mkdirSync(fixtureRoot,{recursive:true});
@@ -264,6 +265,36 @@ test('remote launcher refuses before publishing a permit or account lease',()=>{
  expect(()=>launchPermittedRecovery(f.request,f.base,f.options)).toThrow('no lease issued');
  expect(()=>launchPermittedRecovery(f.request,f.base,{...f.options,nativeFixture:true})).toThrow('no lease issued');
  expect(existsSync(recoveryPermitPaths(f.request,f.base).lease)).toBe(false);expect(existsSync(recoveryPermitPaths(f.request,f.base).permit)).toBe(false);
+});
+test('launcher permits delayed setup to finish at140seconds but retains the lease at the absolute150second expiry',async()=>{
+ for(const elapsed of [140000,150000,150001]){
+  const f=fixture();let clock=now,exit!:(code:number)=>void;
+  const exited=new Promise<number>(resolve=>{exit=resolve;});
+  type Timer={at:number;run:()=>void;unref:()=>Timer};const timers=new Set<Timer>();
+  const advance=(at:number)=>{clock=at;for(const timer of [...timers])if(timer.at<=at){timers.delete(timer);timer.run();}};
+  const set=spyOn(globalThis,'setTimeout').mockImplementation(((run:()=>void,ms=0)=>{const timer:Timer={at:clock+ms,run,unref:()=>timer};timers.add(timer);return timer;}) as any);
+  const clear=spyOn(globalThis,'clearTimeout').mockImplementation(((timer:Timer)=>{timers.delete(timer);}) as any);
+  const kill=spyOn(recoveryProcesses,'safeKill').mockResolvedValue(true);
+  const spawn=spyOn(Bun,'spawn').mockImplementation((()=>{clock=now+5000;return{pid:process.pid,exited,stdin:{write:async()=>{},end:async()=>{}}};}) as any);
+  try{
+   f.options.now=()=>clock;
+   const runnerBytes=readFileSync(resolve(import.meta.dir,'../../..',RECOVERY_SCRIPT));writeFileSync(join(f.base,RECOVERY_SCRIPT),runnerBytes);
+   const launched=launchPermittedRecovery(f.request,f.base,{...f.options,nativeFixture:true});
+   advance(now+20000);f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[]});
+   consumeRecoveryPermit(f.request,f.base,{...f.options,nativeFixture:true});
+   advance(now+100000);
+   const root=join(f.base,'.practice/session-lifecycle'),owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
+   const attempt=beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner,now:()=>clock});attempt.record('ended','logged-out');
+   const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
+   const before={player:{name:'Rod',x:1,z:2,level:0,hp:43},inventory:[{id:995,count:100}],equipment:[],skills:[],bank:null,modalOpen:false};
+   f.put('.practice/coordinator/session-recovery/accounts/rod/one/output/receipt.json',{state:'confirmed',request:f.request,logout:'logged-out',failure:'',startedAt:now+27000,endedAt:now+elapsed,
+    runnerSha256:createHash('sha256').update(runnerBytes).digest('hex'),before,after:structuredClone(before),attemptId:attempt.attemptId,lifecycleSha256:proof.receiptSha256,
+    scope:{gameplay:false,production:0,repairsFailure:false,qualifiesScript:false}});
+   advance(now+elapsed);f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[]});exit(0);
+   if(elapsed===140000){const outcome=await launched.completion.then(value=>({value}),error=>({error:String(error)}));expect(outcome).toMatchObject({value:{proof:{state:'confirmed'}}});expect(existsSync(launched.paths.lease)).toBe(false);}
+   else{await expect(launched.completion).rejects.toThrow();expect(existsSync(launched.paths.lease)).toBe(true);expect(existsSync(launched.paths.completed)).toBe(false);}
+  }finally{spawn.mockRestore();kill.mockRestore();clear.mockRestore();set.mockRestore();rmSync(f.base,{recursive:true,force:true});}
+ }
 });
 test('connect admission expires at the binding window while an already consumed guard retains150second cleanup time',()=>{
  const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);

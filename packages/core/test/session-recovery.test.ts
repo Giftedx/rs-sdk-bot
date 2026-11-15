@@ -1,12 +1,30 @@
-import {test,expect} from 'bun:test';
+import {test,expect,spyOn} from 'bun:test';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {launchRevision} from '../src/worker-release';
 import {beginSessionAttempt,listAttempts} from '../src/session-lifecycle';
-import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,recoverSession,validateRecoveryRequest,recoveryBoundary,recoveryHeldDiagnostic,recoveryDiagnosticFromLog,RECOVERY_SETUP_PHASES,type RecoveryRequest} from '../src/session-recovery';
+import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,recoverSession,validateRecoveryRequest,recoveryBoundary,recoveryHeldDiagnostic,recoveryDiagnosticFromLog,RECOVERY_SETUP_PHASES,startRecoverySessionTimer,type RecoveryRequest} from '../src/session-recovery';
 const source='a'.repeat(64),server='localhost:8888';
 const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
 mkdirSync(fixtureRoot,{recursive:true});
+test('the child session timer keeps its120second cap and cannot outlive the remaining permit authority',()=>{
+ for(const [expiresAt,elapsed] of [[undefined,120000],[nowValue()+150000,120000],[nowValue()+95000,95000],[nowValue(),0]] as const){
+  let clock=nowValue();const exits:number[]=[],diagnostics:string[]=[];
+  type Timer={at:number;run:()=>void;unref:()=>Timer};const timers=new Set<Timer>();
+  const advance=(at:number)=>{clock=at;for(const timer of [...timers])if(timer.at<=at){timers.delete(timer);timer.run();}};
+  const date=spyOn(Date,'now').mockImplementation(()=>clock);
+  const set=spyOn(globalThis,'setTimeout').mockImplementation(((run:()=>void,ms=0)=>{const timer:Timer={at:clock+ms,run,unref:()=>timer};timers.add(timer);return timer;}) as any);
+  const exit=spyOn(process,'exit').mockImplementation(((code:number)=>{exits.push(code);}) as any);
+  const error=spyOn(console,'error').mockImplementation((line:unknown)=>{diagnostics.push(String(line));});
+  try{
+   startRecoverySessionTimer(expiresAt);
+   if(elapsed>0){advance(nowValue()+elapsed-1);expect(exits).toEqual([]);}
+   advance(nowValue()+elapsed);expect(exits).toEqual([1]);
+   expect(recoveryDiagnosticFromLog(diagnostics[0]??'')).toEqual({phase:'deadline',reason:'outer-deadline'});
+  }finally{error.mockRestore();exit.mockRestore();set.mockRestore();date.mockRestore();}
+ }
+});
+const nowValue=()=>1794724773283;
 test('CLI boundary diagnostics identify every setup phase without copying secrets or publishing authority',async()=>{
  for(const phase of RECOVERY_SETUP_PHASES){
   let observed:unknown;

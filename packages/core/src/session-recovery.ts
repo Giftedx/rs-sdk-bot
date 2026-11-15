@@ -5,7 +5,7 @@ import {connectInProcess,clientTransportState,observeClientTransport,inProcessRu
 import {logoutSession,closeWithin,serverFromEnv} from './bot';
 import {isLocalServer} from './localserver';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
-import {launchRevision} from './worker-release';
+import {launchRevision,cachedLaunchRevision} from './worker-release';
 import {waitUntil} from './ticks';
 
 import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,validateRecoveryRequest,recoveryStatePreserved,consumeRecoveryConnection,spendRecoveryConnection,recoveryPermitPaths,waitForRecoveryChildBinding,assertNativeFixtureRoot,assertRecoveryNotStopped,FLEET_REFUSALS,type RecoveryRequest,type ControlledRecoveryRequest,type RecoveryConnectionAdmission} from './session-recovery-permit';
@@ -250,6 +250,11 @@ export async function recoverSession(request:RecoveryRequest,deps:RecoveryDeps){
  log('RECOVERY_RESULT '+JSON.stringify({state:receipt.state,account:request.account,attemptId:receipt.attemptId,gameplay:false,repairsFailure:false}));
  return receipt;
 }
+export function startRecoverySessionTimer(expiresAt?:number){
+ const budget=expiresAt===undefined?120000:Math.min(120000,Math.max(0,expiresAt-Date.now()));
+ const timer=setTimeout(()=>{console.error('RECOVERY_HELD '+JSON.stringify(recoveryHeldDiagnostic(new RecoveryBoundaryError('deadline','outer-deadline'))));process.exit(1);},budget);timer.unref();
+ return timer;
+}
 async function cli(){
  const requestPath=process.argv[2],out=process.argv[3];
  await recoveryBoundary('arguments',()=>{if(!requestPath||!out)throw Error('missing arguments');});
@@ -260,7 +265,7 @@ async function cli(){
  await recoveryBoundary('remote-authority',()=>{if(!controlled&&!isLocalServer(request.server))throw Error('live authenticated recovery is not qualified; no connection attempted');});
  await recoveryBoundary('source',()=>{if(request.source!==launchRevision())throw Error('recovery source changed');});
  process.env.BOT_GOAL=RECOVERY_SCRIPT;process.env.BOT_ROLE='recovery';process.env.COORDINATOR_RUN_ID=request.runId;process.env.WORKER_RELEASE=request.source;delete process.env.WORKER_ENTRY;
- let guard=()=>assertRecoveryNotStopped(request.account,repo),admission:RecoveryConnectionAdmission|undefined;
+ let guard=()=>assertRecoveryNotStopped(request.account,repo),admission:RecoveryConnectionAdmission|undefined,permitExpiresAt:number|undefined;
  let lifecycleRoot=join(repo,'.practice/session-lifecycle');
  if(controlled){
   // A fixture may own an isolated state tree only on a local server. Remote setup always uses this repository.
@@ -272,7 +277,8 @@ async function cli(){
   await recoveryBoundary('child-binding',()=>waitForRecoveryChildBinding(request as ControlledRecoveryRequest,base,Bun.stdin.stream()));
   const permit=await recoveryBoundary('permit-read',()=>JSON.parse(readFileSync(paths.permit,'utf8')));
   await recoveryBoundary('fixture-root',()=>{if(permit.nativeFixture===true){assertNativeFixtureRoot(base,request.server);lifecycleRoot=join(base,'.practice/session-lifecycle');}});
-  ({guard,admission}=await recoveryBoundary('permit-consumption',()=>consumeRecoveryConnection(request as ControlledRecoveryRequest,base,{source:()=>launchRevision(),nativeFixture:permit.nativeFixture===true})));
+  ({guard,admission}=await recoveryBoundary('permit-consumption',()=>consumeRecoveryConnection(request as ControlledRecoveryRequest,base,{source:()=>cachedLaunchRevision(repo),nativeFixture:permit.nativeFixture===true})));
+  permitExpiresAt=permit.expiresAt;
  }
  await recoveryBoundary('stop',guard);
  const env=await recoveryBoundary('credentials-read',()=>readFileSync(join(repo,'vendor/rs-sdk/bots',request.account,'bot.env'),'utf8'));
@@ -280,7 +286,7 @@ async function cli(){
  const password=await recoveryBoundary('credential-selection',()=>{const value=env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();if(!value)throw Error('recovery credential unavailable');return value;});
  await recoveryBoundary('output-request',()=>{mkdirSync(out!,{recursive:true});writeFileSync(join(out!,'request.json'),JSON.stringify(request,null,2),{flag:'wx'});});
  try{console.log('RECOVERY_RUNTIME '+JSON.stringify({at:Date.now(),pid:process.pid,bun:Bun.version,runner:import.meta.path,...inProcessRuntimePaths()}));}catch{/* Observation only. */}
- const timer=setTimeout(()=>{console.error('RECOVERY_HELD '+JSON.stringify(recoveryHeldDiagnostic(new RecoveryBoundaryError('deadline','outer-deadline'))));process.exit(1);},120000);timer.unref();
+ const timer=startRecoverySessionTimer(permitExpiresAt);
  const receipt=await recoveryBoundary('session',()=>recoverSession(request,{root:lifecycleRoot,guard,...(admission?{admission}:{}),
   connect:async()=>{
    const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:guard,recoverSwarm:admission,...(lifecycleRoot!==join(repo,'.practice/session-lifecycle')?{lifecycleRoot}:{})});
