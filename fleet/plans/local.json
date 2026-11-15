@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794786231812,
+ "at": 1794786432588,
  "jobs": [
   {
    "account": "Balls",
@@ -174,25 +174,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "69"
-   ],
-   "env": {
-    "BONE_ID": "526",
-    "MAX_BURY": "54",
-    "BONE_RESERVE": "46",
-    "CAP": "900",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-dbd0d470-0836-45fa-8673-88c41c11ba62"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-prayer-nab-owned69-admission [task-dbd0d470-0836-45fa-8673-88c41c11ba62]",
-   "role": "helper"
   }
  ],
  "army": [
