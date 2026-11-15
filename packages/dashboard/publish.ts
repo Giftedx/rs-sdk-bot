@@ -16,9 +16,10 @@ import {spawn} from 'node:child_process';
 import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT} from './publish-relay';
 import {expectedLootPrices} from './item-prices';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
+import {reloadDue,respawnDaemon} from '../core/src/live-reload';
 import {validateCommand,authorizeCommand,applyCommand,receiptPath,writeReceipt,ACTIONS,ID_RE,MAX_AGE_MS} from './publish-commands';
 
-const root=resolve(import.meta.dir,'..','..'),prac=join(root,'.practice');
+const root=resolve(import.meta.dir,'..','..'),prac=join(root,'.practice'),startedAt=Date.now();
 const expectedDrops=expectedLootPrices(JSON.parse(readFileSync(join(import.meta.dir,'client-assets','npc-loot.json'),'utf8')));
 const REPO=process.env.FLEET_COMMAND_REPO??'';
 const DIR=resolve(process.env.FLEET_COMMAND_DIR??join(prac,'fleet-command'));
@@ -241,6 +242,12 @@ if(import.meta.main){
  process.on('exit',release);process.on('SIGINT',()=>process.exit(0));process.on('SIGTERM',()=>process.exit(0));
  const once=process.argv.includes('--once');
  for(;;){
+  if(!once&&reloadDue(root,'dashboard-publish',startedAt)){
+   release();
+   const pid=respawnDaemon(root,[join(root,'packages/dashboard/publish.ts'),...process.argv.slice(2)],join(prac,'dashboard-publish.log'));
+   console.log(`PUBLISH reload after a live update: successor pid ${pid}`);
+   process.exit(0);
+  }
   try{await cycle();}catch(e){console.log(`PUBLISH fail ${String(e).slice(0,300)}`);if(once)process.exit(1);}
   if(once)break;
   await Bun.sleep(CYCLE_MS);

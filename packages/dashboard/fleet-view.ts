@@ -15,7 +15,7 @@ export function scoreboardView(raw:any){
  return{available:true,at:Number.isFinite(at)?at:null,
   remaining:(goals?.remaining??raw.progress.remaining??[]).map(String),done:goals?.done===true,goals,
   skillLevels:raw.progress.skillLevels??null,skills99:raw.progress.skills99??null,
-  quests:{live:raw.progress.questsLive??null,total:raw.progress.questTotal??null},
+  quests:{live:goals?.quests?.complete??raw.progress.questsLive??null,total:goals?.quests?.total??raw.progress.questTotal??null},
   items:{held:raw.items?.tradeableHeld??null,total:raw.items?.tradeable??null},
   actions:{named:raw.totals?.actionsNamed??null,total:raw.totals?.actions??null},
   skills:raw.skills.map((s:any)=>({skill:String(s.skill),bestLive:Number.isFinite(s.bestLive)?s.bestLive:null,bands:(s.bands??[]).map((b:any)=>({band:String(b.band),stage:String(b.stage)}))}))};
