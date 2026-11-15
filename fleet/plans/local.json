@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794770815883,
+ "at": 1794771416233,
  "jobs": [
   {
    "account": "Balls",
@@ -50,31 +50,6 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
   },
   {
    "account": "NabTheKnob",
