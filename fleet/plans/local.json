@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794719162115,
+ "at": 1794720389446,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -29,11 +29,12 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
-   "role": "pk-trainee"
+   "enabled": false,
+   "standing": false,
+   "repeat": false,
+   "goal": "Completed Strength 30 job; plan finite owner-goal work after session recovery",
+   "role": "pk-trainee",
+   "autopilot": "local"
   },
   {
    "account": "Balls",
@@ -69,8 +70,11 @@
    "account": "Mightyrod",
    "script": "",
    "enabled": false,
-   "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
-   "role": "pvp"
+   "standing": false,
+   "repeat": false,
+   "goal": "Plan finite army or quest work from observed bank and kit",
+   "role": "pvp",
+   "autopilot": "local"
   },
   {
    "account": "Abracadickra",
