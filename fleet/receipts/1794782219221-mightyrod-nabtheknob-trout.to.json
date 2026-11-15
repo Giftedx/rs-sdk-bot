@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794782219221-mightyrod-nabtheknob-trout",
+ "account": "NabTheKnob",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 11,
+ "claim": "29a37ff5-7a4f-4a5c-9a25-60b48f176e2c",
+ "count": 0,
+ "ok": false,
+ "at": 1794782237637,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794782229344-0000026912-0000000001",
+  "at": 1794782237625,
+  "sha256": "485ee29c72679572a63847d6bb28e0363feb0cb54be1056a654b0a775d8054e5"
+ },
+ "screen": false
+}
