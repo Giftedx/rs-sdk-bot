@@ -1,6 +1,6 @@
 # Joined plan
 
-**Live work and blocker repair authorized.** Resume goal work through the existing controllers and current launch gates. Diagnose failed jobs, prove repairs on practice and resume finite useful consumers. Explicit user stops, account ownership, fresh specialist clocks and host limits still apply.
+**Live work authorized.** Resume goal work through the existing controllers and current launch gates. Diagnose failed jobs, prove repairs on practice and resume finite useful consumers. Explicit user stops, account ownership, fresh specialist clocks and host limits still apply.
 
 Owner goals: Haggis rank 1 Overall under the record; specialist board wins with priced margins; all quests; all useful items and best-in-slot gear; a PK army of maxed tribrids that kills players and holds the Wilderness. Gold only buys supplies and kits for these goals. Helpers work from the route supply bill (`bun packages/planner/src/supply-bill.ts`).
 
