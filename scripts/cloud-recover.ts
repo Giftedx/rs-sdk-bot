@@ -290,7 +290,7 @@ export function budgetRefusal(root: string, account: string, end: Pick<EndRecord
 }
 
 export interface RecoveryPlanningFailure {
-    taskId: string; runId?: string; kind: string; source?: string; failedCheck?: string; error?: string; deliveryDirectory?: string;
+    taskId: string; runId?: string; kind: string; source?: string; failedCheck?: string; error?: string; deliveryDirectory?: string; settledAt?: number;
 }
 export interface RecoveryPlanningProblem {
     schema: 'recovery-planning/1'; account: string; server: string; endedAt: number | null; lineage: Lineage; reason: string;
@@ -323,6 +323,7 @@ export function recoveryPlanningProblem(root: string, account: string, end: Pick
     const failures = [...relevant.values()].filter(t => !newerDelivery(t)).sort((a, b) => (b.receipt?.at ?? 0) - (a.receipt?.at ?? 0) || a.spec.id.localeCompare(b.spec.id)).slice(0, 8).map(t => {
         const delivery = t.receipt?.output?.delivery;
         const failure: RecoveryPlanningFailure = { taskId: t.spec.id, kind: t.spec.kind };
+        if (Number.isFinite(t.receipt?.at) && t.receipt.at > 0) failure.settledAt = t.receipt.at;
         if (typeof t.runId === 'string') failure.runId = t.runId;
         if (typeof delivery?.source === 'string') failure.source = delivery.source.slice(0, 64);
         const failedCheck = boundedText(delivery?.failedCheck, 160), error = boundedText(t.receipt?.error ?? t.receipt?.output?.error ?? delivery?.reason, 600), directory = boundedText(delivery?.directory, 1000);
@@ -340,10 +341,11 @@ export function recoveryPlanningProblem(root: string, account: string, end: Pick
 
 // Immutable facts are a planner input, not a second queue. Equivalent failures have one identity even when another
 // task, run or random delivery directory names them. The current end stays in the key because the planner matches
-// that exact actionable end. A changed source or failure observation also requests a new plan.
+// that exact actionable end. A new immutable receipt settlement identifies a fresh occurrence of the same fault.
 export function requestRecoveryPlanning(root: string, problem: RecoveryPlanningProblem): boolean {
     const lineageRoot = 'ends' in problem.lineage ? Math.min(...problem.lineage.ends) : problem.endedAt;
-    const evidence = [...new Set(problem.failures.map(f => JSON.stringify([f.kind, f.source ?? null, f.failedCheck ?? null, f.error ?? null])))].sort();
+    const evidence = [...new Set(problem.failures.map(f => JSON.stringify([f.kind, f.source ?? null, f.failedCheck ?? null, f.error ?? null,
+        typeof f.settledAt === 'number' && Number.isFinite(f.settledAt) && f.settledAt > 0 ? f.settledAt : null])))].sort();
     const key = createHash('sha256').update(JSON.stringify([problem.account.toLowerCase(), problem.server, lineageRoot, problem.endedAt, evidence,
         'unknown' in problem.lineage ? problem.lineage.unknown : null])).digest('hex');
     const dir = join(root, '.practice', 'cloud-recover', 'planning'); mkdirSync(dir, { recursive: true });
