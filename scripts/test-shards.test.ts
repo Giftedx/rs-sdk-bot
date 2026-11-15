@@ -68,6 +68,18 @@ test('a failed test names its file and a passing file is not named', () => {
     expect(failedFiles(output)).toEqual(['packages/core/test/two.test.ts']);
 });
 
+test('GitHub Actions groups retain the failed filename without their command prefix', () => {
+    const output = [
+        '  ::group::scripts\\passing.test.ts:  ', '(pass) fine', '::endgroup::',
+        '::group::packages\\practice\\test\\goldfarm-order-proof.test.ts:', '(fail) proof [5.00ms]', '(fail) another proof', '::endgroup::',
+        '::group::packages/dashboard/panel.test.tsx:', '(fail) panel [5.00ms]', '::endgroup::',
+        'scripts/plain.test.ts:', '(fail) plain [5.00ms]',
+    ].join('\r\n');
+    expect(failedFiles(output)).toEqual([
+        'packages/practice/test/goldfarm-order-proof.test.ts', 'packages/dashboard/panel.test.tsx', 'scripts/plain.test.ts',
+    ]);
+});
+
 test('a change selects the tests that reach it by import, by a quoted path, or by a scan', () => {
     const base = mkdtempSync(join(tmpdir(), 'test-shards-'));
     const write = (path: string, text: string) => { mkdirSync(dirname(join(base, path)), { recursive: true }); writeFileSync(join(base, path), text); };

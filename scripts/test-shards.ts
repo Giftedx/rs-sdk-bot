@@ -77,7 +77,7 @@ export function failedFiles(output: string): string[] {
     const failed = new Set<string>();
     let file: string | null = null;
     for (const line of output.split(/\r?\n/)) {
-        const named = /^(\S.*\.test\.tsx?):$/.exec(line.trim());
+        const named = /^(\S.*\.test\.tsx?):$/.exec(line.trim().replace(/^::group::/, ''));
         if (named) file = named[1]!.replaceAll('\\', '/');
         else if (line.startsWith('(fail)') && file) failed.add(file);
     }
