@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794777110105,
+ "at": 1794777150653,
  "jobs": [
   {
    "account": "Balls",
@@ -152,19 +152,6 @@
    "repeat": false,
    "goal": "local-recover-wandwaver-20261115t082009z [task-fc72bc71-4301-4715-8081-a6d383b249af]",
    "role": "combat"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-34ea2439-7d90-4ec3-8039-035c3da06a7e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-mmsmk1232-20261115t192012z [task-34ea2439-7d90-4ec3-8039-035c3da06a7e]",
-   "role": "helper"
   }
  ],
  "army": [
