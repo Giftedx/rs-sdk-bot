@@ -1,9 +1,10 @@
 import { expect, test } from 'bun:test';
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { acquireFleetLease, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+
+const git = (cwd: string, ...args: string[]) => fleetGitWindow(cwd, 'fleet lease fixture', 5000)(args);
 
 test('a network fault is tried again inside the budget; a rejected push fails at once with Git\'s text', () => {
     const fail = (stderr: string) => Object.assign(Error('Command failed'), { stderr });
@@ -25,7 +26,6 @@ test('a network fault is tried again inside the budget; a rejected push fails at
 
 test('the remote lease excludes another checkout, fences old workers, and permits expired takeover', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
-    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true });
     try {
         const remote = join(base, 'origin.git'), a = join(base, 'a'), b = join(base, 'b');
         git(base, 'init', '--bare', remote);
@@ -65,7 +65,7 @@ test('the remote lease excludes another checkout, fences old workers, and permit
 test('an unreadable authority fails closed', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
     try {
-        execFileSync('git', ['init'], { cwd: base, stdio: 'pipe', timeout: 5000, windowsHide: true });
+        git(base, 'init');
         expect(() => acquireFleetLease(base, 'local')).toThrow('authority');
         expect(fleetLeaseAllowsWorker(base, 'unconfirmed')).toBe(false);
     } finally {
@@ -77,10 +77,9 @@ test('a replacement in the same checkout can adopt workers after the previous co
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
     try {
         const remote = join(base, 'origin.git');
-        const git = (...args: string[]) => execFileSync('git', args, { cwd: base, stdio: 'pipe', timeout: 5000, windowsHide: true });
-        git('init', '--bare', remote);
-        git('init');
-        git('remote', 'add', 'origin', remote);
+        git(base, 'init', '--bare', remote);
+        git(base, 'init');
+        git(base, 'remote', 'add', 'origin', remote);
         const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-lease.ts'));
         const child = Bun.spawn([process.execPath, '-e',
             `import { acquireFleetLease } from ${modulePath}; console.log(acquireFleetLease(process.cwd(), 'local').holder)`],
@@ -106,7 +105,6 @@ test.skipIf(process.platform !== 'win32')('a fresh Git deadline works in a long-
 
 test('a renewal that does not land leaves the lease standing until its deadline, and the next one lands', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
-    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
     try {
         const remote = join(base, 'origin.git'), off = join(base, 'origin.off'), a = join(base, 'a');
         git(base, 'init', '--bare', remote);
@@ -145,7 +143,6 @@ test('a renewal that does not land leaves the lease standing until its deadline,
 
 test('a renewal whose push landed but whose answer was lost is taken as landed', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
-    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
     try {
         const remote = join(base, 'origin.git'), a = join(base, 'a');
         git(base, 'init', '--bare', remote);
@@ -176,7 +173,6 @@ test('a renewal whose push landed but whose answer was lost is taken as landed',
 
 for (const landed of [false, true]) test(`an uncertain initial lease push requires exact remote confirmation: landed=${landed}`, () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
-    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
     try {
         const remote = join(base, 'origin.git'), root = join(base, 'checkout');
         git(base, 'init', '--bare', remote);
@@ -213,7 +209,6 @@ for (const landed of [false, true]) test(`an uncertain initial lease push requir
 
 test('a record that lands after the ref was checked is taken up at the next renewal, not read as a takeover', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
-    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
     try {
         const remote = join(base, 'origin.git'), a = join(base, 'a');
         git(base, 'init', '--bare', remote);

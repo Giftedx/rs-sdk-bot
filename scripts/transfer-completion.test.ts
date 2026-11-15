@@ -8,11 +8,12 @@ type Scenario={mode:'fanout'|'fanin';transferFail?:string;settleFail?:string;int
 // replace the game modules used by another test file in the same Bun process.
 function completionCase(config:Scenario){
  const code=`
- import {mock} from 'bun:test';import {resolve} from 'node:path';
+ import {mock} from 'bun:test';import {join,resolve} from 'node:path';
  const config=${JSON.stringify(config)},sessions=new Map(),opened=[],settled=[],transfers=[],logs=[];
  let released=0;
  const realFs=await import('node:fs'),readFile=realFs.readFileSync;
- mock.module('node:fs',()=>({...realFs,readFileSync:(path,...args)=>String(path).endsWith('/bot.env')?'SERVER=127.0.0.1:21800\\n':readFile(path,...args)}));
+ const envFiles=new Set(['Treasury','First','Second','Receiver'].map(name=>join(process.cwd(),'vendor/rs-sdk/bots',name,'bot.env')));
+ mock.module('node:fs',()=>({...realFs,readFileSync:(path,...args)=>envFiles.has(String(path))?'SERVER=127.0.0.1:21800\\n':readFile(path,...args)}));
  const add=(inventory,id,n)=>{let item=inventory.find(i=>i.id===id);if(item)item.count+=n;else inventory.push({id,count:n,name:id===314?'Feather':'Coins',slot:inventory.length});};
  const held=(inventory,id)=>inventory.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const persistent=config.mode==='fanout'?'Treasury':'Receiver';

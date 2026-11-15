@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 
-function prewarmCase(late:boolean,connectFailure=false,watchdogStop=false){
+async function prewarmCase(late:boolean,connectFailure=false,watchdogStop=false){
  const code=`
  import{mock}from'bun:test';import{resolve,join,dirname}from'node:path';import{mkdirSync,writeFileSync,rmSync}from'node:fs';
  const stem='flwarm'+Math.random().toString(36).slice(2,5),labels=['Fresh','Donor',...Array.from({length:15},(_,i)=>'Helper'+i)],names=labels.map((_,i)=>stem+i.toString(36)),role=n=>labels[names.indexOf(n)],opened=[],closed=[],created=[],stoppers=[];let prefix=false,prefixOpened=[];
@@ -20,21 +20,22 @@ function prewarmCase(late:boolean,connectFailure=false,watchdogStop=false){
  try{const{runRuneCarriers}=await import('./scripts/rune-carriers');const result=await runRuneCarriers(names,2800);console.log(JSON.stringify({opened,closed,prefix,prefixOpened,result,firstStopped:names[2]}));}
  finally{for(const path of created){if(dirname(path)!==botRoot)throw Error('fixture path escaped');rmSync(path,{recursive:true});}}
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
- if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ const child=Bun.spawn([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ const [stdout,stderr,exitCode]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
+ if(exitCode!==0)throw Error(stderr);return JSON.parse(stdout.trim().split(/\r?\n/).at(-1)!);
 }
-test('the crafter logs in before carrier preparation overlaps its prefix',()=>{
- const r=prewarmCase(false);expect(r.prefixOpened).toEqual(['Donor','Fresh']);expect(r.opened).toEqual(['Donor','Fresh',...Array.from({length:15},(_,i)=>'Helper'+i)]);expect(r.prefix).toBe(true);expect(r.closed).toEqual(r.opened);
+test('the crafter logs in before carrier preparation overlaps its prefix',async()=>{
+ const r=await prewarmCase(false);expect(r.prefixOpened).toEqual(['Donor','Fresh']);expect(r.opened).toEqual(['Donor','Fresh',...Array.from({length:15},(_,i)=>'Helper'+i)]);expect(r.prefix).toBe(true);expect(r.closed).toEqual(r.opened);
 });
-test('an exhausted donor budget stops before the fresh crafter login',()=>{
- const r=prewarmCase(true);expect(r.opened).toEqual(['Donor']);expect(r.prefix).toBe(false);expect(r.closed).toEqual(r.opened);expect(r.result.failure).toContain('fresh route budget');
+test('an exhausted donor budget stops before the fresh crafter login',async()=>{
+ const r=await prewarmCase(true);expect(r.opened).toEqual(['Donor']);expect(r.prefix).toBe(false);expect(r.closed).toEqual(r.opened);expect(r.result.failure).toContain('fresh route budget');
 });
-test('overlapping helper logins drain a late connection before cleanup after another fails',()=>{
- const r=prewarmCase(false,true);expect(r.result.ok).toBe(false);expect(r.result.failure).toContain('fixture helper connection refused');
+test('overlapping helper logins drain a late connection before cleanup after another fails',async()=>{
+ const r=await prewarmCase(false,true);expect(r.result.ok).toBe(false);expect(r.result.failure).toContain('fixture helper connection refused');
  expect(r.opened).toHaveLength(17);expect(r.closed).toHaveLength(16);expect(r.closed).toContain('Helper14');expect(r.closed).not.toContain('Helper0');
 });
-test('the first account stop cause survives a later stop and logout cleanup',()=>{
- const r=prewarmCase(false,false,true);expect(r.result.failure).toContain(r.firstStopped+': fixture no progress900');expect(r.result.failure).not.toContain('fixture prefix stopped');expect(r.closed).toHaveLength(17);
+test('the first account stop cause survives a later stop and logout cleanup',async()=>{
+ const r=await prewarmCase(false,false,true);expect(r.result.failure).toContain(r.firstStopped+': fixture no progress900');expect(r.result.failure).not.toContain('fixture prefix stopped');expect(r.closed).toHaveLength(17);
 });
 
 // Module stubs run in their own process so they cannot change another test's SDK.
@@ -74,7 +75,7 @@ test('a prefix failure cancels helper setup before it drains',()=>{
  const result=prefixCase('prefix-error');expect(result.cancelled).toBe(true);expect(result.helperLogins).toBeLessThanOrEqual(1);expect(result.bankActions).toBe(0);
 });
 
-test('prefix travel overlaps preparation and the first body craft waits for readiness',()=>{
+test('prefix travel overlaps preparation and the first body craft waits for readiness',async()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
  let preparing=false,prepared=false,travelDuringPreparation=false,craftedAfterReady=false,release;
@@ -100,7 +101,8 @@ test('prefix travel overlaps preparation and the first body craft waits for read
  await freshBodyStart(s,h,()=>false,async()=>{preparing=true;await new Promise(r=>release=r);prepared=true});
  console.log(JSON.stringify({travelDuringPreparation,craftedAfterReady}));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
- if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ const child=Bun.spawn([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ const [stdout,stderr,exitCode]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
+ if(exitCode!==0)throw Error(stderr);const r=JSON.parse(stdout.trim().split(/\r?\n/).at(-1)!);
  expect(r.travelDuringPreparation).toBe(true);expect(r.craftedAfterReady).toBe(true);
 });

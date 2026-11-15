@@ -5,12 +5,18 @@ import { delimiter, join, resolve } from 'node:path';
 import { commandLine, safeKill } from '../../practice/src/proc';
 
 // A fake CLI exercises the real runner in a separate process, keeping PATH and model configuration out of other tests.
-async function model(mode: string) {
+async function model(mode: string, inherited: NodeJS.ProcessEnv = process.env) {
     const dir = mkdtempSync(join(tmpdir(), 'author-process-'));
-    const fixture = join(dir, 'cli.ts'), runner = join(dir, 'runner.ts');
+    const fixture = join(dir, 'cli.ts'), runner = join(dir, 'runner.ts'), traceFile = join(dir, 'trace.jsonl');
+    const traceSource = `import {appendFileSync} from 'node:fs';
+        const trace=(phase,extra={})=>appendFileSync(${JSON.stringify(traceFile)},JSON.stringify({phase,pid:process.pid,at:Date.now(),monotonicMs:performance.now(),...extra})+'\\n');`;
     writeFileSync(fixture, `
+        ${traceSource}
+        trace('fixture-entry');
         const prompt = await new Response(Bun.stdin.stream()).text();
+        trace('stdin-complete');
         console.log(JSON.stringify({is_error: false, result: prompt, total_cost_usd: 0.12}));
+        trace('output-written');
         if (process.env.CLAUDE_FIXTURE_MODE === 'exit') { console.error('fixture exit failure'); process.exit(7); }
         if (process.env.CLAUDE_FIXTURE_MODE === 'timeout') setInterval(() => {}, 1000);
         if (['orphan', 'escaped'].includes(process.env.CLAUDE_FIXTURE_MODE ?? '')) {
@@ -24,15 +30,29 @@ async function model(mode: string) {
     chmodSync(join(dir, 'claude'), 0o755);
     writeFileSync(join(dir, 'claude.cmd'), `@echo off\r\n"${process.execPath}" "${fixture}" %*\r\n`);
     const author = resolve(import.meta.dir, '../src/author.ts');
-    writeFileSync(runner, `import {runClaude} from ${JSON.stringify(author)}; console.log(JSON.stringify(await runClaude('fixture prompt', 1000, true)));`);
+    const expectedCli = join(dir, process.platform === 'win32' ? 'claude.cmd' : 'claude');
+    writeFileSync(runner, `${traceSource}
+        const resolved=Bun.which('claude'),expected=${JSON.stringify(expectedCli)};
+        trace('runner-entry',{resolved,expected});
+        if(resolved!==expected)throw Error('model fixture CLI mismatch: '+JSON.stringify({resolved,expected}));
+        const {runClaude}=await import(${JSON.stringify(author)});
+        const result=await runClaude('fixture prompt',1000,true);
+        trace('runner-return',{costUsd:result.costUsd});
+        console.log(JSON.stringify(result));`);
+    const inheritedPath = inherited.PATH ?? Object.entries(inherited).find(([key]) => key.toLowerCase() === 'path')?.[1] ?? '';
+    const childEnv = Object.fromEntries(Object.entries(inherited).filter(([key]) => key.toLowerCase() !== 'path'));
+    childEnv.PATH = dir + delimiter + inheritedPath;
     const child = Bun.spawn([process.execPath, runner], {
-        env: { ...process.env, PATH: dir + delimiter + process.env.PATH, CLAUDE_FIXTURE_MODE: mode, CLAUDE_FIXTURE_PID: join(dir, 'descendant.pid') },
+        env: { ...childEnv, CLAUDE_FIXTURE_MODE: mode, CLAUDE_FIXTURE_PID: join(dir, 'descendant.pid') },
         stdout: 'pipe', stderr: 'pipe', windowsHide: true,
     });
     try {
         const [out, err, exit] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
         expect({ exit, err }).toEqual({ exit: 0, err: '' });
-        return JSON.parse(out.trim());
+        const result = JSON.parse(out.trim());
+        if (result.costUsd === 0) throw Error('model fixture returned no cost: ' + JSON.stringify({ mode, result,
+            trace: existsSync(traceFile) ? readFileSync(traceFile, 'utf8') : '(missing)' }));
+        return result;
     } finally {
         if (child.exitCode === null) child.kill();
         if (existsSync(join(dir, 'descendant.pid'))) await safeKill(Number(readFileSync(join(dir, 'descendant.pid'), 'utf8')), 'author-output-fixture');
@@ -42,6 +62,14 @@ async function model(mode: string) {
 
 test('the model runner retains successful output and cost after a clean CLI exit', async () => {
     expect(await model('ok')).toEqual({ ok: true, text: 'fixture prompt', costUsd: 0.12 });
+}, 15000);
+
+test('the model fixture resolves its own CLI with colliding inherited PATH aliases', async () => {
+    const inheritedPath = process.env.PATH ?? process.env.Path ?? '';
+    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toLowerCase() !== 'path'));
+    inherited.PATH = inheritedPath;
+    inherited.Path = inheritedPath;
+    expect(await model('ok', inherited)).toEqual({ ok: true, text: 'fixture prompt', costUsd: 0.12 });
 }, 15000);
 
 test('a success envelope cannot hide a nonzero model CLI exit', async () => {

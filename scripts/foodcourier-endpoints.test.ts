@@ -25,7 +25,7 @@ test('local feather stock suppresses excess purchases while stale or foreign sto
 
 function cliCase(mode:'sources'|'foreign'|'feathers'){
  const code=`
- import {mock} from 'bun:test';import {resolve} from 'node:path';
+ import {mock} from 'bun:test';import {join,resolve} from 'node:path';
  const mode=${JSON.stringify(mode)},server='127.0.0.1:21000',now=100000,ownedRequests=[],selections=[],results=[];
  Date.now=()=>now;
  const realFs=await import('node:fs'),demand=await import('./packages/core/src/bank-demand');
@@ -35,10 +35,11 @@ function cliCase(mode:'sources'|'foreign'|'feathers'){
  const statuses={CookA:{name:'CookA',server,at:now,bankAt:now-1,bank:[{id:333,count:10}],inventory:[{id:314,count:1500}]},
   CookB:{name:'CookB',server,at:now,bankAt:now-1,bank:[{id:385,count:100}],inventory:[]}};
  if(mode==='foreign')for(const status of Object.values(statuses))status.server='rs-sdk-demo.fly.dev';
+ const fixtureRoot=process.cwd();
  mock.module('node:fs',()=>({...realFs,readFileSync:(path,...args)=>{
   const name=String(path);
-  if(name.endsWith('/Fixture/bot.env'))return 'SERVER=rs-sdk-demo.fly.dev\\n';
-  for(const [cook,status]of Object.entries(statuses))if(name.endsWith('/status/'+cook+'.json'))return JSON.stringify(status);
+  if(name===join(fixtureRoot,'vendor/rs-sdk/bots','Fixture','bot.env'))return 'SERVER=rs-sdk-demo.fly.dev\\n';
+  for(const [cook,status]of Object.entries(statuses))if(name===join(fixtureRoot,'.practice','status',cook+'.json'))return JSON.stringify(status);
   return readFile(path,...args);
  }}));
  const s={name:'Fixture',lifecycle:{server},tick:()=>tick,onTick:()=>()=>{},sdk:{getState:()=>({player,inventory:[]}),getSkill:()=>({level:99})},

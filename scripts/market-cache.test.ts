@@ -57,6 +57,61 @@ test('concurrent market publishers expose one complete snapshot without temporar
     } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+async function renameFailureCase(code:string,failures:number){
+    const root=mkdtempSync(join(tmpdir(),'market-replace-'));
+    try{
+        const source=new URL('./market-cache.ts',import.meta.url).href;
+        const child=Bun.spawn([process.execPath,'--eval',`
+            import {mock} from 'bun:test';
+            import {join} from 'node:path';
+            const fs=await import('node:fs'),root=${JSON.stringify(root)},file=join(root,'.practice','market-all.json');
+            const previous={at:1000,items:{1:{name:'Old',price:4,bid:3,ask:5,trades:3,sell:2}}};
+            fs.mkdirSync(join(root,'.practice'));fs.writeFileSync(file,JSON.stringify(previous));
+            let attempts=0;const observed=[],rename=fs.renameSync;
+            mock.module('node:fs',()=>({...fs,renameSync:(from,to)=>{
+                attempts++;observed.push(JSON.parse(fs.readFileSync(file,'utf8')));
+                if(attempts<=${failures})throw Object.assign(Error('fixture replacement refused'),{code:${JSON.stringify(code)}});
+                rename(from,to);
+            }}));
+            const {writeMarketCache}=await import(${JSON.stringify(source)});
+            let error=null;
+            try{writeMarketCache(root,{2:{name:'New',price:7,bid:6,ask:8,trades:3,sell:9}},2000);}
+            catch(failure){error={code:failure.code,message:failure.message};}
+            process.stdout.write(JSON.stringify({attempts,observed,error,cache:JSON.parse(fs.readFileSync(file,'utf8')),files:fs.readdirSync(join(root,'.practice'))}));
+        `],{stdout:'pipe',stderr:'pipe',windowsHide:true,timeout:5000});
+        const [stdout,stderr,exitCode]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
+        expect(exitCode).toBe(0);
+        if(exitCode!==0)throw Error(stderr);
+        return JSON.parse(stdout);
+    }finally{rmSync(root,{recursive:true,force:true});}
+}
+
+for(const code of ['EPERM','EBUSY','EACCES'])test(`market publication preserves its prior snapshot while retrying ${code}`,async()=>{
+    const result=await renameFailureCase(code,2);
+    expect(result.error).toBeNull();
+    expect(result.attempts).toBe(3);
+    expect(result.observed).toEqual(Array.from({length:3},()=>({at:1000,items:{1:{name:'Old',price:4,bid:3,ask:5,trades:3,sell:2}}})));
+    expect(result.cache).toEqual({at:2000,items:{2:{name:'New',price:7,bid:6,ask:8,trades:3,sell:9}}});
+    expect(result.files).toEqual(['market-all.json']);
+});
+
+test('market publication propagates a non-retryable rename error and cleans its temporary file',async()=>{
+    const result=await renameFailureCase('ENOENT',2);
+    expect(result.error).toEqual({code:'ENOENT',message:'fixture replacement refused'});
+    expect(result.attempts).toBe(1);
+    expect(result.cache).toEqual({at:1000,items:{1:{name:'Old',price:4,bid:3,ask:5,trades:3,sell:2}}});
+    expect(result.files).toEqual(['market-all.json']);
+});
+
+test('market publication bounds persistent replacement failures and leaves the old snapshot intact',async()=>{
+    const result=await renameFailureCase('EPERM',100);
+    expect(result.error).toEqual({code:'EPERM',message:'fixture replacement refused'});
+    expect(result.attempts).toBeGreaterThan(1);
+    expect(result.attempts).toBeLessThanOrEqual(21);
+    expect(result.cache).toEqual({at:1000,items:{1:{name:'Old',price:4,bid:3,ask:5,trades:3,sell:2}}});
+    expect(result.files).toEqual(['market-all.json']);
+});
+
 test('fetchMarket reads every page of 100 and pauses between them', async () => {
     const urls: string[] = [];
     let pauses = 0;
