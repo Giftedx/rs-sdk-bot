@@ -350,10 +350,10 @@ test('queue distinguishes jobs a single root repair unblocks from downstream job
  complete(state, 'failed-build', false, 2);
  startTask(state, 'running-proof', 3, 'in-flight');
  const facts = queueFacts(state);
- expect(facts.dependencyReadiness).toEqual({ready:1, waiting:1, blocked:5});
+ expect(facts.dependencyReadiness).toEqual({satisfied:1, waiting:1, blocked:5});
  expect(facts.rootBlockers).toEqual([
   {id:'failed-build', status:'failed', runId:'failed-build', replacement:undefined, pendingTasks:5, pendingRuns:3,
-   readyTasksIfFixed:3, readyRunsIfFixed:1, receipt:{at:2}},
+   dependencySatisfiedTasksIfFixed:3, dependencySatisfiedRunsIfFixed:1, receipt:{at:2}},
  ]);
  expect(chooseTask(state, 4)?.id).toBe('independent');
 });
@@ -369,8 +369,8 @@ test('queue includes provision dependencies that are not in dependsOn', () => {
  complete(state, 'register', false, 2);
  complete(state, 'another-registration', true, 4, {account:'Partner'});
  const facts = queueFacts(state);
- expect(facts.dependencyReadiness).toEqual({ready:0, waiting:0, blocked:2});
- expect(facts.rootBlockers[0]).toMatchObject({id:'register', pendingTasks:2, pendingRuns:2, readyTasksIfFixed:2, readyRunsIfFixed:2});
+ expect(facts.dependencyReadiness).toEqual({satisfied:0, waiting:0, blocked:2});
+ expect(facts.rootBlockers[0]).toMatchObject({id:'register', pendingTasks:2, pendingRuns:2, dependencySatisfiedTasksIfFixed:2, dependencySatisfiedRunsIfFixed:2});
  expect(facts.blocked.map(row=>row.dependencies.map(d=>d.id))).toEqual([['register'],['register']]);
 });
 
@@ -425,7 +425,7 @@ test('planner prompt keeps bounded build and resume evidence in recent tasks and
  ]);
  expect(facts.blocked[0].dependencies).toEqual([{id:'failed-proof',status:'failed'}]);
  expect(facts.rootBlockers[0].receipt).toEqual({at:6,error:reason.slice(0,240)+'...',failedCheck:'native-check',buildFault:'native-check: missing staged item'});
- expect(facts.rootBlockers[0].readyRunsIfFixed).toBe(1);
+ expect(facts.rootBlockers[0].dependencySatisfiedRunsIfFixed).toBe(1);
  expect(activeLine).not.toContain('raw output stays in the receipt');
 });
 test('cancel retires a pending build and points its consumer at the named qualification',()=>{
