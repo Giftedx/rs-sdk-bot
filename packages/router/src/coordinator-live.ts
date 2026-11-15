@@ -9,14 +9,15 @@ import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {evaluateSpecialist, MAX_SPECIALIST_RUN_MS, SPECIALIST_BOARDS, specialistTokenPath} from '../../core/src/specialist-launch';
 import {loadOwners} from '../../core/src/fleet';
-import {cachedLaunchRevision,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
+import {cachedLaunchRevision,cachedReleaseFor,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
-import {acceptStatus,boundedWorkerEndMessage,type CoordTask} from './coordinator';
+import {acceptStatus,boundedWorkerEndMessage,boundAccounts,type CoordTask,type CoordinatorState} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
-import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
-import {readLogoutProof} from '../../core/src/session-lifecycle';
+import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {readLogoutProof,listAttempts} from '../../core/src/session-lifecycle';
+import {pidAlive} from '../../core/src/session-takeover';
 
 // The swarm refuses a session recovery when memory is short (admitRecovery in scripts/swarm.ts). That refusal is
 // final for the run, and each run chained behind it then waits for a new proposal. So a recovery run stays in the
@@ -212,6 +213,77 @@ function swarmRunAccounts(base:string):Set<string>|null{
   return Array.isArray(runs)?new Set(runs.flatMap((r:any)=>Array.isArray(r?.accounts)?r.accounts:[null]).map((n:unknown)=>String(n).toLowerCase())):null;}
  catch(e){return (e as NodeJS.ErrnoException).code==='ENOENT'?new Set():null;}
 }
+// An enabled autopilot row can yield between runs only after its exact mission succeeded and logged out.
+// A row prepared for a different, unstarted mission cannot inherit the previous mission's success.
+function settledAutopilotJob(job:any,account:string,base:string):boolean{
+ if(job?.standing!==true||job.enabled!==true||typeof job.autopilot!=='string'||!job.autopilot)return false;
+ const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(account,LIVE_SERVER,{root});
+ if(proof.state!=='confirmed')return false;
+ const receipt=listAttempts(account,LIVE_SERVER,{root}).find(a=>a.attemptId===proof.attemptId)?.receipt;
+ const running=swarmRunAccounts(base);if(!receipt||!running||running.has(account.toLowerCase()))return false;
+ try{assertNoRecoveryLease(account,base);}catch{return false;}
+ const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
+ const status=liveRows(base).find(s=>s.name?.toLowerCase()===account.toLowerCase()),entries=workerEntries(job.script,job.args??[],base);
+ return !!end&&/^done(?: after \d+ runs)?$/.test(end.reason)&&end.revision===missionSignature(job)&&end.at>=proof.loggedOutAt
+  &&receipt.owner.coordinatorRunId===null&&entries.includes(receipt.owner.script)&&/^[0-9a-f]{64}$/.test(receipt.owner.workerRelease??'')
+  &&status?.server===LIVE_SERVER&&/^ok(?:\s|$)/.test(status.result??'')&&status.goal===job.goal
+  &&status.sessionAttemptId===proof.attemptId&&status.workRevision===receipt.owner.workerRelease&&status.workEntry===entries.join(',')
+  &&(status.coordinatorRunId??null)===null&&Number.isFinite(status.started)&&status.started>=receipt.createdAt&&status.started<=proof.loggedOutAt
+  &&Number.isFinite(status.at)&&status.at>=status.started&&status.at<=end.at;
+}
+export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment';attemptId:string|null;pid:number|null};
+type MemoryCapacity=Parameters<typeof admissionDecision>[0];
+type LiveMemoryWait={account:string;reason:'memory';capacity:MemoryCapacity};
+type LiveWait=LiveAccountWait|LiveMemoryWait;
+const ordinaryDeferrable=(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>)=>task.kind==='run'&&!task.sessionRecovery&&!task.repairs?.length&&(!task.launch||task.launch==='ordinary');
+export function validLiveMemoryWait(wait:any,accounts:readonly string[]):boolean{
+ const v=wait?.capacity,reserve=startReserve({host:false,job:{script:'',enabled:true,orchestrate:accounts.length>1}},accounts.length);
+ return wait?.reason==='memory'&&accounts.length>0&&wait.account?.toLowerCase()===accounts[0]!.toLowerCase()&&!!v
+  &&['running','external','starting','startingReserve','pending','maxBots'].every(k=>Number.isSafeInteger(v[k])&&v[k]>=0)
+  &&['freeGB','minFreeGB'].every(k=>typeof v[k]==='number'&&Number.isFinite(v[k])&&v[k]>=0)
+  &&v.starting===accounts.length&&v.startingReserve===reserve&&admissionDecision(v).reason==='memory';
+}
+type DispatchCapacity={at:number;running:number|null;externalRunning:number|null;pendingStartup:number|null;pendingReserveGB?:number|null;freeGB:number|null;minFreeGB:number|null;maxBots:number|null};
+export function ordinaryRunWaitsForMemory(task:CoordTask,state:CoordinatorState,capacity:DispatchCapacity|null,freeGB:number,base=projectRoot):boolean{
+ if(!ordinaryDeferrable(task))return false;
+ if(!capacity||[capacity.at,capacity.running,capacity.externalRunning,capacity.pendingStartup,capacity.freeGB,capacity.minFreeGB,capacity.maxBots,freeGB].some(v=>v===null||!Number.isFinite(v)||v<0))return true;
+ if(capacity.pendingReserveGB!=null&&(!Number.isFinite(capacity.pendingReserveGB)||capacity.pendingReserveGB<0))return true;
+ const names=boundAccounts(task,state);if(!names?.length)return true;
+ let jobs:any[]=[],runs:any[]=[];
+ try{jobs=readCoordinatorJobs(base).jobs;const saved=JSON.parse(readFileSync(join(base,'.practice/swarm-runs.json'),'utf8'));if(Array.isArray(saved))runs=saved;}catch{/* unseen children retain their reservation */}
+ let slots=0,reserve=0;
+ for(const record of state.tasks.filter(r=>r.status==='running'&&r.spec.kind==='run'&&!r.spec.sessionRecovery)){
+  const accounts=boundAccounts(record.spec,state);if(!accounts?.length)return true;
+  const job=jobs.find(j=>j.coordinatorOwner==='coordinator'&&j.coordinatorTask===record.spec.id&&j.env?.COORDINATOR_RUN_ID===record.runId);
+  // The snapshot already counts a registered run. Children not yet represented still need their startup heap.
+  const counted=job&&runs.some(r=>Number.isFinite(r.started)&&r.started<=capacity.at&&r.revision===missionSignature(job)
+   &&Array.isArray(r.accounts)&&r.accounts.length===accounts.length&&accounts.every(n=>r.accounts.some((a:string)=>a.toLowerCase()===n.toLowerCase())));
+  if(!counted){slots+=accounts.length;reserve+=startReserve({host:false,job:{script:'',enabled:true,orchestrate:accounts.length>1}},accounts.length);}
+ }
+ return !admissionDecision({running:capacity.running!+slots,external:capacity.externalRunning!,pending:(capacity.pendingReserveGB??capacity.pendingStartup!)+reserve,
+  starting:names.length,startingReserve:startReserve({host:false,job:{script:'',enabled:true,orchestrate:names.length>1}},names.length),
+  freeGB:Math.min(freeGB,capacity.freeGB!),minFreeGB:capacity.minFreeGB!,maxBots:capacity.maxBots!}).allowed;
+}
+export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>,accounts:readonly string[],base=projectRoot,alive=pidAlive):LiveAccountWait|null{
+ if(!ordinaryDeferrable(task))return null;
+ const root=join(base,'.practice/session-lifecycle');
+ for(const account of accounts){
+  const proof=readLogoutProof(account,LIVE_SERVER,{root});
+  const receipt=(proof.state==='held'||proof.state==='confirmed')?listAttempts(account,LIVE_SERVER,{root}).find(a=>a.attemptId===proof.attemptId)?.receipt:null;
+  // A status row is no proof of a live owner. The current producer and its live process own this wait.
+  if(proof.state==='held'&&receipt&&Number.isSafeInteger(receipt.owner.pid)&&receipt.owner.pid>0&&receipt.owner.script
+   &&!receipt.events.some(e=>['ended','connect-failed','logout','closed'].includes(e.kind))&&alive(receipt.owner.pid))
+   return{account,reason:'active-session',attemptId:receipt.attemptId,pid:receipt.owner.pid};
+  let job:any;try{job=readMergedPlan(base).jobs.find((j:any)=>jobAccounts(j).some(n=>n.toLowerCase()===account.toLowerCase()));}catch{continue;}
+  if(job?.standing===true&&job.enabled===true&&typeof job.autopilot==='string'&&job.autopilot&&!settledAutopilotJob(job,account,base))
+   return{account,reason:'autopilot-assignment',attemptId:receipt?.attemptId??null,pid:receipt?.owner.pid??null};
+ }
+ return null;
+}
+const deferredLiveAccount=(wait:LiveWait)=>({ok:false,evidence:'live-deferred',installed:false,liveDeferred:wait});
+class LiveAccountWaitError extends Error{
+ constructor(readonly wait:LiveWait){super(wait.reason==='memory'?'live admission waiting: memory':'live account ownership deferred: '+wait.account+' '+wait.reason);}
+}
 export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly string[],base=projectRoot):CoordinatorJobs{
  const wanted=new Set(accounts.map(n=>n.toLowerCase()));
  let running:Set<string>|null|undefined;
@@ -306,6 +378,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  if(retained)recoveryQualification(task,dependencies,source,base);
  const accounts=retained?.accounts??task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  if(accounts.some(n=>typeof n!=='string'||! /^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw Error('participant binding unavailable');
+ const wait=liveAccountWait(task,accounts,base);if(wait)throw new LiveAccountWaitError(wait);
  const settledStops=()=>{
   const stops=liveAccountStops(accounts,base);
   for(const name of new Set(stops.map(s=>s.account)))if(readLogoutProof(name,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state!=='confirmed')throw Error('controller stop handoff needs confirmed producer logout: '+name);
@@ -360,14 +433,17 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  // A disabled hand job whose account has no persistent end and a confirmed producer logout is settled: the owner
  // stopped the work and no session holds the account, so a new mission installs without an ok result or a recovery.
  const settled=handJob&&settledOwnerJob(existing,account,end);
- if(existing?.standing===true&&existing.enabled&&!parkedForRecovery)throw Error('account runs an owner standing job: '+existing.script);
+ const autopilotSettled=task.kind==='run'&&!task.sessionRecovery&&(!task.launch||task.launch==='ordinary')&&settledAutopilotJob(existing,account,base);
+ if(existing?.standing===true&&existing.enabled&&!parkedForRecovery&&!autopilotSettled)throw Error('account runs an owner standing job: '+existing.script);
  if(handJob&&!parkedForRecovery&&!releasedByRecovery&&!settled){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }
  const goal=`${task.id} [${runId}]`,job={...(accounts.length>1?{accounts,orchestrate:true}:{account}),args:task.args??[],maxRestarts:0,script,role:task.role??existing?.role??'helper',goal,enabled:true,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:task.id,
   env:{...task.env,CAP:task.env?.CAP??'1600',COORDINATOR_RUN_ID:runId,...(task.launch==='main'?{HAGGIS_RUN:'1'}:{})}};
- const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:startReserve({host:false,job},accounts.length),pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
+ const capacity={running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:startReserve({host:false,job},accounts.length),pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots};
+ const decision=admissionDecision(capacity);
+ if(decision.reason==='memory'&&ordinaryDeferrable(task))throw new LiveAccountWaitError({account,reason:'memory',capacity});
  if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
  const revision=missionSignature(job);
  let specialist;
@@ -578,11 +654,14 @@ export async function awaitRecoveryInstallPreflight(task:CoordTask,account:strin
 export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>,definition:{entry:string},runId:string,startedAt:number){
  const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n);
  const account=accounts?.[0]??accountFor(task,dependencies),target=accounts?.[task.acceptIndex??0]??account;
+ const waiting=()=>liveAccountWait(task,accounts??[account]);
+ const beforeSource=waiting();if(beforeSource)return deferredLiveAccount(beforeSource);
  // Three releases (docs/script-contract.md, Release scope): `capability` is what the entry's delivery recorded,
  // `source` is what the swarm pins on this job's worker (entry and the code files its arguments name), `launch` is the
  // controller's and its recovery runner's.
- const capability=capabilityRevision([definition.entry]),source=capabilityRevision(workerEntries(definition.entry,task.args??[])),launch=launchRevision();
+ const capability=cachedReleaseFor([definition.entry]),source=cachedReleaseFor(workerEntries(definition.entry,task.args??[])),launch=cachedLaunchRevision();
  liveAccountStops(accounts??[account]);
+ const beforeController=waiting();if(beforeController)return deferredLiveAccount(beforeController);
  await ensureSwarm(launch);
  if(task.repairs?.length){
   if(task.sessionRecovery){
@@ -595,8 +674,13 @@ export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>
   }else await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch));
   for(const repair of task.repairs)if(!preserveCompletedLiveEnd(task,repair,definition.entry,runId,source,dependencies,projectRoot,launch))await requestLiveRecovery(repair,runId);
  }
- const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{launch})),
-  deadline=(task.launch==='specialist'?installed.installedAt:Date.now())+Math.floor(liveTaskWindowMs(task));
+ const installed=await withPlanWrite(()=>{
+  const wait=waiting();if(wait)return deferredLiveAccount(wait);
+  try{return installJob(task,account,definition.entry,runId,source,dependencies,{launch});}
+  catch(error){if(error instanceof LiveAccountWaitError)return deferredLiveAccount(error.wait);throw error;}
+ });
+ if('liveDeferred' in installed)return installed;
+ const deadline=(task.launch==='specialist'?installed.installedAt:Date.now())+Math.floor(liveTaskWindowMs(task));
  try{
   while(Date.now()<deadline){
    if(existsSync(join(projectRoot,'.practice/stop-coordinator')))throw Error('coordinator stopped');

@@ -5,7 +5,8 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {liveLogoutRef} from '../src/coordinator-session';
-import {installJob} from '../src/coordinator-live';
+import {installJob,liveAccountWait} from '../src/coordinator-live';
+import {addTasks,chooseTask,initialState} from '../src/coordinator';
 import {sha} from '../../core/src/launch-evidence';
 import {missionSignature} from '../../core/src/session-admission';
 import {assertSpecialistLogin, specialistContext, specialistTokenPath} from '../../core/src/specialist-launch';
@@ -74,6 +75,76 @@ test('a disabled owner job with a confirmed logout and no persistent end admits 
  f.attempt('Rod').record('ended','logged-out');
  const task:any={id:'test',goal:'gear',account:'Rod'};
  expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).not.toThrow();
+});
+
+function settledAutopilotFixture(){
+ const f=fixture(),source='a'.repeat(64),job={account:'Rod',script:'old.ts',args:['20'],env:{TARGET:'60'},goal:'finite useful work',standing:true,enabled:true,repeat:true,autopilot:'local'};
+ writeFileSync(join(f.base,'swarm.json'),JSON.stringify({maxBots:17,minFreeGB:4,jobs:[job]}));
+ const at=Date.now()-1000;let clock=at;
+ const attempt=beginSessionAttempt({account:'Rod',server},{root:f.root,now:()=>clock,
+  owner:{pid:999999,coordinatorRunId:null,workerRelease:source,script:job.script,role:'combat',participants:null}});
+ const created=Number(attempt.attemptId.split('-')[0]);
+ clock=created+2;attempt.record('ready');clock=created+10;attempt.record('ended','logged-out');attempt.record('closed');
+ f.status('Rod',{goal:job.goal,result:'ok useful effect',at:created+20,started:created+1,sessionAttemptId:attempt.attemptId,workRevision:source,workEntry:job.script});
+ writeFileSync(join(f.base,'.practice/swarm-runs.json'),'[]');
+ writeFileSync(join(f.base,'.practice/swarm-deaths.json'),JSON.stringify({Rod:{at:created+30,reason:'done after 1 runs',revision:missionSignature(job)}}));
+ return{...f,job,source,prior:attempt};
+}
+test('a current live producer holds dispatch until its owner settles, without treating an enabled row or status as a live session',()=>{
+ const f=fixture(),job={account:'Rod',script:'old.ts',standing:true,enabled:true,repeat:true};
+ writeFileSync(join(f.base,'swarm.json'),JSON.stringify({jobs:[job]}));
+ f.status('Rod',{result:'',at:Date.now()});
+ const task:any={id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1,why:'finite quest',accept:{quests:['Scorpion Catcher']}};
+ expect(liveAccountWait(task,['Rod'],f.base,()=>true)).toBeNull();
+ const attempt=beginSessionAttempt({account:'Rod',server},{root:f.root,owner:{pid:123,coordinatorRunId:null,workerRelease:'a'.repeat(64),script:'old.ts',role:'combat',participants:null}});
+ attempt.record('ready');f.status('Rod',{result:'ok stale result',at:1});
+ const state=initialState();addTasks(state,[task]);
+ const held=(candidate:any)=>liveAccountWait(candidate,['Rod'],f.base,pid=>pid===123)!==null;
+ expect(liveAccountWait(task,['Rod'],f.base,pid=>pid===123)).toEqual({account:'Rod',reason:'active-session',attemptId:attempt.attemptId,pid:123});
+ expect(chooseTask(state,Date.now(),{runHeld:held})).toBeNull();
+ expect(liveAccountWait(task,['Rod'],f.base,()=>false)).toBeNull();
+ expect(liveAccountWait(task,['Other'],f.base,()=>true)).toBeNull();
+ expect(liveAccountWait({...task,sessionRecovery:{account:'Rod',endedAt:1}},['Rod'],f.base,()=>true)).toBeNull();
+ expect(liveAccountWait({...task,repairs:[{account:'Rod',endedAt:1}]},['Rod'],f.base,()=>true)).toBeNull();
+ attempt.record('ended','logged-out');attempt.record('closed');
+ expect(held(task)).toBe(false);expect(chooseTask(state,Date.now(),{runHeld:held})?.id).toBe('live');
+});
+test('a closed failed producer is a repair fact, not a known active owner',()=>{
+ const f=fixture(),attempt=beginSessionAttempt({account:'Rod',server},{root:f.root,owner:{pid:123,coordinatorRunId:null,workerRelease:'a'.repeat(64),script:'old.ts',role:'combat',participants:null}});
+ attempt.record('connect-failed');attempt.record('closed');
+ writeFileSync(join(f.base,'swarm.json'),JSON.stringify({jobs:[]}));
+ expect(liveAccountWait({kind:'run'},['Rod'],f.base,()=>true)).toBeNull();
+});
+test('a new unstarted autopilot mission waits for its own result and cannot inherit prior success',()=>{
+ const f=settledAutopilotFixture(),task:any={kind:'run'};
+ expect(liveAccountWait(task,['Rod'],f.base,()=>false)).toBeNull();
+ f.job.args=['40'];writeFileSync(join(f.base,'swarm.json'),JSON.stringify({jobs:[f.job]}));
+ expect(liveAccountWait(task,['Rod'],f.base,()=>false)).toEqual({account:'Rod',reason:'autopilot-assignment',attemptId:f.prior.attemptId,pid:999999});
+});
+test('a finite overlay takes a settled successful autopilot standing job without changing the owner assignment',()=>{
+ const f=settledAutopilotFixture(),path=join(f.base,'swarm.json'),before=readFileSync(path,'utf8');
+ const task:any={id:'test',kind:'run',goal:'quests',account:'Rod'};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,freeGB:64})).not.toThrow();
+ expect(readFileSync(path,'utf8')).toBe(before);
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([expect.objectContaining({account:'Rod',script:'new.ts',enabled:true,repeat:false,coordinatorTask:'test'})]);
+ expect(existsSync(join(f.base,'.practice/stop-Rod'))).toBe(false);
+});
+for(const mismatch of ['hand job','new mission','wrong attempt','wrong source','wrong entry','active run','new session','failed result'])test('idle autopilot handoff preserves '+mismatch,()=>{
+ const f=settledAutopilotFixture(),path=join(f.base,'swarm.json');
+ if(mismatch==='hand job')delete (f.job as any).autopilot;
+ if(mismatch==='new mission')f.job.args=['40'];
+ writeFileSync(path,JSON.stringify({maxBots:17,minFreeGB:4,jobs:[f.job]}));
+ const status=JSON.parse(readFileSync(join(f.base,'.practice/status/Rod.json'),'utf8'));
+ if(mismatch==='wrong attempt')status.sessionAttemptId='older';
+ if(mismatch==='wrong source')status.workRevision='b'.repeat(64);
+ if(mismatch==='wrong entry')status.workEntry='other.ts';
+ if(mismatch==='failed result')status.result='fail no progress';
+ f.status('Rod',status);
+ if(mismatch==='active run')writeFileSync(join(f.base,'.practice/swarm-runs.json'),JSON.stringify([{accounts:['Rod'],pid:999999}]));
+ if(mismatch==='new session')f.attempt('Rod');
+ const before=readFileSync(path,'utf8'),task:any={id:'test',kind:'run',goal:'quests',account:'Rod'};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,freeGB:64})).toThrow();
+ expect(readFileSync(path,'utf8')).toBe(before);expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
 });
 
 for(const [participants,formerJob] of [[['Rod'],true],[['Rod','Partner'],true],[['Rod'],false]] as const)test('controller handoff installs a settled '+(participants.length===1?'single':'composed')+' mission '+(formerJob?'from its old job':'with no former job')+' before clearing its stops',()=>{

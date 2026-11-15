@@ -25,11 +25,17 @@ function readSavedProofPolicy(base:string):SavedProofPolicy{
   ||Object.values(policy).some(v=>!Array.isArray(v)||v.some(p=>typeof p!=='string')))throw Error('invalid saved proof verifier policy');
  return policy;
 }
+// These audited Scorpion selectors only read retained evidence. Other case selections keep the native gate.
+const savedScorpionCases=new Set(['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal']);
 // These exact consumer invocations only validate saved files in DELIVERY_DIR.
 function savedProofVerifierAllowed(check:DeliveryCheck,policy:SavedProofPolicy):boolean{
- const [bun,script,flag]=check.command;
- return check.phase==='consumer'&&check.command.length===3&&bun==='bun'&&flag==='--verify'
-  &&script!==undefined&&Object.hasOwn(policy,check.id)&&policy[check.id]!.includes(script);
+ const [bun,script,flag,...selectors]=check.command;
+ if(check.phase!=='consumer'||bun!=='bun'||flag!=='--verify'
+  ||script===undefined||!Object.hasOwn(policy,check.id)||!policy[check.id]!.includes(script))return false;
+ if(!selectors.length)return true;
+ return check.id==='quest-sweep-saved'&&script==='packages/practice/src/quest-sweep-proof.ts'
+  &&selectors.length<=savedScorpionCases.size&&new Set(selectors).size===selectors.length
+  &&selectors.every(a=>a.startsWith('--case=')&&savedScorpionCases.has(a.slice('--case='.length)));
 }
 export function isSavedProofVerifier(check:DeliveryCheck):boolean{
  return savedProofVerifierAllowed(check,readSavedProofPolicy(root));

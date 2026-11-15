@@ -5,7 +5,8 @@ import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, S
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
 // (GOLDFARM_FRAIL) does not apply to it. A test of that rule gives its own Hitpoints.
-const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: (skills.Thieving ?? 1) >= 55 ? 20 : 10, ...skills }, items });
+// Named bone stock in these fixtures is normal stock. Observation tests supply exact item ids through accountFrom.
+const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: (skills.Thieving ?? 1) >= 55 ? 20 : 10, ...skills }, items: { ...('bone' in items ? { 'bone (unnoted)': items.bone } : {}), ...items } });
 const row = (item: string, short: number) => ({ item, need: short, owned: 0, short, ids: [1], holders: [] });
 const prices = { feather: 2, 'headless arrow': 1, lobster: 150, 'fire rune': 4, 'air rune': 4, 'earth rune': 4, 'rune arrowtip': 200, 'adamant arrowtip': 80, 'arrow shaft': 1 };
 const bill = [row('feathers', 800), row('headless arrows', 3615), row('lobster', 610), row('fire rune', 2000)];
@@ -607,6 +608,28 @@ test('army accounts alch Magic to 99 with natures, feathers and fire, then bury 
     expect(pick({ Magic: 99, Prayer: 99 }, { bone: 1674 })).not.toBe('army-bury-prayer-99');
     const job = jobFor(plan(inputs([acct('Caster', { ...melee, Magic: 99 }, { bone: 500 })], { army, capacity: CAPACITY }))[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, repeat: true, resources: [] });
+});
+
+test('prayer bands do not repeat on preserved bone notes after normal stock is spent', () => {
+    const templates = catalogue().filter(t => ['army-bury-prayer-99', 'army-bury-big-99', 'army-bury-dragon-99'].includes(t.id));
+    const skills = [{ name: 'Prayer', level: 68 }, { name: 'Magic', level: 99 }, { name: 'Ranged', level: 99 }];
+    const observed = (id: number, name: string, bank: number, normal = 0) => accountFrom('Monk', side, {
+        at: 2000, bankAt: 1990, skills,
+        inventory: [{ id: id + 1, baseId: id, name, count: 94 }, ...(normal ? [{ id, baseId: id, name, count: normal }] : [])],
+        bank: [{ id, baseId: id, name, count: bank }],
+    }, () => undefined);
+    const pick = (a: Acct, current: string) => plan(inputs([a], { army: new Set(['monk']), templates, current: new Map([['monk', current]]) }))[0]!;
+    const normal = observed(526, 'Bones', 6);
+    expect(pick(normal, 'army-bury-prayer-99').template).toBeUndefined();
+    expect(normal.items.bone).toBe(100);
+    expect(normal.items['bone (unnoted)']).toBe(6);
+    // The 100 normal-bone start and six-bone reserve stay unchanged.
+    const restocked = pick(observed(526, 'Bones', 6, 94), 'army-bury-prayer-99');
+    expect(restocked.template?.id).toBe('army-bury-prayer-99');
+    expect(jobFor(restocked, side)).toMatchObject({ env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' } });
+    // Other workers keep their existing handling of noted inputs.
+    const feathers = accountFrom('Monk', side, { inventory: [{ id: 315, baseId: 314, name: 'Feather', count: 94 }], bank: [{ id: 314, name: 'Feather', count: 6 }] }, () => undefined);
+    expect(feathers.items.feather).toBe(100);
 });
 
 test('army accounts train Ranged to 99 on the troopers with a bow they wield and 100 arrows it fires', () => {

@@ -5,7 +5,7 @@ let memory:{mockRestore():void}|undefined;
 beforeEach(()=>{memory=spyOn(os,'freemem').mockReturnValue(8*2**30);});
 afterEach(()=>{memory?.mockRestore();});
 import {mkdtempSync,readFileSync,writeFileSync,existsSync,mkdirSync,readdirSync,renameSync,unlinkSync} from 'node:fs';
-import {applyEndRepair,loadEnded,persistEnded} from '../../../scripts/swarm';
+import {applyEndRepair,loadEnded,persistEnded,missionSignature} from '../../../scripts/swarm';
 import {beginSessionAttempt,readLogoutProof,verifyLegacyLogout} from '../../core/src/session-lifecycle';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -16,6 +16,7 @@ const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)
 import {claimCoordinatorState,pauseCoordinator,reconcile} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
 import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
+import * as liveAdmission from '../src/coordinator-live';
 import type {CoordTask} from '../src/coordinator';
 const seed=()=>{const s=initialState();addTasks(s,[{id:'producer',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'native producer'},{id:'consumer',goal:'gear',kind:'qualify',capability:'ammo-order',dependsOn:['producer'],priority:2,estimatedMs:1,why:'next useful consumer'}]);startTask(s,'producer',Date.now()-20000,'recovery-run');return s;};
 test('owner pause persists a receipt written during worker shutdown',async()=>{
@@ -409,6 +410,87 @@ test('restart keeps an owned live worker and retains a lost worker as failure',(
 test('a mismatched receipt cannot complete a different run',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-recovery-')),s=seed();atomicJson(join(runDirectory('recovery-run',dir),'receipt.json'),{taskId:'producer',runId:'other-run',ok:true,at:Date.now(),output:{}});
  reconcile(s,()=>false,dir);expect(s.tasks[0]!.status).toBe('failed');expect(s.goals[1]!.completedTasks).toBe(0);
+});
+test('a proved pre-install account deferral restores the exact run to pending without credit or lost receipt',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-live-defer-')),s=initialState();
+ addTasks(s,[{id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}}]);
+ const record=startTask(s,'live',Date.now()-1000,'busy-run'),before=s.latestReceiptSequence;
+ const receipt={taskId:'live',runId:'busy-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,
+  liveDeferred:{account:'Rod',reason:'active-session',attemptId:'1794777984832-0000029060-0000000001',pid:29060}}};
+ const file=join(runDirectory('busy-run',dir),'receipt.json');atomicJson(file,receipt);
+ reconcile(s,()=>{throw Error('receipt must settle without a process probe');},dir);
+ expect(record.status).toBe('pending');expect(record.attempts).toBe(1);expect(record.receipt).toBeUndefined();expect(record.runId).toBeUndefined();
+ expect(s.latestReceiptSequence).toBe(before);expect(s.goals.find(g=>g.id==='quests')!.completedTasks).toBe(0);
+ expect(JSON.parse(readFileSync(file,'utf8'))).toEqual(receipt);
+ const sequence=s.sequence;reconcile(s,()=>false,dir);expect(s.sequence).toBe(sequence);
+ expect(chooseTask(s,Date.now(),{runHeld:()=>true})).toBeNull();expect(chooseTask(s,Date.now(),{runHeld:()=>false})?.id).toBe('live');
+});
+test('nine ordinary GE memory refusals remain pending with exact admission evidence and no assignments',()=>{
+ const base=mkdtempSync(join(tmpdir(),'coord-ge-memory-')),dir=join(base,'.practice/coordinator'),root=join(base,'.practice/session-lifecycle'),s=initialState();
+ mkdirSync(join(base,'.practice/status'),{recursive:true});
+ const plan=JSON.stringify({maxBots:25,minFreeGB:4,jobs:[]});writeFileSync(join(base,'swarm.json'),plan);
+ const tasks=Array.from({length:9},(_,i)=>({id:`buy-ge-${i}-approved-rescue`,kind:'run' as const,goal:'gear' as const,capability:'ge-bulk-order',account:`GeBuyer${i}`,dependsOn:[],priority:1,estimatedMs:1000,why:'finite owned GE purchase',accept:{bank:{'1331':1}}}));
+ addTasks(s,tasks);
+ for(const task of tasks){
+  const runId='memory-'+task.id;startTask(s,task.id,Date.now()-1000,runId);
+  beginSessionAttempt({account:task.account,server:'rs-sdk-demo.fly.dev'},{root}).record('ended','logged-out');
+  let wait:any;try{installJob(task,task.account,'scripts/buy-owned-ge-item.ts',runId,'source',{},{base,freeGB:4.75});}catch(error){wait=(error as any).wait;}
+  expect(wait).toMatchObject({account:task.account,reason:'memory',capacity:{freeGB:4.75,minFreeGB:4,starting:1,startingReserve:1,pending:0}});
+  const run=runDirectory(runId,dir);expect(existsSync(join(run,'assignments-before.json'))).toBe(false);
+  atomicJson(join(run,'receipt.json'),{taskId:task.id,runId,ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,liveDeferred:wait}});
+ }
+ const before=s.latestReceiptSequence;reconcile(s,()=>false,dir);
+ expect(s.tasks.map(r=>r.status)).toEqual(Array(9).fill('pending'));expect(s.tasks.every(r=>r.attempts===1)).toBe(true);
+ expect(s.latestReceiptSequence).toBe(before);expect(s.goals.find(g=>g.id==='gear')!.completedTasks).toBe(0);
+ expect(readFileSync(join(base,'swarm.json'),'utf8')).toBe(plan);expect(readMergedPlan(base).jobs).toEqual([]);
+});
+test('ordinary dispatch reserves each unseen child and releases that reservation only when the controller includes its exact run',()=>{
+ const base=mkdtempSync(join(tmpdir(),'coord-start-reserve-')),s=initialState();
+ const tasks=Array.from({length:11},(_,i)=>({id:`ge-${i}`,kind:'run' as const,goal:'gear' as const,capability:'ge-bulk-order',account:`GeBuyer${i}`,dependsOn:[],priority:1,estimatedMs:1000,why:'finite owned GE purchase',accept:{bank:{'1331':1}}}));
+ addTasks(s,tasks);const capacity={at:1000,running:0,externalRunning:0,pendingStartup:0,freeGB:5.25,minFreeGB:4,maxBots:25};
+ const memoryHeld=(candidate:CoordTask,c=capacity,free=5.25)=>(liveAdmission as any).ordinaryRunWaitsForMemory?.(candidate,s,c,free,base)??false;
+ const launched:string[]=[];
+ for(let i=0;i<11;i++){const next=chooseTask(s,1001,{liveLimit:25,runHeld:t=>memoryHeld(t)});if(!next)break;launched.push(next.id);startTask(s,next.id,1001,'r-'+next.id);}
+ expect(launched).toHaveLength(1);expect(s.tasks.filter(r=>r.status==='pending')).toHaveLength(10);
+ const first=s.tasks.find(r=>r.status==='running')!,job={account:first.spec.account,script:'scripts/buy-owned-ge-item.ts',enabled:true,coordinatorOwner:'coordinator',coordinatorTask:first.spec.id,env:{COORDINATOR_RUN_ID:first.runId!}};
+ const own=emptyCoordinatorJobs();own.jobs.push(job);writeCoordinatorJobs(base,own);
+ atomicJson(join(base,'.practice/swarm-runs.json'),[{accounts:[job.account],started:1005,revision:missionSignature(job)}]);
+ const pending=s.tasks.find(r=>r.status==='pending')!.spec;
+ expect(memoryHeld(pending)).toBe(true);
+ const observed={...capacity,at:1010,running:1,pendingStartup:1,freeGB:6};
+ expect(memoryHeld(pending,observed,6)).toBe(false);expect(memoryHeld(pending,observed,5.999)).toBe(true);
+ expect(memoryHeld(pending,{...observed,pendingStartup:0,freeGB:5},5)).toBe(false);
+ const cohort={...observed,running:3,pendingStartup:3,pendingReserveGB:1};
+ expect(memoryHeld(pending,cohort,6)).toBe(false);
+});
+for(const invalid of ['allowed','negative count','wrong slots','wrong reserve','nonfinite memory','missing count'])test('a memory deferral cannot hide '+invalid+' admission inputs',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-memory-invalid-')),s=initialState();
+ addTasks(s,[{id:'live',kind:'run',goal:'gear',capability:'ge-bulk-order',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite purchase',accept:{bank:{'1331':1}}}]);
+ startTask(s,'live',Date.now()-1000,'memory-run');
+ const capacity:any={running:0,external:0,starting:1,startingReserve:1,pending:0,freeGB:4.75,minFreeGB:4,maxBots:25};
+ if(invalid==='allowed')capacity.freeGB=8;
+ if(invalid==='negative count')capacity.pending=-1;
+ if(invalid==='wrong slots')capacity.starting=2;
+ if(invalid==='wrong reserve')capacity.startingReserve=2;
+ if(invalid==='nonfinite memory')capacity.freeGB=NaN;
+ if(invalid==='missing count')delete capacity.running;
+ atomicJson(join(runDirectory('memory-run',dir),'receipt.json'),{taskId:'live',runId:'memory-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,liveDeferred:{account:'Rod',reason:'memory',capacity}}});
+ reconcile(s,()=>false,dir);expect(s.tasks[0]!.status).toBe('failed');
+});
+for(const invalid of ['wrong account','wrong run','installed','other evidence','recovery','repair','qualification'])test('a live deferral cannot hide '+invalid,()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-live-defer-')),s=initialState(),task:any={id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}};
+ if(invalid==='recovery'){task.sessionRecovery={account:'Rod',endedAt:1};task.repairs=[{account:'Rod',endedAt:1}];}
+ if(invalid==='repair')task.repairs=[{account:'Rod',endedAt:1}];
+ if(invalid==='qualification'){task.kind='qualify';delete task.account;delete task.accept;}
+ addTasks(s,[task]);startTask(s,'live',Date.now()-1000,'busy-run');
+ const receipt:any={taskId:'live',runId:'busy-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,
+  liveDeferred:{account:'Rod',reason:'active-session',attemptId:'1794777984832-0000029060-0000000001',pid:29060}}};
+ if(invalid==='wrong account')receipt.output.liveDeferred.account='Other';
+ if(invalid==='wrong run')receipt.runId='different-run';
+ if(invalid==='installed')receipt.output.installed=true;
+ if(invalid==='other evidence')receipt.output.evidence='live';
+ atomicJson(join(runDirectory('busy-run',dir),'receipt.json'),receipt);reconcile(s,()=>false,dir);
+ expect(s.tasks[0]!.status).toBe('failed');expect(s.goals.find(g=>g.id==='quests')!.completedTasks).toBe(0);
 });
 test('live child polling does not launch command-line inspection while OS liveness is known',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-quiet-')),s=seed();

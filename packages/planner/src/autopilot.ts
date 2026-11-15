@@ -631,8 +631,12 @@ export function plan(inp: Inputs): Assignment[] {
                 continue;
             }
             if (fare && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) lacksFare(a, t, fare);
-            if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
-            else if (fundable(a) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
+            // Notes remain owned stock for acquisition, but the held-normal Prayer worker can bury only id526.
+            // This gates a new execution; the active instance above and missing-kit acquisition below keep their rules.
+            const usableNormalBones = t.script !== 'scripts/train-prayer.ts' || t.env?.BURY_HELD !== '1' || t.env?.BONE_ID !== undefined
+                || (a.items['bone (unnoted)'] ?? 0) >= (t.needs?.items?.bones ?? 0);
+            if (meets(a, t.needs) && usableNormalBones) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
+            else if (usableNormalBones && fundable(a) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs), fare });
             else if (coinShort(a, t.needs) === 0) {
                 // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
@@ -2042,6 +2046,9 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     for (const r of [status?.inventory, status?.bank, status?.equipment].flatMap(x => Array.isArray(x) ? x : [])) {
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
         if (n && Number.isFinite(r.count)) items[norm(n)] = (items[norm(n)] ?? 0) + r.count;
+        // The held-bones Prayer worker deposits and buries only id526. Keep notes in generic stock for trades and
+        // other consumers, while this availability key admits only the exact normal bones that worker can use.
+        if (r?.id === 526 && Number.isFinite(r.count)) items['bone (unnoted)'] = (items['bone (unnoted)'] ?? 0) + r.count;
     }
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
