@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794705832609,
+ "at": 1794706036235,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -131,21 +131,25 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "aio:ardougne-blood-chests"
    ]
   },
   {
@@ -169,20 +173,26 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "99",
-    "5000"
+    "scripts/shop-buyer.ts magic_guild 1500 ITEMS=staff.of.fire STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000",
+    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
+   "goal": "buy a staff of fire, fire, nature and air runes at the Magic Guild in Yanille for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-guild",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "shop:magic_guild"
+   ]
   },
   {
    "account": "MineYourBiz",
@@ -265,25 +275,21 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "aio-blood-chest",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "aio:ardougne-blood-chests"
+    "knight:2653,3300"
    ]
   },
   {
