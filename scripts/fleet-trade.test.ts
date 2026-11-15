@@ -226,6 +226,72 @@ test('a prepared receipt is exclusive, and only a published matched terminal rec
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+async function receiptRenameCase(code: string, failures: number) {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-receipt-replace-'));
+    const prepared = claimedReceipt();
+    const progress = { uncertain: true, count: 500, inventory: { before: 0, after: 500 }, bank: { count: 500, at: 2300 } };
+    const final = fleetTradeOutcome(prepared, progress, true, logout, attemptId, 2500, 'observed');
+    try {
+        const source = new URL('./fleet-trade-settlement.ts', import.meta.url).href;
+        const child = Bun.spawn([process.execPath, '--eval', `
+            import {mock} from 'bun:test';
+            import {join} from 'node:path';
+            const fs = await import('node:fs'), dir = ${JSON.stringify(dir)}, file = join(dir, 'o1.to.json');
+            const prepared = ${JSON.stringify(prepared)}, final = ${JSON.stringify(final)};
+            const rename = fs.renameSync, observed = [], nativeErrors = [];
+            let attempts = 0, injected = 0;
+            mock.module('node:fs', () => ({...fs, renameSync: (from, to) => {
+                attempts++;
+                observed.push(JSON.parse(fs.readFileSync(file, 'utf8')));
+                if (injected < ${failures}) { injected++; throw Object.assign(Error('fixture receipt replacement refused'), {code: ${JSON.stringify(code)}}); }
+                try { rename(from, to); } catch (failure) { nativeErrors.push(failure.code); throw failure; }
+            }}));
+            const {writeTradeReceipt} = await import(${JSON.stringify(source)});
+            writeTradeReceipt(dir, prepared);
+            let error = null;
+            try { writeTradeReceipt(dir, final); }
+            catch (failure) { error = {code: failure.code, message: failure.message}; }
+            process.stdout.write(JSON.stringify({attempts, injected, nativeErrors, observed, error,
+                receipt: JSON.parse(fs.readFileSync(file, 'utf8')), files: fs.readdirSync(dir)}));
+        `], {stdout: 'pipe', stderr: 'pipe', windowsHide: true, timeout: 5000});
+        const [stdout, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+        if (exitCode !== 0) throw Error(stderr || `receipt fixture exited ${exitCode}`);
+        return {result: JSON.parse(stdout), prepared, final};
+    } finally { rmSync(dir, {recursive: true, force: true}); }
+}
+
+test('terminal receipt publication preserves the prepared receipt while retrying transient EPERM', async () => {
+    const {result, prepared, final} = await receiptRenameCase('EPERM', 2);
+    if (result.error) console.error(JSON.stringify(result));
+    expect(result.error).toBeNull();
+    expect(result.injected).toBe(2);
+    expect(result.attempts).toBe(result.injected + result.nativeErrors.length + 1);
+    expect(result.attempts).toBeLessThanOrEqual(21);
+    for (const code of result.nativeErrors) expect(['EPERM', 'EBUSY', 'EACCES']).toContain(code);
+    expect(result.observed).toEqual(Array.from({length: result.attempts}, () => prepared));
+    expect(result.receipt).toEqual(final);
+    expect(result.files).toEqual(['o1.to.json']);
+});
+
+test('terminal receipt publication bounds persistent EPERM and preserves its prepared receipt', async () => {
+    const {result, prepared} = await receiptRenameCase('EPERM', 100);
+    expect(result.error).toEqual({code: 'EPERM', message: 'fixture receipt replacement refused'});
+    expect(result.attempts).toBeGreaterThan(1);
+    expect(result.attempts).toBeLessThanOrEqual(21);
+    expect(result.observed).toEqual(Array.from({length: result.attempts}, () => prepared));
+    expect(result.receipt).toEqual(prepared);
+    expect(result.files).toEqual(['o1.to.json']);
+});
+
+test('terminal receipt publication propagates ENOENT once and cleans its temporary file', async () => {
+    const {result, prepared} = await receiptRenameCase('ENOENT', 2);
+    expect(result.error).toEqual({code: 'ENOENT', message: 'fixture receipt replacement refused'});
+    expect(result.attempts).toBe(1);
+    expect(result.observed).toEqual([prepared]);
+    expect(result.receipt).toEqual(prepared);
+    expect(result.files).toEqual(['o1.to.json']);
+});
+
 function pairedZeroTrade() {
     const base = mkdtempSync(join(tmpdir(), 'fleet-paired-zero-')), lifecycle = join(base, '.practice/session-lifecycle');
     const trade = order({ id: '1794643307780-nabtheknob-mmsmk1232-bones', server: 'rs-sdk-demo.fly.dev', from: 'NabTheKnob', to: 'mmsmk1232',

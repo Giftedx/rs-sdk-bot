@@ -1,6 +1,6 @@
 // Harness entry only. Import and --verify never start services or log in.
 // Runs the installed goldfarm-stable CLI on fresh fl-prefixed practice accounts, then checks the saved state.
-import {copyFileSync,readFileSync,writeFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
+import {copyFileSync,readFileSync,writeFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync,realpathSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
@@ -29,6 +29,7 @@ const SEEDED_FOOD=[TROUT,SALMON,SHARK];
 export const WORKER_ENV={TICKS:'600',BANK_AT:'50000',FOOD_FROM:'',FUND_COURIER:'',RANDOM_EVENTS:'1'};
 export const MIN_COINS=1000;
 export function goldfarmFaultPreload(module:string,failRecovery:boolean):string {
+ module=realpathSync.native(module);
  return `import {mock} from 'bun:test';
 const real=await import(${JSON.stringify(module)});const {sessionWalker,walkPath}=real;const sessions=new WeakMap();let failed=false;
 mock.module(${JSON.stringify(module)},()=>({...real,

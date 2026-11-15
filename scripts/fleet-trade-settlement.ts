@@ -1,5 +1,6 @@
-import { linkSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { renameRetry } from '../packages/core/src/status';
 
 type Tile = { x: number; z: number; level: number };
 export type OrderLine = { item: string; count: number };
@@ -57,8 +58,11 @@ export function writeTradeReceipt(dir: string, receipt: TradeReceipt) {
     writeFileSync(tmp, JSON.stringify(receipt, null, 1) + '\n', { flag: 'wx', flush: true });
     try {
         if (receipt.state === 'prepared') linkSync(tmp, file);
-        else renameSync(tmp, file);
-    } finally { rmSync(tmp, { force: true }); }
+        else renameRetry(tmp, file);
+    } finally {
+        try { unlinkSync(tmp); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    }
 }
 
 const same = (a: unknown, b: string) => typeof a === 'string' && a.toLowerCase() === b.toLowerCase();
