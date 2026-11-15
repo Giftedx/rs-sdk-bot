@@ -1,0 +1,22 @@
+{
+ "id": "1794783403227-hocuspokeus-mmsmk1232-firerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Hocuspokeus",
+ "to": "mmsmk1232",
+ "item": "Fire rune",
+ "count": 248,
+ "start": 1794783403227,
+ "end": 1794785803227,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
