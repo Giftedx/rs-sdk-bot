@@ -4,6 +4,12 @@ name: CI
 # repository. Nothing starts it but a person: the Actions tab, or `gh workflow run CI --ref <branch>`.
 on:
   workflow_dispatch:
+    inputs:
+      native_practice:
+        description: Run the quest and fleet trade practice proofs
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -54,3 +60,55 @@ jobs:
         working-directory: vendor/rs-sdk/server/webclient
       - name: Full Windows gate
         run: bun scripts/ci-gate.ts --full
+  native-practice:
+    if: inputs.native_practice
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Prepare the pinned practice dependencies
+        run: bun scripts/worktree-setup.ts --bench
+      - name: Pack the public game assets
+        id: pack
+        timeout-minutes: 10
+        working-directory: vendor/rs-sdk/server/engine
+        run: |
+          bun run build
+      - name: Qualify both Scorpion combat cases and refusal
+        id: quest
+        timeout-minutes: 35
+        run: bun packages/router/src/delivery-cli.ts quest-sweep
+      - name: Prove full-pack fleet receiver capacity
+        if: ${{ !cancelled() && steps.pack.outcome == 'success' }}
+        timeout-minutes: 5
+        run: bun packages/practice/src/fleet-trade-capacity-proof.ts
+      - name: Retain the source-bound practice evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-practice-${{ github.sha }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            .practice/deliveries/quest-sweep-*/report.json
+            .practice/deliveries/quest-sweep-*/native.json
+            .practice/deliveries/quest-sweep-*/results.json
+            .practice/deliveries/quest-sweep-*/*.log
+            .practice/deliveries/quest-sweep-*/*.sav
+            .practice/fleet-trade-capacity-*/report.json
+            .practice/fleet-trade-capacity-*/native.json
+            .practice/fleet-trade-capacity-*/failure.json
+            .practice/fleet-trade-capacity-*/transfer-observed.json
+            .practice/fleet-trade-capacity-*/transfer-result.json
+            .practice/fleet-trade-capacity-*/before-*.sav
+            .practice/fleet-trade-capacity-*/after-*.sav
+            .practice/fleet-trade-capacity-*/transfer.log
+            .practice/fleet-trade-capacity-*/transfer.err
+            .practice/fleet-trade-capacity-*/auth-*.log
+            .practice/fleet-trade-capacity-*/auth-*.err
