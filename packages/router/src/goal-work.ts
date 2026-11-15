@@ -9,6 +9,18 @@ const pkEntries=new Set(['scripts/pk-hunt.ts','scripts/pk-roam.ts','scripts/pk-a
 const validTime=(value:unknown,now:number):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=now;
 const fresh=(value:unknown,now:number)=>validTime(value,now)&&now-value<300000;
 
+// This worker reads a fresh bank before funding and refuses a changed baseline. Observation support may dispatch
+// that bounded entry without treating unknown stock as an acquired item or relaxing the runtime's admission.
+function boundedGeQuantity(task:CoordTask,entry:string|undefined,id:number,target:number):number|null{
+ if(entry!=='scripts/buy-owned-ge-item.ts'||id===995||!Number.isSafeInteger(task.timeoutMs)||!(task.timeoutMs!>0)
+  ||Object.keys(task.accept?.bank??{}).length!==1)return null;
+ const env=task.env??{},item=Number(env.ITEM_ID),quantity=Number(env.QUANTITY),owned=Number(env.EXPECTED_OWNED??0),price=Number(env.LIMIT_PRICE),reserve=Number(env.CASH_RESERVE),period=Number(env.ORDER_MS);
+ if(item!==id||![quantity,price].every(n=>Number.isSafeInteger(n)&&n>0)||!Number.isSafeInteger(owned)||owned<0
+  ||!Number.isSafeInteger(reserve)||reserve<0||!Number.isSafeInteger(period)||period<=1||period>task.timeoutMs!
+  ||quantity*price>2147483647||owned+quantity!==target)return null;
+ return quantity;
+}
+
 /** Estimate useful effects. A null value requires an observation before a run can claim the effect. */
 export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readonly any[],now:number,context:GoalWorkContext={}):Map<string,GoalWorkValue>{
  const observations=new Map<string,any>();
@@ -54,6 +66,14 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    if(!Number.isSafeInteger(id))continue;
    const lines=goals.collection.missing.filter(line=>line.id===id&&line.consumer.trim()&&line.consumer!=='unresolved named supply'&&line.need>line.owned);
    if(!lines.length)continue;
+   if(names?.length===1&&(!held||lines.some(line=>(line.verifyOwned??0)>0))&&(!held||target>(held.get(id)??0))){
+    const quantity=boundedGeQuantity(task,entry,id,target);
+    const line=quantity===null?undefined:lines.find(line=>quantity<=Math.max(0,line.need-line.owned-(line.verifyOwned??0)));
+    if(line){
+     credit('supply-observation:'+line.consumer+':'+id+':'+line.need,.01);
+     effects.push('Bounded GE observation supports '+line.consumer+' for item '+id+'. This is not game progress.');
+    }
+   }
    if(!held){unknown.push(account+' holdings of item '+id);continue;}
    let available=Math.max(0,target-(held.get(id)??0));
    for(const line of lines){

@@ -17,13 +17,15 @@ import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElse
 import { CLAIM_MAX_AGE_MS, claimFor, recoveringOwnerJobs } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { transferFleetOwnersLocked, withFleetDataWrite } from './fleet-owner-claim';
-import { readAllFleetAccountClaims, readHeldFleetTradeClaims, releaseFleetTradeClaim, type FleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
+import { readAllFleetAccountClaims, readHeldFleetTradeClaims, releaseFleetTradeClaim, releaseFleetTradeClaims, type FleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
 import { allLeaseLastSeen, fleetGitWindow } from '../packages/core/src/fleet-lease';
 import { describeMoves, planTransfers, type OwnerRow, type SideView } from '../packages/core/src/fleet-assign';
 import { hasCredential } from '../packages/core/src/fleet-vault';
 import { canonicalRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
+import { listAttempts, readLogoutProof } from '../packages/core/src/session-lifecycle';
+import { savedProcessAlive } from '../packages/core/src/session-takeover';
 import { loadEnded, swarmWroteStop } from './swarm';
-import { terminalTradeReceipt, validOrder } from './fleet-trade-settlement';
+import { terminalTradeReceipt, validOrder, type TradeReceipt } from './fleet-trade-settlement';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
@@ -197,13 +199,63 @@ export function reattach(dir: string, branch = BRANCH): boolean {
     return true;
 }
 
+// A paired reconciliation uses the producer's current logout, not just a receipt's reference to an older session.
+export function confirmedTradeLogout(base: string, claim: FleetTradeClaim, receipt: TradeReceipt,
+    alive: (pid: number, at: number) => boolean = savedProcessAlive): boolean {
+    try {
+        const pid = claim.pid;
+        if (typeof pid !== 'number' || !Number.isSafeInteger(pid) || pid <= 0 || !receipt.logout) return false;
+        const options = { root: join(base, '.practice/session-lifecycle') }, proof = readLogoutProof(claim.account, claim.server, options);
+        if (proof.state !== 'confirmed' || proof.attemptId !== receipt.logout.attemptId || proof.loggedOutAt !== receipt.logout.at
+            || proof.receiptSha256 !== receipt.logout.sha256 || proof.loggedOutAt < claim.at) return false;
+        const attempt = listAttempts(claim.account, claim.server, options).find(row => row.attemptId === proof.attemptId);
+        if (!attempt?.receipt || attempt.sha256 !== proof.receiptSha256) return false;
+        return attempt.receipt.owner.pid === pid && attempt.receipt.owner.sharedClaimNonce === claim.nonce
+            && attempt.receipt.owner.script === 'scripts/fleet-trade.ts' && !alive(pid, claim.at);
+    } catch { return false; }
+}
+
+// Both sides saw the screen, but neither moved any ordered stack and both producers confirmed logout. Keep the raw
+// uncertain receipts; releasing their exact claims lets windowClosures derive the failed order without a fake trade.
+function pairedZeroTransferClaims(claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any,
+    confirmed: (claim: FleetTradeClaim, receipt: TradeReceipt) => boolean, now: number): FleetTradeClaim[][] {
+    const pairs: FleetTradeClaim[][] = [];
+    for (const orderId of new Set(claims.filter(claim => claim.phase === 'held' && claim.side === side).map(claim => claim.orderId))) {
+        const order = read(`orders/${orderId}.json`);
+        if (!validOrder(order) || order.id !== orderId || now < order.end) continue;
+        const pair = claims.filter(claim => claim.orderId === orderId);
+        if (pair.length !== 2 || pair.some(claim => claim.phase !== 'held' || claim.side !== side)) continue;
+        const from = pair.filter(claim => claim.role === 'from'), to = pair.filter(claim => claim.role === 'to');
+        if (from.length !== 1 || to.length !== 1 || from[0]!.nonce === to[0]!.nonce) continue;
+        let matched = true;
+        for (const claim of pair) {
+            const receipt = read(`receipts/${orderId}.${claim.role}.json`);
+            if (!receipt || receipt.state !== 'reconcile' || receipt.ok !== false || receipt.screen !== true
+                || claim.account.toLowerCase() !== order[claim.role].toLowerCase() || claim.server.toLowerCase() !== order.server.toLowerCase()
+                || receipt.claim !== claim.nonce || receipt.side !== claim.side || receipt.logout?.at < claim.at
+                || !terminalTradeReceipt(order, claim.role, { ...receipt, state: 'failed' }, now)
+                || ![receipt, ...(receipt.lines ?? [])].every((line: { inventory?: unknown }) => !!line.inventory)) { matched = false; break; }
+            try { if (!confirmed(claim, receipt)) { matched = false; break; } }
+            catch { matched = false; break; }
+        }
+        if (matched) pairs.push(pair);
+    }
+    return pairs;
+}
+
 export function releasePublishedTradeClaims(
     claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any,
     release: (claim: FleetTradeClaim) => void, now = Date.now(),
+    confirmed: (claim: FleetTradeClaim, receipt: TradeReceipt) => boolean = () => false,
+    releasePair?: (claims: readonly FleetTradeClaim[]) => void,
 ): number {
     let released = 0;
+    const paired = new Set<FleetTradeClaim>();
+    if (releasePair) for (const pair of pairedZeroTransferClaims(claims, side, read, confirmed, now)) {
+        releasePair(pair); released += pair.length; pair.forEach(claim => paired.add(claim));
+    }
     for (const claim of claims) {
-        if (claim.phase !== 'held' || claim.side !== side) continue;
+        if (claim.phase !== 'held' || claim.side !== side || paired.has(claim)) continue;
         const order = read(`orders/${claim.orderId}.json`), receipt = read(`receipts/${claim.orderId}.${claim.role}.json`);
         if (!validOrder(order) || order.id !== claim.orderId || !receipt || !terminalTradeReceipt(order, claim.role, receipt, now)
             || receipt.claim !== claim.nonce || receipt.side !== claim.side || receipt.account.toLowerCase() !== claim.account
@@ -287,7 +339,8 @@ function releaseSyncedTrades(dir: string, side: string) {
         try { return committed.ok ? JSON.parse(committed.out) : null; } catch { return null; }
     };
     const held = readHeldFleetTradeClaims(root, [...new Set(accounts)]);
-    releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(root, claim));
+    releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(root, claim), Date.now(),
+        (claim, receipt) => confirmedTradeLogout(root, claim, receipt), pair => { releaseFleetTradeClaims(root, pair); });
     for (const claim of droppedTradeClaims(held, side, read)) {
         releaseFleetTradeClaim(root, claim);
         console.log(`FLEET_SYNC released the dropped trade claim of ${claim.account} for order ${claim.orderId}: the partner moved nothing (a failed receipt, or no claim by the end of the window)`);

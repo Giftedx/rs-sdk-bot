@@ -3,9 +3,11 @@ import {codexArgs,assignedWorker,rejectedReview,modelFailure,runModel} from '../
 import {reviewDependencies,reviewVerdict} from '../src/model-worker';
 import {initialState,addTasks,validateTask} from '../src/coordinator';
 import {waitForWork} from '../src/coordinator-cli';
-import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import * as filesystem from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,realpathSync,symlinkSync,unlinkSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
+import {projectRoot} from '../src/coordinator-store';
 test('a completed job wakes dispatch without waiting for the fallback timer',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'queue-event-'));let deadlineElapsed=false;
  const marker=setTimeout(()=>{deadlineElapsed=true;},1500);
@@ -55,6 +57,35 @@ test.each([0,7])('a real Codex answer requires a successful CLI exit: %i',async 
   const result=await runModel('codex','fixture prompt',1000,true);
   expect(result).toMatchObject({ok:exit===0,text:answer,costUsd:0});
  }finally{spawn.mockRestore();command.mockRestore();if(directory)rmSync(directory,{recursive:true,force:true});}
+});
+test.skipIf(process.platform!=='win32').each([
+ {readOnly:true,answer:'{"approved":true,"reason":"checked"}',exit:0,text:'{"approved":true,"reason":"checked"}'},
+ {readOnly:false,answer:undefined,exit:1,text:'fixture model failed'},
+])('Codex artifacts use the real directory behind a Windows workspace junction: %j',async fixture=>{
+ const make=filesystem.mkdtempSync,base=make(join(tmpdir(),'codex-model-junction-')),target=join(base,'shared'),link=join(base,'workspace-practice');
+ mkdirSync(target);symlinkSync(target,link,'junction');
+ const canonicalTarget=realpathSync.native(target),events=JSON.stringify({type:'turn.failed',error:{message:'fixture model failed'}})+'\n';
+ let output='',stdout='',stderr='',cwd='',mode='';
+ const directory=spyOn(filesystem,'mkdtempSync').mockImplementation(((_prefix:string,options?:Parameters<typeof filesystem.mkdtempSync>[1])=>make(join(link,'codex-'),options)) as typeof filesystem.mkdtempSync);
+ const command=spyOn(Bun,'which').mockImplementation(()=>'C:\\fake\\codex.exe');
+ const spawn=spyOn(Bun,'spawn').mockImplementation(((args:string[],options:any)=>{
+  output=args[args.indexOf('--output-last-message')+1]!;stdout=options.stdout.name;stderr=options.stderr.name;cwd=options.cwd;mode=args[args.indexOf('--sandbox')+1]!;
+  const physical=realpathSync.native(dirname(output)),accepted=output===join(physical,'answer.txt');
+  writeFileSync(join(physical,'events.jsonl'),accepted?events:'');
+  writeFileSync(join(physical,'stderr.log'),accepted?'retained stderr':'path contains a reparse point');
+  if(accepted&&fixture.answer!==undefined)writeFileSync(output,fixture.answer);
+  return{stdin:{write:()=>{},end:()=>{}},exited:Promise.resolve(accepted?fixture.exit:1)};
+ }) as any);
+ try{
+  const result=await runModel('codex','fixture prompt',1000,fixture.readOnly);
+  expect(result).toMatchObject({ok:fixture.exit===0,text:fixture.text,costUsd:0});
+  if(!('evidence' in result)||typeof result.evidence!=='string')throw Error('Codex artifact evidence missing');
+  expect(dirname(result.evidence)).toBe(canonicalTarget);
+  expect(output).toBe(join(result.evidence,'answer.txt'));
+  expect(stdout).toBe(join(result.evidence,'events.jsonl'));expect(stderr).toBe(join(result.evidence,'stderr.log'));
+  expect(cwd).toBe(projectRoot);expect(mode).toBe(fixture.readOnly?'read-only':'danger-full-access');
+  expect(readFileSync(stdout,'utf8')).toBe(events);expect(readFileSync(stderr,'utf8')).toBe('retained stderr');
+ }finally{spawn.mockRestore();command.mockRestore();directory.mockRestore();unlinkSync(link);rmSync(base,{recursive:true,force:true});}
 });
 test('both agents take builds from one queue and explicit ownership wins',()=>{
  expect(assignedWorker('build',[])).toBe('codex');

@@ -1,4 +1,4 @@
-import {existsSync,mkdirSync,mkdtempSync,readFileSync} from 'node:fs';
+import {existsSync,mkdirSync,mkdtempSync,readFileSync,realpathSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {runClaude} from './author';
 import {projectRoot,coordinationDir} from './coordinator-store';
@@ -70,7 +70,9 @@ export function modelFailure(events:string,stderr:string,expired:boolean){
 }
 export async function runModel(worker:ModelWorker,prompt:string,timeoutMs:number,readOnly:boolean){
  if(worker==='claude')return runClaude(prompt,timeoutMs,readOnly);
- mkdirSync(join(coordinationDir,'models'),{recursive:true});const dir=mkdtempSync(join(coordinationDir,'models','codex-'));
+ mkdirSync(join(coordinationDir,'models'),{recursive:true});
+ // Codex refuses output paths through workspace junctions.
+ const dir=realpathSync.native(mkdtempSync(join(coordinationDir,'models','codex-')));
  const output=join(dir,'answer.txt'),env={...process.env};delete env.OPENAI_API_KEY;delete env.CODEX_API_KEY;
  const child=Bun.spawn([...codexCommand(),...codexArgs(output,readOnly)],{cwd:projectRoot,env,stdin:'pipe',stdout:Bun.file(join(dir,'events.jsonl')),stderr:Bun.file(join(dir,'stderr.log')),windowsHide:true});
  child.stdin.write(prompt);child.stdin.end();let expired=false,termination:Promise<void>|undefined;
