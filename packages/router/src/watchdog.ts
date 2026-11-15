@@ -1,4 +1,4 @@
-// Keeps the autonomous loop running until the whole game is done (scoreboard progress.done). Run every 5 minutes by
+// Keeps the autonomous loop running until the owner goals have proof (scoreboard progress.done). Run every 5 minutes by
 // the Windows task "rs-sdk-coordinator-watchdog" (packages/router/src/watchdog-install.ts). Each run, in about a second:
 // 1. Honours owner stops: with .practice/stop-coordinator or .practice/stop-swarm it does nothing.
 // 2. Restarts the coordinator hidden and detached when its owner process is gone.
@@ -33,9 +33,18 @@ const root = resolve(import.meta.dir, '../../..'), dir = join(root, '.practice',
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
 
 export function stalled(history: { at: number; progress: Progress }[], now: number, stallMs = STALL_MS): { since: number; last: Progress } | null {
+    history = history.filter(row => row.progress.goalVersion === 1);
     if (!history.length || now - history[0]!.at < stallMs) return null;
     let lastGain = history[0]!.at;
-    for (let i = 1; i < history.length; i++) if (improved(history[i - 1]!.progress, history[i]!.progress)) lastGain = history[i]!.at;
+    const high:Progress={...history[0]!.progress,goalMetrics:{...history[0]!.progress.goalMetrics}};
+    for (let i = 1; i < history.length; i++) {
+        const current=history[i]!.progress;
+        if(improved(high,current)) lastGain=history[i]!.at;
+        for(const [key,value] of Object.entries(current.goalMetrics??{}))if(Number.isFinite(value)){
+            const prior=high.goalMetrics![key];
+            high.goalMetrics![key]=Number.isFinite(prior)?Math.max(prior!,value):value;
+        }
+    }
     return now - lastGain >= stallMs ? { since: lastGain, last: history.at(-1)!.progress } : null;
 }
 

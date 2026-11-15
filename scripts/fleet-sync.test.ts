@@ -31,6 +31,13 @@ test('the plan view holds only this side\'s jobs, never the main account or job 
     ] });
 });
 
+test('published army goals retain the roster without foreign or main accounts',()=>{
+    const owners=new Map([['worker',{side:'local'}],['other',{side:'cloud'}],['haggis',{side:'local'}]]) as any;
+    const view=planView([], 'local', owners, 7, {army:['Worker',{account:'Other',build:'pure'},'Haggis'],builds:{Worker:'pure-pray',Other:'tank-range',Haggis:'maxed'}});
+    expect(view.army).toEqual(['Worker']);
+    expect(view.builds).toEqual({Worker:'pure-pray'});
+});
+
 test('the snapshot keeps a published row for an account with no local status or a staler one, never another side\'s row', () => {
     const owners = new Map([['quickhandjob', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }], ['trousersnake', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }], ['bigchopper', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
     const row = (name: string, at: number, level: number) => ({ name, server: 'rs-sdk-demo.fly.dev', at, bank: [], inventory: [], equipment: [], skills: [{ name: 'Thieving', level }] });

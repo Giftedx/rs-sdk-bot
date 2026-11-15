@@ -333,7 +333,7 @@ export function preparedProvisionClaims(state:CoordinatorState,records:ReadonlyM
 }
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
-export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean;provisionRunHeld?:(task:CoordTask,records:ReadonlyMap<string,TaskRecord>)=>boolean}={}):CoordTask|null{
+export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean;provisionRunHeld?:(task:CoordTask,records:ReadonlyMap<string,TaskRecord>)=>boolean;goalValue?:(task:CoordTask)=>number|null}={}):CoordTask|null{
  const records=new Map(state.tasks.map(r=>[r.spec.id,r])),running=state.tasks.filter(r=>r.status==='running');
  const busyBuilds=[...new Set([...running.filter(r=>r.spec.kind==='build'&&r.spec.capability).map(r=>r.spec.capability!),...(resources.publishing?[resources.publishing]:[])])];
  const focusCaps=new Set<string>(),visited=new Set<string>();
@@ -346,7 +346,16 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   focusCaps.add(resources.focusCapability);
   for(const record of state.tasks)if(['pending','running'].includes(record.status)&&record.spec.capability===resources.focusCapability)includeFocus(record.spec.id);
  }
- const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id),records)));
+ const values=new Map<string,number|null>();
+ const goalValue=(task:CoordTask)=>{
+  if(!values.has(task.id)){
+   const value=resources.goalValue?.(task)??null;
+   values.set(task.id,typeof value==='number'&&Number.isFinite(value)&&value>0?value:null);
+  }
+  return values.get(task.id)??null;
+ };
+ const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>dependencyMet(r.spec,records.get(id),records))
+  &&(!resources.goalValue||goalValue(r.spec)!==null));
  if(!pending.length)return null;
  const dead=deadRoots(state,records),consumerCounts=new Map<string,number>(),liveDependencies=new Set<string>();
  for(const r of state.tasks){
@@ -420,6 +429,8 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  const focused=ready.filter(r=>r.spec.capability===resources.focusCapability||liveQualifies.has(r.spec.id));
  const candidates=focused.length&&!resources.isolatedBuilds?focused:(buildWaiting||resources.preferLive)&&consumers.length?consumers:ready;
  const ordered=(r:TaskRecord)=>resources.isolatedBuilds&&focused.includes(r)?1:0;
+ if(resources.goalValue)return candidates.sort((a,b)=>(goalValue(b.spec)!/b.spec.estimatedMs)-(goalValue(a.spec)!/a.spec.estimatedMs)
+  ||ordered(b)-ordered(a)||score(b)-score(a)||a.createdAt-b.createdAt||a.spec.id.localeCompare(b.spec.id))[0]?.spec??null;
  const overdue=candidates.filter(r=>now-state.goals.find(g=>g.id===r.spec.goal)!.lastStartedAt>=30*60000);
  const pool=overdue.length?overdue:candidates;
  return pool.sort((a,b)=>ordered(b)-ordered(a)||(overdue.length?state.goals.find(g=>g.id===a.spec.goal)!.lastStartedAt-state.goals.find(g=>g.id===b.spec.goal)!.lastStartedAt:0)

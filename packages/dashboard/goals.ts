@@ -2,6 +2,7 @@ import { COST_RECEIPTS,netCosts } from './net-costs';
 import { gearProgress,questProgress,batchCosts } from './goal-details';
 import { SKILLS } from '../planner/src/haggis';
 import { xpForLevel } from '../planner/src/curve';
+import {COMBAT_SKILLS,type OwnerGoals,type GoalEvidence} from '../router/src/goal-scoreboard';
 
 // The joined plan owns goal wording and pause state. Metrics remain separate observations.
 export function goalPlan(text: string) {
@@ -58,8 +59,53 @@ export const GOAL_RECEIPTS={
  rune:'.practice/recovery-20261025/MineYourBiz-qualification/native-reset-quest-proof.json',
 };
 
+function ownerGoalCards(state:any):Lane[]|null{
+ const g=state.scoreboard?.goals as OwnerGoals|undefined,now=state.now;
+ if(g?.version!==1||!validAt(g.at,now)||!g.main||!Array.isArray(g.specialists?.targets)||!Array.isArray(g.specialists.rank1s)
+  ||!Array.isArray(g.quests?.remaining)||!Array.isArray(g.collection?.missing)||!Array.isArray(g.army?.roster)||!Array.isArray(g.army.accounts))return null;
+ const row=(label:string,value:unknown,source:string,at?:number|null,tone:GoalRow['tone']='dm'):GoalRow=>({label,value:String(value),source,...(validAt(at,now)?{at:at!}:{}),tone});
+ const source=(e:GoalEvidence[]|undefined)=>(e??[]).map(e=>e.source).join('; ')||'.practice/coordinator/scoreboard.json';
+ const at=(e:GoalEvidence[]|undefined)=>(e??[]).find(e=>validAt(e.at,now))?.at;
+ const evidenceRows=(e:GoalEvidence[]|undefined)=>(e??[]).map((e,i)=>row(`Evidence ${i+1}`,e.gap??(e.ageMs===null?'Observation date unknown':`${num(e.ageMs)} ms old at ledger build`),e.source,e.at,e.gap?'warn':'dm'));
+ const pause=state.objectives?.paused?'After resume: ':'';
+ const n=(value:number|null)=>value===null?'unknown':num(value);
+ const observed=validAt(g.main.rankAt,now)&&fresh(g.main.rankAt,now,3_600_000);
+ const mainMetric=observed?g.main.rank1===true?'#1 observed':g.main.rank===null?'Rank unknown':`Rank #${g.main.rank}`:g.main.rank===null?'Rank unknown':'Rank stale';
+ const held=g.specialists.rank1s.filter(r=>fresh(r.at,now,3_600_000)),boardsHeld=new Set(held.map(r=>r.board.toLowerCase())).size;
+ const supplyRows=g.collection.missing.map(s=>row(s.item,`${num(s.owned)}/${num(s.need)} recent${s.verifyOwned?` · ${num(s.verifyOwned)} need verification`:''}`,s.consumer,undefined,'warn'));
+ const nextSupply=g.collection.missing[0];
+ const nextSupplyAction=nextSupply?nextSupply.verifyOwned?`Refresh the held ${nextSupply.item} for ${nextSupply.consumer}.`:`Stage ${num(Math.max(0,nextSupply.need-nextSupply.owned))} ${nextSupply.item} for ${nextSupply.consumer}.`:'Keep exact reservations and delivery proof for each named consumer.';
+ const nextArmy=g.army.accounts.find(a=>!a.maxed),nextSkill=nextArmy?COMBAT_SKILLS.find(skill=>nextArmy.levels[skill]!==99):undefined;
+ return[
+  {title:'Main Overall rank 1',metric:mainMetric,meta:`${n(g.main.modelTicks)} model ticks · ${n(g.main.gapTicks)} to launch margin`,level:observed?'LIVE OBSERVATION':'MODEL / UNKNOWN',
+   blocker:g.main.rank1===true&&observed?'A saved rank observation proves first place at its source time.':'The route model and launch readiness do not prove a recorded Overall win.',
+   next:pause+(g.main.rank1===true&&observed?'Keep current rank evidence and advance the remaining owner goals.':g.main.gapTicks===null?'Restore the Overall record and route model.':g.main.gapTicks>0?`Cut ${num(g.main.gapTicks)} model ticks, then qualify the full route.`:'Check rehearsal, staging and fresh targets before the scored run.'),
+   rows:[row('Recorded Overall rank',observed?g.main.rank===null?'Unknown':`#${g.main.rank}`:'Unknown or stale',source(g.main.evidence),g.main.rankAt),row('Model / launch target',`${n(g.main.modelTicks)} / ${n(g.main.launchTargetTicks)} ticks`,source(g.main.evidence),at(g.main.evidence)),row('Record',`${n(g.main.recordTicks)} ticks`,source(g.main.evidence),at(g.main.evidence)),...evidenceRows(g.main.evidence)]},
+  {title:'Specialist board wins',metric:`${boardsHeld} board${boardsHeld===1?'':'s'} held`,meta:`${g.specialists.targets.length} formal candidates · priced routes remain separate`,level:'LIVE / MODEL',
+   blocker:g.specialists.scopeKnown?'Each target still needs a priced route and a current recorded win.':'The winnable specialist target set is incomplete; estimates and rehearsals are separate from recorded wins.',
+   next:pause+'Price the next specialist route against a fresh record and its exact staged supplies.',
+   rows:[...held.map(r=>row(`${r.board} · ${r.account}`,'#1 observed',r.source,r.at,'good')),...g.specialists.targets.map(t=>row(`${t.board} · ${t.account}`,`plan ${n(t.planTicks)} · rehearsal ${n(t.rehearsalTicks)} · record ${n(t.recordTicks)} ticks · margin ${n(t.marginTicks)}`,source(t.evidence),at(t.evidence))),...evidenceRows(g.specialists.evidence)]},
+  {title:'All quests',metric:`${g.quests.complete}/${g.quests.total} complete`,meta:`implemented journal targets · ${g.quests.observedAccounts} account observations`,level:'LIVE JOURNAL',
+   blocker:g.quests.remaining.length?`${g.quests.remaining.length} implemented quests lack a live completion observation.`:g.quests.total?'Every listed quest has a live journal completion observation.':'The implemented quest target list is unavailable.',
+   next:pause+(g.quests.remaining[0]?`Finish ${g.quests.remaining[0]} and record its journal flag.`:'Keep journal evidence for the complete implemented target list.'),
+   rows:[row('Implemented quests',`${g.quests.complete}/${g.quests.total}`,source(g.quests.evidence),at(g.quests.evidence)),...g.quests.remaining.map(name=>row(name,'Live completion not proved',source(g.quests.evidence),undefined,'warn')),...evidenceRows(g.quests.evidence)]},
+  {title:'Useful items & best gear',metric:g.collection.scopeKnown?`${g.collection.held}/${g.collection.targets} held`:'Scope unknown',meta:'route supplies and declared kits are a supported subset',level:'OBSERVED / UNKNOWN',
+   blocker:g.collection.scopeKnown?'Holdings still need exact item identity and current observations.':'The full useful-item and best-in-slot target set is undefined; supported supply coverage cannot prove collection completion.',
+   next:pause+'Map the full useful-item and best-in-slot targets from the item and gear catalogues.',
+   rows:[row('Supported subset',`${g.collection.held}/${g.collection.targets} named supply lines`,source(g.collection.evidence),at(g.collection.evidence)),row('Full useful-item / best-in-slot scope',g.collection.scopeKnown?'Defined':'Unknown',source(g.collection.evidence),undefined,g.collection.scopeKnown?'dm':'warn'),...evidenceRows(g.collection.evidence)]},
+  {title:'Maxed PK army',metric:g.army.roster.length?`${g.army.maxed}/${g.army.roster.length} maxed`:'Roster unknown',meta:`seven combat skills at 99 on each account · ${g.army.missingLevels} target levels unverified or missing`,level:'LIVE / UNKNOWN',
+   blocker:'Maxed levels, credited player kills and Wilderness control each need their own proof.',
+   next:pause+(nextArmy&&nextSkill?`${nextArmy.levels[nextSkill]===null?'Observe':'Train'} ${nextArmy.account} · ${nextSkill} toward 99.`:'Bind credited player kills and Wilderness control to live evidence.'),
+   rows:[...g.army.accounts.flatMap(a=>COMBAT_SKILLS.map(skill=>row(`${a.account} · ${skill}`,a.levels[skill]===null?'Unknown / 99':`${a.levels[skill]}/99`,source(g.army.evidence),a.at,a.levels[skill]===99?'good':'warn'))),row('Credited player kills',g.army.creditedKills===null?'Unknown':g.army.creditedKills,source(g.army.evidence),undefined,'warn'),row('Wilderness control',g.army.wildernessControl===null?'Unknown':g.army.wildernessControl,source(g.army.evidence),undefined,'warn'),...evidenceRows(g.army.evidence)]},
+  {title:'Named supply support',metric:`${g.collection.held}/${g.collection.targets} lines`,meta:'finite route and kit demand · current stock only',level:'SUPPORT',
+   blocker:g.collection.missing.length?'Current stock is short or needs a fresh observation; gold counts only against a named consumer.':'Stock coverage still requires reservations, staging and delivery proof.',next:pause+nextSupplyAction,
+   rows:[...supplyRows,row('Support scope','Supplies serve the owner goals; wealth and coin rate are not separate goals.',source(g.collection.evidence)),...evidenceRows(g.collection.evidence)]},
+ ];
+}
+
 // Pure, read-only projection. Historical receipts never become current staging or live promotion.
 export function goalProgress(state:any,input:GoalInputs):Lane[]{
+ const owner=ownerGoalCards(state);if(owner)return owner;
  input={...input,items:Array.isArray(input.items)?input.items:[],quests:Array.isArray(input.quests)?input.quests:[],questConstants:typeof input.questConstants==='string'?input.questConstants:'',receipts:input.receipts??{}};
  const now=state.now,bots=(state.bots??[]).filter((b:any)=>!b.practice&&!b.reserved&&b.server==='rs-sdk-demo.fly.dev'),owned=new Set<string>(bots.map((b:any)=>String(b.name).toLowerCase()));
  const row=(label:string,value:unknown,source:string,at?:number,tone?:GoalRow['tone']):GoalRow=>({label,value:String(value),source,...(validAt(at,now)?{at}:{}),tone});

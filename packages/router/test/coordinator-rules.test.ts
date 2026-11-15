@@ -64,6 +64,14 @@ test('a failed refresh stops the rule',()=>{
 test('the fleet leader of a skill continues its chain',()=>{
  expect(applyRules(chain(),deps({fleetBest:()=>({best:30,account:'bigchopper',side:'local'})}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
 });
+
+test('goal continuation supports an army account below fleet best and rejects a pointless leader',()=>{
+ const evaluate=()=>({value:1,reason:'army Ranged deficit'});
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:99,account:'Shaftshooter',side:'local'}),goalValue:evaluate}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
+ const skipped:RuleSkip[]=[];
+ expect(applyRules(chain(),deps({goalValue:()=>({value:0,reason:'No goal or supply consumer'}),skipped:s=>skipped.push(s)}),NOW)).toEqual([]);
+ expect(skipped[0]?.reason).toBe('No goal or supply consumer');
+});
 test('a band far below a 99 held by another account is skipped and reported',()=>{
  const skips:RuleSkip[]=[];
  expect(applyRules(chain(),deps({fleetBest:()=>({best:99,account:'Shaftshooter',side:'local'}),skipped:s=>skips.push(s)}),NOW)).toEqual([]);

@@ -14,6 +14,15 @@ test('scoreboard keeps the remaining list, best live level per skill and the cov
  expect(scoreboardView(null).available).toBe(false);expect(scoreboardView({skills:[]}).available).toBe(false);
 });
 
+test('owner goals are the completion source and coverage alone cannot mark done',()=>{
+ const raw={at:'2026-11-15T00:00:00Z',skills:[],progress:{done:true,remaining:[]}};
+ expect(scoreboardView(raw).done).toBe(false);
+ const goals={version:1,done:false,remaining:['Wilderness control unknown'],army:{maxed:2,roster:['A','B','C']}};
+ const view=scoreboardView({...raw,goals}) as any;
+ expect(view.goals).toEqual(goals);
+ expect(view.remaining).toEqual(['Wilderness control unknown']);
+});
+
 test('fleet sides give each side its sync age, accounts, total levels and coins; late orders and sides are marked; done orders drop out',()=>{
  const now=10_000_000;
  const v=fleetSidesView([

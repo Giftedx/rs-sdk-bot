@@ -8,13 +8,13 @@ Every task names the scoreboard entries it moves and by how much.
 
 | Scoreboard | Now | Source |
 |---|---|---|
-| Main run gap | 40,842 modelled ticks against the 33,011 record (`kingston`), a gap of 7,831 | `bun packages/planner/src/haggis-cli.ts` |
-| Boards held | Count first-place results from a current board snapshot. | `bun packages/planner/src/scout-cli.ts` |
-| Account coverage | This side has 18/19 skills at 99 across accounts. Fleet quest coverage is 39/68 live. Observed items are 219/2,756. The catalogue names 2,607/5,807 actions. | `bun packages/router/src/coverage.ts` |
-| Fresh account completion | Track all 19 skills at 99, every implemented quest and every available boss on one fresh completion account. | That account's skill, quest and boss receipts |
-| Useful capacity | Count stock against a named route consumer. | `bun packages/planner/src/supply-bill.ts` and delivery receipts |
+| Main Overall | Recorded rank 1, separate from model ticks, the 2% launch gap, staging and rehearsal evidence. A stale record cannot authorize launch. | `scoreboard.goals.main`; `bun packages/planner/src/haggis-cli.ts` |
+| Specialist wins | Fresh owned skill-board rank 1 results, priced route margins and bound rehearsal clocks. The full set of winnable targets remains undefined. | `scoreboard.goals.specialists`; `bun packages/planner/src/scout-cli.ts` |
+| Every quest | Completed implemented journal names across owned live accounts, with observation times and the remaining names. | `scoreboard.goals.quests` |
+| Useful items and best gear | Recent stock capped at named route and declared army-kit demand. Old stock requires verification. This subset does not define the full useful-item or best-in-slot target set. | `scoreboard.goals.collection`; `bun packages/planner/src/supply-bill.ts` |
+| PK army | Each declared account's seven base combat levels, maxed account count, credited player-kill proof and Wilderness-control proof. Missing fight evidence stays unknown. | `scoreboard.goals.army` |
 
-The planner's best set wins 2 of 24 boards (Quest Points, Hitpoints); no known single run wins all 24. [Cairn's route](../../research/community-and-upstream.md) plans 34,143 ticks; `bun packages/planner/src/cairn-cli.ts` prices it against ours.
+`bun packages/router/src/coverage.ts` emits the owner-goal ledger beside generic capability coverage. Fleet skill maxima, arbitrary item holdings and source text matches are diagnostics. The coordinator ranks unresolved goal effects and their finite consumer chains per estimated time. Autopilot values only finite route and army-kit shortages, including their acquisition costs. Gold has no value without that demand. A target change starts a new progress baseline; it does not clear a stall. [Cairn's route](../../research/community-and-upstream.md) supplies a separate route comparison through `bun packages/planner/src/cairn-cli.ts`.
 
 ## Lanes
 

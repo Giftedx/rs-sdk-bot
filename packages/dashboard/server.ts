@@ -1175,12 +1175,13 @@ function buildState() {
     };
     const objectives=cached(join(root,'docs/plans/joined-plan.md'),goalPlan,goalPlan(''));
     const currentRace=race(),currentGates=gates();
+    const currentScoreboard=cached(FILES.scoreboard,text=>scoreboardView(JSON.parse(text)),scoreboardView(null));
     const goalInputs:GoalInputs={requirements:currentRace?.supplies??null,
         items:cached<any[]>(join(root,'knowledge/items.json'),JSON.parse,[]),
         quests:cached<any[]>(join(root,'knowledge/quests.json'),JSON.parse,[]),
         questConstants:cached(join(root,'vendor/rs-sdk/server/content/scripts/general/configs/quest.constant'),text=>text,''),
         receipts:Object.fromEntries(Object.entries(GOAL_RECEIPTS).map(([key,path])=>[key,cached<any>(join(root,path),JSON.parse,null)]))};
-    const progress=goalProgress({now,bots,boards,collection,objectives,race:currentRace,gates:currentGates},goalInputs);
+    const progress=goalProgress({now,bots,boards,collection,objectives,race:currentRace,gates:currentGates,scoreboard:currentScoreboard},goalInputs);
     return {
         now, objectives:{...objectives,progress}, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards,
         coordination:(()=>{const file=join(practice,'coordinator/state.json');try{return coordinationView(cached(file,JSON.parse,null),statSync(file).mtimeMs,now,existsSync(join(practice,'stop-coordinator'))||existsSync(join(practice,'stop-swarm')));}catch{return coordinationView(null,0,now);}})(),
@@ -1203,7 +1204,7 @@ function buildState() {
             return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
-        scoreboard: cached(FILES.scoreboard, text => scoreboardView(JSON.parse(text)), scoreboardView(null)), fleetSides: fleetSides(now),
+        scoreboard:currentScoreboard, fleetSides:fleetSides(now),
         icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
 }

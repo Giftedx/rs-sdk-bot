@@ -1,0 +1,127 @@
+import {boundAccounts,deadRoots,provisionRefs,type CoordinatorState,type CoordTask} from './coordinator';
+import type {OwnerGoals} from './goal-scoreboard';
+
+export interface GoalWorkValue {value:number|null;reason:string;consumers:string[]}
+export interface GoalWorkContext {entryOf?:(capability:string)=>string|undefined}
+const key=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
+const combat=new Set(['attack','strength','defence','ranged','magic','prayer','hitpoints']);
+const pkEntries=new Set(['scripts/pk-hunt.ts','scripts/pk-roam.ts','scripts/pk-army.ts']);
+const validTime=(value:unknown,now:number):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=now;
+const fresh=(value:unknown,now:number)=>validTime(value,now)&&now-value<300000;
+
+/** Estimate useful effects. A null value requires an observation before a run can claim the effect. */
+export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readonly any[],now:number,context:GoalWorkContext={}):Map<string,GoalWorkValue>{
+ const observations=new Map<string,any>();
+ for(const row of statuses){
+  if(typeof row?.name!=='string'||row.practice||row.server!=='rs-sdk-demo.fly.dev'||!validTime(row.at,now))continue;
+  const name=key(row.name),old=observations.get(name);
+  if(!old||row.at>old.at)observations.set(name,row);
+ }
+ const termsByTask=new Map<string,Map<string,number>>();
+ const direct=(task:CoordTask):GoalWorkValue=>{
+  const terms=new Map<string,number>();termsByTask.set(task.id,terms);
+  if(task.sessionRecovery){terms.set('recovery:'+key(task.sessionRecovery.account),.01);return{value:.01,reason:'Explicit session recovery supports the owned job. This is not game progress.',consumers:[task.id]};}
+  const names=boundAccounts(task,state),account=names?.[task.acceptIndex??0];
+  const effects:string[]=[],unknown:string[]=[];
+  let value=0;
+  const credit=(id:string,gain:number)=>{const prior=terms.get(id)??0;if(gain>prior){terms.set(id,gain);value+=gain-prior;}};
+  const remaining=new Set(goals.quests.remaining.map(key));
+  for(const quest of new Set(task.accept?.quests??[]))if(remaining.has(key(quest))){credit('quest:'+key(quest),1);effects.push('quest '+quest);}
+  if(!account)return{value:value>0?value:null,reason:effects.join(' ')||'Observe the bound account before selecting its goal effect.',consumers:[task.id]};
+  const own=observations.get(key(account));
+  let entry:string|undefined;try{entry=task.capability&&context.entryOf?.(task.capability);}catch{/* An unreadable entry cannot prove the worker's role. */}
+  if(entry&&pkEntries.has(entry)&&task.timeoutMs!==undefined&&task.timeoutMs>0&&task.timeoutMs<=1800000
+   &&names!.every(name=>goals.army.roster.some(member=>key(member)===key(name)))){
+   credit('pk-proof:'+key(account),.01);effects.push('Bounded army PK proof supports the player-kill and Wilderness goals. The result remains unproved.');
+  }
+  const army=goals.army.accounts.find(row=>key(row.account)===key(account));
+  for(const [skill,target] of Object.entries(task.accept?.skills??{})){
+   if(!combat.has(key(skill))||!army||!goals.army.roster.some(name=>key(name)===key(account)))continue;
+   const observed=Object.entries(army.levels).find(([name])=>key(name)===key(skill))?.[1];
+   if(observed===null||observed===undefined){unknown.push(account+' '+skill+' level');continue;}
+   const gain=Math.max(0,Math.min(99,target)-observed)/98;
+   if(gain){credit('army:'+key(account)+':'+key(skill),gain);effects.push('army '+account+' '+skill+' '+observed+' to '+Math.min(99,target));}
+  }
+  const holdings=(rows:any[])=>rows.reduce((total,row)=>{
+   const id=row?.baseId??row?.id,count=row?.count;
+   if(Number.isSafeInteger(id)&&Number.isSafeInteger(count)&&count>0)total.set(id,(total.get(id)??0)+count);
+   return total;
+  },new Map<number,number>());
+  const bankKnown=own&&fresh(own.bankAt,now)&&own.bankAt<=own.at&&Array.isArray(own.bank);
+  const held=bankKnown?holdings(own.bank):null;
+  for(const [idText,target] of Object.entries(task.accept?.bank??{})){
+   const id=Number(idText);
+   if(!Number.isSafeInteger(id))continue;
+   const lines=goals.collection.missing.filter(line=>line.id===id&&line.consumer.trim()&&line.consumer!=='unresolved named supply'&&line.need>line.owned);
+   if(!lines.length)continue;
+   if(!held){unknown.push(account+' holdings of item '+id);continue;}
+   let available=Math.max(0,target-(held.get(id)??0));
+   for(const line of lines){
+    if((line.verifyOwned??0)>0){unknown.push('previously observed '+line.item+' for '+line.consumer+' before acquisition');continue;}
+    const gain=Math.min(available,line.need-line.owned);
+    if(gain>0){credit('supply:'+line.consumer+':'+id+':'+line.need,gain/line.need);available-=gain;effects.push(gain+' '+line.item+' for '+line.consumer);}
+   }
+  }
+  const skillEffects=Object.entries(task.accept?.skills??{});
+  const prep=(label:string,skill?:string)=>{
+   for(const [name,target] of skillEffects){
+    if(skill&&key(name)!==key(skill))continue;
+    const observed=own?.skills?.find((row:any)=>key(row.name??'')===key(name))?.level;
+    const gain=typeof observed==='number'?Math.max(0,Math.min(99,target)-observed)/98:Math.max(0,Math.min(99,target)-1)/98;
+    if(gain){credit('preparation:'+label+':'+key(account)+':'+key(name),gain);effects.push(label+' '+name+' preparation. Rank remains unproved.');}
+   }
+  };
+  if(task.goal==='main24'&&key(account)==='haggis'&&!goals.main.rank1)prep('main Overall');
+  if(task.goal==='specialists')for(const target of goals.specialists.targets){
+   if(key(target.account)!==key(account)||target.rank1||target.marginTicks===null||target.marginTicks<=0)continue;
+   prep('priced specialist '+target.board,target.board);
+  }
+  return{value:value>0?value:unknown.length?null:0,
+   reason:[...effects,...unknown.map(item=>'Observe '+item+'.')].join(' ')||'The accepted effect does not move an unresolved owner goal.',consumers:[task.id]};
+ };
+ const result=new Map<string,GoalWorkValue>(),dead=deadRoots(state);
+ const open=state.tasks.filter(row=>row.status==='pending'),byId=new Map(open.map(row=>[row.spec.id,row.spec]));
+ const consumers=new Map<string,Map<string,GoalWorkValue>>();
+ for(const row of open){
+  if(row.spec.kind!=='run'||dead.has(row.spec.id))continue;
+  const effect=direct(row.spec),seen=new Set<string>(),visit=[row.spec.id];
+  result.set(row.spec.id,effect);
+  while(visit.length){
+   const id=visit.pop()!,task=byId.get(id);
+   if(!task||seen.has(id))continue;
+   seen.add(id);
+   const inherited=consumers.get(id)??new Map<string,GoalWorkValue>();
+   inherited.set(row.spec.id,effect);consumers.set(id,inherited);
+   visit.push(...task.dependsOn,...provisionRefs(task));
+  }
+ }
+ for(const row of state.tasks){
+  const directEffect=result.get(row.spec.id);
+  const inherited=consumers.get(row.spec.id),terms=new Map<string,number>();
+  for(const id of inherited?.keys()??[])for(const [effect,gain] of termsByTask.get(id)??[])terms.set(effect,Math.max(terms.get(effect)??0,gain));
+  const value=[...terms.values()].reduce((sum,gain)=>sum+gain,0);
+  result.set(row.spec.id,{value:value>0?value:[...(inherited?.values()??[])].some(effect=>effect.value===null)?null:0,
+   reason:inherited?.size===1&&inherited.has(row.spec.id)?directEffect!.reason:inherited?.size?'Supports finite consumers: '+[...inherited.keys()].join(', ')+'. '+[...inherited.values()].map(effect=>effect.reason).join(' '):'No viable pending run connects this task to an owner goal.',
+   consumers:[...(inherited?.keys()??[])].sort()});
+ }
+ return result;
+}
+
+/** Score a rule proposal before its missing source refresh enters the queue with the run. */
+export function ruleGoalValue(state:CoordinatorState,goals:OwnerGoals,statuses:readonly any[],now:number,context:GoalWorkContext={}):(task:CoordTask)=>GoalWorkValue{
+ return task=>{
+  const records=new Map(state.tasks.map(row=>[row.spec.id,row]));
+  const refusal=(reason:string):GoalWorkValue=>({value:0,reason,consumers:[]});
+  if(records.has(task.id))return refusal('The proposed rule task already exists.');
+  const allowed=task.kind==='run'&&task.rule==='next-band'&&task.capability;
+  const dependsOn:string[]=[];
+  for(const id of task.dependsOn){
+   const dependency=records.get(id);
+   if(!dependency&&allowed&&id.startsWith('refresh-'+task.capability+'-'))continue;
+   if(!dependency||dependency.status==='failed'||dependency.status==='superseded')return refusal('The rule requires a viable dependency: '+id+'.');
+   dependsOn.push(id);
+  }
+  const candidate:CoordinatorState={...state,tasks:[...state.tasks,{spec:{...task,dependsOn},status:'pending',createdAt:now,attempts:0}]};
+  return goalWork(candidate,goals,statuses,now,context).get(task.id)??refusal('The rule has no viable goal effect.');
+ };
+}

@@ -66,6 +66,15 @@ test('every fact of the state gets a line',()=>{
     expect(text).toContain('here    master @ abc1234, 0 changed files, 0 behind, 0 ahead of origin/master (fetched 2 min ago), SDK patch applied');
 });
 
+test('the board line reports owner goal gaps instead of a fleet skill maximum',()=>{
+ const s={...state(),scoreboard:{available:true,at:NOW,remaining:[],goals:{version:1,main:{rank:null,gapTicks:8492},specialists:{rank1s:[]},quests:{complete:45,total:68},collection:{scopeKnown:false},army:{maxed:2,roster:['A','B','C']}}}} as unknown as DashState;
+ const line=nowLines(s,local(),NOW).find(row=>row.startsWith('board'))!;
+ expect(line).toContain('Overall rank unknown; launch gap 8492 ticks');
+ expect(line).toContain('quests 45/68');
+ expect(line).toContain('army 2/3 maxed');
+ expect(line).not.toContain('99s');
+});
+
 test('a failed process scan is not read as "no heavy job" or as "controller down"',()=>{
     const text=nowLines(state(),local({procs:null}),NOW).join('\n');
     expect(text).toContain('heavy   not known: the process scan failed. Do not start a heavy job on this line.');

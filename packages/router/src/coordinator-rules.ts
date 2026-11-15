@@ -35,6 +35,8 @@ export interface RuleDeps{
  side:string;
  /** Fleet best of a skill over all sides (scoreboard.json fleetSkills); undefined when the scoreboard cannot be read. */
  fleetBest:(skill:string)=>FleetBest|undefined;
+ /** Goal effect of the proposed next run. When present, fleet maxima are diagnostic only. */
+ goalValue?:(task:CoordTask)=>{value:number|null;reason:string};
  /** Called for a chain the rule leaves because its band cannot raise the board. */
  skipped?:(skip:RuleSkip)=>void;
 }
@@ -105,7 +107,7 @@ export function applyRules(state:CoordinatorState,deps:RuleDeps,now=Date.now()):
   // fleet best, continues.
   const fleet=deps.fleetBest(skill);
   const leader=!!fleet&&fleet.side===deps.side&&fleet.account?.toLowerCase()===account.toLowerCase();
-  if(!fleet||!leader&&next<fleet.best){
+  if(!deps.goalValue&&(!fleet||!leader&&next<fleet.best)){
    deps.skipped?.({capability,account,skill,next,reason:fleet?`fleet best ${skill} ${fleet.best} is held by ${fleet.account} (${fleet.side}); ${account} band to ${next} does not reach it`:`fleet best ${skill} unknown: scoreboard unreadable`});
    continue;
   }
@@ -117,6 +119,11 @@ export function applyRules(state:CoordinatorState,deps:RuleDeps,now=Date.now()):
    priority:spec.priority,estimatedMs:spec.estimatedMs,...(spec.timeoutMs?{timeoutMs:spec.timeoutMs}:{}),
    ...(moved.args?{args:moved.args}:{}),...(moved.env?{env:moved.env}:{}),accept:moved.accept,rule:'next-band',
    why:`Rule next-band: ${last.spec.id} reached ${skill} ${reached} live on ${account} with ${qualification?`qualification ${qualifyId} at the current source`:`refresh qualify ${qualifyId} for the current source`} and an approved review. This run takes ${skill} to ${next} with the same worker inputs and budgets. Consumer: the ${skill} board entry for ${account}; the next band follows by the same rule.`};
+  if(deps.goalValue){
+   const effect=deps.goalValue(task);
+   if(effect.value===null||effect.value<=0){deps.skipped?.({capability,account,skill,next,reason:effect.reason});continue;}
+   task.why=`Rule next-band: ${effect.reason} Qualified worker ${capability} takes ${account} from ${skill} ${reached} to ${next}.`;
+  }
   const batch:CoordTask[]=qualification||refresh?[task]:[{id:refreshId,goal:spec.goal,kind:'qualify',capability,dependsOn:[],priority:15,estimatedMs:240000,
    why:`Refresh current source for the rule next-band run ${id}`},task];
   // One capability's invalid output must not stop the rules for the others.

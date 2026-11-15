@@ -27,7 +27,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -264,6 +264,19 @@ export function stopClearable(status: any, now: number): boolean {
     return !status || !!status.result || !(Number.isFinite(status.at) && now - status.at < OFFLINE_STATUS_MS);
 }
 
+// Recent session telemetry may keep an existing job through consumed kit. It grants no new launch authority.
+export function runningAssignments(jobs:readonly any[],observed:(account:string)=>any,now:number):Set<string>{
+    return new Set(jobs.flatMap(job=>{
+        if(job?.enabled===false||typeof job?.account!=='string'||typeof job?.script!=='string'||!job.template)return[];
+        const status=observed(job.account);
+        if(status?.name?.toLowerCase()!==job.account.toLowerCase()||status.practice||status.server!=='rs-sdk-demo.fly.dev'
+            ||!Number.isFinite(status.at)||status.at<=0||status.at>now||stopClearable(status,now)
+            ||typeof status.sessionAttemptId!=='string'||!status.sessionAttemptId
+            ||typeof status.workEntry!=='string'||!status.workEntry.split(',').includes(job.script))return[];
+        return[job.account.toLowerCase()];
+    }));
+}
+
 // The planner's reach rule reads where an account stands. That place is known only while the account is offline: a
 // live session (stopClearable) is on its way, so its account goes to the planner with no place and keeps its job.
 export function offlinePlace(a: Acct, status: any, now: number): Acct {
@@ -452,12 +465,12 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
         && !(now - (state.unsold?.[i.id] ?? -Infinity) < UNSOLD_RETRY_MS))
         market[norm(i.name)] = { id: i.id, name: i.name, limit: KIT_PRICE_CAPS[norm(i.name)]! };
-    // This side's banked coins, over every account it owns: above the glut level a coin job ranks last.
-    const sideCoins = listed.filter(n => owners.get(n.toLowerCase())?.side === side).reduce((n, name) => n + (accountFrom(name, side, observed(name), id => byId.get(id)).items.coin ?? 0), 0);
-    const coinValue = coinValueFor(sideCoins);
-    if (coinValue !== 1) log.push(`AUTOPILOT coins: this side holds ${sideCoins}, so a coin counts as ${coinValue}`);
+    // Finite funding uses each recipient's own coins and accessible donor surplus.
+    // Protected, paused and busy accounts do not supply a shared cash budget.
+    // Coins fund finite route and army acquisition demand.
+    log.push('AUTOPILOT finite route and army demand');
     const bill = routeBill(items);
-    const planned = plan({ side, accounts, owners, coinValue, bill, templates: catalogue(), prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates: catalogue(), prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const funding = fundOrders(planned, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined),

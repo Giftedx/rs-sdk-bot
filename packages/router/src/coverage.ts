@@ -11,6 +11,7 @@ import { parseConfigs } from '../../knowledge/src/config';
 import { QUEST_SOURCE } from '../../core/src/quest-status';
 import { mySide } from '../../core/src/fleet';
 import { canonicalSnapshots, fleetStatusRows, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
+import { buildOwnerGoals, type OwnerGoals } from './goal-scoreboard';
 
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'] as const;
 export const BANDS = [[1, 40], [40, 70], [70, 99]] as const;
@@ -223,7 +224,8 @@ export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'
     // Ownership chooses the observation before age is considered. An expired owner row must not promote a
     // former side's copy. Local durable achievements remain usable; equal-time rows prefer the local input.
     const selectedLocally = (row: any) => row.side === side && local.some(s => s.name.toLowerCase() === row.name.toLowerCase() && s.at === row.at);
-    const rows = fleetStatusRows(local, validFiles, ownerOf, side).filter(r => r.name.toLowerCase() !== 'haggis'
+    const canonical = fleetStatusRows(local, validFiles, ownerOf, side);
+    const rows = canonical.filter(r => r.name.toLowerCase() !== 'haggis'
         && (selectedLocally(r) || recentObservation(r.at, now, SNAPSHOT_MAX_AGE_MS)));
     const statuses = rows.map(coverageStatus);
     const localStatuses = rows.filter(r => r.side === side).map(coverageStatus);
@@ -245,35 +247,33 @@ export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'
         skills: skillBands(statuses), quests: questStages(statuses, practicePass, scriptFolders, quests), domains, statuses: statuses.length,
         fleetSkills: fleetSkills(localStatuses, otherStatuses, side),
         fleet: { side, sides: [...new Set([side, ...rows.map(a => a.side)])].sort(), sharedAccounts: otherStatuses.length, stale: shared.stale, questsUnknown: [...new Set(rows.filter(a => !Array.isArray(a.quests) && !Array.isArray(a.questJournal)).map(a => a.side))].sort() } };
-    const full = { ...board, progress: progressOf(board) };
+    const goals = buildOwnerGoals({ root, now, statuses: canonical, questNames: quests.filter(q => q.questPoints > 0 && q.name).map(q => q.name!), fleetDir });
+    const full = { ...board, goals, progress: progressOf({ ...board, goals }) };
     writeFileSync(join(root, '.practice', 'coordinator', 'scoreboard.json'), JSON.stringify(full, null, 1) + '\n');
     return full;
 }
 
 // The numbers that must rise while work is useful, and the end condition of the whole project. Boards are tracked by
 // the plan's scoreboard; this covers the game itself.
-export interface Progress { skillLevels: number; skills99: number; questsLive: number; questTotal: number; itemsHeld: number; actionsNamed: number; done: boolean; remaining: string[] }
-export function progressOf(b: { skills: { skill: string; bestLive: number }[]; quests: { liveComplete: string[]; folders: { qp: number }[] }; items: { held: number; tradeable: number; tradeableHeld: number }; totals: { actions: number; actionsNamed: number } }): Progress {
+export interface Progress { skillLevels: number; skills99: number; questsLive: number; questTotal: number; itemsHeld: number; actionsNamed: number; goalVersion?: 1; goalMetrics?: Record<string,number>; done: boolean; remaining: string[] }
+export function progressOf(b: { skills: { skill: string; bestLive: number }[]; quests: { liveComplete: string[]; folders: { qp: number }[] }; items: { held: number; tradeable: number; tradeableHeld: number }; totals: { actions: number; actionsNamed: number }; goals?: OwnerGoals }): Progress {
     const questTotal = b.quests.folders.filter(f => f.qp > 0).length;
-    const remaining = [
-        ...b.skills.filter(s => s.bestLive < 99).map(s => `${s.skill} ${s.bestLive}/99`),
-        ...(b.quests.liveComplete.length < questTotal ? [`quests ${b.quests.liveComplete.length}/${questTotal} live`] : []),
-        ...(b.items.tradeableHeld < b.items.tradeable ? [`tradeable items ${b.items.tradeableHeld}/${b.items.tradeable} held`] : []),
-        ...(b.totals.actionsNamed < b.totals.actions ? [`actions ${b.totals.actionsNamed}/${b.totals.actions} named`] : []),
-    ];
+    const remaining = b.goals?.remaining ?? ['Owner goal observations unavailable'];
     return { skillLevels: b.skills.reduce((n, s) => n + s.bestLive, 0), skills99: b.skills.filter(s => s.bestLive >= 99).length,
-        questsLive: b.quests.liveComplete.length, questTotal, itemsHeld: b.items.held, actionsNamed: b.totals.actionsNamed, done: remaining.length === 0, remaining };
+        questsLive: b.quests.liveComplete.length, questTotal, itemsHeld: b.items.held, actionsNamed: b.totals.actionsNamed,
+        ...(b.goals ? {goalVersion: 1 as const, goalMetrics: b.goals.metrics} : {}), done: b.goals?.done === true, remaining };
 }
 // Work moved the game forward when any progress number rose.
 export function improved(before: Progress, after: Progress): boolean {
-    return after.skillLevels > before.skillLevels || after.skills99 > before.skills99 || after.questsLive > before.questsLive
-        || after.itemsHeld > before.itemsHeld || after.actionsNamed > before.actionsNamed;
+    if(before.goalVersion !== 1 || after.goalVersion !== 1) return false;
+    return Object.entries(after.goalMetrics ?? {}).some(([key,value]) => Number.isFinite(value)
+        && Number.isFinite(before.goalMetrics?.[key]) && value > before.goalMetrics![key]!);
 }
 
 // Rebuilt when older than maxAgeMs; the planner reads it every round.
 export function freshScoreboard(root: string, maxAgeMs = 600_000) {
     const file = join(root, '.practice', 'coordinator', 'scoreboard.json');
-    try { if (Date.now() - statSync(file).mtimeMs < maxAgeMs) return JSON.parse(readFileSync(file, 'utf8')); } catch { /* rebuild */ }
+    try { if (Date.now() - statSync(file).mtimeMs < maxAgeMs) { const saved=JSON.parse(readFileSync(file, 'utf8')); if(saved.goals?.version===1) return saved; } } catch { /* rebuild */ }
     return buildScoreboard(root);
 }
 
