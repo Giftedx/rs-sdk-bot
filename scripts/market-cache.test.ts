@@ -67,17 +67,17 @@ async function renameFailureCase(code:string,failures:number){
             const fs=await import('node:fs'),root=${JSON.stringify(root)},file=join(root,'.practice','market-all.json');
             const previous={at:1000,items:{1:{name:'Old',price:4,bid:3,ask:5,trades:3,sell:2}}};
             fs.mkdirSync(join(root,'.practice'));fs.writeFileSync(file,JSON.stringify(previous));
-            let attempts=0;const observed=[],rename=fs.renameSync;
+            let attempts=0,injected=0;const observed=[],nativeErrors=[],rename=fs.renameSync;
             mock.module('node:fs',()=>({...fs,renameSync:(from,to)=>{
                 attempts++;observed.push(JSON.parse(fs.readFileSync(file,'utf8')));
-                if(attempts<=${failures})throw Object.assign(Error('fixture replacement refused'),{code:${JSON.stringify(code)}});
-                rename(from,to);
+                if(injected<${failures}){injected++;throw Object.assign(Error('fixture replacement refused'),{code:${JSON.stringify(code)}});}
+                try{rename(from,to);}catch(failure){nativeErrors.push(failure.code);throw failure;}
             }}));
             const {writeMarketCache}=await import(${JSON.stringify(source)});
             let error=null;
             try{writeMarketCache(root,{2:{name:'New',price:7,bid:6,ask:8,trades:3,sell:9}},2000);}
             catch(failure){error={code:failure.code,message:failure.message};}
-            process.stdout.write(JSON.stringify({attempts,observed,error,cache:JSON.parse(fs.readFileSync(file,'utf8')),files:fs.readdirSync(join(root,'.practice'))}));
+            process.stdout.write(JSON.stringify({attempts,injected,nativeErrors,observed,error,cache:JSON.parse(fs.readFileSync(file,'utf8')),files:fs.readdirSync(join(root,'.practice'))}));
         `],{stdout:'pipe',stderr:'pipe',windowsHide:true,timeout:5000});
         const [stdout,stderr,exitCode]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
         expect(exitCode).toBe(0);
@@ -89,8 +89,11 @@ async function renameFailureCase(code:string,failures:number){
 for(const code of ['EPERM','EBUSY','EACCES'])test(`market publication preserves its prior snapshot while retrying ${code}`,async()=>{
     const result=await renameFailureCase(code,2);
     expect(result.error).toBeNull();
-    expect(result.attempts).toBe(3);
-    expect(result.observed).toEqual(Array.from({length:3},()=>({at:1000,items:{1:{name:'Old',price:4,bid:3,ask:5,trades:3,sell:2}}})));
+    expect(result.injected).toBe(2);
+    expect(result.attempts).toBe(result.injected+result.nativeErrors.length+1);
+    expect(result.attempts).toBeLessThanOrEqual(21);
+    for(const code of result.nativeErrors)expect(['EPERM','EBUSY','EACCES']).toContain(code);
+    expect(result.observed).toEqual(Array.from({length:result.attempts},()=>({at:1000,items:{1:{name:'Old',price:4,bid:3,ask:5,trades:3,sell:2}}})));
     expect(result.cache).toEqual({at:2000,items:{2:{name:'New',price:7,bid:6,ask:8,trades:3,sell:9}}});
     expect(result.files).toEqual(['market-all.json']);
 });
