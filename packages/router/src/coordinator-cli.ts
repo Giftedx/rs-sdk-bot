@@ -9,7 +9,7 @@ import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHol
 import {planWork,prepareProposal,readPlannerControllerCapacity} from './coordinator-planner';
 import {executeTask,provisionParticipantHold} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
-import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs,recoveryWaitsForMemory,liveAccountWait} from './coordinator-live';
+import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs,recoveryWaitsForMemory,liveAccountWait,ordinaryRunWaitsForMemory,validLiveMemoryWait} from './coordinator-live';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
@@ -112,7 +112,8 @@ export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string
     &&Number.isFinite(result.at)&&result.at>=(record.startedAt??Infinity)&&result.output?.ok===false&&result.output.evidence==='live-deferred'&&result.output.installed===false
     &&typeof wait?.account==='string'&&(boundAccounts(record.spec,state)??[]).some(n=>n.toLowerCase()===wait.account.toLowerCase())
     &&(wait.reason==='active-session'&&attempt(wait.attemptId)&&pid(wait.pid)
-     ||wait.reason==='autopilot-assignment'&&(wait.attemptId===null||attempt(wait.attemptId))&&(wait.pid===null||pid(wait.pid)))){
+     ||wait.reason==='autopilot-assignment'&&(wait.attemptId===null||attempt(wait.attemptId))&&(wait.pid===null||pid(wait.pid))
+     ||validLiveMemoryWait(wait,boundAccounts(record.spec,state)??[]))){
     const runId=record.runId;record.status='pending';delete record.runId;delete record.startedAt;delete record.pid;delete record.receipt;
     state.sequence++;event('task-deferred',{id:record.spec.id,runId,wait,receipt},directory);continue;
    }
@@ -411,7 +412,7 @@ async function tick(state:CoordinatorState,config:any){
  const sourceOf=(cap:string)=>{if(!sources.has(cap)){let s:string|null=null;try{s=deliveryFingerprint(deliveryTask(cap));}catch{/* no source now: hold */}sources.set(cap,s);}return sources.get(cap)!;};
  const staleRun=(task:CoordTask)=>task.kind==='run'&&!!task.capability&&needsFreshQualification(task,new Map(state.tasks.map(r=>[r.spec.id,r])),sourceOf(task.capability));
  const liveRunHeld=(task:CoordTask)=>runHeld(task)||recoveryWaitsForMemory(task,capacity)||staleRun(task)||recoverySlotBusy(task,state.tasks)
-  ||liveAccountWait(task,boundAccounts(task,state)??[])!==null;
+  ||liveAccountWait(task,boundAccounts(task,state)??[])!==null||ordinaryRunWaitsForMemory(task,state,capacity,freemem()/2**30);
  let goalValues:ReturnType<typeof goalWork>=new Map();
  try{
   const observedAt=Date.now(),board=freshScoreboard(projectRoot);

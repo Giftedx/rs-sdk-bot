@@ -12,7 +12,7 @@ import {loadOwners} from '../../core/src/fleet';
 import {cachedLaunchRevision,cachedReleaseFor,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
-import {acceptStatus,boundedWorkerEndMessage,type CoordTask} from './coordinator';
+import {acceptStatus,boundedWorkerEndMessage,boundAccounts,type CoordTask,type CoordinatorState} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
@@ -232,8 +232,40 @@ function settledAutopilotJob(job:any,account:string,base:string):boolean{
   &&Number.isFinite(status.at)&&status.at>=status.started&&status.at<=end.at;
 }
 export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment';attemptId:string|null;pid:number|null};
+type MemoryCapacity=Parameters<typeof admissionDecision>[0];
+type LiveMemoryWait={account:string;reason:'memory';capacity:MemoryCapacity};
+type LiveWait=LiveAccountWait|LiveMemoryWait;
+const ordinaryDeferrable=(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>)=>task.kind==='run'&&!task.sessionRecovery&&!task.repairs?.length&&(!task.launch||task.launch==='ordinary');
+export function validLiveMemoryWait(wait:any,accounts:readonly string[]):boolean{
+ const v=wait?.capacity,reserve=startReserve({host:false,job:{script:'',enabled:true,orchestrate:accounts.length>1}},accounts.length);
+ return wait?.reason==='memory'&&accounts.length>0&&wait.account?.toLowerCase()===accounts[0]!.toLowerCase()&&!!v
+  &&['running','external','starting','startingReserve','pending','maxBots'].every(k=>Number.isSafeInteger(v[k])&&v[k]>=0)
+  &&['freeGB','minFreeGB'].every(k=>typeof v[k]==='number'&&Number.isFinite(v[k])&&v[k]>=0)
+  &&v.starting===accounts.length&&v.startingReserve===reserve&&admissionDecision(v).reason==='memory';
+}
+type DispatchCapacity={at:number;running:number|null;externalRunning:number|null;pendingStartup:number|null;pendingReserveGB?:number|null;freeGB:number|null;minFreeGB:number|null;maxBots:number|null};
+export function ordinaryRunWaitsForMemory(task:CoordTask,state:CoordinatorState,capacity:DispatchCapacity|null,freeGB:number,base=projectRoot):boolean{
+ if(!ordinaryDeferrable(task))return false;
+ if(!capacity||[capacity.at,capacity.running,capacity.externalRunning,capacity.pendingStartup,capacity.freeGB,capacity.minFreeGB,capacity.maxBots,freeGB].some(v=>v===null||!Number.isFinite(v)||v<0))return true;
+ if(capacity.pendingReserveGB!=null&&(!Number.isFinite(capacity.pendingReserveGB)||capacity.pendingReserveGB<0))return true;
+ const names=boundAccounts(task,state);if(!names?.length)return true;
+ let jobs:any[]=[],runs:any[]=[];
+ try{jobs=readCoordinatorJobs(base).jobs;const saved=JSON.parse(readFileSync(join(base,'.practice/swarm-runs.json'),'utf8'));if(Array.isArray(saved))runs=saved;}catch{/* unseen children retain their reservation */}
+ let slots=0,reserve=0;
+ for(const record of state.tasks.filter(r=>r.status==='running'&&r.spec.kind==='run'&&!r.spec.sessionRecovery)){
+  const accounts=boundAccounts(record.spec,state);if(!accounts?.length)return true;
+  const job=jobs.find(j=>j.coordinatorOwner==='coordinator'&&j.coordinatorTask===record.spec.id&&j.env?.COORDINATOR_RUN_ID===record.runId);
+  // The snapshot already counts a registered run. Children not yet represented still need their startup heap.
+  const counted=job&&runs.some(r=>Number.isFinite(r.started)&&r.started<=capacity.at&&r.revision===missionSignature(job)
+   &&Array.isArray(r.accounts)&&r.accounts.length===accounts.length&&accounts.every(n=>r.accounts.some((a:string)=>a.toLowerCase()===n.toLowerCase())));
+  if(!counted){slots+=accounts.length;reserve+=startReserve({host:false,job:{script:'',enabled:true,orchestrate:accounts.length>1}},accounts.length);}
+ }
+ return !admissionDecision({running:capacity.running!+slots,external:capacity.externalRunning!,pending:(capacity.pendingReserveGB??capacity.pendingStartup!)+reserve,
+  starting:names.length,startingReserve:startReserve({host:false,job:{script:'',enabled:true,orchestrate:names.length>1}},names.length),
+  freeGB:Math.min(freeGB,capacity.freeGB!),minFreeGB:capacity.minFreeGB!,maxBots:capacity.maxBots!}).allowed;
+}
 export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>,accounts:readonly string[],base=projectRoot,alive=pidAlive):LiveAccountWait|null{
- if(task.kind!=='run'||task.sessionRecovery||task.repairs?.length||task.launch&&task.launch!=='ordinary')return null;
+ if(!ordinaryDeferrable(task))return null;
  const root=join(base,'.practice/session-lifecycle');
  for(const account of accounts){
   const proof=readLogoutProof(account,LIVE_SERVER,{root});
@@ -248,9 +280,9 @@ export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'re
  }
  return null;
 }
-const deferredLiveAccount=(wait:LiveAccountWait)=>({ok:false,evidence:'live-deferred',installed:false,liveDeferred:wait});
+const deferredLiveAccount=(wait:LiveWait)=>({ok:false,evidence:'live-deferred',installed:false,liveDeferred:wait});
 class LiveAccountWaitError extends Error{
- constructor(readonly wait:LiveAccountWait){super('live account ownership deferred: '+wait.account+' '+wait.reason);}
+ constructor(readonly wait:LiveWait){super(wait.reason==='memory'?'live admission waiting: memory':'live account ownership deferred: '+wait.account+' '+wait.reason);}
 }
 export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly string[],base=projectRoot):CoordinatorJobs{
  const wanted=new Set(accounts.map(n=>n.toLowerCase()));
@@ -409,7 +441,9 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  }
  const goal=`${task.id} [${runId}]`,job={...(accounts.length>1?{accounts,orchestrate:true}:{account}),args:task.args??[],maxRestarts:0,script,role:task.role??existing?.role??'helper',goal,enabled:true,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:task.id,
   env:{...task.env,CAP:task.env?.CAP??'1600',COORDINATOR_RUN_ID:runId,...(task.launch==='main'?{HAGGIS_RUN:'1'}:{})}};
- const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:startReserve({host:false,job},accounts.length),pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
+ const capacity={running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:startReserve({host:false,job},accounts.length),pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots};
+ const decision=admissionDecision(capacity);
+ if(decision.reason==='memory'&&ordinaryDeferrable(task))throw new LiveAccountWaitError({account,reason:'memory',capacity});
  if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
  const revision=missionSignature(job);
  let specialist;

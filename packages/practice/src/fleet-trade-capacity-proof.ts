@@ -78,6 +78,7 @@ export async function runFleetTradeCapacity(directory:string){
    const budget=Math.min(60000,deadline-Date.now()-20000);
    if(budget<1)throw Error('native helper work budget exhausted');
    const child=Bun.spawn({...coinChildConfiguration(args,{STALL_TICKS:'0',RANDOM_EVENTS:'0'},endpoints),
+    windowsHide:true,
     stdout:Bun.file(join(directory,label+'.log')),stderr:Bun.file(join(directory,label+'.err'))});
    let timedOut=false;
    const timer=setTimeout(()=>{timedOut=true;void killTree(child.pid);},budget);

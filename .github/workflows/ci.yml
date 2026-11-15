@@ -1,7 +1,7 @@
 name: CI
 # The local gate proves a change: `bun scripts/ci-gate.ts --post` runs the check steps below on the PC and posts the
 # `local-gate` status on HEAD. This hosted workflow uses standard runners, which cost no minutes on a public
-# repository. Nothing starts it but a person: the Actions tab, or `gh workflow run CI --ref <branch>`.
+# repository. Dispatch it through the Actions tab or `gh workflow run CI --ref <branch>`.
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +10,11 @@ on:
         type: boolean
         required: false
         default: false
+      native_quest:
+        description: Include the complete quest delivery in native practice
+        type: boolean
+        required: false
+        default: true
 permissions:
   contents: read
 jobs:
@@ -81,6 +86,7 @@ jobs:
           bun run build
       - name: Qualify both Scorpion combat cases and refusal
         id: quest
+        if: inputs.native_quest
         timeout-minutes: 35
         run: bun packages/router/src/delivery-cli.ts quest-sweep
       - name: Prove full-pack fleet receiver capacity
