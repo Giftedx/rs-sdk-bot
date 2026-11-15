@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794776453967-bigpackage-mmsmk1232-firerune",
+ "account": "Bigpackage",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "b726a41f-20f8-4aa4-8f4a-71fb7e7de76d",
+ "count": 0,
+ "ok": false,
+ "at": 1794776460614,
+ "detail": "trade claimed"
+}
