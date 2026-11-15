@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794700904757,
+ "at": 1794702139703,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -115,25 +115,6 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
@@ -149,7 +130,7 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
+   "account": "BowBeforeMe",
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
@@ -169,6 +150,25 @@
    "autopilot": "local",
    "resources": [
     "aio:ardougne-blood-chests"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
    ]
   },
   {
