@@ -984,8 +984,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // While it runs, a restarted dispatcher observes the inherited child, refuses a newer intent and the old bytes.
   {
    const T=await fixture(RELAY,preset),d1=dispatcher(RELAY);relay.set('stall');
-   const h=await held('timeout',T,d1),dir=h.dir,childPid=h.sub.child;
-   const until=Date.now()+30000;while(Date.now()<until&&!listAttempts(T.name,T.server,{root:lifeRoot}).some(a=>a.receipt?.owner.pid===childPid))await Bun.sleep(100);
+   // Relay acceptance follows producer publication. Do not replace the lease while the real child still loads.
+   const h=await afterStalledConnection(relay.stalled,()=>held('timeout',T,d1),120000),dir=h.dir,childPid=h.sub.child;
    // held() waited for this case. The held lease refuses the newer request before admission, and a second wait could
    // outlast the stalled child that this case observes.
    const late=caseDir('restart-late-callback'),d2=dispatcher(RELAY),inherited=heldRecoveryOwners(base);
