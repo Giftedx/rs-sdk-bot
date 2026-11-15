@@ -30,6 +30,80 @@ type DialogueClickSdk = {
 export function clickDialoguePage(sdk: DialogueClickSdk, option?: { text: string }): Promise<{ success: boolean; message?: string }> {
     return option ? sdk.clickDialogByText(option.text) : sdk.sendClickDialog(0);
 }
+type DialogueOption = { text: string; componentId?: number; buttonType?: number };
+// One dialogue page: the SDK state, or the page that the live client holds.
+export type DialoguePage = { isOpen: boolean; isWaiting: boolean; options: readonly DialogueOption[] };
+const pageKey = (p: DialoguePage): string =>
+    p.isOpen ? JSON.stringify([p.isWaiting, p.options.map(o => [o.text, o.componentId ?? null, o.buttonType ?? null])]) : 'closed';
+// The SDK state can be a tick behind the client. Client.clickDialogOption reads the client: it refuses a continue
+// after the server closed the chat (seer.rs2 seer_looking_glass: if_close, then three p_delay(3)) or while an
+// earlier continue waits for its next page (resumedPauseButton).
+export const liveDialoguePage = (client: any): DialoguePage | undefined => {
+    if (!client || typeof client.chatModalId !== 'number') return undefined;
+    const isOpen = client.chatModalId !== -1;
+    return { isOpen, isWaiting: !!client.resumedPauseButton, options: isOpen ? client.getDialogOptions?.() ?? [] : [] };
+};
+// Why the live page differs from the page that a refused click answered, or undefined for the same page.
+export const dialogueTransition = (clicked: DialoguePage, live: DialoguePage | undefined): string | undefined => {
+    if (!live) return undefined;
+    if (!live.isOpen) return 'closed';
+    if (live.isWaiting) return 'waiting';
+    return pageKey(live) !== pageKey(clicked) ? 'new page' : undefined;
+};
+// Refused clicks that an observed transition can excuse in one conversation.
+export const MAX_DIALOGUE_TRANSITIONS = 6;
+export type ConverseIO = {
+    tick(): number;
+    stopped(): boolean;
+    guard(): Promise<void>;
+    dialog(): any;
+    live(): DialoguePage | undefined;
+    click(option?: { text: string }): Promise<{ success: boolean; message?: string }>;
+    wait(): Promise<void>;
+    fail(why: string): Promise<never>;
+    log(line: string): void;
+    // True while a sent plan drains: the SDK can show a page that the plan has answered.
+    planGrace(): boolean;
+    // True when it answered the page itself (Q_BURST continues).
+    burst?(option: DialogueOption | undefined, choice: boolean): boolean;
+    clicked?(dialog: any, option: DialogueOption | undefined, choice: boolean): void;
+};
+// One dialog page per tick: the first option matching a pattern, else "continue". Stops when ok() holds.
+export async function converseDialogue(io: ConverseIO, pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> {
+    const deadline = io.tick() + maxTicks;
+    let transitions = 0;
+    while (io.tick() < deadline && !io.stopped()) {
+        await io.guard();
+        if (ok()) return true;
+        const d: any = io.dialog();
+        if (d?.isOpen && !d.isWaiting) {
+            const options: DialogueOption[] = d.options ?? [];
+            const opt = options.find(o => pats.some(re => re.test(o.text)));
+            const choice = options.some(o => !/click here to continue/i.test(o.text));
+            if (choice && !opt) io.log(`WARN no option match: ${options.map(o => o.text).join(' | ')}`);
+            const beforeClick = io.tick();
+            if (io.burst?.(opt, choice)) { await io.wait(); continue; }
+            const reply = await io.click(opt);
+            if (!reply.success) {
+                if (io.planGrace()) { await io.wait(); continue; }
+                const live = io.live();
+                const moved = dialogueTransition({ isOpen: true, isWaiting: false, options }, live);
+                const what = opt ? `option "${opt.text}"` : 'continue';
+                if (moved && transitions < MAX_DIALOGUE_TRANSITIONS) {
+                    transitions++;
+                    io.log(`NOTE dialogue ${what} refused (${reply.message ?? ''}): live page ${moved}, wait ${transitions}/${MAX_DIALOGUE_TRANSITIONS}`);
+                    await io.wait(); continue;
+                }
+                const flags = live ? `open=${live.isOpen} waiting=${live.isWaiting}${moved ? ` ${moved} after ${transitions} waits` : ' same page'}` : 'unobserved';
+                await io.fail(`dialogue click refused: ${reply.message} (${what}; options ${JSON.stringify(options.map(o => o.text))}; live ${flags})`);
+            }
+            io.clicked?.(d, opt, choice);
+            if (io.tick() !== beforeClick) continue;
+        }
+        await io.wait();
+    }
+    return ok();
+}
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
@@ -404,36 +478,27 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // The clicks of the talk under record, or null.
     let recording: PlanToken[] | null = null;
     const plannedLabels = new Set<string>();
-    // One dialog page per tick: the first option matching a pattern, else "continue". Stops when ok() holds.
-    const converse = async (pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> => {
-        const deadline=s.tick()+maxTicks;
-        while (s.tick()<deadline && !stats.died) {
-            await guard('dialogue');
-            if (ok()) return true;
-            const d: any = s.sdk.getDialog();
-            if (d?.isOpen && !d.isWaiting) {
-                const opt = (d.options ?? []).find((o: any) => pats.some(re => re.test(o.text)));
-                if ((d.options ?? []).some((o: any) => !/click here to continue/i.test(o.text)) && !opt) console.log(`WARN no option match: ${(d.options ?? []).map((o: any) => o.text).join(' | ')}`);
-                const beforeClick=s.tick();
-                // Q_BURST=1 sends 5 blind continues on a page with no choice (the USER_EVENT cap).
-                // ResumePauseButtonHandler.ts refuses a continue while a choice is pending, so a choice is never skipped.
-                const choice=(d.options ?? []).some((o: any) => !/click here to continue/i.test(o.text));
-                const c:any=(s as any).client;
-                if(BURST&&!opt&&!choice&&c&&c.chatModalId!==-1){
-                    for(let k=0;k<5;k++){c.writeOpcode(RESUME);c.out.p2(c.chatModalId);}
-                    c.flush?.();bursts++;answeredSeq=textSeq;
-                    await waitTicks(s,1);continue;
-                }
-                const reply=await clickDialoguePage(s.sdk, opt);
-                if(!reply.success){if(s.tick()-planSentAt<=8){await waitTicks(s,1);continue;}await fail(`dialogue click refused: ${reply.message}`);}
-                // A choice records its component; a choice with no component ends the record for this talk.
-                if(recording){const clicked=choice?(opt??d.options[0])?.componentId:'R';if(clicked===undefined)recording=null;else recording.push(clicked);}
-                if(s.tick()!==beforeClick)continue;
-            }
-            await waitTicks(s, 1);
-        }
-        return ok();
-    };
+    const converse = (pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> => converseDialogue({
+        tick: () => s.tick(), stopped: () => stats.died, guard: () => guard('dialogue'),
+        dialog: () => s.sdk.getDialog(), live: () => liveDialoguePage((s as any).client),
+        click: opt => clickDialoguePage(s.sdk, opt), wait: () => waitTicks(s, 1), fail, log: line => console.log(line),
+        planGrace: () => s.tick() - planSentAt <= 8,
+        // Q_BURST=1 sends 5 blind continues on a page with no choice (the USER_EVENT cap).
+        // ResumePauseButtonHandler.ts refuses a continue while a choice is pending, so a choice is never skipped.
+        burst: (opt, choice) => {
+            const c: any = (s as any).client;
+            if (!(BURST && !opt && !choice && c && c.chatModalId !== -1)) return false;
+            for (let k = 0; k < 5; k++) { c.writeOpcode(RESUME); c.out.p2(c.chatModalId); }
+            c.flush?.(); bursts++; answeredSeq = textSeq;
+            return true;
+        },
+        // A choice records its component; a choice with no component ends the record for this talk.
+        clicked: (d, opt, choice) => {
+            if (!recording) return;
+            const id = choice ? (opt ?? d.options[0])?.componentId : 'R';
+            if (id === undefined) recording = null; else recording.push(id);
+        },
+    }, pats, ok, maxTicks);
 
     // A planned conversation, adapted from TestingPurposes/rs-stun-toolkit q-lib.ts `talk` (MIT). The whole token list
     // leaves in one write on the tick the first page shows: 'R' continues a page, a number clicks that choice
