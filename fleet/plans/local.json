@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794709137097,
+ "at": 1794709907414,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -112,25 +112,6 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
@@ -150,6 +131,25 @@
    "autopilot": "local",
    "resources": [
     "aio:ardougne-blood-chests"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
    ]
   },
   {
@@ -173,22 +173,21 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "pen:3017,3288"
+    "knight:2653,3300"
    ]
   },
   {
