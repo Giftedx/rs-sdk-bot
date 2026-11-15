@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794716146925-masterbaiter-wandwaver-staffoffire",
+ "account": "Wandwaver",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "71da86b7-8ef6-437e-bcf5-572b6ca24c49",
+ "count": 1,
+ "ok": true,
+ "at": 1794716194216,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794716193516
+ },
+ "logout": {
+  "attemptId": "1794716152938-0000020104-0000000001",
+  "at": 1794716194205,
+  "sha256": "54482f9ad9dfd07eefd7023fd92817193ad709595359646628b47d03a58d0973"
+ },
+ "screen": true
+}
