@@ -2,6 +2,13 @@ import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {levelForXp} from '../packages/planner/src/curve';
 
+// Keep fixture deadlines on the async event loop, away from Bun's cached Windows sync-spawn clock.
+async function fixtureChild(code:string,timeout:number){
+ const child=Bun.spawn([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout});
+ const [stdout,stderr,exitCode]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
+ return {stdout,stderr,exitCode};
+}
+
 test('packet refresh skips unchanged polls but observes packets, local mutations and resets',async()=>{
  const {createRuneTradeRefresh}=await import('./rune-carrier-trade');
  let scans=0;const actor:any={client:{packetsReceived:10},sdk:{scanGroundItems:async()=>{scans++;}}};
@@ -36,19 +43,19 @@ test('confirmation mode is explicit and rejects unknown controls',async()=>{
  expect(runeConfirmation('observed')).toBe('observed');expect(runeConfirmation('causal')).toBe('causal');expect(()=>runeConfirmation('optimistic')).toThrow('RUNE_CONFIRM_AFTER');
 });
 
-test('packet-gated transfer reads an incoming request between game ticks',()=>{
+test('packet-gated transfer reads an incoming request between game ticks',async()=>{
  const code=`import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_TRADE_REFRESH='packets';
  let response=-1,scans=0,raw=[];const start=performance.now(),s={name:'Crafter',messages:[],client:{packetsReceived:1}},h={name:'Carrier',messages:[],client:{packetsReceived:1}};
  for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>0;a.direct=async()=>{if(a===h)setTimeout(()=>{s.client.packetsReceived++;raw=[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1}]},35);else response=performance.now()-start;return{success:true}};
  a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],getState:()=>({trade:{isOpen:false},gameMessages:a.messages,nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{scans++;if(a===s)a.messages=[...raw]}};}
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>new Promise(()=>{})}));
  const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>response>=0||performance.now()-start>350)}catch{}console.log(JSON.stringify({response,scans}));`;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:2000});
+ const child=await fixtureChild(code,2000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
  expect(r.response).toBeGreaterThanOrEqual(35);expect(r.response).toBeLessThan(350);expect(r.scans).toBeLessThanOrEqual(6);
 });
 
-test('causal confirmation reaches the server before confirmation publication and falls back after an invisible click',()=>{
+test('causal confirmation reaches the server before confirmation publication and falls back after an invisible click',async()=>{
  for(const order of ['receiver','helper'])for(const quota of [1,5])for(const mode of ['observed','causal']){
   const code=`import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_CONFIRM_AFTER='${mode}';
   let tick=0,pending,settled=false,offered=false,early=0,ignored=0;const queues=[[],[]],server=[{screen:'offer',accepted:false},{screen:'offer',accepted:false}],cache=[];
@@ -61,13 +68,13 @@ test('causal confirmation reaches the server before confirmation publication and
    if(settled||server[0].screen==='offer'||tick%2===0)publish();};
   mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{if(!pending)pending=new Promise(r=>queueMicrotask(()=>{advance();pending=undefined;r();}));return pending;}}));
   const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(actors[0],actors[1]);}catch(e){error=String(e)}console.log(JSON.stringify({error,early,ignored,settled}));`;
-  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:3000});
+  const child=await fixtureChild(code,3000);
   if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
   expect(r.error).toBe('');expect(r.settled).toBe(true);expect(r.early).toBe(mode==='causal'?2:0);if(mode==='causal'&&order==='helper')expect(r.ignored).toBeGreaterThan(0);
  }
 });
 
-test('helper-ready acknowledgement answers once before delayed incoming publication',()=>{
+test('helper-ready acknowledgement answers once before delayed incoming publication',async()=>{
  for(const mode of ['fresh','stale','spoofed','busy-then-ready','stop','opened']){
   const code=`import{mock}from'bun:test';import{resolve}from'node:path';
   process.env.RUNE_OPEN_AFTER='helper-ack';let tick=0,pending,requests=0,response=-1;
@@ -82,13 +89,13 @@ test('helper-ready acknowledgement answers once before delayed incoming publicat
    pending=undefined;r();}));return pending;}}));
   const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>response>=0||tick>=('${mode}'==='stop'?2:6));}catch{}
   console.log(JSON.stringify({requests,response}));`;
-  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:3000});
+  const child=await fixtureChild(code,3000);
   if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
   expect(r.requests).toBe(mode==='busy-then-ready'?2:1);
   expect(r.response).toBe(['stop','opened'].includes(mode)?-1:['stale','spoofed'].includes(mode)?5:2);
  }
 });
-test('polling preserves tick-stall failure with at most one wait per actor',()=>{
+test('polling preserves tick-stall failure with at most one wait per actor',async()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';let active=0,peak=0,requests=0;
  const s={name:'Crafter'},h={name:'Carrier'};
@@ -96,11 +103,11 @@ test('polling preserves tick-stall failure with at most one wait per actor',()=>
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{active++;peak=Math.max(peak,active);return new Promise((_,reject)=>setTimeout(()=>{active--;reject(Error('TickStallError: frozen tick stream'))},100));}}));
  const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,peak,requests}));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:1500});
+ const child=await fixtureChild(code,1500);
  if(child.exitCode!==0)throw Error('Transfer did not propagate frozen-tick failure: '+child.stderr.toString());
  const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);expect(r.error).toContain('TickStallError');expect(r.peak).toBe(2);expect(r.requests).toBe(1);
 });
-test('a between-tick owned trade request is answered without waiting for another game tick',()=>{
+test('a between-tick owned trade request is answered without waiting for another game tick',async()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
  let tick=0,responseMs=-1,requests=0,raw=[];const started=performance.now();
@@ -115,11 +122,11 @@ test('a between-tick owned trade request is answered without waiting for another
  const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>responseMs>=0)}catch{}
  console.log(JSON.stringify({responseMs,requests}));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ const child=await fixtureChild(code,5000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
  expect(r.requests).toBe(1);expect(r.responseMs).toBeGreaterThanOrEqual(25);expect(r.responseMs).toBeLessThan(200);
 });
-test('an offer acceptance is sent once while its published flag is delayed',()=>{
+test('an offer acceptance is sent once while its published flag is delayed',async()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,offerAccepts=0,confirmAccepts=0;
  const pack=()=>Array.from({length:27},(_,slot)=>({id:1436,count:1,slot}));
@@ -135,11 +142,11 @@ test('an offer acceptance is sent once while its published flag is delayed',()=>
  const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}
  console.log(JSON.stringify({error,offerAccepts,confirmAccepts}));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ const child=await fixtureChild(code,5000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
  expect(r.error).toBe('');expect(r.offerAccepts).toBe(2);expect(r.confirmAccepts).toBe(2);
 });
-function delayedOffer(mode:'valid'|'empty'|'wrong-item'|'partial'){
+async function delayedOffer(mode:'valid'|'empty'|'wrong-item'|'partial'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,offered=false,receiverAt=-1,confirms=0;const early=[];
  const pack=(n=27,id=1436)=>Array.from({length:n},(_,slot)=>({id,count:1,slot}));
@@ -154,42 +161,42 @@ function delayedOffer(mode:'valid'|'empty'|'wrong-item'|'partial'){
  if(phase===3)for(const a of[s,h]){a.trade.screen='confirm';a.trade.myAccepted=false;}
  if(phase===4)for(const a of[s,h])a.trade={isOpen:false};pending=undefined;r();}));return pending;}}));
  const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,receiverAt,confirms,early}));`;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ const child=await fixtureChild(code,5000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
 }
-test('a fresh server acceptance acknowledges the owned offer before item publication',()=>{
- const r=delayedOffer('valid');expect(r.error).toBe('');expect(r.receiverAt).toBe(1);expect(r.confirms).toBe(2);
+test('a fresh server acceptance acknowledges the owned offer before item publication',async()=>{
+ const r=await delayedOffer('valid');expect(r.error).toBe('');expect(r.receiverAt).toBe(1);expect(r.confirms).toBe(2);
 });
 
-test('causal confirmation rechecks the exact accepted offer after receiver acceptance is latched',()=>{
- const r=delayedOffer('valid');expect(r.error).toBe('');expect(r.receiverAt).toBe(1);
+test('causal confirmation rechecks the exact accepted offer after receiver acceptance is latched',async()=>{
+ const r=await delayedOffer('valid');expect(r.error).toBe('');expect(r.receiverAt).toBe(1);
  expect(r.early).toEqual([{name:'Crafter',phase:2,component:3546},{name:'Carrier',phase:2,component:3546}]);
  expect(r.confirms).toBe(2);
 });
-test('early owned-offer acceptance cannot accept empty, partial or wrong-item confirmation',()=>{
- for(const mode of ['empty','partial','wrong-item'] as const){const r=delayedOffer(mode);expect(r.error).not.toBe('');expect(r.confirms).toBe(0);expect(r.early).toEqual([]);}
+test('early owned-offer acceptance cannot accept empty, partial or wrong-item confirmation',async()=>{
+ for(const mode of ['empty','partial','wrong-item'] as const){const r=await delayedOffer(mode);expect(r.error).not.toBe('');expect(r.confirms).toBe(0);expect(r.early).toEqual([]);}
 });
 
-function acceptedCraftCase(mode:'fresh'|'stale'|'spoofed'|'no-movement'|'refused'|'stop'){
+async function acceptedCraftCase(mode:'fresh'|'stale'|'spoofed'|'no-movement'|'refused'|'stop'){
  const code=`import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,craftAt=-1,crafts=0;
  const pack=()=>Array.from({length:27},(_,slot)=>({id:1436,count:1,slot}));const s={name:'Crafter'},h={name:'Carrier'};
  for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>phase;a.messages=[{type:0,sender:'',text:'Accepted trade.',observationId:1}];a.trade={isOpen:true,screen:'confirm',partner:o.name,myAccepted:false,myOffer:a===h?pack():[],theirOffer:a===s?pack():[]};
  a.sdk={getInventory:()=>a===h?(phase===0?pack():[]):(phase>=2&&craftAt<0&&'${mode}'!=='no-movement'?pack():[]),getState:()=>({trade:a.trade,gameMessages:a.messages,nearbyPlayers:[]}),scanGroundItems:async()=>{},sendAcceptTrade:async()=>{a.trade.myAccepted=true;return{success:true}}};}
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;if(phase===1)for(const a of[s,h]){a.trade={isOpen:false};if('${mode}'!=='stale')a.messages.push({type:'${mode}'==='spoofed'?2:0,sender:'${mode}'==='spoofed'?'Stranger':'',text:'Accepted trade.',observationId:2});}pending=undefined;r();}));return pending;}}));
  const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h,()=> '${mode}'==='stop'&&phase>=1,27,{send:async()=>{crafts++;craftAt=phase;if('${mode}'==='refused')throw Error('fixture altar refused');},complete:()=>craftAt>=0&&phase>=3&&'${mode}'!=='no-movement'});}catch(e){error=String(e)}console.log(JSON.stringify({error,craftAt,crafts,phase}));`;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ const child=await fixtureChild(code,5000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
 }
-test('combined crafting can start on both fresh server acceptance messages before credit publication',()=>{
- const r=acceptedCraftCase('fresh');expect(r.error).toBe('');expect(r.craftAt).toBe(1);expect(r.crafts).toBe(1);expect(r.phase).toBeGreaterThanOrEqual(3);
+test('combined crafting can start on both fresh server acceptance messages before credit publication',async()=>{
+ const r=await acceptedCraftCase('fresh');expect(r.error).toBe('');expect(r.craftAt).toBe(1);expect(r.crafts).toBe(1);expect(r.phase).toBeGreaterThanOrEqual(3);
 });
-test('stale or spoofed acceptance cannot start a combined craft before observed credit',()=>{
- for(const mode of ['stale','spoofed'] as const){const r=acceptedCraftCase(mode);expect(r.error).toBe('');expect(r.craftAt).toBe(2);expect(r.crafts).toBe(1);}
+test('stale or spoofed acceptance cannot start a combined craft before observed credit',async()=>{
+ for(const mode of ['stale','spoofed'] as const){const r=await acceptedCraftCase(mode);expect(r.error).toBe('');expect(r.craftAt).toBe(2);expect(r.crafts).toBe(1);}
 });
-test('combined handoff refuses missing effects, a refused altar action and stop without blind craft retries',()=>{
- const missing=acceptedCraftCase('no-movement');expect(missing.error).not.toBe('');expect(missing.crafts).toBe(1);
- const refused=acceptedCraftCase('refused');expect(refused.error).toContain('fixture altar refused');expect(refused.crafts).toBe(1);
- const stopped=acceptedCraftCase('stop');expect(stopped.error).not.toBe('');expect(stopped.crafts).toBe(0);
+test('combined handoff refuses missing effects, a refused altar action and stop without blind craft retries',async()=>{
+ const missing=await acceptedCraftCase('no-movement');expect(missing.error).not.toBe('');expect(missing.crafts).toBe(1);
+ const refused=await acceptedCraftCase('refused');expect(refused.error).toContain('fixture altar refused');expect(refused.crafts).toBe(1);
+ const stopped=await acceptedCraftCase('stop');expect(stopped.error).not.toBe('');expect(stopped.crafts).toBe(0);
 });
 
 function handoff(mode:'publication'|'reset-publication'|'wrong-item'|'refused'|'no-credit'){
@@ -226,7 +233,7 @@ test('sent confirmations still require both inventory publications',()=>{
  const result=handoff('no-credit');expect(result.error).toContain('essence transfer did not reconcile');expect(result.received).toBe(0);
 });
 
-test('delayed carrier transfer opening avoids cancellation and reconciles27 essence on both actors',()=>{
+test('delayed carrier transfer opening avoids cancellation and reconciles27 essence on both actors',async()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
  let phase=0,pending,duplicate=false,cancelled=false;
@@ -254,14 +261,14 @@ test('delayed carrier transfer opening avoids cancellation and reconciles27 esse
  const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h);}catch(e){error=String(e);}
  const after=[essence(s),essence(h)];console.log(JSON.stringify({error,requests,duplicate,cancelled,before,after,deltas:after.map((n,i)=>n-before[i])}));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
+ const child=await fixtureChild(code,10000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());const result=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
  expect(result.error).toBe('');expect(result.duplicate).toBe(false);expect(result.cancelled).toBe(false);
  expect(result.requests).toEqual([{name:'Carrier',tick:0},{name:'Crafter',tick:1}]);
  expect(result.before).toEqual([0,27]);expect(result.after).toEqual([27,0]);expect(result.deltas).toEqual([27,-27]);
 });
 
-function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'levelup'|'level54'|'unrelated-dialog'|'levelup-stop'='fresh'){
+async function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'levelup'|'level54'|'unrelated-dialog'|'levelup-stop'='fresh'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
  let phase=0,pending,outstanding=false,received=false,duplicate=false,premature=false,opening=-1,escrow=[];
@@ -305,40 +312,40 @@ function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'le
  const count=(a,id)=>a.pack.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  console.log(JSON.stringify({error,phase,requests,duplicate,premature,closes,modal,after:[count(s,1436),count(h,1436)],talismans:[count(s,1446),count(h,1446)]}));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
+ const child=await fixtureChild(code,10000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
 }
-test('carrier retries only acknowledged busy requests and responds once to a fresh exact-player request',()=>{
+test('carrier retries only acknowledged busy requests and responds once to a fresh exact-player request',async()=>{
  for(const busy of [0,3,7]){
-  const r=acknowledgedTransfer(busy);expect(r.error).toBe('');expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);
+  const r=await acknowledgedTransfer(busy);expect(r.error).toBe('');expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);
   expect(r.requests.filter((a:any)=>a.name==='Carrier')).toHaveLength(busy+1);
   expect(r.requests.filter((a:any)=>a.name==='Crafter')).toEqual([{name:'Crafter',tick:busy+1}]);
   expect(r.phase).toBeLessThanOrEqual(busy+5);expect(r.after).toEqual([27,0]);expect(r.talismans).toEqual([1,1]);
  }
 });
 
-test('a Runecraft level-up dialog is dismissed before a fresh trade request can arrive',()=>{
- const r=acknowledgedTransfer(0,'levelup');expect(r.error).toBe('');expect(r.closes).toBe(1);
+test('a Runecraft level-up dialog is dismissed before a fresh trade request can arrive',async()=>{
+ const r=await acknowledgedTransfer(0,'levelup');expect(r.error).toBe('');expect(r.closes).toBe(1);
  expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);expect(r.after).toEqual([27,0]);
  expect(r.talismans).toEqual([1,1]);expect(r.phase).toBeLessThanOrEqual(6);
 });
 
-test('the reachable level54 reward page cannot keep the next essence handoff busy',()=>{
+test('the reachable level54 reward page cannot keep the next essence handoff busy',async()=>{
  expect(levelForXp(3375+8*27*7.5*25)).toBe(54);
- const r=acknowledgedTransfer(0,'level54');expect(r.error).toBe('');expect(r.modal).toBe(false);
+ const r=await acknowledgedTransfer(0,'level54');expect(r.error).toBe('');expect(r.modal).toBe(false);
  expect(r.after).toEqual([27,0]);expect(r.talismans).toEqual([1,1]);
 });
 
-test('the handoff preserves unrelated dialogs and sends no dismissal after stop',()=>{
- const unrelated=acknowledgedTransfer(0,'unrelated-dialog');expect(unrelated.closes).toBe(0);
+test('the handoff preserves unrelated dialogs and sends no dismissal after stop',async()=>{
+ const unrelated=await acknowledgedTransfer(0,'unrelated-dialog');expect(unrelated.closes).toBe(0);
  expect(unrelated.error).toContain('essence transfer did not reconcile');expect(unrelated.after).toEqual([0,27]);
- const stopped=acknowledgedTransfer(0,'levelup-stop');expect(stopped.closes).toBe(0);expect(stopped.requests).toEqual([]);
+ const stopped=await acknowledgedTransfer(0,'levelup-stop');expect(stopped.closes).toBe(0);expect(stopped.requests).toEqual([]);
  expect(stopped.after).toEqual([0,27]);
 });
-test('stale, wrong-player and player-chat requests cannot open a handoff or send a response after stop',()=>{
- const missing=acknowledgedTransfer(0,'missing');expect(missing.error).toContain('essence transfer did not reconcile');
+test('stale, wrong-player and player-chat requests cannot open a handoff or send a response after stop',async()=>{
+ const missing=await acknowledgedTransfer(0,'missing');expect(missing.error).toContain('essence transfer did not reconcile');
  expect(missing.requests).toEqual([{name:'Carrier',tick:0}]);expect(missing.after).toEqual([0,27]);expect(missing.phase).toBeLessThanOrEqual(35);
- const stopped=acknowledgedTransfer(7,'stop');expect(stopped.error).toContain('essence transfer did not reconcile');
+ const stopped=await acknowledgedTransfer(7,'stop');expect(stopped.error).toContain('essence transfer did not reconcile');
  expect(stopped.requests.every((a:any)=>a.name==='Carrier'&&a.tick<2)).toBe(true);expect(stopped.after).toEqual([0,27]);
 });
 

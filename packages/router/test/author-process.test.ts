@@ -7,10 +7,16 @@ import { commandLine, safeKill } from '../../practice/src/proc';
 // A fake CLI exercises the real runner in a separate process, keeping PATH and model configuration out of other tests.
 async function model(mode: string) {
     const dir = mkdtempSync(join(tmpdir(), 'author-process-'));
-    const fixture = join(dir, 'cli.ts'), runner = join(dir, 'runner.ts');
+    const fixture = join(dir, 'cli.ts'), runner = join(dir, 'runner.ts'), traceFile = join(dir, 'trace.jsonl');
+    const traceSource = `import {appendFileSync} from 'node:fs';
+        const trace=(phase,extra={})=>appendFileSync(${JSON.stringify(traceFile)},JSON.stringify({phase,pid:process.pid,at:Date.now(),monotonicMs:performance.now(),...extra})+'\\n');`;
     writeFileSync(fixture, `
+        ${traceSource}
+        trace('fixture-entry');
         const prompt = await new Response(Bun.stdin.stream()).text();
+        trace('stdin-complete');
         console.log(JSON.stringify({is_error: false, result: prompt, total_cost_usd: 0.12}));
+        trace('output-written');
         if (process.env.CLAUDE_FIXTURE_MODE === 'exit') { console.error('fixture exit failure'); process.exit(7); }
         if (process.env.CLAUDE_FIXTURE_MODE === 'timeout') setInterval(() => {}, 1000);
         if (['orphan', 'escaped'].includes(process.env.CLAUDE_FIXTURE_MODE ?? '')) {
@@ -24,7 +30,12 @@ async function model(mode: string) {
     chmodSync(join(dir, 'claude'), 0o755);
     writeFileSync(join(dir, 'claude.cmd'), `@echo off\r\n"${process.execPath}" "${fixture}" %*\r\n`);
     const author = resolve(import.meta.dir, '../src/author.ts');
-    writeFileSync(runner, `import {runClaude} from ${JSON.stringify(author)}; console.log(JSON.stringify(await runClaude('fixture prompt', 1000, true)));`);
+    writeFileSync(runner, `${traceSource}
+        trace('runner-entry',{resolved:Bun.which('claude')});
+        const {runClaude}=await import(${JSON.stringify(author)});
+        const result=await runClaude('fixture prompt',1000,true);
+        trace('runner-return',{costUsd:result.costUsd});
+        console.log(JSON.stringify(result));`);
     const child = Bun.spawn([process.execPath, runner], {
         env: { ...process.env, PATH: dir + delimiter + process.env.PATH, CLAUDE_FIXTURE_MODE: mode, CLAUDE_FIXTURE_PID: join(dir, 'descendant.pid') },
         stdout: 'pipe', stderr: 'pipe', windowsHide: true,
@@ -32,7 +43,10 @@ async function model(mode: string) {
     try {
         const [out, err, exit] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
         expect({ exit, err }).toEqual({ exit: 0, err: '' });
-        return JSON.parse(out.trim());
+        const result = JSON.parse(out.trim());
+        if (result.costUsd === 0) throw Error('model fixture returned no cost: ' + JSON.stringify({ mode, result,
+            trace: existsSync(traceFile) ? readFileSync(traceFile, 'utf8') : '(missing)' }));
+        return result;
     } finally {
         if (child.exitCode === null) child.kill();
         if (existsSync(join(dir, 'descendant.pid'))) await safeKill(Number(readFileSync(join(dir, 'descendant.pid'), 'utf8')), 'author-output-fixture');
