@@ -86,6 +86,122 @@ test('the sender ends its serving window after the first observed trade outcome'
     }
 });
 
+test('a full receiver banks the jug before accepting fire runes and preserves its cakes, coins and kit', async () => {
+    const fire = { id: 554, name: 'Fire rune', count: 250, slot: 0 };
+    let pack = [
+        ...Array.from({ length: 23 }, (_, slot) => ({ id: 1895, name: 'Slice of cake', count: 1, slot })),
+        ...Array.from({ length: 3 }, (_, slot) => ({ id: 1891, name: 'Cake', count: 1, slot: slot + 23 })),
+        { id: 1935, name: 'Jug', count: 1, slot: 26 }, { id: 995, name: 'Coins', count: 800, slot: 27 },
+    ];
+    const held = structuredClone(pack), equipment = [{ id: 1387, name: 'Staff of fire', count: 1, slot: 3 }];
+    let generation = 1, opened = false, trades = 0;
+    const bank: { id: number; name: string; count: number }[] = [];
+    const actions: string[] = [];
+    const fake = {
+        name: 'Taker', tick: () => 10, ended: new Promise(() => {}),
+        client: { objType: (id: number) => ({ stackable: [554, 995].includes(id) }) },
+        sdk: { getState: () => ({ inventory: pack, equipment }), getInventory: () => pack },
+        bankObservation: () => opened ? { generation, at: 2300, items: bank } : undefined,
+        bot: {
+            openBank: async () => { opened = true; actions.push('open bank'); return { success: true }; },
+            closeBank: async () => { opened = false; actions.push('close bank'); return { success: true }; },
+            depositItem: async (item: { id: number; name: string }) => {
+                const count = pack.filter(i => i.id === item.id).reduce((n, i) => n + i.count, 0);
+                bank.push({ id: item.id, name: item.name, count });
+                pack = pack.filter(i => i.id !== item.id); generation++; actions.push(`deposit ${item.id}`);
+                return { success: true };
+            },
+            trade: async (_peer: RegExp, opts: Parameters<Session['bot']['trade']>[1]) => {
+                trades++; actions.push('trade'); expect(opened).toBe(false);
+                const accepted = opts!.accept!([fire]);
+                if (!accepted || pack.length === 28) return { success: false, partner: 'Giver', reason: 'no_space',
+                    message: "You don't have enough inventory space for this trade.", gave: [], received: [] };
+                pack.push(fire);
+                return { success: true, partner: 'Giver', gave: [], received: [fire] };
+            },
+        },
+    } as unknown as Session;
+    const progress = { uncertain: false, count: 0 };
+    await performFleetTransfer(fake, order({ item: 'Fire rune', count: 250 }), 'to', progress,
+        { now: () => 2200, wait: async (_s, predicate) => predicate(null) });
+    expect(trades).toBe(1);
+    expect(actions).toEqual(['open bank', 'deposit 1935', 'close bank', 'trade', 'open bank', 'deposit 554', 'close bank']);
+    expect(pack).toEqual(held.filter(i => i.id !== 1935));
+    expect(bank).toEqual([{ id: 1935, name: 'Jug', count: 1 }, { id: 554, name: 'Fire rune', count: 250 }]);
+    expect(equipment).toEqual([{ id: 1387, name: 'Staff of fire', count: 1, slot: 3 }]);
+    expect(progress).toMatchObject({ count: 250, inventory: { before: 0, after: 250 }, bank: { count: 250, at: 2300 } });
+});
+
+test('receiver acceptance uses the current exact IDs, stackability and all incoming lines', async () => {
+    const fire = { id: 554, name: 'Fire rune', count: 250, slot: 0 };
+    const bones = { id: 536, name: 'Dragon bones', count: 2, slot: 1 };
+    const note = { ...bones, id: 537 };
+    const initial = [...Array.from({ length: 26 }, (_, slot) => ({ id: 1895, name: 'Slice of cake', count: 1, slot })),
+        { ...fire, count: 5, slot: 26 }];
+    let pack = [...initial.slice(0, 25), initial.at(-1)!];
+    const fake = {
+        client: { objType: (id: number) => id === 999999 ? undefined : ({ stackable: [554, 537].includes(id) }) },
+        sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack }, ended: new Promise(() => {}),
+        bot: { trade: async (_peer: RegExp, opts: Parameters<Session['bot']['trade']>[1]) => {
+            pack = initial;
+            expect(opts!.accept!([fire, bones])).toBe(false); // Two loose bones need two free slots.
+            expect(opts!.accept!([fire, note])).toBe(true); // The actual note takes one slot.
+            expect(opts!.accept!([fire, { ...note, id: 999999 }])).toBe(false);
+            expect(opts!.accept!([fire, { ...note, count: 1 }])).toBe(false);
+            pack = [...pack, { ...note, count: 7, slot: 27 }];
+            expect(opts!.accept!([fire, note])).toBe(true); // Both exact stacks already exist.
+            expect(opts!.accept!([fire, bones])).toBe(false); // The same name cannot substitute a note ID.
+            pack = pack.map(i => i.id === 554 ? { ...i, count: 2147483600 } : i);
+            expect(opts!.accept!([fire, note])).toBe(false); // A stack cannot exceed the server integer limit.
+            pack = initial;
+            return { success: false, partner: 'Giver', reason: 'no_space', message: 'inventory space rejected', gave: [], received: [] };
+        } },
+    } as unknown as Session;
+    const progress = { uncertain: false, count: 0 };
+    await expect(performFleetTransfer(fake, order({ item: 'Fire rune', count: 250, extra: [{ item: 'Dragon bones', count: 2 }] }),
+        'to', progress, { now: () => 2200 })).rejects.toThrow('requires reconciliation');
+});
+
+test('a fresh capacity loss and the SDK no_space reason remain reconciled without another trade', async () => {
+    const fire = { id: 554, name: 'Fire rune', count: 250, slot: 0 };
+    let pack = Array.from({ length: 27 }, (_, slot) => ({ id: 1895, name: 'Slice of cake', count: 1, slot }));
+    let trades = 0;
+    const fake = {
+        client: { objType: (id: number) => ({ stackable: id === 554 }) },
+        sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack }, ended: new Promise(() => {}),
+        bot: { trade: async (_peer: RegExp, opts: Parameters<Session['bot']['trade']>[1]) => {
+            trades++; pack = [...pack, { id: 1935, name: 'Jug', count: 1, slot: 27 }];
+            expect(opts!.accept!([fire])).toBe(false);
+            return { success: false, partner: 'Giver', reason: 'no_space',
+                message: "You don't have enough inventory space for this trade.", gave: [], received: [] };
+        } },
+    } as unknown as Session;
+    const progress = { uncertain: false, count: 0 };
+    await expect(performFleetTransfer(fake, order({ item: 'Fire rune', count: 250 }), 'to', progress, { now: () => 2200 }))
+        .rejects.toThrow("no_space: You don't have enough inventory space for this trade.");
+    expect(trades).toBe(1);
+    expect(progress).toMatchObject({ uncertain: true, count: 0, inventory: { before: 0, after: 0 } });
+    expect(fleetTradeOutcome(claimedReceipt(), progress, false, logout, attemptId, 2500, 'no_space').state).toBe('reconcile');
+});
+
+test('a receiver with an unobserved capacity deposit cannot open a trade', async () => {
+    let trades = 0;
+    const pack = Array.from({ length: 28 }, (_, slot) => ({ id: 1895, name: 'Slice of cake', count: 1, slot }));
+    const fake = {
+        client: { objType: (id: number) => ({ stackable: id === 554 }) },
+        sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack }, bankObservation: () => ({ at: 2300 }),
+        ended: new Promise(() => {}),
+        bot: { openBank: async () => ({ success: true }), trade: async () => { trades++; throw Error('trade opened before capacity'); } },
+    } as unknown as Session;
+    const progress = { uncertain: false, count: 0 };
+    await expect(performFleetTransfer(fake, order({ item: 'Fire rune', count: 250 }), 'to', progress, {
+        now: () => 2200, wait: async (_s, predicate) => predicate(null),
+        deposit: async () => { throw Error('pack debit/bank credit unobserved'); },
+    })).rejects.toThrow('pack debit/bank credit unobserved');
+    expect(trades).toBe(0);
+    expect(progress.uncertain).toBe(true);
+});
+
 test('a prepared receipt is exclusive, and only a published matched terminal receipt releases a claim', () => {
     const dir = mkdtempSync(join(tmpdir(), 'fleet-trade-settlement-'));
     try {
@@ -561,12 +677,13 @@ test('a multi-item order needs distinct lines with positive counts, at most one 
 });
 
 test('a multi-item receiver accepts only the exact offer of every line, then banks and credits each line', async () => {
-    const ring = { id: 1637, name: 'Sapphire ring', count: 40, slot: 0 }, cosmic = { id: 564, name: 'Cosmic rune', count: 74, slot: 1 };
+    const ring = { id: 1638, name: 'Sapphire ring', count: 40, slot: 0 }, cosmic = { id: 564, name: 'Cosmic rune', count: 74, slot: 1 };
     const water = { id: 555, name: 'Water rune', count: 40, slot: 2 };
     for (const mode of ['ok', 'one line short'] as const) {
-        let pack: typeof ring[] = [{ ...water, count: 2 }], accept: ((offer: { name: string; count: number }[]) => boolean) | undefined;
+        let pack: typeof ring[] = [{ ...water, count: 2 }], accept: NonNullable<Parameters<Session['bot']['trade']>[1]>['accept'];
         const got = mode === 'ok' ? [ring, cosmic, water] : [ring, cosmic, { ...water, count: 39 }];
         const fake = {
+            client: { objType: (id: number) => ({ stackable: [1638, 564, 555].includes(id) }) },
             sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack },
             bot: {
                 trade: async (_peer: RegExp, opts: { accept: typeof accept }) => {
@@ -586,16 +703,16 @@ test('a multi-item receiver accepts only the exact offer of every line, then ban
         });
         if (mode === 'ok') await run;
         else await expect(run).rejects.toThrow('requires reconciliation');
-        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }, { name: 'Water rune', count: 40 }])).toBe(true);
-        expect(accept!([{ name: 'Water rune', count: 40 }, { name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }])).toBe(true);
-        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }])).toBe(false);
-        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 73 }, { name: 'Water rune', count: 40 }])).toBe(false);
-        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }, { name: 'Water rune', count: 40 }, { name: 'Coins', count: 1 }])).toBe(false);
+        expect(accept!([ring, cosmic, water])).toBe(true);
+        expect(accept!([water, ring, cosmic])).toBe(true);
+        expect(accept!([ring, cosmic])).toBe(false);
+        expect(accept!([ring, { ...cosmic, count: 73 }, water])).toBe(false);
+        expect(accept!([ring, cosmic, water, { id: 995, slot: 3, name: 'Coins', count: 1 }])).toBe(false);
         const final = fleetTradeOutcome(ringReceipt('to'), progress, mode === 'ok', logout, attemptId, 2500, mode);
         expect(final.state).toBe(mode === 'ok' ? 'settled' : 'reconcile');
         expect(terminalTradeReceipt(ringOrder(), 'to', final, 2500)).toBe(mode === 'ok');
         if (mode === 'ok') {
-            expect(deposits).toEqual([1637, 564, 555]);
+            expect(deposits).toEqual([1638, 564, 555]);
             expect(final.lines).toEqual([
                 { item: 'Cosmic rune', requested: 74, count: 74, inventory: { before: 0, after: 74 }, bank: { count: 74, at: 2300 } },
                 { item: 'Water rune', requested: 40, count: 40, inventory: { before: 2, after: 42 }, bank: { count: 40, at: 2300 } },

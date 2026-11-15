@@ -25,7 +25,7 @@ import { laterProcessHolds, processStartTimes } from '../packages/practice/src/p
 import { isLocalServer } from '../packages/core/src/localserver';
 import { meetingTiles } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
-import type { TradeResult } from '../vendor/rs-sdk/sdk/types';
+import type { TradeItem, TradeResult } from '../vendor/rs-sdk/sdk/types';
 import { orderLines, validOrder, writeTradeReceipt, type Order, type Receipt, type TradeLine, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
 export { orderLines, validOrder, type Order, type Receipt } from './fleet-trade-settlement';
 
@@ -159,11 +159,69 @@ export async function waitForGiver(order: Order, { ready, failed, now = Date.now
     }
 }
 
+const itemDefinition = (s: Session, id: number) => (s.client as { objType?: (id: number) => { stackable: boolean } } | undefined)?.objType?.(id);
+let tradeItems: { id: number; name: string; tradeable: boolean }[] | undefined;
+// Before the offer is visible, allow for loose units of each ordered nonstackable item. A quantity over one
+// pack must arrive stacked (normally noted). The accept policy checks the actual offered IDs, including notes.
+function receiverReservation(s: Session, order: Order): number {
+    tradeItems ??= JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
+    const pack = s.sdk.getInventory();
+    return Math.min(28, orderLines(order).reduce((slots, line) => {
+        const ids = tradeItems!.filter(i => i.tradeable && i.name.toLowerCase() === line.item.toLowerCase()).map(i => i.id);
+        if (ids.length && ids.every(id => itemDefinition(s, id)?.stackable === true))
+            return slots + (ids.every(id => pack.some(i => i.id === id)) ? 0 : 1);
+        return slots + (line.count > 28 ? 1 : line.count);
+    }, 0));
+}
+
+function receiverSpace(s: Session, offer: readonly Pick<TradeItem, 'id' | 'count'>[]) {
+    const pack = s.sdk.getInventory(), totals = new Map<number, number>();
+    for (const item of offer) {
+        if (!Number.isSafeInteger(item.id) || item.id < 0 || !Number.isSafeInteger(item.count) || item.count < 1)
+            throw Error('receiver offer item shape is invalid');
+        totals.set(item.id, (totals.get(item.id) ?? 0) + item.count);
+    }
+    let required = 0;
+    for (const [id, count] of totals) {
+        const definition = itemDefinition(s, id);
+        if (typeof definition?.stackable !== 'boolean') throw Error(`receiver item metadata unavailable: ${id}`);
+        if (definition.stackable) {
+            const held = pack.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+            if (held + count > 2147483647) throw Error(`receiver stack limit exceeded: ${id}`);
+            if (!held) required++;
+        } else required += count;
+    }
+    return { required, free: 28 - pack.length };
+}
+
 export async function performFleetTransfer(s: Session, order: Order, role: TradeRole, progress: Progress, {
     now = Date.now, wait = waitUntil, deposit = depositObserved, gone = () => false,
 }: { now?: () => number; wait?: typeof waitUntil; deposit?: typeof depositObserved; gone?: () => boolean } = {}) {
     const left = () => order.end - now();
     const partner = role === 'from' ? order.to : order.from, peer = exactItem(partner);
+    if (left() <= 0) throw Error('order window ended before trade');
+    if (role === 'to' && 28 - s.sdk.getInventory().length < receiverReservation(s, order)) {
+        if (!(await s.bot.openBank()).success || !await wait(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 }))
+            throw Error('receiver capacity bank observation unavailable');
+        // Reuse the coin courier's observed deposit, preferring one expendable slot over a whole food stack.
+        // Deposits preserve every asset in the bank; coins and ordered stacks are the last candidates.
+        const incoming = orderLines(order).map(line => exactItem(line.item));
+        const rank = (item: { id: number; name: string }) => item.id === 995 ? 3 : incoming.some(re => re.test(item.name)) ? 2
+            : s.sdk.getInventory().filter(i => i.id === item.id).length === 1 ? 0 : 1;
+        const candidates = [...s.sdk.getInventory()].sort((a, b) => rank(a) - rank(b));
+        for (const id of new Set(candidates.map(i => i.id))) {
+            if (28 - s.sdk.getInventory().length >= receiverReservation(s, order)) break;
+            if (left() <= 0 || gone()) throw Error('receiver capacity preparation ended before trade');
+            const rows = s.sdk.getInventory().filter(i => i.id === id), item = rows[0];
+            if (!item) continue;
+            progress.uncertain = true;
+            if (await deposit(s, item) !== rows.reduce((n, i) => n + i.count, 0) || s.sdk.getInventory().some(i => i.id === id))
+                throw Error('receiver capacity deposit was not confirmed');
+            progress.uncertain = false;
+        }
+        if (!(await s.bot.closeBank()).success) throw Error('receiver capacity bank did not close');
+        if (28 - s.sdk.getInventory().length < receiverReservation(s, order)) throw Error('receiver capacity unavailable before trade');
+    }
     const lines = orderLines(order).map(line => {
         const re = exactItem(line.item), before = countItems(s, re);
         return { re, count: line.count, before, diff: () => role === 'from' ? before - countItems(s, re) : countItems(s, re) - before };
@@ -176,7 +234,7 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
     // The offer holds every line, at its exact count, and nothing else.
     const exactOffer = (offer: readonly { name: string; count: number }[]) => offer.every(o => lineOf(o.name) >= 0)
         && lines.every(l => offer.filter(o => l.re.test(o.name)).reduce((n, o) => n + o.count, 0) === l.count);
-    let result: TradeResult | undefined;
+    let result: TradeResult | undefined, capacityDetail: string | undefined;
     if (left() <= 0) throw Error('order window ended before trade');
     if (role === 'from') {
         progress.uncertain = true;
@@ -193,7 +251,16 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
             if (gone()) throw Error('partner failed: no trade');
             progress.uncertain = true;
             result = await s.bot.trade(peer, {
-                accept: offer => offer.length > 0 && exactOffer(offer),
+                accept: offer => {
+                    capacityDetail = undefined;
+                    if (!offer.length || !exactOffer(offer)) return false;
+                    try {
+                        const { required, free } = receiverSpace(s, offer);
+                        if (free >= required) return true;
+                        capacityDetail = `receiver capacity: ${free} free, ${required} required`;
+                    } catch (error) { capacityDetail = String(error); }
+                    return false;
+                },
                 requestTimeout: Math.min(30_000, left()), timeout: Math.min(60_000, left()),
             });
             if (!requestRefusal(result) || !still()) break;
@@ -213,7 +280,8 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
     const opposite = role === 'from' ? result?.received : result?.gave;
     if (!result?.success || !result.partner || !peer.test(result.partner) || result.possiblyDropped?.length
         || lines.some((l, i) => counts[i] !== l.count) || opposite?.length || !transferred?.length || !exactOffer(transferred)) {
-        throw Error(progress.uncertain ? 'transfer requires reconciliation' : 'no matching trade completed');
+        const detail = [!result?.success && result?.reason, !result?.success && result?.message, capacityDetail].filter(Boolean).join(': ');
+        throw Error((progress.uncertain ? 'transfer requires reconciliation' : 'no matching trade completed') + (detail ? ': ' + detail : ''));
     }
     if (role === 'from') return;
     if (!(await s.bot.openBank()).success || !await wait(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 }))
