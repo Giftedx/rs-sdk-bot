@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794780139754,
+ "at": 1794780453375,
  "jobs": [
   {
    "account": "Balls",
@@ -161,6 +161,48 @@
    "repeat": false,
    "goal": "local-recover-wandwaver-20261115t082009z [task-fc72bc71-4301-4715-8081-a6d383b249af]",
    "role": "combat"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "2361",
+    "QUANTITY": "345",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "2500",
+    "CASH_RESERVE": "4000000",
+    "ORDER_KEY": "billionaire-overall-adamant345",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-e0fc6ef8-72e9-4ae0-8bf3-0612e14ee196"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-billionaire-overall-adamant345-approved-rescue [task-e0fc6ef8-72e9-4ae0-8bf3-0612e14ee196]",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "892",
+    "QUANTITY": "36",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "10000",
+    "CASH_RESERVE": "2200000",
+    "ORDER_KEY": "mineyourbiz-overall-runearrows36",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-76cf5cae-3b9b-4e02-aa07-44f740bcb35d"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-mineyourbiz-overall-runearrows36-approved-rescue [task-76cf5cae-3b9b-4e02-aa07-44f740bcb35d]",
+   "role": "supply"
   }
  ],
  "army": [
