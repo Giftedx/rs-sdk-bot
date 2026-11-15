@@ -97,6 +97,18 @@ test('an empty proof cannot pass by comparing zero with zero',async()=>{
 });
 
 const delivery:DeliveryTask={id:'copper',goal:task.goal,entry:'scripts/gather-ore.ts',files:['scripts/gather-ore.ts','packages/core/src/deposit.ts'],consumer:'smithing',checks:[]};
+test('the capability brief assigns full delivery and review to the harness after focused source checks',()=>{
+ const brief=buildBrief({...task,delivery},delivery.entry);
+ expect(brief).toContain('bun scripts/typecheck-narrow.ts "scripts/gather-ore.ts" "packages/core/src/deposit.ts"');
+ expect(brief).not.toContain('bunx tsc --noEmit -p .');
+ expect(brief).toContain('focused unit checks');expect(brief).toContain('full integration type-check belongs to the final integration or CI owner');
+ expect(brief).toContain('The harness runs full capability delivery and independent review after status ready');
+ expect(brief).toContain('Do not launch reviewer or model subprocesses');expect(brief).toContain('reviewer quota or practice-turn wait');
+ expect(brief).toContain('do not report ready for an unchanged known failure');
+ const ordinary=buildBrief(task,'scripts/generated/copper5.ts');
+ expect(ordinary).toContain('bunx tsc --noEmit -p .');expect(ordinary).not.toContain('typecheck-narrow');expect(ordinary).not.toContain('reviewer quota');
+});
+
 test('a declared diagnostic returns evidence to the author before full acceptance',async()=>{
  const order:string[]=[],prompts:string[]=[];let calls=0;
  const r=await authorLoop({...task,delivery:{...delivery,checks:[{id:'observe',phase:'practice',command:['bun','observe.ts'],timeoutMs:1000}]}},{maxFixes:2,proveRuns:1},{exists:()=>true,

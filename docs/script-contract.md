@@ -55,7 +55,7 @@ Capability definitions live in `packages/router/tasks/<id>.json`: entry point, o
 
 Not required: proof of every failure window, independent decoders, purity of the proof tooling, or live results before the first live pilot.
 
-**Review.** One independent review per build, by the other model. The reviewer approves unless it finds a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names the file and line, the scenario and the consequence. Concerns outside the work order are notes for a later task, not rejections.
+**Review.** Each build has one independent review: use the other model first; if its subscription limit blocks the call, use one fresh read-only process from the available provider within the original deadline. The reviewer approves unless it finds a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names the file and line, the scenario and the consequence. Concerns outside the work order are notes for a later task, not rejections.
 
 The review blocks delivery unless all of these hold (`reviewGate`, `packages/router/src/model-worker.ts`):
 

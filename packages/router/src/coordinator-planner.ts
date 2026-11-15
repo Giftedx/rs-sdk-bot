@@ -66,21 +66,21 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],no
   return roots;
  }
 
- const dependencyReadiness = {ready: 0, waiting: 0, blocked: 0};
- const rootCounts = new Map<string, {pendingTasks: number; pendingRuns: number; readyTasksIfFixed: number; readyRunsIfFixed: number}>();
+ const dependencyReadiness = {satisfied: 0, waiting: 0, blocked: 0};
+ const rootCounts = new Map<string, {pendingTasks: number; pendingRuns: number; dependencySatisfiedTasksIfFixed: number; dependencySatisfiedRunsIfFixed: number}>();
  const blocked = [];
  for (const {spec, status} of active) {
   if (status !== 'pending') continue;
   const unmet = dependencies.get(spec.id)!.filter(id => records.get(id)?.status !== 'succeeded');
   const roots = terminalRoots(spec.id);
-  dependencyReadiness[roots.size ? 'blocked' : unmet.length ? 'waiting' : 'ready']++;
+  dependencyReadiness[roots.size ? 'blocked' : unmet.length ? 'waiting' : 'satisfied']++;
   for (const id of roots) {
-   const count = rootCounts.get(id) ?? {pendingTasks: 0, pendingRuns: 0, readyTasksIfFixed: 0, readyRunsIfFixed: 0};
+   const count = rootCounts.get(id) ?? {pendingTasks: 0, pendingRuns: 0, dependencySatisfiedTasksIfFixed: 0, dependencySatisfiedRunsIfFixed: 0};
    count.pendingTasks++;
    if (spec.kind === 'run') count.pendingRuns++;
    if (unmet.length === 1 && unmet[0] === id) {
-    count.readyTasksIfFixed++;
-    if (spec.kind === 'run') count.readyRunsIfFixed++;
+    count.dependencySatisfiedTasksIfFixed++;
+    if (spec.kind === 'run') count.dependencySatisfiedRunsIfFixed++;
    }
    rootCounts.set(id, count);
   }
@@ -345,7 +345,10 @@ export function plannerStatusSummary(s:any){
 export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[],publicationConflicts:ReturnType<typeof deliveryConflictRoots>=[]){
  const values=world.scoreboard?.goals?.version===1?goalWork(state,world.scoreboard.goals,world.statuses,world.at??Date.now(),
   {entryOf:capability=>world.capabilities.find(d=>d.id===capability)?.entry}):new Map();
- const work=state.tasks.filter(r=>r.status==='pending').map(r=>({id:r.spec.id,...values.get(r.spec.id)}));
+ const work=state.tasks.filter(r=>r.status==='pending').map(r=>{
+  const value=values.get(r.spec.id);
+  return{id:r.spec.id,...value,...(!(typeof value?.value==='number'&&Number.isFinite(value.value)&&value.value>0)?{dispatchable:false}:{})};
+ });
  const compact={...world,goalWork:work,ended:briefEnded(world.ended),coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map(plannerStatusSummary),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
  const recent=state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').sort((a,b)=>finishedAt(b)-finishedAt(a)).slice(0,48);
  return[
@@ -356,6 +359,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Read AGENTS.md, docs/plans/joined-plan.md, docs/script-contract.md. All game mechanics are authorized. Missing supplies create acquisition tasks, never route exclusions. Preserve all current work, pauses and clocks. No paid APIs.',
   'Own a whole useful outcome through its consumer. Prefer existing workers and trained helpers. Parameterize simple scripts; compose them with dependency IDs. Research only an unresolved decision. Do not create notes/status tools as a substitute for game progress.',
   'GOAL LOOP: current game state and scoreboards must prove the owner goals in world.scoreboard.goals, including actual rank 1 results for the priced specialist targets. Generic skill, item and action coverage is diagnostic, not completion proof. Use the remaining goal deficits to choose finite useful work. The dispatcher scores real accepted effects and linked consumers per estimated hour before model priority. A helper level needs an explicit pending supply or unlock consumer. Arbitrary coins, surplus stock and text matches have no goal value. Unknown observations need inspection or a bounded evidence task, never a claim of success. Return no tasks only if no independent useful work fits. Name the constraint and clearing event. World.stall means no owner goal metric improved; change lane or method.',
+  'Dependency satisfaction is not dispatch readiness. world.goalWork rows with dispatchable:false have no positive known goal value; never report them as ready. Read their reason and consumers: connect a viable finite consumer or repair terminal dependency roots. Unknown observations need the existing bounded observation path. A positive goal value still requires source qualification, account ownership and runtime admission.',
   'SCOREBOARD: world.scoreboard.goals owns the five goal observations and explicit evidence gaps. Generic skills, items, actions and weakDomains describe capability coverage only; they never score as game progress. Name the exact goal, accepted effect and finite consumer for each task. Compare expected goal movement per hour of acquisition, travel, build, checks and execution. Promote an uncovered capability only when an unresolved owner goal needs it. Unknown stock needs verification before replacement.',
   'Compare unresolved owner goal deficits before extending the current capability. In reason compare the best ready live job, the highest-impact unlock/supply bottleneck, and a capability an unresolved goal needs. State expected useful output, entry facts, total acquisition/travel/build/test cost, uncertainty, and the next consumer. Prefer the fastest supported gain. Prioritize qualified live consumers and keep their assignments. While they run, plan independent live work or isolated builds that fit the account, source ownership and host limits. The coordinator enforces admission and waits for the fleet to drain before a build publishes. Never repeat a failed build without new evidence and the exact repair in why.',
   'Return optional replacements:[{from,to}] to replace failed/pending tasks with a changed same-kind/capability/goal/account task and reconnect waiting consumers atomically. Failed receipts remain history. Each new build needs a dependency path from a pending finite live run through pending tasks with no terminal blockers after the proposal. A settled proof cannot carry a new build. Do not add another numbered repair while leaving its consumers behind failed dependencies. Do not replace successful/running work or provision identities. Avoid duplicate open work with the same consumer. Build why is the actual work order sent to its builder; include exact defect, source scope, evidence paths and acceptance.',
@@ -392,7 +396,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'RECENT FINISHED TASKS, up to 48 succeeded or failed, newest settlement first (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:recent.map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(receiptOutputReason(r.receipt),240),...receiptBuildEvidence(r.receipt.output)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
-  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. When present, receipt gives the settlement time and a bounded failure excerpt even for roots outside recent history. pendingTasks and pendingRuns include all downstream work. readyTasksIfFixed and readyRunsIfFixed count only jobs whose sole unmet dependency is this root. Use both counts to decide which repair or set of repairs leads to a useful job. Inspect the full root receipt before proposing a replacement or retiring obsolete work. Dependency-ready work still needs runtime admission.',
+  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. When present, receipt gives the settlement time and a bounded failure excerpt even for roots outside recent history. pendingTasks and pendingRuns include all downstream work. dependencySatisfiedTasksIfFixed and dependencySatisfiedRunsIfFixed count only jobs whose sole unmet dependency is this root; these counts and dependencyReadiness.satisfied say nothing about goal value or dispatch admission. Use world.goalWork with both counts to decide which repair or set of repairs leads to a useful job. Inspect the full root receipt before proposing a replacement or retiring obsolete work.',
   'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state,held)),
   ...(publicationConflicts.length?[
    'PUBLICATION CONFLICT ROOTS. These staged deliveries wait on source reconciliation. Read .practice/coordinator/delivery-prs/<taskId>.json before proposing another build for the same consumer. The delivery owner reconciles the conflict.',

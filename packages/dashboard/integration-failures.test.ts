@@ -6,6 +6,7 @@ import {marketRows,writeMarketCache,MARKET_FILE} from '../../scripts/market-cach
 import {buildItemPrices,itemPrice,priceItemKey} from './item-prices';
 import {createVaultItems} from './vault-items';
 import {isLocalServer} from '../core/src/localserver';
+import {gameDialAddress} from '../core/src/websocket-proxy';
 
 const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
@@ -23,7 +24,7 @@ test('the asset route serves the NPC table requested by opponent information',as
 test('failed rank reads preserve the last observation and have a request deadline',async()=>{
  const code=transpile(server.slice(server.indexOf('let ranksRefreshing'),server.indexOf('setInterval(() => void refreshRanks()')));
  const previous={at:1,rows:[{board:'Mining',rank:2,level:50,time:'1m'}]},ranks=new Map([['Worker',previous]]);let signal:any;
- const run=new Function('fetch','Bun','ranks',`const liveAccounts=()=>['Worker'],remoteNames=()=>[],DEMO='http://example.test',SKILL_BOARDS=[],rankHist=new Map(),FILES={};const hiscoreRows=()=>[],append=()=>{};${code};return refreshRanks;`)(async(_url:any,options:any)=>{signal=options?.signal;return new Response('unavailable',{status:503});},{sleep:async()=>{}},ranks);
+ const run=new Function('fetch','Bun','ranks','gameDialAddress',`const liveAccounts=()=>['Worker'],remoteNames=()=>[],DEMO='http://example.test',SKILL_BOARDS=[],rankHist=new Map(),FILES={};const hiscoreRows=()=>[],append=()=>{};${code};return refreshRanks;`)(async(_url:any,options:any)=>{signal=options?.signal;return new Response('unavailable',{status:503});},{sleep:async()=>{}},ranks,gameDialAddress);
  await run();expect(ranks.get('Worker')).toEqual(previous);expect(signal).toBeInstanceOf(AbortSignal);
 });
 
@@ -33,8 +34,8 @@ test('a failed market page cannot publish fresh prices or partial data',async()=
  const root=mkdtempSync(join(tmpdir(),'dashboard-market-failure-'));
  try{
   const items=marketRows([{id:1,name:'Old',ask:10,bid:5,sellQuantity:2}]);writeMarketCache(root,items,1);
-  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>++calls===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):Response.json({error:'unavailable'},{status:503}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root,buildItemPrices);
-  expect(await run()).toBe(1);expect(prices.has('new')).toBe(false);expect(marketIds.has('new')).toBe(false);
+  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices','gameDialAddress',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>++calls===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):Response.json({error:'unavailable'},{status:503}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root,buildItemPrices,gameDialAddress);
+  expect(await run()).toBe(1);expect(calls).toBe(2);expect(prices.has('new')).toBe(false);expect(marketIds.has('new')).toBe(false);
   expect(JSON.parse(readFileSync(join(root,MARKET_FILE),'utf8'))).toEqual({at:1,items});
  }finally{rmSync(root,{recursive:true,force:true});}
 });
@@ -51,7 +52,7 @@ test('slow rank refreshes cannot overlap on the minute timer',async()=>{
  const start=server.indexOf('let ranksRefreshing');
  const code=transpile(server.slice(start<0?server.indexOf('async function refreshRanks()'):start,server.indexOf('setInterval(() => void refreshRanks()')));
  let calls=0,release!:()=>void;const pending=new Promise<void>(resolve=>{release=resolve;});
- const run=new Function('fetch','Bun',`const liveAccounts=()=>['Worker'],remoteNames=()=>[],ranks=new Map(),DEMO='http://example.test',SKILL_BOARDS=[],rankHist=new Map(),FILES={};const hiscoreRows=()=>[],append=()=>{};${code};return refreshRanks;`)(async()=>{calls++;await pending;return new Response('unavailable',{status:503});},{sleep:async()=>{}});
+ const run=new Function('fetch','Bun','gameDialAddress',`const liveAccounts=()=>['Worker'],remoteNames=()=>[],ranks=new Map(),DEMO='http://example.test',SKILL_BOARDS=[],rankHist=new Map(),FILES={};const hiscoreRows=()=>[],append=()=>{};${code};return refreshRanks;`)(async()=>{calls++;await pending;return new Response('unavailable',{status:503});},{sleep:async()=>{}},gameDialAddress);
  const first=run(),second=run();release();await Promise.all([first,second]);expect(calls).toBe(1);
 });
 
@@ -61,7 +62,7 @@ test('a complete market refresh replaces removed listings and publishes its time
  const root=mkdtempSync(join(tmpdir(),'dashboard-market-success-'));
  try{
   const row={id:2,name:'New',basePrice:20,vwap:999,trades:1,ask:20,bid:15,sellQuantity:0,buyQuantity:3};
-  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[row]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root,buildItemPrices);
+  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices','gameDialAddress',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[row]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,writeMarketCache,root,buildItemPrices,gameDialAddress);
   const at=await run();expect(at).toBeGreaterThan(1);expect([...prices]).toEqual([['new',20]]);expect([...marketIds]).toEqual([['new',2]]);expect(marketById.has(1)).toBe(false);
   expect(JSON.parse(readFileSync(join(root,MARKET_FILE),'utf8'))).toEqual({at,items:marketRows([row])});
  }finally{rmSync(root,{recursive:true,force:true});}
@@ -70,15 +71,15 @@ test('a complete market refresh replaces removed listings and publishes its time
 test('a shared-cache write failure does not hide a successful dashboard market refresh',async()=>{
  const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
  const marketIds=new Map(),marketById=new Map(),prices=new Map();let writes=0;
- const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[{id:2,name:'New',basePrice:20}]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,()=>{writes++;throw Error('read-only cache');},'/unused',buildItemPrices);
+ const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices','gameDialAddress',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[{id:2,name:'New',basePrice:20}]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,()=>{writes++;throw Error('read-only cache');},'/unused',buildItemPrices,gameDialAddress);
  expect(await run()).toBeGreaterThan(1);expect(writes).toBe(1);expect([...prices]).toEqual([['new',20]]);
 });
 
 test('the complete dashboard scrape publishes exact variant values without a last-name alias',async()=>{
  const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
  const rows=[{id:1135,name:'Dragonhide body',basePrice:7800,ask:8000},{id:2503,name:'Dragonhide body',basePrice:13480,vwap:15000,trades:3,ask:16000}];
- const run=new Function('fetch','Bun','marketRows','buildItemPrices','priceCatalogue',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{};let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return {itemPrices,prices};};`)
-  (async()=>Response.json({total:2,items:rows}),{sleep:async()=>{}},marketRows,buildItemPrices,rows);
+ const run=new Function('fetch','Bun','marketRows','buildItemPrices','priceCatalogue','gameDialAddress',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{};let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return {itemPrices,prices};};`)
+  (async()=>Response.json({total:2,items:rows}),{sleep:async()=>{}},marketRows,buildItemPrices,rows,gameDialAddress);
  const result=await run();expect(result.itemPrices.byId[1135]).toMatchObject({value:7800,ask:8000});expect(result.itemPrices.byId[2503]).toMatchObject({value:15000,ask:16000});
  expect(result.itemPrices.byName['dragonhide body']).toBeUndefined();expect(result.prices.has('dragonhide body')).toBe(false);
 });
@@ -87,8 +88,8 @@ test('the exact ID and alias tables replace together only after a complete marke
  const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
  const previous=buildItemPrices([{id:1,name:'Old',basePrice:10}],[{id:1,name:'Old'}]);
  let fail=true,calls=0;
- const run=new Function('fetch','Bun','marketRows','buildItemPrices','previous',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{},priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices=previous;${code};return async()=>{await refreshPrices();return itemPrices;};`)
-  (async()=>++calls%2===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):fail?new Response('',{status:503}):Response.json({total:200,items:[]}),{sleep:async()=>{}},marketRows,buildItemPrices,previous);
+ const run=new Function('fetch','Bun','marketRows','buildItemPrices','previous','gameDialAddress',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{},priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices=previous;${code};return async()=>{await refreshPrices();return itemPrices;};`)
+  (async()=>++calls%2===1?Response.json({total:200,items:[{id:2,name:'New',basePrice:20}]}):fail?new Response('',{status:503}):Response.json({total:200,items:[]}),{sleep:async()=>{}},marketRows,buildItemPrices,previous,gameDialAddress);
  expect(await run()).toBe(previous);expect(previous.byId[1]?.value).toBe(10);expect(previous.byName.old?.value).toBe(10);
  fail=false;const next=await run();expect(next.byId[1]).toBeUndefined();expect(next.byName.old).toBeUndefined();expect(next.byId[2]?.value).toBe(20);expect(next.byName.new?.value).toBe(20);
 });

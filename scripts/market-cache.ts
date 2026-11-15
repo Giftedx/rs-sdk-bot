@@ -11,6 +11,8 @@
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { gameDialAddress } from '../packages/core/src/websocket-proxy';
+import { renameRetry } from '../packages/core/src/status';
 
 export const MARKET_FILE = '.practice/market-all.json';
 export const MARKET_CACHE_MS = 30 * 60_000;
@@ -27,7 +29,7 @@ export function writeMarketCache(base: string, items: Readonly<Record<number, Ma
     mkdirSync(join(base, '.practice'), { recursive: true });
     try {
         writeFileSync(tmp, JSON.stringify({ at, items }), { flag: 'wx' });
-        renameSync(tmp, file);
+        renameRetry(tmp, file);
     } finally { rmSync(tmp, { force: true }); }
 }
 // Acquisition needs an observed seller count as well as the ask. Older caches that omit it remain unknown.
@@ -84,7 +86,7 @@ export async function fetchMarket(get: (url: string) => Promise<any> = async url
 }, pause: (ms: number) => Promise<void> = ms => Bun.sleep(ms)): Promise<Record<number, MarketItem>> {
     const all: Record<number, MarketItem> = {};
     for (let offset = 0, total = 1; offset < total; offset += 100) {
-        const j = await get(`${DEMO}/api/market/items?limit=100&offset=${offset}`);
+        const j = await get(gameDialAddress(`${DEMO}/api/market/items?limit=100&offset=${offset}`));
         if (!Number.isSafeInteger(j?.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('invalid market page');
         total = Math.min(j.total, 5000);
         Object.assign(all, marketRows(j.items));

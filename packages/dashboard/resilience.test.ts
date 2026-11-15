@@ -1,5 +1,6 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
+import {gameDialAddress} from '../core/src/websocket-proxy';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
 const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
 
@@ -69,7 +70,7 @@ test('state-build failures keep retained data private even when an exception nam
 test('an upstream player service failure is not cached as an unranked player for thirty minutes',async()=>{
  const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('function lookupPlayer('),server.indexOf('let lookupWanted:')));
  let calls=0;
- const lookup=new Function('fetch','Bun',`const lookups=new Map(),roster=new Map(),DEMO='https://example.test',ONLINE_MS=30000,SKILL_BOARDS=[];let lookupChain=Promise.resolve();const hiscoreRows=()=>[{board:'Mining'}],wornOf=async()=>null;${code};return lookupPlayer;`)(async()=>++calls===1?new Response('unavailable',{status:503}):new Response('player rows'),{sleep:async()=>{}});
+ const lookup=new Function('fetch','Bun','gameDialAddress',`const lookups=new Map(),roster=new Map(),DEMO='https://example.test',ONLINE_MS=30000,SKILL_BOARDS=[];let lookupChain=Promise.resolve();const hiscoreRows=()=>[{board:'Mining'}],wornOf=async()=>null;${code};return lookupPlayer;`)(async()=>++calls===1?new Response('unavailable',{status:503}):new Response('player rows'),{sleep:async()=>{}},gameDialAddress);
  expect(await lookup('Worker')).toBeNull();expect((await lookup('Worker')).rows).toEqual([{board:'Mining'}]);expect(calls).toBe(2);
 });
 

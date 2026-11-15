@@ -1,7 +1,8 @@
 import {test,expect} from 'bun:test';
-import {initialState,addTasks} from '../src/coordinator';
+import {initialState,addTasks,chooseTask} from '../src/coordinator';
 import {plannerPrompt,gameCoverage,supplyBillSummary} from '../src/coordinator-planner';
 import * as planner from '../src/coordinator-planner';
+import {goalWork} from '../src/goal-work';
 
 import {copyFileSync,mkdirSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -85,6 +86,37 @@ test('planner receives deterministic goal values and reasons for its pending wor
  const prompt=plannerPrompt(state,{...world,at:1000,scoreboard:{goals}});
  expect(prompt).toContain('"goalWork":[{"id":"quest","value":1');
  expect(prompt).toContain('quest Cook');
+});
+
+test('planner never calls an orphan dependency-satisfied review dispatchable without positive goal value',()=>{
+ const state=initialState(),base={goal:'quests' as const,capability:'quest-worker',dependsOn:[],priority:1,estimatedMs:60000,why:'Finite fixture consumer'};
+ addTasks(state,[
+  {...base,id:'review-recovery-refusal-and-held-boundary',kind:'review',capability:'session-recovery-only',priority:100},
+  {...base,id:'qualify-live',kind:'qualify'},
+  {...base,id:'useful-live',kind:'run',account:'Helper',dependsOn:['qualify-live'],accept:{quests:['Cook']}},
+  {...base,id:'unknown-supply',kind:'run',goal:'main24',capability:'gather-order',account:'Helper',accept:{bank:{557:5}}},
+  {...base,id:'failed-proof',kind:'qualify'},
+  {...base,id:'blocked-live',kind:'run',account:'Helper',dependsOn:['failed-proof'],accept:{quests:['Cook']}},
+ ],1000);
+ state.tasks.find(r=>r.spec.id==='failed-proof')!.status='failed';
+ const goals={version:1,main:{rank1:null},specialists:{targets:[]},quests:{remaining:['Cook']},
+  collection:{missing:[{id:557,item:'Earth rune',need:5,owned:0,consumer:'Haggis Earth route'}]},army:{roster:[],accounts:[]}};
+ const values=goalWork(state,goals as any,[],1000),resources={goalValue:(task:any)=>values.get(task.id)?.value??null};
+ expect(values.get('review-recovery-refusal-and-held-boundary')).toMatchObject({value:0,consumers:[]});
+ expect(chooseTask({...state,tasks:state.tasks.filter(r=>r.spec.kind==='review')},1000,resources)).toBeNull();
+ expect(chooseTask(state,1000,resources)?.id).toBe('qualify-live');
+ const prompt=plannerPrompt(state,{...world,at:1000,scoreboard:{goals}});
+ const line=prompt.split('\n').find(row=>row.startsWith('COMPLETE ACTIVE QUEUE'))!,facts=JSON.parse(line.slice(line.indexOf(': ')+2));
+ expect(facts.dependencyReadiness).toEqual({satisfied:3,waiting:1,blocked:1});
+ const dated=prompt.split('\n').find(row=>row.startsWith('DATED WORLD'))!,compact=JSON.parse(dated.slice(dated.indexOf(': ')+2));
+ expect(compact.goalWork.filter((row:any)=>row.dispatchable===false&&['review-recovery-refusal-and-held-boundary','unknown-supply'].includes(row.id))).toEqual([
+  {id:'review-recovery-refusal-and-held-boundary',value:0,reason:'No viable pending run connects this task to an owner goal.',consumers:[],dispatchable:false},
+  {id:'unknown-supply',value:null,reason:'Observe Helper holdings of item 557.',consumers:['unknown-supply'],dispatchable:false},
+ ]);
+ expect(compact.goalWork.find((row:any)=>row.id==='qualify-live')).toMatchObject({value:1,consumers:['useful-live']});
+ expect(compact.goalWork.find((row:any)=>row.id==='qualify-live').dispatchable).toBeUndefined();
+ expect(facts.rootBlockers[0]).toMatchObject({id:'failed-proof',dependencySatisfiedRunsIfFixed:1});
+ expect(prompt).toContain('never report them as ready');expect(prompt).toContain('connect a viable finite consumer');expect(prompt).toContain('repair terminal dependency roots');
 });
 
 test('live status projection keeps dated stock available to the planner',()=>{

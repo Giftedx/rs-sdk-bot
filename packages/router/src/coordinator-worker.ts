@@ -5,7 +5,7 @@ import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
 import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
 import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
 import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
-import {readWorld,parseModelObject} from './coordinator-planner';
+import {readWorld,parseModelObject,runPlannerModel} from './coordinator-planner';
 import {assertProvisionCrew,type ProvisionCrew} from '../../../scripts/provision-readiness';
 import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
 import {projectRoot,coordinationDir,atomicJson,capabilitySource} from './coordinator-store';
@@ -23,6 +23,11 @@ import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdic
 import type {DeliveryResult} from './delivery';
 
 type BuildStageResult=Pick<AuthorResult,'ok'|'delivery'|'diagnostic'|'blocked'|'lastTail'>&{resumedPreparedSource?:string};
+async function reviewSource(agent:ModelWorker,prompt:string,timeoutMs:number,directory:string){
+ const review=await runPlannerModel(agent,prompt,timeoutMs);
+ atomicJson(join(directory,'review-model.json'),review);
+ return reviewVerdict(review,parseModelObject);
+}
 // `gate` decides whether the review blocks delivery (model-worker.ts reviewGate). Without it every review blocks.
 export async function finishBuildDelivery(capability:string,prepared:any,deps:{fingerprint:()=>string;author:()=>Promise<BuildStageResult>;deliver:()=>Promise<DeliveryResult>;review:(result:BuildStageResult,source:string)=>Promise<{approved:boolean;reason:string}>;record:(result:BuildStageResult)=>void;gate?:()=>Promise<{blocking:boolean;reason:string}>},agent:ModelWorker){
  let resume=false;if(prepared&&!prepared.diagnostic)try{resume=prepared.source===deps.fingerprint();}catch{/* missing or changed source needs the author */}
@@ -39,7 +44,13 @@ export async function finishBuildDelivery(capability:string,prepared:any,deps:{f
   const unchanged=deps.fingerprint()===source;
   return{ok:unchanged,delivery:{...result.delivery,id:capability},review:{deferred:true,reason:gate.reason},evidence:'native',agent,...(!unchanged?{error:'source changed during replay'}:{})};
  }
- const verdict=await deps.review(result,source),unchanged=deps.fingerprint()===source;
+ let verdict:{approved:boolean;reason:string};
+ try{verdict=await deps.review(result,source);}
+ catch(error){
+  const unchanged=deps.fingerprint()===source;
+  return{ok:false,sourcePrepared:unchanged,delivery:{...result.delivery,id:capability},gate:gate.reason,evidence:'native',agent,error:unchanged?String(error):'source changed during review; '+String(error)};
+ }
+ const unchanged=deps.fingerprint()===source;
  return{ok:verdict.approved===true&&unchanged,delivery:{...result.delivery,id:capability},review:verdict,gate:gate.reason,evidence:'native',agent,...(!unchanged?{error:'source changed during review'}:{})};
 }
 
@@ -152,9 +163,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
  if(task.kind==='review'){
   const fingerprint=ownedSource;
   const before=fingerprint();
-  const review=await runModel(agent,'Independently review this delivered capability: its code, callers, tests and saved delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Some receipts summarize delivery files and live status. Read receipt.json under _task.evidence for the complete record. Claimed review work order: '+task.why+' Definition: '+JSON.stringify(definition)+' Relevant completed dependency receipts: '+JSON.stringify(reviewDependencies(dependencies,definition.id,task.dependsOn)),task.timeoutMs??300000,true);
-  atomicJson(join(directory,'review-model.json'),review);
-  const verdict=reviewVerdict(review,parseModelObject);
+  const verdict=await reviewSource(agent,'Independently review this delivered capability: its code, callers, tests and saved delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Some receipts summarize delivery files and live status. Read receipt.json under _task.evidence for the complete record. Claimed review work order: '+task.why+' Definition: '+JSON.stringify(definition)+' Relevant completed dependency receipts: '+JSON.stringify(reviewDependencies(dependencies,definition.id,task.dependsOn)),task.timeoutMs??300000,directory);
   return{ok:verdict.approved===true&&fingerprint()===before,review:verdict,evidence:'source-review',source:before,agent};
  }
  if(task.kind==='run'){
@@ -215,9 +224,8 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
  deliver:()=>runDeliveryTask(definition),record:result=>atomicJson(join(directory,'author.json'),result),
  gate:async()=>{const gate=await buildReviewGate({root:projectRoot,isolated,entry:definition.entry,owned:definition.files,startedAt,allow:task.replayAllow});atomicJson(join(directory,'review-gate.json'),{...gate,at:Date.now()});return gate;},
  review:async(result)=>{
- const review=await runModel(agent==='claude'?'codex':'claude','Review this completed capability independently: the declared source, callers, tests and delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Check that the work order was fulfilled through its real worker and that the acceptance bar in docs/script-contract.md holds. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Work order: '+buildWorkOrder(task,dependencies,directory)+' Definition: '+JSON.stringify(definition)+' Delivery: '+JSON.stringify(result.delivery),300000,true);
- atomicJson(join(directory,'review-model.json'),review);
- const verdict=review.ok?parseModelObject(review.text):{approved:false,reason:review.text};atomicJson(join(directory,'review.json'),verdict);
+ const verdict=await reviewSource(agent==='claude'?'codex':'claude','Review this completed capability independently: the declared source, callers, tests and delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Check that the work order was fulfilled through its real worker and that the acceptance bar in docs/script-contract.md holds. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Work order: '+buildWorkOrder(task,dependencies,directory)+' Definition: '+JSON.stringify(definition)+' Delivery: '+JSON.stringify(result.delivery),300000,directory);
+ atomicJson(join(directory,'review.json'),verdict);
  return verdict;
  }},agent);
  return isolated&&built.ok?await publish(built):built;

@@ -31,6 +31,7 @@ import {folderScan} from './folder-scan';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
 import { RosterFeed } from '../core/src/roster-feed';
+import { gameDialAddress } from '../core/src/websocket-proxy';
 import { reloadDue, respawnDaemon } from '../core/src/live-reload';
 import { canonicalSnapshots, ownerOfIn } from '../core/src/fleet-snapshots';
 import { marketRows, writeMarketCache, type MarketItem } from '../../scripts/market-cache';
@@ -419,7 +420,7 @@ setInterval(() => {
 }, 15_000);
 function connectFeed() {
     try {
-        const ws = new WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+        const ws = new WebSocket(gameDialAddress('wss://rs-sdk-demo.fly.dev/worldfeed'));
         feedSocket = ws;
         feedHeardAt = Date.now();
         const feed = new RosterFeed();
@@ -475,7 +476,7 @@ async function refreshRanks() {
         const r = ranks.get(name);
         if (r && Date.now() - r.at < 300_000) continue;
         try {
-            const response = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            const response = await fetch(gameDialAddress(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`), { signal: AbortSignal.timeout(15_000) });
             if (!response.ok) throw Error(`Player ranks HTTP ${response.status}`);
             const rows: Row[] = hiscoreRows(await response.text(), SKILL_BOARDS);
             ranks.set(name, { at: Date.now(), rows });
@@ -520,7 +521,7 @@ const boardTops = new Map<string, { at: number; rows: BoardRow[] }>();
 async function refreshLiveTops() {
     for (const b of SKILL_BOARDS) {
         try {
-            const response = await fetch(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`, { signal: AbortSignal.timeout(15_000) });
+            const response = await fetch(gameDialAddress(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`), { signal: AbortSignal.timeout(15_000) });
             if (!response.ok) throw Error(`Board HTTP ${response.status}`);
             const rows = parseBoard(await response.text());
             if (rows[0]) { liveTop.set(b, { name: rows[0].name, level: rows[0].level, ticks: rows[0].ticks, at: Date.now() }); boardTops.set(b, { at: Date.now(), rows: rows.slice(0, RIVALS_PER_BOARD) }); }
@@ -546,7 +547,7 @@ const lookups = new Map<string, Lookup>();
 // Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
 const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
 const recapCache = new Map<string, { at: number; recap: DeathRecap | null }>();
-const wornOf = (name: string, seen: { x: number; z: number } | undefined) => seen && OBJS.size ? readWorn(DEMO.replace(/^http/, 'ws') + '/worldfeed', name, seen, OBJS) : Promise.resolve(null);
+const wornOf = (name: string, seen: { x: number; z: number } | undefined) => seen && OBJS.size ? readWorn(gameDialAddress(DEMO.replace(/^http/, 'ws') + '/worldfeed'), name, seen, OBJS) : Promise.resolve(null);
 let lookupChain: Promise<unknown> = Promise.resolve();
 function lookupPlayer(name: string): Promise<Lookup | null> {
     const key = name.toLowerCase(), hit = lookups.get(key);
@@ -555,7 +556,7 @@ function lookupPlayer(name: string): Promise<Lookup | null> {
         const again = lookups.get(key);
         if (again && Date.now() - again.at < 1_800_000) return again;
         try {
-            const r = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(key)}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            const r = await fetch(gameDialAddress(`${DEMO}/hiscores/player/${encodeURIComponent(key)}?profile=main`), { signal: AbortSignal.timeout(15_000) });
             if (!r.ok && r.status !== 404) return null;
             const rows = r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [], seen = roster.get(key), online = !!seen && Date.now() - seen.seen < ONLINE_MS;
             const worn = online ? await wornOf(name, seen) : null;
@@ -578,7 +579,7 @@ const extraBoards = new Map<string, { at: number; rows: ValueRow[] }>();
 async function refreshExtra() {
     for (const e of EXTRA) {
         try {
-            const response = await fetch(`${DEMO}/hiscores/${e.path}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            const response = await fetch(gameDialAddress(`${DEMO}/hiscores/${e.path}?profile=main`), { signal: AbortSignal.timeout(15_000) });
             if (!response.ok) throw Error(`Value board HTTP ${response.status}`);
             const rows = valueBoardRows(await response.text());
             if (rows.length) extraBoards.set(e.board, { at: Date.now(), rows });
@@ -616,7 +617,7 @@ async function refreshPrices() {
         const shared: Record<number, MarketItem> = {};
         // 100 items per page (the API refuses more); about 15 pages.
         for (let offset = 0, total = 1; offset < total; offset += 100) {
-            const response = await fetch(`${DEMO}/api/market/items?limit=100&offset=${offset}`, { signal: AbortSignal.timeout(15_000) });
+            const response = await fetch(gameDialAddress(`${DEMO}/api/market/items?limit=100&offset=${offset}`), { signal: AbortSignal.timeout(15_000) });
             if (!response.ok) throw Error(`Market HTTP ${response.status}`);
             const j = await response.json() as { items: any[]; total: number };
             if (!Number.isSafeInteger(j.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('Invalid market page');
@@ -1333,7 +1334,7 @@ const dashboardServer = Bun.serve({
             if (name.replace(/[ _-]/g, '').toLowerCase().includes(MAIN.toLowerCase())) return Response.json({ error: 'not available' }, { status: 404 });
             return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
         }
-        if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
+        if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/?live='+encodeURIComponent(gameDialAddress(DEMO.replace(/^http/,'ws')+'/worldfeed')),reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
         if(url.pathname==='/viewer'||url.pathname==='/viewer/') {
             if(!viewerAvailable())return new Response('3D viewer assets unavailable',{status:503});

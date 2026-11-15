@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { xpForLevel } from './curve';
+import { gameDialAddress } from '../../core/src/websocket-proxy';
 
 // Ranks hiscore boards by what it would really take to win them, supply first (red-team finding H1).
 // Usage: bun packages/planner/src/rank-cli.ts [snapshot=research/hiscores-2026-10-22.json]
@@ -44,7 +45,7 @@ const BOARDS: Board[] = [
 type Market = { name: string; bid: number | null; ask: number | null; buyQuantity: number; sellQuantity: number; lastPrice: number | null; volume: number };
 
 async function market(query: string): Promise<Market | null> {
-    const res = await fetch(`https://rs-sdk-demo.fly.dev/api/market/items?q=${encodeURIComponent(query)}`);
+    const res = await fetch(gameDialAddress(`https://rs-sdk-demo.fly.dev/api/market/items?q=${encodeURIComponent(query)}`));
     if (!res.ok) return null;
     const j = (await res.json()) as { items: Market[] };
     return j.items.find(i => i.name.toLowerCase() === query.toLowerCase()) ?? j.items[0] ?? null;

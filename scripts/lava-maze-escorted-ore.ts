@@ -5,6 +5,7 @@ import { openBot, settle, serverFromEnv } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { depositObserved } from '../packages/core/src/deposit';
 import { RosterFeed } from '../packages/core/src/roster-feed';
+import { gameDialAddress } from '../packages/core/src/websocket-proxy';
 import { waitUntil, type TickSource } from '../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathDeps } from '../packages/core/src/walk';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
@@ -248,7 +249,7 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
         requireThat(await waitUntil(escort!,protectedEscort,{timeoutTicks:8}),'Protect Item or ten-Prayer reserve missing');
         for(const s of sessions)requireThat(await alignAtBank(walkers.get(s)!,()=>!!abort||limits())&&at(s,BANK),'Post-bank stage unconfirmed '+s.name);
         requireThat(sessions.every(s=>at(s,BANK)&&alive(s)),'Exact participant bank staging unconfirmed');
-        feed=radar(fixtureFeed??`${local?'ws':'wss'}://${servers[0]}/worldfeed`);
+        feed=radar(fixtureFeed??gameDialAddress(`${local?'ws':'wss'}://${servers[0]}/worldfeed`));
         requireThat(await waitForRosterEntry(miner!,()=>feed!.fresh(),()=>sessions.map(s=>({name:s.name,player:player(s)})),()=>checkOutbound(true)),
             abort??'Participant roster unavailable before departure');
         requireThat(!checkOutbound(),abort??'Departure refused');

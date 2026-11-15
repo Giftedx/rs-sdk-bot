@@ -112,6 +112,7 @@ test('missing and invalid shared supply observations fall back to per-item marke
             requests.push(url); return { ask: 12, bid: 5, sellQuantity: 3 };
         }, async ms => { pauses.push(ms); });
         expect(requests.map(url => Number(url.split('/').pop()))).toEqual([1, 2, 3]);
+        expect(requests.every(url=>url.startsWith('https://rs-sdk.maxbittker.com/api/market/items/'))).toBe(true);
         expect(pauses).toEqual([550, 550, 550]);
         for (const quote of Object.values(prices)) expect(quote).toEqual({ at: now, ask: 12, bid: 5, sell: 3 });
     } finally { rmSync(base, { recursive: true, force: true }); }
