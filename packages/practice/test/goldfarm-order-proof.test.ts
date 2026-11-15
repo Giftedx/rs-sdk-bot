@@ -13,8 +13,9 @@ test('native fault preload forwards real calls without recursion, fails after ea
 console.log(JSON.stringify(await walkPath(d,[{z:3283}])));coins=2000;
 console.log(JSON.stringify(await walkPath(d,[{z:3283}])));
 console.log(JSON.stringify(await walkPath(d,[{z:3302}])));`);
-  for(const fail of [true,false]){
-   writeFileSync(preload,goldfarmFaultPreload(module,fail));
+  const references=process.platform==='win32'?[module,join(directory.toUpperCase(),'walk.ts')]:[module];
+  for(const reference of references)for(const fail of [true,false]){
+   writeFileSync(preload,goldfarmFaultPreload(reference,fail));
    const child=Bun.spawn([process.execPath,'--preload',preload,entry],{timeout:5000,windowsHide:true,stdout:'pipe',stderr:'pipe'});
    const [exitCode,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
    expect(exitCode,stderr).toBe(0);
