@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794772910864-mightyrod-mmsmk1232-staffoffire",
+ "account": "Mightyrod",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "0690231e-804a-49b1-a978-daba342d1d51",
+ "count": 0,
+ "ok": false,
+ "at": 1794772923351,
+ "detail": "trade claimed"
+}
