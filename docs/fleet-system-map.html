@@ -61,7 +61,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
 <body>
 <main class="wrap">
 <header>
- <span class="eyebrow">rs-sdk-bot · source revision <a href="https://github.com/Giftedx/rs-sdk-bot/tree/d1b9ac5be"><code>d1b9ac5be</code></a></span>
+ <span class="eyebrow">rs-sdk-bot · source revision <a href="https://github.com/Giftedx/rs-sdk-bot/tree/86da1ef3b449f6e6e9bdc74c24064040e55931dd"><code>86da1ef3b</code></a></span>
  <h1>Fleet System Map</h1>
  <p class="lede">What picks the work, what starts a bot, what shares the fleet, and what happens when a step fails.</p>
  <p class="scope">This page describes source behavior. Tests, practice runs and live runs prove different things. Owner goals need fresh game evidence. The map alone proves no live result.</p>
@@ -169,7 +169,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
  <tr><td>Dashboard</td><td>Publisher if needed, or an explicit start</td><td>Shared SSE state each 2 s while watched</td><td>Local view, observations, control API and evidence display.</td></tr>
  <tr><td>monitor / loop-watch</td><td>Explicit session start</td><td>Default 30 s</td><td>Process/loop checks, <code>monitor.json</code> and <code>alerts.jsonl</code>. They are separate tools.</td></tr>
  </tbody></table></div>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/watchdog.ts#L75">watchdog</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/controllers.ts#L170">daemon launch records</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/cloud-side.ts#L26">cloud-side</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/watchdog.ts#L75">watchdog</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/controllers.ts#L170">daemon launch records</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/cloud-side.ts#L26">cloud-side</a></p>
 </section>
 
 <section id="goals">
@@ -197,7 +197,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   <p>Repeated no-progress failures or excessive waste can retire an account/template pair. Transport drains do not count as worker failures.</p>
   <p>A changed worker script can release a retirement. Death stays held for review. A successful trainer or ended kit buy requests a fresh pass.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/goal-scoreboard.ts">owner goals</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/goal-work.ts#L25">consumer value</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator.ts#L336">dispatch</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/planner/src/supply-bill.ts#L97">Overall supply bill</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/planner/src/autopilot.ts#L501">autopilot selection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/autopilot.ts#L367">log feedback</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/goal-scoreboard.ts">owner goals</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/goal-work.ts#L25">consumer value</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator.ts#L336">dispatch</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/planner/src/supply-bill.ts#L97">Overall supply bill</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/planner/src/autopilot.ts#L501">autopilot selection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/autopilot.ts#L367">log feedback</a></p>
 </section>
 
 <section id="job">
@@ -244,7 +244,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   <p>Standing retry needs a finished live status quiet for 15 min, or matching logout proof at least 2 min old. Owner stops still block starts.</p>
   <p class="to">The swarm records ends in <code>swarm-deaths.json</code>. Coordinator acceptance also checks identity, source, freshness, useful effect and settled participants.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/swarm.ts#L151">admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/swarm.ts#L246">supervisor command</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/swarm.ts#L746">detached runs</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/practice/src/supervise.ts#L99">end rules</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/inprocess.ts#L549">connection admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/worker-release.ts#L276">release checks</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/aio.ts#L346">AIO</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/swarm.ts#L151">admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/swarm.ts#L246">supervisor command</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/swarm.ts#L746">detached runs</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/practice/src/supervise.ts#L99">end rules</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/inprocess.ts#L549">connection admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/worker-release.ts#L276">release checks</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/aio.ts#L346">AIO</a></p>
 </section>
 
 <section id="queue">
@@ -268,7 +268,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   <p>Only a failed regression can trigger automatic code repair in that delivery loop. It must be non-timeout, with repair enabled and fix rounds remaining.</p>
   <p>Practice and consumer failures return to the integrator for diagnosis. A useful retry needs the cause, the smallest repair and fresh proof.</p></li>
  <li class="step"><span class="who">Replay + review</span><h3>Decide whether review blocks delivery</h3>
-  <p>The other model reviews the build. Deferred review becomes a separate task assigned to that model.</p>
+  <p>Review prefers the other model. A recognized usage limit can select the fallback model within the same budget. Deferred review becomes a separate task.</p>
   <p>Native qualification must pass first. Changes within owned files can deliver before review if three required recorded runs replay cleanly.</p>
   <p><code>replayAllow</code> can permit named command types to change. Replay counts those changes and continues checking later commands.</p>
   <p>Unknown scope, too few records, replay errors or disallowed differences require review before delivery. A later rejection holds subsequent capability runs.</p></li>
@@ -281,7 +281,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   <p>An explicit <code>timeoutMs</code> controls the window. Otherwise the fallback uses 1.5 times the estimate, at least 15 min, with a maximum cap.</p>
   <p>Missed targets or an expired window produce a failed receipt. They can request a planner diagnosis and a changed finite consumer.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator.ts#L136">qualification refresh</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator.ts#L264">build holds</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator-decisions.ts#L21">retirement</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/model-worker.ts#L85">model and replay gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/author.ts#L177">diagnostic and delivery</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator-live.ts#L289">run window</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator.ts#L136">qualification refresh</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator.ts#L264">build holds</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator-decisions.ts#L21">retirement</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/model-worker.ts#L85">model and replay gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator-planner.ts#L502">review fallback</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/author.ts#L179">diagnostic and delivery</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator-live.ts#L289">run window</a></p>
 </section>
 
 <section id="code">
@@ -303,13 +303,14 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   </ul>
   <p>If the SDK patch changes, an exact patched or clean vendor tree can receive it. Other vendor edits or new-file collisions are preserved and reported.</p></li>
  <li class="step"><span class="who">live-update → daemon reload</span><h3>Reload only affected loops</h3>
-  <p><code>.practice/live-update.json</code> names daemons whose import closure intersects the changed files.</p>
+  <p><code>.practice/live-update.json</code> names daemons whose import closure intersects the changed files. Later unrelated updates retain each pending reload request.</p>
   <p>Autopilot restarts after its active pass. Fleet-agent restarts after its active trades. A coordinator restart retains running task workers.</p>
+  <p>The dashboard collector closes its event streams and finishes active requests before starting its replacement. The publisher reloads between cycles.</p>
   <p>If swarm source changes, the coordinator can replace a detached-run controller without pausing or draining its sessions. The replacement adopts detached supervisors.</p>
   <p>A legacy controller can need a drain. The bounded standing drain has a 5 min limit and 1 hour backoff.</p>
   <p>Existing sessions retain loaded code. Fresh worker starts load disk source and apply their job's release and launch rules.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/delivery-pr.ts">delivery pull requests</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/ci-gate.ts">local gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/live-update.ts#L62">move conditions</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/live-update.ts#L92">delivery adoption and rebase</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/live-update.ts#L502">SDK patch and reload</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator-live.ts#L85">controller replacement</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/delivery-pr.ts">delivery pull requests</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/ci-gate.ts">local gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/live-update.ts#L62">move conditions</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/live-update.ts#L92">delivery adoption and rebase</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/live-update.ts#L504">SDK patch and reload</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/live-reload.ts#L18">pending daemon reloads</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator-live.ts#L85">controller replacement</a></p>
 </section>
 
 <section id="trade">
@@ -342,7 +343,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   </ul>
   <p class="to">Case 2 uses the local clock for a partner on this side. Other unresolved trade claims have no expiry. Do not infer settlement from elapsed time.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/fleet-sync.ts#L246">claim release</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/fleet-sync.ts#L203">paired logout proof</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/fleet-trade-claim.ts#L186">atomic pair release</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/fleet-sync.ts#L298">dropped claims</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/fleet-sync.ts#L363">sync</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/fleet-trade.ts#L62">trade admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/fleet-trade.ts#L241">receipt outcome</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/fleet-sync.ts#L246">claim release</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/fleet-sync.ts#L203">paired logout proof</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/fleet-trade-claim.ts#L186">atomic pair release</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/fleet-sync.ts#L298">dropped claims</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/fleet-sync.ts#L363">sync</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/fleet-trade.ts#L62">trade admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/fleet-trade.ts#L241">receipt outcome</a></p>
 </section>
 
 <section id="cloud">
@@ -368,7 +369,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   <p>When the home side returns, idle adopted accounts can return if it has room. A handback pass adopts no other accounts.</p>
   <p class="to">Adoption changes owner rows with a compare-and-swap push. It does not authorize another side to log in before that handover lands.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/controllers.ts#L64">local PID lease</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/fleet-lease.ts#L8">side lease</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/fleet-trade-claim.ts">account claims</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/cloud-launch.ts#L53">cloud limits</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/cloud-side.ts#L90">cloud runner</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/fleet-vault.ts#L104">vault restore</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/fleet-assign.ts#L36">adoption</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/controllers.ts#L64">local PID lease</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/fleet-lease.ts#L8">side lease</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/fleet-trade-claim.ts">account claims</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/cloud-launch.ts#L53">cloud limits</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/cloud-side.ts#L116">cloud runner</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/fleet-vault.ts#L104">vault restore</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/fleet-assign.ts#L36">adoption</a></p>
 </section>
 
 <section id="fail">
@@ -405,7 +406,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
  <tr><td>Trade is uncertain</td><td>The receipt stays <code>reconcile</code>. Only proved zero-movement cases release uncertain claims automatically.</td><td>Reconcile items, both session outcomes and matching claim nonces.</td></tr>
  <tr><td>Owner goals show no gain for 6 hours</td><td>Watchdog writes <code>coordinator/stall.json</code>.</td><td>The planner receives the stall and must change lane or method. Coverage counts alone do not clear it.</td></tr>
  </tbody></table></div>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/cloud-recover.ts#L137">recovery budgets</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/cloud-recover.ts#L293">retained failures</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/cloud-recover.ts#L476">diagnosis requests</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator-planner.ts#L358">planner repair contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/watchdog.ts#L35">owner-goal stall</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/cloud-recover.ts#L137">recovery budgets</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/cloud-recover.ts#L293">retained failures</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/cloud-recover.ts#L476">diagnosis requests</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator-planner.ts#L361">planner repair contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/watchdog.ts#L35">owner-goal stall</a></p>
 </section>
 
 <section id="watch">
@@ -426,7 +427,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   <p>Coordinator console commands can queue proposals. A command receipt records the outcome. Resume removes only the supported command's own hold.</p>
   <p class="to">A command receipt proves its control effect. It does not prove useful game output or successful live work.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/dashboard/server.ts#L1050">dashboard state</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/dashboard/publish.ts#L198">publication cycle</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/dashboard/publish-relay.ts#L101">public projection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/dashboard/publish-commands.ts#L36">command checks</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/dashboard/server.ts#L1053">dashboard state</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/dashboard/publish.ts#L199">publication cycle</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/dashboard/publish-relay.ts#L101">public projection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/dashboard/publish-commands.ts#L36">command checks</a></p>
 </section>
 
 <section id="stops">
@@ -446,7 +447,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
  <tr><td><code>DASH_READ_ONLY=1</code></td><td>Dashboard actions are read-only. It does not stop existing workers.</td></tr>
  </tbody></table></div>
  <p class="to">Watchdog can restore publication before checking coordinator/swarm stops. A paused game fleet can still have a working hosted page.</p>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/swarm.ts#L293">owner stop preservation</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/scripts/swarm.ts#L931">disabled owned run</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/watchdog.ts#L83">watchdog scopes</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/worker-release.ts#L276">standing release policy</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/swarm.ts#L293">owner stop preservation</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/scripts/swarm.ts#L931">disabled owned run</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/watchdog.ts#L83">watchdog scopes</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/worker-release.ts#L276">standing release policy</a></p>
 </section>
 
 <section id="gaps">
@@ -461,11 +462,11 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
   <li>Generic coverage describes capabilities. Goal completion needs accepted evidence for each owner goal, including player kills and Wilderness control.</li>
   <li>The implemented goal ledger keeps unproved results explicit. This page makes no claim that the overall goal is complete.</li>
  </ul>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/core/src/haggisgate.ts">scored launch gates</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/goal-scoreboard.ts">goal evidence</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/d1b9ac5be/packages/router/src/coordinator-planner.ts#L358">goal and repair contract</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/core/src/haggisgate.ts">scored launch gates</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/goal-scoreboard.ts">goal evidence</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/86da1ef3b449f6e6e9bdc74c24064040e55931dd/packages/router/src/coordinator-planner.ts#L361">goal and repair contract</a></p>
 </section>
 
 <footer>
- <p>Source snapshot: <a href="https://github.com/Giftedx/rs-sdk-bot/tree/d1b9ac5be"><code>d1b9ac5be</code></a>. Each section links to its owning code. Timings and budgets are defaults unless stated otherwise.</p>
+ <p>Source snapshot: <a href="https://github.com/Giftedx/rs-sdk-bot/tree/86da1ef3b449f6e6e9bdc74c24064040e55931dd"><code>86da1ef3b</code></a>. Each section links to its owning code. Timings and budgets are defaults unless stated otherwise.</p>
  <p>Keep source checks, practice evidence and live evidence separate. Bind a runtime conclusion to the worker source, account, result and observation that support it.</p>
 </footer>
 </main>
