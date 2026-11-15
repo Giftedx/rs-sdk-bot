@@ -10,6 +10,7 @@
 // coordinator holds real work in jobs.json and releases its parked jobs itself (coordinator-live.ts
 // releaseFinishedOwnJobs), so this script never stops it.
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -23,12 +24,12 @@ import { jobAccounts } from '../packages/core/src/coordinator-jobs';
 import { clearSwarmStop, loadEnded, swarmWroteStop, type EndRecord } from './swarm';
 
 export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
-// The end reasons the recovery permit accepts (packages/core/src/session-recovery-permit.ts), less a death: a death
-// waits for a person, as the swarm's standing retry does.
+// The end reasons the recovery permit accepts (packages/core/src/session-recovery-permit.ts), less a death. A death
+// needs planner diagnosis without a recovery login.
 const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped)(?:\b| )/;
 
 export type ClaimView = { phase: 'held' | 'released'; kind?: string; pid?: number; host?: string } | null;
-export type Eligibility = { eligible: true; endedAt: number } | { eligible: false; reason: string; log: boolean };
+export type Eligibility = { eligible: true; endedAt: number } | { eligible: false; reason: string; log: boolean; diagnose?: true };
 
 // Whether one account needs, and may get, an authenticated recovery now. `log` marks a held session that is refused,
 // as opposed to an account with nothing to recover.
@@ -38,24 +39,25 @@ export type Eligibility = { eligible: true; endedAt: number } | { eligible: fals
 // silence and the retry MAX_ATTEMPTS allows was never submitted.
 export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndRecord | undefined; stopText: string | undefined; pidAlive: (pid: number) => boolean; host: string; retried?: boolean }): Eligibility {
     if (v.proof.state !== 'held') return { eligible: false, reason: `logout proof ${v.proof.state}`, log: false };
+    if (v.stopText !== undefined && !swarmWroteStop(v.stopText)) return { eligible: false, reason: 'owner stop file holds the account', log: true };
     if (!v.claim || v.claim.phase !== 'held') {
         // No claim holds the account, and its logout is still unproved: a trade worker dropped and fleet sync released
         // its claim (scripts/fleet-sync.ts droppedTradeClaims). The swarm's orphan end names the held attempt and its
         // dead owner (scripts/swarm.ts orphanedSessionEnds), which is what a recovery needs. Live claude-cloud:
         // TrouserSnake and UnderMyKilt stood with no job after such a release until a recovery was submitted by hand.
-        if (!v.end?.reason.startsWith(`exit orphaned: attempt ${v.proof.attemptId} `)) return { eligible: false, reason: 'no held fleet account claim', log: false };
+        if (!v.end) return { eligible: false, reason: 'end record gone; planner diagnosis required', log: true, diagnose: true };
+        if (!v.end.reason.startsWith(`exit orphaned: attempt ${v.proof.attemptId} `)) return { eligible: false, reason: 'no held fleet account claim', log: false };
     } else {
         if (v.claim.kind !== 'swarm') return { eligible: false, reason: 'claim is held by a trade order', log: true };
         if (v.claim.host === v.host && typeof v.claim.pid === 'number' && v.pidAlive(v.claim.pid)) return { eligible: false, reason: 'worker still alive', log: false };
     }
-    if (v.stopText !== undefined && !swarmWroteStop(v.stopText)) return { eligible: false, reason: 'owner stop file holds the account', log: true };
-    if (!v.end) return { eligible: false, reason: 'end record gone (standing retry window passed); recover by hand', log: true };
+    if (!v.end) return { eligible: false, reason: 'end record gone (standing retry window passed); planner diagnosis required', log: true, diagnose: true };
     // The supervisor retries the dropped session before it writes the end; until then the end record is an earlier
     // run's. The attempt id starts with its creation time (packages/core/src/session-lifecycle.ts).
     const started = /^\d{13}-/.test(v.proof.attemptId) ? Number(v.proof.attemptId.slice(0, 13)) : NaN;
     if (v.end.at < started && !v.retried) return { eligible: false, reason: 'waiting: the supervisor has not ended the held attempt', log: false };
-    if (/^died\b/.test(v.end.reason)) return { eligible: false, reason: 'death needs a person', log: true };
-    if (!RECOVERABLE_END.test(v.end.reason)) return { eligible: false, reason: `end reason not recoverable: ${v.end.reason}`, log: true };
+    if (/^died\b/.test(v.end.reason)) return { eligible: false, reason: 'death requires diagnosis before recovery', log: true, diagnose: true };
+    if (!RECOVERABLE_END.test(v.end.reason)) return { eligible: false, reason: `end reason not recoverable: ${v.end.reason}`, log: true, diagnose: true };
     return { eligible: true, endedAt: v.end.at };
 }
 
@@ -75,8 +77,7 @@ const stamp = (now: number) => new Date(now).toISOString().replace(/[-:]/g, '').
 // again). Accounts dropped together recover in one proposal behind one qualify, so a second account does not wait a
 // whole call and reach the swarm's 15-minute end-record deletion. Each run also waits for the run before it: the
 // controller has one repair slot and a run gives up after 180 s waiting for it (coordinator-live.ts
-// requestAuthenticatedRecovery), which four parallel runs overran. A run behind a failed one never starts; it counts
-// as a spent attempt and the next call submits its account again.
+// requestAuthenticatedRecovery), which four parallel runs overran. An unstarted run spends no account login attempt.
 export type Target = { account: string; endedAt: number };
 // The coordinator takes at most 12 tasks in one proposal (packages/router/src/coordinator-planner.ts prepareProposal)
 // and one of them is the qualify, so a call recovers at most 11 accounts; the rest wait for the next call. Live
@@ -133,12 +134,11 @@ export function deadTasks(tasks: readonly any[]): Set<string> {
 export const recoveriesInFlight = (tasks: readonly any[], dead = deadTasks(tasks)) =>
     tasks.filter(t => t?.spec?.sessionRecovery && (t.status === 'running' || t.status === 'pending' && !dead.has(t.spec.id)));
 
-// Recovery runs already spent on one exact end: the run failed, or its qualify did. A run that never started behind a
-// failed earlier run of its chain is no attempt. A failure is retried once; a second stops the retries for that end.
+// Only a failed recovery run can spend an account login attempt. A qualification failure touches no live session.
 // A run that the controller refused while it waited for memory, a bot slot or the source owner issued no lease and
 // touched no session (packages/core/src/session-recovery-dispatch.ts phase `source-owner` or `admission`;
 // packages/router/src/coordinator-live.ts awaitBotSlot). It spends no attempt. MAX_WAITS keeps those retries finite.
-// Live local: Sausagefest's four recovery runs were all refused on memory, and the end went to "recover by hand".
+// A refused setup keeps its own finite wait budget before the planner diagnoses it.
 export const MAX_ATTEMPTS = 2, MAX_WAITS = 6;
 // The dispatcher's cause names (session-recovery-dispatch.ts setupCauses) of a refusal that only waited.
 const WAIT_CAUSES = new Set(['recovery admission waiting: memory', 'recovery admission waiting: maxBots', 'recovery waits for runtime source owner']);
@@ -172,12 +172,10 @@ const leaseWaitRefused = (t: any) => {
 };
 const waitRefused = (t: any, waits: ReadonlySet<string>) => t.status === 'failed' && (waits.has(t.runId) || WAIT_ERROR.test(t.receipt?.error ?? '') || leaseWaitRefused(t));
 function endRuns(tasks: readonly any[], target: Target) {
-    const byId = new Map(tasks.map(t => [t?.spec?.id, t]));
-    const qualifyFailed = (id: string) => { const d = byId.get(id); return d?.spec?.kind === 'qualify' && (d.status === 'failed' || d.status === 'superseded'); };
     return tasks.filter(t => {
         const r = t?.spec?.sessionRecovery;
         return r?.account?.toLowerCase() === target.account.toLowerCase() && r.endedAt === target.endedAt
-            && (t.status === 'failed' || t.status === 'pending' && (t.spec.dependsOn ?? []).some(qualifyFailed));
+            && t.status === 'failed';
     });
 }
 export function spentAttempts(tasks: readonly any[], target: Target, waits: ReadonlySet<string> = new Set()): number {
@@ -283,12 +281,78 @@ export function budgetRefusal(root: string, account: string, end: Pick<EndRecord
     let lineage: Lineage;
     try { tasks = retainedRecoveryTasks(root, tasks); lineage = recoveryLineage(end, lineageAttempts(root, account), recoveryRecords(root, account, tasks)); }
     catch (e) { lineage = { unknown: `history or lifecycle unreadable: ${String(e).slice(0, 120)}` }; }
-    if ('unknown' in lineage) return `recovery lineage of end ${end.at} unknown (${lineage.unknown}); recover by hand`;
+    if ('unknown' in lineage) return `recovery lineage of end ${end.at} unknown (${lineage.unknown}); planner diagnosis required`;
     const sum = (f: typeof spentAttempts) => lineage.ends.reduce((n, endedAt) => n + f(tasks, { account, endedAt }, waits), 0);
     const of = lineage.ends.length > 1 ? `end ${end.at} and the ${lineage.ends.length - 1} earlier ends of its lineage (first ${lineage.ends.at(-1)})` : `end ${end.at}`;
-    if (sum(spentAttempts) >= MAX_ATTEMPTS) return `${MAX_ATTEMPTS} recoveries of ${of} failed; recover by hand`;
-    if (sum(waitedAttempts) >= MAX_WAITS) return `${MAX_WAITS} recoveries of ${of} waited on memory, a bot slot, the source owner or an unresolved recovery lease; recover by hand`;
+    if (sum(spentAttempts) >= MAX_ATTEMPTS) return `${MAX_ATTEMPTS} recoveries of ${of} failed; planner diagnosis required`;
+    if (sum(waitedAttempts) >= MAX_WAITS) return `${MAX_WAITS} recoveries of ${of} waited on memory, a bot slot, the source owner or an unresolved recovery lease; planner diagnosis required`;
     return undefined;
+}
+
+export interface RecoveryPlanningFailure {
+    taskId: string; runId?: string; kind: string; source?: string; failedCheck?: string; error?: string; deliveryDirectory?: string;
+}
+export interface RecoveryPlanningProblem {
+    schema: 'recovery-planning/1'; account: string; server: string; endedAt: number | null; lineage: Lineage; reason: string;
+    failures: RecoveryPlanningFailure[]; pendingTaskIds: string[];
+}
+const boundedText = (value: unknown, limit: number): string | undefined => typeof value === 'string' ? value.slice(0, limit) : undefined;
+
+// A failed source needs diagnosis before another automatic qualification or session. The planner owns any changed
+// repair, its practice proof and the finite retry. A newer accepted delivery can support that retry without deleting
+// the failed receipt or granting another login budget.
+export function recoveryPlanningProblem(root: string, account: string, end: Pick<EndRecord, 'at' | 'reason'> | undefined, tasks: readonly any[], refusal?: string, waits: ReadonlySet<string> = new Set()): RecoveryPlanningProblem | undefined {
+    let lineage: Lineage;
+    try { lineage = end ? recoveryLineage(end, lineageAttempts(root, account), recoveryRecords(root, account, tasks)) : { unknown: 'end record unavailable' }; }
+    catch (error) { lineage = { unknown: `history or lifecycle unreadable: ${String(error).slice(0, 120)}` }; }
+    const ends = new Set('ends' in lineage ? lineage.ends : end ? [end.at] : []), records = new Map(tasks.map(t => [t.spec.id, t]));
+    const runs = tasks.filter(t => t.spec?.sessionRecovery?.account?.toLowerCase() === account.toLowerCase() && ends.has(t.spec.sessionRecovery.endedAt));
+    const relevant = new Map<string, any>();
+    for (const run of runs) {
+        if (run.status === 'failed' && !waitRefused(run, waits)) relevant.set(run.spec.id, run);
+        const seen = new Set<string>(), visit = [...(run.spec.dependsOn ?? [])];
+        while (visit.length) {
+            const id = visit.pop()!; if (seen.has(id)) continue; seen.add(id);
+            const dep = records.get(id); if (!dep) continue;
+            if (dep.spec.capability === 'session-recovery-only' && ['qualify', 'build'].includes(dep.spec.kind) && dep.status === 'failed') relevant.set(id, dep);
+            visit.push(...(dep.spec.dependsOn ?? []));
+        }
+    }
+    const newerDelivery = (failure: any) => tasks.some(t => t.status === 'succeeded' && t.spec?.capability === 'session-recovery-only'
+        && t.receipt?.output?.delivery?.ok === true && t.receipt.at > (failure.receipt?.at ?? Infinity));
+    const failures = [...relevant.values()].filter(t => !newerDelivery(t)).sort((a, b) => (b.receipt?.at ?? 0) - (a.receipt?.at ?? 0) || a.spec.id.localeCompare(b.spec.id)).slice(0, 8).map(t => {
+        const delivery = t.receipt?.output?.delivery;
+        const failure: RecoveryPlanningFailure = { taskId: t.spec.id, kind: t.spec.kind };
+        if (typeof t.runId === 'string') failure.runId = t.runId;
+        if (typeof delivery?.source === 'string') failure.source = delivery.source.slice(0, 64);
+        const failedCheck = boundedText(delivery?.failedCheck, 160), error = boundedText(t.receipt?.error ?? t.receipt?.output?.error ?? delivery?.reason, 600), directory = boundedText(delivery?.directory, 1000);
+        if (failedCheck !== undefined) failure.failedCheck = failedCheck;
+        if (error !== undefined) failure.error = error;
+        if (directory !== undefined) failure.deliveryDirectory = directory;
+        return failure;
+    });
+    if (!refusal && !failures.length) return undefined;
+    return { schema: 'recovery-planning/1', account, server: LIVE_SERVER, endedAt: end?.at ?? null,
+        lineage: 'unknown' in lineage ? { unknown: lineage.unknown.slice(0, 600) } : lineage,
+        reason: (refusal ?? 'A recovery prerequisite or session failed.').slice(0, 600),
+        failures, pendingTaskIds: runs.filter(t => t.status === 'pending').map(t => t.spec.id).sort().slice(0, 24) };
+}
+
+// Immutable facts are a planner input, not a second queue. Equivalent failures have one identity even when another
+// task, run or random delivery directory names them. The current end stays in the key because the planner matches
+// that exact actionable end. A changed source or failure observation also requests a new plan.
+export function requestRecoveryPlanning(root: string, problem: RecoveryPlanningProblem): boolean {
+    const lineageRoot = 'ends' in problem.lineage ? Math.min(...problem.lineage.ends) : problem.endedAt;
+    const evidence = [...new Set(problem.failures.map(f => JSON.stringify([f.kind, f.source ?? null, f.failedCheck ?? null, f.error ?? null])))].sort();
+    const key = createHash('sha256').update(JSON.stringify([problem.account.toLowerCase(), problem.server, lineageRoot, problem.endedAt, evidence,
+        'unknown' in problem.lineage ? problem.lineage.unknown : null])).digest('hex');
+    const dir = join(root, '.practice', 'cloud-recover', 'planning'); mkdirSync(dir, { recursive: true });
+    const file = join(dir, key + '.json');
+    try { writeFileSync(file, JSON.stringify(problem, null, 1) + '\n', { flag: 'wx' }); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false; throw error; }
+    const coord = join(root, '.practice', 'coordinator'); mkdirSync(coord, { recursive: true });
+    writeFileSync(join(coord, 'plan-request'), 'Diagnose recovery facts in ' + file);
+    return true;
 }
 
 // The folder that receives the coordinator's parked jobs and stop file after a release.
@@ -408,11 +472,23 @@ async function main(root: string, dry: boolean): Promise<number> {
         const stopFile = join(root, '.practice', `stop-${name}`), stopText = existsSync(stopFile) ? readFileSync(stopFile, 'utf8') : undefined;
         const end = ended.get(name);
         const e = eligibility({ proof, claim, end, stopText, pidAlive, host: hostname(), retried: !!end && spentAttempts(before, { account: name, endedAt: end.at }, waits) > 0 });
-        if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
-        if (!cloud && !endSettled(end!, Date.now())) continue;
+        if (!e.eligible) {
+            if (e.diagnose) {
+                const problem = recoveryPlanningProblem(root, name, end, before, e.reason, waits)!;
+                if (dry) log(`${name}: would request recovery diagnosis through the planner: ${e.reason}`);
+                else if (requestRecoveryPlanning(root, problem)) log(`${name}: requested recovery diagnosis through the planner: ${e.reason}`);
+            } else if (e.log) log(`${name}: refused: ${e.reason}`);
+            continue;
+        }
         const target = { account: name, endedAt: e.endedAt };
         const refusal = budgetRefusal(root, name, end!, before, waits);
-        if (refusal) { log(`${name}: refused: ${refusal}`); continue; }
+        const problem = recoveryPlanningProblem(root, name, end!, before, refusal, waits);
+        if (problem) {
+            if (dry) log(`${name}: would request recovery diagnosis and practice through the planner`);
+            else if (requestRecoveryPlanning(root, problem)) log(`${name}: requested recovery diagnosis and practice through the planner`);
+            continue;
+        }
+        if (!cloud && !endSettled(end!, Date.now())) continue;
         if (recoveryLeaseState(root, name) === 'held') { log(`${name}: refused: a recovery child still holds the account's lease, or the lease is unreadable`); continue; }
         targets.push(target);
     }

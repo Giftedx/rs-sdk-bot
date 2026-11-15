@@ -10,6 +10,8 @@ A request to fix or implement a change includes the routine steps needed to deli
 
 Owner pauses, account leases, resource limits and launch gates still apply. Never force-push `master`, discard another agent's work, expose secrets or waive a failed check. Ask only for missing authority or a choice that changes the result. When a check rejects valid work, find the cause and repair it with evidence. Do not bypass it.
 
+A failure starts repair work within the authorized scope. The responsible agent reads the raw result and traces the first failed step. Reproduce the cause with the cheapest focused check. Prove gameplay repairs on practice before a finite live retry through the owning controller. If the target is complete or the method cannot serve it, plan the next useful consumer. Continue independent goal work while the repair runs.
+
 ## Work loop
 
 1. Run `bun scripts/now.ts` and read each line: free memory, stop files, controllers, heavy jobs, job states, coordinator tasks, and this checkout and the main checkout against `origin/master`. A stop file with owner text is a pause, not a fault. A merged fix is live only when the main checkout holds it. Preserve others' edits. One owner per account, server and generated output.
@@ -83,7 +85,7 @@ For a new approach, read the same sources first. Search upstream only for an unr
 - All gameplay techniques are authorized, including server bugs, login wine, cocktails, pyre oil, Charge, relogs and tick manipulation. A missing supply is acquisition work, never a route ban.
 - GE buying, selling and merchant trading are authorized ([market policy](research/supply-logistics.md#market-policy-current)). Direct transfers need owned partners. Use AI subscriptions, not paid APIs.
 - Respect admission limits in `scripts/swarm.ts` and `swarm.json`; do not lower them to fit a run. One heavy practice qualification at a time.
-- Honour user pauses and stop files. Stop repeated no-progress attempts. Clear only the exact repaired block. Verification never enables workers or changes repeat policy.
+- Honour explicit user pauses and stop files. An authorized resume applies only to its stated scope. Diagnose failure ends through the repair work above. Clear only the exact repaired block through the supported controller path. Stop repeated no-progress attempts. Verification alone never enables workers or changes repeat policy.
 - Never print credentials or copy `bot.env`. Hide the main account in shared dashboard views. Preserve pinned upstream code and local patches.
 
 ## Knowledge

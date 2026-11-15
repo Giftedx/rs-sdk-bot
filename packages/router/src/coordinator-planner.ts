@@ -1,4 +1,4 @@
-import {readFileSync,existsSync,readdirSync,writeFileSync} from 'node:fs';
+import {readFileSync,existsSync,readdirSync,statSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
@@ -18,6 +18,8 @@ import {readMergedPlan} from '../../core/src/coordinator-jobs';
 import {liveHelperStatuses,observedStock,overallSupplyDemand,supplyBill} from '../../planner/src/supply-bill';
 import {FLEET_DIR,mySide} from '../../core/src/fleet';
 import {fleetStatusRows,ownerOfIn,readSnapshotFiles} from '../../core/src/fleet-snapshots';
+import {readLogoutProof} from '../../core/src/session-lifecycle';
+import type {RecoveryPlanningProblem} from '../../../scripts/cloud-recover';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -200,7 +202,35 @@ export function readPlannerStatuses(base=projectRoot,fleetDir=FLEET_DIR(),side=m
    };
   });
 }
-export function readWorld(){
+export function readRecoveryProblems(base:string,ended:Record<string,{at:number}>,tasks:readonly TaskRecord[]=[]):Array<RecoveryPlanningProblem&{evidence:string}>{
+ const dir=join(base,'.practice/cloud-recover/planning');
+ if(!existsSync(dir))return [];
+ const current=new Map(Object.entries(ended).map(([name,end])=>[name.toLowerCase(),end.at]));
+ const selected=new Map<string,RecoveryPlanningProblem&{evidence:string}>();
+ const records=new Map(tasks.map(task=>[task.spec.id,task]));
+ const deliveredAt=tasks.reduce((at,task)=>task.status==='succeeded'&&task.spec.capability==='session-recovery-only'
+  &&task.receipt?.output?.delivery?.ok===true?Math.max(at,task.receipt.at):at,0);
+ const files=readdirSync(dir).filter(name=>/^[a-f0-9]{64}\.json$/.test(name)).flatMap(name=>{
+  try{const stat=statSync(join(dir,name));return stat.isFile()&&stat.size<=32_768?[{name,at:stat.mtimeMs}]:[];}catch{return [];}
+ }).sort((a,b)=>b.at-a.at).slice(0,512);
+ for(const {name}of files){
+  try{
+   const row=JSON.parse(readFileSync(join(dir,name),'utf8')) as RecoveryPlanningProblem;
+   if(row.schema!=='recovery-planning/1'||typeof row.account!=='string'||typeof row.server!=='string'
+    ||!Array.isArray(row.failures)||!Array.isArray(row.pendingTaskIds)||typeof row.reason!=='string'
+    ||!row.lineage||(row.endedAt===null?current.has(row.account.toLowerCase()):current.get(row.account.toLowerCase())!==row.endedAt)
+    ||selected.has(row.account.toLowerCase()))continue;
+   if(readLogoutProof(row.account,row.server,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed')continue;
+   const failures=row.failures.filter(f=>!(deliveredAt>(records.get(f.taskId)?.receipt?.at??Infinity)));
+   if(row.failures.length&&!failures.length)continue;
+   selected.set(row.account.toLowerCase(),{...row,reason:row.reason.slice(0,600),failures:failures.slice(0,8),
+    pendingTaskIds:row.pendingTaskIds.slice(0,24),evidence:'.practice/cloud-recover/planning/'+name});
+   if(selected.size>=32)break;
+  }catch{/* A partial or unreadable fact cannot replace the ended account's source record. */}
+ }
+ return [...selected.values()];
+}
+export function readWorld(tasks:readonly TaskRecord[]=[]){
  const plan=readMergedPlan(projectRoot);
  const statuses=readPlannerStatuses();
  const protectedNames=plan.jobs.filter((j:any)=>!j.script||/fresh.clock|main simultaneous|24 boards/i.test(j.goal??'')).flatMap((j:any)=>j.accounts??[j.account]).filter(Boolean);
@@ -213,7 +243,7 @@ export function readWorld(){
  let stall:any=null;try{const f=join(projectRoot,'.practice/coordinator/stall.json');if(existsSync(f))stall=JSON.parse(readFileSync(f,'utf8'));}catch{/* no stall note */}
  const controller=readPlannerControllerCapacity();
  const now=Date.now();
- return{at:now,scoreboard,stall,assets:assetSummary(liveHelperStatuses(),protectedNames,now),supplyBill:supplyBillSummary({source:'route',now}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true,...(controller?{controller}:{})},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+ return{at:now,scoreboard,stall,recoveryProblems:readRecoveryProblems(projectRoot,ended,tasks),assets:assetSummary(liveHelperStatuses(),protectedNames,now),supplyBill:supplyBillSummary({source:'route',now}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true,...(controller?{controller}:{})},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
 }
 // A fresh status cannot refresh an older bank observation.
 function recentStockStatus(status:any,now:number){
@@ -325,6 +355,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'SCOREBOARD: world.scoreboard.goals owns the five goal observations and explicit evidence gaps. Generic skills, items, actions and weakDomains describe capability coverage only; they never score as game progress. Name the exact goal, accepted effect and finite consumer for each task. Compare expected goal movement per hour of acquisition, travel, build, checks and execution. Promote an uncovered capability only when an unresolved owner goal needs it. Unknown stock needs verification before replacement.',
   'Compare unresolved owner goal deficits before extending the current capability. In reason compare the best ready live job, the highest-impact unlock/supply bottleneck, and a capability an unresolved goal needs. State expected useful output, entry facts, total acquisition/travel/build/test cost, uncertainty, and the next consumer. Prefer the fastest supported gain. Prioritize qualified live consumers and keep their assignments. While they run, plan independent live work or isolated builds that fit the account, source ownership and host limits. The coordinator enforces admission and waits for the fleet to drain before a build publishes. Never repeat a failed build without new evidence and the exact repair in why.',
   'Return optional replacements:[{from,to}] to replace failed/pending tasks with a changed same-kind/capability/goal/account task and reconnect waiting consumers atomically. Failed receipts remain history. Each new build needs a dependency path from a pending finite live run through pending tasks with no terminal blockers after the proposal. A settled proof cannot carry a new build. Do not add another numbered repair while leaving its consumers behind failed dependencies. Do not replace successful/running work or provision identities. Avoid duplicate open work with the same consumer. Build why is the actual work order sent to its builder; include exact defect, source scope, evidence paths and acceptance.',
+  'RECOVERY WORK: world.recoveryProblems names failures needing a solution, not a request for manual recovery. Read its evidence and the full failed check; diagnose the cause, plan the smallest repair and practice qualification, then reconnect a finite useful live consumer with replacements. A failed qualification before login spends no account login attempt. Exhausted actual login attempts require a repaired method and fresh qualification, never an unchanged retry. Retire obsolete goals, choose another qualified route when it solves the same deficit, and keep independent useful work moving. A capacity wait needs its producer and clearing event. Honour a current explicit user stop; an old fault or completed job is not an indefinite owner pause.',
   'Reuse candidate scripts for an unresolved owner goal, qualify the normal entry and recovery, then run a finite live consumer. New accounts require a named missing role or measured capacity need, prepared inputs and a useful first job. Preserve protected account clocks. Script names, comments, extra levels and surplus earning never prove goal progress.',
   'For an existing capability whose owned files or entry cannot support the real consumer, return capabilityUpdates:[{expectedSource:<capabilitySources[id]>,definition:<complete DeliveryTask>}] with a same-capability build task and explicit replacements for old pending builds. One update per proposal; no running owner may hold that capability. The daemon preserves the old definition. Expand the existing module scope instead of duplicating it under a new capability name. Entry must be an actual account-parameterized live worker; local --save fixtures and privileged practice commands belong in checks. Native proof must invoke that worker CLI, not only helper functions. Every new/progress build must include a finite live consumer with useful acceptance, inputs and a next goal; never stop at stock or qualification.',
   'THIN ACCEPTANCE (owner order): a consumer and its checks hold only the script contract acceptance bar: unit tests, one practice run of the real CLI showing the useful effect, assets reconciled, a clear refusal and logout. Never add interruption/resume, reseed, independent recompute, raw-file binding or failure-window scenarios, and never widen an existing consumer. A live failure gets the smallest fix of the exact failed step plus one regression test.',
@@ -473,7 +504,7 @@ export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:
  return{...first,attempts};
 }
 export async function planWork(state:CoordinatorState,directory:string,timeoutMs:number,agent:ModelWorker='codex'){
- const world=readWorld();atomicJson(join(directory,'world.json'),world);
+ const world=readWorld(state.tasks);atomicJson(join(directory,'world.json'),world);
  const held=heldRuns(state,capability=>capabilitySource(JSON.parse(readFileSync(join(projectRoot,'packages/router/tasks',capability+'.json'),'utf8')).files));
  const prompt=plannerPrompt(state,world,join(directory,'world.json'),held,deliveryConflictRoots(coordinationDir));
  writeFileSync(join(directory,'prompt.txt'),prompt);

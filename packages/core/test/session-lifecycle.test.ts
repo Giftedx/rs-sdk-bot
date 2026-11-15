@@ -1,5 +1,4 @@
 import { test, expect } from 'bun:test';
-import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join,resolve } from 'node:path';
@@ -9,6 +8,7 @@ import { watchUnexpectedEnd, logoutSession, awaitBotReady, settle } from '../src
 import { beginSessionAttempt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
 import { withPlanWrite } from '../src/plan-lock';
 import { acquireFleetTradeClaim, readFleetAccountClaim } from '../src/fleet-trade-claim';
+import { fleetGitWindow } from '../src/fleet-lease';
 
 test('producer script identity comes from the actual CLI entry, never a descriptive goal',()=>{
  const repo=resolve(import.meta.dir,'../../..'),env={BOT_GOAL:'scripts/gather-fire-combat.ts',WORKER_RELEASE:'a'.repeat(64)};
@@ -61,7 +61,7 @@ function noSecret(root: string) {
 test('the network boundary fences a trade-held account and releases only its own confirmed swarm logout', async () => {
     const parent = resolve(tmpdir()), base = mkdtempSync(join(parent, 'lifecycle-shared-'));
     try {
-        const git = (...args: string[]) => execFileSync('git', args, { cwd: base, stdio: 'pipe', timeout: 5000, windowsHide: true });
+        const git = (...args: string[]) => fleetGitWindow(base, 'session lifecycle fixture Git', 5000)(args);
         const origin = join(base, 'origin.git'), root = join(base, '.practice/session-lifecycle');
         git('init', '--bare', origin);
         git('init');

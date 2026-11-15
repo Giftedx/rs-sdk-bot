@@ -40,6 +40,8 @@ Every game script is in the catalog: `bun scripts/aio.ts --list` prints it. Give
 
 Loop: observe, check requirements, act, confirm the effect, record, repeat. Confirm the product or quest flag; a click, SDK success or animation is not an effect. Bound every wait. On no progress, stop safely and report the first failed step. Never clear a block by restarting.
 
+A repair must bind its evidence to the failed source, entry state and first failed step. Practice must reach that step and prove the repaired behavior with reconciled assets and logout. The next live run needs a finite unmet target, a budget and a named consumer. If the target is complete, replace the job instead of repeating it. A session recovery proves account access and logout. It does not qualify the failed gameplay path.
+
 ## Deliver a capability
 
 Capability definitions live in `packages/router/tasks/<id>.json`: entry point, owned files, consumer and check commands. `bun run deliver <id>` runs the checks without a model call and writes logs to `.practice/deliveries/`. `stage: delivered` means those checks passed on those source bytes. It is not a live release.
@@ -73,8 +75,8 @@ The gate runs each replay in a scratch copy of the build's source with its own `
 
 - A planner-created or updated capability definition has a recorded transition in `.practice/coordinator/capability-history`. When the build qualifies that exact definition, the delivery includes its bytes and the recorded base. The PR can apply the qualified definition over its recorded base or find it already present. A different master definition stops the PR for reconciliation.
 
-- A master edit that overlaps the build's change stops the PR with state `conflict` and event `delivery-pr-conflict`, which name the lines. The owner resolves it by hand. The step never overwrites a newer master line.
-- A request without base snapshots (staged by an older coordinator) stops with state `conflict`. The owner commits its `delivered/` files by hand.
+- A master edit that overlaps the build's change stops the PR with state `conflict` and event `delivery-pr-conflict`, which name the lines. The responsible integration agent resolves the conflict from both sources and reruns the affected checks. The delivery step never overwrites a newer master line.
+- A request without base snapshots (staged by an older coordinator) stops with state `conflict`. The responsible integration agent verifies its `delivered/` files against source and qualification evidence before preparing a checked PR. Missing evidence requires qualification.
 - An earlier delivery of a file the build's source can run (the capability release of its entry, which follows literal worker paths, plus the import closure of its owned files; `deliverySourceSet`), staged before the build's workspace was prepared, is a prerequisite: the build's source already held its change. The PR opens only after each prerequisite PR merged (or had nothing to commit). Until then the request waits and checks again every 5 minutes.
 - The commit never includes `swarm.json` or `.practice/`. The step never pushes master, never force-pushes and never merges.
 - When reusing a remote branch or an existing PR, the step checks the staged qualified definition at the observed head commit. A missing or different definition stops the delivery as a conflict. A matching head is reused without another push.

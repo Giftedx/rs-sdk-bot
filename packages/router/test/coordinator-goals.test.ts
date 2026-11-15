@@ -8,8 +8,51 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {snapshot} from '../../../scripts/fleet-sync';
 import {supplyBill} from '../../planner/src/supply-bill';
+import {requestRecoveryPlanning,type RecoveryPlanningProblem} from '../../../scripts/cloud-recover';
 
 const world={coverage:{scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]} as any;
+
+test('a new orphan end in one recovery lineage reaches planning without repeating equivalent requests',()=>{
+ const base=mkdtempSync(join(tmpdir(),'planner-recovery-transition-'));
+ const first:RecoveryPlanningProblem={schema:'recovery-planning/1',account:'Helper',server:'rs-sdk-demo.fly.dev',endedAt:7,
+  lineage:{ends:[7]},reason:'qualification failed',failures:[{taskId:'q1',kind:'qualify',error:'git ETIMEDOUT'}],pendingTaskIds:['recover']};
+ expect(requestRecoveryPlanning(base,first)).toBe(true);
+ expect(requestRecoveryPlanning(base,{...first,endedAt:8,lineage:{ends:[8,7]}})).toBe(true);
+ expect(planner.readRecoveryProblems(base,{helper:{at:8}})).toMatchObject([{account:'Helper',endedAt:8}]);
+ expect(requestRecoveryPlanning(base,{...first,endedAt:8,lineage:{ends:[8,7]}})).toBe(false);
+});
+
+test('recovery planning reads current failures once per account and excludes settled or malformed records',()=>{
+ const base=mkdtempSync(join(tmpdir(),'planner-recovery-')),dir=join(base,'.practice/cloud-recover/planning');
+ mkdirSync(dir,{recursive:true});
+ const problem={schema:'recovery-planning/1',account:'Helper',server:'rs-sdk-demo.fly.dev',endedAt:7,
+  lineage:{ends:[7]},reason:'qualification failed before login',failures:[{taskId:'q1',kind:'qualify',failedCheck:'regression',error:'git ETIMEDOUT'}],pendingTaskIds:['recover-helper']};
+ writeFileSync(join(dir,'a'.repeat(64)+'.json'),JSON.stringify(problem));
+ writeFileSync(join(dir,'b'.repeat(64)+'.json'),JSON.stringify({...problem,account:'Settled'}));
+ writeFileSync(join(dir,'c'.repeat(64)+'.json'),JSON.stringify({...problem,endedAt:6}));
+ writeFileSync(join(dir,'d'.repeat(64)+'.json'),'broken');
+ const rows=planner.readRecoveryProblems(base,{helper:{at:7},settled:{at:8}});
+ expect(rows).toHaveLength(1);
+ expect(rows[0]).toMatchObject(problem);
+ expect(rows[0]!.evidence).toBe('.practice/cloud-recover/planning/'+'a'.repeat(64)+'.json');
+ const tasks=[{spec:{id:'q1',capability:'session-recovery-only'},status:'failed',receipt:{at:10}},
+  {spec:{id:'q2',capability:'session-recovery-only'},status:'succeeded',receipt:{at:20,output:{delivery:{ok:true}}}}] as any;
+ expect(planner.readRecoveryProblems(base,{helper:{at:7}},tasks)).toEqual([]);
+ expect(planner.readRecoveryProblems(base,{})).toEqual([]);
+ writeFileSync(join(dir,'e'.repeat(64)+'.json'),JSON.stringify({...problem,account:'UnknownEnd',endedAt:null,lineage:{unknown:'end record unavailable'}}));
+ expect(planner.readRecoveryProblems(base,{})).toMatchObject([{account:'UnknownEnd',endedAt:null}]);
+ expect(planner.readRecoveryProblems(base,{unknownend:{at:9}})).toEqual([]);
+});
+
+test('planner turns recovery failures into diagnosis and practice work instead of passive manual recovery',()=>{
+ const recoveryProblems=[{account:'Helper',endedAt:7,reason:'qualification failed',failures:[{failedCheck:'regression',error:'git ETIMEDOUT'}]}];
+ const prompt=plannerPrompt(initialState(),{...world,recoveryProblems});
+ expect(prompt).toContain('world.recoveryProblems');
+ expect(prompt).toContain('diagnose');
+ expect(prompt).toContain('practice');
+ expect(prompt).toContain('"recoveryProblems":'+JSON.stringify(recoveryProblems));
+ expect(prompt).toContain('failed qualification before login spends no account login attempt');
+});
 
 test('planner receives deterministic goal values and reasons for its pending work',()=>{
  const state=initialState();

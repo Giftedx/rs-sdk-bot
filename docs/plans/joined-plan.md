@@ -1,6 +1,8 @@
 # Joined plan
 
-**Live work authorized.** Owner goals: Haggis rank 1 Overall under the record; specialist board wins with priced margins; all quests; all useful items and best-in-slot gear; a PK army of maxed tribrids that kills players and holds the Wilderness. Gold only buys supplies and kits for these goals. Helpers work from the route supply bill (`bun packages/planner/src/supply-bill.ts`).
+**Live work authorized.** Resume goal work through the existing controllers and current launch gates. Diagnose failed jobs, prove repairs on practice and resume finite useful consumers. Explicit user stops, account ownership, fresh specialist clocks and host limits still apply.
+
+Owner goals: Haggis rank 1 Overall under the record; specialist board wins with priced margins; all quests; all useful items and best-in-slot gear; a PK army of maxed tribrids that kills players and holds the Wilderness. Gold only buys supplies and kits for these goals. Helpers work from the route supply bill (`bun packages/planner/src/supply-bill.ts`).
 
 ## Scoreboards
 
@@ -33,9 +35,9 @@ Main run, coverage and live work run at once, so no lane starves the others. Eve
 
 ## Blockers
 
-- If the coordinator has only pending work behind dead dependencies, use its existing replacement and retirement rules. The first job after an authorized resume must name a settled helper, verified stock, a measurable effect and a current qualification. Keep the owner pause files in place until a resume is authorized.
+- If the coordinator has pending work behind dead dependencies, repair or replace those dependencies through its existing rules. Each repair needs a viable finite consumer. The first resumed job must name a settled helper, verified stock, a measurable effect and a current qualification. Preserve explicit user stops outside the authorized resume scope.
 
-- If the queue has no pending or running tasks, consume the existing plan request on authorized resume. Use task status and receipts to decide what can run. The saved planner reason describes its last proposal. Before scheduling a supply batch, check the stop files for the buyer, supplier and receiving account. Verify the helper's logout, current qualification, bank stock and remaining shortfall before assigning it. Count the supply against the route only after the named consumer receives it.
+- If the queue has no pending or running tasks, consume the existing plan request. A failed planning round needs diagnosis and a revised proposal. Continue independent qualified goal work while the responsible agent repairs the failed path. Before scheduling a supply batch, check the stop files for the buyer, supplier and receiving account. Verify the helper's logout, current qualification, bank stock and remaining shortfall before assigning it. Count the supply against the route only after the named consumer receives it.
 
 - The coordinator runs under `.practice/coordinator/owner.json`; `bun run coordinate --stop` pauses it. A change to the swarm's own code (`scripts/swarm.ts` and its imports) forces a controller rollout that pauses every standing job, so controller fixes ship in one batch. The practice server is shared: one heavy practice qualification at a time.
 - `fresh-rune-supply-order` needs a new practice qualification: its file `scripts/generated/quest-lib.ts` changed.
@@ -51,4 +53,3 @@ Main run, coverage and live work run at once, so no lane starves the others. Eve
 - [Wine](../../.practice/deliveries/wine-order-1793163518046-KvlTfl/report.json): Cooking 99 at 400 ms on practice; live pilot needs owned ingredients.
 - [Ammo](../../.practice/deliveries/ammo-order-1793161432055-5O690E/report.json): 90 tips to 90 iron arrows on practice; live qualification is open.
 - [Ranged](../../.practice/ranged-entry/repair-release/live/proof.json): level 7 live. [Rune Mysteries](../../.practice/quest-expansion/rune/live-proof.json) done live. [Swordinhand](../../.practice/quest-expansion/journal-live-proof.json): Defence 20, Strength 20.
-- Blocks to preserve: combat failure 1792955012008, Woodpecker 1792972599531, all stop files.
