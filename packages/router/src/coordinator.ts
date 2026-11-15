@@ -119,7 +119,7 @@ export const dependencyMet=(task:CoordTask,dep:TaskRecord|undefined,records?:Rea
 
 // True when a run has no passed qualification of its capability on the current source among its dependencies: the
 // worker would refuse it at once ("fresh same-capability native qualification required", coordinator-worker.ts). The
-// refresh that adds such a qualification skips ticks while a build runs, so the dispatcher holds such a run instead of
+// refresh that adds such a qualification waits on a related build, so the dispatcher holds such a run instead of
 // starting it. `source` null (no fingerprint) holds it too.
 export function needsFreshQualification(task:CoordTask,records:ReadonlyMap<string,TaskRecord>,source:string|null):boolean{
  if(task.kind!=='run')return false;
