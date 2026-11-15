@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794778899375,
+ "at": 1794778921524,
  "jobs": [
   {
    "account": "Balls",
@@ -77,10 +77,10 @@
    ]
   },
   {
-   "account": "NabTheKnob",
+   "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=nabtheknob-kit4-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit8-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -88,12 +88,35 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "supply",
-   "template": "kit-buy:army-weapon",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "0",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
    "autopilot": "local",
    "resources": [
-    "ge:weapon"
+    "trooper:battlefield"
    ]
   },
   {
