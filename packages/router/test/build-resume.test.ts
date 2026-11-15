@@ -94,14 +94,14 @@ test('the real read-only review pipeline falls back once on a quota and releases
 test('both unavailable reviewers retain the full native delivery without inventing a source rejection',async()=>{
  const r=await reviewPipeline([limited,limited]);
  expect(r.calls.map(c=>c.agent)).toEqual(['claude','codex']);expect(r.result).toMatchObject({ok:false,sourcePrepared:true,delivery:{ok:true,stage:'delivered',source}});
- expect(r.result.review).toBeUndefined();expect(r.result.error).toContain('review model unavailable');expect(r.model.attempts).toHaveLength(2);
+ expect('review' in r.result?r.result.review:undefined).toBeUndefined();expect(r.result.error).toContain('review model unavailable');expect(r.model.attempts).toHaveLength(2);
  const state=initialState();addTasks(state,[{id:'delivered',kind:'build',goal:'main24',capability:'fixture',dependsOn:[],priority:1,estimatedMs:1000,why:'Fixture source review'}],0);
  startTask(state,'delivered',1,'delivered');finishTask(state,{taskId:'delivered',runId:'delivered',ok:false,at:2,output:r.result});
  expect(preparedNativeDelivery(state,'fixture',source,source)?.source).toBe(source);
 });
 test('an answered negative review stays a rejection and never tries a second provider',async()=>{
  const r=await reviewPipeline([{ok:true,text:'{"approved":false,"reason":"a.ts:1 loses the owned stock"}',costUsd:0}]);
- expect(r.calls.map(c=>c.agent)).toEqual(['claude']);expect(r.result.ok).toBe(false);expect(r.result.review).toEqual({approved:false,reason:'a.ts:1 loses the owned stock'});
+ expect(r.calls.map(c=>c.agent)).toEqual(['claude']);expect(r.result.ok).toBe(false);expect('review' in r.result?r.result.review:undefined).toEqual({approved:false,reason:'a.ts:1 loses the owned stock'});
 });
 test('review fallback cannot release a delivery whose source changed while the review ran',async()=>{
  const r=await reviewPipeline([limited,{ok:true,text:'{"approved":true,"reason":"checked"}',costUsd:0}],true);
