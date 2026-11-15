@@ -17,6 +17,7 @@ export interface BankRouteJob{
  alchemyTarget?:string;
  tool?:number;
  xpRate?:number;
+ targetLevel?:number;
  fishingProtection?:FishingProtection;
 }
 
@@ -41,6 +42,7 @@ export function validateBankRouteJob(j:BankRouteJob):void{
  if(j.family==='fishing'&&j.recipe==='lava'&&j.fishingProtection?.antifire!==true)throw Error('Lava requires declared melee and antifire protection');
  if(j.fishingProtection!==undefined){const p=j.fishingProtection;if(j.family!=='fishing'||!p||p.prayer!==14||(!Number.isSafeInteger(p.potionsPerUnit)||p.potionsPerUnit<1||p.potionsPerUnit>3)||!Number.isSafeInteger(p.maximumDoses)||p.maximumDoses<1||p.maximumDoses>40||p.antifire!==undefined&&(p.antifire!==true||j.recipe!=='lava'))throw Error('invalid finite fishing protection');}
  if(j.xpRate!==undefined&&(!Number.isSafeInteger(j.xpRate)||j.xpRate<1||j.xpRate>1000))throw Error('invalid declared XP rate');
+ if(j.targetLevel!==undefined&&(!['cooking','wine'].includes(j.family)||!Number.isSafeInteger(j.targetLevel)||j.targetLevel<1||j.targetLevel>99))throw Error('invalid bank cooking level target');
  if(j.target>2147483647||j.batch>2147483647||j.cap>100000)throw Error('bank job exceeds native count or tick limits');
  for(const p of [j.bank,j.site])if(p&&(![p.x,p.z,p.level].every(Number.isSafeInteger)||p.level<0||p.level>3||p.x<0||p.x>16383||p.z<0||p.z>16383))throw Error('invalid bank/site tile');
 }

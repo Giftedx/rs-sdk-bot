@@ -26,8 +26,8 @@ import{actionSessionOwner,finishActionSession}from'./microbot-a-actions';
 import{productionStopRequested}from'./microbot-c-lifetime';
 import{questFlags}from'../packages/core/src/quest-status';
 
-// Harvest targets are minimum useful output; manufacturing batches remain exact.
-export type BankJob={family:'jewellery'|'cooking'|'tanning'|'glass'|'magic'|'inventory'|'wine'|'bones'|'mining'|'fishing'|'stalls';recipe:string;target:number;batch:number;cap:number;returnTicks:number;members:boolean;reserve?:number;bank?:Tile;site?:Tile;heat?:Heat;alchemyTarget?:string;tool?:number;xpRate?:number;fishingProtection?:FishingProtection};
+// Harvest targets are minimum useful output; manufacturing batches remain exact unless a Cooking base level is required.
+export type BankJob={family:'jewellery'|'cooking'|'tanning'|'glass'|'magic'|'inventory'|'wine'|'bones'|'mining'|'fishing'|'stalls';recipe:string;target:number;batch:number;cap:number;returnTicks:number;members:boolean;reserve?:number;bank?:Tile;site?:Tile;heat?:Heat;alchemyTarget?:string;tool?:number;xpRate?:number;targetLevel?:number;fishingProtection?:FishingProtection};
 const AK={x:3269,z:3167,level:0},FURNACE={x:3275,z:3186,level:0};
 const nativeItems=new Set(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(row=>{const m=row.match(/^(\d+)=/);return m?[Number(m[1])]:[];}));
 export function validateBankJob(j:BankJob){
@@ -80,7 +80,7 @@ async function profile(s:Session,j:BankJob):Promise<BankProfile>{
   const r=inventoryRecipes().find(r=>r.name===j.recipe);if(!r)throw Error('unknown inventory recipe');if(j.target%(r.productUnits??1))throw Error('target must be a native output multiple');
   return{...base,inputs:pairs(r),tools:[...r.tools,...r.optionalInputs??[]],outputs:[r.product,...r.lossProduct===undefined?[]:[r.lossProduct],...(r.byproducts??[]).map(i=>i.id)],run:async(n,cap,stop)=>checked(await runInventoryBank(s,r,{maximum:n,cap,maxAttempts:Math.max(n,5*n),reserve:j.reserve,members:j.members,stop}))};
  }
- if(j.family==='wine')return{...base,inputs:{1987:1,1937:1},tools:[],outputs:[1993,1991,1995],run:async(n,cap,stop)=>checked(await runMixedWine(s,n,cap,stop,j.reserve))};
+ if(j.family==='wine')return{...base,inputs:{1987:1,1937:1},tools:[],outputs:[1993,1991,1995],run:async(n,cap,stop)=>checked(await runMixedWine(s,n,cap,stop,j.reserve,{allowAllBad:j.targetLevel!==undefined}))};
  return{...base,inputs:{526:1,557:2,555:2,561:1},tools:[],outputs:[1963],run:async(n,cap,stop)=>checked(await runBonesBank(s,{maximum:n,cap,members:j.members,reserve:j.reserve,stop}))};
 }
 
@@ -159,17 +159,21 @@ export async function runBankProfile(s:Session,j:BankRouteJob,p:BankProfile,requ
  const returningStop=()=>dead()||s.tick()-start>=j.cap;
  const observedBank=()=>{const at=s.sdk.getState()?.player;return !dead()&&!!at&&at.level===p.bank.level&&Math.max(Math.abs(at.worldX-p.bank.x),Math.abs(at.worldZ-p.bank.z))<=3;};
  let completed=0,trips=0,banked:Record<number,number>={},failure='',atBank=observedBank(),recoveryDeferred=false;
+ // Failed cooks and bad wine consume inputs without XP. The estimate starts the order; only the observed base
+ // level ends a training job. Replacement units remain bounded by owned stock, the stop checks and the tick cap.
+ const targetMet=()=>{if(j.targetLevel===undefined)return completed>=j.target;const base=s.sdk.getSkill('Cooking')?.baseLevel;if(!Number.isSafeInteger(base)||base!<1||base!>99)throw Error('bank job Cooking base level unknown');return base!>=j.targetLevel;};
  const travel=async(to:Tile,returning=false)=>{atBank=observedBank();const check=returning?returningStop:stop;if(check())throw Error('bank job stopped before travel');const atStart=s.sdk.getState()?.player,tol=bankTravelTolerance(j.family,to===p.site);if(atStart&&atStart.level===to.level&&Math.max(Math.abs(atStart.worldX-to.x),Math.abs(atStart.worldZ-to.z))<=tol)return;const controller=new AbortController(),off=s.onTick(()=>{if(check())controller.abort('bank job travel bound');});try{const from=s.sdk.getState()?.player,remaining=Math.max(1,j.cap-(s.tick()-start));const result=from&&from.level===to.level&&Math.max(Math.abs(from.worldX-to.x),Math.abs(from.worldZ-to.z))<=128?await walkPath(await sessionWalker(s),[{...to,tol}],{stop:check}):await goTo(s,await getWorld(),to,accountOf(s),{signal:controller.signal,legTimeoutTicks:Math.min(120,remaining),maxRetriesPerLeg:1});if(!result.ok)throw Error('bank job route '+result.detail);const at=s.sdk.getState()?.player;atBank=!!at&&at.level===p.bank.level&&Math.max(Math.abs(at.worldX-p.bank.x),Math.abs(at.worldZ-p.bank.z))<=3;}finally{off();atBank=observedBank();}};
  const open=async()=>{if(returningStop())throw Error('bank job bank budget exhausted');if(s.sdk.getState()?.bank.isOpen&&s.bankObservation?.())return;await s.sdk.sendCloseModal();await waitUntil(s,()=>!s.sdk.getState()?.interface.isOpen&&!s.sdk.getState()?.dialog.isOpen,{timeoutTicks:8});const g=s.bankObservation?.()?.generation??-1;const result=await s.bot.openBank();if(!result.success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??-1)>g,{timeoutTicks:12}))throw Error('bank job fresh bank unavailable');};
  const secure=async(credit:boolean)=>{await open();for(const id of related){const item=inv().find(i=>i.id===id);if(item){const n=await depositObserved(s,item);if(credit&&p.outputs.includes(id))banked[id]=(banked[id]??0)+n;}}};
  try{
   if(!first||hp0<1)throw Error('bank job initial state missing');await travel(p.bank);await secure(false);
   const selfBanked=['inventory','wine','bones'].includes(j.family);
-  if(selfBanked){const initial=Object.fromEntries(p.outputs.map(id=>[id,bankCount(id)]));await s.bot.closeBank();await p.run(j.target,j.cap-j.returnTicks-(s.tick()-start),stop);completed=j.target;await travel(p.bank,true);await secure(false);for(const id of p.outputs)banked[id]=bankCount(id)-initial[id]!;}
-  else while(completed<j.target){
+  while(!targetMet()){
    if(stop())throw Error('bank job stopped before refill');await open();
+   const remaining=j.targetLevel===undefined?j.target-completed:Math.max(1,j.target-completed);
+   if(selfBanked){const amount=j.targetLevel===undefined?remaining:Math.min(j.batch,remaining),initial=Object.fromEntries(p.outputs.map(id=>[id,bankCount(id)]));await s.bot.closeBank();await p.run(amount,j.cap-j.returnTicks-(s.tick()-start),stop);completed+=amount;await travel(p.bank,true);await secure(false);for(const id of p.outputs)banked[id]=(banked[id]??0)+bankCount(id)-initial[id]!;continue;}
    const type=s.client as {objType:(id:number)=>{stackable:boolean}};
-   const amount=fittingBankBatch(p.inputs,p.tools,Math.min(j.batch,j.target-completed),28-inv().length,id=>{const value=type.objType(id)?.stackable;if(typeof value!=='boolean')throw Error('native item stackability unknown '+id);return value;},p.capacityOutputs);
+   const amount=fittingBankBatch(p.inputs,p.tools,Math.min(j.batch,remaining),28-inv().length,id=>{const value=type.objType(id)?.stackable;if(typeof value!=='boolean')throw Error('native item stackability unknown '+id);return value;},p.capacityOutputs);
    if(amount<1)throw Error('bank job pack cannot fit a batch');
    for(const [id,n]of [...p.tools.map(id=>[id,count(id)?0:1]),...Object.entries(p.inputs).map(([id,n])=>[Number(id),n*amount])]){
     if(!n)continue;if(stop())throw Error('bank job stopped before withdrawal');const row=s.sdk.getState()?.bank.items.find(i=>i.id===id);if(!row||bankCount(id)-n<(Object.hasOwn(p.inputs,id)?j.reserve??0:0))throw Error('bank job stock short '+id);const before=count(id),stored=bankCount(id),g=s.bankObservation!()!.generation;await s.bot.withdrawItem(row,n,{asNote:false});if(!await waitUntil(s,()=>count(id)===before+n&&bankCount(id)===stored-n&&(s.bankObservation?.()?.generation??-1)>g,{timeoutTicks:10}))throw Error('bank job withdrawal does not reconcile '+id);
@@ -184,7 +188,7 @@ export async function runBankProfile(s:Session,j:BankRouteJob,p:BankProfile,requ
  atBank=observedBank();
  if([...protectedPack].some(([id,n])=>count(id)!==n))failure+='; protected stock changed';
  if((s.sdk.getSkill('Hitpoints')?.level??0)<hp0)failure+='; health changed';
- const ok=!failure&&completed>=j.target&&atBank&&!dead()&&!requestStop()&&s.tick()-start<j.cap;
- return{ok,family:j.family,recipe:j.recipe,completed,trips,banked,atBank,recoveryDeferred,ticks:s.tick()-start,failure:failure||'-'};
+ const ok=!failure&&targetMet()&&atBank&&!dead()&&!requestStop()&&s.tick()-start<j.cap;
+ return{ok,family:j.family,recipe:j.recipe,completed,trips,banked,atBank,recoveryDeferred,ticks:s.tick()-start,failure:failure||'-',...j.targetLevel===undefined?{}:{targetLevel:j.targetLevel,level:s.sdk.getSkill('Cooking')?.baseLevel}};
 }
 if(import.meta.main){const account=process.argv[2],path=process.argv[3];if(!account||!path)throw Error('usage: microbot-bank-jobs.ts account job.json');const job=JSON.parse(readFileSync(path,'utf8')) as BankJob;validateBankJob(job);let stopped=false;const s=await openBot(account,{onStop:async()=>{stopped=true;}}),owner=job.fishingProtection?actionSessionOwner(s):undefined,settle=(ok:boolean,detail:string)=>owner?finishActionSession(owner,ok,detail):finish([s],ok,detail);try{const result=await runBankJob(s,job,()=>stopped);console.log('BANK_JOB '+JSON.stringify(result));await settle(result.ok,JSON.stringify(result));}catch(error){await settle(false,String(error));}}

@@ -109,6 +109,9 @@ export function pickTrip(bank: readonly { id: number; count: number }[], shallow
 }
 
 // `choose` picks the trip from the bank once the pack is banked (the hunter with no kit named: pickTrip).
+// Each potion's ids, four doses first (scripts/pk.ts ITEMS).
+export const POTION_DOSES: readonly (readonly number[])[] = [ITEMS.prayerPotion, ITEMS.superRestore, ITEMS.superAttack, ITEMS.attackPotion, ITEMS.superStrength,
+    ITEMS.strengthPotion, ITEMS.superDefence, ITEMS.defencePotion, ITEMS.rangingPotion, ITEMS.magicPotion, ITEMS.antipoison.slice(0, 4), ITEMS.antipoison.slice(4)];
 export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT,
     choose?: (bank: readonly { id: number; count: number }[]) => { trip: readonly { id: number; count: number }[]; moreFood: number }): Promise<string | null> {
     const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
@@ -135,12 +138,17 @@ export async function restock(s: Session, food: number, trip: readonly { id: num
     }
     food -= boosts;
     for (const want of [...trip, { id: ITEMS.shark, count: food }]) {
-        const wornCount = equip().filter(e => e.id === want.id).reduce((n, e) => n + e.count, 0);
+        // Held already: worn, or in the pack (a two-handed bow that the melee wield above takes off can come to the pack
+        // after the deposit).
+        const wornCount = equip().filter(e => e.id === want.id).reduce((n, e) => n + e.count, 0) + (want.id === ITEMS.shark ? 0 : held(s, want.id));
         const need = want.count - wornCount;
         if (need <= 0) continue;
-        const row = s.sdk.getBankItems().find(b => b.id === want.id);
-        if (!row || row.count < need) { await s.bot.closeBank(); return `bank lacks ${need} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
-        await s.bot.withdrawItem(row, need, { asNote: false });
+        // A potion is taken in any of its doses, the fullest first: a bank holds what earlier trips left (POTION_DOSES).
+        const kin = POTION_DOSES.find(g => g.includes(want.id)) ?? [want.id];
+        const rows = kin.flatMap(id => s.sdk.getBankItems().filter(b => b.id === id && b.count > 0));
+        if (rows.reduce((n, r) => n + r.count, 0) < need) { await s.bot.closeBank(); return `bank lacks ${need} of item ${want.id} (has ${kin.reduce((n, id) => n + (stock().find(b => b.id === id)?.count ?? 0), 0)}; worn ${equip().map(e => e.id).join(',')}; pack ${s.sdk.getInventory().map(i => i.id).join(',')})`; }
+        let left = need;
+        for (const row of rows) { if (left <= 0) break; const take = Math.min(left, row.count); await s.bot.withdrawItem(row, take, { asNote: false }); left -= take; }
     }
     await s.bot.closeBank();
     return held(s, ITEMS.shark) >= food ? null : 'food withdrawal short';

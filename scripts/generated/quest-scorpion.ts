@@ -8,7 +8,8 @@
 // A behind the wall (2877,9796), B in the Barbarian Outpost (2552,3570), C upstairs in the Monastery (3058,3488,1),
 // whose ladder needs the order (Prayer 31, areas/monastery/scripts/prayer_guild.rs2:5-40). Peksa and the Seer's
 // later hints are not needed. Thormac with the full cage queues the completion.
-import { openQuest } from './quest-lib';
+import { openQuest, fightForDrop } from './quest-lib';
+import { componentId } from '../../packages/core/src/logout';
 import { establishBarcrawlGate, runBarcrawl } from './quest-barcrawl';
 
 const THORMAC = { x: 2702, z: 3405 };
@@ -157,17 +158,27 @@ try {
     const pickup = (g: any) => q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
     if (!q.has(ITEM.dusty)) {
         await q.walk('to jailer', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }]);
-        // The Jailer (level 47) dies to the kit the account fights with: a low-Attack ranger's bow or a mage's strikes
-        // (attackNpc; the sweep brings the bow and QUEST_ARROWS, or the staff and QUEST_CASTS), not to its hands.
-        for (let t = 0; t < 150 && !q.has(ITEM.jailKey); t++) {
-            await q.guard('jailer');
-            const g = ground(ITEM.jailKey);
-            const n = npcId(NPC.jailer);
-            if (g) { if (t % 3 === 0) await pickup(g); }
-            else if (n && (t % 5 === 0 || q.pos()?.targetIndex !== n.index)) await q.attackNpc(n);
-            await q.waitTicks(1);
-        }
-        if (!q.has(ITEM.jailKey)) await q.fail('jail key');
+        // The Jailer (level 47, 47 hitpoints) dies to the kit the account fights with: a low-Attack ranger's bow or a
+        // mage's strikes (the sweep brings the bow and QUEST_ARROWS, or the staff and QUEST_CASTS), or a melee account's
+        // weapon. fightForDrop chooses the usable method each tick: an empty quiver turns the fight to the strike runes.
+        const skill = (name: string): number => q.st()?.skills?.find((k: any) => k.name === name)?.baseLevel ?? 1;
+        const worn = (): any[] => q.s.sdk.getEquipment();
+        const jailer = await fightForDrop({
+            tick: () => q.s.tick(), worn, pack: () => q.st()?.inventory ?? [], ranged: () => skill('Ranged'), magic: () => skill('Magic'),
+            target: () => npcId(NPC.jailer), engaged: n => q.pos()?.targetIndex === n.index,
+            drop: () => ground(ITEM.jailKey), held: () => q.has(ITEM.jailKey),
+            equip: async item => {
+                const equipped = await q.s.bot.equipItem(item as any);
+                if (!equipped.success) throw Error(`jailer equip ${item.id} rejected: ${equipped.message ?? 'equip failed'}`);
+                if (!await q.waitUntil(() => worn().some((i: any) => i.id === item.id && i.count > 0), 5)) throw Error(`jailer equipment not observed: ${item.id}`);
+            },
+            attack: async n => { await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: (n as any).optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' }); },
+            cast: async (n, component) => { await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId(component), reason: 'SDK' }); },
+            pickup: async g => { await pickup(g); },
+            wait: async () => { await q.guard('jailer'); await q.waitTicks(1); },
+        }, 150);
+        console.log(`SCORP_JAILER ${JSON.stringify(jailer)}`);
+        if (!jailer.ok || !q.has(ITEM.jailKey)) await q.fail(`jail key: ${jailer.detail ?? 'not held'}`);
         q.milestone('jail key');
         const inCell = () => (q.pos()?.worldZ ?? 9999) < JAIL_DOOR.z;
         await q.step('cell door', () => q.useOnLoc(ITEM.jailKey, JAIL_DOOR), inCell, 15, 4);

@@ -65,3 +65,10 @@ test('spots are multiway rows with a target pattern, and the fighter routes to t
   expect(step.script).toBe('scripts/cannon-fight.ts');
   expect(step.env.SPOT).toBe('battlefield');
 });
+
+test('the spider spot walks out of the spiders\' map square before logout', () => {
+  const c = CANNON_SPOTS.spiders!.clear!;
+  // Map square 51_59 is z 3776-3839; the spiders wander 10 tiles from their spawns.
+  expect(c.z).toBeLessThan(3776 - 10);
+  expect(CANNON_SPOTS.battlefield!.clear).toBeUndefined();
+});

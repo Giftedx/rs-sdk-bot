@@ -219,15 +219,19 @@ if (import.meta.main) {
         const size = Math.ceil(names.length / procs), children: { out: Promise<string>; exited: Promise<number> }[] = [];
         for (let at = 0; at < names.length; at += size) {
             const child = Bun.spawn(['bun', import.meta.path, ...names.slice(at, at + size).flat().flatMap((n, i) => (i === 2 ? [String(cap), n] : [n]))],
-                { env: { ...env, SPAR_CHILD: '1', SPAR_PAIR_OFFSET: String(at), SPAR_CAP: String(cap) }, stdout: 'pipe', stderr: 'inherit', windowsHide: true });
+                // The no-progress guard (packages/core/src/bot.ts, STALL_TICKS default 900) past the cap: a splashed spell gives
+                // no XP (pvp_magic.rs2 pvp_spell_fail), so a mage in a mirror of magic tanks can go the whole cap without any,
+                // and the guard then stopped the child at the cap with exit code 1 (extra:spar-kit-mage-tank-x8).
+                { env: { ...env, SPAR_CHILD: '1', SPAR_PAIR_OFFSET: String(at), SPAR_CAP: String(cap), STALL_TICKS: env.STALL_TICKS ?? String(cap + 300) }, stdout: 'pipe', stderr: 'inherit', windowsHide: true });
             children.push({ out: new Response(child.stdout).text(), exited: child.exited });
         }
         const outs = await Promise.all(children.map(c => c.out)), codes = await Promise.all(children.map(c => c.exited));
         const results: SparResult[] = [];
         for (const out of outs) for (const line of out.split(/\r?\n/)) {
             if (line.startsWith('SPAR {')) results.push(JSON.parse(line.slice(5)) as SparResult);
-            // One RESULT line for the batch: the parent writes it.
+            // One RESULT line for the batch: the parent writes it. SPAR_CHILD_RESULTS=1 shows each child's as CHILD RESULT.
             if (line && !line.startsWith('RESULT ')) console.log(line);
+            else if (line && env.SPAR_CHILD_RESULTS === '1') console.log(`CHILD ${line}`);
         }
         const s = batchSummary(results), ok = results.length === names.length && results.every(sparValid) && codes.every(code => code === 0);
         console.log(`SPAR_TIMING procs=${procs} wallMs=${Date.now() - t0} pairs=${results.length} ticks=${s.ticks}`);
