@@ -4,6 +4,7 @@ Bot scripts and tooling for the rs-sdk (MaxBittker/rs-sdk, MIT) demo and local p
 
 Start with [the working guide](AGENTS.md), [current plan](docs/plans/joined-plan.md), and [research map](research/INDEX.md).
 Use the [swarm script contract](docs/script-contract.md) for reusable scripts, account admission, progress and recovery.
+Open the [Fleet System Map](docs/fleet-system-map.html) in a browser for the control paths, job choices, recovery and shared fleet data.
 
 ## Setup
 

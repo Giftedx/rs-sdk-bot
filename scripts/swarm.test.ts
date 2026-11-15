@@ -832,7 +832,37 @@ test('a run another job of the account started is foreign to a job that is off o
     expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });
 
-import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, standingRetryDue, writeSwarmStop } from './swarm';
+import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, standingRetryDue, writeSwarmStop, runningJobState } from './swarm';
+
+for(const [enabled,stopAll,label] of [[false,false,'disabled job'],[true,true,'global stop']] as const){
+    test(`a running ${label} preserves the owner's pause through automatic resume`,()=>{
+        const base=mkdtempSync(join(tmpdir(),'swarm-running-owner-')),file=join(base,'stop-Helper');
+        try{
+            const pause='owner pause: keep Helper offline\n';
+            writeFileSync(file,pause);
+            const job:Job={account:'Helper',script:'scripts/goldfarm.ts',enabled};
+            const parsed=parseJob(job);if('error' in parsed)throw Error(parsed.error);
+            const run={accounts:['Helper'],started:100,revision:missionSignature(job)};
+            expect(runningJobState(parsed,run,new Map(),new Set(),stopAll,()=>file)).toEqual({Helper:'stopping'});
+            expect(readFileSync(file,'utf8')).toBe(pause);
+            expect(clearSwarmStop(file)).toBe(false);
+            expect(readFileSync(file,'utf8')).toBe(pause);
+        }finally{rmSync(base,{recursive:true,force:true});}
+    });
+}
+
+test('stopping a running job creates a controller stop when no pause exists',()=>{
+    const base=mkdtempSync(join(tmpdir(),'swarm-running-stop-')),file=join(base,'stop-Helper');
+    try{
+        const job:Job={account:'Helper',script:'scripts/goldfarm.ts',enabled:false};
+        const parsed=parseJob(job);if('error' in parsed)throw Error(parsed.error);
+        const run={accounts:['Helper'],started:100,revision:missionSignature(job)};
+        expect(runningJobState(parsed,run,new Map(),new Set(),false,()=>file)).toEqual({Helper:'stopping'});
+        expect(readFileSync(file,'utf8')).toBe(SWARM_STOP.job);
+        expect(clearSwarmStop(file)).toBe(true);
+        expect(existsSync(file)).toBe(false);
+    }finally{rmSync(base,{recursive:true,force:true});}
+});
 test('a standing retry needs proof that the account is offline; a confirmed logout is enough with no status file', () => {
     const live = 'rs-sdk-demo.fly.dev', now = 10_000_000, old = now - 16 * 60_000;
     // No status file: the confirmed logout decides alone.
