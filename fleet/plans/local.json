@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794783770055,
+ "at": 1794783845178,
  "jobs": [
   {
    "account": "Balls",
@@ -147,27 +147,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "12",
-    "QUANTITY": "1",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "187499",
-    "CASH_RESERVE": "2300000",
-    "ORDER_KEY": "sausagefest-overall-cannon-furnace1",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-81ea5b87-62c7-4540-af29-eb856047ddc9"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-sausagefest-cannon-furnace1-capacity [task-81ea5b87-62c7-4540-af29-eb856047ddc9]",
    "role": "supply"
   },
   {
