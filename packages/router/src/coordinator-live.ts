@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
-import {admissionDecision,startReserve,activeExternalLive,RECOVERY_SLOT_WAIT_MS,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
+import {admissionDecision,startReserve,activeExternalLive,RECOVERY_SLOT_WAIT_MS,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature,swarmWroteStop,clearSwarmStop} from '../../../scripts/swarm';
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
@@ -287,6 +287,16 @@ function retiredRecoveryCohort(task:CoordTask,account:string,base:string):Retire
  return{accounts,runId,taskId};
 }
 const liveTaskWindowMs=(task:CoordTask)=>task.timeoutMs??Math.min(MAX_SPECIALIST_RUN_MS,Math.max(900_000,(task.estimatedMs??0)*1.5));
+// A controller stop belongs to the retired job. Owner pauses and global stops still hold every replacement.
+function liveAccountStops(accounts:readonly string[],base=projectRoot):{account:string;file:string}[]{
+ for(const flag of ['stop-coordinator','stop-swarm'])if(existsSync(join(base,'.practice',flag)))throw Error('live owner stopped: '+flag);
+ return accounts.flatMap(account=>[...new Set([account,account.toLowerCase()])].flatMap(name=>{
+  const file=join(base,'.practice','stop-'+name);let text:string;
+  try{text=readFileSync(file,'utf8');}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return[];throw error;}
+  if(!swarmWroteStop(text))throw Error('account has a stop file; preserve its owner: '+account);
+  return[{account,file}];
+ }));
+}
 export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean;launch?:string}={}){
  // `source` is the run's capability release; a recovery session binds to the launch release (default: the same value).
  const base=options.base??projectRoot,rows=liveRows(base),launch=options.launch??source;
@@ -296,6 +306,12 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  if(retained)recoveryQualification(task,dependencies,source,base);
  const accounts=retained?.accounts??task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  if(accounts.some(n=>typeof n!=='string'||! /^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw Error('participant binding unavailable');
+ const settledStops=()=>{
+  const stops=liveAccountStops(accounts,base);
+  for(const name of new Set(stops.map(s=>s.account)))if(readLogoutProof(name,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state!=='confirmed')throw Error('controller stop handoff needs confirmed producer logout: '+name);
+  return stops;
+ };
+ settledStops();
  const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownRaw=existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null;
  // Release first: the merged-plan split check and the overlay replacement below both read this result.
  const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),accounts,base),plan=mergedPlan(JSON.parse(raw),own),now=Date.now();
@@ -317,7 +333,6 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
   const ended=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===participant.toLowerCase())?.[1];
   if(Object.hasOwn(SPECIALIST_BOARDS,participant.toLowerCase())||occupied&&(!occupied.script||/fresh.clock|24 boards|main simultaneous/i.test(occupied.goal??'')))throw Error('participant has a protected reservation: '+participant);
   if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!settledOwnerJob(occupied,participant,ended)&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
-  if(existsSync(join(base,'.practice','stop-'+participant)))throw Error('participant has an owner stop file');
   if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended))throw Error('participant needs verified recovery');
   if(rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result))throw Error('participant session not settled');
  }
@@ -329,7 +344,6 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
    if(!launch.go)throw Error('main launch evidence is not ready');if(!options.preflight)atomicJson(join(base,'.practice/haggis-go.json'),launch);
   }else if(task.launch!=='specialist'||task.goal!=='specialists'||!board)throw Error('reserved clock needs its scored launch and staging evidence');
  }
- if(existsSync(join(base,'.practice','stop-'+account)))throw Error('account has a stop file; preserve its owner');
  const unfinished=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result);
  if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,launch,base))throw Error('account session ownership is not settled');
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
@@ -376,7 +390,11 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  atomicJson(join(base,'.practice/coordinator','runs',runId,'assignments-before.json'),before);
  own.jobs=replaceAssignments(own.jobs,accounts,job);
  if(readFileSync(path,'utf8')!==raw||(existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null)!==ownRaw)throw Error('assignment plan changed; reconcile before writing');
- writeCoordinatorJobs(base,own);return{goal,source,account,installedAt:now};
+ const stops=settledStops();
+ // Publish the replacement before clearing its controller stop, so the retired job cannot restart in between.
+ writeCoordinatorJobs(base,own);
+ for(const {file} of stops)clearSwarmStop(file);
+ return{goal,source,account,installedAt:now};
 }
 /** Check admission while the failure still holds, then park its old assignment before the controller can clear it. */
 export function prepareLiveRecovery(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot,launch=source,admission:{freeGB?:number}={}){
@@ -564,7 +582,7 @@ export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>
  // `source` is what the swarm pins on this job's worker (entry and the code files its arguments name), `launch` is the
  // controller's and its recovery runner's.
  const capability=capabilityRevision([definition.entry]),source=capabilityRevision(workerEntries(definition.entry,task.args??[])),launch=launchRevision();
- if((accounts??[account]).some(a=>existsSync(join(projectRoot,'.practice/stop-'+a))))throw Error('live account owner stopped before controller setup');
+ liveAccountStops(accounts??[account]);
  await ensureSwarm(launch);
  if(task.repairs?.length){
   if(task.sessionRecovery){

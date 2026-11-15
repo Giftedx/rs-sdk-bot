@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -9,6 +9,7 @@ import {installJob} from '../src/coordinator-live';
 import {sha} from '../../core/src/launch-evidence';
 import {missionSignature} from '../../core/src/session-admission';
 import {assertSpecialistLogin, specialistContext, specialistTokenPath} from '../../core/src/specialist-launch';
+import {readCoordinatorJobs} from '../../core/src/coordinator-jobs';
 const server='rs-sdk-demo.fly.dev';
 function fixture(){
  const base=mkdtempSync(join(tmpdir(),'router-session-')),root=join(base,'.practice/session-lifecycle');
@@ -73,6 +74,61 @@ test('a disabled owner job with a confirmed logout and no persistent end admits 
  f.attempt('Rod').record('ended','logged-out');
  const task:any={id:'test',goal:'gear',account:'Rod'};
  expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).not.toThrow();
+});
+
+for(const [participants,formerJob] of [[['Rod'],true],[['Rod','Partner'],true],[['Rod'],false]] as const)test('controller handoff installs a settled '+(participants.length===1?'single':'composed')+' mission '+(formerJob?'from its old job':'with no former job')+' before clearing its stops',()=>{
+ const f=fixture(),path=join(f.base,'swarm.json'),stop='swarm plan removed or stopped';
+ const plan=JSON.stringify({maxBots:17,minFreeGB:4,jobs:formerJob?participants.map(account=>({account,script:'old.ts',enabled:false,repeat:false})):[]});
+ writeFileSync(path,plan);
+ const stops=participants.flatMap(name=>[name,name.toLowerCase()]).map(name=>join(f.base,'.practice/stop-'+name));
+ for(const name of participants){f.status(name,{result:'fail prior work',at:Date.now()-1000});f.attempt(name).record('ended','logged-out');}
+ for(const file of stops)writeFileSync(file,stop);
+ const task:any={id:'test',goal:'quests',...(participants.length===1?{account:'Rod'}:{participants})};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).not.toThrow();
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+ for(const file of stops)expect(readFileSync(file,'utf8')).toBe(stop);
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,freeGB:64})).not.toThrow();
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([expect.objectContaining({script:'new.ts',enabled:true,repeat:false,coordinatorTask:'test',
+  ...(participants.length===1?{account:'Rod'}:{accounts:participants,orchestrate:true})})]);
+ for(const file of stops)expect(existsSync(file)).toBe(false);
+ expect(readFileSync(path,'utf8')).toBe(plan);
+});
+
+test('controller handoff with no former job requires producer logout instead of legacy bootstrap',()=>{
+ const f=fixture(),path=join(f.base,'swarm.json'),stop=join(f.base,'.practice/stop-Rod');
+ const plan=JSON.stringify({maxBots:17,minFreeGB:4,jobs:[]});writeFileSync(path,plan);
+ f.status('Rod',{result:'ok old work',at:Date.now()-15*60_000});
+ writeFileSync(stop,'swarm plan removed or stopped');
+ const task:any={id:'test',goal:'quests',account:'Rod'};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,freeGB:64})).toThrow();
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+ expect(readFileSync(stop,'utf8')).toBe('swarm plan removed or stopped');
+ expect(readFileSync(path,'utf8')).toBe(plan);
+});
+
+for(const constraint of ['owner stop','owner lowercase stop','owner text with controller prefix','live predecessor','unconfirmed logout','enabled job','memory','participant owner stop','global coordinator stop','global swarm stop'])test('controller handoff preserves stops and assignments on '+constraint,()=>{
+ const f=fixture(),path=join(f.base,'swarm.json'),stop='swarm plan removed or stopped';
+ const participants=constraint==='participant owner stop'?['Rod','Partner']:['Rod'];
+ const plan=JSON.stringify({maxBots:17,minFreeGB:4,jobs:participants.map(account=>({account,script:'old.ts',enabled:constraint==='enabled job',repeat:false}))});
+ writeFileSync(path,plan);
+ const stops=new Map<string,string>();
+ for(const name of participants){
+  f.status(name,{result:constraint==='live predecessor'?'':'fail prior work',at:Date.now()-1000});
+  const attempt=f.attempt(name);if(constraint!=='unconfirmed logout')attempt.record('ended','logged-out');
+  stops.set(join(f.base,'.practice/stop-'+name),name==='Partner'?'owner paused':stop);
+ }
+ if(constraint==='owner stop')stops.set(join(f.base,'.practice/stop-Rod'),'owner paused');
+ if(constraint==='owner lowercase stop')stops.set(join(f.base,'.practice/stop-rod'),'owner paused');
+ if(constraint==='owner text with controller prefix')stops.set(join(f.base,'.practice/stop-Rod'),stop+'; keep offline for owner');
+ if(constraint==='global coordinator stop')stops.set(join(f.base,'.practice/stop-coordinator'),'owner paused');
+ if(constraint==='global swarm stop')stops.set(join(f.base,'.practice/stop-swarm'),'owner paused');
+ for(const [file,text] of stops)writeFileSync(file,text);
+ const beforeStops=new Map([...stops.keys()].map(file=>[file,readFileSync(file,'utf8')]));
+ const task:any={id:'test',goal:'quests',...(participants.length===1?{account:'Rod'}:{participants})};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,freeGB:constraint==='memory'?4:64})).toThrow();
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+ for(const [file,text] of beforeStops)expect(readFileSync(file,'utf8')).toBe(text);
+ expect(readFileSync(path,'utf8')).toBe(plan);
 });
 
 test('a settled disabled helper can join a composed mission after its prior job failed',()=>{
