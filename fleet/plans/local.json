@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794783413613,
+ "at": 1794783694620,
  "jobs": [
   {
    "account": "Balls",
@@ -168,27 +168,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-ge-bowbeforeme-cannon1700-capacity [task-051d37af-79b5-4b90-b5b8-0fd15ed3be3e]",
-   "role": "supply"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "564",
-    "QUANTITY": "183",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "3728",
-    "CASH_RESERVE": "2500000",
-    "ORDER_KEY": "hocuspokeus-overall-cosmic183",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-811e3b42-f92b-4149-9914-45abe6e241d2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-hocuspokeus-cosmic183-capacity [task-811e3b42-f92b-4149-9914-45abe6e241d2]",
    "role": "supply"
   },
   {
