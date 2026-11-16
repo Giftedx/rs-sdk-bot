@@ -1,0 +1,121 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/core/test/fleet-trade-claim.test.ts:
+(pass) atomic trade claim release frees both exact nonces and rejects replacement claims [286.45ms]
+(pass) atomic trade claim release rejects the whole push if one account receives a concurrent new claim [254.56ms]
+(pass) atomic trade claim release reads back both released claims after a lost response without replaying a release [227.96ms]
+(pass) two trade-only checkouts cannot claim the same account concurrently [238.09ms]
+(pass) a released trade role cannot replay after another order claims and releases the account [304.30ms]
+(pass) an unknown Git authority cannot grant trade admission [18.58ms]
+(pass) a trade and a swarm racing on the same account have exactly one winner [176.05ms]
+(pass) a dead swarm producer remains held, and pre-network recovery refusal restores the prior hold [339.94ms]
+(pass) the owning checkout can recover a dead claim that never reached session intent [204.84ms]
+(pass) a dead claim with no pending marker stays held even if the session receipt is missing [143.16ms]
+(pass) a dead pre-login trade claim can be replaced only on its owning checkout [216.45ms]
+(pass) trade admission accepts the owning checkout’s exact confirmed worker logout [144.85ms]
+(pass) another side replaces a dead side's swarm claim only once the claim and that side's lease are an hour stale [253.07ms]
+(pass) a new checkout of the same side replaces a dead checkout's claim once the claim and that checkout's renewals are an hour stale [232.98ms]
+(pass) a same-side claim whose checkout never held the lease is orphaned once another checkout holds it; no lease ref gives no takeover [176.98ms]
+(pass) a side that still renews its lease keeps its held claims, and a side with no lease record gives no takeover [169.99ms]
+(pass) the older fleet-data heartbeat counts as the dead side's lease, and a held trade claim is never taken over [213.76ms]
+
+packages/core/test/fleet-lease.test.ts:
+(pass) a network fault is tried again inside the budget; a rejected push fails at once with Git's text [1206.62ms]
+(pass) the remote lease excludes another checkout, fences old workers, and permits expired takeover [240.85ms]
+(pass) an unreadable authority fails closed [7.71ms]
+(pass) a replacement in the same checkout can adopt workers after the previous controller exits [147.80ms]
+(skip) a fresh Git deadline works in a long-running process
+(pass) a renewal that does not land leaves the lease standing until its deadline, and the next one lands [78.16ms]
+(pass) a renewal whose push landed but whose answer was lost is taken as landed [92.39ms]
+(pass) an uncertain initial lease push requires exact remote confirmation: landed=false [49.48ms]
+(pass) an uncertain initial lease push requires exact remote confirmation: landed=true [60.74ms]
+(pass) a record that lands after the ref was checked is taken up at the next renewal, not read as a takeover [104.22ms]
+
+packages/core/test/session-recovery.test.ts:
+(pass) the child session timer keeps its120second cap and cannot outlive the remaining permit authority [1.12ms]
+(pass) CLI boundary diagnostics identify every setup phase without copying secrets or publishing authority [1.48ms]
+(pass) retained first refusal is a closed code, never legacy or arbitrary exception text [0.29ms]
+(pass) setup distinguishes known authority, source, child, stops, credentials and IO refusals [0.42ms]
+(pass) diagnostic publication cannot create a connection admission or a producer receipt [1.45ms]
+(pass) actual CLI reports safe setup refusals before credentials, producer intent or output publication [9648.95ms]
+(pass) recovery confirms one exact producer attempt and makes no gameplay or failure-clear claim [3.55ms]
+(pass) actual SDK skills-array Proxy is copied into an independent snapshot [1.71ms]
+(pass) protected identities and owner/stop refusals happen before any connection intent [0.53ms]
+(pass) a caller-made admission or ok flag cannot authorize any connection [0.90ms]
+(pass) auth/connection failure is held without leaking the original error or retrying [0.85ms]
+(pass) returned logout errors and thrown logout errors cannot leak diagnostic secrets [3.64ms]
+(pass) failed readiness, wrong identity, state loss and unresolved modal cleanup stay held after one cleanup [9.59ms]
+(pass) timeout/disconnect and a newer intent cannot borrow a confirmed cleanup from the old attempt [5.82ms]
+(pass) caller success cannot replace actual producer source or script provenance [3.00ms]
+
+packages/core/test/session-recovery-permit.test.ts:
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS opaque admission, exact producer, retired lease epoch, unchanged ordinary guards, abort, CAS, exact new logout
+(pass) qualified cross-host recovery normal [1891.35ms]
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_INTERRUPTED_PASS real child exit after push, ordinary refusal, supported expired lease retirement, qualified retry, exact inherited hold restored
+(pass) qualified cross-host recovery interrupted [798.95ms]
+(pass) the controller launches the core recovery worker inside the gameplay ownership scope [0.10ms]
+(pass) private fixtures honour every repository and fixture stop flag [0.67ms]
+(pass) successful retired cleanup requires a new actual mission, no hold, no producer history and exact authority [27.25ms]
+(pass) completed permit pins the exact successful end and actual mission through consumption [19.68ms]
+(pass) completed cleanup retains a ready disconnected live producer and binds only its fresh recovery child [16.52ms]
+(pass) a diagnostic file cannot replace missing consumption or a missing producer receipt; original lease stays held [6.76ms]
+(pass) only the controller may issue one account lease; child consumes one nonce and ordinary launch stays held [4.86ms]
+(pass) refusals happen before a lease is issued and keep exact failure bytes [7.96ms]
+(pass) the child guard rechecks task, source, exact end and runner after nonce consumption [14.94ms]
+(pass) only this consumed child may own its new partial session during the cleanup guard [5.18ms]
+(pass) completion indexes only the exact child/producer, releases its lease, and never clears the old failure [31.73ms]
+(pass) native qualification needs per-check observed cases and unchanged raw evidence, not true flags [2.50ms]
+(pass) one consumed permit yields one connection admission; forged, reused or crossed admissions refuse [5.00ms]
+(pass) remote launcher refuses before publishing a permit or account lease [1.25ms]
+(pass) launcher permits delayed setup to finish at140seconds but retains the lease at the absolute150second expiry [13.48ms]
+(pass) connect admission expires at the binding window while an already consumed guard retains150second cleanup time [6.01ms]
+(pass) a heartbeat published during the slow owner and source checks admits the valid child exactly once [4.40ms]
+(pass) a completed launch binds its child although each process lookup ages the blocked controller heartbeat [6.23ms]
+(pass) missing, malformed, crossed, future, stale or active fleet state refuses issuance without a lease [14.96ms]
+(pass) fleet state replaced between issuance and consumption holds the lease with no nonce, receipt or connection [28.16ms]
+(pass) an earlier retained fleet-unresolved diagnostic still parses [0.09ms]
+(pass) the controller releases only an exact expired held lease with a dead bound child and its matching confirmed logout [52.91ms]
+(pass) the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect [39.46ms]
+(pass) an exact pre-request lease refusal waits while the controller archives only its dead connect-failed child and retains lineage outcomes [52.13ms]
+(pass) restart counts inherited children without replay, ignores dead children, and retains every lease [2.89ms]
+(pass) a later process that holds the id of a dead recovery child is not the child [59.19ms]
+(pass) cachedProcessStarts reads each id once a minute and keeps a failed read [3.81ms]
+(pass) authenticated cleanup admits a stopped end and still honours owner stops and exact end identity [56.97ms]
+(pass) the delivery binds to its capability release while the request binds to the launch release [8.79ms]
+(pass) a held retired producer gets a permit only from a delivery at its capability release [7.98ms]
+
+packages/core/test/inprocess-auth-order.test.ts:
+(pass) rejected authentication does not record an owned partner [97.99ms]
+(pass) ownership is recorded only after an authenticated session returns [90.70ms]
+(pass) a stop during asynchronous local setup refuses before producer intent and authentication [86.77ms]
+(pass) a direct live login refuses a shared account claim before authentication [91.73ms]
+(pass) a direct live login checks an account stop before claiming or authenticating [87.25ms]
+
+packages/core/test/session-recovery-dispatch.test.ts:
+(pass) malformed recovery is acknowledged and removed without launch or damage to the failure [1.58ms]
+(pass) existing lease archives the owned request and never reaps or relaunches its child [0.50ms]
+(pass) busy child stays owned and its completion cannot remove a newer processing request [0.67ms]
+(pass) source/stop/admission refusals occur before launch; post-issuance failure reports the retained lease [1.09ms]
+(pass) setup refusals retain bounded permit causes without exposing arbitrary exception text [0.91ms]
+(pass) failed child keeps the old failure; malformed or ordinary JSON is not consumed as a recovery [0.57ms]
+(pass) result persistence failure retains the input and suppresses any duplicate launch [0.44ms]
+(pass) a refusal receipt failure cannot become a later admitted launch [0.54ms]
+(pass) a refused processing request cannot launch after a dispatcher restart [0.42ms]
+(pass) marker persistence failure makes no admission decision and does not claim a handled request [0.38ms]
+(pass) a restarted dispatcher leaves the inherited lease and original active child untouched [0.34ms]
+(pass) a fixture link introduced deep in control state after construction is refused [0.59ms]
+(pass) nested fixture links and linked swarm assignments are refused before dispatch [0.80ms]
+(pass) native fixture mode cannot use production state or a remote endpoint [0.31ms]
+(pass) case aliases, junctions and control-directory links cannot turn a local fixture into production state [0.37ms]
+(pass) the actual default remote launcher still refuses without a lease or child [0.43ms]
+
+1 tests skipped:
+(skip) a fresh Git deadline works in a long-running process
+
+ 94 pass
+ 1 skip
+ 0 fail
+ 1247 expect() calls
+Ran 95 tests across 6 files. [19.22s]

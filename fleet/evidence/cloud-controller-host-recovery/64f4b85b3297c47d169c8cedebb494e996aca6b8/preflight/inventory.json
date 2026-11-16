@@ -1,0 +1,140 @@
+{
+  "at": 1794828978091,
+  "source": "64f4b85b3297c47d169c8cedebb494e996aca6b8",
+  "scope": "raw existing live lifecycle and retained historical bytes; no new live attempt or bank freshness claim",
+  "files": [
+    {
+      "path": "live-lifecycle/FullLoad/attempts/1794637614152-0000001853-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/attempts/1794637614152-0000001853-0000000001.json",
+      "bytes": 788,
+      "mtimeMs": 1794640538903.5361,
+      "sha256": "48e9e9e3bd2d16a3a178f113b368c4864fc18d625bf8845763e5e1314b6bcff0"
+    },
+    {
+      "path": "live-lifecycle/FullLoad/attempts/1794641947342-0000012238-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/attempts/1794641947342-0000012238-0000000001.json",
+      "bytes": 789,
+      "mtimeMs": 1794644418860.7825,
+      "sha256": "8447fdf34677a5d2276f62d12483d67a39c2b673159601b8fa60dadbd7da2c43"
+    },
+    {
+      "path": "live-lifecycle/FullLoad/attempts/1794807014059-0000010716-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/attempts/1794807014059-0000010716-0000000001.json",
+      "bytes": 843,
+      "mtimeMs": 1794807014093.9546,
+      "sha256": "71ce40df23c7a8d518fd511da01bf9f8c0185c1f101054bb1accec7a070e0f7a"
+    },
+    {
+      "path": "live-lifecycle/FullLoad/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/latest.json",
+      "bytes": 169,
+      "mtimeMs": 1794807014057.9563,
+      "sha256": "c4f274db57881abc4417c02d8e5b1d15e0fceff0a07ef6a3f815d4085d397a9e"
+    },
+    {
+      "path": "historical-lifecycle/FullLoad/attempts/1794807014059-0000010716-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/FullLoad.lifecycle/attempts/1794807014059-0000010716-0000000001.json",
+      "bytes": 843,
+      "mtimeMs": 1794807502507.1477,
+      "sha256": "71ce40df23c7a8d518fd511da01bf9f8c0185c1f101054bb1accec7a070e0f7a"
+    },
+    {
+      "path": "historical-lifecycle/FullLoad/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/FullLoad.lifecycle/latest.json",
+      "bytes": 169,
+      "mtimeMs": 1794807142239.847,
+      "sha256": "c4f274db57881abc4417c02d8e5b1d15e0fceff0a07ef6a3f815d4085d397a9e"
+    },
+    {
+      "path": "historical-status/FullLoad.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/FullLoad.status.json",
+      "bytes": 9902,
+      "mtimeMs": 1794807142235.8472,
+      "sha256": "adb3808e515e72b7e522b23355770433613413b67356bbe5a825558e4cf10594"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794641428974-0000010677-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794641428974-0000010677-0000000001.json",
+      "bytes": 796,
+      "mtimeMs": 1794642640084.0706,
+      "sha256": "99bf9cf1e77117bc4123e92235c32a3c7f77f41799ecb9992413dbcb304ecf8f"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794642649082-0000014319-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794642649082-0000014319-0000000001.json",
+      "bytes": 803,
+      "mtimeMs": 1794642900032.507,
+      "sha256": "c62806bf81a0ba039c8d5362ee9f4f726a1b048f49fe4bc9c0c6d5b383668f93"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794643882133-0000017951-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794643882133-0000017951-0000000001.json",
+      "bytes": 791,
+      "mtimeMs": 1794644419640.7722,
+      "sha256": "4c1500f8305f568c539cdda33acf62d376213e93c8230220f282fbb941a967d6"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794807013455-0000010703-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794807013455-0000010703-0000000001.json",
+      "bytes": 845,
+      "mtimeMs": 1794807013477.9846,
+      "sha256": "5dde32167165f5710a56058f5006fafadcdd96aa251809eb2bfa851508369a27"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/latest.json",
+      "bytes": 171,
+      "mtimeMs": 1794807013453.9858,
+      "sha256": "9e2e809089f96ba907e50da56d822d416d7da0290c9dc03575892a902c17bc9a"
+    },
+    {
+      "path": "historical-lifecycle/Unsheathed/attempts/1794807013455-0000010703-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/Unsheathed.lifecycle/attempts/1794807013455-0000010703-0000000001.json",
+      "bytes": 845,
+      "mtimeMs": 1794807502507.1477,
+      "sha256": "5dde32167165f5710a56058f5006fafadcdd96aa251809eb2bfa851508369a27"
+    },
+    {
+      "path": "historical-lifecycle/Unsheathed/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/Unsheathed.lifecycle/latest.json",
+      "bytes": 171,
+      "mtimeMs": 1794807142243.8467,
+      "sha256": "9e2e809089f96ba907e50da56d822d416d7da0290c9dc03575892a902c17bc9a"
+    },
+    {
+      "path": "historical-status/Unsheathed.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/Unsheathed.status.json",
+      "bytes": 9101,
+      "mtimeMs": 1794807142239.847,
+      "sha256": "149d1e42334e3a506668c36d9127da553c1e785d30923d494eaafa18676229c2"
+    },
+    {
+      "path": "focused/interrupted-red.log",
+      "source": "/tmp/host-interrupted-red.log",
+      "bytes": 2632,
+      "mtimeMs": 1794828798535.1187,
+      "sha256": "282833e80df61fbea1b7ad9c29382dce1c8d6a2cc935672ffa2bfbd66ae94842"
+    },
+    {
+      "path": "focused/interrupted-green.log",
+      "source": "/tmp/host-interrupted-green-final.log",
+      "bytes": 640,
+      "mtimeMs": 1794828905258.887,
+      "sha256": "e94224dc11e3856c9e3b38092d4930a9c1540056b55fa7718e68df9bddd2a026"
+    },
+    {
+      "path": "focused/related-tests.log",
+      "source": "/tmp/host-recovery-related.log",
+      "bytes": 10659,
+      "mtimeMs": 1794828839864.082,
+      "sha256": "fabba3a2f4561832ec4b1bb1816d65b6ffb957a569e0385589e5d382553db822"
+    },
+    {
+      "path": "focused/typecheck.log",
+      "source": "/tmp/host-recovery-typecheck.log",
+      "bytes": 15,
+      "mtimeMs": 1794828839879.0396,
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    }
+  ]
+}
