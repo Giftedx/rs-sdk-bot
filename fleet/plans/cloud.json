@@ -1,34 +1,7 @@
 {
  "side": "cloud",
- "at": 1794851219092,
- "jobs": [
-  {
-   "account": "FullLoad",
-   "script": "scripts/fleet-inspect.ts",
-   "env": {
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "TICK_RECORD": "1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
-   "role": "inspect"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/fleet-inspect.ts",
-   "env": {
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "TICK_RECORD": "1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
-   "role": "inspect"
-  }
- ],
+ "at": 1794853351660,
+ "jobs": [],
  "army": [],
  "builds": {}
 }
