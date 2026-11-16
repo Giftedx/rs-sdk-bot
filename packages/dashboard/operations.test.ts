@@ -7,6 +7,77 @@ const healthSource=shell.slice(shell.indexOf('  function recordedHp('),shell.ind
 const currentHp=new Function('window',`${healthSource};return currentHp;`)({});
 const recordedHp=new Function('window',`${healthSource};return recordedHp;`)({});
 const now=1_000_000;
+const escapeText=(text:unknown)=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+
+test('script search trims the query and keeps the count and empty state inside the refreshed list',()=>{
+ const code=operations.slice(operations.indexOf(' function library(){'),operations.indexOf(' function transfers(){'));
+ const capabilities=[{id:'cook',goal:'Cook sharks',consumer:'Food',entry:'scripts/cook.ts',files:[],checks:[]},{id:'mine',goal:'Mine ore',consumer:'Bars',entry:'scripts/mine.ts',files:[],checks:[]}];
+ const html=(query:string)=>new Function('caps','tasks','libraryQuery','E','badge','button','age',code+';return library();')(()=>capabilities,()=>[],query,escapeText,()=>'',()=>'',String) as string;
+ const matched=html('  SHARK  '),refresh=matched.slice(matched.indexOf('id="op-library-list"'));
+ expect(refresh).toContain('1 of 2 registered capabilities');expect(refresh).toContain('Cook sharks');expect(refresh).not.toContain('Mine ore');
+ expect(html('no-match')).toContain('No scripts match your search.');
+});
+
+test('Configuration keeps its trimmed plugin filter when a periodic render rebuilds the panel',()=>{
+ const manager=operations.slice(operations.indexOf(' function manager(){'),operations.indexOf(' window.atlasPluginNames='));
+ const render=operations.slice(operations.indexOf(' function renderCurrent('),operations.indexOf(' function toast('));
+ const body={scrollTop:37,innerHTML:'',contains:()=>false,querySelectorAll:()=>[]};
+ const env:any={pluginQuery:'  XP  ',pluginNames:{xp:'XP Tracker',fleet:'Fleet',manager:'Configuration'},saved:(_k:string,f:any)=>f,defaultHidden:[],page:String,title:()=>'',hiddenHere:()=>false,window:{},E:escapeText,button:()=>'',document:{activeElement:{tagName:'BODY'}},api:{selectedPlugin:()=> 'manager'},body};
+ new Function(...Object.keys(env),`${manager};const views={manager};${render};renderCurrent();`)(...Object.values(env));
+ expect(body.innerHTML).toContain('value="  XP  "');expect(body.innerHTML).toContain('data-pin="xp"');expect(body.innerHTML).not.toContain('data-pin="fleet"');expect(body.scrollTop).toBe(37);
+ const empty=new Function(...Object.keys(env),`${manager};return manager();`)(...Object.values({...env,pluginQuery:'no-match'}));
+ expect(empty).toContain('No plugins match your search.');
+});
+
+function paletteHarness(){
+ const code=operations.slice(operations.indexOf(' function openPalette('),operations.indexOf(" window.addEventListener('keydown',e=>{if((e.ctrlKey"));
+ let removed=false;
+ const doc:any={activeElement:null};
+ const trigger:any={name:'trigger',isConnected:true,focus:()=>{doc.activeElement=trigger;}};
+ const input:any={name:'input',value:'',isConnected:true,focus:()=>{doc.activeElement=input;}};
+ const close:any={name:'close',focus:()=>{doc.activeElement=close;}};
+ let buttons:any[]=[];
+ const results:any={querySelectorAll:()=>buttons,querySelector:()=>buttons[0],set innerHTML(html:string){buttons=[...html.matchAll(/data-search-result="(\d+)"/g)].map(m=>{const b:any={name:'result'+m[1],dataset:{searchResult:m[1]},focus:()=>{doc.activeElement=b;},click:()=>results.onclick({target:{closest:()=>b}})};return b;});}};
+ const overlay:any={className:'',remove:()=>{removed=true;},querySelector:(s:string)=>s==='input'?input:s==='.op-palette-results'?results:close,querySelectorAll:()=>[input,close,...buttons]};
+ const opened:string[]=[];doc.activeElement=trigger;
+ const env:any={$:()=>null,document:{...doc,createElement:()=>overlay},app:{append:()=>{removed=false;}},isOwner:()=>true,window:{atlasOperator:()=>true},pluginNames:{fleet:'Fleet',xp:'XP Tracker',world:'World'},hiddenHere:()=>false,bots:()=>[],caps:()=>[],tasks:()=>[],api:{openPlugin:(id:string)=>opened.push(id)},body:{querySelector:()=>null},E:escapeText,commandButton:trigger};
+ Object.defineProperty(env.document,'activeElement',{get:()=>doc.activeElement});
+ const open=new Function(...Object.keys(env),code+';return openPalette;')(...Object.values(env));
+ const key=(key:string,shiftKey=false)=>overlay.onkeydown({key,shiftKey,preventDefault:()=>{},stopPropagation:()=>{}});
+ return{open,key,overlay,input,close,trigger,buttons:()=>buttons,active:()=>doc.activeElement,removed:()=>removed,opened};
+}
+
+test('command search starts ArrowUp at the last result and traps Tab at both dialog edges',()=>{
+ const p=paletteHarness();p.open();p.key('ArrowUp');expect(p.active()).toBe(p.buttons().at(-1));
+ p.key('Tab');expect(p.active()).toBe(p.input);p.key('Tab',true);expect(p.active()).toBe(p.buttons().at(-1));
+ p.open('no-match');p.key('ArrowDown');expect(p.active()).toBe(p.input);
+});
+
+test('command search cancel paths restore the prior control and padded queries still match',()=>{
+ const p=paletteHarness();
+ for(const close of [()=>p.key('Escape'),()=>p.close.onclick(),()=>p.overlay.onclick({target:p.overlay})]){
+  p.trigger.focus();p.open('  XP  ');expect(p.buttons()).toHaveLength(1);close();expect(p.removed()).toBe(true);expect(p.active()).toBe(p.trigger);
+ }
+});
+
+test('account coins distinguish a reported bank without coins from an absent bank observation',()=>{
+ const code=operations.slice(operations.indexOf(' function account(){'),operations.indexOf(' function raw(){'));
+ const html=(bank:any)=>{
+  const env:any={bots:()=>[{name:'Worker',bank,bankAt:bank?1:null}],sel:'Worker',meta:null,tasks:()=>[],window:{atlasOperator:()=>true},page:String,title:()=>'',button:()=>'',jobButton:()=>'',badge:()=>'',issues:()=>[],E:escapeText,safeName:String,nf:String,gp:String,age:String};
+  return new Function(...Object.keys(env),code+';return account();')(...Object.values(env)) as string;
+ };
+ for(const bank of [[],[{id:333,name:'Trout',count:3}]])expect(html(bank)).toContain('<b>0</b><span>coins in saved bank</span>');
+ expect(html(undefined)).toContain('<b>—</b><span>coins in saved bank</span>');expect(html([{id:995,count:12}])).toContain('<b>12</b><span>coins in saved bank</span>');
+});
+
+test('recent operator command cards show refused and failed receipts and escaped diagnostic notes',()=>{
+ const code=operations.slice(operations.indexOf(' function recentCommands(){'),operations.indexOf(' function dispatch(){'));
+ const requests=[...['refused','failed','rejected','accepted','submitted','plan-requested','unknown'].map(status=>({id:status,action:'queue',status,at:1,note:'<b>source changed</b>'}))];
+ const html=new Function('meta','E','badge','button','age',code+';return recentCommands();')({requests},escapeText,(tone:string,label:string)=>`<i class="${tone}">${label}</i>`,()=>'',String) as string;
+ for(const status of ['refused','failed','rejected'])expect(html).toContain(`<i class="failed">${status}</i>`);
+ expect(html).toContain('<i class="good">accepted</i>');expect(html).toContain('<i class="pending">submitted</i>');expect(html).toContain('<i class="pending">plan-requested</i>');expect(html).not.toContain('<i class="pending">unknown</i>');
+ expect(html).toContain('&lt;b&gt;source changed&lt;/b&gt;');expect(html).not.toContain('<b>source changed</b>');
+});
 
 test('the command centre names owner goal gaps and opens Project goals',()=>{
  const source=operations.slice(operations.indexOf(' function operations(){'),operations.indexOf(' // Why a new bot'));

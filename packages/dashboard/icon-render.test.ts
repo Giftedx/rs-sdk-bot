@@ -29,7 +29,7 @@ test('the bank window and GE rows keep item identity even when the safe name tab
  run(`${bank};openBank();`,{account:()=>bot,document:{createElement:()=>modal},hud:{querySelector:()=>null,append:()=>{}},window:{atlasOperator:()=>true},toast:empty,E,safeName:String,age,stackValue:()=>({value:0,unpriced:0}),gp,icon,qty:empty,statTip:empty,priceTip:empty});
  containsItems(node('.bank-items').innerHTML);
  const ge=shell.slice(shell.indexOf('  function geResults(){'),shell.indexOf('  // Pull requests plugin'));
- const rows=run(`${ge};return geResults()[1];`,{S:{icons:{},bots:[],economy:{supplies:[green,black,note]}},window:{atlasOperator:()=>false},geQuery:'',geSort:'stock',geAll:true,geOpen:null,E,nf,age,icon,geSources:empty});
+ const rows=run(`${ge};return geResults()[1];`,{S:{icons:{},bots:[],economy:{supplies:[green,black,note]}},window:{atlasOperator:()=>false},geQuery:'',geSort:'stock',geAll:true,geLimit:80,geOpen:null,E,nf,age,icon,geSources:empty});
  containsItems(rows,[green,black,note],24);
 });
 

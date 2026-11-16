@@ -29,7 +29,12 @@ export function createOperatorControl(options:{root:string;readOnly?:boolean;non
   return{nonce,readOnly:!!options.readOnly,coordinatorRunning,controllers,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
    accountHolds:held().map(name=>{let text='';try{text=readFileSync(join(root,'.practice','stop-'+name),'utf8');}catch{}return{name,owner:text.startsWith('dashboard-stop:')?'dashboard':'other'};}),
    requests:existsSync(audit)?readdirSync(audit).filter(n=>/^[a-f0-9-]+\.json$/.test(n)).map(n=>{
-    try{const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json');return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status:r.action==='queue'?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status};}catch{return null;}
+    try{
+     const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json'),terminalFailure=['refused','failed','rejected'].includes(r.status);
+     const status=r.action==='queue'&&!terminalFailure?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status;
+     const note=typeof r.note==='string'?r.note.replace(/\s+/g,' ').trim().slice(0,200):'';
+     return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status,...(note?{note}:{})};
+    }catch{return null;}
    }).filter(r=>r!==null).sort((a,b)=>b.at-a.at).slice(0,30):[]};
  }
  return async(req:Request,remote:string)=>{

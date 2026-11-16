@@ -106,6 +106,20 @@ test('a choice made in the 3D view ends the tour',()=>{
  expect(ended).toEqual([false]);expect(steps).toEqual([]);
 });
 
+test('dialog keyboard events leave the bank and game tabs behind them unchanged',()=>{
+ const start=shell.lastIndexOf("  window.addEventListener('keydown',e=>{");
+ const code=shell.slice(start,shell.indexOf('  window.atlasClient=',start));
+ const run=(modal:boolean,key:string)=>{
+  const removed:string[]=[];let listener:any,tabChanges=0;
+  const window={atlasWallOn:()=>false,addEventListener:(_type:string,fn:any)=>listener=fn};
+  new Function('window','document','focus','focusOpen','wallEnd','context','hud','gamePanel',`let selectedTab='inventory';${code}`)(window,{body:{}},{classList:{contains:()=>false}},()=>{},()=>false,null,{querySelector:(s:string)=>({remove:()=>removed.push(s)}),classList:{remove:()=>{}}},()=>tabChanges++);
+  listener({key,target:{tagName:'BUTTON',closest:()=>modal?{}:null},preventDefault:()=>{},stopPropagation:()=>{}});
+  return {removed,tabChanges};
+ };
+ expect(run(true,'Escape').removed).toEqual([]);expect(run(true,'F2').tabChanges).toBe(0);
+ expect(run(false,'Escape').removed).toContain('.game-bank');expect(run(false,'F2').tabChanges).toBe(1);
+});
+
 test('an open bank redraws newer observations and closes when its account changes',()=>{
  const code=shell.slice(shell.indexOf('  function openBank(){'),shell.indexOf('  // Orbs as RuneLite'));
  let current:any={name:'Worker',bankAt:1,bank:[{name:'Coins',count:10}]},removed=false;
@@ -1585,7 +1599,43 @@ test('Skill Calculator: XP left to the target, the time at the rate, and each ac
  expect(html).toContain(`<b>${left}</b> xp left`);expect(html).toContain('TTL 60m');
  expect(html).toContain(`<span class="calc-count">${Math.ceil(left/175)}</span>`);
  expect(html).toMatch(/calc-row calc-locked"[^>]*>\[Magic logs\]/);
+ t.set('Woodcutting',99,{woodcutting:[]});
+ const maxed=t.calcBox({skills:[{name:'Woodcutting',xp:X.xpForLevel(99)+10}]},{rate:100});
+ expect(maxed).toContain('Target <b>99 · complete</b>');expect(maxed).not.toContain('data-calc-target');expect(maxed).not.toContain('min="100"');
  t.set(null,null,null);expect(t.calcBox({skills:[]},null)).toBe('');
+});
+
+function xpPanelHarness(initial:any){
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const code=shell.slice(shell.indexOf("  const XP_STORE='atlas-xp-baselines';"),shell.indexOf('  // Hiscore plugin'));
+ let bot=initial,stored='{}',now=1000;
+ const nodes:any={},node=(selector:string)=>nodes[selector]??={innerHTML:'',textContent:''};
+ const panel={querySelector:node,contains:()=>false};
+ const api=new Function('body','account','window','Date','localStorage','document','put','E','safeName','nf','dur','efficiencyBox','calcBox','asset','skillFile',`let calcSkill=null,xpHideMaxed=false;${code};return {refreshXp,hide:v=>{xpHideMaxed=v;}};`)
+  ({querySelector:()=>panel},()=>bot,{atlasXp:X,atlasOperator:()=>true},{now:()=>now},{getItem:()=>stored,setItem:(_key:string,value:string)=>{stored=value;}},{activeElement:null},(el:any,html:string)=>{el.innerHTML=html;},String,String,String,String,()=>'',()=>'',String,String);
+ return {...api,node,stored:()=>JSON.parse(stored),update:(value:any)=>{bot=value;now+=60_000;api.refreshXp();}};
+}
+
+test('XP baselines for newly observed skills survive the panel storage reload',()=>{
+ const start={name:'Worker',started:100,skills:[{name:'Attack',xp:0}]};
+ const panel=xpPanelHarness(start);panel.refreshXp();
+ panel.update({...start,skills:[...start.skills,{name:'Mining',xp:1000}]});
+ expect(panel.stored().Worker.xp.Mining).toBe(1000);
+ panel.update({...start,skills:[...start.skills,{name:'Mining',xp:1400}]});
+ expect(panel.node('.xp-results').innerHTML).toContain('+400 xp');
+ expect(panel.node('.xp-stats').innerHTML).toContain('XP gained <b>400</b>');
+});
+
+test('Hide maxed explains filtered rows while retaining their positive XP total',()=>{
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ const start={name:'Worker',started:100,skills:[{name:'Cooking',xp:X.xpForLevel(99)}]};
+ const panel=xpPanelHarness(start);panel.refreshXp();
+ panel.update({...start,skills:[{name:'Cooking',xp:X.xpForLevel(99)+50}]});
+ expect(panel.node('.xp-results').innerHTML).toContain('+50 xp');
+ panel.hide(true);panel.refreshXp();
+ expect(panel.node('.xp-stats').innerHTML).toContain('XP gained <b>50</b>');
+ expect(panel.node('.xp-results').innerHTML).toContain('Maxed skills are hidden.');
+ expect(panel.node('.xp-results').innerHTML).not.toContain('No XP gained');
 });
 test('skilling highlights and the trail: the resource of the top loot item near the account, fishing spots, the walked path',()=>{
  const code=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
@@ -1653,13 +1703,50 @@ test('Inventory Tags: food, potions, teleports and runes get their group class; 
 test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
  const code=shell.slice(shell.indexOf('  function gePanel(){'),shell.indexOf('  // Pull requests plugin'));
  const state:any={bots:[],economy:{supplies:[{id:1,name:'Coal',ask:150}]}};
- const run=new Function('S','window','E','nf','icon','loadItemSources','data',`const geTele=()=>'';let geQuery='',geAll=true,geOpen='1',geOpenName='Coal',sourcePin=null,itemSourcesData=data;const age=()=>'';${code};return gePanel();`);
+ const run=new Function('S','window','E','nf','icon','loadItemSources','data',`const geTele=()=>'';let geQuery='',geAll=true,geLimit=80,geOpen='1',geOpenName='Coal',sourcePin=null,itemSourcesData=data;const age=()=>'';${code};return gePanel();`);
  const html=run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{1:[['gather','Mining 30: Coal rock',[3000,3000,0,3001,3001,0]],['drop','Drop: Giant (level 28) · always',[]]]});
  expect(html).toContain('class="ge-row ge-open" data-ge-src="1" data-ge-name="Coal"');
  expect(html).toContain('<span class="ge-label">Mining 30: Coal rock</span><button class="xp-reset" data-src-pin="0" title="2 places">Show on map</button>');
  expect(html).not.toContain('data-src-pin="1"');
  expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{})).toContain('Loading sources');
  expect(run(state,{atlasOperator:()=>false},String,String,()=>'<i/>',()=>{},{2:[]})).toContain('No source on record');
+});
+
+function marketPanelHarness(supplies:any[]){
+ const market=shell.slice(shell.indexOf("  let geQuery='',geOpen=null"),shell.indexOf('  // Pull requests plugin'));
+ const input=shell.split('\n').find(line=>line.startsWith("  body.addEventListener('input',e=>{if(e.target.id==='ge-search')"))!;
+ const clickStart=shell.indexOf("  body.addEventListener('click',e=>{const bp="),clickEnd=shell.indexOf("  body.addEventListener('click',e=>{const mk=",clickStart);
+ const toggleStart=shell.indexOf("if(e.target.closest('[data-ge-all]'))"),toggleEnd=shell.indexOf("const hm=e.target.closest('[data-hs-mode]')",toggleStart);
+ const handlers:any={},document:any={activeElement:null},focused:string[]=[],nodes:any={};
+ const node=(selector:string)=>nodes[selector]??={innerHTML:'',focus:()=>{focused.push(selector);document.activeElement={selector};}};
+ const results={contains:(el:any)=>!!el?.inside,querySelector:node};
+ const body={querySelector:()=>results,addEventListener:(type:string,fn:any)=>{handlers[type]=fn;}};
+ const api=new Function('S','window','E','nf','icon','age','body','document','put',`${market}\n${input}\n${shell.slice(clickStart,clickEnd)}\nconst toggle=e=>{${shell.slice(toggleStart,toggleEnd)}};return {geResults,refreshGe,toggle};`)
+  ({bots:[],economy:{pricesAt:1,supplies}},{atlasOperator:()=>false},String,String,()=>'',()=> '1m',body,document,(el:any,html:string)=>{if(el.innerHTML!==html){el.innerHTML=html;document.activeElement=null;}});
+ const event=(selector:string,data:any={})=>({target:{closest:(query:string)=>query===selector?{dataset:data}:null}});
+ return {...api,focused,document,node,more:()=>handlers.click(event('[data-ge-more]')),sort:(value:string)=>handlers.click(event('[data-ge-sort]',{geSort:value})),search:(value:string)=>handlers.input({target:{id:'ge-search',value}}),all:()=>api.toggle(event('[data-ge-all]'))};
+}
+
+test('GE exposes every matching item and resets its visible batch for search, sort and offers',()=>{
+ const supplies=Array.from({length:82},(_,i)=>({id:i+1,name:'Item '+String(i+1).padStart(2,'0'),ask:100,bid:50,vwap:90,stock:100-i}));
+ supplies.push({id:100,name:'Unlisted',ask:null,bid:null,vwap:0,stock:0} as any);
+ const panel=marketPanelHarness(supplies),count=()=>[...panel.geResults()[1].matchAll(/data-ge-src=/g)].length;
+ expect(panel.geResults()[0]).toContain('Showing 80 of 82 items');expect(count()).toBe(80);expect(panel.geResults()[1]).toContain('data-ge-more');
+ panel.more();expect(count()).toBe(82);expect(panel.geResults()[0]).toContain('Showing 82 of 82 items');expect(panel.geResults()[1]).not.toContain('data-ge-more');
+ panel.search('Item ');expect(count()).toBe(80);panel.more();expect(count()).toBe(82);
+ panel.sort('flip');expect(count()).toBe(80);panel.more();expect(count()).toBe(82);
+ panel.sort('stock');panel.more();panel.all();expect(count()).toBe(80);expect(panel.geResults()[0]).toContain('Showing 80 of 82 items');
+ panel.search('Unlisted');expect(count()).toBe(1);expect(panel.geResults()[0]).toContain('Showing 1 of 1 items');
+});
+
+test('GE preserves sort and offer-toggle keyboard focus when its head is replaced',()=>{
+ const panel=marketPanelHarness([{id:1,name:'Coal',ask:100,bid:50,vwap:90,stock:10},{id:2,name:'Unlisted',stock:0}]);
+ panel.document.activeElement={inside:true,dataset:{geSort:'flip'},matches:(query:string)=>query==='[data-ge-sort]'};
+ panel.sort('flip');expect(panel.focused.at(-1)).toBe('[data-ge-sort="flip"]');
+ panel.document.activeElement={inside:true,dataset:{geSort:'flip'},matches:(query:string)=>query==='[data-ge-sort]'};
+ panel.node('.ge-head').innerHTML='old price age';panel.refreshGe();expect(panel.focused).toHaveLength(2);expect(panel.focused.at(-1)).toBe('[data-ge-sort="flip"]');
+ panel.document.activeElement={inside:true,dataset:{},matches:(query:string)=>query==='[data-ge-all]'};
+ panel.all();expect(panel.focused.at(-1)).toBe('[data-ge-all]');
 });
 test('skill guide: the best action now with its count to the next level, and the next unlocks',()=>{
  const code=shell.slice(shell.indexOf("  // Skill guide (RuneLite's Skill Calculator"),shell.indexOf('  function calcBox(b,row){'));
