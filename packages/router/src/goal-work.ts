@@ -147,7 +147,11 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    const line=Object.entries(consumer.accept?.bank??{}).flatMap(([goalId,quantity])=>{
     const item=Number(goalId);
     return item>0&&item!==995&&Number.isSafeInteger(item)&&Number.isSafeInteger(quantity)&&quantity>0
-     ?supplyLines(item).filter(line=>quantity<=Math.max(0,line.need-line.owned-(line.verifyOwned??0))):[];
+     ?supplyLines(item).filter(line=>{
+      const room=Math.max(0,line.need-line.owned-(line.verifyOwned??0));
+      // A read-only refresh may observe stock already included in the consumer's absolute bank target.
+      return room>0&&quantity<=(observer?line.need:room);
+     }):[];
    })[0];
    if(!line)continue;
    const term='supply-observation:'+line.consumer+':'+line.id+':'+line.need;
