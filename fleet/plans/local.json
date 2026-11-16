@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794806199793,
+ "at": 1794806298973,
  "jobs": [
   {
    "account": "Balls",
@@ -53,22 +53,21 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=24 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit15-532-6to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "repeat": false,
+   "goal": "buy 24 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
+   "resources": []
   },
   {
    "account": "NabTheKnob",
