@@ -1,0 +1,357 @@
+{
+  "at": 1794832092554,
+  "source": "20fb821d96b4c6ce2c5ac195b72826ae1d9a9859",
+  "scope": "raw existing live lifecycle and retained historical bytes; no new live attempt or bank freshness claim",
+  "files": [
+    {
+      "path": "live-lifecycle/FullLoad/attempts/1794637614152-0000001853-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/attempts/1794637614152-0000001853-0000000001.json",
+      "bytes": 788,
+      "mtimeMs": 1794640538903.5361,
+      "sha256": "48e9e9e3bd2d16a3a178f113b368c4864fc18d625bf8845763e5e1314b6bcff0"
+    },
+    {
+      "path": "live-lifecycle/FullLoad/attempts/1794641947342-0000012238-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/attempts/1794641947342-0000012238-0000000001.json",
+      "bytes": 789,
+      "mtimeMs": 1794644418860.7825,
+      "sha256": "8447fdf34677a5d2276f62d12483d67a39c2b673159601b8fa60dadbd7da2c43"
+    },
+    {
+      "path": "live-lifecycle/FullLoad/attempts/1794807014059-0000010716-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/attempts/1794807014059-0000010716-0000000001.json",
+      "bytes": 843,
+      "mtimeMs": 1794807014093.9546,
+      "sha256": "71ce40df23c7a8d518fd511da01bf9f8c0185c1f101054bb1accec7a070e0f7a"
+    },
+    {
+      "path": "live-lifecycle/FullLoad/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/fullload/latest.json",
+      "bytes": 169,
+      "mtimeMs": 1794807014057.9563,
+      "sha256": "c4f274db57881abc4417c02d8e5b1d15e0fceff0a07ef6a3f815d4085d397a9e"
+    },
+    {
+      "path": "historical-lifecycle/FullLoad/attempts/1794807014059-0000010716-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/FullLoad.lifecycle/attempts/1794807014059-0000010716-0000000001.json",
+      "bytes": 843,
+      "mtimeMs": 1794807502507.1477,
+      "sha256": "71ce40df23c7a8d518fd511da01bf9f8c0185c1f101054bb1accec7a070e0f7a"
+    },
+    {
+      "path": "historical-lifecycle/FullLoad/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/FullLoad.lifecycle/latest.json",
+      "bytes": 169,
+      "mtimeMs": 1794807142239.847,
+      "sha256": "c4f274db57881abc4417c02d8e5b1d15e0fceff0a07ef6a3f815d4085d397a9e"
+    },
+    {
+      "path": "historical-status/FullLoad.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/FullLoad.status.json",
+      "bytes": 9902,
+      "mtimeMs": 1794807142235.8472,
+      "sha256": "adb3808e515e72b7e522b23355770433613413b67356bbe5a825558e4cf10594"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794641428974-0000010677-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794641428974-0000010677-0000000001.json",
+      "bytes": 796,
+      "mtimeMs": 1794642640084.0706,
+      "sha256": "99bf9cf1e77117bc4123e92235c32a3c7f77f41799ecb9992413dbcb304ecf8f"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794642649082-0000014319-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794642649082-0000014319-0000000001.json",
+      "bytes": 803,
+      "mtimeMs": 1794642900032.507,
+      "sha256": "c62806bf81a0ba039c8d5362ee9f4f726a1b048f49fe4bc9c0c6d5b383668f93"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794643882133-0000017951-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794643882133-0000017951-0000000001.json",
+      "bytes": 791,
+      "mtimeMs": 1794644419640.7722,
+      "sha256": "4c1500f8305f568c539cdda33acf62d376213e93c8230220f282fbb941a967d6"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/attempts/1794807013455-0000010703-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/attempts/1794807013455-0000010703-0000000001.json",
+      "bytes": 845,
+      "mtimeMs": 1794807013477.9846,
+      "sha256": "5dde32167165f5710a56058f5006fafadcdd96aa251809eb2bfa851508369a27"
+    },
+    {
+      "path": "live-lifecycle/Unsheathed/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/session-lifecycle/live/rs-sdk-demo.fly.dev/unsheathed/latest.json",
+      "bytes": 171,
+      "mtimeMs": 1794807013453.9858,
+      "sha256": "9e2e809089f96ba907e50da56d822d416d7da0290c9dc03575892a902c17bc9a"
+    },
+    {
+      "path": "historical-lifecycle/Unsheathed/attempts/1794807013455-0000010703-0000000001.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/Unsheathed.lifecycle/attempts/1794807013455-0000010703-0000000001.json",
+      "bytes": 845,
+      "mtimeMs": 1794807502507.1477,
+      "sha256": "5dde32167165f5710a56058f5006fafadcdd96aa251809eb2bfa851508369a27"
+    },
+    {
+      "path": "historical-lifecycle/Unsheathed/latest.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/Unsheathed.lifecycle/latest.json",
+      "bytes": 171,
+      "mtimeMs": 1794807142243.8467,
+      "sha256": "9e2e809089f96ba907e50da56d822d416d7da0290c9dc03575892a902c17bc9a"
+    },
+    {
+      "path": "historical-status/Unsheathed.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/Unsheathed.status.json",
+      "bytes": 9101,
+      "mtimeMs": 1794807142239.847,
+      "sha256": "149d1e42334e3a506668c36d9127da553c1e785d30923d494eaafa18676229c2"
+    },
+    {
+      "path": "post-qualification/processes.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/processes.json",
+      "bytes": 2,
+      "mtimeMs": 1794832079075.725,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "post-qualification/.practice__cloud-side__cloud__recovery-plan.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__cloud-side__cloud__recovery-plan.json",
+      "bytes": 3968,
+      "mtimeMs": 1794832076351.7244,
+      "sha256": "3c6f9cb1b696f4bfcec3660e8bcf4b463a76874176b12db0c0226f60cb65dad3"
+    },
+    {
+      "path": "post-qualification/selected-state.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/selected-state.json",
+      "bytes": 1050,
+      "mtimeMs": 1794832079075.725,
+      "sha256": "850893469834c3ee094c1e00f553ccac345573cf6a5645553309afd878f55e7e"
+    },
+    {
+      "path": "post-qualification/.practice__swarm-script-holds.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__swarm-script-holds.json",
+      "bytes": 2,
+      "mtimeMs": 1794832076347.7244,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "post-qualification/.practice__swarm-deaths.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__swarm-deaths.json",
+      "bytes": 2708,
+      "mtimeMs": 1794832076347.7244,
+      "sha256": "a19622bc23d4b62d5f8d0f1b7458271442514093b890155753c449b94032800d"
+    },
+    {
+      "path": "post-qualification/claims.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/claims.json",
+      "bytes": 5434,
+      "mtimeMs": 1794832078371.7266,
+      "sha256": "93ab4208a14b6d899745b035c983dcb817a21d0c71be1010ae789781465ec67d"
+    },
+    {
+      "path": "post-qualification/.practice__coordinator__swarm-owner.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__coordinator__swarm-owner.json",
+      "bytes": 430,
+      "mtimeMs": 1794832076351.7244,
+      "sha256": "122554b95211af5ec7c9d56e403a691ad14a369bbb3099c5e556701a2f6bc7d9"
+    },
+    {
+      "path": "post-qualification/claim-bodies.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/claim-bodies.json",
+      "bytes": 5896,
+      "mtimeMs": 1794832079027.725,
+      "sha256": "f537cb30387cf5334c7e8b6fd321c09ef79d5e695ce263c035cb6a04516f2ffe"
+    },
+    {
+      "path": "post-qualification/source.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/source.json",
+      "bytes": 355,
+      "mtimeMs": 1794832080372.8198,
+      "sha256": "90da17c3c543479f265139432055822f7d5d5d31c5c2dfe3a3d66d35689dab21"
+    },
+    {
+      "path": "post-qualification/.practice__coordinator__owner.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__coordinator__owner.json",
+      "bytes": 245,
+      "mtimeMs": 1794832076351.7244,
+      "sha256": "9cf84e434f8333126a2a2420b22eb521dc6ec38bd6497984e138825b57b2e08b"
+    },
+    {
+      "path": "post-qualification/.practice__cloud-side__cloud__daemons.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__cloud-side__cloud__daemons.json",
+      "bytes": 398,
+      "mtimeMs": 1794832076351.7244,
+      "sha256": "bfdd6c86bc624e98480470070fbc0116087869f2df78347b572a8eb34e26005f"
+    },
+    {
+      "path": "post-qualification/.practice__coordinator__state.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__coordinator__state.json",
+      "bytes": 16728,
+      "mtimeMs": 1794832076351.7244,
+      "sha256": "28eea45c612cb7c5adaef5035c39556af23e2d9e09cda5708be91dd5827ea7dc"
+    },
+    {
+      "path": "post-qualification/owners.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/owners.json",
+      "bytes": 1333,
+      "mtimeMs": 1794832078371.7266,
+      "sha256": "2e14bf7d6c1183d56ac55f701ae88422938c9d7c06ce9d09c7b084c986c3e04c"
+    },
+    {
+      "path": "post-qualification/.practice__swarm-state.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__swarm-state.json",
+      "bytes": 1720,
+      "mtimeMs": 1794832076351.7244,
+      "sha256": "749c109bf1c01ce7ea0f0aad8359bf1a4a4132878c6c4e5d98bf1e93ae994e22"
+    },
+    {
+      "path": "post-qualification/files.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/files.json",
+      "bytes": 2042,
+      "mtimeMs": 1794832076351.7244,
+      "sha256": "12bd82e1633b350f94a3485160dcad51b52ea466ac7556191db8937e184ec1de"
+    },
+    {
+      "path": "post-qualification/.practice__cloud-handoff__swarm.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/after-recovery-3/.practice__cloud-handoff__swarm.json",
+      "bytes": 3268,
+      "mtimeMs": 1794832076347.7244,
+      "sha256": "d19393974f41253c222ec5b2261ba53c133c7a82bf7434bb23f7eb3e9e87634b"
+    },
+    {
+      "path": "verification/session-check.log",
+      "source": "/tmp/host-20fb-packet-verifier.log",
+      "bytes": 23,
+      "mtimeMs": 1794831919664.096,
+      "sha256": "bbbdf50401d7cd1595e5754d9a38c6bcf1bb6d00bdd032addc01208c9593d60d"
+    },
+    {
+      "path": "verification/bank-observer.log",
+      "source": "/tmp/host-20fb-observer-verifier.log",
+      "bytes": 189,
+      "mtimeMs": 1794831923036.0881,
+      "sha256": "04a46e556581b3be76f078d95321b23f88ba5adf583691adeaefd73b72bac2bf"
+    },
+    {
+      "path": "verification/ci-final.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/host-20fb-ci-final.json",
+      "bytes": 5873,
+      "mtimeMs": 1794832045727.7988,
+      "sha256": "f6ab023785f65a6c7d41afcc6c7c943b2cc32e6ad3d9753bb6a270543d48d647"
+    },
+    {
+      "path": "focused/interrupted-red.log",
+      "source": "/tmp/host-interrupted-red.log",
+      "bytes": 2632,
+      "mtimeMs": 1794828798535.1187,
+      "sha256": "282833e80df61fbea1b7ad9c29382dce1c8d6a2cc935672ffa2bfbd66ae94842"
+    },
+    {
+      "path": "focused/double-interrupted-red.log",
+      "source": "/tmp/host-double-interrupted-red.log",
+      "bytes": 2691,
+      "mtimeMs": 1794829364953.8025,
+      "sha256": "47fa931a053ae5789883a8702eaf394d3404d5f0135f09e9cb0f369d7e2d3499"
+    },
+    {
+      "path": "focused/double-interrupted-green.log",
+      "source": "/tmp/host-double-interrupted-green.log",
+      "bytes": 676,
+      "mtimeMs": 1794829330489.884,
+      "sha256": "815d7d0425a04d5bc81dd097d11efe606c124c1360f5d037bbbe48555c93b64e"
+    },
+    {
+      "path": "focused/related-tests.log",
+      "source": "/tmp/host-final-related.log",
+      "bytes": 29279,
+      "mtimeMs": 1794829396421.752,
+      "sha256": "a0e19e9db8a98b5735b08cfd0bc639223e400c5614188f8ae22b00889335e6a3"
+    },
+    {
+      "path": "focused/typecheck.log",
+      "source": "/tmp/host-final-typecheck.log",
+      "bytes": 15,
+      "mtimeMs": 1794829396441.7517,
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    {
+      "path": "focused/readiness.log",
+      "source": "/tmp/host-final-readiness.log",
+      "bytes": 265,
+      "mtimeMs": 1794829461196.4375,
+      "sha256": "19ba321ea63501bc7bff3e9e1cd57ec90b86db3cc954e2db536ca303215985ef"
+    },
+    {
+      "path": "focused/fresh-git-fixture.log",
+      "source": "/tmp/host-fresh-git-fixture.log",
+      "bytes": 676,
+      "mtimeMs": 1794829956536.3896,
+      "sha256": "942b1f4a6fe25b2373d18566c5f1730e68d6be4a33a0c5945fd7e97a2e587ebc"
+    },
+    {
+      "path": "retained-64f4-ci/annotations.json",
+      "source": "/workspace/rs-sdk-bot/.practice/cloud-inspect-live/live-8336/host-recovery-64f4-annotations.json",
+      "bytes": 2481,
+      "mtimeMs": 1794829925580.4648,
+      "sha256": "985c61634a3613489f984486502ccf55b35e3a334790ae2c7036cd5434cf7e6b"
+    },
+    {
+      "path": "retained-64f4-failure/failure.json",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/failure.json",
+      "bytes": 69196,
+      "mtimeMs": 1794829094070.4338,
+      "sha256": "3b83aa7afdf097c595c07e84ea1221823bdb08d2d3de35102476415492f40b41"
+    },
+    {
+      "path": "retained-64f4-failure/report.json",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/report.json",
+      "bytes": 10086,
+      "mtimeMs": 1794829097250.426,
+      "sha256": "3c601156eab9d4387211461f625908caa9a9b98e04860ae60488870aeb956d08"
+    },
+    {
+      "path": "retained-64f4-failure/2.err.log",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/2.err.log",
+      "bytes": 46,
+      "mtimeMs": 1794829096686.4275,
+      "sha256": "f101dcd4bf8d8696e2d7de5e873ad486c535386303c4f25138e2e8a3e6256e2c"
+    },
+    {
+      "path": "retained-64f4-failure/2.out.log",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/2.out.log",
+      "bytes": 73,
+      "mtimeMs": 1794829078511.1912,
+      "sha256": "2aa516c9459a234ce4ac8192c163508d8bdb08c93fed9e21d9149f74db7b23f2"
+    },
+    {
+      "path": "retained-64f4-failure/cases/cooldown/owner-warm.json",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/cases/cooldown/owner-warm.json",
+      "bytes": 99,
+      "mtimeMs": 1794829094074.4338,
+      "sha256": "0af8ce244f5177dc36386d9d86bcec642af9bd245931957098ec36461379157e"
+    },
+    {
+      "path": "retained-64f4-failure/cases/cooldown/owner-ready.json",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/cases/cooldown/owner-ready.json",
+      "bytes": 342,
+      "mtimeMs": 1794829090214.443,
+      "sha256": "09c0204a2d93c11b15e61a4d354adf59d1554eb6db0b86620a38436d141800d8"
+    },
+    {
+      "path": "retained-64f4-failure/cases/cooldown/owner.err",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/cases/cooldown/owner.err",
+      "bytes": 49,
+      "mtimeMs": 1794829093990.434,
+      "sha256": "ea3145cd7b28e30158a3f0a93fd3797458afd269ddf0d7ab55cdc57f21471878"
+    },
+    {
+      "path": "retained-64f4-failure/cases/cooldown/owner.log",
+      "source": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794828915876-710Mo1/cases/cooldown/owner.log",
+      "bytes": 113,
+      "mtimeMs": 1794829087898.4487,
+      "sha256": "d7b1e2b9fe0517e15c6f96cc0f21f969119ddf63cedea3ab71b96fe81dbdd56d"
+    }
+  ]
+}
