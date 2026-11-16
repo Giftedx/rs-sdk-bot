@@ -1,0 +1,53 @@
+[
+  {
+    "at": 1794834231568,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvx7jf84\",\"server\":\"127.0.0.1:8890\",\"runId\":\"native-rcv-completed-held-producer-128071\",\"nonce\":\"one-completed-held-producer\",\"endedAt\":1794834220944,\"source\":\"591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": true,
+      "completed": {
+        "at": 1794834231567,
+        "request": {
+          "schema": "session-recovery/1",
+          "kind": "session-recovery",
+          "account": "flrcvx7jf84",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-completed-held-producer-128071",
+          "nonce": "one-completed-held-producer",
+          "endedAt": 1794834220944,
+          "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+          "qualification": {
+            "delivery": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            "proof": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        "childPid": 132939,
+        "receiptPath": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794834068163-KZHOGz/control/.practice/coordinator/session-recovery/accounts/flrcvx7jf84/one-completed-held-producer/output/receipt.json",
+        "receiptSha256": "b8883de3916a138f54a2ca8ac403069a3c71bca43bdc43f033d977094c5ad66d",
+        "proof": {
+          "state": "confirmed",
+          "account": "flrcvx7jf84",
+          "server": "127.0.0.1:8890",
+          "domain": "practice",
+          "attemptId": "1794834224096-0000132939-0000000001",
+          "loggedOutAt": 1794834226531,
+          "ownerRun": "native-rcv-completed-held-producer-128071",
+          "receiptSha256": "c8149522019860689f04c46f01f57b4f4ea923d3fd09b7b3a50a1be413188351"
+        },
+        "nativeFixture": true,
+        "scope": {
+          "repairsFailure": false,
+          "qualifiesScript": false,
+          "production": 0
+        }
+      },
+      "reason": "confirmed session cleanup; old failure retained"
+    }
+  }
+]

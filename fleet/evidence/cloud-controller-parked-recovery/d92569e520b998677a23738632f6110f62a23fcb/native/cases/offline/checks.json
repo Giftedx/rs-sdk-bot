@@ -1,0 +1,30 @@
+{
+  "id": "offline",
+  "level": "native-actual-cli",
+  "checks": {
+    "childLaunched": true,
+    "dispatcherConfirmed": true,
+    "receiptConfirmed": true,
+    "loginAcknowledged": true,
+    "logoutAcknowledged": true,
+    "nonceConsumed": true,
+    "receiptPresent": true,
+    "completedIndexed": true,
+    "leaseReleased": true,
+    "producerConfirmed": true,
+    "recoveredForRun": true,
+    "failureRetained": true,
+    "freshSave": true,
+    "savedInventories": true,
+    "savedSkills": true,
+    "savedPosition": true,
+    "noGameplayClaim": true
+  },
+  "account": "flrcvxa2ew1",
+  "server": "127.0.0.1:8890",
+  "runId": "native-rcv-offline-128071",
+  "childPid": 132350,
+  "taskPid": 132348,
+  "persistence": "fresh native save after confirmed producer logout",
+  "firstRefusal": null
+}

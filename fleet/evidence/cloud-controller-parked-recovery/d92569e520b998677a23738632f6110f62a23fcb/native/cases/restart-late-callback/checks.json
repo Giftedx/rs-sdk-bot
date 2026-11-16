@@ -1,0 +1,14 @@
+{
+  "id": "restart-late-callback",
+  "level": "native-actual-dispatcher-restart",
+  "checks": {
+    "inheritedChildCounted": true,
+    "newerIntentRefused": true,
+    "oldBytesRefused": true,
+    "lateCallbackHeld": true,
+    "lateCallbackKeptLease": true,
+    "newerNotLaunched": true,
+    "notRecovered": true
+  },
+  "account": "flrcvxno2c22"
+}

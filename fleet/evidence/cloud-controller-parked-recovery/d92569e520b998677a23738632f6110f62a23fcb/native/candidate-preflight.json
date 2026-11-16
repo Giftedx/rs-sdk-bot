@@ -1,0 +1,42 @@
+{
+  "at": 1794834168117,
+  "candidateHead": "d92569e520b998677a23738632f6110f62a23fcb",
+  "helperSha256": "d5cde058cb65e9f278b80aa583aec9b198cc4f4cb8a71384ff48bb2b69a72e43",
+  "scope": "mutation-free candidate preflight against frozen c72 original state; no controller or producer started",
+  "targets": [
+    {
+      "account": "FullLoad",
+      "attemptId": "1794807014059-0000010716-0000000001",
+      "endedAt": 1794807014127
+    },
+    {
+      "account": "Unsheathed",
+      "attemptId": "1794807013455-0000010703-0000000001",
+      "endedAt": 1794807013505
+    }
+  ],
+  "nextScope": {
+    "targets": [
+      {
+        "account": "FullLoad",
+        "attemptId": "1794807014059-0000010716-0000000001",
+        "endedAt": 1794807014127
+      },
+      {
+        "account": "Unsheathed",
+        "attemptId": "1794807013455-0000010703-0000000001",
+        "endedAt": 1794807013505
+      }
+    ],
+    "taskIds": [
+      "cloud-recovery-qualified-20261116t130246z",
+      "cloud-recover-fullload-20261116t130246z",
+      "cloud-recover-unsheathed-20261116t130246z"
+    ]
+  },
+  "overlayPreserved": true,
+  "planPreserved": true,
+  "overlaySha256": "1010dc273978cd6b5a5cede9e289c8f5df4b496919303dfc24bccced899d2c4d",
+  "maxBots": 4,
+  "minFreeGB": 4
+}

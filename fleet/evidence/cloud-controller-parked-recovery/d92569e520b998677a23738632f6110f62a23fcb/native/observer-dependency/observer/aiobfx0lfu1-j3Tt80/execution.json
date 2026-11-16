@@ -1,0 +1,13 @@
+{
+  "script": "scripts/fleet-inspect.ts",
+  "args": [],
+  "env": {
+    "REQUIRE_BANK": "1"
+  },
+  "exitCode": 0,
+  "expired": false,
+  "save": {
+    "beforeMtimeMs": 1794834112368.1519,
+    "afterMtimeMs": 1794834118716.1375
+  }
+}
