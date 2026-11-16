@@ -157,6 +157,10 @@ const git = (cwd: string, ...args: string[]) => {
 // conflict in packages/dashboard/goals.ts).
 export const FETCH_FLEET_DATA = ['fetch', '--quiet', '--no-tags', 'origin', `+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}`] as const;
 export function ensureWorktree(dir = FLEET_WORKTREE, base = root): string {
+    if (process.platform === 'win32') {
+        const config = git(base, 'config', '--local', 'core.longpaths', 'true');
+        if (!config.ok) throw Error(`fleet worktree: cannot enable core.longpaths for Windows: ${config.out}`);
+    }
     if (existsSync(join(dir, '.git'))) return dir;
     git(base, ...FETCH_FLEET_DATA);
     const remote = git(base, 'rev-parse', '--verify', `origin/${BRANCH}`).ok;
