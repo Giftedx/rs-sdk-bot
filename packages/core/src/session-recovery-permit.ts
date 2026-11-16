@@ -265,7 +265,7 @@ export function consumeRecoveryPermit(r:ControlledRecoveryRequest,base:string,op
 // An opaque in-process token. Only consumeRecoveryConnection creates one, for this exact request and child PID.
 // recoverSession spends it once for its connection; the guard stays reusable for cleanup checks.
 export type RecoveryConnectionAdmission={readonly nonce:string};
-const admissions=new WeakMap<object,{request:ControlledRecoveryRequest;pid:number;nativeFixture:boolean;guard:()=>void;spent:boolean}>();
+const admissions=new WeakMap<object,{request:ControlledRecoveryRequest;pid:number;nativeFixture:boolean;guard:()=>void;spent:boolean;base:string;previous:{attemptId:string;sha256:string}|null}>();
 export function consumeRecoveryConnection(r:ControlledRecoveryRequest,base:string,options:Checks={}){
  const paths=recoveryPermitPaths(r,base);
  const check=(ownedChild=false)=>{
@@ -278,7 +278,8 @@ export function consumeRecoveryConnection(r:ControlledRecoveryRequest,base:strin
  const used=readFileSync(paths.used,'utf8');
  const guard=()=>{check(true);if(readFileSync(paths.used,'utf8')!==used)throw Error('recovery consumption marker changed');};
  const admission:RecoveryConnectionAdmission=Object.freeze({nonce:r.nonce});
- admissions.set(admission,{request:structuredClone(r),pid:process.pid,nativeFixture:permit.nativeFixture===true,guard,spent:false});
+ const latest=readLogoutProof(r.account,r.server,{root:join(base,'.practice/session-lifecycle')}),producer=latest.state==='held'?listAttempts(r.account,r.server,{root:join(base,'.practice/session-lifecycle')}).find(a=>a.attemptId===latest.attemptId):undefined;
+ admissions.set(admission,{request:structuredClone(r),pid:process.pid,nativeFixture:permit.nativeFixture===true,guard,spent:false,base:realpathSync(base),previous:producer?.sha256?{attemptId:producer.attemptId,sha256:producer.sha256}:null});
  return {guard,admission};
 }
 // Spends the admission for one connection. A copied, forged, reused or crossed token refuses before any intent.
@@ -288,11 +289,12 @@ export function spendRecoveryConnection(admission:unknown,r:RecoveryRequest){
   throw Error('recovery connection admission invalid; no connection attempted');
  entry.spent=true;entry.guard();
 }
-export function assertSpentRecoveryConnection(admission:RecoveryConnectionAdmission,account:string,server:string){
+export function assertSpentRecoveryConnection(admission:RecoveryConnectionAdmission,account:string,server:string,base?:string){
  const entry=admissions.get(admission);
- if(!entry?.spent||entry.pid!==process.pid||!same(entry.request.account,account)||entry.request.server!==server||entry.nativeFixture)
+ if(!entry?.spent||entry.pid!==process.pid||!same(entry.request.account,account)||entry.request.server!==server||entry.nativeFixture||base&&realpathSync(base)!==entry.base)
   throw Error('recovery connection admission invalid; no connection attempted');
  entry.guard();
+ return {previous:entry.previous?{...entry.previous}:null};
 }
 
 export function recoveryStatePreserved(before:any,after:any){

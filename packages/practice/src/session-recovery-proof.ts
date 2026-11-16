@@ -1086,7 +1086,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    retainRequiredRecoveryCase(row,()=>progress());
   }
   const checks=deriveChecks(cases);
-  const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','packages/core/src/route-plan.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
+  const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','packages/core/src/route-plan.ts','packages/core/src/fleet-trade-claim.ts','packages/core/src/fleet-lease.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
    'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','packages/core/src/bounded-owners.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
    'packages/practice/src/swarm-recovery-chain.ts','packages/router/src/bank-observer-qualification.ts',
    'packages/router/src/coordinator-cli.ts','packages/router/src/coordinator-live.ts','packages/router/tasks/session-recovery-only.json',

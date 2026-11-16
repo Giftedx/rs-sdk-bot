@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, commitFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs } from './fleet-lease';
+import { appendFleetGitRecord, commitFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
+import {assertSpentRecoveryConnection,type RecoveryConnectionAdmission} from './session-recovery-permit';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive, savedProcessAlive } from './session-takeover';
 
@@ -256,9 +257,10 @@ function orphanedSwarmClaim(git: ReturnType<typeof fleetGitWindow>, claim: Fleet
     return seen !== null && now - seen >= ORPHAN_CLAIM_MS;
 }
 
-export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean } = {}) {
+export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, admission=undefined as RecoveryConnectionAdmission|undefined, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean } = {}) {
     const { account, server } = identity(input), { side } = input;
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
+    const authorized=admission?assertSpentRecoveryConnection(admission,account,server,root):undefined;
     const git = fleetGitWindow(root, 'fleet swarm claim authority');
     const { ref, head, claim: current } = loadClaim(git, account, server);
     const pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
@@ -266,11 +268,22 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     let inheritedHold: FleetSwarmClaim | undefined, orphan: FleetSwarmClaim | undefined;
     if (claim?.phase === 'held') {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
-        const prior = matchedWorkerProof(root, claim, input);
+        let prior = matchedWorkerProof(root, claim, input),continuedHost=false;
+        if(!prior&&recover&&authorized&&claim.side===side&&claim.checkout===fleetCheckoutId(root)&&claim.host!==hostname()){
+            const proof=readLogoutProof(account,server,lifecycleOptions(root));
+            const producer=proof.state==='held'?listAttempts(account,server,lifecycleOptions(root)).find(a=>a.attemptId===proof.attemptId):undefined;
+            if(proof.state==='held'&&authorized.previous?.attemptId===proof.attemptId&&authorized.previous.sha256===producer?.sha256
+                &&producer?.receipt?.owner.sharedClaimNonce===claim.nonce&&producer.receipt.owner.pid===claim.pid){
+                const lease=recoveryHostLease(git,side,claim.checkout,claim.host,now());
+                if(lease&&claim.at<=lease.previous.at+FLEET_LEASE_TTL_MS&&producer.receipt.createdAt<=lease.previous.at+FLEET_LEASE_TTL_MS
+                    &&fleetLeaseAllowsWorker(root,side+':'+lease.current.epoch,now())){prior=proof;continuedHost=true;}
+            }
+        }
+        if(authorized&&!prior)throw Error('qualified recovery claim identity or host continuation unavailable');
         if (!prior && orphanedSwarmClaim(git, claim, side, now(), fleetCheckoutId(root))) orphan = claim;
         // A recovery takes a held claim only from an owner that is gone. The claim's time tells its owner from a later
         // process with the same id (savedProcessAlive).
-        else if (!prior || (prior.state !== 'confirmed' && !(recover && !ownerAlive(claim.pid, claim.at)))) {
+        else if (!prior || (prior.state !== 'confirmed' && !(recover && (continuedHost||!ownerAlive(claim.pid, claim.at))))) {
             throw Error('fleet account claim held by swarm');
         }
         if (prior?.state === 'held') inheritedHold = claim;
