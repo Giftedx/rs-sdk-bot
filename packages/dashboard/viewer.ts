@@ -184,16 +184,16 @@ export function installViewerBridge(host:any) {
         if(changed)publishDepleted(m.k);
     };
     const groundRow=(r:any)=>Array.isArray(r)&&r.length===5&&r.every(Number.isSafeInteger)&&r[0]>=0&&r[0]<16384&&r[1]>=0&&r[1]<16384&&r[2]>=0&&r[2]<4&&r[3]>=0&&r[3]<65536&&r[4]>=1&&r[4]<2**31;
-    const Socket=host.WebSocket;
+    const Socket=host.WebSocket,openFeeds=new Set<any>();
     if(Socket)host.WebSocket=class extends Socket {
         constructor(address:any,protocols?:any){
             super(address,protocols);
             try{if(new host.URL(String(address),host.location.href).pathname==='/worldfeed'){
                 // The first feed socket is the main view's: its area is the one the respawn timers follow.
                 if(!mainFeed){mainFeed=this;clearDepleted();}
-                this.addEventListener('open',()=>{feedConnected=true;emit();});
-                this.addEventListener('close',()=>{feedConnected=false;emit();if(mainFeed===this){mainFeed=null;clearDepleted();}});
-                this.addEventListener('error',()=>{feedConnected=false;emit();});
+                this.addEventListener('open',()=>{openFeeds.add(this);feedConnected=true;emit();});
+                this.addEventListener('close',()=>{openFeeds.delete(this);feedConnected=openFeeds.size>0;emit();if(mainFeed===this){mainFeed=null;clearDepleted();}});
+                this.addEventListener('error',()=>{openFeeds.delete(this);feedConnected=openFeeds.size>0;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
                 // The feed sends one full roster (p), then changes (d:1): lv slots that left, j rows that joined or changed,
