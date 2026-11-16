@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "actualSessionCheckDone": true,
+    "sessionCheckLogout": true,
+    "actualSessionCheckSwarmShutdown": true,
+    "sessionCheckFreshSave": true,
+    "releasedClaimStable": true,
+    "reservationsPreserved": true,
+    "completedEndRetainedOnEnable": true,
+    "inspectionReservationsPreserved": true,
+    "actualNewMission": true,
+    "sourcePinned": true,
+    "freshBank": true,
+    "exactBank": true,
+    "inspectorFreshSave": true,
+    "inspectorLogout": true,
+    "assets": true,
+    "skills": true,
+    "hp": true,
+    "position": true,
+    "otherClaimsPreserved": true
+  },
+  "evidenceScope": "native Swarm components; no cloud-side/coordinator full E2E/live",
+  "source": "5d7a113e7f73395da1a1a2fc9d85c278d71b5d78d9012cc955921016ef26c15f",
+  "privateSource": "5d7a113e7f73395da1a1a2fc9d85c278d71b5d78d9012cc955921016ef26c15f",
+  "plans": {
+    "recovery": "6afdcc919808af09d003cc87d81a91d6327961b5ca93b0a536d9d59bbeb53e45",
+    "inspection": "12455e7c5562134363f045c3a64b2e68b7b8741039952de10e7e91c5c3e5550f"
+  },
+  "authority": "private bare Git and loopback world; local sessions do not acquire shared gameplay claims"
+}

@@ -1,0 +1,276 @@
+{
+  "submittedAt": 1794820021197,
+  "fleet": {
+    "at": 1794820021197,
+    "observedAt": 1794820021197,
+    "ageMs": 0,
+    "verdict": "resolved"
+  },
+  "child": 31915,
+  "dispatch": "recovery child held; inspect fixed child output and retained account lease; no retry",
+  "boundaries": [
+    {
+      "phase": "admitRecovery",
+      "at": 1794820021200,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxinao19",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 29.40673828125,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794820021200,
+          "request": {
+            "account": "flrcvxinao19",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-cooldown-902976",
+            "nonce": "one-cooldown",
+            "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5",
+            "endedAt": 1794820018770
+          },
+          "controller": {
+            "pid": 30443,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5"
+          },
+          "processPid": 30443,
+          "task": {
+            "pid": 31913,
+            "runId": "native-rcv-cooldown-902976",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxinao19",
+            "sessionRecovery": {
+              "account": "flrcvxinao19",
+              "endedAt": 1794820018770
+            },
+            "repairs": [
+              {
+                "account": "flrcvxinao19",
+                "endedAt": 1794820018770
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 31913,
+            "runId": "native-rcv-cooldown-902976"
+          },
+          "requestLease": {
+            "pid": 31913,
+            "runId": "native-rcv-cooldown-902976",
+            "nonce": "one-cooldown"
+          },
+          "fleet": {
+            "at": 1794820021197,
+            "controllerPid": 30443
+          },
+          "end": {
+            "at": 1794820018770,
+            "reason": "blocked after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "admitRecovery",
+      "at": 1794820021203,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxinao19",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 29.40673828125,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794820021200,
+          "request": {
+            "account": "flrcvxinao19",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-cooldown-902976",
+            "nonce": "one-cooldown",
+            "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5",
+            "endedAt": 1794820018770
+          },
+          "controller": {
+            "pid": 30443,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5"
+          },
+          "processPid": 30443,
+          "task": {
+            "pid": 31913,
+            "runId": "native-rcv-cooldown-902976",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxinao19",
+            "sessionRecovery": {
+              "account": "flrcvxinao19",
+              "endedAt": 1794820018770
+            },
+            "repairs": [
+              {
+                "account": "flrcvxinao19",
+                "endedAt": 1794820018770
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 31913,
+            "runId": "native-rcv-cooldown-902976"
+          },
+          "requestLease": {
+            "pid": 31913,
+            "runId": "native-rcv-cooldown-902976",
+            "nonce": "one-cooldown"
+          },
+          "fleet": {
+            "at": 1794820021197,
+            "controllerPid": 30443
+          },
+          "end": {
+            "at": 1794820018770,
+            "reason": "blocked after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794820021203,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794820021203,
+        "request": {
+          "account": "flrcvxinao19",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-cooldown-902976",
+          "nonce": "one-cooldown",
+          "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5",
+          "endedAt": 1794820018770
+        },
+        "controller": {
+          "pid": 30443,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5"
+        },
+        "processPid": 30443,
+        "task": {
+          "pid": 31913,
+          "runId": "native-rcv-cooldown-902976",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxinao19",
+          "sessionRecovery": {
+            "account": "flrcvxinao19",
+            "endedAt": 1794820018770
+          },
+          "repairs": [
+            {
+              "account": "flrcvxinao19",
+              "endedAt": 1794820018770
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 31913,
+          "runId": "native-rcv-cooldown-902976"
+        },
+        "requestLease": {
+          "pid": 31913,
+          "runId": "native-rcv-cooldown-902976",
+          "nonce": "one-cooldown"
+        },
+        "fleet": {
+          "at": 1794820021197,
+          "controllerPid": 30443
+        },
+        "end": {
+          "at": 1794820018770,
+          "reason": "blocked after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794820021218,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794820021203,
+        "request": {
+          "account": "flrcvxinao19",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-cooldown-902976",
+          "nonce": "one-cooldown",
+          "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5",
+          "endedAt": 1794820018770
+        },
+        "controller": {
+          "pid": 30443,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "00e7232b24a4530fbf31001357f4f17d906cacac53d16a0d7180a2a0c0f2b7b5"
+        },
+        "processPid": 30443,
+        "task": {
+          "pid": 31913,
+          "runId": "native-rcv-cooldown-902976",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxinao19",
+          "sessionRecovery": {
+            "account": "flrcvxinao19",
+            "endedAt": 1794820018770
+          },
+          "repairs": [
+            {
+              "account": "flrcvxinao19",
+              "endedAt": 1794820018770
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 31913,
+          "runId": "native-rcv-cooldown-902976"
+        },
+        "requestLease": {
+          "pid": 31913,
+          "runId": "native-rcv-cooldown-902976",
+          "nonce": "one-cooldown"
+        },
+        "fleet": {
+          "at": 1794820021197,
+          "controllerPid": 30443
+        },
+        "end": {
+          "at": 1794820018770,
+          "reason": "blocked after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    }
+  ],
+  "firstFailure": null
+}

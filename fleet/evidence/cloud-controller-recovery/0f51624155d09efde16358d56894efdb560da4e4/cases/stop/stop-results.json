@@ -1,0 +1,40 @@
+[
+  {
+    "kind": "fixture",
+    "account": "flrcvx1m4a16",
+    "path": "/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/session-recovery-only-1794819860365-wlGEnm/control/.practice/stop-flrcvx1m4a16",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery setup refused; no lease issued; no retry",
+      "setup": {
+        "phase": "stop",
+        "cause": "recovery owner stopped"
+      }
+    },
+    "child": null,
+    "lease": false,
+    "noProducerIntent": true,
+    "noLogin": true,
+    "retention": "retained"
+  },
+  {
+    "kind": "repository",
+    "account": "flrcvxzac217",
+    "path": "/workspace/rs-sdk-bot-cloud-controller/.practice/stop-flrcvxzac217",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery setup refused; no lease issued; no retry",
+      "setup": {
+        "phase": "stop",
+        "cause": "recovery owner stopped"
+      }
+    },
+    "child": null,
+    "lease": false,
+    "noProducerIntent": true,
+    "noLogin": true,
+    "retention": "retained"
+  }
+]

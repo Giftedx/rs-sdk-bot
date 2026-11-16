@@ -1,0 +1,10 @@
+{
+  "id": "stock-negative-controls",
+  "level": "native-saved-reconciliation",
+  "checks": {
+    "lostItem": true,
+    "gainedItem": true,
+    "skillChange": true,
+    "moved": true
+  }
+}
