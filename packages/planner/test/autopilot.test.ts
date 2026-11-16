@@ -6,7 +6,7 @@ const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
 // (GOLDFARM_FRAIL) does not apply to it. A test of that rule gives its own Hitpoints.
 // Named bone stock in these fixtures is normal stock. Observation tests supply exact item ids through accountFrom.
-const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: (skills.Thieving ?? 1) >= 55 ? 20 : 10, ...skills }, items: { ...('bone' in items ? { 'bone (unnoted)': items.bone } : {}), ...items } });
+const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: (skills.Thieving ?? 1) >= 55 ? 20 : 10, ...skills }, currentHP: skills.Hitpoints ?? ((skills.Thieving ?? 1) >= 55 ? 20 : 10), items: { ...('bone' in items ? { 'bone (unnoted)': items.bone } : {}), ...items } });
 const row = (item: string, short: number) => ({ item, need: short, owned: 0, short, ids: [1], holders: [] });
 const prices = { feather: 2, 'headless arrow': 1, lobster: 150, 'fire rune': 4, 'air rune': 4, 'earth rune': 4, 'rune arrowtip': 200, 'adamant arrowtip': 80, 'arrow shaft': 1 };
 const bill = [row('feathers', 800), row('headless arrows', 3615), row('lobster', 610), row('fire rune', 2000)];
@@ -326,6 +326,26 @@ test('a status file becomes base levels and held counts by name', () => {
     expect(a).toEqual({ name: 'Pal', side, skills: { Hitpoints: 10, Thieving: 56 }, items: { feather: 100 } });
     expect(accountFrom('New', side, null, () => undefined).skills).toEqual({ Hitpoints: 10 });
 });
+test('bow kit stock uses native base IDs instead of shared unstrung display names', () => {
+    const a = accountFrom('Archer', side, { inventory: [
+        { id: 72, name: 'Magic shortbow', count: 2 }, { id: 73, baseId: 72, name: 'Magic shortbow (noted)', count: 3 },
+        { id: 861, name: 'Shortbow', count: 1 }, { id: 862, baseId: 861, name: 'Magic shortbow (noted)', count: 4 },
+        { id: 50, name: 'Shortbow', count: 2 }, { name: 'Shortbow', count: 99 }, { id: 999999, name: 'Magic shortbow', count: 99 },
+    ] }, () => undefined);
+    expect(a.items['magic shortbow']).toBe(5);
+    expect(a.items['unstrung magic shortbow']).toBe(5);
+    expect(a.items['unstrung shortbow']).toBe(2);
+    expect(a.items.shortbow).toBeUndefined();
+});
+test('account health comes from observed current HP, including shared skill rows, and stays unknown when absent', () => {
+    const from = (status: unknown) => accountFrom('Fighter', side, status, () => undefined);
+    const skills = [{ name: 'Hitpoints', level: 99, currentLevel: 51 }];
+    expect(from({ hp: { now: 29, max: 99 }, skills }).currentHP).toBe(29);
+    expect(from({ skills }).currentHP).toBe(51);
+    for (const hp of [null, {}, { now: -1 }, { now: NaN }, { now: '99' }])
+        expect(from({ hp, skills: [{ name: 'Hitpoints', level: 99 }] }).currentHP).toBeUndefined();
+    expect(from(null).currentHP).toBeUndefined();
+});
 
 test('the planner gets handed-over and unnamed accounts; enabled jobs, reservations and stop files keep theirs', () => {
     const jobs = [
@@ -455,6 +475,13 @@ test('a server outage is a drain: a socket error at login or a stalled tick stre
     expect(assess(['RESULT fail no chickens', login, stall, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 2 });
     expect(assess(['RESULT fail login: LoginError: Account already logged in', 'RESULT fail login: LoginError: Account already logged in']).retire).toBe(true);
 });
+test('an offline login server or unavailable swarm claim is a drain, not a broken worker', () => {
+    const offline = 'RESULT fail login: LoginError: Login server offline';
+    const claim = 'RESULT fail login: Error: fleet swarm claim authority unavailable or changed: rejected HEAD -> fleet-trade-claim/worker';
+    expect(assess([offline, offline, claim, claim])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 4 });
+    expect(assess(['RESULT fail no chickens', offline, claim, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 2 });
+    expect(assess(['RESULT fail login: LoginError: Invalid password', 'RESULT fail login: LoginError: Invalid password'])).toMatchObject({ retire: true, fail: 2, drains: 0 });
+});
 test('a run that ended on a stop file is a drain: the job was stopped, it did not fail', () => {
     const inner = 'RESULT fail quest-sweep murder Error: worker finished: stop file', outer = 'RESULT fail stop file quest-chain done=drunkmonk failed=murder';
     expect(assess([inner, outer])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });
@@ -579,6 +606,29 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
     expect(Object.values(full).filter(id => id === 'army-cow-strength-70')).toHaveLength(1);
     const job = jobFor(plan(inputs([soldier('Soldier')], { army, capacity: CAPACITY }))[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
+});
+test('injured trooper entries acquire food while healthy thieves and owned food retain their valid entry', () => {
+    const template = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
+    const templates = [template], market = { trout: { id: 333, name: 'Trout', limit: 100 } }, army = new Set(['archer']);
+    const archer = (currentHP: number | undefined, food = 0): Acct => ({
+        ...acct('Archer', { Hitpoints: 99, Ranged: 70, Thieving: 99 }, { shortbow: 1, 'bronze arrow': 100, coin: 100_000, trout: food }), currentHP,
+    });
+    const pick = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { templates, army, market, ...extra }))[0]!;
+    for (const hp of [29, 50, undefined]) {
+        const out = pick(archer(hp));
+        expect(out.template?.id).toBe('kit-buy:army-trooper-ranged-99');
+        expect(out.template?.args?.join(' ')).toContain('ITEM_ID=333');
+        expect(out.template?.args?.join(' ')).toContain('QUANTITY=100');
+        expect(pick(archer(hp, 10)).template?.id).toBe(template.id);
+    }
+    expect(pick(archer(51)).template?.id).toBe(template.id);
+    const sent = pick(archer(29), { market: {}, stock: [{ name: 'Donor', side, items: { trout: 50 } }] });
+    expect(sent.send).toMatchObject({ from: 'Donor', to: 'Archer', item: 'trout', template: template.id });
+    expect(sent.send?.count).toBeGreaterThan(0);
+    expect(sent.send?.count).toBeLessThanOrEqual(50);
+    const held = pick(archer(29), { current: new Map([['archer', template.id]]), running: new Set(['archer']) });
+    expect(held.template?.id).toBe(template.id);
+    expect(held.send).toBeUndefined();
 });
 
 test('army accounts alch Magic to 99 with natures, feathers and fire, then bury held bones for Prayer', () => {

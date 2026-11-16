@@ -8,7 +8,7 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { aioPilots, armyRoster, completedHeldOrderSeq, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 import { existsSync } from 'node:fs';
 import { resolveAioStep } from './aio';
@@ -442,6 +442,33 @@ test('a retirement whose last fail is now a drain lapses, whatever its script', 
         retired: { 'trousersnake:army-cow-strength-45': { reason: '2 fail RESULTs: RESULT fail no cow progress: insufficient slots', script: 'same' } },
         lapsed: ['thefullmonty:army-cow-strength-70', 'quickhandjob:army-cow-defence-45'],
     });
+});
+test('a saved infrastructure retirement lapses while gameplay and death holds remain', () => {
+    const offline = { reason: '2 fail RESULTs: RESULT fail login: LoginError: Login server offline', script: 'same' };
+    const claim = { reason: '2 fail RESULTs: RESULT fail login: Error: fleet swarm claim authority unavailable or changed', script: 'same' };
+    const stalled = { reason: 'tick waste 97% idle+move', script: 'same' };
+    const death = { reason: 'death: died', script: 'same' };
+    expect(liveRetirements({ 'first:goldfarm': offline, 'second:feathers': claim, 'third:ranged': stalled, 'fourth:ranged': death }, () => 'same')).toEqual({
+        retired: { 'third:ranged': stalled, 'fourth:ranged': death }, lapsed: ['first:goldfarm', 'second:feathers'],
+    });
+});
+test('kit offers buy the usable bow ID and retain market absence and unsold holds', () => {
+    const bows = [
+        { id: 72, name: 'Magic shortbow', debugname: 'unstrung_magic_shortbow' },
+        { id: 861, name: 'Magic shortbow', debugname: 'magic_shortbow' },
+        { id: 862, name: 'Magic shortbow', debugname: 'cert_magic_shortbow' },
+    ];
+    expect(kitMarket(bows, {}, 1_000)['magic shortbow']?.id).toBe(861);
+    expect(kitMarket(bows.slice(0, 1), {}, 1_000)['magic shortbow']).toBeUndefined();
+    expect(kitMarket(bows, { '861': 900 }, 1_000)['magic shortbow']).toBeUndefined();
+    const nativeItems = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    expect(kitMarket(nativeItems, {}, 1_000)['magic shortbow']?.id).toBe(861);
+});
+test('donor stock keeps unstrung bow names apart from usable and noted gear', () => {
+    const stock = donorStock('Donor', 'local', { name: 'Donor', server: 'rs-sdk-demo.fly.dev', at: 1_000, bankAt: 1_000,
+        inventory: [{ id: 72, name: 'Magic shortbow', count: 3 }], bank: [{ id: 862, baseId: 861, name: 'Magic shortbow (noted)', count: 1 }] }, 1_001, 500, () => undefined);
+    expect(stock?.items['magic shortbow']).toBe(1);
+    expect(stock?.items['unstrung magic shortbow']).toBe(3);
 });
 
 import { ARMY_MEET, itemOrder, sideStock } from './autopilot';
