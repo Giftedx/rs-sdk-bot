@@ -1,0 +1,19 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/router/test/coordinator-recovery.test.ts:
+107 |  if(existsSync(lock)){let held:any=null;try{held=JSON.parse(readFileSync(lock,'utf8'));}catch{/* unreadable lock stays a fence */}
+108 |   if(held&&Number.isSafeInteger(held.pid)&&!pidExists(held.pid)&&typeof held.runId==='string'&&/^(?:task|rollout)-[0-9a-f-]+$/.test(held.runId)){const runDir=join(dir,'runs',held.runId);mkdirSync(runDir,{recursive:true});renameSync(lock,join(runDir,'expired-build-lock.json'));}}
+109 |  if(existsSync(lock))throw Error('runtime owner or unacknowledged controller remains fenced');
+110 |  let owner:any=null;if(existsSync(ownerFile))owner=JSON.parse(readFileSync(ownerFile,'utf8'));
+111 |  const alive=owner&&(pidExists(owner.pid)&&controllerStateFresh(owner,base,now())||matches(owner.pid,owner.nonce));
+112 |  if(owner&&!alive&&pidExists(owner.pid))throw Error('saved controller is alive but command ownership is unknown; do not start a duplicate');
+                                                    ^
+error: saved controller is alive but command ownership is unknown; do not start a duplicate
+      at ensureSwarm (/workspace/rs-sdk-bot-host-recovery/packages/router/src/coordinator-live.ts:112:47)
+      at <anonymous> (/workspace/rs-sdk-bot-host-recovery/packages/router/test/coordinator-recovery.test.ts:550:31)
+(fail) default controller liveness retires a zombie but fences live, unreadable and foreign owners [8.26ms]
+
+ 0 pass
+ 59 filtered out
+ 1 fail
+Ran 1 test across 1 file. [1118.00ms]

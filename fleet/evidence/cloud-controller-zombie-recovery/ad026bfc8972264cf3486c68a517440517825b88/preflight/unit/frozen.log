@@ -1,0 +1,10 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/router/test/coordinator-recovery.test.ts:
+(pass) default controller liveness retires a zombie but fences live, unreadable and foreign owners [19.62ms]
+
+ 1 pass
+ 59 filtered out
+ 0 fail
+ 24 expect() calls
+Ran 1 test across 1 file. [722.00ms]

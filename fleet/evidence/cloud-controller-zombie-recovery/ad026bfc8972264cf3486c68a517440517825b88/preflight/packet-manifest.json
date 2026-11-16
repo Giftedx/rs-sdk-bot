@@ -1,0 +1,55 @@
+{
+  "head": "ad026bfc8972264cf3486c68a517440517825b88",
+  "scope": "Linux zombie owner unit proof and actual settled-watch kernel evidence; pending retirement proposal is preview only, not applied; no live recovery/inspection/order",
+  "files": [
+    {
+      "path": "pending-retirement-proposal.json",
+      "bytes": 374,
+      "sha256": "e9f5fd7236520308ad3d3445241f741f8fcb02ef94a967aab4e7542382d652d5",
+      "gitBlob": "c545eb83af66bc1fcaf7009b50a173ec94ddf8dd"
+    },
+    {
+      "path": "pending-retirement-preview.json",
+      "bytes": 1331,
+      "sha256": "462fe0170f35c184a37424a158f3099a10c2378e05f309b9a8b0ac7a8933bde7",
+      "gitBlob": "408d2cf683296ea066bacf4d28a2de5af3bfabf2"
+    },
+    {
+      "path": "kernel-state.json",
+      "bytes": 292,
+      "sha256": "221d687586b6930fba2e3ca2eda89e5029a40a3af74fb2e129cdc72c97efe33e",
+      "gitBlob": "a27c0f56ecfa61cf95dcf6486d89c8efeb24ef3b"
+    },
+    {
+      "path": "watch-outcome.json",
+      "bytes": 1318,
+      "sha256": "6aaa7d20bc4432c088d17b185de3ff99e4ab1ba71cd842e46a3f146de6bb32e0",
+      "gitBlob": "4ba70691ccb5502bba10d426722606f39a95e4d8"
+    },
+    {
+      "path": "unit/red.log",
+      "bytes": 1522,
+      "sha256": "e746b8b2ee93094b8bcb979db39d3c846ab486294bfabf489c61bd045507ec96",
+      "gitBlob": "d8563a79101c220accfacb7e30335e309a280f68"
+    },
+    {
+      "path": "unit/focused.log",
+      "bytes": 12991,
+      "sha256": "97679df8071d690cdac0b83a86044e3821d2d72e4c8e9898c5038388a84def3b",
+      "gitBlob": "e767e53cfb9bb4298e34fbc050ca855eb2e92958"
+    },
+    {
+      "path": "unit/typecheck.log",
+      "bytes": 15,
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "gitBlob": "f5b99e8a88f3351bff2d974f340241915d097a47"
+    },
+    {
+      "path": "unit/frozen.log",
+      "bytes": 279,
+      "sha256": "6abfa70bc43e948e3a842e05f7081331eff9f5a9bc3247b7f1a088ee067cd4d4",
+      "gitBlob": "7f41a912d43ec1d3a20045e1935506930da0b754"
+    }
+  ],
+  "unknownDependencies": []
+}

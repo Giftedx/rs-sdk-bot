@@ -1,0 +1,13 @@
+{
+  "reason": "Retire only the unstarted consumers of the settled zombie-blocked watch before a fresh bounded proposal on repaired source; preserve all task history and actor state",
+  "capabilities": [],
+  "tasks": [],
+  "cancel": [
+    {
+      "id": "cloud-recover-fullload-20261116t132135z"
+    },
+    {
+      "id": "cloud-recover-unsheathed-20261116t132135z"
+    }
+  ]
+}
