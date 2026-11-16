@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794860826579-unsheathed-bowbeforeme-4fc8c2e1db72c70b",
  "account": "BowBeforeMe",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 2,
  "claim": "70be2dc3-03cb-4b5c-bcee-703f2d2fbe72",
- "count": 0,
- "ok": false,
- "at": 1794860836969,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1794861096270,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1794861095510
+ },
+ "logout": {
+  "attemptId": "1794860836978-0000033124-0000000001",
+  "at": 1794861096253,
+  "sha256": "3461fe2984615f71bcedd7a56b2b293c960db3ecdd38fde4ff9882fcfe95bdb8"
+ },
+ "screen": true
 }
