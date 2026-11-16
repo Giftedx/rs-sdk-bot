@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794818028020,
+ "at": 1794818635856,
  "jobs": [
   {
    "account": "Balls",
@@ -122,93 +122,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "30",
-    "EXPECTED_OWNED": "16",
-    "LIMIT_PRICE": "9000",
-    "CASH_RESERVE": "500000",
-    "ORDER_KEY": "billionaire-overall-bones30-restock",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-4def4231-0edc-4736-9de1-3b1902b48f12"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-billionaire-overall-bones30-restock [task-4def4231-0edc-4736-9de1-3b1902b48f12]",
-   "role": "supply"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-eb87a8cc-f309-4434-affc-cbba8fcebc44"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-inspect-hocus-overall-cannon149 [task-eb87a8cc-f309-4434-affc-cbba8fcebc44]",
-   "role": "helper"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-eecfdb94-cd6e-4974-8d1f-56f407f68d51"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-inspect-mmthv-overall-cannon135 [task-eecfdb94-cd6e-4974-8d1f-56f407f68d51]",
-   "role": "helper"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5cba235a-af5e-4b32-9f75-ced3dccbbf0f"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-inspect-bowbeforeme-overall-cannon200 [task-5cba235a-af5e-4b32-9f75-ced3dccbbf0f]",
-   "role": "helper"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-c16abf5d-9686-411a-9865-06a135f3a546"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-inspect-moneyshot-overall-cannon208 [task-c16abf5d-9686-411a-9865-06a135f3a546]",
-   "role": "helper"
   }
  ],
  "army": [
