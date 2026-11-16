@@ -37,6 +37,66 @@ test('viewer routes only explicit roots and rejects decoded or double-encoded tr
     for(const path of ['/static/../server.ts','/static/%2e%2e%2fserver.ts','/caches/%252e%252e/file','/static/js%5csecret','/caches/C:/secret','/static/%00bad','/static/%zz','/static//js/x'])
         expect(viewerAssetRoute(path)).toBe('bad');
 });
+
+function cacheBridge(response:Response,href?:string){
+ const b=browser(),calls:any[]=[];Object.assign(b.host,{Headers,Response,fetch:async(...args:any[])=>{calls.push(args);return response;}});
+ if(href)b.host.location={href,origin:new URL(href).origin};
+ new Function('window',viewerBridgeSource())(b.host);
+ return {...b,calls};
+}
+
+test('the serialized bridge completes an exact EOF cache resume with zero new bytes',async()=>{
+ const original=new Response('unsatisfied',{status:416,headers:{'Content-Range':'bytes */9708920'}}),b=cacheBridge(original);
+ const input='http://localhost:3102/caches/rs-sdk-289/main_file_cache.dat',init={headers:{Range:'bytes=9708920-9007199254740991'}};
+ const response=await b.host.fetch(input,init);
+ expect(response.ok).toBe(true);expect(response.headers.get('Content-Length')).toBe('0');expect((await response.arrayBuffer()).byteLength).toBe(0);
+ expect(b.calls).toEqual([[input,init]]);expect(original.bodyUsed).toBe(false);
+ const requestBridge=cacheBridge(new Response(null,{status:416,headers:{'Content-Range':'bytes */9708920'}}));
+ expect((await requestBridge.host.fetch(new Request(input,init))).ok).toBe(true);
+});
+
+test('the serialized hosted bridge recovers only its resolved viewer cache root',async()=>{
+ const base='https://giftedx.github.io/rs-fleet-command/viewer/',href=base+'?hideNamesFrom='+encodeURIComponent('https://giftedx.github.io/rs-fleet-command/api/hidden-names');
+ const init={headers:{Range:'bytes=9708920-9007199254740991'}},make=()=>new Response(null,{status:416,headers:{'Content-Range':'bytes */9708920'}});
+ const response=await cacheBridge(make(),href).host.fetch(base+'caches/rs-sdk-289/main_file_cache.dat',init);
+ expect(response.ok).toBe(true);expect((await response.arrayBuffer()).byteLength).toBe(0);
+ for(const path of ['/static/caches/rs-sdk-289/main_file_cache.dat','/rs-fleet-command/static/caches/rs-sdk-289/main_file_cache.dat','/other/viewer/caches/rs-sdk-289/main_file_cache.dat']){
+  const original=make();expect(await cacheBridge(original,href).host.fetch(new URL(path,base).href,init)).toBe(original);
+ }
+});
+
+test('the cache EOF bridge leaves malformed, mismatched and unrelated errors unchanged',async()=>{
+ const path='http://localhost:3102/caches/rs-sdk-289/main_file_cache.dat',range='bytes=9708920-9007199254740991';
+ const cases:[string,RequestInit,string|null][]=[
+  [path,{headers:{Range:range}},null],
+  [path,{headers:{Range:range}},'bytes */9708919'],
+  [path,{headers:{Range:range}},'bytes */9708921'],
+  [path,{headers:{Range:range}},'bytes */9007199254740992'],
+  [path,{headers:{Range:range}},'bytes */09708920'],
+  [path,{headers:{Range:range}},'bytes 0-9708919/9708920'],
+  [path,{headers:{Range:'bytes=9708920-'}},'bytes */9708920'],
+  [path,{headers:{Range:'bytes=0-9007199254740991'}},'bytes */0'],
+  [path,{headers:{Range:'bytes=9007199254740992-9007199254740991'}},'bytes */9007199254740992'],
+  [path,{headers:{Range:'bytes=9708920-9007199254740990'}},'bytes */9708920'],
+  [path,{method:'HEAD',headers:{Range:range}},'bytes */9708920'],
+  [path,{method:'POST',headers:{Range:range}},'bytes */9708920'],
+  [path,{headers:{}},'bytes */9708920'],
+  ['https://other.example/caches/rs-sdk-289/main_file_cache.dat',{headers:{Range:range}},'bytes */9708920'],
+  [path.replace('main_file_cache.dat','main_file_cache.idx0'),{headers:{Range:range}},'bytes */9708920'],
+  [path.replace('/caches/','/static/'),{headers:{Range:range}},'bytes */9708920'],
+  [path.replace('rs-sdk-289','rs-sdk%2f289'),{headers:{Range:range}},'bytes */9708920'],
+  [path+'?other=1',{headers:{Range:range}},'bytes */9708920'],
+ ];
+ for(const [url,init,total] of cases){const original=new Response(null,{status:416,headers:total?{'Content-Range':total}:{}}),b=cacheBridge(original);expect(await b.host.fetch(url,init)).toBe(original);}
+ const redirected=new Response(null,{status:416,headers:{'Content-Range':'bytes */9708920'}});Object.defineProperty(redirected,'url',{value:'https://other.example/main_file_cache.dat'});
+ expect(await cacheBridge(redirected).host.fetch(path,{headers:{Range:range}})).toBe(redirected);
+ const request=new Request(path,{method:'HEAD',headers:{Range:range}}),original=new Response(null,{status:416,headers:{'Content-Range':'bytes */9708920'}});
+ expect(await cacheBridge(original).host.fetch(request)).toBe(original);
+});
+
+test('the cache EOF bridge preserves ordinary full and partial successful responses',async()=>{
+ for(const status of [200,206]){const original=new Response('cache bytes',{status}),b=cacheBridge(original);expect(await b.host.fetch('/caches/rs-sdk-289/main_file_cache.dat',{headers:{Range:'bytes=9708920-9007199254740991'}})).toBe(original);expect(await original.text()).toBe('cache bytes');}
+});
 test('native map follow selection reaches the inspector only after rendering and private-name filtering',async()=>{
  const b=browser();let relay:any;b.host.setInterval=(fn:any)=>{relay=fn;};installViewerBridge(b.host);
  b.host.location.href+='&follow=HiddenActor';relay();expect(b.messages.some(m=>m.data.atlasFollow)).toBe(false);
