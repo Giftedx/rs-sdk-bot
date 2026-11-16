@@ -1,0 +1,250 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/core/test/fleet-trade-claim.test.ts:
+(pass) atomic trade claim release frees both exact nonces and rejects replacement claims [400.50ms]
+(pass) atomic trade claim release rejects the whole push if one account receives a concurrent new claim [358.86ms]
+(pass) atomic trade claim release reads back both released claims after a lost response without replaying a release [230.77ms]
+(pass) two trade-only checkouts cannot claim the same account concurrently [263.28ms]
+(pass) a released trade role cannot replay after another order claims and releases the account [295.25ms]
+(pass) an unknown Git authority cannot grant trade admission [21.32ms]
+(pass) a trade and a swarm racing on the same account have exactly one winner [182.20ms]
+(pass) a dead swarm producer remains held, and pre-network recovery refusal restores the prior hold [498.53ms]
+(pass) the owning checkout can recover a dead claim that never reached session intent [335.21ms]
+(pass) a dead claim with no pending marker stays held even if the session receipt is missing [227.20ms]
+(pass) a dead pre-login trade claim can be replaced only on its owning checkout [371.07ms]
+(pass) trade admission accepts the owning checkout’s exact confirmed worker logout [199.28ms]
+(pass) another side replaces a dead side's swarm claim only once the claim and that side's lease are an hour stale [236.04ms]
+(pass) a new checkout of the same side replaces a dead checkout's claim once the claim and that checkout's renewals are an hour stale [236.43ms]
+(pass) a same-side claim whose checkout never held the lease is orphaned once another checkout holds it; no lease ref gives no takeover [222.14ms]
+(pass) a side that still renews its lease keeps its held claims, and a side with no lease record gives no takeover [225.59ms]
+(pass) the older fleet-data heartbeat counts as the dead side's lease, and a held trade claim is never taken over [292.44ms]
+
+packages/core/test/fleet-lease.test.ts:
+(pass) a network fault is tried again inside the budget; a rejected push fails at once with Git's text [1208.06ms]
+(pass) the remote lease excludes another checkout, fences old workers, and permits expired takeover [232.02ms]
+(pass) an unreadable authority fails closed [14.67ms]
+(pass) a replacement in the same checkout can adopt workers after the previous controller exits [125.51ms]
+(skip) a fresh Git deadline works in a long-running process
+(pass) a renewal that does not land leaves the lease standing until its deadline, and the next one lands [77.98ms]
+(pass) a renewal whose push landed but whose answer was lost is taken as landed [112.06ms]
+(pass) an uncertain initial lease push requires exact remote confirmation: landed=false [56.34ms]
+(pass) an uncertain initial lease push requires exact remote confirmation: landed=true [62.33ms]
+(pass) a record that lands after the ref was checked is taken up at the next renewal, not read as a takeover [106.43ms]
+
+packages/core/test/session-recovery.test.ts:
+(pass) the child session timer keeps its120second cap and cannot outlive the remaining permit authority [1.01ms]
+(pass) CLI boundary diagnostics identify every setup phase without copying secrets or publishing authority [1.01ms]
+(pass) retained first refusal is a closed code, never legacy or arbitrary exception text [0.25ms]
+(pass) setup distinguishes known authority, source, child, stops, credentials and IO refusals [0.47ms]
+(pass) diagnostic publication cannot create a connection admission or a producer receipt [1.53ms]
+(pass) actual CLI reports safe setup refusals before credentials, producer intent or output publication [10964.96ms]
+(pass) recovery confirms one exact producer attempt and makes no gameplay or failure-clear claim [5.85ms]
+(pass) actual SDK skills-array Proxy is copied into an independent snapshot [6.03ms]
+(pass) protected identities and owner/stop refusals happen before any connection intent [2.38ms]
+(pass) a caller-made admission or ok flag cannot authorize any connection [0.88ms]
+(pass) auth/connection failure is held without leaking the original error or retrying [3.87ms]
+(pass) returned logout errors and thrown logout errors cannot leak diagnostic secrets [5.68ms]
+(pass) failed readiness, wrong identity, state loss and unresolved modal cleanup stay held after one cleanup [10.72ms]
+(pass) timeout/disconnect and a newer intent cannot borrow a confirmed cleanup from the old attempt [8.45ms]
+(pass) caller success cannot replace actual producer source or script provenance [3.20ms]
+
+packages/core/test/session-recovery-permit.test.ts:
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS admission
+(pass) qualified cross-host recovery admission [621.65ms]
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS identity
+(pass) qualified cross-host recovery identity [977.93ms]
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS provenance
+(pass) qualified cross-host recovery provenance [816.45ms]
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS lease
+(pass) qualified cross-host recovery lease [973.07ms]
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS lifecycle
+(pass) qualified cross-host recovery lifecycle [859.56ms]
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_INTERRUPTED_PASS two real child exits after push, durable original Git witness, ordinary refusal, supported expired lease retirement, qualified retry, exact inherited hold restored
+(pass) qualified cross-host recovery interrupted [1207.65ms]
+(pass) the controller launches the core recovery worker inside the gameplay ownership scope [0.12ms]
+(pass) private fixtures honour every repository and fixture stop flag [1.38ms]
+(pass) successful retired cleanup requires a new actual mission, no hold, no producer history and exact authority [45.75ms]
+(pass) completed permit pins the exact successful end and actual mission through consumption [34.27ms]
+(pass) completed cleanup retains a ready disconnected live producer and binds only its fresh recovery child [22.22ms]
+(pass) a diagnostic file cannot replace missing consumption or a missing producer receipt; original lease stays held [12.46ms]
+(pass) only the controller may issue one account lease; child consumes one nonce and ordinary launch stays held [7.32ms]
+(pass) refusals happen before a lease is issued and keep exact failure bytes [16.29ms]
+(pass) the child guard rechecks task, source, exact end and runner after nonce consumption [21.11ms]
+(pass) only this consumed child may own its new partial session during the cleanup guard [6.95ms]
+(pass) completion indexes only the exact child/producer, releases its lease, and never clears the old failure [45.73ms]
+(pass) native qualification needs per-check observed cases and unchanged raw evidence, not true flags [2.81ms]
+(pass) one consumed permit yields one connection admission; forged, reused or crossed admissions refuse [5.57ms]
+(pass) remote launcher refuses before publishing a permit or account lease [1.57ms]
+(pass) launcher permits delayed setup to finish at140seconds but retains the lease at the absolute150second expiry [16.81ms]
+(pass) connect admission expires at the binding window while an already consumed guard retains150second cleanup time [6.60ms]
+(pass) a heartbeat published during the slow owner and source checks admits the valid child exactly once [4.44ms]
+(pass) a completed launch binds its child although each process lookup ages the blocked controller heartbeat [5.39ms]
+(pass) missing, malformed, crossed, future, stale or active fleet state refuses issuance without a lease [22.90ms]
+(pass) fleet state replaced between issuance and consumption holds the lease with no nonce, receipt or connection [36.64ms]
+(pass) an earlier retained fleet-unresolved diagnostic still parses [0.10ms]
+(pass) the controller releases only an exact expired held lease with a dead bound child and its matching confirmed logout [63.34ms]
+(pass) the controller also releases a held lease that a later session of a different run superseded, or whose child did not connect [46.18ms]
+(pass) an exact pre-request lease refusal waits while the controller archives only its dead connect-failed child and retains lineage outcomes [76.97ms]
+(pass) restart counts inherited children without replay, ignores dead children, and retains every lease [8.88ms]
+(pass) a later process that holds the id of a dead recovery child is not the child [6.44ms]
+(pass) cachedProcessStarts reads each id once a minute and keeps a failed read [0.32ms]
+(pass) authenticated cleanup admits a stopped end and still honours owner stops and exact end identity [9.17ms]
+(pass) the delivery binds to its capability release while the request binds to the launch release [3.81ms]
+(pass) a held retired producer gets a permit only from a delivery at its capability release [3.74ms]
+
+packages/core/test/inprocess-auth-order.test.ts:
+(pass) rejected authentication does not record an owned partner [132.31ms]
+(pass) ownership is recorded only after an authenticated session returns [108.31ms]
+(pass) a stop during asynchronous local setup refuses before producer intent and authentication [104.29ms]
+(pass) a direct live login refuses a shared account claim before authentication [101.29ms]
+(pass) a direct live login checks an account stop before claiming or authenticating [99.78ms]
+
+packages/core/test/session-recovery-dispatch.test.ts:
+(pass) malformed recovery is acknowledged and removed without launch or damage to the failure [1.90ms]
+(pass) existing lease archives the owned request and never reaps or relaunches its child [0.40ms]
+(pass) busy child stays owned and its completion cannot remove a newer processing request [0.77ms]
+(pass) source/stop/admission refusals occur before launch; post-issuance failure reports the retained lease [1.51ms]
+(pass) setup refusals retain bounded permit causes without exposing arbitrary exception text [1.42ms]
+(pass) failed child keeps the old failure; malformed or ordinary JSON is not consumed as a recovery [0.85ms]
+(pass) result persistence failure retains the input and suppresses any duplicate launch [0.66ms]
+(pass) a refusal receipt failure cannot become a later admitted launch [1.30ms]
+(pass) a refused processing request cannot launch after a dispatcher restart [1.08ms]
+(pass) marker persistence failure makes no admission decision and does not claim a handled request [0.34ms]
+(pass) a restarted dispatcher leaves the inherited lease and original active child untouched [0.56ms]
+(pass) a fixture link introduced deep in control state after construction is refused [0.70ms]
+(pass) nested fixture links and linked swarm assignments are refused before dispatch [0.80ms]
+(pass) native fixture mode cannot use production state or a remote endpoint [0.62ms]
+(pass) case aliases, junctions and control-directory links cannot turn a local fixture into production state [0.47ms]
+(pass) the actual default remote launcher still refuses without a lease or child [0.49ms]
+
+packages/practice/test/session-recovery-proof.test.ts:
+(pass) loc diagnostics preserve handler result and dispatch when observation fails [0.38ms]
+RECOVERY_MODAL {"phase":"before-dispatch","action":"acceptCharacterDesign","at":1794831283780,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":null,"kits":null,"colours":null}}
+RECOVERY_MODAL {"phase":"design-prepared","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":null,"kits":null,"colours":null}}
+RECOVERY_MODAL {"phase":"dispatch-returned","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","success":true,"outgoing":null}
+RECOVERY_MODAL {"phase":"flushed","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","transportBefore":null,"transportAfter":null}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":1,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":2,"inGame":true,"modalOpen":false,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"finished","action":"acceptCharacterDesign","at":1794831283781,"tick":10,"inGame":true,"modalOpen":false,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","closed":true,"incoming":[]}
+RECOVERY_MODAL {"phase":"before-dispatch","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":null,"kits":null,"colours":null}}
+RECOVERY_MODAL {"phase":"design-prepared","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":null,"kits":null,"colours":null}}
+RECOVERY_MODAL {"phase":"dispatch-returned","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","success":true,"outgoing":null}
+RECOVERY_MODAL {"phase":"flushed","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","transportBefore":null,"transportAfter":null}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":1,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":2,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":3,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":4,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":5,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":6,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":7,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":8,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":9,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283781,"tick":10,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"finished","action":"acceptCharacterDesign","at":1794831283803,"tick":10,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","closed":false,"incoming":[]}
+RECOVERY_MODAL {"phase":"before-dispatch","action":"closeModal","at":1794831283803,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":null,"kits":null,"colours":null}}
+RECOVERY_MODAL {"phase":"dispatch-returned","action":"closeModal","at":1794831283803,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","success":true,"outgoing":null}
+RECOVERY_MODAL {"phase":"flushed","action":"closeModal","at":1794831283803,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","transportBefore":null,"transportAfter":null}
+RECOVERY_MODAL {"phase":"observed","action":"closeModal","at":1794831283803,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"closeModal","at":1794831283803,"tick":1,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"closeModal","at":1794831283803,"tick":2,"inGame":true,"modalOpen":false,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"finished","action":"closeModal","at":1794831283803,"tick":10,"inGame":true,"modalOpen":false,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","closed":true,"incoming":[]}
+(pass) recovery accepts player_kit and requires an observed modal close within the observation budget [23.67ms]
+(pass) ten rapid buffered ticks do not exhaust the budget before a delayed closure response, and session end refuses [65.37ms]
+RECOVERY_MODAL {"phase":"before-dispatch","action":"acceptCharacterDesign","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":null,"kits":null,"colours":null}}
+RECOVERY_MODAL {"phase":"design-prepared","action":"acceptCharacterDesign","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":true,"kits":[0,10,18,26,33,36,42],"colours":[0,0,0,0,0]}}
+RECOVERY_MODAL {"phase":"dispatch-returned","action":"acceptCharacterDesign","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","success":true,"outgoing":null}
+RECOVERY_MODAL {"phase":"flushed","action":"acceptCharacterDesign","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","transportBefore":null,"transportAfter":null}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"acceptCharacterDesign","at":1794831283869,"tick":1,"inGame":true,"modalOpen":false,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"finished","action":"acceptCharacterDesign","at":1794831283869,"tick":2,"inGame":true,"modalOpen":false,"modalInterface":3559,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","closed":true,"incoming":[]}
+RECOVERY_MODAL {"phase":"before-dispatch","action":"closeModal","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","design":{"gender":null,"kits":null,"colours":null}}
+RECOVERY_MODAL {"phase":"dispatch-returned","action":"closeModal","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","success":true,"outgoing":null}
+RECOVERY_MODAL {"phase":"flushed","action":"closeModal","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","transportBefore":null,"transportAfter":null}
+RECOVERY_MODAL {"phase":"observed","action":"closeModal","at":1794831283869,"tick":0,"inGame":true,"modalOpen":true,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"observed","action":"closeModal","at":1794831283869,"tick":1,"inGame":true,"modalOpen":false,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none"}
+RECOVERY_MODAL {"phase":"finished","action":"closeModal","at":1794831283869,"tick":2,"inGame":true,"modalOpen":false,"modalInterface":12,"clientModal":null,"candidates":[],"predictedAccept":null,"selection":"none","closed":true,"incoming":[]}
+(pass) queued recovery cleanup flushes before observing the modal effect [0.99ms]
+(pass) modal diagnostics separate dispatch refusal, fallback selection and absent observed closure without changing cleanup [67.97ms]
+(pass) modal wire trace records queued design and accept payloads and later server opcodes, then restores dispatch [23.57ms]
+(pass) tutorial recovery repairs the zero-kit initialization using enabled pinned body parts and colour bounds, preserving valid designs [5.55ms]
+(pass) child readiness waits for delayed publication, but absent, crossed and late bindings refuse without consumption [1178.92ms]
+(pass) native pre-child observation separates actual memory, capacity, release and launcher authority refusals hidden by dispatch [10.61ms]
+(pass) low memory delays the recovery request until admission allows one start, and an expired wait sends no request [12.81ms]
+(pass) boundary wrapper preserves exact return and thrown objects, redacts unknown errors and tolerates a failed observer [0.37ms]
+(pass) native authority samples retain owner inputs without copying environment secrets or mutating files [0.41ms]
+(pass) partial readiness before intent retains none and missing pointer without inventing an attempt [0.78ms]
+(pass) receipt visibility before latest publication retains the invalid FIRST read even when publication later finishes [1.52ms]
+(pass) valid connecting-only latest retains exact proof, owner, ordered observations and byte hashes read-only [0.76ms]
+(pass) malformed latest stays explicitly invalid; diagnostic snapshots never copy arbitrary secret fields [0.51ms]
+(pass) crossed latest account cannot look like matching partial evidence [0.71ms]
+(pass) crossed latest server cannot look like matching partial evidence [0.50ms]
+(pass) crossed latest domain cannot look like matching partial evidence [0.32ms]
+(pass) wrong owner PID is distinct from a valid connecting-only attempt [0.49ms]
+(pass) a newer unpointed intent is held for its actual reason, never retried into before-START success [0.47ms]
+(pass) a dead owner stays separate from its unresolved partial attempt [0.58ms]
+(pass) partial owner waits past receipt publication for the stalled handshake and retains its first read, with bounded listener cleanup [14.52ms]
+(pass) native partial observation follows the relay acceptance and keeps the first result [0.56ms]
+(pass) offline setup failure is retained before throwing and prevents dependent dispatch on its held account [0.83ms]
+(pass) authentication adverse case requires both prior confirmed recovery and independent DB registration [0.25ms]
+(pass) every reader check names at least one observed case [0.14ms]
+(pass) saved reconciliation treats an absent and an empty container alike but sees any slot, skill or tile change [1.23ms]
+(pass) a check passes only when all of its cases were observed, passed and kept evidence [1.43ms]
+(pass) a derived proof with real saved files satisfies the controller reader; a changed raw file does not [2.78ms]
+(pass) evidence listing hashes plain files and never follows a link [0.22ms]
+(pass) retained ownership failure is reproducible but its legacy reply cannot identify a login [1.03ms]
+(pass) owner login before readiness and legitimate logout after refusal are distinct despite identical success codes [1.19ms]
+(pass) an unexpected login request fails absence before its reply and after any delayed reply [0.35ms]
+(pass) interleaved request IDs keep account, request type and connection identity [0.50ms]
+(pass) missing duplicate crossed and malformed attribution refuses, even outside the filtered interval [0.92ms]
+(pass) practice observer preserves original receivers, arguments, return values and exceptions without retaining secrets [1.93ms]
+(pass) observer faults and record bounds do not change send/emitter behavior [51.27ms]
+(pass) the emitted native preload uses the same self-contained observer implementation [1.28ms]
+(pass) the world button observer is self-contained, keeps dispatch results and records protected refusal and decoded opcodes [2.02ms]
+(pass) the world observer times buffered messages and empty decode reads only while the modal is open [1.74ms]
+(pass) a final seal proves the observation is complete; lost paired records, clock faults and post-seal traffic refuse [1.11ms]
+(pass) proof stop files are created exclusively and retained through normal and final cleanup [1.01ms]
+(pass) cleanup never observes or mutates stops, with a replacement armed after stat [0.77ms]
+(pass) cleanup never observes or mutates stops, with a replacement armed after read [0.48ms]
+(pass) the native proof retains separate fixture and repository stop identities through finally [0.73ms]
+(pass) the retained cooldown timeline fails as an expired window, and its stale owner view is not owner evidence [0.86ms]
+(pass) a recovery login inside the open takeover window must be refused with response 3 [0.29ms]
+(pass) a warm takeover after submit excludes only its own request and retains the recovery window checks [0.32ms]
+(pass) runtime observation waits for a complete current child identity before the owner takeover [0.91ms]
+(pass) runtime observation refuses a crossed checkout and has a finite wait for missing evidence [0.38ms]
+(pass) a gap exactly at the bound is expired; one millisecond less is open [0.58ms]
+(pass) a response 3 for another account or another request is not the recovery refusal [0.44ms]
+(pass) a missing warm-takeover reply, or a warm login that took over nothing, fails [0.33ms]
+(pass) owner preservation needs server-side evidence; a stale client view after a real takeover is not enough [0.46ms]
+(pass) owner logout observation waits for a delayed auth reply but refuses an absent or failed acknowledgement [1.36ms]
+(pass) orphan recovery waits for the takeover window after the observed server end [0.06ms]
+(pass) orphan recovery is measured after the bound window from the latest prior login [0.30ms]
+(pass) orphan recovery enters only after the server acknowledges the killed owner logout, not after the takeover window alone [0.86ms]
+(pass) orphan recovery final logout is the recovery session logout, never the preceding cleanup logout [0.31ms]
+(pass) the native proof keeps its private takeover window and server-side outcome evidence [0.32ms]
+(pass) the module main does not run on import [0.18ms]
+(pass) isolated recovery proof needs no publish lock and still rejects runtime or runner drift [0.56ms]
+(pass) native recovery uses the current delivery identity with the shark default [0.20ms]
+(pass) completed router pins capture both current integration files without a saved report [0.72ms]
+(pass) changed router files do not fail at proof start against a stale saved report [0.40ms]
+(pass) a timer-only fleet snapshot stays stale at a late handoff; a fresh owned handoff resolves without hiding real ownership [0.97ms]
+(pass) initial owner readiness remains absent until its complete JSON is published [0.58ms]
+(pass) the orphan child reading mid-heartbeat sees a complete fleet view, never fleet-malformed [1.27ms]
+(pass) the relay binds dual-stack, falls back to IPv4 loopback only on EAFNOSUPPORT, and keeps other bind errors [0.56ms]
+(pass) the world client reaches the IPv4 world when another listener on ::1 accepts and drops the same port [8.19ms]
+
+1 tests skipped:
+(skip) a fresh Git deadline works in a long-running process
+
+ 169 pass
+ 1 skip
+ 0 fail
+ 1926 expect() calls
+Ran 170 tests across 7 files. [26.11s]

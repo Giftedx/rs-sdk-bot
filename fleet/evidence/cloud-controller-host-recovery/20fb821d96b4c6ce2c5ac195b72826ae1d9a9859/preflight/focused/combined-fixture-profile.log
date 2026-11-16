@@ -1,0 +1,13 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/core/test/session-recovery-permit.test.ts:
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS opaque admission, exact producer, retired lease epoch, unchanged ordinary guards, abort, CAS, exact new logout
+HOST_RECOVERY_PROFILE {"mode":"normal","fixtureGitCalls":152,"fixtureGitMs":1140.8557450000012,"wallMs":1883.2136300000002}
+(pass) qualified cross-host recovery normal [2501.79ms]
+
+ 1 pass
+ 31 filtered out
+ 0 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [3.29s]

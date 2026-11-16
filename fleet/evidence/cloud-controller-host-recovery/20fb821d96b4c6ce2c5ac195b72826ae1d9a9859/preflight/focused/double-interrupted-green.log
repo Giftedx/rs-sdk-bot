@@ -1,0 +1,15 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/core/test/session-recovery-permit.test.ts:
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_FIXTURE_PASS opaque admission, exact producer, retired lease epoch, unchanged ordinary guards, abort, CAS, exact new logout
+(pass) qualified cross-host recovery normal [2218.27ms]
+bun test v1.3.14 (0d9b296a)
+QUALIFIED_HOST_INTERRUPTED_PASS two real child exits after push, durable original Git witness, ordinary refusal, supported expired lease retirement, qualified retry, exact inherited hold restored
+(pass) qualified cross-host recovery interrupted [1248.46ms]
+
+ 2 pass
+ 30 filtered out
+ 0 fail
+ 2 expect() calls
+Ran 2 tests across 1 file. [4.13s]
