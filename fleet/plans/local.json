@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794820542977,
+ "at": 1794820615843,
  "jobs": [
   {
    "account": "Balls",
@@ -136,7 +136,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-d38a2813-ef13-4c76-9b76-f19a24c3e96f"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-scorpion-mmsmk-ardougne-cure [task-d38a2813-ef13-4c76-9b76-f19a24c3e96f]",
    "role": "helper"
