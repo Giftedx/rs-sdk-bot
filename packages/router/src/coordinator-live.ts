@@ -16,7 +16,7 @@ import {acceptStatus,boundedWorkerEndMessage,boundAccounts,type CoordTask,type C
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,readMergedPlan,ownerPlanPath,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
-import {boundedOwnerBinding} from '../../core/src/bounded-owners';
+import {boundedOwnerBinding,boundedProcessAlive} from '../../core/src/bounded-owners';
 import {readLogoutProof,listAttempts} from '../../core/src/session-lifecycle';
 import {pidAlive} from '../../core/src/session-takeover';
 
@@ -95,7 +95,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  if(stopped())throw Error('controller rollout owner stopped');
  const diskSource=deps.diskSource??(()=>cachedLaunchRevision(base));
  const currentSource=deps.currentSource??diskSource,matches=deps.matches??processMatches,now=deps.now??Date.now;
- const pidExists=deps.pidExists??((pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return(e as NodeJS.ErrnoException).code!=='ESRCH';}});
+ const pidExists=deps.pidExists??boundedProcessAlive;
  const stop=deps.stop??safeKill,drain=deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerDrain(owner,after,base));
  const ack=deps.ack??deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerAck(owner,after,base));
  // Stop only the controller process: a tree kill would end the detached runs it adopted.
@@ -105,9 +105,10 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  // it, and so can a controller a rollout could not confirm stopped: the fence then names that controller's pid. The
  // process check below still refuses a second controller.
  if(existsSync(lock)){let held:any=null;try{held=JSON.parse(readFileSync(lock,'utf8'));}catch{/* unreadable lock stays a fence */}
-  if(held&&Number.isSafeInteger(held.pid)&&!pidExists(held.pid)&&typeof held.runId==='string'&&/^(?:task|rollout)-[0-9a-f-]+$/.test(held.runId)){const runDir=join(dir,'runs',held.runId);mkdirSync(runDir,{recursive:true});renameSync(lock,join(runDir,'expired-build-lock.json'));}}
+  if(held&&Number.isSafeInteger(held.pid)&&held.pid>0&&!pidExists(held.pid)&&typeof held.runId==='string'&&/^(?:task|rollout)-[0-9a-f-]+$/.test(held.runId)){const runDir=join(dir,'runs',held.runId);mkdirSync(runDir,{recursive:true});renameSync(lock,join(runDir,'expired-build-lock.json'));}}
  if(existsSync(lock))throw Error('runtime owner or unacknowledged controller remains fenced');
  let owner:any=null;if(existsSync(ownerFile))owner=JSON.parse(readFileSync(ownerFile,'utf8'));
+ if(existsSync(ownerFile)&&(!owner||!Number.isSafeInteger(owner.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce))throw Error('saved controller identity malformed; preserve ownership fence');
  const alive=owner&&(pidExists(owner.pid)&&controllerStateFresh(owner,base,now())||matches(owner.pid,owner.nonce));
  if(owner&&!alive&&pidExists(owner.pid))throw Error('saved controller is alive but command ownership is unknown; do not start a duplicate');
  // A rollout pauses standing jobs by listing their accounts in the coordinator's file (the merged plan shows them

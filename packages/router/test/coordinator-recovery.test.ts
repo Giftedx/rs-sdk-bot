@@ -1,5 +1,6 @@
 import {test,expect,beforeEach,afterEach,spyOn} from 'bun:test';
 import * as os from 'node:os';
+import * as fs from 'node:fs';
 // Recovery fixtures model an admitted host. Admission limits have their own explicit memory cases.
 let memory:{mockRestore():void}|undefined;
 beforeEach(()=>{memory=spyOn(os,'freemem').mockReturnValue(8*2**30);});
@@ -529,6 +530,29 @@ test('a detached-run controller rolls over without drain or pause, and is stoppe
  expect(events).toEqual(['stop-one:11', 'spawn', 'ack:22']);
  expect(JSON.parse(readFileSync(ownerFile, 'utf8'))).toMatchObject({ pid: 22, detached: true });
  expect(existsSync(join(dir, 'rollout-paused.json'))).toBe(false);
+});
+test.skipIf(process.platform!=='linux')('default controller liveness retires a zombie but fences live, unreadable and foreign owners',async()=>{
+ const savedPid=2147483645,nativeKill=process.kill,nativeRead=fs.readFileSync;
+ let kernel='Z';
+ const kill=spyOn(process,'kill').mockImplementation(((pid:number,signal:any)=>pid===savedPid&&signal===0?true:nativeKill.call(process,pid,signal)) as typeof process.kill);
+ const read=spyOn(fs,'readFileSync').mockImplementation(((path:any,...args:any[])=>{
+  if(String(path)===`/proc/${savedPid}/stat`){if(kernel==='unreadable')throw Object.assign(Error('fixture unreadable'),{code:'EACCES'});return `${savedPid} (retired swarm) ${kernel} 1 ${savedPid} ${savedPid}`;}
+  return(nativeRead as any)(path,...args);
+ }) as typeof fs.readFileSync);
+ try{
+  for(const condition of ['Z','S','unreadable','foreign','zero','negative','missing-nonce','invalid-lock']){
+   kernel=['foreign','zero','negative','missing-nonce','invalid-lock'].includes(condition)?'Z':condition;
+   const f=recoveryFixture(),ownerFile=join(f.prac,'coordinator/swarm-owner.json'),events:string[]=[];
+   atomicJson(ownerFile,{pid:condition==='zero'?0:condition==='negative'?-1:savedPid,nonce:condition==='missing-nonce'?'':'retired',source:'old',swarmSource:'old',detached:true});const original=readFileSync(ownerFile);
+   const lockFile=join(f.prac,'coordinator/build-lock.json');if(condition==='invalid-lock')atomicJson(lockFile,{pid:0,runId:'rollout-1234'});
+   const deps={base:f.base,currentSource:()=>'new',diskSource:()=>'new',matches:()=>false,processes:()=>condition==='foreign'?[savedPid-1]:[],rows:()=>[],now:()=>1000,
+    spawn:()=>{events.push('spawn');return savedPid-2;},stopOne:async()=>{events.push('stop');return true;},ack:async()=>{events.push('ack');}};
+   try{
+    if(condition==='Z'){await ensureSwarm('new',deps);expect(events).toEqual(['spawn','ack']);expect(JSON.parse(readFileSync(ownerFile,'utf8')).pid).toBe(savedPid-2);}
+    else{await expect(ensureSwarm('new',deps)).rejects.toThrow(condition==='foreign'?'another controller':condition==='invalid-lock'?'remains fenced':['zero','negative','missing-nonce'].includes(condition)?'identity malformed':'ownership is unknown');expect(events).toEqual([]);expect(readFileSync(ownerFile)).toEqual(original);if(condition==='invalid-lock')expect(existsSync(lockFile)).toBe(true);}
+   }finally{fs.rmSync(f.base,{recursive:true,force:true});}
+  }
+ }finally{read.mockRestore();kill.mockRestore();}
 });
 
 test('a run rolls a controller whose release differs from its source; a standing check reuses it', async () => {
