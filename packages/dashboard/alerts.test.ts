@@ -11,7 +11,7 @@ const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(start,en
 const alerts=(bots:any[],now:number)=>new Function('productionReview',`
  const results=[],productionReviews=new Map(),practiceNames=()=>new Set();
  ${code};return alerts;
-`)(productionReview)(bots,now) as {name:string;kind:string;text:string}[];
+`)(productionReview)(bots,now) as {name:string;at:number;kind:string;text:string;practice:boolean}[];
 
 test('a fresh remote bank snapshot with a disabled plan is offline without a stuck alert',()=>{
  const at=1794855715119,now=at+805_000,name='FullLoad',server='rs-sdk-demo.fly.dev';
