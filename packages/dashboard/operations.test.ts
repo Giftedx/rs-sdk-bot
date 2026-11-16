@@ -79,6 +79,46 @@ test('recent operator command cards show refused and failed receipts and escaped
  expect(html).toContain('&lt;b&gt;source changed&lt;/b&gt;');expect(html).not.toContain('<b>source changed</b>');
 });
 
+function evidenceHarness(){
+ const start=operations.indexOf(' function showRowDetails('),code=operations.slice(start,operations.indexOf('\n window.addEventListener',start));
+ const doc:any={activeElement:null};let removed=false,stopped=0,copyValue='';
+ const makeRow=(key:string)=>{const row:any={dataset:{rowKey:key},title:'Observed on this PC',isConnected:true,querySelector:(s:string)=>({textContent:s==='.label'?key:'5'}),focus:()=>{doc.activeElement=row;}};return row;};
+ let rows=[makeRow('CPU'),makeRow('CPU')];const trigger=rows[1];
+ const fallback:any={focus:()=>{doc.activeElement=fallback;}};
+ const close:any={focus:()=>{doc.activeElement=close;}},copy:any={focus:()=>{doc.activeElement=copy;}};
+ const overlay:any={remove:()=>{removed=true;},querySelector:()=>close,querySelectorAll:()=>[close,copy]};
+ const body={querySelectorAll:()=>rows};
+ const env:any={$:()=>null,document:{createElement:()=>overlay},body,app:{append:()=>{}},E:escapeText,button:(_label:string,_action:string,value:string)=>{copyValue=value;return '<button>Copy evidence</button>';},commandButton:fallback};
+ Object.defineProperty(env.document,'activeElement',{get:()=>doc.activeElement});
+ new Function(...Object.keys({...env,row:trigger}),`${code};showRowDetails(row);`)(...Object.values({...env,row:trigger}));
+ const key=(key:string,shiftKey=false)=>overlay.onkeydown({key,shiftKey,preventDefault:()=>{},stopPropagation:()=>{stopped++;}});
+ return{key,overlay,close,copy,trigger,fallback,copyValue:()=>copyValue,active:()=>doc.activeElement,removed:()=>removed,stopped:()=>stopped,replace:()=>{trigger.isConnected=false;rows=[makeRow('CPU'),makeRow('CPU')];return rows;},removeRows:()=>{trigger.isConnected=false;rows=[];}};
+}
+
+test('evidence dialog cancel paths restore the triggering row and keep its Tab trap',()=>{
+ for(const cancel of [(h:any)=>h.key('Escape'),(h:any)=>h.close.onclick(),(h:any)=>h.overlay.onclick({target:h.overlay})]){
+  const h=evidenceHarness();expect(h.active()).toBe(h.close);expect(h.copyValue()).toBe('CPU\n5\nObserved on this PC');
+  h.key('Tab',true);expect(h.active()).toBe(h.copy);h.key('Tab');expect(h.active()).toBe(h.close);
+  cancel(h);expect(h.removed()).toBe(true);expect(h.active()).toBe(h.trigger);
+ }
+});
+
+test('evidence dialog resolves a refreshed row by key and duplicate occurrence or uses the command button',()=>{
+ const h=evidenceHarness(),replacement=h.replace();h.key('Escape');
+ expect(h.active()).toBe(replacement[1]);expect(h.active()).not.toBe(replacement[0]);
+ const absent=evidenceHarness();absent.removeRows();absent.close.onclick();expect(absent.active()).toBe(absent.fallback);
+});
+
+test('modal keys do not bubble and Alt navigation leaves the background plugin alone',()=>{
+ const h=evidenceHarness();h.key('ArrowLeft');expect(h.stopped()).toBe(1);
+ const line=operations.split('\n').find(line=>line.includes("travel(e.key==='ArrowLeft'?-1:1)"))!;
+ let handler:any;const directions:number[]=[];
+ new Function('window','travel',line)({addEventListener:(_event:string,callback:any)=>{handler=callback;}},(direction:number)=>directions.push(direction));
+ for(const modal of ['.op-detail-overlay','.op-palette-overlay'])handler({altKey:true,key:'ArrowLeft',target:{closest:()=>modal},preventDefault:()=>{}});
+ expect(directions).toEqual([]);
+ handler({altKey:true,key:'ArrowRight',target:{closest:()=>null},preventDefault:()=>{}});expect(directions).toEqual([1]);
+});
+
 test('the command centre names owner goal gaps and opens Project goals',()=>{
  const source=operations.slice(operations.indexOf(' function operations(){'),operations.indexOf(' // Why a new bot'));
  const scoreboard={available:true,remaining:['Main rank unknown','Quest gap'],quests:{live:45,total:68},goals:{version:1,done:false}};
