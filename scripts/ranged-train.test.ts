@@ -141,11 +141,11 @@ test('a stop during the recovery walk aborts the route and skips the unwield',as
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.
-function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'|'bones-taken',observeBankMoves=false){
+function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'|'bones-taken',observeBankMoves=false,missingFood=false){
  type Item={id:number;name:string;count:number};
  const item=(id:number,count:number):Item=>({id,name:id===995?'Coins':id===1985?'Cheese':String(id),count});
  let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0,respawnAt:number|undefined;
- let pack:Item[]=catherby?[item(995,3250),item(1515,2),item(946,1),item(1893,4)]:[],equipment:Item[]=[],bank=[item(843,1),item(882,60),...(catherby?[item(995,452202)]:[item(329,3)])];
+ let pack:Item[]=catherby?[item(995,3250),item(1515,2),item(946,1),item(1893,4)]:[],equipment:Item[]=[],bank=[item(843,1),item(882,60),...(catherby?[item(995,452202)]:missingFood?[item(995,52)]:[item(329,3)])];
  if(upgrade)bank.push(item(849,1),item(888,20));
  if(underground){pack=[item(556,3),item(557,1),item(553,1)];equipment=[item(552,1),item(1277,1),item(1171,1)];}
  const state:any={player:{worldX:catherby?2807:3253,worldZ:catherby?3441:3421,level:0},autoRetaliateEnabled:false,bank:{isOpen:false,items:bank},nearbyNpcs:[],groundItems:[]};
@@ -197,9 +197,39 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
   return{ok:true,ticks:0,still:0,clicks:0,repaths:0,doors:0,next:points.length};
  });
  if(underground)planner.mockImplementation(async(from,to)=>({cost:1,legs:from.z>9000?[{kind:'transport',to,at:{x:3103,z:9576,level:0}}]:[]} as any));
- return{s,attacks,planner,worldRoute,assets:()=>[...bank,...pack,...equipment],run:(overrides={})=>runRangedTrain(s,{...rangedTrainOptions({},['bun','s','unit']),maxTrips:2,buyArrows:0,...(catherby?{maxSpend:5000,coinReserve:400000}:{}),...overrides}),
+ return{s,attacks,planner,worldRoute,route,assets:()=>[...bank,...pack,...equipment],run:(overrides={})=>runRangedTrain(s,{...rangedTrainOptions({},['bun','s','unit']),maxTrips:2,buyArrows:0,...(catherby?{maxSpend:5000,coinReserve:400000}:{}),...overrides}),
   close:()=>{clearInterval(timer);route.mockRestore();walker.mockRestore();planner.mockRestore();worldRoute.mockRestore();}};
 }
+
+test('Varrock food staging uses its bounded mainland corridor instead of a cold global route search',async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,false,undefined,false,true);
+ f.planner.mockImplementation(async()=>{throw Error('cold global food search must not start');});
+ try{
+  const r=await f.run({food:2,maxSpend:52});
+  expect(r).toMatchObject({ok:true,targetMet:true,kills:2,foodId:1985,foodBought:2,foodSpent:10,travelSpent:0,coinsSpent:10,coinDebit:10,preserved:true,accounting:true,equipmentRestored:true});
+  expect(f.planner).not.toHaveBeenCalled();expect(f.worldRoute).not.toHaveBeenCalled();
+  const paths=f.route.mock.calls.map(([,points])=>points);
+  expect(paths.some(points=>points.at(-1)?.x===3015&&points.at(-1)?.z===3206)).toBe(true);
+  expect(paths.some(points=>points.at(-1)?.x===3253&&points.at(-1)?.z===3421)).toBe(true);
+ }finally{f.close();}
+});
+
+test('Varrock food corridor keeps its stop bound and buys nothing after an interrupted walk',async()=>{
+ const f=trainingFixture(['kill'],false,false,false,undefined,false,true);let stopped=false;
+ f.planner.mockImplementation(async()=>{throw Error('cold global food search must not start');});
+ f.route.mockImplementation(async(_deps,points,options)=>{
+  expect(points.at(-1)).toMatchObject({x:3015,z:3206});
+  expect(options?.maxTicks).toBeLessThanOrEqual(500);expect(options?.stop?.()).toBe(false);
+  stopped=true;expect(options?.stop?.()).toBe(true);
+  return {ok:false,detail:'stop requested',ticks:1} as any;
+ });
+ try{
+  const r=await f.run({food:2,maxSpend:52,stop:()=>stopped});
+  expect(f.route).toHaveBeenCalledTimes(1);expect(f.planner).not.toHaveBeenCalled();
+  expect(r).toMatchObject({ok:false,kills:0,foodBought:0,foodSpent:0,coinsSpent:0,coinDebit:0,preserved:true,accounting:true});
+  expect(f.attacks).toHaveLength(0);expect(r.failure).toContain('stop requested');
+ }finally{f.close();}
+});
 
 for(const race of ['foreign','own-missing'] as const)test(`optional ammunition race ${race} cannot stop an accounted Ranged band`,async()=>{
  const f=trainingFixture(['kill','kill'],false,false,false,race);
@@ -293,13 +323,17 @@ test('the practice seed starts at Ranged 70 with 3000 XP, ten chickens, to level
  expect(RANGED_SEED_XP).toBe(139847);expect(RANGED_SEED_XP).toBeGreaterThanOrEqual(rangedLevelXp(70));
 });
 
-// Idle cause: the cold route worker plans the cellar exit, then each food-run leg again, while the account stands still.
-test('underground entry queues both food-run legs before its own walk starts',async()=>{
- const f=trainingFixture(['kill','kill'],false,false,true);
+test('underground entry plans its exit before banking and uses the bounded mainland food corridor',async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,true,undefined,false,true);
  try{
-  const r=await f.run();expect(r.ok).toBe(true);
-  expect(f.planner.mock.calls.map(c=>[c[0],c[1]])).toEqual([[{x:3113,z:9555,level:0},{x:3253,z:3421,level:0}],[{x:3253,z:3421,level:0},{x:3015,z:3206,level:0}],[{x:3015,z:3206,level:0},{x:3253,z:3421,level:0}]]);
+  const r=await f.run({food:2,maxSpend:52});
+  expect(r).toMatchObject({ok:true,targetMet:true,kills:2,foodBought:2,foodSpent:10,travelSpent:0,coinsSpent:10,coinDebit:10,preserved:true,accounting:true,equipmentRestored:true});
+  expect(f.planner.mock.calls.map(c=>[c[0],c[1]])).toEqual([[{x:3113,z:9555,level:0},{x:3253,z:3421,level:0}]]);
   expect(Math.max(...f.planner.mock.invocationCallOrder)).toBeLessThan(f.worldRoute.mock.invocationCallOrder[0]!);
+  expect(f.worldRoute).toHaveBeenCalledTimes(1);
+  const paths=f.route.mock.calls.map(([,points])=>points);
+  expect(paths.some(points=>points.at(-1)?.x===3015&&points.at(-1)?.z===3206)).toBe(true);
+  expect(paths.some(points=>points.at(-1)?.x===3253&&points.at(-1)?.z===3421)).toBe(true);
  }finally{f.close();}
 });
 
