@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794821924956-mmsmk1232-nabtheknob-naturerune",
+ "account": "mmsmk1232",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 358,
+ "claim": "eeea4ad9-9c68-4b1e-a534-1801561e7c94",
+ "count": 358,
+ "ok": true,
+ "at": 1794821989622,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 358,
+  "after": 0
+ },
+ "bank": {
+  "count": 358,
+  "at": 1794821977579
+ },
+ "logout": {
+  "attemptId": "1794821966983-0000014208-0000000001",
+  "at": 1794821989539,
+  "sha256": "f946e988be98aa67823bedeffe7493cf4f14ce8a4c143d9a36abc65894793955"
+ },
+ "screen": true
+}
