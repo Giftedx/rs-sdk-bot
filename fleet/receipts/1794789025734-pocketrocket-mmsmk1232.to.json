@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794789025734-pocketrocket-mmsmk1232",
  "account": "mmsmk1232",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 71882,
  "claim": "148ff3eb-0e69-4155-b2af-1f50a2ae54a1",
- "count": 0,
- "ok": false,
- "at": 1794789035896,
- "detail": "trade claimed"
+ "count": 71882,
+ "ok": true,
+ "at": 1794789302115,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 71882
+ },
+ "bank": {
+  "count": 71882,
+  "at": 1794789301360
+ },
+ "logout": {
+  "attemptId": "1794789035906-0000029304-0000000001",
+  "at": 1794789302096,
+  "sha256": "589ea7300e140141736fa9729cc4d2857f36179eb5a252c309edec2125cbc264"
+ },
+ "screen": true
 }
