@@ -3,7 +3,10 @@ import{finishBuildDelivery,executeTask}from'../src/coordinator-worker';
 import{initialState,addTasks,startTask,finishTask,preparedNativeDelivery,validateTask}from'../src/coordinator';
 import type{DeliveryResult}from'../src/delivery';
 import * as modelWorker from'../src/model-worker';
-import{mkdtempSync,readFileSync,rmSync}from'node:fs';
+import * as deliveryCli from'../src/delivery-cli';
+import{coordinationDir,projectRoot}from'../src/coordinator-store';
+import{existsSync,mkdirSync,mkdtempSync,readFileSync,rmSync}from'node:fs';
+import{createHash}from'node:crypto';
 import{tmpdir}from'node:os';import{join}from'node:path';
 const source='a'.repeat(64);
 function fixture(){let author=0,delivered=0,reviewed=0,current=source;const records:any[]=[];
@@ -70,6 +73,83 @@ test('full delivery deferral preserves preparation; a deferred diagnostic never 
 });
 
 const limited={ok:false,text:"model exit 1\nYou've hit your weekly limit · resets Nov 17",costUsd:0};
+const blocked={ok:true,text:JSON.stringify({status:'blocked',reason:'fixture stops before gameplay',requiredChange:'fixture only'}),costUsd:0};
+const ready={ok:true,text:JSON.stringify({status:'ready',summary:'fixture source is present'}),costUsd:0};
+async function authorPipeline(replies:({ok:boolean;text:string;costUsd:number}|Error)[],options:{elapsed?:number[];regressionRepair?:boolean;agent?:modelWorker.ModelWorker}={}){
+ const directory=mkdtempSync(join(tmpdir(),'author-quota-')),calls:{agent:string;timeout:number;readOnly:boolean;prompt:string}[]=[];
+ mkdirSync(coordinationDir,{recursive:true});
+ let at=1000,deliveries=0;
+ const clock=spyOn(Date,'now').mockImplementation(()=>at);
+ const model=spyOn(modelWorker,'runModel').mockImplementation(async(agent,prompt,timeout,readOnly)=>{
+  const reply=replies[calls.length],elapsed=options.elapsed?.[calls.length]??1000;
+  calls.push({agent,prompt,timeout,readOnly});at+=elapsed;
+  if(reply instanceof Error)throw reply;
+  if(!reply)throw Error('unexpected model attempt');return reply;
+ });
+ const delivery=spyOn(deliveryCli,'runDeliveryTask').mockImplementation(async definition=>{
+  deliveries++;
+  if(!options.regressionRepair)throw Error('fixture must not start delivery');
+  const report:Awaited<ReturnType<typeof deliveryCli.runDeliveryTask>>={ok:deliveries>1,stage:deliveries>1?'delivered':'failed',evidence:'native',consumer:'mocked fixture only',
+   source:deliveryCli.deliveryFingerprint(definition),reason:'fixture regression',checks:deliveries>1?[]:[{id:'fixture',phase:'regression',exitCode:1,timedOut:false,detail:'fixture only'}],
+   id:definition.id,goal:definition.goal,at,runtimeRevision:source,directory,
+   files:definition.files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(projectRoot,path))).digest('hex')})),
+   ...(deliveries===1?{failedCheck:'fixture'}:{})};
+  return report;
+ });
+ try{
+  const result=await executeTask({id:'author-quota-fixture',kind:'build',goal:'skills',capability:'prayer-order',dependsOn:[],priority:1,
+   estimatedMs:1000,timeoutMs:10000,why:'Fixture author control only; no game action'}, {},directory,'author-quota-fixture',1000,options.agent??'claude');
+  const primary=JSON.parse(readFileSync(join(directory,'author-response-1.json'),'utf8'));
+  const fallbackFile=join(directory,'author-response-1-fallback.json');
+  return{result,calls,deliveries,primary,fallback:existsSync(fallbackFile)?JSON.parse(readFileSync(fallbackFile,'utf8')):undefined,
+   author:JSON.parse(readFileSync(join(directory,'author.json'),'utf8'))};
+ }finally{model.mockRestore();delivery.mockRestore();clock.mockRestore();rmSync(directory,{recursive:true,force:true});}
+}
+test('author quota recovery uses the alternate writable provider and retains both raw replies within one deadline',async()=>{
+ const r=await authorPipeline([limited,blocked],{elapsed:[1500,500]});
+ expect(r.calls.map(c=>[c.agent,c.readOnly,c.timeout])).toEqual([['claude',false,10000],['codex',false,8500]]);
+ expect(r.calls[1]!.prompt).toBe(r.calls[0]!.prompt);
+ expect(r.primary).toMatchObject({...limited,agent:'claude'});
+ expect(r.fallback).toMatchObject({...blocked,agent:'codex'});
+ expect(r.result).toMatchObject({ok:false,agent:'codex',blocked:{reason:'fixture stops before gameplay'}});
+ expect(r.deliveries).toBe(0);
+});
+test('author quota recovery never retries a non-quota failure or a successful reply mentioning quota',async()=>{
+ for(const reply of [{ok:false,text:'model deadline exceeded',costUsd:0},{ok:false,text:'authentication failed',costUsd:0},
+  {ok:true,text:JSON.stringify({status:'blocked',reason:limited.text,requiredChange:'fixture only'}),costUsd:0}]){
+  const r=await authorPipeline([reply]);expect(r.calls).toHaveLength(1);expect(r.calls[0]!.readOnly).toBe(false);
+  expect(r.fallback).toBeUndefined();expect(r.deliveries).toBe(0);
+ }
+});
+test('author quota recovery does not start an alternate after its original deadline is spent',async()=>{
+ const r=await authorPipeline([limited],{elapsed:[10000]});
+ expect(r.calls).toHaveLength(1);expect(r.calls[0]!.timeout).toBe(10000);expect(r.fallback).toBeUndefined();
+ expect(r.result.ok).toBe(false);expect(r.deliveries).toBe(0);
+});
+test('author quota recovery stops after one unavailable alternate and retains its startup error',async()=>{
+ const r=await authorPipeline([limited,new Error('fixture alternate unavailable')]);
+ expect(r.calls.map(c=>[c.agent,c.readOnly])).toEqual([['claude',false],['codex',false]]);
+ expect(r.primary.text).toBe(limited.text);expect(r.fallback).toMatchObject({ok:false,agent:'codex'});
+ expect(r.fallback.text).toContain('fixture alternate unavailable');expect(r.result.ok).toBe(false);expect(r.deliveries).toBe(0);
+});
+test('author quota recovery keeps the successful provider for a diagnosed repair and reports the actual author to review',async()=>{
+ const r=await authorPipeline([limited,ready,ready,limited,{ok:true,text:'{"approved":true,"reason":"mocked source review"}',costUsd:0}],{regressionRepair:true});
+ expect(r.calls.map(c=>[c.agent,c.readOnly])).toEqual([['claude',false],['codex',false],['codex',false],['claude',true],['codex',true]]);
+ expect(r.calls.slice(0,3).map(c=>c.timeout)).toEqual([10000,9000,8000]);
+ expect(r.calls[2]!.prompt).toContain('regression gate failed');
+ expect(r.deliveries).toBe(2);expect(r.result).toMatchObject({ok:true,agent:'codex'});expect(r.author.agent).toBe('codex');
+});
+test('author quota recovery cannot return to the exhausted provider during a later diagnosed repair',async()=>{
+ const r=await authorPipeline([limited,ready,limited],{regressionRepair:true});
+ expect(r.calls.map(c=>[c.agent,c.readOnly])).toEqual([['claude',false],['codex',false],['codex',false]]);
+ expect(r.result).toMatchObject({ok:false,agent:'codex'});expect(r.deliveries).toBe(1);
+});
+test('author quota recovery also preserves writable mode when Codex is the exhausted primary',async()=>{
+ const r=await authorPipeline([limited,blocked],{agent:'codex'});
+ expect(r.calls.map(c=>[c.agent,c.readOnly])).toEqual([['codex',false],['claude',false]]);
+ expect(r.primary).toMatchObject({...limited,agent:'codex'});expect(r.fallback).toMatchObject({...blocked,agent:'claude'});
+ expect(r.result).toMatchObject({ok:false,agent:'claude'});expect(r.deliveries).toBe(0);
+});
 async function reviewPipeline(replies:{ok:boolean;text:string;costUsd:number}[],changeOnFallback=false){
  const f=fixture(),directory=mkdtempSync(join(tmpdir(),'build-review-')),calls:{agent:string;timeout:number;readOnly:boolean}[]=[];
  const model=spyOn(modelWorker,'runModel').mockImplementation(async(agent,_prompt,timeout,readOnly)=>{

@@ -211,23 +211,36 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
  // Preserve every declared pre-existing file before an author edits it.
  for(const file of definition.files)if(existsSync(join(projectRoot,file))){const out=join(directory,'before',file);mkdirSync(dirname(out),{recursive:true});copyFileSync(join(projectRoot,file),out);}
  const authorDeadline=Date.now()+(task.timeoutMs??900000);
- let authorCalls=0;
+ let authorCalls=0,authorFallbackUsed=false;
  const authorModel=async(prompt:string)=>{
   const attempt=++authorCalls;writeFileSync(join(directory,`author-prompt-${attempt}.txt`),prompt);
-  const response=await runModel(agent,prompt,Math.max(1,authorDeadline-Date.now()),false);
-  atomicJson(join(directory,`author-response-${attempt}.json`),response);return response;
+  const budget=authorDeadline-Date.now();
+  const response=budget>0?await runModel(agent,prompt,budget,false):{ok:false,text:'author deadline exceeded',costUsd:0};
+  atomicJson(join(directory,`author-response-${attempt}.json`),{...response,agent});
+  // Only a quota permits one alternate author call. Repairs stay with that provider and the original deadline.
+  const remaining=authorDeadline-Date.now();
+  if(!response.ok&&!authorFallbackUsed&&remaining>0&&/\b(?:you['’]ve hit your (?:weekly|daily|monthly|usage) limit|usage limit reached)\b/i.test(response.text)){
+   authorFallbackUsed=true;agent=agent==='claude'?'codex':'claude';
+   let fallback:Awaited<ReturnType<typeof runModel>>;
+   try{fallback=await runModel(agent,prompt,remaining,false);}
+   catch(error){fallback={ok:false,text:'author startup failed: '+String(error),costUsd:0};}
+   atomicJson(join(directory,`author-response-${attempt}-fallback.json`),{...fallback,agent});
+   return{...fallback,costUsd:response.costUsd+fallback.costUsd};
+  }
+  return response;
  };
  let prepared:any=null;try{prepared=preparedNativeDelivery(loadState(),definition.id,deliveryFingerprint(definition),task.resumeSource);}catch{/* incomplete or changed source needs the ordinary author */}
  if(task.resumeSource&&!prepared)throw Error('explicit prepared source continuation no longer matches a native delivery');
  const built=await finishBuildDelivery(definition.id,prepared,{fingerprint:()=>deliveryFingerprint(definition),
  author:()=>authorLoop({id:definition.id,goal:definition.goal+'\n'+buildWorkOrder(task,dependencies,directory),preset:'',delivery:definition},{maxFixes:2,proveRuns:1,repairRegressions:true},{runModel:authorModel,exists:fileExists,prove:async()=>{throw Error('delivery required');},deliver:runDeliveryTask,diagnose:runDiagnosticTask}),
- deliver:()=>runDeliveryTask(definition),record:result=>atomicJson(join(directory,'author.json'),result),
+ deliver:()=>runDeliveryTask(definition),record:result=>atomicJson(join(directory,'author.json'),{...result,agent}),
  gate:async()=>{const gate=await buildReviewGate({root:projectRoot,isolated,entry:definition.entry,owned:definition.files,startedAt,allow:task.replayAllow});atomicJson(join(directory,'review-gate.json'),{...gate,at:Date.now()});return gate;},
  review:async(result)=>{
  const verdict=await reviewSource(agent==='claude'?'codex':'claude','Review this completed capability independently: the declared source, callers, tests and delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Check that the work order was fulfilled through its real worker and that the acceptance bar in docs/script-contract.md holds. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Work order: '+buildWorkOrder(task,dependencies,directory)+' Definition: '+JSON.stringify(definition)+' Delivery: '+JSON.stringify(result.delivery),300000,directory);
  atomicJson(join(directory,'review.json'),verdict);
  return verdict;
  }},agent);
- return isolated&&built.ok?await publish(built):built;
+ const result={...built,agent};
+ return isolated&&result.ok?await publish(result):result;
  }finally{if(owned())unlinkSync(lock);}
 }
