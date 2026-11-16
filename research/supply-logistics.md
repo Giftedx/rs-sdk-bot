@@ -10,6 +10,8 @@ Autopilot prepares missing items for useful production and quest jobs through th
 
 Travel checks the nearest three banks, then at most eight if those routes fail, within one route deadline. Withdrawal checks all requested items and coins against a current bank generation. Each accepted withdrawal needs an exact pack credit, bank debit and newer generation. A missing response can reconcile from those effects but cannot cause another withdrawal. These tests prove selection and refusal behavior. A native or live transfer still needs its own settled receipt and consumer output.
 
+Source -> consumer -> adapt -> check: the bot session's loot and random-event controls -> fleet-agent trade children -> force `LOOT_WATCH=0` and `RANDOM_EVENTS=0` after the inherited environment so a transfer cannot add unrelated pickup or event work to its asset ledger -> `scripts/fleet-agent.test.ts` checks both missing controls and inherited enabled controls. The order window, claim admission and two-party settlement remain separate requirements; this environment check does not prove a live transfer.
+
 **New consumer enrolment:** wait for fresh `waiting-for-food`, bank observation from this run and bank-distance ≤3 before adding courier demand. Fresh bank data alone races receiver readiness (zero-transfer failure: `.practice/fleet-expansion/first-delivery-attempt.json`). Two live deliveries after the wait each reconciled160 sender debit=recipient credit; pilots returned to bank. `.practice/fleet-expansion/attach-ready.ts` checks enrolment; it is not a general runtime readiness fix. Promote the Thieving55-qualified earner after clean bootstrap handover; bootstrap60 timed out live and is failed. Food purchase cost is unknown.
 
 

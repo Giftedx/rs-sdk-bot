@@ -22,6 +22,12 @@ test('a trade runs with the idle guard off, whatever the agent inherited: its or
  expect(tradeEnvironment('/fleet',{},'current').STALL_TICKS).toBe('0');
 });
 
+test('a transfer keeps unrelated loot and random events off even when the agent inherited them enabled',()=>{
+ for(const inherited of [{},{LOOT_WATCH:'1',RANDOM_EVENTS:'1'}]){
+  expect(tradeEnvironment('/fleet',inherited,'current')).toMatchObject({LOOT_WATCH:'0',RANDOM_EVENTS:'0'});
+ }
+});
+
 test('a sync child reports its own RESULT line, or its exit code when it printed none',()=>{
  expect(syncResult('pulling\nRESULT ok fleet-sync side=claude-cloud accounts=4 lease=none committed=false pushed=false\n',0)).toBe('RESULT ok fleet-sync side=claude-cloud accounts=4 lease=none committed=false pushed=false');
  expect(syncResult('error: cannot pull\n',1)).toBe('RESULT fail fleet-sync exit 1');

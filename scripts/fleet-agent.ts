@@ -49,8 +49,9 @@ const TRADE_SCRIPT=resolve(import.meta.dir,'../scripts/fleet-trade.ts');
 // idle guard (packages/core/src/bot.ts): a trade waits for its partner, and its own order window bounds it. With the
 // guard on, a side that waited 900 ticks was ended, a giver's receipt read `reconcile` with nothing given, and its
 // trade claim then stayed held (live: TheFullMonty waited for a PC account that could not log in).
+// A transfer does only its declared route and items. Incidental loot or random-event work changes that asset ledger.
 export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=capabilityRevision([TRADE_SCRIPT],root)){
-    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT,STALL_TICKS:'0'};
+    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT,STALL_TICKS:'0',LOOT_WATCH:'0',RANDOM_EVENTS:'0'};
 }
 
 // The swarm leaves its own stop file when an account's job leaves the plan, as when the planner takes the account off
