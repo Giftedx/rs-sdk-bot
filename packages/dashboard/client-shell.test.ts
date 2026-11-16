@@ -8,6 +8,7 @@ const pricing=(S:any)=>new Function('S','window',`${pricingSource};return {price
 const healthSource=shell.slice(shell.indexOf('  function recordedHp('),shell.indexOf('  const curLevel='));
 const questPointSource=shell.slice(shell.indexOf('  function questPointsOf('),shell.indexOf('  function questReqs('));
 const questStateSource=shell.split('\n').find(line=>line.startsWith('  const questState='))??'';
+const reportedTotalSource=shell.split('\n').find(line=>line.startsWith('  const reportedTotal='))??'';
 const equipmentValue=new Function(`${shell.slice(shell.indexOf('  function equipmentValue('),shell.indexOf('  function wornBonuses('))};return equipmentValue;`)();
 
 function fleetOverlay(goals:any,owner=true,clock:any={now:Date.now()}){
@@ -1545,7 +1546,7 @@ test('historical shared HP stays dated in the party and orb without becoming cur
  const skills=[{name:'Hitpoints',level:30}],baseOnly={name:'Worker',at:now,skills,...healthObservation({at:now,skills},now)};
  expect(render(baseOnly)).not.toContain('orb-hp');
  const skillStart=shell.indexOf("    if(selectedTab==='skills')"),skillCode=shell.slice(skillStart,shell.indexOf('\n    else if',skillStart));
- const skillHtml=new Function('b','Date',`${healthSource}const selectedTab='skills',skills=['Hitpoints'],reported=()=>true,level=()=>b.skills[0],asset=String,skillFile=String,realSkill=()=>true,combatLine=()=>'',bankedLine=()=>'';let html='';${skillCode};return html;`)
+  const skillHtml=new Function('b','Date',`${healthSource}const selectedTab='skills',skills=['Hitpoints'],reported=()=>true,level=()=>b.skills[0],asset=String,skillFile=String,realSkill=()=>true,combatLine=()=>'',bankedLine=()=>'';${reportedTotalSource}let html='';${skillCode};return html;`)
   (baseOnly,{now:()=>now});
  expect(skillHtml).toContain('<span>—<small>／30</small>');expect(skillHtml).not.toContain('<span>30<small>／30</small>');
 });

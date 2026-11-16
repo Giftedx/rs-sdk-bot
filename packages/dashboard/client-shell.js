@@ -223,9 +223,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return {cells:rows.filter(r=>r.item),note:items.some(i=>i&&Object.hasOwn(i,'slot'))?'Inventory positions are unverified; items are listed in reported order.':'Inventory positions are not reported; items are listed in reported order.'};
   }
   // The combat level line under the Skills tab, with the levels each style needs for the next one on hover.
-  function combatLine(b){const X=window.atlasXp;if(!b?.skills?.length||!X?.combat)return '';const lv=Object.fromEntries(b.skills.map(s=>[s.name,s.level])),c=X.combat(lv);
+  const reportedTotal=b=>{const levels=b?.skills?.filter(s=>realSkill(s)&&Number.isSafeInteger(s.level)&&s.level>0);return levels?.length?levels.reduce((n,s)=>n+s.level,0):null;};
+  function combatObservation(b){
+    const names=['Attack','Strength','Defence','Hitpoints','Ranged','Prayer','Magic'],rows=(b?.skills||[]).filter(s=>names.includes(s?.name));
+    const complete=rows.length===names.length&&new Set(rows.map(s=>s.name)).size===names.length&&rows.every(s=>Number.isInteger(s.level)&&s.level>=1&&s.level<=99);
+    const derived=complete?window.atlasXp?.combat?.(Object.fromEntries(rows.map(s=>[s.name,s.level]))):null,reported=Number.isSafeInteger(b?.combat)&&b.combat>0?b.combat:null,level=reported??derived?.level??null;
+    return {level,next:derived?.level===level?derived?.next??null:null};
+  }
+  function combatLine(b){const c=combatObservation(b);if(c.level==null)return '<div class="skill-total combat-line">Combat level: —</div>';
     const n=c.next,parts=n?[['Attack/Strength',n.melee],['Defence/Hitpoints',n.defence],['Prayer',n.prayer],['Ranged',n.ranged],['Magic',n.magic]].filter(([,v])=>v!=null).map(([k,v])=>v+' '+k):[];
-    return '<div class="skill-total combat-line" title="'+(n?'Next combat level ('+(c.level+1)+'): '+E(parts.join(', or '))+'.':'Highest combat level')+'">Combat level: '+c.level+(n&&parts.length?' <small>next: '+E(parts[0])+'</small>':'')+'</div>';}
+    return '<div class="skill-total combat-line" title="'+(n?'Next combat level ('+(c.level+1)+'): '+E(parts.join(', or '))+'.':c.level===126?'Highest combat level':'Next-level estimate needs complete base levels matching this combat level.')+'">Combat level: '+c.level+(n&&parts.length?' <small>next: '+E(parts[0])+'</small>':'')+'</div>';}
   // Banked XP line (RuneLite's Banked Experience panel): under the Skills tab, each skill the bank holds XP for
   // (bankedXp), the most first, with the levels it gains; the tooltip lists them all.
   function bankedLine(b){if(typeof bankedXp!=='function'||!Array.isArray(b?.bank))return '';
@@ -241,13 +248,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // the newest record with a death is an older one. A recap is of the reported death when its death time is within
   // 10 minutes before the report (the RESULT line comes when the run ends).
   let recap={name:null,state:'none',data:null,error:'',deathAt:null,at:0};
+  let recapRequest=0;
   const recapOfDeath=()=>Number.isFinite(recap.data?.at)&&Number.isFinite(recap.deathAt)&&recap.data.at<=recap.deathAt+60_000&&recap.deathAt-recap.data.at<=10*60_000;
   const recapStale=b=>!!b?.death&&!b.practice&&(recap.name!==b.name||recap.deathAt!==b.death.at||(recap.state==='ok'&&(recap.data?.kept==null||!recapOfDeath())||recap.state==='none'||recap.state==='error')&&Date.now()-recap.at>30_000);
   function loadRecap(name){
-    const deathAt=S?.bots?.find(x=>x.name===name)?.death?.at??null,at=Date.now();
+    const deathAt=S?.bots?.find(x=>x.name===name)?.death?.at??null,at=Date.now(),request=++recapRequest;
     if(!window.atlasOperator()){recap={name,state:'off',data:null,error:'',deathAt,at};paintRecap();return;}
     recap={name,state:'loading',data:null,error:'',deathAt,at};paintRecap();
-    fetch('/api/death-recap?name='+encodeURIComponent(name)).then(r=>r.ok?r.json():Promise.reject(Error('HTTP '+r.status))).then(j=>{if(recap.name!==name||recap.at!==at)return;recap={name,state:j.recap?'ok':'none',data:j.recap||null,error:'',deathAt,at};paintRecap();minimap();},e=>{if(recap.name!==name||recap.at!==at)return;recap={name,state:'error',data:null,error:String(e?.message||e),deathAt,at};paintRecap();});
+    fetch('/api/death-recap?name='+encodeURIComponent(name)).then(r=>r.ok?r.json():Promise.reject(Error('HTTP '+r.status))).then(j=>{if(request!==recapRequest)return;recap={name,state:j.recap?'ok':'none',data:j.recap||null,error:'',deathAt,at};paintRecap();minimap();},e=>{if(request!==recapRequest)return;recap={name,state:'error',data:null,error:String(e?.message||e),deathAt,at};paintRecap();});
   }
   function recapHtml(r){
     const head=`<div class="xp-head"><span>Death · ${E(safeName(r.name||''))}</span>${r.data?.at?'<span class="xp-muted">'+age(r.data.at)+' ago</span>':''}</div>`;
@@ -267,7 +275,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   // The Activity plugin (operations.js) draws the card at its top; a new state of the recap draws the plugin again.
   // Each draw of Activity checks the watched account: a newer death or a respawn reads the recap again.
-  window.atlasRecapHtml=()=>{const b=typeof account==='function'?account():null;if(recap.state!=='loading'&&recapStale(b))loadRecap(b.name);return recap.name?'<div class="death-recap"><div class="xp-box">'+recapHtml(recap)+'</div></div>':'';};
+  window.atlasRecapHtml=()=>{const b=typeof account==='function'?account():null;if(!b?.death||b.practice)return '';if(recapStale(b))loadRecap(b.name);return recap.name===b.name&&recap.deathAt===b.death.at?'<div class="death-recap"><div class="xp-box">'+recapHtml(recap)+'</div></div>':'';};
   function paintRecap(){if(selectedPlugin==='activity'&&window.atlasPlugins?.activity)window.atlasPlugins.activity.render(body);}
   // Quest Journal, Fleet view (RuneLite's Quest List colours over every account): each quest with how many of our
   // accounts finished it. Any unknown state makes it grey; otherwise all finished is green, some finished or
@@ -289,7 +297,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function gamePanel(){
     const b=account(),panel=$('#game-panel');let html='';
     if(selectedTab==='inventory'){const dm=deathMarks(b);if(dm)for(const it of b.equipment||[])deathCls(dm,it);if(Array.isArray(b?.inventory)){const layout=inventoryLayout(b.inventory);html='<div class="inventory-grid">'+layout.cells.map(({item,index,slot})=>itemCell(item,index,deathCls(dm,item),slot)).join('')+'</div>'+(layout.note?'<p class="game-muted">'+E(layout.note)+'</p>':'')+invWorth(b.inventory)+teleLine(b);}else html='<p class="game-muted">Select an account with a reported inventory.</p>';}
-    if(selectedTab==='skills'){html='<div class="skill-grid">'+skills.filter(n=>reported(b,n)).map(n=>{const s=level(n);return `<button class="game-skill" data-skill="${n}" title="${n}${s?(s.xp!=null?' · '+s.xp.toLocaleString()+' XP':' · level '+s.level):' · not reported by this game'}${n==='Hitpoints'?healthNote(b):''}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt=""><span>${s?n==='Hitpoints'?recordedHp(b)?.now??'—':s.currentLevel??s.level:'—'}<small>／${s?s.level:'—'}</small></span></button>`;}).join('')+'</div><div class="skill-total">Total level: '+(b?.skills?.filter(realSkill).reduce((n,s)=>n+s.level,0)??'—')+'</div>'+combatLine(b)+bankedLine(b);}
+    if(selectedTab==='skills'){html='<div class="skill-grid">'+skills.filter(n=>reported(b,n)).map(n=>{const s=level(n);return `<button class="game-skill" data-skill="${n}" title="${n}${s?(s.xp!=null?' · '+s.xp.toLocaleString()+' XP':' · level '+s.level):' · not reported by this game'}${n==='Hitpoints'?healthNote(b):''}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt=""><span>${s?n==='Hitpoints'?recordedHp(b)?.now??'—':s.currentLevel??s.level:'—'}<small>／${s?s.level:'—'}</small></span></button>`;}).join('')+'</div><div class="skill-total">Total level: '+(reportedTotal(b)??'—')+'</div>'+combatLine(b)+bankedLine(b);}
     if(selectedTab==='equipment'&&b?.equipmentObserved!==false&&b?.equipment?.length&&b.equipment.every(e=>e.slot==null)){html='<div class="game-list">'+b.equipment.map(it=>`<span class="equip-row">${icon(it,32)}<span>${E(it.name)}</span></span>`).join('')+'</div><p class="game-muted">The '+E(b.side||'other')+' side reports worn items without their slots. Snapshot '+age(b.at)+' old.</p>';}
     else if(selectedTab==='equipment'){const slots=[[0,'Head',78,4,0],[1,'Cape',37,43,1],[2,'Neck',78,43,2],[13,'Ammo',119,43,10],[3,'Weapon',22,82,3],[4,'Body',78,82,5],[5,'Shield',134,82,6],[7,'Legs',78,122,7],[9,'Hands',22,162,8],[10,'Feet',78,162,9],[12,'Ring',134,162,4]];const dm=deathMarks(b),known=Array.isArray(b?.equipment)&&b.equipmentObserved!==false;html='<div class="equipment-doll">'+slots.map(([id,name,x,y,f])=>{const it=known?b.equipment.find(e=>e.slot===id):null,su=setupSlot(b,id,it);return `<button class="equipment-slot${su.cls}${deathCls(dm,it)}" style="left:${x}px;top:${y}px" data-equipment="${id}" title="${(it?E(it.name)+(it.count>1?' × '+E(it.count):''):name+' · '+(known?'empty':'not reported'))+E(su.tip)}">${it?icon(it,32)+(it.count>1?qty(it.count):'')+chargeTag(it):'<i class="worn-icon" style="background-position:-'+32*(f%4)+'px -'+32*Math.floor(f/4)+'px"></i>'}</button>`;}).join('')+'</div>'+(b?'<p class="game-muted">'+(known?(window.atlasOperator()?'Observed ':'Updated ')+''+age(b.at)+' ago':'Equipment is not reported for this account.')+'</p>':'<p class="game-muted">Select an account in the title bar.</p>')+equipStats(b)+setupPanel(b);}
     if(selectedTab==='quests'&&questScope==='fleet')html=fleetQuests();
@@ -559,9 +567,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const rank=(board)=>b?.ranks?.find(r=>r.board===board);
     const cell=(skill,label,levelText,title)=>`<div class="hs-cell" title="${E(title)}"><img src="${asset('skill-'+skillFile(skill)+'.png')}" alt="${E(label)}"><span>${levelText}</span></div>`;
     const grid=b?skills.filter(n=>reported(b,n)).map(n=>{const k=b.skills?.find(x=>x.name===n),r=rank(n);return cell(n,n,k?String(k.level):'--',n+(k?'\nLevel: '+k.level+(k.xp!=null?'\nExperience: '+nf(k.xp):''):' is not reported')+(r?'\nRank: '+nf(r.rank)+(r.delta?(r.delta>0?', up ':', down ')+nf(Math.abs(r.delta))+(r.since?' in '+age(r.since):''):''):''));}).join(''):'';
-    const overall=b?.ranks?.find(r=>r.board==='Overall');const total=b?.skills?.filter(realSkill).reduce((n,k)=>n+k.level,0);
+    const overall=b?.ranks?.find(r=>r.board==='Overall');const total=reportedTotal(b);
     const extra=(b?.ranks||[]).filter(r=>['Quest Points','Equipment','Bank','Runite'].includes(r.board)).map(r=>`<div class="hs-row"><span>${E(r.board)}</span><span>Rank ${nf(r.rank)}</span><span>${E(r.level)}${r.board==='Quest Points'?' QP':''}</span></div>`).join('');
-    return b?`<div class="hs-head"><span>${E(safeName(b.name))}</span><span>${overall?'Rank '+nf(overall.rank):''}</span></div><div class="hs-grid">${grid}<div class="hs-cell hs-overall" title="${E('Overall\nTotal level: '+total+(overall?'\nRank: '+nf(overall.rank)+'\nTime: '+overall.time:''))}"><img src="${asset('rl-xp.png')}" alt="Overall"><span>${total??'--'}</span></div></div>${extra?'<div class="hs-extra">'+extra+'</div>':''}`
+    return b?`<div class="hs-head"><span>${E(safeName(b.name))}</span><span>${overall?'Rank '+nf(overall.rank):''}</span></div><div class="hs-grid">${grid}<div class="hs-cell hs-overall" title="${E('Overall\nTotal level: '+(total??'not reported')+(overall?'\nRank: '+nf(overall.rank)+'\nTime: '+overall.time:''))}"><img src="${asset('rl-xp.png')}" alt="Overall"><span>${total??'--'}</span></div></div>${extra?'<div class="hs-extra">'+extra+'</div>':''}`
         :worldLookup&&worldLookup.name.toLowerCase()===name.toLowerCase()?lookupCard(worldLookup):'<p class="xp-muted">'+(name?'Press Enter to look up '+E(name)+'.':'Type a player name.')+'</p>';
   }
   function refreshHiscoreAccount(){
@@ -1374,7 +1382,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!window.atlasOperator()){if(PUBLIC_HIDDEN.includes(id))id='fleet';else if(id==='board'){const key=typeof chosenBoard==='string'&&typeof boardKey==='function'?boardKey(chosenBoard):'',top=(S?.rivals||[]).find(x=>boardKey(x.board)===key);if(!top)return;rivalBoard=top.board;hiscoresMode='rivals';id='boards';}}
     const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();body._h=null;if(priorPlugin!==id)enter(body);$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
     // Activity opens with the death recap of the watched account when it died.
-    if(id==='activity'){const da=account();if(recap.state!=='loading'&&recapStale(da))loadRecap(da.name);}
+    if(id==='activity'){const da=account();if(recapStale(da))loadRecap(da.name);}
     body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
     rail.querySelectorAll('[data-client-plugin]').forEach(b=>{b.classList.toggle('on',b.dataset.clientPlugin===id);b.setAttribute('aria-pressed',String(b.dataset.clientPlugin===id));});syncSidebar();if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
   }
@@ -2446,9 +2454,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const entries=Object.hasOwn(S?.economy||{},'itemPricesByName')?Object.entries(S.economy.itemPricesByName||{}).map(([name,p])=>[p.name||name,p.value]):Object.entries(S?.economy?.itemValues||{}),v=entries.find(([k])=>k.toLowerCase()===q);if(v)return v[0]+': value '+gp(v[1])+ha(v[0])+' · no market offer.';
     const a=typeof itemAlch==='object'?Object.keys(itemAlch).find(k=>k.toLowerCase()===q):null;return a&&ha(a)?a+ha(a).replace(' · ',': ')+' · no market offer.':'No price for '+q+'.';}
   function chatLookup(text){if(/^!price\b/i.test(text))return priceLine(text.replace(/^!price\s*/i,''));const b=account();if(!b)return 'Follow an account first (title bar or ::focus <name>).';const [cmd,...rest]=text.slice(1).toLowerCase().split(/\s+/),arg=rest.join(' '),who=safeName(b.name),rank=board=>b.ranks?.find(r=>r.board===board),fmt=(board,level)=>{const r=rank(board);return level+(r?.rank?' · rank #'+nf(r.rank):'');};
-    if(cmd==='cmb'){const lv=Object.fromEntries((b.skills||[]).map(s=>[s.name,s.level])),c=window.atlasXp?.combat?.(lv);return c?who+': combat level '+c.level+'.':who+': no levels reported.';}
+    if(cmd==='cmb'){const c=combatObservation(b);return who+': '+(c.level==null?'no combat reported':'combat level '+c.level)+'.';}
     if(cmd==='qp'){const q=questPointsOf(b);return who+': '+(q?q.points+' quest points'+(q.rank?' · rank #'+nf(q.rank):''):'quest points not reported')+'.';}
-    if(cmd==='total'){const t=b.skills?.filter(realSkill).reduce((n,s)=>n+s.level,0);return t?who+': total level '+fmt('Overall',t)+'.':who+': no levels reported.';}
+    if(cmd==='total'){const t=reportedTotal(b);return t!=null?who+': total level '+fmt('Overall',t)+'.':who+': no levels reported.';}
     const alias={att:'Attack',atk:'Attack',def:'Defence',str:'Strength',hp:'Hitpoints',range:'Ranged',ranging:'Ranged',pray:'Prayer',mage:'Magic',cook:'Cooking',wc:'Woodcutting',fletch:'Fletching',fish:'Fishing',fm:'Firemaking',craft:'Crafting',smith:'Smithing',mine:'Mining',herb:'Herblore',agil:'Agility',thiev:'Thieving',rc:'Runecraft'};
     const skill=alias[arg]||skills.find(n=>n.toLowerCase()===arg||n.toLowerCase().startsWith(arg)&&arg.length>=3);if(!skill)return 'Usage: !lvl <skill>, for example !lvl mining.';const s=level(skill);return s?who+': '+skill+' level '+fmt(skill,s.level)+'.':who+': '+skill+' is not reported.';}
   // Opponent information (RuneLite opponentinfo): the followed account's target in the 3D view, with its name, combat
