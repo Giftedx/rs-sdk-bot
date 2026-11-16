@@ -1,8 +1,11 @@
 import {test,expect} from 'bun:test';
-import {boundedRecoveryPlan,releaseForBoundedInspection,assertCompletedInspectionMission} from './cloud-recovery';
-import {beginSessionAttempt,readLogoutProof,listAttempts} from '../packages/core/src/session-lifecycle';
+import {boundedRecoveryPlan,prepareBoundedRecovery,releaseForBoundedInspection,assertCompletedInspectionMission} from './cloud-recovery';
+import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir,lifecycleOwner} from '../packages/core/src/session-lifecycle';
 import {missionSignature} from '../packages/core/src/session-admission';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {randomUUID} from 'node:crypto';
+import {fleetGitWindow,fleetCheckoutId,commitFleetGitRecord,pushFleetGitRecord} from '../packages/core/src/fleet-lease';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {assertBoundedRecoveryQueue} from '../packages/core/src/bounded-recovery';
@@ -17,6 +20,39 @@ test('bounded recovery parks only its inspectors and preserves reservation bytes
  for(const change of [{...plan,maxBots:3},{...plan,jobs:[plan.jobs[0],{...plan.jobs[1],enabled:true}]},{...plan,jobs:[plan.jobs[0],{...plan.jobs[1],script:'old.ts'}]}])
   expect(()=>boundedRecoveryPlan(change,targets,['Rod','Other'])).toThrow();
 });
+test('bounded recovery retries preserve only exact selected parked owner copies without releasing held state',()=>{
+ const base=mkdtempSync(join(tmpdir(),'bounded-parked-')),dir=join(base,'.practice/coordinator');mkdirSync(dir,{recursive:true});
+ const git=(...args:string[])=>execFileSync('git',args,{cwd:base,encoding:'utf8',stdio:'pipe',windowsHide:true}).trim();
+ try{
+  const remote=join(base,'origin.git');git('init','--bare',remote);git('init');git('remote','add','origin',remote);
+  const nonce=randomUUID(),pid=2147483646,server='rs-sdk-demo.fly.dev',root=join(base,'.practice/session-lifecycle');
+  const attempt=beginSessionAttempt({account:'Rod',server},{root,owner:{...lifecycleOwner(),pid,sharedClaimNonce:nonce}});attempt.record('connect-failed');
+  const receipt=listAttempts('Rod',server,{root})[0]!,scope=[{account:'Rod',attemptId:attempt.attemptId,endedAt:receipt.receipt!.updatedAt+1}];
+  const authority=fleetGitWindow(base),tree=authority(['hash-object','-w','-t','tree','--stdin'],'');
+  const claim={kind:'swarm',account:'rod',server,side:'cloud',checkout:fleetCheckoutId(base),host:'previous-fixture-host',pid,nonce,phase:'held',at:receipt.receipt!.createdAt};
+  const ref='refs/heads/fleet-trade-claim/rod',head=commitFleetGitRecord(authority,undefined,tree,'Fixture held claim\n\n'+JSON.stringify(claim));pushFleetGitRecord(authority,ref,head);
+  const ends=join(base,'.practice/swarm-deaths.json'),state=join(dir,'state.json'),file=join(dir,'jobs.json');
+  writeFileSync(ends,JSON.stringify({Rod:{at:scope[0]!.endedAt,reason:'exit 1 after 1 runs'}}));writeFileSync(state,JSON.stringify({tasks:[]}));
+  const parked={...plan.jobs[0],enabled:false},raw=JSON.stringify({jobs:[parked],coordination:{}});writeFileSync(file,raw);
+  const receiptFile=join(accountDir('Rod',server,root),'attempts',attempt.attemptId+'.json');
+  const before={end:readFileSync(ends),state:readFileSync(state),receipt:readFileSync(receiptFile)};
+  const next=prepareBoundedRecovery(base,plan,scope,['Rod','Other'],'cloud');
+  expect(next.jobs[1]).toBe(plan.jobs[1]);expect(next.jobs[0].enabled).toBe(false);expect(readFileSync(file,'utf8')).toBe(raw);
+  expect(readFileSync(ends)).toEqual(before.end);expect(readFileSync(state)).toEqual(before.state);expect(readFileSync(receiptFile)).toEqual(before.receipt);
+  expect(authority(['ls-remote','--refs','origin',ref]).split(/\s/)[0]).toBe(head);
+  for(const jobs of [[{...parked,enabled:true}],[{...parked,account:'Other'}],[{...parked,script:'scripts/other.ts'}],[{...parked,env:{...parked.env,LOOT_WATCH:'1'}}],[{...parked,coordinatorOwner:'coordinator',coordinatorTask:'old'}],[parked,parked]]){
+   const bytes=JSON.stringify({jobs,coordination:{}});writeFileSync(file,bytes);
+   expect(()=>prepareBoundedRecovery(base,plan,scope,['Rod','Other'],'cloud')).toThrow();expect(readFileSync(file,'utf8')).toBe(bytes);
+  }
+  writeFileSync(file,raw);
+  const settings=JSON.stringify({jobs:[parked],coordination:{focusCapability:'other'}});writeFileSync(file,settings);
+  expect(()=>prepareBoundedRecovery(base,plan,scope,['Rod','Other'],'cloud')).toThrow();expect(readFileSync(file,'utf8')).toBe(settings);writeFileSync(file,raw);
+  for(const changed of [[{...scope[0]!,endedAt:scope[0]!.endedAt+1}],[{...scope[0]!,attemptId:'1794807014059-0000010716-0000000001'}]]){
+   expect(()=>prepareBoundedRecovery(base,plan,changed,['Rod','Other'],'cloud')).toThrow();expect(readFileSync(file,'utf8')).toBe(raw);
+  }
+  expect(()=>prepareBoundedRecovery(base,plan,scope,['Rod','Other'],'other')).toThrow();expect(readFileSync(file,'utf8')).toBe(raw);
+ }finally{rmSync(base,{recursive:true,force:true});}
+},30000);
 test('completed recovery admits only its new inspector mission and retains exact success/producer lineage',()=>{
  const root=mkdtempSync(join(tmpdir(),'completed-inspection-')),source='a'.repeat(64),server='rs-sdk-demo.fly.dev',runId='task-native-recovery';
  const attempt=beginSessionAttempt({account:'Rod',server},{root,owner:{pid:process.pid,coordinatorRunId:runId,workerRelease:source,script:'scripts/session-check.ts',role:'recovery',participants:null}});
