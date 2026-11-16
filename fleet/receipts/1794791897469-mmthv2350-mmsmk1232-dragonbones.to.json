@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794791897469-mmthv2350-mmsmk1232-dragonbones",
  "account": "mmsmk1232",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 105,
  "claim": "b4ecda6c-2cf1-4b24-948c-baaa90b1521b",
- "count": 0,
- "ok": false,
- "at": 1794791908807,
- "detail": "trade claimed"
+ "count": 105,
+ "ok": true,
+ "at": 1794792164793,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 105
+ },
+ "bank": {
+  "count": 105,
+  "at": 1794792164100
+ },
+ "logout": {
+  "attemptId": "1794791908817-0000024472-0000000001",
+  "at": 1794792164782,
+  "sha256": "2ffa66c35b054630c96edc5ff9ca3fd9eed73b1ea57964a1203d00c8ff187622"
+ },
+ "screen": true
 }
