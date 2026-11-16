@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794802194435,
+ "at": 1794803037806,
  "jobs": [
   {
    "account": "Balls",
@@ -124,6 +124,29 @@
    "role": "supply"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "2",
+    "QUANTITY": "500",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "11000",
+    "CASH_RESERVE": "3000000",
+    "ORDER_KEY": "pocketrocket-overall-cannon500-funded",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-90be4ff6-439c-46f1-acc8-6d1840011579"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-pocketrocket-overall-cannon500-funded [task-90be4ff6-439c-46f1-acc8-6d1840011579]",
+   "role": "supply"
+  },
+  {
    "account": "NabTheKnob",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -132,18 +155,18 @@
    ],
    "env": {
     "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "60",
+    "TARGET_LEVEL": "80",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-f84a3a3c-c2db-4baf-987a-b5d23619f545"
+    "COORDINATOR_RUN_ID": "task-bb60833c-36d7-4f71-8c64-5b00f1ab1358"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-nabtheknob-trooper-defence60-owned [task-f84a3a3c-c2db-4baf-987a-b5d23619f545]",
+   "goal": "chain-cow-progress-order-nabtheknob-defence80 [task-bb60833c-36d7-4f71-8c64-5b00f1ab1358]",
    "role": "helper"
   }
  ],
