@@ -17,6 +17,10 @@ test('a journaled successor, unknown owner or surviving child cannot prove bound
  expect(observeBoundedOwners(base,binding,[{pid:11,nonce:'old'}],deps)).toMatchObject({known:true,settled:false,active:[22]});
  expect(observeBoundedOwners(base,binding,[],{...deps,command:()=>null})).toMatchObject({known:false,settled:false});
  expect(observeBoundedOwners(base,binding,[],{...deps,alive:()=>false,groups:()=>[33]})).toMatchObject({known:true,settled:false,active:[33]});
+ writeFileSync(join(dir,'swarm-owner.json'),JSON.stringify({pid:33,nonce:'prior-swarm',watchId:'prior-watch',plan:'prior-plan',side:'cloud'}));
+ expect(observeBoundedOwners(base,binding,[],{...deps,groups:()=>[]})).toMatchObject({known:true,settled:false,active:[22]});
+ expect(observeBoundedOwners(base,binding,[],{...deps,groups:ids=>ids.includes(33)?[44]:[]})).toMatchObject({known:false,settled:false});
+ unlinkSync(join(dir,'swarm-owner.json'));
  expect(observeBoundedOwners(base,{...binding,plan:'wrong'},[],deps)).toMatchObject({known:false,settled:false});
  writeFileSync(join(dir,'owner.json'),'partial');
  expect(observeBoundedOwners(base,binding,[],deps)).toMatchObject({known:false,settled:false});

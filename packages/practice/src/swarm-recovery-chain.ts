@@ -14,6 +14,20 @@ import {killTree} from './proc';
 import {SWARM_STOP,clearSwarmStop} from '../../../scripts/swarm';
 import {withPlanWrite} from '../../core/src/plan-lock';
 
+export function materializeSwarmRuntime(sourceRoot:string,root:string){
+ const links:string[]=[];
+ for(const path of ['vendor/rs-sdk/sdk','vendor/rs-sdk/server']){const p=join(root,path);if(lstatSync(p).isSymbolicLink())unlinkSync(p);mkdirSync(p,{recursive:true});}
+ for(const path of runtimeTrees)copySourceTree(join(sourceRoot,path),join(root,path));
+ for(const dir of ['vendor/rs-sdk/server/webclient','vendor/rs-sdk/server/engine']){
+  mkdirSync(join(root,dir),{recursive:true});
+  if(existsSync(join(sourceRoot,dir,'package.json')))copyFileSync(join(sourceRoot,dir,'package.json'),join(root,dir,'package.json'));
+  const link=join(root,dir,'node_modules');linkSourceDirectory(join(sourceRoot,dir,'node_modules'),link);if(existsSync(link))links.push(link);
+ }
+ copySourceTree(join(sourceRoot,'vendor/rs-sdk/server/engine/src'),join(root,'vendor/rs-sdk/server/engine/src'));
+ copySourceTree(join(sourceRoot,'vendor/rs-sdk/server/content'),join(root,'vendor/rs-sdk/server/content'));
+ return links;
+}
+
 // An actual Swarm CLI with byte-identical source, loopback profiles and a private bare Git authority.
 // Recovery itself stays in the outer guarded dispatcher; no live controller root/server is redirected.
 export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;directory:string;account:string;server:string;profile:string;save:string;observerDelivery:string}){
@@ -21,7 +35,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
  const children:ReturnType<typeof Bun.spawn>[]=[],hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
  const put=(p:string,value:unknown)=>{mkdirSync(dirname(join(root,p)),{recursive:true});writeFileSync(join(root,p),JSON.stringify(value,null,2));};
  let passed=false;const privateLinks:string[]=[];
- const git=(args:string[])=>{const r=Bun.spawnSync(['git',...args],{cwd:root,stdout:'pipe',stderr:'pipe'});if(r.exitCode!==0)throw Error('private swarm Git operation failed');return r.stdout.toString().trim();};
+ const git=(args:string[])=>{const r=Bun.spawnSync(['git',...args],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});if(r.exitCode!==0)throw Error('private swarm Git operation failed');return r.stdout.toString().trim();};
  const wait=async(check:()=>boolean,reason:string,ms=90000)=>{const end=Date.now()+ms;while(Date.now()<end){if(check())return;if(children.some(p=>p.exitCode!==null&&p.exitCode!==0))throw Error('private swarm child exited; retain phase logs');await Bun.sleep(100);}throw Error('private swarm '+reason);};
  const json=(p:string)=>{try{return JSON.parse(readFileSync(join(root,p),'utf8'));}catch{return null;}};
  try{
@@ -33,14 +47,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   if(verification.exitCode!==0)throw Error('private swarm observer saved-proof verification failed');
   copyFileSync(join(input.observerDelivery,'report.json'),join(directory,'observer-delivery.json'));
   // Materialize only runtime code. Never copy any existing account profile or bot.env.
-  for(const path of ['vendor/rs-sdk/sdk','vendor/rs-sdk/server']){const p=join(root,path);if(lstatSync(p).isSymbolicLink())unlinkSync(p);mkdirSync(p,{recursive:true});}
-  for(const path of runtimeTrees)copySourceTree(join(sourceRoot,path),join(root,path));
-  for(const dir of ['vendor/rs-sdk/server/webclient','vendor/rs-sdk/server/engine']){
-   mkdirSync(join(root,dir),{recursive:true});
-   if(existsSync(join(sourceRoot,dir,'package.json')))copyFileSync(join(sourceRoot,dir,'package.json'),join(root,dir,'package.json'));
-   const link=join(root,dir,'node_modules');linkSourceDirectory(join(sourceRoot,dir,'node_modules'),link);if(existsSync(link))privateLinks.push(link);
-  }
-  copySourceTree(join(sourceRoot,'vendor/rs-sdk/server/engine/src'),join(root,'vendor/rs-sdk/server/engine/src'));
+  privateLinks.push(...materializeSwarmRuntime(sourceRoot,root));
   if(existsSync(join(root,'.practice/cache'))&&lstatSync(join(root,'.practice/cache')).isSymbolicLink())unlinkSync(join(root,'.practice/cache'));
   assertNativeFixtureRoot(root,server);
   const profileLink=join(root,'vendor/rs-sdk/bots',account);symlinkSync(dirname(profile),profileLink,process.platform==='win32'?'junction':'dir');privateLinks.push(profileLink);
@@ -58,7 +65,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   const reservations=reserved.map(account=>({account,enabled:false,repeat:false,role:'reserved'}));
   const planPath=join(root,'.practice/selected-swarm.json'),plan={maxBots:4,minFreeGB:4,fleetCapacity:4,jobs:[job,...reservations]};put('.practice/selected-swarm.json',plan);
   const env={...process.env,FLEET_SIDE:'cloud',FLEET_DIR:join(root,'fleet'),SWARM_PLAN:planPath,FLEET_ADOPT:'0',CLOUD_WATCH_ID:'',WORKER_RELEASE:'',WORKER_ENTRY:'',COORDINATOR_RUN_ID:'',DEMO_OK:'1'};
-  const launch=(label:string)=>{const p=Bun.spawn([process.execPath,join(root,'scripts/swarm.ts'),planPath],{cwd:root,env,stdout:Bun.file(join(directory,label+'.log')),stderr:Bun.file(join(directory,label+'.err')),detached:true});children.push(p);return p;};
+  const launch=(label:string)=>{const p=Bun.spawn([process.execPath,join(root,'scripts/swarm.ts'),planPath],{cwd:root,env,stdout:Bun.file(join(directory,label+'.log')),stderr:Bun.file(join(directory,label+'.err')),detached:true,windowsHide:true});children.push(p);return p;};
   const shutdown=async(p:ReturnType<typeof Bun.spawn>)=>{writeFileSync(join(root,'.practice/stop-swarm'),SWARM_STOP.all);await wait(()=>p.exitCode!==null,'shutdown did not settle',45000);if(await p.exited!==0)throw Error('private swarm shutdown failed');if(readFileSync(join(root,'.practice/stop-swarm'),'utf8')===SWARM_STOP.all)unlinkSync(join(root,'.practice/stop-swarm'));};
   const before=readPracticeSave(save);copyFileSync(save,join(directory,'swarm-before.sav'));const first=launch('session-check-swarm');
   await wait(()=>/^done after 1 runs$/.test(json('.practice/swarm-deaths.json')?.[account]?.reason??''),'session check did not produce actual done end');
@@ -68,7 +75,9 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   await shutdown(first);
   const checkedSave=await waitPracticeSave(save,s=>(s.vars[134]??0)>(before.vars[134]??0),{timeoutMs:15000});
   copyFileSync(save,join(directory,'swarm-session-check.sav'));
-  const checks:any={actualSessionCheckDone:true,sessionCheckLogout:true,actualSessionCheckSwarmShutdown:true,sessionCheckFreshSave:checkedSave.matched,releasedClaimStable:stableClaims(),reservationsPreserved:JSON.stringify(plan.jobs.slice(1))===JSON.stringify(reservations)};
+  const readPlan=(stage:string)=>{const raw=readFileSync(planPath),actual=JSON.parse(raw.toString());writeFileSync(join(directory,stage+'-plan.json'),raw);return {unchanged:JSON.stringify(actual.jobs.slice(1))===JSON.stringify(reservations),sha256:createHash('sha256').update(raw).digest('hex')};};
+  const recoveryPlan=readPlan('session-check');
+  const checks:any={actualSessionCheckDone:true,sessionCheckLogout:true,actualSessionCheckSwarmShutdown:true,sessionCheckFreshSave:checkedSave.matched,releasedClaimStable:stableClaims(),reservationsPreserved:recoveryPlan.unchanged};
   clearSwarmStop(join(root,'.practice','stop-'+account));
   const inspect={...job,script:'scripts/fleet-inspect.ts',enabled:false,env:{...flags,REQUIRE_BANK:'1'}};
   const next={...plan,jobs:[inspect,...reservations],coordination:{boundedInspection:[account]}};put('.practice/selected-swarm.json',next);
@@ -79,6 +88,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   await wait(()=>json('.practice/status/'+account+'.json')?.result?.includes('bankObserved=1'),'new finite inspector did not observe bank',120000);
   await wait(()=>/^done after 1 runs$/.test(json('.practice/swarm-deaths.json')?.[account]?.reason??'')&&readFileSync(join(root,'.practice/swarm-deaths.json'),'utf8')!==completed,'inspector end not owned by swarm');
   await shutdown(second);
+  const inspectionPlan=readPlan('inspection');checks.inspectionReservationsPreserved=inspectionPlan.unchanged;
   const log=readFileSync(join(root,'.practice/swarm-logs',account+'.log'),'utf8'),status=json('.practice/status/'+account+'.json'),proof=readLogoutProof(account,server,{root:join(root,'.practice/session-lifecycle')});
   const observation=JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('BANK_OBSERVED ')).at(-1)?.slice(14)??'null');
   const bank=JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('BANK ')).at(-1)?.slice(5)??'null');
@@ -91,7 +101,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   writeFileSync(join(directory,'swarm-worker.log'),log);writeFileSync(join(directory,'inspector-status.json'),JSON.stringify(status));writeFileSync(join(directory,'inspector-proof.json'),JSON.stringify(proof));
   cpSync(accountDir(account,server,join(root,'.practice/session-lifecycle')),join(directory,'swarm-lifecycle'),{recursive:true});
   copyFileSync(save,join(directory,'swarm-after.sav'));
-  writeFileSync(join(directory,'swarm-chain-checks.json'),JSON.stringify({checks,source:hash(join(sourceRoot,'scripts/swarm.ts')),privateSource:hash(join(root,'scripts/swarm.ts')),authority:'private bare Git and loopback world; local sessions do not acquire shared gameplay claims'},null,2));
+  writeFileSync(join(directory,'swarm-chain-checks.json'),JSON.stringify({checks,evidenceScope:'native Swarm components; no cloud-side/coordinator full E2E/live',source:hash(join(sourceRoot,'scripts/swarm.ts')),privateSource:hash(join(root,'scripts/swarm.ts')),plans:{recovery:recoveryPlan.sha256,inspection:inspectionPlan.sha256},authority:'private bare Git and loopback world; local sessions do not acquire shared gameplay claims'},null,2));
   if(!Object.values(checks).every(v=>v===true))throw Error('actual swarm continuation checks failed');
   passed=true;return checks as Record<string,boolean>;
  }finally{

@@ -45,10 +45,15 @@ export function observeBoundedOwners(base:string,binding:BoundedOwnerBinding,lau
         match(owner,'coordinator');
         if(owner.successor)match(owner.successor,'coordinator');
         const swarmPath=join(dir,'swarm-owner.json');
+        let retiredSwarm=false;
         if(existsSync(swarmPath)){
             const swarm=read(swarmPath);
-            if(swarm.watchId!==binding.watchId||swarm.plan!==binding.plan||swarm.side!==binding.side)throw Error('bounded swarm owner crossed');
-            match(swarm,'swarm');
+            if(swarm.watchId!==binding.watchId||swarm.plan!==binding.plan||swarm.side!==binding.side){
+                if(!Number.isSafeInteger(swarm.pid)||swarm.pid<1||typeof swarm.nonce!=='string'||!swarm.nonce)throw Error('bounded swarm owner unknown');
+                const members=(deps.groups??boundedGroupMembers)([swarm.pid]);
+                if(alive(swarm.pid)||members===null||members.length)throw Error('bounded swarm owner crossed');
+                retiredSwarm=true;
+            }else match(swarm,'swarm');
         }
         const state=read(join(dir,'state.json'));
         if(state.planner)throw Error('bounded planner owner unexpected');
@@ -60,6 +65,7 @@ export function observeBoundedOwners(base:string,binding:BoundedOwnerBinding,lau
         const runsPath=join(base,'.practice/swarm-runs.json');
         if(existsSync(runsPath))for(const run of read(runsPath)){
             if(!Number.isSafeInteger(run.pid)||run.pid<1)throw Error('bounded supervisor identity unreadable');
+            if(retiredSwarm){const members=(deps.groups??boundedGroupMembers)([run.pid]);if(alive(run.pid)||members===null||members.length)throw Error('prior swarm supervisor ownership unresolved');}
             groups.add(run.pid);if(alive(run.pid))active.add(run.pid);
         }
         const members=(deps.groups??boundedGroupMembers)([...groups]);
