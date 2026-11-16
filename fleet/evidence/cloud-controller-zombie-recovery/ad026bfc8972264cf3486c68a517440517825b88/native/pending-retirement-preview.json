@@ -1,0 +1,47 @@
+{
+  "at": 1794837213917,
+  "source": "c4b61d06a9a6c817cef02b4094396e278b361400",
+  "stateSha256": "4da8193969f01ba8692fdcf80f85e4a5bf9308f964d7d376dc5baeeb2d742860",
+  "scope": {
+    "targets": [
+      {
+        "account": "FullLoad",
+        "attemptId": "1794807014059-0000010716-0000000001",
+        "endedAt": 1794807014127
+      },
+      {
+        "account": "Unsheathed",
+        "attemptId": "1794807013455-0000010703-0000000001",
+        "endedAt": 1794807013505
+      }
+    ],
+    "taskIds": [
+      "cloud-recovery-qualified-20261116t132135z",
+      "cloud-recover-fullload-20261116t132135z",
+      "cloud-recover-unsheathed-20261116t132135z"
+    ]
+  },
+  "changedRecords": [
+    "cloud-recover-fullload-20261116t132135z",
+    "cloud-recover-unsheathed-20261116t132135z"
+  ],
+  "after": [
+    {
+      "id": "cloud-recover-fullload-20261116t132135z",
+      "before": "pending",
+      "after": "superseded",
+      "supersededBy": "cancelled",
+      "attempts": 0
+    },
+    {
+      "id": "cloud-recover-unsheathed-20261116t132135z",
+      "before": "pending",
+      "after": "superseded",
+      "supersededBy": "cancelled",
+      "attempts": 0
+    }
+  ],
+  "stateFileUnchanged": true,
+  "applied": false,
+  "api": "prepareProposal preview only; later normal journaled intake under owner quiescence, no direct state edits"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "selected-plan",
+  "level": "native-actual-controller-selection",
+  "checks": {
+    "handoffLimits": true,
+    "excludesRootJobs": true,
+    "rootPlanRetained": true
+  }
+}

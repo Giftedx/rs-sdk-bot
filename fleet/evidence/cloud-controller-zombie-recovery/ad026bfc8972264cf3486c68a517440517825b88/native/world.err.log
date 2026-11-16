@@ -1,0 +1,52 @@
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxaw7i1
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxaw7i1 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxaw7i1
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxaw7i1
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxkllq2
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxkllq2 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxkllq2
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxkllq2
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxkllq2
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxkllq2 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxkllq2
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxkllq2
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxkllq2
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxkllq2 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxkllq2
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxkllq2
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxaqln3
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxaqln3 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxaqln3
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxaqln3
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxaqln3
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxaqln3 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxaqln3
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxaqln3
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvx20gg4
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvx20gg4 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvx20gg4
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvx20gg4
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxpci318
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxpci318 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxpci318
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxpci318
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxqrk119
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxqrk119
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxqrk119 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxqrk119
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxqrk119
+[LOGOUT DEBUG] Server requesting idle logout for flrcvxdb4320 - ticksSinceConnected=500, timeout=500
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxdb4320 (requestLogout=false, requestIdleLogout=true)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxdb4320
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxdb4320
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxdb4320 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxdb4320
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxdb4320
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxjwmp21
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxjwmp21 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxjwmp21
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxjwmp21
+[LOGOUT DEBUG] P_LOGOUT script opcode called for flrcvxn3ml23
+[LOGOUT DEBUG] processLogouts: Setting loggingOut=true for flrcvxn3ml23 (requestLogout=true, requestIdleLogout=false)
+[LOGOUT DEBUG] Server removePlayer() called for flrcvxn3ml23
+[LOGOUT DEBUG] NetworkPlayer.logout() sending LOGOUT packet for flrcvxn3ml23

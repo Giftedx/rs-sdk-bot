@@ -1,0 +1,31 @@
+
+SWARM_JOB 942e95c4d886bde6ecabd9f52545233b77873c04875ed86a5575478a63be873b
+Pathfinding initialized in 2167ms (136704 zones + 297 mainland fill, 1268350 tiles, 2691 doors masked, 5 one-way doors blocked)
+START 3185 3436 0
+RELEASE f09ac1a8d892
+LEDGER ticks=0 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=0 idlePct=0.0 xpGain=0 longestIdle= idleBy= bot=flrcvxkllq2
+PRAYER_GUARD {"flicks":0,"early":0,"holds":0,"holdsBy":{},"takenFrom":{},"protects":0,"repairs":0,"resends":0,"spent":0,"manual":false,"yielded":false,"points":[null,null],"taken":0} bot=flrcvxkllq2
+EAT_GUARD {"eats":0,"urgent":0,"holds":0,"waits":0,"refused":0,"resends":0,"late":0,"healed":0,"yielded":false,"fought":false,"held":false,"hp":[null,null,null]} bot=flrcvxkllq2
+EVENTS {} bot=flrcvxkllq2
+[lite] flrcvxkllq2: session ended (logged-out) 
+LOGOUT logged-out
+RESULT ok sessionChecked=1 hp=43 x=3185 z=3436 level=0
+SUPERVISE run 1 exit 0: RESULT ok sessionChecked=1 hp=43 x=3185 z=3436 level=0
+SUPERVISE end done after 1 runs
+
+SWARM_JOB 40568b6e3d8a8ec0c45580fdb54df879f4487a85ed850beeb6d46677745fba20
+Pathfinding initialized in 21ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)
+START 3185 3436 0
+RELEASE f09ac1a8d892
+INSPECT {"name":"flrcvxkllq2","pos":{"name":"Flrcvxkllq2","combatLevel":11,"hp":43,"maxHp":43,"x":6336,"z":6720,"worldX":3185,"worldZ":3436,"level":0,"runEnergy":100,"runWeight":5,"animId":-1,"spotanimId":-1,"combat":{"inCombat":false,"targetIndex":-1,"targetType":"none","lastDamageTick":-1},"isDead":false,"lifeId":1,"respawnCount":0,"lastDeathTick":null},"skills":[{"name":"Attack","level":1,"baseLevel":1,"experience":0},{"name":"Defence","level":1,"baseLevel":1,"experience":0},{"name":"Strength","level":1,"baseLevel":1,"experience":0},{"name":"Hitpoints","level":43,"baseLevel":43,"experience":19684},{"name":"Ranged","level":1,"baseLevel":1,"experience":0},{"name":"Prayer","level":1,"baseLevel":1,"experience":0},{"name":"Magic","level":1,"baseLevel":1,"experience":0},{"name":"Cooking","level":99,"baseLevel":99,"experience":998458},{"name":"Woodcutting","level":1,"baseLevel":1,"experience":0},{"name":"Fletching","level":1,"baseLevel":1,"experience":0},{"name":"Fishing","level":99,"baseLevel":99,"experience":998458},{"name":"Firemaking","level":1,"baseLevel":1,"experience":0},{"name":"Crafting","level":1,"baseLevel":1,"experience":0},{"name":"Smithing","level":1,"baseLevel":1,"experience":0},{"name":"Mining","level":1,"baseLevel":1,"experience":0},{"name":"Herblore","level":1,"baseLevel":1,"experience":0},{"name":"Agility","level":1,"baseLevel":1,"experience":0},{"name":"Thieving","level":1,"baseLevel":1,"experience":0},{"name":"Stat18","level":1,"baseLevel":1,"experience":0},{"name":"Stat19","level":1,"baseLevel":1,"experience":0},{"name":"Runecraft","level":1,"baseLevel":1,"experience":0}],"inventory":[{"slot":0,"id":995,"name":"Coins","count":1200,"optionsWithIndex":[]},{"slot":1,"id":311,"name":"Harpoon","count":1,"optionsWithIndex":[]},{"slot":2,"id":329,"name":"Salmon","count":4,"optionsWithIndex":[{"text":"Eat","opIndex":1}]}],"npcs":[{"name":"Banker","x":3187,"z":3436},{"name":"Banker","x":3187,"z":3438},{"name":"Banker","x":3187,"z":3440},{"name":"Banker","x":3187,"z":3442},{"name":"Banker","x":3187,"z":3444},{"name":"Grand Exchange teller","x":3181,"z":3445},{"name":"Guard","x":3175,"z":3427},{"name":"Banker","x":3187,"z":3446},{"name":"Guard","x":3176,"z":3423},{"name":"Guard","x":3171,"z":3427}],"locs":[{"name":"Bank booth","id":2213,"x":3186,"z":3436,"level":0,"options":[{"text":"Use","opIndex":1},{"text":"Use-quickly","opIndex":2}]},{"name":"Bank booth","id":2213,"x":3186,"z":3438,"level":0,"options":[{"text":"Use","opIndex":1},{"text":"Use-quickly","opIndex":2}]},{"name":"Staircase","id":1733,"x":3187,"z":3433,"level":0,"options":[{"text":"Climb-down","opIndex":1}]},{"name":"Bank booth","id":2213,"x":3186,"z":3440,"level":0,"options":[{"text":"Use","opIndex":1},{"text":"Use-quickly","opIndex":2}]},{"name":"Bank booth","id":2213,"x":3186,"z":3442,"level":0,"options":[{"text":"Use","opIndex":1},{"text":"Use-quickly","opIndex":2}]},{"name":"Bank table","id":590,"x":3190,"z":3443,"level":0,"options":[]},{"name":"Bank booth","id":2213,"x":3186,"z":3444,"level":0,"options":[{"text":"Use","opIndex":1},{"text":"Use-quickly","opIndex":2}]},{"name":"Bank booth","id":2213,"x":3186,"z":3446,"level":0,"options":[{"text":"Use","opIndex":1},{"text":"Use-quickly","opIndex":2}]},{"name":"Bank booth","id":2214,"x":3180,"z":3447,"level":0,"options":[]},{"name":"Bank booth","id":2214,"x":3181,"z":3447,"level":0,"options":[]},{"name":"Bank booth","id":2214,"x":3182,"z":3447,"level":0,"options":[]},{"name":"Ladder","id":1750,"x":3183,"z":3447,"level":0,"options":[{"text":"Climb-up","opIndex":1}]},{"name":"Bank table","id":590,"x":3187,"z":3447,"level":0,"options":[]},{"name":"Tree","id":1278,"x":3171,"z":3444,"level":0,"options":[{"text":"Chop down","opIndex":1}]}]}
+BANK [{"id":385,"name":"Shark","count":5},{"id":436,"name":"Copper ore","count":17}]
+BANK_OBSERVED {"generation":1,"at":1794837817981,"items":2}
+LEDGER ticks=7 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=7 idlePct=100.0 xpGain=0 longestIdle=7@t2(3185,3436) idleBy=none:5,after:closeModal:1,bank:1 bot=flrcvxkllq2
+PRAYER_GUARD {"flicks":0,"early":0,"holds":0,"holdsBy":{},"takenFrom":{},"protects":0,"repairs":0,"resends":0,"spent":0,"manual":false,"yielded":false,"points":[1,1],"taken":0} bot=flrcvxkllq2
+EAT_GUARD {"eats":0,"urgent":0,"holds":0,"waits":0,"refused":0,"resends":0,"late":0,"healed":0,"yielded":false,"fought":false,"held":false,"hp":[43,43,43]} bot=flrcvxkllq2
+EVENTS {} bot=flrcvxkllq2
+[lite] flrcvxkllq2: session ended (logged-out) 
+LOGOUT logged-out
+RESULT ok inspection bankObserved=1 bankGeneration=1 bankObservedAt=1794837817981 bankItems=2
+SUPERVISE run 1 exit 0: RESULT ok inspection bankObserved=1 bankGeneration=1 bankObservedAt=1794837817981 bankItems=2
+SUPERVISE end done after 1 runs

@@ -1,0 +1,66 @@
+[
+  {
+    "at": 1794838069315,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxn3ml23\",\"server\":\"localhost:8899\",\"runId\":\"native-rcv-partial-alive-742496\",\"nonce\":\"one-partial-alive\",\"endedAt\":1794838066562,\"source\":\"591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery setup refused; no lease issued; no retry",
+      "setup": {
+        "phase": "launch",
+        "cause": "recovery previous session owner still alive"
+      }
+    }
+  },
+  {
+    "at": 1794838079971,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxn3ml23\",\"server\":\"localhost:8899\",\"runId\":\"native-rcv-partial-742496\",\"nonce\":\"one-partial\",\"endedAt\":1794838066562,\"source\":\"591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": true,
+      "completed": {
+        "at": 1794838079970,
+        "request": {
+          "schema": "session-recovery/1",
+          "kind": "session-recovery",
+          "account": "flrcvxn3ml23",
+          "server": "localhost:8899",
+          "runId": "native-rcv-partial-742496",
+          "nonce": "one-partial",
+          "endedAt": 1794838066562,
+          "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+          "qualification": {
+            "delivery": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            "proof": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        "childPid": 154504,
+        "receiptPath": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794837683471-ipA084/control/.practice/coordinator/session-recovery/accounts/flrcvxn3ml23/one-partial/output/receipt.json",
+        "receiptSha256": "23746272f384c5beabc9394c0ee8bbfdcb698b437c107fb379ac8655d22760ae",
+        "proof": {
+          "state": "confirmed",
+          "account": "flrcvxn3ml23",
+          "server": "localhost:8899",
+          "domain": "practice",
+          "attemptId": "1794838072743-0000154504-0000000001",
+          "loggedOutAt": 1794838074932,
+          "ownerRun": "native-rcv-partial-742496",
+          "receiptSha256": "b1c2c22b7a90d63cc9decfd0ab99c497890483c2639697af6fe03519e72cb911"
+        },
+        "nativeFixture": true,
+        "scope": {
+          "repairsFailure": false,
+          "qualifiesScript": false,
+          "production": 0
+        }
+      },
+      "reason": "confirmed session cleanup; old failure retained"
+    }
+  }
+]

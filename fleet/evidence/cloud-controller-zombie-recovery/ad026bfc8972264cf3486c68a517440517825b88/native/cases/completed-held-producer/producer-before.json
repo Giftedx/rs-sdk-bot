@@ -1,0 +1,64 @@
+{
+  "beforeProof": {
+    "state": "held",
+    "account": "flrcvx20gg4",
+    "server": "127.0.0.1:8890",
+    "domain": "practice",
+    "attemptId": "1794837832647-0000152295-0000000001",
+    "reason": "ended disconnected"
+  },
+  "retained": [
+    {
+      "attemptId": "1794837832647-0000152295-0000000001",
+      "receipt": {
+        "schema": "session-lifecycle/1",
+        "attemptId": "1794837832647-0000152295-0000000001",
+        "account": "flrcvx20gg4",
+        "server": "127.0.0.1:8890",
+        "domain": "practice",
+        "owner": {
+          "pid": 152874,
+          "coordinatorRunId": null,
+          "workerRelease": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+          "script": "scripts/retired-fixture.ts",
+          "role": "supply",
+          "participants": null
+        },
+        "config": {
+          "members": null
+        },
+        "createdAt": 1794837832647,
+        "updatedAt": 1794837832649,
+        "events": [
+          {
+            "at": 1794837832647,
+            "kind": "connecting"
+          },
+          {
+            "at": 1794837832647,
+            "kind": "connected"
+          },
+          {
+            "at": 1794837832647,
+            "kind": "ready"
+          },
+          {
+            "at": 1794837832648,
+            "kind": "ended",
+            "detail": "disconnected"
+          },
+          {
+            "at": 1794837832648,
+            "kind": "logout",
+            "detail": "disconnected"
+          },
+          {
+            "at": 1794837832649,
+            "kind": "closed"
+          }
+        ]
+      },
+      "sha256": "8663c069ca57c5e5492cc1c27f753d16d6ce8a59b112fa6fe972040d8332f445"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "inherited": [
+    {
+      "account": "flrcvxlm3d22",
+      "pid": 154409,
+      "started": 1794838031388,
+      "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9"
+    }
+  ],
+  "newerResult": {
+    "changed": false,
+    "sessionRecovered": false,
+    "reason": "existing recovery lease held; inspect original child; no retry"
+  },
+  "replayResult": {
+    "changed": false,
+    "sessionRecovered": false,
+    "reason": "recovery request already handled or interrupted; inspect retained account lease and child output; no retry"
+  },
+  "lateRow": {
+    "at": 1794838066427,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxlm3d22\",\"server\":\"localhost:8899\",\"runId\":\"native-rcv-timeout-742496\",\"nonce\":\"one-timeout\",\"endedAt\":1794838031360,\"source\":\"591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery child held; inspect fixed child output and retained account lease; no retry"
+    }
+  }
+}
