@@ -497,7 +497,7 @@ test('an exact pre-request lease refusal waits while the controller archives onl
   const producer=listAttempts('Rod',f.request.server,{root}).find(a=>a.attemptId===attempt.attemptId)!;
   const proof=readLogoutProof('Rod',f.request.server,{root});
   const paths=recoveryPermitPaths(f.request,f.base),receipt:any={schema:'session-recovery/1',state:'held',request:structuredClone(f.request),
-   startedAt:issued,endedAt:issued+10,attemptId:attempt.attemptId,lifecycleSha256:producer.sha256,proof,before:null,after:null,
+   startedAt:issued,endedAt:producer.receipt!.updatedAt+5,attemptId:attempt.attemptId,lifecycleSha256:producer.sha256,proof,before:null,after:null,
    logout:'not-attempted',failure:'connect failed or unresolved',runnerSha256:f.runnerHash,
    scope:{gameplay:false,production:0,repairsFailure:false,qualifiesScript:false,bankObservation:'unobserved'}};
   if(fault==='request')receipt.request.nonce='crossed';
