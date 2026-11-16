@@ -1,0 +1,20 @@
+{
+  "schema": "session-recovery/1",
+  "kind": "session-recovery",
+  "account": "flrcvxjxwa18",
+  "server": "127.0.0.1:8890",
+  "runId": "native-rcv-ownership-556786",
+  "nonce": "one-ownership",
+  "endedAt": 1794822671362,
+  "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+  "qualification": {
+    "delivery": {
+      "path": "native-fixture-not-qualified",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "proof": {
+      "path": "native-fixture-not-qualified",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}

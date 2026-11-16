@@ -1,0 +1,15 @@
+[
+  {
+    "at": 1794822883399,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxr0j823\",\"server\":\"localhost:8899\",\"runId\":\"native-rcv-partial-alive-556786\",\"nonce\":\"one-partial-alive\",\"endedAt\":1794822881545,\"source\":\"b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery setup refused; no lease issued; no retry",
+      "setup": {
+        "phase": "launch",
+        "cause": "recovery previous session owner still alive"
+      }
+    }
+  }
+]

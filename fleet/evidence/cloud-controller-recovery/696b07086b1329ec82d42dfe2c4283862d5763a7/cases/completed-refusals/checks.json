@@ -1,0 +1,132 @@
+{
+  "id": "completed-refusals",
+  "level": "native-actual-controller-refusal",
+  "ok": true,
+  "checks": {
+    "same-revision": true,
+    "open-hold": true,
+    "changed-end": true,
+    "stopped": true,
+    "reserved": true,
+    "active": true,
+    "orphan": true,
+    "partial-intent": true,
+    "competing-owner": true,
+    "wrong-identity": true,
+    "wrong-source": true,
+    "noSubsequentLogin": true,
+    "noSubsequentProducerAttempt": true
+  },
+  "rows": [
+    {
+      "fault": "same-revision",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "open-hold",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "changed-end",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "stopped",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "reserved",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "active",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "orphan",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "partial-intent",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "competing-owner",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "wrong-identity",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    },
+    {
+      "fault": "wrong-source",
+      "refused": true,
+      "noLogin": true,
+      "noNewIntent": true,
+      "endsRetained": true,
+      "holdsRetained": true,
+      "assignmentsRetained": true,
+      "stopRetained": true
+    }
+  ]
+}

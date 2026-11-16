@@ -1,0 +1,20 @@
+{
+  "at": 1794822883399,
+  "since": 1794822883383,
+  "result": {
+    "changed": false,
+    "sessionRecovered": false,
+    "reason": "recovery setup refused; no lease issued; no retry",
+    "setup": {
+      "phase": "launch",
+      "cause": "recovery previous session owner still alive"
+    }
+  },
+  "child": null,
+  "lease": false,
+  "permit": false,
+  "noRecoveryLogin": true,
+  "attempts": [
+    "1794822882234-0000044430-0000000001"
+  ]
+}

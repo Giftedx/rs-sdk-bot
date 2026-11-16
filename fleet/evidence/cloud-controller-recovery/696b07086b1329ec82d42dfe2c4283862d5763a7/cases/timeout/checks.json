@@ -1,0 +1,17 @@
+{
+  "id": "timeout",
+  "level": "native-actual-cli-stalled-endpoint",
+  "checks": {
+    "stalledBeforeStart": true,
+    "dispatcherHeld": true,
+    "noConfirmedReceipt": true,
+    "leaseHeld": true,
+    "notCompleted": true,
+    "producerHeld": true,
+    "childEnded": true,
+    "failureRetained": true
+  },
+  "account": "flrcvx2olf22",
+  "childPid": 44362,
+  "receipt": "held"
+}

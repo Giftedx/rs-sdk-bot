@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "proof": {
+    "state": "confirmed",
+    "account": "flrcvx0a413",
+    "server": "127.0.0.1:8890",
+    "domain": "practice",
+    "attemptId": "1794822647994-0000043234-0000000001",
+    "loggedOutAt": 1794822650274,
+    "ownerRun": null,
+    "receiptSha256": "d369e67a13729afc13dd6d73c244dff5cad4d7d8001ce6d98d800de331f77d1d"
+  },
+  "session": {
+    "loginAcknowledged": true,
+    "logoutAcknowledged": true
+  }
+}

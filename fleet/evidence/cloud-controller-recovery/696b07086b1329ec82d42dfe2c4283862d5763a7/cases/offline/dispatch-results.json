@@ -1,0 +1,53 @@
+[
+  {
+    "at": 1794822572318,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxleqg1\",\"server\":\"127.0.0.1:8890\",\"runId\":\"native-rcv-offline-556786\",\"nonce\":\"one-offline\",\"endedAt\":1794822559711,\"source\":\"b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": true,
+      "completed": {
+        "at": 1794822572317,
+        "request": {
+          "schema": "session-recovery/1",
+          "kind": "session-recovery",
+          "account": "flrcvxleqg1",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-offline-556786",
+          "nonce": "one-offline",
+          "endedAt": 1794822559711,
+          "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+          "qualification": {
+            "delivery": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            "proof": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        "childPid": 42746,
+        "receiptPath": "/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/session-recovery-only-1794822513776-GWOlhK/control/.practice/coordinator/session-recovery/accounts/flrcvxleqg1/one-offline/output/receipt.json",
+        "receiptSha256": "081dcbd9c0dc3517ab03aeee669f3b833b1b1ee561df971ea484108cfcdb992e",
+        "proof": {
+          "state": "confirmed",
+          "account": "flrcvxleqg1",
+          "server": "127.0.0.1:8890",
+          "domain": "practice",
+          "attemptId": "1794822565264-0000042746-0000000001",
+          "loggedOutAt": 1794822567286,
+          "ownerRun": "native-rcv-offline-556786",
+          "receiptSha256": "0008fffc0c041d0b8ea83491f784307d3e3720414fe7498e12f7efaa84202b52"
+        },
+        "nativeFixture": true,
+        "scope": {
+          "repairsFailure": false,
+          "qualifiesScript": false,
+          "production": 0
+        }
+      },
+      "reason": "confirmed session cleanup; old failure retained"
+    }
+  }
+]

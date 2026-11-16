@@ -1,0 +1,32 @@
+
+scripts/fleet-inspect.test.ts:
+(pass) strict bank observation accepts a fresh generation: fresh [3.49ms]
+(pass) strict bank observation accepts a fresh generation: delayed [0.32ms]
+(pass) strict bank observation accepts a fresh generation: refreshed-open [0.17ms]
+(pass) strict bank observation rejects an unproved inspection: far [0.42ms]
+(pass) strict bank observation rejects an unproved inspection: open-fail [0.55ms]
+(pass) strict bank observation rejects an unproved inspection: missing [0.30ms]
+(pass) strict bank observation rejects an unproved inspection: stale [0.27ms]
+(pass) strict bank observation rejects an unproved inspection: stale-open [0.14ms]
+(pass) strict bank observation rejects an unproved inspection: same-generation [0.18ms]
+(pass) strict bank observation rejects an unproved inspection: old-time [0.29ms]
+(pass) strict bank observation rejects an unproved inspection: stop [0.09ms]
+(pass) strict bank observation rejects an unproved inspection: stop-before [0.04ms]
+(pass) strict bank observation rejects an unproved inspection: stop-close [0.08ms]
+(pass) a freshly observed empty bank is a valid zero-item observation [0.25ms]
+(pass) ordinary inspection retains success when no bank is nearby [0.17ms]
+
+scripts/measure/catalog-integration-proof.test.ts:
+(pass) the actual artisan proof filter selects both Dommik tool patterns [0.15ms]
+(pass) retained cut artisan bytes prove exact conversion and XP without a session [74.17ms]
+(pass) retained producer artisan bytes prove exact conversion and XP without a session [62.77ms]
+(pass) retained tools artisan bytes prove exact conversion and XP without a session [66.58ms]
+(pass) retained observer bytes require a fresh bank marker, exact BANK payload and preserved state [201.97ms]
+(pass) tool acquisition requires both banked tools and reconciled bounded spend [143.44ms]
+(pass) a successful artisan log cannot qualify short output or the wrong saved XP [153.48ms]
+(pass) retained artisan source pins include dispatcher, planner and save reader dependencies [308.48ms]
+
+ 23 pass
+ 0 fail
+ 108 expect() calls
+Ran 23 tests across 2 files. [1245.00ms]

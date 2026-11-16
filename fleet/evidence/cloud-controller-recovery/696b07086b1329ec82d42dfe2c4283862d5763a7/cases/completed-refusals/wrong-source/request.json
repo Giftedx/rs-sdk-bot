@@ -1,0 +1,20 @@
+{
+  "schema": "session-recovery/1",
+  "kind": "session-recovery",
+  "account": "flrcvxd9vt15",
+  "server": "127.0.0.1:8890",
+  "runId": "native-rcv-completed-refusal-wrong-source-556786",
+  "nonce": "one-completed-refusal-wrong-source",
+  "endedAt": 1794822662409,
+  "source": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "qualification": {
+    "delivery": {
+      "path": "native-fixture-not-qualified",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "proof": {
+      "path": "native-fixture-not-qualified",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}

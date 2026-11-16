@@ -1,0 +1,48 @@
+{
+  "schema": "session-recovery/1",
+  "state": "held",
+  "request": {
+    "schema": "session-recovery/1",
+    "kind": "session-recovery",
+    "account": "flrcvxleqg1",
+    "server": "127.0.0.1:8890",
+    "runId": "native-rcv-auth-failure-556786",
+    "nonce": "one-auth-failure",
+    "endedAt": 1794822559711,
+    "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+    "qualification": {
+      "delivery": {
+        "path": "native-fixture-not-qualified",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "proof": {
+        "path": "native-fixture-not-qualified",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "startedAt": 1794822665539,
+  "endedAt": 1794822667988,
+  "attemptId": "1794822666258-0000043536-0000000001",
+  "lifecycleSha256": "878aee1e2c4239ab130f4cba0c4639faf65c93bfe1af68b75438f0d6574bd857",
+  "proof": {
+    "state": "held",
+    "account": "flrcvxleqg1",
+    "server": "127.0.0.1:8890",
+    "domain": "practice",
+    "attemptId": "1794822666258-0000043536-0000000001",
+    "reason": "connect failed without an observed end"
+  },
+  "before": null,
+  "after": null,
+  "logout": "not-attempted",
+  "failure": "connect failed or unresolved",
+  "scope": {
+    "gameplay": false,
+    "production": 0,
+    "repairsFailure": false,
+    "qualifiesScript": false,
+    "bankObservation": "unobserved"
+  },
+  "runnerSha256": "2717fa5c4e7454a68cf7c4b82d7f5beba2ca88c7eccda07208b00caa66f57b24"
+}
