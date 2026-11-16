@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794792393694-pocketrocket-wandwaver",
+ "account": "Pocketrocket",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 90000,
+ "claim": "d335da69-7bcd-4343-b39a-59e9ee43cf11",
+ "count": 90000,
+ "ok": true,
+ "at": 1794792429955,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 90000,
+  "after": 0
+ },
+ "bank": {
+  "count": 90000,
+  "at": 1794792416014
+ },
+ "logout": {
+  "attemptId": "1794792404495-0000009564-0000000001",
+  "at": 1794792429944,
+  "sha256": "d179526f807fe7a8923e1b12f5cc5e92b99ae303cb38697203664e21d9e91df2"
+ },
+ "screen": true
+}
