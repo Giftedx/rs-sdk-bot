@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794808743205,
+ "at": 1794809361166,
  "jobs": [
   {
    "account": "Balls",
@@ -77,7 +77,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "0",
@@ -87,9 +87,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
@@ -148,25 +148,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/microbot-jewellery-trip.ts",
-   "args": [],
-   "env": {
-    "RECIPE": "sapphire_ring",
-    "TARGET": "1",
-    "BATCH": "1",
-    "CAP": "800",
-    "RETURN_TICKS": "100",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-97103b67-1844-410d-b7ed-5eede7b5a3cb"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-make-woodpecker-overall-ring1 [task-97103b67-1844-410d-b7ed-5eede7b5a3cb]",
-   "role": "production"
   }
  ],
  "army": [
