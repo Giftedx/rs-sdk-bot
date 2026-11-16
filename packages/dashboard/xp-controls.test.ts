@@ -11,6 +11,7 @@ function tracker(){
  const doc:any={activeElement:null,addEventListener:(kind:string,fn:any)=>{documentHandlers[kind]=fn;}},outside:any={tagName:'BUTTON'},handlers:any={};let api:any;
  const create=(name:string,parent:any=null)=>{
   const node:any={name,parent,dataset:{},_h:null,markup:'',controls:[],children:{},attributes:{},textContent:'',value:'',isConnected:true};
+  Object.defineProperty(node,'defaultValue',{get:()=>node.attributes.value??''});
   node.contains=(target:any)=>{if(target?.isConnected===false)return false;for(let t=target;t;t=t.parent)if(t===node)return true;return false;};
   node.getAttribute=(key:string)=>node.attributes[key]??null;node.hasAttribute=(key:string)=>Object.hasOwn(node.attributes,key);
   node.matches=(selector:string)=>selector.split(',').some(s=>s==='.xp-tracker'?node.name==='panel':s.startsWith('[')&&node.hasAttribute(s.slice(1,-1)));
@@ -59,6 +60,17 @@ test('calculator draft survives periodic refresh but native Enter and change rec
  t.update({...t.bot(),timeline:'xx'});expect(t.doc.activeElement).toBe(input);expect(input.value).toBe('74');
  expect(t.key(input,'Enter')).toBe(true);expect(t.panel.querySelector('.xp-calc').markup).toContain('<b>'+String(X.xpForLevel(74)-t.bot().skills[0].xp)+'</b> xp left');expect(t.doc.activeElement).toBe(t.find('data-calc-target'));
  const changed=t.find('data-calc-target');changed.value='75';t.change(changed);expect(t.panel.querySelector('.xp-calc').markup).toContain('<b>'+String(X.xpForLevel(75)-t.bot().skills[0].xp)+'</b> xp left');expect(t.doc.activeElement).toBe(t.find('data-calc-target'));
+});
+
+test('empty Enter restores the visible goal target when the calculator markup is already cached',()=>{
+ const t=tracker();t.api.pick('Ranged');const input=t.focus('data-calc-target');
+ expect(input.value).toBe('99');
+ const initial=t.panel.querySelector('.xp-calc').markup;
+ input.value='';expect(t.panel.querySelector('.xp-calc').markup).toBe(initial);
+ expect(t.key(input,'Enter')).toBe(true);
+ const visible=t.find('data-calc-target');
+ expect(visible).toBe(input);expect(visible.value).toBe('99');expect(visible.isConnected).toBe(true);expect(t.doc.activeElement).toBe(visible);
+ expect(t.panel.querySelector('.xp-calc').markup).toContain('<b>'+String(X.xpForLevel(99)-t.bot().skills[0].xp)+'</b> xp left');
 });
 
 test('a focused draft cannot retain another account or a removed or unreported XP skill',()=>{
