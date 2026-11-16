@@ -156,7 +156,7 @@ export function attachProgressionSession(s:Session,work:WorkDescriptor,server:st
  let window:{tick:number;xp:number;setup:number;started:boolean;lastTick:number;conditions:string}|null=null;
  const evaluate=()=>{
   prior=observedStatus(s,prior,Date.now());
-  current=options.evaluate?.(prior)??evaluateProgressionWork(work,prior,{base,accept:consumer,requireQualification:!isLocalServer(server),continuing:!!executing,currentMethod:executing,admitted});
+  current=options.evaluate?.(prior)??evaluateProgressionWork(work,prior,{base,accept:consumer,requireQualification:true,continuing:!!executing,currentMethod:executing,admitted});
   const key=JSON.stringify([current.supported,current.decision?.selected,current.decision?.state,current.decision?.followUps]);
   if(key!==lastWritten){
    writeDecision(base,s,work,current,Date.now(),undefined,executing);lastWritten=key;

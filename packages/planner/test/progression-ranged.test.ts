@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
 import {chooseProgression,type ObservedAccount} from '../src/progression';
-import {rangedProgressionMethods,rangedKit} from '../src/progression-ranged';
+import {rangedProgressionMethods,rangedKit,rangedModelRate} from '../src/progression-ranged';
+import {xpForLevel} from '../src/curve';
 
 const now=2_000_000;
 const account=(bank:Record<number,number>={841:1,882:500,2142:43,995:382923}):ObservedAccount=>({
@@ -24,6 +25,14 @@ test('known unreserved better bows and compatible arrows change the chosen kit',
  expect(rangedKit(a)).toMatchObject({bow:861,arrow:892});
  a.reservations={861:1,892:500};
  expect(rangedKit(a)).toMatchObject({bow:841,arrow:882});
+});
+test('equal modeled Ranged throughput prefers actual arrow strength without overriding bow speed',()=>{
+ const a=account({841:1,882:25,884:82,2142:43,995:382923});a.skills.Ranged={level:70,xp:xpForLevel(70)};
+ const bronze=rangedKit({...a,bank:{at:now,value:{841:1,882:25}}})!,iron=rangedKit({...a,bank:{at:now,value:{841:1,884:82}}})!;
+ expect(iron.strength).toBeGreaterThan(bronze.strength);
+ expect(rangedModelRate(70,bronze,22,12)).toBe(rangedModelRate(70,iron,22,12));
+ expect(rangedKit(a)).toMatchObject({bow:841,arrow:884});
+ expect(rangedKit({...a,bank:{at:now,value:{861:1,859:1,892:82}}})).toMatchObject({bow:861,arrow:892});
 });
 
 test('status catalog and live SDK skill-name casing select the same eligible Ranged kit',()=>{

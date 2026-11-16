@@ -3,6 +3,7 @@ import {mkdtempSync,readFileSync,rmSync,mkdirSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
+import {setEquipmentObserved} from '../src/container-observation';
 import {attachProgressionSession,evaluateProgressionWork,preflightProgressionWork,parentProgressionAccept,finiteProgressionAccept,progressionRateConditions} from '../src/progression-session';
 import {accountFromStatus,loadProgressionCatalog} from '../../planner/src/progression-catalog';
 import {chooseProgression} from '../../planner/src/progression';
@@ -60,6 +61,17 @@ test('every connected session records and enforces a handoff before new work',()
   let handoff='';p.onHandoff(detail=>{handoff=detail;});expect(handoff).toContain('faster qualified route');
   const record=JSON.parse(readFileSync(join(base,'.practice/progression-system/decisions/Fixture.json'),'utf8'));
   expect(record.supported).toBe(false);expect(record.entry).toBe('scripts/train-chickens.ts');
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
+test('an unqualified model cannot interrupt the authored practice worker it needs to measure',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-practice-')),now=Date.now(),client={};setEquipmentObserved(client,true);
+ const state:any={inGame:true,player:{worldX:3253,worldZ:3421,level:0,combat:{inCombat:false}},skills:[{name:'Ranged',baseLevel:1,level:1,experience:0},{name:'Hitpoints',baseLevel:10,level:10,experience:1154}],inventory:[],equipment:[]};
+ const s:any={name:'Fixture',client,sdk:{getState:()=>state},tick:()=>1,onTick:()=>()=>{},bankObservation:()=>({at:now,generation:1,items:[{id:841,count:1},{id:882,count:25},{id:1985,count:3}]}),ended:new Promise(()=>{})};
+ try{
+  const p=attachProgressionSession(s,{script:'scripts/ranged-starter.ts',args:[],env:{}},'localhost:8888',{base,log:()=>{}}),e=p.refresh();
+  expect(e?.supported).toBe(true);expect(e?.decision?.followUps.some(f=>f.state==='qualify')).toBe(true);
+  expect(p.refusal({type:'interactNpc',option:'Attack'})).toBeNull();
  }finally{rmSync(base,{recursive:true,force:true});}
 });
 

@@ -1,6 +1,8 @@
 import {expect,test} from 'bun:test';
 import {createAutopilotProgression,executingProgressionMethod} from './autopilot-progression';
-import {accountFromStatus,type CatalogAccept,type ProgressionCatalog} from '../packages/planner/src/progression-catalog';
+import {accountFromStatus,loadProgressionCatalog,type CatalogAccept,type ProgressionCatalog} from '../packages/planner/src/progression-catalog';
+import {preflightProgressionWork} from '../packages/core/src/progression-session';
+import {resolveAioStep} from './aio';
 import {chooseProgression,type ProgressionMethod} from '../packages/planner/src/progression';
 import {catalogue,jobResources,plan,type Assignment,type Template} from '../packages/planner/src/autopilot';
 import {xpForLevel} from '../packages/planner/src/curve';
@@ -47,6 +49,17 @@ test('AP finite production asks for new output beyond its observed owned stock',
  const {planner,calls}=setup([method('bones',1,{effects:{items:{536:2}},step:{script:t.script,args:t.args,env:{}}})],{observed:()=>({...status,bank:[{id:536,count:20}]})});
  planner.refine([assignment(t)]);expect(calls[0]?.accept).toEqual({bank:{536:26}});
 });
+test('an unchanged unqualified AP producer carries its finite consumer into the actual delegated preflight',()=>{
+ const listed=catalogue().find(t=>t.id==='aio-cannonballs')!,t={...listed,...listed.production!.resize(1),production:{...listed.production!,maximum:1}},c=loadProgressionCatalog();
+ const observed={...status,bank:[{id:2,count:10},{id:2353,count:1},{id:4,count:1}],skills:[{name:'Smithing',level:35,xp:xpForLevel(35)}]};
+ const {planner}=setup([],{catalog:c,observed:()=>observed,itemId:(name:string)=>name==='cannonball'?2:undefined});
+ const r=planner.refine([assignment(t)]),out=r.assignments[0]!.template!;
+ expect(r.changes).toEqual([]);expect(out.script).toBe(t.script);expect(out.args).toEqual(t.args);
+ expect(JSON.parse(out.env?.PROGRESSION_CONSUMER??'null')).toEqual({bank:{2:14}});
+ expect(out.env?.PROGRESSION_METHOD).toBeUndefined();expect(out.env?.PROGRESSION_SOURCE).toBeUndefined();
+ const step=resolveAioStep(out.args![0]!,out.args!.slice(1)),work={...step,env:{...out.env,...step.env}};
+ expect(step.script).toBe('scripts/microbot-a-cannonballs.ts');expect(()=>preflightProgressionWork(work,server,c,'Archer')).not.toThrow();
+});
 test('AP stages priced external stock only through its existing finite order adapter',()=>{
  const remaining=xpForLevel(50)-xpForLevel(40),withInput=method('fast',10,{inputs:{536:1}}),t=template();
  const {planner}=setup([slow,withInput],{stocks:[{holder:'Supplier',at:now,items:{536:remaining},delivery:{ticks:10,basis:'measured',source:'transfer-proof',evidence:'three matched owned transfers'}}],
@@ -90,7 +103,7 @@ test('AP keeps only the exact active finite mission after its admitted arrows ar
  const p=setup([m],{observed:()=>active,jobs:[job]}).planner,kept=p.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
  expect(kept.env).toEqual(env);expect(kept.args).toEqual(job.args);expect(kept.resources).toEqual(['trooper:battlefield']);
  const ended=setup([m],{observed:()=>({...active,result:'RESULT ok'}),jobs:[job]}).planner.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
- expect(ended.env).toEqual(t.env);expect(ended.env?.PROGRESSION_METHOD).toBeUndefined();
+ expect(ended.env).toEqual({...t.env,PROGRESSION_CONSUMER:JSON.stringify({skills:{Ranged:50}})});expect(ended.env?.PROGRESSION_METHOD).toBeUndefined();expect(ended.env?.PROGRESSION_SOURCE).toBeUndefined();
  const changed={...t,trains:{...t.trains!,to:51}},fresh=p.templateFor(changed,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
- expect(fresh.env).toEqual(t.env);expect(fresh.env?.PROGRESSION_METHOD).toBeUndefined();
+ expect(fresh.env).toEqual({...t.env,PROGRESSION_CONSUMER:JSON.stringify({skills:{Ranged:51}})});expect(fresh.env?.PROGRESSION_METHOD).toBeUndefined();expect(fresh.env?.PROGRESSION_SOURCE).toBeUndefined();
 });

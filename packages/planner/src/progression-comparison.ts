@@ -1,3 +1,4 @@
+// Compare matched native progression runs with their pinned sources and entry state.
 import {readFileSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 export interface ProgressionRun{ok:boolean;mode:string;seed:number;source:string;entrySha256:string;target:number;ticks:number;elapsedMs:number;xpGain:number;checks:Record<string,boolean>;result?:{method?:string;targetMet?:boolean};evidence?:string}

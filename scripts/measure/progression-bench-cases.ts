@@ -1,3 +1,4 @@
+// Define matched Ranged progression practice cases for the existing AIO bench.
 import type {BenchCase} from './aio-bench-cases';
 import {RANGED_COMPARISON_PRESET,rangedComparisonPass} from '../../packages/practice/src/ranged-progression-case';
 

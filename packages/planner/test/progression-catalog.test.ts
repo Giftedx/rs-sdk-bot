@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
+import {validateSmeltOrder} from '../../../scripts/smelt-batch';
 import {accountFromStatus,catalogCoverage,intentForEntry,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
 
 const now=10_000;
@@ -207,5 +208,15 @@ test('fixed quest entry aliases carry their exact named finite quest consumer',(
  for(const[id,name]of [['barcrawl',"Alfred Grimhand's Barcrawl"],['magearena','The Mage Arena']]){
   expect(flags).not.toContain('text='+name);
   expect(intentForEntry('scripts/generated/quest-'+id+'.ts',[],{})).toEqual({kind:'service',objective:'quester:quest:'+id});
+ }
+});
+
+test('native cannonball quantities and bounds match the actual smelting order contract',()=>{
+ expect(intentForEntry('scripts/microbot-a-cannonballs.ts',[],{})).toMatchObject({kind:'produce',items:{2:4}});
+ expect(intentForEntry('scripts/microbot-a-cannonballs.ts',['27','1500'],{CANNON_XP_RATE:'25'})).toMatchObject({kind:'produce',items:{2:108}});
+ expect(intentForEntry('scripts/aio.ts',['skiller','smithing','cannonballs','2','1500','CANNON_XP_RATE=25'],{})).toMatchObject({kind:'produce',items:{2:8}});
+ for(const[bars,cap,xpRate,reserve]of [[0,1200,1,0],[100001,1200,1,0],[1,0,1,0],[1,10001,1,0],[1,1200,0,0],[1,1200,1001,0],[1,1200,1,-1],[1,Infinity,1,0]]){
+  expect(()=>validateSmeltOrder({bar:'cannonballs',maximum:bars!,cap:cap!,xpRate:xpRate!,reserve:reserve!,mode:'exact'})).toThrow();
+  expect(intentForEntry('scripts/microbot-a-cannonballs.ts',[String(bars),String(cap)],{CANNON_XP_RATE:String(xpRate),CANNON_RESERVE:String(reserve)})).toBeNull();
  }
 });

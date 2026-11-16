@@ -26,7 +26,7 @@ export function rangedKit(a:ObservedAccount){
   bow:b.id,arrow:q.id,bowLevel:b.level,arrows:owned[q.id]!,attack:attack+(all.get(b.id)?.bonuses.rangeAttack??0),
   strength:strength+(all.get(q.id)?.bonuses.rangeStrength??0),interval:Math.max(1,(all.get(b.id)?.attackRate??4)-1),
  })));
- return options.sort((x,y)=>rangedModelRate(level,y,22,12)-rangedModelRate(level,x,22,12)||x.bow-y.bow||x.arrow-y.arrow)[0]??null;
+ return options.sort((x,y)=>rangedModelRate(level,y,22,12)-rangedModelRate(level,x,22,12)||y.strength-x.strength||x.bow-y.bow||x.arrow-y.arrow)[0]??null;
 }
 // Stop only at an owned unlock that actually changes the modeled usable kit.
 export function rangedBandTarget(a:ObservedAccount,target:number){

@@ -111,6 +111,10 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   const id=Number(args[0]),count=Number(args[1]??27),ticks=Number(env.TICKS??6000);
   return whole(id)&&id>0&&whole(count)&&count>0&&Number.isFinite(ticks)&&ticks>0?{kind:'acquire',items:{[id]:count},consumer}:null;
  }
+ if(script==='scripts/microbot-a-cannonballs.ts'){
+  const bars=Number(args[0]??1),cap=Number(args[1]??1200),xp=Number(env.CANNON_XP_RATE??1),reserve=Number(env.CANNON_RESERVE??0);
+  return whole(bars)&&bars>=1&&bars<=100000&&whole(cap)&&cap>=1&&cap<=10000&&whole(xp)&&xp>=1&&xp<=1000&&whole(reserve)?{kind:'produce',items:{2:bars*4},consumer}:null;
+ }
  const trainerDefaults:Record<string,{skill:string;target:number;cap:number;minimumCap:number}>={
   'scripts/generated/fishing30.ts':{skill:'fishing',target:30,cap:3000,minimumCap:1},
   'scripts/generated/thieving60.ts':{skill:'thieving',target:60,cap:2500,minimumCap:240},

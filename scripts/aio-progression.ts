@@ -1,3 +1,4 @@
+// Select finite AIO work through the shared account state and source qualification policy.
 import type {Step} from '../packages/core/src/chain-step';
 import type {ProgressionCatalog,CatalogAccept} from '../packages/planner/src/progression-catalog';
 import type {ProgressionDecision} from '../packages/planner/src/progression';

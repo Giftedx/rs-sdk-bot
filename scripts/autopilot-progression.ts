@@ -80,6 +80,11 @@ function bind(t:Template,method:ProgressionMethod,intent:WorkIntent|null,accept?
  return{...t,env:{...t.env,PROGRESSION_METHOD:method.id,PROGRESSION_SOURCE:method.source,...consumer?{PROGRESSION_CONSUMER:JSON.stringify(consumer)}:{}},
   resources:entry(t.script)==='scripts/ranged-train.ts'?jobResources({script:t.script,args:t.args,env:{...t.env,PROGRESSION_METHOD:method.id},resources:t.resources}):t.resources};
 }
+function declareConsumer(t:Template,intent:WorkIntent|null,accept?:CatalogAccept):Template{
+ const consumer=asConsumer(intent,accept);if(!consumer)return t;
+ const encoded=JSON.stringify(consumer);if(t.env?.PROGRESSION_CONSUMER===encoded)return t;
+ return{...t,env:{...t.env,PROGRESSION_CONSUMER:encoded}};
+}
 
 /** Keep the existing allocator and orders; compare only their actual finite consumers. */
 export function createAutopilotProgression(o:AutopilotProgressionOptions){
@@ -118,10 +123,10 @@ export function createAutopilotProgression(o:AutopilotProgressionOptions){
   // snapshot. The immutable source/method/consumer echo must still match.
   if(active)return{...t,args:[...(active.job.args??[])],env:{...active.job.env},resources:jobResources(active.job)};
   const d=r.evaluation.decision,m=r.evaluation.methods?.find(m=>m.id===d?.selected);
-  if(d?.state!=='execute'||!m||!methodSupportsWork(m.step,r.work))return t;
+  if(d?.state!=='execute'||!m||!methodSupportsWork(m.step,r.work))return declareConsumer(t,r.intent,r.accept);
   // requireQualification=true is evaluated on this fresh observation. The
   // current finite worker may be bound even when its rate remains a model.
-  if(!m.qualification||m.qualification.source!==m.source)return t;
+  if(!m.qualification||m.qualification.source!==m.source)return declareConsumer(t,r.intent,r.accept);
   return bind(t,m,r.intent,r.accept);
  }
  function refine(baseline:readonly Assignment[]):FleetProgressionResult{
