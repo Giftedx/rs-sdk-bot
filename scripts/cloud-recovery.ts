@@ -2,6 +2,7 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {hostname} from 'node:os';
+import {isDeepStrictEqual} from 'node:util';
 import {readLogoutProof,listAttempts} from '../packages/core/src/session-lifecycle';
 import {readFleetAccountClaim} from '../packages/core/src/fleet-trade-claim';
 import {validateBoundedRecovery,assertBoundedRecoveryQueue,type RecoveryTarget} from '../packages/core/src/bounded-recovery';
@@ -34,7 +35,17 @@ export function prepareBoundedRecovery(base:string,plan:any,targets:RecoveryTarg
     const proposal=recoveryProposal(side,targets,now);
     next.coordination.bootstrap=proposal.tasks;
     next.coordination.boundedRecovery.taskIds=proposal.tasks.map(t=>t.id);
-    if(readCoordinatorJobs(base).jobs.length)throw Error('bounded recovery preserves existing coordinator assignments; settle them first');
+    // A failed pre-install recovery keeps disabled copies of its owner jobs. Preserve
+    // those exact selected copies for prepareLiveRecovery; they cannot be released
+    // while the original producer is held. Every other assignment stays fenced.
+    const parked=readCoordinatorJobs(base),selected=new Set(targets.map(t=>t.account.toLowerCase())),seen=new Set<string>();
+    if(parked.jobs.length&&(Object.keys(parked.coordination).length||parked.expansion||parked.paused?.length))throw Error('bounded recovery preserves existing coordinator settings');
+    for(const job of parked.jobs){
+        const key=typeof job?.account==='string'?job.account.toLowerCase():'';
+        const owner=next.jobs.find((j:any)=>j.account.toLowerCase()===key);
+        if(!selected.has(key)||seen.has(key)||!owner||!isDeepStrictEqual(job,owner))throw Error('bounded recovery preserves changed or unrelated coordinator assignments');
+        seen.add(key);
+    }
     const statePath=join(base,'.practice/coordinator/state.json');
     if(existsSync(statePath))assertBoundedRecoveryQueue(next.coordination.boundedRecovery,JSON.parse(readFileSync(statePath,'utf8')));
     const ended=loadEnded(join(base,'.practice/swarm-deaths.json'));
