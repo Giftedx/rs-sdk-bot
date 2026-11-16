@@ -87,8 +87,13 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    if(!held){unknown.push(account+' holdings of item '+id);continue;}
    let available=Math.max(0,target-(held.get(id)??0));
    for(const line of lines){
-    if((line.verifyOwned??0)>0){unknown.push('previously observed '+line.item+' for '+line.consumer+' before acquisition');continue;}
-    const gain=Math.min(available,line.need-line.owned);
+    const unverified=Math.max(0,line.verifyOwned??0),room=Math.max(0,line.need-line.owned-unverified);
+    if(unverified>0){
+     unknown.push('previously observed '+line.item+' for '+line.consumer+' before replacing that stock');
+     // Reserve uncertain holdings. A finite new batch may fill only the shortage beyond that reserve.
+     if(entry==='scripts/buy-owned-ge-item.ts'||available>room)continue;
+    }
+    const gain=Math.min(available,room);
     if(gain>0){credit('supply:'+line.consumer+':'+id+':'+line.need,gain/line.need);available-=gain;effects.push(gain+' '+line.item+' for '+line.consumer);}
    }
   }
