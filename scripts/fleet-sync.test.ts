@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { activeAccounts, carriedPrior, ensureWorktree, keepPublished, planView, pullFleetData, reattach, sideCapacity, sideCard, snapshot, worktreeProblem } from './fleet-sync';
 import { SWARM_STOP } from './swarm';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
@@ -362,20 +362,44 @@ test('the pull keeps a rewritten committed receipt and a staged order removal, a
 
 test('a clone of master alone gets the published fleet-data branch, never one made from the code', () => {
     const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
-    const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000 }).trim();
+    const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000, windowsHide: true }).trim();
     const base = mkdtempSync(join(tmpdir(), 'fleet-wt-'));
     try {
         const remote = join(base, 'remote.git'), seed = join(base, 'seed'), clone = join(base, 'clone');
         g(base, 'init', '--bare', remote); g(base, 'init', '-b', 'master', seed);
         writeFileSync(join(seed, 'code.ts'), 'code\n'); g(seed, 'add', '.'); g(seed, 'commit', '-qm', 'code');
         g(seed, 'checkout', '-q', '--orphan', 'fleet-data'); g(seed, 'rm', '-rq', '--cached', '.');
-        writeFileSync(join(seed, 'owners.json'), '{}\n'); g(seed, 'add', 'owners.json'); g(seed, 'commit', '-qm', 'fleet data');
+        g(seed, 'config', '--local', 'core.longpaths', 'true');
+        const proof = join('fleet', 'evidence', 'cloud-controller-live', 'a'.repeat(40), 'recovery-20261116t101433z', 'controller',
+            'session-recovery', 'accounts', 'fullload', '0f16b62e-3898-4909-82d5-81d6c3dcef5f', 'retained-producer',
+            'attempts', '1794807014059-0000010716-0000000001', 'receipt.json');
+        expect(proof.length).toBeGreaterThan(260);
+        mkdirSync(dirname(join(seed, proof)), { recursive: true }); writeFileSync(join(seed, proof), 'retained proof\n');
+        writeFileSync(join(seed, 'owners.json'), '{}\n'); g(seed, 'add', 'owners.json', proof); g(seed, 'commit', '-qm', 'fleet data');
         g(seed, 'remote', 'add', 'origin', remote); g(seed, 'push', '-q', 'origin', 'master', 'fleet-data');
         // A Codex checkout: master only, so `git fetch origin fleet-data` alone leaves origin/fleet-data missing.
         g(base, 'clone', '-q', '--single-branch', '--branch', 'master', remote, clone);
+        g(clone, 'config', '--local', 'core.longpaths', 'false');
         const wt = ensureWorktree(join(clone, 'fleet'), clone);
+        expect(readFileSync(join(wt, proof), 'utf8').replace(/\r/g, '')).toBe('retained proof\n');
+        expect(g(clone, 'config', '--local', '--get', 'core.longpaths')).toBe(process.platform === 'win32' ? 'true' : 'false');
         expect(g(wt, 'log', '--format=%s', '-1')).toBe('fleet data');
         expect(worktreeProblem(wt, 0)).toBeNull();
+        // The existing-worktree path must repair the setting without touching local files or HEAD.
+        g(clone, 'config', '--local', 'core.longpaths', 'false');
+        writeFileSync(join(wt, 'collision.json'), 'local proof\n');
+        const head = g(wt, 'rev-parse', 'HEAD');
+        expect(ensureWorktree(wt, clone)).toBe(wt);
+        expect(g(wt, 'config', '--local', '--get', 'core.longpaths')).toBe(process.platform === 'win32' ? 'true' : 'false');
+        expect(g(wt, 'rev-parse', 'HEAD')).toBe(head);
+        expect(readFileSync(join(wt, 'collision.json'), 'utf8')).toBe('local proof\n');
+        // Long-path support does not waive an independent untracked-file collision during a later pull.
+        writeFileSync(join(seed, 'collision.json'), 'remote proof\n'); g(seed, 'add', 'collision.json');
+        g(seed, 'commit', '-qm', 'remote proof'); g(seed, 'push', '-q', 'origin', 'fleet-data');
+        expect(() => pullFleetData(wt)).toThrow('untracked working tree files');
+        expect(readFileSync(join(wt, 'collision.json'), 'utf8')).toBe('local proof\n');
+        expect(g(wt, 'rev-parse', 'HEAD')).toBe(head);
+        rmSync(join(wt, 'collision.json')); pullFleetData(wt);
         // The worktree the old fetch made: fleet-data from the code. It holds commits the published branch lacks.
         const bogus = join(clone, 'bogus');
         g(clone, 'worktree', 'add', '-q', '-b', 'stray', bogus, 'master');
@@ -383,5 +407,16 @@ test('a clone of master alone gets the published fleet-data branch, never one ma
         // Unpublished fleet data (pushes refused, say) is never taken for the code, however many commits.
         for (const n of [1, 2, 3]) { writeFileSync(join(wt, `receipt-${n}.json`), '{}\n'); g(wt, 'add', '.'); g(wt, 'commit', '-qm', `receipt ${n}`); }
         expect(worktreeProblem(wt, 0)).toBeNull();
+    } finally { rmSync(base, { recursive: true, force: true }); }
+}, 30_000);
+
+test.skipIf(process.platform !== 'win32')('a Windows long-path configuration failure refuses even an existing worktree', () => {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
+    const base = mkdtempSync(join(tmpdir(), 'fleet-wt-config-'));
+    try {
+        execFileSync('git', ['init', '-q', base], { stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000, windowsHide: true });
+        writeFileSync(join(base, '.git', 'config.lock'), 'owned lock\n');
+        expect(() => ensureWorktree(base, base)).toThrow('cannot enable core.longpaths for Windows');
+        expect(readFileSync(join(base, '.git', 'config.lock'), 'utf8')).toBe('owned lock\n');
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
