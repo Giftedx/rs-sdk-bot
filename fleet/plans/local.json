@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794820319186,
+ "at": 1794820542977,
  "jobs": [
   {
    "account": "Balls",
@@ -139,6 +139,26 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-scorpion-mmsmk-ardougne-cure [task-d38a2813-ef13-4c76-9b76-f19a24c3e96f]",
+   "role": "helper"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "73"
+   ],
+   "env": {
+    "BONE_ID": "526",
+    "MAX_BURY": "98",
+    "BONE_RESERVE": "10",
+    "CAP": "1500",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-05ae964e-73de-4ca4-886d-cfe22cf9eca2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-prayer-nab-owned73 [task-05ae964e-73de-4ca4-886d-cfe22cf9eca2]",
    "role": "helper"
   }
  ],
