@@ -112,6 +112,8 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
   return copy;
  });
  const out:any=pick(s,PUBLIC_KEYS);
+ // Retained data still needs a fault flag; the collector's exception can contain private paths and names.
+ if(s.stateError)out.stateError='Fleet data could not be refreshed; showing the last snapshot.';
  out.bots=bots;
  // A finished or stopped run, by its goal: the run's counters (coins banked, items bought) are the owner's.
  out.results=(s.results??[]).filter((r:any)=>!isMain(r?.name)&&!r?.practice).map((r:any)=>({at:r.at,name:r.name,ok:r.ok,text:publicGoal(r.goal)??''}));

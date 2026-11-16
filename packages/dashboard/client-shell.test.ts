@@ -339,7 +339,7 @@ function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:strin
  const hud=dom.createElement('div'),wallButton=dom.createElement('button');
  const api=new Function('S','VIEWER','window','MARK','st','$','focusSay','focusOpen','focus','focusNote','log','safeName','phoneWidth','document','hud','wallButton','localStorage','writeLink','requestAnimationFrame',`
   let keysOpened=0;window.atlasWallKeys=()=>{keysOpened++;};
-  let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0;
+  let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0,depletedNow={list:[]};
   const TOUR_MS=45000,tourStep=()=>{},focusPaint=()=>{paints++;},render=()=>{renders++;};
   let pick=name=>{wallEnd(false);log.push({pick:name});sel=name;window.atlasFreeCamera=false;},setMode=m=>{mode=m;};
   ${live}${state}${code}
@@ -1560,6 +1560,41 @@ test('respawn timers: the time left is the base scaled by the players online, le
  // A start the view did not see has no countdown; a tile with no resource is left out.
  expect(rows[1]).toMatchObject({name:'Oak tree',left:null,range:null});
  expect(rows.length).toBe(2);
+});
+
+test('respawn observations clear on manual 2D and renderer fallback, and a retry waits for new observations',()=>{
+ const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
+ const respawn=shell.slice(shell.indexOf("  // Respawn timers (RuneLite's Mining"),shell.indexOf("  // Party (RuneLite's Party panel)"));
+ const modes=html.slice(html.indexOf('function setMode('),html.indexOf('// A failed 3D view'));
+ const failure=html.slice(html.indexOf('const VIEWER_RETRY_MS='),html.indexOf('async function request3D(){'));
+ const hook=shell.split('\n').find(line=>line.includes('const previousSetMode=setMode;'))!;
+ const nodes=new Map(),timers:Array<()=>void>=[],$=(key:string)=>{if(!nodes.has(key))nodes.set(key,{removeAttribute(){},classList:{toggle(){}},style:{},contentWindow:{postMessage(){}}});return nodes.get(key);};
+ const resources={kinds:{2106:{name:'Runite rock',base:1200}},depleted:[450],byTile:new Map([['3059,3884,0',2106]])};
+ const env:any={S:{bots:[],world:{tickMs:400},roster:[]},Date:{now:()=>1000},asset:String,fetch:()=>new Promise(()=>{}),setInterval:()=>0,setTimeout:(fn:()=>void)=>{timers.push(fn);return timers.length;},clearTimeout:()=>{},E:String,$,location:{origin:'o'},globalThis:{},document:{hidden:false,addEventListener(){}},res:resources};
+ const ui=new Function(...Object.keys(env),`let mode='3d',VIEWER={state:'ready',origin:'o'},VIEWER_REQUEST=0,VIEWER_TIMER,rswFor=null;const sel=null,selectedPlugin='world',body={dataset:{plugin:'world'}},showViewerStatus=()=>{},syncWorld=()=>{},drawMap=()=>{},wallSync=()=>{},focusPaint=()=>{};let card='';${respawn}${modes}${failure}${hook}
+ function refreshWorld(){card=respawnBox();}
+ function request3D(){VIEWER={...VIEWER,state:'loading'};setMode('3d',true);}
+ return {report:()=>{depletedNow={tick:110,at:1000,list:[[3059,3884,0,450,100]]};resources=res;refreshWorld();},mode:setMode,fail:viewerUnavailable,retry:retryViewer,request:request3D,ready:()=>{VIEWER={...VIEWER,state:'ready'};refreshWorld();},state:()=>({mode,rows:respawnRows(1000),card,list:depletedNow.list})};`)(...Object.values(env));
+ for(const reason of ['manual','failure']){
+  ui.ready();ui.mode('3d',true);ui.report();expect(ui.state().rows).toHaveLength(1);expect(ui.state().card).toContain('Runite rock');
+  if(reason==='manual')ui.mode('2d');else ui.fail('graphics context lost');expect(ui.state().mode).toBe('2d');expect(ui.state().list).toEqual([]);expect(ui.state().rows).toEqual([]);expect(ui.state().card).not.toContain('Respawns');
+  if(reason==='manual')ui.request();else ui.retry();expect(ui.state().mode).toBe('3d');expect(ui.state().rows).toEqual([]);ui.ready();expect(ui.state().card).not.toContain('Respawns');
+  ui.report();expect(ui.state().rows).toHaveLength(1);expect(ui.state().card).toContain('Runite rock');
+ }
+});
+
+test('queued depletion reports cannot repopulate an unloaded or loading viewer but ready reports still clear and refill',()=>{
+ const code=shell.split('\n').find(line=>line.startsWith("  window.addEventListener('message',e=>{if(e.origin!==location.origin"))!;
+ const frame={},report=[[3059,3884,0,450,100]],window:any={addEventListener:(_kind:string,fn:any)=>{window.receive=fn;}};
+ const ui=new Function('window','$','location','Date',`let mode='3d',VIEWER={state:'ready',feed:null},depletedNow={tick:0,list:[],at:0},refreshes=0;const selectedPlugin='world',body={dataset:{plugin:'world'}},wallMessage=()=>{},wallFrameKey=()=>{},refreshWorld=()=>{refreshes++;};${code}
+ return {set:(m,state,feed=null)=>{mode=m;VIEWER={state,feed};depletedNow={tick:0,list:[],at:0};refreshes=0;},feed:value=>{VIEWER.feed=value;},value:()=>({depletedNow,refreshes})};`)(window,()=>({contentWindow:frame}),{origin:'o'},{now:()=>1000});
+ const deliver=(list:any[]=report)=>window.receive({origin:'o',source:frame,data:{atlasDepleted:{tick:110,list}}});
+ for(const [mode,state] of [['2d','idle'],['2d','unavailable'],['3d','loading'],['3d','checking']]){
+  ui.set(mode,state);deliver();expect(ui.value().depletedNow.list).toEqual([]);expect(ui.value().refreshes).toBe(0);
+ }
+ ui.set('3d','ready');deliver();expect(ui.value().depletedNow.list).toEqual(report);expect(ui.value().refreshes).toBe(1);
+ ui.feed(false);deliver([]);expect(ui.value().depletedNow.list).toEqual([]);expect(ui.value().refreshes).toBe(2);
+ ui.feed(true);deliver();expect(ui.value().depletedNow.list).toEqual(report);
 });
 test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
  const line=shell.split('\n').find(l=>l.includes("live.sort(xpSort==='waste'"))!.trim();

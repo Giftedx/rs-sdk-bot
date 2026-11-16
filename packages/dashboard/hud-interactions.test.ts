@@ -76,6 +76,26 @@ test('minimap dots and hit targets use the shown floor while cross-floor pins st
  expect(upper).toContain('Roof');expect(upper).toContain('UpperMate');expect(upper).not.toContain('Ground');expect(upper).not.toContain('Mate');
 });
 
+test('watching another player uses their current floor for every minimap layer and new markers',()=>{
+ const code=extract('  function minimap(){','  // A click on the minimap'),click=extract("  const miniCanvas=hud.querySelector('.game-minimap canvas')",'  // The wheel zooms the minimap');
+ const roof:any[]=['Roof',3200,3200,1,30],roster=[roof,['Ground',3201,3200,0,3],...Array.from({length:4},(_,i)=>['Upper'+i,3201+i,3200,1,3]),['Top',3202,3200,2,3]],bots=[{name:'GroundMate',pos:{x:3200,z:3200,level:0}},{name:'UpperMate',pos:{x:3200,z:3200,level:1}}];
+ const rectangles:any[]=[],lines:any[]=[],saved:any[]=[],handlers:any={};
+ const g:any=new Proxy({strokeRect:(...args:any[])=>rectangles.push({colour:g.strokeStyle,args}),lineTo:(...args:any[])=>lines.push({colour:g.strokeStyle,args})},{get:(o:any,k)=>k in o?o[k]:()=>{}});
+ const canvas={width:146,height:151,getContext:()=>g,getBoundingClientRect:()=>({left:0,top:0,width:146,height:151}),addEventListener:(kind:string,fn:any)=>{handlers[kind]=fn;}};
+ const env:any={S:{bots,roster},hud:{querySelector:(q:string)=>q.endsWith('canvas')?canvas:null},account:()=>null,mapWorld:()=>({bots,roster}),window:{atlasFollowOther:'rOoF',atlasCam3d:{x:3200,z:3200,yaw:2047}},mode:'3d',$:()=>({getAttribute:()=>'/viewer/'}),st:()=>['off'],safeName:String,
+  hl:{busy:true,trail:true,marks:true,icons:true},trails:new Map([['ground',[{x:3200,z:3200,l:0},{x:3201,z:3200,l:0}]],['upper',[{x:3200,z:3200,l:1},{x:3201,z:3200,l:1}]]]),
+  marks:[{x:3200,z:3200,l:0,c:'#ff0000'},{x:3201,z:3200,l:1,c:'#00ffff'}],mapIcons:[[3200,3200,0,'t','Ground icon'],[3201,3200,1,'t','Upper icon']],iconCan:()=>null,
+  pinned:()=>({label:'NPC',tiles:[{x:3200,z:3200,l:0},{x:3201,z:3200,l:1}]}),toggleMark:(...args:any[])=>{saved.push(args);return true;},toast:()=>{}};
+ const ui=new Function(...Object.keys(env),`let miniView;${code}${click};return {paint:()=>{minimap();return minimap.hits.map(h=>h[2]);},view:()=>miniView};`)(...Object.values(env));
+ let hits=ui.paint();expect(hits).toContain('Roof');expect(hits).toContain('UpperMate');expect(hits).toContain('5 players here');expect(hits).toContain('Upper icon');
+ expect(hits).toContain('NPC');expect(hits).toContain('NPC · floor 0');expect(hits).not.toContain('NPC · floor 1');
+ for(const label of ['Ground','GroundMate','Ground icon','Top'])expect(hits).not.toContain(label);
+ expect(rectangles.map(r=>r.colour)).toEqual(['#00ffff']);expect(lines.filter(l=>l.colour==='#00c000')).toHaveLength(1);
+ handlers.click({shiftKey:true,clientX:73,clientY:75});expect(saved).toEqual([[3200,3200,1]]);
+ roof[3]=2;hits=ui.paint();expect(hits).toContain('Top');expect(hits).not.toContain('UpperMate');expect(hits).not.toContain('Upper icon');
+ handlers.click({shiftKey:true,clientX:73,clientY:75});expect(saved.at(-1)).toEqual([3200,3200,2]);
+});
+
 test('a floor change at the same coordinates resets the old minimap trail',()=>{
  const code=extract('  function trackTrails(){','  function overlayMessage(){'),bot={name:'Me',inWorld:true,action:'move',pos:{x:3200,z:3200,level:0}},trails=new Map();
  const track=new Function('S','trails','idleSince',`${code};return trackTrails;`)({bots:[bot]},trails,new Map());
