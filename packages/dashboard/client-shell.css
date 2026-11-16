@@ -72,6 +72,9 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .xp-buttons{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.xp-hide{font:11px Arial;color:#aaa;margin-top:6px;display:flex;gap:4px;align-items:center}
 .bank-value{position:absolute;right:34px;top:7px;font:14px RS;color:#ff981f}
 .game-bank .bank-empty{grid-column:1/-1;text-align:center;padding:12px 4px}
+.game-bank header{position:relative;flex:none;min-height:46px;align-items:flex-start;padding-top:2px}
+.game-bank .bank-count{top:27px}.game-bank .bank-value{top:27px;right:8px;max-width:calc(100% - 85px);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bank-tabs button{flex:1;min-width:0;width:auto;max-width:40px}
 /* Opponent information (RuneLite opponentinfo): top centre, clear of the overlay panel; the name and a red/green bar. */
 .game-hud .game-opponent{position:absolute;left:50%;transform:translateX(-50%);top:8px;z-index:6;min-width:130px;padding:4px 6px;background:rgba(62,53,41,.85);border:1px solid #1e1a14;outline:1px solid #5a4d39;font:12px RS;color:#fff;text-align:center;pointer-events:none}
 .game-opponent b{font-weight:normal;display:block;margin-bottom:3px}.game-opponent small{color:#ff0;font:12px RS}
