@@ -119,7 +119,7 @@ test('World refresh never takes focus from an outside control',()=>{
 function hiscores(){
  const p=page(),now=1_000_000,S:any={now,bots:[],roster:[['Other',3200,3200,0,50]],world:{connected:true}};
  const env:any={body:p.body,document:p.doc,put:p.put,S,window:{atlasLiveRoster:()=>false},E:escapeText,skills:[],reported:()=>true,realSkill:()=>true,safeName:String,nf:String,whereIs:(x:number,z:number)=>x+','+z,age:(at:number)=>String(now-at),icon:()=>'',Date:class extends Date{static now(){return now;}},boardSummary:()=>'',progressPanel:()=>'',boardGrid:()=>{},rivalsPanel:()=>'<p>Rivals</p>'};
- const results=section('  function hiscoreResults(name){','  // Hiscores:');
+ const results=(shell.split('\n').find(line=>line.startsWith('  const reportedTotal='))??'')+section('  function hiscoreResults(name){','  // Hiscores:');
  const mode=section('  function hiscores(){','  // Where a tile is,');
  const card=section('  function lookupCard(l){','  function refreshWorldLookup(){');
  const hmStart=shell.indexOf("const hm=e.target.closest('[data-hs-mode]')"),hm=shell.slice(hmStart,shell.indexOf("if(e.target.closest('[data-xp-reset]'))",hmStart));
