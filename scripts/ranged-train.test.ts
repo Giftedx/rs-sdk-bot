@@ -125,7 +125,7 @@ test('native Ranged proof binds its actual worker closure and owned files',()=>{
  const s=rangedProofSource();expect(s.runtime).toBe(capabilityRevision(['scripts/ranged-train.ts']));
  expect(Object.keys(s.files)).toEqual(['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts',
   'scripts/gather-combat.ts','scripts/gather-combat-giant.test.ts',
-  'packages/planner/src/progression-ranged.ts','packages/planner/test/progression-ranged.test.ts','packages/practice/src/ranged-progression-case.ts',
+  'packages/planner/src/progression-ranged.ts','packages/planner/test/progression-ranged.test.ts','packages/practice/src/ranged-progression-case.ts','packages/practice/src/ranged-progression-case.test.ts',
   'packages/practice/src/ranged-progression-entry.json','scripts/measure/progression-bench-cases.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-player-save.test.ts']);
 },30_000); // Two closure hashes take about 3 s on an idle PC; the default 5 s limit fails under load.
 

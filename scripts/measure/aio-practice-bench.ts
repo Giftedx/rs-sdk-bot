@@ -164,6 +164,7 @@ if (import.meta.main) {
   if (has('--all')) env.BENCH_ALL = '1';
   if (has('--save-baseline')) env.BENCH_SAVE_BASELINE = '1';
   if (has('--no-keep')) env.BENCH_CACHE = '0';
+  if (env.RANGED_PROGRESSION_ENTRY) env.BENCH_CACHE = '0';
   if (has('--coverage')) env.BENCH_COVERAGE_ONLY = '1';
   const wallClock = has('--wall-clock') || env.BENCH_LOCKSTEP === '0';
   if (argv.length > 1 || argv[0]?.startsWith('--')) throw new Error(`unknown arguments: ${argv.join(' ')}`);
