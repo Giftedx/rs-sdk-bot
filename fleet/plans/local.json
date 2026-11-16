@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794812235183,
+ "at": 1794812308521,
  "jobs": [
   {
    "account": "Balls",
@@ -122,49 +122,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "72"
-   ],
-   "env": {
-    "BONE_ID": "526",
-    "MAX_BURY": "36",
-    "BONE_RESERVE": "10",
-    "CAP": "900",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-8c4f59ad-89ba-41e9-a589-669bbf7311bb"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-prayer-nab-owned72 [task-8c4f59ad-89ba-41e9-a589-669bbf7311bb]",
-   "role": "helper"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "2",
-    "QUANTITY": "50",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "13600",
-    "CASH_RESERVE": "500000",
-    "ORDER_KEY": "bigpackage-overall-cannon50-cash-bounded",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2a84e86f-ac3f-48c1-b648-fc254626bbdf"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-bigpackage-overall-cannon50-cash-bounded [task-2a84e86f-ac3f-48c1-b648-fc254626bbdf]",
    "role": "supply"
   }
  ],
