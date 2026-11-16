@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794828783493,
+ "at": 1794832477858,
  "jobs": [
   {
    "account": "Balls",
@@ -53,21 +53,22 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=14 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit26-536-6to20 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 14 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "Shaftsinker",
