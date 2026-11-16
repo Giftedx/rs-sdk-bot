@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794804492698-mineyourbiz-bigchopper-dragonbones",
+ "account": "Bigchopper",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 46,
+ "claim": "b468d297-ed1a-498c-981c-5b6a6bbc543c",
+ "count": 0,
+ "ok": false,
+ "at": 1794804917748,
+ "detail": "trade claimed"
+}
