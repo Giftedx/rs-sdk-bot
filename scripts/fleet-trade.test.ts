@@ -9,6 +9,10 @@ import { terminalTradeReceipt, windowClosures, writeTradeReceipt, type TradeRece
 import { makeOrder } from './fleet-order';
 import { DROPPED_CLAIM_MS, UNANSWERED_GRACE_MS, droppedTradeClaims, releasePublishedTradeClaims, snapshot } from './fleet-sync';
 import * as fleetSync from './fleet-sync';
+import * as fleetTrade from './fleet-trade';
+import { BotSDK } from '../vendor/rs-sdk/sdk';
+import { executionContext, executionWait } from '../vendor/rs-sdk/sdk/execution-context';
+import { logout as logoutAction } from '../packages/core/src/logout';
 
 const order = (o: Partial<Order>): Order => ({ id: 'o1', server: 's', from: 'Giver', to: 'Taker', item: 'Lobster', count: 500, start: 1000, end: 5000, ...o });
 
@@ -25,6 +29,70 @@ const claimedReceipt = (role: 'from' | 'to' = 'to'): TradeReceipt => ({
     role, side: 'local', server: 's', item: 'Lobster', requested: 500, claim: nonce, ok: false, count: 0, at: 2000, detail: '',
 });
 const logout = { state: 'confirmed', account: 'Taker', server: 's', domain: 'live', attemptId, loggedOutAt: 2400, ownerRun: null, receiptSha256: sha256 } as const;
+
+test('an expired or unsupported order window starts no post-login work', async () => {
+    expect(typeof fleetTrade.runOrderWork).toBe('function');
+    let actions = 0;
+    for (const end of [2199, 2200, NaN, Infinity, -Infinity, 2200 + 2147483648]) {
+        await expect(fleetTrade.runOrderWork(order({ end }), async () => { actions++; }, () => 2200))
+            .rejects.toThrow('order window');
+    }
+    expect(actions).toBe(0);
+    expect(await fleetTrade.runOrderWork(order({ end: 2200 + 2147483647 }), async () => 'supported', () => 2200)).toBe('supported');
+});
+
+test('order expiry cancels a pending SDK action and blocks a late continuation while cleanup can dispatch', async () => {
+    expect(typeof fleetTrade.runOrderWork).toBe('function');
+    const sdk = new BotSDK({ botUsername: 'test', password: 'test', autoLaunchBrowser: false });
+    const internal = sdk as any, packets: unknown[] = [];
+    internal.connectionState = 'connected';
+    internal.ws = { readyState: WebSocket.OPEN };
+    internal.send = (message: unknown) => { packets.push(message); };
+    let resume!: () => void, late!: Promise<unknown>;
+    const paused = new Promise<void>(resolve => { resume = resolve; });
+    try {
+        await expect(fleetTrade.runOrderWork(order({ end: 2230 }), async () => {
+            late = (async () => { await paused; return sdk.sendWalk(3202, 3200); })();
+            await sdk.sendWalk(3201, 3200);
+            await sdk.sendWalk(3203, 3200);
+        }, () => 2200)).rejects.toThrow('order window ended');
+        expect(packets).toHaveLength(1);
+        expect(internal.pendingActions.size).toBe(0);
+        resume();
+        await expect(late).rejects.toThrow('Deadline exceeded');
+        expect(packets).toHaveLength(1);
+        expect(executionContext.getStore()).toBeUndefined();
+        let end!: (event: { reason: string }) => void;
+        const ended = new Promise<{ reason: string }>(resolve => { end = resolve; });
+        internal.send = (message: any) => {
+            packets.push(message);
+            queueMicrotask(() => {
+                internal.pendingActions.get(message.actionId)?.resolve({ success: true });
+                end({ reason: 'logged-out' });
+            });
+        };
+        expect(await logoutAction({ sdk, ended }, 1000)).toBe('logged-out');
+        expect(packets).toHaveLength(2);
+    } finally { resume?.(); }
+});
+
+test('expiry keeps uncertain and partial trade progress for reconciliation outside the cancelled scope', async () => {
+    expect(typeof fleetTrade.runOrderWork).toBe('function');
+    for (const progress of [{ uncertain: false, count: 0 }, { uncertain: true, count: 0 },
+        { uncertain: false, count: 250, inventory: { before: 0, after: 250 } }]) {
+        let disposed = false;
+        await expect(fleetTrade.runOrderWork(order({ end: 2220 }), () =>
+            executionWait(() => () => { disposed = true; }), () => 2200)).rejects.toThrow('order window ended');
+        expect(disposed).toBe(true);
+        expect(executionContext.getStore()).toBeUndefined();
+        const receipt = fleetTradeOutcome(claimedReceipt(), progress, false, logout, attemptId, 2500, 'deadline');
+        expect(receipt.state).toBe(progress.uncertain || progress.count ? 'reconcile' : 'failed');
+        expect(receipt.count).toBe(progress.count);
+        expect(receipt.inventory).toEqual(progress.inventory);
+        expect(receipt.logout?.attemptId).toBe(attemptId);
+        expect(receipt.ok).toBe(false);
+    }
+});
 
 test('transfer needs a matching partner, observed exact item delta, bank credit, and this session logout', async () => {
     const item = { id: 379, name: 'Lobster', count: 500, slot: 0 };
@@ -44,16 +112,20 @@ test('transfer needs a matching partner, observed exact item delta, bank credit,
             ended: new Promise(() => {}), bankObservation: () => ({ at: 2300 }),
         } as unknown as Session;
         const progress = { uncertain: false, count: 0 };
-        const run = performFleetTransfer(fake, order({}), 'to', progress, {
+        const run = fleetTrade.runOrderWork(order({}), () => performFleetTransfer(fake, order({}), 'to', progress, {
             now: () => 2200, wait: async (_s, predicate) => predicate(null),
             deposit: async () => { if (mode === 'bank failure') throw Error('bank unavailable'); pack = []; return 505; },
-        });
+        }), () => 2200);
         if (mode === 'ok') await run;
         else await expect(run).rejects.toThrow(mode === 'bank failure' ? 'bank unavailable' : 'requires reconciliation');
         expect(calls).toBe(1);
         const final = fleetTradeOutcome(claimedReceipt(), progress, mode === 'ok', logout, attemptId, 2500, mode);
         expect(final.state).toBe(mode === 'ok' ? 'settled' : 'reconcile');
         expect(final.inventory).toEqual({ before: 5, after: 505 });
+        if (mode === 'ok') expect(final).toEqual({
+            ...claimedReceipt(), state: 'settled', ok: true, count: 500, inventory: { before: 5, after: 505 },
+            bank: { count: 500, at: 2300 }, logout: { attemptId, at: 2400, sha256 }, at: 2500, detail: 'ok',
+        });
         expect(terminalTradeReceipt(order({}), 'to', final, 2500)).toBe(mode === 'ok');
         expect(fleetTradeOutcome(claimedReceipt(), progress, true, logout, 'wrong attempt', 2500, 'bad logout').state).toBe('reconcile');
     }

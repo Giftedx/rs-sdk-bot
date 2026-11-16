@@ -111,7 +111,7 @@ export async function runFleetTradeCapacity(directory:string){
 import {openBot,settle} from ${JSON.stringify(moduleUrl('packages/core/src/bot.ts'))};
 import {readLogoutProof} from ${JSON.stringify(moduleUrl('packages/core/src/session-lifecycle.ts'))};
 import {waitTicks} from ${JSON.stringify(moduleUrl('packages/core/src/ticks.ts'))};
-import {performFleetTransfer,watchTradeScreen} from ${JSON.stringify(moduleUrl('scripts/fleet-trade.ts'))};
+import {performFleetTransfer,runOrderWork,watchTradeScreen} from ${JSON.stringify(moduleUrl('scripts/fleet-trade.ts'))};
 const names=${JSON.stringify(names)},sessions=[],progress=[{uncertain:false,count:0},{uncertain:false,count:0}],off=[];
 let ok=false,error='';const at=Date.now();
 try{
@@ -119,7 +119,7 @@ try{
  const order={id:'native-helper-'+at,server:${JSON.stringify(endpoints.server)},from:names[0],to:names[1],item:'Fire rune',count:250,start:at,end:Date.now()+60000,meet:[{x:3183,z:3436,level:0},{x:3184,z:3436,level:0}]};
  const metadata=sessions.map(s=>({name:s.name,fire:s.client.objType(554).stackable,jug:s.client.objType(1935).stackable,pack:s.sdk.getInventory(),equipment:s.sdk.getState().equipment,attemptId:s.lifecycle?.attemptId}));
  for(const [i,s]of sessions.entries())off.push(watchTradeScreen(s,progress[i]));
- await Promise.all(sessions.map((s,i)=>performFleetTransfer(s,order,i?'to':'from',progress[i])));
+ await Promise.all(sessions.map((s,i)=>runOrderWork(order,()=>performFleetTransfer(s,order,i?'to':'from',progress[i]))));
  ok=true;writeFileSync(${JSON.stringify(join(directory,'transfer-observed.json'))},JSON.stringify({at,metadata,progress}));
 }catch(e){error=String(e);}finally{for(const fn of off)fn();}
 const settled=await settle(sessions,ok,error||'native receiver capacity observed');
