@@ -15,6 +15,7 @@ import { ownedAccounts, tradePartners, recordOwnedAccount, tradeRefusal } from '
 import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
 import { ClientProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { tickWaits } from './tick-stream';
+import {pendingRouteWork} from './route-plan';
 import { executionWait } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { setEquipmentObserved } from './container-observation';
 import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from './session-lifecycle';
@@ -207,12 +208,16 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             // The count-dialog wait counts as a wait only until the dialog is open; then the tick holds for the submit,
             // so the submit lands in the same tick on every run, whatever the executor's 50 ms poll meets.
             const dialogOpen = !!(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
-            const busy = (running && waitLeft === 0 && !serverWait && !(inDialogWait() && !dialogOpen)) || !waiting;
+            const routes=pendingRouteWork();
+            // Persistent state listeners do not make an off-tick route a game-input wait.
+            // Actual tick/actions/dialog waits still advance; the existing busy cap bounds this hold.
+            const routeBusy=routes>0&&waitLeft===0&&!serverWait&&!inDialogWait();
+            const busy = routeBusy || (running && waitLeft === 0 && !serverWait && !(inDialogWait() && !dialogOpen)) || !waiting;
             // A script that ended after its last tick wait leaves no wait: SIM_SCRIPT_MS (500) bounds that hold.
             if (busy && performance.now() - since < (scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
             ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
-            if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} bot=${(client as { loginUser?: string }).loginUser ?? "?"} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} sdk=${[...inFlight].map(([k, n]) => `${k}${n > 1 ? `x${n}` : ''}`).join(',') || '-'} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
+            if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} bot=${(client as { loginUser?: string }).loginUser ?? "?"} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} routes=${routes} sdk=${[...inFlight].map(([k, n]) => `${k}${n > 1 ? `x${n}` : ''}`).join(',') || '-'} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
             client.writeOpcode?.(ClientProt.NO_TIMEOUT);
             sendNow?.();
         };

@@ -187,7 +187,7 @@ export async function qualifyOwnedLogistics(args:readonly string[],options:Entry
   mkdirSync(join(scratch,'.practice/coordinator'),{recursive:true});
   writeFileSync(join(scratch,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
   mkdirSync(join(scratch,'fleet'),{recursive:true});writeFileSync(join(scratch,'fleet/owners.json'),JSON.stringify({accounts:{}}));
-  const env={...process.env,DEMO_OK:'',FLEET_SIDE:'local',FLEET_DIR:join(scratch,'fleet'),COORDINATOR_RUN_ID:'',STANDING:'0',
+  const env={...process.env,DEMO_OK:'',FLEET_SIDE:'local',FLEET_DIR:join(scratch,'fleet'),SWARM_PLAN:join(scratch,'swarm.json'),CLOUD_WATCH_ID:'',COORDINATOR_RUN_ID:'',STANDING:'0',
    BOT_GOAL:'practice owned logistics '+entry.mode,COIN_ORDER:'bench-'+crypto.randomUUID(),ITEM_ORDER:'bench-'+crypto.randomUUID()};
   const controller=new AbortController(),cancel=()=>controller.abort(Error('owned logistics fixture cancelled'));
   options.signal?.addEventListener('abort',cancel,{once:true});

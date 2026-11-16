@@ -15,7 +15,8 @@ import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
 import {acceptStatus,boundedWorkerEndMessage,boundAccounts,type CoordTask,type CoordinatorState} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
-import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,readMergedPlan,ownerPlanPath,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {boundedOwnerBinding} from '../../core/src/bounded-owners';
 import {readLogoutProof,listAttempts} from '../../core/src/session-lifecycle';
 import {pidAlive} from '../../core/src/session-takeover';
 
@@ -114,7 +115,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  // off/on is the swarm's own resume path. swarm.json is not written.
  const pausedFile=join(dir,'rollout-paused.json');
  const paused=():string[]=>{try{return JSON.parse(readFileSync(pausedFile,'utf8'));}catch{return [];}};
- const standing=():string[]=>{try{return mergedPlan(JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')),readCoordinatorJobs(base)).jobs.filter((j:any)=>j.standing===true&&j.enabled).flatMap(jobAccounts);}catch{return [];}};
+ const standing=():string[]=>{try{return readMergedPlan(base).jobs.filter((j:any)=>j.standing===true&&j.enabled).flatMap(jobAccounts);}catch{return [];}};
  const setEnabled=(accounts:readonly string[],on:boolean)=>withPlanWrite(()=>{
   const own=readCoordinatorJobs(base),keys=new Set(accounts.map(a=>a.toLowerCase())),held=new Set((own.paused??[]).map(a=>a.toLowerCase()));
   for(const key of keys)if(on)held.delete(key);else held.add(key);
@@ -141,7 +142,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const open=alive&&!detached?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result&&!(Number.isFinite(s.at)&&now()-s.at>=BOOTSTRAP_STATUS_AGE_MS)):[];
  if(open.length){
   // Every standing job counts here, on or off: a job just turned off still closes its last session.
-  const allStanding=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true).flatMap((j:any)=>j.accounts??(j.account?[j.account]:[]));}catch{return [];}};
+  const allStanding=():string[]=>{try{return (JSON.parse(readFileSync(ownerPlanPath(base),'utf8')).jobs??[]).filter((j:any)=>j.standing===true).flatMap((j:any)=>j.accounts??(j.account?[j.account]:[]));}catch{return [];}};
   const names=new Set(allStanding().map(a=>a.toLowerCase())),own=open.filter(s=>names.has(String(s.name).toLowerCase())).map(s=>String(s.name));
   // Pause standing jobs only when nothing else holds the rollout; while a coordinator run does, they keep working.
   // Pause every enabled standing job, not only the open ones: a job paused alone restarts and reopens a session.
@@ -167,8 +168,8 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   }
   if(stopped())throw Error('controller rollout owner stopped');
   if(diskSource()!==source)throw Error('runtime changed before controller spawn');
-  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release,WORKER_ENTRY:''})))(source,nonce);
-  const next={pid,nonce,source,swarmSource,at:now(),detached:true};
+  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,join(base,'scripts/swarm.ts'),ownerPlanPath(base),'--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release,WORKER_ENTRY:''})))(source,nonce);
+  const next={pid,nonce,source,swarmSource,at:now(),detached:true,...boundedOwnerBinding(base)};
   try{
    atomicJson(ownerFile,next);await ack(next,next.at);if(stopped())throw Error('controller rollout owner stopped');
    if(diskSource()!==source)throw Error('runtime changed before controller admission');
@@ -385,7 +386,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
   return stops;
  };
  settledStops();
- const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownRaw=existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null;
+ const path=ownerPlanPath(base),raw=readFileSync(path,'utf8'),ownRaw=existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null;
  // Release first: the merged-plan split check and the overlay replacement below both read this result.
  const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),accounts,base),plan=mergedPlan(JSON.parse(raw),own),now=Date.now();
  const existing=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===account.toLowerCase()));
@@ -487,7 +488,7 @@ export function prepareLiveRecovery(task:CoordTask,account:string,script:string,
  }
  if(task.sessionRecovery)recoveryQualification(task,dependencies,source,base);
  installJob(task,account,script,runId,source,dependencies,{base,preflight:true,recoveryPreflight:!!task.sessionRecovery,launch,freeGB:admission.freeGB});
- const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownFile=join(base,COORDINATOR_JOBS_FILE),ownRaw=existsSync(ownFile)?readFileSync(ownFile,'utf8'):null;
+ const path=ownerPlanPath(base),raw=readFileSync(path,'utf8'),ownFile=join(base,COORDINATOR_JOBS_FILE),ownRaw=existsSync(ownFile)?readFileSync(ownFile,'utf8'):null;
  const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),participants,base),plan=mergedPlan(JSON.parse(raw),own),names=new Set(participants.map(n=>n.toLowerCase()));
  const before=structuredClone(plan.jobs);
  // Park the held accounts: a disabled copy of their job goes into the coordinator's file, where it shadows the owner

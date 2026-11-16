@@ -1,8 +1,11 @@
 import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,resolve} from 'node:path';
 import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer,crashResidue,LOST_SESSION_DROP_MS,forgetReleaseMemory} from '../src/worker-release';
+test('the actual runtime source tree keeps controller tooling outside its import boundary',()=>{
+ expect(()=>workerSourceRevision(resolve(import.meta.dir,'../../..'))).not.toThrow();
+});
 
 test('a new process answers the release from the disk cache until a release file changes',()=>{
  const root=fixture();

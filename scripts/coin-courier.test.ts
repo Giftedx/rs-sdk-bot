@@ -216,8 +216,9 @@ test('coin proof isolates real ownership files and profiles while keeping the wo
   rmSync(join(scratch,'.practice/coordinator/state.json'));
   for(const server of ['127.0.0.1:21000','rs-sdk-demo.fly.dev'])expect(()=>checkTransferAccounts(scratch,['Donor'],server,[],'',io)).toThrow('ownership unavailable');
   const p=coinProofEndpoints({engine:21000,gateway:21001,management:21002,tcp:21003},'coin-fixture');
-  const child=coinChildConfiguration(['scripts/coin-courier.ts','Donor','Receiver','45000'],{},p,{FLEET_VAULT_KEY:'inherited-fixture',FLEET_DIR:source,COORDINATOR_RUN_ID:'live-run'},scratch);
+  const child=coinChildConfiguration(['scripts/coin-courier.ts','Donor','Receiver','45000'],{},p,{SWARM_PLAN:join(source,'swarm.json'),FLEET_VAULT_KEY:'inherited-fixture',FLEET_DIR:source,COORDINATOR_RUN_ID:'live-run'},scratch);
   expect(child.cwd).toBe(scratch);expect(child.env.FLEET_DIR).toBe(join(scratch,'fleet'));
+  expect(child.env.SWARM_PLAN).toBe(join(scratch,'swarm.json'));
   expect(child.env.FLEET_VAULT_KEY).toBe('');expect(child.env.COORDINATOR_RUN_ID).toBe('');
   expect(removeCoinProofRoot(scratch)).toBe(true);scratch='';
   expect(readFileSync(join(source,'vendor/rs-sdk/bots/LiveActor/marker'),'utf8')).toBe('private live profile');

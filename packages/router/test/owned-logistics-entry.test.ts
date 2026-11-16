@@ -54,7 +54,7 @@ test('actual registration precedes copied AIO execution with private ownership s
  try{
   const result=await qualifyOwnedLogistics([names[0]!,'coin-fanout',names[1]!,names[2]!],{...f,run:async(args,options)=>{
    commands.push([...args]);calls++;
-   expect(options.cwd).toBe(f.roots[0]);expect(options.env.DEMO_OK).toBe('');expect(options.env.FLEET_DIR).toBe(join(options.cwd,'fleet'));
+   expect(options.cwd).toBe(f.roots[0]);expect(options.env.DEMO_OK).toBe('');expect(options.env.FLEET_DIR).toBe(join(options.cwd,'fleet'));expect(options.env.SWARM_PLAN).toBe(join(options.cwd,'swarm.json'));
    expect(JSON.parse(readFileSync(join(options.cwd,'swarm.json'),'utf8')).jobs).toEqual([]);
    expect(JSON.parse(readFileSync(join(options.cwd,'.practice/coordinator/state.json'),'utf8'))).toEqual({version:1,tasks:[]});
    return calls===1?{code:0,stdout:auth()}:{code:0,stdout:'RESULT ok aggregate transfer\n'};

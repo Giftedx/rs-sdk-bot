@@ -35,7 +35,7 @@ import { jobLogStart } from '../packages/core/src/job-log';
 import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../packages/practice/src/proc';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
-import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { mergedPlan, readCoordinatorJobs, readMergedPlan, emptyCoordinatorJobs, ownerPlanPath } from '../packages/core/src/coordinator-jobs';
 import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
 import { acquireFleetLease, FLEET_LEASE_RENEW_MS, FLEET_LEASE_RETRY_MS } from '../packages/core/src/fleet-lease';
 
@@ -638,7 +638,7 @@ if (import.meta.main) {
     const root = resolve(import.meta.dir, '..');
     const planFile = resolve(process.argv[2] ?? join(root, 'swarm.json'));
     // Windows paths compare without case: the drive letter differs between a shell's cwd and import.meta.dir.
-    const rootPlan = process.platform === 'win32' ? planFile.toLowerCase() === resolve(root, 'swarm.json').toLowerCase() : planFile === resolve(root, 'swarm.json');
+    const rootPlan = process.platform === 'win32' ? planFile.toLowerCase() === ownerPlanPath(root).toLowerCase() : planFile === ownerPlanPath(root);
     const coordinatorOwner=process.argv.find(a=>a.startsWith('--coordinator='))?.slice('--coordinator='.length);
     const prac = join(root, '.practice');
     const side = mySide();
@@ -812,7 +812,7 @@ if (import.meta.main) {
         }
         let plan: Plan;
         // The coordinator's jobs join the root plan only; a practice plan file given on the command line runs alone.
-        try { plan = mergedPlan(JSON.parse(readFileSync(planFile, 'utf8')), rootPlan ? readCoordinatorJobs(root) : emptyCoordinatorJobs()); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
+        try { plan = rootPlan ? readMergedPlan(root,planFile) : mergedPlan(JSON.parse(readFileSync(planFile, 'utf8')),emptyCoordinatorJobs()); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
         // An owner edit of the hold file applies live, like swarm.json.
         try { const m = statSync(holdsFile).mtimeMs; if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason))); holdsMtime = m; } } catch { /* no hold file yet */ }
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }

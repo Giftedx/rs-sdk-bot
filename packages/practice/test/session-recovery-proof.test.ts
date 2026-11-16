@@ -1,4 +1,9 @@
 // Unit-only checks of the native recovery proof's pure parts. No world, login server or game child starts here.
+test('loc diagnostics preserve handler result and dispatch when observation fails',()=>{
+ let calls=0;class Handler{handle(){calls++;return false;}}
+ recoveryProof.installLocObserver({OpLocHandler:Handler,LocType:{get(){throw Error('unavailable');}},World:{getLoc(){return {type:2213};},currentTick:1}},()=>{throw Error('writer unavailable');});
+ expect(new Handler().handle()).toBe(false);expect(calls).toBe(1);
+});
 import {test,expect,spyOn} from 'bun:test';
 import * as fs from 'node:fs';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,symlinkSync,existsSync,rmSync,statSync,renameSync} from 'node:fs';

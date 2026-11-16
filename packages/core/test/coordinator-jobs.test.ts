@@ -59,6 +59,16 @@ test('the plan keeps owner limits; a granted expansion applies only while the ow
     expect(standing[0].enabled).toBe(true);
     expect(plan.coordination).toEqual({ enabled: true, maxLive: 17, directive: 'go' });
 });
+test('a selected cloud plan merges the same overlay without reading or changing the root plan', () => {
+    const base = mkdtempSync(join(tmpdir(), 'selected-coordinator-plan-'));
+    const selected = join(base, 'cloud.json');
+    const rootPlan = JSON.stringify({ maxBots: 17, jobs: [{ account: 'Other', enabled: true }] });
+    writeFileSync(join(base, 'swarm.json'), rootPlan);
+    writeFileSync(selected, JSON.stringify({ maxBots: 4, minFreeGB: 4, jobs: [{ account: 'Rod', enabled: false }] }));
+    writeCoordinatorJobs(base, { jobs: [{ account: 'Rod', enabled: true, script: 'check.ts', coordinatorOwner: 'coordinator' }], coordination: {} });
+    expect(readMergedPlan(base, selected)).toMatchObject({ maxBots: 4, minFreeGB: 4, jobs: [{ account: 'Rod', enabled: true, script: 'check.ts' }] });
+    expect(readFileSync(join(base, 'swarm.json'), 'utf8')).toBe(rootPlan);
+});
 test('a missing file is an empty overlay; a written file reads back and merges from disk', () => {
     const base = mkdtempSync(join(tmpdir(), 'coordinator-jobs-'));
     writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 2, minFreeGB: 0, jobs: owner }));

@@ -25,6 +25,13 @@ const expected=(f:ReturnType<typeof fixture>)=>({
  pending:existsSync(f.path),accepted:existsSync(f.path+'.accepted'),rejected:existsSync(f.path+'.rejected'),
  tasks:loadState(f.directory).tasks.map(r=>r.spec.id),
 });
+test('a bounded recovery rejects unrelated submitted work without publishing or admitting it',()=>{
+ const f=fixture(),scope={targets:[{account:'Rod',attemptId:'1794807014059-0000010716-0000000001',endedAt:1794807014127}],taskIds:['recovery-qualified','recover-rod']};
+ writeFileSync(join(f.base,'swarm.json'),JSON.stringify({maxBots:4,minFreeGB:4,jobs:[],coordination:{boundedRecovery:scope}}));
+ intakeRequests(f.state,f.base,{publish:()=>{throw Error('unrelated publication must not run');}});
+ expect(existsSync(f.path+'.rejected')).toBe(true);expect(f.state.tasks).toEqual([]);
+ expect(readFileSync(f.cap,'utf8')).toBe(f.bytes);
+});
 
 test('a failed queue save leaves the request pending and the in-memory queue untouched',()=>{
  const f=fixture();

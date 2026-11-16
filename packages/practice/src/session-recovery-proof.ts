@@ -15,6 +15,8 @@ import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
 import {accountDir,domainOf,readLogoutProof,listAttempts,beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {launchRevision,cachedLaunchRevision} from '../../core/src/worker-release';
+import {readMergedPlan} from '../../core/src/coordinator-jobs';
+import {proveSwarmRecoveryContinuation} from './swarm-recovery-chain';
 import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -250,6 +252,15 @@ export function installAuthObserver(Server:any,write:(line:string)=>void=(line)=
 // While a player's main modal is open it also records, with wall-clock times: each websocket message the world
 // buffers for that player (pinned web/websocket.ts message -> ClientSocket.buffer; length only) and each tick's
 // decode read (available bytes). This separates a missing client write, a transport delay and a world scheduling delay.
+export function installLocObserver(m:{OpLocHandler:any;LocType:any;World:any},write:(line:string)=>void){
+ const handle=m.OpLocHandler.prototype.handle;
+ m.OpLocHandler.prototype.handle=function(this:any,message:any,player:any){
+  let evidence:unknown=null;
+  try{const loc=m.World.getLoc(message.x,message.z,player.level,message.loc),type=loc?m.LocType.get(loc.type):null;evidence={account:player.username,packet:{x:message.x,z:message.z,loc:message.loc,op:message.op},player:{x:player.x,z:player.z,level:player.level,originX:player.originX,originZ:player.originZ,delayed:player.delayed},loc:loc?{type:loc.type,x:loc.x,z:loc.z}:null,options:type?.op??null};}catch{/* observation cannot change dispatch */}
+  let result:unknown;try{result=Reflect.apply(handle,this,[message,player]);return result;}finally{try{write('LOC_HANDLE '+JSON.stringify({at:Date.now(),tick:m.World.currentTick,evidence,result}));}catch{/* observation cannot change dispatch */}}
+ };
+}
+
 export function installButtonObserver(m:{NetworkPlayer:any;IfButtonHandler:any;IdkSaveDesignHandler:any;Component:any;Repository:any;World:any;WSClientSocket?:any},write:(line:string)=>void=(line)=>console.log(line),now:()=>number=Date.now){
  // IDK_SAVEDESIGN, IF_BUTTON, CLOSE_MODAL
  const watch=[27,86,93],live=new Set<string>();let count=0,wireCount=0,decoding:{packets:number[]}|null=null,button:{runs:object[]}|null=null;
@@ -573,7 +584,7 @@ async function run(directory:string){
  const source=launchRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
  const children:ReturnType<typeof Bun.spawn>[]=[],recoveryChildren:{pid:number;nonce:string}[]=[],cases:any[]=[],tasks=new Map<string,any>(),ends:Record<string,any>={},jobs:any[]=[];
  const ownedStops:OwnedStop[]=[],junctions:string[]=[];
- const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE};
+ const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE,plan:process.env.SWARM_PLAN};
  let relay:ReturnType<typeof startRelay>|undefined,pulse:ReturnType<typeof setInterval>|undefined,stamp=String(Date.now()).slice(-6);
  const put=(path:string,value:unknown)=>publishControlFile(join(base,path),value);
  const progress=()=>writeFileSync(join(directory,'progress.json'),JSON.stringify({source,runnerSha256,cases},null,2));
@@ -595,6 +606,10 @@ async function run(directory:string){
   // 127.0.0.1, not localhost: the login server binds 0.0.0.0 (IPv4 only, LoginServer.ts:379), and on this PC localhost
   // can resolve to ::1 first; the world's login client then never connects and every login reads "login server offline".
   const env={...process.env,DB_BACKEND:'sqlite',LOGIN_SERVER:'true',LOGIN_HOST:'127.0.0.1',LOGIN_PORT:String(LOGIN_PORT),EASY_STARTUP:'false',NODE_ID:'77',NODE_PORT:'43651',NODE_MEMBERS:'true',NODE_TICKRATE:'150',WEB_PORT:'8890',WEB_MANAGEMENT_PORT:'8896',WEBSITE_REGISTRATION:'false',FRIEND_SERVER:'false',LOGGER_SERVER:'false'};
+  // GameMap.init refuses to load packed locations without this immutable content/maps root.
+  const nativeMapSource=resolve(engine,'../content');
+  Object.assign(env,{BUILD_SRC_DIR:nativeMapSource});
+  if(!existsSync(join(nativeMapSource,'maps')))throw Error('native recovery map source missing');
   const spawnServer=(args:string[],log:string,extra:Record<string,string>={})=>{const p=Bun.spawn(args,{cwd:workspace,env:{...env,...extra},stdout:Bun.file(join(directory,log+'.out.log')),stderr:Bun.file(join(directory,log+'.err.log')),windowsHide:true});children.push(p);return p;};
   const waitLog=async(p:ReturnType<typeof Bun.spawn>,file:string,pattern:RegExp)=>{const until=Date.now()+60000;while(Date.now()<until){if(p.exitCode!==null)throw Error('native server exited: '+file);if(existsSync(join(directory,file))&&pattern.test(readFileSync(join(directory,file),'utf8')))return;await Bun.sleep(200);}throw Error('native server readiness timeout: '+file);};
   const login=spawnServer([process.execPath,'--preload',observer,join(engine,'src/login.ts')],'login',{WEB_MANAGEMENT_PORT:'8897',LOGIN_TAKEOVER_MIN_MS:String(TAKEOVER_WINDOW_MS)});await waitLog(login,'login.out.log',/Login server listening/);
@@ -604,6 +619,8 @@ async function run(directory:string){
   writeFileSync(buttonTrace,'',{flag:'wx'});
   const engineModule=(p:string)=>JSON.stringify(join(engine,'src',p));
   writeFileSync(worldObserver,`import{appendFileSync,existsSync,writeFileSync}from'node:fs';const trace=${JSON.stringify(buttonTrace)};const timer=setInterval(async()=>{if(!existsSync(${JSON.stringify(attachRequest)}))return;clearInterval(timer);try{const[n,b,d,c,r,w,s]=await Promise.all([${['engine/entity/NetworkPlayer.ts','network/game/client/handler/IfButtonHandler.ts','network/game/client/handler/IdkSaveDesignHandler.ts','cache/config/Component.ts','network/game/client/ClientGameProtRepository.ts','engine/World.ts','server/ws/WSClientSocket.ts'].map(p=>'import('+engineModule(p)+')').join(',')}]);(${installButtonObserver.toString()})({NetworkPlayer:n.NetworkPlayer,IfButtonHandler:b.default,IdkSaveDesignHandler:d.default,Component:c.default,Repository:r.default,World:w.default,WSClientSocket:s.default},line=>appendFileSync(trace,line+'\\n'));writeFileSync(${JSON.stringify(attachAck)},'attached');}catch{writeFileSync(${JSON.stringify(attachAck)},'failed');}},50);timer.unref();`);
+  const locTrace=join(directory,'loc-observations.log');
+  appendFileSync(worldObserver,`\nconst locTimer=setInterval(async()=>{if(!existsSync(${JSON.stringify(attachAck)}))return;clearInterval(locTimer);try{const[h,l,w]=await Promise.all([import(${engineModule('network/game/client/handler/OpLocHandler.ts')}),import(${engineModule('cache/config/LocType.ts')}),import(${engineModule('engine/World.ts')})]);(${installLocObserver.toString()})({OpLocHandler:h.default,LocType:l.default,World:w.default},line=>appendFileSync(${JSON.stringify(locTrace)},line+'\\n'));appendFileSync(${JSON.stringify(locTrace)},'LOC_ATTACHED\\n');}catch{appendFileSync(${JSON.stringify(locTrace)},'LOC_ATTACH_FAILED\\n');}},50);locTimer.unref();`);
   const world=spawnServer([process.execPath,'--preload',worldObserver,join(engine,'src/app.ts')],'world');await waitLog(world,'world.out.log',/World ready|World is ready|World started|world is ready/i);
   writeFileSync(attachRequest,'attach');
   for(const until=Date.now()+10000;!existsSync(attachAck)&&Date.now()<until;)await Bun.sleep(50);
@@ -619,7 +636,10 @@ async function run(directory:string){
   put('packages/router/tasks/'+capability+'.json',JSON.parse(readFileSync(join(root,'packages/router/tasks',capability+'.json'),'utf8')));
   put('.practice/swarm-script-holds.json',[]);
   put('.practice/coordinator/swarm-owner.json',{pid:process.pid,nonce:CONTROLLER_MARKER,source});
-  const writeState=()=>{put('.practice/coordinator/state.json',{tasks:[...tasks.values()]});put('.practice/swarm-deaths.json',ends);put('swarm.json',{maxBots:17,minFreeGB:FREE_FLOOR_GB,jobs});};
+  // A decoy root plan must never grant or block a handoff plan's recovery authority.
+  put('swarm.json',{maxBots:1,minFreeGB:1000,jobs:[{account:'NotOurActor',enabled:true,script:'scripts/session-check.ts'}]});
+  process.env.SWARM_PLAN=join(base,'handoff/swarm.json');
+  const writeState=()=>{put('.practice/coordinator/state.json',{tasks:[...tasks.values()]});put('.practice/swarm-deaths.json',ends);put('handoff/swarm.json',{maxBots:17,minFreeGB:FREE_FLOOR_GB,jobs});};
   const beat=()=>put('.practice/swarm-state.json',{at:Date.now(),controllerPid:process.pid,jobs:jobs.map(j=>({account:j.account,state:'disabled'}))});
   // A failed timer publish keeps the previous complete view; the strict reader refuses it as stale, never malformed.
   writeState();beat();pulse=setInterval(()=>{try{beat();}catch{}},1000);
@@ -699,6 +719,11 @@ async function run(directory:string){
   };
   const caseDir=(id:string)=>{const d=join(directory,'cases',id);mkdirSync(d,{recursive:true});return d;};
   const deathBytes=()=>readFileSync(join(base,'.practice/swarm-deaths.json'),'utf8');
+  record('selected-plan','native-actual-controller-selection',{
+   handoffLimits:readMergedPlan(base).maxBots===17&&readMergedPlan(base).minFreeGB===FREE_FLOOR_GB,
+   excludesRootJobs:!readMergedPlan(base).jobs.some((j:any)=>j.account==='NotOurActor'),
+   rootPlanRetained:JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).maxBots===1,
+  });
   // An owner process using the real per-account producer. The root chooses whether the controller can see it.
   const owner=async(f:Fixture,dir:string,mode:'hold'|'warm'|'orphan'|'partial',lifecycle:string)=>{
    const script=join(dir,'owner.ts'),ready=join(dir,'owner-ready.json'),release=join(dir,'owner-release'),takeover=join(dir,'owner-takeover'),warmFile=join(dir,'owner-warm.json');
@@ -779,10 +804,17 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // 1 offline: an ordinary logged-out account.
   const A=await fixture(HOST,preset);
   const offline=await positive('offline',A);offline.record('native-actual-cli');
+  if(capability==='session-recovery-only'){
+   const pointer=JSON.parse(readFileSync(join(directory,'bank-observer-qualification.json'),'utf8'));
+   if(hash(pointer.path)!==pointer.sha256)throw Error('bank observer qualification pointer changed');
+   const F=await fixture(HOST,{...preset,position:{x:3185,z:3436,level:0}}),out=await positive('bounded-swarm-new-mission',F);
+   const checks=await proveSwarmRecoveryContinuation({sourceRoot:root,directory:out.dir,account:F.name,server:F.server,profile:F.envPath,save:F.save,observerDelivery:dirname(pointer.path)});
+   out.record('native-actual-swarm-new-mission',checks);
+  }
   // Retired successful ordinary account with no producer history: actual controller -> installed core CLI.
   {
    const C=await fixture(HOST,preset,true),dir=caseDir('completed');
-   const holds=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignments=readFileSync(join(base,'swarm.json'),'utf8');
+   const holds=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignments=readFileSync(join(base,'handoff/swarm.json'),'utf8');
    const beforeProof=readLogoutProof(C.name,C.server,{root:lifeRoot});
    const out=await positive('completed',C),end=ends[C.name],entry=JSON.parse(readFileSync(join(base,'packages/router/tasks',capability+'.json'),'utf8')).entry;
    const revision=missionSignature({account:C.name,script:entry,env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500',COORDINATOR_RUN_ID:out.runId}});
@@ -797,7 +829,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     oldMissionRefused:startable([C.name],false,retained,()=>Infinity,undefined,end.revision).start.length===0,
     newMissionReleased:startable([C.name],false,retained,()=>Infinity,undefined,revision).start.includes(C.name),
     holdsRetained:readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8')===holds,
-    assignmentsRetained:readFileSync(join(base,'swarm.json'),'utf8')===assignments,
+    assignmentsRetained:readFileSync(join(base,'handoff/swarm.json'),'utf8')===assignments,
     noStopCreated:!existsSync(join(base,'.practice','stop-'+C.name)),
    });
   }
@@ -841,12 +873,12 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
      if(fault==='wrong-source')r.source='f'.repeat(64);
      writeState();
     });
-    const endsBefore=deathBytes(),holdsBefore=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignmentsBefore=readFileSync(join(base,'swarm.json'),'utf8'),attempts=listAttempts(C.name,C.server,{root:lifeRoot}).map(a=>a.attemptId);
+    const endsBefore=deathBytes(),holdsBefore=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignmentsBefore=readFileSync(join(base,'handoff/swarm.json'),'utf8'),attempts=listAttempts(C.name,C.server,{root:lifeRoot}).map(a=>a.attemptId);
     const out=await h.finish(),stopped=join(base,'.practice','stop-'+C.name);
     const row={fault,refused:!h.sub.child&&!existsSync(out.paths.lease)&&!existsSync(out.paths.permit)&&out.result?.sessionRecovered===false,
      noLogin:noRecoveryLogin(loginLog(),h.since,C.name),noNewIntent:isDeepStrictEqual(attempts,listAttempts(C.name,C.server,{root:lifeRoot}).map(a=>a.attemptId)),
      endsRetained:deathBytes()===endsBefore,holdsRetained:readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8')===holdsBefore,
-     assignmentsRetained:readFileSync(join(base,'swarm.json'),'utf8')===assignmentsBefore,stopRetained:fault!=='stopped'||existsSync(stopped)};
+     assignmentsRetained:readFileSync(join(base,'handoff/swarm.json'),'utf8')===assignmentsBefore,stopRetained:fault!=='stopped'||existsSync(stopped)};
     rows.push(row);writeFileSync(join(dir,fault+'.json'),JSON.stringify(row));cpSync(h.dir,join(dir,fault),{recursive:true});
     // Fault setup belongs only to this private fixture; stopped identities remain retired.
     put('.practice/swarm-script-holds.json',[]);jobs.find(j=>j.account===C.name).enabled=false;writeState();
@@ -1054,8 +1086,11 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    retainRequiredRecoveryCase(row,()=>progress());
   }
   const checks=deriveChecks(cases);
-  const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
-   'vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
+  const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','packages/core/src/route-plan.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
+   'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','packages/core/src/bounded-owners.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
+   'packages/practice/src/swarm-recovery-chain.ts','packages/router/src/bank-observer-qualification.ts',
+   'packages/router/src/coordinator-cli.ts','packages/router/src/coordinator-live.ts','packages/router/tasks/session-recovery-only.json',
+   'vendor/rs-sdk/server/webclient/tsconfig.json','vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
   if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');
   const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===launchRevision()&&runnerSha256===hash(runner),
    level:'native-controller-recovery',at:Date.now(),runtimeRevision:source,runnerSha256,bindings,
@@ -1076,6 +1111,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   if(saved.rsan===undefined)delete process.env.LOGIN_RSAN;else process.env.LOGIN_RSAN=saved.rsan;
   if(saved.rsae===undefined)delete process.env.LOGIN_RSAE;else process.env.LOGIN_RSAE=saved.rsae;
   if(saved.release===undefined)delete process.env.WORKER_RELEASE;else process.env.WORKER_RELEASE=saved.release;
+  if(saved.plan===undefined)delete process.env.SWARM_PLAN;else process.env.SWARM_PLAN=saved.plan;
   // Remove only the junction entries, never their shared targets.
   for(const j of junctions)try{if(lstatSync(j).isSymbolicLink())rmdirSync(j);}catch{}
   closeSync(fd);unlinkSync(lock);

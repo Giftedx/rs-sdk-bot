@@ -2,7 +2,22 @@
 // the run jobs it installs, the delivery focus it adopts and the fleet expansion it grants in this untracked file.
 // scripts/swarm.ts, scripts/fleet-agent.ts and the recovery permit read both files as one plan through mergedPlan.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, relative, isAbsolute } from 'node:path';
+import {assertBoundedRecoveryAssignments,assertBoundedInspectionAssignments} from './bounded-recovery';
+
+const repository = resolve(import.meta.dir, '../../..');
+function selectedOwnerPlan(base: string) {
+    const selected=process.env.SWARM_PLAN;
+    if(!selected)return;
+    const within=relative(resolve(base),resolve(base,selected));
+    return resolve(base)===repository || within!== '..'&&!within.startsWith('..'+(process.platform==='win32'?'\\':'/'))&&!isAbsolute(within) ? selected : undefined;
+}
+// Fixture roots stay private even when a production controller selected its handoff plan.
+export function ownerPlanPath(base: string, selected = selectedOwnerPlan(base)): string {
+    const file = resolve(base, selected ?? 'swarm.json'), within = relative(resolve(base), file);
+    if (within === '..' || within.startsWith('..' + (process.platform === 'win32' ? '\\' : '/')) || isAbsolute(within)) throw Error('owner plan outside checkout');
+    return file;
+}
 
 export const COORDINATOR_JOBS_FILE = '.practice/coordinator/jobs.json';
 export type CoordinatorJobs = {
@@ -76,6 +91,9 @@ export function mergedPlan<P extends { maxBots: number; jobs: any[]; coordinatio
     const jobs = mergeJobs(plan.jobs ?? [], overlay.jobs).map(j => paused.size && j.standing === true && j.enabled && jobAccounts(j).some(n => paused.has(n.toLowerCase())) ? { ...j, enabled: false } : j);
     return { ...plan, ...(granted !== undefined ? { maxBots: granted } : {}), ...(coordination !== undefined ? { coordination } : {}), jobs };
 }
-export function readMergedPlan(base: string) {
-    return mergedPlan(JSON.parse(readFileSync(join(base, 'swarm.json'), 'utf8')), readCoordinatorJobs(base));
+export function readMergedPlan(base: string, selected?: string) {
+    const plan=JSON.parse(readFileSync(ownerPlanPath(base, selected), 'utf8')),overlay=readCoordinatorJobs(base);
+    if(plan.coordination?.boundedRecovery)assertBoundedRecoveryAssignments(plan.coordination.boundedRecovery,plan.jobs,overlay.jobs);
+    if(plan.coordination?.boundedInspection)assertBoundedInspectionAssignments(plan.coordination.boundedInspection,plan.jobs,overlay.jobs);
+    return mergedPlan(plan,overlay);
 }

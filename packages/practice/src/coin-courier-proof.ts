@@ -116,7 +116,7 @@ export async function startCoinProofStack(p:ProofEndpoints,start:(opts:StackOpti
 export function coinChildConfiguration(args:string[],env:Record<string,string>,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env,workerRoot=root){
     return{cmd:['bun',...args],cwd:workerRoot,windowsHide:true,
         env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',
-            FLEET_SIDE:'local',FLEET_DIR:join(workerRoot,'fleet'),FLEET_VAULT_KEY:'',FLEET_SEED:'',COORDINATOR_RUN_ID:'',STANDING:'0',SWARM_LEASE_HOLDER:'',WORKER_RELEASE:'',BOT_GOAL:'practice coin courier'}};
+            FLEET_SIDE:'local',FLEET_DIR:join(workerRoot,'fleet'),SWARM_PLAN:join(workerRoot,'swarm.json'),CLOUD_WATCH_ID:'',FLEET_VAULT_KEY:'',FLEET_SEED:'',COORDINATOR_RUN_ID:'',STANDING:'0',SWARM_LEASE_HOLDER:'',WORKER_RELEASE:'',BOT_GOAL:'practice coin courier'}};
 }
 // The shared registration CLI admits only default ports. Keep its session owner
 // and tick wait, with the exact generated profile bound to this proof's endpoints.
