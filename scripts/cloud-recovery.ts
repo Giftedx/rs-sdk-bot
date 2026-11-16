@@ -41,7 +41,7 @@ export function prepareBoundedRecovery(base:string,plan:any,targets:RecoveryTarg
     const parked=readCoordinatorJobs(base),selected=new Set(targets.map(t=>t.account.toLowerCase())),seen=new Set<string>();
     if(parked.jobs.length&&(Object.keys(parked.coordination).length||parked.expansion||parked.paused?.length))throw Error('bounded recovery preserves existing coordinator settings');
     for(const job of parked.jobs){
-        const key=typeof job.account==='string'?job.account.toLowerCase():'';
+        const key=typeof job?.account==='string'?job.account.toLowerCase():'';
         const owner=next.jobs.find((j:any)=>j.account.toLowerCase()===key);
         if(!selected.has(key)||seen.has(key)||!owner||!isDeepStrictEqual(job,owner))throw Error('bounded recovery preserves changed or unrelated coordinator assignments');
         seen.add(key);

@@ -40,7 +40,7 @@ test('bounded recovery retries preserve only exact selected parked owner copies 
   expect(next.jobs[1]).toBe(plan.jobs[1]);expect(next.jobs[0].enabled).toBe(false);expect(readFileSync(file,'utf8')).toBe(raw);
   expect(readFileSync(ends)).toEqual(before.end);expect(readFileSync(state)).toEqual(before.state);expect(readFileSync(receiptFile)).toEqual(before.receipt);
   expect(authority(['ls-remote','--refs','origin',ref]).split(/\s/)[0]).toBe(head);
-  for(const jobs of [[{...parked,enabled:true}],[{...parked,account:'Other'}],[{...parked,script:'scripts/other.ts'}],[{...parked,env:{...parked.env,LOOT_WATCH:'1'}}],[{...parked,coordinatorOwner:'coordinator',coordinatorTask:'old'}],[parked,parked]]){
+  for(const jobs of [[null],[{}],[{...parked,account:undefined,accounts:['Rod']}],[{...parked,enabled:true}],[{...parked,account:'Other'}],[{...parked,script:'scripts/other.ts'}],[{...parked,repeat:true}],[{...parked,env:{...parked.env,LOOT_WATCH:'1'}}],[{...parked,coordinatorOwner:'coordinator',coordinatorTask:'old'}],[parked,parked]]){
    const bytes=JSON.stringify({jobs,coordination:{}});writeFileSync(file,bytes);
    expect(()=>prepareBoundedRecovery(base,plan,scope,['Rod','Other'],'cloud')).toThrow();expect(readFileSync(file,'utf8')).toBe(bytes);
   }
