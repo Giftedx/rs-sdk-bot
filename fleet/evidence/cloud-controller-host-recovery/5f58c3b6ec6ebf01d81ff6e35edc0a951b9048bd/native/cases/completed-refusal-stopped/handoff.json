@@ -1,0 +1,13 @@
+{
+  "submittedAt": 1794830144827,
+  "fleet": {
+    "at": 1794830144828,
+    "observedAt": 1794830144828,
+    "ageMs": 0,
+    "verdict": "resolved"
+  },
+  "child": null,
+  "dispatch": "recovery setup refused; no lease issued; no retry",
+  "boundaries": [],
+  "firstFailure": null
+}

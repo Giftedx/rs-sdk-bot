@@ -1,0 +1,19 @@
+{
+  "id": "stop",
+  "level": "native-actual-dispatcher",
+  "ok": true,
+  "checks": {
+    "fixtureStopRefused": true,
+    "repositoryStopRefused": true,
+    "distinctIdentities": true,
+    "stopsRetained": true,
+    "noProducerIntent": true,
+    "noLogin": true,
+    "noSubsequentLogin": true,
+    "noSubsequentProducerAttempt": true
+  },
+  "accounts": [
+    "flrcvxsvc916",
+    "flrcvxnycb17"
+  ]
+}

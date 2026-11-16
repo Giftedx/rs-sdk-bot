@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "status": "complete",
+  "mode": "observer",
+  "account": "aiobfxtg371",
+  "server": "127.0.0.1:21000",
+  "attempt": "aiobfxtg371-usPgLr",
+  "startedAt": 1794830024888,
+  "source": {
+    "entry": "scripts/fleet-inspect.ts",
+    "entries": [
+      "scripts/fleet-inspect.ts",
+      "scripts/measure/catalog-integration-proof.ts"
+    ],
+    "revision": "7a347a8cc6bccd0c2c6068ba3d0b79af10b972cfcf834d6d1871752389ba9855",
+    "proofSha256": "a72f4ec92a10f9b648abb0cd1993ab1d831ba9abc1897ad66bbfdf2726514c28"
+  },
+  "completedAt": 1794830032567,
+  "files": {
+    "before.sav": "cdf07aa18d493865265972ec29a13dfb97970bdc2061e4f1f86d09329b3b6149",
+    "after.sav": "914c03bb25c1216bbdb18e9cfe54387cb8410579ccdcfcd323ea067948c09838",
+    "stdout.log": "c33eb707d8ccdf49ad0304fee05113717ce1866a93ca802882e2ecd69b2f2383",
+    "stderr.log": "df584584c868541ac51d37ffb0b1841f301a79bb93e478e14124faa89415db28",
+    "execution.json": "4caac1a279ad952f7107761180a9141a23798ed8584ae2eba60b25c3c47051ef",
+    "logout.json": "4176505cf494898213febff1eecb6807ad5c332d445571043e10b9db235b2c62"
+  }
+}
