@@ -412,12 +412,12 @@ test('a mismatched receipt cannot complete a different run',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-recovery-')),s=seed();atomicJson(join(runDirectory('recovery-run',dir),'receipt.json'),{taskId:'producer',runId:'other-run',ok:true,at:Date.now(),output:{}});
  reconcile(s,()=>false,dir);expect(s.tasks[0]!.status).toBe('failed');expect(s.goals[1]!.completedTasks).toBe(0);
 });
-test('a proved pre-install account deferral restores the exact run to pending without credit or lost receipt',()=>{
+for(const reason of ['active-session','fleet-order'] as const)test('a proved pre-install '+reason+' deferral restores the exact run to pending without credit or lost receipt',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-live-defer-')),s=initialState();
  addTasks(s,[{id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}}]);
  const record=startTask(s,'live',Date.now()-1000,'busy-run'),before=s.latestReceiptSequence;
  const receipt={taskId:'live',runId:'busy-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,
-  liveDeferred:{account:'Rod',reason:'active-session',attemptId:'1794777984832-0000029060-0000000001',pid:29060}}};
+  liveDeferred:{account:'Rod',reason,attemptId:reason==='fleet-order'?null:'1794777984832-0000029060-0000000001',pid:reason==='fleet-order'?null:29060}}};
  const file=join(runDirectory('busy-run',dir),'receipt.json');atomicJson(file,receipt);
  reconcile(s,()=>{throw Error('receipt must settle without a process probe');},dir);
  expect(record.status).toBe('pending');expect(record.attempts).toBe(1);expect(record.receipt).toBeUndefined();expect(record.runId).toBeUndefined();
@@ -425,6 +425,21 @@ test('a proved pre-install account deferral restores the exact run to pending wi
  expect(JSON.parse(readFileSync(file,'utf8'))).toEqual(receipt);
  const sequence=s.sequence;reconcile(s,()=>false,dir);expect(s.sequence).toBe(sequence);
  expect(chooseTask(s,Date.now(),{runHeld:()=>true})).toBeNull();expect(chooseTask(s,Date.now(),{runHeld:()=>false})?.id).toBe('live');
+});
+
+for(const invalid of ['task','run','account','old timestamp','installed','evidence','attempt','pid','missing attempt','missing pid'])test('a fleet-order deferral cannot hide forged '+invalid,()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-order-defer-')),s=initialState();
+ addTasks(s,[{id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}}]);
+ const startedAt=Date.now()-1000;startTask(s,'live',startedAt,'order-run');
+ const receipt:any={taskId:'live',runId:'order-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,liveDeferred:{account:'Rod',reason:'fleet-order',attemptId:null,pid:null}}};
+ if(invalid==='task')receipt.taskId='other-task';if(invalid==='run')receipt.runId='other-run';
+ if(invalid==='account')receipt.output.liveDeferred.account='Other';if(invalid==='old timestamp')receipt.at=startedAt-1;
+ if(invalid==='installed')receipt.output.installed=true;if(invalid==='evidence')receipt.output.evidence='live';
+ if(invalid==='attempt')receipt.output.liveDeferred.attemptId='1794777984832-0000029060-0000000001';if(invalid==='pid')receipt.output.liveDeferred.pid=29060;
+ if(invalid==='missing attempt')delete receipt.output.liveDeferred.attemptId;if(invalid==='missing pid')delete receipt.output.liveDeferred.pid;
+ const file=join(runDirectory('order-run',dir),'receipt.json');atomicJson(file,receipt);reconcile(s,()=>false,dir);
+ expect(s.tasks[0]!.status).toBe('failed');expect(s.goals.find(g=>g.id==='quests')!.completedTasks).toBe(0);
+ expect(JSON.parse(readFileSync(file,'utf8'))).toEqual(receipt);
 });
 test('nine ordinary GE memory refusals remain pending with exact admission evidence and no assignments',()=>{
  const base=mkdtempSync(join(tmpdir(),'coord-ge-memory-')),dir=join(base,'.practice/coordinator'),root=join(base,'.practice/session-lifecycle'),s=initialState();
