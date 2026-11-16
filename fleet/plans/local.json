@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794795729253,
+ "at": 1794795764566,
  "jobs": [
   {
    "account": "Balls",
@@ -53,24 +53,22 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "532",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying bought big bones",
-   "role": "combat",
-   "template": "army-bury-big-99",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "Wandwaver",
