@@ -878,8 +878,9 @@ function alerts(bots: any[], now: number): Alert[] {
         if (['failed','died','blocked'].includes(b.operation)) out.push({ at:b.at, name:b.name, kind:b.operation==='died'?'death':b.operation==='blocked'?'blocked':'failure', text:String(b.result||b.phase||'HP 0 observed').slice(0,110) });
         // Running = this process has printed no RESULT yet. No update for 60 s while running: stuck or crashed.
         // A job the swarm disabled or saw end is not stuck; without a swarm job, only the last 15 min count.
+        // Fleet stock snapshots omit session results; their age cannot prove a worker is stuck.
         const js = String(b.job?.state ?? '');
-        const meant = b.job ? /^(running|starting|external)/.test(js) : age < 15 * 60_000;
+        const meant = !b.remote && !b.snapshotOnly && (b.job ? /^(running|starting|external)/.test(js) : age < 15 * 60_000);
         if (!b.result && meant && age > 60_000) out.push({ at: b.at, name: b.name, kind: 'stuck', text: `no status for ${Math.round(age / 1000)} s while running` });
         if (b.fresh && !b.result) {
             const tl = String(b.timeline ?? ''), m = tl.match(/i+$/);
