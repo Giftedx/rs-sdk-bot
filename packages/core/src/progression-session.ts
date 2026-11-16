@@ -60,7 +60,10 @@ export function progressionProofs(base=root):Record<string,{source:string;bands:
   try{
    const bytes=readFileSync(reference.path),proof=JSON.parse(bytes.toString());
    if(createHash('sha256').update(bytes).digest('hex')!==reference.sha256||proof.ok!==true||!proof.source||!Array.isArray(proof.supportedMethods))continue;
-   for(const method of proof.supportedMethods)if(method.source===proof.source&&Array.isArray(method.bands)&&method.bands.length)result[method.id]={source:proof.source,bands:method.bands};
+   for(const method of proof.supportedMethods)if(method.source===proof.source&&Array.isArray(method.bands)&&method.bands.length){
+    const prior=result[method.id],bands=prior?.source===proof.source?[...prior.bands,...method.bands]:method.bands;
+    result[method.id]={source:proof.source,bands:[...new Map(bands.map((band:any)=>[JSON.stringify(band),band])).values()]};
+   }
   }catch{/* An absent or modified native artifact never authorizes a route. */}
  }
  return result;

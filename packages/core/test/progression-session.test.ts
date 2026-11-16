@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {setEquipmentObserved} from '../src/container-observation';
-import {attachProgressionSession,evaluateProgressionWork,preflightProgressionWork,parentProgressionAccept,finiteProgressionAccept,progressionRateConditions} from '../src/progression-session';
+import {attachProgressionSession,evaluateProgressionWork,preflightProgressionWork,parentProgressionAccept,finiteProgressionAccept,progressionRateConditions,progressionProofs} from '../src/progression-session';
 import {accountFromStatus,loadProgressionCatalog} from '../../planner/src/progression-catalog';
 import {chooseProgression} from '../../planner/src/progression';
 import {progressionMethods} from '../../planner/src/progression-catalog';
@@ -46,6 +46,23 @@ test('source-qualified admission survives a spent arrow but stays bound to its f
   expect(evaluateProgressionWork(work,spent,{now,base,requireQualification:true,currentMethod:admitted.method,continuing:true}).supported).toBe(false);
   expect(evaluateProgressionWork(work,spent,{now,base,requireQualification:true,currentMethod:admitted.method,continuing:true,admitted}).decision?.state).toBe('execute');
   expect(evaluateProgressionWork({...work,args:['99']},spent,{now,base,requireQualification:true,currentMethod:admitted.method,continuing:true,admitted}).decision?.state).not.toBe('execute');
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
+test('native qualifications retain different account bands on the same source without mixing releases',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-bands-'));
+ try{
+  const dir=join(base,'.practice/progression-system');mkdirSync(dir,{recursive:true});
+  const references=[85,95].map(level=>{
+   const path=join(dir,'proof-'+level+'.json'),bytes=JSON.stringify({ok:true,source:'same-source',supportedMethods:[{id:'ranged/troopers',source:'same-source',bands:[{levels:{Prayer:{min:level,max:level}}}]}]});
+   writeFileSync(path,bytes);return{path,sha256:createHash('sha256').update(bytes).digest('hex')};
+  });
+  const index=join(dir,'qualifications.json');writeFileSync(index,JSON.stringify({proofs:[...references,...references]}));
+  const retained=progressionProofs(base)['ranged/troopers'];
+  expect(retained?.bands).toHaveLength(2);expect(retained?.bands.map(b=>b.levels.Prayer.min)).toEqual([85,95]);
+  const path=join(dir,'changed-source.json'),bytes=JSON.stringify({ok:true,source:'changed-source',supportedMethods:[{id:'ranged/troopers',source:'changed-source',bands:[{levels:{Prayer:{min:99,max:99}}}]}]});
+  writeFileSync(path,bytes);writeFileSync(index,JSON.stringify({proofs:[...references,{path,sha256:createHash('sha256').update(bytes).digest('hex')}]}));
+  expect(progressionProofs(base)['ranged/troopers']).toEqual({source:'changed-source',bands:[{levels:{Prayer:{min:99,max:99}}}]});
  }finally{rmSync(base,{recursive:true,force:true});}
 });
 
