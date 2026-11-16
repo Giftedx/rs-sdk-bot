@@ -1,0 +1,22 @@
+{
+ "id": "1794804492698-mineyourbiz-bigchopper-dragonbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Bigchopper",
+ "item": "Dragon bones",
+ "count": 46,
+ "start": 1794804492698,
+ "end": 1794806892698,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

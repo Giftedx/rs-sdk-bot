@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794803898653,
+ "at": 1794804892000,
  "jobs": [
   {
    "account": "Balls",
@@ -104,29 +104,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "2500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-4a7e64c2-bec3-40c8-9ec2-7fea8d9a168c"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "chain-cow-progress-order-nabtheknob-defence90 [task-4a7e64c2-bec3-40c8-9ec2-7fea8d9a168c]",
-   "role": "helper"
   }
  ],
  "army": [
