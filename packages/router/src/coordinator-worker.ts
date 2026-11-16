@@ -5,7 +5,7 @@ import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
 import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
 import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
 import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
-import {readWorld,parseModelObject,runPlannerModel} from './coordinator-planner';
+import {readWorld,parseModelObject,runSubscriptionModel,type SubscriptionModelDeps} from './coordinator-planner';
 import {assertProvisionCrew,type ProvisionCrew} from '../../../scripts/provision-readiness';
 import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
 import {projectRoot,coordinationDir,atomicJson,capabilitySource} from './coordinator-store';
@@ -23,8 +23,8 @@ import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdic
 import type {DeliveryResult} from './delivery';
 
 type BuildStageResult=Pick<AuthorResult,'ok'|'delivery'|'diagnostic'|'blocked'|'lastTail'>&{resumedPreparedSource?:string};
-async function reviewSource(agent:ModelWorker,prompt:string,timeoutMs:number,directory:string){
- const review=await runPlannerModel(agent,prompt,timeoutMs);
+export async function reviewSource(agent:ModelWorker,prompt:string,timeoutMs:number,directory:string,deps:SubscriptionModelDeps={}){
+ const review=await runSubscriptionModel(agent,prompt,timeoutMs,deps);
  atomicJson(join(directory,'review-model.json'),review);
  return reviewVerdict(review,parseModelObject);
 }

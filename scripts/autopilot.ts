@@ -27,7 +27,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
+import { BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -189,6 +189,14 @@ export function silentSides(orders: readonly Order[], receipts: readonly Receipt
 // cap, not that the buy job is broken: the pair is not retired, and the item leaves the market for a day, so the next
 // pass buys the other lines and asks a donor for this one.
 export const UNSOLD_RETRY_MS = 24 * 3600_000;
+export function kitMarket(items: readonly { id: number; name?: string; debugname?: string }[], unsold: Readonly<Record<string, number>> = {}, now = Date.now()): Market {
+    const market: Record<string, { id: number; name: string; limit: number }> = {};
+    for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
+        && (!(norm(i.name) in BOW_IDS) || BOW_IDS[norm(i.name)] === i.id)
+        && !(now - (unsold[i.id] ?? -Infinity) < UNSOLD_RETRY_MS))
+        market[norm(i.name)] = { id: i.id, name: i.name, limit: KIT_PRICE_CAPS[norm(i.name)]! };
+    return market;
+}
 export function unfilledItems(lines: readonly string[]): number[] {
     const out = new Set<number>();
     for (const l of lines) {
@@ -497,10 +505,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         if (other !== side && !silent.has(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id),
             { owners, server: 'rs-sdk-demo.fly.dev', card: readJson(join(fleetDir, 'sides', f), null) }));
     }
-    const market: Record<string, { id: number; name: string; limit: number }> = {};
-    for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
-        && !(now - (state.unsold?.[i.id] ?? -Infinity) < UNSOLD_RETRY_MS))
-        market[norm(i.name)] = { id: i.id, name: i.name, limit: KIT_PRICE_CAPS[norm(i.name)]! };
+    const market = kitMarket(items, state.unsold, now);
     // Finite funding uses each recipient's own coins and accessible donor surplus.
     // Protected, paused and busy accounts do not supply a shared cash budget.
     // Coins fund finite route and army acquisition demand.

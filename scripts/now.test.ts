@@ -61,9 +61,24 @@ test('every fact of the state gets a line',()=>{
     expect(text).not.toMatch(/^ {2}(run|wait) +old\b/m);
     expect(text).toContain('alerts  stuck 1 (A)');
     expect(text).toContain('board   99s 19; quests 44/68 live; 13 min old');
-    expect(text).toContain('sides   local 5 min, cloud 5.0 d LATE');
+    expect(text).toContain('sides   snapshots: local 5 min, cloud 5.0 d LATE');
     expect(text).toContain('prs     1 open: 7 claude/x (draft)');
     expect(text).toContain('here    master @ abc1234, 0 changed files, 0 behind, 0 ahead of origin/master (fetched 2 min ago), SDK patch applied');
+});
+
+test('snapshot age stays separate from synced controller renewals and remote health',()=>{
+    const lines=nowLines(state(),local({syncedLeases:[{side:'cloud',pid:33,at:NOW-2*MIN},{side:'local',pid:22,at:NOW-20*MIN}]}),NOW);
+    expect(lines).toContain('sides   snapshots: local 5 min, cloud 5.0 d LATE');
+    expect(lines).toContain('leases  synced controller records: local pid=22 renewal=20 min STALE, cloud pid=33 renewal=2 min; current remote process identity and health not checked');
+    expect(lines.join('\n')).not.toContain('cloud DOWN');
+});
+
+test('missing and invalid snapshot or lease dates stay unknown',()=>{
+    const s={...state(),fleetSides:{sides:[{side:'cloud',at:null,late:true},{side:'other',at:NOW+1,late:false}]}};
+    const lines=nowLines(s,local({syncedLeases:[{side:'cloud',pid:null,at:null},{side:'other',pid:4,at:NOW+1}]}),NOW);
+    expect(lines).toContain('sides   snapshots: cloud unknown, other unknown');
+    expect(lines).toContain('leases  synced controller records: cloud pid=unknown renewal=unknown, other pid=4 renewal=unknown; current remote process identity and health not checked');
+    expect(nowLines(null,local({syncedLeases:null}),NOW)).toContain('leases  not known: synced controller records could not be read');
 });
 
 test('the board line reports owner goal gaps instead of a fleet skill maximum',()=>{

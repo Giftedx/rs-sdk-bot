@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { COOLDOWN_MS, MAX_PER_DAY, launchRequest, planLaunches, readConfig, type Config, type Launch } from './cloud-launch';
+import { COOLDOWN_MS, MAX_PER_DAY, launchRequest, launchDecisions, launchDecisionLine, planLaunches, readConfig, type Config, type Launch } from './cloud-launch';
 import { LIVE_MS } from '../packages/core/src/fleet-assign';
 
 const NOW = 1_800_000_000_000;
@@ -36,6 +36,31 @@ describe('cloud launch', () => {
         expect(plan({ history: failed, stranded: 4 })).toEqual(['claude-cloud-2', 'cloud']);
         const many: Launch[] = Array.from({ length: MAX_PER_DAY }, (_, i) => ({ side: 'cloud', kind: 'codex', via: 'codex', at: NOW - COOLDOWN_MS - i * 60_000, ok: true, detail: '' }));
         expect(plan({ history: many })).toEqual(['claude-cloud']);
+    });
+
+    test('every configured side explains its launch hold without a session link or credential', () => {
+        const history: Launch[] = [{ side: 'cloud', kind: 'codex', via: 'codex', at: NOW - 60_000, ok: true, detail: 'private-session-link secret' }];
+        const decisions=launchDecisions({config,seen:new Map([['claude-cloud',NOW-30_000]]),owned:new Map([['cloud',15]]),stranded:2,history,now:NOW});
+        expect(decisions.map(d=>[d.config.side,d.reason])).toEqual([['claude-cloud','controller-recent'],['claude-cloud-2','provider-cap'],['cloud','starting']]);
+        expect(launchDecisionLine(decisions[0]!)).toBe('CLOUD_LAUNCH hold claude-cloud: controller renewal 30s old (launch silence threshold 900s)');
+        expect(launchDecisionLine(decisions[1]!)).toBe('CLOUD_LAUNCH hold claude-cloud-2: claude session cap 1/1');
+        expect(launchDecisionLine(decisions[2]!)).toBe('CLOUD_LAUNCH hold cloud: admitted launch awaiting controller renewal; retry in 2340s');
+        expect(decisions.map(launchDecisionLine).join('\n')).not.toMatch(/private-session-link|secret/);
+    });
+
+    test('failed-launch cooldown, daily budget, no demand and disabled config each name their clearing condition', () => {
+        const input={config,seen:new Map<string,number>(),owned:new Map([['cloud',15]]),stranded:0,history:[] as Launch[],now:NOW};
+        const failed:Launch={side:'cloud',kind:'codex',via:'codex',at:NOW-60_000,ok:false,detail:'busy'};
+        const cooldown=launchDecisions({...input,history:[failed]}).find(d=>d.config.side==='cloud')!;
+        expect(cooldown.reason).toBe('cooldown');
+        expect(launchDecisionLine(cooldown)).toBe('CLOUD_LAUNCH hold cloud: last attempt failed; retry in 2340s');
+        const history=Array.from({length:MAX_PER_DAY},(_,i)=>({...failed,at:NOW-COOLDOWN_MS-i*60_000}));
+        const capped=launchDecisions({...input,history}).find(d=>d.config.side==='cloud')!;
+        expect(capped.reason).toBe('daily-cap');
+        expect(launchDecisionLine(capped)).toContain('24h attempt budget 12/12; retry in ');
+        expect(launchDecisions(input)[0]!.reason).toBe('no-demand');
+        expect(launchDecisionLine(launchDecisions(input)[0]!)).toContain('no owned or stranded accounts');
+        expect(launchDecisions({...input,config:{...config,enabled:false}}).every(d=>d.reason==='disabled')).toBe(true);
     });
 
     test('requests: the routine fire, the claude CLI and the codex CLI each carry the one-command prompt', () => {

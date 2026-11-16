@@ -4,6 +4,7 @@ import {runClaude} from './author';
 import {projectRoot,coordinationDir} from './coordinator-store';
 import {killTree} from '../../practice/src/proc';
 export type ModelWorker='codex'|'claude';
+export interface ModelRunOptions{purpose?:'planner'}
 // The receipts a review prompt carries: the task's own dependencies and this capability's history, newest first, within
 // a size the model accepts. The whole coordinator history ran past Codex's 1,048,576-character input limit.
 export const REVIEW_INPUT_MAX_CHARS=400000;
@@ -47,9 +48,11 @@ export function rejectedReview(dependencies:Record<string,any>,capability:string
  const latest=Object.values(dependencies).filter(d=>d?.evidence==='source-review'&&d._task?.capability===capability&&d.source===source).sort((a,b)=>b._task.at-a._task.at)[0];
  return latest?.review?.approved===false?String(latest.review.reason):null;
 }
-export function codexArgs(output:string,readOnly:boolean){
+export function codexArgs(output:string,readOnly:boolean,options:ModelRunOptions={}){
  // Build workspaces (build-workspace.ts) have no .git; Codex refuses them without --skip-git-repo-check.
  return ['exec','--skip-git-repo-check','--json','--ephemeral','--color','never','--sandbox',readOnly?'read-only':'danger-full-access','-c','approval_policy="never"','-c','forced_login_method="chatgpt"',
+  // A finite scheduling round uses its own effort setting instead of the interactive session's.
+  ...(options.purpose==='planner'?['-c','model_reasoning_effort="medium"']:[]),
   // A disabled shadow needs a valid transport, even when that server is not
   // in user config. These placeholders are never launched.
   ...['blender','node_repl','cua_repl'].flatMap(name=>['-c',`mcp_servers.${name}={command="cmd.exe",enabled=false}`]),
@@ -68,13 +71,13 @@ export function modelFailure(events:string,stderr:string,expired:boolean){
  let failure='';for(const line of events.split(/\r?\n/))try{const r=JSON.parse(line);if(r.type==='turn.failed')failure=String(r.error?.message??r.error??'');else if(r.type==='error')failure=String(r.message??'');}catch{}
  return expired?'model deadline exceeded':failure||stderr.slice(-1200)||'model ended without an answer';
 }
-export async function runModel(worker:ModelWorker,prompt:string,timeoutMs:number,readOnly:boolean){
+export async function runModel(worker:ModelWorker,prompt:string,timeoutMs:number,readOnly:boolean,options:ModelRunOptions={}){
  if(worker==='claude')return runClaude(prompt,timeoutMs,readOnly);
  mkdirSync(join(coordinationDir,'models'),{recursive:true});
  // Codex refuses output paths through workspace junctions.
  const dir=realpathSync.native(mkdtempSync(join(coordinationDir,'models','codex-')));
  const output=join(dir,'answer.txt'),env={...process.env};delete env.OPENAI_API_KEY;delete env.CODEX_API_KEY;
- const child=Bun.spawn([...codexCommand(),...codexArgs(output,readOnly)],{cwd:projectRoot,env,stdin:'pipe',stdout:Bun.file(join(dir,'events.jsonl')),stderr:Bun.file(join(dir,'stderr.log')),windowsHide:true});
+ const child=Bun.spawn([...codexCommand(),...codexArgs(output,readOnly,options)],{cwd:projectRoot,env,stdin:'pipe',stdout:Bun.file(join(dir,'events.jsonl')),stderr:Bun.file(join(dir,'stderr.log')),windowsHide:true});
  child.stdin.write(prompt);child.stdin.end();let expired=false,termination:Promise<void>|undefined;
  const timer=setTimeout(()=>{expired=true;termination=killTree(child.pid);},timeoutMs);
  const exit=await child.exited;clearTimeout(timer);await termination;

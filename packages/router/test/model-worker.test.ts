@@ -22,6 +22,11 @@ test('headless Codex uses stdin, captured results and ChatGPT auth without an AP
  expect(args).toContain('plugins."unified-computer-use@openai-bundled".enabled=false');
  expect(args).toContain('mcp_servers.cua_repl={command="cmd.exe",enabled=false}');
 });
+test('planner Codex bounds reasoning effort without changing build and review settings',()=>{
+ expect(codexArgs('result.txt',true,{purpose:'planner'})).toContain('model_reasoning_effort="medium"');
+ expect(codexArgs('result.txt',true)).not.toContain('model_reasoning_effort="medium"');
+ expect(codexArgs('result.txt',false)).not.toContain('model_reasoning_effort="medium"');
+});
 test('failed model turns report their real structured cause instead of unrelated MCP shutdown warnings',()=>{
  const events=JSON.stringify({type:'turn.failed',error:{message:'Incomplete response returned, reason: max_output_tokens'}});
  expect(modelFailure(events,'MCP Auth required during shutdown',false)).toContain('max_output_tokens');expect(modelFailure(events,'other',true)).toBe('model deadline exceeded');
@@ -45,17 +50,19 @@ test.each([
  }finally{spawn.mockRestore();command.mockRestore();if(directory)rmSync(directory,{recursive:true,force:true});}
 });
 test.each([0,7])('a real Codex answer requires a successful CLI exit: %i',async exit=>{
- let directory:string|undefined;
+ let directory:string|undefined,plannerBound=false;
  const answer='{"approved":true,"reason":"checked"}';
  const command=spyOn(Bun,'which').mockImplementation(()=>process.platform==='win32'?'C:\\fake\\codex.exe':'/fake/codex');
  const spawn=spyOn(Bun,'spawn').mockImplementation(((args:string[])=>{
   const output=args[args.indexOf('--output-last-message')+1]!;directory=dirname(output);
+  plannerBound=args.includes('model_reasoning_effort="medium"');
   writeFileSync(output,answer);writeFileSync(join(directory,'events.jsonl'),'');writeFileSync(join(directory,'stderr.log'),'MCP shutdown warning');
   return{stdin:{write:()=>{},end:()=>{}},exited:Promise.resolve(exit)};
  }) as any);
  try{
-  const result=await runModel('codex','fixture prompt',1000,true);
+  const result=await runModel('codex','fixture prompt',1000,true,{purpose:'planner'});
   expect(result).toMatchObject({ok:exit===0,text:answer,costUsd:0});
+  expect(plannerBound).toBe(true);
  }finally{spawn.mockRestore();command.mockRestore();if(directory)rmSync(directory,{recursive:true,force:true});}
 });
 test.skipIf(process.platform!=='win32').each([

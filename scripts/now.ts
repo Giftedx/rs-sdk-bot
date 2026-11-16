@@ -7,10 +7,11 @@
 // It changes nothing.
 // Usage: bun scripts/now.ts
 // No worker imports this file, so an edit changes no worker release (packages/core/src/worker-release.ts).
-import {existsSync,readFileSync,statSync} from 'node:fs';
+import {existsSync,readdirSync,readFileSync,statSync} from 'node:fs';
 import {uptime} from 'node:os';
 import {join,resolve} from 'node:path';
 import {failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type FailLoop} from './fail-loops';
+import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
 
 type Task={id:string;kind:string;status:string;agent:string|null;account:string|null;startedAt:number|null;timeoutMs?:number|null};
 type Bot={name:string;job?:{enabled?:boolean;state?:string}|null};
@@ -25,7 +26,7 @@ export type DashState={
     bots?:Bot[];
     alerts?:{name:string;kind:string;practice:boolean}[];
     scoreboard?:{available:boolean;at?:number|null;skills99?:number|null;remaining?:string[];goals?:{version:number;main:{rank:number|null;gapTicks:number|null};specialists:{rank1s:unknown[]};quests:{complete:number;total:number};collection:{scopeKnown:boolean};army:{maxed:number;roster:string[]}}|null}|null;
-    fleetSides?:{sides:{side:string;at:number;late:boolean}[]}|null;
+    fleetSides?:{sides:{side:string;at:number|null;late:boolean}[]}|null;
     prs?:{number:number;branch:string;draft:boolean;state:string}[];
 };
 // One bun or node process: the script files that its command line names, and how long it has run.
@@ -33,7 +34,20 @@ export type Proc={scripts:string[];up:number};
 export type Checkout={path:string;branch:string;head:string;dirty:number;behind:number|null;ahead:number|null;fetchedAt:number|null;patch:'applied'|'not applied'|'no vendor/rs-sdk'};
 // `procs` is null when the process scan failed. Then the heavy jobs and the controllers are not known.
 // `loops`: the fast-fail loops of the main checkout's results (scripts/fail-loops.ts); null when they were not read.
-export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null};
+export type SyncedLease={side:string;pid:number|null;at:number|null};
+export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;syncedLeases?:SyncedLease[]|null};
+
+// Fleet-data mirrors are a saved observation, not a remote process or network health check.
+export function readSyncedLeases(dir:string):SyncedLease[]|null{
+    if(!existsSync(dir))return [];
+    try{return readdirSync(dir).filter(f=>f.endsWith('.json')&&SIDE_NAME.test(f.slice(0,-5))).map(file=>{
+        const side=file.slice(0,-5);
+        try{const row=JSON.parse(readFileSync(join(dir,file),'utf8'));
+            if(row.side!==side)return{side,pid:null,at:null};
+            return{side,pid:Number.isSafeInteger(row.pid)&&row.pid>0?row.pid:null,at:Number.isSafeInteger(row.at)&&row.at>0?row.at:null};
+        }catch{return{side,pid:null,at:null};}
+    });}catch{return null;}
+}
 
 export function age(ms:number):string{
     const s=Math.max(0,ms)/1000;
@@ -89,6 +103,16 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
     add('stop',()=>'stop    '+(local.stops.length?local.stops.map(s=>`${s.file}: "${s.text}"`).join('; '):'no stop-coordinator, no stop-swarm')+(state?.coordination?.paused?'; the coordinator is paused':''));
     add('control',()=>procs===null?'control not known: the process scan failed'
         :'control '+CONTROLLERS.map(name=>{const p=procs.find(x=>x.scripts.includes(name));return p?`${name} up ${age(p.up)}`:`${name} DOWN`;}).join(', '));
+    add('leases',()=>{
+        if(local.syncedLeases===undefined)return null;
+        if(local.syncedLeases===null)return 'leases  not known: synced controller records could not be read';
+        if(!local.syncedLeases.length)return 'leases  no synced controller records; current remote process identity and health not checked';
+        const rows=[...local.syncedLeases].sort((a,b)=>a.side==='local'?-1:b.side==='local'?1:a.side.localeCompare(b.side));
+        return 'leases  synced controller records: '+rows.map(s=>{
+            const known=typeof s.at==='number'&&s.at>0&&s.at<=now;
+            return `${s.side} pid=${s.pid??'unknown'} renewal=${known?age(now-s.at!)+(now-s.at!>=LEASE_MAX_AGE_MS?' STALE':''):'unknown'}`;
+        }).join(', ')+'; current remote process identity and health not checked';
+    });
     if(state){
         add('swarm',()=>{const sw=state.swarm;return sw?`swarm   ${sw.running} of ${sw.maxBots} bots, ${sw.pendingStartup} pending starts, ${sw.jobs} jobs; state ${age(now-sw.at)} old`:'swarm   no state';});
         add('jobs',()=>{
@@ -118,7 +142,7 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
         });
         add('sides',()=>{
             const sides=state.fleetSides?.sides??[];
-            return sides.length?'sides   '+sides.map(s=>`${s.side} ${age(now-s.at)}${s.late?' LATE':''}`).join(', '):null;
+            return sides.length?'sides   snapshots: '+sides.map(s=>`${s.side} ${typeof s.at==='number'&&s.at>0&&s.at<=now?age(now-s.at)+(s.late?' LATE':''):'unknown'}`).join(', '):null;
         });
         add('prs',()=>{
             const prs=(state.prs??[]).filter(p=>p.state==='OPEN');
@@ -201,5 +225,7 @@ if(import.meta.main){
     const same=main.toLowerCase()===here.toLowerCase(),now=Date.now();
     let loops:FailLoop[]|null=null;
     try{loops=failLoops(readRecentResults(join(main,'.practice','results.jsonl')),now);}catch{/* an unreadable results file hides only this line */}
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs:scanProcs(now),stops,here:readCheckout(here),main:same?null:readCheckout(main),loops},now))console.log(line);
+    const syncedFleet=join(main,'.practice','fleet-data','fleet');
+    const syncedLeases=readSyncedLeases(join(existsSync(syncedFleet)?syncedFleet:join(main,'fleet'),'leases'));
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs:scanProcs(now),stops,here:readCheckout(here),main:same?null:readCheckout(main),loops,syncedLeases},now))console.log(line);
 }

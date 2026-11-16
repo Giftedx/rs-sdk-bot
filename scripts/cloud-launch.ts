@@ -50,26 +50,51 @@ export function readConfig(text: string): Config {
 
 // Which configured sides to start now. `seen`: each side's newest lease renewal. `owned`: accounts each side owns,
 // the main and specialist accounts aside. `stranded`: accounts whose side has been silent STRANDED_MS.
-export function planLaunches(v: { config: Config; seen: ReadonlyMap<string, number>; owned: ReadonlyMap<string, number>; stranded: number; history: readonly Launch[]; now: number }): SideConfig[] {
+type LaunchInput = { config: Config; seen: ReadonlyMap<string, number>; owned: ReadonlyMap<string, number>; stranded: number; history: readonly Launch[]; now: number };
+export type LaunchDecision = { config: SideConfig; reason: 'due' | 'disabled' | 'controller-recent' | 'starting' | 'no-demand' | 'cooldown' | 'daily-cap' | 'provider-cap'; leaseAgeMs: number | null; retryMs: number | null; attempts24h: number; lastOk: boolean | null; busy: number; cap: number };
+
+// Admission and its report share this selector. A submitted session proves no controller renewal or useful work.
+export function launchDecisions(v: LaunchInput): LaunchDecision[] {
     const { config, seen, now } = v;
-    if (config.enabled === false) return [];
     const live = (side: string) => { const s = seen.get(side); return s !== undefined && now - s < LIVE_MS; };
     const starting = (side: string) => v.history.some(l => l.side === side && l.ok && now - l.at < COOLDOWN_MS);
     const cap = { claude: config.maxClaude ?? 1, codex: config.maxCodex ?? 1 };
     const busy = { claude: 0, codex: 0 };
     const sides = [...new Map(config.sides.map(s => [s.side, s])).values()];
     for (const s of sides) if (live(s.side) || starting(s.side)) busy[s.kind]++;
-    const out: SideConfig[] = [];
+    const out: LaunchDecision[] = [];
     for (const s of sides) {
-        if (live(s.side) || starting(s.side)) continue;
-        if ((v.owned.get(s.side) ?? 0) === 0 && v.stranded === 0) continue;
-        if (v.history.some(l => l.side === s.side && now - l.at < COOLDOWN_MS)) continue;
-        if (v.history.filter(l => l.side === s.side && now - l.at < 24 * 60 * 60_000).length >= MAX_PER_DAY) continue;
-        if (busy[s.kind] >= cap[s.kind]) continue;
-        busy[s.kind]++;
-        out.push(s);
+        const history = v.history.filter(l => l.side === s.side).sort((a,b) => b.at-a.at);
+        const recent = history.filter(l => now-l.at < 24*60*60_000);
+        const record = (reason: LaunchDecision['reason'], retryMs: number | null = null) => out.push({ config:s, reason,
+            leaseAgeMs:seen.has(s.side)?now-seen.get(s.side)!:null, retryMs, attempts24h:recent.length,
+            lastOk:history[0]?.ok??null, busy:busy[s.kind], cap:cap[s.kind] });
+        if (config.enabled === false) { record('disabled'); continue; }
+        if (live(s.side)) { record('controller-recent'); continue; }
+        if (starting(s.side)) { record('starting', Math.max(...history.filter(l=>l.ok).map(l=>l.at+COOLDOWN_MS))-now); continue; }
+        if ((v.owned.get(s.side) ?? 0) === 0 && v.stranded === 0) { record('no-demand'); continue; }
+        if (history.some(l => now-l.at < COOLDOWN_MS)) { record('cooldown',history[0]!.at+COOLDOWN_MS-now); continue; }
+        if (recent.length >= MAX_PER_DAY) { record('daily-cap',recent.map(l=>l.at).sort((a,b)=>a-b)[recent.length-MAX_PER_DAY]!+24*60*60_000-now); continue; }
+        if (busy[s.kind] >= cap[s.kind]) { record('provider-cap'); continue; }
+        record('due'); busy[s.kind]++;
     }
     return out;
+}
+
+export function planLaunches(v: LaunchInput): SideConfig[] {
+    return launchDecisions(v).filter(d=>d.reason==='due').map(d=>d.config);
+}
+
+export function launchDecisionLine(d: LaunchDecision): string {
+    const retry=`retry in ${Math.ceil((d.retryMs??0)/1000)}s`;
+    const reason = d.reason==='controller-recent' ? `controller renewal ${Math.floor(d.leaseAgeMs!/1000)}s old (launch silence threshold ${LIVE_MS/1000}s)`
+        : d.reason==='starting' ? `admitted launch awaiting controller renewal; ${retry}`
+        : d.reason==='cooldown' ? `last attempt ${d.lastOk?'admitted':'failed'}; ${retry}`
+        : d.reason==='daily-cap' ? `24h attempt budget ${d.attempts24h}/${MAX_PER_DAY}; ${retry}`
+        : d.reason==='provider-cap' ? `${d.config.kind} session cap ${d.busy}/${d.cap}`
+        : d.reason==='no-demand' ? 'no owned or stranded accounts'
+        : d.reason==='disabled' ? 'launcher disabled in config' : 'launch due';
+    return `CLOUD_LAUNCH ${d.reason==='due'?'due':'hold'} ${d.config.side}: ${reason}`;
 }
 
 // The command or request of one launch. Returned rather than run, so a test checks it without starting anything.
@@ -127,15 +152,17 @@ if (import.meta.main) {
         }
         const stateFile = join(dir, 'state.json');
         const history: Launch[] = (() => { try { return JSON.parse(readFileSync(stateFile, 'utf8')).launches ?? []; } catch { return []; } })();
-        const due = planLaunches({ config, seen, owned, stranded, history, now });
+        const decisions = launchDecisions({ config, seen, owned, stranded, history, now });
+        const due = decisions.filter(d=>d.reason==='due').map(d=>d.config);
         const liveSides = config.sides.filter(s => { const t = seen.get(s.side); return t !== undefined && now - t < LIVE_MS; }).map(s => s.side);
-        console.log(`CLOUD_LAUNCH live=${liveSides.join(',') || 'none'} stranded=${stranded} due=${due.map(s => s.side).join(',') || 'none'}${args.includes('--dry') ? ' (dry)' : ''}`);
+        console.log(`CLOUD_LAUNCH controllers-recent=${liveSides.join(',') || 'none'} stranded=${stranded} due=${due.map(s => s.side).join(',') || 'none'}${args.includes('--dry') ? ' (dry)' : ''}`);
+        for (const decision of decisions) console.log(launchDecisionLine(decision));
         if (args.includes('--dry')) process.exit(0);
         for (const s of due) {
             let r: { ok: boolean; detail: string };
             try { r = await launch(s); } catch (e) { r = { ok: false, detail: String(e).slice(0, 200) }; }
             history.push({ side: s.side, kind: s.kind, via: s.kind === 'codex' ? 'codex' : s.via ?? 'routine', at: Date.now(), ok: r.ok, detail: r.detail });
-            console.log(`CLOUD_LAUNCH ${s.side} ${r.ok ? 'started' : 'failed'}: ${r.detail}`);
+            console.log(`CLOUD_LAUNCH ${s.side} ${r.ok ? 'admitted' : 'failed'}: ${r.detail}`);
         }
         mkdirSync(dir, { recursive: true });
         writeFileSync(stateFile, JSON.stringify({ launches: history.filter(l => now - l.at < 7 * 24 * 60 * 60_000) }, null, 1) + '\n');

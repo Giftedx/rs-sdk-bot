@@ -20,7 +20,8 @@ import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-rou
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
 // reports (absent: none known, which counts as 0). `pos`: the tile where the account stands while it is offline
 // (absent: not known, and the reach rule does not apply).
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
+// `currentHP`: the observed current Hitpoints; absent means unknown, never the base level.
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -32,8 +33,9 @@ export type Flow = { item: string; perTick: number };
 // `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
 // `questPoints`: the least quest points (a place behind a door that counts them).
 // `frail`: an account with fewer Hitpoints than `hitpoints` must hold `count` items of `of`; any other account needs none.
+// `hpAboveHalf`: observed current HP must exceed half the base Hitpoints, rounded up, as stall food staging requires.
 export type Needs = {
-    combat?: number; quests?: readonly string[]; questPoints?: number; frail?: { hitpoints: number; of: readonly string[]; count: number };
+    combat?: number; quests?: readonly string[]; questPoints?: number; hpAboveHalf?: true; frail?: { hitpoints: number; of: readonly string[]; count: number };
     skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
@@ -300,8 +302,11 @@ const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Objec
 // The items a frail account is short of for these needs: 0 for an account with the Hitpoints, or with no such need.
 const frailShort = (a: Acct, needs: Template['needs']) => !needs?.frail || (a.skills.Hitpoints ?? 10) >= needs.frail.hitpoints ? 0
     : Math.max(0, needs.frail.count - needs.frail.of.reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0));
+const healthMet = (a: Acct, needs: Template['needs']) => !needs?.hpAboveHalf
+    || (Number.isFinite(a.currentHP) && a.currentHP! > Math.ceil((a.skills.Hitpoints ?? 10) / 2));
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
+    && healthMet(a, needs)
     && (needs?.quests ?? []).every(q => questDone(a, q))
     && (a.questPoints ?? 0) >= (needs?.questPoints ?? 0)
     && frailShort(a, needs) === 0
@@ -322,7 +327,7 @@ const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...need
 // kits the account takes one whose every line it `can` get (a buy: 250 fire runes, not a fire staff no market sells),
 // then the one with the fewest missing units.
 export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string, count: number) => boolean = () => true): Lack[] | null {
-    if ((a.combat ?? combatLevel(a.skills)) < (needs?.combat ?? 0) || !(needs?.quests ?? []).every(q => questDone(a, q))
+    if (!healthMet(a, needs) || (a.combat ?? combatLevel(a.skills)) < (needs?.combat ?? 0) || !(needs?.quests ?? []).every(q => questDone(a, q))
         || (a.questPoints ?? 0) < (needs?.questPoints ?? 0)
         || !Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
         || !Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
@@ -1001,7 +1006,9 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // A run that ended on a stop file is a drain as well: the owner paused the account or the controller removed the job,
 // which says nothing about whether the job works (live claude-cloud: a quest chain stopped for an open fleet order
 // logged two such fails, and the account's Lost City band was retired).
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|stop file\b|.*\bworker finished: stop file\b)/;
+// An offline login server or an unavailable swarm claim authority refuses the session before the worker runs.
+// Supervisor retry bounds and claim recovery still apply; neither refusal establishes a broken worker.
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority unavailable or changed\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|stop file\b|.*\bworker finished: stop file\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -1197,15 +1204,15 @@ export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; ban
 // account stays on the cows. Raw beef counts as food (TROOPER_STOCK): an account leaves the cows with one raw beef a
 // kill banked, and TROOPER_COOK=1 cooks it at the range by the bank before the run (scripts/trooper-food.ts). With the
 // beef gone the same stage steals a pack of cake, bread and chocolate slices at the Ardougne baker's stalls, so an
-// account with Thieving 5 needs no food to start (TROOPER_FED); the trainer eats cake a bite at a time. Live, TheFullMonty trained Ranged 1 to 61 and Strength 61 to 78 there. GIANT_BURY=1 has the trainer bury
+// account with Thieving 5 and current HP above half needs no food to start (TROOPER_FED); the trainer eats cake a bite at a time. Live, TheFullMonty trained Ranged 1 to 61 and Strength 61 to 78 there. GIANT_BURY=1 has the trainer bury
 // the bones each kill leaves until Prayer 99: practice, six at once, about 2.5 Prayer XP per tick for 16% of the
 // Strength rate (research/combat-measure.md, bones buried on the field). Gap: live rates with several accounts at
 // once are not measured.
 export const TROOPER_FOOD = ['shark', 'swordfish', 'lobster', 'trout', 'cooked meat', 'bread', 'chocolate slice', 'slice of cake', '2/3 cake', 'cake'] as const;
 export const TROOPER_STOCK = [...TROOPER_FOOD, 'raw beef'] as const;
-// What feeds a trooper run: 10 pieces of stock held, or Thieving 5, with which the job's food stage steals a pack at
-// the Ardougne baker's stalls when the stock is short (scripts/trooper-food.ts).
-export const TROOPER_FED: readonly Needs[] = [{ pieces: { of: TROOPER_STOCK, count: 10 } }, { skills: { Thieving: 5 } }];
+// What feeds a trooper run: 10 pieces of stock held, or Thieving 5 with observed HP above half, with which the job's
+// food stage steals a pack at the Ardougne baker's stalls (scripts/trooper-food.ts). Injury or unknown HP needs stock.
+export const TROOPER_FED: readonly Needs[] = [{ pieces: { of: TROOPER_STOCK, count: 10 } }, { skills: { Thieving: 5 }, hpAboveHalf: true }];
 export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number }[] = [
     { skill: 'Strength', band: 6 }, { skill: 'Attack', band: 7 }, { skill: 'Defence', band: 8 },
 ];
@@ -1235,6 +1242,14 @@ export const PRAYER_FIELD_BAND = 9;
 export const RANGED_BAND = 4, GUILD_BAND = 3.9;
 const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
     ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
+// Native bows and their unstrung inputs share display names. Only the strung base ID supplies a combat kit.
+const BOW_IDENTITIES: Readonly<Record<string, readonly [strung: number, unstrung: number]>> = {
+    shortbow: [841, 50], longbow: [839, 48], 'oak shortbow': [843, 54], 'oak longbow': [845, 56],
+    'willow shortbow': [849, 60], 'willow longbow': [847, 58], 'maple shortbow': [853, 64], 'maple longbow': [851, 62],
+    'yew shortbow': [857, 68], 'yew longbow': [855, 66], 'magic shortbow': [861, 72], 'magic longbow': [859, 70],
+};
+export const BOW_IDS: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(BOW_IDENTITIES).map(([name, [id]]) => [name, id]));
+const bowStockNames = new Map(Object.entries(BOW_IDENTITIES).flatMap(([name, [strung, unstrung]]) => [[strung, name], [unstrung, `unstrung ${name}`]] as [number, string][]));
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
 // A staff that stands for the fire runes of a cast.
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
@@ -2116,9 +2131,13 @@ export function freshest(...observations: readonly any[]): any {
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
     const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
+    const validHP = (hp: unknown): hp is number => Number.isSafeInteger(hp) && (hp as number) >= 0;
+    const sharedHP = (Array.isArray(status?.skills) ? status.skills : []).find((k: any) => k?.name === 'Hitpoints')?.currentLevel;
+    const currentHP = validHP(status?.hp?.now) ? status.hp.now : validHP(sharedHP) ? sharedHP : undefined;
     for (const r of [status?.inventory, status?.bank, status?.equipment].flatMap(x => Array.isArray(x) ? x : [])) {
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
-        if (n && Number.isFinite(r.count)) items[norm(n)] = (items[norm(n)] ?? 0) + r.count;
+        const bow = bowStockNames.get(r?.baseId ?? r?.id), key = bow ?? (n && !(norm(n) in BOW_IDS) ? norm(n) : undefined);
+        if (key && Number.isFinite(r.count)) items[key] = (items[key] ?? 0) + r.count;
         // The held-bones Prayer worker deposits and buries only id526. Keep notes in generic stock for trades and
         // other consumers, while this availability key admits only the exact normal bones that worker can use.
         if (r?.id === 526 && Number.isFinite(r.count)) items['bone (unnoted)'] = (items['bone (unnoted)'] ?? 0) + r.count;
@@ -2126,7 +2145,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
     const questPoints = status?.guildFacts?.varps?.qp, p = status?.pos;
-    return { name, side, skills, items, ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
+    return { name, side, skills, items, ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
         ...(Number.isFinite(p?.x) && Number.isFinite(p?.z) ? { pos: { x: p.x, z: p.z, level: Number.isFinite(p.level) ? p.level : 0 } } : {}) };
 }
 

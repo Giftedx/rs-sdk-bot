@@ -13,6 +13,15 @@ import {requestRecoveryPlanning,type RecoveryPlanningProblem} from '../../../scr
 
 const world={coverage:{scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]} as any;
 
+test('planner scopes source discovery to the selected finite consumer and its missing evidence',()=>{
+ const prompt=plannerPrompt(initialState(),world);
+ expect(prompt).toContain('Select one useful finite consumer chain');
+ expect(prompt).toContain('existing world and queue summaries');
+ expect(prompt).toContain('exact repair receipts');
+ expect(prompt).toContain('later planning rounds');
+ expect(prompt).toContain('bounded observation task');
+});
+
 test('a new orphan end in one recovery lineage reaches planning without repeating equivalent requests',()=>{
  const base=mkdtempSync(join(tmpdir(),'planner-recovery-transition-'));
  const first:RecoveryPlanningProblem={schema:'recovery-planning/1',account:'Helper',server:'rs-sdk-demo.fly.dev',endedAt:7,

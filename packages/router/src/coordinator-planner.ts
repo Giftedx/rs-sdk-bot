@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
 import {GOALS,NEW_EVIDENCE_MAX,addTasks,deadRoots,finishedAt,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CapabilityChange,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
-import {runModel,type ModelWorker} from './model-worker';
+import {runModel,type ModelWorker,type ModelRunOptions} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
 import {goalWork} from './goal-work';
@@ -354,6 +354,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
  return[
   'You are the autonomous director of this RuneScape project, working with Codex and Claude through one claimed task queue. Return ONLY a JSON object {reason:string,tasks:CoordTask[],capabilities:DeliveryTask[]}. Both tasks and capabilities must be JSON arrays, including when empty: {"reason":"No new work","tasks":[],"capabilities":[]}. Never use {} or null for either collection; capabilities is not a map of existing definitions.',
   'Do not edit files, launch processes or play the game. The coordinator owns execution. Read local sources as needed.',
+  'Select one useful finite consumer chain from the existing world and queue summaries. Read its worker contract, exact repair receipts and missing prerequisite evidence as needed. Return the complete viable chain as soon as those facts are known; later planning rounds cover other lanes. If a needed fact cannot be established, use an existing bounded observation task or name the exact waiting event. Keep source discovery within the selected chain.',
   'Status observations preserve their original ages. A fleet-snapshot row is saved account state, not an executing session. Structured counters and ledger summaries are advisory observations bound to their started/sessionAttemptId/workRevision/workEntry fields; acceptance still needs the coordinator\'s bound receipts.',
   'Goals: Haggis rank 1 Overall under the record; specialist rank 1 on skill boards with a priced winning margin; every quest done; every useful item and best-in-slot gear held; a PK army of maxed tribrids that kills players and holds the Wilderness. Gold only supplies these goals. Goal IDs: '+GOALS.join(', ')+'. The main24 ID denotes the main Overall run. For specialist work, price each specialist route against the current board record before treating it as a target.',
   'Read AGENTS.md, docs/plans/joined-plan.md, docs/script-contract.md. All game mechanics are authorized. Missing supplies create acquisition tasks, never route exclusions. Preserve all current work, pauses and clocks. No paid APIs.',
@@ -499,17 +500,24 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,s
  Object.assign(state,candidate);
  return count;
 }
-export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:number,run:typeof runModel=runModel,now:()=>number=Date.now){
- const start=now(),first=await run(agent,prompt,timeoutMs,true),attempts=[{agent,...first}];
- if(!first.ok&&/\b(?:you['’]ve hit your (?:weekly|daily|monthly|usage) limit|usage limit reached)\b/i.test(first.text)){
+export interface SubscriptionModelDeps{run?:typeof runModel;now?:()=>number}
+export async function runSubscriptionModel(agent:ModelWorker,prompt:string,timeoutMs:number,{run=runModel,now=Date.now,purpose}:SubscriptionModelDeps&ModelRunOptions={}){
+ // Only planning reserves time for a stalled primary; reviews keep their full primary deadline and effort.
+ const start=now(),options:ModelRunOptions=purpose?{purpose}:{},primaryMs=purpose==='planner'?Math.max(1,Math.floor(timeoutMs/2)):timeoutMs;
+ const first=await run(agent,prompt,primaryMs,true,options),attempts=[{agent,...first}];
+ const limited=/\b(?:you['’]ve hit your (?:weekly|daily|monthly|usage) limit|usage limit reached)\b/i.test(first.text);
+ if(!first.ok&&(limited||purpose==='planner'&&/\bmodel deadline exceeded\b/i.test(first.text))){
   const remaining=timeoutMs-(now()-start);
   if(remaining>0){
    const fallback:ModelWorker=agent==='claude'?'codex':'claude';let result:Awaited<ReturnType<typeof runModel>>;
-   try{result=await run(fallback,prompt,remaining,true);}catch(error){result={ok:false,text:'planner startup failed: '+String(error),costUsd:0};}
+   try{result=await run(fallback,prompt,remaining,true,options);}catch(error){result={ok:false,text:'planner startup failed: '+String(error),costUsd:0};}
    attempts.push({agent:fallback,...result});return{...result,attempts};
   }
  }
  return{...first,attempts};
+}
+export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:number,run:typeof runModel=runModel,now:()=>number=Date.now){
+ return runSubscriptionModel(agent,prompt,timeoutMs,{run,now,purpose:'planner'});
 }
 export async function planWork(state:CoordinatorState,directory:string,timeoutMs:number,agent:ModelWorker='codex'){
  const world=readWorld(state.tasks);atomicJson(join(directory,'world.json'),world);
