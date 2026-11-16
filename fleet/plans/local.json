@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794861168008,
+ "at": 1794861492757,
  "jobs": [
   {
    "account": "Balls",
@@ -128,7 +128,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-3916536a-ddba-40f4-9fbd-0136a4ff8004"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "chain-ranged-train-nabtheknob-ranged85 [task-3916536a-ddba-40f4-9fbd-0136a4ff8004]",
    "role": "helper"
