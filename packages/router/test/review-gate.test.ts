@@ -7,6 +7,7 @@ import {finishBuildDelivery,buildReviewGate,executeTask} from '../src/coordinato
 import {reviewGate} from '../src/model-worker';
 import {initialState,addTasks,startTask,finishTask,type CoordTask} from '../src/coordinator';
 import {prepareWorkspace,prepareReplayRoot,removeReplayRoot} from '../src/build-workspace';
+import {prepareReplayRoot as preparePracticeReplayRoot,removeReplayRoot as removePracticeReplayRoot} from '../../practice/src/replay-root';
 import {deliveryTask} from '../src/delivery-cli';
 import {projectRoot} from '../src/coordinator-store';
 import type {DeliveryResult} from '../src/delivery';
@@ -98,12 +99,15 @@ test('a review rejection after delivery stops the next run of that capability',a
 });
 
 test('a replay root has its own .practice and its removal keeps every link target',()=>{
+ expect(prepareReplayRoot).toBe(preparePracticeReplayRoot);expect(removeReplayRoot).toBe(removePracticeReplayRoot);
  const source=mkdtempSync(join(tmpdir(),'replay-source-'));
- for(const dir of ['scripts','node_modules','vendor','.practice/cache','.practice/status'])mkdirSync(join(source,dir),{recursive:true});
+ for(const dir of ['scripts/nested/node_modules','scripts/nested/.git','node_modules','vendor','.practice/cache','.practice/status'])mkdirSync(join(source,dir),{recursive:true});
  writeFileSync(join(source,'scripts/x.ts'),'worker');writeFileSync(join(source,'node_modules/keep'),'1');writeFileSync(join(source,'vendor/keep'),'1');
+ for(const dir of ['node_modules','.git'])writeFileSync(join(source,'scripts/nested',dir,'skip'),'excluded');
  writeFileSync(join(source,'.practice/cache/route-legs.json'),'{}');writeFileSync(join(source,'.practice/status/bot.json'),'live');
  const root=prepareReplayRoot(source);
  expect(readFileSync(join(root,'scripts/x.ts'),'utf8')).toBe('worker');
+ for(const dir of ['node_modules','.git'])expect(existsSync(join(root,'scripts/nested',dir))).toBe(false);
  expect(existsSync(join(root,'.practice/cache/route-legs.json'))).toBe(true);
  expect(existsSync(join(root,'.practice/status'))).toBe(false);
  writeFileSync(join(root,'.practice/receipt.json'),'replayed');

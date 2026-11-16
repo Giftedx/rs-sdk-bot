@@ -1,6 +1,7 @@
 import { beforeAll, test, expect } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync,mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,lstatSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot, BANK_MEETS } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadPathfinding } from '../packages/core/src/pathcache';
@@ -74,7 +75,16 @@ test('trade diagnostics keep missing entry evidence explicit', () => {
 test('named consumer retains its CLI and shared bank', () => {
     const c = parseCoins(['Pocketpython', 'Abracadickra', '2000000']);
     expect(c.amount).toBe(2000000);
+    expect(c.reserve).toBe(0);
     expect([c.x, c.z]).toEqual([3185, 3436]);
+});
+
+test('coin courier accepts an explicit donor bank reserve and rejects invalid or duplicate bounds before login',()=>{
+    for(const reserve of [0,5000,2147483647])expect(parseCoins(['Giver','Taker','1',`--reserve=${reserve}`]).reserve).toBe(reserve);
+    for(const reserve of ['-1','1.5','NaN','Infinity','2147483648','','1e3','1=2'])
+        expect(()=>parseCoins(['Giver','Taker','1',`--reserve=${reserve}`])).toThrow();
+    expect(()=>parseCoins(['Giver','Taker','1','--reserve'])).toThrow();
+    expect(()=>parseCoins(['Giver','Taker','1','--reserve=0','--reserve=5000'])).toThrow();
 });
 test('meeting tiles are adjacent public floor joined to the bank tile, off the booth counter', async () => {
     const c = parseCoins(['Pocketpython', 'Abracadickra', '2000000']);
@@ -127,6 +137,14 @@ test('both bank deltas must match, with original pocket coins retained', () => {
     expect(exactCoinDelta(before, [], 1000)).toBe(false);
 });
 
+test('exact courier deltas also retain the declared donor bank reserve',()=>{
+    const before=[{bank:3000,pack:9},{bank:50,pack:7}],after=[{bank:2000,pack:9},{bank:1050,pack:7}];
+    expect(exactCoinDelta(before,after,1000,2000)).toBe(true);
+    expect(exactCoinDelta(before,after,1000,2001)).toBe(false);
+    for(const reserve of [-1,NaN,Infinity,1.5,2147483648])expect(exactCoinDelta(before,after,1000,reserve)).toBe(false);
+    expect(exactCoinDelta(before,[{bank:2000,pack:10},after[1]!],1000,2000)).toBe(false);
+});
+
 test('owned coin endpoints reach the stack, new profiles, registration and every worker child',async()=>{
  const {selectCoinProofEndpoints,coinProofAccountEnv,startCoinProofStack,coinChildConfiguration,coinRegistrationArgs}=await import('../packages/practice/src/coin-courier-proof');
  const checked:number[]=[],samples=[0,0.01];
@@ -167,4 +185,54 @@ test('owned coin endpoints reach the stack, new profiles, registration and every
   expect(child.windowsHide).toBe(true);
  }
  expect(()=>selectCoinProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
+});
+
+test('coin proof isolates real ownership files and profiles while keeping the worker guards',async()=>{
+ const {prepareCoinProofRoot,removeCoinProofRoot,coinProofSource,coinChildConfiguration,coinProofEndpoints}=await import('../packages/practice/src/coin-courier-proof');
+ const {checkTransferAccounts}=await import('./transfer-admission');
+ const base=mkdtempSync(join(tmpdir(),'coin-proof-root-')),source=join(base,'source');let scratch='';
+ const put=(path:string,text:string)=>{const target=join(source,path);mkdirSync(join(target,'..'),{recursive:true});writeFileSync(target,text);};
+ try{
+  for(const path of ['scripts/coin-courier.ts','scripts/coin-courier.test.ts','packages/practice/src/coin-courier-proof.ts','packages/practice/src/replay-root.ts'])put(path,'fixture '+path);
+  put('swarm.json',JSON.stringify({maxBots:2,jobs:[{account:'Donor',enabled:true}]}));
+  put('.practice/coordinator/state.json',JSON.stringify({version:1,tasks:[{status:'running',runId:'other',spec:{account:'Donor'}}]}));
+  put('vendor/rs-sdk/bots/LiveActor/marker','private live profile');put('vendor/rs-sdk/bots/create-bot.ts','creator');
+  put('vendor/rs-sdk/bots/_template/marker','template');put('vendor/rs-sdk/bots/_template/bot.env','PASSWORD={{PASSWORD}}\n');put('vendor/rs-sdk/sdk/marker','sdk');
+  put('fleet/owners.json',JSON.stringify({accounts:{Donor:{side:'cloud'}}}));
+  scratch=prepareCoinProofRoot(source,base);
+  expect(coinProofSource(scratch)).toBe(coinProofSource(source));
+  for(const path of ['scripts/coin-courier.ts','packages/practice/src/replay-root.ts']){
+   const copied=join(scratch,path),workerText=readFileSync(copied,'utf8');writeFileSync(copied,workerText+' changed');
+   expect(coinProofSource(scratch)).not.toBe(coinProofSource(source));writeFileSync(copied,workerText);
+  }
+  expect(lstatSync(join(scratch,'.practice')).isSymbolicLink()).toBe(false);
+  expect(lstatSync(join(scratch,'vendor/rs-sdk/bots')).isSymbolicLink()).toBe(false);
+  expect(existsSync(join(scratch,'vendor/rs-sdk/bots/LiveActor'))).toBe(false);
+  expect(JSON.parse(readFileSync(join(scratch,'swarm.json'),'utf8')).jobs).toEqual([]);
+  expect(JSON.parse(readFileSync(join(scratch,'.practice/coordinator/state.json'),'utf8'))).toEqual({version:1,tasks:[]});
+  const io={owned:()=>new Set(['donor']),logoutState:()=> 'confirmed'};
+  expect(()=>checkTransferAccounts(scratch,['Donor'],'127.0.0.1:21000',[],'',io)).not.toThrow();
+  expect(()=>checkTransferAccounts(source,['Donor'],'rs-sdk-demo.fly.dev',[],'',io)).toThrow('account lease conflict');
+  rmSync(join(scratch,'.practice/coordinator/state.json'));
+  for(const server of ['127.0.0.1:21000','rs-sdk-demo.fly.dev'])expect(()=>checkTransferAccounts(scratch,['Donor'],server,[],'',io)).toThrow('ownership unavailable');
+  const p=coinProofEndpoints({engine:21000,gateway:21001,management:21002,tcp:21003},'coin-fixture');
+  const child=coinChildConfiguration(['scripts/coin-courier.ts','Donor','Receiver','45000'],{},p,{FLEET_VAULT_KEY:'inherited-fixture',FLEET_DIR:source,COORDINATOR_RUN_ID:'live-run'},scratch);
+  expect(child.cwd).toBe(scratch);expect(child.env.FLEET_DIR).toBe(join(scratch,'fleet'));
+  expect(child.env.FLEET_VAULT_KEY).toBe('');expect(child.env.COORDINATOR_RUN_ID).toBe('');
+  expect(removeCoinProofRoot(scratch)).toBe(true);scratch='';
+  expect(readFileSync(join(source,'vendor/rs-sdk/bots/LiveActor/marker'),'utf8')).toBe('private live profile');
+  expect(JSON.parse(readFileSync(join(source,'.practice/coordinator/state.json'),'utf8')).tasks).toHaveLength(1);
+  put('vendor/rs-sdk/bots/_template/bot.env','PASSWORD=fixture-not-a-placeholder\n');
+  expect(()=>prepareCoinProofRoot(source,base)).toThrow('placeholder credentials');
+ }finally{if(scratch)removeCoinProofRoot(scratch);rmSync(base,{recursive:true,force:true});}
+});
+
+test('reserve proof reports admission failure before waiting for a fresh save',async()=>{
+ const {assertCoinReserveRefusal}=await import('../packages/practice/src/coin-courier-proof');
+ const denied='LOGOUT \nRESULT fail Error: coordinator account ownership unavailable\nCOIN_RESULT {"ok":false,"detail":"Error: coordinator account ownership unavailable"}';
+ expect(()=>assertCoinReserveRefusal(1,denied)).toThrow('coordinator account ownership unavailable');
+ const expected='LOGOUT logged-out logged-out\nCOIN_RESULT {"ok":false,"detail":"Error: coin donor bank reserve short"}';
+ expect(()=>assertCoinReserveRefusal(1,expected)).not.toThrow();
+ expect(()=>assertCoinReserveRefusal(0,expected)).toThrow();
+ expect(()=>assertCoinReserveRefusal(1,expected.replace('logged-out logged-out',''))).toThrow();
 });
