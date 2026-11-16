@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794851433596,
+ "at": 1794852050241,
  "jobs": [
   {
    "account": "Balls",
@@ -103,29 +103,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "2357",
-    "QUANTITY": "1",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "3500",
-    "CASH_RESERVE": "90000",
-    "ORDER_KEY": "wood-ring-third-gold-one",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-0c73b219-5e76-466c-b403-ba3b1686e23f"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-wood-ring-third-gold-one [task-0c73b219-5e76-466c-b403-ba3b1686e23f]",
    "role": "supply"
   }
  ],
