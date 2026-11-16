@@ -45,7 +45,7 @@ export async function startAmmoProofStack(p:ProofEndpoints,start:(opts:StackOpti
 }
 export function ammoChildConfiguration(args:string[],env:Record<string,string>,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
     return{cmd:['bun',...args],cwd:resolve(import.meta.dir,'../../..'),windowsHide:true,
-        env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0'}};
+        env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0'}};
 }
 // The shared registration CLI admits only default ports. Keep its session owner
 // and tick wait, with the exact generated profile bound to this proof's endpoints.

@@ -41,6 +41,14 @@ test('owned ammo endpoints reach the stack, new profiles, registration and every
  expect(()=>selectAmmoProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
 });
 
+test('proof children disable loot even when inherited and caller environments enable it',()=>{
+ const p=selectAmmoProofEndpoints(()=>true,()=>0),inherited={LOOT_WATCH:'1'},env={LOOT_WATCH:'1',CAP:'1600'};
+ const child=ammoChildConfiguration(['scripts/handoff-inputs.ts','donor','receiver','100:Lobster'],env,p,inherited);
+ expect(child.env.LOOT_WATCH).toBe('0');
+ expect(inherited).toEqual({LOOT_WATCH:'1'});
+ expect(env).toEqual({LOOT_WATCH:'1',CAP:'1600'});
+});
+
 test('ammo acceptance rejects missing product, lost reserve and absent XP',()=>{
     const save=(bank:{id:number;count:number}[],xp=0)=>({inventories:{93:[],94:[],95:bank.map((item,slot)=>({...item,slot}))},skills:Array.from({length:21},(_,i)=>({index:i,level:i===3?15:1,xp:i===9?xp:0,rawExperience:0})),position:{x:3253,z:3421,level:0},version:9,vars:{}});
     const before=[save([{id:40,count:90},{id:39,count:16}]),save([{id:53,count:390}])];
