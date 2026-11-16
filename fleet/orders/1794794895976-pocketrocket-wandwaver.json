@@ -1,0 +1,22 @@
+{
+ "id": "1794794895976-pocketrocket-wandwaver",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketrocket",
+ "to": "Wandwaver",
+ "item": "coins",
+ "count": 90060,
+ "start": 1794794895976,
+ "end": 1794797295976,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
