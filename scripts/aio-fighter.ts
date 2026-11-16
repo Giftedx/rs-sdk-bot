@@ -12,6 +12,7 @@ import {combatAlchPolicy} from './microbot-combat-alch';
 import {createCombatLoot,telegrabPolicy} from './microbot-telegrab';
 import {totalAvailableHeal,defaultEatAt} from '../packages/core/src/sustain';
 import {refillCannon,holdPrayer,enableSpecial,qolDropSelection,type QolDropOrder} from './microbot-c-qol';
+import {selectAioProgression,type AioProgressionContext} from './aio-progression';
 
 export {
  cowProfile,cowRoutePoints,guardCowWalker,bankCombatLoot,genericCombatNpc,
@@ -36,7 +37,7 @@ export interface CombatLevels {
 // Auto-select the next melee training band (target NPC, skill to train, target level, and step) for an account.
 // Cows stage the owned kit from any start, including fresh accounts; the army's faster
 // Khazard trooper method opens at melee 60. Hitpoints can still need work after all melee skills reach 99.
-export function planAutoFighterBand(levels: CombatLevels, bank: 'draynor' | 'varrock' | 'ardougne' = 'draynor'): {
+function planAuthoredFighterBand(levels: CombatLevels, bank: 'draynor' | 'varrock' | 'ardougne' = 'draynor'): {
  target: string;
  trainSkill: 'Strength' | 'Attack' | 'Defence' | 'Hitpoints';
  targetLevel: number;
@@ -76,6 +77,14 @@ export function planAutoFighterBand(levels: CombatLevels, bank: 'draynor' | 'var
  };
 }
 
+export function planAutoFighterBand(levels:CombatLevels,bank:'draynor'|'varrock'|'ardougne'='draynor',progression?:AioProgressionContext){
+ const authored=planAuthoredFighterBand(levels,bank);
+ const account=typeof progression?.status?.name==='string'?progression.status.name:'Fighter';
+ const choice=selectAioProgression(account,authored.step,{},progression,false);
+ if(!choice.step)throw Error('aio-fighter: '+choice.reason);
+ return{...authored,step:choice.step,progression:choice.decision,reason:choice.reason};
+}
+
 export interface FighterProfileSpec {
  target: string;
  script: string;
@@ -113,12 +122,16 @@ export function resolveFighterStep(targetInput: string, rest: readonly string[] 
  return resolveRouteStep(profile, rest);
 }
 
-export async function runAioFighter(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {
+export async function runAioFighter(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env,progression?:AioProgressionContext,
+ run:(args:string[],env:Record<string,string|undefined>)=>Promise<string>=runDirectChild): Promise<string> {
  if (!account) throw Error('aio-fighter requires account');
  const [target, ...rest] = args;
  if (!target) throw Error('aio-fighter requires <target>');
- const step = resolveFighterStep(target, rest);
- return runDirectChild([step.script, account, ...step.args], { ...env, ...step.env });
+ const original=resolveFighterStep(target,rest),choice=selectAioProgression(account,original,env,progression);
+ if(choice.decision)console.log('AIO_PROGRESSION '+JSON.stringify({account,state:choice.decision.state,selected:choice.decision.selected,basis:choice.decision.basis,expectedTicks:choice.decision.expectedTicks}));
+ if(!choice.step){const result=`RESULT ${choice.blocked?'fail':'ok'} ${choice.reason}`;console.log(result);return result;}
+ const step=choice.step;
+ return run([step.script, account, ...step.args], { ...env, ...step.env });
 }
 
 if (import.meta.main) {

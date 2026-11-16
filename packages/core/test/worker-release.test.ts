@@ -170,6 +170,22 @@ test('an import added to the closure changes the release, and then the imported 
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 
+test('progression entry metadata keeps its planner and data pinned without importing future worker bodies',()=>{
+ const root=fixture();
+ try{
+  mkdirSync(join(root,'packages/planner/src'),{recursive:true});
+  const planner='packages/planner/src/progression-catalog.ts';
+  writeFileSync(join(root,planner),"export const next='scripts/other.ts';export const data='knowledge/npcs.json';export const stable=1;");
+  writeFileSync(join(root,'scripts/worker.ts'),"import '../packages/planner/src/progression-catalog';");
+  const first=capabilityRevision(['scripts/worker.ts'],root),files=releaseFiles(['scripts/worker.ts'],root);
+  expect(files).toContain(planner);expect(files).toContain('knowledge/npcs.json');expect(files).not.toContain('scripts/other.ts');
+  writeFileSync(join(root,'scripts/other.ts'),'export const other=2;');expect(capabilityRevision(['scripts/worker.ts'],root)).toBe(first);
+  writeFileSync(join(root,'knowledge/npcs.json'),'[1]');expect(capabilityRevision(['scripts/worker.ts'],root)).not.toBe(first);
+  writeFileSync(join(root,planner),readFileSync(join(root,planner),'utf8')+"\nimport '../../../scripts/other';");
+  expect(releaseFiles(['scripts/worker.ts'],root)).toContain('scripts/other.ts');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
 test('data reads count by literal path, by joined literals and by folder; unresolved or workspace imports stop the release',()=>{
  const root=fixture();
  try{

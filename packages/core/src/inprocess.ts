@@ -23,6 +23,8 @@ import { assertSpentRecoveryConnection, type RecoveryConnectionAdmission } from 
 import { assertWorkerRelease } from './worker-release';
 import { assertActionScope } from './action-scope';
 import type { TickRecorder } from './tick-record';
+import {attachProgressionSession,preflightProgressionWork,processWork,type ProgressionSession} from './progression-session';
+import type {WorkDescriptor} from './progression-policy';
 // The wait checks of every lockstep session of this process (selfWaiting in createShim).
 const waitingSessions = new Set<() => boolean>();
 // The executors that wait for the server to open a count dialog (a withdraw or deposit of X): the dialog comes in
@@ -77,6 +79,7 @@ export interface Shim {
     direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
     // Starts the per-tick run record (tick-record.ts) from the next publication; null stops it.
     record(recorder: TickRecorder | null): void;
+    setProgressionGuard(guard:(action:unknown)=>string|null):void;
 }
 
 type Queued = { actionId: string; action: { type: string; ticks?: number } };
@@ -90,6 +93,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     let waitDone: (() => void) | null = null;
     const queue: Queued[] = [];
     let recorder: TickRecorder | null = null;
+    let progressionGuard:((action:unknown)=>string|null)|undefined;
     let commands = 0;
     const indexes = new Map<string, number>();
     const listeners = new Set<() => void>();
@@ -139,6 +143,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         assertActionScope(action);
         const refusal = guard?.(action);
         if (refusal) return { success: false, reason: 'unowned_partner', message: refusal };
+        const progression=progressionGuard?.(action);
+        if(progression)return{success:false,reason:'progression_replan',message:progression};
         const dispatched = (result: unknown) => {
             const reply = result as { success?: unknown; phase?: unknown } | null;
             // Protocol actions append bytes synchronously. Send them before a
@@ -454,6 +460,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             recorder = stopped ? null : next;
             if (recorder) recorder.publish(tick, client.collectBotState(tick), 'p');
         },
+        setProgressionGuard(next){progressionGuard=next;},
     };
 }
 
@@ -475,6 +482,7 @@ export interface Session {
     lifecycle?: SessionAttempt;
     // Per-tick run record (tick-record.ts). Absent on test doubles.
     record?(recorder: TickRecorder | null): void;
+    progression?:ProgressionSession;
 }
 
 // Read-only transport observation of one LiteClient: LiteClient.conn -> GameConnection.out/stream ->
@@ -551,7 +559,7 @@ export type TradeAdmission = {
     prepare(claim: FleetTradeClaim): void;
 };
 
-export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean; recoverSwarm?: RecoveryConnectionAdmission; trade?: TradeAdmission }): Promise<Session> {
+export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean; recoverSwarm?: RecoveryConnectionAdmission; trade?: TradeAdmission; work?:WorkDescriptor }): Promise<Session> {
     if(opts.lifecycleRoot&&!isLocalServer(opts.server??'localhost:8888'))throw Error('lifecycle root override is local-only');
     const server = opts.server ?? 'localhost:8888';
     const live = !isLocalServer(server);
@@ -587,6 +595,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
             lifecycle.owner = {...lifecycleOwner(), specialistAuthorization: {ticket: currentTicket, mission: process.env.SWARM_MISSION_HASH!}};
         }
         opts.trade?.check(server);
+        preflightProgressionWork(opts.work??processWork(),server,undefined,opts.name);
     };
     return startInProcessSession(opts, { startSession, sdk: new BotSDK(inProcessSdkConfig(opts)), Actions: BotActions, cacheDir,
         beforeConnect,planLock:opts.lockPlan||ticket||opts.trade?planLockDir:undefined,lifecycle,
@@ -628,7 +637,7 @@ export function connectFailedDetail(error: unknown, rows: FetchRow[], max = 300)
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
-export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean },
+export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean; work?:WorkDescriptor },
     deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission} }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
@@ -718,7 +727,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     attempt.record('connected');
     (deps.recordOwned ?? recordOwnedAccount)(opts.name,host);
     const bot: BotActions = new Actions(sdk);
-    return {
+    const result:Session={
         name: opts.name,
         sdk,
         bot,
@@ -738,4 +747,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
             releaseConfirmed();
         },
     };
+    const progression=attachProgressionSession(result,opts.work??processWork(),host);
+    sh.setProgressionGuard(action=>progression.refusal(action));
+    return result;
 }

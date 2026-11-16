@@ -7,6 +7,7 @@ import {firemakingFixture} from '../../packages/practice/src/firemaking-order-pr
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
+import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -1485,7 +1486,7 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
 };
 
 export function benchCases(): BenchCase[] {
-  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES];
+  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES,...PROGRESSION_BENCH_CASES];
 }
 
 export function benchCoverage() {

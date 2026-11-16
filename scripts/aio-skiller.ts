@@ -214,8 +214,16 @@ export interface ProgressiveBand {
  step: Step;
 }
 
-type ProgressiveTier = { level: number; method: string; xp: number; args?: readonly string[]; env?: Readonly<Record<string, string>>; job?: {family: BankJob['family'];recipe: string;members?: boolean;bank?: BankJob['bank'];site?: BankJob['site']} };
-const PROGRESSIVE_TIERS: Readonly<Record<string, readonly ProgressiveTier[]>> = {
+export function progressiveSkillerAlternatives(skillInput:string,currentLevel:number,targetLevel:number,xpRate=25):ProgressiveBand[]{
+ const skill=skillInput.toLowerCase();
+ if(!Number.isSafeInteger(currentLevel)||currentLevel<1||!Number.isSafeInteger(targetLevel)||targetLevel<=currentLevel||targetLevel>99||!Number.isFinite(xpRate)||xpRate<=0)throw Error('aio-skiller: invalid progressive level bounds');
+ const tiers=PROGRESSIVE_TIERS[skill];if(!tiers)throw Error(`aio-skiller: no XP progression for ${skill}`);
+ const to=skill==='prayer'?Math.max(43,targetLevel):targetLevel;
+ return tiers.filter(t=>t.level<=currentLevel).map(t=>progressiveTierBand(skill,t,currentLevel,to,xpRate));
+}
+
+export type ProgressiveTier = { level: number; method: string; xp: number; args?: readonly string[]; env?: Readonly<Record<string, string>>; job?: {family: BankJob['family'];recipe: string;members?: boolean;bank?: BankJob['bank'];site?: BankJob['site']} };
+export const PROGRESSIVE_TIERS: Readonly<Record<string, readonly ProgressiveTier[]>> = {
  firemaking: [
   { level: 1, method: 'order', xp: 40, env: { LOG: 'normal' } },
   { level: 15, method: 'order', xp: 60, env: { LOG: 'oak' } },
@@ -304,6 +312,19 @@ export function readBankJobArgument(argument: string): BankJob {
  return job;
 }
 
+function progressiveTierBand(skill:string,active:ProgressiveTier,fromLevel:number,toLevel:number,xpRate:number):ProgressiveBand{
+ const effectiveXp=active.xp*xpRate,unitsNeeded=Math.max(1,Math.ceil(Math.max(0,xpForLevel(toLevel)-xpForLevel(fromLevel))/effectiveXp));
+ const extra=[...(active.args??[]),...(['agility','runecraft','cooking','magic'].includes(skill)&&(skill!=='magic'||active.method==='alch-train')?[String(toLevel)]:[]),
+  `TARGET_LEVEL=${toLevel}`,'CAP=20000',...(['woodcutting','fishing','thieving'].includes(skill)?[`TARGET=${toLevel}`]:[]),
+  ...(skill==='fletching'?[`MAX_MAKE=${Math.min(25,unitsNeeded)}`,'LOG_RESERVE=0','BANK_KNIFE=1']:[]),
+  ...(skill==='crafting'&&active.method==='bowstrings'?[`MAX_MAKE=${unitsNeeded}`,'RAW_RESERVE=0']:[]),
+  ...(skill==='smithing'?[`MAX_MAKE=${unitsNeeded}`,'ORE_RESERVE=0']:[]),...(skill==='prayer'?[`MAX_BURY=${unitsNeeded}`]:[]),
+  ...Object.entries(active.env??{}).map(([k,v])=>`${k}=${v}`)];
+ return{skill,method:active.method,fromLevel,toLevel,unlockLevel:active.level,xpPerUnit:effectiveXp,unitsNeeded,
+  step:active.job?bankJobStep({family:active.job.family,recipe:active.job.recipe,target:unitsNeeded,batch:13,cap:20000,returnTicks:300,members:active.job.members??false,reserve:0,
+   ...skill==='cooking'?{targetLevel:toLevel}:{},...active.job.bank?{bank:active.job.bank}:{},...active.job.site?{site:active.job.site}:{}}):resolveSkillerStep(skill,active.method,extra)};
+}
+
 // Compute an automatic level-band progression from currentLevel -> targetLevel (accounting for server xpRate, default 25x).
 export function planProgressiveSkiller(skillInput: string, currentLevel: number, targetLevel: number, xpRate = 25): ProgressiveBand[] {
  const skill = skillInput.toLowerCase();
@@ -322,31 +343,7 @@ export function planProgressiveSkiller(skillInput: string, currentLevel: number,
  while (cursor < targetLevel) {
   const active = [...tiers].filter(t => t.level <= cursor).at(-1) ?? tiers[0]!;
   const nextUnlock = tiers.find(t => t.level > cursor && t.level < targetLevel)?.level ?? targetLevel;
-  const xpNeeded = Math.max(0, xpForLevel(nextUnlock) - xpForLevel(cursor));
-  const effectiveXp = active.xp * xpRate;
-  const unitsNeeded = Math.max(1, Math.ceil(xpNeeded / effectiveXp));
-  const extra = [
-   ...(active.args ?? []),
-   ...(['agility','runecraft','cooking','magic'].includes(skill) && (skill!=='magic'||active.method==='alch-train') ? [String(nextUnlock)] : []),
-   `TARGET_LEVEL=${nextUnlock}`,
-   'CAP=20000',
-   ...(['woodcutting','fishing','thieving'].includes(skill) ? [`TARGET=${nextUnlock}`] : []),
-   ...(skill==='fletching' ? [`MAX_MAKE=${Math.min(25,unitsNeeded)}`,'LOG_RESERVE=0','BANK_KNIFE=1'] : []),
-   ...(skill==='crafting' && active.method==='bowstrings' ? [`MAX_MAKE=${unitsNeeded}`,'RAW_RESERVE=0'] : []),
-   ...(skill==='smithing' ? [`MAX_MAKE=${unitsNeeded}`,'ORE_RESERVE=0'] : []),
-   ...(skill==='prayer' ? [`MAX_BURY=${unitsNeeded}`] : []),
-   ...Object.entries(active.env ?? {}).map(([k, v]) => `${k}=${v}`),
-  ];
-  bands.push({
-   skill,
-   method: active.method,
-   fromLevel: cursor,
-   toLevel: nextUnlock,
-   unlockLevel: active.level,
-   xpPerUnit: effectiveXp,
-   unitsNeeded,
-   step: active.job ? bankJobStep({family:active.job.family,recipe:active.job.recipe,target:unitsNeeded,batch:13,cap:20000,returnTicks:300,members:active.job.members??false,reserve:0,...skill==='cooking'?{targetLevel:nextUnlock}:{},...active.job.bank?{bank:active.job.bank}:{},...active.job.site?{site:active.job.site}:{}}) : resolveSkillerStep(skill, active.method, extra),
-  });
+  bands.push(progressiveTierBand(skill,active,cursor,nextUnlock,xpRate));
   cursor = nextUnlock;
  }
  return bands;

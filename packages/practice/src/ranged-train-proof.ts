@@ -16,7 +16,10 @@ import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
-const owned=['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts'];
+const owned=['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts',
+ 'scripts/gather-combat.ts','scripts/gather-combat-giant.test.ts',
+ 'packages/planner/src/progression-ranged.ts','packages/planner/test/progression-ranged.test.ts','packages/practice/src/ranged-progression-case.ts',
+ 'packages/practice/src/ranged-progression-entry.json','scripts/measure/progression-bench-cases.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-player-save.test.ts'];
 export const rangedProofSource=()=>({runtime:capabilityRevision(['scripts/ranged-train.ts'],root),files:Object.fromEntries(owned.map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const source=rangedProofSource;
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -34,7 +37,7 @@ export const RANGED_FIXTURE:SaveConfig={position:{x:2618,z:3332,level:0},
  bank:[{id:COINS,count:455452},{id:841,count:1},{id:884,count:82},{id:882,count:25},{id:1511,count:15},{id:1521,count:8951}]};
 export function rangedChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
  return {cmd:['bun','scripts/ranged-train.ts',name,String(TARGET),'10000'],cwd:root,
-  env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',MIN_ARROWS:'100',BUY_ARROWS:'0',BUY_ARROW_ID:'884',MAX_SPEND:String(MAX_SPEND),COIN_RESERVE:String(COIN_RESERVE),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'20'},windowsHide:true};
+  env:{...inherited,DEMO_OK:'',RANGED_COMPARE_METHOD:'chickens',RANDOM_EVENTS:'0',LOOT_WATCH:'0',MIN_ARROWS:'100',BUY_ARROWS:'0',BUY_ARROW_ID:'884',MAX_SPEND:String(MAX_SPEND),COIN_RESERVE:String(COIN_RESERVE),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'20'},windowsHide:true};
 }
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const worn=(s:Save)=>(s.inventories[94]??[]).map(i=>i.id).sort((a,b)=>a-b);

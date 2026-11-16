@@ -1,0 +1,333 @@
+{
+  "at": 1794869273306,
+  "bankAt": 1794869269947,
+  "sourceSha256": "a5404b62e4792b038f1ba9cf5a1607a2615aaac9af7aa50728faee18873bded0",
+  "producer": {
+    "loggedOutAt": 1794869270285,
+    "receiptSha256": "2332976057711d626b7158707f2aa6bdcc92b8b2a340626c1f071d3a49425572"
+  },
+  "pos": {
+    "x": 3185,
+    "z": 3436,
+    "level": 0
+  },
+  "hp": {
+    "now": 99,
+    "max": 99
+  },
+  "skills": [
+    {
+      "name": "Attack",
+      "level": 99,
+      "currentLevel": 99,
+      "xp": 999500
+    },
+    {
+      "name": "Defence",
+      "level": 99,
+      "currentLevel": 99,
+      "xp": 1000200
+    },
+    {
+      "name": "Strength",
+      "level": 99,
+      "currentLevel": 99,
+      "xp": 998800
+    },
+    {
+      "name": "Hitpoints",
+      "level": 99,
+      "currentLevel": 99,
+      "xp": 1084907
+    },
+    {
+      "name": "Ranged",
+      "level": 80,
+      "currentLevel": 80,
+      "xp": 285700
+    },
+    {
+      "name": "Prayer",
+      "level": 95,
+      "currentLevel": 52,
+      "xp": 758250
+    },
+    {
+      "name": "Magic",
+      "level": 99,
+      "currentLevel": 99,
+      "xp": 999187
+    },
+    {
+      "name": "Cooking",
+      "level": 59,
+      "currentLevel": 59,
+      "xp": 62250
+    },
+    {
+      "name": "Woodcutting",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Fletching",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Fishing",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Firemaking",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Crafting",
+      "level": 22,
+      "currentLevel": 22,
+      "xp": 3750
+    },
+    {
+      "name": "Smithing",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Mining",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Herblore",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Agility",
+      "level": 60,
+      "currentLevel": 60,
+      "xp": 67037
+    },
+    {
+      "name": "Thieving",
+      "level": 99,
+      "currentLevel": 99,
+      "xp": 85113822
+    },
+    {
+      "name": "Stat18",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Stat19",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    },
+    {
+      "name": "Runecraft",
+      "level": 1,
+      "currentLevel": 1,
+      "xp": 0
+    }
+  ],
+  "inventory": [],
+  "equipment": [
+    {
+      "id": 284,
+      "count": 1,
+      "slot": 4
+    },
+    {
+      "id": 285,
+      "count": 1,
+      "slot": 7
+    }
+  ],
+  "bank": [
+    {
+      "id": 995,
+      "count": 382923
+    },
+    {
+      "id": 1351,
+      "count": 1
+    },
+    {
+      "id": 590,
+      "count": 1
+    },
+    {
+      "id": 303,
+      "count": 1
+    },
+    {
+      "id": 315,
+      "count": 1
+    },
+    {
+      "id": 1931,
+      "count": 4
+    },
+    {
+      "id": 1265,
+      "count": 1
+    },
+    {
+      "id": 1205,
+      "count": 1
+    },
+    {
+      "id": 555,
+      "count": 6
+    },
+    {
+      "id": 557,
+      "count": 4
+    },
+    {
+      "id": 559,
+      "count": 2
+    },
+    {
+      "id": 1438,
+      "count": 1
+    },
+    {
+      "id": 279,
+      "count": 1
+    },
+    {
+      "id": 1813,
+      "count": 1
+    },
+    {
+      "id": 1809,
+      "count": 1
+    },
+    {
+      "id": 1815,
+      "count": 1
+    },
+    {
+      "id": 1819,
+      "count": 1
+    },
+    {
+      "id": 1796,
+      "count": 1
+    },
+    {
+      "id": 1802,
+      "count": 1
+    },
+    {
+      "id": 314,
+      "count": 4697
+    },
+    {
+      "id": 278,
+      "count": 1
+    },
+    {
+      "id": 1739,
+      "count": 1242
+    },
+    {
+      "id": 526,
+      "count": 513
+    },
+    {
+      "id": 2132,
+      "count": 1168
+    },
+    {
+      "id": 1935,
+      "count": 16
+    },
+    {
+      "id": 1446,
+      "count": 8
+    },
+    {
+      "id": 2347,
+      "count": 3
+    },
+    {
+      "id": 954,
+      "count": 7
+    },
+    {
+      "id": 1925,
+      "count": 1
+    },
+    {
+      "id": 1895,
+      "count": 2
+    },
+    {
+      "id": 2142,
+      "count": 43
+    },
+    {
+      "id": 1277,
+      "count": 1
+    },
+    {
+      "id": 2138,
+      "count": 602
+    },
+    {
+      "id": 556,
+      "count": 318
+    },
+    {
+      "id": 558,
+      "count": 6
+    },
+    {
+      "id": 1331,
+      "count": 1
+    },
+    {
+      "id": 561,
+      "count": 303
+    },
+    {
+      "id": 1387,
+      "count": 1
+    },
+    {
+      "id": 1171,
+      "count": 1
+    },
+    {
+      "id": 841,
+      "count": 1
+    },
+    {
+      "id": 882,
+      "count": 149
+    },
+    {
+      "id": 1985,
+      "count": 3
+    },
+    {
+      "id": 536,
+      "count": 6
+    }
+  ]
+}

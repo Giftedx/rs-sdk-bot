@@ -27,7 +27,7 @@ async function trace(reject:boolean,lateStop=false,direct=false,accountStop=fals
   opts.onClient(client);events.push('return-session');return{client,stop(){},stopped:new Promise(()=>{})};
  }}));
  const {connectInProcess}=await import(${JSON.stringify(resolve(root,'packages/core/src/inprocess.ts'))});
- let error='';try{await connectInProcess({name:'authfixture',password:'fixture-only',...(${direct}?{server:'rs-sdk-demo.fly.dev'}:{lifecycleRoot}),beforeConnect:()=>{events.push('before-connect');if(stopped)throw Error('owner stopped during local setup');}});events.push('returned');}catch(e){error=String(e);}
+ let error='';try{await connectInProcess({name:'authfixture',password:'fixture-only',work:{script:'packages/core/src/session-recovery.ts',args:[],env:{}},...(${direct}?{server:'rs-sdk-demo.fly.dev'}:{lifecycleRoot}),beforeConnect:()=>{events.push('before-connect');if(stopped)throw Error('owner stopped during local setup');}});events.push('returned');}catch(e){error=String(e);}
  const {listAttempts}=await import(${JSON.stringify(resolve(root,'packages/core/src/session-lifecycle.ts'))});
  console.log('AUTH_TRACE '+JSON.stringify({events,error,attempts:listAttempts('authfixture','localhost:8888',{root:lifecycleRoot}).length}));`;
  const result=Bun.spawn(['bun','-e',code],{cwd:root,stdout:'pipe',stderr:'pipe',timeout:10000,windowsHide:true});

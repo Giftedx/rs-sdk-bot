@@ -418,7 +418,7 @@ test('planner prompt keeps bounded build and resume evidence in recent tasks and
   else complete(state,spec.id,true,i+10);
  }
  const world:Parameters<typeof plannerPrompt>[1]={
-  at:0,scoreboard:null,stall:null,recoveryProblems:[],assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
+  at:0,scoreboard:null,stall:null,progression:[],progressionRequests:{at:null,rows:[]},recoveryProblems:[],assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
   capacity:{maxBots:0,minFreeGB:0,freeGB:7,nativeStartupGB:6.5,
    nativeTurn:{observedAt:10,holder:'pid-present',liveWaiters:1,oldestWaitMs:5,unknownTickets:0},
    diskFreeGB:100,maxLive:0,preferLive:false},

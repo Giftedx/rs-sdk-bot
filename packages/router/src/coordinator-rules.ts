@@ -6,6 +6,7 @@
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {addTasks,boundAccounts,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
+import type {CoordinatorProgressionResult} from './coordinator-progression';
 
 export const RULES={
  'next-band':{
@@ -21,6 +22,8 @@ const PROTECTED=['haggis','shaftshooter','polevaulter'];
 // A supply or repair run in a chain's dependencies says its inputs were moved in for that band only.
 const NEUTRAL_DEPENDENCIES=new Set(['session-recovery-only']);
 export interface RuleDeps{
+ /** Production supplies the shared state-aware selector before a worker is continued. */
+ progression?:(task:CoordTask,account:string,skill:string,next:number)=>CoordinatorProgressionResult;
  /** Current delivery fingerprint of a capability; throws when its source cannot be read. */
  fingerprint:(capability:string)=>string;
  /** Method unlock levels of a skill (knowledge/skills.json). */
@@ -36,7 +39,7 @@ export interface RuleDeps{
  /** Fleet best of a skill over all sides (scoreboard.json fleetSkills); undefined when the scoreboard cannot be read. */
  fleetBest:(skill:string)=>FleetBest|undefined;
  /** Goal effect of the proposed next run. When present, fleet maxima are diagnostic only. */
- goalValue?:(task:CoordTask)=>{value:number|null;reason:string};
+ goalValue?:(task:CoordTask,prerequisites?:readonly CoordTask[])=>{value:number|null;reason:string};
  /** Called for a chain the rule leaves because its band cannot raise the board. */
  skipped?:(skip:RuleSkip)=>void;
 }
@@ -69,6 +72,12 @@ export function retarget(spec:CoordTask,skill:string,from:number,to:number){
  return moved?{args,env,accept:{skills:{[skill]:to}}}:null;
 }
 const slug=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const reaches=(effect:CoordTask['accept'],consumer:NonNullable<CoordTask['accept']>)=>{
+ for(const [skill,target]of Object.entries(consumer.skills??{}))if(!Object.entries(effect?.skills??{}).some(([name,level])=>name.toLowerCase()===skill.toLowerCase()&&level>=target))return false;
+ for(const [id,target]of Object.entries(consumer.bank??{}))if((effect?.bank?.[id]??0)<target)return false;
+ for(const quest of consumer.quests??[])if(!effect?.quests?.some(name=>name.toLowerCase()===quest.toLowerCase()))return false;
+ return true;
+};
 /** Add the rule-derived next jobs. Returns the new tasks (empty when no rule can decide). */
 export function applyRules(state:CoordinatorState,deps:RuleDeps,now=Date.now()):CoordTask[]{
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
@@ -90,7 +99,7 @@ export function applyRules(state:CoordinatorState,deps:RuleDeps,now=Date.now()):
   if(PROTECTED.includes(account.toLowerCase())||deps.paused(account))continue;
   if(spec.dependsOn.some(id=>{const dep=records.get(id);return dep?.spec.kind==='run'&&dep.spec.capability!==capability&&!NEUTRAL_DEPENDENCIES.has(dep.spec.capability!);}))continue;
   // No second open run of the same capability on the same account, from any source.
-  if(open.some(r=>r.spec.kind==='run'&&r.spec.capability===capability&&(boundAccounts(r.spec,state)??[]).some(n=>n.toLowerCase()===account.toLowerCase())))continue;
+  if(open.some(r=>r.spec.kind==='run'&&(r.spec.capability===capability||r.spec.rule==='next-band')&&(boundAccounts(r.spec,state)??[]).some(n=>n.toLowerCase()===account.toLowerCase())))continue;
   let source:string;try{source=deps.fingerprint(capability);}catch{continue;}
   if(!reviewApproved(state,capability))continue;
   // A change inside the worker's import closure leaves the qualification stale. The rule then queues the refresh qualify
@@ -110,6 +119,26 @@ export function applyRules(state:CoordinatorState,deps:RuleDeps,now=Date.now()):
   if(!deps.goalValue&&(!fleet||!leader&&next<fleet.best)){
    deps.skipped?.({capability,account,skill,next,reason:fleet?`fleet best ${skill} ${fleet.best} is held by ${fleet.account} (${fleet.side}); ${account} band to ${next} does not reach it`:`fleet best ${skill} unknown: scoreboard unreadable`});
    continue;
+  }
+  if(deps.progression){
+   let chosen:CoordinatorProgressionResult;
+   try{chosen=deps.progression({...spec,accept:{skills:{[skill]:next}}},account,skill,next);}catch(error){deps.skipped?.({capability,account,skill,next,reason:'Progression selection needs repair: '+String(error)});continue;}
+   if(!['continue','handoff'].includes(chosen.action)||!chosen.step||!chosen.capability||!chosen.stepAccept){deps.skipped?.({capability,account,skill,next,reason:'Progression '+chosen.action+': '+chosen.reason});continue;}
+   const route=chosen.route?.length?chosen.route:[{capability:chosen.capability,step:chosen.step,accept:chosen.stepAccept}];
+   const consumer={skills:{[skill]:next}};
+   if(!reaches(route.at(-1)!.accept,consumer)){deps.skipped?.({capability,account,skill,next,reason:'A prerequisite has no bound step that reaches the original finite consumer.'});continue;}
+   if(openRuleTasks+route.length>deps.maxOpen)continue;
+   const proofs=route.map(step=>{try{const fingerprint=deps.fingerprint(step.capability);return reviewApproved(state,step.capability)?currentQualification(state,step.capability,fingerprint):null;}catch{return null;}});
+   if(proofs.some(p=>!p)){deps.skipped?.({capability,account,skill,next,reason:'Selected progression route requires current qualification and review for each exact existing capability.'});continue;}
+   let root=`chain-${slug(capability)}-${slug(account)}-${slug(skill)}${next}`;for(let n=2;ids.has(root);n++)root=`chain-${slug(capability)}-${slug(account)}-${slug(skill)}${next}-${n}`;
+   const tasks:CoordTask[]=route.map((step,index)=>({id:index===route.length-1?root:root+'-step-'+(index+1),goal:spec.goal,kind:'run',capability:step.capability,account,
+    dependsOn:[proofs[index]!.spec.id,index===0?last.spec.id:root+'-step-'+index],priority:spec.priority,estimatedMs:Math.max(1,Math.round((chosen.decision?.path[index]?.ticks??spec.estimatedMs/400)*400)),
+    ...(spec.timeoutMs?{timeoutMs:spec.timeoutMs}:{}),args:step.step.args,env:step.step.env,
+    accept:index===route.length-1?consumer:step.accept,rule:'next-band',
+    why:'Rule next-band: '+chosen.reason+' Consumer: '+JSON.stringify(consumer)+'. Each finite prerequisite has its own source qualification.'}));
+   if(deps.goalValue){const effect=deps.goalValue(tasks.at(-1)!,tasks.slice(0,-1));if(effect.value===null||effect.value<=0){deps.skipped?.({capability,account,skill,next,reason:effect.reason});continue;}}
+   try{addTasks(state,tasks,now);}catch{continue;}
+   for(const task of tasks)ids.add(task.id);added.push(...tasks);openRuleTasks+=tasks.length;continue;
   }
   const moved=retarget(spec,skill,target,next);if(!moved)continue;
   let id=`chain-${slug(capability)}-${slug(account)}-${slug(skill)}${next}`;

@@ -59,6 +59,10 @@ const skipped=new Set(['node_modules','.git','.practice']);
 // These modules name files only to hash them and refuse changed bytes themselves, so their literals add nothing:
 // this file names release inputs; launch-evidence.ts binds the main launch to its own source fingerprint.
 const hashOnly=new Set(['packages/core/src/worker-release.ts','packages/core/src/launch-evidence.ts']);
+// These modules compare or describe future entry paths; they never load those
+// worker bodies. Their real imports and all data reads still belong to the pin.
+const progressionEntryMetadata=new Set(['packages/core/src/progression-policy.ts','packages/core/src/progression-session.ts',
+    'packages/planner/src/progression-catalog.ts','packages/planner/src/progression-ranged.ts']);
 // One call's file reads and parses; a check of several peers shares it. Never kept between calls.
 export type ReleaseMemo=Map<string,unknown>;
 
@@ -144,7 +148,10 @@ function fileLinks(base:string,file:string,memo:ReleaseMemo):{files:string[];dir
         if(spec.startsWith('.'))files.push(...resolveImport(base,file,spec));
         else if(spec.startsWith('@rsbot/'))throw Error('no worker progress: release workspace import unsupported: '+file+' -> '+spec);
     }
-    if(!hashOnly.has(file))for(const literal of stringLiterals(file,text))for(const p of literalPaths(base,file,literal,memo))(p.dir?dirs:files).push(p.path);
+    if(!hashOnly.has(file))for(const literal of stringLiterals(file,text))for(const p of literalPaths(base,file,literal,memo)){
+        if(progressionEntryMetadata.has(file)&&!p.dir&&p.path.startsWith('scripts/')&&codeFile.test(p.path))continue;
+        (p.dir?dirs:files).push(p.path);
+    }
     const links={files,dirs};memo.set(key,links);return links;
 }
 const inRuntimeTree=(p:string)=>runtimeTrees.some(t=>p===t||p.startsWith(t+'/'));

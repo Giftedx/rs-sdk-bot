@@ -128,7 +128,7 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
     });
 }
 
-export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
+export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null;binding?():{boundMethod:string|null;source:string|null;consumer:unknown}} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
     captureMilestones();
     const key = s.name.toLowerCase(), lines = emptyLines(perBot.get(key)?.attributed ?? false);
     perBot.set(key, lines);
@@ -229,6 +229,9 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             inputs: inputs(),
             // Every key=value counter from the last RESULT line (shopTicks, walkTicks, stuns, eaten, ...).
             counters: lines.counters,
+            progression:(()=>{const d=s.progression?.decision(),executing=s.progression?.method?.(),binding=s.progression?.binding?.();return d?{...binding,state:d.state,selected:d.selected,executing:executing??null,expectedTicks:d.expectedTicks,basis:d.basis,reason:d.reason,followUps:d.followUps,stateFingerprint:d.stateFingerprint}:executing?{...binding,executing}:null;})(),
+            progressionCrowding:st?.nearbyPlayers?.length??0,
+            progressionContext:{style:st?.combatStyle??null,prayers:st?.prayers?.activePrayers??null},
             env: { target: process.env.TARGET ?? null, cap: process.env.CAP ?? null },
         };
         // The coordinator reads this file every second during a live run, and on Windows that read can block the

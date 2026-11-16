@@ -1,5 +1,6 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart,openShopWithDoor} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart,openShopWithDoor,runAdaptiveRanged,rangedComparisonMethod} from './ranged-train';
+import * as combat from './gather-combat';
 import * as walking from '../packages/core/src/walk';
 import * as bot from '../packages/core/src/bot';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
@@ -8,15 +9,124 @@ import type {Session} from '../packages/core/src/inprocess';
 import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions,rangedLevelXp,RANGED_SEED_XP} from '../packages/practice/src/ranged-train-proof';
 import {capabilityRevision} from '../packages/core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
+import {xpForLevel} from '../packages/planner/src/curve';
+import {rangedComparisonChecks} from '../packages/practice/src/ranged-progression-case';
+import rangedEntryFixture from '../packages/practice/src/ranged-progression-entry.json';
+
+test('the native exact-entry check refuses extra practice supplies that the observed account does not own',()=>{
+ const rows=(items:readonly {id:number;count:number}[])=>items.map((i,slot)=>({...i,slot}));
+ const save={version:10,position:rangedEntryFixture.pos,vars:{},
+  skills:rangedEntryFixture.skills.map((s,index)=>({index,xp:s.xp,level:s.currentLevel,rawExperience:s.xp*10})),
+  inventories:{93:rows(rangedEntryFixture.inventory),94:rows(rangedEntryFixture.equipment),95:rows(rangedEntryFixture.bank)}};
+ const inflated=structuredClone(save);inflated.inventories[95].push({slot:99,id:892,count:500});
+ expect(rangedComparisonChecks(inflated,inflated,null,'',1).exactEntry).toBe(false);
+});
+
+test('adaptive Ranged reads a fresh bank, selects the existing trooper worker and counts approach fares',async()=>{
+ const client={};setEquipmentObserved(client,true);let generation=1,open=false;
+ const pack:{id:number;count:number}[]=[];
+ const bank=[{id:841,count:1},{id:882,count:500},{id:2142,count:43},{id:995,count:382923}];
+ const skills=[{name:'Ranged',baseLevel:80,level:80,xp:285700},{name:'Hitpoints',baseLevel:99,level:99,xp:1080130}];
+ const s={name:'ordinary',client,tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  bankObservation:()=>open?{at:Date.now(),generation,items:generation>1?bank:[]}:null,
+  sdk:{getState:()=>({player:{worldX:3252,worldZ:3420,level:0},bank:{isOpen:open}}),getSkills:()=>skills,
+   getSkill:(name:string)=>skills.find(k=>k.name===name),getSkillXp:(name:string)=>skills.find(k=>k.name===name)?.xp??0,getInventory:()=>pack,getEquipment:()=>[]},
+  bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};},
+   withdrawItem:async(item:{id:number},amount:number)=>{expect(open).toBe(true);bank.find(i=>i.id===item.id)!.count-=amount;pack.push({id:item.id,count:amount});generation++;return{success:true};}},
+ } as unknown as Session;
+ const worker=spyOn(combat,'runGiants').mockImplementation(async(session,o)=>{
+  expect(o.site).toBe(combat.TROOPER_SITE);expect(o.trainSkill).toBe('Ranged');expect(o.targetLevel).toBe(85);
+  await session.bot.openBank();await session.bot.withdrawItem({id:995} as any,60);await session.bot.closeBank();pack.splice(0);
+  await session.bot.openBank();skills[0]!.baseLevel=85;skills[0]!.level=85;skills[0]!.xp+=100000;
+  return{ok:true,targetMet:true,preserved:true,foodAccounted:true,selectedXp:100000,ammoId:882,ammoUsed:4,finalLevel:85} as any;
+ });
+ try{
+  const r=await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','ordinary','85','20000']),coinReserve:382483});
+  expect(worker).toHaveBeenCalledTimes(1);expect(r).toMatchObject({method:'ranged/troopers',ok:true,targetMet:true,coinsSpent:60,coinDebit:60});
+ }finally{worker.mockRestore();}
+});
+
+test('a public live ranged invocation cannot force the comparison chicken method',()=>{
+ expect(()=>rangedComparisonMethod('chickens','rs-sdk-demo.fly.dev')).toThrow('local practice server');
+ expect(rangedComparisonMethod('chickens','127.0.0.1:8888')).toBe('chickens');
+});
+
+test('adaptive Ranged finishes an owned gear unlock band then reobserves before the next band',async()=>{
+ const client={};setEquipmentObserved(client,true);let generation=0,open=false,tick=0,level=19,xp=xpForLevel(19);
+ const bank=[{id:843,count:1},{id:849,count:1},{id:882,count:300},{id:888,count:300},{id:2142,count:43},{id:995,count:382923}];
+ const skills=()=>[{name:'Ranged',baseLevel:level,level,xp},{name:'Hitpoints',baseLevel:99,level:99,xp:1080130}];
+ const s={name:'ordinary',client,tick:()=>tick,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  bankObservation:()=>({at:Date.now(),generation,items:bank}),
+  sdk:{getState:()=>({player:{worldX:2619,worldZ:3332,level:0},bank:{isOpen:open}}),getSkills:skills,
+   getSkill:(name:string)=>skills().find(k=>k.name===name),getSkillXp:(name:string)=>skills().find(k=>k.name===name)?.xp??0,getInventory:()=>[],getEquipment:()=>[]},
+  bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};}},
+ } as unknown as Session;
+ const bands:number[]=[],kits:number[]=[];
+ const worker=spyOn(combat,'runGiants').mockImplementation(async(_s,o)=>{
+  bands.push(o.targetLevel!);kits.push(o.rangedKit!.bow);const start=xp;
+  level=o.targetLevel!;xp=xpForLevel(level);tick+=100;
+  return{ok:true,targetMet:true,preserved:true,foodAccounted:true,selectedXp:xp-start,ammoId:o.rangedKit!.arrow,ammoUsed:1,finalLevel:level} as any;
+ });
+ try{
+  const r=await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','ordinary','25','3000']),coinReserve:382483});
+  expect(bands).toEqual([20,25]);expect(kits).toEqual([843,849]);expect(r).toMatchObject({ok:true,targetMet:true,finalLevel:25});
+ }finally{worker.mockRestore();}
+});
+
+test('trooper preparation banks entry coins before a zero-spend order can approach the field',async()=>{
+ const client={};setEquipmentObserved(client,true);let generation=0,open=false,level=80,xp=285700;
+ const pack=[{id:995,name:'Coins',slot:0,count:100}],bank=[{id:841,count:1},{id:882,count:149},{id:2142,count:43},{id:995,count:100}].map(i=>({...i,name:i.id===995?'Coins':String(i.id)}));
+ const skills=()=>[{name:'Ranged',baseLevel:level,level,xp},{name:'Hitpoints',baseLevel:99,level:99,xp:1080130}];
+ const s={name:'ordinary',client,tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  bankObservation:()=>({at:Date.now(),generation,items:bank}),
+  sdk:{getState:()=>({player:{worldX:2619,worldZ:3332,level:0},inventory:pack,bank:{isOpen:open,items:bank}}),getSkills:skills,
+   getSkill:(name:string)=>skills().find(k=>k.name===name),getSkillXp:(name:string)=>skills().find(k=>k.name===name)?.xp??0,getInventory:()=>pack,getEquipment:()=>[]},
+  bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};},
+   depositItem:async()=>{bank.find(i=>i.id===995)!.count+=100;pack.splice(0);generation++;return{success:true};},
+   withdrawItem:async()=>{throw Error('unbudgeted withdrawal reached the bot');}},
+ } as unknown as Session;
+ const worker=spyOn(combat,'runGiants').mockImplementation(async(session)=>{
+  expect(session.sdk.getInventory().some(i=>i.id===995)).toBe(false);
+  await expect(session.bot.withdrawItem({id:995} as any,60)).rejects.toThrow('fare budget refused');
+  level=85;xp=xpForLevel(85);return{ok:true,targetMet:true,preserved:true,foodAccounted:true,selectedXp:xp-285700,ammoId:882,ammoUsed:0,finalLevel:85} as any;
+ });
+ try{expect(await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','ordinary','85','3000']),maxSpend:0})).toMatchObject({ok:true,coinDebit:0});}
+ finally{worker.mockRestore();}
+});
+
+test('the adaptive CLI budget and result include its unsupported-entry recovery walk',async()=>{
+ const client={};setEquipmentObserved(client,true);let generation=0,open=false,tick=0,level=80,xp=285700;
+ const p={worldX:3185,worldZ:3436,level:0},bank=[{id:841,count:1},{id:882,count:149},{id:2142,count:43},{id:995,count:382923}];
+ const skills=()=>[{name:'Ranged',baseLevel:level,level,xp},{name:'Hitpoints',baseLevel:99,level:99,xp:1080130}];
+ const s={name:'ordinary',client,tick:()=>tick,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  bankObservation:()=>({at:Date.now(),generation,items:bank}),
+  sdk:{getState:()=>({player:p,bank:{isOpen:open}}),getSkills:skills,getSkill:(n:string)=>skills().find(k=>k.name===n),getSkillXp:(n:string)=>skills().find(k=>k.name===n)?.xp??0,getInventory:()=>[],getEquipment:()=>[]},
+  bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};}},
+ } as unknown as Session;
+ const world=spyOn(bot,'getWorld').mockImplementation(async()=>({} as any)),actor=spyOn(bot,'accountOf').mockImplementation(()=>({skills:{magic:99},items:[],coins:0} as any));
+ const go=spyOn(walking,'goTo').mockImplementation(async()=>{tick+=77;p.worldX=3253;p.worldZ=3421;return{ok:true} as any;});
+ const worker=spyOn(combat,'runGiants').mockImplementation(async(_s,o)=>{
+  expect(o.cap).toBe(2923);tick+=100;level=85;xp=xpForLevel(85);
+  return{ok:true,targetMet:true,preserved:true,foodAccounted:true,selectedXp:xp-285700,ammoId:882,ammoUsed:0,finalLevel:85} as any;
+ });
+ try{
+  const r=await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','ordinary','85','3000']),coinReserve:382483});
+  expect(go).toHaveBeenCalledTimes(1);expect(r).toMatchObject({ok:true,ticks:177});
+ }finally{worker.mockRestore();go.mockRestore();world.mockRestore();actor.mockRestore();}
+});
 
 test('stock-only native continuation disables arrow buying without reducing admission or target checks',()=>{
  const c=rangedChildConfiguration('fixture',{LOOT_WATCH:'1'});expect(c.env.BUY_ARROWS).toBe('0');expect(c.env.COIN_RESERVE).toBe('400000');
+ expect(c.env.RANGED_COMPARE_METHOD).toBe('chickens');
  expect(c.env.LOOT_WATCH).toBe('0');
  expect(c.cmd.slice(-2)).toEqual(['71','10000']);expect(c.env.KILLS_PER_TRIP).toBe('8');
 });
 test('native Ranged proof binds its actual worker closure and owned files',()=>{
  const s=rangedProofSource();expect(s.runtime).toBe(capabilityRevision(['scripts/ranged-train.ts']));
- expect(Object.keys(s.files)).toEqual(['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts']);
+ expect(Object.keys(s.files)).toEqual(['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts',
+  'scripts/gather-combat.ts','scripts/gather-combat-giant.test.ts',
+  'packages/planner/src/progression-ranged.ts','packages/planner/test/progression-ranged.test.ts','packages/practice/src/ranged-progression-case.ts',
+  'packages/practice/src/ranged-progression-entry.json','scripts/measure/progression-bench-cases.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-player-save.test.ts']);
 },30_000); // Two closure hashes take about 3 s on an idle PC; the default 5 s limit fails under load.
 
 test('proof selects a whole isolated endpoint set and refuses eight exhausted candidates',()=>{
@@ -334,6 +444,14 @@ test('an owned bow and arrows unlocked by a kill are staged before the next targ
   const r=await f.run({target:30});
   expect(r).toMatchObject({ok:true,trips:2,bow:849,arrow:888,accounting:true,preserved:true});
   expect(f.attacks.map(a=>a.kit.sort((a,b)=>a-b))).toEqual([[843,882],[849,888]]);
+ }finally{f.close();}
+});
+
+test('a selected kit stays on its field trip while a different legacy tier unlocks',async()=>{
+ const f=trainingFixture(['kill','kill'],false,true);
+ try{
+  const r=await f.run({target:30,kit:{bow:843,arrow:882}});
+  expect(r.ok).toBe(true);expect(r.kills).toBe(2);expect(r.trips).toBe(1);expect(r.bow).toBe(843);
  }finally{f.close();}
 });
 

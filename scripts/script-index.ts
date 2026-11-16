@@ -16,6 +16,7 @@ const repo = resolve(import.meta.dir, '..');
 // its aio-<category>.ts file and not an entry here.
 export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/autopilot.ts': 'fleet control: writes the planner jobs into swarm.json',
+ 'scripts/autopilot-progression.ts': 'fleet control helper: compares finite assignments through the shared progression selector',
  'scripts/check-no-diary.ts': 'developer tool: checks the docs for history wording',
  'scripts/check-pin.ts': 'developer tool: checks the commit of vendor/rs-sdk',
  'scripts/gear.ts': 'developer tool: looks up each wearable item and its bonuses in knowledge/gear.json',
@@ -58,6 +59,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/preparation-report.ts': 'report: owned gear and supplies against the inputs of the workers',
  'scripts/preparation-route-state.ts': 'helper of scripts/preparation-report.ts',
  'scripts/provision-readiness.ts': 'fleet control: checks the crew of an account provision',
+ 'scripts/progression-catalog.ts': 'developer tool: generates checked declarative progression metadata; no gameplay',
  'scripts/route-audit-components.ts': 'helper of scripts/route-audit.ts',
  'scripts/route-audit.ts': 'developer tool: offline navigation audit',
  'scripts/script-descriptions.ts': 'helper of scripts/script-index.ts',
