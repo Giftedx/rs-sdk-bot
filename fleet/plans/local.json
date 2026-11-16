@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794845860201,
+ "at": 1794847098257,
  "jobs": [
   {
    "account": "Balls",
@@ -132,6 +132,29 @@
    "repeat": false,
    "goal": "run-ranged-nab-army75 [task-c5a1bf2b-2517-41c4-bd73-39a93eb9fad2]",
    "role": "helper"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "2357",
+    "QUANTITY": "1",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "3500",
+    "CASH_RESERVE": "90000",
+    "ORDER_KEY": "wood-ring12-gold1",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-6db5d70a-1015-47da-8f42-ce0510f4d187"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-wood-ring12-gold1 [task-6db5d70a-1015-47da-8f42-ce0510f4d187]",
+   "role": "supply"
   }
  ],
  "army": [
