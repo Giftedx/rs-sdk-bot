@@ -1,0 +1,10 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/practice/test/session-recovery-proof.test.ts:
+(pass) initial owner readiness remains absent until its complete JSON is published [2.87ms]
+
+ 1 pass
+ 70 filtered out
+ 0 fail
+ 5 expect() calls
+Ran 1 test across 1 file. [392.00ms]
