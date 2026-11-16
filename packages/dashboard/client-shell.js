@@ -265,19 +265,21 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   window.atlasRecapHtml=()=>{const b=typeof account==='function'?account():null;if(recap.state!=='loading'&&recapStale(b))loadRecap(b.name);return recap.name?'<div class="death-recap"><div class="xp-box">'+recapHtml(recap)+'</div></div>':'';};
   function paintRecap(){if(selectedPlugin==='activity'&&window.atlasPlugins?.activity)window.atlasPlugins.activity.render(body);}
   // Quest Journal, Fleet view (RuneLite's Quest List colours over every account): each quest with how many of our
-  // accounts finished it, green when all did, yellow when some did or started it, red when none did. A click lists
-  // each account in its colour.
+  // accounts finished it. Any unknown state makes it grey; otherwise all finished is green, some finished or
+  // started is yellow, and none started is red. A click lists each account in its colour.
   let questScope='account';
+  const questState=q=>q?.state==='complete'||q?.state==='completed'?'completed':q?.state==='started'?'in progress':q?.state==='not started'?'not started':'unknown';
   const questScopeBar=()=>`<div class="quest-scope"><button data-quest-scope="account" class="${questScope==='account'?'on':''}">This account</button><button data-quest-scope="fleet" class="${questScope==='fleet'?'on':''}">Fleet</button></div>`;
   function fleetQuests(){
-    const bots=S?S.bots.filter(x=>!x.practice&&!x.reserved&&Array.isArray(x.quests)&&x.quests.length):[],done=q=>q.state==='complete'||q.state==='completed',byQuest=new Map();
-    for(const x of bots)for(const q of x.quests){if(!q?.name)continue;const r=byQuest.get(q.name)??{name:q.name,done:[],started:[],todo:[]};(done(q)?r.done:q.state==='started'?r.started:r.todo).push(x.name);byQuest.set(q.name,r);}
-    const kind=r=>r.done.length&&!r.started.length&&!r.todo.length?'completed':r.done.length||r.started.length?'in progress':'not started',colour={completed:'#00ff00','in progress':'#ffff00','not started':'#ff0000'};
-    if(questDetail&&byQuest.has(questDetail)){const r=byQuest.get(questDetail),line=(names,c,label)=>names.map(n=>`<span style="color:${c}" title="${label}">${E(safeName(n))}</span>`).join('');return '<h3>'+E(r.name)+'</h3><p style="text-align:center">'+r.done.length+' of '+(r.done.length+r.started.length+r.todo.length)+' accounts done</p><div class="game-list quest-accounts">'+line(r.done,'#00ff00','done')+line(r.started,'#ffff00','started')+line(r.todo,'#ff0000','not started')+'</div><button class="game-control" data-quest-back>Back to quest list</button>';}
+    const bots=S?S.bots.filter(x=>!x.practice&&!x.reserved&&Array.isArray(x.quests)&&x.quests.length):[],byQuest=new Map();
+    for(const x of bots)for(const q of x.quests){if(!q?.name)continue;const r=byQuest.get(q.name)??{name:q.name,done:[],started:[],todo:[],unknown:[]};r[{'completed':'done','in progress':'started','not started':'todo',unknown:'unknown'}[questState(q)]].push(x.name);byQuest.set(q.name,r);}
+    for(const r of byQuest.values()){const seen=new Set([...r.done,...r.started,...r.todo,...r.unknown]);r.unknown.push(...bots.filter(x=>!seen.has(x.name)).map(x=>x.name));}
+    const kind=r=>r.unknown.length?'unknown':r.done.length===bots.length?'completed':r.done.length||r.started.length?'in progress':'not started',colour={completed:'#00ff00','in progress':'#ffff00','not started':'#ff0000',unknown:'#aaa'};
+    if(questDetail&&byQuest.has(questDetail)){const r=byQuest.get(questDetail),line=(names,c,label)=>names.map(n=>`<span style="color:${c}" title="${label}">${E(safeName(n))}</span>`).join('');return '<h3>'+E(r.name)+'</h3><p style="text-align:center">'+r.done.length+' of '+bots.length+' accounts done</p><div class="game-list quest-accounts">'+line(r.done,'#00ff00','done')+line(r.started,'#ffff00','started')+line(r.todo,'#ff0000','not started')+line(r.unknown,'#aaa','unknown')+'</div><button class="game-control" data-quest-back>Back to quest list</button>';}
     const rows=[...byQuest.values()].sort((a,c)=>a.name.localeCompare(c.name)),shown=rows.filter(r=>(questFilter==='all'||kind(r)===questFilter)&&r.name.toLowerCase().includes(questQuery.trim().toLowerCase()));
     const any=rows.filter(r=>r.done.length).length,every=rows.filter(r=>kind(r)==='completed').length;
     if(!bots.length)return '<h3>Quest Journal</h3>'+questScopeBar()+'<p class="game-muted">No account reports its quests.</p>';
-    return '<h3>Quest Journal</h3>'+questScopeBar()+'<p style="text-align:center">'+any+' of '+rows.length+' done by an account · '+every+' by all '+bots.length+'</p><div class="quest-filter">'+[['all','All'],['completed','All done'],['in progress','Some'],['not started','None']].map(([id,label])=>`<button data-quest-filter="${id}" class="${questFilter===id?'on':''}">${label} ${id==='all'?rows.length:rows.filter(r=>kind(r)===id).length}</button>`).join('')+'</div><input class="quest-search" data-quest-search placeholder="Find a quest…" aria-label="Search quests" value="'+E(questQuery)+'"><div class="game-list">'+shown.map(r=>`<button class="quest-fleet-row" style="color:${colour[kind(r)]}" data-quest="${E(r.name)}" title="${r.done.length} done, ${r.started.length} started, ${r.todo.length} not started"><span>${E(r.name)}</span><span>${r.done.length}/${r.done.length+r.started.length+r.todo.length}</span></button>`).join('')+(!shown.length?'<p class="game-muted" role="status">No quests match your search or filter.</p>':'')+'</div>';
+    return '<h3>Quest Journal</h3>'+questScopeBar()+'<p style="text-align:center">'+any+' of '+rows.length+' done by an account · '+every+' by all '+bots.length+'</p><div class="quest-filter">'+[['all','All'],['completed','All done'],['in progress','Some'],['not started','None'],['unknown','Unknown']].map(([id,label])=>`<button data-quest-filter="${id}" class="${questFilter===id?'on':''}">${label} ${id==='all'?rows.length:rows.filter(r=>kind(r)===id).length}</button>`).join('')+'</div><input class="quest-search" data-quest-search placeholder="Find a quest…" aria-label="Search quests" value="'+E(questQuery)+'"><div class="game-list">'+shown.map(r=>`<button class="quest-fleet-row" style="color:${colour[kind(r)]}" data-quest="${E(r.name)}" title="${r.done.length} done, ${r.started.length} started, ${r.todo.length} not started, ${r.unknown.length} unknown"><span>${E(r.name)}</span><span>${r.done.length}/${bots.length}</span></button>`).join('')+(!shown.length?'<p class="game-muted" role="status">No quests match your search or filter.</p>':'')+'</div>';
   }
   function gamePanel(){
     const b=account(),panel=$('#game-panel');let html='';
@@ -299,12 +301,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       html='<h3>Friends List</h3><p style="text-align:center">Friends: '+bots.filter(x=>x.inWorld).length+' online / '+bots.length+'</p><div class="game-list friends-list">'+bots.map(x=>`<button data-friend="${E(x.name)}" title="${E(safeName(x.name))}${x.goal?' · '+E(x.goal):''}"><span>${E(safeName(x.name))}</span><span class="${x.inWorld?'friend-on':'friend-off'}">${x.inWorld?(window.atlasOperator()?E(x.side||'local'):'Online'):'Offline'}</span></button>`).join('')+'</div><button class="game-control" data-open-plugin="fleet">Fleet plugin</button>';}}
     if(selectedTab==='settings')html='<h3 class="cyan">Game Options</h3><label>Display mode<select id="game-display"><option value="open">Sidebar open</option><option value="closed" '+(app.classList.contains('client-collapsed')?'selected':'')+'>Game only</option></select></label><label>Render quality<select id="game-quality"><option value="1">Sharp</option><option value="0.75">Balanced</option><option value="0.5">Light</option></select></label>'+(window.FleetShim?'<label>Roofs<select id="game-roofs"><option value="off">Removed</option><option value="on" '+(window.atlasRoofsOff()?'':'selected')+'>Shown</option></select></label>':'')+'<button class="game-control" data-toggle-chat>Show / hide chatbox</button><button class="game-control" data-places>Places & camera</button>'+(window.atlasOperator()?'<button class="game-control" data-open-plugin="machine">Performance</button>':'');
     if(selectedTab==='logout'){const owner=window.FleetShim?.signedIn?.();html='<p style="text-align:center">'+(owner?'Logged in as '+E(owner)+'.':'You are watching as a spectator.')+'</p><p class="game-muted">Account sessions belong to their workers; logging out here never logs a bot out.</p><button class="game-control" data-logout>Click here to logout</button><button class="game-control" data-open-plugin="fleet">View active sessions</button>';}
-    const active=document.activeElement,friend=panel.contains(active)?active.dataset.friend:null;
-    const typing=active?.matches?.('[data-quest-search]')?[document.activeElement.selectionStart,document.activeElement.selectionEnd]:null;
+    const active=document.activeElement,sameAccount=panel._account===(b?.name??null),key=panel.contains(active)?['questSearch','questFilter','questScope','quest','questBack','setupKit','friend'].find(k=>active.dataset?.[k]!=null):null;
+    const selector=key?'[data-'+key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+'="'+CSS.escape(active.dataset[key])+'"]':null;
+    const restore=key==='quest'&&questDetail?'[data-quest-back]':key==='questBack'&&!questDetail&&panel._questDetail?'[data-quest="'+CSS.escape(panel._questDetail)+'"]':selector;
+    const typing=key==='questSearch'?[active.selectionStart,active.selectionEnd]:null;
+    panel._account=b?.name??null;panel._questDetail=questDetail;
     put(panel,html);
-    if(!active?.isConnected){
-      if(typing){const box=panel.querySelector('[data-quest-search]');if(box){box.focus({preventScroll:true});box.setSelectionRange(typing[0],typing[1]);}}
-      if(friend)panel.querySelector('[data-friend="'+CSS.escape(friend)+'"]')?.focus({preventScroll:true});
+    if(key&&(sameAccount||key==='friend')&&!active.isConnected){
+      const next=panel.querySelector(restore)||(key.startsWith('quest')?(panel.querySelector('[data-quest-search]')||panel.querySelector('[data-quest-back]')||panel.querySelector('[data-quest-scope]')):null);
+      next?.focus({preventScroll:true});if(typing&&next?.matches('[data-quest-search]'))next.setSelectionRange(typing[0],typing[1]);
     }
     hud.querySelectorAll('[data-game-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.gameTab===selectedTab);el.setAttribute('aria-pressed',String(el.dataset.gameTab===selectedTab));});
     if(selectedTab==='settings')$('#game-quality').value=String(window.atlasQuality||1);
@@ -341,13 +346,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return legacy.length&&new Set(legacy.map(r=>r.level)).size===1?observed({points:legacy[0].level,at:null,source:'hiscores'},legacy[0]):null;
   }
   function questReqs(b,name){const r=questReqData?.[name];if(!r)return [];const lv=n=>(b?.skills||[]).find(x=>x.name===n)?.level,qs=b?.quests||[],qp=questPointsOf(b)?.points;
-    const done=n=>{const q=qs.find(x=>x.name===n);return q?q.state==='complete'||q.state==='completed':null;};
+    const done=n=>{const state=questState(qs.find(x=>x.name===n));return state==='unknown'?null:state==='completed';};
     return [...r.s.map(([k,n,src])=>{const have=lv(k);return {text:n+' '+k,ok:Number.isFinite(have)?have>=n:null,have:Number.isFinite(have)?have:null,src};}),
       ...(r.qp?[{text:r.qp[0]+' quest points',ok:Number.isFinite(qp)?qp>=r.qp[0]:null,have:Number.isFinite(qp)?qp:null,src:r.qp[1]}]:[]),
       ...r.q.map(([n,src])=>({text:n,ok:done(n),have:null,src}))];}
   // Ready: not done, and every requirement is met (a quest with no listed requirement is ready). Until the data loads,
   // no quest is ready and the Ready filter is hidden.
-  const questReady=(b,q)=>!!questReqData&&!(q.state==='complete'||q.state==='completed')&&questReqs(b,q.name).every(x=>x.ok===true);
+  const questReady=(b,q)=>!!questReqData&&['not started','in progress'].includes(questState(q))&&questReqs(b,q.name).every(x=>x.ok===true);
   // Quest items: i [[item, count, src]] (src 1 the quest's scripts name the item, 0 only the wiki lists it), held across
   // the pack, worn gear and the bank (the bank as last observed). Items do not count for Ready: they can be bought.
   function questItems(b,name){const l=questReqData?.[name]?.i;if(!l)return [];const all=[...(b?.inventory||[]),...(b?.equipment||[]),...(b?.bank||[])].filter(Boolean);
@@ -557,11 +562,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const panel=body.querySelector('.hs-wrap');
     if(!panel)return;
     const input=panel.querySelector('#hs-name');
+    const results=panel.querySelector('.hs-results'),active=document.activeElement,follow=results.contains(active)?active.dataset?.worldFollow:null;
     if(hiscoreName&&sel!==hiscoreSel&&input!==document.activeElement)hiscoreName='';
     const name=hiscoreName||sel||'';
     if(input!==document.activeElement&&input.value!==name)input.value=name;
     put(panel.querySelector('#hs-names'),S.bots.filter(b=>!b.practice).map(b=>`<option value="${E(b.name)}"></option>`).join('')+(S.roster||[]).slice(0,400).map(r=>`<option value="${E(r[0])}"></option>`).join(''));
-    put(panel.querySelector('.hs-results'),hiscoreResults(name));
+    put(results,hiscoreResults(name));
+    if(follow!=null)([...results.querySelectorAll('[data-world-follow]')].find(el=>el.dataset.worldFollow===follow)||input)?.focus({preventScroll:true});
   }
   // Hiscores: Fleet shows the fleet's best rank per board, Rivals a board's top 10, Player any one player's levels and ranks.
   let hiscoresMode='fleet';
@@ -572,11 +579,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return '<div class="op-kpis hs-summary">'+tile('Boards at #1',first+'<i> / '+S.boards.length+'</i>',first?'held by the fleet':'')+tile('Best rank','#'+best.best.rank.toLocaleString(),best.board+' · '+safeName(best.best.name))+(close?tile('Closest to #1',Math.round((close.gap.close||0)*100)+'%',close.board+' · '+close.gap.text):'')+(climb?.best.delta>0?tile('Biggest climb','▲'+climb.best.delta.toLocaleString(),climb.board+' · '+safeName(climb.best.name)):'')+'</div>';
   }
   function hiscores(){
+    const focusedMode=body.contains(document.activeElement)?document.activeElement?.dataset?.hsMode:null;
     for(const el of [boards])parked.append(el);body.replaceChildren();
     const head=document.createElement('div');head.className='op-filter hs-mode';head.innerHTML=[['fleet','Fleet'],['rivals','Rivals'],['account','Player']].map(([m,l])=>`<button data-hs-mode="${m}" class="${hiscoresMode===m?'active':''}">${l}</button>`).join('');body.append(head);
     if(hiscoresMode==='fleet'){boards.hidden=false;const p=document.createElement('div');p.className='progress-head';p.innerHTML=boardSummary()+progressPanel();body.append(p,boards);if(S)boardGrid();}
     else if(hiscoresMode==='rivals'){const w=document.createElement('div');w.className='rivals-wrap';w.innerHTML=rivalsPanel();body.append(w);}
     else{const w=document.createElement('div');w.className='hs-wrap';w.innerHTML='<div class="hs-panel"><form class="hs-search" id="hs-form"><input id="hs-name" list="hs-names" maxlength="12" placeholder="Find a player…" aria-label="Player name"><datalist id="hs-names"></datalist></form><div class="hs-results"></div></div>';body.append(w);refreshHiscoreAccount();}
+    if(focusedMode)[...body.querySelectorAll('[data-hs-mode]')].find(el=>el.dataset.hsMode===focusedMode)?.focus({preventScroll:true});
   }
   // Where a tile is, in words: the nearest named place within 64 tiles.
   const placeOf=(x,z)=>{if(x==null)return '';let best=null,bd=64*64;for(const [n,px,pz] of (typeof PLACES!=='undefined'?PLACES:[])){const d=(px-x)**2+(pz-z)**2;if(d<bd){bd=d;best=n;}}return best?'near '+best:x+', '+z;};
@@ -833,7 +842,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function markersBox(){
     const b=account(),p=b?.live||b?.pos||null,colours=MARK_COLOURS.map(([c,n])=>'<option value="'+c+'" '+(c===markColour?'selected':'')+'>'+n+'</option>').join('');
-    const rows=marks.slice(-20).reverse().map(m=>{const i=marks.indexOf(m);return '<div class="mark-row"><span class="mark-swatch" style="background:'+E(m.c||MARK_COLOURS[0][0])+'"></span><button class="xp-reset" data-mark-go="'+i+'" title="Move the camera there (2D)">'+m.x+', '+m.z+(m.l?' · floor '+m.l:'')+'</button><button class="xp-reset" data-mark-del="'+i+'" title="Remove this marker" aria-label="Remove marker">✕</button></div>';}).join('');
+    const rows=marks.slice(-20).reverse().map(m=>{const i=marks.indexOf(m),key=m.x+','+m.z+','+(m.l||0);return '<div class="mark-row" data-mark-key="'+E(key)+'"><span class="mark-swatch" style="background:'+E(m.c||MARK_COLOURS[0][0])+'"></span><button class="xp-reset" data-mark-go="'+i+'" title="Move the camera there (2D)">'+m.x+', '+m.z+(m.l?' · floor '+m.l:'')+'</button><button class="xp-reset" data-mark-del="'+i+'" title="Remove this marker" aria-label="Remove marker">✕</button></div>';}).join('');
     return '<div class="xp-box"><div class="xp-head"><span>Ground markers</span><span class="xp-muted">'+marks.length+' · shift+click the minimap</span></div><div class="xp-buttons"><button class="xp-reset" data-mark-here '+(p?'':'disabled')+'>Mark the account\'s tile</button><select data-mark-colour aria-label="Marker colour">'+colours+'</select>'+(marks.length?'<button class="xp-reset" data-mark-clear>Clear all</button>':'')+'</div>'+(rows?'<div class="mark-list">'+rows+'</div>':'')+'</div>';
   }
   // Pickpocket (RuneLite's Thieving overlay, with the server's roll): client-assets/thieving.json (gen-thieving.ts) has
@@ -1038,8 +1047,17 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // A new snapshot rewrites the panel; the rows a viewer opened stay open.
   function refreshWorld(){
     if(document.activeElement?.matches?.('[data-finder]')&&body.contains(document.activeElement))return;
-    const focused=finderFocusState(),open=new Set([...body.querySelectorAll('details[data-k]')].filter(d=>d.open).map(d=>d.dataset.k)),top=body.scrollTop;
-    put(body,worldPanel());restoreFinderFocus(focused);body.querySelectorAll('details[data-k]').forEach(d=>{d.open=open.has(d.dataset.k);});body.scrollTop=top;
+    const finder=finderFocusState(),active=document.activeElement,key=!finder&&active&&body.contains(active)?['hl','hlMin','markHere','markColour','markDel','markGo','markClear'].find(k=>Object.hasOwn(active.dataset||{},k)):null;
+    const focused=key?{key,value:active.dataset[key],marker:active.closest('[data-mark-key]')?.dataset.markKey}:null;
+    const open=new Set([...body.querySelectorAll('details[data-k]')].filter(d=>d.open).map(d=>d.dataset.k)),top=body.scrollTop;
+    put(body,worldPanel());
+    if(finder)restoreFinderFocus(finder);
+    else if(focused){
+      const target=[...body.querySelectorAll('button,input,select')].find(el=>Object.hasOwn(el.dataset,focused.key)&&(focused.marker?el.closest('[data-mark-key]')?.dataset.markKey===focused.marker:el.dataset[focused.key]===focused.value));
+      const fallbacks=focused.key.startsWith('mark')?[body.querySelector('[data-mark-here]'),body.querySelector('[data-mark-colour]')]:[];
+      for(const el of [target,...fallbacks,body.querySelector('[data-finder]')]){if(!el||el.disabled)continue;el.focus({preventScroll:true});if(document.activeElement===el)break;}
+    }
+    body.querySelectorAll('details[data-k]').forEach(d=>{d.open=open.has(d.dataset.k);});body.scrollTop=top;
   }
   // Bot farms: other players online whose names follow one pattern, and how many of them stand at our spots.
   function farmsBox(spots){
@@ -1581,7 +1599,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function desktopNotify(text,test=false){if(!notifyOn()||(!test&&document.hasFocus()))return false;try{new Notification('RuneLite \u2014 Swarm',{body:text,icon:asset('runelite.png'),tag:text.slice(0,40)});return true;}catch{return false;}}
   function testNotify(){const sent=desktopNotify('Test notification from the dashboard.',true);toast(sent?'Test notification sent to the browser.':'Test notification could not be sent. Check browser and system notification settings.');return sent;}
-  window.atlasNotify={on:notifyOn,set:setNotify,status:notifyStatus,test:testNotify};
+  window.atlasNotify={on:notifyOn,set:setNotify,status:notifyStatus,test:testNotify,pending:()=>notifyPending};
   let idleFor=null,idleAt=null,idleRun=0,idleTold=false,hpTold=false,lastFood=null,foodTold=false;
   // The food items in an account's pack, most first (item-stats.json says what heals).
   function foodOf(b){const by=new Map();for(const i of b?.inventory||[])if(i&&/\bheals\b/i.test(itemStats[i.name]||''))by.set(i.name,(by.get(i.name)||0)+(i.count||1));const items=[...by].map(([name,count])=>({name,count})).sort((x,y)=>y.count-x.count);return {items,total:items.reduce((n,i)=>n+i.count,0)};}
