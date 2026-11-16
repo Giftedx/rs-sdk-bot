@@ -1,5 +1,6 @@
 import {expect,test} from 'bun:test';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {xpForLevel} from '../../planner/src/curve';
@@ -26,6 +27,16 @@ test('the tracked default keeps its exact entry SHA and preset',()=>{
  const raw=readFileSync(join(import.meta.dir,'ranged-progression-entry.json')),loaded=parseRangedEntry(raw);
  expect(loaded.sha256).toBe(createHash('sha256').update(raw).digest('hex'));
  expect(rangedComparisonPreset(loaded.entry)).toEqual(RANGED_COMPARISON_PRESET);
+});
+
+test('the outer benchmark checks the captured start tile after reading an override',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ranged-entry-')),path=join(dir,'entry.json'),input=fresh();input.pos={x:3252,z:3420,level:0};
+ try{
+  writeFileSync(path,bytes(input));
+  const code="import {PROGRESSION_BENCH_CASES} from './scripts/measure/progression-bench-cases'; process.env.RANGED_PROGRESSION_ENTRY=process.env.TEST_ENTRY; console.log(JSON.stringify(PROGRESSION_BENCH_CASES.map(c=>c.presetConfig?.position)));";
+  const p=Bun.spawnSync(['bun','-e',code],{cwd:join(import.meta.dir,'../../..'),env:{...process.env,RANGED_PROGRESSION_ENTRY:'',TEST_ENTRY:path},windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:30000});
+  expect(p.exitCode).toBe(0);expect(JSON.parse(p.stdout.toString())).toEqual(Array.from({length:4},()=>input.pos));
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
 test('saved entry verification refuses tampered frozen bytes or detached skill and stock bands',()=>{

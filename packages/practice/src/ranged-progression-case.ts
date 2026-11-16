@@ -59,7 +59,8 @@ export function parseRangedEntry(raw:Uint8Array):{entry:RangedComparisonEntry;by
  const entry:RangedComparisonEntry={at,bankAt,sourceSha256:entryHash(e.sourceSha256),producer,pos:{x:entryNumber(pos.x,0,16383),z:entryNumber(pos.z,0,16383),level:entryNumber(pos.level,0,3)},hp:health,skills,inventory,equipment,bank};
  return{entry,bytes,sha256:sha256(bytes)};
 }
-const entry=parseRangedEntry(readFileSync(sourceStatus)).entry;
+export function loadRangedComparisonEntry(path=process.env.RANGED_PROGRESSION_ENTRY){return parseRangedEntry(readFileSync(path?resolve(path):sourceStatus));}
+const entry=loadRangedComparisonEntry('').entry;
 export function rangedComparisonPreset(entry:RangedComparisonEntry):SaveConfig{return{
  position:entry.pos,skills:Object.fromEntries(entry.skills.filter(k=>!k.name.startsWith('Stat')).map(k=>[k.name,k.level])),
  inventory:entry.inventory.map(i=>({id:i.id,count:i.count})),equipment:entry.equipment.map(i=>({id:i.id,count:i.count,slot:i.slot})),
@@ -134,7 +135,7 @@ async function run(template:string,mode:string,target=RANGED_COMPARISON_TARGET){
  if(!isLocalServer(server)||process.env.DEMO_OK==='1')throw Error('Ranged comparison is local practice only');
  const override=process.env.RANGED_PROGRESSION_ENTRY;
  if(override&&process.env.BENCH_CACHE!=='0')throw Error('Ranged entry override requires uncached practice (--profile or --no-keep)');
- const loaded=parseRangedEntry(readFileSync(override?resolve(override):sourceStatus)),entry=loaded.entry;
+ const loaded=loadRangedComparisonEntry(override),entry=loaded.entry;
  if(entry.skills[4]!.level>=target)throw Error('Ranged entry must precede the finite target');
  const port=Number(server.slice(server.lastIndexOf(':')+1));if(!Number.isSafeInteger(port)||port<1)throw Error('comparison engine port unknown');
  const name=runBotName('aiobfl',1),botDir=join(root,'vendor/rs-sdk/bots',name),folder=resolve(root,process.env.BENCH_OUTPUT_DIR??'.practice/progression-ranged',`${mode}-${process.env.SIM_SEED??process.env.BENCH_SEED??'seed'}-${name}`);
