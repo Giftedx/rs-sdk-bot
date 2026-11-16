@@ -440,6 +440,17 @@ export function approachLegs(via: { x: number; z: number }[] | undefined, from: 
     return (via ?? []).filter(w => d(w) < left && (left = d(w), true));
 }
 
+export async function approachShop(conf: Pick<(typeof PROFILES)[string], 'npcSpot' | 'realm'>,
+    from: { worldX: number; worldZ: number } | null | undefined,
+    walk: (x: number, z: number, tol: number, level: number) => Promise<boolean>, payToll: () => Promise<boolean>, stopped: () => boolean = () => false): Promise<boolean> {
+    if (stopped()) return false;
+    // The configured east market door charges from the bank's west side. Pay before searching across its closed gate.
+    if (conf.realm && from && conf.realm.inside(from) && from.worldX < conf.realm.toll.x && !await payToll())
+        throw new Error('realm toll: crossing unobserved');
+    if (stopped()) return false;
+    return walk(conf.npcSpot.x, conf.npcSpot.z, 2, conf.npcSpot.level ?? 0);
+}
+
 export async function buyWithBudget(bot: { buyFromShop(item: RegExp, amount: number): Promise<unknown> },
     sdk: { getInventory(): { name: string; count: number }[]; getState(): { shop?: { shopItems: { name: string; count: number; baseCost: number }[]; shopConfig?: { sellMultiplier: number; haggle?: number } } } | null },
     name: string, requested: number, reserve: number, remainingSpend: number, shelf?: number): Promise<{ bought: number; spent: number }> {
@@ -732,11 +743,10 @@ try {
         // Walk to shop
         const p = pos();
         if (!p || p.level !== (conf.npcSpot.level ?? 0) || Math.max(Math.abs(p.worldX - conf.npcSpot.x), Math.abs(p.worldZ - conf.npcSpot.z)) > 3) {
-            // A walk that the realm's toll door stops: pay, then walk on.
-            if (!await walk(conf.npcSpot.x, conf.npcSpot.z, 2, conf.npcSpot.level ?? 0) && realm && !over() && await payToll())
-                await walk(conf.npcSpot.x, conf.npcSpot.z, 2, conf.npcSpot.level ?? 0);
+            await approachShop(conf, p, walk, payToll, over);
         }
 
+        if (over() || ended) break;
         if (!s.sdk.getState()?.shop?.isOpen) {
             const shopRes = await s.bot.openShop(conf.npc);
             if (!shopRes.success) {

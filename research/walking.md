@@ -1,5 +1,11 @@
 # Walking without stalls
 
+## Zanaris shop entry
+
+Zanaris includes map squares 49,149 and 50,149. A walk between its western bank and market remains inside the realm. A walk outside those squares uses the entrance exit to the swamp shed. The shop buyer pays its configured market toll before searching for the NPC behind the closed gate. It skips payment on the shop side and starts no new toll or NPC approach after its budget ends.
+
+Source -> local consumer -> reuse/adapt -> check: the pinned `doorman.rs2` crossing and the existing Jakut profile, `payToll` and `walkWithFerryFallback` -> dragon-weapon procurement -> reuse the observed diamond crossing and adapt approach order and region bounds -> `shop-buyer.test.ts`, `walk-to.test.ts` and `extra:shop-jukat` on three seeds. The native case buys and banks three swords, exits the realm, restores weapon 1333 and confirms logout. Evidence: `.practice/system-bottlenecks/zanaris-native-final.log` and `zanaris-final-focused.log`. Conditions: seeded stock and one buyer. Live procurement and contention need separate observations. These runs do not establish a matched speed comparison.
+
 **Reuse before repair:** [source map](project-use-map.md#failure-cases-worth-porting-next) now pins blurite reach strategies and rsmod border/access tests. Separate tile arrival, legal interaction reach and alternate endpoints. Reproduce the failing object shape, rotation, approach side, actor size and plane before changing BFS or tolerances. These are inspected upstream cases, not new local route proof.
 
 ## Farm return correction
