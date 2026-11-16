@@ -88,6 +88,42 @@ test('queue submission uses the existing inbox, retains state and is idempotent'
  const metadata=await(await f.handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json();expect(metadata.requests[0].status).toBe('submitted');expect(metadata.capabilities[0].consumer).toBe('Feed earning accounts');
  }finally{f.close();}
 });
+test('queue metadata retains terminal receipt failures without inbox entries or beside stale acceptance markers',async()=>{
+ const f=fixture();try{
+  const audit=join(f.root,'.practice/dashboard-controls'),inbox=join(f.dir,'requests');mkdirSync(audit,{recursive:true});mkdirSync(inbox,{recursive:true});
+  const receipts=['refused','failed','rejected'].map((status,i)=>({id:randomUUID(),action:'queue',at:i+1,status,note:'The command could not reach the queue.',source:'remote'}));
+  for(const receipt of receipts)writeFileSync(join(audit,receipt.id+'.json'),JSON.stringify(receipt));
+  const metadata=async()=>await(await f.handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json();
+  for(const staleMarker of [false,true]){
+   if(staleMarker)for(const receipt of receipts)writeFileSync(join(inbox,receipt.id+'.request.json.accepted'),'{}');
+   const meta=await metadata();
+   for(const receipt of receipts)expect(meta.requests.find((r:any)=>r.id===receipt.id)).toMatchObject({status:receipt.status,note:'The command could not reach the queue.'});
+  }
+ }finally{f.close();}
+});
+test('submitted and pending queue receipts still follow inbox acceptance and rejection markers',async()=>{
+ const f=fixture();try{
+  const audit=join(f.root,'.practice/dashboard-controls'),inbox=join(f.dir,'requests');mkdirSync(audit,{recursive:true});mkdirSync(inbox,{recursive:true});
+  const receipts=['submitted','pending'].map((status,i)=>({id:randomUUID(),action:'queue',at:i+1,status,taskId:'operator-fixture-'+i}));
+  for(const receipt of receipts)writeFileSync(join(audit,receipt.id+'.json'),JSON.stringify(receipt));
+  const metadata=async()=>await(await f.handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json();
+  for(const status of ['submitted','accepted','rejected']){
+   if(status!=='submitted')for(const receipt of receipts){const file=join(inbox,receipt.id+'.request.json');if(status==='rejected')rmSync(file+'.accepted');writeFileSync(file+'.'+status,'{}');}
+   const meta=await metadata();
+   for(const receipt of receipts){const request=meta.requests.find((r:any)=>r.id===receipt.id);expect(request.status).toBe(status);expect(Object.hasOwn(request,'note')).toBe(false);}
+  }
+ }finally{f.close();}
+});
+test('receipt metadata carries only short text notes',async()=>{
+ const f=fixture();try{
+  const audit=join(f.root,'.practice/dashboard-controls');mkdirSync(audit,{recursive:true});
+  const receipts=[{id:randomUUID(),action:'account-release',at:1,status:'refused',note:'  Hold reason\r\n'+'x'.repeat(250)},{id:randomUUID(),action:'queue',at:2,status:'failed',note:{input:'private command input'}}];
+  for(const receipt of receipts)writeFileSync(join(audit,receipt.id+'.json'),JSON.stringify(receipt));
+  const meta=await(await f.handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json(),note=meta.requests.find((r:any)=>r.id===receipts[0]!.id).note;
+  expect(note).toBe('Hold reason '+'x'.repeat(188));
+  expect(Object.hasOwn(meta.requests.find((r:any)=>r.id===receipts[1]!.id),'note')).toBe(false);
+ }finally{f.close();}
+});
 test('unknown capabilities, bad dependencies and unqualified live requests write no queue',async()=>{
  const f=fixture();try{for(const extra of [{capability:'missing'},{dependsOn:['missing']},{kind:'run',account:'Worker',launch:'ordinary',accept:{bank:{995:20}}}]){
  const id=randomUUID();expect((await f.send({id,action:'queue',task:{id:'operator-'+id,kind:'qualify',goal:'wealth',capability:'food',why:'Useful supply',dependsOn:[],priority:30,estimatedMs:60000,...extra}})).status).toBe(400);}
