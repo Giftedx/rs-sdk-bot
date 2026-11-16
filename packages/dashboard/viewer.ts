@@ -79,7 +79,7 @@ export function installViewerBridge(host:any) {
         if(state==='ready'&&!announced){announced=true;for(const restore of undo.splice(0))restore();}
     };
     const fail=(detail:string)=>{failed=true;privacyReady=false;emit(detail);};
-    const url=new host.URL(host.location.href),hidden=url.searchParams.get('hideNamesFrom');
+    const url=new host.URL(host.location.href),hidden=url.searchParams.get('hideNamesFrom'),cacheRoot=new host.URL('caches/',host.location.href).pathname;
     let hiddenUrl:any;
     try{hiddenUrl=new host.URL(hidden,host.location.href);}catch{fail('Private name filter URL is unavailable.');return;}
     if(!hidden||hiddenUrl.origin!==host.location.origin||!hiddenUrl.pathname.endsWith('/api/hidden-names')||hiddenUrl.search){fail('Private name filter must use this dashboard.');return;}
@@ -91,6 +91,15 @@ export function installViewerBridge(host:any) {
         let target:any;try{target=new host.URL(typeof input==='string'?input:input?.url??String(input),host.location.href);}catch{return fetch(input,init);}
         let response:any;
         try{response=await fetch(input,init);}catch(e){if(target.href===hiddenUrl.href)fail('Private name filter could not be loaded.');throw e;}
+        // The pinned loader resumes cached parts at EOF but accepts only 200/206. A confirmed complete prefix needs no new bytes.
+        const cachePath=target.pathname.startsWith('/caches/')?target.pathname.slice(8):target.pathname.startsWith(cacheRoot)?target.pathname.slice(cacheRoot.length):'';
+        if(response.status===416&&target.origin===host.location.origin&&!target.search&&!target.hash&&/^[A-Za-z0-9][A-Za-z0-9._-]*\/main_file_cache\.dat$/.test(cachePath)
+            &&(!response.url||new host.URL(response.url,target.href).href===target.href)){
+            const method=String(init?.method??input?.method??'GET').toUpperCase(),headers=new host.Headers(init?.headers??input?.headers);
+            const range=/^bytes=([1-9]\d*)-9007199254740991$/.exec(headers.get('Range')||''),total=/^bytes \*\/([1-9]\d*)$/.exec(response.headers.get('Content-Range')||'');
+            if(method==='GET'&&range&&total&&Number.isSafeInteger(Number(range[1]))&&Number.isSafeInteger(Number(total[1]))&&Number(range[1])===Number(total[1]))
+                return new host.Response(null,{status:206,headers:{'Content-Length':'0','Content-Type':'application/octet-stream'}});
+        }
         if(target.href!==hiddenUrl.href)return response;
         if(!response.ok){fail('Private name filter could not be loaded.');return response;}
         const json=response.json.bind(response);
