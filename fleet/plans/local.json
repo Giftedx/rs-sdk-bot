@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794811301120,
+ "at": 1794811944099,
  "jobs": [
   {
    "account": "Balls",
@@ -50,6 +50,28 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "17"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Shaftsinker",
