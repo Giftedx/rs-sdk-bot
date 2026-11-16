@@ -299,6 +299,51 @@ test('bank observation support cannot leak into ordinary run ancestors',()=>{
  expect(goalWork(state,observedRingGoals(),[status('Helper')],NOW,bankContext).get(earlier.id)!.value).toBe(1/12);
 });
 
+test('near-complete ring demand can observe an absolute bank target and credits only the fresh new quantity',()=>{
+ const board=ringGoals();board.collection.missing[0]!.verifyOwned=8;
+ const observer=bankObserver({account:'BowBeforeMe'}),consumer=ringConsumer({account:'BowBeforeMe',dependsOn:[observer.id],env:{RECIPE:'sapphire_ring',TARGET:'2',BATCH:'2'},accept:{bank:{1637:5}}});
+ const {state}=evaluate([bankProof,observer,consumer],board,[]);
+ const stale=status('BowBeforeMe',{bank:[{id:1637,count:3}],bankAt:NOW-300000});
+ const values=goalWork(state,board,[stale],NOW,bankContext);
+ expect(values.get(observer.id)!.value).toBe(.01);
+ expect(values.get(observer.id)!.reason).toContain('Bounded bank observation');
+ expect(values.get(bankProof.id)!.value).toBe(.01);
+ expect(values.get(consumer.id)!.value).toBeNull();
+ state.tasks.find(row=>row.spec.id===bankProof.id)!.status='succeeded';
+ expect(chooseTask(state,NOW,{goalValue:task=>values.get(task.id)?.value??null})?.id).toBe(observer.id);
+ const fresh=goalWork(state,board,[status('BowBeforeMe',{bank:[{id:1637,count:3}]})],NOW,bankContext);
+ expect(fresh.get(consumer.id)!.value).toBe(2/12);
+ expect(fresh.get(observer.id)!.reason).not.toContain('Bounded bank observation');
+ const empty=goalWork(state,board,[status('BowBeforeMe',{bank:[]})],NOW,bankContext);
+ expect(empty.get(consumer.id)!.value).toBeNull();
+ expect(empty.get(observer.id)!.reason).not.toContain('Bounded bank observation');
+ expect(board.collection.missing[0]).toMatchObject({need:12,owned:0,verifyOwned:8});
+ expect(state.goals.find(goal=>goal.id==='main24')!.completedTasks).toBe(0);
+});
+
+test('near-complete bank observation keeps total-goal, same-account and linked-consumer bounds',()=>{
+ const board=ringGoals();board.collection.missing[0]!.verifyOwned=8;
+ const observer=bankObserver({account:'BowBeforeMe'});
+ for(const consumer of [ringConsumer({account:'BowBeforeMe',dependsOn:[observer.id],accept:{bank:{1637:13}}}),
+  ringConsumer({account:'Other',dependsOn:[observer.id],accept:{bank:{1637:5}}})]){
+  const {state}=evaluate([bankProof,observer,consumer],board,[]);
+  expect(goalWork(state,board,[],NOW,bankContext).get(observer.id)!.value??0).toBe(0);
+ }
+ const {state}=evaluate([bankProof,observer],board,[]);
+ expect(goalWork(state,board,[],NOW,bankContext).get(observer.id)!.value).toBe(0);
+});
+
+test('near-complete absolute production targets do not expand GE input observation spending',()=>{
+ const board=ringGoals();board.collection.missing[0]!.verifyOwned=8;
+ const input=ringInput({account:'BowBeforeMe',env:{ITEM_ID:'2357',QUANTITY:'2',EXPECTED_OWNED:'0',LIMIT_PRICE:'3500',CASH_RESERVE:'90000',ORDER_MS:'900000'},accept:{bank:{2357:2}}});
+ const consumer=ringConsumer({account:'BowBeforeMe',dependsOn:[input.id],env:{RECIPE:'sapphire_ring',TARGET:'2',BATCH:'2'},accept:{bank:{1637:5}}});
+ const {state}=evaluate([geProof,input,consumer],board,[]);
+ const values=goalWork(state,board,[status('BowBeforeMe',{bank:[{id:1637,count:3}],bankAt:NOW-300000})],NOW,ringContext);
+ expect(values.get(input.id)!.value).toBeNull();
+ expect(values.get(input.id)!.reason).not.toContain('Bounded GE input observation');
+ expect(values.get(consumer.id)!.value).toBeNull();
+});
+
 test('bank observers require the strict entry, one account, a short timeout and exact observation counter',()=>{
  const refused:CoordTask[]=[bankObserver({env:{}}),bankObserver({env:{REQUIRE_BANK:'0'}}),bankObserver({args:['unexpected']}),
   bankObserver({timeoutMs:undefined}),bankObserver({timeoutMs:120001}),bankObserver({account:undefined,participants:['Helper','Other']}),
