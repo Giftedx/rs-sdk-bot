@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794810691751-billionaire-bigchopper-dragonbones",
+ "account": "Bigchopper",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 30,
+ "claim": "edde38ee-8323-46c9-920c-d25329eea7f2",
+ "count": 0,
+ "ok": false,
+ "at": 1794811237402,
+ "detail": "trade claimed"
+}
