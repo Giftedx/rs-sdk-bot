@@ -109,6 +109,8 @@ export type Assignment = { account: string; template?: Template; value: number; 
 export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
+    // Bind a fresh qualified adaptive method before this pass reserves its place.
+    templateFor?: (template: Template, account: Acct) => Template;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
     // The share of its value a job keeps on a resource another account already holds (default 1).
     shared?: Readonly<Record<string, number>>;
@@ -475,6 +477,7 @@ const onRoute = (quests: readonly string[], name: string) => quests.some(q => no
 // - a gather-combat band with another TRAIN_SKILL or a kill count (GIANT_KILLS) is refused: the kill count replaces
 //   the level stop, and TRAIN_SKILL=Hitpoints keeps the style the account had, which can train any melee skill;
 // - the Prayer band that buries held normal bones (scripts/train-prayer.ts) stops at the level: its target argument;
+// - the adaptive Ranged worker stops at its target argument and delegates troopers without burying bones;
 // - a band of another script that ends above the level is refused: that script has no proved stop;
 // - a quest band is refused unless the quest is on the route of the build (BUILD_QUESTS): a quest reward gives XP in
 //   skills nobody chose. A quest of the route is refused too while a skill of the account is over its level before
@@ -499,6 +502,7 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
     if ((a.skills[t.trains.skill] ?? 1) >= level) return null;
     const to = Math.min(t.trains.to, level);
     if (combat) return { ...t, env: { ...t.env, TARGET_LEVEL: String(to), GIANT_BURY: '0' }, trains: { ...t.trains, to } };
+    if (t.script === 'scripts/ranged-train.ts' && t.trains.skill === 'Ranged') return {...t,args:[String(to),...(t.args??[]).slice(1)],env:{...t.env,TARGET_LEVEL:String(to)},trains:{...t.trains,to}};
     // Normal bones give 112.5 Prayer XP each, under the XP of one level from level 6 up, and the worker counts its
     // buries from the XP still needed (planPrayer). A band of bought bones (BONE_ID) is refused: one dragon bone gives
     // 1,800 XP, more than the level after 43.
@@ -626,10 +630,11 @@ export function plan(inp: Inputs): Assignment[] {
         if (!band || inp.retired?.has(pairKey(a.name, band.id)) || !admitted(band)) continue;
         // The reach rule (wayCost): no candidate for a place with no way from where the account stands. The ferry fare
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
-        const fare = wayCost(a.pos, placeOf(band), inp.mountain?.(a) ?? true);
-        if (fare === null) continue;
         const finite=finiteOrder(band,a);if(!finite)continue;
-        const t = fare ? withFare(finite, fare) : finite;
+        const selected=inp.templateFor?.(finite,a)??finite;
+        const fare = wayCost(a.pos, placeOf(selected), inp.mountain?.(a) ?? true);
+        if (fare === null) continue;
+        const t = fare ? withFare(selected, fare) : selected;
         if (t.quest && t.tier !== 'goal') {
             const lacks=kitLacks(a,t.needs,i=>!!inp.market?.[i]);
             if (questDone(a, t.quest.name) || lacks===null || coinShort(a,t.needs)>0) continue;
@@ -1862,9 +1867,9 @@ export function catalogue(): Template[] {
         batch: { trout: 100 },
     };
     const ranged: Template = {
-        id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
-        env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1', LOOT_WATCH: '0' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
-        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
+        id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/ranged-train.ts', args: ['99', '1500'],
+        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '4000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['pen:3229,3298',TROOPER_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
     };
@@ -2059,8 +2064,8 @@ export function jobResources(job: ResourceJob): string[] {
     if (job.host && !job.orchestrate && Array.isArray(job.accounts)) return job.accounts.flatMap(account => jobResources({
         ...job, host: false, accounts: undefined, env: { ...job.env, ...job.envByAccount?.[account] }, envByAccount: undefined,
     }));
-    if (Array.isArray(job.resources)) return job.resources.filter(r => typeof r === 'string');
     const script = String(job.script ?? '').replace(/\\/g, '/').replace(/^\.\//, '');
+    if (Array.isArray(job.resources)&&script!=='scripts/ranged-train.ts') return job.resources.filter(r => typeof r === 'string');
     const chained = script === 'scripts/chain.ts';
     let direct: Step = {script, args: job.args ?? [], env: {}};
     // Preserve the direct-job metadata convention, while AIO gets its own argv so
@@ -2089,9 +2094,12 @@ export function jobResources(job: ResourceJob): string[] {
             const pen = (env.PEN ?? '').match(/^(\d+),(\d+)$/);
             out.push(pen ? `pen:${Number(pen[1])},${Number(pen[2])}` : 'pen:3229,3298');
         }
-        // Ranged training kills the Lumbridge pen's chickens (scripts/ranged-train.ts OUT ends at 3233,3297), so it holds
-        // that pen like a feather job does: two sides must not farm one pen.
-        if (file === 'scripts/ranged-train.ts') out.push('pen:3229,3298');
+        if (file === 'scripts/ranged-train.ts') {
+            const method=env.PROGRESSION_METHOD;
+            if(method==='ranged/chickens')out.push('pen:3229,3298');
+            else if(method==='ranged/troopers'||method==='ranged/guild-willow-mithril')out.push(TROOPER_FIELD);
+            else out.push('pen:3229,3298',TROOPER_FIELD);
+        }
         if (file === 'scripts/shop-buyer.ts') out.push(`shop:${(args[0] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);
         if (file === 'scripts/gather-fish.ts' && (args[0] ?? env.METHOD ?? 'cage').toLowerCase() === 'cage') out.push('catherby:lobster');
         if (file === 'scripts/gather-combat.ts') {
@@ -2115,7 +2123,7 @@ export function jobResources(job: ResourceJob): string[] {
         // Qualified planner alchemists carry an explicit empty resource override.
         if (file === 'scripts/alch-train.ts' && Number(args[0]) >= 2 && Number(args[0]) <= 99) out.push(STRIKE_TILE);
     }
-    return [...new Set(out)];
+    return [...new Set([...out,...(script==='scripts/ranged-train.ts'&&Array.isArray(job.resources)?job.resources.filter(r=>typeof r==='string'&&r!=='pen:3229,3298'&&r!==TROOPER_FIELD):[])])];
 }
 
 // The freshest of an account's observations by `at`: its status file and its row in the side's fleet snapshot. A fresh

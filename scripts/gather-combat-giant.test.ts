@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,roamTarget,anothersFight,ammoPiles,AMMO_REACH,AMMO_WORTH} from './gather-combat';
+import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,selectedGiantRangedKit,roamTarget,anothersFight,ammoPiles,AMMO_REACH,AMMO_WORTH} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 
@@ -356,6 +356,34 @@ test('Ranged takes the best owned bow for the level, a shortbow first, and arrow
     expect(selectGiantArrows([{id:888,count:10}],45,20)).toBe(888);
     const bow=[{index:0,name:'Accurate',trainsSkills:['Ranged']},{index:1,name:'Rapid',trainsSkills:['Ranged']},{index:2,name:'Longrange',trainsSkills:['Ranged','Defence']}];
     expect(giantStyle({known:true,weaponName:'Shortbow',currentStyle:0,styles:bow},'Ranged')).toEqual({index:1,name:'Rapid',weapon:'Shortbow'});
+});
+
+test('the selected faster shortbow is actually wielded when a higher-tier longbow is also owned',async()=>{
+ const bowTab=[{index:0,name:'Accurate',trainsSkills:['Ranged']},{index:1,name:'Rapid',trainsSkills:['Ranged']}];
+ const f=giantFixture({tab:bowTab}),sdk=f.session.sdk as any,bot=f.session.bot as any;
+ f.bank.push({id:857,name:'Yew shortbow',count:1,slot:f.bank.length},{id:859,name:'Magic longbow',count:1,slot:f.bank.length+1},{id:892,name:'Rune arrow',count:500,slot:f.bank.length+2});
+ const state=sdk.getState.bind(sdk),skill=sdk.getSkill.bind(sdk),oldXp=sdk.getSkillXp.bind(sdk),attack=bot.attack.bind(bot);let xp=0;
+ sdk.getSkill=(name:string)=>name==='Ranged'?{level:80,baseLevel:80}:skill(name);
+ sdk.getSkillXp=(name:string)=>name==='Ranged'?xp:oldXp(name);
+ bot.attack=async(...args:any[])=>{xp+=2200;return attack(...args);};
+ bot.equipItem=async(item:any)=>{
+  const eq=state().equipment as any[],slot=item.id===892?13:3,old=eq.find(i=>i.slot===slot);
+  if(old){eq.splice(eq.indexOf(old),1);f.inv.push({...old});}
+  f.inv.splice(f.inv.indexOf(item),1);eq.push({...item,slot});return{success:true};
+ };
+ const site={label:'trooper',npcs:[117],foods:[385],bank:GIANT.bank,spot:GIANT.spot,room:GIANT.room,drops:[]};
+ try{
+  const r=await runGiants(f.session,{cap:500,trainSkill:'Ranged',targetLevel:85,maximum:1,site,walk:f.walk,rangedKit:{bow:857,arrow:892}} as any);
+  expect(r.ok).toBe(true);expect(state().equipment.find((i:any)=>i.slot===3)?.id).toBe(857);
+  expect(state().equipment.find((i:any)=>i.slot===13)?.id).toBe(892);expect(r.preserved).toBe(true);
+ }finally{f.dispose();}
+});
+
+test('a selected Ranged kit refuses absent stock, locked bows and arrows the chosen bow cannot fire',()=>{
+ const stock=[{id:841,count:1},{id:857,count:1},{id:882,count:100},{id:892,count:100}];
+ expect(selectedGiantRangedKit(stock,80,{bow:857,arrow:892})).toEqual({bow:{id:857,level:40},arrow:892});
+ for(const [level,kit] of [[39,{bow:857,arrow:892}],[80,{bow:861,arrow:892}],[80,{bow:841,arrow:892}],[80,{bow:857,arrow:888}]] as const)
+  expect(()=>selectedGiantRangedKit(stock,level,kit)).toThrow('selected Ranged kit is not owned, usable and compatible');
 });
 
 test('fired arrows are taken from the stacks within reach, the largest first; small stacks, other arrows, far stacks and missed tiles are left',()=>{

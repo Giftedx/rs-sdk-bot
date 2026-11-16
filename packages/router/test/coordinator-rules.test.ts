@@ -1,6 +1,7 @@
 import {test,expect} from 'bun:test';
 import {initialState,addTasks,startTask,finishTask,chooseTask,compactState,type CoordTask,type CoordinatorState} from '../src/coordinator';
 import {applyRules,nextBand,retarget,type RuleDeps,type RuleSkip} from '../src/coordinator-rules';
+import type {CoordinatorProgressionResult} from '../src/coordinator-progression';
 
 const NOW=10_000_000;
 const deps=(extra:Partial<RuleDeps>={}):RuleDeps=>({fingerprint:()=>'src-a',unlocks:()=>[20,30,31,40,50],level:()=>undefined,paused:()=>false,maxOpen:4,
@@ -129,4 +130,38 @@ test('archived dependencies of a finished band do not block its next band',()=>{
  const fresh=chain();s.tasks.push(...fresh.tasks);s.tasks.find(r=>r.spec.id==='run-ranged-30')!.spec.dependsOn.push('old-qualify');
  expect(compactState(s,NOW,1000).map(r=>r.spec.id)).toEqual(['old-qualify']);
  expect(applyRules(s,deps(),NOW).map(t=>t.id)).toEqual(['chain-ranged-train-bigchopper-ranged40']);
+});
+const progressionResult=(over:Partial<CoordinatorProgressionResult>={}):CoordinatorProgressionResult=>({action:'handoff',intent:{kind:'train',skill:'Ranged',targetLevel:40},step:{script:'scripts/faster.ts',args:['40'],env:{TRAIN_SKILL:'Ranged'}},capability:'faster-ranged',decision:null,stepAccept:{skills:{Ranged:40}},consumer:{skills:{Ranged:40}},requests:[],reason:'Faster qualified finite method',...over});
+function qualifyRival(s:CoordinatorState,capability='faster-ranged'){
+ addTasks(s,[{id:'qualify-'+capability,kind:'qualify',goal:'skills',capability,dependsOn:[],priority:15,estimatedMs:1000,why:'Qualify finite method'},
+  {id:'review-'+capability,kind:'review',goal:'skills',capability,dependsOn:[],priority:15,estimatedMs:1000,why:'Review finite method'}],NOW-1000);
+ finish(s,'qualify-'+capability,true,{delivery:{ok:true,id:capability,source:'src-a'},evidence:'native'},NOW-900);
+ finish(s,'review-'+capability,true,{review:{approved:true,reason:''},evidence:'source-review'},NOW-800);
+}
+test('state-aware continuation replaces the obsolete worker and binds the rival qualification',()=>{
+ const s=chain();qualifyRival(s);
+ const added=applyRules(s,deps({progression:()=>progressionResult()}),NOW);
+ expect(added).toHaveLength(1);expect(added[0]).toMatchObject({capability:'faster-ranged',args:['40'],accept:{skills:{Ranged:40}},dependsOn:['qualify-faster-ranged','run-ranged-30']});
+ expect(applyRules(s,deps({progression:()=>progressionResult()}),NOW+1)).toEqual([]);
+});
+test('a missing native state proof stops only that continuation and does not retarget the obsolete worker',()=>{
+ const s=chain();const result=progressionResult({action:'measure',step:null,capability:null,stepAccept:null,requests:[{method:'fast',action:'qualify',reason:'state proof missing'}]});
+ expect(applyRules(s,deps({progression:()=>result}),NOW)).toEqual([]);
+});
+test('an unknown rival does not stop a qualified current method from its next finite band',()=>{
+ const result=progressionResult({action:'continue',capability:'ranged-train',step:{script:'scripts/ranged-train.ts',args:['40','10000'],env:{CAP:'10000'}},requests:[{method:'rival',action:'measure',reason:'rate unknown'}]});
+ expect(applyRules(chain(),deps({progression:()=>result}),NOW)[0]).toMatchObject({capability:'ranged-train',accept:{skills:{Ranged:40}}});
+});
+test('a prerequisite and its original useful consumer stay linked through their own qualifications',()=>{
+ const s=chain();qualifyRival(s);qualifyRival(s,'unlock-quest');
+ const step={script:'scripts/quest.ts',args:['unlock'],env:{}};
+ const result=progressionResult({capability:'unlock-quest',step,stepAccept:{quests:['unlock']},route:[{capability:'unlock-quest',step,accept:{quests:['unlock']}},{capability:'faster-ranged',step:{script:'scripts/faster.ts',args:['40'],env:{}},accept:{skills:{Ranged:40}}}]});
+ const added=applyRules(s,deps({progression:()=>result,goalValue:(task,prerequisites=[])=>({value:task.dependsOn.every(id=>s.tasks.some(r=>r.spec.id===id)||prerequisites.some(r=>r.id===id))?1:null,reason:'Finite chain dependencies are present'})}),NOW),first=added.find(t=>t.capability==='unlock-quest'),consumer=added.find(t=>t.capability==='faster-ranged');
+ expect(first?.accept).toEqual({quests:['unlock']});expect(consumer?.accept).toEqual({skills:{Ranged:40}});
+ expect(consumer?.dependsOn).toContain(first!.id);expect(consumer?.dependsOn).toContain('qualify-faster-ranged');
+});
+test('a callback cannot bypass a rival review or source qualification',()=>{
+ expect(applyRules(chain(),deps({progression:()=>progressionResult()}),NOW)).toEqual([]);
+ const s=chain();qualifyRival(s);
+ expect(applyRules(s,deps({fingerprint:cap=>cap==='faster-ranged'?'changed':'src-a',progression:()=>progressionResult()}),NOW)).toEqual([]);
 });

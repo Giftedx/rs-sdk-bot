@@ -379,6 +379,14 @@ export function selectGiantArrows(stock:readonly {id:number;count:number}[],rang
     const fires=GIANT_ARROWS.filter(a=>a.level<=Math.min(ranged,bowLevel)&&stockOf(stock,a.id)>0);
     return (fires.find(a=>stockOf(stock,a.id)>=GIANT_AMMO_RUN)??[...fires].sort((a,b)=>stockOf(stock,b.id)-stockOf(stock,a.id))[0])?.id;
 }
+export function selectedGiantRangedKit(stock:readonly {id:number;count:number}[],ranged:number,selected?:{bow:number;arrow:number}){
+    if(!selected){const bow=selectGiantBow(stock,ranged);return bow?{bow,arrow:selectGiantArrows(stock,ranged,bow.level)}:undefined;}
+    const tier=GIANT_BOWS.find(t=>(t.ids as readonly number[]).includes(selected.bow)),arrow=GIANT_ARROWS.find(a=>a.id===selected.arrow);
+    if(!Number.isSafeInteger(ranged)||ranged<1||ranged>99||!tier||tier.level>ranged||stockOf(stock,selected.bow)<1
+        ||!arrow||arrow.level>Math.min(ranged,tier.level)||stockOf(stock,selected.arrow)<1)
+        throw Error('giant prerequisite: selected Ranged kit is not owned, usable and compatible');
+    return{bow:{id:selected.bow,level:tier.level},arrow:selected.arrow};
+}
 // A fired arrow lands on the target's tile four times in five (player_ranged.rs2 ranged_dropammo_npc, ^dropammo_chance
 // 5) and lies there 200 ticks (^lootdrop_duration), one stack a tile for its owner (World.addObj). After a kill the bow
 // trainer takes the stacks of its arrows within AMMO_REACH tiles, the largest first and at most AMMO_PICKS of them: a
@@ -429,7 +437,7 @@ export function roamTarget<T extends {index:number;distance:number}>(account:str
 // A target that fights another player: in combat and facing a player slot that is not this account's.
 export const anothersFight=(npc:{inCombat?:boolean;targetIndex?:number}|undefined,selfSlot:number|undefined)=>
     !!npc?.inCombat&&selfSlot!==undefined&&(npc.targetIndex??-1)>=32768&&npc.targetIndex!==32768+selfSlot;
-export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;ammoPickup?:boolean;bury?:boolean;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
+export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;ammoPickup?:boolean;rangedKit?:{bow:number;arrow:number};bury?:boolean;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
     const site=o.site??GIANT_SITE,label=site.label;
     const maximum=giantKillLimit(o.maximum);
     const training=giantTraining(o.trainSkill,o.targetLevel);
@@ -582,8 +590,8 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     };
     const rangedKit=()=>{
         const stock=[...(s.bankObservation?.()?.items??[]),...allKit()],level=s.sdk.getSkill('Ranged')?.baseLevel??1;
-        const bow=selectGiantBow(stock,level);if(!bow)throw new Error('giant prerequisite: no owned bow for the Ranged level');
-        ammoId=selectGiantArrows(stock,level,bow.level);if(ammoId===undefined)throw new Error('giant prerequisite: no owned arrows the bow fires');
+        const chosen=selectedGiantRangedKit(stock,level,o.rangedKit),bow=chosen?.bow;if(!bow)throw new Error('giant prerequisite: no owned bow for the Ranged level');
+        ammoId=chosen?.arrow;if(ammoId===undefined)throw new Error('giant prerequisite: no owned arrows the bow fires');
         ammoStart=bankCount(ammoId)+count(allKit(),ammoId);
         return bow.id;
     };

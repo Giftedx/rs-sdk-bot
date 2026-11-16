@@ -17,6 +17,8 @@ const inputs = (accounts: Acct[], extra: Partial<Inputs> = {}): Inputs => ({
     side, accounts, owners: new Map(accounts.map(a => [a.name.toLowerCase(), { side: a.side }])), bill: fundedRouteBill, templates: catalogue(), prices, ...extra,
 });
 const ids = (xs: ReturnType<typeof plan>) => Object.fromEntries(xs.map(x => [x.account, x.template?.id ?? 'vacant']));
+// Cohort allocation cases receive the fresh qualified method that the CLI binds before reserving its place.
+const qualifiedTrooperTemplate=(t:Template):Template=>t.script==='scripts/ranged-train.ts'?{...t,env:{...t.env,PROGRESSION_METHOD:'ranged/troopers',PROGRESSION_SOURCE:'fixture-native-proof'},resources:['trooper:battlefield']}:t;
 
 test('a bill line still short, or one it feeds, has value; surplus and unneeded coins have none', () => {
     expect(unitValue('Feather', bill, prices)).toBe(4);
@@ -276,8 +278,9 @@ test('existing jobs hold their resources, chain steps included', () => {
     expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/shop-buyer.ts harry 300', 'scripts/goldfarm.ts KNIGHT_SPOT=2582,3297'] })).toEqual(['shop:harry', 'knight:2582,3297']);
     expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/gather-fish.ts cage 3000', 'scripts/cook-food.ts 3000 lobster'] })).toEqual(['catherby:lobster']);
     expect(jobResources({ script: 'scripts/gather-fish.ts', args: ['harpoon'] })).toEqual([]);
-    // Ranged training kills the Lumbridge pen's chickens, so a side running it holds that pen against feather jobs.
-    expect(jobResources({ script: 'scripts/ranged-train.ts', args: ['97', '30000'], env: { FOOD: '2' } })).toEqual(['pen:3229,3298']);
+    // An adaptive entry without a bound route claims both possible fields until its fresh choice is known.
+    expect(jobResources({ script: 'scripts/ranged-train.ts', args: ['97', '30000'], env: { FOOD: '2' } })).toEqual(['pen:3229,3298','trooper:battlefield']);
+    expect(jobResources({ script: 'scripts/ranged-train.ts', resources:['pen:3229,3298','shop:lowe'],env:{PROGRESSION_METHOD:'ranged/troopers'} })).toEqual(['trooper:battlefield','shop:lowe']);
     expect(jobResources({ script: 'scripts/gather-feathers.ts', env: { PEN: '3017,3288' } })).toEqual(['pen:3017,3288']);
     expect(jobResources({ script: 'x', resources: ['shop:betty'] })).toEqual(['shop:betty']);
 });
@@ -699,7 +702,7 @@ test('army accounts train Ranged to 99 on the troopers with a bow they wield and
     expect(pick({}, { shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 99 }, { ...fish, shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-strength-99');
     const job = jobFor(plan(inputs([acct('Archer', base, { ...fish, shortbow: 1, 'iron arrow': 500 })], { army, capacity: CAPACITY }))[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
+    expect(job).toMatchObject({ script: 'scripts/ranged-train.ts', args: ['99','1500'], env: { TARGET_LEVEL: '99', FOOD:'3', AMMO:'100' }, repeat: true, resources: ['pen:3229,3298','trooper:battlefield'] });
 });
 
 import { xpForLevel } from '../src/curve';
@@ -1552,7 +1555,7 @@ test('an army account without Lost City takes the quest chain as a pilot, before
     const soldier = (name: string, done: ReadonlySet<string> | undefined, s: Record<string, number> = {}, items: Record<string, number> = {}): Acct =>
         ({ ...acct(name, { ...maxed, ...s }, { ...kit, ...items }), ...(done ? { quests: done } : {}) });
     const pilots = new Set(['army-quest-lostcity']);
-    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, ...extra }));
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots,templateFor:qualifiedTrooperTemplate, ...extra }));
     const [x] = run([soldier('Kilt', quests())]);
     expect(x!.template!.id).toBe('army-quest-lostcity');
     expect(x!.reason).toBe(`army band ${QUEST_BAND}: Lost City`);
@@ -1591,7 +1594,7 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     const soldier = (name: string, items: Record<string, number> = {}, s: Record<string, number> = {}): Acct => acct(name, { ...maxed, ...s }, { ...kit, ...items });
     const pilots = new Set(['army-splash-magic-66', 'army-water-aubury']);
     const runes: Market = { 'body rune': { id: 559, name: 'Body rune', limit: KIT_PRICE_CAPS['body rune']! }, 'earth rune': { id: 557, name: 'Earth rune', limit: KIT_PRICE_CAPS['earth rune']! } };
-    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, market: runes, ...extra }));
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, market: runes,templateFor:qualifiedTrooperTemplate, ...extra }));
     // What a level still casts: 135 curses from Magic 21, ten from Magic 65, the whole kit under Curse's level.
     const need = splashKit(21);
     expect(need).toEqual({ 'body rune': 135, 'earth rune': 405, 'water rune': 270 });
@@ -1896,8 +1899,10 @@ test('an account with a PK build trains to the levels of the build and no furthe
     expect(buildBand(byId('army-trooper-strength-99'), fresh, dragon)!.env!.TARGET_LEVEL).toBe('99');
     // No band buries bones: bones give Prayer XP. The Prayer band of the trooper field counts kills and keeps the
     // style of the account, so it is refused even for a build with Prayer above the account's level.
-    expect(byId('army-trooper-ranged-99').env!.GIANT_BURY).toBe('1');
-    expect(buildBand(byId('army-trooper-ranged-99'), fresh, pure)!.env!.GIANT_BURY).toBe('0');
+    expect(byId('army-trooper-ranged-99').script).toBe('scripts/ranged-train.ts');
+    expect(byId('army-trooper-ranged-99').env!.GIANT_BURY).toBeUndefined();
+    const ranged45=buildBand(byId('army-trooper-ranged-99'),acct('Build',{Ranged:40}),{...pure,Ranged:45})!;
+    expect(ranged45.args).toEqual(['45','1500']);expect(ranged45.env!.TARGET_LEVEL).toBe('45');expect(ranged45.trains!.to).toBe(45);
     expect(trooper.env!.GIANT_BURY).toBe('0');
     expect(buildBand(byId('army-trooper-prayer-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
     // Prayer comes from held normal bones only, to the level of the build: the worker's target argument.

@@ -27,7 +27,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
+import { BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -36,6 +36,8 @@ import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
+import { createAutopilotProgression } from './autopilot-progression';
+import { accountFromStatus } from '../packages/planner/src/progression-catalog';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -513,11 +515,30 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const bill = routeBill(items);
     state.kitSeq=completedHeldOrderSeq(swarm.jobs.filter((j:any)=>mineMarked(j)&&!keep.has(String(j.account).toLowerCase())),side,state.assigned,templates,state.kitSeq??{},
         (name,offset,job)=>readJobResultLines(join(prac,'swarm-logs',`${name}.log`),offset,job));
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    const idsByName=new Map<string,number[]>();
+    for(const item of items)if(typeof item.name==='string'&&!/^cert_/.test(item.debugname??'')){const name=norm(item.name),ids=idsByName.get(name)??[];if(!ids.includes(item.id))ids.push(item.id);idsByName.set(name,ids);}
+    const itemId=(name:string)=>{const ids=idsByName.get(norm(name));return ids?.length===1?ids[0]:undefined;};
+    const retained=kitReserve(templates),progressionStocks=stock.flatMap(s=>{
+        try{const a=accountFromStatus(s.name,observed(s.name),now),owned:Record<number,number>={};
+            for(const container of [a.inventory,a.equipment,a.bank])if(container&&container.at>0&&container.at<=now&&now-container.at<=300000)for(const[id,count]of Object.entries(container.value))owned[Number(id)]=(owned[Number(id)]??0)+count;
+            const quantities:Record<number,number>={};for(const[id,count]of Object.entries(owned)){const name=norm(byId.get(Number(id))??'');if(!name)continue;quantities[Number(id)]=Math.max(0,Math.min(count,(s.items[name]??0))-(retained[name]??0)-(a.reservations?.[Number(id)]??0));}
+            return[{holder:s.name,at:a.at,items:quantities}];
+        }catch{return[];}
+    });
+    const sourceAllowed=new Set(stock.map(s=>s.name.toLowerCase())),newlyWorking=new Set<string>();
+    const progression=createAutopilotProgression({now,observed,itemId,itemName:id=>byId.get(id),builds:buildCaps(swarm),jobs:swarm.jobs,
+        assignedAt:new Map(Object.entries(state.assigned).map(([name,s])=>[name.toLowerCase(),s.at])),taken,capacity:CAPACITY,
+        busy:new Set([...keep,...open,...stranded,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map(n=>n.toLowerCase())]),paused,protected:new Set(['haggis']),
+        stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
+        canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
+    for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
+    const refined=progression.refine(planned);
+    log.push(`AUTOPILOT progression ${refined.changes.filter(c=>c.ready).length} measured changes, ${refined.requests.length} evidence/supply requests`);
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const lead=(from:string,to:string)=>owners.get(from.toLowerCase())?.side===side&&owners.get(to.toLowerCase())?.side===side?0:15*60_000;
-    const funding = fundOrders(planned, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined,lead(from,to)),
+    const funding = fundOrders(refined.assignments, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined,lead(from,to)),
         s => itemOrder(s.from, s.to, market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item, s.count, serverOf(s.to), now,
             lead(s.from,s.to)));
     const out = funding.assignments;
@@ -552,6 +573,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     }
     mkdirSync(join(prac, 'autopilot'), { recursive: true });
     writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
+    mkdirSync(join(prac,'progression-system'),{recursive:true});
+    writeAtomic(join(prac,'progression-system',`fleet-${side}.json`),JSON.stringify({version:1,side,at:now,decisions:progression.decisions(),requests:refined.requests,gaps:refined.gaps,reservations:refined.reservations,search:refined.search},null,1)+'\n');
     if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
     for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
     return log;

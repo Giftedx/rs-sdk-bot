@@ -10,7 +10,7 @@ import {planWork,prepareProposal,readPlannerControllerCapacity} from './coordina
 import {executeTask,provisionParticipantHold} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs,recoveryWaitsForMemory,liveAccountWait,ordinaryRunWaitsForMemory,validLiveMemoryWait} from './coordinator-live';
-import {cachedLaunchRevision} from '../../core/src/worker-release';
+import {cachedLaunchRevision,cachedReleaseFor} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,ownerPlanPath,jobAccounts,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {validateBoundedRecovery,assertBoundedRecoveryQueue} from '../../core/src/bounded-recovery';
 import {boundedOwnerBinding} from '../../core/src/bounded-owners';
@@ -18,7 +18,9 @@ import {assignedWorker} from './model-worker';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {prepareWorkspace,sharedWorkspacePlan} from './build-workspace';
-import {applyRules,skillUnlocks} from './coordinator-rules';
+import {applyRules,skillUnlocks,currentQualification,reviewApproved} from './coordinator-rules';
+import {evaluateCoordinatorProgression} from './coordinator-progression';
+import {evaluateProgressionWork,progressionProofs} from '../../core/src/progression-session';
 import {processDeliveryPrs} from './delivery-pr';
 import {freshScoreboard} from './coverage';
 import {goalWork,ruleGoalValue} from './goal-work';
@@ -221,13 +223,34 @@ function runRules(state:CoordinatorState,liveLimit:number){
   let board:any;try{board=freshScoreboard(projectRoot,RULE_BOARD_MAX_AGE_MS);}catch{board=null;}
   const fleetSkills:any[]|undefined=Array.isArray(board?.fleetSkills)?board.fleetSkills:undefined;
   const goalStatuses=liveHelperStatuses(projectRoot),entryOf=(capability:string)=>{try{return deliveryTask(capability).entry;}catch{return undefined;}};
+  const definitions=readdirSync(join(projectRoot,'packages/router/tasks')).filter(name=>name.endsWith('.json')).flatMap(name=>{try{return[deliveryTask(name.slice(0,-5))];}catch(error){event('progression-definition-unavailable',{file:name,reason:String(error)});return[];}});
+  const proofs=progressionProofs(projectRoot),progressionRows:unknown[]=[];
   const added=applyRules(state,{fingerprint:cap=>deliveryFingerprint(deliveryTask(cap)),unlocks:unlocks??=skillUnlocks(projectRoot),maxOpen:liveLimit,
-   goalValue:board?.goals?ruleGoalValue(state,board.goals,goalStatuses,now,{entryOf}):()=>({value:null,reason:'Owner goal observations unavailable'}),
+   progression:(task,account)=>{
+    const entry=entryOf(task.capability!);if(!entry)return{action:'measure',intent:null,step:null,capability:null,decision:null,stepAccept:null,consumer:task.accept??null,requests:[],reason:'Existing capability entry is unavailable.'};
+    const status=goalStatuses.find((row:any)=>row.name?.toLowerCase()===account.toLowerCase())??null;
+    const work={script:entry,args:task.args??[],env:task.env??{}};
+    const shared=evaluateProgressionWork(work,status,{accept:task.accept,now,base:projectRoot,requireQualification:false});
+    const result=evaluateCoordinatorProgression({task,entry,status,now,observed:shared.account,methods:()=>shared.methods??[],
+     bindingFor:method=>{
+      const proof=proofs[method.id];if(!proof)return null;
+      let source:string;try{source=cachedReleaseFor([method.step.script],projectRoot);}catch{return null;}
+      if(proof.source!==source||method.source!==source)return null;
+      const matches=definitions.filter(d=>d.entry===method.step.script).sort((a,b)=>Number(b.id===task.capability)-Number(a.id===task.capability)||a.id.localeCompare(b.id));
+      for(const definition of matches){const fingerprint=deliveryFingerprint(definition);if(reviewApproved(state,definition.id)&&currentQualification(state,definition.id,fingerprint))return{capability:definition.id,methodId:method.id,source,qualification:{source,bands:proof.bands},reviewed:true};}
+      return null;
+     }});
+    progressionRows.push({account,task:task.id,statusAt:status?.at??null,bankAt:status?.bankAt??null,consumer:result.consumer,action:result.action,reason:result.reason,
+     method:result.decision?.selected??null,stateFingerprint:result.decision?.stateFingerprint??null,requests:result.requests});
+    return result;
+   },
+   goalValue:board?.goals?(task,prerequisites=[])=>ruleGoalValue({...state,tasks:[...state.tasks,...prerequisites.map(spec=>({spec,status:'pending' as const,createdAt:now,attempts:0}))]},board.goals,goalStatuses,now,{entryOf})(task):()=>({value:null,reason:'Owner goal observations unavailable'}),
    side:board?.fleet?.side??process.env.FLEET_SIDE??'local',
    fleetBest:skill=>fleetSkills?.find(r=>String(r.skill).toLowerCase()===skill.toLowerCase()),
    skipped:skip=>{const key=JSON.stringify(skip);if(!ruleSkips.has(key)){ruleSkips.add(key);event('rule-skipped',{rule:'next-band',...skip});}},
    paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
-   level:(account,skill)=>{try{return json(join(projectRoot,'.practice/status',account+'.json')).skills?.find((v:any)=>v.name===skill)?.level;}catch{return undefined;}}},now);
+   level:(account,skill)=>goalStatuses.find((row:any)=>row.name?.toLowerCase()===account.toLowerCase())?.skills?.find((v:any)=>v.name?.toLowerCase()===skill.toLowerCase())?.level},now);
+  atomicJson(join(coordinationDir,'progression-requests.json'),{at:now,rows:progressionRows});
   if(added.length){saveState(state);event('rule-tasks-added',{tasks:added.map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept}))});}
  }catch(error){event('rule-pass-failed',String(error));}
 }
