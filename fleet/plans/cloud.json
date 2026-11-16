@@ -1,7 +1,104 @@
 {
  "side": "cloud",
- "at": 1794806881414,
- "jobs": [],
- "army": [],
- "builds": {}
+ "at": 1794806883972,
+ "jobs": [
+  {
+   "account": "BraveHardon",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "TossTheCaber",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/fleet-inspect.ts",
+   "env": {
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "TICK_RECORD": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
+   "role": "inspect"
+  },
+  {
+   "account": "Porksword",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "YewGotWood",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "Spitroaster",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "Stirmypot",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "BoneToPick",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "Crownjewels",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "FullSporran",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "Heavyload",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  },
+  {
+   "account": "FullLoad",
+   "script": "scripts/fleet-inspect.ts",
+   "env": {
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "TICK_RECORD": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
+   "role": "inspect"
+  },
+  {
+   "account": "Coinpurse",
+   "enabled": false,
+   "repeat": false,
+   "role": "reserved"
+  }
+ ]
 }
