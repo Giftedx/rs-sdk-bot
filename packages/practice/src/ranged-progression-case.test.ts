@@ -1,0 +1,57 @@
+import {expect,test} from 'bun:test';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {xpForLevel} from '../../planner/src/curve';
+import fixture from './ranged-progression-entry.json';
+import {parseRangedEntry,rangedComparisonPreset,rangedComparisonChecks,rangedEntryProofChecks,rangedSupportedMethods,RANGED_COMPARISON_PRESET} from './ranged-progression-case';
+
+const bytes=(value:unknown)=>Buffer.from(JSON.stringify(value));
+const fresh=()=>{const entry=structuredClone(fixture);entry.skills[5]={...entry.skills[5]!,level:96,currentLevel:53,xp:xpForLevel(96)};return entry;};
+const save=(entry:ReturnType<typeof parseRangedEntry>['entry'])=>({version:10,position:entry.pos,vars:{},
+ skills:entry.skills.map((s,index)=>({index,xp:s.xp,level:s.currentLevel,rawExperience:s.xp*10})),
+ inventories:{93:entry.inventory.map((i,slot)=>({...i,slot})),94:entry.equipment,95:entry.bank.map((i,slot)=>({...i,slot}))}});
+
+test('an override freezes its own exact bytes and presets and checks its observed Prayer96 state',()=>{
+ const input=bytes(fresh()),loaded=parseRangedEntry(input),before=save(loaded.entry);
+ expect(loaded.sha256).toBe(createHash('sha256').update(input).digest('hex'));
+ expect(Buffer.from(loaded.bytes).equals(input)).toBe(true);
+ expect(rangedComparisonPreset(loaded.entry).skills?.Prayer).toBe(96);
+ expect(rangedComparisonChecks(before,before,null,'',1,83,loaded.entry).exactEntry).toBe(true);
+ expect(rangedComparisonChecks(before,before,null,'',1).exactEntry).toBe(false);
+ expect(RANGED_COMPARISON_PRESET.skills?.Prayer).toBe(95);
+});
+
+test('the tracked default keeps its exact entry SHA and preset',()=>{
+ const raw=readFileSync(join(import.meta.dir,'ranged-progression-entry.json')),loaded=parseRangedEntry(raw);
+ expect(loaded.sha256).toBe(createHash('sha256').update(raw).digest('hex'));
+ expect(rangedComparisonPreset(loaded.entry)).toEqual(RANGED_COMPARISON_PRESET);
+});
+
+test('saved entry verification refuses tampered frozen bytes or detached skill and stock bands',()=>{
+ const changed=fresh();changed.bank.find(i=>i.id===882)!.count=147;changed.bank.find(i=>i.id===2142)!.count=40;
+ const loaded=parseRangedEntry(bytes(changed)),result={method:'ranged/troopers',bow:841,arrow:882};
+ const report={entrySha256:loaded.sha256,source:'a'.repeat(64),target:85,supportedMethods:rangedSupportedMethods(loaded.entry,result,'a'.repeat(64),85)};
+ expect(rangedEntryProofChecks(loaded.bytes,report,result).supportedMethods).toBe(true);
+ expect(report.supportedMethods[0]!.bands[0]!.levels.Prayer).toEqual({min:96,max:96});
+ expect(report.supportedMethods[0]!.bands[0]!.items).toMatchObject({882:147,2142:40});
+ const stale={...report,supportedMethods:rangedSupportedMethods(parseRangedEntry(bytes(fixture)).entry,result,report.source,85)};
+ expect(rangedEntryProofChecks(loaded.bytes,stale,result).supportedMethods).toBe(false);
+ changed.skills[5]!.xp++;
+ expect(()=>rangedEntryProofChecks(bytes(changed),report,result)).toThrow('frozen Ranged entry SHA-256 differs');
+});
+
+test('entry validation rejects malformed counts, slots, base XP, current skills and unsettled metadata',()=>{
+ for(const mutate of [
+  (e:ReturnType<typeof fresh>)=>{e.bank[0]!.count=-1;},
+  (e:ReturnType<typeof fresh>)=>{e.bank[0]!.count=2**31;},
+  (e:ReturnType<typeof fresh>)=>{e.equipment[1]!.slot=e.equipment[0]!.slot;},
+  (e:ReturnType<typeof fresh>)=>{e.skills[5]!.xp=0;},
+  (e:ReturnType<typeof fresh>)=>{e.skills[5]!.currentLevel=100;},
+  (e:ReturnType<typeof fresh>)=>{e.skills[3]!.currentLevel=0;e.hp.now=0;},
+  (e:ReturnType<typeof fresh>)=>{e.skills.reverse();},
+  (e:ReturnType<typeof fresh>)=>{e.producer.loggedOutAt=e.at+1;},
+  (e:ReturnType<typeof fresh>)=>{e.pos.level=4;},
+ ]){const entry=fresh();mutate(entry);expect(()=>parseRangedEntry(bytes(entry))).toThrow('invalid Ranged entry');}
+ expect(()=>parseRangedEntry(bytes({...fresh(),server:'private.example'}))).toThrow('invalid Ranged entry');
+});
