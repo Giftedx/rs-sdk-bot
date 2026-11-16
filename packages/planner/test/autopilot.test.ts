@@ -607,7 +607,7 @@ test('army accounts alch Magic to 99 with natures, feathers and fire, then bury 
     expect(pick({ Magic: 99 }, { bone: 99 })).not.toBe('army-bury-prayer-99');
     expect(pick({ Magic: 99, Prayer: 99 }, { bone: 1674 })).not.toBe('army-bury-prayer-99');
     const job = jobFor(plan(inputs([acct('Caster', { ...melee, Magic: 99 }, { bone: 500 })], { army, capacity: CAPACITY }))[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, repeat: true, resources: [] });
+    expect(job).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000', AUTOPILOT_ORDER:'0' }, repeat: false, resources: [] });
 });
 
 test('prayer bands do not repeat on preserved bone notes after normal stock is spent', () => {
@@ -1000,7 +1000,7 @@ test('an army account with no other band to start buys the bones its Prayer stil
     expect(pick({}, { coin: 5_000_000 }, { unfundable: new Set(['monk']), current: new Map([['monk', 'army-trooper-prayer-99']]) }).template!.id).toBe(KIT_BUY + 'army-bury-dragon-99');
     // With the bones held, a part-filled order too, it buries them before anything else.
     const bury = pick({}, { coin: 1_000, 'dragon bone': BONE_START });
-    expect(jobFor(bury, side)).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_ID: '536', BONE_RESERVE: String(BONE_KEEP) }, repeat: true });
+    expect(jobFor(bury, side)).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_ID: '536', BONE_RESERVE: String(BONE_KEEP), AUTOPILOT_ORDER:'0' }, repeat: false });
     // No dragon bones under the cap: big bones, sized by their own XP. Neither: the filler on the field.
     const { 'dragon bone': _, ...onlyBig } = bones;
     const big = pick({}, { coin: 5_000_000 }, { market: onlyBig });
@@ -2322,4 +2322,76 @@ test('cash-first local item staging funds the known meeting trip and the consume
     expect(ready.template!.needs!.items!.coins).toBe(15060);expect(ready.fund).toBeUndefined();expect(ready.send).toBeUndefined();
     const held=plan(inputs([caster,mule],{...extra,unfundable:new Set(['caster']),current:new Map([['caster',t.id]]),running:new Set(['caster'])})).find(x=>x.account===caster.name)!;
     expect(held.fund).toBeUndefined();expect(held.send).toBeUndefined();
+});
+
+for(const source of ['local-cash-remote-item','remote-cash-local-item','remote-cash-remote-item'] as const)
+test(`remote shortage preparation serializes ${source} with meeting and return fares`,()=>{
+    const t=catalogue().find(t=>t.id==='army-staff-zaff')!,varrock={x:3185,z:3436,level:0},bank={...ARMY_BANK,level:0};
+    const caster={...acct('Caster',{Magic:30},{feather:50}),pos:varrock};
+    const itemSide=source==='remote-cash-local-item'?side:'local';
+    const stock:Stock[]=[{name:'RuneMule',side:itemSide,items:{'nature rune':100}},
+        ...(source==='local-cash-remote-item'?[]:[{name:'CloudCash',side:'local',items:{coin:100000}}])];
+    const extra:Partial<Inputs>={templates:[t],army:new Set(['caster']),pilots:new Set([t.id]),bill:[],stock,
+        donors:source==='local-cash-remote-item'?[{name:'CashMule',coins:100000}]:[]};
+    const run=(account:Acct)=>plan(inputs([account],extra))[0]!;
+    const cash=run(caster);
+    expect(cash.fund).toEqual({from:source==='local-cash-remote-item'?'CashMule':'CloudCash',to:'Caster',coins:15120,template:t.id});
+    expect(cash.send).toBeUndefined();
+    const funded={...caster,items:{...caster.items,coin:15120}};
+    const item=run(funded);
+    expect(item.send).toEqual({from:'RuneMule',to:'Caster',item:'nature rune',count:50,template:t.id});expect(item.fund).toBeUndefined();
+    const received={...funded,pos:bank,items:{...funded.items,coin:15060,'nature rune':50}};
+    const ready=run(received);
+    expect(ready.template!.id).toBe(t.id);expect(ready.template!.needs!.items!.coins).toBe(15060);
+    expect(ready.fund).toBeUndefined();expect(ready.send).toBeUndefined();
+});
+
+test('remote shortage preparation resolves mixed local and remote item lines before funding',()=>{
+    const t=catalogue().find(t=>t.id==='army-staff-zaff')!,caster=acct('Caster',{Magic:30});
+    const extra:Partial<Inputs>={templates:[t],army:new Set(['caster']),pilots:new Set([t.id]),bill:[],
+        donors:[{name:'CashMule',coins:100000}],stock:[{name:'NearFeathers',side,items:{feather:100}},{name:'FarRunes',side:'local',items:{'nature rune':100}}]};
+    const run=(items:Record<string,number>)=>plan(inputs([{...caster,items}],extra))[0]!;
+    expect(run({}).fund).toMatchObject({from:'CashMule',coins:15000,template:t.id});
+    const first=run({coin:15000});expect(first.send).toMatchObject({from:'NearFeathers',item:'feather',count:50});expect(first.fund).toBeUndefined();
+    const second=run({coin:15000,feather:50});expect(second.send).toMatchObject({from:'FarRunes',item:'nature rune',count:50});expect(second.fund).toBeUndefined();
+    expect(run({coin:15000,feather:50,'nature rune':50}).template!.id).toBe(t.id);
+    expect(plan(inputs([caster],{...extra,stock:extra.stock!.slice(0,1)}))[0]!.fund).toBeUndefined();
+});
+
+test('remote coins fund a finite producer whose item inputs are already owned',()=>{
+    const t=catalogue().find(t=>t.id==='aio-rune-scimitars')!,smith=acct('Smith',{Smithing:90},{hammer:1,'runite bar':2});
+    const extra:Partial<Inputs>={templates:[t],pilots:new Set([t.id]),bill:[row('rune scimitar',1)],prices:{'rune scimitar':15000},
+        stock:[{name:'CloudCash',side:'local',items:{coin:50010}}]};
+    const preparation=plan(inputs([smith],extra))[0]!;
+    expect(preparation.fund).toEqual({from:'CloudCash',to:'Smith',coins:10,template:t.id});expect(preparation.send).toBeUndefined();
+    const ready=plan(inputs([{...smith,items:{...smith.items,coin:10}}],extra))[0]!;
+    expect(ready.fund).toBeUndefined();expect(ready.send).toBeUndefined();expect(jobFor(ready,side)).toMatchObject({template:t.id,repeat:false,maxRestarts:0});
+    expect(plan(inputs([smith],{...extra,stock:[{name:'CloudCash',side:'local',items:{coin:50009}}]}))[0]!.fund).toBeUndefined();
+    expect(plan(inputs([smith],{...extra,noSend:new Set(['cloudcash>smith'])}))[0]!.fund).toBeUndefined();
+});
+
+test('remote shortage preparation preserves productive local work and held recipients',()=>{
+    const t=catalogue().find(t=>t.id==='army-staff-zaff')!,bowstrings=catalogue().find(t=>t.id==='aio-bowstrings')!;
+    const caster=acct('Caster',{Magic:30,Crafting:10},{feather:50,flax:1});
+    const extra:Partial<Inputs>={templates:[t,bowstrings],army:new Set(['caster']),pilots:new Set([t.id,bowstrings.id]),bill:[row('bow string',1)],prices:{'bow string':100},
+        donors:[{name:'CashMule',coins:100000}],stock:[{name:'FarRunes',side:'local',items:{'nature rune':100}},{name:'CloudCash',side:'local',items:{coin:100000}}]};
+    const local=plan(inputs([caster],extra))[0]!;
+    expect(local.template!.id).toBe(bowstrings.id);expect(local.fund).toBeUndefined();expect(local.send).toBeUndefined();
+    const idle={...caster,items:{feather:50}};
+    for(const held of [true,false]){
+        const outcome=plan(inputs([idle],{...extra,templates:[t],bill:[],...(held?{unfundable:new Set(['caster']),current:new Map([['caster',t.id]]),running:new Set(['caster'])}:{noSend:new Set(['farrunes>caster'])})}))[0]!;
+        expect(outcome.fund).toBeUndefined();expect(outcome.send).toBeUndefined();
+    }
+    const island={...idle,pos:{x:2915,z:3174,level:0}};
+    expect(plan(inputs([island],{...extra,templates:[t],bill:[]}))[0]!.fund).toBeUndefined();
+});
+
+test('remote shortage preparation spends a remote cash donor once and retains its reserve',()=>{
+    const t={...catalogue().find(t=>t.id==='army-staff-zaff')!,resources:[]};
+    const accounts=['CasterA','CasterB'].map(name=>acct(name,{Magic:30},{feather:50}));
+    const extra:Partial<Inputs>={templates:[t],army:new Set(['castera','casterb']),pilots:new Set([t.id]),bill:[],
+        stock:[{name:'CloudCash',side:'local',items:{coin:100000}},{name:'FarRunes',side:'local',items:{'nature rune':150}}]};
+    const out=plan(inputs(accounts,extra));expect(out.filter(x=>x.fund)).toHaveLength(1);
+    expect(out.find(x=>x.fund)!.fund).toMatchObject({from:'CloudCash',coins:15000});
+    expect(plan(inputs(accounts,{...extra,stock:[{name:'CloudCash',side:'local',items:{coin:64999}},extra.stock![1]!]})).some(x=>!!x.fund)).toBe(false);
 });

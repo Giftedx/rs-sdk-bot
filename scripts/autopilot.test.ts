@@ -8,7 +8,7 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { aioPilots, armyRoster, completedHeldOrderSeq, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 import { existsSync } from 'node:fs';
 import { resolveAioStep } from './aio';
@@ -37,6 +37,34 @@ test('settled finite makers wake the existing planner on success or failure with
     const farm=catalogue().find(t=>t.id.startsWith('goldfarm@'))!;
     expect(finishedTrainers([jobFor({account:'Farmer',template:farm,value:1,reason:'continuous funding',resources:[]},side)],side,
         {Farmer:{template:farm.id,offset:0}},[farm],()=>['RESULT ok finite farm window'])).toEqual([]);
+});
+
+test('held Prayer batches stop repeating and rearm only after a matching settled supply episode',()=>{
+    const side='local',templates=catalogue();
+    for(const id of ['army-bury-prayer-99','army-bury-dragon-99','army-bury-big-99']){
+        const t=templates.find(t=>t.id===id)!;
+        expect(jobFor({account:'Priest',template:t,value:0,reason:'finite owned bones',resources:[]},side).repeat).toBe(false);
+    }
+    const t=templates.find(t=>t.id==='army-bury-dragon-99')!;
+    const account:Acct={name:'Priest',side,skills:{Prayer:98,Ranged:99,Magic:99},items:{'dragon bone':30}};
+    const make=(sequence:Record<string,number>,a=account)=>{
+        const [assignment]=plan({side,accounts:[a],owners:new Map([['priest',{side}]]),templates:[t],army:new Set(['priest']),bill:[],prices:{},kitSeq:new Map(Object.entries(sequence))});
+        return assignment?.template?jobFor(assignment,side):undefined;
+    };
+    const old=make({})!;expect(old.repeat).toBe(false);
+    const advance=completedHeldOrderSeq;
+    const assigned={Priest:{template:t.id,offset:12}},initial={priest:0};
+    expect(advance([old],side,assigned,[t],initial,()=>[])).toEqual(initial);
+    expect(advance([{...old,enabled:false}],side,assigned,[t],initial,()=>['RESULT ok targetMet=false'])).toEqual(initial);
+    expect(advance([old],side,assigned,[t],initial,()=>['RESULT fail input missing'])).toEqual(initial);
+    expect(advance([old],side,assigned,[t],initial,()=>['RESULT ok targetMet=true consumed=24 preserved=true'])).toEqual(initial);
+    const sequence=advance([old],side,assigned,[t],initial,()=>['RESULT ok targetMet=false consumed=24 preserved=true']);
+    expect(sequence).toEqual({priest:1});expect(initial).toEqual({priest:0});
+    const next=make(sequence)!;expect(missionSignature(next)).not.toBe(missionSignature(old));
+    const done=new Map([['Priest',{reason:'done after 1 runs',revision:missionSignature(old)}]]);
+    expect(startable(['Priest'],old.repeat,done,()=>Infinity,undefined,missionSignature(old)).start).toEqual([]);
+    expect(startable(['Priest'],next.repeat,done,()=>Infinity,undefined,missionSignature(next)).start).toEqual(['Priest']);
+    expect(make(sequence,{...account,skills:{...account.skills,Prayer:99}})).toBeUndefined();
 });
 
 test('a declared finite maker keeps its exact pending mission until its own terminal result',()=>{
@@ -433,6 +461,16 @@ test('a same-side owned supply order can start immediately without the remote sy
     expect(o.start).toBe(now);
     expect(o.end).toBe(now+40*60_000);
     expect(validOrder(o)).toBe(true);
+});
+
+test('a local funding order starts immediately while the default remote funding lead remains intact',()=>{
+    const now=1_000_000;
+    const remote=coinOrder('FarCash','Maker',120,'rs-sdk-demo.fly.dev',now);
+    expect(remote.start).toBe(now+15*60_000);
+    const local=coinOrder('NearCash','Maker',120,'rs-sdk-demo.fly.dev',now,ARMY_MEET,0);
+    expect(local).toMatchObject({start:now,end:now+40*60_000,count:120,meet:ARMY_MEET});
+    expect(validOrder(local)).toBe(true);
+    for(const lead of [-1,15*60_000+1,0.5,NaN])expect(()=>coinOrder('NearCash','Maker',120,'rs-sdk-demo.fly.dev',now,undefined,lead)).toThrow('invalid coin order lead');
 });
 
 test('a kit send becomes an item order and a vacant account; a party to an open order waits', () => {

@@ -29,6 +29,8 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   const name=key(row.name),old=observations.get(name);
   if(!old||row.at>old.at)observations.set(name,row);
  }
+ const bankKnown=(account:string)=>{const own=observations.get(key(account));return own&&fresh(own.bankAt,now)&&own.bankAt<=own.at&&Array.isArray(own.bank);};
+ const supplyLines=(id:number)=>goals.collection.missing.filter(line=>line.id===id&&line.consumer.trim()&&line.consumer!=='unresolved named supply'&&line.need>line.owned);
  const termsByTask=new Map<string,Map<string,number>>();
  const direct=(task:CoordTask):GoalWorkValue=>{
   const terms=new Map<string,number>();termsByTask.set(task.id,terms);
@@ -59,12 +61,11 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    if(Number.isSafeInteger(id)&&Number.isSafeInteger(count)&&count>0)total.set(id,(total.get(id)??0)+count);
    return total;
   },new Map<number,number>());
-  const bankKnown=own&&fresh(own.bankAt,now)&&own.bankAt<=own.at&&Array.isArray(own.bank);
-  const held=bankKnown?holdings(own.bank):null;
+  const held=bankKnown(account)?holdings(own.bank):null;
   for(const [idText,target] of Object.entries(task.accept?.bank??{})){
    const id=Number(idText);
    if(!Number.isSafeInteger(id))continue;
-   const lines=goals.collection.missing.filter(line=>line.id===id&&line.consumer.trim()&&line.consumer!=='unresolved named supply'&&line.need>line.owned);
+   const lines=supplyLines(id);
    if(!lines.length)continue;
    if(names?.length===1&&(!held||lines.some(line=>(line.verifyOwned??0)>0))&&(!held||target>(held.get(id)??0))){
     const quantity=boundedGeQuantity(task,entry,id,target);
@@ -115,10 +116,38 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    visit.push(...task.dependsOn,...provisionRefs(task));
   }
  }
+ // A bounded input purchase observes the same bank its pending production consumer must inspect. Credit only
+ // that GE entry and its non-run prerequisites; ordinary workers still need fresh bank evidence to dispatch.
+ const inputObservationTerms=new Map<string,string>();
+ for(const row of open){
+  const task=row.spec,names=boundAccounts(task,state),effect=result.get(task.id),order=Object.entries(task.accept?.bank??{})[0];
+  if(task.kind!=='run'||dead.has(task.id)||names?.length!==1||!effect||(effect.value??0)>0||!order)continue;
+  const [idText,target]=order,id=Number(idText);let entry:string|undefined;
+  try{entry=task.capability&&context.entryOf?.(task.capability);}catch{/* Unknown workers cannot observe a bank. */}
+  if(!Number.isSafeInteger(id)||id<=0||boundedGeQuantity(task,entry,id,target)===null)continue;
+  for(const consumerId of consumers.get(task.id)?.keys()??[]){
+   const consumer=byId.get(consumerId),accounts=consumer&&boundAccounts(consumer,state);
+   if(consumerId===task.id||!consumer||accounts?.length!==1||key(accounts[0]!)!==key(names[0]!)
+    ||bankKnown(accounts[0]!)||result.get(consumerId)?.value!==null)continue;
+   const line=Object.entries(consumer.accept?.bank??{}).flatMap(([goalId,quantity])=>{
+    const item=Number(goalId);
+    return item>0&&item!==995&&Number.isSafeInteger(item)&&Number.isSafeInteger(quantity)&&quantity>0
+     ?supplyLines(item).filter(line=>quantity<=Math.max(0,line.need-line.owned-(line.verifyOwned??0))):[];
+   })[0];
+   if(!line)continue;
+   const term='supply-observation:'+line.consumer+':'+line.id+':'+line.need;
+   termsByTask.get(task.id)!.set(term,.01);inputObservationTerms.set(task.id,term);
+   effect.value=.01;effect.reason='Bounded GE input observation supports '+consumerId+' for '+line.consumer+' item '+line.id+'. This is not game progress.';
+   break;
+  }
+ }
  for(const row of state.tasks){
   const directEffect=result.get(row.spec.id);
   const inherited=consumers.get(row.spec.id),terms=new Map<string,number>();
-  for(const id of inherited?.keys()??[])for(const [effect,gain] of termsByTask.get(id)??[])terms.set(effect,Math.max(terms.get(effect)??0,gain));
+  for(const id of inherited?.keys()??[])for(const [effect,gain] of termsByTask.get(id)??[]){
+   if(row.spec.kind==='run'&&row.spec.id!==id&&inputObservationTerms.get(id)===effect)continue;
+   terms.set(effect,Math.max(terms.get(effect)??0,gain));
+  }
   const value=[...terms.values()].reduce((sum,gain)=>sum+gain,0);
   result.set(row.spec.id,{value:value>0?value:[...(inherited?.values()??[])].some(effect=>effect.value===null)?null:0,
    reason:inherited?.size===1&&inherited.has(row.spec.id)?directEffect!.reason:inherited?.size?'Supports finite consumers: '+[...inherited.keys()].join(', ')+'. '+[...inherited.values()].map(effect=>effect.reason).join(' '):'No viable pending run connects this task to an owner goal.',

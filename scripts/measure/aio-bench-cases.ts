@@ -1219,6 +1219,17 @@ const SAME_JOB_CASES: BenchCase[] = [
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
 const EXTRA_CASES: BenchCase[] = [
+  {key:'extra:catalog-dommik-tools',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['tools','{save}'],timeoutMs:180_000,
+    presetConfig:{position:{x:3085,z:3250,level:0},skills:{Crafting:51,Hitpoints:64},inventory:[],equipment:[],bank:[{id:995,count:100470},{id:1623,count:4}]},
+    pass:s=>ok(s)&&s.includes('"mode":"tools"')&&s.includes('"assets":true')&&s.includes('"logout":true')},
+  {key:'extra:catalog-cut-sapphire',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['cut','{save}'],timeoutMs:120_000,
+    presetConfig:{position:{x:3269,z:3167,level:0},skills:{Crafting:20,Hitpoints:40},inventory:[],equipment:[],bank:[{id:1623,count:2},{id:1755,count:1}]},
+    pass:s=>ok(s)&&s.includes('"mode":"cut"')&&s.includes('"assets":true')&&s.includes('"logout":true')},
+  {key:'extra:remote-supply-producer',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['remote','{bot:b}','{bot:c}'],timeoutMs:180_000,
+    presetConfig:{position:{x:3269,z:3167,level:0},skills:{Crafting:20,Hitpoints:40},inventory:[],equipment:[],bank:[]},
+    companions:[{suffix:'b',preset:'fresh_lumbridge',presetConfig:{position:{x:3270,z:3167,level:0},skills:{Hitpoints:40},inventory:[],equipment:[],bank:[{id:995,count:50072}]}},
+      {suffix:'c',preset:'fresh_lumbridge',presetConfig:{position:{x:3269,z:3168,level:0},skills:{Hitpoints:40},inventory:[],equipment:[],bank:[{id:1739,count:2}]}}],
+    pass:s=>ok(s)&&s.includes('"case":"remote-supply-producer"')&&s.includes('"completed":2')&&s.includes('"fee":2')&&s.includes('"retainedReserve":50000')&&s.includes('"logoutsConfirmed":true')&&s.includes('LOGOUT logged-out logged-out logged-out')},
   {key:'extra:catalog-finite-producer',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['producer','{save}'],timeoutMs:120_000,
     presetConfig:{position:{x:3269,z:3167,level:0},skills:{Crafting:20,Hitpoints:40},bank:[{id:1607,count:13},{id:2357,count:13},{id:1592,count:1}]},
     pass:s=>ok(s)&&s.includes('"mode":"producer"')&&s.includes('"assets":true')&&s.includes('"logout":true')},
