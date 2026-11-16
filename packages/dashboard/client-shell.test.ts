@@ -1394,7 +1394,7 @@ test('explicit unknown name-price tables and visible variants block legacy name 
 test('restock and the fleet coin summary expose incomplete valuation',()=>{
  const start=shell.indexOf('  let pkKits='),end=shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)");
  const code=shell.slice(start,end),S={economy:{itemPricesByName:{},itemValues:{Ring:9999}}};
- const t=new Function('localStorage','fetch','asset','E','icon','nf','price',`${code};return {setupPanel,set:()=>{pkKits=[{name:'kit',worn:{},carried:[['Ring',2]]}];setupKit='kit';}};`)
+ const t=new Function('localStorage','fetch','asset','E','icon','nf','price',`${code};return {setupPanel,set:()=>{pkKits=[{name:'kit',worn:{},carried:[['Ring',2,1]]}];setupKit='kit';}};`)
   ({getItem:()=>null},()=>new Promise(()=>{}),String,String,()=>'',String,pricing(S).price);
  t.set();expect(t.setupPanel({equipment:[],inventory:[],bank:[]})).toContain('≈ 0 gp + 1 unpriced');
  const summary=shell.split('\n').find(l=>l.startsWith('    if(!b){const fleet='))!;
@@ -1964,8 +1964,8 @@ test('food: the healing items in the pack, most first',()=>{
 test('Inventory Setups: worn slots green, red or yellow against the kit, and the pack list against the kit',()=>{
  const code=shell.slice(shell.indexOf("  // Inventory Setups (RuneLite's) in the Equipment tab:"),shell.indexOf("  // Screenshot (RuneLite's Screenshot plugin)"));
  const t=new Function('localStorage','fetch','asset','E','icon','nf',`${code};return {setupSlot,setupPanel,set:(k,s)=>{pkKits=k;setupKit=s;}};`)({getItem:()=>null},()=>new Promise(()=>{}),(n:string)=>n,String,(n:string)=>`[${n}]`,String);
- t.set([{name:'tribrid',worn:{0:['Rune full helm',1],13:['Rune arrow',300]},carried:[['Shark',18],['Blood rune',100]]}],'tribrid');
- const b={equipment:[{slot:0,name:'Rune full helm',count:1},{slot:13,name:'Rune arrow',count:120},{slot:5,name:'Wooden shield',count:1}],inventory:[{name:'Shark',count:1},{name:'Shark',count:1},{name:'Blood rune',count:100}]};
+ t.set([{name:'tribrid',worn:{0:['Rune full helm',1,1163],13:['Rune arrow',300,892]},carried:[['Shark',18,385],['Blood rune',100,565]]}],'tribrid');
+ const b={equipment:[{id:1163,slot:0,name:'Rune full helm',count:1},{id:892,slot:13,name:'Rune arrow',count:120},{id:1171,slot:5,name:'Wooden shield',count:1}],inventory:[{id:385,name:'Shark',count:1},{id:385,name:'Shark',count:1},{id:565,name:'Blood rune',count:100}]};
  expect(t.setupSlot(b,0,b.equipment[0]).cls).toBe(' setup-ok');
  expect(t.setupSlot(b,13,b.equipment[1])).toEqual({cls:' setup-miss',tip:' · kit wants Rune arrow × 300'});
  expect(t.setupSlot(b,5,b.equipment[2]).cls).toBe(' setup-extra');
@@ -1974,7 +1974,7 @@ test('Inventory Setups: worn slots green, red or yellow against the kit, and the
  expect(html).toContain('setup-row setup-short');expect(html).toContain('<span>2 / 18</span>');
  expect(html).toContain('setup-row setup-have');expect(html).toContain('<span>100 / 100</span>');
  // With an observed bank, each row gives the bank count; short when pack and bank together miss the kit.
- const withBank=t.setupPanel({...b,bank:[{name:'Shark',count:10}]});
+ const withBank=t.setupPanel({...b,bank:[{id:385,name:'Shark',count:10}]});
  expect(withBank).toContain('2 / 18 <small class="setup-bank setup-bank-short">bank 10</small>');
  expect(withBank).toContain('100 / 100 <small class="setup-bank">bank 0</small>');
  // The restock line: 18 sharks less 2 in the pack and 10 in the bank leave 6.

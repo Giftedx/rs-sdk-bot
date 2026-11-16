@@ -186,9 +186,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!spellbookData||!Array.isArray(b?.inventory))return [];
     const have=n=>b.inventory.filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipment?.find(e=>e.slot===3)?.name;
     const free=new Set(Object.entries(spellbookData.staffs||{}).filter(([,s])=>Array.isArray(s)&&s.includes(weapon)).map(([r])=>r)),mg=curLevel(b,'Magic');
-    return spellbookData.spells.map(([name,lv,runes])=>({name,lv,casts:Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c))),can:!Number.isFinite(mg)||mg>=lv})).filter(s=>s.casts>0&&Number.isFinite(s.casts));
+    return spellbookData.spells.map(([name,lv,runes])=>({name,lv,casts:Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c))),can:Number.isFinite(mg)?mg>=lv:null})).filter(s=>s.casts>0&&Number.isFinite(s.casts));
   }
-  const teleLine=b=>{const l=teleCasts(b);return l.length?'<p class="tele-casts" title="'+E(l.map(s=>s.name+' ×'+s.casts+(s.can?'':' (Magic '+s.lv+' needed)')).join(', '))+'">Tele: '+l.map(s=>'<span class="'+(s.can?'':'tele-low')+'" title="'+E(s.name+' · Magic '+s.lv+(s.can?'':' (too low)'))+'">'+E(s.name.slice(0,3))+' ×'+s.casts+'</span>').join(' · ')+'</p>':'';};
+  const teleLine=b=>{const l=teleCasts(b);return l.length?'<p class="tele-casts" title="'+E(l.map(s=>s.name+' ×'+s.casts+(s.can==null?' (Magic level not reported)':s.can?'':' (Magic '+s.lv+' needed)')).join(', '))+'">Tele: '+l.map(s=>'<span class="'+(s.can===true?'':'tele-low')+'" title="'+E(s.name+' · Magic '+s.lv+(s.can==null?' (Magic level not reported)':s.can?'':' (too low)'))+'">'+E(s.name.slice(0,3))+' ×'+s.casts+'</span>').join(' · ')+'</p>':'';};
   // Items kept on death (RuneLite's Items Kept on Death): in the Wilderness, the 3 items the account keeps (pvpState,
   // green) and the items of value it loses (red), on the worn items and the pack. deathMarks gives the kept units by name
   // (pvpState counts each unit of a stack once); deathCls uses them up by the stack's count, in the order the cells are
@@ -360,24 +360,32 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // scripts/pk-kits.ts). The doll marks each slot green when the account wears the kit's item, red when it does not, and
   // yellow when it wears something the kit leaves empty; the list below shows what the kit carries against the pack.
   let pkKits=null,setupKit=(()=>{try{return localStorage.getItem('atlas-setup-kit')||'';}catch{return '';}})();
-  fetch(asset('pk-kits.json')).then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j))pkKits=j;},()=>{});
+  fetch(asset('pk-kits.json?v=2')).then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j))pkKits=j;},()=>{});
   const setupOf=()=>pkKits?.find(k=>k.name===setupKit)||null;
-  const sameItem=(it,want)=>!!it&&String(it.name).toLowerCase()===String(want[0]).toLowerCase()&&(it.count||1)>=want[1];
-  const setupSlot=(b,id,it)=>{const k=setupOf();if(!k||!b?.equipment)return {cls:'',tip:''};const want=k.worn[id];if(want)return sameItem(it,want)?{cls:' setup-ok',tip:' · kit: '+want[0]}:{cls:' setup-miss',tip:' · kit wants '+want[0]+(want[1]>1?' × '+want[1]:'')};return it?{cls:' setup-extra',tip:' · the kit leaves this slot empty'}:{cls:'',tip:''};};
+  const setupId=want=>Number.isSafeInteger(want?.[2])&&want[2]>=0?want[2]:null;
+  const setupItem=want=>setupId(want)==null?{name:want[0]}:{id:want[2],name:want[0]};
+  // A legacy name-only requirement cannot distinguish variants. Bank notes use their canonical item; worn and pack items use their raw ID.
+  const setupIdentity=(it,want,bank=false)=>{const need=setupId(want);if(need==null)return null;if(!it)return false;
+    const own=k=>Object.hasOwn(it,k),has=own('id')||own('baseId'),id=bank&&own('baseId')?it.baseId:it.id;
+    if(it.unconfirmed)return null;
+    if(has)return Number.isSafeInteger(id)&&id>=0?id===need:null;
+    return String(it.name).toLowerCase()===String(want[0]).toLowerCase()?null:false;
+  };
+  const sameItem=(it,want)=>{const match=setupIdentity(it,want);return match==null?null:match&&(it.count||1)>=want[1];};
+  const setupCount=(items,want,bank=false)=>{if(!Array.isArray(items)||setupId(want)==null)return null;let count=0,unknown=false;for(const it of items){if(!it)continue;const match=setupIdentity(it,want,bank);if(match===true)count+=it.count||1;else if(match==null)unknown=true;}return unknown?null:count;};
+  const setupSlot=(b,id,it)=>{const k=setupOf();if(!k||!b?.equipment||b.equipmentObserved===false)return {cls:'',tip:''};const want=k.worn[id];if(want){const match=sameItem(it,want);return match==null?{cls:'',tip:' · kit match unverified: item ID not reported'}:match?{cls:' setup-ok',tip:' · kit: '+want[0]}:{cls:' setup-miss',tip:' · kit wants '+want[0]+(want[1]>1?' × '+want[1]:'')};}return it?{cls:' setup-extra',tip:' · the kit leaves this slot empty'}:{cls:'',tip:''};};
   function setupPanel(b){
     if(!pkKits?.length)return '';
     const k=setupOf(),opts='<option value="">No setup</option>'+pkKits.map(x=>`<option value="${E(x.name)}" ${x.name===setupKit?'selected':''}>${E(x.name)}</option>`).join('');
     let rows='';
     if(k&&b){
-      const have=n=>(b.inventory||[]).filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0);
-      // The bank's count of each kit item, for a restock (b.bank is the last observed bank).
-      const banked=n=>Array.isArray(b.bank)?b.bank.filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0):null;
-      const differ=Object.entries(k.worn).filter(([id,w])=>!sameItem(b.equipment?.find(e=>e.slot===Number(id)),w)).length;
-      rows='<p class="game-muted">'+(b.equipment?differ?differ+' worn slot'+(differ===1?'':'s')+' differ from the kit':'Every worn slot matches the kit':'Equipment is not reported.')+'</p>'+k.carried.map(([n,c])=>{const h=have(n),bk=banked(n);return `<div class="setup-row ${h>=c?'setup-have':'setup-short'}" title="${E(n)}: ${nf(h)} held, ${nf(c)} in the kit${bk==null?'':', '+nf(bk)+' in the bank'}">${icon(n,24)}<span>${E(n)}</span><span>${nf(h)} / ${nf(c)}${bk==null?'':` <small class="setup-bank${h+bk<c?' setup-bank-short':''}">bank ${nf(bk)}</small>`}</span></div>`;}).join('');
+      const matches=Object.entries(k.worn).map(([id,w])=>sameItem(b.equipment?.find(e=>e.slot===Number(id)),w)),differ=matches.filter(x=>x===false).length,unknown=matches.filter(x=>x==null).length;
+      rows='<p class="game-muted">'+(!b.equipment||b.equipmentObserved===false?'Equipment is not reported.':unknown?unknown+' worn slot'+(unknown===1?'':'s')+' unverified: item IDs not reported'+(differ?' · '+differ+' differ':''):differ?differ+' worn slot'+(differ===1?'':'s')+' differ from the kit':'Every worn slot matches the kit')+'</p>'+k.carried.map(w=>{const [n,c]=w,h=setupCount(b.inventory,w),bk=setupCount(b.bank,w,true);return `<div class="setup-row ${h==null?'game-muted':h>=c?'setup-have':'setup-short'}" title="${E(n)}: ${h==null?'unknown':nf(h)} held, ${nf(c)} in the kit${Array.isArray(b.bank)?', '+(bk==null?'unknown':nf(bk))+' in the bank':''}">${icon(setupItem(w),24)}<span>${E(n)}</span><span>${h==null?'?':nf(h)} / ${nf(c)}${!Array.isArray(b.bank)?'':` <small class="setup-bank${h!=null&&bk!=null&&h+bk<c?' setup-bank-short':''}">bank ${bk==null?'?':nf(bk)}</small>`}</span></div>`;}).join('');
+      if([...Object.values(k.worn),...k.carried].some(w=>setupId(w)==null))rows+='<p class="game-muted">Item IDs are not reported for this setup. Matches remain unverified.</p>';
     }
     // Restock: what the pack and the bank together miss for the kit, with the cost at the GE price (itemValues).
-    if(k&&b&&Array.isArray(b.bank)){const unit=n=>typeof price==='function'?price(n)?.value??null:null,miss=k.carried.map(([n,c])=>{const own=(b.inventory||[]).filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0)+b.bank.filter(i=>i&&String(i.name).toLowerCase()===n.toLowerCase()).reduce((t,i)=>t+(i.count||1),0);return [n,Math.max(0,c-own)];}).filter(([,m])=>m>0);
-      if(miss.length){const cost=miss.reduce((t,[n,m])=>t+(unit(n)??0)*m,0),unpriced=miss.filter(([n])=>unit(n)==null).length;rows+='<p class="setup-restock" title="'+E(miss.map(([n,m])=>nf(m)+' '+n+(unit(n)!=null?' at '+nf(Math.round(unit(n)))+' gp':' (no GE price)')).join(', '))+'">Restock: '+E(miss.slice(0,3).map(([n,m])=>nf(m)+' '+n).join(', '))+(miss.length>3?' +'+(miss.length-3):'')+' · ≈ '+nf(Math.round(cost))+' gp'+(unpriced?' + '+unpriced+' unpriced':'')+'</p>';}}
+    if(k&&b&&Array.isArray(b.bank)){const unit=w=>typeof price==='function'?price(setupItem(w))?.value??null:null,stock=k.carried.map(w=>{const pack=setupCount(b.inventory,w),bank=setupCount(b.bank,w,true);return {w,missing:pack==null||bank==null?null:Math.max(0,w[1]-pack-bank)};}),miss=stock.filter(x=>x.missing>0),unknown=stock.filter(x=>x.missing==null).length;
+      if(miss.length){const cost=miss.reduce((t,x)=>t+(unit(x.w)??0)*x.missing,0),unpriced=miss.filter(x=>unit(x.w)==null).length;rows+='<p class="setup-restock" title="'+E(miss.map(x=>nf(x.missing)+' '+x.w[0]+(unit(x.w)!=null?' at '+nf(Math.round(unit(x.w)))+' gp':' (no GE price)')).join(', '))+'">Restock: '+E(miss.slice(0,3).map(x=>nf(x.missing)+' '+x.w[0]).join(', '))+(miss.length>3?' +'+(miss.length-3):'')+' · ≈ '+nf(Math.round(cost))+' gp'+(unpriced?' + '+unpriced+' unpriced':'')+'</p>';}if(unknown)rows+='<p class="game-muted">Restock: '+unknown+' item counts unknown; exact item IDs are needed.</p>';}
     return `<div class="setup"><label>Setup <select data-setup-kit aria-label="Inventory setup">${opts}</select></label>${rows}</div>`;
   }
   // Screenshot (RuneLite's Screenshot plugin): the 3D view of the watched account is captured on a level-up, a death and
@@ -709,8 +717,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const failRows=()=>(S?.bots||[]).filter(x=>!x.practice&&!x.inWorld&&x.lastRes&&x.lastRes.ok===false&&!x.lastRes.died&&x.pos&&Number.isInteger(x.pos.x)&&Date.now()-x.lastRes.at<86_400_000).map(x=>({name:x.name,x:x.pos.x,z:x.pos.z,l:x.pos.level||0,reason:failReason(x.lastRes.text),text:String(x.lastRes.text||''),at:x.lastRes.at}));
   // NPC finder: type an NPC name in the World plugin; its spawns show in pink on the minimap and in the 3D view
   // (client-assets/npc-spawns.json: every NPC of the pinned server by name, with its combat levels and spawn tiles).
-  let npcSpawns=null,finderQuery='',finderPick=null;
-  const loadSpawns=()=>{if(npcSpawns===null){npcSpawns=[];fetch(asset('npc-spawns.json')).then(r=>r.ok?r.json():[]).then(j=>{if(Array.isArray(j)){npcSpawns=j;if(typeof selectedPlugin!=='undefined'&&selectedPlugin==='world'){finderResults();const tb=body.querySelector('.train-box');if(tb)tb.innerHTML=trainInner();}}},()=>{});}};
+  let npcSpawns=null,npcSpawnsPending=false,npcSpawnsError='',finderQuery='',finderPick=null;
+  const paintSpawns=()=>{if(typeof selectedPlugin!=='undefined'&&selectedPlugin==='world'){finderResults();const tb=body.querySelector('.train-box');if(tb)tb.innerHTML=trainInner();}};
+  const loadSpawns=(retry=false)=>{if(npcSpawnsPending||npcSpawns!==null||npcSpawnsError&&!retry)return;npcSpawnsPending=true;npcSpawnsError='';
+    fetch(asset('npc-spawns.json')).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();}).then(j=>{if(!Array.isArray(j))throw Error('Invalid NPC spawn data');npcSpawns=j;}).catch(e=>{npcSpawnsError=String(e?.message||e);}).finally(()=>{npcSpawnsPending=false;paintSpawns();});paintSpawns();
+  };
+  const spawnStatus=()=>npcSpawnsPending?'<span class="xp-muted" role="status">Loading NPC spawns…</span>':npcSpawnsError?'<span class="xp-muted" role="status" title="'+E(npcSpawnsError)+'">NPC spawns unavailable.</span> <button class="xp-reset" data-finder-retry aria-label="Retry NPC data">Retry</button>':'';
   const spawnTiles=row=>{const t=[];for(let i=0;i+2<(row?.[3]?.length||0);i+=3)t.push({x:row[3][i],z:row[3][i+1],l:row[3][i+2]});return t;};
   // finderSafe (a Combat training row): the pick keeps only its spawns outside the Wilderness, for the nearest spawn and the pins.
   let finderSafe=false;
@@ -758,7 +770,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       const p=x.live||x.pos;if(!x.inWorld||!p||!Number.isInteger(p.x)||!Number.isInteger(p.z)){idleSince.delete(x.name);continue;}
       {const i=idleSince.get(x.name);if(x.action!=='idle')idleSince.delete(x.name);else if(!i||i.x!==p.x||i.z!==p.z||i.l!==(p.level||0))idleSince.set(x.name,{x:p.x,z:p.z,l:p.level||0,at:Date.now()});}
       const t=trails.get(x.name)||[],last=t[t.length-1];
-      if(last&&last.x===p.x&&last.z===p.z)continue;
+      if(last&&last.x===p.x&&last.z===p.z&&last.l===(p.level||0))continue;
       if(last&&(Math.abs(last.x-p.x)>40||Math.abs(last.z-p.z)>40||last.l!==(p.level||0)))t.length=0;
       t.push({x:p.x,z:p.z,l:p.level||0});if(t.length>60)t.shift();trails.set(x.name,t);
     }
@@ -923,7 +935,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return out.sort((a,c)=>c.xp-a.xp).slice(0,5);}
   // The box starts the spawn load. The wrapper stays on the page, so loadSpawns can fill it when the data arrives.
   function trainBox(){if(typeof loadSpawns==='function')loadSpawns();return '<div class="train-box">'+trainInner()+'</div>';}
-  function trainInner(){const rows=trainRows();if(!rows.length)return '';return '<div class="xp-box"><div class="xp-head"><span>Combat training</span><span class="xp-muted">best XP/h now</span></div>'+rows.map(r=>'<button class="finder-row" data-finder-pick="'+E(r.name)+'" data-finder-safe title="'+E(r.name+': about '+nf(Math.round(r.kills))+' kills an hour; it hits up to '+r.max)+'"><span>'+E(r.name)+'</span><small>'+nf(Math.round(r.xp))+' XP/h</small></button>').join('')+'</div>';}
+  function trainInner(){const rows=trainRows();if(!rows.length)return typeof spawnStatus==='function'?spawnStatus():'';return '<div class="xp-box"><div class="xp-head"><span>Combat training</span><span class="xp-muted">best XP/h now</span></div>'+rows.map(r=>'<button class="finder-row" data-finder-pick="'+E(r.name)+'" data-finder-safe title="'+E(r.name+': about '+nf(Math.round(r.kills))+' kills an hour; it hits up to '+r.max)+'"><span>'+E(r.name)+'</span><small>'+nf(Math.round(r.xp))+' XP/h</small></button>').join('')+'</div>';}
   function finderList(){
     if(finderPlayer){const p=playerRow(),c=miniView.PX?{x:miniView.cx,z:miniView.cz}:null,d=p&&c?Math.max(Math.abs(p[1]-c.x),Math.abs(p[2]-c.z)):null;
       return '<div class="finder-pick"><b>'+E(p?String(p[0]):finderPlayer)+'</b> <span class="xp-muted">'+(p?'combat '+(p[4]??'?')+' · '+p[1]+', '+p[2]+(d!=null?' · '+nf(d)+' tiles away':''):'not online')+'</span>'+(p?'<button class="xp-reset" data-finder-go="'+p[1]+','+p[2]+'" title="Move the camera there (2D)">Go</button><button class="xp-reset" data-lookup="'+E(String(p[0]))+'">Hiscores</button>':'')+'<button class="xp-reset" data-finder-clear>Clear</button></div>';}
@@ -931,11 +943,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(r){const tiles=spawnTiles(r),c=miniView.PX?{x:miniView.cx,z:miniView.cz}:null,best=c?tiles.map(t=>({...t,d:Math.max(Math.abs(t.x-c.x),Math.abs(t.z-c.z))})).sort((a,b)=>a.d-b.d)[0]:null;
       return '<div class="finder-pick"><b>'+E(r[0])+'</b> <span class="xp-muted">'+combatText(r)+' · '+tiles.length+(tiles.length===1?' spawn':' spawns')+'</span>'+(best?'<button class="xp-reset" data-finder-go="'+best.x+','+best.z+'" title="Move the camera there (2D)">Nearest: '+best.x+', '+best.z+' · '+nf(best.d)+' tiles</button>':'')+'<button class="xp-reset" data-finder-clear>Clear</button>'+(teleText(tiles)?'<small class="finder-tele">'+E(teleText(tiles))+'</small>':'')+(thieveText(r[0])?'<small class="finder-tele">'+E(thieveText(r[0]))+'</small>':'')+(meleeHitText(r[0])?'<small class="finder-tele">'+E(meleeHitText(r[0]))+'</small>':'')+(npcHitsText(r[0])?'<small class="finder-tele">'+E(npcHitsText(r[0]))+'</small>':'')+(killXpText(r[0])?'<small class="finder-tele">'+E(killXpText(r[0]))+'</small>':'')+(lootText(r[0])?'<small class="finder-tele">'+E(lootText(r[0]))+'</small>':'')+(hourText(r[0])?'<small class="finder-tele">'+E(hourText(r[0]))+'</small>':'')+'</div>';}
     // While the NPC list loads, the players (from the roster, already here) still show.
-    if(npcSpawns!==null&&!npcSpawns.length&&!playerMatches(finderQuery).length)return '<span class="xp-muted">Loading NPC spawns…</span>';
+    const status=typeof spawnStatus==='function'?spawnStatus():'';
     const m=finderMatches(finderQuery),pm=playerMatches(finderQuery);
     const npcs=m.map(x=>'<button class="finder-row" data-finder-pick="'+E(x[0])+'"><span>'+E(x[0])+'</span><small>'+combatText(x)+' · '+x[3].length/3+'</small></button>').join('');
     const players=pm.map(r=>'<button class="finder-row finder-player" data-finder-player="'+E(String(r[0]))+'"><span>'+E(String(r[0]))+'</span><small>player · combat '+(r[4]??'?')+'</small></button>').join('');
-    return npcs||players?npcs+players:finderQuery.trim().length>=2?'<span class="xp-muted">No NPC or online player by that name.</span>':'';
+    return npcs||players||status?npcs+players+status:finderQuery.trim().length>=2?'<span class="xp-muted">No NPC or online player by that name.</span>':'';
   }
   function finderResults(){const el=body.querySelector('.finder-results');if(el)el.innerHTML=finderList();}
   function finderBox(){return '<div class="xp-box"><div class="xp-head"><span>NPC and player finder</span><span class="xp-muted">in pink</span></div><input class="finder-input" type="search" data-finder value="'+E(finderQuery)+'" placeholder="NPC or player name" aria-label="Find an NPC or a player"><div class="finder-results">'+finderList()+'</div></div>';}
@@ -1368,7 +1380,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // map turns. A fleet bot is green (dim when it does not play). Another player by class (RuneLite's minimap
   // plugin colours): a ranked rival is blue, a bot farm account is grey, any other player is white. The sets are made
   // once for each snapshot.
-  function minimap(){const c=hud.querySelector('.game-minimap canvas');if(!c||!S)return;const g=c.getContext('2d'),W=c.width,H=c.height,m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};const b=account(),bp=b?.live||b?.pos,markers=mapWorld();hud.querySelector('.game-minimap')?.setAttribute('aria-label',markers.practice?'Practice minimap':'Minimap');
+  function minimap(){const c=hud.querySelector('.game-minimap canvas');if(!c||!S)return;const g=c.getContext('2d'),W=c.width,H=c.height,m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};const b=account(),bp=b?.live||b?.pos,floor=bp?.level||0,markers=mapWorld();hud.querySelector('.game-minimap')?.setAttribute('aria-label',markers.practice?'Practice minimap':'Minimap');
     const c3=typeof mode!=='undefined'&&mode==='3d'&&window.atlasCam3d&&$('#rsw')?.getAttribute('src')?window.atlasCam3d:null,p=c3&&(!bp||window.atlasFreeCamera||window.atlasFollowOther)?{x:c3.x,z:c3.z}:bp,angle=c3?(2047-c3.yaw)*Math.PI/1024:0;
     const D=minimap,PX=p?D.zoom||4:Math.min(W/(m.w*m.scale),H/(m.h*m.scale)),cx=p?p.x:m.x0+m.w*m.scale/2,cz=p?p.z:m.z0+m.h*m.scale/2;miniView={cx,cz,PX,angle};
     const compass=hud.querySelector('.minimap-compass');if(compass)compass.style.transform=angle?`rotate(${angle*180/Math.PI}deg)`:'';
@@ -1389,14 +1401,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       for(const [k,n] of cell){if(n<5)continue;const [gx,gz]=k.split(',').map(Number),x0=gx*8,z0=gz*8,pts=[corner(x0,z0),corner(x0+8,z0),corner(x0+8,z0+8),corner(x0,z0+8)];g.fillStyle='rgba(255,40,0,'+Math.min(0.5,0.12+n*0.02)+')';g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();const c=corner(x0+4,z0+4);hits.push([Math.round(c[0]),Math.round(c[1]),n+' players here']);}}
     const fleetNames=new Set(markers.bots.map(o=>o.name.toLowerCase()));// In the Wilderness, a player who can attack the watched account now (PvP Tools) is a red dot.
     const attackers=new Set(((b&&b.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b)?.threats:null)||[]).map(t=>String(t.name).toLowerCase()));
-    for(const [n,qx,qz] of markers.roster){const low=String(n).toLowerCase();if(fleetNames.has(low))continue;if(attackers.has(low))dot(qx,qz,'#ff2020','#b00000',n,2);else if(D.rival.has(low))dot(qx,qz,'#19b3ff','#0f84c4',n,2);else if(D.farm.has(low))dot(qx,qz,'#9a9a9a','#757575',n,2);else dot(qx,qz,'#fff','#d2d2d2',n,2);}
-    for(const o of markers.bots){const q=o.live||o.pos;if(!q||(q.z>6400)!==(cz>6400)||o===b)continue;const[cl]=st(o);if(cl==='on')dot(q.x,q.z,'#2bff2b','#1fc21f',o.name,3);else dot(q.x,q.z,'#3d8a33','#2c6625',o.name,3);}
+    for(const [n,qx,qz,l] of markers.roster){if((l||0)!==floor)continue;const low=String(n).toLowerCase();if(fleetNames.has(low))continue;if(attackers.has(low))dot(qx,qz,'#ff2020','#b00000',n,2);else if(D.rival.has(low))dot(qx,qz,'#19b3ff','#0f84c4',n,2);else if(D.farm.has(low))dot(qx,qz,'#9a9a9a','#757575',n,2);else dot(qx,qz,'#fff','#d2d2d2',n,2);}
+    for(const o of markers.bots){const q=o.live||o.pos;if(!q||(q.level||0)!==floor||(q.z>6400)!==(cz>6400)||o===b)continue;const[cl]=st(o);if(cl==='on')dot(q.x,q.z,'#2bff2b','#1fc21f',o.name,3);else dot(q.x,q.z,'#3d8a33','#2c6625',o.name,3);}
     // Death recap: the watched account's death tile, while its recap is open.
-    const dt=typeof recap!=='undefined'&&recap.state==='ok'&&b&&recap.name===b.name?recap.data?.pos:null;if(dt&&(dt.z>6400)===(cz>6400))dot(dt.x,dt.z,'#ff2020','#a00000','Death tile',3);
+    const dt=typeof recap!=='undefined'&&recap.state==='ok'&&b&&recap.name===b.name?recap.data?.pos:null;if(dt&&(dt.level||0)===floor&&(dt.z>6400)===(cz>6400))dot(dt.x,dt.z,'#ff2020','#a00000','Death tile',3);
     // Position trail on the minimap: each of our accounts' last places, a thin green line.
-    if(p&&typeof hl!=='undefined'&&hl.trail&&typeof trails!=='undefined'){g.strokeStyle='#00c000';g.lineWidth=1;const tp=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const t of trails.values()){if(t.length<2)continue;g.beginPath();t.forEach((q,i)=>{const [x,y]=tp(q.x,q.z);if(i)g.lineTo(x,y);else g.moveTo(x,y);});g.stroke();}}
+    if(p&&typeof hl!=='undefined'&&hl.trail&&typeof trails!=='undefined'){g.strokeStyle='#00c000';g.lineWidth=1;const tp=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const t of trails.values()){if(t.length<2)continue;g.beginPath();let drawing=false;for(const q of t){if((q.l||0)!==floor||(q.z>6400)!==(cz>6400)){drawing=false;continue;}const [x,y]=tp(q.x,q.z);if(drawing)g.lineTo(x,y);else g.moveTo(x,y);drawing=true;}g.stroke();}}
     // Multi-Lines on the minimap: the red multi-combat edges near the minimap's centre, turned and scaled as the dots are.
-    if(p&&typeof hl!=='undefined'&&hl.multi&&typeof multiLines!=='undefined'&&multiLines){g.strokeStyle='#ff0000';g.lineWidth=1;const px=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const [x0,z0,x1,z1,l] of multiLines){if(l!==(b?.pos?.level||0))continue;const k=clipLine(x0,z0,x1,z1,cx,cz,80);if(!k)continue;const a=px(k[0],k[1]),c=px(k[2],k[3]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c[0],c[1]);g.stroke();}}
+    if(p&&typeof hl!=='undefined'&&hl.multi&&typeof multiLines!=='undefined'&&multiLines){g.strokeStyle='#ff0000';g.lineWidth=1;const px=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const [x0,z0,x1,z1,l] of multiLines){if(l!==floor)continue;const k=clipLine(x0,z0,x1,z1,cx,cz,80);if(!k)continue;const a=px(k[0],k[1]),c=px(k[2],k[3]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c[0],c[1]);g.stroke();}}
     // Ground markers, failure markers and the NPC finder's spawns on the minimap.
     const mp=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [Math.round(OX+dx*cos-dy*sin),Math.round(OY+dx*sin+dy*cos)];},sameSide=qz=>(qz>6400)===(cz>6400);
     if(typeof hl!=='undefined'&&hl.marks&&typeof marks!=='undefined'){const s=Math.max(3,Math.round(PX));const floor=bp?.level||0;for(const m of marks){if(!sameSide(m.z)||(m.l||0)!==floor)continue;const [x,y]=mp(m.x,m.z);if(x<-s||y<-s||x>W+s||y>H+s)continue;g.strokeStyle=m.c||'#ffff00';g.lineWidth=1;g.strokeRect(x-(s>>1)+0.5,y-(s>>1)+0.5,s,s);}}
@@ -1409,8 +1421,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
         // The map art already has the game's shop icons: a shop keeper is named under the pointer, with no mark of its own.
         if(k==='s')continue;g.fillStyle='#000';g.beginPath();g.arc(x+0.5,y+0.5,3.5,0,7);g.fill();g.fillStyle=k==='t'?(can===false?'#24407a':'#3f7fff'):k==='p'?'#00d0d0':can===false?'#e02020':'#2bd32b';if(k==='a')g.fillRect(x-2,y-2,5,5);else{g.beginPath();g.arc(x+0.5,y+0.5,2.5,0,7);g.fill();}}}
 
-    if(typeof hl!=='undefined'&&hl.idle&&typeof idleRows==='function'){const shownBots=new Set(markers.bots.map(o=>o.name));for(const r of idleRows()){if(!sameSide(r.z)||!shownBots.has(r.name))continue;const [x,y]=mp(r.x,r.z);g.strokeStyle='#ffff00';g.lineWidth=1;g.beginPath();g.arc(x+0.5,y+0.5,5,0,7);g.stroke();hits.push([x,y,safeName(r.name)+' idle '+Math.floor(r.ms/60000)+'m']);}}
-    if(typeof hl!=='undefined'&&hl.fails&&typeof failSpots==='function')for(const f of failSpots())if(sameSide(f.z))dot(f.x,f.z,'#ff9900','#b36b00',(f.names.length>1?f.names.length+' failed':safeName(f.names[0])+' failed')+': '+f.reason,3);
+    if(typeof hl!=='undefined'&&hl.idle&&typeof idleRows==='function'){const shownBots=new Set(markers.bots.map(o=>o.name));for(const r of idleRows()){if((r.l||0)!==floor||!sameSide(r.z)||!shownBots.has(r.name))continue;const [x,y]=mp(r.x,r.z);g.strokeStyle='#ffff00';g.lineWidth=1;g.beginPath();g.arc(x+0.5,y+0.5,5,0,7);g.stroke();hits.push([x,y,safeName(r.name)+' idle '+Math.floor(r.ms/60000)+'m']);}}
+    if(typeof hl!=='undefined'&&hl.fails&&typeof failSpots==='function')for(const f of failSpots())if((f.l||0)===floor&&sameSide(f.z))dot(f.x,f.z,'#ff9900','#b36b00',(f.names.length>1?f.names.length+' failed':safeName(f.names[0])+' failed')+': '+f.reason,3);
     if(p){g.fillStyle='#fff';g.fillRect(OX-1,OY-2,3,3);}
     // Only the pixels of the map hole stay: the frame is a cut-out, and it does not hide the rest of the square.
     if(D.hole){g.globalCompositeOperation='destination-in';g.drawImage(D.hole,0,0);g.globalCompositeOperation='source-over';}}
@@ -2270,6 +2282,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   hud.addEventListener('click',e=>{const dth=e.target.closest('.infobox[data-death]');if(dth){loadRecap(dth.dataset.death);showPlugin('activity');return;}const f=e.target.closest('.infobox[data-xp-focus]');if(f){pick(f.dataset.xpFocus);}});
   body.addEventListener('input',e=>{if(e.target.matches?.('[data-finder]')){finderQuery=e.target.value.slice(0,40);finderPick=null;finderPlayer=null;loadSpawns();finderResults();overlaySync(true);minimap();}});
   body.addEventListener('focusin',e=>{if(e.target.matches?.('[data-finder]'))loadSpawns();});
+  body.addEventListener('click',e=>{if(e.target.closest('[data-finder-retry]'))loadSpawns(true);});
   body.addEventListener('click',e=>{const bp=e.target.closest('[data-best-pin]');if(bp){const b=account(),k=b?.skills?.find(x=>x.name===calcSkill),s=k?bestSpot(b,calcSkill,window.atlasXp.levelForXp(k.xp)):null;if(s){const key='best|'+s.name;sourcePin=sourcePin?.key===key?null:{key,label:s.name,tip:s.name+' (level '+s.level+')',tiles:s.tiles};finderPick=null;finderPlayer=null;overlaySync(true);minimap();refreshXp();if(sourcePin)toast('Shown in pink on the minimap and in the 3D view.');}return;}const pin=e.target.closest('[data-src-pin]');if(pin&&geOpen){const j=Number(pin.dataset.srcPin),src=itemSourcesData?.[geOpen]?.[j];if(src){const key=geOpen+'|'+j;sourcePin=sourcePin?.key===key?null:{key,label:geOpenName+': '+src[1].replace(/ ·.*$/,''),tip:geOpenName+' · '+src[1],tiles:flatTiles(src[2])};finderPick=null;finderPlayer=null;overlaySync(true);minimap();refreshGe();if(sourcePin)toast('Shown in pink on the minimap and in the 3D view.');}return;}
     if(e.target.closest('[data-ge-more]')){geLimit+=80;refreshGe();return;}
     const gs=e.target.closest('[data-ge-sort]');if(gs){geSort=gs.dataset.geSort;geLimit=80;refreshGe();return;}
