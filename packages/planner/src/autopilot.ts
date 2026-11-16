@@ -50,6 +50,9 @@ export type Template = {
     filler?: boolean;
     // A trainer whose script runs a fixed amount (not to its target level) repeats until the planner moves it on.
     repeats?: boolean;
+    // Declared finite makers only. Counts are input actions; outputPerUnit keeps native recipe multiples explicit.
+    production?: { output: string; outputPerUnit: number; maximum: number; inputs: Readonly<Record<string, number>>;
+        reserves?: Readonly<Record<string, number>>; resize: (units: number) => { args: string[]; env?: Record<string, string> } };
     // The stock a kit buy brings an item up to, by item name: more than the start minimum in `needs`, so one login
     // buys a batch (nature runes for many alchemy casts) and not one start's worth.
     batch?: Record<string, number>;
@@ -368,9 +371,9 @@ export type KitLine = { item: string; id: number; quantity: number; held: number
 // scripts/autopilot.ts raises when the account leaves a kit buy) and the holding before and after: a rerun of one buy
 // continues its order, and a later top-up from the same holding is a new order. Not a trainer: it does not repeat, and
 // the account takes the band on the pass after its RESULT.
-export function kitBuyTemplate(band: Template, account: string, lines: readonly KitLine[], seq = 0): Template {
+export function kitBuyTemplate(band: Template, account: string, lines: readonly KitLine[], seq = 0, cashReserve = KIT_CASH_RESERVE): Template {
     const step = (l: KitLine) => [KIT_BUY_SCRIPT, `ITEM_ID=${l.id}`, `QUANTITY=${l.quantity}`, ...(l.held > 0 ? [`EXPECTED_OWNED=${l.held}`] : []), `LIMIT_PRICE=${l.limit}`,
-        `CASH_RESERVE=${KIT_CASH_RESERVE}`, `ORDER_KEY=${account.toLowerCase()}-kit${seq}-${l.id}-${l.held}to${l.held + l.quantity}`, 'ORDER_MS=900000', 'FILL_WAIT_TICKS=200'].join(' ');
+        `CASH_RESERVE=${cashReserve}`, `ORDER_KEY=${account.toLowerCase()}-kit${seq}-${l.id}-${l.held}to${l.held + l.quantity}`, 'ORDER_MS=900000', 'FILL_WAIT_TICKS=200'].join(' ');
     return { id: KIT_BUY + band.id, family: 'kit-buy', script: 'scripts/chain.ts', args: lines.map(step), env: { ROUNDS: '1' }, role: 'supply',
         goal: `buy ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} on the Grand Exchange to ${band.goal}`, repeats: false, yields: () => [] };
 }
@@ -565,6 +568,18 @@ export function plan(inp: Inputs): Assignment[] {
         const gift = bridge ? Math.max(0, bridge.target - (localByName.get(lower!)?.items.coin ?? 0) - (earnedCoins.get(lower!) ?? 0)) : 0;
         return direct(item) + cash.route + own + gift;
     };
+    const finiteOrder = (t: Template, a: Acct): Template | null => {
+        const p=t.production;if(!p)return t;
+        const demand=Math.ceil(needed(norm(p.output),a.name)/p.outputPerUnit);
+        if(demand<1)return null;
+        const available=Math.min(...Object.entries(p.inputs).map(([item,n])=>Math.max(0,Math.floor(((a.items[norm(item)]??0)-(p.reserves?.[item]??0))/n))));
+        const units=Math.min(p.maximum,demand,available>0?available:Infinity),items={...t.needs?.items};
+        for(const [item,n]of Object.entries(p.inputs))items[item]=n*units+(p.reserves?.[item]??0);
+        const resized=p.resize(units);
+        const baseline=JSON.stringify([a.items[norm(p.output)]??0,...Object.keys(p.inputs).sort().map(item=>[norm(item),a.items[norm(item)]??0])]);
+        return{...t,...resized,env:{...t.env,...resized.env,AUTOPILOT_ORDER:baseline},repeats:false,
+            needs:{...t.needs,items},production:{...p,maximum:units}};
+    };
     const consume = (item: string, count: number, account?: string, bought = false) => {
         for (const d of demand) if (count > 0 && !d.budget && d.names.includes(item) && (account === undefined || d.account === account.toLowerCase())) {
             const used = Math.min(d.short, count); d.short -= used; count -= used;
@@ -577,7 +592,7 @@ export function plan(inp: Inputs): Assignment[] {
     };
     const reserveOutput = (t: Template, a: Acct) => {
         for (const f of t.yields(a)) {
-            const item = norm(f.item), count = Math.min(Math.max(0, f.perTick) * VALUE_TICKS, needed(item, a.name));
+            const item = norm(f.item), count = Math.min(t.production&&item===norm(t.production.output)?t.production.maximum*t.production.outputPerUnit:Math.max(0, f.perTick) * VALUE_TICKS, needed(item, a.name));
             const rest = consume(item, count);
             if (item === 'coin') earnedCoins.set(a.name.toLowerCase(), (earnedCoins.get(a.name.toLowerCase()) ?? 0) + rest);
             else if (rest > 0) fed.set(item, (fed.get(item) ?? 0) + rest);
@@ -606,7 +621,8 @@ export function plan(inp: Inputs): Assignment[] {
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
         const fare = wayCost(a.pos, placeOf(band), inp.mountain?.(a) ?? true);
         if (fare === null) continue;
-        const t = fare ? withFare(band, fare) : band;
+        const finite=finiteOrder(band,a);if(!finite)continue;
+        const t = fare ? withFare(finite, fare) : finite;
         if (t.quest && t.tier !== 'goal') {
             const lacks=kitLacks(a,t.needs,i=>!!inp.market?.[i]);
             if (questDone(a, t.quest.name) || lacks===null || coinShort(a,t.needs)>0) continue;
@@ -639,10 +655,10 @@ export function plan(inp: Inputs): Assignment[] {
             if (meets(a, t.needs) && usableNormalBones) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
             else if (usableNormalBones && fundable(a) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs), fare });
-            else if (coinShort(a, t.needs) === 0) {
+            else {
                 // Acquisition chooses the source, purchase batch and price after donor arbitration.
                 const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]);
-                if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
+                if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks, coins:coinShort(a,t.needs) });
             }
             continue;
         }
@@ -669,9 +685,9 @@ export function plan(inp: Inputs): Assignment[] {
             if (lacks?.length && (value > 0 || makesCoins(t, a))) cands.push({ account: a.name,
                 template: { ...t, id: FRAIL_FOOD_BUY_ID, batchFor: account => Object.fromEntries(t.needs!.frail!.of.map(item => [norm(item), (account.items[norm(item)] ?? 0) + FRAIL_FOOD_BUY])) },
                 value, resources: t.resources ?? [], reason: `prepares food for ${t.family}`, lacks, supply: { template: t, account: a, share: TRAIN_SHARE } });
-        } else if (coinShort(a,t.needs)===0) {
+        } else {
             const lacks=kitLacks(a,t.needs,i=>!!inp.market?.[i]),value=valueOf(t,a);
-            if(lacks?.length&&value>0)cands.push({account:a.name,template:t,value,resources:t.resources??[],reason:`prepares ${t.goal}`,lacks,
+            if(lacks?.length&&value>0)cands.push({account:a.name,template:t,value,resources:t.resources??[],reason:`prepares ${t.goal}`,lacks,coins:coinShort(a,t.needs),
                 supply:{template:t,account:a,share:1}});
         }
     }
@@ -701,6 +717,7 @@ export function plan(inp: Inputs): Assignment[] {
     const gaveItems = new Set<string>(), vacated = new Map<string, string>();
     const take = (c: Cand, value: number) => {
         if (c.lacks || (!c.goal && value <= 0) || done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        const selected=finiteOrder(c.template,localByName.get(c.account.toLowerCase())!);if(!selected)return;
         let fund: Funding | undefined;
         if (c.coins) {
             const from = [...pool].filter(([n, left]) => canGiveCoins(n, c.account) && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
@@ -711,8 +728,8 @@ export function plan(inp: Inputs): Assignment[] {
         pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
         const bridge = bridges.get(c.account.toLowerCase()), reason = bridge ? `${c.reason} for ${bridge.recipient}'s army kit, up to ${bridge.target} coins including donor reserve` : c.reason;
-        done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${reason}, funded ${c.coins} coins by ${fund.from}${c.fare ? `, ferry fare ${c.fare}` : ''}` : reason, resources: c.resources, ...(fund ? { fund } : {}) });
-        if (c.supply) reserveOutput(c.supply.template, c.supply.account);
+        done.set(c.account, { account: c.account, template: selected, value, reason: fund ? `${reason}, funded ${c.coins} coins by ${fund.from}${c.fare ? `, ferry fare ${c.fare}` : ''}` : reason, resources: c.resources, ...(fund ? { fund } : {}) });
+        if (c.supply) reserveOutput(c.supply.template.id===selected.id?selected:c.supply.template, c.supply.account);
         if (c.kit) reserveKit(c.account, c.kit);
     };
     // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
@@ -755,6 +772,30 @@ export function plan(inp: Inputs): Assignment[] {
         if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
+        const donorFor = (item: string, count: number) => stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= count
+            && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
+        // Fund the worker's own cash prerequisite first, then reobserve before acquiring its missing items.
+        // fundOrders parks the intended worker until this one owned transfer settles.
+        if(c.coins){
+            if(busy||far)return;
+            const mountain=inp.mountain?.(a)??true,toMeet=wayCost(a.pos,ARMY_BANK,mountain),fromMeet=wayCost(ARMY_BANK,placeOf(c.template),mountain);
+            // The cash transfer precedes the item trip. Its recipient can use that staged cash for the meeting
+            // fare, and must still retain the consumer's cash and return fare after the item arrives.
+            const canMeet=toMeet!==null&&fromMeet!==null;
+            const obtainable=(item:string,count:number)=>!!c.template.ownSupply?.includes(item)||!c.template.shopKit&&!!inp.market?.[item]||canMeet&&!!donorFor(item,count);
+            const lacks=kitLacks(a,c.template.needs,obtainable);
+            if(!lacks||lacks.some(l=>!l.of.some(item=>obtainable(item,l.count))))return;
+            const owned=canMeet&&lacks.some(l=>l.of.some(item=>!!donorFor(item,l.count)));
+            const detour=a.pos&&owned?Math.max(0,toMeet!+fromMeet!-(wayCost(a.pos,placeOf(c.template),mountain)??0)):0;
+            const coins=c.coins+detour;
+            const from=[...pool].filter(([name,left])=>!done.has(name)&&!gaveItems.has(name)&&left>=coins&&canGiveCoins(name,c.account)).sort((x,y)=>y[1]-x[1])[0]?.[0];
+            if(!from)return;
+            pool.set(from,pool.get(from)!-coins);gave.add(from);pool.delete(c.account);
+            done.set(c.account,{account:c.account,template:c.template,value:0,reason:`funds ${coins} coins before preparing ${c.template.id}`,resources:[],
+                fund:{from,to:c.account,coins,template:c.template.id,...(meetOf.get(c.account)?{meet:'ardougne' as const}:{})}});
+            return;
+        }
         if (step === 'buy' && c.template.shopKit) return;
         const own = (l: Lack) => l.of.some(i => !!c.template.ownSupply?.includes(i));
         const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
@@ -764,12 +805,13 @@ export function plan(inp: Inputs): Assignment[] {
             const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
             const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - held : 0) }; });
             const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
-            const free = coins - (c.template.keepCoins?.(a) ?? 0);
+            const keep = Math.max(c.template.keepCoins?.(a) ?? 0,...Object.entries(c.template.needs?.items??{}).filter(([item])=>norm(item)==='coin').map(([,count])=>count));
+            const free = coins - keep;
             const full = sized(true), start = sized(false), part = Math.floor((free - KIT_CASH_RESERVE) / (full[0]?.limit ?? 1));
             const frailFood = c.template.id === FRAIL_FOOD_BUY_ID;
             const lines = frailFood || price(full) + KIT_CASH_RESERVE <= free ? full
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
-            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
+            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             const purchaseResources=c.template.id===WEAPON.id||frailFood?c.resources:[];
             const reservePurchase=()=>{for(const r of purchaseResources)used.set(r,(used.get(r)??0)+1);reserveKit(c.account,lines);if(c.supply)reserveOutput(c.supply.template,c.supply.account);};
@@ -794,10 +836,7 @@ export function plan(inp: Inputs): Assignment[] {
         if (step === 'buy') return;
         // An item order meets at the Ardougne north bank (scripts/autopilot.ts itemOrder). A party of this side whose
         // place is known must have a way there and hold the fare of that way. A party with no known place has no rule.
-        const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
         if (!reachesMeet(c.account)) return;
-        const donorFor = (item: string, count: number) => stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= count
-            && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
         // A market alternative can be unaffordable while a donor holds another complete kit. Reconsider the choice
         // against this pass's reachable, unreserved stock, including donors already taken by another account.
         const lacks = kitLacks(a, c.template.needs, (item, count) => !!donorFor(item, count)) ?? [];
@@ -888,22 +927,28 @@ export function plan(inp: Inputs): Assignment[] {
 // A training job or a quest job does not repeat: its ok RESULT means the target level is met (or the quest is done), and a rerun would log in, find the level
 // met and log out (a scored login for nothing). The swarm keeps the account's `done` end until the next pass hands it
 // a job with a different mission, which the met level unlocks. A run that ends short of the target is a fail RESULT,
-// which the supervisor retries and the swarm's standing retry resumes, with or without repeat.
+// which the supervisor retries and the swarm's standing retry resumes, with or without repeat. Declared finite
+// makers take one attempt: success needs a fresh stock observation, and a failed end needs the supported repair path.
 // finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
-    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: t.repeats ?? !(t.trains || t.quest), standing: true,
+    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: t.repeats ?? !(t.trains || t.quest), standing: true,...(t.production?{standingRetry:false,maxRestarts:0}:{}),
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
 }
 
-// Accounts whose planner trainer has reached its target: the job's template trains, the state still assigns that
-// template, and the job's log since the assignment holds an ok RESULT. The daemon re-plans these accounts at once.
+// A trainer or quest that succeeded, or a finite maker that ended: the current assignment and job fingerprint must
+// match the complete result. The daemon reobserves these accounts at once through its existing planning pass.
 export function finishedTrainers(jobs: readonly any[], side: string, assigned: Readonly<Record<string, { template: string; offset: number }>>, templates: readonly Template[],
     linesSince: (account: string, offset: number, job: any) => readonly string[]): string[] {
     // A quest job ends as a trainer does: its ok RESULT frees the account for the job the quest unlocks.
-    const trains = new Set(templates.filter(t => t.trains || t.quest).map(t => t.id));
-    return jobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && trains.has(j.template) && assigned[j.account]?.template === j.template
-        && assess(linesSince(j.account, assigned[j.account]!.offset, j)).ok > 0).map(j => j.account);
+    const watched = new Map(templates.filter(t => t.trains || t.quest || t.production).map(t => [t.id,t]));
+    return jobs.filter(j => {
+        if(j?.autopilot!==side||typeof j.account!=='string'||!watched.has(j.template)||assigned[j.account]?.template!==j.template)return false;
+        const lines=linesSince(j.account,assigned[j.account]!.offset,j);
+        // runChild indents chain steps; only the outer job's column-zero RESULT settles a finite maker.
+        const result=assess(watched.get(j.template)!.production?lines.filter(l=>l.startsWith('RESULT ')):lines);
+        return watched.get(j.template)!.production?result.ok+result.fail+result.drains>0:result.ok>0;
+    }).map(j=>j.account);
 }
 
 // Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail with
@@ -1342,17 +1387,22 @@ export function aioTemplates(): Template[] {
     const bars = (bar: string, level: number, ore: string, coal: number, load: number, perTick: number) =>
         aio(`aio-${bar}-bars`, 'skiller:smithing:smelt', 'scripts/smelt-bars.ts', ['smithing', 'smelt', '1500', bar, 'MAX_MAKE=28', 'ORE_RESERVE=0'], {
             role: 'smithing', goal: `smelt banked ${ore}${coal ? ' and coal' : ''} into ${bar} bars at Al Kharid`,
+            repeats:false,production:{output:`${bar} bar`,outputPerUnit:1,maximum:28,inputs:{[ore]:1,...coal?{coal}:{}},
+                resize:n=>({args:['skiller','smithing','smelt','1500',bar,`MAX_MAKE=${n}`,'ORE_RESERVE=0']})},
             needs: { skills: { Smithing: level }, items: { [ore]: load, ...(coal ? { coal: coal * load } : {}) } }, yields: () => [{ item: `${bar} bar`, perTick }] });
     // One recipe of the bank-standing worker, up to MAKE_BATCH units of what the bank holds.
-    const make = (id: string, recipe: string, goal: string, role: string, needs: Needs, item: string) =>
+    const make = (id: string, recipe: string, goal: string, role: string, needs: Needs, item: string,consumed:Record<string,number>=needs.items??{}) =>
         aio(id, 'skiller:crafting:inventory', 'scripts/microbot-production.ts', ['crafting', 'inventory', recipe, `MAX_MAKE=${MAKE_BATCH}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'], {
-            role, goal, needs, yields: () => [{ item, perTick: 0.1 }] });
+            role, goal, needs,repeats:false,production:{output:item,outputPerUnit:1,maximum:MAKE_BATCH,inputs:consumed,
+                resize:n=>({args:['skiller','crafting','inventory',recipe,`MAX_MAKE=${n}`,'CAP=1500','MEMBERS=1','ORDER_MODE=best-effort']})}, yields: () => [{ item, perTick: 0.1 }] });
     const potions = UNF_POTIONS.map(([herb, item, level]) => make(`aio-unf-${herb.replace(' ', '-')}`, `brew:unf_${herb.replace(' ', '_')}_potion`,
         `mix banked ${item} and vials of water into unfinished ${herb} potions`, 'herblore', { skills: { Herblore: level }, items: { [item]: 1, 'vial of water': 1 } }, `${herb} potion (unf)`));
-    const dust = (id: string, raw: string, item: string) => make(id, `grind:${raw.replace(/ /g, '_')}`, `grind banked ${raw}s into ${item}`, 'herblore', { items: { 'pestle and mortar': 1, [raw]: 1 } }, item);
+    const dust = (id: string, raw: string, item: string) => make(id, `grind:${raw.replace(/ /g, '_')}`, `grind banked ${raw}s into ${item}`, 'herblore', { items: { 'pestle and mortar': 1, [raw]: 1 } }, item,{[raw]:1});
     const rings = GEM_RINGS.map(([gem, level]) => aio(`aio-${gem}-rings`, 'skiller:crafting:jewellery-trip', 'scripts/microbot-jewellery-trip.ts',
         ['crafting', 'jewellery-trip', `RECIPE=${gem}_ring`, `TARGET=${RING_BATCH}`, `BATCH=${RING_BATCH}`, 'CAP=1500'], {
             role: 'crafting', goal: `make ${RING_BATCH} ${gem} rings from banked gold bars and gems at the Al Kharid furnace`,
+            repeats:false,production:{output:`${gem} ring`,outputPerUnit:1,maximum:RING_BATCH,inputs:{'gold bar':1,[gem]:1},
+                resize:n=>({args:['skiller','crafting','jewellery-trip',`RECIPE=${gem}_ring`,`TARGET=${n}`,`BATCH=${n}`,'CAP=1500']})},
             needs: { skills: { Crafting: level }, items: { 'ring mould': 1, 'gold bar': RING_BATCH, [gem]: RING_BATCH } },
             yields: () => [{ item: `${gem} ring`, perTick: 0.05 }] }));
     return [
@@ -1360,12 +1410,14 @@ export function aioTemplates(): Template[] {
             role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.18 }] }),
         aio('aio-bowstrings', 'skiller:crafting:bowstrings', 'scripts/spin-bowstrings.ts', ['crafting', 'bowstrings', '1250', `MAX_MAKE=${BOWSTRING_BATCH}`, 'RAW_RESERVE=0', 'MAX_TRIPS=4'], {
             role: 'crafting', goal: `spin ${BOWSTRING_BATCH} banked flax into bow strings at Seers`, needs: { skills: { Crafting: 10 }, items: { flax: BOWSTRING_BATCH } },
+            repeats:false,production:{output:'bow string',outputPerUnit:1,maximum:BOWSTRING_BATCH,inputs:{flax:1},resize:n=>({args:['skiller','crafting','bowstrings','1250',`MAX_MAKE=${n}`,'RAW_RESERVE=0','MAX_TRIPS=4']})},
             yields: () => [{ item: 'bow string', perTick: 0.12 }] }),
         aio('aio-yews', 'skiller:woodcutting:yews', 'scripts/gather-yews.ts', ['woodcutting', 'yews', '1800', '27', 'MAX_TRIPS=4'], {
             role: 'woodcutting', goal: 'cut yew logs at Seers and bank them', resources: [AIO_PLACES.yews],
             needs: { skills: { Woodcutting: 60 }, pieces: { of: AXES, count: 1 } }, yields: () => [{ item: 'yew logs', perTick: 0.018 }] }),
         aio('aio-shafts', 'skiller:fletching:shafts', 'scripts/fletch-arrows.ts', ['fletching', 'shafts', '600', `MAX_MAKE=${SHAFT_LOGS}`, 'LOG_RESERVE=0'], {
             role: 'fletching', goal: `cut ${SHAFT_LOGS} banked logs into arrow shafts`, needs: { items: { knife: 1, logs: SHAFT_LOGS } },
+            repeats:false,production:{output:'arrow shaft',outputPerUnit:15,maximum:SHAFT_LOGS,inputs:{logs:1},resize:n=>({args:['skiller','fletching','shafts','600',`MAX_MAKE=${n}`,'LOG_RESERVE=0']})},
             yields: () => [{ item: 'arrow shaft', perTick: 1 }] }),
         aio('aio-ore', 'skiller:mining:ore', 'scripts/gather-ore.ts', ['mining', 'ore', '1800', '25', 'MAX_TRIPS=3'], {
             role: 'mining', goal: 'mine ore at Varrock East and bank three loads', resources: [AIO_PLACES.ore],
@@ -1383,13 +1435,16 @@ export function aioTemplates(): Template[] {
         bars('steel', 30, 'iron ore', 2, 9, 0.1),
         aio('aio-cannonballs', 'skiller:smithing:cannonballs', 'scripts/microbot-a-cannonballs.ts', ['smithing', 'cannonballs', String(CANNON_BARS), '1500', 'CANNON_XP_RATE=25'], {
             role: 'smithing', goal: `cast ${CANNON_BARS} banked steel bars into cannonballs at Al Kharid`,
+            repeats:false,production:{output:'cannonball',outputPerUnit:4,maximum:CANNON_BARS,inputs:{'steel bar':1},resize:n=>({args:['skiller','smithing','cannonballs',String(n),'1500','CANNON_XP_RATE=25']})},
             needs: { skills: { Smithing: 35 }, items: { 'ammo mould': 1, 'steel bar': CANNON_BARS } }, yields: () => [{ item: 'cannonball', perTick: 0.2 }] }),
         aio('aio-rune-scimitars', 'skiller:smithing:anvil', 'scripts/smelt-bars.ts', ['smithing', 'anvil', '1500', 'PRODUCT_ID=1333', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {
             role: 'smithing', goal: 'smith a rune scimitar from two banked runite bars at the Varrock West anvils',
+            repeats:false,production:{output:'rune scimitar',outputPerUnit:1,maximum:1,inputs:{'runite bar':2},resize:()=>({args:['skiller','smithing','anvil','1500','PRODUCT_ID=1333','MAX_MAKE=1','BAR_RESERVE=0']})},
             needs: { skills: { Smithing: 90 }, items: { hammer: 1, 'runite bar': 2, coins: 10 } }, yields: () => [{ item: 'rune scimitar', perTick: 0.003 }] }),
         aio('aio-rune-axe', 'skiller:smithing:anvil', 'scripts/smelt-bars.ts', ['smithing', 'anvil', '1500', 'PRODUCT_ID=1359', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {
             role: 'smithing', goal: 'smith a rune axe from a banked runite bar at the Varrock West anvils',
-            repeats: false, needs: { skills: { Smithing: 86 }, items: { hammer: 1, 'runite bar': 1, coins: 10 }, holdsUnder: { 'rune axe': 1 } }, yields: () => [{ item: 'rune axe', perTick: 0.003 }] }),
+            repeats: false,production:{output:'rune axe',outputPerUnit:1,maximum:1,inputs:{'runite bar':1},resize:()=>({args:['skiller','smithing','anvil','1500','PRODUCT_ID=1359','MAX_MAKE=1','BAR_RESERVE=0']})},
+            needs: { skills: { Smithing: 86 }, items: { hammer: 1, 'runite bar': 1, coins: 10 }, holdsUnder: { 'rune axe': 1 } }, yields: () => [{ item: 'rune axe', perTick: 0.003 }] }),
         ...potions,
         dust('aio-unicorn-horn-dust', 'unicorn horn', 'unicorn horn dust'),
         dust('aio-dragon-scale-dust', 'blue dragon scale', 'dragon scale dust'),
@@ -1414,21 +1469,22 @@ export function aioTemplates(): Template[] {
 //   cuts a shortbow from normal logs with the same worker. The rate is an estimate: one bow for two logins, taken as
 //   100 ticks. Gap: no practice run strings a bow in this chain.
 // - uncooked stew: Cooking 25 (stew.rs2), and a potato, a bowl of water and a cooked meat in the bank for each stew:
-//   the potato goes in first, then the meat. One run makes STEW_BATCH stews (the route bill asks for 3), and `needs`
-//   asks for STEW_BATCH of each input: the first step then makes no incomplete stew that the second step has no meat
-//   for. The rate is half that of one recipe, as a stew takes two. Gaps: no practice run makes a stew, no job brings
-//   the three inputs, and no template finishes an incomplete stew that a failed second step leaves in the bank.
+//   the potato goes in first, then the meat. One run makes up to STEW_BATCH useful stews, bounded by complete owned
+//   recipes; both steps receive that count. The rate is half that of one recipe, as a stew takes two. Gaps: no
+//   practice run makes this chain, and no template finishes an incomplete stew left by a failed second step.
 export function makerChains(): Template[] {
     const step = (recipe: string, max: number, cap = 1500) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${max} CAP=${cap} MEMBERS=1 ORDER_MODE=best-effort`;
-    const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'>): Template =>
+    const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'|'production'>): Template =>
         ({ id, pilot: true, family: 'aio:skiller:crafting:inventory', script: 'scripts/chain.ts', args: steps, env: { ROUNDS: '1' }, worker: 'scripts/microbot-production.ts', ...rest });
     return [
         chain('make-yew-shortbow', [step('cut-bow:unstrung_yew_shortbow', 1, 600), step('bow-string:yew_shortbow', 1, 600)], {
             role: 'fletching', goal: 'cut a banked yew log into a shortbow and string it', repeats: false,
+            production:{output:'yew shortbow',outputPerUnit:1,maximum:1,inputs:{'yew logs':1,'bow string':1},resize:n=>({args:[step('cut-bow:unstrung_yew_shortbow',n,600),step('bow-string:yew_shortbow',n,600)]})},
             needs: { skills: { Fletching: 65 }, items: { knife: 1, 'yew logs': 1, 'bow string': 1 }, holdsUnder: { 'yew shortbow': 1 } },
             yields: () => [{ item: 'yew shortbow', perTick: 0.01 }] }),
         chain('make-uncooked-stew', [step('prepare:potato-stew', STEW_BATCH), step('prepare:uncooked-stew', STEW_BATCH)], {
             role: 'cooking', goal: 'make uncooked stews from banked potatoes, bowls of water and cooked meat',
+            repeats:false,production:{output:'uncooked stew',outputPerUnit:1,maximum:STEW_BATCH,inputs:{potato:1,'bowl of water':1,'cooked meat':1},resize:n=>({args:[step('prepare:potato-stew',n),step('prepare:uncooked-stew',n)]})},
             needs: { skills: { Cooking: 25 }, items: { potato: STEW_BATCH, 'bowl of water': STEW_BATCH, 'cooked meat': STEW_BATCH } },
             yields: () => [{ item: 'uncooked stew', perTick: 0.05 }] }),
     ];

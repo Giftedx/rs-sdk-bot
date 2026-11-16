@@ -39,7 +39,7 @@ import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packag
 import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
 import { acquireFleetLease, FLEET_LEASE_RENEW_MS, FLEET_LEASE_RETRY_MS } from '../packages/core/src/fleet-lease';
 
-export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
+export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; standingRetry?:boolean; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
 // A run is a detached supervisor process: it outlives this controller, and a restarted controller adopts it from
 // .practice/swarm-runs.json. Its output goes straight to its log file, which the controller follows from `offset`.
@@ -211,6 +211,7 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
     if(job.orchestrate!==undefined&&typeof job.orchestrate!=='boolean')return {error:'bad orchestrate mode'};
     if(job.args!==undefined&&(!Array.isArray(job.args)||job.args.some(a=>typeof a!=='string')))return {error:'args must be strings'};
     if(job.maxRestarts!==undefined&&(!Number.isSafeInteger(job.maxRestarts)||job.maxRestarts<0))return {error:'bad maxRestarts'};
+    if(job.standingRetry!==undefined&&typeof job.standingRetry!=='boolean')return {error:'bad standingRetry'};
     if(job.orchestrate){
         if(job.host)return {error:'orchestrate cannot use host mode'};
         if(job.account!==undefined)return {error:'orchestrator has both account and accounts'};
@@ -319,7 +320,8 @@ export function runningJobState(parsed:ParsedJob,run:Pick<Run,'accounts'|'starte
 // stopped end with a result is the stop file's. A worker words its stop its own way (trooper and cow mode end
 // `fail mode=giant ... stop=stop-file`), so the rule does not look for one wording: live claude-cloud, five accounts
 // vacated for a fleet order stood 24 to 72 minutes with an enabled job. A death waits for a person; done is not a pause.
-export function standingRetryable(reason: string, result?: string): boolean {
+export function standingRetryable(reason: string, result?: string, retry?:boolean): boolean {
+    if(retry===false)return false;
     if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && !/^(?:RESULT )?fail no food\b/.test(result);
     return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
 }
@@ -939,7 +941,7 @@ if (import.meta.main) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
                     if (!end) continue;
                     let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { /* no status file: the logout proof decides */ }
-                    if (!standingRetryable(end.reason, s?.result)) continue;
+                    if (!standingRetryable(end.reason, s?.result, job.standingRetry)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }

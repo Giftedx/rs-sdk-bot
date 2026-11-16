@@ -6,6 +6,7 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
 import { runSoftenClay } from './soften-clay';
 import { bankCargo } from '../packages/core/src/cargo';
+import { leaveRuneStarter } from './rune-starter';
 
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyLoc } from '../vendor/rs-sdk/sdk/types';
@@ -144,12 +145,7 @@ let damage:ReturnType<typeof oreDamageEvidence>;
 const offDamage=watchOreDamage(s,e=>{damage=e;console.log('ORE_DAMAGE '+JSON.stringify(e));});
 let safetyStarted=false,cleanup:((reason:string)=>Promise<never>)|undefined;
 try {
-    const initial = s.sdk.getState()?.player;
-    if (initial && initial.worldX < 3160 && initial.worldZ < 3130) {
-        await waitUntil(s, st => (st?.nearbyNpcs?.length ?? 0) > 0, { timeoutTicks: 30 });
-        const tut = await s.bot.skipTutorial();
-        if (!tut.success) throw new Error(`tutorial: ${tut.message}`);
-    }
+    await leaveRuneStarter(s,()=>!!requestedStop||!!damage);
     await waitTicks(s, 3);
     const pos = () => s.sdk.getState()?.player;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;

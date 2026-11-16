@@ -5,6 +5,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { expandPath, sessionWalker, walkPath } from '../packages/core/src/walk';
 import { rangedEntry, runRangedTrain } from './ranged-train';
+import { leaveRuneStarter } from './rune-starter';
 
 function check(value: unknown, message: string): asserts value {
     if (!value) throw Error(message);
@@ -35,16 +36,9 @@ export async function runRangedStarter(session: Session, stopRequested: () => bo
     try {
         const tutorial = player();
         check(freshRangedStart(tutorial, ranged(), xp()), 'fresh tutorial start required');
-        let mainland = false;
-        for (let i = 0; i < 3 && !mainland; i++) {
-            check(!stopped(), 'stopped before tutorial skip');
-            check((await session.bot.skipTutorial()).success, 'tutorial skip failed');
-            mainland = await waitUntil(session, () => {
-                const p = player();
-                return p?.level === 0 && Math.abs(p.worldX-3222) <= 3 && Math.abs(p.worldZ-3222) <= 6;
-            }, { timeoutTicks: 30 });
-        }
+        await leaveRuneStarter(session,stopped);
         const p = player();
+        const mainland=!!p&&p.level===0&&Math.abs(p.worldX-3222)<=3&&Math.abs(p.worldZ-3222)<=6;
         const starter = session.sdk.getInventory().map(({ id, count }) => ({ id, count }));
         check(mainland && p && ranged() === 1 && xp() === 0 && hp() === 10 &&
             starter.some(i => i.id === 841 && i.count === 1) && starter.some(i => i.id === 882 && i.count === 25),

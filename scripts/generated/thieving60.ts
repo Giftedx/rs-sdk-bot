@@ -9,6 +9,7 @@
 // Food: bread from the Baker (2654,3311, shop 'bakery', 12 coins), eaten at 5 Hitpoints or less.
 import { existsSync } from 'node:fs';
 import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
+import { leaveRuneStarter, onStarterIsland } from '../rune-starter';
 import { depositObserved } from '../../packages/core/src/deposit';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../../packages/core/src/walk';
@@ -49,10 +50,9 @@ try {
     // A new live account starts on Tutorial Island (seen: START 3094 3106 0 on the demo server). Skip it first.
     await waitTicks(s, 5);
     const p0 = s.sdk.getState()?.player;
-    if (p0 && p0.worldX < 3160 && p0.worldZ < 3130) {
-        const t = await s.bot.skipTutorial();
-        console.log(`MILESTONE tutorial ${t.success ? 'ok' : 'fail'}`);
-        if (!t.success) await finish([s], false, `tutorial skip failed: ${t.message}`);
+    if (onStarterIsland(p0)) {
+        await leaveRuneStarter(s,()=>false);
+        console.log('MILESTONE tutorial ok');
     }
     const xp = () => s.sdk.getSkillXp('Thieving') ?? 0;
     const lvl = () => s.sdk.getSkill('Thieving')?.baseLevel ?? 0;

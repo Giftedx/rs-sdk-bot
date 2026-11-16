@@ -11,6 +11,7 @@ import {depositObserved} from '../packages/core/src/deposit';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import {executionContext} from '../vendor/rs-sdk/sdk/execution-context';
 import {trainChickens} from './train-chickens';
+import {leaveRuneStarter} from './rune-starter';
 
 type Role='producer'|'courier'|'receiver';
 type Phase='all'|'clean'|'earn';
@@ -100,11 +101,8 @@ export async function bootstrapSupplyActor(s:Session,role:Role,checkpoint?:Check
   requireThat(await waitUntil(s,()=>equipmentObserved(client),{timeoutTicks:20}),'known equipment packet required');
   if(phase!=='earn'){
    const p=state()?.player;requireThat(p&&p.worldX<3160&&p.worldZ<3130&&freshSkills(),'fresh registered tutorial actor with untrained skills required');
-   let mainland=false;
-   for(let i=0;i<3&&!mainland;i++){
-    check();const r=await s.bot.skipTutorial();requireThat(r.success,'ordinary tutorial NPC skip failed');
-    mainland=await waitUntil(s,()=>{const p=state()?.player;return !!p&&p.level===0&&p.worldX>=3180&&p.worldZ>=3180;},{timeoutTicks:30});
-   }
+   check();await leaveRuneStarter(s,()=>signal.aborted||ended||hp()<=0);check();
+   const landed=state()?.player,mainland=!!landed&&landed.level===0&&landed.worldX>=3180&&landed.worldZ>=3180;
    requireThat(mainland&&freshSkills(),'tutorial did not yield fresh mainland actor');
    for(const item of [...worn()]){requireThat((await s.bot.unequipItem(item)).success,'gift equipment removal failed');requireThat(await waitUntil(s,()=>!worn().some(i=>i.slot===item.slot),{timeoutTicks:8}),'gift equipment removal unobserved');}
    await dropAll('all tutorial inventory gifts');await toBank();

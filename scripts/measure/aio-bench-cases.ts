@@ -1219,6 +1219,12 @@ const SAME_JOB_CASES: BenchCase[] = [
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
 const EXTRA_CASES: BenchCase[] = [
+  {key:'extra:catalog-finite-producer',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['producer','{save}'],timeoutMs:120_000,
+    presetConfig:{position:{x:3269,z:3167,level:0},skills:{Crafting:20,Hitpoints:40},bank:[{id:1607,count:13},{id:2357,count:13},{id:1592,count:1}]},
+    pass:s=>ok(s)&&s.includes('"mode":"producer"')&&s.includes('"assets":true')&&s.includes('"logout":true')},
+  {key:'extra:catalog-gather-short',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['gather-short','{save}'],timeoutMs:120_000,
+    presetConfig:{position:{x:3185,z:3436,level:0},inventory:[{id:1059,count:1},...Array.from({length:27},()=>({id:303,count:1}))]},
+    pass:s=>ok(s)&&s.includes('"mode":"gather-short"')&&s.includes('targetMet=false remaining=1')&&s.includes('"assets":true')},
   {key:'extra:owned-bank-ring-consumer',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['trade','{bot:b}'],timeoutMs:120_000,
     presetConfig:{position:{x:3269,z:3167,level:0},skills:{Crafting:10,Hitpoints:40},inventory:[],equipment:[],bank:[{id:2357,count:1}]},
     companions:[{suffix:'b',preset:'fresh_lumbridge',presetConfig:{position:{x:3270,z:3167,level:0},skills:{Crafting:10,Hitpoints:40},inventory:[],equipment:[],bank:[{id:1592,count:1}]}}],

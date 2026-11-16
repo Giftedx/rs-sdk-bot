@@ -198,10 +198,12 @@ export function unfilledItems(lines: readonly string[]): number[] {
     return [...out];
 }
 // A kit buy that has started and printed no RESULT yet holds an open Grand Exchange offer: its coins are in the
-// exchange, so the account's live status shows them gone. The pass leaves such a job as it is.
-export function kitBuyRunning(job: any, assigned: { template: string; offset: number } | undefined, linesSince: (offset: number) => readonly string[]): boolean {
-    if (!job?.enabled || typeof job.template !== 'string' || !job.template.startsWith(KIT_BUY) || !assigned || assigned.template !== job.template) return false;
-    const r = assess(linesSince(assigned.offset));
+// exchange, so the account's live status shows them gone. A declared finite maker also keeps its exact pending
+// quantity and observed-stock fingerprint until its terminal result. The pass leaves these jobs as they are.
+export function kitBuyRunning(job: any, assigned: { template: string; offset: number } | undefined, linesSince: (offset: number) => readonly string[],finiteMaker=false): boolean {
+    if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY)&&!finiteMaker) || !assigned || assigned.template !== job.template) return false;
+    const lines=linesSince(assigned.offset);
+    const r = assess(finiteMaker?lines.filter(l=>l.startsWith('RESULT ')):lines);
     return r.ok + r.fail + r.drains === 0;
 }
 // The accounts whose last session has no confirmed logout (session-lifecycle `held`), in lower case. Such an account
@@ -396,8 +398,9 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const stopText = (n: string): string | undefined => { try { return readFileSync(join(prac, `stop-${n}`), 'utf8'); } catch { return undefined; } };
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
     const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused);
+    const finiteMakers=new Set(catalogue().filter(t=>t.production).map(t=>t.id));
     for (const j of swarm.jobs.filter(mineMarked)) if (typeof j.account === 'string'
-        && kitBuyRunning(j, state.assigned[j.account], offset => readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), offset, j))) keep.add(j.account.toLowerCase());
+        && kitBuyRunning(j, state.assigned[j.account], offset => readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), offset, j),finiteMakers.has(j.template))) keep.add(j.account.toLowerCase());
 
     // Retire planner jobs whose own log lines show no progress.
     const log: string[] = [];
@@ -611,7 +614,7 @@ if (import.meta.main) {
         if ((!dry && swarmPaused()) || inFlight) return;
         const due = trainersDone(planFile).filter(k => !seen.has(k));
         if (!due.length) return;
-        console.log(`AUTOPILOT trainer at target, passing now: ${due.map(k => k.split(':')[0]).join(' ')}`);
+        console.log(`AUTOPILOT finite job ended, passing now: ${due.map(k => k.split(':')[0]).join(' ')}`);
         void once().then(outcome => {
             if (outcome === 'applied') for (const k of due) seen.add(k);
         });

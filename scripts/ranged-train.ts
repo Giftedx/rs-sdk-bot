@@ -27,6 +27,12 @@ const COINS=995,BONES=526,CHICKEN=2138,FEATHER=314,BANK={x:3253,z:3421},LOWE={x:
 const LOWE_ARROWS=[882,884,886];
 const OUT:PathPoint[]=[{x:3280,z:3429,tol:2},{x:3275,z:3380,tol:2},{x:3260,z:3335,tol:2},{x:3233,z:3297,tol:0}];
 const BACK:PathPoint[]=[{x:3260,z:3335,tol:2},{x:3275,z:3380,tol:2},{x:3280,z:3429,tol:2},{...BANK,tol:1}];
+// The starter's east-Varrock corridor and agility-order's public Draynor -> Wydin approach. A known mainland food
+// trip uses the guarded walker directly; a cold global food search can outlast the session's no-progress bound.
+const FOOD_OUT:PathPoint[]=[{x:3280,z:3429,tol:2},{x:3275,z:3380,tol:2},{x:3260,z:3335,tol:2},
+ {x:3239,z:3306,tol:2},{x:3232,z:3285,tol:2},{x:3226,z:3262,tol:2},{x:3089,z:3266,tol:2},
+ {x:3060,z:3265,tol:3},{x:3047,z:3237,tol:3},{x:3029,z:3217,tol:3},{...WYDIN,tol:1}];
+const FOOD_BACK:PathPoint[]=[...FOOD_OUT.slice(0,-1).reverse(),{...BANK,tol:1}];
 const count=(items:readonly Item[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const sum=(items:readonly Item[],ids:readonly number[])=>ids.reduce((n,id)=>n+count(items,id),0);
 // Highest levelrequire the account can wield; the shortbow wins a tie because it fires faster.
@@ -121,13 +127,22 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  // Shared trip search and execution; exclude consumable teleports so fares are the only travel debit.
  type Stop={x:number;z:number};
  const same=(a:Stop,b:Stop)=>a.x===b.x&&a.z===b.z;
+ const mainlandFood=entry.x===BANK.x&&entry.z===BANK.z;
+ const foodRoute=(from:Stop,to:Stop)=>mainlandFood&&(same(from,BANK)&&same(to,WYDIN)||same(from,WYDIN)&&same(to,BANK));
  const tripAccount=()=>{const actor=accountOf(s);return{...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:coins()};};
  // The route worker starts cold and closes 30 s after its last plan, so a food-run leg that plans alone waits some
  // hundreds of ticks. A trip queues the legs known to follow it; travel from that stop takes the ready plan, or plans again if it is null.
  const queued:{from:Stop;to:Stop;plan:ReturnType<typeof planTripOffThread>}[]=[];
- const queue=(from:Stop,to:Stop)=>{if(queued.some(q=>same(q.from,from)&&same(q.to,to)))return;const plan=planTripOffThread({...from,level:0},{...to,level:0},tripAccount());plan.catch(()=>{});queued.push({from,to,plan});};
+ const queue=(from:Stop,to:Stop)=>{if(foodRoute(from,to)||queued.some(q=>same(q.from,from)&&same(q.to,to)))return;const plan=planTripOffThread({...from,level:0},{...to,level:0},tripAccount());plan.catch(()=>{});queued.push({from,to,plan});};
  const travel=async(to:Stop,next:readonly (readonly [Stop,Stop])[]=[])=>{
   const p=st()?.player;if(!p)throw Error('ranged-train travel state unknown');
+  const corridor=p.level===0&&(near(BANK,6)&&foodRoute(BANK,to)?FOOD_OUT:near(WYDIN,2)&&foodRoute(WYDIN,to)?FOOD_BACK:null);
+  if(corridor){
+   if(over()||sustain.failure()||hp()<=6)throw Error('ranged-train travel deadline/health/stop');
+   const wallet=coins();await walk(corridor);const paid=wallet-coins();travelSpent+=paid;coinsSpent+=paid;
+   if(over()||!near(to,2)||paid!==0)throw Error('ranged-train mainland food walk effect/stop/fare unobserved');
+   return;
+  }
   const i=queued.findIndex(q=>same(q.to,to)&&p.level===0&&Math.max(Math.abs(p.worldX-q.from.x),Math.abs(p.worldZ-q.from.z))<=2);
   const ready=i<0?undefined:queued.splice(i,1)[0]!.plan.catch(()=>null);
   const fresh=()=>planTripOffThread({x:p.worldX,z:p.worldZ,level:p.level},{...to,level:0},tripAccount());

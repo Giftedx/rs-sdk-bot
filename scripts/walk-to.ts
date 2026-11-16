@@ -10,6 +10,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import type { Tile, Account } from '../packages/core/src/world';
 import type { Outcome } from '../packages/core/src/act';
 import { loadTravel, travelAllowed, type Travel } from '../packages/core/src/travel';
+import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 
 export function parseTarget(args: string[]): { account: string; to: { x: number; z: number; level: number } } {
     const [account, x, z, level] = args;
@@ -76,21 +77,29 @@ export const fareFault = (need: number, missing: number, banked: number): string
 
 // Tutorial Island, where a new live account starts (seen: START 3094 3106 0 on the demo server). The sea is on each
 // side of this box, and no route leaves the island: the skip puts the account in Lumbridge.
-export const onTutorialIsland = (p: { worldX: number; worldZ: number; level?: number } | null | undefined): boolean =>
-    !!p && p.worldX >= 3050 && p.worldX <= 3160 && p.worldZ >= 3050 && p.worldZ <= 3140;
-export async function leaveTutorial(s: Session, skip: () => Promise<{ success: boolean; message?: string }> = () => s.bot.skipTutorial(),
-    ready: () => Promise<unknown> = () => waitUntil(s, st => (st?.nearbyNpcs?.length ?? 0) > 0, { timeoutTicks: 30 })): Promise<Outcome | null> {
+export const onTutorialIsland = onStarterIsland;
+export async function leaveTutorial(s: Session, skip?: () => Promise<{ success: boolean; message?: string }>,
+    ready?: () => Promise<unknown>, stop: () => boolean = () => false): Promise<Outcome | null> {
     if (!onTutorialIsland(s.sdk.getState()?.player)) return null;
-    await ready();
-    const r = await skip();
-    console.log(`MILESTONE tutorial ${r.success ? 'ok' : 'fail'}`);
-    return r.success ? null : { ok: false, reason: 'precondition', detail: `tutorial skip failed: ${r.message ?? ''}`, ticks: 0 };
+    const start=s.tick?.()??0;
+    try {
+        if(stop())throw Error('stopped during starter exit');
+        if(ready)await ready();
+        if(stop())throw Error('stopped during starter exit');
+        if(skip){
+            const r=await skip();
+            console.log(`MILESTONE tutorial ${r.success?'ok':'fail'}`);
+            if(!r.success)return {ok:false,reason:'precondition',detail:`tutorial skip failed: ${r.message??''}`,ticks:0};
+        }else await leaveRuneStarter(s,stop);
+        if(stop())throw Error('stopped during starter exit');
+        return null;
+    }catch(error){return {ok:false,reason:stop()?'aborted':'precondition',detail:String(error),ticks:(s.tick?.()??start)-start};}
 }
 
 // A planned walk that takes the Ardougne ferries when the planner has no route, with the fare from the bank. `walk`
 // is the caller's planned walk for one leg. A start on Tutorial Island leaves the island first.
-export async function ferryWalk(s: Session, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>): Promise<Outcome> {
-    const stuck = await leaveTutorial(s);
+export async function ferryWalk(s: Session, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>, stop: () => boolean = () => false): Promise<Outcome> {
+    const stuck = await leaveTutorial(s,undefined,undefined,stop);
     if (stuck) return stuck;
     const p = s.sdk.getState()?.player;
     if (!p) return walk(to);
@@ -112,7 +121,7 @@ export async function approach(s: Session, to: Tile, stop: () => boolean = () =>
     const cancel = new AbortController(), off = s.onTick(() => { if (stop()) cancel.abort('stop requested'); });
     try {
         const world = await getWorld();
-        return await ferryWalk(s, to, (tile, planBudgetMs) => goTo(s, world, tile, accountOf(s), { maxRetriesPerLeg: 2, legTimeoutTicks: 150, signal: cancel.signal, planBudgetMs }));
+        return await ferryWalk(s, to, (tile, planBudgetMs) => goTo(s, world, tile, accountOf(s), { maxRetriesPerLeg: 2, legTimeoutTicks: 150, signal: cancel.signal, planBudgetMs }),()=>stop()||cancel.signal.aborted);
     } finally { off(); }
 }
 

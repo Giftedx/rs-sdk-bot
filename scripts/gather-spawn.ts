@@ -19,11 +19,14 @@ if (import.meta.main) {
     const id = Number(idText), target = Number(targetText ?? 27), TICKS = Number(process.env.TICKS ?? 6000);
     if (!name || !Number.isSafeInteger(id) || !Number.isSafeInteger(target) || target < 1) { console.log('RESULT fail usage: gather-spawn.ts <account> <item id> [target]'); process.exit(2); }
     const s = await openBot(name).catch(e => finish([], false, `login: ${String(e)}`));
-    const world = await getWorld(), start = s.tick(), inv = () => s.sdk.getInventory();
+    let start = s.tick();
+    const inv = () => s.sdk.getInventory();
     const held = () => inv().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
     const here = () => { const p = s.sdk.getState()!.player!; return { x: p.worldX, z: p.worldZ, level: p.level }; };
     let banked = 0, trips = 0, last = '';
     try {
+        const world = await getWorld();
+        start = s.tick();
         while (banked < target && s.tick() - start < TICKS) {
             const stack = inv().find(i => i.id === id), stackable = (stack?.count ?? 0) > 1 || /rune$/i.test(stack?.name ?? '') || [554, 555, 556, 557, 558, 559, 560, 561, 562, 563, 564, 565, 566].includes(id);
             const n = tripSize(target - banked - held(), stackable, 28 - inv().length);
@@ -35,15 +38,16 @@ if (import.meta.main) {
                 if (!(await goTo(s, world, bank, accountOf(s), { legTimeoutTicks: 100 })).ok) continue;
                 if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) continue;
                 const item = inv().find(i => i.id === id);
-                if (item) await depositObserved(s, item);
+                const credited = item ? await depositObserved(s, item) : 0;
+                if(credited>0){banked+=credited;trips++;}
                 await s.bot.closeBank();
-                deposited = held() === 0;
+                deposited = held() === 0 && credited === got;
                 break;
             }
             if (!deposited) { last = 'no bank in reach'; break; }
-            banked += got; trips++;
             console.log(`GATHER_SPAWN trip=${trips} banked=${banked}/${target} t=${s.tick() - start} ${last}`);
         }
-        await finish([s], banked > 0, `item=${id} banked=${banked} target=${target} trips=${trips} ticks=${s.tick() - start} ${last}`);
-    } catch (e) { await finish([s], banked > 0, `item=${id} banked=${banked} ${String(e)}`); }
+        const targetMet = banked >= target;
+        await finish([s], targetMet, `item=${id} banked=${banked} target=${target} targetMet=${targetMet} remaining=${Math.max(0,target-banked)} trips=${trips} ticks=${s.tick() - start} ${last}`);
+    } catch (e) { await finish([s], false, `item=${id} banked=${banked} target=${target} targetMet=${banked>=target} remaining=${Math.max(0,target-banked)} trips=${trips} ticks=${s.tick()-start} ${String(e)}`); }
 }

@@ -94,13 +94,7 @@ export async function runQuestCookJob(name:string,cap:number){
   return ok();
  };
  try{
-  // A new account starts on Tutorial Island: skip it first (the same call as scripts/arrive-draynor.ts).
-  await wait(()=>!!s.sdk.getState()?.player,20);
-  const first=s.sdk.getState()?.player;
-  if(first&&first.worldX<3160&&first.worldZ<3130){
-   await wait(()=>(s.sdk.getState()?.nearbyNpcs?.length??0)>0,30);
-   const skipped=await s.bot.skipTutorial();if(!skipped.success)throw Error(`tutorial: ${skipped.message}`);
-  }
+  await leaveRuneStarter(s,()=>ended||dead||s.tick()>=deadline);guard();
   if(!await wait(()=>{const st=s.sdk.getState(),p=st?.player;return !!p&&flag(s)!=='unknown'&&Array.isArray(st?.inventory)&&Array.isArray(st?.equipment)&&equipmentReady(s)&&Number.isSafeInteger(qp(s))&&s.sdk.getSkillXp('Cooking')!==null;},20))throw Error('Cook entry unobserved within deadline');
   const p=s.sdk.getState()!.player!;life=p.lifeId;respawns=p.respawnCount;
   if(p.name.toLowerCase()!==name.toLowerCase())throw Error('Cook account identity mismatch');

@@ -42,6 +42,7 @@
 //   no tree within 12 tiles of the spawn: that leaves out both oaks (3102,3242, 3106,3247), the normal trees at
 //   3099,3242 and 3099,3247, and the trees at 3104-3110,3228-3244.
 import { openBot, finish, countItems, releasePrayerGuard, sessionDied } from '../../packages/core/src/bot';
+import { leaveRuneStarter, onStarterIsland } from '../rune-starter';
 import { waitTicks } from '../../packages/core/src/ticks';
 import {runWoodSupply} from '../woodcut-supply';
 import { componentId } from '../../packages/core/src/logout';
@@ -108,10 +109,9 @@ try {
 
     // A new live account starts on Tutorial Island (3094,3106); skip it before the clock starts.
     const p0 = s.sdk.getState()?.player;
-    if (p0 && p0.worldX < 3160 && p0.worldZ < 3130) {
-        const t = await s.bot.skipTutorial();
-        console.log(`MILESTONE tutorial ${t.success ? 'ok' : 'fail'}`);
-        if (!t.success) await finish([s], false, `tutorial skip failed: ${t.message}`);
+    if (onStarterIsland(p0)) {
+        await leaveRuneStarter(s,()=>false);
+        console.log('MILESTONE tutorial ok');
     }
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;
