@@ -67,11 +67,66 @@ test('state-build failures keep retained data private even when an exception nam
  expect(run()).not.toMatch(/haggis/i);expect(JSON.parse(run()).stateError).toContain('⟦MAIN⟧');
 });
 
+function playerLookupHarness(fetcher:(url:string,init?:RequestInit)=>Promise<Response>,sleep:(ms:number)=>Promise<void>=async()=>{}){
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('let lookupChain:'),server.indexOf('// Equipment, Bank and Runite boards:')));
+ let round!:()=>void,period=0;
+ const api=new Function('fetch','Bun','gameDialAddress','setInterval',`const lookups=new Map(),roster=new Map(),DEMO='https://example.test',ONLINE_MS=30000,SKILL_BOARDS=[];const hiscoreRows=()=>[{board:'Mining'}],wornOf=async()=>null;${code};return {lookup:lookupPlayer,cache:lookups,wanted:names=>{lookupWanted=names;}};`)(fetcher,{sleep},gameDialAddress,(fn:()=>void,ms:number)=>{round=fn;period=ms;});
+ return {...api,round,period};
+}
+function lookupGate<T>(){
+ let resolve!:(value:T)=>void,reject!:(reason:unknown)=>void;
+ const promise=new Promise<T>((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};
+}
+
 test('an upstream player service failure is not cached as an unranked player for thirty minutes',async()=>{
- const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('function lookupPlayer('),server.indexOf('let lookupWanted:')));
- let calls=0;
- const lookup=new Function('fetch','Bun','gameDialAddress',`const lookups=new Map(),roster=new Map(),DEMO='https://example.test',ONLINE_MS=30000,SKILL_BOARDS=[];let lookupChain=Promise.resolve();const hiscoreRows=()=>[{board:'Mining'}],wornOf=async()=>null;${code};return lookupPlayer;`)(async()=>++calls===1?new Response('unavailable',{status:503}):new Response('player rows'),{sleep:async()=>{}},gameDialAddress);
+ let calls=0;const {lookup}=playerLookupHarness(async()=>++calls===1?new Response('unavailable',{status:503}):new Response('player rows'));
  expect(await lookup('Worker')).toBeNull();expect((await lookup('Worker')).rows).toEqual([{board:'Mining'}]);expect(calls).toBe(2);
+});
+
+for(const failure of ['503','exception'])test('concurrent case-folded player lookups share an uncached '+failure+' and allow a later retry',async()=>{
+ const gate=lookupGate<Response>();let calls=0;
+ const h=playerLookupHarness(async()=>++calls===1?gate.promise:new Response('player rows'));
+ const first=h.lookup('Worker'),same=h.lookup('wOrKeR'),shared=first===same;
+ if(failure==='503')gate.resolve(new Response('unavailable',{status:503}));else gate.reject(Error('upstream unavailable'));
+ const results=await Promise.all([first,same]);
+ expect(shared).toBe(true);expect(results).toEqual([null,null]);expect(calls).toBe(1);expect(h.cache.has('worker')).toBe(false);
+ const retried=await h.lookup('WORKER');expect(retried.rows).toEqual([{board:'Mining'}]);expect(calls).toBe(2);expect(h.cache.get('worker')).toBe(retried);
+});
+
+test('distinct player lookups stay serial through cooldown while a fresh hit bypasses pending work',async()=>{
+ const firstReply=lookupGate<Response>(),cooldowns:ReturnType<typeof lookupGate<void>>[]=[],waits:number[]=[],calls:string[]=[];
+ let releaseAll=false;
+ const h=playerLookupHarness(async url=>{calls.push(new URL(url).pathname.split('/').at(-1)!);return calls.length===1?firstReply.promise:new Response('player rows');},async ms=>{
+  waits.push(ms);if(releaseAll)return;const gate=lookupGate<void>();cooldowns.push(gate);await gate.promise;
+ });
+ const first=h.lookup('First'),second=h.lookup('Second');
+ try{
+  await Bun.sleep(0);expect(calls).toEqual(['first']);
+  firstReply.resolve(new Response('player rows'));await Bun.sleep(0);
+  expect(waits).toEqual([1200]);expect(calls).toEqual(['first']);
+  let fresh:any=null;const hit=h.lookup('FIRST').then((value:any)=>{fresh=value;});await Bun.sleep(0);
+  expect(fresh?.rows).toEqual([{board:'Mining'}]);expect(fresh).toBe(h.cache.get('first'));
+  cooldowns[0].resolve(undefined);await first;await hit;await Bun.sleep(0);
+  expect(calls).toEqual(['first','second']);expect(waits).toEqual([1200,1200]);
+  cooldowns[1].resolve(undefined);expect((await second).rows).toEqual([{board:'Mining'}]);
+ }finally{
+  releaseAll=true;firstReply.resolve(new Response('player rows'));for(const gate of cooldowns)gate.resolve(undefined);await Promise.allSettled([first,second]);
+ }
+});
+
+test('repeated background rounds share pending names and failed jobs are cleared before the next round',async()=>{
+ const calls:string[]=[],h=playerLookupHarness(async url=>{calls.push(new URL(url).pathname.split('/').at(-1)!);return new Response('unavailable',{status:503});});
+ const names=Array.from({length:12},(_,i)=>'Player'+i);h.wanted(names);expect(h.period).toBe(60_000);
+ h.round();h.round();h.round();await h.lookup('Barrier');
+ expect(calls).toEqual([...names.slice(0,10).map(name=>name.toLowerCase()),'barrier']);expect(h.cache.size).toBe(0);
+ h.round();await h.lookup('Barrier');
+ expect(calls).toEqual([...names.slice(0,10).map(name=>name.toLowerCase()),'barrier',...names.slice(0,10).map(name=>name.toLowerCase()),'barrier']);expect(h.cache.size).toBe(0);
+});
+
+test('an upstream 404 remains a cached unranked lookup with the same cooldown',async()=>{
+ let calls=0;const waits:number[]=[],h=playerLookupHarness(async()=>{calls++;return new Response('not found',{status:404});},async ms=>{waits.push(ms);});
+ const first=await h.lookup('Nobody'),same=await h.lookup('NOBODY');
+ expect(first.rows).toEqual([]);expect(same).toBe(first);expect(calls).toBe(1);expect(waits).toEqual([1200]);
 });
 
 test('a fresh live roster overrules the published snapshot, and a stale one does not',()=>{

@@ -1646,7 +1646,7 @@ function xpPanelHarness(initial:any){
  let bot=initial,stored='{}',now=1000;
  const nodes:any={},node=(selector:string)=>nodes[selector]??={innerHTML:'',textContent:''};
  const panel={querySelector:node,contains:()=>false};
- const api=new Function('body','account','window','Date','localStorage','document','put','E','safeName','nf','dur','efficiencyBox','calcBox','asset','skillFile',`let calcSkill=null,xpHideMaxed=false;${code};return {refreshXp,hide:v=>{xpHideMaxed=v;}};`)
+ const api=new Function('body','account','window','Date','localStorage','document','put','E','safeName','nf','dur','efficiencyBox','calcBox','asset','skillFile',`let calcSkill=null,calcTarget=null,calcAccount=null,xpHideMaxed=false;${code};return {refreshXp,hide:v=>{xpHideMaxed=v;}};`)
   ({querySelector:()=>panel},()=>bot,{atlasXp:X,atlasOperator:()=>true},{now:()=>now},{getItem:()=>stored,setItem:(_key:string,value:string)=>{stored=value;}},{activeElement:null},(el:any,html:string)=>{el.innerHTML=html;},String,String,String,String,()=>'',()=>'',String,String);
  return {...api,node,stored:()=>JSON.parse(stored),update:(value:any)=>{bot=value;now+=60_000;api.refreshXp();}};
 }
