@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794869126144,
+ "at": 1794869742168,
  "jobs": [
   {
    "account": "Balls",
@@ -106,23 +106,29 @@
    "role": "supply"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/train-prayer.ts",
+   "accounts": [
+    "Woodpecker",
+    "OreElse"
+   ],
+   "script": "scripts/handoff-inputs.ts",
    "args": [
-    "95"
+    "2:Gold ore",
+    "--bank-x=3269",
+    "--bank-z=3167",
+    "--approach-ms=900000",
+    "--request-ms=60000",
+    "--timeout-ms=240000"
    ],
    "env": {
-    "BONE_ID": "536",
-    "MAX_BURY": "211",
-    "BONE_RESERVE": "6",
-    "CAP": "1500",
+    "HANDOFF_ORDER": "wood-oreelse-bow-two-rings-1794869332260",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-f92f0261-7963-420a-a9c7-0cfd9c4fb4f0"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-497e37e2-d048-4271-9bc2-7fb46e0b1269"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-prayer-nab-owned-dragon95 [task-f92f0261-7963-420a-a9c7-0cfd9c4fb4f0]",
+   "goal": "run-handoff-ore-wood-bow-two-rings-1794869332260 [task-497e37e2-d048-4271-9bc2-7fb46e0b1269]",
    "role": "helper"
   }
  ],
