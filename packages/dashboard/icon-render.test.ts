@@ -41,7 +41,7 @@ test('decoded worn lookup IDs reach their actual lookup card icons',()=>{
 
 test('stock, collection and observed loot renders pass their retained IDs to icons',()=>{
  const stock=operations.slice(operations.indexOf(' function stock(){'),operations.indexOf(' // Fleet deck:'));
- const env={page:(s:string)=>s,title:empty,button:empty,stockTabs:empty,bots:()=>[{name:'Worker',bankAt:1,bank:[green,black]}],stockView:'stock',stockAccount:'',stockQuery:'',moneyKey:(i:any)=>'id:'+i.id,moneyPrice:()=>null,S:{},window:{atlasOperator:()=>true},E,nf,gp,age,safeName:String,icon};
+ const env={page:(s:string)=>s,title:empty,button:empty,stockTabs:empty,bots:()=>[{name:'Worker',bankAt:1,bank:[green,black]}],stockView:'stock',stockAccount:'',stockQuery:'',stockSort:'quantity',stockLimit:80,moneyKey:(i:any)=>'id:'+i.id,moneyPrice:()=>null,S:{},window:{atlasOperator:()=>true},E,nf,gp,age,safeName:String,icon};
  containsItems(run(`${stock};return stock();`,env),[green,black],20);
  const collection=operations.slice(operations.indexOf(' function heldIds(){'),operations.indexOf(' function moneyPrice('));
  const log=run(`${collection};return collectionLog();`,{bots:env.bots,itemList:[[1135,green.name,'Armour'],[2503,black.name,'Armour']],itemListError:'',logCat:'Armour',logQuery:'',E,nf,safeName:String,icon});

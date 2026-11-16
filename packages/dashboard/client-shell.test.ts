@@ -118,10 +118,41 @@ test('an open bank redraws newer observations and closes when its account change
  current={name:'Other',bank:[]};node('input').oninput();expect(removed).toBe(true);
 });
 
-function questPanel(bot:any,filter='all',now=Date.now()){
+test('bank search counts matched slots and distinguishes missing, empty and unmatched inventory',()=>{
+ const code=shell.slice(shell.indexOf('  function openBank(){'),shell.indexOf('  // Orbs as RuneLite'));
+ let current:any={name:'Worker',bankAt:1,bank:[{name:'Coins',count:10},{name:'Shark',count:25}]};
+ const nodes:any={},node=(s:string)=>nodes[s]??=(s==='input'?{value:''}:{innerHTML:'',textContent:''});
+ const modal:any={dataset:{},setAttribute:()=>{},querySelector:node,remove:()=>{}};
+ new Function('account','document','hud','window','E','safeName','age','stackValue','gp','icon','qty','priceTip','statTip',`${code};openBank();`)
+  (()=>current,{createElement:()=>modal},{querySelector:()=>null,append:()=>{}},{atlasOperator:()=>true},String,String,String,()=>({value:10,unpriced:0}),String,()=>'',String,()=>'',()=>'');
+ expect(node('.bank-count').textContent).toBe(2);
+ node('input').value='  sHaRk  ';node('input').oninput();
+ expect(node('.bank-count').textContent).toBe('1 / 2');expect(node('.bank-items').innerHTML).toContain('Shark');expect(node('.bank-items').innerHTML).not.toContain('Coins');
+ node('input').value='Lobster';node('input').oninput();
+ expect(node('.bank-count').textContent).toBe('0 / 2');expect(node('.bank-items').innerHTML).toContain('No items match your search.');
+ expect(node('.bank-items').innerHTML).toContain('class="game-muted bank-empty" role="status"');
+ current={...current,bank:[]};node('input').oninput();
+ expect(node('.bank-items').innerHTML).toContain('This bank is empty.');expect(node('.bank-items').innerHTML).not.toContain('No items match');
+ current={name:'Worker'};node('input').oninput();
+ expect(node('.bank-count').textContent).toBe('—');expect(node('.bank-items').innerHTML).toContain('No bank inventory has been reported');expect(node('.bank-items').innerHTML).not.toContain('This bank is empty.');
+ current={name:'Worker',bank:[{name:'Lobster',count:4}],bankAt:2};modal.refreshObservation();
+ expect(node('.bank-count').textContent).toBe('1 / 1');expect(node('.bank-items').innerHTML).toContain('Lobster');
+ node('input').value='   ';node('input').oninput();expect(node('.bank-count').textContent).toBe(1);
+});
+
+function questPanel(bot:any,filter='all',now=Date.now(),query=''){
  const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'&&questScope==='fleet')"),shell.indexOf("    if(selectedTab==='friends')"));
- return new Function('b','questFilter','E','age','S',`${questPointSource};const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String,{now});
+ return new Function('b','questFilter','questQuery','E','age','S',`${questPointSource};const selectedTab='quests',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,query,String,String,{now});
 }
+
+test('the account Quest Journal explains empty searches and filters without calling missing data empty',()=>{
+ const bot={quests:[{name:'Imp Catcher',state:'not started'}]};
+ expect(questPanel(bot,'all',Date.now(),'  iMp  ')).toContain('data-quest="Imp Catcher"');
+ const unmatched=questPanel(bot,'all',Date.now(),'Dragon');
+ expect(unmatched).toContain('No quests match your search or filter.');expect(unmatched).not.toContain('data-quest="Imp Catcher"');
+ expect(questPanel(bot,'completed')).toContain('No quests match your search or filter.');
+ expect(questPanel({})).toContain('Quest progress has not been reported');expect(questPanel({})).not.toContain('No quests match');
+});
 
 test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
  const code=shell.slice(shell.indexOf('  function accountChoices(){'),shell.indexOf('  function refresh(){'));
@@ -1411,6 +1442,16 @@ test('the Quest Journal fleet view counts each quest over our accounts and colou
  const detail=run('Imp Catcher');
  expect(detail).toContain('<span style="color:#ffff00" title="started">Alpha</span><span style="color:#ff0000" title="not started">Bravo</span>');
  expect(run(null,'completed')).not.toContain('Imp Catcher');
+});
+
+test('the fleet Quest Journal explains empty searches and keeps absent observations distinct',()=>{
+ const code=shell.slice(shell.indexOf("  let questScope='account';"),shell.indexOf('  function gamePanel(){'));
+ const bots=[{name:'Worker',quests:[{name:'Imp Catcher',state:'not started'}]}];
+ const run=(query='',filter='all',seen:any[]=bots)=>new Function('S','E','safeName','questQuery','questFilter',`let questDetail=null;${code};return fleetQuests();`)({bots:seen},String,String,query,filter);
+ expect(run('  iMp  ')).toContain('data-quest="Imp Catcher"');
+ expect(run('Dragon')).toContain('No quests match your search or filter.');expect(run('Dragon')).not.toContain('data-quest="Imp Catcher"');
+ expect(run('','completed')).toContain('No quests match your search or filter.');
+ expect(run('Dragon','all',[])).toContain('No account reports its quests.');expect(run('Dragon','all',[])).not.toContain('No quests match');
 });
 test('PvP Tools: risk, the 3 kept items, and only the players the server lets attack',()=>{
  const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
