@@ -1,0 +1,8 @@
+{
+  "state": "native-ready",
+  "at": 1794824116778,
+  "freeGB": 29.247669219970703,
+  "requiredGB": 6.5,
+  "deadline": 1794825016778,
+  "check": "native-session-recovery"
+}

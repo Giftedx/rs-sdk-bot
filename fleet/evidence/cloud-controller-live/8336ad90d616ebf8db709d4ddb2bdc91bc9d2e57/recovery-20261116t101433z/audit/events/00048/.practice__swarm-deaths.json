@@ -1,0 +1,66 @@
+{
+ "Porksword": {
+  "at": 1794637575954,
+  "reason": "gave-up after 3 runs",
+  "revision": "[\"scripts/goldfarm.ts\",false,[\"porksword\"],[[\"KNIGHT_SPOT\",\"2652,3318\"],[\"TICKS\",\"9000\"]]]"
+ },
+ "BraveHardon": {
+  "at": 1794637576688,
+  "reason": "gave-up after 3 runs",
+  "revision": "[\"scripts/goldfarm.ts\",false,[\"bravehardon\"],[[\"KNIGHT_SPOT\",\"2582,3297\"],[\"TICKS\",\"9000\"]]]"
+ },
+ "TossTheCaber": {
+  "at": 1794637578827,
+  "reason": "gave-up after 3 runs",
+  "revision": "[\"scripts/goldfarm.ts\",false,[\"tossthecaber\"],[[\"KNIGHT_SPOT\",\"2582,3297\"],[\"TICKS\",\"9000\"]]]"
+ },
+ "BoneToPick": {
+  "at": 1794637607782,
+  "reason": "gave-up after 3 runs",
+  "revision": "[\"scripts/generated/thieving60.ts\",false,[\"bonetopick\"],[[\"CAP\",\"2500\"],[\"CLEAN_FOOD\",\"1\"],[\"TARGET\",\"55\"]]]"
+ },
+ "Crownjewels": {
+  "at": 1794637609190,
+  "reason": "gave-up after 3 runs",
+  "revision": "[\"scripts/generated/thieving60.ts\",false,[\"crownjewels\"],[[\"CAP\",\"2500\"],[\"CLEAN_FOOD\",\"1\"],[\"TARGET\",\"55\"]]]"
+ },
+ "FullSporran": {
+  "at": 1794637637490,
+  "reason": "gave-up after 3 runs",
+  "revision": "[\"scripts/gather-feathers.ts\",false,[\"fullsporran\"],[[\"PEN\",\"3017,3288\"],[\"TARGET\",\"2000\"],[\"TICKS\",\"3000\"]]]"
+ },
+ "Spitroaster": {
+  "at": 1794641480931,
+  "reason": "exit orphaned: attempt 1794640054150-0000008246-0000000001 owner 8246 gone"
+ },
+ "Stirmypot": {
+  "at": 1794644116880,
+  "reason": "done after 1 runs",
+  "revision": "[\"scripts/gather-feathers.ts\",false,[\"stirmypot\"],[[\"PEN\",\"3187,3277\"],[\"TARGET\",\"2000\"],[\"TICKS\",\"3000\"]]]"
+ },
+ "MeatNTwoVeg": {
+  "at": 1794644421191,
+  "reason": "stopped after 1 runs",
+  "revision": "[\"scripts/goldfarm.ts\",false,[\"meatntwoveg\"],[[\"KNIGHT_SPOT\",\"2669,3298\"],[\"TICKS\",\"9000\"]]]"
+ },
+ "Heavyload": {
+  "at": 1794642198043,
+  "reason": "done after 1 runs",
+  "revision": "[\"scripts/generated/thieving60.ts\",false,[\"heavyload\"],[[\"CAP\",\"2500\"],[\"CLEAN_FOOD\",\"1\"],[\"TARGET\",\"55\"]]]"
+ },
+ "YewGotWood": {
+  "at": 1794644431838,
+  "reason": "stopped after 1 runs",
+  "revision": "[\"scripts/gather-feathers.ts\",false,[\"yewgotwood\"],[[\"PEN\",\"3229,3298\"],[\"TARGET\",\"2000\"],[\"TICKS\",\"3000\"]]]"
+ },
+ "Unsheathed": {
+  "at": 1794807013505,
+  "reason": "gave-up after 1 runs",
+  "revision": "[\"scripts/fleet-inspect.ts\",false,[\"unsheathed\"],[[\"LOOT_WATCH\",\"0\"],[\"RANDOM_EVENTS\",\"0\"],[\"TICK_RECORD\",\"1\"]]]"
+ },
+ "FullLoad": {
+  "at": 1794807014127,
+  "reason": "gave-up after 1 runs",
+  "revision": "[\"scripts/fleet-inspect.ts\",false,[\"fullload\"],[[\"LOOT_WATCH\",\"0\"],[\"RANDOM_EVENTS\",\"0\"],[\"TICK_RECORD\",\"1\"]]]"
+ }
+}

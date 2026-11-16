@@ -1,0 +1,11 @@
+{
+  "pid": 51072,
+  "nonce": "a2d67f45-bcba-4cd1-96df-1a8536e933df",
+  "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+  "swarmSource": "fa0a10c1ef018a2f0801405d261fa7ac3a02301de950fcf68ea2844df17b5dc4",
+  "at": 1794824461236,
+  "detached": true,
+  "watchId": "42fecad0-9fc2-4823-b38f-d21c9bfc490c",
+  "plan": "/workspace/rs-sdk-bot/.practice/cloud-side/cloud/recovery-plan.json",
+  "side": "cloud"
+}

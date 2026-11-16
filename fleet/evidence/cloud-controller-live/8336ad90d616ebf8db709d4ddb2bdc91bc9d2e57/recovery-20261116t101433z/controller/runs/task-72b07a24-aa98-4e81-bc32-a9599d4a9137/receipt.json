@@ -1,0 +1,8 @@
+{
+  "taskId": "cloud-recover-unsheathed-20261116t101433z",
+  "runId": "task-72b07a24-aa98-4e81-bc32-a9599d4a9137",
+  "ok": false,
+  "at": 1794824484511,
+  "output": null,
+  "error": "Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry"
+}

@@ -1,0 +1,16 @@
+{
+  "task": {
+    "id": "cloud-recovery-qualified-20261116t101433z",
+    "goal": "wealth",
+    "kind": "qualify",
+    "capability": "session-recovery-only",
+    "dependsOn": [],
+    "priority": 90,
+    "estimatedMs": 600000,
+    "why": "Qualify authenticated session recovery"
+  },
+  "dependencies": {},
+  "runId": "task-6effa5d9-aaf6-4566-8faf-b86819e45ad7",
+  "startedAt": 1794824077519,
+  "agent": "codex"
+}

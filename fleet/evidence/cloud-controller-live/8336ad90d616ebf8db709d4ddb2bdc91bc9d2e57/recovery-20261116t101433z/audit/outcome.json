@@ -1,0 +1,10 @@
+{
+  "qualificationPassed": true,
+  "controllerWatch": "RESULT ok cloud-side side=cloud minutes=12 accounts=14 coordinator=down starts=0 stopped",
+  "recoveriesPassed": false,
+  "newLiveProducer": false,
+  "inspectionStarted": false,
+  "allCloudClaimsUnchanged": true,
+  "source": "8336ad90d616ebf8db709d4ddb2bdc91bc9d2e57",
+  "causeEvidence": "admission-diagnosis.json; hostname-only proof rejection is being reproduced; coarse child receipts omit the underlying exception"
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "session-recovery/1",
+  "kind": "session-recovery",
+  "account": "Unsheathed",
+  "endedAt": 1794807013505,
+  "server": "rs-sdk-demo.fly.dev",
+  "runId": "task-72b07a24-aa98-4e81-bc32-a9599d4a9137",
+  "nonce": "370347b8-95ec-4800-ac6f-f0a13470e0a6",
+  "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+  "qualification": {
+    "delivery": {
+      "path": "/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/report.json",
+      "sha256": "494bb9af1bf4f9eb7e783d73778c237a6a018a130ce623c1fd3fce4019bcad89"
+    },
+    "proof": {
+      "path": "/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/proof.json",
+      "sha256": "954957467d52db2c6397b5f98b90b224157c3108e3eb8ac2c8bfa1bc5a19ce2d"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "session-recovery/1",
+  "state": "held",
+  "request": {
+    "schema": "session-recovery/1",
+    "kind": "session-recovery",
+    "account": "flrcvxt0qp22",
+    "server": "localhost:8899",
+    "runId": "native-rcv-timeout-119837",
+    "nonce": "one-timeout",
+    "endedAt": 1794824405699,
+    "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+    "qualification": {
+      "delivery": {
+        "path": "native-fixture-not-qualified",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "proof": {
+        "path": "native-fixture-not-qualified",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "startedAt": 1794824408602,
+  "endedAt": 1794824440393,
+  "attemptId": "1794824409185-0000050923-0000000001",
+  "lifecycleSha256": "cf465d395cbda38da648d3cce557d52ef5c8a403956a4b714979e770a8d2f68b",
+  "proof": {
+    "state": "held",
+    "account": "flrcvxt0qp22",
+    "server": "localhost:8899",
+    "domain": "practice",
+    "attemptId": "1794824409185-0000050923-0000000001",
+    "reason": "connect failed without an observed end"
+  },
+  "before": null,
+  "after": null,
+  "logout": "not-attempted",
+  "failure": "connect failed or unresolved",
+  "scope": {
+    "gameplay": false,
+    "production": 0,
+    "repairsFailure": false,
+    "qualifiesScript": false,
+    "bankObservation": "unobserved"
+  },
+  "runnerSha256": "2717fa5c4e7454a68cf7c4b82d7f5beba2ca88c7eccda07208b00caa66f57b24"
+}

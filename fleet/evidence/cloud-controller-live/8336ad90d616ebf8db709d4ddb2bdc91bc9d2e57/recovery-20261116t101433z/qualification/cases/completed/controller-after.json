@@ -1,0 +1,47 @@
+{
+  "ends": [
+    [
+      "flrcvxeb9r1",
+      {
+        "at": 1794824123155,
+        "reason": "blocked after 1 runs"
+      }
+    ],
+    [
+      "flrcvx9v7m2",
+      {
+        "at": 1794824136233,
+        "reason": "blocked after 1 runs"
+      }
+    ],
+    [
+      "flrcvx8p2u3",
+      {
+        "at": 1794824197863,
+        "reason": "done after 1 runs",
+        "revision": "[\"scripts/retired-fixture.ts\",false,[\"flrcvx8p2u3\"],[]]"
+      }
+    ]
+  ],
+  "repair": {
+    "changed": false,
+    "reason": "completed work needs a new mission"
+  },
+  "revision": "[\"scripts/session-check.ts\",false,[\"flrcvx8p2u3\"],[[\"CAP\",\"1500\"],[\"COORDINATOR_RUN_ID\",\"native-rcv-completed-119837\"],[\"TARGET_LEVEL\",\"20\"],[\"TRAIN_SKILL\",\"Attack\"]]]",
+  "beforeProof": {
+    "state": "none",
+    "account": "flrcvx8p2u3",
+    "server": "127.0.0.1:8890",
+    "domain": "practice"
+  },
+  "proof": {
+    "state": "confirmed",
+    "account": "flrcvx8p2u3",
+    "server": "127.0.0.1:8890",
+    "domain": "practice",
+    "attemptId": "1794824201359-0000049662-0000000001",
+    "loggedOutAt": 1794824203594,
+    "ownerRun": "native-rcv-completed-119837",
+    "receiptSha256": "1d8becd67afa8c64d76a96625f9d8aeb3096ab319b47db1978352f80499257fc"
+  }
+}

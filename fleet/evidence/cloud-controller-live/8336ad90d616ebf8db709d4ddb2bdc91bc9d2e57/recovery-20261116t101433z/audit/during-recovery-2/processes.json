@@ -1,0 +1,46 @@
+[
+  {
+    "pid": 48152,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun",
+    "script": ".practice/cloud-inspect-live/live-audit.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 1440424,
+    "createdAt": 1794824069240
+  },
+  {
+    "pid": 48169,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun",
+    "script": "scripts/cloud-side.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 1440562,
+    "createdAt": 1794824070620
+  },
+  {
+    "pid": 48349,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun.exe",
+    "script": "/workspace/rs-sdk-bot/packages/router/src/coordinator-cli.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 1440963,
+    "createdAt": 1794824074630
+  },
+  {
+    "pid": 51072,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun.exe",
+    "script": "/workspace/rs-sdk-bot/scripts/swarm.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 1479591,
+    "createdAt": 1794824460910
+  }
+]

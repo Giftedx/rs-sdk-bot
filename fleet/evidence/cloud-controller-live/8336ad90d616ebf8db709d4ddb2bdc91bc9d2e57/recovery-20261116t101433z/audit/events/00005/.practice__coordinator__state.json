@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "sequence": 3,
+  "tasks": [
+    {
+      "spec": {
+        "id": "cloud-recovery-qualified-20261116t101433z",
+        "goal": "wealth",
+        "kind": "qualify",
+        "capability": "session-recovery-only",
+        "dependsOn": [],
+        "priority": 90,
+        "estimatedMs": 600000,
+        "why": "Qualify authenticated session recovery"
+      },
+      "status": "running",
+      "createdAt": 1794824075329,
+      "attempts": 1,
+      "runId": "task-6effa5d9-aaf6-4566-8faf-b86819e45ad7",
+      "startedAt": 1794824077519,
+      "agent": "codex",
+      "pid": 48360
+    },
+    {
+      "spec": {
+        "id": "cloud-recover-fullload-20261116t101433z",
+        "goal": "wealth",
+        "kind": "run",
+        "capability": "session-recovery-only",
+        "account": "FullLoad",
+        "dependsOn": [
+          "cloud-recovery-qualified-20261116t101433z"
+        ],
+        "repairs": [
+          {
+            "account": "FullLoad",
+            "endedAt": 1794807014127
+          }
+        ],
+        "sessionRecovery": {
+          "account": "FullLoad",
+          "endedAt": 1794807014127
+        },
+        "accept": {
+          "counters": {
+            "sessionChecked": 1
+          }
+        },
+        "priority": 90,
+        "estimatedMs": 120000,
+        "why": "Authenticated recovery of FullLoad's orphaned session"
+      },
+      "status": "pending",
+      "createdAt": 1794824075329,
+      "attempts": 0
+    },
+    {
+      "spec": {
+        "id": "cloud-recover-unsheathed-20261116t101433z",
+        "goal": "wealth",
+        "kind": "run",
+        "capability": "session-recovery-only",
+        "account": "Unsheathed",
+        "dependsOn": [
+          "cloud-recovery-qualified-20261116t101433z",
+          "cloud-recover-fullload-20261116t101433z"
+        ],
+        "repairs": [
+          {
+            "account": "Unsheathed",
+            "endedAt": 1794807013505
+          }
+        ],
+        "sessionRecovery": {
+          "account": "Unsheathed",
+          "endedAt": 1794807013505
+        },
+        "accept": {
+          "counters": {
+            "sessionChecked": 1
+          }
+        },
+        "priority": 90,
+        "estimatedMs": 120000,
+        "why": "Authenticated recovery of Unsheathed's orphaned session"
+      },
+      "status": "pending",
+      "createdAt": 1794824075329,
+      "attempts": 0
+    }
+  ],
+  "goals": [
+    {
+      "id": "wealth",
+      "lastStartedAt": 1794824077519,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "skills",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "quests",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "gear",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "specialists",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "main24",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    }
+  ],
+  "lastPlanAt": 0,
+  "lastPlanReason": "Exact bounded authenticated recovery"
+}

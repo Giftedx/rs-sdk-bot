@@ -1,0 +1,13 @@
+[
+  {
+    "pid": 48152,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun",
+    "script": ".practice/cloud-inspect-live/live-audit.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 1440424,
+    "createdAt": 1794824069240
+  }
+]

@@ -1,0 +1,1 @@
+$ bun scripts/measure/aio-practice-bench.ts "^extra:owned-bank-observation\$" --profile --budget "10"

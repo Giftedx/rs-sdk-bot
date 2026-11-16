@@ -1,0 +1,276 @@
+{
+  "submittedAt": 1794824223258,
+  "fleet": {
+    "at": 1794824223258,
+    "observedAt": 1794824223259,
+    "ageMs": 1,
+    "verdict": "resolved"
+  },
+  "child": 49981,
+  "dispatch": "recovery child held; inspect fixed child output and retained account lease; no retry",
+  "boundaries": [
+    {
+      "phase": "admitRecovery",
+      "at": 1794824223260,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxeb9r1",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 28.465736389160156,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794824223260,
+          "request": {
+            "account": "flrcvxeb9r1",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-auth-failure-119837",
+            "nonce": "one-auth-failure",
+            "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+            "endedAt": 1794824123155
+          },
+          "controller": {
+            "pid": 49110,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753"
+          },
+          "processPid": 49110,
+          "task": {
+            "pid": 49979,
+            "runId": "native-rcv-auth-failure-119837",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxeb9r1",
+            "sessionRecovery": {
+              "account": "flrcvxeb9r1",
+              "endedAt": 1794824123155
+            },
+            "repairs": [
+              {
+                "account": "flrcvxeb9r1",
+                "endedAt": 1794824123155
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 49979,
+            "runId": "native-rcv-auth-failure-119837"
+          },
+          "requestLease": {
+            "pid": 49979,
+            "runId": "native-rcv-auth-failure-119837",
+            "nonce": "one-auth-failure"
+          },
+          "fleet": {
+            "at": 1794824223258,
+            "controllerPid": 49110
+          },
+          "end": {
+            "at": 1794824123155,
+            "reason": "blocked after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "admitRecovery",
+      "at": 1794824223263,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxeb9r1",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 28.465736389160156,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794824223260,
+          "request": {
+            "account": "flrcvxeb9r1",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-auth-failure-119837",
+            "nonce": "one-auth-failure",
+            "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+            "endedAt": 1794824123155
+          },
+          "controller": {
+            "pid": 49110,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753"
+          },
+          "processPid": 49110,
+          "task": {
+            "pid": 49979,
+            "runId": "native-rcv-auth-failure-119837",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxeb9r1",
+            "sessionRecovery": {
+              "account": "flrcvxeb9r1",
+              "endedAt": 1794824123155
+            },
+            "repairs": [
+              {
+                "account": "flrcvxeb9r1",
+                "endedAt": 1794824123155
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 49979,
+            "runId": "native-rcv-auth-failure-119837"
+          },
+          "requestLease": {
+            "pid": 49979,
+            "runId": "native-rcv-auth-failure-119837",
+            "nonce": "one-auth-failure"
+          },
+          "fleet": {
+            "at": 1794824223258,
+            "controllerPid": 49110
+          },
+          "end": {
+            "at": 1794824123155,
+            "reason": "blocked after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794824223263,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794824223263,
+        "request": {
+          "account": "flrcvxeb9r1",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-auth-failure-119837",
+          "nonce": "one-auth-failure",
+          "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+          "endedAt": 1794824123155
+        },
+        "controller": {
+          "pid": 49110,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753"
+        },
+        "processPid": 49110,
+        "task": {
+          "pid": 49979,
+          "runId": "native-rcv-auth-failure-119837",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxeb9r1",
+          "sessionRecovery": {
+            "account": "flrcvxeb9r1",
+            "endedAt": 1794824123155
+          },
+          "repairs": [
+            {
+              "account": "flrcvxeb9r1",
+              "endedAt": 1794824123155
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 49979,
+          "runId": "native-rcv-auth-failure-119837"
+        },
+        "requestLease": {
+          "pid": 49979,
+          "runId": "native-rcv-auth-failure-119837",
+          "nonce": "one-auth-failure"
+        },
+        "fleet": {
+          "at": 1794824223258,
+          "controllerPid": 49110
+        },
+        "end": {
+          "at": 1794824123155,
+          "reason": "blocked after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794824223273,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794824223263,
+        "request": {
+          "account": "flrcvxeb9r1",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-auth-failure-119837",
+          "nonce": "one-auth-failure",
+          "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753",
+          "endedAt": 1794824123155
+        },
+        "controller": {
+          "pid": 49110,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "b99deb3f3a59ad57303f68ea67f118a9f6382637d5032055c9150eab9d80e753"
+        },
+        "processPid": 49110,
+        "task": {
+          "pid": 49979,
+          "runId": "native-rcv-auth-failure-119837",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxeb9r1",
+          "sessionRecovery": {
+            "account": "flrcvxeb9r1",
+            "endedAt": 1794824123155
+          },
+          "repairs": [
+            {
+              "account": "flrcvxeb9r1",
+              "endedAt": 1794824123155
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 49979,
+          "runId": "native-rcv-auth-failure-119837"
+        },
+        "requestLease": {
+          "pid": 49979,
+          "runId": "native-rcv-auth-failure-119837",
+          "nonce": "one-auth-failure"
+        },
+        "fleet": {
+          "at": 1794824223258,
+          "controllerPid": 49110
+        },
+        "end": {
+          "at": 1794824123155,
+          "reason": "blocked after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    }
+  ],
+  "firstFailure": null
+}

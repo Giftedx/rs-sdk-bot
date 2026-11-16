@@ -1,0 +1,89 @@
+{
+  "at": 1794824904547,
+  "current": {
+    "host": "739d55ef289c",
+    "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+    "workerHolder": null,
+    "leaseAllows": true
+  },
+  "actors": [
+    {
+      "account": "FullLoad",
+      "claim": {
+        "kind": "swarm",
+        "account": "fullload",
+        "server": "rs-sdk-demo.fly.dev",
+        "side": "cloud",
+        "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+        "host": "c495244f1bc5",
+        "pid": 10716,
+        "nonce": "b8c567f0-c952-4e2c-bf03-d0cb1c5dfe06",
+        "phase": "held",
+        "at": 1794807012497
+      },
+      "proof": {
+        "state": "held",
+        "account": "FullLoad",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live",
+        "attemptId": "1794807014059-0000010716-0000000001",
+        "reason": "connect failed without an observed end"
+      },
+      "producer": {
+        "pid": 10716,
+        "coordinatorRunId": null,
+        "workerRelease": "dfeb6dc477fb8046f7c53aa4a1957bf58b84e33c5e86b42aab4b3d716d51dc1b",
+        "script": "scripts/fleet-inspect.ts",
+        "role": "inspect",
+        "participants": null,
+        "sharedClaimNonce": "b8c567f0-c952-4e2c-bf03-d0cb1c5dfe06"
+      },
+      "comparison": {
+        "sameSide": true,
+        "sameHost": false,
+        "sameCheckout": true,
+        "sameNonce": true,
+        "samePid": true
+      }
+    },
+    {
+      "account": "Unsheathed",
+      "claim": {
+        "kind": "swarm",
+        "account": "unsheathed",
+        "server": "rs-sdk-demo.fly.dev",
+        "side": "cloud",
+        "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+        "host": "c495244f1bc5",
+        "pid": 10703,
+        "nonce": "2a637834-6fde-40ba-bd57-392bdc4aef20",
+        "phase": "held",
+        "at": 1794807011741
+      },
+      "proof": {
+        "state": "held",
+        "account": "Unsheathed",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live",
+        "attemptId": "1794807013455-0000010703-0000000001",
+        "reason": "connect failed without an observed end"
+      },
+      "producer": {
+        "pid": 10703,
+        "coordinatorRunId": null,
+        "workerRelease": "dfeb6dc477fb8046f7c53aa4a1957bf58b84e33c5e86b42aab4b3d716d51dc1b",
+        "script": "scripts/fleet-inspect.ts",
+        "role": "inspect",
+        "participants": null,
+        "sharedClaimNonce": "2a637834-6fde-40ba-bd57-392bdc4aef20"
+      },
+      "comparison": {
+        "sameSide": true,
+        "sameHost": false,
+        "sameCheckout": true,
+        "sameNonce": true,
+        "samePid": true
+      }
+    }
+  ]
+}

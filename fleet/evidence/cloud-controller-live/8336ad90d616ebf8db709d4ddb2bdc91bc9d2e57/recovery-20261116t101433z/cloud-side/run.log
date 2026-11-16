@@ -1,0 +1,117 @@
+2026-11-14T05:44:13.001Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-14T05:44:13.003Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-14T05:44:15.848Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-14T05:44:17.688Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-14T05:44:17.692Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-14T05:44:17.697Z credentials {"restored":14} key=yes
+2026-11-14T05:44:40.829Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-14T05:44:40.831Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-14T05:44:41.137Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-14T05:44:42.246Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-14T05:44:42.247Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-14T05:44:42.250Z credentials {"present":14} key=yes
+2026-11-14T06:25:31.604Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-14T06:25:31.609Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-14T06:25:32.763Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-14T06:25:36.154Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-14T06:25:36.158Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-14T06:25:36.164Z credentials {"present":14} key=yes
+2026-11-14T06:25:36.168Z started swarm pid 717
+2026-11-14T06:25:36.169Z started fleet-agent pid 718
+2026-11-14T06:25:36.169Z started autopilot pid 719
+2026-11-14T06:25:36.170Z watching 50 min, 14 accounts, free 32.5 GB
+2026-11-14T07:16:01.214Z stopped at end
+2026-11-14T07:30:14.154Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-14T07:30:14.157Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-14T07:30:15.201Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-14T07:30:17.259Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-14T07:30:17.262Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-14T07:30:17.267Z credentials {"present":14} key=yes
+2026-11-14T07:30:17.270Z started swarm pid 10413
+2026-11-14T07:30:17.270Z started fleet-agent pid 10414
+2026-11-14T07:30:17.271Z started autopilot pid 10415
+2026-11-14T07:30:17.271Z watching 50 min, 14 accounts, free 32.5 GB
+2026-11-14T08:20:32.320Z stopped at end
+2026-11-14T08:35:15.490Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T08:35:15.490Z FAIL worktree setup failed
+2026-11-14T09:15:26.648Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T09:15:26.649Z FAIL worktree setup failed
+2026-11-14T10:00:23.768Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T10:00:23.769Z FAIL worktree setup failed
+2026-11-14T10:45:22.374Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T10:45:22.375Z FAIL worktree setup failed
+2026-11-14T11:30:16.486Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T11:30:16.487Z FAIL worktree setup failed
+2026-11-14T12:15:18.439Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T12:15:18.439Z FAIL worktree setup failed
+2026-11-14T13:00:19.753Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T13:00:19.753Z FAIL worktree setup failed
+2026-11-14T13:45:18.171Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T13:45:18.171Z FAIL worktree setup failed
+2026-11-14T14:30:18.276Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T14:30:18.276Z FAIL worktree setup failed
+2026-11-14T15:15:16.709Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-14T15:15:16.709Z FAIL worktree setup failed
+2026-11-15T06:30:28.861Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T06:30:28.861Z FAIL worktree setup failed
+2026-11-15T07:35:20.837Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T07:35:20.837Z FAIL worktree setup failed
+2026-11-15T08:35:29.459Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T08:35:29.459Z FAIL worktree setup failed
+2026-11-15T09:20:29.138Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T09:20:29.139Z FAIL worktree setup failed
+2026-11-15T10:05:27.673Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T10:05:27.673Z FAIL worktree setup failed
+2026-11-15T10:50:31.259Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T10:50:31.259Z FAIL worktree setup failed
+2026-11-15T11:35:27.906Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T11:35:27.906Z FAIL worktree setup failed
+2026-11-15T12:20:28.724Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T12:20:28.724Z FAIL worktree setup failed
+2026-11-15T13:05:28.226Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T13:05:28.226Z FAIL worktree setup failed
+2026-11-15T13:50:30.449Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T13:50:30.450Z FAIL worktree setup failed
+2026-11-15T14:35:30.343Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T14:35:30.344Z FAIL worktree setup failed
+2026-11-15T15:20:30.167Z $ bun scripts/worktree-setup.ts -> 1 is commit. Run again with --reset-vendor to restore its tracked files and apply this patch. worktree-setup: root packages: present worktree-setup: SDK packages: present worktree-setup: web client packages: present worktree-setup: hook switch: main checkout, nothing to copy worktree-setup: NOT ready 
+2026-11-15T15:20:30.168Z FAIL worktree setup failed
+2026-11-16T05:00:39.765Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-16T05:00:39.769Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-16T05:00:41.853Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-16T05:00:43.653Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-16T05:00:43.657Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-16T05:00:43.664Z credentials {"present":14} key=yes
+2026-11-16T05:21:34.944Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-16T05:21:34.950Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-16T05:21:35.505Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-16T05:21:37.420Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-16T05:21:37.428Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-16T05:21:37.444Z credentials {"present":14} key=yes
+2026-11-16T05:21:37.448Z started swarm pid 8958
+2026-11-16T05:21:37.449Z started fleet-agent pid 8959
+2026-11-16T05:21:37.449Z started autopilot pid 8960
+2026-11-16T05:21:37.450Z watching 3 min, 14 accounts, free 32.1 GB
+2026-11-16T05:24:42.476Z stopped at end
+2026-11-16T05:27:58.002Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-16T05:27:58.006Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-16T05:27:58.997Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-16T05:28:01.465Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-16T05:28:01.472Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-16T05:28:01.479Z credentials {"present":14} key=yes
+2026-11-16T05:28:01.482Z started swarm pid 10395
+2026-11-16T05:28:01.483Z started fleet-agent pid 10396
+2026-11-16T05:28:01.483Z started autopilot pid 10397
+2026-11-16T05:28:01.483Z watching 3 min, 14 accounts, free 32.1 GB
+2026-11-16T05:31:06.501Z stopped at end
+2026-11-16T10:14:31.191Z $ bun scripts/worktree-setup.ts -> 0
+2026-11-16T10:14:31.198Z $ git config submodule.vendor/rs-sdk.ignore dirty -> 0
+2026-11-16T10:14:31.934Z $ git fetch --quiet --no-tags origin +refs/heads/fleet-data:refs/remotes/origin/fleet-data -> 0
+2026-11-16T10:14:33.597Z $ bun scripts/fleet-sync.ts --no-push -> 0
+2026-11-16T10:14:33.600Z $ git -C /workspace/rs-sdk-bot/.practice/fleet-data config rebase.autoStash true -> 0
+2026-11-16T10:14:33.605Z credentials {"present":14} key=yes
+2026-11-16T10:14:34.951Z $ bun packages/router/src/coordinator-cli.ts --submit /workspace/rs-sdk-bot/.practice/cloud-side/cloud/recovery-proposal.json -> 0
+2026-11-16T10:14:34.952Z bounded recovery controller stops cleared: FullLoad,Unsheathed
+2026-11-16T10:14:34.956Z started coordinator pid 48349
+2026-11-16T10:14:34.956Z watching 12 min, 14 accounts, free 29.7 GB
+2026-11-16T10:26:37.036Z stopped at end

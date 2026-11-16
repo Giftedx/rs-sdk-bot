@@ -1,0 +1,29 @@
+{
+  "id": "auth-failure",
+  "level": "native-actual-cli",
+  "checks": {
+    "registeredBefore": true,
+    "serverRejected": true,
+    "dispatcherHeld": true,
+    "receiptHeld": true,
+    "leaseHeld": true,
+    "nonceConsumed": true,
+    "receiptPresent": true,
+    "notCompleted": true,
+    "failureRetained": true,
+    "saveBytesUnchanged": true
+  },
+  "account": "flrcvxeb9r1",
+  "persistence": "no fresh save; unchanged bytes are compared, not claimed as persistence",
+  "firstBoundary": {
+    "fleet": {
+      "at": 1794824223258,
+      "observedAt": 1794824223259,
+      "ageMs": 1,
+      "verdict": "resolved"
+    },
+    "child": 49981,
+    "dispatch": "recovery child held; inspect fixed child output and retained account lease; no retry",
+    "authReplies": 1
+  }
+}

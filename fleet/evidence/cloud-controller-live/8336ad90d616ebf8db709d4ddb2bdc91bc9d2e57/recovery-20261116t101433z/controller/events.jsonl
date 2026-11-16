@@ -1,0 +1,9 @@
+{"at":1794824075323,"kind":"coordinator-started","detail":{"pid":48349,"nonce":"0957ef6b-a701-4eb9-ac73-2b8b657350e5"}}
+{"at":1794824075332,"kind":"queue-submitted","detail":{"file":"a5c95f2a-6bed-444f-a9bb-3f5d4bef11a7.request.json"}}
+{"at":1794824077528,"kind":"task-started","detail":{"id":"cloud-recovery-qualified-20261116t101433z","runId":"task-6effa5d9-aaf6-4566-8faf-b86819e45ad7","pid":48360,"agent":"codex"}}
+{"at":1794824460913,"kind":"task-finished","detail":{"id":"cloud-recovery-qualified-20261116t101433z","status":"succeeded","runId":"task-6effa5d9-aaf6-4566-8faf-b86819e45ad7"}}
+{"at":1794824463860,"kind":"task-started","detail":{"id":"cloud-recover-fullload-20261116t101433z","runId":"task-8f41d7a0-7ed5-4ff2-a5af-ab2be6464391","pid":51103,"agent":"codex"}}
+{"at":1794824475495,"kind":"task-finished","detail":{"id":"cloud-recover-fullload-20261116t101433z","status":"failed","runId":"task-8f41d7a0-7ed5-4ff2-a5af-ab2be6464391"}}
+{"at":1794824475653,"kind":"task-started","detail":{"id":"cloud-recover-unsheathed-20261116t101433z","runId":"task-72b07a24-aa98-4e81-bc32-a9599d4a9137","pid":51141,"agent":"codex"}}
+{"at":1794824485025,"kind":"task-finished","detail":{"id":"cloud-recover-unsheathed-20261116t101433z","status":"failed","runId":"task-72b07a24-aa98-4e81-bc32-a9599d4a9137"}}
+{"at":1794824795182,"kind":"coordinator-paused","detail":{"reason":"owner stop file","unsettledRuns":[]}}

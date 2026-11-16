@@ -1,0 +1,1 @@
+RECOVERY_HELD {"schema":"session-recovery-diagnostic/1","state":"held","phase":"remote-authority","reason":"remote-unqualified","authorizesConnection":false,"producerReceipt":false}

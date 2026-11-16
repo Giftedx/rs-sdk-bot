@@ -1,0 +1,28 @@
+{
+  "id": "cooldown",
+  "level": "native-actual-cli",
+  "checks": {
+    "takeoverWindowOpen": true,
+    "serverCooldown": true,
+    "dispatcherHeld": true,
+    "receiptHeld": true,
+    "leaseHeld": true,
+    "producerHeld": true,
+    "notRecovered": true,
+    "activeOwnerPreserved": true,
+    "ownerLogoutConfirmed": true,
+    "failureRetained": true
+  },
+  "account": "flrcvxpkgw19",
+  "owner": "external private lifecycle root; invisible to the controller by design",
+  "reason": "recovery login refused with response 3 inside the open takeover window",
+  "window": {
+    "ok": true,
+    "reason": "recovery login refused with response 3 inside the open takeover window",
+    "windowMs": 60000,
+    "takeoverReplyAt": 1794824242220,
+    "recoveryRequestAt": 1794824244364,
+    "gapMs": 2144,
+    "response": 3
+  }
+}
