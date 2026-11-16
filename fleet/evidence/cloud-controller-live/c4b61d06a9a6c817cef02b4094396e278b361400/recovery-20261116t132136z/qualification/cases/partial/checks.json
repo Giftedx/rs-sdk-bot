@@ -1,0 +1,31 @@
+{
+  "id": "partial",
+  "level": "native-actual-cli",
+  "checks": {
+    "childLaunched": true,
+    "dispatcherConfirmed": true,
+    "receiptConfirmed": true,
+    "loginAcknowledged": true,
+    "logoutAcknowledged": true,
+    "nonceConsumed": true,
+    "receiptPresent": true,
+    "completedIndexed": true,
+    "leaseReleased": true,
+    "producerConfirmed": true,
+    "recoveredForRun": true,
+    "failureRetained": true,
+    "freshSave": true,
+    "savedInventories": true,
+    "savedSkills": true,
+    "savedPosition": true,
+    "noGameplayClaim": true,
+    "oldPartialUnconfirmed": true
+  },
+  "account": "flrcvx3g8f23",
+  "server": "localhost:8899",
+  "runId": "native-rcv-partial-360240",
+  "childPid": 143722,
+  "taskPid": 143720,
+  "persistence": "fresh native save after confirmed producer logout",
+  "firstRefusal": null
+}

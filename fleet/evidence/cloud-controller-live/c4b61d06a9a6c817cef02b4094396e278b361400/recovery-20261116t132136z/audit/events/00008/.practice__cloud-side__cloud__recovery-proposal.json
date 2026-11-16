@@ -1,0 +1,73 @@
+{
+  "reason": "Exact bounded authenticated recovery",
+  "capabilities": [],
+  "tasks": [
+    {
+      "id": "cloud-recovery-qualified-20261116t132135z",
+      "goal": "wealth",
+      "kind": "qualify",
+      "capability": "session-recovery-only",
+      "dependsOn": [],
+      "priority": 90,
+      "estimatedMs": 600000,
+      "why": "Qualify authenticated session recovery"
+    },
+    {
+      "id": "cloud-recover-fullload-20261116t132135z",
+      "goal": "wealth",
+      "kind": "run",
+      "capability": "session-recovery-only",
+      "account": "FullLoad",
+      "dependsOn": [
+        "cloud-recovery-qualified-20261116t132135z"
+      ],
+      "repairs": [
+        {
+          "account": "FullLoad",
+          "endedAt": 1794807014127
+        }
+      ],
+      "sessionRecovery": {
+        "account": "FullLoad",
+        "endedAt": 1794807014127
+      },
+      "accept": {
+        "counters": {
+          "sessionChecked": 1
+        }
+      },
+      "priority": 90,
+      "estimatedMs": 120000,
+      "why": "Authenticated recovery of FullLoad's orphaned session"
+    },
+    {
+      "id": "cloud-recover-unsheathed-20261116t132135z",
+      "goal": "wealth",
+      "kind": "run",
+      "capability": "session-recovery-only",
+      "account": "Unsheathed",
+      "dependsOn": [
+        "cloud-recovery-qualified-20261116t132135z",
+        "cloud-recover-fullload-20261116t132135z"
+      ],
+      "repairs": [
+        {
+          "account": "Unsheathed",
+          "endedAt": 1794807013505
+        }
+      ],
+      "sessionRecovery": {
+        "account": "Unsheathed",
+        "endedAt": 1794807013505
+      },
+      "accept": {
+        "counters": {
+          "sessionChecked": 1
+        }
+      },
+      "priority": 90,
+      "estimatedMs": 120000,
+      "why": "Authenticated recovery of Unsheathed's orphaned session"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "state": "confirmed",
+  "account": "aiobfx3son1",
+  "server": "127.0.0.1:21000",
+  "domain": "practice",
+  "attemptId": "1794835348027-0000141804-0000000001",
+  "loggedOutAt": 1794835350520,
+  "ownerRun": null,
+  "receiptSha256": "7402e44322b738946c410356f30b23e6ff703c12628aceea575f71eb00b2c106"
+}

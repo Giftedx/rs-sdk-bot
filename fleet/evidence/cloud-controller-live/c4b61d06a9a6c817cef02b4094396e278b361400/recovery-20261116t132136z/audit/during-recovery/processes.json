@@ -1,0 +1,68 @@
+[
+  {
+    "pid": 136975,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun",
+    "script": ".practice/cloud-inspect-live/live-audit-c4.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 2562617,
+    "createdAt": 1794835291170
+  },
+  {
+    "pid": 136992,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun",
+    "script": "scripts/cloud-side.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 2562752,
+    "createdAt": 1794835292520
+  },
+  {
+    "pid": 137266,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun.exe",
+    "script": "/workspace/rs-sdk-bot/packages/router/src/coordinator-cli.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 2563161,
+    "createdAt": 1794835296610
+  },
+  {
+    "pid": 137276,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun.exe",
+    "script": "/workspace/rs-sdk-bot/packages/router/src/coordinator-cli.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 2563423,
+    "createdAt": 1794835299230
+  },
+  {
+    "pid": 141854,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun.exe",
+    "script": "/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794835300201-BOWKBW/observe-auth.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 2569513,
+    "createdAt": 1794835360130
+  },
+  {
+    "pid": 141876,
+    "cwd": null,
+    "cwdAccess": "EACCES",
+    "exe": "bun.exe",
+    "script": "/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794835300201-BOWKBW/observe-world.ts",
+    "env": {},
+    "envAccess": "EACCES",
+    "startTicks": 2569594,
+    "createdAt": 1794835360940
+  }
+]

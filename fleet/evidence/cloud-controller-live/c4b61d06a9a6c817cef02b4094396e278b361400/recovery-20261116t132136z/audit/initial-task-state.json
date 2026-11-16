@@ -1,0 +1,29 @@
+{
+  "tasks": [
+    {
+      "status": "running",
+      "runId": "task-3dd8bf8c-c987-45b1-b4f9-d475f636cb32",
+      "pid": 137276,
+      "id": "cloud-recovery-qualified-20261116t132135z",
+      "kind": "qualify",
+      "account": null
+    },
+    {
+      "status": "pending",
+      "runId": null,
+      "pid": null,
+      "id": "cloud-recover-fullload-20261116t132135z",
+      "kind": "run",
+      "account": "FullLoad"
+    },
+    {
+      "status": "pending",
+      "runId": null,
+      "pid": null,
+      "id": "cloud-recover-unsheathed-20261116t132135z",
+      "kind": "run",
+      "account": "Unsheathed"
+    }
+  ],
+  "planner": false
+}

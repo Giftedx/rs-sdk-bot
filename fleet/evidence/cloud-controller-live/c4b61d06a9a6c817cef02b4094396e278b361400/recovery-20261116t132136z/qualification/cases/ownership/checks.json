@@ -1,0 +1,20 @@
+{
+  "id": "ownership",
+  "level": "native-actual-dispatcher",
+  "ok": true,
+  "checks": {
+    "liveOwnerRefused": true,
+    "ownerUndisturbed": true,
+    "directApiRefused": true,
+    "remoteCliRefused": true,
+    "noRemoteIntent": true,
+    "initialOwnerLogin": true,
+    "ownerCleanupConfirmed": true,
+    "noNewProducerAttempt": true,
+    "noRecoveryLogin": true,
+    "noSubsequentLogin": true,
+    "noSubsequentProducerAttempt": true
+  },
+  "account": "flrcvxfk8418",
+  "ownerPid": 142901
+}

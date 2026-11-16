@@ -1,0 +1,11 @@
+{
+  "head": "db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb",
+  "trackedDiffSha256": "674d91dd8a976c068ac5316f7e9b47b9db6790eba94b811277e16b0ab3da3eb8",
+  "untracked": [
+    "server/engine/data/market-aiobench-0.sqlite",
+    "server/engine/data/market-aiobench-0.sqlite-shm",
+    "server/engine/data/market-aiobench-0.sqlite-wal",
+    "server/engine/src/simseed.ts",
+    "server/webclient/src/lite/session-end.test.ts"
+  ]
+}

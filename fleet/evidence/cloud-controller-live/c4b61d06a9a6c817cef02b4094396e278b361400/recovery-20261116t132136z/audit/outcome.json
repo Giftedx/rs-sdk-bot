@@ -1,0 +1,48 @@
+{
+  "source": "c4b61d06a9a6c817cef02b4094396e278b361400",
+  "qualificationPassed": true,
+  "controllerWatch": "RESULT ok cloud-side side=cloud minutes=15 accounts=14 coordinator=down starts=1 stopped",
+  "recoveriesPassed": false,
+  "liveProducersStarted": 0,
+  "inspectionStarted": false,
+  "all14ClaimsUnchanged": true,
+  "planBytesUnchanged": true,
+  "overlayBytesUnchanged": true,
+  "tasks": [
+    {
+      "id": "cloud-recovery-qualified-20261116t132135z",
+      "status": "succeeded",
+      "kind": "qualify",
+      "account": null,
+      "runId": "task-3dd8bf8c-c987-45b1-b4f9-d475f636cb32",
+      "attempts": 1,
+      "pid": 137276
+    },
+    {
+      "id": "cloud-recover-fullload-20261116t132135z",
+      "status": "pending",
+      "kind": "run",
+      "account": "FullLoad",
+      "runId": null,
+      "attempts": 0,
+      "pid": null
+    },
+    {
+      "id": "cloud-recover-unsheathed-20261116t132135z",
+      "status": "pending",
+      "kind": "run",
+      "account": "Unsheathed",
+      "runId": null,
+      "attempts": 0,
+      "pid": null
+    }
+  ],
+  "quiescence": {
+    "known": true,
+    "settled": true,
+    "active": [],
+    "coordinator": 137266,
+    "reason": null
+  },
+  "reason": "ensureSwarm raw kill(0) treats saved zombie PID51072 as alive/unknown; old group contains no executable process"
+}

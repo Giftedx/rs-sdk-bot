@@ -1,0 +1,9 @@
+Pathfinding initialized in 18ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)
+START 2618 3332 0
+RELEASE 591717c40949
+LEDGER ticks=0 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=0 idlePct=0.0 xpGain=0 longestIdle= idleBy= bot=flrcvxxne23
+PRAYER_GUARD {"flicks":0,"early":0,"holds":0,"holdsBy":{},"takenFrom":{},"protects":0,"repairs":0,"resends":0,"spent":0,"manual":false,"yielded":false,"points":[null,null],"taken":0} bot=flrcvxxne23
+EAT_GUARD {"eats":0,"urgent":0,"holds":0,"waits":0,"refused":0,"resends":0,"late":0,"healed":0,"yielded":false,"fought":false,"held":false,"hp":[null,null,null]} bot=flrcvxxne23
+EVENTS {} bot=flrcvxxne23
+LOGOUT logged-out
+RESULT ok sessionChecked=1 hp=43 x=2618 z=3332 level=0

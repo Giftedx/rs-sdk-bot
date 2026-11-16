@@ -1,0 +1,334 @@
+{
+  "submittedAt": 1794835466231,
+  "fleet": {
+    "at": 1794835466231,
+    "observedAt": 1794835466231,
+    "ageMs": 0,
+    "verdict": "resolved"
+  },
+  "child": null,
+  "dispatch": "recovery setup refused; no lease issued; no retry",
+  "boundaries": [
+    {
+      "phase": "admitRecovery",
+      "at": 1794835466234,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxk1nw6",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 27.28662109375,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794835466234,
+          "request": {
+            "account": "flrcvxk1nw6",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-completed-refusal-open-hold-360240",
+            "nonce": "one-completed-refusal-open-hold",
+            "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+            "endedAt": 1794835466228
+          },
+          "controller": {
+            "pid": 141841,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9"
+          },
+          "processPid": 141841,
+          "task": {
+            "pid": 142618,
+            "runId": "native-rcv-completed-refusal-open-hold-360240",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxk1nw6",
+            "sessionRecovery": {
+              "account": "flrcvxk1nw6",
+              "endedAt": 1794835466228
+            },
+            "repairs": [
+              {
+                "account": "flrcvxk1nw6",
+                "endedAt": 1794835466228
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 142618,
+            "runId": "native-rcv-completed-refusal-open-hold-360240"
+          },
+          "requestLease": {
+            "pid": 142618,
+            "runId": "native-rcv-completed-refusal-open-hold-360240",
+            "nonce": "one-completed-refusal-open-hold"
+          },
+          "fleet": {
+            "at": 1794835466231,
+            "controllerPid": 141841
+          },
+          "end": {
+            "at": 1794835466228,
+            "reason": "done after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "admitRecovery",
+      "at": 1794835466238,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxk1nw6",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 27.28662109375,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794835466234,
+          "request": {
+            "account": "flrcvxk1nw6",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-completed-refusal-open-hold-360240",
+            "nonce": "one-completed-refusal-open-hold",
+            "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+            "endedAt": 1794835466228
+          },
+          "controller": {
+            "pid": 141841,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9"
+          },
+          "processPid": 141841,
+          "task": {
+            "pid": 142618,
+            "runId": "native-rcv-completed-refusal-open-hold-360240",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxk1nw6",
+            "sessionRecovery": {
+              "account": "flrcvxk1nw6",
+              "endedAt": 1794835466228
+            },
+            "repairs": [
+              {
+                "account": "flrcvxk1nw6",
+                "endedAt": 1794835466228
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 142618,
+            "runId": "native-rcv-completed-refusal-open-hold-360240"
+          },
+          "requestLease": {
+            "pid": 142618,
+            "runId": "native-rcv-completed-refusal-open-hold-360240",
+            "nonce": "one-completed-refusal-open-hold"
+          },
+          "fleet": {
+            "at": 1794835466231,
+            "controllerPid": 141841
+          },
+          "end": {
+            "at": 1794835466228,
+            "reason": "done after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794835466239,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794835466239,
+        "request": {
+          "account": "flrcvxk1nw6",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-completed-refusal-open-hold-360240",
+          "nonce": "one-completed-refusal-open-hold",
+          "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+          "endedAt": 1794835466228
+        },
+        "controller": {
+          "pid": 141841,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9"
+        },
+        "processPid": 141841,
+        "task": {
+          "pid": 142618,
+          "runId": "native-rcv-completed-refusal-open-hold-360240",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxk1nw6",
+          "sessionRecovery": {
+            "account": "flrcvxk1nw6",
+            "endedAt": 1794835466228
+          },
+          "repairs": [
+            {
+              "account": "flrcvxk1nw6",
+              "endedAt": 1794835466228
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 142618,
+          "runId": "native-rcv-completed-refusal-open-hold-360240"
+        },
+        "requestLease": {
+          "pid": 142618,
+          "runId": "native-rcv-completed-refusal-open-hold-360240",
+          "nonce": "one-completed-refusal-open-hold"
+        },
+        "fleet": {
+          "at": 1794835466231,
+          "controllerPid": 141841
+        },
+        "end": {
+          "at": 1794835466228,
+          "reason": "done after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794835466244,
+      "outcome": "threw",
+      "reason": "recovery completed account has an open hold",
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794835466239,
+        "request": {
+          "account": "flrcvxk1nw6",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-completed-refusal-open-hold-360240",
+          "nonce": "one-completed-refusal-open-hold",
+          "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+          "endedAt": 1794835466228
+        },
+        "controller": {
+          "pid": 141841,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9"
+        },
+        "processPid": 141841,
+        "task": {
+          "pid": 142618,
+          "runId": "native-rcv-completed-refusal-open-hold-360240",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxk1nw6",
+          "sessionRecovery": {
+            "account": "flrcvxk1nw6",
+            "endedAt": 1794835466228
+          },
+          "repairs": [
+            {
+              "account": "flrcvxk1nw6",
+              "endedAt": 1794835466228
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 142618,
+          "runId": "native-rcv-completed-refusal-open-hold-360240"
+        },
+        "requestLease": {
+          "pid": 142618,
+          "runId": "native-rcv-completed-refusal-open-hold-360240",
+          "nonce": "one-completed-refusal-open-hold"
+        },
+        "fleet": {
+          "at": 1794835466231,
+          "controllerPid": 141841
+        },
+        "end": {
+          "at": 1794835466228,
+          "reason": "done after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    }
+  ],
+  "firstFailure": {
+    "phase": "launchPermittedRecovery",
+    "at": 1794835466244,
+    "outcome": "threw",
+    "reason": "recovery completed account has an open hold",
+    "hostDeferred": false,
+    "inputs": {
+      "sampledAt": 1794835466239,
+      "request": {
+        "account": "flrcvxk1nw6",
+        "server": "127.0.0.1:8890",
+        "runId": "native-rcv-completed-refusal-open-hold-360240",
+        "nonce": "one-completed-refusal-open-hold",
+        "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+        "endedAt": 1794835466228
+      },
+      "controller": {
+        "pid": 141841,
+        "nonce": "packages/practice/src/session-recovery-proof.ts",
+        "source": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9"
+      },
+      "processPid": 141841,
+      "task": {
+        "pid": 142618,
+        "runId": "native-rcv-completed-refusal-open-hold-360240",
+        "status": "running",
+        "kind": "run",
+        "account": "flrcvxk1nw6",
+        "sessionRecovery": {
+          "account": "flrcvxk1nw6",
+          "endedAt": 1794835466228
+        },
+        "repairs": [
+          {
+            "account": "flrcvxk1nw6",
+            "endedAt": 1794835466228
+          }
+        ]
+      },
+      "taskOwner": {
+        "pid": 142618,
+        "runId": "native-rcv-completed-refusal-open-hold-360240"
+      },
+      "requestLease": {
+        "pid": 142618,
+        "runId": "native-rcv-completed-refusal-open-hold-360240",
+        "nonce": "one-completed-refusal-open-hold"
+      },
+      "fleet": {
+        "at": 1794835466231,
+        "controllerPid": 141841
+      },
+      "end": {
+        "at": 1794835466228,
+        "reason": "done after 1 runs"
+      },
+      "releasePinMatches": true
+    }
+  }
+}

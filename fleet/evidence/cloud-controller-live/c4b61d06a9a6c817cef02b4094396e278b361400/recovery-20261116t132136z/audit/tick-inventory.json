@@ -1,0 +1,5 @@
+{
+  "scope": "selected actors since watch start",
+  "files": [],
+  "reason": "both recovery runs remained pending; no selected live session or tick record started"
+}

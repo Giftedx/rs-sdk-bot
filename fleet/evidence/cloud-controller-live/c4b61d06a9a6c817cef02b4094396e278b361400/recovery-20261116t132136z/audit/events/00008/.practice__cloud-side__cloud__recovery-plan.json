@@ -1,0 +1,148 @@
+{
+  "maxBots": 4,
+  "minFreeGB": 4,
+  "fleetCapacity": 4,
+  "jobs": [
+    {
+      "account": "BraveHardon",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "TossTheCaber",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "Unsheathed",
+      "script": "scripts/fleet-inspect.ts",
+      "enabled": false,
+      "repeat": false,
+      "maxRestarts": 0,
+      "standingRetry": false,
+      "role": "inspect",
+      "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
+      "env": {
+        "LOOT_WATCH": "0",
+        "RANDOM_EVENTS": "0",
+        "TICK_RECORD": "1"
+      }
+    },
+    {
+      "account": "Porksword",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "MeatNTwoVeg",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "YewGotWood",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "Spitroaster",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "Stirmypot",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "BoneToPick",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "Crownjewels",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "FullSporran",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "Heavyload",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    },
+    {
+      "account": "FullLoad",
+      "script": "scripts/fleet-inspect.ts",
+      "enabled": false,
+      "repeat": false,
+      "maxRestarts": 0,
+      "standingRetry": false,
+      "role": "inspect",
+      "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
+      "env": {
+        "LOOT_WATCH": "0",
+        "RANDOM_EVENTS": "0",
+        "TICK_RECORD": "1"
+      }
+    },
+    {
+      "account": "Coinpurse",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved",
+      "note": "manual reservation during bounded FullLoad/Unsheathed inspection"
+    }
+  ],
+  "coordination": {
+    "enabled": true,
+    "maxActive": 1,
+    "maxLive": 4,
+    "preferLive": true,
+    "autoExpand": false,
+    "boundedRecovery": {
+      "targets": [
+        {
+          "account": "FullLoad",
+          "attemptId": "1794807014059-0000010716-0000000001",
+          "endedAt": 1794807014127
+        },
+        {
+          "account": "Unsheathed",
+          "attemptId": "1794807013455-0000010703-0000000001",
+          "endedAt": 1794807013505
+        }
+      ],
+      "taskIds": [
+        "cloud-recovery-qualified-20261116t132135z",
+        "cloud-recover-fullload-20261116t132135z",
+        "cloud-recover-unsheathed-20261116t132135z"
+      ]
+    },
+    "bootstrap": []
+  }
+}

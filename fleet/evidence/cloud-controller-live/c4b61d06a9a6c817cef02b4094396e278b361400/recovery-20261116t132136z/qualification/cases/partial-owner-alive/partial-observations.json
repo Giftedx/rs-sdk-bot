@@ -1,0 +1,120 @@
+{
+  "ownerReady": {
+    "at": 1794835688396,
+    "pid": 143703
+  },
+  "observations": [
+    {
+      "account": "flrcvx3g8f23",
+      "server": "localhost:8899",
+      "domain": "practice",
+      "ownerPid": 143703,
+      "ownerAlive": true,
+      "order": [
+        {
+          "step": "listAttempts:start",
+          "at": 1794835690969
+        },
+        {
+          "step": "listAttempts:end",
+          "at": 1794835690969
+        },
+        {
+          "step": "readLogoutProof:start",
+          "at": 1794835690969
+        },
+        {
+          "step": "readLogoutProof:end",
+          "at": 1794835690970
+        },
+        {
+          "step": "latestAfter:start",
+          "at": 1794835690970
+        },
+        {
+          "step": "latestAfter:end",
+          "at": 1794835690970
+        },
+        {
+          "step": "receiptAfter:start",
+          "at": 1794835690970
+        },
+        {
+          "step": "receiptAfter:end",
+          "at": 1794835690970
+        },
+        {
+          "step": "ownerAlive:start",
+          "at": 1794835690970
+        },
+        {
+          "step": "ownerAlive:end",
+          "at": 1794835690970
+        }
+      ],
+      "attempts": [
+        {
+          "attemptId": "1794835689419-0000143703-0000000001",
+          "sha256": "d3432a8954ae6cda19d8c10a6c99bc7b1b8a980093038e67e8eba9fdf3e4fe3d",
+          "receipt": {
+            "account": "flrcvx3g8f23",
+            "server": "localhost:8899",
+            "domain": "practice",
+            "attemptId": "1794835689419-0000143703-0000000001",
+            "ownerPid": 143703,
+            "createdAt": 1794835689419,
+            "updatedAt": 1794835689419,
+            "eventKinds": [
+              "connecting"
+            ]
+          }
+        }
+      ],
+      "proof": {
+        "state": "held",
+        "account": "flrcvx3g8f23",
+        "server": "localhost:8899",
+        "domain": "practice",
+        "attemptId": "1794835689419-0000143703-0000000001",
+        "reason": "connection attempt before START, outcome unknown"
+      },
+      "latestAfter": {
+        "state": "read",
+        "sha256": "6ae66eafd657ac31d7a06921fbd3fc4a1f116ba284a88da21123d326ce46a4f8",
+        "identity": {
+          "schema": "session-lifecycle/1",
+          "account": "flrcvx3g8f23",
+          "server": "localhost:8899",
+          "domain": "practice",
+          "attemptId": "1794835689419-0000143703-0000000001",
+          "at": 1794835689419
+        }
+      },
+      "receiptsAfter": [
+        {
+          "attemptId": "1794835689419-0000143703-0000000001",
+          "state": "read",
+          "sha256": "d3432a8954ae6cda19d8c10a6c99bc7b1b8a980093038e67e8eba9fdf3e4fe3d",
+          "identity": {
+            "schema": "session-lifecycle/1",
+            "account": "flrcvx3g8f23",
+            "server": "localhost:8899",
+            "domain": "practice",
+            "attemptId": "1794835689419-0000143703-0000000001"
+          }
+        }
+      ],
+      "checks": {
+        "ownerIntentVisible": true,
+        "ownerAlive": true,
+        "held": true,
+        "beforeStart": true,
+        "matchingAttempt": true,
+        "matchingIdentity": true
+      },
+      "ownerIntentVisible": true
+    }
+  ],
+  "selectedIndex": 0,
+  "timedOut": false
+}

@@ -1,0 +1,35 @@
+{
+  "jobs": [
+    {
+      "account": "FullLoad",
+      "script": "scripts/fleet-inspect.ts",
+      "enabled": false,
+      "repeat": false,
+      "maxRestarts": 0,
+      "standingRetry": false,
+      "role": "inspect",
+      "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
+      "env": {
+        "LOOT_WATCH": "0",
+        "RANDOM_EVENTS": "0",
+        "TICK_RECORD": "1"
+      }
+    },
+    {
+      "account": "Unsheathed",
+      "script": "scripts/fleet-inspect.ts",
+      "enabled": false,
+      "repeat": false,
+      "maxRestarts": 0,
+      "standingRetry": false,
+      "role": "inspect",
+      "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
+      "env": {
+        "LOOT_WATCH": "0",
+        "RANDOM_EVENTS": "0",
+        "TICK_RECORD": "1"
+      }
+    }
+  ],
+  "coordination": {}
+}

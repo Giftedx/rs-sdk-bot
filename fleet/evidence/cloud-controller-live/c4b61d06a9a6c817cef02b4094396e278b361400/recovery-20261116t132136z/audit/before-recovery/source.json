@@ -1,0 +1,14 @@
+{
+  "head": "c72e31a5f6750b5fe245f6fde1717f3fe08b3878",
+  "sessionCheckRuntime": "f09ac1a8d892583e6c600f85d6c43b16fd8b37a5f41b63bff8c4af09e25a54c7",
+  "acceptedRuntime": "f09ac1a8d892583e6c600f85d6c43b16fd8b37a5f41b63bff8c4af09e25a54c7",
+  "runtimeMatches": true,
+  "launch": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d",
+  "acceptedLaunch": "591717c409498ea3e843e8b902699deae6318a3e317e25e7c9341cb98d163fc9",
+  "launchMatches": false,
+  "freeGB": 28.196704864501953,
+  "credentials": {
+    "vault": true,
+    "seed": true
+  }
+}

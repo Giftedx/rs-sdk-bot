@@ -1,0 +1,23 @@
+{
+  "id": "partial-owner-alive",
+  "level": "native-actual-dispatcher",
+  "checks": {
+    "partialIntentHeld": true,
+    "liveOwnerRefused": true,
+    "observedLiveOwner": true,
+    "noLeaseIssued": true,
+    "noPermitIssued": true,
+    "noRecoveryLogin": true,
+    "noNewProducerAttempt": true
+  },
+  "account": "flrcvx3g8f23",
+  "ownerPid": 143703,
+  "observationChecks": {
+    "ownerIntentVisible": true,
+    "ownerAlive": true,
+    "held": true,
+    "beforeStart": true,
+    "matchingAttempt": true,
+    "matchingIdentity": true
+  }
+}
