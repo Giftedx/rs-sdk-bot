@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794803461541,
+ "at": 1794803660431,
  "jobs": [
   {
    "account": "Balls",
@@ -133,18 +133,18 @@
    ],
    "env": {
     "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "80",
+    "TARGET_LEVEL": "90",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-bb60833c-36d7-4f71-8c64-5b00f1ab1358"
+    "COORDINATOR_RUN_ID": "task-4a7e64c2-bec3-40c8-9ec2-7fea8d9a168c"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "chain-cow-progress-order-nabtheknob-defence80 [task-bb60833c-36d7-4f71-8c64-5b00f1ab1358]",
+   "goal": "chain-cow-progress-order-nabtheknob-defence90 [task-4a7e64c2-bec3-40c8-9ec2-7fea8d9a168c]",
    "role": "helper"
   }
  ],
