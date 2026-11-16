@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794855132976,
+ "at": 1794855748497,
  "jobs": [
   {
    "account": "Balls",
@@ -109,7 +109,7 @@
    "account": "NabTheKnob",
    "script": "scripts/ranged-train.ts",
    "args": [
-    "75",
+    "85",
     "20000"
    ],
    "env": {
@@ -126,27 +126,11 @@
     "MAX_TRIPS": "50",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-bae63647-18fb-4650-b449-4173bb92eafe"
+    "COORDINATOR_RUN_ID": "task-3916536a-ddba-40f4-9fbd-0136a4ff8004"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-ranged-nab75-confirmed-entry [task-bae63647-18fb-4650-b449-4173bb92eafe]",
-   "role": "helper"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-40286b67-9d8a-4d16-833e-eb238bff727a"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-inspect-wood-owned-gold-ring [task-40286b67-9d8a-4d16-833e-eb238bff727a]",
+   "goal": "chain-ranged-train-nabtheknob-ranged85 [task-3916536a-ddba-40f4-9fbd-0136a4ff8004]",
    "role": "helper"
   }
  ],
