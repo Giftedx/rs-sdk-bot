@@ -97,7 +97,7 @@ jobs:
       - name: Prove remote supply and artisan entry cases
         timeout-minutes: 10
         run: |
-          bun run bench '^extra:(catalog-cut-sapphire|catalog-dommik-tools|remote-supply-producer)$' --profile --budget 10
+          bun run bench '^extra:(catalog-cut-sapphire|catalog-dommik-tools|remote-supply-producer|owned-bank-observation)$' --profile --budget 10
         env:
           BENCH_OUT: .practice/shared-preparation/supply-artisan.json
       - name: Run the first AIO smoke group
@@ -156,6 +156,11 @@ jobs:
         if: ${{ !cancelled() && steps.pack.outcome == 'success' }}
         timeout-minutes: 5
         run: bun packages/practice/src/fleet-trade-capacity-proof.ts
+      - name: Prove donor reserve and exact courier settlement
+        if: ${{ !cancelled() && steps.pack.outcome == 'success' }}
+        timeout-minutes: 10
+        run: |
+          bun packages/router/src/delivery-cli.ts coin-courier
       - name: Retain the source-bound practice evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -170,6 +175,7 @@ jobs:
             .practice/deliveries/quest-sweep-*/results.json
             .practice/deliveries/quest-sweep-*/*.log
             .practice/deliveries/quest-sweep-*/*.sav
+            .practice/deliveries/coin-courier-*/**
             .practice/fleet-trade-capacity-*/report.json
             .practice/fleet-trade-capacity-*/native.json
             .practice/fleet-trade-capacity-*/failure.json

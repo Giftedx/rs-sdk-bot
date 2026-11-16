@@ -63,10 +63,11 @@ export function resultCounters(text: string): Record<string, number> {
     if(complete&&depth===0&&!quote)consume();
     return out;
 }
-export function renameRetry(from: string, to: string, rename: (a: string, b: string) => void = renameSync): void {
+export function renameRetry(from: string, to: string, rename: (a: string, b: string) => void = renameSync, maxRetries = 20): void {
+    if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 100) throw Error('rename retry limit must be an integer from 0 to 100');
     for (let attempt = 0; ; attempt++) {
         try { rename(from, to); return; }
-        catch (e) { if (attempt >= 20 || !['EPERM', 'EBUSY', 'EACCES'].includes((e as NodeJS.ErrnoException).code ?? '')) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50); }
+        catch (e) { if (attempt >= maxRetries || !['EPERM', 'EBUSY', 'EACCES'].includes((e as NodeJS.ErrnoException).code ?? '')) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50); }
     }
 }
 function updateLines(e: StatusLines, line: string): void {

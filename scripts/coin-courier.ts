@@ -11,18 +11,26 @@ import { createHandoff } from './courier-handoff';
 import { parseHandoff, acquireAccountLeases } from './handoff-inputs';
 import {checkTransferAccounts,transferOrderKey} from './transfer-admission';
 
+// --reserve=N keeps at least N coins in the donor's freshly observed bank; omitted means zero.
 export function parseCoins(args: string[]) {
     const [from, to, amount, ...options] = args;
     if (!amount || !/^\d+$/.test(amount) || Number(amount) > 2147483647) throw Error('positive exact coin amount required');
-    const defaults = ['--bank-x=3185', '--bank-z=3436'].filter(d => !options.some(o => o.split('=')[0] === d.split('=')[0]));
-    const c = parseHandoff([from ?? '', to ?? '', `${amount}:Coins`, ...defaults, ...options]);
+    const reserves=options.filter(option=>option.split('=')[0]==='--reserve');
+    if(reserves.length>1)throw Error('duplicate coin reserve option');
+    const text=reserves[0]?.slice('--reserve='.length)??'0',reserve=Number(text);
+    if(reserves.length&&(!reserves[0]!.startsWith('--reserve=')||!/^\d+$/.test(text))||!Number.isSafeInteger(reserve)||reserve<0||reserve>2147483647)
+        throw Error('coin donor bank reserve must be an integer from 0 to 2147483647');
+    const rest=options.filter(option=>option.split('=')[0]!=='--reserve');
+    const defaults = ['--bank-x=3185', '--bank-z=3436'].filter(d => !rest.some(o => o.split('=')[0] === d.split('=')[0]));
+    const c = parseHandoff([from ?? '', to ?? '', `${amount}:Coins`, ...defaults, ...rest]);
     if (c.notes || c.keep) throw Error('coin courier does not accept notes or keep options');
-    return { ...c, amount: Number(amount) };
+    return { ...c, amount: Number(amount), reserve };
 }
 const coins = (items: { id: number; count: number }[]) => items.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
 export type CoinState = { bank: number; pack: number };
-export function exactCoinDelta(before: CoinState[], after: CoinState[], amount: number): boolean {
+export function exactCoinDelta(before: CoinState[], after: CoinState[], amount: number, reserve=0): boolean {
     return Number.isSafeInteger(amount) && amount > 0 && before.length === 2 && after.length === 2
+        && Number.isSafeInteger(reserve) && reserve >= 0 && reserve <= 2147483647 && after[0]!.bank >= reserve
         && [...before, ...after].every(s => Number.isSafeInteger(s.bank) && s.bank >= 0 && Number.isSafeInteger(s.pack) && s.pack >= 0)
         && before[0]!.bank - after[0]!.bank === amount && after[1]!.bank - before[1]!.bank === amount
         && before.every((s, i) => s.pack === after[i]!.pack);
@@ -94,12 +102,17 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
     };
     const bank = async (s: Session) => {
         guard();
-        await s.bot.openBank();
-        await observe(s, () => !!s.bankObservation?.(), `coin bank entry unobserved: ${s.name}`);
+        const generation=s.bankObservation?.()?.generation??-1;
+        if(s.sdk.getState()?.bank?.isOpen){
+            if(!(await s.bot.closeBank()).success)throw Error(`coin bank closure failed: ${s.name}`);
+            await observe(s,()=>!s.sdk.getState()?.bank?.isOpen,`coin bank closure unobserved: ${s.name}`);
+        }
+        if(!(await s.bot.openBank()).success)throw Error(`coin bank entry failed: ${s.name}`);
+        await observe(s, () => !!s.sdk.getState()?.bank?.isOpen&&(s.bankObservation?.()?.generation??-1)>generation, `coin fresh bank entry unobserved: ${s.name}`);
     };
     const state = (s: Session): CoinState => {
         const b = s.bankObservation?.();
-        if (!b) throw Error('coin bank snapshot unavailable');
+        if (!b||!s.sdk.getState()?.bank?.isOpen) throw Error('coin open bank snapshot unavailable');
         return { bank: coins(b.items), pack: coins(s.sdk.getInventory()) };
     };
     const world = await getWorld();
@@ -110,15 +123,17 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
         await observe(s, () => { const p = s.sdk.getState()?.player; return !!p && p.level === 0 && Math.max(Math.abs(p.worldX - c.x), Math.abs(p.worldZ - c.z)) <= 2; }, 'coin bank location unobserved');
         await bank(s);
     }
-    // Both withdrawal and trade receipt need a slot when there is no existing coin stack.
-    for (const s of sessions) await prepareCoinSlot(s, guard);
     const before = sessions.map(state);
     if (before[0]!.bank < c.amount) throw Error('coin bank funds short');
+    if (before[0]!.bank-c.amount<c.reserve) throw Error('coin donor bank reserve short');
+    // Refuse before a full pack's unrelated item is moved, or any withdrawal/journal/trade begins.
+    // Both withdrawal and trade receipt need a slot when there is no existing coin stack.
+    for (const s of sessions) await prepareCoinSlot(s, guard);
     if (before[0]!.pack + c.amount > 2147483647 || before[1]!.pack + c.amount > 2147483647 || before[1]!.bank + c.amount > 2147483647) throw Error('coin stack overflow');
     if (!before[1]!.pack && receiver.sdk.getInventory().length >= 28) throw Error('coin receiver pack full');
     // A pending journal is never retried without reconciliation by its owner.
     mkdirSync(root, { recursive: true });
-    writeFileSync(join(root, 'before.json'), JSON.stringify({ from: c.donor, to: c.receiver, amount: c.amount, server, before }), { flag: 'wx' });
+    writeFileSync(join(root, 'before.json'), JSON.stringify({ from: c.donor, to: c.receiver, amount: c.amount, reserve:c.reserve, server, before }), { flag: 'wx' });
     const withdraw = async (s: Session, amount: number, target: CoinState) => {
         guard(); const generation = s.bankObservation!()!.generation;
         await s.bot.withdrawItem(exactItem('Coins'), amount);
@@ -172,8 +187,8 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
     // Restore the receiver's original pocket coins after depositing the transfer.
     if (before[1]!.pack) await withdraw(receiver, before[1]!.pack, { bank: before[1]!.bank + c.amount, pack: before[1]!.pack });
     const after = sessions.map(state);
-    if (!exactCoinDelta(before, after, c.amount)) throw Error('exact coin bank deltas unproved: ' + JSON.stringify({ before, after }));
-    const receipt = { from: c.donor, to: c.receiver, amount: c.amount, server, before, after, childResults };
+    if (!exactCoinDelta(before, after, c.amount,c.reserve)) throw Error('exact coin bank deltas/reserve unproved: ' + JSON.stringify({ before, after, reserve:c.reserve }));
+    const receipt = { from: c.donor, to: c.receiver, amount: c.amount, reserve:c.reserve, server, before, after, childResults };
     writeFileSync(join(root, 'settled.json'), JSON.stringify(receipt), { flag: 'wx' });
     console.log('COIN_RECEIPT ' + JSON.stringify(receipt));
     return receipt;

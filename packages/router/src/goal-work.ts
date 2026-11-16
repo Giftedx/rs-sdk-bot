@@ -21,6 +21,13 @@ function boundedGeQuantity(task:CoordTask,entry:string|undefined,id:number,targe
  return quantity;
 }
 
+function boundedBankObserver(task:CoordTask,entry:string|undefined):boolean{
+ return entry==='scripts/fleet-inspect.ts'&&task.env?.REQUIRE_BANK==='1'&&!(task.args?.length)
+  &&Number.isSafeInteger(task.timeoutMs)&&task.timeoutMs!>0&&task.timeoutMs!<=120000
+  &&Object.keys(task.accept??{}).length===1&&Object.keys(task.accept?.counters??{}).length===1
+  &&task.accept?.counters?.bankObserved===1;
+}
+
 /** Estimate useful effects. A null value requires an observation before a run can claim the effect. */
 export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readonly any[],now:number,context:GoalWorkContext={}):Map<string,GoalWorkValue>{
  const observations=new Map<string,any>();
@@ -36,6 +43,9 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   const terms=new Map<string,number>();termsByTask.set(task.id,terms);
   if(task.sessionRecovery){terms.set('recovery:'+key(task.sessionRecovery.account),.01);return{value:.01,reason:'Explicit session recovery supports the owned job. This is not game progress.',consumers:[task.id]};}
   const names=boundAccounts(task,state),account=names?.[task.acceptIndex??0];
+  let entry:string|undefined;try{entry=task.capability&&context.entryOf?.(task.capability);}catch{/* An unreadable entry cannot prove the worker's role. */}
+  // An inspection does not produce the stock, levels or quests named by an acceptance condition.
+  if(entry==='scripts/fleet-inspect.ts')return{value:0,reason:'Bank inspection observes existing state. This is not game progress.',consumers:[task.id]};
   const effects:string[]=[],unknown:string[]=[];
   let value=0;
   const credit=(id:string,gain:number)=>{const prior=terms.get(id)??0;if(gain>prior){terms.set(id,gain);value+=gain-prior;}};
@@ -43,7 +53,6 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   for(const quest of new Set(task.accept?.quests??[]))if(remaining.has(key(quest))){credit('quest:'+key(quest),1);effects.push('quest '+quest);}
   if(!account)return{value:value>0?value:null,reason:effects.join(' ')||'Observe the bound account before selecting its goal effect.',consumers:[task.id]};
   const own=observations.get(key(account));
-  let entry:string|undefined;try{entry=task.capability&&context.entryOf?.(task.capability);}catch{/* An unreadable entry cannot prove the worker's role. */}
   if(entry&&pkEntries.has(entry)&&task.timeoutMs!==undefined&&task.timeoutMs>0&&task.timeoutMs<=1800000
    &&names!.every(name=>goals.army.roster.some(member=>key(member)===key(name)))){
    credit('pk-proof:'+key(account),.01);effects.push('Bounded army PK proof supports the player-kill and Wilderness goals. The result remains unproved.');
@@ -116,15 +125,16 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    visit.push(...task.dependsOn,...provisionRefs(task));
   }
  }
- // A bounded input purchase observes the same bank its pending production consumer must inspect. Credit only
- // that GE entry and its non-run prerequisites; ordinary workers still need fresh bank evidence to dispatch.
- const inputObservationTerms=new Map<string,string>();
+ // A bounded input purchase or strict bank inspection observes its pending consumer's bank. Credit only the
+ // observing entry and its non-run prerequisites; ordinary workers still need fresh bank evidence to dispatch.
+ const observationTerms=new Map<string,string>();
  for(const row of open){
   const task=row.spec,names=boundAccounts(task,state),effect=result.get(task.id),order=Object.entries(task.accept?.bank??{})[0];
-  if(task.kind!=='run'||dead.has(task.id)||names?.length!==1||!effect||(effect.value??0)>0||!order)continue;
-  const [idText,target]=order,id=Number(idText);let entry:string|undefined;
+  if(task.kind!=='run'||dead.has(task.id)||names?.length!==1||!effect||(effect.value??0)>0)continue;
+  let entry:string|undefined;
   try{entry=task.capability&&context.entryOf?.(task.capability);}catch{/* Unknown workers cannot observe a bank. */}
-  if(!Number.isSafeInteger(id)||id<=0||boundedGeQuantity(task,entry,id,target)===null)continue;
+  const observer=boundedBankObserver(task,entry),id=Number(order?.[0]);
+  if(!observer&&(!order||!Number.isSafeInteger(id)||id<=0||boundedGeQuantity(task,entry,id,order[1])===null))continue;
   for(const consumerId of consumers.get(task.id)?.keys()??[]){
    const consumer=byId.get(consumerId),accounts=consumer&&boundAccounts(consumer,state);
    if(consumerId===task.id||!consumer||accounts?.length!==1||key(accounts[0]!)!==key(names[0]!)
@@ -136,8 +146,8 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    })[0];
    if(!line)continue;
    const term='supply-observation:'+line.consumer+':'+line.id+':'+line.need;
-   termsByTask.get(task.id)!.set(term,.01);inputObservationTerms.set(task.id,term);
-   effect.value=.01;effect.reason='Bounded GE input observation supports '+consumerId+' for '+line.consumer+' item '+line.id+'. This is not game progress.';
+   termsByTask.get(task.id)!.set(term,.01);observationTerms.set(task.id,term);
+   effect.value=.01;effect.reason=(observer?'Bounded bank observation':'Bounded GE input observation')+' supports '+consumerId+' for '+line.consumer+' item '+line.id+'. This is not game progress.';
    break;
   }
  }
@@ -145,7 +155,7 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   const directEffect=result.get(row.spec.id);
   const inherited=consumers.get(row.spec.id),terms=new Map<string,number>();
   for(const id of inherited?.keys()??[])for(const [effect,gain] of termsByTask.get(id)??[]){
-   if(row.spec.kind==='run'&&row.spec.id!==id&&inputObservationTerms.get(id)===effect)continue;
+   if(row.spec.kind==='run'&&row.spec.id!==id&&observationTerms.get(id)===effect)continue;
    terms.set(effect,Math.max(terms.get(effect)??0,gain));
   }
   const value=[...terms.values()].reduce((sum,gain)=>sum+gain,0);

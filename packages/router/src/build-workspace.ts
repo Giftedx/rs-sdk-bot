@@ -3,16 +3,18 @@
 // checkout, so they never load half-edited code. Only publish() writes the main checkout; the caller holds the
 // build lock and a drained fleet for that step alone. Heavy shared trees are junctions: node_modules, vendor and
 // .practice (coordinator state, deliveries and practice bots stay shared).
-import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,statSync,symlinkSync,writeFileSync,copyFileSync,lstatSync,unlinkSync,openSync,closeSync,fchmodSync,renameSync,linkSync} from 'node:fs';
+import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,statSync,writeFileSync,copyFileSync,lstatSync,unlinkSync,openSync,closeSync,fchmodSync,renameSync,linkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {basename,dirname,join,resolve} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import type {Stats} from 'node:fs';
+import {renameRetry} from '../../core/src/status';
+import {copySourceTree as copyTree,linkSourceDirectory as link,SOURCE_COPY_SKIP as SKIP} from '../../practice/src/replay-root';
+export {prepareReplayRoot,removeReplayRoot} from '../../practice/src/replay-root';
 
 export const COPY_DIRS=['scripts','packages','knowledge','research','docs','patches'];
 export const LINK_DIRS=['node_modules','vendor','.practice','.claude'];
-const SKIP=new Set(['node_modules','.git']);
 
 export interface WorkspaceBase{capability:string;created:number;base:Record<string,string|null>;published?:number}
 
@@ -21,20 +23,6 @@ export function workspaceRoot(mainRoot:string,capability:string):string{
  return join(dirname(mainRoot),basename(mainRoot)+'-build',capability);
 }
 export const fileHash=(file:string):string|null=>existsSync(file)?createHash('sha256').update(readFileSync(file)).digest('hex'):null;
-
-function copyTree(from:string,to:string){
- mkdirSync(to,{recursive:true});
- for(const entry of readdirSync(from,{withFileTypes:true})){
-  if(SKIP.has(entry.name))continue;
-  const a=join(from,entry.name),b=join(to,entry.name);
-  if(entry.isDirectory())copyTree(a,b);else if(entry.isFile())copyFileSync(a,b);
- }
-}
-function link(target:string,path:string){
- if(!existsSync(target))return;
- try{if(lstatSync(path))return;}catch{/* absent */}
- symlinkSync(target,path,process.platform==='win32'?'junction':'dir');
-}
 
 // Fresh copy of the main checkout's source, except the declared files of an unpublished earlier attempt: a repair
 // build continues from its own last source, as it did when builds edited the main checkout. `base` records the main
@@ -113,13 +101,21 @@ function fileState(path:string):FileState|null{
   throw Error('publish: file changed while reading: '+path);
  return{bytes:bytes.toString('base64'),mode:permissions(st.mode&0o777)};
 }
-function replaceFile(path:string,state:FileState,exclusive=false){
+export function replaceFile(path:string,state:FileState,exclusive=false,rename:(from:string,to:string)=>void=renameSync){
  mkdirSync(dirname(path),{recursive:true});
  const temporary=path+'.publish-'+randomUUID();let fd:number|undefined,created=false;
  try{
   fd=openSync(temporary,'wx',state.mode);created=true;
   writeFileSync(fd,Buffer.from(state.bytes,'base64'));fchmodSync(fd,state.mode);closeSync(fd);fd=undefined;
-  if(exclusive)linkSync(temporary,path);else renameSync(temporary,path);
+  if(exclusive)linkSync(temporary,path);
+  else{
+   const before=fileState(path);
+   // A retry may wait while another writer edits the target. Keep that edit and the durable originals.
+   renameRetry(temporary,path,(from,to)=>{
+    if(!sameState(fileState(to),before))throw Error('publish: source changed before replacement: '+to);
+    rename(from,to);
+   },100);
+  }
  }finally{
   if(fd!==undefined)closeSync(fd);
   if(created)try{unlinkSync(temporary);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
@@ -261,24 +257,3 @@ export function publishWorkspace(mainRoot:string,capability:string,files:string[
 }
 
 export const isWorkspace=(root:string):boolean=>{try{return statSync(join(root,'.workspace.json')).isFile();}catch{return false;}};
-
-// A scratch copy of the worker source for replays (coordinator-worker.ts replayRun). Workers write receipts, ledgers
-// and status under .practice; in a build workspace .practice is the live one, so a replay gets its own empty
-// .practice with only the shared route caches linked. Source and data are copies, because module paths resolve
-// through links to the original folder.
-const REPLAY_COPY=['scripts','packages','knowledge','patches'],REPLAY_LINKS=['node_modules','vendor'];
-export function prepareReplayRoot(source:string,parent=tmpdir()):string{
- const root=mkdtempSync(join(parent,'replay-root-'));
- for(const dir of REPLAY_COPY)if(existsSync(join(source,dir)))copyTree(join(source,dir),join(root,dir));
- for(const entry of readdirSync(source,{withFileTypes:true}))if(entry.isFile()&&!entry.name.startsWith('.workspace'))copyFileSync(join(source,entry.name),join(root,entry.name));
- for(const dir of REPLAY_LINKS)link(join(source,dir),join(root,dir));
- mkdirSync(join(root,'.practice'));link(join(source,'.practice','cache'),join(root,'.practice','cache'));
- return root;
-}
-// Removes the links first and deletes the copy only when no link is left, so a delete never reaches a link target.
-export function removeReplayRoot(root:string){
- const links=[...REPLAY_LINKS.map(d=>join(root,d)),join(root,'.practice','cache')];
- for(const path of links)try{if(lstatSync(path).isSymbolicLink()||process.platform==='win32')unlinkSync(path);}catch{/* absent */}
- if(links.some(path=>{try{lstatSync(path);return true;}catch{return false;}}))return false;
- rmSync(root,{recursive:true,force:true});return true;
-}
