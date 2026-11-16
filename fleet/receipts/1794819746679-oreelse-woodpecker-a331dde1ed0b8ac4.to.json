@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794819746679-oreelse-woodpecker-a331dde1ed0b8ac4",
+ "account": "Woodpecker",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut sapphire",
+ "requested": 1,
+ "claim": "01daaa90-0f45-4f9b-9920-2077cfdb5878",
+ "count": 0,
+ "ok": false,
+ "at": 1794820160713,
+ "detail": "trade claimed"
+}
