@@ -27,6 +27,24 @@ type DialogueClickSdk = {
     sendClickDialog(index?: number): Promise<{ success: boolean; message?: string }>;
 };
 
+/** Accumulate multi-line IF_SETTEXT updates on a chat layer into whole dialogue pages. */
+export function createBurstPageRecorder(chatRoots: ReadonlySet<number>, onRecord: (text: string) => void) {
+    let layer = -1;
+    const seen = new Set<number>();
+    let joined = '';
+    return (id: number, layerId: number, text: unknown): void => {
+        if (typeof text !== 'string' || !text || !chatRoots.has(layerId)) return;
+        if (layerId !== layer || seen.has(id)) {
+            layer = layerId;
+            seen.clear();
+            joined = '';
+        }
+        seen.add(id);
+        joined = joined ? `${joined} ${text}` : text;
+        onRecord(joined);
+    };
+}
+
 export function clickDialoguePage(sdk: DialogueClickSdk, option?: { text: string }): Promise<{ success: boolean; message?: string }> {
     return option ? sdk.clickDialogByText(option.text) : sdk.sendClickDialog(0);
 }
@@ -295,11 +313,14 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         // Any dialogue answer, also a script's own sendClickDialog (quest-tree.ts ballista), answers the pages so far.
         const click = s.sdk.sendClickDialog.bind(s.sdk);
         (s.sdk as any).sendClickDialog = async (option?: number) => { const seq = textSeq; const r: any = await click(option); if (r?.success) answeredSeq = Math.max(answeredSeq, seq); return r; };
+        const clickByText = s.sdk.clickDialogByText.bind(s.sdk);
+        (s.sdk as any).clickDialogByText = async (pattern: string | RegExp) => { const seq = textSeq; const r: any = await clickByText(pattern); if (r?.success) answeredSeq = Math.max(answeredSeq, seq); return r; };
+        const recordBurstLine = createBurstPageRecorder(CHAT_ROOTS, joined => { pages.push(joined); if (pages.length > 400) pages.shift(); recorded++; textSeq++; textAt = s.tick(); });
         lite.ifMutable = function (id: number) {
             const com: any = before.call(this, id);
             if (com && !com.__pageText) {
                 let v = com.text;
-                Object.defineProperty(com, 'text', { configurable: true, enumerable: true, get: () => v, set: (x: any) => { v = x; if (typeof x === 'string' && x && CHAT_ROOTS.has(com.layerId)) { pages.push(x); if (pages.length > 400) pages.shift(); recorded++; textSeq++; textAt = s.tick(); } } });
+                Object.defineProperty(com, 'text', { configurable: true, enumerable: true, get: () => v, set: (x: any) => { v = x; recordBurstLine(id, com.layerId, x); } });
                 com.__pageText = true;
             }
             return com;
@@ -478,6 +499,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // The clicks of the talk under record, or null.
     let recording: PlanToken[] | null = null;
     const plannedLabels = new Set<string>();
+    let planSentAt = -100;
     const converse = (pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> => converseDialogue({
         tick: () => s.tick(), stopped: () => stats.died, guard: () => guard('dialogue'),
         dialog: () => s.sdk.getDialog(), live: () => liveDialoguePage((s as any).client),
@@ -487,9 +509,10 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         // ResumePauseButtonHandler.ts refuses a continue while a choice is pending, so a choice is never skipped.
         burst: (opt, choice) => {
             const c: any = (s as any).client;
-            if (!(BURST && !opt && !choice && c && c.chatModalId !== -1)) return false;
+            const live = liveDialoguePage(c);
+            if (!(BURST && !opt && !choice && c && c.chatModalId !== -1 && live?.isOpen && !live.isWaiting && !live.options.some(o => !/click here to continue/i.test(o.text)))) return false;
             for (let k = 0; k < 5; k++) { c.writeOpcode(RESUME); c.out.p2(c.chatModalId); }
-            c.flush?.(); bursts++; answeredSeq = textSeq;
+            c.flush?.(); bursts++; answeredSeq = textSeq; planSentAt = s.tick();
             return true;
         },
         // A choice records its component; a choice with no component ends the record for this talk.
@@ -507,7 +530,6 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // fence puts the token after it on a later tick. A continue sent to a choice page is refused, never applied.
     // Returns the number of ticks the plan needs to drain.
     // While a plan drains, the SDK can show a page that the plan has answered: a refused click then is not a fault.
-    let planSentAt = -100;
     const sendPlan = (plan: readonly PlanToken[]): number => {
         const c: any = (s as any).client;
         let n = 0;

@@ -149,13 +149,14 @@ const resultOf=(log:string)=>lines(log,'MAGIC_ORDER_RESULT');
 const loggedOut=(log:string)=>/^LOGOUT logged-out$/m.test(log)&&/^RESULT (ok|fail) /m.test(log);
 export function fallbackChecks(before:Save,after:Save,log:string){
  const seg=segmentChecks(before,after,log),r=resultOf(log)[0],casts=lines(log,'MAGIC_ORDER_CAST');
+ const rawBefore=before.skills[6]!.rawExperience,rawAfter=after.skills[6]!.rawExperience,rawGain=rawAfter-rawBefore;
  return{
   windStrike:r?.teleportRunesUsed===undefined&&r?.casts===1&&casts.length===1&&/^(man|woman|mugger)$/i.test(casts[0]?.target?.name??'')
    &&r?.runesUsed?.air===1&&r?.runesUsed?.mind===1,
   castSite:casts.length===1&&casts[0]?.position?.level===0
    &&Math.max(Math.abs(casts[0].position.x-CAST_SITE.x),Math.abs(casts[0].position.z-CAST_SITE.z))<=8,
   purchase:seg.purchases.length===1&&seg.bought.air===0&&seg.bought.mind===1&&seg.spent>0,
-  xp:r?.magicXpGained===after.skills[6]!.xp-before.skills[6]!.xp&&r.magicXpGained>=5.5*CONFIG.xpRate,
+  xp:Number.isInteger(rawGain)&&rawGain>=55*CONFIG.xpRate&&r?.magicXpGained===Math.trunc(rawAfter/10)-Math.trunc(rawBefore/10),
   otherRunes:Object.values(TELE_RUNE_IDS).filter(id=>id!==AIR&&id!==MIND).every(id=>total(before,id)===total(after,id)),
   equipment:JSON.stringify(before.inventories[94])===JSON.stringify(after.inventories[94]),
  };

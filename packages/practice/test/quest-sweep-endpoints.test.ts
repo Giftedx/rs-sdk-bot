@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync,mkdtempSync,existsSync,rmSync} from 'node:fs'
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,runQuestSweepProofCase,selectFreshQuestSweepProofName,selectQuestSweepProofCases,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
-import {converseDialogue,dialogueTransition,liveDialoguePage,type ConverseIO} from '../../../scripts/generated/quest-lib';
+import {converseDialogue,createBurstPageRecorder,dialogueTransition,liveDialoguePage,type ConverseIO} from '../../../scripts/generated/quest-lib';
 
 test('the Seer conversation waits through an observed closure or pending continue and fails a refused live page',async()=>{
  // seer.rs2 seer_looking_glass: "Let me look into my looking glass.", if_close, three mes + p_delay(3), then the hint pages.
@@ -201,27 +201,47 @@ test('Doric no-cash replay refuses at the bank before any purchase, gather or ha
 
 
 // Scorpion fixture: Varrock entry, worn gear, a staged bank, then varp 76=6, 77=2, one QP, the keys, 28 arrows
-// in the worn ammunition slot and one lobster eaten.
+// in the worn ammunition slot, one lobster eaten and one observed antipoison dose.
 const WORN=[[0,1169],[2,552],[3,861],[4,1131],[7,1097],[9,1063]].map(([slot,id])=>({slot:slot!,id:id!,count:1}));
 const scorpionSave=():Parameters<typeof questSweepChecks>[1]=>({version:10,position:{x:3185,z:3436,level:0},vars:{76:0,77:0,101:0},
- inventories:{93:[],94:structuredClone(WORN),95:[[995,268],[563,8],[556,31],[555,5],[554,1],[882,40],[379,4]].map(([id,count],slot)=>({slot,id:id!,count:count!}))},
+ inventories:{93:[],94:structuredClone(WORN),95:[[995,268],[563,8],[556,31],[555,5],[554,1],[882,40],[379,4],[175,1]].map(([id,count],slot)=>({slot,id:id!,count:count!}))},
  skills:Array.from({length:21},(_,index)=>({index,rawExperience:index===3?400000:0,xp:index===3?40000:0,level:index===3?69:1}))});
+const SCORPION_WITHDRAW_ANTIPOISON='QUEST_SWEEP_WITHDRAW {"id":175,"count":1,"before":0,"after":1,"bankBefore":1,"bankAfter":0,"observed":true}\n';
+const SCORPION_DOSE='SCORP_ANTIPOISON {"item":175,"next":177,"slot":6,"observed":true}\n';
 const SCORPION_LOG='START 3185 3436 0\n'
  +'QUEST_SWEEP_WITHDRAW {"id":563,"count":3,"before":0,"after":3,"bankBefore":8,"bankAfter":5,"observed":true}\n'
  +'QUEST_SWEEP_WITHDRAW {"id":563,"count":5,"before":3,"after":8,"bankBefore":5,"bankAfter":0,"observed":true}\n'
+ +SCORPION_WITHDRAW_ANTIPOISON
  +'MILESTONE complete 2153\nMILESTONE scorpion b 2160\n'
  +'SCORP_JAILER {"ok":true,"methods":["ranged"],"ticks":34}\nMILESTONE jail key 2500\n'
+ +SCORPION_DOSE+'MILESTONE scorpion a 2650\nMILESTONE scorpion c 2720\n'
  +'QUEST_SWEEP_FLAG {"id":7373,"name":"Scorpion Catcher","state":"complete"}\nLOGOUT logged-out\n'
  +'RESULT ok qp=1 questMsg=true  xp=strength=165625 ticks=2771 hpMin=48 eats=1 died=false\n';
 test('Scorpion saved effects use pinned completion 6, eight staged Law runes and reconciled pack, bank and worn ammunition',()=>{
  const before=scorpionSave(),after=structuredClone(before);
  after.position={x:2699,z:3403,level:3};after.vars={76:6,77:2,101:1};
- after.inventories={93:[[379,3],[555,2],[556,9],[563,2],[1590,1],[1591,1]].map(([id,count],slot)=>({slot,id:id!,count:count!})),94:[...structuredClone(WORN),{slot:13,id:882,count:28}],95:[]};
+ after.inventories={93:[[379,3],[555,2],[556,9],[563,2],[1590,1],[1591,1],[177,1]].map(([id,count],slot)=>({slot,id:id!,count:count!})),94:[...structuredClone(WORN),{slot:13,id:882,count:28}],95:[]};
  for(const [i,d] of [[2,1656250],[3,15525],[4,47000],[6,72500]] as const)after.skills[i]!.rawExperience+=d;
  const record={id:'scorpion-ranged-barcrawl',exit:0,timedOut:false,saveMatched:true,seconds:1};
  const check=(text=SCORPION_LOG):Record<string,boolean>=>questSweepChecks(record.id,before,after,text,record);
  expect(Object.entries(check()).filter(([,ok])=>!ok)).toEqual([]);
  expect(check(SCORPION_LOG.replace('["ranged"]','["melee"]')).jailer).toBe(false);
+ expect(check(SCORPION_LOG.replace(SCORPION_WITHDRAW_ANTIPOISON,''))).toMatchObject({antipoison:false,assets:true});
+ for(const text of [
+  SCORPION_LOG.replace(SCORPION_DOSE,''),
+  SCORPION_LOG.replace('"item":175,"next":177','"item":175,"next":179'),
+  SCORPION_LOG.replace('"slot":6,"observed":true','"slot":6,"observed":false'),
+  SCORPION_LOG.replace('"slot":6,"observed":true','"slot":28,"observed":true'),
+  SCORPION_LOG.replace('"item":175,"next":177','"item":2448,"next":181'),
+  SCORPION_LOG.replace(SCORPION_DOSE,SCORPION_DOSE+SCORPION_DOSE),
+ ])expect(check(text)).toMatchObject({antipoison:false,assets:false});
+ for(const k of ['a','b','c'])expect(check(SCORPION_LOG.replace(new RegExp(`^MILESTONE scorpion ${k} .*\\n`,'m'),'' )).catches).toBe(false);
+ before.vars[102]=-5;expect(check().entry).toBe(false);before.vars[102]=0;
+ const potion=after.inventories[93]!.find(i=>i.id===177)!;
+ const full=SCORPION_LOG.replace(SCORPION_DOSE,SCORPION_DOSE+'SCORP_ANTIPOISON {"item":177,"next":179,"slot":6,"observed":true}\nSCORP_ANTIPOISON {"item":179,"next":229,"slot":6,"observed":true}\n');
+ potion.id=229;expect(Object.values(check(full)).every(Boolean)).toBe(true);
+ expect(check(full.replace('"item":177,"next":179,"slot":6','"item":177,"next":179,"slot":7'))).toMatchObject({antipoison:false,assets:false});
+ potion.count=2;expect(check(full).assets).toBe(false);potion.count=1;potion.id=177;
  // Varp 100 is not the pinned completion; a missing QP fails.
  after.vars[76]=100;expect(check().quest).toBe(false);after.vars[76]=6;
  after.vars[101]=0;expect(check().quest).toBe(false);after.vars[101]=1;
@@ -245,17 +265,40 @@ test('Scorpion saved effects use pinned completion 6, eight staged Law runes and
 });
 test('selected Scorpion melee proof requires only the blade kit, a melee Jailer drop, combat XP and the useful quest effect',()=>{
  const before=scorpionSave();
+ before.position={x:2655,z:3283,level:0};
  before.skills[2]!.level=65;
  before.inventories[94]!.find(i=>i.slot===3)!.id=1333;
- before.inventories[95]=before.inventories[95]!.filter(i=>i.id!==882);
+ before.inventories[95]=before.inventories[95]!.filter(i=>i.id!==882&&i.id!==175);
+ before.inventories[95]!.find(i=>i.id===995)!.count=1292;
  const after=structuredClone(before);
  after.position={x:2699,z:3403,level:3};after.vars={76:6,77:2,101:1};
- after.inventories={93:[[379,3],[555,2],[556,9],[563,2],[1590,1],[1591,1]].map(([id,count],slot)=>({slot,id:id!,count:count!})),94:structuredClone(before.inventories[94]!),95:[]};
+ after.inventories={93:[[379,3],[555,2],[556,9],[563,2],[1590,1],[1591,1],[177,1]].map(([id,count],slot)=>({slot,id:id!,count:count!})),94:structuredClone(before.inventories[94]!),95:[]};
  for(const [i,d] of [[0,47000],[2,1656250],[3,15525],[6,72500]] as const)after.skills[i]!.rawExperience+=d;
- const log=SCORPION_LOG.replace('["ranged"]','["melee"]');
+ const buy='QUEST_SWEEP_BUY {"item":175,"name":"Antipoison(3)","count":1,"npc":"Jiminua","before":0,"after":1,"coinsBefore":1292,"coins":328}\n';
+ const travel='QUEST_SWEEP_TRAVEL_COST {"phase":"shop","item":175,"coinsBefore":328,"coins":298,"observed":true}\n'
+  +'QUEST_SWEEP_TRAVEL_COST {"phase":"start","coinsBefore":298,"coins":268,"observed":true}\n';
+ const boats='QUEST_SWEEP_BOAT {"id":"npc:captain_barnaby:brimhaven@2679,3275","coins":30}\n'
+  +'QUEST_SWEEP_BOAT {"id":"npc:customs_officer:ardougne@2772,3231","coins":30}\n';
+ const log=SCORPION_LOG.replace('START 3185 3436 0','START 2655 3283 0').replace('["ranged"]','["melee"]').replace(SCORPION_WITHDRAW_ANTIPOISON,buy+travel+boats);
  const record={id:'scorpion-barcrawl',exit:0,timedOut:false,saveMatched:true,seconds:1};
  const check=(text=log):Record<string,boolean>=>questSweepChecks(record.id,before,after,text,record);
  expect(Object.entries(check()).filter(([,ok])=>!ok)).toEqual([]);
+ for(const text of [
+  log.replace(buy,''),
+  log.replace('"coinsBefore":1292,"coins":328','"coinsBefore":1292,"coins":1292'),
+  log.replace('"coinsBefore":1292,"coins":328','"coinsBefore":1292,"coins":327'),
+  log.replace('"before":0,"after":1,"coinsBefore":1292','"before":0,"after":2,"coinsBefore":1292'),
+  log.replace(buy,buy+buy),
+  log.replace('"phase":"shop","item":175','"phase":"shop","item":177'),
+  log.replace('"phase":"start","coinsBefore":298,"coins":268','"phase":"start","coinsBefore":298,"coins":267'),
+  log.replace(travel,travel+travel),
+ ])expect(check(text)).toMatchObject({antipoison:false,assets:false});
+ // Explicit boat records and snapshots describe the same debit, and each path reconciles it once.
+ expect(Object.values(check(log.replace(travel,''))).every(Boolean)).toBe(true);
+ expect(Object.values(check(log.replace(boats,''))).every(Boolean)).toBe(true);
+ expect(check(log.replace(travel,'').replace(boats,''))).toMatchObject({antipoison:true,assets:false});
+ expect(check(log.replace('"coins":30','"coins":31'))).toMatchObject({antipoison:false,assets:false});
+ expect(check(log.replace('npc:captain_barnaby:brimhaven@2679,3275','npc:unknown'))).toMatchObject({antipoison:false,assets:false});
  // A bow, any ammunition, a strike rune, a staff or a noted blade must not supply an alternate method.
  for(const id of [861,882,884,558,562,1387,1334]){
   before.inventories[93]!.push({slot:0,id,count:1});
@@ -291,6 +334,7 @@ test('a completed Scorpion entry refuses before the bank and keeps the save unch
  expect(Object.entries(check()).filter(([,ok])=>!ok)).toEqual([]);
  // A bank walk or a missing-supply result means the guard staged before it refused.
  expect(check(log.replace('LOGOUT','QUEST_SWEEP_BANK {"from":{}}\nLOGOUT')).noInput).toBe(false);
+ expect(check(log.replace('LOGOUT',SCORPION_DOSE+'LOGOUT')).noInput).toBe(false);
  expect(check(log.replace('Scorpion Catcher is complete','missing 995:592 to buy 563,556')).result).toBe(false);
  before.vars[76]=100;expect(check().entry).toBe(false);
 });
@@ -449,4 +493,23 @@ LOGOUT logged-out
  expect(check(ate0.replace('RESULT ok','QUEST_SWEEP_FARE {"coins":30}\nRESULT ok')).budget).toBe(false);
  expect(check(log.replace('eats=24','eats=25'))).toMatchObject({budget:false,assets:false});
  expect(check(log.replace('eats=24','eats=1')).assets).toBe(false);
+});
+
+test('burst page recorder joins multi-line chat pages across components, resets on repeat or layer switch, and skips non-chat layers',()=>{
+ const pages:string[]=[];
+ const record=createBurstPageRecorder(new Set([4882,4887]),text=>pages.push(text));
+ record(1,9999,'Side panel text');
+ expect(pages).toEqual([]);
+ record(4884,4882,'Father Urhney');
+ record(4885,4882,'is an expert');
+ expect(pages.some(p=>/father urhney is an expert/i.test(p))).toBe(true);
+ // Repeating a component id on the same chat layer starts a fresh page instead of concatenating onto the old page.
+ record(4884,4882,'I can go and knock some sense');
+ record(4885,4882,'into them before a full blown war breaks out.');
+ expect(pages[pages.length-1]).toBe('I can go and knock some sense into them before a full blown war breaks out.');
+ expect(pages.some(p=>/knock some sense.*full blown war/i.test(p))).toBe(true);
+ expect(pages[pages.length-1]).not.toContain('Father Urhney');
+ // Switching chat layers also starts a fresh page.
+ record(4889,4887,'Another chat root line');
+ expect(pages[pages.length-1]).toBe('Another chat root line');
 });

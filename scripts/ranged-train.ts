@@ -50,7 +50,7 @@ export function rangedEntry(p:{worldX:number;worldZ:number;level:number}|null|un
  if(!p||p.level!==0)return null;
  // Observed entry only. The shared planner owns the pinned cellar ladder and surface route.
  if(p.worldX===3113&&p.worldZ===9555)return BANK;
- for(const bank of [BANK,{x:2809,z:3441}])if(Math.max(Math.abs(p.worldX-bank.x),Math.abs(p.worldZ-bank.z))<=6)return bank;
+ for(const bank of [BANK,{x:2809,z:3441},{x:2619,z:3332}])if(Math.max(Math.abs(p.worldX-bank.x),Math.abs(p.worldZ-bank.z))<=6)return bank;
  return null;
 }
 export function preparationFunds(total:number,spent:number,maxSpend:number,reserve:number){return Math.max(0,Math.min(maxSpend-spent,total-reserve));}
@@ -86,7 +86,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),eq=()=>s.sdk.getEquipment(),held=(id:number)=>count(inv(),id),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
  const level=()=>s.sdk.getSkill('Ranged')?.baseLevel??0,xp=()=>s.sdk.getSkillXp('Ranged')??0,coins=()=>held(COINS);
  if(!await waitUntil(s,()=>hp()>0&&level()>0,{timeoutTicks:15}))throw Error('ranged-train prerequisite: skill observation unknown');
- if(!await waitUntil(s,()=>!!rangedEntry(st()?.player),{timeoutTicks:15}))throw Error('ranged-train prerequisite: Varrock East, Catherby bank or observed Wizards Tower cellar entry required');
+ if(!await waitUntil(s,()=>!!rangedEntry(st()?.player),{timeoutTicks:15}))throw Error('ranged-train prerequisite: Varrock East, Catherby, Ardougne north bank or observed Wizards Tower cellar entry required');
  const originalRetaliate=st()?.autoRetaliateEnabled;if(typeof originalRetaliate!=='boolean')throw Error('ranged-train prerequisite: auto-retaliate telemetry unknown');
  const p0=st()?.player,start=s.tick(),startLevel=level(),startXp=xp(),originalEquipment=eq().map(i=>i.id);
  const entry=rangedEntry(p0);if(!p0||!entry)throw Error('ranged-train prerequisite: supported entry observation lost');

@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {ADMISSION,BLOOD_RUNE,COINS,ENTRY,FARE,ORDER,YANILLE_BANK,buyChecks,caseChecks,childChecks,childConfiguration,refuseChecks,runeShopFixture,runeShopSource} from '../src/rune-shop-order-proof';
+import {ADMISSION,BLOOD_RUNE,COINS,ENTRY,FARE,ORDER,YANILLE_BANK,buyChecks,caseChecks,cases,childChecks,childConfiguration,refuseChecks,runeShopFixture,runeShopSource} from '../src/rune-shop-order-proof';
 import {bloodProofEndpoints} from '../src/blood-chest-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -36,6 +36,12 @@ test('the child runs the real CLI with the bounded blood order on owned endpoint
  expect(ORDER).toEqual({target:100,maxSpend:30000,reserve:2000,coins:150000});
  expect(FARE).toBe(60);
 });
+test('both declared children disable loot even when the inherited environment enables it',()=>{
+ for(const id of cases){
+  expect(childConfiguration('flrunex1',id,{LOOT_WATCH:'1'}).env).toMatchObject({LOOT_WATCH:'0'});
+ }
+});
+
 test('the buy case passes on 100 banked runes and a debit of spend plus fares, and fails on any gap',()=>{
  const before=start(74),receipt={code:0,timedOut:false,persisted:true};
  expect(failed(caseChecks('buy',before,bought(5000,60),okLog(5000,60),receipt))).toEqual([]);

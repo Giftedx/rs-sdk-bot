@@ -4,7 +4,8 @@ import {mkdtempSync,writeFileSync,readFileSync,unlinkSync,existsSync,rmSync} fro
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {SWORDINHAND,cases,cowFixture,cowEntry,cowResult,cowSaveChecks,cowChildChecks,cowChildConfiguration,cowSequenceChecks,claimCowStop,retainCowStop,
- MIGHTYROD,GIANT_HITPOINTS_XP,xpForLevel,giantFixture,giantEntry,giantSaveChecks,giantChildChecks,giantChildConfiguration,giantResult} from '../src/cow-progress-isolated-proof';
+ MIGHTYROD,GIANT_HITPOINTS_XP,xpForLevel,giantFixture,giantEntry,giantSaveChecks,giantChildChecks,giantChildConfiguration,giantResult,
+ NABTHEKNOB,trooperCases,trooperFixture,trooperEntry,trooperChildConfiguration,trooperSaveChecks,trooperChildChecks} from '../src/cow-progress-isolated-proof';
 import {giantTraining} from '../../../scripts/gather-combat';
 import {cowProfile} from '../../../scripts/gather-combat';
 import {ISOLATED,ISOLATED_ENGINE_ENV,pointBotAt} from '../src/rehearse';
@@ -214,6 +215,12 @@ test('isolated giant fixture stages banked melee and food away from the bank and
  expect(giantTraining(child.env.TRAIN_SKILL,Number(child.env.TARGET_LEVEL))).toEqual({skill:'Hitpoints',targetLevel:87});
 });
 
+test('giant proof disables optional loot even when the parent enables it',()=>{
+ const inherited={LOOT_WATCH:'1'},child=giantChildConfiguration('fixture',inherited);
+ expect(child.env.LOOT_WATCH).toBe('0');
+ expect(inherited).toEqual({LOOT_WATCH:'1'});
+});
+
 test('saved giant proof requires HP level and XP, eating, banked herb deltas and retained swapped kit',()=>{
  const {before,after,result}=giantFinished();expect(Object.values(giantSaveChecks(before,after,result)).every(Boolean)).toBe(true);
  const mutations:((a:any,r:any)=>void)[]=[
@@ -223,6 +230,7 @@ test('saved giant proof requires HP level and XP, eating, banked herb deltas and
   a=>{a.inventories[93].push({slot:20,id:532,count:1});},
   a=>{a.inventories[95].find((i:any)=>i.id===385).count--;},
   a=>{a.inventories[93].find((i:any)=>i.id===995).count--;},
+  a=>{a.inventories[95].push({slot:20,id:1925,count:2});},
   a=>{a.inventories[94].pop();},a=>{a.position={x:2545,z:3144,level:0};},
   (_,r)=>{r.eaten=0;},(_,r)=>{r.foodAccounted=false;},(_,r)=>{r.died=true;},
  ];
@@ -230,4 +238,81 @@ test('saved giant proof requires HP level and XP, eating, banked herb deltas and
  expect(Object.values(giantChildChecks(0,false,'LOGOUT logged-out\nRESULT ok mode=giant ok=true\n')).every(Boolean)).toBe(true);
  expect(giantChildChecks(0,false,'RESULT ok mode=giant ok=true\n').logout).toBe(false);
  expect(giantResult('x\nGIANT_RESULT {"creditedKills":2}\n')).toEqual({creditedKills:2});
+});
+
+function trooperSave():any{
+ const f=trooperFixture();
+ return {version:9,position:{...NABTHEKNOB.position},vars:{134:1},
+  skills:NABTHEKNOB.skills.map((s,index)=>({index,level:s.level,xp:s.xp,rawExperience:s.xp*10})),
+  inventories:{93:f.inventory!.map((i,slot)=>({slot,...i})),94:f.equipment!.map(i=>({slot:i.slot,id:i.id,count:i.count})),95:f.bank!.map((i,slot)=>({slot,...i}))}};
+}
+function trooperFinished(){
+ const before=trooperSave(),after=structuredClone(before),xp=xpForLevel(60)+100,kills=50,buried=49,eaten=10;
+ after.position={x:2619,z:3332,level:0};after.vars[134]++;
+ after.skills[1]={...after.skills[1],level:60,xp,rawExperience:xp*10};
+ after.skills[3]={...after.skills[3],level:65,xp:410135+20000,rawExperience:(410135+20000)*10};
+ after.skills[5].rawExperience+=buried*1125;after.skills[5].xp=Math.trunc(after.skills[5].rawExperience/10);
+ after.inventories[95].find((i:any)=>i.id===2142).count-=eaten;
+ after.inventories[95].find((i:any)=>i.id===526).count++;
+ after.inventories[95]=after.inventories[95].filter((i:any)=>i.id!==1331);
+ after.inventories[94].find((i:any)=>i.slot===3).id=1331;
+ after.inventories[93].push({slot:2,id:1277,count:1});
+ const result={ok:true,targetMet:true,partial:false,stop:'target-level',trainSkill:'Defence',targetLevel:60,startLevel:1,finalLevel:60,selectedXp:xp,
+  style:{index:3,name:'Block',weapon:'Adamant scimitar'},creditedKills:kills,buried,prayerXp:after.skills[5].xp-before.skills[5].xp,
+  initialFood:45,finalFood:35,eaten,foodAccounted:true,preserved:true,died:false,respawns:0,hpMin:40,bankTrips:2,ticks:1900,failure:'-'};
+ return {before,after,result};
+}
+const trooperLog=(result:any,stage:any={cooked:0,burnt:0,trips:0,stolen:0,refused:0,ticks:10})=>
+ `TROOPER_FOOD ${JSON.stringify(stage)}\nGIANT_RESULT ${JSON.stringify(result)}\nLOGOUT logged-out\nRESULT ok mode=giant ok=true\n`;
+
+test('Nab trooper entry retains the dated assets and expected Prayer consumer output',()=>{
+ expect(trooperCases).toEqual(['trooper']);expect(trooperEntry(trooperSave())).toBe(true);
+ expect(NABTHEKNOB.position).toEqual({x:2618,z:3333,level:0});
+ expect(NABTHEKNOB.skills.slice(0,6)).toEqual([{level:70,xp:140900},{level:1,xp:0},{level:99,xp:998800},{level:86,xp:410135},{level:66,xp:103800},{level:69,xp:124312}]);
+ expect(NABTHEKNOB.inventory).toEqual([{id:558,count:33},{id:556,count:33}]);
+ expect(NABTHEKNOB.equipment).toEqual([{id:1277,count:1,slot:3},{id:284,count:1,slot:4},{id:1171,count:1,slot:5},{id:285,count:1,slot:7},{id:882,count:305,slot:13}]);
+ expect(NABTHEKNOB.bank).toEqual(expect.arrayContaining([{id:995,count:436119},{id:1331,count:1},{id:2142,count:43},{id:1895,count:2},{id:2132,count:1168},{id:526,count:46},{id:1739,count:1242},{id:1925,count:1}]));
+ const mutations:((s:any)=>void)[]=[s=>{s.skills[1].xp=1;},s=>{s.skills[5].xp=118237;},s=>{s.position.x++;},
+  s=>{s.inventories[95].find((i:any)=>i.id===526).count=100;},s=>{s.inventories[95].find((i:any)=>i.id===2142).count--;},
+  s=>{s.inventories[95].find((i:any)=>i.id===1331).id=1333;},s=>{s.inventories[94].pop();}];
+ for(const mutate of mutations){const s=trooperSave();mutate(s);expect(trooperEntry(s)).toBe(false);}
+});
+
+test('Nab child pins the exact finite trooper CLI and controls despite inherited alternatives',()=>{
+ const inherited={SERVER:'localhost:8888',GATEWAY_URL:'ws://localhost:7780',DEMO_OK:'1',TRAIN_SKILL:'Attack',TARGET_LEVEL:'99',
+  GIANT_FOOD:'5',GIANT_BURY:'0',TROOPER_COOK:'0',LOOT_WATCH:'1',RANDOM_EVENTS:'1',GIANT_KILLS:'1',MAX_KILLS:'1',COMBAT_POTIONS_FILE:'foreign',COMBAT_ALCH_FILE:'foreign',TELEGRAB_MAX:'1'};
+ const original={...inherited},child=trooperChildConfiguration('fixture',inherited);
+ expect(child.cmd).toEqual(['bun','scripts/gather-combat.ts','fixture','2500','trooper']);expect(child.windowsHide).toBe(true);
+ expect(child.env).toMatchObject({SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',
+  TRAIN_SKILL:'Defence',TARGET_LEVEL:'60',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'});
+ for(const key of ['GIANT_KILLS','MAX_KILLS','COMBAT_POTIONS_FILE','COMBAT_ALCH_FILE','TELEGRAB_MAX'])expect(child.env[key]).toBeUndefined();
+ expect(inherited).toEqual(original);
+});
+
+test('Nab saved proof requires Defence60, exact costs, retained bones and kit, bank return and finite ticks',()=>{
+ const {before,after,result}=trooperFinished();expect(Object.values(trooperSaveChecks(before,after,result)).every(Boolean)).toBe(true);
+ const mutations:((a:any,r:any)=>void)[]=[
+  a=>{a.skills[1].xp=xpForLevel(60)-1;},(_,r)=>{r.finalLevel=59;},(_,r)=>{r.selectedXp++;},
+  a=>{a.skills[0].rawExperience++;},a=>{a.skills[3].rawExperience=4101350;},
+  a=>{a.inventories[95].find((i:any)=>i.id===2142).count--;},(_,r)=>{r.eaten++;},(_,r)=>{r.foodAccounted=false;},
+  a=>{a.inventories[95].find((i:any)=>i.id===526).count=45;},a=>{a.skills[5].rawExperience++;},
+  a=>{a.inventories[95].find((i:any)=>i.id===995).count--;},a=>{a.inventories[95].find((i:any)=>i.id===2132).count--;},
+  a=>{a.inventories[94].pop();},a=>{a.inventories[93].push({slot:20,id:526,count:1});},
+  a=>{a.position={x:2525,z:3242,level:0};},(_,r)=>{r.ticks=2501;},(_,r)=>{r.ticks=-1;},(_,r)=>{r.died=true;},
+  (_,r)=>{r.preserved=false;},(_,r)=>{r.style.index=1;},(_,r)=>{r.partial=true;r.targetMet=false;r.stop='cap';},
+ ];
+ for(const mutate of mutations){const f=trooperFinished();mutate(f.after,f.result);expect(Object.values(trooperSaveChecks(f.before,f.after,f.result)).every(Boolean)).toBe(false);}
+ expect(Object.values(trooperSaveChecks(before,after,null)).every(Boolean)).toBe(false);
+});
+
+test('Nab child requires observed owned-food staging, the total finite budget and one confirmed logout',()=>{
+ const {result}=trooperFinished(),log=trooperLog(result);
+ expect(Object.values(trooperChildChecks(0,false,log)).every(Boolean)).toBe(true);
+ expect(Object.values(trooperChildChecks(0,false,log.replace(/^TROOPER_FOOD .*\n/,''))).every(Boolean)).toBe(false);
+ expect(Object.values(trooperChildChecks(0,false,trooperLog(result,{cooked:1,burnt:0,trips:1,stolen:0,refused:0,ticks:10}))).every(Boolean)).toBe(false);
+ expect(Object.values(trooperChildChecks(0,false,trooperLog({...result,ticks:2491}))).every(Boolean)).toBe(false);
+ expect(trooperChildChecks(0,false,log.replace('LOGOUT logged-out\n','')).logout).toBe(false);
+ expect(trooperChildChecks(0,true,log).exit).toBe(false);
+ expect(trooperChildChecks(1,false,log).exit).toBe(false);
+ expect(trooperChildChecks(0,false,log+'LOGOUT logged-out\n').logout).toBe(false);
 });

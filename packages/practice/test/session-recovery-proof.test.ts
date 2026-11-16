@@ -995,6 +995,59 @@ test('a timer-only fleet snapshot stays stale at a late handoff; a fresh owned h
   expect(fleetHandoff(()=>rmSync(path),path,account,process.pid,()=>now).verdict).toBe('missing');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+test('fixture launch refreshes the complete fleet view after delayed admission, and admission refusal prevents publication and launch',()=>{
+ const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');
+ // Execute the fixture's dispatcher wiring without starting its private world or replacing the shared dispatcher.
+ const start=text.indexOf('  const dispatcher='),end=text.indexOf('\n  let fixtureIndex=',start);
+ expect(start).toBeGreaterThan(-1);expect(end).toBeGreaterThan(start);
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(text.slice(start,end));
+ const make=new Function('deps',`const {base,createRecoveryDispatch,admission,observeRecoveryBoundary,recoveryAuthorityInputs,admitRecovery,observeBoundary,fleetHandoff,beat,join,launchPermittedRecovery,cachedLaunchRevision}=deps;${code};return dispatcher;`);
+ for(const refused of [true,false]){
+  const base=mkdtempSync(join(tmpdir(),'recovery-post-admission-')),path=join(base,'.practice/swarm-state.json'),events:string[]=[],boundaries:RecoveryBoundary[]=[];
+  const r:ControlledRecoveryRequest={schema:'session-recovery/1',kind:'session-recovery',account:'Rod',server:'localhost:8890',runId:'native-post-admission',nonce:'one',endedAt:100,source:'a'.repeat(64),
+   qualification:{delivery:{path:'unit-only',sha256:'0'.repeat(64)},proof:{path:'unit-only',sha256:'0'.repeat(64)}}};
+  let now=1794785110203;
+  const clock=spyOn(Date,'now').mockImplementation(()=>now);
+  const view=(at:number)=>({at,controllerPid:process.pid,jobs:[{account:r.account,state:'disabled'},{account:'Other',state:'disabled'}]});
+  const initial=view(1794785110171),input={account:r.account,active:[],running:0,external:0,pending:0,freeGB:PRACTICE_STARTUP_GB+32,minFreeGB:FREE_FLOOR_GB,maxBots:17};
+  try{
+   publishControlFile(path,initial);const before=readFileSync(path);
+   const dispatcher=make({base,createRecoveryDispatch,admission:()=>({owners:[],input}),observeRecoveryBoundary,
+    recoveryAuthorityInputs:(b:string,request:ControlledRecoveryRequest)=>{
+     events.push('observe');return recoveryAuthorityInputs(b,request);
+    },
+    admitRecovery:(v:typeof input)=>{
+     events.push('admit');now+=9770;
+     admitRecovery(refused?{...v,freeGB:FREE_FLOOR_GB}:v,()=>{});events.push('admitted');
+    },
+    observeBoundary:(event:RecoveryBoundary)=>boundaries.push(event),fleetHandoff,join,
+    beat:()=>{events.push('publish');publishControlFile(path,view(now));},
+    cachedLaunchRevision:()=>r.source,
+    launchPermittedRecovery:(request:ControlledRecoveryRequest,b:string,options:{nativeFixture:boolean;source:()=>string})=>{
+     events.push('launch');expect(request).toEqual(r);expect(b).toBe(base);expect(options.nativeFixture).toBe(true);expect(options.source()).toBe(r.source);
+     now+=1347;assertFleetResolved(path,r.account,process.pid);
+     return {child:{pid:process.pid},completion:new Promise<never>(()=>{})};
+    },
+   })(r.server);
+   const raw=JSON.stringify(r);writeFileSync(join(base,'.practice/swarm-repair.json.processing'),raw);
+   expect(dispatcher.handle(raw)).toBe(true);
+   if(refused){
+    expect(events).toEqual(['observe','admit']);expect(readFileSync(path)).toEqual(before);expect(dispatcher.active).toBeUndefined();
+    expect(boundaries.map(e=>[e.phase,e.outcome])).toEqual([['admitRecovery','entered'],['admitRecovery','threw']]);
+    const row=JSON.parse(readFileSync(join(base,'.practice/swarm-repair.json.results.jsonl'),'utf8'));
+    expect(row.result).toMatchObject({sessionRecovered:false,setup:{phase:'admission',cause:'recovery admission waiting: memory'}});
+   }else{
+    expect(events).toEqual(['observe','admit','admitted','publish','observe','launch']);expect(dispatcher.active?.pid).toBe(process.pid);
+    expect(JSON.parse(readFileSync(path,'utf8'))).toEqual(view(1794785119973));
+    expect(boundaries.map(e=>[e.phase,e.outcome])).toEqual([['admitRecovery','entered'],['admitRecovery','returned'],['launchPermittedRecovery','entered'],['launchPermittedRecovery','returned']]);
+    expect(boundaries.find(e=>e.phase==='launchPermittedRecovery')?.inputs).toMatchObject({fleet:{at:1794785119973,controllerPid:process.pid}});
+   }
+   expect(FLEET_HEARTBEAT_MAX_MS).toBe(10000);
+   expect(fs.readdirSync(join(base,'.practice')).some(name=>name.endsWith('.tmp'))).toBe(false);
+  }finally{clock.mockRestore();rmSync(base,{recursive:true,force:true});}
+ }
+});
+
 test('the orphan child reading mid-heartbeat sees a complete fleet view, never fleet-malformed',()=>{
  const dir=mkdtempSync(join(tmpdir(),'fleet-publish-')),path=join(dir,'.practice','swarm-state.json'),account='flrcvxxhah18';
  const view=(at:number)=>({at,controllerPid:process.pid,jobs:[{account,state:'disabled'}]});

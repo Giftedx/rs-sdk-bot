@@ -11,6 +11,7 @@
 import { openQuest, fightForDrop } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 import { establishBarcrawlGate, runBarcrawl } from './quest-barcrawl';
+import { waitUntil } from '../../packages/core/src/ticks';
 
 const THORMAC = { x: 2702, z: 3405 };
 const SEER = { x: 2702, z: 3475 };
@@ -31,6 +32,45 @@ const JAILER = { x: 2933, z: 9693 };                         // spawn, maps/m45_
 const JAIL_DOOR = { id: 2631, x: 2931, z: 9690 };            // Velrak's cell door, south wall of the tile
 const VELRAK = { x: 2931, z: 9685 };
 const GATE = { id: 2623, x: 2924, z: 9803 };                 // deepdungeondoor, west wall of the tile, maps/m45_153.jm2
+
+// anti_poison.rs2 grants protection even without poison and replaces the bottle in its original inventory slot.
+const ANTIPOISON_NEXT: Readonly<Record<number, number>> = {2448:181,181:183,183:185,185:229,2446:175,175:177,177:179,179:229};
+type PoisonIO = {
+    onTick(cb:()=>void):()=>void;
+    poisoned():number;
+    inventory():readonly {id:number;slot:number;count:number}[];
+    use(slot:number):Promise<unknown>;
+    wait(ok:()=>boolean,ticks:number):Promise<boolean>;
+    log(row:{item:number;next:number;slot:number;observed:boolean}):void;
+};
+export function watchScorpionPoison(io:PoisonIO) {
+    let seen=0,stopped=false,failure:string|undefined,pending:Promise<void>|undefined;
+    const cure=async()=>{
+        const pot=io.inventory().find(i=>i.count>0&&ANTIPOISON_NEXT[i.id]!==undefined);
+        if(!pot)throw Error('Scorpion missing usable antipoison dose');
+        const next=ANTIPOISON_NEXT[pot.id]!;
+        const changed=()=>io.inventory().some(i=>i.slot===pot.slot&&i.id===next&&i.count===pot.count);
+        for(let attempt=0;attempt<3&&!stopped;attempt++){
+            // A dropped click can repeat only while this same bottle remains in its observed slot.
+            if(!io.inventory().some(i=>i.slot===pot.slot&&i.id===pot.id&&i.count===pot.count))break;
+            await io.use(pot.slot);
+            if(await io.wait(changed,5)){
+                io.log({item:pot.id,next,slot:pot.slot,observed:true});return;
+            }
+        }
+        throw Error(`Scorpion antipoison dose change unobserved ${pot.id}->${next}`);
+    };
+    const dose=()=>{
+        if(!stopped&&!failure&&!pending)pending=cure().catch(error=>{failure=String(error);}).finally(()=>{pending=undefined;});
+        return pending;
+    };
+    const off=io.onTick(()=>{
+        if(stopped||failure||pending||io.poisoned()<=seen)return;
+        seen=io.poisoned();
+        void dose();
+    });
+    return {protect:async()=>{await dose();if(failure)throw Error(failure);},failure:()=>failure,pending:async()=>{await pending;},stop:async()=>{stopped=true;off();await pending;}};
+}
 
 type CatchQuest = Pick<Awaited<ReturnType<typeof openQuest>>, 'st' | 'has' | 'waitUntil' | 'walk' | 'dash' | 'step' | 'useOnNpc' | 'waitTicks' | 'milestone' | 'findLoc' | 'opLoc' | 'opIndex'>;
 
@@ -70,10 +110,17 @@ export async function catchScorpion(q: CatchQuest, k: 'a' | 'b' | 'c', at: { x: 
 }
 
 if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
-// The eater takes any edible in the pack: an account without the preset's lobsters carries its own cake or fish, and the
-// dungeon's poison and the Jailer bleed it either way.
-const q = await openQuest({ cap: Number(process.env.CAP ?? 2500), eatAt: 50, lumbridgeOk: false });
+// The eater handles wounds. Antipoison cures the dungeon's poison, which Protect from Melee cannot prevent.
+let poison:ReturnType<typeof watchScorpionPoison>|undefined;
+const q = await openQuest({ cap: Number(process.env.CAP ?? 2500), eatAt: 50, lumbridgeOk: false, stop:()=>!!poison?.failure() });
+poison=watchScorpionPoison({
+    onTick:cb=>q.s.onTick(cb),poisoned:()=>q.msgCount(/you have been poisoned/i),inventory:()=>q.st()?.inventory??[],
+    use:slot=>q.s.direct({type:'useInventoryItem',slot,optionIndex:1,reason:'SDK'}),
+    wait:(ok,ticks)=>waitUntil(q.s,ok,{timeoutTicks:ticks}),log:row=>console.log(`SCORP_ANTIPOISON ${JSON.stringify(row)}`),
+});
+void q.s.ended.then(()=>poison!.stop());
 try {
+    if(!q.st()?.inventory?.some((i:any)=>i.count>0&&ANTIPOISON_NEXT[i.id]!==undefined))throw Error('Scorpion missing usable antipoison dose');
     const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage); 3: quest_scorpion_s3 (Taverley dungeon ladder, cage with B)
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+scorpion catcher/i) > 0) questDone = true; });
@@ -156,6 +203,10 @@ try {
     if (FROM < 3) {
         await q.teleport('falador teleport 1', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to taverley ladder', [{ x: TAV_LADDER.x, z: TAV_LADDER.z + 1, tol: 1 }]);
+    }
+    // Protect before the descent or, for SC_FROM=3, before leaving the dungeon landing.
+    await poison.protect();
+    if (FROM < 3) {
         await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
     }
     // Poison scorpions roam the dungeon between the ladder and the jail and their sting poisons for hundreds of ticks; the
@@ -236,8 +287,7 @@ try {
         // z 9756-9763), the corridor's north-east bend (2951,9793), the north passage (2937,9825), then the landing. Each
         // leg is short enough that the planner's shortest route is the way in; from the bend a one-leg route to the landing
         // runs back through the dusty gate, which the door policy opens for a holder of the key and the client finds
-        // locked, so its clicks beyond the gate are rejected. The legs never stop for the poison scorpions, since Protect
-        // from Melee blocks their sting while the points last.
+        // locked, so its clicks beyond the gate are rejected. Protect from Melee blocks damage, but poison still needs a dose.
         const trace = (label: string) => (line: string) => console.log(`SCORP_WALK ${label}: ${line}`);
         for (const leg of [
             { label: 'to east corridor', to: { x: 2936, z: 9777, tol: 2 } },
@@ -279,7 +329,9 @@ try {
     await q.waitUntil(() => questDone, 10);
     q.milestone('complete');
     offDone();
+    await poison.stop();
+    if(poison.failure())throw Error(poison.failure());
     await q.end(questDone, `qp=1 questMsg=${questDone}`);
 
-} catch (e) { await q.fail(String(e)); }
+} catch (e) { await poison.stop();await q.fail(poison.failure()??String(e)); }
 }

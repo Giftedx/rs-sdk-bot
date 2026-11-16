@@ -26,15 +26,15 @@ const TARGET=71,MAX_SPEND=5000,COIN_RESERVE=400000;
 export const rangedLevelXp=(level:number)=>{let acc=0;for(let l=1;l<level;l++)acc+=Math.floor(l+300*2**(l/10));return Math.floor(acc/4);};
 // Ranged 70 with 3000 XP to go: 10 chickens at 300 XP.
 export const RANGED_SEED_XP=rangedLevelXp(TARGET)-3000;
-// Observed underground entry and protected quest kit. Bank contents are fixture stock, not a live snapshot.
-export const RANGED_FIXTURE:SaveConfig={position:{x:3113,z:9555,level:0},
+// Observed Ardougne north bank entry and protected quest kit. Bank contents are fixture stock, not a live snapshot.
+export const RANGED_FIXTURE:SaveConfig={position:{x:2618,z:3332,level:0},
  skills:{Attack:65,Defence:10,Strength:11,Hitpoints:60,Ranged:70},
  inventory:[{id:556,count:3},{id:557,count:1},{id:553,count:1}],
  equipment:[{id:552,count:1,slot:2},{id:1277,count:1,slot:3},{id:1171,count:1,slot:5}],
  bank:[{id:COINS,count:455452},{id:841,count:1},{id:884,count:82},{id:882,count:25},{id:1511,count:15},{id:1521,count:8951}]};
 export function rangedChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
  return {cmd:['bun','scripts/ranged-train.ts',name,String(TARGET),'10000'],cwd:root,
-  env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',MIN_ARROWS:'100',BUY_ARROWS:'0',BUY_ARROW_ID:'884',MAX_SPEND:String(MAX_SPEND),COIN_RESERVE:String(COIN_RESERVE),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'20'},windowsHide:true};
+  env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',MIN_ARROWS:'100',BUY_ARROWS:'0',BUY_ARROW_ID:'884',MAX_SPEND:String(MAX_SPEND),COIN_RESERVE:String(COIN_RESERVE),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'20'},windowsHide:true};
 }
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const worn=(s:Save)=>(s.inventories[94]??[]).map(i=>i.id).sort((a,b)=>a-b);
@@ -47,7 +47,7 @@ export function rangedSaveChecks(before:Save,after:Save,r:any){
  const free=new Set([...ARROWS,COINS,BONES,CHICKEN,FEATHER,FOOD]);
  const arrows=(s:Save)=>ARROWS.reduce((n,id)=>n+total(s,id),0);
  return {
-  entry:before.skills[4]!.level===70&&before.skills[4]!.xp===RANGED_SEED_XP&&before.position.x===3113&&before.position.z===9555&&before.position.level===0&&total(before,553)===1&&total(before,552)===1&&total(before,556)===3&&total(before,557)===1&&total(before,841)===1&&arrows(before)===107&&total(before,COINS)===455452&&total(before,329)===0&&total(before,333)===0,
+  entry:before.skills[4]!.level===70&&before.skills[4]!.xp===RANGED_SEED_XP&&before.position.x===2618&&before.position.z===3332&&before.position.level===0&&total(before,553)===1&&total(before,552)===1&&total(before,556)===3&&total(before,557)===1&&total(before,841)===1&&arrows(before)===107&&total(before,COINS)===455452&&total(before,329)===0&&total(before,333)===0,
   target:r?.ok===true&&r.targetMet===true&&r.stop==='target-level'&&after.skills[4]!.level>=TARGET&&r.finalLevel===after.skills[4]!.level&&r.startLevel===70,
   xp:Number.isSafeInteger(r?.xpGain)&&r.xpGain>0&&after.skills[4]!.xp-before.skills[4]!.xp===r.xpGain,
   bow:r?.bow===841&&r.arrow===884&&total(after,841)===1,
@@ -80,8 +80,8 @@ export function verifyRanged(directory:string){
   fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
   beforeHash:meta.before===hash(join(directory,'before.sav')),afterHash:meta.after===hash(join(directory,'after.sav')),logHash:meta.log===hash(join(directory,'worker.log'))};
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,
-  scope:'One native150ms/25x underground Ranged70->71 order with protected quest kit, owned shortbow and stock-only ammunition, purchased food and reconciled fares. No live or speed claim.',
-  nextConsumer:'run-ranged-bigchopper-stock-only80: target80, CAP35000, MAX_SPEND4419, COIN_RESERVE400000, MIN_ARROWS200, BUY_ARROWS0, AMMO100, FOOD3, FOOD_ID329, KILLS_PER_TRIP8, MAX_TRIPS50. Fresh bank stock required. Then80->90.'};
+  scope:'One native150ms/25x Ardougne north bank Ranged70->71 order with protected quest kit, owned shortbow and stock-only ammunition, purchased food and reconciled fares. No live or speed claim.',
+  nextConsumer:'run-ranged-nab70-funded-entry: target70, CAP20000, MAX_SPEND500, COIN_RESERVE400000, MIN_ARROWS30, BUY_ARROWS0, BUY_ARROW_ID882, AMMO100, FOOD3, FOOD_ID329, KILLS_PER_TRIP8, MAX_TRIPS20, LOOT_WATCH0, RANDOM_EVENTS0. Fresh ownership, stock, health, reservations and travel choice/cost proof within the live budget required before release. Then run-magic-nab-owned25.'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 // Delivery admits the practice start reserve before this process starts; the proof holds only the floor.
