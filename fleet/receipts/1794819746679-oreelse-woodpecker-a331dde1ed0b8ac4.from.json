@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794819746679-oreelse-woodpecker-a331dde1ed0b8ac4",
  "account": "OreElse",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Uncut sapphire",
  "requested": 1,
  "claim": "ca6b9de2-12ce-424d-8fea-cea367934117",
- "count": 0,
- "ok": false,
- "at": 1794819888866,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794820174018,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794820143263
+ },
+ "logout": {
+  "attemptId": "1794819888874-0000028272-0000000001",
+  "at": 1794820174005,
+  "sha256": "475cc5f82cc6765cf8413bf4dddf58f33ad1e58006b20671cab7cbea95c8bf5f"
+ },
+ "screen": true
 }
