@@ -137,7 +137,7 @@ function matchedWorkerProof(root: string, claim: FleetSwarmClaim, target: ClaimI
     if (producer?.sharedClaimNonce === claim.nonce && producer.pid === claim.pid) return proof;
 }
 
-function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimIdentity): { inherited?: FleetSwarmClaim } | undefined {
+function abandonedBeforeNetwork(root: string, claim: FleetAccountClaim, target: ClaimIdentity) {
     if (!claim.pid || savedProcessAlive(claim.pid, claim.at) || !owningCheckout(root, claim, target.side)) return;
     let pending: {claim: string; inherited?: FleetSwarmClaim};
     try { pending = JSON.parse(readFileSync(pendingPath(root, claim.nonce), 'utf8')); }
@@ -150,6 +150,12 @@ function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimI
     // A missing receipt alone proves nothing. Require the pre-push marker and refuse if
     // any receipt is unreadable or could belong to the marked attempt.
     if (attempts.some(row => !row.receipt || row.receipt.owner.sharedClaimNonce === claim.nonce)) return;
+    return pending;
+}
+
+function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimIdentity): { inherited?: FleetSwarmClaim } | undefined {
+    const pending=abandonedBeforeNetwork(root,claim,target);
+    if(!pending)return;
     if (!pending.inherited) return {};
     if (!isSwarmClaim(claim)) return;
     const prior = parseClaim(JSON.stringify(pending.inherited), claim.account, claim.server);
@@ -257,28 +263,42 @@ function orphanedSwarmClaim(git: ReturnType<typeof fleetGitWindow>, claim: Fleet
     return seen !== null && now - seen >= ORPHAN_CLAIM_MS;
 }
 
+function qualifiedHostProof(root:string,claim:FleetSwarmClaim,target:ClaimIdentity,authorized:ReturnType<typeof assertSpentRecoveryConnection>,git:ReturnType<typeof fleetGitWindow>,now:number){
+    if(claim.side!==target.side||claim.checkout!==fleetCheckoutId(root)||claim.host===hostname())return;
+    const proof=readLogoutProof(target.account,target.server,lifecycleOptions(root));
+    const producer=proof.state==='held'?listAttempts(target.account,target.server,lifecycleOptions(root)).find(a=>a.attemptId===proof.attemptId):undefined;
+    if(proof.state!=='held'||authorized.previous?.attemptId!==proof.attemptId||authorized.previous.sha256!==producer?.sha256
+        ||producer?.receipt?.owner.sharedClaimNonce!==claim.nonce||producer.receipt.owner.pid!==claim.pid)return;
+    const lease=recoveryHostLease(git,target.side,claim.checkout,claim.host,now);
+    if(lease&&claim.at<=lease.previous.at+FLEET_LEASE_TTL_MS&&producer.receipt.createdAt<=lease.previous.at+FLEET_LEASE_TTL_MS
+        &&fleetLeaseAllowsWorker(root,target.side+':'+lease.current.epoch,now))return proof;
+}
+
 export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, admission=undefined as RecoveryConnectionAdmission|undefined, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean } = {}) {
     const { account, server } = identity(input), { side } = input;
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
     const authorized=admission?assertSpentRecoveryConnection(admission,account,server,root):undefined;
     const git = fleetGitWindow(root, 'fleet swarm claim authority');
     const { ref, head, claim: current } = loadClaim(git, account, server);
-    const pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
+    let pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
+    // A qualified child may die after pushing its claim but before recording intent.
+    // Only its exact durable marker and Git parent can carry the foreign-host hold
+    // forward; the spent admission and retired host lease must still authorize it.
+    if(!pending&&recover&&authorized&&current?.phase==='held'&&isSwarmClaim(current)){
+        const marker=abandonedBeforeNetwork(root,current,input);
+        if(marker?.inherited){
+            const inherited=parseClaim(JSON.stringify(marker.inherited),account,server),parents=head?git(['show','-s','--format=%P',head]).split(/\s+/):[];
+            if(isSwarmClaim(inherited)&&inherited.phase==='held'&&inherited.nonce!==current.nonce&&parents.length===1
+                &&git(['show','-s','--format=%b',parents[0]!])===JSON.stringify(inherited)
+                &&qualifiedHostProof(root,inherited,input,authorized,git,now()))pending={inherited};
+        }
+    }
     const claim = pending ? pending.inherited : current;
     let inheritedHold: FleetSwarmClaim | undefined, orphan: FleetSwarmClaim | undefined;
     if (claim?.phase === 'held') {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
         let prior = matchedWorkerProof(root, claim, input),continuedHost=false;
-        if(!prior&&recover&&authorized&&claim.side===side&&claim.checkout===fleetCheckoutId(root)&&claim.host!==hostname()){
-            const proof=readLogoutProof(account,server,lifecycleOptions(root));
-            const producer=proof.state==='held'?listAttempts(account,server,lifecycleOptions(root)).find(a=>a.attemptId===proof.attemptId):undefined;
-            if(proof.state==='held'&&authorized.previous?.attemptId===proof.attemptId&&authorized.previous.sha256===producer?.sha256
-                &&producer?.receipt?.owner.sharedClaimNonce===claim.nonce&&producer.receipt.owner.pid===claim.pid){
-                const lease=recoveryHostLease(git,side,claim.checkout,claim.host,now());
-                if(lease&&claim.at<=lease.previous.at+FLEET_LEASE_TTL_MS&&producer.receipt.createdAt<=lease.previous.at+FLEET_LEASE_TTL_MS
-                    &&fleetLeaseAllowsWorker(root,side+':'+lease.current.epoch,now())){prior=proof;continuedHost=true;}
-            }
-        }
+        if(!prior&&recover&&authorized){prior=qualifiedHostProof(root,claim,input,authorized,git,now());continuedHost=!!prior;}
         if(authorized&&!prior)throw Error('qualified recovery claim identity or host continuation unavailable');
         if (!prior && orphanedSwarmClaim(git, claim, side, now(), fleetCheckoutId(root))) orphan = claim;
         // A recovery takes a held claim only from an owner that is gone. The claim's time tells its owner from a later
