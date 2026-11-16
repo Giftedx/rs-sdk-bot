@@ -1,0 +1,22 @@
+{
+ "id": "1794860826579-unsheathed-bowbeforeme-4fc8c2e1db72c70b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "BowBeforeMe",
+ "item": "Gold bar",
+ "count": 2,
+ "start": 1794860826579,
+ "end": 1794861726579,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ]
+}
