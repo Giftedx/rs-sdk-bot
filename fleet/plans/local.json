@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794820088004,
+ "at": 1794820130386,
  "jobs": [
   {
    "account": "Balls",
@@ -53,25 +53,22 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "20"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "Shaftsinker",
