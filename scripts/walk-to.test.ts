@@ -1,6 +1,6 @@
 import { expect, test, spyOn } from 'bun:test';
 import * as owner from '../packages/core/src/bot';
-import { approach, parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom, onTutorialIsland, leaveTutorial } from './walk-to';
+import { approach, parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom, onTutorialIsland, leaveTutorial, inZanaris } from './walk-to';
 import { loadTravel } from '../packages/core/src/travel';
 import type { Outcome } from '../packages/core/src/act';
 
@@ -221,6 +221,19 @@ test('a persistent walk retries from where a leg stopped while it gets closer, a
     const stuck = async () => { calls++; return { ok: false, reason: 'blocked', detail: 'door' }; };
     expect(await walkTargetPersist(s, to, 4, stuck)).toEqual({ ok: false, reason: 'blocked', detail: 'door' });
     expect(calls).toBe(2);
+});
+
+test('Zanaris contains the observed bank and market map squares with exact floor and bounds',()=>{
+    for(const [x,z]of [[3136,9536],[3152,9578],[3220,9592],[3263,9599]])expect(inZanaris({x:x!,z:z!,level:0})).toBe(true);
+    for(const [x,z,level]of [[3135,9578,0],[3264,9578,0],[3152,9535,0],[3152,9600,0],[3152,9578,1]])expect(inZanaris({x:x!,z:z!,level:level!})).toBe(false);
+});
+
+test('Zanaris entry, western bank and market-toll walks stay inside the realm',async()=>{
+    const calls:string[]=[],walk=async({x,z}:{x:number;z:number}):Promise<Outcome>=>{calls.push(x+','+z);return{ok:true,ticks:1};};
+    const sail=async():Promise<Outcome>=>{throw Error('unexpected ferry inside Zanaris');};
+    expect(await walkWithFerryFallback({x:3220,z:9592,level:0},{x:3152,z:9578,level:0},walk,sail,()=>0)).toEqual({ok:true,ticks:1});
+    expect(await walkWithFerryFallback({x:3152,z:9578,level:0},{x:3237,z:9558,level:0},walk,sail,()=>0)).toEqual({ok:true,ticks:1});
+    expect(calls).toEqual(['3152,9578','3237,9558']);
 });
 
 test('a trip out of Zanaris first takes its exit to the swamp shed, then plans from there', async () => {

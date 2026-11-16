@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { supervise } from '../packages/practice/src/supervise';
-import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS, selectItems, profileRefusal, approachLegs } from './shop-buyer';
+import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS, selectItems, profileRefusal, approachLegs, approachShop } from './shop-buyer';
 
 const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}$`, 'i'), buyPerTick });
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
@@ -179,6 +179,51 @@ test('magic guild far trip goes by the Port Sarim and Ardougne docks only from f
 test('existing shop profiles retain their NPC, route endpoints and commodity counts',()=>{
     const cases=[['ardy','Aemad',2613,3294,2654,3283,8],['catherby','Hickton',2821,3444,2809,3441,4],['sarim','Gerrant',3013,3225,3092,3243,4],['betty','Betty',3012,3259,3092,3243,9],['taverley','Jatix',2908,3443,2934,3376,4],['general_sarim','Shopkeeper',3014,3205,3092,3243,5],['aubury','Aubury',3253,3402,3253,3420,8],['zeke','Zeke',3288,3190,3269,3167,4],['nurmof','Nurmof',2998,9844,3013,3355,6]] as const;
     for(const [key,npc,x,z,bx,bz,n]of cases){const p=PROFILES[key]!;expect(p.npc.test(npc)).toBe(true);expect(p.npcSpot).toEqual({x,z});expect(p.bankSpot).toEqual({x:bx,z:bz});expect(p.items).toHaveLength(n);}
+});
+
+test('Jakut pays one toll before the first shop walk and skips payment after the observed crossing',async()=>{
+    const from={worldX:3154,worldZ:9577},events:unknown[]=[];
+    const pay=async()=>{events.push('toll');from.worldX=3238;from.worldZ=9558;return true;};
+    const walk=async(x:number,z:number,tol:number,level:number)=>{events.push(['walk',x,z,tol,level]);return true;};
+    expect(await approachShop(PROFILES.jukat!,from,walk,pay)).toBe(true);
+    expect(await approachShop(PROFILES.jukat!,from,walk,pay)).toBe(true);
+    expect(events).toEqual(['toll',['walk',3252,9572,2,0],['walk',3252,9572,2,0]]);
+});
+
+test.each(['jukat','catherby'])('a reached cap before the %s approach pays no toll and starts no walk',async profile=>{
+    const events:string[]=[];
+    expect(await approachShop(PROFILES[profile]!,{worldX:3154,worldZ:9577},async()=>{events.push('walk');return true;},async()=>{events.push('toll');return true;},()=>true)).toBe(false);
+    expect(events).toEqual([]);
+});
+
+test('a cap reached during the paid crossing starts no NPC walk',async()=>{
+    const events:string[]=[];let stopped=false;
+    const paid=await approachShop(PROFILES.jukat!,{worldX:3154,worldZ:9577},async()=>{events.push('walk');return true;},async()=>{events.push('toll');stopped=true;return true;},()=>stopped);
+    expect(paid).toBe(false);expect(events).toEqual(['toll']);
+});
+
+test.each([3238,3252])('a Jakut shop-side entry at x=%i needs no second diamond',async worldX=>{
+    let walks=0;
+    expect(await approachShop(PROFILES.jukat!,{worldX,worldZ:9572},async()=>{walks++;return true;},async()=>{throw Error('unexpected second toll');})).toBe(true);
+    expect(walks).toBe(1);
+});
+
+test('an unobserved toll crossing cannot start the NPC walk',async()=>{
+    let walks=0;
+    await expect(approachShop(PROFILES.jukat!,{worldX:3154,worldZ:9577},async()=>{walks++;return true;},async()=>false)).rejects.toThrow('realm toll: crossing unobserved');
+    expect(walks).toBe(0);
+});
+
+test('a missing toll diamond keeps the prerequisite failure before any NPC walk',async()=>{
+    let walks=0;
+    await expect(approachShop(PROFILES.jukat!,{worldX:3154,worldZ:9577},async()=>{walks++;return true;},async()=>{throw Error('realm toll: no diamond in the pack or in the bank');})).rejects.toThrow('realm toll: no diamond');
+    expect(walks).toBe(0);
+});
+
+test.each(['catherby','sarim','betty'])('ordinary %s shop approaches retain their single walk without a toll',async name=>{
+    const profile=PROFILES[name]!,walks:unknown[]=[];
+    expect(await approachShop(profile,{worldX:3154,worldZ:9577},async(...args)=>{walks.push(args);return false;},async()=>{throw Error('unexpected realm toll');})).toBe(false);
+    expect(walks).toEqual([[profile.npcSpot.x,profile.npcSpot.z,2,profile.npcSpot.level??0]]);
 });
 
 test("Jakut's shelf of 2 dragon longswords bounds the unit price, so a reserve allows the tenth sword of 1,019,000 coins", async () => {
