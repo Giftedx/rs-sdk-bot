@@ -1,0 +1,22 @@
+{
+ "id": "1794791897469-mmthv2350-mmsmk1232-dragonbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "mmsmk1232",
+ "item": "Dragon bones",
+ "count": 105,
+ "start": 1794791897469,
+ "end": 1794794297469,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
