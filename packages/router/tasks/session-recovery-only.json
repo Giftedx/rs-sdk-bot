@@ -12,7 +12,12 @@
     "scripts/cloud-recovery.ts",
     "scripts/cloud-recovery.test.ts",
     "packages/core/src/bounded-recovery.ts",
+    "packages/core/src/bounded-owners.ts",
     "packages/core/test/bounded-recovery.test.ts",
+    "packages/core/test/bounded-owners.test.ts",
+    "packages/practice/src/swarm-recovery-chain.ts",
+    "packages/practice/src/bank-observer-qualification.ts",
+    "packages/router/tasks/owned-bank-observation.json",
     "packages/core/src/coordinator-jobs.ts",
     "packages/core/test/coordinator-jobs.test.ts",
     "packages/router/src/coordinator-cli.ts",
@@ -54,6 +59,7 @@
         "scripts/cloud-side.test.ts",
         "scripts/cloud-recovery.test.ts",
         "packages/core/test/bounded-recovery.test.ts",
+        "packages/core/test/bounded-owners.test.ts",
         "packages/core/test/coordinator-jobs.test.ts",
         "packages/core/test/session-lifecycle.test.ts",
         "packages/core/test/inprocess.test.ts",
@@ -71,6 +77,12 @@
         "10000"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "id": "bank-observer-qualification",
+      "phase": "regression",
+      "command": ["bun", "packages/practice/src/bank-observer-qualification.ts"],
+      "timeoutMs": 600000
     },
     {
       "id": "native-session-recovery",

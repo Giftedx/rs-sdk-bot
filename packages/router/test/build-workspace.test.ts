@@ -3,8 +3,9 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,lstatSync,un
 import {tmpdir} from 'node:os';
 import {join,dirname,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {BASE_DIR,deliveredLedger,prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText,replaceFile} from '../src/build-workspace';
+import {BASE_DIR,deliveredLedger,prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText,replaceFile,sharedWorkspacePlan} from '../src/build-workspace';
 import {stageDeliveryPr} from '../src/delivery-pr';
+import {writeCoordinatorJobs,readMergedPlan} from '../../core/src/coordinator-jobs';
 
 const mainTree=()=>{
  const main=join(mkdtempSync(join(tmpdir(),'ws-')),'repo');
@@ -12,6 +13,16 @@ const mainTree=()=>{
  return main;
 };
 const files=['scripts/worker.ts','packages/core/src/shared.ts'];
+test('a build rebases its selected shared plan without losing overlay ownership, limits or claims',()=>{
+ const main=mainTree(),selected=join(main,'.practice/cloud-handoff/swarm.json');mkdirSync(dirname(selected),{recursive:true});
+ const bytes=JSON.stringify({maxBots:4,minFreeGB:4,jobs:[{account:'Held',enabled:false,role:'reserved'}],claims:[{account:'Held',phase:'held'}]});writeFileSync(selected,bytes);
+ writeCoordinatorJobs(main,{jobs:[{account:'Other',enabled:false,script:'paused.ts'}],coordination:{}});
+ const work=prepareWorkspace(main,'fixture-order',files).root,target=sharedWorkspacePlan(main,work,selected)!;
+ expect(target).toBe(join(work,'.practice/cloud-handoff/swarm.json'));expect(readFileSync(target,'utf8')).toBe(bytes);
+ expect(readMergedPlan(work,target)).toEqual(readMergedPlan(main,selected));
+ expect(readFileSync(selected,'utf8')).toBe(bytes);expect(sharedWorkspacePlan(main,work,undefined)).toBeUndefined();
+ expect(()=>sharedWorkspacePlan(main,work,join(dirname(main),'foreign.json'))).toThrow('not shared');
+});
 
 test('atomic publish retries transient rename failures but preserves concurrent edits and permanent refusals',()=>{
  const main=mainTree(),path=join(main,files[0]!),state={bytes:Buffer.from('published').toString('base64'),mode:0o600};

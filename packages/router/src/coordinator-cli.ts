@@ -13,10 +13,11 @@ import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs,recoveryWaitsF
 import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,ownerPlanPath,jobAccounts,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {validateBoundedRecovery,assertBoundedRecoveryQueue} from '../../core/src/bounded-recovery';
+import {boundedOwnerBinding} from '../../core/src/bounded-owners';
 import {assignedWorker} from './model-worker';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
-import {prepareWorkspace} from './build-workspace';
+import {prepareWorkspace,sharedWorkspacePlan} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
 import {processDeliveryPrs} from './delivery-pr';
 import {freshScoreboard} from './coverage';
@@ -132,7 +133,7 @@ export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string
  }
 }
 function spawn(mode:string,id:string,directory:string,cwd=projectRoot){
- return spawnDetached([process.execPath,cli,mode,id],cwd,join(directory,'stdout.log'),join(directory,'stderr.log'),cwd===projectRoot?process.env:{...process.env,COORDINATOR_MAIN_ROOT:projectRoot});
+ return spawnDetached([process.execPath,join(cwd,cli),mode,id],cwd,join(directory,'stdout.log'),join(directory,'stderr.log'),cwd===projectRoot?process.env:{...process.env,COORDINATOR_MAIN_ROOT:projectRoot,SWARM_PLAN:sharedWorkspacePlan(projectRoot,cwd,process.env.SWARM_PLAN),CLOUD_WATCH_ID:''});
 }
 function launchTask(state:CoordinatorState,id:string){
  const runId='task-'+randomUUID(),record=startTask(state,id,Date.now(),runId),dir=runDirectory(runId);
@@ -481,7 +482,7 @@ export async function claimCoordinatorState(nonce:string,directory=coordinationD
  return withPlanWrite(()=>{
   rejectActiveOwner();
   const state=loadState(directory);
-  atomicJson(lease,{pid:process.pid,nonce,at:Date.now()});
+  atomicJson(lease,{pid:process.pid,nonce,at:Date.now(),...boundedOwnerBinding(projectRoot)});
   return state;
  },directory,15000,recoverConcurrentPlanWrite);
 }
@@ -541,7 +542,9 @@ async function main(){
   unlinkSync(restart);
   // The successor loads the current code at once instead of waiting up to five minutes for the watchdog.
   const token='reload-'+randomUUID(),stamp=Date.now();
-  const pid=spawnDetached([process.execPath,'packages/router/src/coordinator-cli.ts','--run',token],projectRoot,join(coordinationDir,`daemon-${stamp}.out.log`),join(coordinationDir,`daemon-${stamp}.err.log`));
+  const pid=spawnDetached([process.execPath,join(projectRoot,'packages/router/src/coordinator-cli.ts'),'--run',token],projectRoot,join(coordinationDir,`daemon-${stamp}.out.log`),join(coordinationDir,`daemon-${stamp}.err.log`));
+  // Publish the handoff before this process exits. The watch must count a successor that has not claimed yet.
+  await withPlanWrite(()=>{const file=join(coordinationDir,'owner.json'),owner=json(file);if(owner.pid!==process.pid||owner.nonce!==nonce)throw Error('coordinator reload owner changed');atomicJson(file,{...owner,successor:{pid,nonce:token}});});
   event('coordinator-reload',{children:'preserved for adoption',successor:pid});return;
  }
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))await pauseCoordinator(state);

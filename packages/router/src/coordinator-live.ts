@@ -16,6 +16,7 @@ import {acceptStatus,boundedWorkerEndMessage,boundAccounts,type CoordTask,type C
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,readMergedPlan,ownerPlanPath,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {boundedOwnerBinding} from '../../core/src/bounded-owners';
 import {readLogoutProof,listAttempts} from '../../core/src/session-lifecycle';
 import {pidAlive} from '../../core/src/session-takeover';
 
@@ -167,8 +168,8 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   }
   if(stopped())throw Error('controller rollout owner stopped');
   if(diskSource()!==source)throw Error('runtime changed before controller spawn');
-  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts',ownerPlanPath(base),'--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release,WORKER_ENTRY:''})))(source,nonce);
-  const next={pid,nonce,source,swarmSource,at:now(),detached:true};
+  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,join(base,'scripts/swarm.ts'),ownerPlanPath(base),'--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release,WORKER_ENTRY:''})))(source,nonce);
+  const next={pid,nonce,source,swarmSource,at:now(),detached:true,...boundedOwnerBinding(base)};
   try{
    atomicJson(ownerFile,next);await ack(next,next.at);if(stopped())throw Error('controller rollout owner stopped');
    if(diskSource()!==source)throw Error('runtime changed before controller admission');

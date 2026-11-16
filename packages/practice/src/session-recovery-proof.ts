@@ -16,6 +16,7 @@ import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-r
 import {accountDir,domainOf,readLogoutProof,listAttempts,beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {launchRevision,cachedLaunchRevision} from '../../core/src/worker-release';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
+import {proveSwarmRecoveryContinuation} from './swarm-recovery-chain';
 import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -788,6 +789,13 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // 1 offline: an ordinary logged-out account.
   const A=await fixture(HOST,preset);
   const offline=await positive('offline',A);offline.record('native-actual-cli');
+  if(capability==='session-recovery-only'){
+   const pointer=JSON.parse(readFileSync(join(directory,'bank-observer-qualification.json'),'utf8'));
+   if(hash(pointer.path)!==pointer.sha256)throw Error('bank observer qualification pointer changed');
+   const F=await fixture(HOST,{...preset,position:{x:3185,z:3436,level:0}}),out=await positive('bounded-swarm-new-mission',F);
+   const checks=await proveSwarmRecoveryContinuation({sourceRoot:root,directory:out.dir,account:F.name,server:F.server,profile:F.envPath,save:F.save,observerDelivery:dirname(pointer.path)});
+   out.record('native-actual-swarm-new-mission',checks);
+  }
   // Retired successful ordinary account with no producer history: actual controller -> installed core CLI.
   {
    const C=await fixture(HOST,preset,true),dir=caseDir('completed');
@@ -1064,7 +1072,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   }
   const checks=deriveChecks(cases);
   const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
-   'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
+   'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','packages/core/src/bounded-owners.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
+   'packages/practice/src/swarm-recovery-chain.ts','packages/practice/src/bank-observer-qualification.ts',
    'packages/router/src/coordinator-cli.ts','packages/router/src/coordinator-live.ts','packages/router/tasks/session-recovery-only.json',
    'vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
   if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');

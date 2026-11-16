@@ -8,6 +8,7 @@ test('only the exact finite recovery proposal can dispatch; old tasks remain ret
     for(const spec of [{...run,account:'Other'},{...run,sessionRecovery:{account:'Rod',endedAt:1}},{...run,kind:'build'}, {...qualify,capability:'wine-order'}, {...run,participants:['Rod','Other']}, {...run,env:{LOOT_WATCH:'1'}}, {...run,id:'different'}])
         expect(()=>assertBoundedRecoveryQueue(scope,{tasks:[{status:'pending',spec}]})).toThrow('outside bounded');
     expect(()=>assertBoundedRecoveryQueue(scope,{tasks:[],planner:{pid:1}})).toThrow('planner');
+    expect(()=>assertBoundedRecoveryQueue(scope,{tasks:[],pendingSubmission:{capabilities:['other']}})).toThrow('unresolved submission');
     expect(()=>validateBoundedRecovery({...scope,targets:[...scope.targets,...scope.targets]})).toThrow('invalid');
 });
 test('a bounded swarm refuses an enabled owner job or a foreign overlay before dispatch',()=>{

@@ -24,9 +24,11 @@ import { MAIN_ACCOUNT } from '../packages/core/src/haggisgate';
 import { SWARM_STOP, swarmWroteStop } from './swarm';
 import { FETCH_FLEET_DATA, worktreeProblem } from './fleet-sync';
 import { withFleetDataWrite } from './fleet-owner-claim';
-import {prepareBoundedRecovery,prepareBoundedInspection,clearSwarmStops} from './cloud-recovery';
+import {prepareBoundedRecovery,releaseForBoundedInspection,clearSwarmStops} from './cloud-recovery';
 import type {RecoveryTarget} from '../packages/core/src/bounded-recovery';
 import {withPlanWrite} from '../packages/core/src/plan-lock';
+import {randomUUID} from 'node:crypto';
+import {observeBoundedOwners,boundedProcessAlive,type BoundedOwnerBinding} from '../packages/core/src/bounded-owners';
 
 const root = resolve(import.meta.dir, '..');
 export const DEFAULT_WATCH_MINUTES = 110;
@@ -94,7 +96,7 @@ export function worktreeSetupResult(result: { status: number | null; stdout?: st
     return { ok: false, detail };
 }
 
-export type DaemonRecord = { pid: number; started: number; restarts: number[] };
+export type DaemonRecord = { pid: number; started: number; restarts: number[]; nonce?: string };
 export function daemonCommand(name: Daemon, plan: string): string[] {
     if (name === 'swarm') return ['scripts/swarm.ts', plan];
     if (name === 'fleet-agent') return ['scripts/fleet-agent.ts'];
@@ -210,8 +212,7 @@ if (import.meta.main) {
         try{
             const targets=JSON.parse(readFileSync(resolve((o.recover??o.inspect)!),'utf8')).targets as RecoveryTarget[];
             recoveryTargets=targets;
-            if(o.inspect&&!run(['bun','packages/router/src/coordinator-cli.ts','--release-finished',targets.map(t=>t.account).join(',')]))fail('bounded inspection assignments still held');
-            const next:any=o.recover?prepareBoundedRecovery(root,JSON.parse(readFileSync(plan,'utf8')),targets,mine.map(a=>a.name),o.side):prepareBoundedInspection(root,JSON.parse(readFileSync(plan,'utf8')),targets,mine.map(a=>a.name),o.side);
+            const next:any=o.recover?prepareBoundedRecovery(root,JSON.parse(readFileSync(plan,'utf8')),targets,mine.map(a=>a.name),o.side):await releaseForBoundedInspection(root,JSON.parse(readFileSync(plan,'utf8')),targets,mine.map(a=>a.name),o.side,()=>run(['bun','packages/router/src/coordinator-cli.ts','--release-finished',targets.map(t=>t.account).join(',')]));
             const proposal=join(dir,'recovery-proposal.json');
             if(o.recover){writeFileSync(proposal,JSON.stringify({reason:'Exact bounded authenticated recovery',capabilities:[],tasks:next.coordination.bootstrap},null,2));next.coordination.bootstrap=[];}
             plan=join(dir,o.recover?'recovery-plan.json':'inspection-plan.json');writeFileSync(plan,JSON.stringify(next,null,2));
@@ -237,16 +238,29 @@ if (import.meta.main) {
     const records: Record<string, DaemonRecord> = (() => { try { return JSON.parse(readFileSync(pidsFile, 'utf8')); } catch { return {}; } })();
     const commands=managedCommands(!!o.recover,plan,!!o.inspect);
     let inspectionStartupError=false;
+    const binding:BoundedOwnerBinding={watchId:randomUUID(),plan,side:o.side};
+    if(o.recover)env.CLOUD_WATCH_ID=binding.watchId;
+    const launched:{pid:number;nonce:string}[]=[];
+    let recoveryLaunched=false,boundedOwnershipError=false;
     const start = (name: string) => {
         const out = openSync(join(dir, `${name}.log`), 'a');
-        const child = spawn(process.execPath, commands[name]!, { cwd: root, env, detached: true, windowsHide: true, stdio: ['ignore', out, out] });
+        const nonce=o.recover?randomUUID():undefined,args=o.recover?[join(root,commands[name]![0]!),...commands[name]!.slice(1),nonce!]:commands[name]!;
+        const child = spawn(process.execPath, args, { cwd: root, env, detached: true, windowsHide: true, stdio: ['ignore', out, out] });
         closeSync(out); child.unref();
         const prior = records[name]?.restarts ?? [];
-        records[name] = { pid: child.pid!, started: Date.now(), restarts: [...prior.filter(t => Date.now() - t < 60 * 60_000), Date.now()] };
+        records[name] = { pid: child.pid!, started: Date.now(), restarts: [...prior.filter(t => Date.now() - t < 60 * 60_000), Date.now()],...(nonce?{nonce}:{}) };
+        if(nonce){launched.push({pid:child.pid!,nonce});recoveryLaunched=true;}
         writeFileSync(pidsFile, JSON.stringify(records));
         log(`started ${name} pid ${child.pid}`);
     };
     const tend = () => {
+        if(o.recover&&recoveryLaunched){
+            const current=observeBoundedOwners(root,binding,launched);
+            if(!current.known){boundedOwnershipError=true;log('bounded coordinator ownership unknown; no duplicate start');}
+            else if(current.coordinator&&boundedProcessAlive(current.coordinator))records.coordinator={...records.coordinator!,pid:current.coordinator};
+            else if(!current.active.length){boundedOwnershipError=true;log('bounded coordinator exited; no automatic retry');}
+            return;
+        }
         for (const name of Object.keys(commands)) {
             const r = records[name];
             if (r && alive(r.pid, commands[name]![0]!)) continue;
@@ -280,6 +294,7 @@ if (import.meta.main) {
         await Bun.sleep(Math.min(60_000, Math.max(0, end - Date.now())));
         if (ownerStop(readStop())) { ownerStopped = true; log('owner stop file: watch ends'); break; }
         tend();
+        if(boundedOwnershipError)break;
     }
     if (o.stopAtEnd) {
         if(o.recover){
@@ -294,19 +309,19 @@ if (import.meta.main) {
         const wrote = endStopWrites(readStop());
         if (wrote) writeFileSync(stopSwarm, SWARM_STOP.all);
         const stopBy = Date.now() + 6 * 60_000;
-        while (Date.now() < stopBy && records.swarm && alive(records.swarm.pid, 'scripts/swarm.ts')) await Bun.sleep(5_000);
+        while (Date.now() < stopBy && !o.recover && records.swarm && alive(records.swarm.pid, 'scripts/swarm.ts')) await Bun.sleep(5_000);
+        let ownersSettled=!o.recover;
         if(o.recover){
-            const r=records.coordinator;
-            while(Date.now()<stopBy&&r&&alive(r.pid,'coordinator-cli.ts'))await Bun.sleep(1000);
+            while(Date.now()<stopBy){const current=observeBoundedOwners(root,binding,launched);ownersSettled=current.known&&current.settled;if(ownersSettled)break;await Bun.sleep(1000);}
         }
         const settled=boundedStopSettled(!!records.swarm&&alive(records.swarm.pid,'scripts/swarm.ts'),!!records.coordinator&&alive(records.coordinator.pid,'coordinator-cli.ts'));
-        if(bounded&&!settled){log('bounded stop incomplete; stop fence and live owners preserved');console.log(`RESULT fail cloud-side side=${o.side} bounded stop incomplete; stop fence preserved`);process.exit(1);}
+        if(bounded&&(!settled||!ownersSettled)){log('bounded stop incomplete; stop fence and live owners preserved');console.log(`RESULT fail cloud-side side=${o.side} bounded stop incomplete; stop fence preserved`);process.exit(1);}
         if(!bounded)for (const name of Object.keys(commands)) { const r = records[name]; if (r && alive(r.pid, commands[name]![0]!)) try { process.kill(r.pid, 'SIGTERM'); } catch { /* gone */ } }
         if (wrote && readStop() === SWARM_STOP.all) try { unlinkSync(stopSwarm); } catch { /* gone */ }
         log('stopped at end');
     }
     const up = Object.keys(commands).map(n => `${n}=${records[n] && alive(records[n]!.pid, commands[n]![0]!) ? 'up' : 'down'}`).join(' ');
     const starts = Object.keys(commands).reduce((s, n) => s + (records[n]?.restarts.filter(t => t >= began).length ?? 0), 0);
-    console.log(`RESULT ${inspectionStartupError?'fail':ownerStopped ? 'stop' : 'ok'} cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${ownerStopped ? ' owner stop file' : ''}${o.stopAtEnd ? ' stopped' : ''}`);
-    if(inspectionStartupError)process.exitCode=1;
+    console.log(`RESULT ${inspectionStartupError||boundedOwnershipError?'fail':ownerStopped ? 'stop' : 'ok'} cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${ownerStopped ? ' owner stop file' : ''}${o.stopAtEnd ? ' stopped' : ''}`);
+    if(inspectionStartupError||boundedOwnershipError)process.exitCode=1;
 }

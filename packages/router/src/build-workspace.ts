@@ -5,7 +5,7 @@
 // .practice (coordinator state, deliveries and practice bots stay shared).
 import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,statSync,writeFileSync,copyFileSync,lstatSync,unlinkSync,openSync,closeSync,fchmodSync,renameSync,linkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {basename,dirname,join,resolve} from 'node:path';
+import {basename,dirname,join,resolve,relative,isAbsolute} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import type {Stats} from 'node:fs';
@@ -15,6 +15,12 @@ export {prepareReplayRoot,removeReplayRoot} from '../../practice/src/replay-root
 
 export const COPY_DIRS=['scripts','packages','knowledge','research','docs','patches'];
 export const LINK_DIRS=['node_modules','vendor','.practice','.claude'];
+export function sharedWorkspacePlan(mainRoot:string,workspace:string,selected:string|undefined):string|undefined{
+ if(!selected)return;
+ const file=resolve(mainRoot,selected),path=relative(resolve(mainRoot),file);
+ if(isAbsolute(path)||!path.startsWith('.practice'+(process.platform==='win32'?'\\':'/')))throw Error('selected build plan is not shared through .practice');
+ return join(workspace,path);
+}
 
 export interface WorkspaceBase{capability:string;created:number;base:Record<string,string|null>;published?:number}
 

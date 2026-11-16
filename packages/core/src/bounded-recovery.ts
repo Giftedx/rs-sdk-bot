@@ -11,9 +11,10 @@ export function validateBoundedRecovery(value: unknown): BoundedRecovery {
         || new Set(v.targets.map(t => t.account.toLowerCase())).size !== v.targets.length) throw Error('invalid bounded recovery scope');
     return v;
 }
-export function assertBoundedRecoveryQueue(scope: BoundedRecovery, state: { tasks: any[]; planner?: unknown }) {
+export function assertBoundedRecoveryQueue(scope: BoundedRecovery, state: { tasks: any[]; planner?: unknown; pendingSubmission?: unknown }) {
     validateBoundedRecovery(scope);
     if (state.planner) throw Error('bounded recovery refuses an existing planner');
+    if (state.pendingSubmission) throw Error('bounded recovery preserves an unresolved submission');
     for (const row of state.tasks.filter(r => r.status === 'pending' || r.status === 'running')) {
         const t = row.spec, target = scope.targets.find(n => n.account === t.account);
         if (!scope.taskIds.includes(t.id) || t.capability !== 'session-recovery-only'

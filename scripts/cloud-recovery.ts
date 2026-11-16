@@ -2,12 +2,13 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {hostname} from 'node:os';
-import {readLogoutProof} from '../packages/core/src/session-lifecycle';
+import {readLogoutProof,listAttempts} from '../packages/core/src/session-lifecycle';
 import {readFleetAccountClaim} from '../packages/core/src/fleet-trade-claim';
 import {validateBoundedRecovery,assertBoundedRecoveryQueue,type RecoveryTarget} from '../packages/core/src/bounded-recovery';
 import {readCoordinatorJobs,jobAccounts} from '../packages/core/src/coordinator-jobs';
-import {loadEnded,persistentEnd} from './swarm';
-import {successfulEnd} from '../packages/core/src/session-admission';
+import {loadEnded,persistentEnd,failedScript,startable} from './swarm';
+import {successfulEnd,missionSignature} from '../packages/core/src/session-admission';
+import {capabilityRevision} from '../packages/core/src/worker-release';
 import {eligibility,recoveryProposal,LIVE_SERVER,clearSwarmStops} from './cloud-recover';
 
 export function boundedRecoveryPlan(plan:any,targets:RecoveryTarget[],owned:readonly string[],now=Date.now()) {
@@ -51,16 +52,41 @@ export function prepareBoundedRecovery(base:string,plan:any,targets:RecoveryTarg
     return next;
 }
 export {clearSwarmStops};
-export function prepareBoundedInspection(base:string,plan:any,targets:RecoveryTarget[],owned:readonly string[],side:string) {
+export function assertCompletedInspectionMission(v:{account:string;proof:any;producer:any;end:any;prior:any;bound:any;target:RecoveryTarget;job:any;source:string}){
+    const {account,proof,producer,end,prior,bound,target,job,source}=v,receipt=producer?.receipt,status=prior?.receipt?.output?.status;
+    if(proof.state!=='confirmed'||producer?.sha256!==proof.receiptSha256||!receipt||!prior||prior.status!=='succeeded'||prior.receipt?.ok!==true
+        ||prior.spec.account!==account||prior.spec.sessionRecovery?.endedAt!==target.endedAt||prior.runId!==proof.ownerRun
+        ||status?.sessionAttemptId!==proof.attemptId||status.workRevision!==source||status.coordinatorRunId!==proof.ownerRun
+        ||receipt.owner.script!=='scripts/session-check.ts'||receipt.owner.workerRelease!==source||!successfulEnd(end.reason)
+        ||!bound?.taskIds?.includes(prior.spec.id)||!bound.targets?.some((t:RecoveryTarget)=>t.account===account&&t.attemptId===target.attemptId&&t.endedAt===target.endedAt)
+        ||failedScript(end)!=='scripts/session-check.ts'||receipt.updatedAt>end.at||job.script!=='scripts/fleet-inspect.ts')throw Error('bounded inspection completed recovery identity changed');
+    const revision=missionSignature({...job,env:{...job.env,REQUIRE_BANK:'1'}});
+    if(!startable([account],false,new Map([[account,end]]),()=>Infinity,undefined,revision).start.includes(account))throw Error('bounded inspection needs a different completed mission');
+}
+export function prepareBoundedInspection(base:string,plan:any,targets:RecoveryTarget[],owned:readonly string[],side:string,checkOverlay=true) {
     const staged=boundedRecoveryPlan(plan,targets,owned),accounts=targets.map(t=>t.account);
-    if(readCoordinatorJobs(base).jobs.length)throw Error('bounded inspection coordinator assignments still held');
+    if(checkOverlay&&readCoordinatorJobs(base).jobs.length)throw Error('bounded inspection coordinator assignments still held');
     const ends=loadEnded(join(base,'.practice/swarm-deaths.json'));
     for(const account of accounts){
         const proof=readLogoutProof(account,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')});
         const claim=readFleetAccountClaim(base,{account,server:LIVE_SERVER});
         if(proof.state!=='confirmed'||!claim||claim.side!==side||claim.phase!=='released')throw Error('bounded inspection needs current confirmed logout and released claim');
         const end=ends.get(account);
-        if(end&&(persistentEnd(end.reason)||successfulEnd(end.reason)))throw Error('bounded inspection end still requires controller repair');
+        if(!end||persistentEnd(end.reason)||!successfulEnd(end.reason))throw Error('bounded inspection end still requires controller repair or completed recovery');
+        {
+            const producer=listAttempts(account,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).find(a=>a.attemptId===proof.attemptId);
+            const state=JSON.parse(readFileSync(join(base,'.practice/coordinator/state.json'),'utf8'));
+            const prior=state.tasks.find((r:any)=>r.runId===proof.ownerRun&&r.status==='succeeded'&&r.spec.account===account&&r.spec.sessionRecovery?.endedAt===targets.find(t=>t.account===account)!.endedAt);
+            const bound=JSON.parse(readFileSync(join(base,'.practice/cloud-side',side,'recovery-plan.json'),'utf8')).coordination?.boundedRecovery;
+            const target=targets.find(t=>t.account===account)!;
+            assertCompletedInspectionMission({account,proof,producer,end,prior,bound,target,job:staged.jobs.find((j:any)=>j.account===account),source:capabilityRevision(['scripts/session-check.ts'],base)});
+        }
     }
     return {...staged,jobs:staged.jobs.map((j:any)=>accounts.includes(j.account)?{...j,env:{...j.env,REQUIRE_BANK:'1'}}:j),coordination:{boundedInspection:accounts}};
+}
+export async function releaseForBoundedInspection(base:string,plan:any,targets:RecoveryTarget[],owned:readonly string[],side:string,release:()=>boolean|Promise<boolean>) {
+    // Both structural ownership and current session authority are read before the supported overlay mutation.
+    prepareBoundedInspection(base,plan,targets,owned,side,false);
+    if(!await release())throw Error('bounded inspection assignments still held');
+    return prepareBoundedInspection(base,plan,targets,owned,side);
 }
