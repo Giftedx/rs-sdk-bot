@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794794895976-pocketrocket-wandwaver",
+ "account": "Pocketrocket",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 90060,
+ "claim": "c30d0ee0-bc6b-48e3-8895-99455a6153c7",
+ "count": 0,
+ "ok": false,
+ "at": 1794794902930,
+ "detail": "trade claimed"
+}
