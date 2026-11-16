@@ -1,0 +1,22 @@
+{
+ "id": "1794789025734-pocketrocket-mmsmk1232",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketrocket",
+ "to": "mmsmk1232",
+ "item": "coins",
+ "count": 71882,
+ "start": 1794789025734,
+ "end": 1794791425734,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
