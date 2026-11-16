@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794852050241,
+ "at": 1794852669238,
  "jobs": [
   {
    "account": "Balls",
@@ -103,6 +103,33 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dommik",
+    "1500"
+   ],
+   "env": {
+    "ITEMS": "ring mould|chisel",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "MAX_ITEMS": "2",
+    "MAX_SPEND": "20",
+    "FLOAT": "100",
+    "COIN_RESERVE": "0",
+    "NO_BUY_TICKS": "25",
+    "BANK_PACK": "1",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-59804261-0dda-49cf-9d58-6889540c2596"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-tools-bow-owned-ring-entry [task-59804261-0dda-49cf-9d58-6889540c2596]",
    "role": "supply"
   }
  ],
