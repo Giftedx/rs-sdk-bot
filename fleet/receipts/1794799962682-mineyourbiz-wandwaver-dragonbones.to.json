@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794799962682-mineyourbiz-wandwaver-dragonbones",
  "account": "Wandwaver",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 24,
  "claim": "a9830ab1-531e-443d-9ce3-608c1e93fab6",
- "count": 0,
- "ok": false,
- "at": 1794800412642,
- "detail": "trade claimed"
+ "count": 24,
+ "ok": true,
+ "at": 1794800676441,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 24
+ },
+ "bank": {
+  "count": 24,
+  "at": 1794800675650
+ },
+ "logout": {
+  "attemptId": "1794800412651-0000024708-0000000001",
+  "at": 1794800676429,
+  "sha256": "0eb03619846c04fad2aabb2401ed2272f74ff4fbc374a7056180a6d48d418826"
+ },
+ "screen": true
 }
