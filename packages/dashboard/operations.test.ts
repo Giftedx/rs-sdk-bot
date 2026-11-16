@@ -113,7 +113,7 @@ test('modal keys do not bubble and Alt navigation leaves the background plugin a
  const h=evidenceHarness();h.key('ArrowLeft');expect(h.stopped()).toBe(1);
  const line=operations.split('\n').find(line=>line.includes("travel(e.key==='ArrowLeft'?-1:1)"))!;
  let handler:any;const directions:number[]=[];
- new Function('window','travel',line)({addEventListener:(_event:string,callback:any)=>{handler=callback;}},(direction:number)=>directions.push(direction));
+ new Function('window','travel','document',line)({addEventListener:(_event:string,callback:any)=>{handler=callback;}},(direction:number)=>directions.push(direction),{querySelector:()=>null});
  for(const modal of ['.op-detail-overlay','.op-palette-overlay'])handler({altKey:true,key:'ArrowLeft',target:{closest:()=>modal},preventDefault:()=>{}});
  expect(directions).toEqual([]);
  handler({altKey:true,key:'ArrowRight',target:{closest:()=>null},preventDefault:()=>{}});expect(directions).toEqual([1]);

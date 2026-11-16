@@ -667,7 +667,7 @@ test('keys pressed in the viewer frame do the same, and \\ and Escape open and c
  w.frameKey(undefined);w.frameKey({key:'Enter'});expect(w.on()).toBe(false);
  // A wall button that is hidden (2D map) or disabled (viewer loading) does not open by key.
  w.wallButton.disabled=true;w.frameKey({key:'\\'});expect(w.on()).toBe(false);
- expect(shell).toContain("if(window.atlasWallOn?.()&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!(/^(?:BUTTON|A|SUMMARY)$/.test(e.target.tagName)&&(e.key==='Enter'||e.key===' '))&&wallPress(e.key,e.shiftKey)){e.preventDefault();e.stopPropagation();return;}");
+ expect(shell).toContain("if(window.atlasWallOn?.()&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!((/^(?:BUTTON|A|SUMMARY)$/.test(e.target.tagName)||e.target.getAttribute?.('role')==='button')&&(e.key==='Enter'||e.key===' '))&&wallPress(e.key,e.shiftKey)){e.preventDefault();e.stopPropagation();return;}");
  expect(shell).toContain('wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);');
 });
 
