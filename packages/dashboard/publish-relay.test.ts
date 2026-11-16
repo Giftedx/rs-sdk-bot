@@ -61,6 +61,25 @@ describe('hosted views',()=>{
   // A field outside the whitelist cannot trip the check: it never reaches the public file.
   expect('mainPlan' in publicView({bots:[],mainPlan:{note:'haggis route'},objectives:{lanes:[{next:'haggis route'}]}})).toBe(false);
  });
+ test('public collector failures retain dated data with a generic warning, without the private exception',()=>{
+  const now=1_000_000,raw='Error reading C:\\private\\Haggis\\status.json: secret worker details';
+  const s={now,stateError:raw,bots:[{name:'Worker',at:now-5000,skills:[{name:'Attack',level:40,xp:37_224}]}],
+   world:{connected:true,tickAt:now-2000},roster:[['Worker',3200,3201,0,40]],lookups:{worker:{name:'Worker',at:now-3000,rows:[{board:'Overall',level:200}]}}};
+  const p=publicView(s);
+  expect(p.stateError).toBe('Fleet data could not be refreshed; showing the last snapshot.');
+  expect([p.now,p.bots[0].at,p.world.tickAt,p.lookups.worker.at]).toEqual([now,now-5000,now-2000,now-3000]);
+  expect(p.bots[0].skills).toEqual(s.bots[0].skills);expect(p.roster).toEqual(s.roster);expect(p.lookups.worker.rows).toEqual(s.lookups.worker.rows);
+  expect(JSON.stringify(p)).not.toMatch(/private|Haggis|secret worker|status\.json/);
+  expect(s.stateError).toBe(raw);
+ });
+ test('a recovered public collector drops its warning, and healthy falsey error states add no field',()=>{
+  const s:any={now:1_000_000,bots:[],stateError:'read failed'};
+  expect(publicView(s).stateError).toBeTruthy();
+  for(const stateError of [undefined,null,false,0,'']){
+   s.stateError=stateError;s.now+=1000;
+   const p=publicView(s);expect(p).not.toHaveProperty('stateError');expect(p.now).toBe(s.now);
+  }
+ });
  test('public bots keep game-visible fields and lose run counters, banks and coordinator internals',()=>{
   const b={name:'CoinCock',pos:{x:1,z:2},skills:[{name:'Attack',level:5,xp:400}],inventory:[{name:'Coins',count:9}],equipment:[],ranks:[],goal:'coins [task-1a2b] buy (607 short): 1630 bronze in the bank',currentGoal:'run-ranged-coincock-owned-band50',
    phase:'banked=15000 packCoins=5100',phaseShort:'banked 15.0K',result:'ok banked=15000',lastRes:{text:'ok banked=15000'},ledger:{coins:1},counters:{banked:15000},job:{script:'x'},planJob:{next:'y'},nativeProof:{ok:true},timeline:'xxi',role4:{coinsPerTick:3},bank:[{name:'Coins',count:1}],bankAt:1,env:{a:1}};
