@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794853286438,
+ "at": 1794855132976,
  "jobs": [
   {
    "account": "Balls",
@@ -131,6 +131,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-ranged-nab75-confirmed-entry [task-bae63647-18fb-4650-b449-4173bb92eafe]",
+   "role": "helper"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/fleet-inspect.ts",
+   "args": [],
+   "env": {
+    "REQUIRE_BANK": "1",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-40286b67-9d8a-4d16-833e-eb238bff727a"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-inspect-wood-owned-gold-ring [task-40286b67-9d8a-4d16-833e-eb238bff727a]",
    "role": "helper"
   }
  ],
