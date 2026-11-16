@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794790695457,
+ "at": 1794790768894,
  "jobs": [
   {
    "account": "Balls",
@@ -147,52 +147,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "1127",
-    "QUANTITY": "2",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "800000",
-    "CASH_RESERVE": "750000",
-    "ORDER_KEY": "sausagefest-army-runeplate2",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-389f8d55-f450-4d74-9c13-f44b97469163"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-sausagefest-army-runeplate2 [task-389f8d55-f450-4d74-9c13-f44b97469163]",
-   "role": "supply"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "1231",
-    "QUANTITY": "2",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "1317083",
-    "CASH_RESERVE": "900000",
-    "ORDER_KEY": "pickpockdick-army-dagger2",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-16f94a58-a67d-4e76-bcf9-8938ca63502d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-pickpockdick-army-dagger2 [task-16f94a58-a67d-4e76-bcf9-8938ca63502d]",
    "role": "supply"
   }
  ],
