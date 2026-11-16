@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794860857057,
+ "at": 1794861168008,
  "jobs": [
   {
    "account": "Balls",
@@ -131,23 +131,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "chain-ranged-train-nabtheknob-ranged85 [task-3916536a-ddba-40f4-9fbd-0136a4ff8004]",
-   "role": "helper"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "elena"
-   ],
-   "env": {
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-27eda867-59e8-47b7-9a01-e00b0717de3b"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-plague-mmsmk-biohazard-gate [task-27eda867-59e8-47b7-9a01-e00b0717de3b]",
    "role": "helper"
   }
  ],
