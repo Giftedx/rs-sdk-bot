@@ -8,7 +8,7 @@ import {capabilityRevision,runtimeTrees} from '../../core/src/worker-release';
 import {accountDir,readLogoutProof} from '../../core/src/session-lifecycle';
 import {assertNativeFixtureRoot} from '../../core/src/session-recovery-permit';
 import {acquireFleetTradeClaim,readAllFleetAccountClaims} from '../../core/src/fleet-trade-claim';
-import {fleetGitWindow} from '../../core/src/fleet-lease';
+import {fleetGitWindow,readFleetGitRefs} from '../../core/src/fleet-lease';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {killTree} from './proc';
 import {SWARM_STOP,clearSwarmStop} from '../../../scripts/swarm';
@@ -62,6 +62,14 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   for(const name of reserved.slice(0,7))acquireFleetTradeClaim(root,{account:name,server,side:'cloud',orderId:'native-reserved-'+name,role:'from'});
   const claimsBefore=readAllFleetAccountClaims(fleetGitWindow(root));
   const stableClaims=()=>JSON.stringify([...readAllFleetAccountClaims(fleetGitWindow(root))])===JSON.stringify([...claimsBefore]);
+  const retainClaims=(stage:string)=>{
+   const authority=fleetGitWindow(root),claims=[...readAllFleetAccountClaims(authority)];
+   const refs=readFleetGitRefs(authority,['refs/heads/fleet-trade-claim/*']);
+   const bodies=[...refs].map(([ref,head])=>({ref,head,body:authority(['show','-s','--format=%b',head])}));
+   const raw=JSON.stringify({claims,bodies},null,2);writeFileSync(join(directory,stage+'-claims.json'),raw);
+   return createHash('sha256').update(raw).digest('hex');
+  };
+  const beforeClaims=retainClaims('before');
   const flags={LOOT_WATCH:'0',RANDOM_EVENTS:'0',TICK_RECORD:'1'},job={account,script:'scripts/session-check.ts',enabled:true,repeat:false,maxRestarts:0,standingRetry:false,env:flags};
   const reservations=reserved.map(account=>({account,enabled:false,repeat:false,role:'reserved'}));
   const planPath=join(root,'.practice/selected-swarm.json'),plan={maxBots:4,minFreeGB:4,fleetCapacity:4,jobs:[job,...reservations]};put('.practice/selected-swarm.json',plan);
@@ -78,6 +86,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   copyFileSync(save,join(directory,'swarm-session-check.sav'));
   const readPlan=(stage:string)=>{const raw=readFileSync(planPath),actual=JSON.parse(raw.toString());writeFileSync(join(directory,stage+'-plan.json'),raw);return {unchanged:JSON.stringify(actual.jobs.slice(1))===JSON.stringify(reservations),sha256:createHash('sha256').update(raw).digest('hex')};};
   const recoveryPlan=readPlan('session-check');
+  const recoveryClaims=retainClaims('session-check');
   const checks:any={actualSessionCheckDone:true,sessionCheckLogout:true,actualSessionCheckSwarmShutdown:true,sessionCheckFreshSave:checkedSave.matched,releasedClaimStable:stableClaims(),reservationsPreserved:recoveryPlan.unchanged};
   clearSwarmStop(join(root,'.practice','stop-'+account));
   const inspect={...job,script:'scripts/fleet-inspect.ts',enabled:false,env:{...flags,REQUIRE_BANK:'1'}};
@@ -90,6 +99,8 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   await wait(()=>/^done after 1 runs$/.test(json('.practice/swarm-deaths.json')?.[account]?.reason??'')&&readFileSync(join(root,'.practice/swarm-deaths.json'),'utf8')!==completed,'inspector end not owned by swarm');
   await shutdown(second);
   const inspectionPlan=readPlan('inspection');checks.inspectionReservationsPreserved=inspectionPlan.unchanged;
+  const inspectionClaims=retainClaims('inspection');
+  checks.claimBodiesPreserved=beforeClaims===recoveryClaims&&beforeClaims===inspectionClaims;
   const log=readFileSync(join(root,'.practice/swarm-logs',account+'.log'),'utf8'),status=json('.practice/status/'+account+'.json'),proof=readLogoutProof(account,server,{root:join(root,'.practice/session-lifecycle')});
   const observation=JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('BANK_OBSERVED ')).at(-1)?.slice(14)??'null');
   const bank=JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('BANK ')).at(-1)?.slice(5)??'null');
@@ -102,7 +113,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   writeFileSync(join(directory,'swarm-worker.log'),log);writeFileSync(join(directory,'inspector-status.json'),JSON.stringify(status));writeFileSync(join(directory,'inspector-proof.json'),JSON.stringify(proof));
   cpSync(accountDir(account,server,join(root,'.practice/session-lifecycle')),join(directory,'swarm-lifecycle'),{recursive:true});
   copyFileSync(save,join(directory,'swarm-after.sav'));
-  writeFileSync(join(directory,'swarm-chain-checks.json'),JSON.stringify({checks,evidenceScope:'native Swarm components; no cloud-side/coordinator full E2E/live',source:hash(join(sourceRoot,'scripts/swarm.ts')),privateSource:hash(join(root,'scripts/swarm.ts')),plans:{recovery:recoveryPlan.sha256,inspection:inspectionPlan.sha256},authority:'private bare Git and loopback world; local sessions do not acquire shared gameplay claims'},null,2));
+  writeFileSync(join(directory,'swarm-chain-checks.json'),JSON.stringify({checks,evidenceScope:'native Swarm components; no cloud-side/coordinator full E2E/live',source:hash(join(sourceRoot,'scripts/swarm.ts')),privateSource:hash(join(root,'scripts/swarm.ts')),plans:{recovery:recoveryPlan.sha256,inspection:inspectionPlan.sha256},claims:{before:beforeClaims,recovery:recoveryClaims,inspection:inspectionClaims},authority:'private bare Git and loopback world; local sessions do not acquire shared gameplay claims'},null,2));
   if(!Object.values(checks).every(v=>v===true))throw Error('actual swarm continuation checks failed');
   passed=true;return checks as Record<string,boolean>;
  }finally{
