@@ -117,6 +117,34 @@ test('equipment retains worn slots and conserves inventory-to-worn assets withou
         expect(JSON.stringify(after)).not.toContain('STATUS_TEST_PRIVATE');expect(JSON.stringify(after)).not.toContain('optionsWithIndex');expect(JSON.stringify(after)).not.toContain('password');
     }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});}
 });
+
+test('inventory status preserves valid SDK positions without changing its item whitelist',()=>{
+    const name=`StatusInvSlots${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const inventory=[{slot:27,id:1779,name:'Flax',count:2,password:'PRIVATE_ITEM',optionsWithIndex:[{text:'Use'}]},
+        {slot:0,id:1780,name:'Flax (noted)',count:3}, {slot:4,id:995,name:'Coins',count:5}];
+    const session:any={name,sdk:{getState:()=>({inventory,skills:[]})},tick:()=>1,onTick:()=>()=>{}};
+    const status=startStatus(session,'localhost:8888');
+    try{
+        const doc=JSON.parse(readFileSync(file,'utf8'));
+        expect(doc.inventory).toEqual([{slot:27,id:1779,baseId:1779,name:'Flax',count:2},
+            {slot:0,id:1780,baseId:1779,name:'Flax (noted)',count:3},{slot:4,id:995,baseId:995,name:'Coins',count:5}]);
+        expect(JSON.stringify(doc.inventory)).not.toContain('PRIVATE_ITEM');expect(JSON.stringify(doc.inventory)).not.toContain('optionsWithIndex');
+    }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});}
+});
+
+test('invalid or missing inventory positions do not remove valid item rows or claim a guessed position',()=>{
+    const name=`StatusInvLegacy${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const slots=[undefined,null,-1,28,1.5,'3',NaN,Infinity,0,27];
+    const inventory=slots.map((slot,n)=>({slot,id:995,name:'Coins',count:n+1}));
+    const session:any={name,sdk:{getState:()=>({inventory,skills:[]})},tick:()=>1,onTick:()=>()=>{}};
+    const status=startStatus(session,'localhost:8888');
+    try{
+        const rows=JSON.parse(readFileSync(file,'utf8')).inventory;expect(rows).toHaveLength(slots.length);
+        expect(rows.map((i:any)=>i.count)).toEqual(slots.map((_s,n)=>n+1));
+        for(let n=0;n<8;n++)expect(Object.hasOwn(rows[n],'slot')).toBe(false);
+        expect(rows[8].slot).toBe(0);expect(rows[9].slot).toBe(27);
+    }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});}
+});
 test('missing or malformed equipment is unknown, while an explicit empty SDK array remains empty',()=>{
     const name=`StatusEquipUnknown${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
     const state:any={inventory:[],skills:[]},callbacks:(()=>void)[]=[];
