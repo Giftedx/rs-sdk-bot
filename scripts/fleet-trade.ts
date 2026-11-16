@@ -26,8 +26,20 @@ import { isLocalServer } from '../packages/core/src/localserver';
 import { meetingTiles } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
 import type { TradeItem, TradeResult } from '../vendor/rs-sdk/sdk/types';
+import { withExecutionDeadline } from '../vendor/rs-sdk/sdk/execution-context';
 import { orderLines, validOrder, writeTradeReceipt, type Order, type Receipt, type TradeLine, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
 export { orderLines, validOrder, type Order, type Receipt } from './fleet-trade-settlement';
+
+// Cancel post-login travel, banking and trade together. Receipt reconciliation and
+// logout belong to the caller, outside this scope; cancellation cannot undo a trade.
+export async function runOrderWork<T>(order: Pick<Order, 'end'>, work: () => Promise<T>, now = Date.now): Promise<T> {
+    const remaining = order.end - now();
+    // The SDK uses setTimeout; larger or non-finite delays are coerced to 1 ms.
+    if (!Number.isFinite(remaining) || remaining > 2147483647)
+        throw Error('unsupported order window: remaining time must be finite and at most 2147483647 ms');
+    if (remaining <= 0) throw Error('order window ended before work');
+    return withExecutionDeadline(remaining, work, () => { throw Error('order window ended during work'); });
+}
 
 // The open order this account takes part in: in its window (or starting within `lead` ms) and with no receipt from it.
 export function pickOrder(orders: readonly Order[], receipts: readonly Receipt[], account: string, now: number, lead = 10 * 60_000): { order: Order; role: 'from' | 'to' } | null {
@@ -372,56 +384,58 @@ if (import.meta.main) {
     let ok = false, detail: string;
     watchTradeScreen(s, progress);
     try {
-        const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
-        // The planner has no land route between Ardougne and the east; walkTarget takes the ferries then (60 coins in the
-        // pack). Live: a taker in Ardougne failed "no route to 3182,3440" for a Varrock West meet.
-        const there = await walkTarget(s, tile, false) as Outcome;
-        if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
-        await s.bot.walkTo(tile.x, tile.z, 0);
-        // The giver takes out of its bank what each line needs beyond what it holds, one bank visit for all lines.
-        const short = role === 'from' ? orderLines(order).map((line, i) => ({ line, i, item: exactItem(line.item) })).filter(l => countItems(s, l.item) < l.line.count) : [];
-        if (short.length) {
-            if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) throw Error('bank did not open');
-            for (const { line, i, item } of short) {
-                const held = () => countItems(s, item);
-                // Loose items beside a noted stack of the same item: the offer took the loose rows only (live: 23 loose
-                // dragon bones offered of 347, and the receiver refused the short offer). The loose ones go back in
-                // first, so the whole line comes out as one noted stack.
-                const loose = s.sdk.getInventory().filter(r => item.test(r.name) && r.count === 1);
-                if (line.count > 1 && !/^coins$/i.test(line.item) && loose.length) {
-                    const generation = s.bankObservation?.()?.generation ?? -1;
+        await runOrderWork(order, async () => {
+            const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
+            // The planner has no land route between Ardougne and the east; walkTarget takes the ferries then (60 coins in the
+            // pack). Live: a taker in Ardougne failed "no route to 3182,3440" for a Varrock West meet.
+            const there = await walkTarget(s, tile, false) as Outcome;
+            if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
+            await s.bot.walkTo(tile.x, tile.z, 0);
+            // The giver takes out of its bank what each line needs beyond what it holds, one bank visit for all lines.
+            const short = role === 'from' ? orderLines(order).map((line, i) => ({ line, i, item: exactItem(line.item) })).filter(l => countItems(s, l.item) < l.line.count) : [];
+            if (short.length) {
+                if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) throw Error('bank did not open');
+                for (const { line, i, item } of short) {
+                    const held = () => countItems(s, item);
+                    // Loose items beside a noted stack of the same item: the offer took the loose rows only (live: 23 loose
+                    // dragon bones offered of 347, and the receiver refused the short offer). The loose ones go back in
+                    // first, so the whole line comes out as one noted stack.
+                    const loose = s.sdk.getInventory().filter(r => item.test(r.name) && r.count === 1);
+                    if (line.count > 1 && !/^coins$/i.test(line.item) && loose.length) {
+                        const generation = s.bankObservation?.()?.generation ?? -1;
+                        progress.uncertain = true;
+                        await s.bot.depositItem(loose[0]!, -1);
+                        if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => item.test(r.name) && r.count === 1), { timeoutTicks: 10 }))
+                            throw Error(`sender loose ${line.item} deposit not confirmed`);
+                        progress.uncertain = false;
+                    }
+                    const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(r => item.test(r.name));
+                    const amount = line.count - held(), bankCount = row?.count ?? 0;
+                    if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${line.item} ${bankCount} banked + ${held()} held < ${line.count}`);
+                    const target = s.sdk.getState()?.bank.items.find(r => r.id === row.id);
+                    if (!target) throw Error(`sender bank item is unavailable: ${line.item}`);
+                    const stack = s.sdk.getInventory().find(r => item.test(r.name));
+                    const asNote = amount > 1 && !/^coins$/i.test(line.item) && !(stack && stack.count > 1);
                     progress.uncertain = true;
-                    await s.bot.depositItem(loose[0]!, -1);
-                    if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => item.test(r.name) && r.count === 1), { timeoutTicks: 10 }))
-                        throw Error(`sender loose ${line.item} deposit not confirmed`);
-                    progress.uncertain = false;
+                    await s.bot.withdrawItem(target, amount, { asNote });
+                    const confirmed = () => {
+                        const after = s.bankObservation?.();
+                        const remaining = after?.items.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
+                        return after && after.generation > bankBefore.generation && remaining === bankCount - amount && held() === line.count ? after : null;
+                    };
+                    if (!await waitUntil(s, () => !!confirmed(), { timeoutTicks: 10 })) throw Error(`sender withdrawal debit or pack credit not confirmed: ${line.item}`);
+                    const bankAfter = confirmed();
+                    if (!bankAfter) throw Error('sender withdrawal observation changed');
+                    const bank = { count: amount, at: bankAfter.at };
+                    if (i === 0) progress.bank = bank;
+                    else (progress.lines ??= [])[i - 1] = { count: 0, bank };
                 }
-                const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(r => item.test(r.name));
-                const amount = line.count - held(), bankCount = row?.count ?? 0;
-                if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${line.item} ${bankCount} banked + ${held()} held < ${line.count}`);
-                const target = s.sdk.getState()?.bank.items.find(r => r.id === row.id);
-                if (!target) throw Error(`sender bank item is unavailable: ${line.item}`);
-                const stack = s.sdk.getInventory().find(r => item.test(r.name));
-                const asNote = amount > 1 && !/^coins$/i.test(line.item) && !(stack && stack.count > 1);
-                progress.uncertain = true;
-                await s.bot.withdrawItem(target, amount, { asNote });
-                const confirmed = () => {
-                    const after = s.bankObservation?.();
-                    const remaining = after?.items.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
-                    return after && after.generation > bankBefore.generation && remaining === bankCount - amount && held() === line.count ? after : null;
-                };
-                if (!await waitUntil(s, () => !!confirmed(), { timeoutTicks: 10 })) throw Error(`sender withdrawal debit or pack credit not confirmed: ${line.item}`);
-                const bankAfter = confirmed();
-                if (!bankAfter) throw Error('sender withdrawal observation changed');
-                const bank = { count: amount, at: bankAfter.at };
-                if (i === 0) progress.bank = bank;
-                else (progress.lines ??= [])[i - 1] = { count: 0, bank };
+                await s.bot.closeBank();
+                progress.uncertain = false;
             }
-            await s.bot.closeBank();
-            progress.uncertain = false;
-        }
-        if (role === 'from' && order.takerWaits) markGiverReady(root, order.id);
-        await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role) || releaseMoved() });
+            if (role === 'from' && order.takerWaits) markGiverReady(root, order.id);
+            await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role) || releaseMoved() });
+        });
         ok = true;
         detail = 'transfer observed';
     } catch (error) { detail = releaseMoved() ? `release moved under the session: ${String(error)}` : String(error); }
