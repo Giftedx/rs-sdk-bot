@@ -64,8 +64,8 @@ export type Template = {
     quest?: { name: string; unlocks: string[] };
     // A goal band whose target is a holding: it stands while the account holds fewer than `to` of `item`.
     stock?: { item: string; to: number };
-    // Kit lines the band's own supply job brings (the hunt's shop run): the kit tier neither buys them on the market
-    // nor asks another account for them.
+    // Kit lines the band's own supply job buys instead of the market.
+    // Spare owned stock can still supply them through a bounded item order.
     ownSupply?: readonly string[];
     // An AIO route (scripts/aio.ts): `aio` is its bench key (scripts/measure/aio-bench-cases.ts) and `worker` the script
     // the dispatcher runs, so a retirement lapses when the worker changes, not only the dispatcher.
@@ -76,7 +76,7 @@ export type Template = {
     // A goal band whose missing kit is bought as a candidate of the band itself, as the weapon buy is: an account that
     // can start a later band still gets it. Without the flag a kit is bought only when no band can start.
     kitFirst?: true;
-    // A band whose kit only a shop job of its own brings: the kit tier neither buys nor asks a donor for it.
+    // A band whose missing kit is bought only by its shop job. Owned donations remain eligible.
     shopKit?: true;
     // A goal band for accounts with a PK build only (buildBand): no other army account takes it.
     buildOnly?: true;
@@ -608,12 +608,13 @@ export function plan(inp: Inputs): Assignment[] {
         if (fare === null) continue;
         const t = fare ? withFare(band, fare) : band;
         if (t.quest && t.tier !== 'goal') {
-            if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;
+            const lacks=kitLacks(a,t.needs,i=>!!inp.market?.[i]);
+            if (questDone(a, t.quest.name) || lacks===null || coinShort(a,t.needs)>0) continue;
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };
             for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(after, u.needs)) continue;
                 const value = TRAIN_SHARE * valueOf(u, after);
-                if (value > 0 || makesCoins(u, after)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}`, supply: { template: u, account: after, share: TRAIN_SHARE } });
+                if (value > 0 || makesCoins(u, after)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}`, supply: { template: u, account: after, share: TRAIN_SHARE },...(lacks.length?{lacks}:{}) });
             }
             continue;
         }
@@ -639,20 +640,9 @@ export function plan(inp: Inputs): Assignment[] {
             else if (usableNormalBones && fundable(a) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs), fare });
             else if (coinShort(a, t.needs) === 0) {
-                // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
-                // A line no market sells and a shop job brings (shopLine) is left to that job.
-                const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]), buys = t.kitFirst ? (lacks ?? []).filter(l => !shopLine(l)) : [];
-                const picks = buys.map(l => l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]);
-                // The band's batch for the account when it can pay for it, else what the band needs to start.
-                const batchOf = t.batchFor?.(a) ?? t.batch, price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0);
-                const sized = (batch: boolean): KitLine[] => picks.length && picks.every(p => p !== undefined) ? picks.map((p, n) => { const held = a.items[p!] ?? 0, m = inp.market![p!]!;
-                    return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(buys[n]!.count, batch ? (batchOf?.[p!] ?? 0) - held : 0) }; }) : [];
-                const afford = (ls: readonly KitLine[]) => (a.items.coin ?? 0) >= price(ls) + KIT_CASH_RESERVE + (t.needs?.items?.coins ?? 0);
-                const lines = afford(sized(true)) ? sized(true) : sized(false), cost = price(lines);
-                if (lines.length && afford(lines) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
-                    cands.push({ account: a.name, template: kitBuyTemplate(t, a.name, lines, inp.kitSeq?.get(a.name.toLowerCase()) ?? 0), value: 0, resources: [],
-                        reason: `army band ${goal.band}: buys ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} for ${t.id}, at most ${cost} coins`, goal, kit: lines });
-                else if (lacks?.length && !t.shopKit) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
+                // Acquisition chooses the source, purchase batch and price after donor arbitration.
+                const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]);
+                if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
             }
             continue;
         }
@@ -673,29 +663,25 @@ export function plan(inp: Inputs): Assignment[] {
             if (value > 0 && fare) lacksFare(a, t, fare);
             if ((value > 0 || makesCoins(t, a)) && fundable(a)) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs), fare, supply: { template: t, account: a, share: 1 } });
         } else if (t.needs?.frail && frailShort(a, t.needs) > 0 && meets(a, { ...t.needs, frail: undefined })) {
-            // The account lacks only the food of the frail rule. It buys FRAIL_FOOD_BUY units with its own coins: the
-            // cheapest food of the job that the market lists. One buy id serves each spot of the job, so two failed
-            // buys retire the buy and not one spot. The job's worth orders the buy, at the share of a trainer. The buy
-            // holds the spot of the job that it is for: with each spot full there is no buy, and the spot stays free
-            // for the buyer until the food is in its bank.
-            const pick = t.needs.frail.of.map(norm).filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0];
-            const m = pick ? inp.market![pick]! : undefined, value = TRAIN_SHARE * valueOf(t, a), buyer = { ...t, id: FRAIL_FOOD_BUY_ID };
-            if (m && (value > 0 || makesCoins(t, a)) && (a.items.coin ?? 0) >= FRAIL_FOOD_BUY * m.limit + KIT_CASH_RESERVE && !inp.retired?.has(pairKey(a.name, KIT_BUY + FRAIL_FOOD_BUY_ID)))
-                cands.push({ account: a.name, template: kitBuyTemplate(buyer, a.name, [{ item: m.name, id: m.id, held: a.items[pick!] ?? 0, limit: m.limit, quantity: FRAIL_FOOD_BUY }], inp.kitSeq?.get(a.name.toLowerCase()) ?? 0),
-                    value, resources: t.resources ?? [], reason: `buys ${FRAIL_FOOD_BUY} ${m.name} for ${t.family}, at most ${FRAIL_FOOD_BUY * m.limit} coins`, supply: { template: t, account: a, share: TRAIN_SHARE } });
+            // Spare owned food precedes the existing full food purchase. Both
+            // routes require finite coin demand and a free knight spot.
+            const value = TRAIN_SHARE * valueOf(t, a), lacks = kitLacks(a, t.needs);
+            if (lacks?.length && (value > 0 || makesCoins(t, a))) cands.push({ account: a.name,
+                template: { ...t, id: FRAIL_FOOD_BUY_ID, batchFor: account => Object.fromEntries(t.needs!.frail!.of.map(item => [norm(item), (account.items[norm(item)] ?? 0) + FRAIL_FOOD_BUY])) },
+                value, resources: t.resources ?? [], reason: `prepares food for ${t.family}`, lacks, supply: { template: t, account: a, share: TRAIN_SHARE } });
+        } else if (coinShort(a,t.needs)===0) {
+            const lacks=kitLacks(a,t.needs,i=>!!inp.market?.[i]),value=valueOf(t,a);
+            if(lacks?.length&&value>0)cands.push({account:a.name,template:t,value,resources:t.resources??[],reason:`prepares ${t.goal}`,lacks,
+                supply:{template:t,account:a,share:1}});
         }
     }
-    // The weapon buy (WEAPON): a kit buy made for the account, offered as a goal candidate so it comes before the melee
-    // bands even while one of them can start. The buy script refuses a second scimitar (scripts/buy-owned-ge-item.ts
-    // ownedBaseline), so a stale status cannot buy twice.
+    // The weapon kit comes before the melee bands. Owned stock can supply it without a market quote.
+    // The buy script refuses a second scimitar through its owned baseline.
     for (const a of mine) {
-        const lower = a.name.toLowerCase(), m = inp.market?.[WEAPON.item];
-        if (!m || !inp.army?.has(lower) || (a.skills.Attack ?? 1) < WEAPON.attack || WEAPON_HELD.some(w => (a.items[w] ?? 0) > 0)
-            || (a.items.coin ?? 0) < m.limit + KIT_CASH_RESERVE || inp.retired?.has(pairKey(a.name, KIT_BUY + WEAPON.id))) continue;
-        const template = kitBuyTemplate({ ...WEAPON, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [] }, a.name,
-            [{ item: m.name, id: m.id, held: 0, limit: m.limit, quantity: 1 }], inp.kitSeq?.get(lower) ?? 0);
-        cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: buys 1 ${m.name}, at most ${m.limit} coins`, goal: { band: WEAPON_BAND, left: 0 },
-            kit: [{ item: m.name, id: m.id, held: 0, limit: m.limit, quantity: 1 }] });
+        const lower = a.name.toLowerCase();
+        if (!inp.army?.has(lower) || (a.skills.Attack ?? 1) < WEAPON.attack || WEAPON_HELD.some(w => (a.items[w] ?? 0) > 0)) continue;
+        const template:Template={...WEAPON,family:'kit-buy',script:KIT_BUY_SCRIPT,role:'supply',yields:()=>[],kitFirst:true,needs:{items:{[WEAPON.item]:1}}};
+        cands.push({account:a.name,template,value:0,resources:[WEAPON_MARKET],reason:`army band ${WEAPON_BAND}: stages 1 ${WEAPON.item}`,goal:{band:WEAPON_BAND,left:0},lacks:[{of:[WEAPON.item],count:1}]});
     }
     // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
@@ -714,7 +700,7 @@ export function plan(inp: Inputs): Assignment[] {
     // Accounts that give an item this pass, and accounts that leave a coin job so a kit order can reach them.
     const gaveItems = new Set<string>(), vacated = new Map<string, string>();
     const take = (c: Cand, value: number) => {
-        if ((!c.goal && value <= 0) || done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        if (c.lacks || (!c.goal && value <= 0) || done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         let fund: Funding | undefined;
         if (c.coins) {
             const from = [...pool].filter(([n, left]) => canGiveCoins(n, c.account) && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
@@ -734,14 +720,10 @@ export function plan(inp: Inputs): Assignment[] {
     const goalOrder = (x: Cand, y: Cand) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
     // A quest the account holds comes before every band: a stop in the middle of a quest leaves the account wherever
     // the quest stood (live: an account on Lost City, band 3.6, was moved to the rune buy of band 2).
-    for (const c of cands.filter(c => c.goal && !c.lacks && !!c.template.quest && keeps(c)).sort(goalOrder)) take(c, 0);
-    for (const c of cands.filter(c => c.goal && !c.lacks && !c.template.filler).sort(goalOrder)) take(c, 0);
     // Then the kit tier: an army account with no band it can start gets the kit of its earliest band, before any coin
-    // job, so banked gold becomes a band and not more gold. A buy is one login with the account's own coins. A send
-    // takes a partner off its work for a trade window and keeps the account vacant until the order closes, so it comes
-    // second: every band the account can buy for is tried before a donor is asked for any of them (an account at
-    // Prayer 97 buys its dragon bones and does not wait for 37 bones from another side), this side's donors before
-    // another side's, and another side's only for an account with no job of any tier that it can start.
+    // job. This side's available spare stock supplies the kit before a repurchase. Its item orders start without
+    // the cross-side sync lead. A remote transfer retains that lead, so an affordable local purchase precedes it.
+    // A running band, an open purchase or a productive remote recipient keeps its assignment.
     const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
     const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
     // What a donor keeps of an item: the most a band needs to start. An army account of this side keeps that only for
@@ -761,6 +743,7 @@ export function plan(inp: Inputs): Assignment[] {
     const acquire = (c: Cand, step: 'buy' | 'send', far: boolean) => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
+        if(!c.goal&&(worth(c)<=0||inp.running?.has(c.account.toLowerCase())))return;
         // Another side's stock and coins are asked only for an account with no job it can start and none running: such
         // a trade needs the account offline until the other side's agent runs it, up to the order's window (live: 13
         // of 14 accounts stood parked at once, most for 1 to 13 items of another side, one with 123,028 coins for 3
@@ -772,6 +755,7 @@ export function plan(inp: Inputs): Assignment[] {
         if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        if (step === 'buy' && c.template.shopKit) return;
         const own = (l: Lack) => l.of.some(i => !!c.template.ownSupply?.includes(i));
         const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
@@ -782,11 +766,16 @@ export function plan(inp: Inputs): Assignment[] {
             const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
             const free = coins - (c.template.keepCoins?.(a) ?? 0);
             const full = sized(true), start = sized(false), part = Math.floor((free - KIT_CASH_RESERVE) / (full[0]?.limit ?? 1));
-            const lines = price(full) + KIT_CASH_RESERVE <= free ? full
+            const frailFood = c.template.id === FRAIL_FOOD_BUY_ID;
+            const lines = frailFood || price(full) + KIT_CASH_RESERVE <= free ? full
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
-            if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); reserveKit(c.account, lines); return; }
+            const purchaseResources=c.template.id===WEAPON.id||frailFood?c.resources:[];
+            const reservePurchase=()=>{for(const r of purchaseResources)used.set(r,(used.get(r)??0)+1);reserveKit(c.account,lines);if(c.supply)reserveOutput(c.supply.template,c.supply.account);};
+            const buyReason=`${c.goal&&c.template.kitFirst?`army band ${c.goal.band}: `:''}buys ${what} for ${c.template.id}, at most ${cost} coins`;
+            if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason:buyReason, resources:purchaseResources });reservePurchase();return; }
+            if (frailFood) return;
             if (!busy && meetOf.get(c.account) !== null) {
                 // A coin donor of this side, else a free account of another side with coins above the reserve.
                 const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
@@ -796,8 +785,8 @@ export function plan(inp: Inputs): Assignment[] {
                 if (from) {
                     if (own) pool.set(own, pool.get(own)! - short);
                     gave.add(from); pool.delete(c.account);
-                    done.set(c.account, { account: c.account, template, value: 0, reason: `${c.reason}, funded ${short} coins by ${from} to buy ${what}`, resources: [], fund: { from, to: c.account, coins: short, template: template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) } });
-                    reserveKit(c.account, lines);
+                    done.set(c.account, { account: c.account, template, value: 0, reason: `${c.reason}, funded ${short} coins by ${from} to buy ${what}`, resources:purchaseResources, fund: { from, to: c.account, coins: short, template: template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) } });
+                    reservePurchase();
                     return;
                 }
             }
@@ -814,7 +803,7 @@ export function plan(inp: Inputs): Assignment[] {
         const lacks = kitLacks(a, c.template.needs, (item, count) => !!donorFor(item, count)) ?? [];
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
-        for (const l of lacks.filter(l => !own(l)).sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
+        for (const l of lacks.sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
             const from = donorFor(item, l.count);
             if (!from) continue;
             // A donor of this side sends the band's batch, as a buy would bring it, as far as its spare stock goes: one
@@ -826,18 +815,32 @@ export function plan(inp: Inputs): Assignment[] {
             // The donor is held for this account, so a second account does not leave its job for the same stock.
             if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); pool.delete(from.name); } return; }
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(c.account);
-            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count, template: c.template.id } });
+            const resources = c.template.id === FRAIL_FOOD_BUY_ID ? c.resources : [];
+            for (const resource of resources) used.set(resource, (used.get(resource) ?? 0) + 1);
+            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${count} ${item} by ${from.name}`, resources, send: { from: from.name, to: c.account, item, count, template: c.template.id } });
             reserveKit(c.account, [{ item, quantity: count }], false);
+            if(c.supply)reserveOutput(c.supply.template,c.supply.account);
             return;
         }
     };
     // This side's own coins and stock before another side's: a trade across sides waits on the other side's agent,
     // and the account stands vacant meanwhile (live: five accounts parked for donors of another side, one for 22
     // bones, while this side's maxed accounts held what they needed).
-    const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
+    const kits = [...cands.filter(c => c.goal && c.lacks).sort(goalOrder),...cands.filter(c=>!c.goal&&c.lacks).sort(order)];
     // The accounts with a job of any tier that they can start now with what they hold.
     const ready = new Set(cands.filter(c => !c.lacks && !c.coins && (c.goal || worth(c) > 0)).map(c => c.account));
-    for (const far of [false, true]) for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, far);
+    for(const c of cands.filter(c=>c.goal&&!c.lacks&&!!c.template.quest&&keeps(c)).sort(goalOrder))take(c,0);
+    for(const c of cands.filter(c=>c.goal&&!c.template.filler).sort(goalOrder)){
+        if(!c.lacks){
+            if(c.template.family==='shop-buyer'&&!inp.running?.has(c.account.toLowerCase()))
+                for(const kit of kits.filter(kit=>kit.account===c.account&&kit.goal?.band===c.goal!.band))acquire(kit,'send',false);
+            take(c,0);
+        }
+        else if(c.template.kitFirst){acquire(c,'send',false);acquire(c,'buy',false);}
+    }
+    for (const c of kits) acquire(c, 'send', false);
+    for (const c of kits) acquire(c, 'buy', false);
+    for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, true);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // A recipient that cannot earn its kit may need a helper to become a donor. Reserve one helper for one finite
@@ -1587,8 +1590,8 @@ export function catalogue(): Template[] {
     // iron arrows (a kill uses 60 to 100, more with two hunters in the cave; mithril costs about 745 coins an arrow), one Varrock teleport and six
     // sharks; the dusty key cannot be traded and has its own job. Both are fillers: an account takes them, and the
     // kit tier gets the kit, only when no training band and no kit of one serves it, so bones for Prayer come before
-    // arrows for dragons. The arrows and the teleport's air and fire runes are the shop run's (`ownSupply`); the kit
-    // tier gets the bow, the law rune and the sharks. Live (claude-cloud, by hand): three kills, three hides, no hitpoint lost, banked. Pilots.
+    // arrows for dragons. The shop run buys arrows and the teleport's air and fire runes (`ownSupply`); the kit
+    // tier buys the bow, law rune and sharks. Spare owned stock can supply every kit line. Pilots.
     const dustyKey: Template = {
         id: 'army-dusty-key', pilot: true, family: 'aio:quester:mode:dusty-key', script: 'scripts/aio.ts', args: ['quester', 'dusty-key'], aio: 'quester:mode:dusty-key', worker: 'scripts/dusty-key.ts',
         role: 'quest', goal: "get the dusty key from Velrak for Taverley dungeon's inner gate", tier: 'goal', band: HUNT_BAND, filler: true, repeats: false, stock: { item: 'dusty key', to: 1 }, yields: () => [],

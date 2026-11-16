@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Account, Leg, RouteOptions, Tile, World } from './world';
+import { executionContext, withExecutionDeadline } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 export const BANK_STOP_COST = 10; // estimate in ticks: open the bank, withdraw, close
@@ -48,11 +49,17 @@ export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stoc
     // as the direct search plus a detour, so it is never cheaper. Each bank search costs a full route search (about 10 s
     // from Varrock West to Port Sarim; the 3 banks made the plan 40 s against 11 s direct, with the same cost).
     if (best && take <= 0 && world.routeGain && !world.routeGain(acct, richer)) return best;
-    for (const bank of [...bankTiles].filter(b => b.level === from.level).sort((a, b) => cheb(a, from) - cheb(b, from)).slice(0, nearest)) {
+    const candidates=[...bankTiles].filter(b=>b.level===from.level).sort((a,b)=>cheb(a,from)-cheb(b,from)).slice(0,8),initial=Math.min(candidates.length,Math.max(0,Math.floor(nearest)));
+    let bankRouteFound=false;
+    for (let index=0;index<candidates.length;index++) {
+        if(index===initial&&bankRouteFound||routeOpts?.deadline!==undefined&&performance.now()>=routeOpts.deadline)break;
+        const bank=candidates[index]!;
         const there = world.route(from, bank, acct, routeOpts);
         if (!there.ok || (best && there.cost + BANK_STOP_COST >= best.cost)) continue;
+        if(routeOpts?.deadline!==undefined&&performance.now()>=routeOpts.deadline)break;
         const on = world.route(bank, to, richer, routeOpts);
         if (!on.ok) continue;
+        bankRouteFound=true;
         const cost = there.cost + BANK_STOP_COST + on.cost;
         if (!best || cost < best.cost) {
             const want = itemsFor(on.legs, counts), items: Record<string, number> = {};
@@ -81,26 +88,50 @@ const items = () => (JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'items.
 export const itemName = (id: number) => (names ??= new Map(items().map(i => [i.id, i.debugname]))).get(id);
 export const itemIdOf = (name: string) => (ids ??= new Map(items().map(i => [i.debugname, i.id]))).get(name);
 
-type BankSession = { tick(): number; sdk: { getState(): any }; bot: { openBank(): Promise<{ success: boolean; message?: string }>; withdrawItem(row: unknown, count: number): Promise<unknown>; closeBank(): Promise<unknown> } };
-// Opens the nearest bank and takes `coins` coins and `items` (debugname -> count). Ok when the pack gained them all.
-export async function takeItems(s: BankSession, coins: number, want: Record<string, number>, waitTicks: (n: number) => Promise<unknown>): Promise<{ ok: boolean; detail: string }> {
+type BankObservation={generation:number;items:{id:number;count:number}[]};
+type BankSession = { tick(): number; sdk: { getState(): any }; bankObservation?():BankObservation|null; bot: { openBank(): Promise<{ success: boolean; message?: string }>; withdrawItem(row: unknown, count: number): Promise<unknown>; closeBank(): Promise<unknown> } };
+type BankTakeResult={ok:boolean;detail:string;shortfalls?:Record<number,number>;unknown?:boolean};
+// Takes the whole route supply only after a current bank observation funds every line. Each withdrawal needs paired
+// bank debit and pack credit in a newer bank generation; an unresolved action is never sent again here.
+export async function takeItems(s: BankSession, coins: number, want: Record<string, number>, waitTicks: (n: number) => Promise<unknown>, options:{stop?:()=>boolean;deadline?:number}={}): Promise<BankTakeResult> {
     const held = (id: number) => (s.sdk.getState()?.inventory ?? []).filter((i: any) => i.id === id).reduce((n: number, i: any) => n + i.count, 0);
     const list = [...(coins > 0 ? [[995, coins] as const] : []), ...Object.entries(want).map(([n, c]) => [itemIdOf(n), c] as const)];
     if (list.some(([id]) => id === undefined)) return { ok: false, detail: `unknown item in ${JSON.stringify(want)}` };
-    const opened = await s.bot.openBank();
-    if (!opened.success) return { ok: false, detail: `bank did not open: ${opened.message ?? ''}` };
-    for (let i = 0; i < 10 && !(s.sdk.getState()?.bank?.items?.length); i++) await waitTicks(1);
-    const short: string[] = [];
-    for (const [id, n] of list as [number, number][]) {
-        const row = (s.sdk.getState()?.bank?.items ?? []).find((i: any) => i.id === id), before = held(id);
-        if (!row) { short.push(`${id}:none`); continue; }
-        // The bank row may change in place during dispatch. Observe the pack gain against a fixed amount,
-        // and require the full route supply even when the bank can only provide part of it.
-        const amount = Math.min(n, row.count);
-        await s.bot.withdrawItem(row, amount);
-        for (let i = 0; i < 5 && held(id) < before + amount; i++) await waitTicks(1);
-        if (held(id) < before + n) short.push(`${id}:${held(id) - before}/${n}`);
-    }
-    await s.bot.closeBank();
-    return short.length ? { ok: false, detail: `withdraw short ${short.join(',')}` } : { ok: true, detail: `took ${list.map(([id, n]) => `${id}x${n}`).join(',')}` };
+    if(!Number.isSafeInteger(coins)||coins<0||list.some(([,n])=>!Number.isSafeInteger(n)||n<1))return {ok:false,detail:'invalid bank route supply count'};
+    const required=new Map<number,number>();for(const[id,n]of list as [number,number][])required.set(id,(required.get(id)??0)+n);
+    const stopped=()=>options.stop?.()||executionContext.getStore()?.signal.aborted||options.deadline!==undefined&&performance.now()>=options.deadline;
+    const current=()=>s.sdk.getState()?.bank?.isOpen?s.bankObservation?.()??null:null;
+    const stored=(observation:BankObservation,id:number)=>observation.items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+    return withExecutionDeadline(Math.max(0,(options.deadline??performance.now()+30_000)-performance.now()),async()=>{
+        let opening=false,dispatched=false,result:BankTakeResult;
+        const perform=async():Promise<BankTakeResult>=>{
+            if(stopped())return {ok:false,detail:'bank stop stopped'};
+            const prior=s.bankObservation?.(),wasCurrent=!!current(),generation=prior?.generation??-1;
+            opening=true;const opened=await s.bot.openBank();
+            if(!opened.success)return {ok:false,detail:`bank did not open: ${opened.message??''}`};
+            const fresh=()=>{const observation=current();return observation&&(wasCurrent||observation.generation>generation)?observation:null;};
+            for(let i=0;i<10&&!fresh()&&!stopped();i++)await waitTicks(1);
+            const observation=fresh();if(!observation||stopped())return {ok:false,detail:'bank observation unavailable',unknown:true};
+            const shortfalls:Record<number,number>={};
+            for(const[id,n]of required){const short=n-stored(observation,id);if(short>0)shortfalls[id]=short;}
+            if(Object.keys(shortfalls).length)return {ok:false,detail:'withdraw short '+JSON.stringify(shortfalls),shortfalls};
+            // The SDK resolves exact bank slots from its own snapshot. Check every row before the first dispatch.
+            if([...required.keys()].some(id=>!(s.sdk.getState()?.bank?.items??[]).some((i:any)=>i.id===id)))return {ok:false,detail:'bank withdrawal rows unavailable',unknown:true};
+            for(const[id,n]of required){
+                if(stopped())return {ok:false,detail:'bank stop stopped'};
+                const row=(s.sdk.getState()?.bank?.items??[]).find((i:any)=>i.id===id),before=current();
+                if(!row||!before)return {ok:false,detail:'bank observation unavailable before withdrawal',unknown:true};
+                const packBefore=held(id),bankBefore=stored(before,id),beforeGeneration=before.generation;
+                if(bankBefore<n)return {ok:false,detail:'bank stock changed before withdrawal '+id,shortfalls:{[id]:n-bankBefore}};
+                dispatched=true;try{await s.bot.withdrawItem(row,n);}catch{/* Reconcile a dispatch whose reply was lost. */}
+                const matched=()=>{const after=current();return !!after&&after.generation>beforeGeneration&&held(id)===packBefore+n&&stored(after,id)===bankBefore-n;};
+                for(let i=0;i<5&&!matched()&&!stopped();i++)await waitTicks(1);
+                if(!matched())return {ok:false,detail:`withdraw outcome unknown ${id}:${held(id)-packBefore}/${n}`,unknown:true};
+            }
+            return {ok:true,detail:`took ${[...required].map(([id,n])=>`${id}x${n}`).join(',')}`};
+        };
+        try{result=await perform();}catch(error){result={ok:false,detail:'bank stop '+String(error),unknown:dispatched||opening};}
+        if(opening)try{await s.bot.closeBank();}catch(error){result={...result,ok:false,detail:result.detail+'; bank close '+String(error),unknown:true};}
+        return result;
+    },()=>({ok:false,detail:'bank stop deadline',unknown:true}));
 }

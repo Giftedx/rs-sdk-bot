@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { MAIN_ACCOUNT } from './haggisgate';
 import { wildernessLevel } from './prayer-guard';
 import { SPECIALIST_BOARDS } from './specialist-launch';
+import { lootCapacity, type LootStackDefinition } from './loot-policy';
 
 export type Ground = { id: number; name?: string; count: number; x: number; z: number; distance: number; reachable?: boolean };
 export type Held = { slot: number; id: number; name?: string; count: number };
@@ -139,21 +140,22 @@ export function lureGuard(r: LootRules = LOOT_RULES) {
     };
 }
 
-// True for an item that goes on one stack: coins, a noted item, or a pile of more than one on one ground entry.
-export const stacks = (g: Pick<Ground, 'id' | 'count'>, t: LootTables, pack: readonly Held[]) =>
-    g.id === COINS || g.count > 1 || /^cert_/.test(t.info(g.id)?.debugname ?? '') || pack.some(i => i.id === g.id && i.count > 1);
+// Stackability comes from the native definition, never the size of a ground or held pile.
+export const stacks = (g: Pick<Ground, 'id' | 'count'>, definition: LootStackDefinition) => definition(g.id)?.stackable === true;
 
 // Room for the pile: 'ok', the slot to drop first, or null. The only item the job drops is one of several slots
 // of one item (a resource the script gathers, not a tool it holds once) that is worth under a tenth of the pile,
 // is not kept and is not reserved.
-export function lootRoom(pack: readonly Held[], g: Ground, t: LootTables, keep: (id: number) => boolean): 'ok' | number | null {
-    if (stacks(g, t, pack) && pack.some(i => i.id === g.id)) return 'ok';
-    if (pack.length < 28) return 'ok';
+export function lootRoom(pack: readonly Held[], g: Ground, t: LootTables, keep: (id: number) => boolean, definition?: LootStackDefinition): 'ok' | number | null {
+    const native = definition?.(g.id);
+    if (typeof native?.stackable !== 'boolean') return null;
+    if (lootCapacity({inventory:pack},g,native)) return 'ok';
     const worth = pileValue(g, t), slots = new Map<number, number>();
     for (const i of pack) slots.set(i.id, (slots.get(i.id) ?? 0) + 1);
     let best: Held | null = null, bestValue = Infinity;
     for (const i of pack) {
         if (keep(i.id) || (slots.get(i.id) ?? 0) < 2) continue;
+        if (!lootCapacity({inventory:pack.filter(other => other.slot !== i.slot)},g,native)) continue;
         const v = unitValue(i.id, t) * i.count;
         if (v * 10 >= worth || v > bestValue) continue;
         if (v < bestValue || (best && i.slot > best.slot)) { best = i; bestValue = v; }

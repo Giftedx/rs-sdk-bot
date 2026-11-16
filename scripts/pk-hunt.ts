@@ -18,6 +18,8 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
 import { itemCost } from './pk-roam';
+import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../packages/core/src/item-requirements';
+import { lootCapacity } from '../packages/core/src/loot-policy';
 
 // HUNT_PROFILE=<profile of scripts/pk-spar.ts>: that profile's fight options for each fight of the hunt (the kit,
 // special weapon, escape and caps stay the hunt's). auto (default): the champion for a hunter of combat 115 or more,
@@ -43,18 +45,19 @@ export const KIT_IDS = { mysticFireStaff: 1401, magicShortbow: 861, runeArrow: 8
 export const TRIBRID_KIT: Kit = { magic: [KIT_IDS.mysticFireStaff], ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
 // What a trip carries besides food: the switch weapons, Fire Wave runes (air, blood; the staff gives fire), two prayer
 // potions and a glory for the escape.
-export const TRIP: readonly { id: number; count: number }[] = [
+export type TripItem = ItemCount & { minDoses?: number; minCharges?: number; maxSlots?: number };
+export const TRIP: readonly TripItem[] = [
     { id: KIT_IDS.mysticFireStaff, count: 1 }, { id: KIT_IDS.magicShortbow, count: 1 },
-    { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
+    { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1, minCharges: 1, maxSlots: 1 },
 ] as const;
 
 // The snare kit (scripts/pk-kits.ts tribrid-snare): bow and dagger for the fight, the runes of Entangle for a target that
 // runs (5 earth, 5 water and 4 nature a cast), no staff and no wave runes. It beat the staff kit against the melee
 // build, the hybrid and the ranger (research/pvp-fight-loop.md). PK_KIT=snare selects the kit and this trip.
 export const SNARE_KIT: Kit = { ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
-export const SNARE_TRIP: readonly { id: number; count: number }[] = [
+export const SNARE_TRIP: readonly TripItem[] = [
     { id: KIT_IDS.magicShortbow, count: 1 }, { id: ITEMS.earthRune, count: 50 }, { id: ITEMS.waterRune, count: 50 }, { id: ITEMS.natureRune, count: 40 },
-    { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
+    { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1, minCharges: 1, maxSlots: 1 },
 ] as const;
 
 // Never fight our own accounts: every fleet side's owners plus the main account.
@@ -98,22 +101,42 @@ export const BOOST_POTIONS = [ITEMS.superAttack, ITEMS.superStrength, ITEMS.rang
 // The bow trip: the snare trip with no runes and three more sharks in their place. In a stand-up fight the kit with 21
 // sharks and no freeze beat the snare kit 33 to 13 (research/pvp-fight-loop.md), and up to Wilderness level 30 a
 // glory works at once, so no freeze holds a target there.
-export const BOW_TRIP: readonly { id: number; count: number }[] = [{ id: KIT_IDS.magicShortbow, count: 1 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 }] as const;
-export type TripPick = { name: 'bow' | 'snare' | 'staff'; kit: Kit; trip: readonly { id: number; count: number }[]; moreFood: number };
+export const BOW_TRIP: readonly TripItem[] = [{ id: KIT_IDS.magicShortbow, count: 1 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1, minCharges: 1, maxSlots: 1 }] as const;
+export type TripPick = { name: 'bow' | 'snare' | 'staff'; kit: Kit; trip: readonly TripItem[]; moreFood: number; resolution: RequirementResolution };
+
+export function tripRequirements(trip: readonly TripItem[], worn: readonly ItemCount[] = []): ItemRequirement[] {
+    const whole = (n: unknown, max = 2147483647) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 1 && n <= max;
+    if (!Array.isArray(trip) || trip.length > 28 || trip.some(row => !row || typeof row !== 'object'
+        || !Number.isSafeInteger(row.id) || row.id < 0 || row.id > 2147483647 || !whole(row.count)
+        || row.minDoses !== undefined && !whole(row.minDoses) || row.minCharges !== undefined && !whole(row.minCharges)
+        || row.maxSlots !== undefined && !whole(row.maxSlots, 28) || row.minDoses !== undefined && row.minCharges !== undefined)) return [{ id: -1, count: NaN }];
+    return trip.flatMap((row): ItemRequirement[] => {
+        const unit = nativeRequirementMetadata(row.id)?.unit;
+        if (row.minDoses !== undefined && row.minCharges !== undefined || !Number.isSafeInteger(row.count) || row.count < 1) return [{ id: row.id, count: NaN }];
+        const kind = row.minDoses !== undefined ? 'doses' : row.minCharges !== undefined ? 'charges' : unit?.kind;
+        if (kind) return [{ id: row.id, kind, minUnits: row.minDoses ?? row.minCharges ?? row.count * (unit?.units ?? NaN), maxSlots: row.maxSlots ?? row.count }];
+        const count = row.count - worn.filter(item => item.id === row.id).reduce((n, item) => n + item.count, 0);
+        return count > 0 ? [{ id: row.id, count }] : [];
+    });
+}
+const resolveTrip = (stock: readonly ItemCount[], trip: readonly TripItem[], worn: readonly ItemCount[] = []) =>
+    resolveItemRequirements(tripRequirements(trip, worn), stock, nativeRequirementMetadata);
+const invalidTrip = (trip: readonly TripItem[]) => resolveTrip([], trip).shortages.filter(row => ['invalid', 'unknown', 'noted'].includes(row.reason));
 // The trip a bank can fill. `shallow`: every hunt spot is at Wilderness level 30 or less; the bow trip is first there.
 // Else the snare trip where the bank holds all of it, else the staff trip.
-export function pickTrip(bank: readonly { id: number; count: number }[], shallow = false): TripPick {
-    const holds = (want: { id: number; count: number }) => (bank.find(b => b.id === want.id)?.count ?? 0) >= want.count;
-    if (shallow && BOW_TRIP.every(holds)) return { name: 'bow', kit: SNARE_KIT, trip: BOW_TRIP, moreFood: 3 };
-    return SNARE_TRIP.every(holds) ? { name: 'snare', kit: SNARE_KIT, trip: SNARE_TRIP, moreFood: 0 } : { name: 'staff', kit: TRIBRID_KIT, trip: TRIP, moreFood: 0 };
+export function pickTrip(bank: readonly ItemCount[], shallow = false, worn: readonly ItemCount[] = []): TripPick {
+    const bow = resolveTrip(bank, BOW_TRIP, worn);
+    if (shallow && bow.ok) return { name: 'bow', kit: SNARE_KIT, trip: BOW_TRIP, moreFood: 3, resolution: bow };
+    const snare = resolveTrip(bank, SNARE_TRIP, worn);
+    return snare.ok ? { name: 'snare', kit: SNARE_KIT, trip: SNARE_TRIP, moreFood: 0, resolution: snare }
+        : { name: 'staff', kit: TRIBRID_KIT, trip: TRIP, moreFood: 0, resolution: resolveTrip(bank, TRIP, worn) };
 }
 
 // `choose` picks the trip from the bank once the pack is banked (the hunter with no kit named: pickTrip).
-// Each potion's ids, four doses first (scripts/pk.ts ITEMS).
-export const POTION_DOSES: readonly (readonly number[])[] = [ITEMS.prayerPotion, ITEMS.superRestore, ITEMS.superAttack, ITEMS.attackPotion, ITEMS.superStrength,
-    ITEMS.strengthPotion, ITEMS.superDefence, ITEMS.defencePotion, ITEMS.rangingPotion, ITEMS.magicPotion, ITEMS.antipoison.slice(0, 4), ITEMS.antipoison.slice(4)];
-export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT,
-    choose?: (bank: readonly { id: number; count: number }[]) => { trip: readonly { id: number; count: number }[]; moreFood: number }): Promise<string | null> {
+export async function restock(s: Session, food: number, trip: readonly TripItem[] = TRIP, kit: Kit = TRIBRID_KIT,
+    choose?: (bank: readonly ItemCount[], worn?: readonly ItemCount[]) => { trip: readonly TripItem[]; moreFood: number; resolution?: RequirementResolution }): Promise<string | null> {
+    const invalid = invalidTrip(trip);
+    if (invalid.length) return 'invalid trip requirements ' + JSON.stringify(invalid);
     const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
     let switched = false;
     for (const item of [...s.sdk.getInventory()]) {
@@ -125,41 +148,50 @@ export async function restock(s: Session, food: number, trip: readonly { id: num
     if (switched && typeof s.onTick === 'function') await nextTick(s);
     if (!(await s.bot.openBank()).success) return 'bank did not open';
     for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
-    if (choose) { const pick = choose(s.sdk.getBankItems()); trip = pick.trip; food += pick.moreFood; }
-    const stock = () => s.bankObservation?.()?.items ?? [];
-    // Boost potions where the bank holds them, each for one shark: a tribrid with a super attack, a super strength and a
-    // ranging potion won 11 of 16 spars against the same kit with three more sharks (research/pvp-fight-loop.md). The
-    // fight loop drinks them. A bank with none is no fault: the trip goes on with food alone.
-    let boosts = 0;
+    let selected: RequirementResolution | undefined;
+    if (choose) { const pick = choose(s.sdk.getBankItems(), equip()); trip = pick.trip; food += pick.moreFood; selected = pick.resolution; }
+    const stock = () => [...s.sdk.getBankItems(), ...s.sdk.getInventory()];
+    const fail = async (r: RequirementResolution) => { await s.bot.closeBank(); return 'bank lacks trip requirements ' + JSON.stringify(r.shortages); };
+    selected ??= resolveTrip(stock(), trip, equip());
+    if (!selected.ok) return fail(selected);
+    // Resolve the trip before optional boosts. A boost never consumes declared
+    // trip stock. Each optional bottle replaces one shark.
+    const reserved = new Map(selected.items.map(row => [row.id, row.count]));
+    const boosts: ItemCount[] = [];
     for (const doses of BOOST_POTIONS) {
-        if (boosts >= food - 1) break;
-        const row = s.sdk.getBankItems().find(b => (doses as readonly number[]).includes(b.id) && b.count > 0);
-        if (row) { await s.bot.withdrawItem(row, 1, { asNote: false }); boosts++; }
+        if (boosts.length >= food - 1) break;
+        const totals = new Map<number, number>();
+        for (const row of stock()) totals.set(row.id, (totals.get(row.id) ?? 0) + row.count);
+        const remaining = [...totals].map(([id, count]) => ({ id, count: Math.max(0, count - (reserved.get(id) ?? 0)) }));
+        const boost = resolveItemRequirements([{ id: doses[0], kind: 'doses', minUnits: 1, maxSlots: 1 }], remaining, nativeRequirementMetadata);
+        if (!boost.ok) continue;
+        for (const row of boost.items) { boosts.push(row); reserved.set(row.id, (reserved.get(row.id) ?? 0) + row.count); }
     }
-    food -= boosts;
-    for (const want of [...trip, { id: ITEMS.shark, count: food }]) {
-        // Held already: worn, or in the pack (a two-handed bow that the melee wield above takes off can come to the pack
-        // after the deposit).
-        const wornCount = equip().filter(e => e.id === want.id).reduce((n, e) => n + e.count, 0) + (want.id === ITEMS.shark ? 0 : held(s, want.id));
-        const need = want.count - wornCount;
-        if (need <= 0) continue;
-        // A potion is taken in any of its doses, the fullest first: a bank holds what earlier trips left (POTION_DOSES).
-        const kin = POTION_DOSES.find(g => g.includes(want.id)) ?? [want.id];
-        const rows = kin.flatMap(id => s.sdk.getBankItems().filter(b => b.id === id && b.count > 0));
-        if (rows.reduce((n, r) => n + r.count, 0) < need) { await s.bot.closeBank(); return `bank lacks ${need} of item ${want.id} (has ${kin.reduce((n, id) => n + (stock().find(b => b.id === id)?.count ?? 0), 0)}; worn ${equip().map(e => e.id).join(',')}; pack ${s.sdk.getInventory().map(i => i.id).join(',')})`; }
-        let left = need;
-        for (const row of rows) { if (left <= 0) break; const take = Math.min(left, row.count); await s.bot.withdrawItem(row, take, { asNote: false }); left -= take; }
+    food -= boosts.length;
+    const target = resolveItemRequirements([...selected.items, ...boosts, { id: ITEMS.shark, count: food }], stock(), nativeRequirementMetadata);
+    if (!target.ok) return fail(target);
+    for (const want of target.items) {
+        let left = want.count - held(s, want.id);
+        for (const row of s.sdk.getBankItems().filter(row => row.id === want.id && row.count > 0)) {
+            if (left <= 0) break;
+            const count = Math.min(left, row.count);
+            await s.bot.withdrawItem(row, count, { asNote: false });
+            left = want.count - held(s, want.id);
+        }
+        if (left > 0) { await s.bot.closeBank(); return 'trip withdrawal short for item ' + want.id; }
     }
     await s.bot.closeBank();
-    return held(s, ITEMS.shark) >= food ? null : 'food withdrawal short';
+    const observed = resolveTrip(s.sdk.getInventory(), trip, equip());
+    return observed.ok && held(s, ITEMS.shark) >= food ? null : 'trip withdrawal short ' + JSON.stringify(observed.shortages);
 }
 
 export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
-    kit?: Kit; trip?: readonly { id: number; count: number }[]; damageSpell?: number; rotation?: Style[]; teleSpell?: number;
+    kit?: Kit; trip?: readonly TripItem[]; damageSpell?: number; rotation?: Style[]; teleSpell?: number;
     spots?: readonly Spot[]; observe?: boolean };
 export async function hunt(s: Session, o: HuntOptions) {
     const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
     const tally = { kills: 0, deaths: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
+    if (o.trip !== undefined) { const invalid = invalidTrip(o.trip); if (invalid.length) return { ...tally, end: 'invalid trip requirements ' + JSON.stringify(invalid) }; }
     let ended = false;
     void s.ended.then(() => { ended = true; });
     const over = () => ended || o.stop() || s.tick() - start >= o.cap;
@@ -173,7 +205,7 @@ export async function hunt(s: Session, o: HuntOptions) {
     const ownKit = (k: Kit): Kit => (startShield === undefined || startShield === KIT_IDS.runeKiteshield ? k
         : { ...k, melee: (k.melee ?? []).map(id => (id === KIT_IDS.runeKiteshield ? startShield : id)) });
     const shallow = (o.spots ?? HUNT_SPOTS).every(sp => wildernessLevel(sp.z) <= 30);
-    let spot = 0;
+    let spot = 0, needsRestock = false;
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
     if (far()) {
         const glory = s.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
@@ -196,11 +228,12 @@ export async function hunt(s: Session, o: HuntOptions) {
         } else return { ...tally, end: 'far from Edgeville with no glory or PK_TELE' };
     }
     while (!over()) {
-        if (held(s, ITEMS.shark) < o.minFood) {
+        if (needsRestock || held(s, ITEMS.shark) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
-            const missing = await restock(s, o.food, o.trip, kit, auto ? bank => { const pick = pickTrip(bank, shallow); kit = pick.kit; log(`HUNT trip ${pick.name}`); return pick; } : undefined);
+            const missing = await restock(s, o.food, o.trip, kit, auto ? (bank, worn) => { const pick = pickTrip(bank, shallow, worn); kit = pick.kit; log(`HUNT trip ${pick.name}`); return pick; } : undefined);
             if (missing) return { ...tally, end: missing };
+            needsRestock = false;
             tally.trips++;
         }
         const spots = o.spots ?? HUNT_SPOTS, here = spots[spot % spots.length]!;
@@ -281,12 +314,12 @@ export async function hunt(s: Session, o: HuntOptions) {
                 const e = await fightPlayer(s, target.name, { kit: ownKit(kit), exitOnDanger: false, escapeSpell: o.teleSpell, cap: 200, log,
                     predictPrayer: true, snapPrayer: true, flee: true });
                 log(`HUNT escape after danger: ${e.outcome}`);
-                if (e.outcome === 'escaped') tally.escapes++;
+                if (e.outcome === 'escaped') { tally.escapes++; needsRestock = true; }
                 if (e.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
             }
             if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
             if (r.outcome === 'session ended') return { ...tally, end: 'session ended' };
-            if (r.outcome === 'escaped') { tally.escapes++; }
+            if (r.outcome === 'escaped') { tally.escapes++; needsRestock = true; }
             break;
         }
     }
@@ -294,7 +327,7 @@ export async function hunt(s: Session, o: HuntOptions) {
 }
 
 // Pick up what the loser dropped near where it stood, most valuable stacks first, bones aside; eat food to free a slot for valuable drops.
-async function loot(s: Session, at: { x: number; z: number }, stop: () => boolean): Promise<number> {
+export async function loot(s: Session, at: { x: number; z: number }, stop: () => boolean): Promise<number> {
     let taken = 0;
     // The drop lands after the death animation: wait up to 10 ticks for the first pile.
     const near = (g: { x: number; z: number; name: string }) => Math.max(Math.abs(g.x - at.x), Math.abs(g.z - at.z)) <= 3 && !/bones$/i.test(g.name);
@@ -303,14 +336,19 @@ async function loot(s: Session, at: { x: number; z: number }, stop: () => boolea
         const pile = (s.sdk.getState()?.groundItems ?? []).filter(near)
             .sort((a, b) => (itemCost(b.id) * b.count - itemCost(a.id) * a.count) || (a.distance - b.distance))[0];
         if (!pile) break;
-        const stacks = s.sdk.getInventory().some(i => i.id === pile.id && i.count > 1);
-        if (s.sdk.getInventory().length >= 28 && !stacks) {
+        const native = (s.client as { objType?: (id: number) => { stackable: boolean } | undefined } | undefined)?.objType?.(pile.id);
+        if (!lootCapacity({ inventory: s.sdk.getInventory() }, pile, native)) {
+            if (typeof native?.stackable !== 'boolean') break;
             const meal = bestFood(s.sdk.getInventory());
             if (!meal || itemCost(pile.id) * pile.count < 1000) break;
+            const afterMeal = s.sdk.getInventory().map(item => item.slot === meal.slot ? { ...item, count: item.count - 1 } : item).filter(item => item.count > 0);
+            if (!lootCapacity({ inventory: afterMeal }, pile, native)) break;
+            const before = held(s, meal.id);
             await s.bot.eatFood(meal);
+            if (held(s, meal.id) !== before - 1 || !lootCapacity({ inventory: s.sdk.getInventory() }, pile, native)) break;
         }
-        const r = await s.bot.pickupItem(pile);
-        if (!r.success) break;
+        const before = held(s, pile.id), r = await s.bot.pickupItem(pile);
+        if (!r.success || held(s, pile.id) !== before + pile.count) break;
         taken++;
     }
     return taken;
@@ -330,5 +368,5 @@ if (import.meta.main) {
     console.log('HUNT ' + JSON.stringify(r));
     // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
     if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');
-    await finish([s], r.end !== 'died' && !/failed|lacks|short|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
+    await finish([s], r.end !== 'died' && !/failed|lacks|short|invalid|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
 }

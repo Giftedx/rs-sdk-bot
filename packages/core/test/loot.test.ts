@@ -24,6 +24,7 @@ const state = (x: number, z: number) => ({
     nearbyLocs: [] as any[], groundItems: [] as any[], gameMessages: [] as any[], dialog: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false }, modalOpen: false,
 });
 const fullPack = (id = JUNK) => Array.from({ length: 28 }, (_, slot) => ({ slot, id, name: 'ore', count: 1 }));
+const nativeLootDefinition=(id:number)=>({stackable:id===FEATHER||id===NOTED||id===995});
 
 test('value: GE bid or 60% alchemy floor; coins 1; untradeable 0', () => {
     const t = tables([], { [RUNE]: 40_000 });
@@ -93,14 +94,23 @@ test('bait guards: the anchor holds through a trail; 3 pickups in 100 ticks paus
 
 test('room: a stack joins its stack; a full pack drops one of several cheap slots, never a kept or single item', () => {
     const t = tables();
-    expect(lootRoom([], pile(RUNE, 0, 0, 1), t, () => false)).toBe('ok');
-    expect(lootRoom([...fullPack().slice(0, 27), { slot: 27, id: NOTED, name: 'n', count: 4 }], pile(NOTED, 0, 0, 1), t, () => false)).toBe('ok');
-    expect(lootRoom(fullPack(), pile(RUNE, 0, 0, 1), t, () => false)).toBe(27);
-    expect(lootRoom(fullPack(), pile(RUNE, 0, 0, 1), t, id => id === JUNK)).toBeNull();
+    expect(lootRoom([], pile(RUNE, 0, 0, 1), t, () => false,nativeLootDefinition)).toBe('ok');
+    expect(lootRoom([...fullPack().slice(0, 27), { slot: 27, id: NOTED, name: 'n', count: 4 }], pile(NOTED, 0, 0, 1), t, () => false,nativeLootDefinition)).toBe('ok');
+    expect(lootRoom(fullPack(), pile(RUNE, 0, 0, 1), t, () => false,nativeLootDefinition)).toBe(27);
+    expect(lootRoom(fullPack(), pile(RUNE, 0, 0, 1), t, id => id === JUNK,nativeLootDefinition)).toBeNull();
     const singles = fullPack().map((i, k) => ({ ...i, id: 10_000 + k }));
-    expect(lootRoom(singles, pile(RUNE, 0, 0, 1), t, () => false)).toBeNull();
+    expect(lootRoom(singles, pile(RUNE, 0, 0, 1), t, () => false,nativeLootDefinition)).toBeNull();
     // An ore is not worth a tenth of a junk pile: no drop.
-    expect(lootRoom(fullPack(), pile(JUNK, 0, 0, 1), t, () => false)).toBeNull();
+    expect(lootRoom(fullPack(), pile(JUNK, 0, 0, 1), t, () => false,nativeLootDefinition)).toBeNull();
+});
+
+test('room uses native stackability for one held unit and requires enough room for the whole pile',()=>{
+ const t=tables(),native=(id:number)=>({stackable:id===FEATHER});
+ const pack=[...fullPack().slice(0,27),{slot:27,id:FEATHER,count:1}];
+ expect(lootRoom(pack,pile(FEATHER,0,0,1,100),t,()=>false,native)).toBe('ok');
+ expect(lootRoom(pack,pile(FEATHER,0,0,1,100),t,()=>false,()=>undefined)).toBeNull();
+ expect(lootRoom(fullPack(),pile(RUNE,0,0,1,2),t,()=>false,native)).toBeNull();
+ expect(lootRoom(fullPack().slice(0,27),pile(RUNE,0,0,1,2),t,()=>false,native)).toBe(26);
 });
 
 test('record runs never loot; one claim per pile across sessions', () => {
@@ -127,7 +137,7 @@ function fake(st: any) {
     const listeners = new Set<() => void>();
     const sent: any[] = [], lines: string[] = [];
     const s: any = {
-        name: 'fake', bot: {}, tick: () => t,
+        name: 'fake', bot: {}, client:{objType:nativeLootDefinition}, tick: () => t,
         sdk: { getState: () => ({ ...st, tick: t }), send: (_: any) => {}, handleMessage: (_: string) => {} },
         onTick(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; },
         direct: async (a: any) => { sent.push({ t, ...a }); return { success: true }; },

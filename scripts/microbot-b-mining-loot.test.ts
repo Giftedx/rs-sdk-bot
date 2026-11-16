@@ -36,3 +36,22 @@ test('skips a pickup address whose same-ID piles have different counts', () => {
  s.groundItems[1]!.count = first.count;
  expect(selectGroundLoot(s,policy,definition)?.item.count).toBe(first.count);
 });
+
+test('optional name globs select whole names and ignores beat each policy branch', () => {
+ const s=state(),definition=()=>({cost:180,stackable:true});
+ expect(selectGroundLoot(s,{...policy,ids:[],nameGlobs:['N?ture *']},definition)?.item.id).toBe(561);
+ expect(selectGroundLoot(s,{...policy,ids:[],nameGlobs:['rune']},definition)).toBeUndefined();
+ for(const mode of ['list','value','mixed']as const){
+  expect(selectGroundLoot(s,{...policy,mode,ignoredIds:[561]},definition)).toBeUndefined();
+  expect(selectGroundLoot(s,{...policy,mode,ignoredNames:['NATURE RUNE']},definition)).toBeUndefined();
+  expect(selectGroundLoot(s,{...policy,mode,ignoredNameGlobs:['* rune']},definition)).toBeUndefined();
+ }
+});
+
+test('capacity refuses unknown metadata and overflowing stack merges',()=>{
+ const s=state(),item=s.groundItems[0]!;
+ expect(lootCapacity(s,item,undefined as any)).toBe(false);
+ s.inventory=[{id:561,count:2147483646,slot:0}as any];
+ expect(lootCapacity(s,item,{cost:1,stackable:true})).toBe(false);
+ expect(lootCapacity(s,{...item,count:1},{cost:1,stackable:true})).toBe(true);
+});

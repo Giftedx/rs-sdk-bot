@@ -389,7 +389,8 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         if (d) first = await walkRoute(s, d.legs, opts);
     }
     if (!first.ok || !r.bank) return first;
-    const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n));
+    const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n),
+        {stop:()=>opts.signal?.aborted===true,deadline:performance.now()+30_000});
     if (!took.ok) return { ok: false, reason: 'precondition', detail: `bank stop at ${r.bank.at.x},${r.bank.at.z}: ${took.detail}`, ticks: s.tick() - started };
     const rest = await walkRoute(s, r.bank.then, opts);
     return rest.ok ? { ok: true, ticks: s.tick() - started } : rest;

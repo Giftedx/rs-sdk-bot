@@ -15,6 +15,11 @@ on:
         type: boolean
         required: false
         default: true
+      preparation_practice:
+        description: Run shared preparation cases and the AIO smoke set
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -65,6 +70,57 @@ jobs:
         working-directory: vendor/rs-sdk/server/webclient
       - name: Full Windows gate
         run: bun scripts/ci-gate.ts --full
+  preparation-practice:
+    if: inputs.preparation_practice
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Prepare the pinned practice dependencies
+        run: bun scripts/worktree-setup.ts --bench
+      - name: Pack the public game assets
+        timeout-minutes: 10
+        working-directory: vendor/rs-sdk/server/engine
+        run: |
+          bun run build
+      - name: Prove shared preparation and funded batch behavior
+        timeout-minutes: 10
+        run: |
+          bun run bench '^extra:(bank-preflight-tanning-short|loot-wildcard-ignore|hunt-restock-partial-glory|owned-bank-ring-consumer|progressive-cooking-entry|bank-job-cook-lobster|inventory-best-effort)$' --profile --budget 10
+        env:
+          BENCH_OUT: .practice/shared-preparation/cases.json
+      - name: Run the first AIO smoke group
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: |
+          bun run bench '^quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$' --smoke --profile --budget 10
+        env:
+          BENCH_OUT: .practice/shared-preparation/smoke-a.json
+      - name: Run the second AIO smoke group
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: |
+          bun run bench '^(?!quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$)' --smoke --profile --budget 10
+        env:
+          BENCH_OUT: .practice/shared-preparation/smoke-b.json
+      - name: Retain preparation and smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-preparation-${{ github.sha }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            .practice/shared-preparation/*.json
+            .practice/aio-bench/output/*.log
+            .practice/aio-bench/profile/*
+            .practice/logs/engine-aiobench-*.log
   native-practice:
     if: inputs.native_practice
     runs-on: ubuntu-latest

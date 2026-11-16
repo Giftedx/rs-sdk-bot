@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, serverFromEnv, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
+import { lootCapacity } from '../packages/core/src/loot-policy';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { RosterFeed } from '../packages/core/src/roster-feed';
 import { gameDialAddress } from '../packages/core/src/websocket-proxy';
@@ -664,25 +665,33 @@ export function planLoot(ground: readonly Ground[], at: { x: number; z: number }
 }
 
 // Picks up the valuable stacks at a kill tile; a full pack eats a food to make room. Returns the gp picked up.
-async function lootAt(session: Session, at: { x: number; z: number }, ctx: { value: (id: number) => Promise<number>; min: number; stats: { loot: string[]; lootValue: number }; emit: (e: object) => void }) {
+export async function lootAt(session: Session, at: { x: number; z: number }, ctx: { value: (id: number) => Promise<number>; min: number; stats: { loot: string[]; lootValue: number }; emit: (e: object) => void }) {
     const { sdk, bot } = session;
     const ground = (sdk.getState()?.groundItems ?? []) as unknown as Ground[];
     const price = new Map<number, number>();
     for (const g of ground) if (cheb(g, at) <= 1 && !price.has(g.id)) price.set(g.id, await ctx.value(g.id));
     let got = 0;
     for (const g of planLoot(ground, at, price, ctx.min)) {
-        const stacks = sdk.getInventory().some(i => i.id === g.id && i.count > 1);
-        if (sdk.getInventory().length >= 28 && !stacks) {
+        const definition=(session.client as {objType?:(id:number)=>{stackable:boolean}|undefined}|undefined)?.objType?.(g.id);
+        if(typeof definition?.stackable!=='boolean'){ctx.emit({e:'loot-skipped',item:g.name,value:g.value,why:'stackability unknown'});continue;}
+        if (!lootCapacity({inventory:sdk.getInventory()},g,definition)) {
             const meal = sdk.getInventory().find(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
-            if (!meal) { ctx.emit({ e: 'loot-skipped', item: g.name, value: g.value, why: 'pack full' }); continue; }
+            if (!meal || !lootCapacity({inventory:sdk.getInventory().filter(i=>i.slot!==meal.slot)},g,definition)) { ctx.emit({ e: 'loot-skipped', item: g.name, value: g.value, why: 'pack full' }); continue; }
+            const before=sdk.getInventory().filter(i=>i.id===meal.id).reduce((n,i)=>n+i.count,0);
             await bot.eatFood(meal);
+            if(sdk.getInventory().filter(i=>i.id===meal.id).reduce((n,i)=>n+i.count,0)!==before-1){ctx.emit({e:'loot-skipped',item:g.name,value:g.value,why:'food debit does not reconcile'});break;}
+            if(!lootCapacity({inventory:sdk.getInventory()},g,definition)){ctx.emit({e:'loot-skipped',item:g.name,value:g.value,why:'no observed room'});continue;}
         }
         const live = (sdk.getState()?.groundItems ?? []).find((x: any) => x.id === g.id && x.x === g.x && x.z === g.z);
-        if (!live) continue;
+        if (!live || live.count!==g.count || !lootCapacity({inventory:sdk.getInventory()},live,definition)) continue;
+        const before=sdk.getInventory().filter(i=>i.id===live.id).reduce((n,i)=>n+i.count,0);
         const r = await bot.pickupItem(live as any);
         if (!r.success) { ctx.emit({ e: 'loot-failed', item: g.name, msg: r.message }); continue; }
-        got += g.value; ctx.stats.lootValue += g.value; ctx.stats.loot.push(g.name);
-        ctx.emit({ e: 'loot', item: g.name, count: g.count, value: g.value });
+        const gained=sdk.getInventory().filter(i=>i.id===live.id).reduce((n,i)=>n+i.count,0)-before;
+        if(gained!==live.count){ctx.emit({e:'loot-failed',item:g.name,msg:'pickup quantity does not reconcile'});continue;}
+        const value=(price.get(g.id)??0)*gained;
+        got += value; ctx.stats.lootValue += value; ctx.stats.loot.push(g.name);
+        ctx.emit({ e: 'loot', item: g.name, count: gained, value });
     }
     return got;
 }

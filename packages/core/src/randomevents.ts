@@ -860,7 +860,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 const risk = lootRisk(st, here, danger(), fleetNames, rules);
                 if (risk) return end(`abort-${risk}`);
                 if (!canSend()) return false;
-                const room = lootRoom(inv(), here, tables, keepOrReserve);
+                const room = lootRoom(inv(), here, tables, keepOrReserve,id=>{const d=(s.client as any)?.objType?.(id);return typeof d?.stackable==='boolean'?d:undefined;});
                 if (room === null) return end('full');
                 if (room !== 'ok') {
                     if (s.tick() - dropAt >= 2) {
@@ -928,7 +928,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 if (!riskSaid.has(key)) { riskSaid.add(key); say('loot', `skip-${risk}`, `id=${g.id} value=${pileValue(g, tables)} d=${g.distance}`); }
                 continue;
             }
-            if (lootRoom(pack, g, tables, keepOrReserve) === null) {
+            if (lootRoom(pack, g, tables, keepOrReserve,id=>{const d=(s.client as any)?.objType?.(id);return typeof d?.stackable==='boolean'?d:undefined;}) === null) {
                 skipPiles.set(key, now + SKIP_DONE);
                 say('loot', 'skip-full', `id=${g.id} value=${pileValue(g, tables)}`);
                 continue;

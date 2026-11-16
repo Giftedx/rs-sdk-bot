@@ -1219,6 +1219,20 @@ const SAME_JOB_CASES: BenchCase[] = [
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
 const EXTRA_CASES: BenchCase[] = [
+  {key:'extra:owned-bank-ring-consumer',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['trade','{bot:b}'],timeoutMs:120_000,
+    presetConfig:{position:{x:3269,z:3167,level:0},skills:{Crafting:10,Hitpoints:40},inventory:[],equipment:[],bank:[{id:2357,count:1}]},
+    companions:[{suffix:'b',preset:'fresh_lumbridge',presetConfig:{position:{x:3270,z:3167,level:0},skills:{Crafting:10,Hitpoints:40},inventory:[],equipment:[],bank:[{id:1592,count:1}]}}],
+    pass:s=>ok(s)&&s.includes('"case":"owned-bank-ring-consumer"')&&s.includes('"completed":1')&&s.includes('"banked":{"1635":1}')&&s.includes('"logoutsConfirmed":true')&&s.includes('LOGOUT logged-out logged-out')},
+  {key:'extra:bank-preflight-tanning-short',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['bank'],timeoutMs:60_000,
+    presetConfig:{position:{x:3269,z:3167,level:0},bank:[{id:1739,count:2}]},
+    pass:s=>ok(s)&&s.includes('"shortfalls":{"995":2}')&&s.includes('"dispatches":0')&&s.includes('"assetsPreserved":true')&&s.includes('LOGOUT logged-out')},
+  // m50_53.jm2: Logs at (3243,3395) and (3243,3397), Leather body at (3244,3398).
+  {key:'extra:loot-wildcard-ignore',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['loot'],timeoutMs:60_000,
+    presetConfig:{position:{x:3253,z:3421,level:0},skills:{Defence:99,Hitpoints:99}},
+    pass:s=>ok(s)&&s.includes('"pickups":[1511,1511]')&&s.includes('"banked":{"1511":2}')&&s.includes('"ignoredPicked":false')&&s.includes('LOGOUT logged-out')},
+  {key:'extra:hunt-restock-partial-glory',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['partial'],timeoutMs:60_000,
+    presetConfig:{position:{x:3092,z:3496,level:0},skills:{Prayer:43,Hitpoints:40},bank:[{id:861,count:1},{id:139,count:2},{id:1706,count:1},{id:385,count:4}]},
+    pass:s=>ok(s)&&s.includes('"restocks":2')&&s.includes('"glory":1706')&&s.includes('"prayerDoses":6')&&s.includes('"assetsPreserved":true')&&s.includes('LOGOUT logged-out')},
   {key: 'extra:progressive-cooking-entry', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge',
     scriptArgs: planProgressiveSkiller('cooking',1,15)[0]!.step.args,
     presetConfig: {position:{x:2809,z:3441,level:0},skills:{Cooking:1},inventory:[],bank:[{id:2138,count:12}]},

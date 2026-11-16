@@ -2,6 +2,14 @@
 
 > Correction: the Almera “10 grapes” entry below is the Waterfall raft location, not an item spawn. Use [grape-gold.md](grape-gold.md) for that source. Quantities and prices below are research values, not current stock or quotes. GE is authorized; reprice proposals before use. The grape-dependent schedule is invalid; do not use its ETA.
 
+## Shared preparation and owned stock
+
+Source -> consumer -> reuse -> check: `planBankTripSchedule`, observed bank generations and the existing fleet order protocol -> bank jobs, travel withdrawals and Autopilot supply preparation -> reuse these paths instead of another bank or trade controller -> `bank-trip.test.ts`, `microbot-bank-jobs.test.ts`, `trip.test.ts` and the Autopilot tests. A non-self-banked batch checks every ingredient and tool before its first withdrawal. A shortage reports exact missing IDs. Unknown bank data stays unknown. A whole-order shortage permits complete funded batches but cannot turn an unmet finite target into success. Cooking and wine retain their random-output and level-goal rules.
+
+Autopilot prepares missing items for useful production and quest jobs through their existing `Needs`. The account's holdings come first. Reachable spare stock from a free account on the same side comes before a purchase. A local order has no cross-side sync lead. Another side's order retains the 15-minute lead, so an affordable local purchase can precede it. Donor reserves, held accounts, active orders and failed donor routes remain excluded. A recent status cannot refresh an old bank observation. Worn equipment is not donor stock. Pack and bank snapshots use their larger count per item to avoid counting the same retained stock twice. Selection reserves the finite output demand as well as its inputs.
+
+Travel checks the nearest three banks, then at most eight if those routes fail, within one route deadline. Withdrawal checks all requested items and coins against a current bank generation. Each accepted withdrawal needs an exact pack credit, bank debit and newer generation. A missing response can reconcile from those effects but cannot cause another withdrawal. These tests prove selection and refusal behavior. A native or live transfer still needs its own settled receipt and consumer output.
+
 **New consumer enrolment:** wait for fresh `waiting-for-food`, bank observation from this run and bank-distance ≤3 before adding courier demand. Fresh bank data alone races receiver readiness (zero-transfer failure: `.practice/fleet-expansion/first-delivery-attempt.json`). Two live deliveries after the wait each reconciled160 sender debit=recipient credit; pilots returned to bank. `.practice/fleet-expansion/attach-ready.ts` checks enrolment; it is not a general runtime readiness fix. Promote the Thieving55-qualified earner after clean bootstrap handover; bootstrap60 timed out live and is failed. Food purchase cost is unknown.
 
 

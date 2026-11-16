@@ -5,22 +5,17 @@ import {existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import type {BotWorldState,GroundItem} from '../vendor/rs-sdk/sdk/types';
-export interface LootPolicy{mode:'list'|'value'|'mixed';ids:readonly number[];names:readonly string[];minimumValue:number;maximumValue:number;radius:number;maximumUnits:number;cap:number;idleTicks:number}
-export interface LootDefinition{cost:number;stackable:boolean}
+import {lootCapacity,lootMatches,validLootFilters,type LootPolicy,type LootDefinition} from '../packages/core/src/loot-policy';
+export {lootCapacity,type LootPolicy,type LootDefinition} from '../packages/core/src/loot-policy';
 const stock=(s:BotWorldState)=>{const n:Record<number,number>={};for(const i of s.inventory)n[i.id]=(n[i.id]??0)+i.count;return n;};
 const hp=(s:BotWorldState)=>s.skills.find(k=>k.name==='Hitpoints')?.level??0;
-export function lootCapacity(s:BotWorldState,i:GroundItem,definition:LootDefinition){
- const held=stock(s)[i.id]??0,free=28-s.inventory.length;
- return definition.stackable?(held>0||free>=1)&&held+i.count<=2147483647:free>=i.count;
-}
 export function selectGroundLoot(s:BotWorldState,p:LootPolicy,definition:(id:number)=>LootDefinition|undefined,left=p.maximumUnits){
  return s.groundItems.flatMap(i=>{
   // Native pickup addresses the tile and item ID. Differently sized stacks
   // at that address cannot be selected individually or bounded by this row.
   if(s.groundItems.some(other=>other.id===i.id&&other.x===i.x&&other.z===i.z&&other.count!==i.count))return[];
   const d=definition(i.id);if(!d||!Number.isSafeInteger(i.count)||i.count<1||i.count>left||!Number.isSafeInteger(d.cost)||d.cost<0||!Number.isSafeInteger(i.count*d.cost)||i.reachable===false||i.distance>p.radius||!lootCapacity(s,i,d)||s.nearbyPlayers.some(player=>Math.max(Math.abs(player.x-i.x),Math.abs(player.z-i.z))<=1))return[];
-  const listed=p.ids.includes(i.id)||p.names.some(name=>name.toLowerCase()===i.name.toLowerCase()),value=i.count*d.cost,valued=value>=p.minimumValue&&value<=p.maximumValue;
-  return(p.mode==='list'?listed:p.mode==='value'?valued:listed||valued)?[{item:i,value}]:[];
+  return lootMatches(i,p,d)?[{item:i,value:i.count*d.cost}]:[];
  }).sort((a,b)=>b.value-a.value||a.item.distance-b.item.distance)[0];
 }
 export function groundLootEffect(before:BotWorldState,after:BotWorldState,item:GroundItem){
@@ -31,7 +26,7 @@ export function groundLootEffect(before:BotWorldState,after:BotWorldState,item:G
 }
 export interface LootDriver{state:()=>BotWorldState|null;tick:()=>number;stop:()=>boolean;definition:(id:number)=>LootDefinition|undefined;pickup:(i:GroundItem)=>Promise<boolean>;wait:(test:()=>boolean,ticks:number)=>Promise<boolean>;step:()=>Promise<void>;clearModal?:()=>Promise<void>}
 export async function runVisibleGroundLoot(d:LootDriver,p:LootPolicy){
- if(!['list','value','mixed'].includes(p.mode)||![p.maximumUnits,p.cap,p.idleTicks,p.radius].every(n=>Number.isSafeInteger(n)&&n>0)||p.radius>12||!Number.isSafeInteger(p.minimumValue)||p.minimumValue<0||!Number.isSafeInteger(p.maximumValue)||p.maximumValue<p.minimumValue||p.ids.some(id=>!Number.isSafeInteger(id)||id<0)||p.mode==='list'&&!p.ids.length&&!p.names.length)throw Error('invalid finite ground-loot policy');
+ if(!validLootFilters(p)||![p.maximumUnits,p.cap,p.idleTicks,p.radius].every(n=>Number.isSafeInteger(n)&&n>0)||p.radius>12||!Number.isSafeInteger(p.minimumValue)||p.minimumValue<0||!Number.isSafeInteger(p.maximumValue)||p.maximumValue<p.minimumValue)throw Error('invalid finite ground-loot policy');
  const initial=d.state();if(!initial?.player||hp(initial)<1)throw Error('ground-loot state unknown');const start=d.tick();let units=0,pickups=0,staticValue=0,progress=start;const acquired:Record<number,number>={};
  const kit=JSON.stringify(initial.equipment.map(i=>({id:i.id,slot:i.slot,count:i.count})).sort((a,b)=>a.slot-b.slot));
  const state=()=>{const s=d.state();if(!s?.player)throw Error('ground-loot session ended');if(d.stop())throw Error('ground-loot stopped');if(d.tick()-start>=p.cap)throw Error('ground-loot cap');if(s.player.lifeId!==initial.player!.lifeId||s.player.level!==initial.player!.level||s.player.isDead||hp(s)!==hp(initial)||Math.max(Math.abs(s.player.worldX-initial.player!.worldX),Math.abs(s.player.worldZ-initial.player!.worldZ))>p.radius)throw Error('ground-loot health, life or area changed');if(JSON.stringify(s.equipment.map(i=>({id:i.id,slot:i.slot,count:i.count})).sort((a,b)=>a.slot-b.slot))!==kit)throw Error('ground-loot equipment changed');return s;};
@@ -52,6 +47,7 @@ export async function runVisibleGroundLoot(d:LootDriver,p:LootPolicy){
 if(import.meta.main){
  const name=process.argv[2];if(!name)throw Error('account required');
  const p:LootPolicy={mode:(process.env.LOOT_MODE??'list') as LootPolicy['mode'],ids:(process.env.LOOT_IDS??'').split(',').filter(Boolean).map(Number),names:(process.env.LOOT_NAMES??'').split(',').map(n=>n.trim()).filter(Boolean),minimumValue:Number(process.env.MIN_VALUE??1),maximumValue:Number(process.env.MAX_VALUE??2147483647),radius:Number(process.env.RADIUS??2),maximumUnits:Number(process.env.MAX_UNITS??1),cap:Number(process.env.CAP??200),idleTicks:Number(process.env.IDLE_TICKS??80)};
+ p.nameGlobs=(process.env.LOOT_NAME_GLOBS??'').split(',').map(n=>n.trim()).filter(Boolean);p.ignoredIds=(process.env.LOOT_IGNORE_IDS??'').split(',').filter(Boolean).map(Number);p.ignoredNames=(process.env.LOOT_IGNORE_NAMES??'').split(',').map(n=>n.trim()).filter(Boolean);p.ignoredNameGlobs=(process.env.LOOT_IGNORE_NAME_GLOBS??'').split(',').map(n=>n.trim()).filter(Boolean);
  const s=await openBot(name).catch(e=>finish([],false,`login: ${String(e)}`));let ended=false;void s.ended.then(()=>{ended=true;});
  const client=s.client as {objType?:(id:number)=>{cost:number;stackable:boolean}};
  try{const result=await runVisibleGroundLoot({state:()=>s.sdk.getState(),tick:()=>s.tick(),stop:()=>ended||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all'),definition:id=>{const d=client.objType?.(id);return d&&typeof d.stackable==='boolean'?{cost:d.cost,stackable:d.stackable}:undefined;},pickup:async i=>(await s.sdk.sendPickup(i.x,i.z,i.id)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),clearModal:async()=>{await s.sdk.sendCloseModal();}},p);await finish([s],true,JSON.stringify(result));}catch(e){await finish([s],false,String(e));}

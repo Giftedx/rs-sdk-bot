@@ -1,5 +1,27 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, castableFreeze, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, castableFreeze, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+
+test('roam pickup joins one native stack without eating combat food',async()=>{
+ const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;
+ const s:any={client:{objType:()=>({stackable:true})},sdk:{getInventory:()=>inventory,getState:()=>({groundItems:ground})},bot:{eatFood:async()=>{eaten++;return{success:false};},pickupItem:async()=>{inventory[0]!.count+=5;return{success:true};}}};
+ const stats={loot:[]as string[],lootValue:0};expect(await lootAt(s,{x:1,z:1},{value:async()=>1000,min:1000,stats,emit:()=>{}})).toBe(5000);expect(eaten).toBe(0);expect(stats.lootValue).toBe(5000);
+});
+test('roam pickup skips unknown metadata and a food action with no observed room',async()=>{
+ const inventory=Array.from({length:28},(_,slot)=>({id:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));let picked=0,eaten=0;
+ const s:any={client:{objType:()=>undefined},sdk:{getInventory:()=>inventory,getState:()=>({groundItems:[{id:1215,name:'Dragon dagger',count:1,x:1,z:1}]})},bot:{eatFood:async()=>{eaten++;return{success:true};},pickupItem:async()=>{picked++;return{success:true};}}};
+ const ctx={value:async()=>30000,min:1000,stats:{loot:[]as string[],lootValue:0},emit:()=>{}};
+ expect(await lootAt(s,{x:1,z:1},ctx)).toBe(0);expect(eaten).toBe(0);expect(picked).toBe(0);
+ s.client.objType=()=>({stackable:false});expect(await lootAt(s,{x:1,z:1},ctx)).toBe(0);expect(picked).toBe(0);
+});
+
+test.each([1,2])('roam pickup reconciles exactly one food debit (observed %i)',async(debit)=>{
+ const inventory=Array.from({length:28},(_,slot)=>({id:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));let picked=0;
+ const s:any={client:{objType:()=>({stackable:false})},sdk:{getInventory:()=>inventory,getState:()=>({groundItems:[{id:1215,name:'Dragon dagger',count:1,x:1,z:1}]})},bot:{eatFood:async()=>{inventory.splice(0,debit);return{success:true};},pickupItem:async()=>{picked++;inventory.push({id:1215,slot:0,count:1,optionsWithIndex:[]});return{success:true};}}};
+ const stats={loot:[]as string[],lootValue:0};
+ expect(await lootAt(s,{x:1,z:1},{value:async()=>30000,min:1000,stats,emit:()=>{}})).toBe(debit===1?30000:0);
+ expect(picked).toBe(debit===1?1:0);
+ expect(stats.lootValue).toBe(debit===1?30000:0);
+});
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
