@@ -33,12 +33,12 @@ function queue(){
 }
 
 test('Account linked jobs select the same open-first recent five from native and hosted task order',()=>{
- const native=queue(),original=native.coordination.tasks.map(task=>task.id),hosted=controlView(native,{});
+ const native=queue(),original=native.coordination.tasks.map((task:{id:string})=>task.id),hosted=controlView(native,{});
  const expected=['waiting-new','running-current','waiting-old','finish-newest','finish-new-a'];
  expect(taskIds(accountHtml(native))).toEqual(expected);
  expect(taskIds(accountHtml(hosted))).toEqual(expected);
  expect(taskIds(accountHtml({...native,coordination:{...native.coordination,tasks:[...native.coordination.tasks].reverse()}}))).toEqual(expected);
- expect(native.coordination.tasks.map(task=>task.id)).toEqual(original);
+ expect(native.coordination.tasks.map((task:{id:string})=>task.id)).toEqual(original);
  const publicHtml=accountHtml(hosted,{name:'Worker'},false);
  expect(publicHtml).not.toContain('Linked jobs');expect(taskIds(publicHtml)).toEqual([]);
 });
