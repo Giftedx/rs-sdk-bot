@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794821324960-mmsmk1232-nabtheknob-staffoffire",
+ "account": "mmsmk1232",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "e2c6ccea-74f2-4470-8ec1-6d48ab117a2b",
+ "count": 0,
+ "ok": false,
+ "at": 1794821373847,
+ "detail": "trade claimed"
+}
