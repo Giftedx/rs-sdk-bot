@@ -1,0 +1,23 @@
+{
+ "id": "1794819746679-oreelse-woodpecker-a331dde1ed0b8ac4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Woodpecker",
+ "item": "Uncut sapphire",
+ "count": 1,
+ "start": 1794819746679,
+ "end": 1794822146679,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
