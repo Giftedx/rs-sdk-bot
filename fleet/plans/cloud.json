@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794855639668,
+ "at": 1794855999220,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -94,7 +94,7 @@
     "TICK_RECORD": "1",
     "ROUNDS": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
    "goal": "finite bank entry and fresh FullLoad holdings for remaining Overall route supplies; no purchase or transfer",
    "role": "inspect"
