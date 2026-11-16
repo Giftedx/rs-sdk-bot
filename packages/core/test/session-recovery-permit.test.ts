@@ -24,7 +24,9 @@ if(process.env.HOST_RECOVERY_FIXTURE==='1')test('qualified cross-host fixture bo
  const f=fixture(),git=(...args:string[])=>execFileSync('git',args,{cwd:f.base,encoding:'utf8',stdio:'pipe',windowsHide:true}).trim();
  try{
   const remote=join(f.base,'private-origin.git');git('init','--bare',remote);git('init');git('remote','add','origin',remote);
-  const authority=fleetGitWindow(f.base),tree=authority(['hash-object','-w','-t','tree','--stdin'],'');
+  // The matrix performs independent Git operations; do not share a spent authority
+  // deadline across the whole Windows fixture. Production admission budgets stay unchanged.
+  const authority=(args:string[],input?:string)=>fleetGitWindow(f.base)(args,input),tree=authority(['hash-object','-w','-t','tree','--stdin'],'');
   const append=(ref:string,body:unknown)=>{const prior=authority(['ls-remote','--refs','origin',ref]).split(/\s/)[0]||undefined;const head=commitFleetGitRecord(authority,prior,tree,(ref.includes('fleet-trade-claim/')?'Fixture claim\n\n':'')+JSON.stringify(body));pushFleetGitRecord(authority,ref,head);return head;};
   const nonce=randomUUID(),old=beginSessionAttempt({account:'Rod',server:'rs-sdk-demo.fly.dev',secret:'unit-fixture'}, {root:join(f.base,'.practice/session-lifecycle'),owner:{...lifecycleOwner(),pid:process.pid,sharedClaimNonce:nonce},now:Date.now});
   old.record('connect-failed','unit fixture; no network');
