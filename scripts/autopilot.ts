@@ -202,7 +202,8 @@ export function unfilledItems(lines: readonly string[]): number[] {
 // quantity and observed-stock fingerprint until its terminal result. The pass leaves these jobs as they are.
 export function kitBuyRunning(job: any, assigned: { template: string; offset: number } | undefined, linesSince: (offset: number) => readonly string[],finiteMaker=false): boolean {
     if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY)&&!finiteMaker) || !assigned || assigned.template !== job.template) return false;
-    const r = assess(linesSince(assigned.offset));
+    const lines=linesSince(assigned.offset);
+    const r = assess(finiteMaker?lines.filter(l=>l.startsWith('RESULT ')):lines);
     return r.ok + r.fail + r.drains === 0;
 }
 // The accounts whose last session has no confirmed logout (session-lifecycle `held`), in lower case. Such an account

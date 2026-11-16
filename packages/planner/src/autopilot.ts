@@ -779,14 +779,21 @@ export function plan(inp: Inputs): Assignment[] {
         // fundOrders parks the intended worker until this one owned transfer settles.
         if(c.coins){
             if(busy||far)return;
-            const obtainable=(item:string,count:number)=>!!c.template.ownSupply?.includes(item)||!c.template.shopKit&&!!inp.market?.[item]||reachesMeet(c.account)&&!!donorFor(item,count);
+            const mountain=inp.mountain?.(a)??true,toMeet=wayCost(a.pos,ARMY_BANK,mountain),fromMeet=wayCost(ARMY_BANK,placeOf(c.template),mountain);
+            // The cash transfer precedes the item trip. Its recipient can use that staged cash for the meeting
+            // fare, and must still retain the consumer's cash and return fare after the item arrives.
+            const canMeet=toMeet!==null&&fromMeet!==null;
+            const obtainable=(item:string,count:number)=>!!c.template.ownSupply?.includes(item)||!c.template.shopKit&&!!inp.market?.[item]||canMeet&&!!donorFor(item,count);
             const lacks=kitLacks(a,c.template.needs,obtainable);
             if(!lacks||lacks.some(l=>!l.of.some(item=>obtainable(item,l.count))))return;
-            const from=[...pool].filter(([name,left])=>!done.has(name)&&!gaveItems.has(name)&&left>=c.coins!&&canGiveCoins(name,c.account)).sort((x,y)=>y[1]-x[1])[0]?.[0];
+            const owned=canMeet&&lacks.some(l=>l.of.some(item=>!!donorFor(item,l.count)));
+            const detour=a.pos&&owned?Math.max(0,toMeet!+fromMeet!-(wayCost(a.pos,placeOf(c.template),mountain)??0)):0;
+            const coins=c.coins+detour;
+            const from=[...pool].filter(([name,left])=>!done.has(name)&&!gaveItems.has(name)&&left>=coins&&canGiveCoins(name,c.account)).sort((x,y)=>y[1]-x[1])[0]?.[0];
             if(!from)return;
-            pool.set(from,pool.get(from)!-c.coins);gave.add(from);pool.delete(c.account);
-            done.set(c.account,{account:c.account,template:c.template,value:0,reason:`funds ${c.coins} coins before preparing ${c.template.id}`,resources:[],
-                fund:{from,to:c.account,coins:c.coins,template:c.template.id,...(meetOf.get(c.account)?{meet:'ardougne' as const}:{})}});
+            pool.set(from,pool.get(from)!-coins);gave.add(from);pool.delete(c.account);
+            done.set(c.account,{account:c.account,template:c.template,value:0,reason:`funds ${coins} coins before preparing ${c.template.id}`,resources:[],
+                fund:{from,to:c.account,coins,template:c.template.id,...(meetOf.get(c.account)?{meet:'ardougne' as const}:{})}});
             return;
         }
         if (step === 'buy' && c.template.shopKit) return;
@@ -937,7 +944,9 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
     const watched = new Map(templates.filter(t => t.trains || t.quest || t.production).map(t => [t.id,t]));
     return jobs.filter(j => {
         if(j?.autopilot!==side||typeof j.account!=='string'||!watched.has(j.template)||assigned[j.account]?.template!==j.template)return false;
-        const result=assess(linesSince(j.account,assigned[j.account]!.offset,j));
+        const lines=linesSince(j.account,assigned[j.account]!.offset,j);
+        // runChild indents chain steps; only the outer job's column-zero RESULT settles a finite maker.
+        const result=assess(watched.get(j.template)!.production?lines.filter(l=>l.startsWith('RESULT ')):lines);
         return watched.get(j.template)!.production?result.ok+result.fail+result.drains>0:result.ok>0;
     }).map(j=>j.account);
 }

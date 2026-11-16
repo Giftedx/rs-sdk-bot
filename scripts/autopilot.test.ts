@@ -98,6 +98,23 @@ test('finite maker polling and preservation ignore stale, foreign and incomplete
         expect(kitBuyRunning(job,assigned,read,true)).toBe(false);expect(poll()).toEqual(['Crafter']);
     }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('finite maker chains remain pending until their outer result after indented child results',()=>{
+    const t=makerChains().find(t=>t.id==='make-uncooked-stew')!,side='local';
+    const job=jobFor({account:'Cook',template:t,value:1,reason:'useful stew',resources:[]},side);
+    const dir=mkdtempSync(join(tmpdir(),'autopilot-finite-chain-')),log=join(dir,'account.log'),assigned={template:t.id,offset:0};
+    try{
+        const read=(offset:number)=>readJobResultLines(log,offset,job);
+        const poll=()=>finishedTrainers([job],side,{Cook:assigned},[t],(_a,offset,active)=>readJobResultLines(log,offset,active));
+        for(const outcome of ['ok','fail']){
+            writeFileSync(log,jobLogStart(job)+`  | RESULT ${outcome} prepare potato-stew\nCHAIN round=1 scripts/aio.ts ${outcome}\n`);
+            expect(read(0)).toContain(`  | RESULT ${outcome} prepare potato-stew`);
+            expect(kitBuyRunning(job,assigned,read,true)).toBe(true);expect(poll()).toEqual([]);
+            appendFileSync(log,`RESULT ${outcome} chain rounds=1 ok=1 failed=${outcome==='ok'?0:1}\n`);
+            expect(kitBuyRunning(job,assigned,read,true)).toBe(false);expect(poll()).toEqual(['Cook']);
+        }
+    }finally{rmSync(dir,{recursive:true,force:true});}
+});
 import { sideCard } from './fleet-sync';
 
 const side = 'claude-cloud';

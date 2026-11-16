@@ -2058,7 +2058,7 @@ test('the halberd build trains Thieving and Agility, then takes Underground Pass
     expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
 });
 
-import { FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
+import { ARMY_BANK, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
 
 const TAVERLEY = { x: 2877, z: 3501, level: 0 }, DRAYNOR = { x: 3092, z: 3242, level: 0 }, ARDOUGNE = { x: 2654, z: 3283, level: 0 }, SEERS = { x: 2727, z: 3493, level: 0 };
 const MUSA_POINT = { x: 2920, z: 3160, level: 0 }, TUTORIAL = { x: 3094, z: 3106, level: 0 }, TOLL_SIDE = { x: 3269, z: 3164, level: 0 };
@@ -2304,4 +2304,22 @@ test('market preparation retains the consumer fare and cash buffer without addin
         expect(buy.template!.args![0]).toContain('QUANTITY=50');
         expect(buy.template!.args![0]).toContain(`CASH_RESERVE=${KIT_CASH_RESERVE+15000}`);
     }
+});
+
+test('cash-first local item staging funds the known meeting trip and the consumer return fare',()=>{
+    const t=catalogue().find(t=>t.id==='army-staff-zaff')!,varrock={x:3185,z:3436,level:0},bank={...ARMY_BANK,level:0};
+    const caster={...acct('Caster',{Magic:30},{feather:50}),pos:varrock};
+    const mule={...acct('RuneMule',{}, {'nature rune':100}),pos:bank};
+    const extra:Partial<Inputs>={templates:[t],army:new Set(['caster']),pilots:new Set([t.id]),bill:[],market:{},
+        donors:[{name:'CashMule',coins:100000}],stock:[{name:mule.name,side,items:mule.items}]};
+    const run=(a:Acct)=>plan(inputs([a,mule],extra)).find(x=>x.account===a.name)!;
+    expect(wayCost(varrock,bank,true)).toBe(60);expect(wayCost(bank,placeOf(t),true)).toBe(60);
+    const cash=run(caster);expect(cash.fund).toMatchObject({coins:15120,template:t.id});expect(cash.send).toBeUndefined();
+    const funded={...caster,items:{...caster.items,coin:15120}};
+    expect(run(funded).send).toMatchObject({from:mule.name,to:caster.name,item:'nature rune',count:50});
+    const arrived={...funded,pos:bank,items:{...funded.items,coin:15060,'nature rune':50}};
+    const ready=run(arrived);expect(ready.template!.id).toBe(t.id);
+    expect(ready.template!.needs!.items!.coins).toBe(15060);expect(ready.fund).toBeUndefined();expect(ready.send).toBeUndefined();
+    const held=plan(inputs([caster,mule],{...extra,unfundable:new Set(['caster']),current:new Map([['caster',t.id]]),running:new Set(['caster'])})).find(x=>x.account===caster.name)!;
+    expect(held.fund).toBeUndefined();expect(held.send).toBeUndefined();
 });
