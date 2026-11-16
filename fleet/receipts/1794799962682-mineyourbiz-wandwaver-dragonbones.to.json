@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794799962682-mineyourbiz-wandwaver-dragonbones",
+ "account": "Wandwaver",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 24,
+ "claim": "a9830ab1-531e-443d-9ce3-608c1e93fab6",
+ "count": 0,
+ "ok": false,
+ "at": 1794800412642,
+ "detail": "trade claimed"
+}
