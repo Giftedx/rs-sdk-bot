@@ -10,7 +10,8 @@ import {capabilityRevision} from '../packages/core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
 
 test('stock-only native continuation disables arrow buying without reducing admission or target checks',()=>{
- const c=rangedChildConfiguration('fixture');expect(c.env.BUY_ARROWS).toBe('0');expect(c.env.COIN_RESERVE).toBe('400000');
+ const c=rangedChildConfiguration('fixture',{LOOT_WATCH:'1'});expect(c.env.BUY_ARROWS).toBe('0');expect(c.env.COIN_RESERVE).toBe('400000');
+ expect(c.env.LOOT_WATCH).toBe('0');
  expect(c.cmd.slice(-2)).toEqual(['71','10000']);expect(c.env.KILLS_PER_TRIP).toBe('8');
 });
 test('native Ranged proof binds its actual worker closure and owned files',()=>{
@@ -114,16 +115,41 @@ test('the recovery walk plans with no Magic, items, worn gear or coins, so it ca
  const w=recoveryWalker({skills:{magic:55,ranged:70},varps:{a:1},items:['law_rune'],counts:{law_rune:9},worn:['staff_of_air'],coins:90000});
  expect(w).toEqual({skills:{magic:0,ranged:70},varps:{a:1},items:[],counts:{},worn:[],coins:0});
 });
-function recoverySession(){
+function recoverySession(position={worldX:3236,worldZ:3296,level:0},arrowId=884){
  const client={};setEquipmentObserved(client,true);
  let tick=0;const callbacks=new Set<()=>void>(),unequipped:number[]=[];
- const equipment=[{id:841,name:'Shortbow',count:1},{id:884,name:'Iron arrow',count:50}];
+ const equipment=[{id:841,name:'Shortbow',count:1},{id:arrowId,name:'Arrow',count:50}];
  const s={name:'unit',client,tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>{callbacks.delete(cb);};},
-  sdk:{getState:()=>({player:{worldX:3236,worldZ:3296,level:0}}),getEquipment:()=>equipment},
+  sdk:{getState:()=>({player:position}),getEquipment:()=>equipment},
   bot:{unequipItem:async(i:{id:number})=>{unequipped.push(i.id);equipment.splice(equipment.findIndex(e=>e.id===i.id),1);}}};
  const timer=setInterval(()=>{tick++;for(const cb of [...callbacks])cb();},1);
  return{s:s as unknown as Session,unequipped,stop:()=>clearInterval(timer)};
 }
+test('Ardougne bank recovery observes worn bow and quiver removal without unfunded travel',async()=>{
+ const position={worldX:2618,worldZ:3332,level:0};
+ const go=spyOn(walking,'goTo').mockImplementation(async()=>{throw Error('recovery travel before bank funding');});
+ try{
+  expect(rangedEntry(position)).toEqual({x:2619,z:3332});
+  expect(rangedEntry({...position,level:1})).toBeNull();
+  expect(rangedEntry({...position,worldX:2612})).toBeNull();
+  for(const observed of [true,false]){
+   const f=recoverySession(position,882);
+   const unequip=observed?undefined:spyOn(f.s.bot,'unequipItem').mockImplementation(async()=>({success:true} as any));
+   try{
+    expect(f.s.sdk.getEquipment().map(i=>i.id)).toEqual([841,882]);
+    if(observed){
+     expect(await recoverRangedStart(f.s)).toEqual({from:{x:2618,z:3332,level:0},stopped:false});
+     expect(f.unequipped).toEqual([841,882]);expect(f.s.sdk.getEquipment()).toEqual([]);
+    }else{
+     await expect(recoverRangedStart(f.s)).rejects.toThrow('ranged-train recovery unequip unobserved 841');
+     expect(f.s.sdk.getEquipment().map(i=>i.id)).toEqual([841,882]);
+    }
+    expect(go).not.toHaveBeenCalled();expect(f.s.sdk.getState()!.player).toMatchObject(position);
+   }finally{unequip?.mockRestore();f.stop();}
+  }
+ }finally{go.mockRestore();}
+});
+
 test('a stop before recovery starts no route and leaves the kit worn',async()=>{
  const f=recoverySession(),go=spyOn(walking,'goTo').mockImplementation(async()=>({ok:true} as any));
  try{const r=await recoverRangedStart(f.s,()=>true);expect(r).toEqual({from:{x:3236,z:3296,level:0},stopped:true});expect(go).not.toHaveBeenCalled();expect(f.unequipped).toEqual([]);}

@@ -94,8 +94,8 @@ export function presetFor(quest:string):SaveConfig&{position:Tile}{
 export const FOOD=new Set([329,333,361,365,373,379,385,1891,1893,1895,2309,554,555,556,557,563]),COINS=995;
 // A quest whose own item is on the food list: Merlin's Crystal hands its bread to the beggar for Excalibur.
 export const QUEST_ITEMS_AMONG_FOOD:Record<string,number[]>={merlin:[2309]};
-// A preset's protective supply that no quest script uses and no shop sells (Scorpion Catcher's antipoison, 2446): the
-// sweep neither needs nor withdraws it; an account that holds one keeps it as any other pack item.
+// Scorpion chooses an owned antipoison dose after reading the bank, or buys one stocked three-dose bottle.
+// Its preset's four-dose bottle does not require that exact form.
 export const OPTIONAL=new Set([2446]);
 export function needs(preset:SaveConfig,food=false,quest=''):Map<number,number>{
  const m=new Map<number,number>(),own=new Set(QUEST_ITEMS_AMONG_FOOD[quest]??[]);
@@ -214,9 +214,15 @@ export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={
 // row: Ape Atoll took 18 sips and the demon 3 (NOTE atoll ... potions=18, RESULT ... potions=3 prayerLeft=16), so
 // 43 + 21 x 17 - 16 = 384 points, which no base Prayer covers.
 export const PRAYER_USED:Record<string,number>={tree:64,grandtree:47,arena:7},PRAYER_MARGIN=15,PRAYER_POTIONS=[2434,139,141,143];
-// The generated quests drink any antipoison dose they hold (quest-mm.ts ANTIPOISON), and no shop sells one: a preset's
-// antipoison goes with the food rows, taken when the bank holds it and never a missing item.
+// Monkey Madness takes its preset's antipoison when owned. Scorpion requires an owned dose or one shop bottle.
 export const ANTIPOISONS=[2448,181,183,185,175,177,179];
+export function scorpionAntipoisonNeeds(base:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[]):Map<number,number>{
+ const need=new Map(base),doses=[...ANTIPOISONS,2446];
+ for(const id of doses)need.delete(id);
+ const owned=(rows:readonly Item[])=>doses.find(id=>count(rows,id)>0);
+ need.set(owned(pack)??owned(bank)??175,1);
+ return need;
+}
 // Items a quest script gets for itself when the account holds none, so they go with the food rows too: Monkey Madness
 // kills a Karamja monkey by the Gandius glider for its bones (quest-mm.ts monkeyBones).
 export const QUEST_FINDS:Record<string,readonly number[]>={mm:[3183]};
@@ -664,6 +670,8 @@ export function heckelIO(s:Session,world:World):HeckelIO{
 // rs-sdk collision and clicks straight on where that plan is empty. Only the last tile's tolerance is checked.
 type Pt=[number,number,number];
 export const KARAMJA:Pt[]=[[2774,3228,3],[2800,3200,5],[2850,3175,5],[2920,3160,5],[2956,3146,3]];
+const JIMINUA:Tile={x:2767,z:3122,level:0};
+const JIMINUA_FROM_BRIMHAVEN:Pt[]=[[2774,3228,2],[2800,3200,3],[2790,3160,3],[JIMINUA.x,JIMINUA.z,2]];
 // SARIM_TO_DRAYNOR's first legs, then LUMBRIDGE_TO_DRAYNOR reversed: north of the jail guards.
 export const SARIM_NORTH:Pt[]=[[3047,3237,3],[3060,3265,3],[3089,3266,2],[3100,3285,3],[3180,3258,3]];
 export async function walkCorridor(deps:PathDeps,points:readonly Pt[],walk:typeof walkPath=walkPath){
@@ -797,7 +805,16 @@ export const mountainClosed=(acct:Pick<Account,'skills'>,hunters=loadHunters())=
 // back through Ardougne and the boats. A stronger account at Catherby walks the pass.
 export const eastOfArdougne=(from:Tile,to:Tile,acct?:Pick<Account,'skills'>)=>from.level===0&&from.z>=3270&&(from.x<2800||from.x<2860&&!!acct&&mountainClosed(acct))&&(to.x>=2950||!!acct&&TAVERLEY_SIDE(to)&&mountainClosed(acct));
 export const BOAT_FARES=60;
-export const fares=(from:Tile,targets:readonly Tile[],acct?:Pick<Account,'skills'>)=>targets.some(t=>eastOfArdougne(from,t,acct))?BOAT_FARES:0;
+// This exception buys one required cure from its pinned keeper. Other distant sellers keep FAR_SELLER.
+function scorpionCureJourney(from:Tile,b:Pick<Buy,'id'|'count'|'npcId'|'tile'>):'sarim'|'ardougne'|null{
+ if(b.id!==175||b.count!==1||b.npcId!==560||b.tile.level!==0||b.tile.x!==JIMINUA.x||b.tile.z!==JIMINUA.z||from.level!==0)return null;
+ if(from.x>=3150&&from.x<=3260&&from.z>=3380&&from.z<=3500)return 'sarim';
+ if(from.x>=2540&&from.x<=2630&&from.z>=3070&&from.z<=3110)return 'ardougne';
+ if(from.x===2655&&from.z===3283)return 'ardougne';
+ return null;
+}
+export const fares=(from:Tile,targets:readonly Tile[],acct?:Pick<Account,'skills'>,scorpionBuys:readonly Buy[]=[])=>
+ (targets.some(t=>eastOfArdougne(from,t,acct))?BOAT_FARES:0)+(scorpionBuys.some(b=>scorpionCureJourney(from,b))?BOAT_FARES:0);
 // The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
 export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
 // Keepers with no Trade option: the shop opens through their talk (area_yanille/scripts/ogre_merchant.rs2: "Yes I do."
@@ -840,12 +857,14 @@ export const eastOfPass=(at:Tile,acct:Pick<Account,'skills'>)=>at.level===0&&at.
 export const OBSERVATORY_FROM_ARDOUGNE:Pt[]=[[2657,3275,2],[2626,3260,2],[2588,3243,2],[2549,3230,2],[2527,3240,2],[2501,3228,2],[2481,3204,2],[2466,3180,2],[2456,3167,2]];
 export async function reachStart(s:Session,world:World,start:Tile,quest?:string,walker=()=>sessionWalker(s),route=walkRoute,acct=():Pick<Account,'skills'>=>accountOf(s)){
  const p=s.sdk.getState()?.player;
+ const cure=quest==='scorpion'?scorpionCureJourney(at(s),{id:175,count:1,npcId:560,tile:start}):null;
+ const cureReturn=quest==='scorpion'&&p?.level===0&&cheb(at(s),JIMINUA)<=8&&cheb(start,JIMINUA)>8;
  const totemMainland=quest==='totem'&&p?.level===0&&p.worldX<2745&&p.worldZ>=3200;
  const observatoryEast=quest==='itgronigen'&&!!p&&start.level===0&&eastOfPass({x:p.worldX,z:p.worldZ,level:p.level},acct());
  // The mainland-to-tower whole-world bank comparison waits before the first walk leg;
  // legTimeoutTicks cannot bound that planner. Reuse the courier's two boats and corridors.
- if(totemMainland||observatoryEast||quest==='cog'&&p?.level===0&&p.worldX>=2950&&p.worldZ<3500&&start.level===0){
-  const fares=totemMainland?90:60,label=totemMainland?'Tribal Totem':observatoryEast?'Observatory':'Clock Tower';
+ if(cure||cureReturn||totemMainland||observatoryEast||quest==='cog'&&p?.level===0&&p.worldX>=2950&&p.worldZ<3500&&start.level===0){
+  const fares=totemMainland?90:cureReturn?30:60,label=cure||cureReturn?'Scorpion antipoison':totemMainland?'Tribal Totem':observatoryEast?'Observatory':'Clock Tower';
   if(count(s.sdk.getState()?.inventory??[],COINS)<fares)throw Error(`missing 995:${fares} for ${label} boat route`);
   const deps=await walker(),deadline=s.tick()+(observatoryEast?2700:1800);
   const near=(point:{x:number;z:number},tol:number)=>{const at=deps.pos();return !!at&&at.level===0&&Math.max(Math.abs(at.x-point.x),Math.abs(at.z-point.z))<=tol;};
@@ -859,10 +878,31 @@ export async function reachStart(s:Session,world:World,start:Tile,quest?:string,
    const t=loadTravel().find(t=>t.id===id);
    if(!t?.from||!near(t.from,8))throw Error(`${label} boat approach unobserved: ${id}`);
    if(s.tick()>=deadline)throw Error(`${label} entry deadline`);
+   const coins=count(s.sdk.getState()?.inventory??[],COINS);
    const r=await route(s,[{kind:'travel',travel:t,at:t.from,to:t.to}],{maxRetriesPerLeg:1,legTimeoutTicks:150});
-   if(!r.ok||!near(t.to,8))throw Error(`${label} boat failed: ${id} ${r.ok?'arrival unobserved':r.detail}`);
+   const observed=()=>near(t.to,8)&&(!(cure||cureReturn)||count(s.sdk.getState()?.inventory??[],COINS)===coins-t.coins);
+   if(!r.ok||!await waitUntil(s,observed,{timeoutTicks:10}))throw Error(`${label} boat failed: ${id} ${r.ok?'arrival/fare unobserved':r.detail}`);
    console.log(`QUEST_SWEEP_BOAT ${JSON.stringify({id,coins:t.coins})}`);
   };
+  if(cure){
+   if(cure==='sarim'){
+    await corridor([[SARIM_LANDING.x,SARIM_LANDING.z,2]]);
+    await sail('npc:captain_tobias:karamja-musa-point@3028,3216');
+    await corridor([...KARAMJA].reverse());
+   }else{
+    await corridor([[2644,3293,2],[2669,3284,2],[2679,3275,2]]);
+    await sail('npc:captain_barnaby:brimhaven@2679,3275');
+   }
+   await corridor(JIMINUA_FROM_BRIMHAVEN);
+   return;
+  }
+  if(cureReturn){
+   await corridor([...JIMINUA_FROM_BRIMHAVEN].reverse().concat([[2772,3231,2]]));
+   await sail('npc:customs_officer:ardougne@2772,3231');
+   // The remaining tower approach keeps the shared walker's ladders and optional teleport handling.
+   if(start.level!==0||!near(start,8))await reachStart(s,world,start,undefined,walker,route,acct);
+   return;
+  }
   if(totemMainland){
    await corridor([[2644,3293,2],[2669,3284,2],[2679,3275,2]]);
    await sail('npc:captain_barnaby:brimhaven@2679,3275');
@@ -1005,7 +1045,7 @@ export async function enterMagicGuild(s:Session,world:World,door:Tile,walk:(s:Se
 }
 
 // Walk to each seller, open its shop and buy. Ok when the pack holds the bought counts.
-async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<string|null>{
+export async function buyFromShops(s:Session,world:World,buys:readonly Buy[],observeScorpionTravel=false,approach=reachStart):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
  // Purchases go nearest seller first from wherever the bot stands (onions from Hudo in the Gnome Stronghold before
  // redberries from Wydin in Port Sarim, from Ardougne), so a walk east by boat is not followed by a walk back west.
@@ -1020,15 +1060,19 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
   for(const [k,c] of sellers.entries()){
    if(held(b.id)>=target)break;
    // A seller across the sea or the map is not worth the search: the sweep fails fast and the shortfall is acquisition work.
-   if(travelDistance(here(),c.tile)>FAR_SELLER){console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({npc:c.npc,tile:c.tile,from:here()})}`);continue;}
+   const cure=observeScorpionTravel&&scorpionCureJourney(here(),{...b,...c});
+   if(!cure&&travelDistance(here(),c.tile)>FAR_SELLER){console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({npc:c.npc,tile:c.tile,from:here()})}`);continue;}
    const guild=magicGuildApproach(c.tile,here(),s.sdk.getSkill('Magic')?.level??1);
    if(guild.refused||guild.door){
     walked=guild.door?await enterMagicGuild(s,world,guild.door):{ok:false,reason:'precondition',detail:guild.refused};
     console.log(`QUEST_SWEEP_GUILD ${JSON.stringify({npc:c.npc,door:guild.door,at:here(),...walked})}`);
     if(!walked.ok)continue;
    }
-   walked=await walkFar(s,world,c.tile,100);
+   const coinsBeforeTravel=held(COINS),from=here();
+   if(cure){await approach(s,world,c.tile,'scorpion');walked={ok:true};}
+   else walked=await walkFar(s,world,c.tile,100);
    if(!walked.ok)continue;
+   if(observeScorpionTravel&&b.id===175)console.log(`QUEST_SWEEP_TRAVEL_COST ${JSON.stringify({phase:'shop',item:b.id,coinsBefore:coinsBeforeTravel,coins:held(COINS),from,at:here(),observed:true})}`);
    tried++;
    const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===c.npcId).sort((x:any,y:any)=>x.distance-y.distance)[0];
    if(!npc)return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
@@ -1261,6 +1305,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   if(meal!==undefined&&BUILD_MEALS[quest]!==undefined)food.set(meal,BUILD_MEALS[quest]!);
   console.log(`QUEST_SWEEP_BUILD_PACK ${JSON.stringify({quest,pack:build,meals:BUILD_MEALS[quest]})}`);
  }
+ if(quest==='scorpion')base=scorpionAntipoisonNeeds(base,st()?.inventory??[],[]);
  let wornKit=wornKitPlan(quest,base,st()?.inventory??[],[],s.sdk.getEquipment()),need=wornKit.need;
  const maxHp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel??10;
  const sustain=startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async action=>{
@@ -1395,6 +1440,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
    console.log(`QUEST_SWEEP_BARE ${JSON.stringify({worn:worn.map(i=>i.id),left:s.sdk.getEquipment().length,pack:pack().map(i=>i.id)})}`);
   }
   const rows=():Item[]=>(st()?.bank?.items??[]).map((i:any)=>({id:i.id,count:i.count}));
+  if(quest==='scorpion')base=scorpionAntipoisonNeeds(base,pack(),rows());
   wornKit=wornKitPlan(quest,base,pack(),rows(),s.sdk.getEquipment());need=wornKit.need;
   const p=plan(need,pack(),rows()),meal=mealPlan(food,pack(),rows(),p.withdraw,need);
   p.withdraw.push(...meal);
@@ -1457,7 +1503,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
   // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
   // coins, and crossEast refuses the crossing below 60.
-  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s))
+  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s),quest==='scorpion'?shop.buys:[])
    +(quest==='itgronigen'&&eastOfPass(here(),accountOf(s))?BOAT_FARES:0);
   if(shop.coins){
    const take=shopCoinTake(shop.coins,count(pack(),COINS),p.withdraw.find(w=>w.id===COINS)?.count??0,need.get(COINS)??0);
@@ -1507,7 +1553,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   }
   await s.bot.closeBank();
   console.log(`QUEST_SWEEP_BANK_DONE ${JSON.stringify({at:here(),buys:shop.buys.map(b=>b.id),gathers:gather.gathers.map(g=>g.id)})}`);
-  if(shop.buys.length){const why=await buyFromShops(s,world,shop.buys);if(why)return fail(why);}
+  if(shop.buys.length){const why=await buyFromShops(s,world,shop.buys,quest==='scorpion');if(why)return fail(why);}
   if(heckelDust){const dust=await fetchHeckelDust(heckelIO(s,world));if(!dust.ok)return fail(dust.detail!);}
   if(manorFood||manorPoison){const food=await fetchManorFishFood(manorIO(s,world),preset.position,{food:manorFood,poison:manorPoison});if(!food.ok)return fail(food.detail!);}
   if(gather.gathers.length){const why=await gatherItems(s,world,gather.gathers,(to)=>walkFar(s,world,to,100));if(why)return fail(why);}
@@ -1523,7 +1569,9 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(!exit.ok)return fail(exit.detail!);
  const unprayed=await prayBefore(s,world,quest);
  if(unprayed)return fail(unprayed);
+ const travelCoins=count(pack(),COINS),travelFrom=here();
  await reachStart(s,world,start,quest);
+ if(quest==='scorpion')console.log(`QUEST_SWEEP_TRAVEL_COST ${JSON.stringify({phase:'start',coinsBefore:travelCoins,coins:count(pack(),COINS),from:travelFrom,at:here(),observed:true})}`);
  if(wornKit.wear.some(i=>!s.sdk.getEquipment().some(e=>e.id===i.id&&e.count>0)))return fail('worn kit missing before handover');
  console.log(`MILESTONE quest-sweep ${quest} staged at ${JSON.stringify(here())}`);
  observeQuestFlags(s);

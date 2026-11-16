@@ -60,7 +60,7 @@ const AIR=556,MIND=558,COINS=995,TROUT=333;
 function save(o:{pack?:Item[];bank?:Item[];magic?:{xp:number;level:number};hp?:number;at?:{x:number;z:number}}={}):Save{
  const skills=Array.from({length:21},(_,index)=>({index,rawExperience:0,xp:0,level:1}));
  skills[3]={index:3,rawExperience:11540,xp:1154,level:o.hp??10};
- if(o.magic)skills[6]={index:6,rawExperience:o.magic.xp*10,xp:o.magic.xp,level:o.magic.level};
+ if(o.magic)skills[6]={index:6,rawExperience:o.magic.xp*10,xp:Math.trunc(o.magic.xp),level:o.magic.level};
  const slots=(list:Item[]=[])=>list.map((i,slot)=>({slot,...i}));
  return{version:9,position:{x:o.at?.x??3253,z:o.at?.z??3420,level:0},skills,vars:{},inventories:{93:slots(o.pack),94:[],95:slots(o.bank)}};
 }
@@ -107,18 +107,35 @@ test('high-level fallback proof requires a Wind Strike, paid rune, saved XP and 
  const a=save({pack:f.inventory,bank:f.bank.map(i=>({...i,count:i.count-(i.id===AIR?1:i.id===COINS?4:0)})),magic:{level:71,xp:xp+137.5}});
  const log=[purchase({requested:1,bought:1,spent:4,packBefore:{air:2,mind:0,coins:300}}),
   'MAGIC_ORDER_CAST '+JSON.stringify({cast:1,position:{x:3223,z:3400,level:0},target:{name:'Man'}}),
-  result({casts:1,coinsSpent:4,bought:{air:0,mind:1},runesUsed:{air:1,mind:1},magicXpGained:137.5}),logout].join('\n');
+  result({casts:1,coinsSpent:4,bought:{air:0,mind:1},runesUsed:{air:1,mind:1},magicXpGained:137}),logout].join('\n');
  expect(fixtureChecks(b,'fallback')).toBe(true);
  expect(Object.values(progressChecks(b,a,log,ok,71,300,1000)).every(Boolean)).toBe(true);
  expect(Object.values(fallbackChecks(b,a,log)).every(Boolean)).toBe(true);
  expect(fallbackChecks(b,a,log.replace('"Man"','"Guard"')).windStrike).toBe(false);
  expect(fallbackChecks(b,a,log.replace('"x":3223','"x":3092')).castSite).toBe(false);
- expect(fallbackChecks(b,a,log.replace('"magicXpGained":137.5','"magicXpGained":138')).xp).toBe(false);
+ expect(fallbackChecks(b,a,log.replace('"magicXpGained":137','"magicXpGained":138')).xp).toBe(false);
  expect(fallbackChecks(b,a,log.replace('"bought":1','"bought":2')).purchase).toBe(false);
  const lost=structuredClone(a);lost.inventories[95]!.find(i=>i.id===557)!.count--;
  expect(fallbackChecks(b,lost,log).otherRunes).toBe(false);
  expect(progressChecks(b,a,log.replace('LOGOUT logged-out','LOGOUT timeout'),ok,71,300,1000).logout).toBe(false);
  expect(fixtureChecks({...b,skills:a.skills},'fallback')).toBe(false);
+});
+
+test('fallback XP checks raw gain and reconciles each truncated saved XP total',()=>{
+ for(const [rawBefore,rawAfter,gain] of [[1428460,1429835,137],[1428469,1429844,138]] as const){
+  const b=save({magic:{level:70,xp:0}}),a=save({magic:{level:71,xp:0}});
+  b.skills[6]={index:6,rawExperience:rawBefore,xp:Math.trunc(rawBefore/10),level:70};
+  a.skills[6]={index:6,rawExperience:rawAfter,xp:Math.trunc(rawAfter/10),level:71};
+  const log=result({magicXpGained:gain});
+  expect(a.skills[6]!.rawExperience-b.skills[6]!.rawExperience).toBe(1375);
+  expect(fallbackChecks(b,a,log).xp).toBe(true);
+  expect(fallbackChecks(b,a,result({magicXpGained:gain+1})).xp).toBe(false);
+  expect(fallbackChecks(b,a,result({magicXpGained:137.5})).xp).toBe(false);
+  const short=structuredClone(a);short.skills[6]!.rawExperience--;
+  expect(fallbackChecks(b,short,log).xp).toBe(false);
+  const fractional=structuredClone(a);fractional.skills[6]!.rawExperience+=0.5;
+  expect(fallbackChecks(b,fractional,log).xp).toBe(false);
+ }
 });
 
 test('fixtures match the work order shapes',()=>{

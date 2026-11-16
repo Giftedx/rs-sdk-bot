@@ -92,7 +92,8 @@ export function cowSaveChecks(before:Save,after:Save,result:any,kind:Kind){
 // One surface-camp case: an ordinary owned start away from the bank, with the
 // melee weapon and food banked. Damaged current HP requires observed eating.
 export const giantCases=['giant'] as const;
-const allCases=[...cases,...giantCases];
+export const trooperCases=['trooper'] as const;
+const allCases=[...cases,...giantCases,...trooperCases];
 const SHARK=385,MELEE=1331,STAFF=1381,GIANT_DROPS=[532,225,199,201,203,205,207,209,211,213,215,217,219],GIANT_BANK={x:2655,z:3283};
 // Engine level/10 curve. The save stores XP times ten.
 export const xpForLevel=(level:number)=>{let points=0;for(let n=1;n<level;n++)points+=Math.floor(n+300*2**(n/10));return Math.floor(points/4);};
@@ -106,7 +107,7 @@ export function giantFixture():SaveConfig{
 }
 export function giantChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
  return {cmd:['bun','scripts/gather-combat.ts',name,'1500','giant'],cwd:root,
-  env:{...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET:'giant',TRAIN_SKILL:'Hitpoints',TARGET_LEVEL:'87',GIANT_FOOD:'5'},windowsHide:true};
+  env:{...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',TARGET:'giant',TRAIN_SKILL:'Hitpoints',TARGET_LEVEL:'87',GIANT_FOOD:'5'},windowsHide:true};
 }
 export function giantResult(log:string){try{return JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('GIANT_RESULT ')).at(-1)?.slice(13)??'null');}catch{return null;}}
 export function giantEntry(before:Save){
@@ -137,6 +138,69 @@ export function giantChildChecks(code:number,timedOut:boolean,log:string){
  log=log.replace(/\r\n/g,'\n');
  return {exit:!timedOut&&code===0,logout:(log.match(/^LOGOUT logged-out$/gm)??[]).length===1&&!/^WARN .*?(logout|session close)/m.test(log),result:/^RESULT ok mode=giant /m.test(log)};
 }
+// NabTheKnob status at1794782237646, bank at1794780627716. Prayer's connected
+// owned54-bone consumer supplies69/124312XP and retains46bones before combat.
+export const NABTHEKNOB={position:{x:2618,z:3333,level:0},
+ skills:[{level:70,xp:140900},{level:1,xp:0},{level:99,xp:998800},{level:86,xp:410135},{level:66,xp:103800},{level:69,xp:124312},
+  {level:1,xp:0},{level:59,xp:62250},...Array.from({length:4},()=>({level:1,xp:0})),{level:22,xp:3750},
+  ...Array.from({length:3},()=>({level:1,xp:0})),{level:60,xp:67037},{level:99,xp:85113822},...Array.from({length:3},()=>({level:1,xp:0}))],
+ inventory:[{id:558,count:33},{id:556,count:33}],
+ equipment:[{id:SWORD,count:1,slot:3},{id:284,count:1,slot:4},{id:SHIELD,count:1,slot:5},{id:285,count:1,slot:7},{id:882,count:305,slot:13}],
+ bank:[{id:995,count:436119},{id:1351,count:1},{id:590,count:1},{id:303,count:1},{id:315,count:1},{id:1931,count:4},{id:1265,count:1},{id:1205,count:1},
+  {id:556,count:2},{id:558,count:2},{id:555,count:6},{id:557,count:4},{id:559,count:2},{id:1438,count:1},{id:279,count:1},{id:1813,count:1},{id:1809,count:1},
+  {id:1815,count:1},{id:1819,count:1},{id:1796,count:1},{id:1802,count:1},{id:314,count:2105},{id:278,count:1},{id:1739,count:1242},{id:526,count:46},
+  {id:2132,count:1168},{id:841,count:1},{id:1935,count:16},{id:1446,count:8},{id:2347,count:3},{id:954,count:6},{id:1925,count:1},{id:MELEE,count:1},{id:1895,count:2},{id:2142,count:43}]};
+const NAB_FOOD=[2142,1895];
+export function trooperFixture():SaveConfig{
+ return {position:NABTHEKNOB.position,skills:{Attack:70,Defence:1,Strength:99,Hitpoints:86,Prayer:69},inventory:NABTHEKNOB.inventory,equipment:NABTHEKNOB.equipment,bank:NABTHEKNOB.bank};
+}
+export function trooperChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
+ const env:NodeJS.ProcessEnv={...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',
+  TRAIN_SKILL:'Defence',TARGET_LEVEL:'60',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'};
+ // These opt-ins change or refuse the finite level order instead of running it.
+ for(const key of ['GIANT_KILLS','MAX_KILLS','COMBAT_POTIONS_FILE','COMBAT_ALCH_FILE','TELEGRAB_MAX'])delete env[key];
+ return {cmd:['bun','scripts/gather-combat.ts',name,'2500','trooper'],cwd:root,env,windowsHide:true};
+}
+export function trooperEntry(before:Save){
+ const expected:Record<number,{id:number;count:number}[]>={93:NABTHEKNOB.inventory,94:NABTHEKNOB.equipment,95:NABTHEKNOB.bank};
+ return before.position.level===0&&before.position.x===2618&&before.position.z===3333
+  &&NABTHEKNOB.skills.every((v,i)=>before.skills[i]?.level===v.level&&before.skills[i]?.xp===v.xp&&before.skills[i]?.rawExperience===v.xp*10)
+  &&Object.keys(before.inventories).every(inv=>inv in expected)
+  &&Object.entries(expected).every(([inv,items])=>{
+   const container=Number(inv),ids=new Set([...items,...(before.inventories[container]??[])].map(i=>i.id));
+   return [...ids].every(id=>count(before,container,id)===items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0));
+  })&&NABTHEKNOB.equipment.every(i=>before.inventories[94]?.some(v=>v.slot===i.slot&&v.id===i.id&&v.count===i.count));
+}
+export function trooperSaveChecks(before:Save,after:Save,result:any){
+ const p=after.position,ids=new Set([...Object.values(before.inventories).flat(),...Object.values(after.inventories).flat()].map(i=>i.id));
+ const kills=result?.creditedKills,buried=result?.buried,gain=after.skills[1]!.xp-before.skills[1]!.xp;
+ const food=(s:Save)=>NAB_FOOD.reduce((n,id)=>n+total(s,id),0),debits=NAB_FOOD.map(id=>total(before,id)-total(after,id));
+ const bankedBones=count(after,95,526)-count(before,95,526);
+ return {
+  entry:trooperEntry(before),
+  bank:p.level===0&&Math.max(Math.abs(p.x-2619),Math.abs(p.z-3332))<=6&&count(after,93,526)===0&&result?.bankTrips>=2,
+  target:result?.ok===true&&result.targetMet===true&&result.partial===false&&result.stop==='target-level'&&result.failure==='-'
+   &&after.skills[1]!.xp>=xpForLevel(60)&&after.skills[1]!.level>=60&&result.finalLevel>=60,
+  order:result?.trainSkill==='Defence'&&result.targetLevel===60&&result.startLevel===1&&result.style?.weapon==='Adamant scimitar'&&result.style?.index===3&&result.style?.name==='Block',
+  xp:Number.isSafeInteger(result?.selectedXp)&&gain===result.selectedXp&&gain>0&&after.skills[3]!.rawExperience>before.skills[3]!.rawExperience
+   &&before.skills.every((v,i)=>[1,3,5].includes(i)||after.skills[i]?.rawExperience===v.rawExperience),
+  food:Number.isSafeInteger(result?.eaten)&&result.eaten>=0&&result.foodAccounted===true&&result.initialFood===food(before)&&result.finalFood===food(after)
+   &&food(before)-food(after)===result.eaten&&debits.every(n=>n>=0),
+  loot:Number.isSafeInteger(kills)&&kills>0&&Number.isSafeInteger(buried)&&buried>0&&buried<=kills
+   &&after.skills[5]!.rawExperience-before.skills[5]!.rawExperience===buried*1125&&after.skills[5]!.xp-before.skills[5]!.xp===result.prayerXp
+   &&bankedBones>=0&&bankedBones+buried<=kills&&count(after,95,526)>=46,
+  assets:result?.preserved===true&&[...ids].every(id=>NAB_FOOD.includes(id)||id===526||total(after,id)===total(before,id))
+   &&count(after,94,MELEE)===1&&NABTHEKNOB.equipment.filter(i=>i.slot!==3).every(i=>after.inventories[94]?.some(v=>v.slot===i.slot&&v.id===i.id&&v.count===i.count)),
+  health:after.skills[3]!.level>0&&result?.died===false&&result.respawns===0&&Number.isFinite(result.hpMin)&&result.hpMin>0,
+  budget:Number.isSafeInteger(result?.ticks)&&result.ticks>0&&result.ticks<=2500,
+ };
+}
+export function trooperChildChecks(code:number,timedOut:boolean,log:string){
+ let stage:any=null;try{stage=JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('TROOPER_FOOD ')).at(-1)?.slice(13)??'null');}catch{}
+ return {...giantChildChecks(code,timedOut,log),
+  preparation:!!stage&&['cooked','burnt','trips','stolen','refused'].every(k=>stage[k]===0)&&Number.isSafeInteger(stage.ticks)&&stage.ticks>=0,
+  totalBudget:!!stage&&Number.isSafeInteger(stage.ticks)&&stage.ticks>=0&&Number.isSafeInteger(giantResult(log)?.ticks)&&stage.ticks+giantResult(log).ticks<=2500};
+}
 export function cowChildChecks(code:number,timedOut:boolean,log:string,kind:Kind){
  log=log.replace(/\r\n/g,'\n');
  const ok=kind==='entry'||kind==='partial'||kind==='restarted';
@@ -164,14 +228,14 @@ export function verifyCow(directory:string){
  for(const id of allCases){
   const dir=join(directory,id),c=receipt(id);
   const before=readPracticeSave(join(dir,'before.sav')),after=readPracticeSave(join(dir,'after.sav')),log=readFileSync(join(dir,'worker.log'),'utf8');
-  const local={...(id==='giant'?{...giantSaveChecks(before,after,giantResult(log)),...giantChildChecks(c?.code,c?.timedOut,log)}:{...cowSaveChecks(before,after,cowResult(log),id),...cowChildChecks(c?.code,c?.timedOut,log,id)}),
+  const local={...(id==='trooper'?{...trooperSaveChecks(before,after,giantResult(log)),...trooperChildChecks(c?.code,c?.timedOut,log)}:id==='giant'?{...giantSaveChecks(before,after,giantResult(log)),...giantChildChecks(c?.code,c?.timedOut,log)}:{...cowSaveChecks(before,after,cowResult(log),id),...cowChildChecks(c?.code,c?.timedOut,log,id)}),
    stopRetained:id!=='stopped'||c?.stopFailure===null&&typeof c?.stopMarkerHash==='string'&&hash(c.stopRetained)===c.stopMarkerHash,
    savedLogout:c?.persisted===true&&(after.vars[134]??0)>(before.vars[134]??0),beforeHash:c?.before===hash(join(dir,'before.sav')),afterHash:c?.after===hash(join(dir,'after.sav')),logHash:c?.log===hash(join(dir,'worker.log'))};
   for(const [key,value] of Object.entries(local))checks[id+':'+key]=value;
  }
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,
-  scope:'Native cow CLI on a Swordinhand clone and giant CLI Hitpoints86->87 at the surface camp, from an owned location with weapon and food banked; no live release, unattended or speed claim.',
-  nextConsumer:'qualify-combat-giant-style-3, run-combat-mightyrod-hitpoints87 and run-herbs-mightyrod-giant-batch. Swordinhand finite five-cow consumer, then its next eligible quest assignment.'};
+  scope:'Native cow CLI on a Swordinhand clone, giant CLI Hitpoints86->87 and exact2500-tick trooper CLI Defence1->60 on a Nab clone after its owned Prayer69 consumer; no live release, unattended or speed claim.',
+  nextConsumer:'run-prayer-nab-owned69-admission, then run-nabtheknob-trooper-defence60-owned through controller admission. Next: funded Defence70 army band. Existing Swordinhand and Mightyrod consumers retain their own admission.'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(directory:string){
@@ -196,17 +260,18 @@ async function run(directory:string){
     if(existsSync(botDir))throw Error('isolated practice identity already exists');
     const bot=await createBot(name);pointBotAt(bot.envPath,ISOLATED.engine,ISOLATED.gateway);
     if(!readFileSync(bot.envPath,'utf8').split(/\r?\n/).includes(`SERVER=localhost:${ISOLATED.engine}`))throw Error('isolated local fixture required');
-    if(id==='giant'){path=await applyPreset(name,giantFixture());setPracticeSkills(path,MIGHTYROD.skills);}
+    if(id==='trooper'){path=await applyPreset(name,trooperFixture());setPracticeSkills(path,NABTHEKNOB.skills);}
+    else if(id==='giant'){path=await applyPreset(name,giantFixture());setPracticeSkills(path,MIGHTYROD.skills);}
     else{path=await applyPreset(name,cowFixture(id));setPracticeSkills(path,SWORDINHAND.skills);}
    }
    copyFileSync(path,join(dir,'before.sav'));
    const log=join(dir,'worker.log'),stopFile=join(root,'.practice',`stop-${name}`);
    if(existsSync(stopFile))throw Error('stale stop file for practice identity');
-   const config=id==='giant'?giantChildConfiguration(name,process.env):cowChildConfiguration(name,process.env,id);
+   const config=id==='trooper'?trooperChildConfiguration(name,process.env):id==='giant'?giantChildConfiguration(name,process.env):cowChildConfiguration(name,process.env,id);
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('HOST_DEFERRED_NATIVE_HEADROOM: below free-memory floor; no child started');
    const child=Bun.spawn({...config,stdout:Bun.file(log),stderr:Bun.file(join(dir,'worker.err')),windowsHide:true});
    let timedOut=false,exited=false,stopRequested=false,termination:Promise<void>|undefined,ownedStop:CowStop|undefined;
-   const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},270000);
+   const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},id==='trooper'?450000:270000);
    const exit=child.exited.then(code=>{exited=true;return code;});
    if(id==='stopped'){
     // Request the stop after the first observed credited kill.
@@ -227,7 +292,7 @@ async function run(directory:string){
    if(!persisted.matched||timedOut)throw Error('cow child logout/save deadline; evidence retained');
    if(stopFailure)throw Error(stopFailure);
    const text=readFileSync(log,'utf8'),saved=readPracticeSave(join(dir,'after.sav'));
-   const local=id==='giant'?{...giantSaveChecks(before,saved,giantResult(text)),...giantChildChecks(code,timedOut,text)}:{...cowSaveChecks(before,saved,cowResult(text),id),...cowChildChecks(code,timedOut,text,id)};
+   const local=id==='trooper'?{...trooperSaveChecks(before,saved,giantResult(text)),...trooperChildChecks(code,timedOut,text)}:id==='giant'?{...giantSaveChecks(before,saved,giantResult(text)),...giantChildChecks(code,timedOut,text)}:{...cowSaveChecks(before,saved,cowResult(text),id),...cowChildChecks(code,timedOut,text,id)};
    if(!Object.values(local).every(Boolean))throw Error(`cow ${id} checks failed; evidence retained`);
    if(id==='partial')partial={name,path};
   }

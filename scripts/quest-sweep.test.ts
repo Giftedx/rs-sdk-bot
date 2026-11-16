@@ -1452,15 +1452,129 @@ test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashe
  expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
 });
 
-test('Scorpion Catcher\'s antipoison is neither a need nor food: no shop sells it and the script never drinks it',async()=>{
- const {OPTIONAL}=await import('./quest-sweep');
- expect(OPTIONAL.has(2446)).toBe(true);
- const preset=presetFor('scorpion');
- expect((preset.inventory??[]).some(i=>i.id===2446)).toBe(true);
- expect(needs(preset,false,'scorpion').has(2446)).toBe(false);
- expect(needs(preset,true,'scorpion').has(2446)).toBe(false);
- expect(needs(preset,true,'scorpion').get(379)).toBe(4);
+test('Scorpion stages an owned antipoison or one shop bottle and confirms each poison cure before the next sting',async()=>{
+ const {scorpionAntipoisonNeeds,shopPlan}=await import('./quest-sweep');
+ const {watchScorpionPoison}=await import('./generated/quest-scorpion');
+ expect(typeof scorpionAntipoisonNeeds).toBe('function');
+ const base=scorpionBarcrawlNeeds(needs(presetFor('scorpion'),false,'scorpion'),0);
+ const need=scorpionAntipoisonNeeds(base,[],[]);
+ expect(plan(need,[],[]).missing).toContainEqual({id:175,count:1});
+ for(const id of [2446,175,177,179,2448,181,183,185]){
+  const owned=scorpionAntipoisonNeeds(need,[],[{id,count:2}]);
+  expect(plan(owned,[],[{id,count:2}]).withdraw).toContainEqual({id,count:1});
+  expect(plan(owned,[{id,count:1}],[]).missing.some(i=>[2446,175,177,179,2448,181,183,185].includes(i.id))).toBe(false);
+ }
+ const items=JSON.parse(readFileSync(new URL('../knowledge/items.json',import.meta.url),'utf8'));
+ const shops=shopPlan([{id:175,count:1}],{x:3185,z:3440,level:0},id=>items.find((i:any)=>i.id===id),nearestSeller);
+ expect(shops.buys.map(i=>({id:i.id,count:i.count}))).toEqual([{id:175,count:1}]);
+ expect(shops.unsold).toEqual([]);expect(shops.coins).toBe(964);
+ let tick=0,poisons=0,callback=()=>{},held=175,change=true,used:number[]=[],logs:unknown[]=[];
+ const io:Parameters<typeof watchScorpionPoison>[0]={
+  onTick:cb=>{callback=cb;return()=>{callback=()=>{};};},
+  poisoned:()=>poisons,
+  inventory:()=>held?[{id:held,slot:7,count:1}]:[],
+  use:async slot=>{used.push(slot);},
+  wait:async(ok,ticks)=>{for(let i=0;i<ticks;i++){tick++;callback();if(change&&i===1)held=held===175?177:held===177?179:229;if(ok())return true;}return false;},
+  log:row=>{logs.push(row);},
+ };
+ const guard=watchScorpionPoison(io);
+ callback();expect(used).toEqual([]);
+ poisons++;callback();callback();await guard.pending();
+ expect(used).toEqual([7]);expect(held).toBe(177);expect(guard.failure()).toBeUndefined();
+ expect(logs).toEqual([{item:175,next:177,slot:7,observed:true}]);
+ callback();await guard.pending();expect(used).toHaveLength(1);
+ poisons++;callback();await guard.pending();expect(held).toBe(179);expect(used).toHaveLength(2);
+ change=false;poisons++;callback();await guard.pending();
+ expect(guard.failure()).toContain('dose change unobserved');expect(tick).toBeLessThanOrEqual(20);
+ const failedUses=used.length;callback();await guard.pending();expect(used).toHaveLength(failedUses);
+ await guard.stop();
+ held=0;const empty=watchScorpionPoison(io);poisons++;callback();await empty.pending();
+ expect(empty.failure()).toContain('missing usable antipoison');await empty.stop();
 });
+
+test('Scorpion entry protection observes one dose in its original slot without a poisoning message',async()=>{
+ const {watchScorpionPoison}=await import('./generated/quest-scorpion');
+ let callback=()=>{},held=175,tick=0;
+ const used:number[]=[],logs:unknown[]=[];
+ const guard=watchScorpionPoison({
+  onTick:cb=>{callback=cb;return()=>{callback=()=>{};};},poisoned:()=>0,
+  inventory:()=>[{id:held,slot:7,count:1}],
+  use:async slot=>{used.push(slot);},
+  wait:async(ok,ticks)=>{for(let i=0;i<ticks;i++){tick++;callback();if(i===1)held=177;if(ok())return true;}return false;},
+  log:row=>{logs.push(row);},
+ });
+ try{
+  await Promise.all([guard.protect(),guard.protect()]);
+  callback();await guard.pending();
+  expect(used).toEqual([7]);expect(held).toBe(177);expect(tick).toBe(2);
+  expect(logs).toEqual([{item:175,next:177,slot:7,observed:true}]);
+  expect(guard.failure()).toBeUndefined();
+ }finally{await guard.stop();}
+});
+
+test('Scorpion buys its missing Jiminua cure from Varrock, Yanille or Ardougne south bank with both fares withdrawn',async()=>{
+ const {fares,shopCoinTake,travelDistance,FAR_SELLER,buyFromShops}=await import('./quest-sweep');
+ const items=JSON.parse(readFileSync(new URL('../knowledge/items.json',import.meta.url),'utf8'));
+ for(const entry of [{x:3185,z:3438,level:0},{x:2612,z:3093,level:0},{x:2655,z:3283,level:0}]){
+  const shop=shopPlan([{id:175,count:1}],entry,id=>items.find((i:any)=>i.id===id),nearestSeller);
+  expect(shop.buys).toMatchObject([{id:175,count:1,npcId:560,tile:{x:2767,z:3122,level:0}}]);
+  expect(travelDistance(entry,shop.buys[0]!.tile)).toBeGreaterThan(FAR_SELLER);
+  const extra=fares(entry,[shop.buys[0]!.tile,presetFor('scorpion').position],undefined,shop.buys);
+  expect(extra).toBe(60);
+  const withdrawals=plan(new Map([[995,268]]),[],[{id:995,count:1292}]).withdraw;
+  withdrawals[0]!.count+=shopCoinTake(shop.coins+extra,0,withdrawals[0]!.count,268);
+  expect(withdrawals).toEqual([{id:995,count:1292}]);
+  let tick=0,coins=withdrawals[0]!.count,bottle=false,land=true;
+  const player={worldX:entry.x,worldZ:entry.z,level:0},listeners=new Set<()=>void>(),boats:string[]=[];
+  const state=()=>({player,inventory:[{id:995,count:coins},...(bottle?[{id:175,count:1}]:[])],
+   nearbyNpcs:Math.max(Math.abs(player.worldX-2767),Math.abs(player.worldZ-3122))<=5?[{id:560,distance:1}]:[],
+   shop:{isOpen:true,shopItems:[{id:175,count:1}]}});
+  const s={sdk:{getState:state,getSkill:()=>({level:50})},tick:()=>tick,
+   onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},bot:{
+    openShop:async()=>({success:true}),buyFromShop:async()=>{bottle=true;coins-=288;},closeShop:async()=>{},
+   }} as unknown as Session;
+  const deps:PathDeps={pos:()=>({x:player.worldX,z:player.worldZ,level:player.level}),onTick:s.onTick,locs:()=>[],
+   interactLoc:()=>{throw Error('unexpected interaction');},plan:(level,from,to)=>{
+    const path=findLongPath(level,from.x,from.z,to.x,to.z);
+    if((from.x!==to.x||from.z!==to.z)&&(to.x===2767&&to.z===3122||to.x===2790&&to.z===3160)){
+     const end=path.at(-1);expect(end&&Math.max(Math.abs(end.x-to.x),Math.abs(end.z-to.z))).toBeLessThanOrEqual(1);
+    }
+    return path;
+   },
+   walk:(x,z)=>{player.worldX=x;player.worldZ=z;}};
+  const world={route:()=>{throw Error('Jiminua journey must use its bounded itinerary');},blockedDoors:()=>[]};
+  const route=(async(_s,legs)=>{
+   const leg=legs[0]!;if(leg.kind!=='travel')throw Error('expected boat');boats.push(leg.travel.id);
+   if(land){coins-=leg.travel.coins;player.worldX=leg.to.x;player.worldZ=leg.to.z;player.level=leg.to.level;}
+   return{ok:true,ticks:1};
+  }) as typeof import('../packages/core/src/walk').walkRoute;
+  const approach:typeof reachStart=(s,w,to,quest)=>reachStart(s,w,to,quest,async()=>deps,route);
+  const timer=setInterval(()=>{tick++;for(const cb of listeners)cb();},1);
+  try{
+   expect(await buyFromShops(s,world,shop.buys,true,approach)).toBeNull();
+   expect(bottle).toBe(true);expect(coins).toBe(1292-30-288);
+   expect(boats).toEqual([entry.x>=2950?'npc:captain_tobias:karamja-musa-point@3028,3216':'npc:captain_barnaby:brimhaven@2679,3275']);
+   // Reuse the same declared island exit that reachStart takes before heading to Thormac.
+   await reachStart(s,world,{x:2683,z:3271,level:0},'scorpion',async()=>deps,route);
+   expect(boats.at(-1)).toBe('npc:customs_officer:ardougne@2772,3231');expect(coins).toBe(1292-60-288);
+   expect(Math.max(Math.abs(player.worldX-2683),Math.abs(player.worldZ-3271))).toBeLessThanOrEqual(8);
+   Object.assign(player,{worldX:entry.x,worldZ:entry.z});bottle=false;coins=59;boats.length=0;
+   await expect(buyFromShops(s,world,shop.buys,true,approach)).rejects.toThrow('missing 995:60');
+   expect(boats).toEqual([]);
+   coins=1292;land=false;
+   await expect(buyFromShops(s,world,shop.buys,true,approach)).rejects.toThrow('arrival/fare unobserved');
+   expect(bottle).toBe(false);
+  }finally{clearInterval(timer);}
+  // The exception is one cure at this keeper on these supported mainland entries.
+  expect(fares(entry,[],undefined,[])).toBe(0);
+  expect(fares(entry,[],undefined,[{...shop.buys[0]!,count:2}])).toBe(0);
+  Object.assign(player,{worldX:entry.x,worldZ:entry.z});bottle=false;coins=1292;
+  expect(await buyFromShops(s,world,[{...shop.buys[0]!,id:590}],true,approach)).toContain('no seller within 800 tiles');
+  Object.assign(player,{worldX:2644,worldZ:3680});
+  expect(fares({x:2644,z:3680,level:0},[],undefined,shop.buys)).toBe(0);
+  expect(await buyFromShops(s,world,shop.buys,true,approach)).toContain('no seller within 800 tiles');
+ }
+},30000);
 
 test("Gertrude's seasoned sardine is doogle leaves from the spawn by her house on a sardine bought from Gerrant",()=>{
  const gertrude={x:3150,z:3410,level:0};

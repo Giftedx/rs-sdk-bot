@@ -656,8 +656,11 @@ async function run(directory:string){
     return observeRecoveryBoundary('admitRecovery',{admission:input,heldOwners:owners,authority:recoveryAuthorityInputs(base,r)},()=>admitRecovery(input),observeBoundary);
    },
    // Exactly the dispatcher's native default: same base, source callback and actual launcher.
-   launch:r=>observeRecoveryBoundary('launchPermittedRecovery',recoveryAuthorityInputs(base,r),
-    ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>cachedLaunchRevision()}),observeBoundary)});
+   launch:r=>{
+    fleetHandoff(beat,join(base,'.practice/swarm-state.json'),r.account,process.pid);
+    return observeRecoveryBoundary('launchPermittedRecovery',recoveryAuthorityInputs(base,r),
+     ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>cachedLaunchRevision()}),observeBoundary);
+   }});
   let fixtureIndex=0;
   const fixture=async(server:string,preset:Parameters<typeof applyPreset>[1],completed=false)=>{
    // The name token cycles every 28 minutes (prove.ts runBotName), and fixture folders from earlier proofs stay in

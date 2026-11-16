@@ -47,7 +47,7 @@ const LIMITS:Record<Case,{cap:string;timeoutMs:number}>={
 };
 export function childConfiguration(name:string,id:Case,inherited:NodeJS.ProcessEnv=process.env,endpoints?:Endpoints){
  return{cmd:['bun',workerEntry,name,'magic_guild',LIMITS[id].cap],cwd:root,windowsHide:true,
-  env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',
+  env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',
    ITEMS:'blood rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(ORDER.target),MAX_ITEMS:String(ORDER.target),MAX_SPEND:String(ORDER.maxSpend),
    COIN_RESERVE:String(ORDER.reserve),NO_BUY_TICKS:'25',BANK_PACK:'1'}};
 }
