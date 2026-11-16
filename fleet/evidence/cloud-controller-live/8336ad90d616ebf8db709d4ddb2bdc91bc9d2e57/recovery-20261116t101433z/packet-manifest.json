@@ -11829,6 +11829,12 @@
       "gitBlob": "758ae8f1a03dab1df542231b661d6a50fd1bc0dc"
     },
     {
+      "path": "audit/host-recovery-worktree-setup.log",
+      "bytes": 293,
+      "sha256": "7d6169382bacd8c49f47484795f163ba91faf55c37547bb55a5b0fb84603b36f",
+      "gitBlob": "bbcd1e5752e589d0e3bf8fc079cb7e576ea85fce"
+    },
+    {
       "path": "audit/during-recovery/processes.json",
       "bytes": 2,
       "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -15975,19 +15981,6 @@
       "gitBlob": "2237467b137fb065f9f8fa4696a45f11c06c7e2f"
     }
   ],
-  "unknownDependencies": [
-    {
-      "path": "qualification/isolated-engine/view",
-      "reason": "non-regular dependency retained locally"
-    },
-    {
-      "path": "qualification/isolated-engine/data/raw",
-      "reason": "non-regular dependency retained locally"
-    },
-    {
-      "path": "qualification/isolated-engine/data/pack",
-      "reason": "non-regular dependency retained locally"
-    }
-  ],
+  "unknownDependencies": [],
   "scan": "exact selected regular files, generated credential-read expressions inspected, no redaction; private credentials/keys/profiles excluded"
 }

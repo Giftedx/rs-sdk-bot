@@ -1,0 +1,7 @@
+worktree-setup: submodule: done, from the main checkout
+worktree-setup: SDK patch: done
+worktree-setup: root packages: done
+worktree-setup: SDK packages: done
+worktree-setup: web client packages: done
+worktree-setup: hook switch: present, or not set in the main checkout
+worktree-setup: ready
