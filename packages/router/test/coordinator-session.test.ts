@@ -1,4 +1,4 @@
-import {test,expect} from 'bun:test';
+import {test,expect,mock} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -11,6 +11,7 @@ import {sha} from '../../core/src/launch-evidence';
 import {missionSignature} from '../../core/src/session-admission';
 import {assertSpecialistLogin, specialistContext, specialistTokenPath} from '../../core/src/specialist-launch';
 import {readCoordinatorJobs} from '../../core/src/coordinator-jobs';
+import type {Order,TradeReceipt} from '../../../scripts/fleet-trade-settlement';
 const server='rs-sdk-demo.fly.dev';
 function fixture(){
  const base=mkdtempSync(join(tmpdir(),'router-session-')),root=join(base,'.practice/session-lifecycle');
@@ -114,6 +115,137 @@ test('a closed failed producer is a repair fact, not a known active owner',()=>{
  attempt.record('connect-failed');attempt.record('closed');
  writeFileSync(join(f.base,'swarm.json'),JSON.stringify({jobs:[]}));
  expect(liveAccountWait({kind:'run'},['Rod'],f.base,()=>true)).toBeNull();
+});
+
+function fleetOrderFixture(){
+ const f=fixture(),now=Date.now();
+ writeFileSync(join(f.base,'swarm.json'),JSON.stringify({maxBots:17,minFreeGB:4,jobs:[]}));
+ const dir=join(f.base,'fleet');for(const sub of ['orders','receipts'])mkdirSync(join(dir,sub),{recursive:true});
+ const order:Order={id:'owned-gold-bars',server,from:'Unsheathed',to:'BowBeforeMe',item:'Gold bar',count:2,start:now+15*60000,end:now+30*60000};
+ const putOrder=(value:any)=>writeFileSync(join(dir,'orders',order.id+'.json'),JSON.stringify(value));
+ const putReceipt=(value:any)=>writeFileSync(join(dir,'receipts',order.id+'.'+value.role+'.json'),JSON.stringify(value));
+ return{...f,now,order,putOrder,putReceipt};
+}
+
+test('a future fleet order holds both idle participants through dispatch and installation before any login claim',()=>{
+ const f=fleetOrderFixture();f.putOrder(f.order);
+ const task:any={id:'bow-consumer',kind:'run',goal:'main24',capability:'owned-bank-observation',account:'BowBeforeMe',launch:'ordinary',dependsOn:[],priority:49,estimatedMs:60000,why:'finite consumer',accept:{counters:{bankObserved:1}}};
+ expect(liveAccountWait(task,['BowBeforeMe'],f.base,()=>false)).toEqual({account:'BowBeforeMe',reason:'fleet-order',attemptId:null,pid:null});
+ expect(liveAccountWait(task,['Unsheathed'],f.base,()=>false)?.reason).toBe('fleet-order');
+ expect(liveAccountWait(task,['Other'],f.base,()=>false)).toBeNull();
+ const state=initialState();addTasks(state,[task]);
+ expect(chooseTask(state,Date.now(),{runHeld:t=>liveAccountWait(t,[t.account!],f.base,()=>false)!==null})).toBeNull();
+ expect(()=>installJob(task,'BowBeforeMe','scripts/fleet-inspect.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).toThrow('fleet-order');
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+});
+
+test('expired empty, invalid and other-server fleet orders do not hold a new local mission',()=>{
+ const f=fleetOrderFixture(),task:any={kind:'run'};
+ for(const order of [{...f.order,start:f.now-60000,end:f.now-1},{...f.order,count:0},{...f.order,server:'localhost:8888'}]){
+  f.putOrder(order);expect(liveAccountWait(task,['BowBeforeMe'],f.base,()=>false)).toBeNull();
+ }
+ writeFileSync(join(f.base,'fleet/orders',f.order.id+'.json'),'{');
+ expect(liveAccountWait(task,['BowBeforeMe'],f.base,()=>false)).toBeNull();
+});
+
+function terminalFleetReceipt(order:Order,role:'from'|'to',state:'settled'|'failed',now:number):TradeReceipt{
+ const settled=state==='settled';
+ return{version:2,state,id:order.id,role,account:order[role],partner:order[role==='from'?'to':'from'],side:role==='from'?'cloud':'local',server:order.server,item:order.item,requested:order.count,claim:role==='from'?'12345678-1234-1234-1234-123456789012':'87654321-1234-1234-1234-123456789012',at:now-1,ok:settled,detail:'',count:settled?order.count:0,inventory:settled?(role==='from'?{before:order.count,after:0}:{before:0,after:order.count}):{before:0,after:0},...(settled&&role==='to'?{bank:{count:order.count,at:now-3}}:{}),logout:{attemptId:'0000000002400-1-1',at:now-2,sha256:'a'.repeat(64)}};
+}
+
+for(const outcome of ['settled','failed'] as const)test('matched '+outcome+' fleet receipts release both parties before the window expires',()=>{
+ const f=fleetOrderFixture(),order={...f.order,start:f.now-60000};f.putOrder(order);
+ f.putReceipt(terminalFleetReceipt(order,'from',outcome,f.now));
+ expect(liveAccountWait({kind:'run'},['BowBeforeMe'],f.base,()=>false)?.reason).toBe('fleet-order');
+ f.putReceipt(terminalFleetReceipt(order,'to',outcome,f.now));
+ expect(liveAccountWait({kind:'run'},['BowBeforeMe','Unsheathed'],f.base,()=>false)).toBeNull();
+});
+
+test('an expired fleet order with an unmatched completed transfer still waits for reconciliation',()=>{
+ const f=fleetOrderFixture(),order={...f.order,start:f.now-60000,end:f.now-10};f.putOrder(order);
+ f.putReceipt(terminalFleetReceipt(order,'from','settled',f.now));
+ expect(liveAccountWait({kind:'run'},['BowBeforeMe'],f.base,()=>false)?.reason).toBe('fleet-order');
+});
+
+function historicalFleetOrderFixture(){
+ const f=fleetOrderFixture(),dir=join(f.base,'fleet');
+ mkdirSync(join(f.base,'.git'));writeFileSync(join(f.base,'.git/config'),'[remote "origin"]\nurl = test-authority\n');
+ const order:Order={id:'1794503734080-nabtheknob-mmsmk1232-bones',server,from:'NabTheKnob',to:'mmsmk1232',item:'Bones',count:86,start:1794503734080,end:1794506134080};
+ const putOrder=(value:Order)=>writeFileSync(join(dir,'orders',order.id+'.json'),JSON.stringify(value));
+ const receipt=(role:'from'|'to'):TradeReceipt=>({...terminalFleetReceipt(order,role,'failed',order.start+210000),state:'reconcile',detail:'transfer requires reconciliation',screen:true,inventory:role==='from'?{before:86,after:86}:{before:0,after:0}});
+ const putReceipt=(value:any)=>writeFileSync(join(dir,'receipts',order.id+'.'+value.role+'.json'),JSON.stringify(value));
+ putOrder(order);for(const role of ['from','to'] as const)putReceipt(receipt(role));
+ return{...f,order,putOrder,putReceipt,receipt};
+}
+
+test('released receipt nonces close the historical Nab and mmsmk order and reuse exact authority proof',()=>{
+ const f=historicalFleetOrderFixture(),readHeld=mock((_base:string,accounts:readonly string[])=>{expect(new Set(accounts)).toEqual(new Set(['NabTheKnob','mmsmk1232']));return [];});
+ const authority={readHeld,now:()=>f.now};
+ expect(liveAccountWait({kind:'run'},['NabTheKnob','mmsmk1232'],f.base,()=>false,authority)).toBeNull();
+ expect(readHeld).toHaveBeenCalledTimes(1);
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)).toBeNull();
+ expect(liveAccountWait({kind:'run'},['mmsmk1232'],f.base,()=>false,authority)).toBeNull();
+ expect(readHeld).toHaveBeenCalledTimes(1);
+});
+
+test('JSON null receipt rows do not hide authoritative closure of a coherent expired order',()=>{
+ const f=historicalFleetOrderFixture(),readHeld=mock(()=>[]);
+ writeFileSync(join(f.base,'fleet/receipts/null.json'),'null');
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,{readHeld,now:()=>f.now})).toBeNull();
+ expect(readHeld).toHaveBeenCalledTimes(1);
+});
+
+test('receipt item names retain the settlement protocol case equivalence',()=>{
+ const f=historicalFleetOrderFixture(),readHeld=mock(()=>[]);
+ f.putReceipt({...f.receipt('from'),item:'bones'});f.putReceipt({...f.receipt('to'),item:'BONES'});
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,{readHeld,now:()=>f.now})).toBeNull();
+ expect(readHeld).toHaveBeenCalledTimes(1);
+});
+
+test('held and unavailable trade authority keep the order held, retry after cooldown, then observe release',()=>{
+ const f=historicalFleetOrderFixture();let now=f.now,unavailable=false,held=true;
+ const readHeld=mock(()=>{if(unavailable)throw Error('authority unavailable');return held?[{nonce:f.receipt('from').claim} as any]:[];}),authority={readHeld,now:()=>now};
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ expect(readHeld).toHaveBeenCalledTimes(1);
+ now+=60000;unavailable=true;
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ held=false;now+=59999;
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ expect(readHeld).toHaveBeenCalledTimes(2);
+ now++;unavailable=false;
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)).toBeNull();
+ expect(readHeld).toHaveBeenCalledTimes(3);
+});
+
+test('a failed authority read cannot resolve any absent receipt nonce',()=>{
+ const f=historicalFleetOrderFixture(),readHeld=mock(()=>{throw Error('authority unavailable');}),authority={readHeld,now:()=>f.now};
+ for(let n=0;n<3;n++)expect(liveAccountWait({kind:'run'},['NabTheKnob','mmsmk1232'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ expect(readHeld).toHaveBeenCalledTimes(1);
+});
+
+test('a changed nonce or Git authority cannot inherit old released-nonce proof',()=>{
+ const f=historicalFleetOrderFixture();let held:string|null=null;
+ const readHeld=mock(()=>held?[{nonce:held} as any]:[]),authority={readHeld,now:()=>f.now};
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)).toBeNull();
+ held='11111111-1111-4111-8111-111111111111';f.putReceipt({...f.receipt('from'),claim:held});
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ expect(readHeld).toHaveBeenCalledTimes(2);
+ held=f.receipt('from').claim;f.putReceipt(f.receipt('from'));
+ writeFileSync(join(f.base,'.git/config'),'[remote "origin"]\nurl = different-authority\n');
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ expect(readHeld).toHaveBeenCalledTimes(3);
+});
+
+test('authority resolution preserves future windows, malformed receipts and unmatched completed movement',()=>{
+ const f=historicalFleetOrderFixture(),readHeld=mock(()=>[]),authority={readHeld,now:()=>f.now};
+ f.putOrder({...f.order,start:f.now+15*60000,end:f.now+30*60000});
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ expect(readHeld).toHaveBeenCalledTimes(0);
+ f.putOrder(f.order);f.putReceipt({...f.receipt('from'),account:'Other'});
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
+ f.putReceipt(terminalFleetReceipt(f.order,'from','settled',f.order.start+210000));
+ expect(liveAccountWait({kind:'run'},['NabTheKnob'],f.base,()=>false,authority)?.reason).toBe('fleet-order');
 });
 test('a new unstarted autopilot mission waits for its own result and cannot inherit prior success',()=>{
  const f=settledAutopilotFixture(),task:any={kind:'run'};

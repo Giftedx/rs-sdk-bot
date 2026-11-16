@@ -1,5 +1,5 @@
 import {readFileSync,existsSync,readdirSync,writeFileSync,renameSync,unlinkSync,mkdirSync,statSync} from 'node:fs';
-import {join} from 'node:path';
+import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
@@ -8,7 +8,10 @@ import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {evaluateSpecialist, MAX_SPECIALIST_RUN_MS, SPECIALIST_BOARDS, specialistTokenPath} from '../../core/src/specialist-launch';
-import {loadOwners} from '../../core/src/fleet';
+import {loadOwners,FLEET_DIR} from '../../core/src/fleet';
+import {inOpenOrder} from '../../../scripts/autopilot';
+import {validOrder,type Order,type Receipt} from '../../../scripts/fleet-trade-settlement';
+import {readHeldFleetTradeClaims} from '../../core/src/fleet-trade-claim';
 import {cachedLaunchRevision,cachedReleaseFor,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
@@ -233,7 +236,7 @@ function settledAutopilotJob(job:any,account:string,base:string):boolean{
   &&(status.coordinatorRunId??null)===null&&Number.isFinite(status.started)&&status.started>=receipt.createdAt&&status.started<=proof.loggedOutAt
   &&Number.isFinite(status.at)&&status.at>=status.started&&status.at<=end.at;
 }
-export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment';attemptId:string|null;pid:number|null};
+export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment'|'fleet-order';attemptId:string|null;pid:number|null};
 type MemoryCapacity=Parameters<typeof admissionDecision>[0];
 type LiveMemoryWait={account:string;reason:'memory';capacity:MemoryCapacity};
 type LiveWait=LiveAccountWait|LiveMemoryWait;
@@ -266,9 +269,51 @@ export function ordinaryRunWaitsForMemory(task:CoordTask,state:CoordinatorState,
   starting:names.length,startingReserve:startReserve({host:false,job:{script:'',enabled:true,orchestrate:names.length>1}},names.length),
   freeGB:Math.min(freeGB,capacity.freeGB!),minFreeGB:capacity.minFreeGB!,maxBots:capacity.maxBots!}).allowed;
 }
-export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>,accounts:readonly string[],base=projectRoot,alive=pidAlive):LiveAccountWait|null{
+type OrderClaimAuthority={readHeld?:(base:string,accounts:readonly string[])=>ReturnType<typeof readHeldFleetTradeClaims>;now?:()=>number};
+type OrderClaimCache={authority:string;resolved:Set<string>;retryAt:Map<string,number>};
+const orderClaimCaches=new Map<string,OrderClaimCache>();
+// A published trade nonce only moves held -> released; only swarm claims have an inherited-hold restore path.
+// Cache that exact negative proof, never an account-wide absence. Held or unknown claims are checked again later.
+function fleetOrderClaimsHeld(base:string,orders:readonly Order[],receipts:readonly Receipt[],accounts:readonly string[],now:number,readHeld:NonNullable<OrderClaimAuthority['readHeld']>){
+ const root=resolve(base),wanted=new Set(accounts.map(n=>n.toLowerCase()));
+ type Binding={key:string;account:string;orderId:string;role:string};
+ const bindings=new Map<string,Binding|null>();
+ for(const order of orders)if(now>=order.end)for(const receipt of receipts){
+  if(!receipt||typeof receipt!=='object'||receipt.id!==order.id||receipt.version!==2||!['prepared','reconcile'].includes(receipt.state))continue;
+  const role=receipt.role,other=role==='from'?'to':'from',same=(a:unknown,b:string)=>typeof a==='string'&&a.toLowerCase()===b.toLowerCase();
+  const coherent=(role==='from'||role==='to')&&same(receipt.account,order[role])&&same(receipt.partner,order[other])&&same(receipt.server,order.server)
+   &&same(receipt.item,order.item)&&receipt.requested===order.count&&receipt.ok===false&&Number.isSafeInteger(receipt.count)&&receipt.count>=0&&receipt.count<=order.count
+   &&Number.isSafeInteger(receipt.at)&&receipt.at>=order.start&&receipt.at<=now&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(receipt.claim);
+  if(!coherent){bindings.set(receipt.claim,null);continue;}
+  const key=JSON.stringify([receipt.account.toLowerCase(),order.server.toLowerCase(),receipt.claim]),prior=bindings.get(receipt.claim);
+  if(bindings.has(receipt.claim)&&(!prior||prior.key!==key||prior.orderId!==order.id||prior.role!==role))bindings.set(receipt.claim,null);
+  else bindings.set(receipt.claim,{key,account:order[role],orderId:order.id,role});
+ }
+ const candidates=[...bindings.values()].filter((v):v is Binding=>v!==null),keys=new Set(candidates.map(v=>v.key));
+ let cache=orderClaimCaches.get(root);
+ if(cache)for(const key of new Set([...cache.resolved,...cache.retryAt.keys()]))if(wanted.has(JSON.parse(key)[0])&&!keys.has(key)){cache.resolved.delete(key);cache.retryAt.delete(key);}
+ if(!candidates.length)return()=>true;
+ let authority:string;
+ try{
+  const dotGit=join(root,'.git'),gitDir=statSync(dotGit).isDirectory()?dotGit:resolve(root,readFileSync(dotGit,'utf8').match(/^gitdir:\s*(.+)\s*$/)![1]!.trim());
+  const common=existsSync(join(gitDir,'commondir'))?resolve(gitDir,readFileSync(join(gitDir,'commondir'),'utf8').trim()):gitDir;
+  authority=createHash('sha256').update(common+'\0'+readFileSync(join(common,'config'),'utf8')+'\0'+(existsSync(join(gitDir,'config.worktree'))?readFileSync(join(gitDir,'config.worktree'),'utf8'):'')).digest('hex');
+ }catch{orderClaimCaches.delete(root);return()=>true;}
+ if(!cache||cache.authority!==authority){cache={authority,resolved:new Set(),retryAt:new Map()};orderClaimCaches.set(root,cache);}
+ const due=candidates.filter(v=>!cache!.resolved.has(v.key)&&now>=(cache!.retryAt.get(v.key)??0));
+ if(due.length){
+  for(const v of due)cache.retryAt.set(v.key,now+60000);
+  try{
+   const held=new Set(readHeld(base,[...new Set(due.map(v=>v.account))]).map(c=>c.nonce));
+   for(const v of due)if(!held.has(JSON.parse(v.key)[2])){cache.resolved.add(v.key);cache.retryAt.delete(v.key);}
+  }catch{/* Authority failure supplies no release proof. */}
+ }
+ return(nonce:string)=>{const v=bindings.get(nonce);return !v||!cache!.resolved.has(v.key);};
+}
+export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>,accounts:readonly string[],base=projectRoot,alive=pidAlive,authority:OrderClaimAuthority={}):LiveAccountWait|null{
  if(!ordinaryDeferrable(task))return null;
  const root=join(base,'.practice/session-lifecycle');
+ let ordered:Set<string>|undefined;
  for(const account of accounts){
   const proof=readLogoutProof(account,LIVE_SERVER,{root});
   const receipt=(proof.state==='held'||proof.state==='confirmed')?listAttempts(account,LIVE_SERVER,{root}).find(a=>a.attemptId===proof.attemptId)?.receipt:null;
@@ -276,6 +321,17 @@ export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'re
   if(proof.state==='held'&&receipt&&Number.isSafeInteger(receipt.owner.pid)&&receipt.owner.pid>0&&receipt.owner.script
    &&!receipt.events.some(e=>['ended','connect-failed','logout','closed'].includes(e.kind))&&alive(receipt.owner.pid))
    return{account,reason:'active-session',attemptId:receipt.attemptId,pid:receipt.owner.pid};
+  if(!ordered){
+   const synced=join(base,'.practice/fleet-data/fleet'),fleet=base===projectRoot?FLEET_DIR():existsSync(join(synced,'owners.json'))?synced:join(base,'fleet');
+   const rows=(folder:string)=>{const dir=join(fleet,folder);return existsSync(dir)?readdirSync(dir).filter(f=>f.endsWith('.json')).flatMap(file=>{try{return[JSON.parse(readFileSync(join(dir,file),'utf8'))];}catch{return[];}}):[];};
+   const names=new Set(accounts.map(n=>n.toLowerCase()));
+   const orders=rows('orders').filter(validOrder).filter(o=>o.server.toLowerCase()===LIVE_SERVER&&(names.has(o.from.toLowerCase())||names.has(o.to.toLowerCase())));
+   // The order intent precedes login claims. Reuse the autopilot's settlement rules, including unresolved receipts.
+   const receipts=rows('receipts'),now=authority.now?.()??Date.now();
+   const claimHeld=fleetOrderClaimsHeld(base,orders,receipts,accounts,now,authority.readHeld??readHeldFleetTradeClaims);
+   ordered=inOpenOrder(orders,receipts,now,()=>true,claimHeld);
+  }
+  if(ordered.has(account.toLowerCase()))return{account,reason:'fleet-order',attemptId:null,pid:null};
   let job:any;try{job=readMergedPlan(base).jobs.find((j:any)=>jobAccounts(j).some(n=>n.toLowerCase()===account.toLowerCase()));}catch{continue;}
   if(job?.standing===true&&job.enabled===true&&typeof job.autopilot==='string'&&job.autopilot&&!settledAutopilotJob(job,account,base))
    return{account,reason:'autopilot-assignment',attemptId:receipt?.attemptId??null,pid:receipt?.owner.pid??null};

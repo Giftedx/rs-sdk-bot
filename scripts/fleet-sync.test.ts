@@ -7,6 +7,9 @@ import { SWARM_STOP } from './swarm';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
 import { observedStock } from '../packages/planner/src/supply-bill';
+import { canonicalRows } from '../packages/core/src/fleet-snapshots';
+import { remoteBots } from '../packages/dashboard/fleet-view';
+import { publicView } from '../packages/dashboard/publish-relay';
 
 test('a coordinator job takes its account in the view, as the swarm runs it', () => {
     const owners = new Map([['oreelse', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
@@ -106,6 +109,53 @@ test('snapshot inventory preserves noted rope and weapon identities while stock 
         { id: 1334, baseId: 1333, name: 'Rune scimitar', count: 1 }, { id: 995, baseId: 995, name: 'Coins', count: 50 }]);
     expect(account.inventory.some((i: any) => i.id === 954 || i.id === 1333)).toBe(false);
     expect([...observedStock(account)]).toEqual([[954, 2], [1333, 1], [995, 50]]);
+});
+
+test('snapshot inventory carries optional observed slots without changing note identity, count or item order', () => {
+    const owners = new Map([['worker', { side: 'cloud', server: 's' }]]);
+    const [account] = snapshot([{ name: 'Worker', server: 's', at: 1_000, inventory: [
+        { slot: 27, id: 955, baseId: 954, name: 'Rope', count: 2, privateData: 'private-note' },
+        { slot: 0, id: 1334, baseId: 1333, name: 'Rune scimitar', count: 1 },
+        { slot: 5, id: 995, name: 'Coins', count: 50 },
+    ] }], 'cloud', owners, 2_000).accounts;
+    expect(account.inventory).toEqual([
+        { slot: 27, id: 955, baseId: 954, name: 'Rope', count: 2 },
+        { slot: 0, id: 1334, baseId: 1333, name: 'Rune scimitar', count: 1 },
+        { slot: 5, id: 995, baseId: 995, name: 'Coins', count: 50 },
+    ]);
+    expect(account.inventoryIds).toBe('raw');expect([...observedStock(account)]).toEqual([[954, 2], [1333, 1], [995, 50]]);
+    expect(JSON.stringify(account)).not.toContain('private-note');
+});
+
+test('invalid or missing optional inventory slots do not erase items or invent positions', () => {
+    const owners = new Map([['worker', { side: 'cloud', server: 's' }]]);
+    for (const slot of [undefined, null, -1, 28, 1.5, NaN, Infinity, '0', false]) {
+        const [account] = snapshot([{ name: 'Worker', server: 's', at: 1_000,
+            inventory: [{ id: 955, baseId: 954, name: 'Rope', count: 2, slot }],
+        }], 'cloud', owners, 2_000).accounts;
+        expect(account.inventory).toEqual([{ id: 955, baseId: 954, name: 'Rope', count: 2 }]);
+        expect(account.inventoryIds).toBe('raw');
+    }
+    const [duplicates] = snapshot([{ name: 'Worker', server: 's', at: 1_000,
+        inventory: [{ slot: 5, id: 995, count: 10 }, { slot: 5, id: 453, count: 3 }],
+    }], 'cloud', owners, 2_000).accounts;
+    // The HUD decides whether all observed positions are distinct; transport never moves or discards an item.
+    expect(duplicates.inventory.map((item: any) => [item.slot, item.id, item.count])).toEqual([[5, 995, 10], [5, 453, 3]]);
+});
+
+test('optional slots survive canonical fleet rows, remote dashboard observations and the public projection', () => {
+    const owners = new Map([['worker', { side: 'cloud', server: 's' }]]);
+    for (const inventory of [
+        [{ slot: 0, id: 955, baseId: 954, name: 'Rope', count: 2 }, { slot: 27, id: 995, baseId: 995, name: 'Coins', count: 50 }],
+        [{ id: 955, baseId: 954, name: 'Rope', count: 2 }, { id: 995, baseId: 995, name: 'Coins', count: 50 }],
+    ]) {
+        const file = snapshot([{ name: 'Worker', server: 's', at: 1_000, inventory }], 'cloud', owners, 2_000);
+        const canonical = canonicalRows([file], () => 'cloud').get('worker');
+        const retained = snapshot([], 'cloud', owners, 3_000, [canonical]).accounts[0];
+        const remote = remoteBots([{ ...file, accounts: [canonical] }], new Set(), new Map(), new Map(), 2_000);
+        const published = publicView({ now: 2_000, bots: remote });
+        expect(canonical.inventory).toEqual(inventory);expect(retained.inventory).toEqual(inventory);expect(remote[0].inventory).toEqual(inventory);expect(published.bots[0].inventory).toEqual(inventory);
+    }
 });
 
 test('only known projected inventory receives a raw-ID marker and invalid raw IDs stay unknown', () => {

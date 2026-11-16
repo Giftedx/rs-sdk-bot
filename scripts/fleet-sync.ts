@@ -39,7 +39,7 @@ const rows = (raw: unknown, kind: 'bank' | 'equipment' | 'inventory' = 'bank') =
         id: kind === 'inventory' ? i.id : i.baseId ?? i.id,
         ...(kind === 'inventory' ? { baseId: i.baseId ?? i.id } : {}),
         ...(typeof i.name === 'string' ? { name: i.name } : {}), count: i.count,
-        ...(kind === 'equipment' && nonnegativeInteger(i.slot) ? { slot: i.slot } : {}),
+        ...(nonnegativeInteger(i.slot) && (kind === 'equipment' || kind === 'inventory' && i.slot < 28) ? { slot: i.slot } : {}),
     }));
 const journalRows = (raw: unknown) => Array.isArray(raw) && raw.length > 0
     && raw.every(q => q && nonnegativeInteger(q.id) && typeof q.name === 'string' && q.name.trim()

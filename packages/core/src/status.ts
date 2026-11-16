@@ -213,7 +213,8 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             skills: (st?.skills ?? []).map((k: any) => ({ name: k.name, level: k.baseLevel, currentLevel:k.level, xp: k.experience })),
             guildFacts: guildActorFacts(s.client, st),
             doorStates: s.client && typeof s.client === 'object' && (s.client as {ingame?:unknown}).ingame !== true ? {} : observedDoorStates(st),
-            inventory: (st?.inventory ?? []).map((i: any) => ({ id:i.id,baseId:baseId(i.id),name: i.name, count: i.count })),
+            inventory: (st?.inventory ?? []).map((i: any) => ({ id:i.id,baseId:baseId(i.id),name: i.name, count: i.count,
+                ...(Number.isSafeInteger(i.slot)&&i.slot>=0&&i.slot<28?{slot:i.slot}:{}) })),
             // What this account sees on the floor, its own private drops too, as [x, z, level, id, count]: the
             // dashboard's 3D view draws them, because the world feed never sends a private obj.
             ground: groundStatus(st?.groundItems, p?.level),
