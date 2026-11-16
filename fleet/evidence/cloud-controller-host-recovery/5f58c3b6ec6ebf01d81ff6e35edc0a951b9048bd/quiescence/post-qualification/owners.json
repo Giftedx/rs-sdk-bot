@@ -1,0 +1,72 @@
+[
+  {
+    "account": "bonetopick",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "bravehardon",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "coinpurse",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "crownjewels",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "fullload",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "fullsporran",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "heavyload",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "meatntwoveg",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "porksword",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "spitroaster",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "stirmypot",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "tossthecaber",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "unsheathed",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  {
+    "account": "yewgotwood",
+    "side": "cloud",
+    "server": "rs-sdk-demo.fly.dev"
+  }
+]

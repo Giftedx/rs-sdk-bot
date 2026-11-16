@@ -1,0 +1,52 @@
+bun test v1.3.14 (0d9b296a)
+
+packages/core/test/session-recovery-permit.test.ts:
+129 |  }finally{rmSync(f.base,{recursive:true,force:true});}
+130 | },30000);
+131 | else for(const mode of ['normal','interrupted'])test('qualified cross-host recovery '+mode,async()=>{
+132 |  const child=Bun.spawn([process.execPath,'test',import.meta.path,'--test-name-pattern','^qualified cross-host fixture body$'],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,HOST_RECOVERY_FIXTURE:'1',HOST_RECOVERY_MODE:mode,FLEET_SIDE:'cloud'},stdout:'pipe',stderr:'pipe',windowsHide:true});
+133 |  const timer=setTimeout(()=>child.kill(),30000);
+134 |  try{const [code,out,err]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);expect({code,output:code?out+err:''}).toEqual({code:0,output:''});if(code===0)console.log(out.trim());}finally{clearTimeout(timer);}
+                                                                                                                                                                            ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "code": 0,
+-   "output": "",
++   "code": 1,
++   "output": 
++ "bun test v1.3.14 (0d9b296a)
++ 
++ packages/core/test/session-recovery-permit.test.ts:
++ 297 |     let inheritedHold: FleetSwarmClaim | undefined, orphan: FleetSwarmClaim | undefined;
++ 298 |     if (claim?.phase === 'held') {
++ 299 |         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
++ 300 |         let prior = matchedWorkerProof(root, claim, input),continuedHost=false;
++ 301 |         if(!prior&&recover&&authorized){prior=qualifiedHostProof(root,claim,input,authorized,git,now());continuedHost=!!prior;}
++ 302 |         if(authorized&&!prior)throw Error('qualified recovery claim identity or host continuation unavailable');
++                                           ^
++ error: qualified recovery claim identity or host continuation unavailable
++       at acquireFleetSwarmClaim (/workspace/rs-sdk-bot-host-recovery/packages/core/src/fleet-trade-claim.ts:302:37)
++       at <anonymous> (/workspace/rs-sdk-bot-host-recovery/packages/core/test/session-recovery-permit.test.ts:82:20)
++ (fail) qualified cross-host fixture body [762.73ms]
++ 
++  0 pass
++  30 filtered out
++  1 fail
++  25 expect() calls
++ Ran 1 test across 1 file. [1394.00ms]
++ "
++ ,
+  }
+
+- Expected  - 2
++ Received  + 24
+
+      at <anonymous> (/workspace/rs-sdk-bot-host-recovery/packages/core/test/session-recovery-permit.test.ts:134:167)
+(fail) qualified cross-host recovery interrupted [1409.20ms]
+
+ 0 pass
+ 31 filtered out
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [2.14s]
