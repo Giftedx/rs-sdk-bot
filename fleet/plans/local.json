@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794819862792,
+ "at": 1794820012909,
  "jobs": [
   {
    "account": "Balls",
@@ -53,19 +53,23 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=13 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit20-536-6to19 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "20"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 13 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
    "autopilot": "local",
    "resources": []
   },
