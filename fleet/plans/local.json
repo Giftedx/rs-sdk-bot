@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794820615843,
+ "at": 1794820689768,
  "jobs": [
   {
    "account": "Balls",
@@ -123,23 +123,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "scorpion"
-   ],
-   "env": {
-    "CAP": "6000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-d38a2813-ef13-4c76-9b76-f19a24c3e96f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-scorpion-mmsmk-ardougne-cure [task-d38a2813-ef13-4c76-9b76-f19a24c3e96f]",
-   "role": "helper"
   },
   {
    "account": "NabTheKnob",
