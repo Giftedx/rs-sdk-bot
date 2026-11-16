@@ -139,7 +139,7 @@ function matchedWorkerProof(root: string, claim: FleetSwarmClaim, target: ClaimI
 
 function abandonedBeforeNetwork(root: string, claim: FleetAccountClaim, target: ClaimIdentity) {
     if (!claim.pid || savedProcessAlive(claim.pid, claim.at) || !owningCheckout(root, claim, target.side)) return;
-    let pending: {claim: string; inherited?: FleetSwarmClaim};
+    let pending: {claim: string; inherited?: FleetSwarmClaim; inheritedHead?:string};
     try { pending = JSON.parse(readFileSync(pendingPath(root, claim.nonce), 'utf8')); }
     catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
@@ -153,7 +153,7 @@ function abandonedBeforeNetwork(root: string, claim: FleetAccountClaim, target: 
     return pending;
 }
 
-function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimIdentity): { inherited?: FleetSwarmClaim } | undefined {
+function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimIdentity): { inherited?: FleetSwarmClaim; inheritedHead?:string } | undefined {
     const pending=abandonedBeforeNetwork(root,claim,target);
     if(!pending)return;
     if (!pending.inherited) return {};
@@ -163,9 +163,9 @@ function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimI
         && prior.side === claim.side && prior.host === claim.host && prior.nonce !== claim.nonce) return {inherited: prior};
 }
 
-function writePending(root: string, claim: FleetAccountClaim, inherited?: FleetSwarmClaim) {
+function writePending(root: string, claim: FleetAccountClaim, inherited?: FleetSwarmClaim, inheritedHead?:string) {
     mkdirSync(pendingDir(root), {recursive: true});
-    writeFileSync(pendingPath(root, claim.nonce), JSON.stringify({claim: JSON.stringify(claim), inherited}), {flag: 'wx'});
+    writeFileSync(pendingPath(root, claim.nonce), JSON.stringify({claim: JSON.stringify(claim), inherited, inheritedHead}), {flag: 'wx'});
 }
 
 function forgetPending(root: string, nonce: string) {
@@ -274,6 +274,28 @@ function qualifiedHostProof(root:string,claim:FleetSwarmClaim,target:ClaimIdenti
         &&fleetLeaseAllowsWorker(root,target.side+':'+lease.current.epoch,now))return proof;
 }
 
+function pendingHostWitness(root:string,head:string,inherited:FleetSwarmClaim,witness:string|undefined,target:ClaimIdentity,git:ReturnType<typeof fleetGitWindow>){
+    const {account,server}=identity(target);
+    const parents=git(['show','-s','--format=%P',head]).split(/\s+/);
+    // Legacy first-interruption markers bind directly to the original parent.
+    witness??=parents.length===1?parents[0]:undefined;
+    if(!witness||! /^[0-9a-f]{40}$/.test(witness)||git(['show','-s','--format=%b',witness])!==JSON.stringify(inherited))return;
+    git(['merge-base','--is-ancestor',witness,head]);
+    const attempts=listAttempts(target.account,target.server,lifecycleOptions(root));
+    if(attempts.some(a=>!a.receipt))return;
+    const rows=git(['rev-list','--parents',head,'^'+witness]).split('\n'),seen=new Set<string>();
+    let cursor=head;
+    for(const row of rows){
+        const [commit,parent,...extra]=row.split(/\s+/);
+        if(commit!==cursor||!parent||extra.length)return;
+        const claim=parseClaim(git(['show','-s','--format=%b',commit!]),account,server);
+        if(!isSwarmClaim(claim)||claim.phase!=='held'||!owningCheckout(root,claim,target.side)||claim.nonce===inherited.nonce||seen.has(claim.nonce)
+            ||savedProcessAlive(claim.pid,claim.at)||attempts.some(a=>a.receipt!.owner.sharedClaimNonce===claim.nonce))return;
+        seen.add(claim.nonce);cursor=parent;
+    }
+    if(cursor===witness)return witness;
+}
+
 export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, admission=undefined as RecoveryConnectionAdmission|undefined, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean } = {}) {
     const { account, server } = identity(input), { side } = input;
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
@@ -282,19 +304,21 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     const { ref, head, claim: current } = loadClaim(git, account, server);
     let pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
     // A qualified child may die after pushing its claim but before recording intent.
-    // Only its exact durable marker and Git parent can carry the foreign-host hold
+    // Only its exact durable marker and linear Git witness can carry the foreign-host hold
     // forward; the spent admission and retired host lease must still authorize it.
     if(!pending&&recover&&authorized&&current?.phase==='held'&&isSwarmClaim(current)){
         const marker=abandonedBeforeNetwork(root,current,input);
         if(marker?.inherited){
-            const inherited=parseClaim(JSON.stringify(marker.inherited),account,server),parents=head?git(['show','-s','--format=%P',head]).split(/\s+/):[];
-            if(isSwarmClaim(inherited)&&inherited.phase==='held'&&inherited.nonce!==current.nonce&&parents.length===1
-                &&git(['show','-s','--format=%b',parents[0]!])===JSON.stringify(inherited)
-                &&qualifiedHostProof(root,inherited,input,authorized,git,now()))pending={inherited};
+            const inherited=parseClaim(JSON.stringify(marker.inherited),account,server);
+            if(head&&isSwarmClaim(inherited)&&inherited.phase==='held'&&inherited.nonce!==current.nonce
+                &&qualifiedHostProof(root,inherited,input,authorized,git,now())){
+                const inheritedHead=pendingHostWitness(root,head,inherited,marker.inheritedHead,input,git);
+                if(inheritedHead)pending={inherited,inheritedHead};
+            }
         }
     }
     const claim = pending ? pending.inherited : current;
-    let inheritedHold: FleetSwarmClaim | undefined, orphan: FleetSwarmClaim | undefined;
+    let inheritedHold: FleetSwarmClaim | undefined, inheritedHead:string|undefined, orphan: FleetSwarmClaim | undefined;
     if (claim?.phase === 'held') {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
         let prior = matchedWorkerProof(root, claim, input),continuedHost=false;
@@ -307,9 +331,10 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
             throw Error('fleet account claim held by swarm');
         }
         if (prior?.state === 'held') inheritedHold = claim;
+        if(continuedHost)inheritedHead=pending?.inheritedHead??head;
     }
     const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, ...claimOwner(root), nonce: randomUUID(), phase: 'held', at: now() };
-    writePending(root, record, inheritedHold);
+    writePending(root, record, inheritedHold,inheritedHead);
     const owned = appendClaim(git, ref, head, orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt', record);
     if (pending && current) cleanPending(root, current.nonce);
     let released = false;

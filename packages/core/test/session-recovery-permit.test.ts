@@ -43,8 +43,7 @@ if(process.env.HOST_RECOVERY_FIXTURE==='1')test('qualified cross-host fixture bo
    const target={account:'Rod',server:claim.server,side:'cloud'},ref='refs/heads/fleet-trade-claim/rod';
    const body=()=>authority(['show','-s','--format=%b',authority(['ls-remote','--refs','origin',ref]).split(/\s/)[0]!]);
    const original=body(),pointer=join(accountDir('Rod',claim.server,join(f.base,'.practice/session-lifecycle')),'latest.json'),latest=readFileSync(pointer);
-   issueRecoveryPermit(f.request,f.base,options);
-   const input=join(f.base,'interrupted-input.json');writeFileSync(input,JSON.stringify({request:f.request,base:f.base,clock,source}));
+   const input=join(f.base,'interrupted-input.json');
    const code=`import {readFileSync,existsSync} from 'node:fs';
     import {consumeRecoveryConnection,spendRecoveryConnection,recoveryPermitPaths} from ${JSON.stringify(resolve(import.meta.dir,'../src/session-recovery-permit.ts'))};
     import {acquireFleetSwarmClaim} from ${JSON.stringify(resolve(import.meta.dir,'../src/fleet-trade-claim.ts'))};
@@ -55,27 +54,34 @@ if(process.env.HOST_RECOVERY_FIXTURE==='1')test('qualified cross-host fixture bo
     const {admission}=consumeRecoveryConnection(request,base,options);spendRecoveryConnection(admission,request);
     acquireFleetSwarmClaim(base,{account:request.account,server:request.server,side:'cloud'},{recover:true,admission,now:()=>clock});
     process.exit(0);`;
-   const child=Bun.spawn([process.execPath,'-e',code,input],{cwd:f.base,stdout:'pipe',stderr:'pipe',windowsHide:true});
-   bindRecoveryChild(f.request,child.pid,f.base,options);
-   const [exit,out,err]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);expect({exit,output:out+err}).toEqual({exit:0,output:''});
-   const interrupted=readFleetAccountClaim(f.base,target)!;expect(interrupted.host).toBe(hostname());expect(interrupted.pid).toBe(child.pid);expect(interrupted.nonce).not.toBe(claim.nonce);
-   expect(readFileSync(pointer)).toEqual(latest);
-   expect(()=>acquireFleetSwarmClaim(f.base,target,{recover:true,now:()=>clock,ownerAlive:()=>false})).toThrow();
-   clock+=150001;f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
-   expect(releaseExpiredRecoveryLease('Rod',f.base,{now:()=>clock,matches:()=>true}).basis).toBe('not-connected');
-   f.request.nonce='two';f.put('.practice/swarm-repair.json.lease',{pid:10,runId:'task-run',nonce:'two'});
+   let interrupted:NonNullable<ReturnType<typeof readFleetAccountClaim>>|undefined,childPid=0;
+   for(const nonce of ['one','two']){
+    f.request.nonce=nonce;f.put('.practice/swarm-repair.json.lease',{pid:10,runId:'task-run',nonce});
+    issueRecoveryPermit(f.request,f.base,options);writeFileSync(input,JSON.stringify({request:f.request,base:f.base,clock,source}));
+    const child=Bun.spawn([process.execPath,'-e',code,input],{cwd:f.base,stdout:'pipe',stderr:'pipe',windowsHide:true});
+    bindRecoveryChild(f.request,child.pid,f.base,options);
+    const [exit,out,err]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);expect({exit,output:out+err}).toEqual({exit:0,output:''});
+    const prior=interrupted;interrupted=readFleetAccountClaim(f.base,target)!;childPid=child.pid;
+    expect(interrupted.host).toBe(hostname());expect(interrupted.pid).toBe(child.pid);expect(interrupted.nonce).not.toBe(prior?.nonce??claim.nonce);
+    expect(readFileSync(pointer)).toEqual(latest);
+    expect(()=>acquireFleetSwarmClaim(f.base,target,{recover:true,now:()=>clock,ownerAlive:()=>false})).toThrow();
+    clock+=150001;f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
+    expect(releaseExpiredRecoveryLease('Rod',f.base,{now:()=>clock,matches:()=>true}).basis).toBe('not-connected');
+   }
+   f.request.nonce='three';f.put('.practice/swarm-repair.json.lease',{pid:10,runId:'task-run',nonce:'three'});
    issueRecoveryPermit(f.request,f.base,options);bindRecoveryChild(f.request,process.pid,f.base,options);
    const {admission}=consumeRecoveryConnection(f.request,f.base,options);spendRecoveryConnection(admission,f.request);
-   const markerPath=join(f.base,'.practice/fleet-account-pending',interrupted.nonce+'.json'),markerRaw=readFileSync(markerPath),marker=JSON.parse(markerRaw.toString());
+   const markerPath=join(f.base,'.practice/fleet-account-pending',interrupted!.nonce+'.json'),markerRaw=readFileSync(markerPath),marker=JSON.parse(markerRaw.toString());
    const retry=()=>acquireFleetSwarmClaim(f.base,target,{recover:true,admission,now:()=>clock,ownerAlive:()=>{throw Error('remote PID is not local death proof');}});
-   for(const changed of [{...marker,inherited:{...marker.inherited,nonce:randomUUID()}},{...marker,claim:'{}'}]){
+   const unrelated=commitFleetGitRecord(authority,undefined,tree,'Unrelated witness\n\n'+JSON.stringify(claim));
+   for(const changed of [{...marker,inherited:{...marker.inherited,nonce:randomUUID()}},{...marker,claim:'{}'},{...marker,inheritedHead:'0'.repeat(40)},{...marker,inheritedHead:unrelated}]){
     writeFileSync(markerPath,JSON.stringify(changed));const unchanged=body();expect(retry).toThrow();expect(body()).toBe(unchanged);writeFileSync(markerPath,markerRaw);
    }
-   const intent=beginSessionAttempt({account:'Rod',server:claim.server,secret:'unit-fixture'},{root:join(f.base,'.practice/session-lifecycle'),owner:{...lifecycleOwner(),pid:child.pid,sharedClaimNonce:interrupted.nonce},now:()=>clock});
+   const intent=beginSessionAttempt({account:'Rod',server:claim.server,secret:'unit-fixture'},{root:join(f.base,'.practice/session-lifecycle'),owner:{...lifecycleOwner(),pid:childPid,sharedClaimNonce:interrupted!.nonce},now:()=>clock});
    writeFileSync(pointer,latest);expect(retry).toThrow();rmSync(join(dirname(pointer),'attempts',intent.attemptId+'.json'));expect(readFileSync(pointer)).toEqual(latest);
    const recovered=retry();
    recovered.abortBeforeNetwork();expect(body()).toBe(original);expect(readFileSync(pointer)).toEqual(latest);
-   console.log('QUALIFIED_HOST_INTERRUPTED_PASS real child exit after push, ordinary refusal, supported expired lease retirement, qualified retry, exact inherited hold restored');return;
+   console.log('QUALIFIED_HOST_INTERRUPTED_PASS two real child exits after push, durable original Git witness, ordinary refusal, supported expired lease retirement, qualified retry, exact inherited hold restored');return;
   }
   issueRecoveryPermit(f.request,f.base,options);bindRecoveryChild(f.request,process.pid,f.base,options);
   const {admission}=consumeRecoveryConnection(f.request,f.base,options);spendRecoveryConnection(admission,f.request);
