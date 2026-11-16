@@ -10,6 +10,7 @@ let worker: BunWorker | null = null, next = 0, idle: ReturnType<typeof setTimeou
 // An idle worker holds a second pathfinder (about 800 MB per bot process); it closes this long after its last plan.
 export const WORKER_IDLE_MS = 30_000;
 const pending = new Map<number, { resolve(p: TripPlan | null): void; reject(e: unknown): void }>();
+export const pendingRouteWork = (): number => pending.size;
 
 function stopWorker(w: BunWorker) {
     if (worker !== w) return;
