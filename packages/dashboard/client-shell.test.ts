@@ -7,6 +7,7 @@ const pricingSource=shell.slice(shell.indexOf('  const priceName='),shell.indexO
 const pricing=(S:any)=>new Function('S','window',`${pricingSource};return {price,priceKey};`)(S,{});
 const healthSource=shell.slice(shell.indexOf('  function recordedHp('),shell.indexOf('  const curLevel='));
 const questPointSource=shell.slice(shell.indexOf('  function questPointsOf('),shell.indexOf('  function questReqs('));
+const questStateSource=shell.split('\n').find(line=>line.startsWith('  const questState='))??'';
 const equipmentValue=new Function(`${shell.slice(shell.indexOf('  function equipmentValue('),shell.indexOf('  function wornBonuses('))};return equipmentValue;`)();
 
 function fleetOverlay(goals:any,owner=true,clock:any={now:Date.now()}){
@@ -185,7 +186,7 @@ test('quest points need a point observation, not the number of completed quests'
 
 test('quest requirements, journal and chat use the backend selected QP, including explicit unknown',()=>{
  const now=1_000_000,server='rs-sdk-demo.fly.dev';
- const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
+ const code=questStateSource+shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
  const data={Gate:{s:[],q:[],qp:[55,1]}},sync=(v:any):any=>({then:(f:any)=>sync(f(v))});
  const t=new Function('S','asset','fetch','E',`${code};return {questPointsOf,questReqs,questReady};`)({now},String,()=>sync({ok:true,json:()=>data}),String);
  let current:any={name:'Worker',server,at:now-10,guildFacts:{varps:{qp:55}},ranksAt:now-1000,ranks:[{board:'Quest Points',level:50,rank:12}],quests:[]};
@@ -1217,7 +1218,7 @@ test('banked XP: bank items that are the one input of an action, at the best act
 });
 
 test('quest requirements: met, missing with the level held, unknown, and the Ready test',()=>{
- const code=shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
+ const code=questStateSource+shell.slice(shell.indexOf("  // Quest requirements (RuneLite's Quest Helper)"),shell.indexOf('  // The third list is XP that is one of several outcomes'));
  const data={"Hero's Quest":{s:[['Mining',52,1],['Cooking',53,0]],qp:[55,1],q:[['Lost City',1],['Dragon Slayer',0]]},'Lost City':{s:[['Woodcutting',36,1]],q:[]}};
  const sync=(v:any)=>({then(f:any){return sync(f(v));}});
  const env:any={asset:(n:string)=>n,fetch:()=>sync({ok:true,json:()=>data}),E:(x:string)=>x};
