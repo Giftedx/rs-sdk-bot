@@ -42,6 +42,96 @@
       "sha256": "e22ea7a44eca43f0b54739c0e0aaf3a21194dcb8bc3e25f3e87fdb18e4d644a2"
     },
     {
+      "path": "cases/auth-failure/control-account/lease.json",
+      "bytes": 908,
+      "sha256": "a1fb0f60829ec6d1b4ab08101582d381f70c97107836998db2604d5c764f8bea"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/child.json",
+      "bytes": 81,
+      "sha256": "182c54f06c6ef66b794a40d421cf7549c328562a61675160866e574fb5c74d55"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/input.json",
+      "bytes": 544,
+      "sha256": "2c41c4c416f1550796cd5cd80df28653a54ea0e069a88601007a4197f2ecd9b5"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/output/receipt.json",
+      "bytes": 1537,
+      "sha256": "619f76951fa8a9d2c457ea63c4e1ec3f5fe44bf38e533d6ede8217a5c020b2ad"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/output/request.json",
+      "bytes": 638,
+      "sha256": "a412a26531db90336ff124eeb65975fee88898a24030e6ec4b3df5bd2a517846"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/permit.json",
+      "bytes": 908,
+      "sha256": "a1fb0f60829ec6d1b4ab08101582d381f70c97107836998db2604d5c764f8bea"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/used.json",
+      "bytes": 122,
+      "sha256": "0b1e9a6c1744619feec106e20cf5afc946f1aab86e66b35fbd1926b61feee7d1"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-auth-failure/worker.log",
+      "bytes": 1150,
+      "sha256": "fd6cc01f460f7dd183a88e66a51b3a49d8fc54ea74ef52b4f7ff6897610315fa"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/child.json",
+      "bytes": 71,
+      "sha256": "3220d511f047b131a23472b2684794039d47b7c5041e42efea89359aa151285d"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/completed.json",
+      "bytes": 1277,
+      "sha256": "7fe3eadff2581ac3eab527575d158696bd03e19a4c493f5b6d4406f8332deb19"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/input.json",
+      "bytes": 534,
+      "sha256": "69ad1bc687138f341f36144820c7e5634be8802a66dc5377ce5b70d3b0d47ffe"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/output/receipt.json",
+      "bytes": 8320,
+      "sha256": "3ee6192576176f581882abc95db46d066c60d0bc64818d99d35ae99f610f3180"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/output/request.json",
+      "bytes": 628,
+      "sha256": "9c5546eec5384e561e3bdff88a238eb54806e66204e0e8cacc9b0667182182a4"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/permit.json",
+      "bytes": 898,
+      "sha256": "a92b6f22c39f18e5861cc1265f2c784ab7fd5263828bbdda192349b69c9075fd"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/used.json",
+      "bytes": 117,
+      "sha256": "b4324a79a114f2d0a9fb56346ed81d6a88afef54a9b110678aaa3bc5e94365f2"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/worker.err",
+      "bytes": 48,
+      "sha256": "ef84ca0b3206f47b118843494dd7a2ff81d49335d89d7726b1c5438ed244b65c"
+    },
+    {
+      "path": "cases/auth-failure/control-account/one-offline/worker.log",
+      "bytes": 1818,
+      "sha256": "ff455c8eba7a0e36022b54a4be2168f22158a5021f74d23902a579d9324848b0"
+    },
+    {
       "path": "cases/auth-failure/dispatch-results.json",
       "bytes": 3389,
       "sha256": "bad77e296238f5fa4f45b603fc28d9e523ac675ea07f8903a225de2eca3db411"
@@ -65,6 +155,11 @@
       "path": "cases/auth-failure/lifecycle/latest.json",
       "bytes": 171,
       "sha256": "375fcc592846f0eb94dd9b7031ac39339cbc3da821d1192e02d75eac16ebc654"
+    },
+    {
+      "path": "cases/auth-failure/recovery-worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "cases/auth-failure/recovery-worker.log",
@@ -107,6 +202,51 @@
       "sha256": "b301a4bfa2c75cee58521fe7fcf8422e4939caf3ce776ed337f05e199165fd45"
     },
     {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/child.json",
+      "bytes": 107,
+      "sha256": "94df51c2fda89ab7d58d6af447fcce59dee9423532b95638bff9269ccc2ab3a0"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/completed.json",
+      "bytes": 1349,
+      "sha256": "92005efefb717541cc82d6aae5ef3bd39a6de7b68a014b15714911da86d860a9"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/input.json",
+      "bytes": 570,
+      "sha256": "5438c9b7584933746850522a5024835fec6fbe3d282d77d8e3cefc43d3acb249"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/output/receipt.json",
+      "bytes": 8374,
+      "sha256": "9e9f949857c679a77cacc7a4d609fddc418c7b52261da021433cc49b67ae3d50"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/output/request.json",
+      "bytes": 664,
+      "sha256": "88af734b9ead19aead9568a7219ad2d37bcea6043f2623ffa632dd3382247e0f"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/permit.json",
+      "bytes": 934,
+      "sha256": "50ecc48480e0a718a714036e7bec9333da20b1a5725c3c1d9dff6812d632c347"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/used.json",
+      "bytes": 135,
+      "sha256": "b2a54960435781b1eed34e661587d7f53d2abcfb68f2a3a9af6fcfb214ed79c5"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/worker.err",
+      "bytes": 48,
+      "sha256": "5039f5e6e4fd487d089cb5a160fe1efb77998aefc167de4ec467fb33a40b20f2"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/control-account/one-bounded-swarm-new-mission/worker.log",
+      "bytes": 1836,
+      "sha256": "15dca58f2a7b961f218216c8495a5abfb573827a70bc8091d9d2d5004e9e8019"
+    },
+    {
       "path": "cases/bounded-swarm-new-mission/dispatch-results.json",
       "bytes": 2670,
       "sha256": "c1086b7688836a9ef279f7823454724ee037c3633fb2e3ccdcdeebc130b3c44e"
@@ -115,6 +255,11 @@
       "path": "cases/bounded-swarm-new-mission/inspection-plan.json",
       "bytes": 1871,
       "sha256": "822a6022b5fdef46b7da381570d4b3c88cc60ce132c2c641b34580830c8f7f49"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/inspection-swarm.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "cases/bounded-swarm-new-mission/inspection-swarm.log",
@@ -147,9 +292,214 @@
       "sha256": "0110ee7c152ffe02f82407d142f9f928f418572b6712e68824c226825d75feff"
     },
     {
+      "path": "cases/bounded-swarm-new-mission/observer-verifier.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
       "path": "cases/bounded-swarm-new-mission/observer-verifier.log",
       "bytes": 189,
       "sha256": "a463a4f73bc6e4860995a141a2af5068a1dd5e67b4d61ce5cb30d11ec04428fe"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/HEAD",
+      "bytes": 23,
+      "sha256": "f6f2b945f6c411b02ba3da9c7ace88dcf71b6af65ba2e0d89aa82900042b5a10"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/config",
+      "bytes": 66,
+      "sha256": "dd548269913b6adbdfa7049170ea86850050cb762ea3b9c510a0b2986d2113e3"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/description",
+      "bytes": 73,
+      "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/applypatch-msg.sample",
+      "bytes": 478,
+      "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/commit-msg.sample",
+      "bytes": 896,
+      "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/fsmonitor-watchman.sample",
+      "bytes": 4726,
+      "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/post-update.sample",
+      "bytes": 189,
+      "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/pre-applypatch.sample",
+      "bytes": 424,
+      "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/pre-commit.sample",
+      "bytes": 1649,
+      "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/pre-merge-commit.sample",
+      "bytes": 416,
+      "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/pre-push.sample",
+      "bytes": 1374,
+      "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/pre-rebase.sample",
+      "bytes": 4898,
+      "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/pre-receive.sample",
+      "bytes": 544,
+      "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/prepare-commit-msg.sample",
+      "bytes": 1492,
+      "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/push-to-checkout.sample",
+      "bytes": 2783,
+      "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/sendemail-validate.sample",
+      "bytes": 2308,
+      "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/hooks/update.sample",
+      "bytes": 3650,
+      "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/info/exclude",
+      "bytes": 240,
+      "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/14/4cba256692aba9c001021ac0a6291fb695da72",
+      "bytes": 364,
+      "sha256": "4bd24defa87636849c711e15fad88930f9adefaa2206fc618bdf35fb753aec8e"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/19/c5b054f9fddc97ed83d7809809448afade8efe",
+      "bytes": 373,
+      "sha256": "06c3dcef1782509300aae7dc445b0e2a173ae561382e0d3c5a9576e2d7c42ae3"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/20/a8781baa534d25c49465ebd6ab687ce4d9fea3",
+      "bytes": 363,
+      "sha256": "174baf96ff8a36f8ef72de15db573324a2f54acc8cec50c4acd51fd7ab727b4d"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/38/16e359f17e686500030abb373f433a4b4d6bb0",
+      "bytes": 363,
+      "sha256": "9264337885deba299ec77352db4841030fa805976e65fd74d0b6ce579b2c5d78"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/45/ad4efe228df7eef995c84da3f35a6b9b11fb18",
+      "bytes": 363,
+      "sha256": "0f1c29ebffb1ec9ecaee844d4ee4f8d339070bbdd23406c2872db02c21d1d95d"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/4b/825dc642cb6eb9a060e54bf8d69288fbee4904",
+      "bytes": 15,
+      "sha256": "e72602cad67ed061ec84b13e92568f873172efac19a512a1b561dbf54e2c8426"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/70/8ba5e2fe6312ea64d428de968726eea5ec8ac9",
+      "bytes": 362,
+      "sha256": "e29c57b80e87c0707de9c0fa8eb56e5d3a300a45452986df547af1587b08953d"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/81/284853a9ac0137d83fe25a6bd99c07ac91a190",
+      "bytes": 364,
+      "sha256": "318c437a5e523cc535bc71cb09fefae5347fa0cea50ae9fbaaad1e9a1059083e"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/90/dfb086ac833b0450a4d9e94e92f221e739e875",
+      "bytes": 363,
+      "sha256": "746d2b1a7c988eda7daf8ec6517d3202234ea3adfc15714b0b85363793e2f8f3"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/94/4bf9a5c2e73d2e04a79b696add8fca0fff6968",
+      "bytes": 274,
+      "sha256": "7a00143bbf95ac0356fb99677b725ec87aaec784904aeee6bf8716d9bbe06f9d"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/e1/a5d937e42e9588fe50ba9bb59c3e6f5ebd76a4",
+      "bytes": 245,
+      "sha256": "31c0ac28f6b6f45c4195db21cee98e5985e5737ee015c8a0bb955e3b2c0dd947"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/objects/e3/b4aab18e8ff865526510927720516a1de22cb8",
+      "bytes": 362,
+      "sha256": "d6734d6db52dca3fcb27c8e67c9f7a9a2c183b8eb33737bf90c2e9a54346fba6"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-lease/cloud",
+      "bytes": 41,
+      "sha256": "721c2ab7adc0280c455f5dc693c5aefc061b9468c73e1f0cfc7253c05baf6b1b"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/flrcvxrxnv2",
+      "bytes": 41,
+      "sha256": "fa3d93df8c4ac18c4ed09f133307fd01c385a9207d9aa168ecb0868e5ada2ea9"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/fxreserve0",
+      "bytes": 41,
+      "sha256": "4f1fe6abb8639ff51013c34f370665e32b1ba63cd64de53d665c0e8ab87455e4"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/fxreserve1",
+      "bytes": 41,
+      "sha256": "fa8889f84f35be28204cd71c1df579f1a4928efa08656d4c5b6199b046c761c4"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/fxreserve2",
+      "bytes": 41,
+      "sha256": "c2ad7679751ffe0f2904d4181290cfb346ae995cb9cd57505beca1049b62cd9a"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/fxreserve3",
+      "bytes": 41,
+      "sha256": "9c85bb401b585070cdb2aeafe9361eeffcbcd9366fc38702ab7751dc8d78beb9"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/fxreserve4",
+      "bytes": 41,
+      "sha256": "d0ad09ba121370892dd57cc73daa3eb60030109abffadc0e5a479b420edb18f6"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/fxreserve5",
+      "bytes": 41,
+      "sha256": "4ec5bcdc015ef593d639e8bb3286743ae1645857c79faa4312208467f32283f5"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/private-authority.git/refs/heads/fleet-trade-claim/fxreserve6",
+      "bytes": 41,
+      "sha256": "bd64df353818831291b0891f9901843f09d90d17e59a1f5fcf404cbd379b77d2"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/recovery-worker.err",
+      "bytes": 48,
+      "sha256": "5039f5e6e4fd487d089cb5a160fe1efb77998aefc167de4ec467fb33a40b20f2"
     },
     {
       "path": "cases/bounded-swarm-new-mission/recovery-worker.log",
@@ -165,6 +515,11 @@
       "path": "cases/bounded-swarm-new-mission/session-check-plan.json",
       "bytes": 1764,
       "sha256": "35d75e3fa8daa435bc7003a938ec4592e88ae84185541d1dd20a07e0ffa203aa"
+    },
+    {
+      "path": "cases/bounded-swarm-new-mission/session-check-swarm.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "cases/bounded-swarm-new-mission/session-check-swarm.log",
@@ -232,6 +587,51 @@
       "sha256": "3f2f314a4eea3506f983dd31700a32aabee4825ca06184bed977ad53371c1b94"
     },
     {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/child.json",
+      "bytes": 103,
+      "sha256": "1d2d9429d9576c95ebc4d0467506ef962f40e424bac085ae5c9ec7aebbb7d820"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/completed.json",
+      "bytes": 1341,
+      "sha256": "439b7fda87acf2c8f61587f71b141a89902f053e116fde5cac782367686fbdb5"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/input.json",
+      "bytes": 566,
+      "sha256": "888a09bda31af442ec6c95154d6526cc84e8ee8d5c5aaa84ee9f8c462f1782a8"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/output/receipt.json",
+      "bytes": 8368,
+      "sha256": "4ff611084b61b8b3cbf4edd319ab96c1c490cb0f766d645f732b13a549e7e49d"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/output/request.json",
+      "bytes": 660,
+      "sha256": "ecd558652675c08ee5446b77cea17451fd970722fc869b28ab93779e8ac3aea7"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/permit.json",
+      "bytes": 1438,
+      "sha256": "03abec8e7e8135b4d16c3d436845720ce851b953bdf5428414f8d687f7c2cfe2"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/used.json",
+      "bytes": 133,
+      "sha256": "0027a18fb79d942e46564d0e6f2ad9bdfd3b141690bd2af8ffb02034801c19df"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/worker.err",
+      "bytes": 48,
+      "sha256": "db9fbe103d5323297943e2abe7be65280f1dde4931d47fdc5f5813dc162f4f16"
+    },
+    {
+      "path": "cases/completed-held-producer/control-account/one-completed-held-producer/worker.log",
+      "bytes": 1834,
+      "sha256": "fa3a75d221aa7a0edbc774b778e5e7ee50fd184ae15159a16fd978e8fe8b9184"
+    },
+    {
       "path": "cases/completed-held-producer/dispatch-results.json",
       "bytes": 2658,
       "sha256": "1e689d42d89b33683bd383c8a43e9aa0d5b43c325ed678633b06bee4760b8277"
@@ -255,6 +655,11 @@
       "path": "cases/completed-held-producer/producer-before.json",
       "bytes": 1684,
       "sha256": "d0c07c65699dc19908ead7caf3b9c983e7fd87060002b46d32c282b50042d3ec"
+    },
+    {
+      "path": "cases/completed-held-producer/recovery-worker.err",
+      "bytes": 48,
+      "sha256": "db9fbe103d5323297943e2abe7be65280f1dde4931d47fdc5f5813dc162f4f16"
     },
     {
       "path": "cases/completed-held-producer/recovery-worker.log",
@@ -1182,6 +1587,51 @@
       "sha256": "51e57230021fba36c443b88834d06bf36ca049ba4d0df057bcc5a9f4787175eb"
     },
     {
+      "path": "cases/completed/control-account/one-completed/child.json",
+      "bytes": 75,
+      "sha256": "8db61fa83660cba5d65614972adad901a153a2dd28d1d1fc666785ecd515548d"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/completed.json",
+      "bytes": 1285,
+      "sha256": "94859e718f350fb7cbe1c0d3bac1eeb9016c1d4874c162668d85be68d4edc79f"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/input.json",
+      "bytes": 538,
+      "sha256": "b8fb861ca7485e1b20b6345f709a659448271348d06d5d74a9a6dc50b726ba43"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/output/receipt.json",
+      "bytes": 8326,
+      "sha256": "7b2bc25dd2a37687be9ae3da21b5961c06bd3cef5eafa638b3e52f2a83efad83"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/output/request.json",
+      "bytes": 632,
+      "sha256": "e3cca12e160ffb50bc1b7960e6d7f8e825066663affd4bce0a3c8d7a13787444"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/permit.json",
+      "bytes": 1269,
+      "sha256": "6c5fd9513bfa2e0a8e0574a5dcbd7dbf959fb006d06258ddcd56ac4bc9627c84"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/used.json",
+      "bytes": 119,
+      "sha256": "7fa3ae7075b6ca3671a86504db125d8be148c3ab12ac2794076627f578e502f1"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/worker.err",
+      "bytes": 48,
+      "sha256": "9bb17119c5fabd797cdfc03f45776c8b71319d5d49d9a0d881eb65e62277acd7"
+    },
+    {
+      "path": "cases/completed/control-account/one-completed/worker.log",
+      "bytes": 1820,
+      "sha256": "9252720db4bef0493c144a99ec5ca0da6125920e005a99dad31316caf93a71a1"
+    },
+    {
       "path": "cases/completed/controller-after.json",
       "bytes": 1244,
       "sha256": "40bcb0f149c53fb1f6519ad672e6957b637b586a02376aae4759cee7b57d2785"
@@ -1200,6 +1650,11 @@
       "path": "cases/completed/lifecycle/latest.json",
       "bytes": 171,
       "sha256": "40c1202b1e688215be6e7cb5d651c42cc840236f0cdd6d641fd5c01d15d86109"
+    },
+    {
+      "path": "cases/completed/recovery-worker.err",
+      "bytes": 48,
+      "sha256": "9bb17119c5fabd797cdfc03f45776c8b71319d5d49d9a0d881eb65e62277acd7"
     },
     {
       "path": "cases/completed/recovery-worker.log",
@@ -1252,6 +1707,51 @@
       "sha256": "30acb15b8812bc9e8547d81d60dcc92754c41442acc66c57b561feea02095f5f"
     },
     {
+      "path": "cases/cooldown/control-account/lease.json",
+      "bytes": 901,
+      "sha256": "11fd3ba8892a696bc3b4065c683dfd442701a74ba5e7cb8ebafd87930c842573"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/child.json",
+      "bytes": 73,
+      "sha256": "7637ef98ca02e2ebd4f87afdfc657d6750c57f3bd9793d314604d1c79b8ec4a8"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/input.json",
+      "bytes": 537,
+      "sha256": "03c98478b699a650c539d0ac4d0ad208fbc55f34d6cb2d6b128a96051ccadb64"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/output/receipt.json",
+      "bytes": 1531,
+      "sha256": "b5a8af49d47cd6508d21031ebbf74b47398d401a48541fe02dc1182cea7e8bfe"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/output/request.json",
+      "bytes": 631,
+      "sha256": "4fd8ab6879539cff5d20e8bb1bede8daafb2d94196ec8485f52b61beb10de77d"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/permit.json",
+      "bytes": 901,
+      "sha256": "11fd3ba8892a696bc3b4065c683dfd442701a74ba5e7cb8ebafd87930c842573"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/used.json",
+      "bytes": 118,
+      "sha256": "8e57fa50f10468aaaebbab5718e020cced7abf5a9116f8c5dbcad6d0da118716"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/cooldown/control-account/one-cooldown/worker.log",
+      "bytes": 1151,
+      "sha256": "23e5f6532a52b3ac042dbf6bfd95ad114fc2a6fe70ec54e6eb007e3441b81626"
+    },
+    {
       "path": "cases/cooldown/cooldown-window.json",
       "bytes": 2100,
       "sha256": "aed3d48fda915e7fc3cff1bd03586d6d961ee802794bf7b4ea56a82443afaafb"
@@ -1287,14 +1787,39 @@
       "sha256": "a313d026f3b3cf479d6aaf22f8dced33210a80197b82c63a5dfee12eeda1b6b1"
     },
     {
+      "path": "cases/cooldown/owner-release",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "cases/cooldown/owner-takeover",
+      "bytes": 8,
+      "sha256": "5932b2bbe74c4afaae18b853d8c4702808c9bbf42eecd3fa7a24fd9a67f8c97f"
+    },
+    {
       "path": "cases/cooldown/owner-warm.json",
       "bytes": 99,
       "sha256": "bf92820ec5345da42a228f4c3a8a168370c1892ba365ea7986f1cd43cfa46ae7"
     },
     {
+      "path": "cases/cooldown/owner.err",
+      "bytes": 98,
+      "sha256": "1be041b1347e72f72810bf474eba5d5f70dfccfe26a04e728bf041c521a62661"
+    },
+    {
       "path": "cases/cooldown/owner.log",
       "bytes": 137,
       "sha256": "60d4aae0558b693c6370f2797f424e83e3f8104aff82c07c287e4def3e747f1c"
+    },
+    {
+      "path": "cases/cooldown/owner.ts",
+      "bytes": 3125,
+      "sha256": "22004695005140cf395740b1f1c1feca72391c5e4b9e86a44a09ade5cfbf33db"
+    },
+    {
+      "path": "cases/cooldown/recovery-worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "cases/cooldown/recovery-worker.log",
@@ -1332,6 +1857,51 @@
       "sha256": "b8cf42e7bdaa56c6694d8764e68a6da6f4eb2f4fe3d74fd7dca3d655f7bdbf8c"
     },
     {
+      "path": "cases/modal/control-account/one-modal/child.json",
+      "bytes": 67,
+      "sha256": "5c0603a4d7d991fce47659e5308b531e5ff24dd740c5efc0b1e38c9552ff222e"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/completed.json",
+      "bytes": 1272,
+      "sha256": "bd6aaac78deb03eae9f0ad32ebda3847c57a00beb7d92c9275f576b249b6f859"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/input.json",
+      "bytes": 531,
+      "sha256": "c3ae3e4ef94119060df71c74a82e059f9e3b6a481059ac51990d4cb244bae14c"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/output/receipt.json",
+      "bytes": 8319,
+      "sha256": "4346e618a8720752a355285caceda029b270a33893a1660e4708fce65ab5350d"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/output/request.json",
+      "bytes": 625,
+      "sha256": "1c28d3f01135b0c44555b7bbd4be2e3ea573966bb50cea8b120708cc51b5e8cd"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/permit.json",
+      "bytes": 895,
+      "sha256": "e1bed892755fbaf9378657bc1ff17864b0639bb9d9d7b50de9be932870222d27"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/used.json",
+      "bytes": 115,
+      "sha256": "05fb02aadf7f305931945f11b7bd8767f56137fb02cc42b260ee07629b1f0f49"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/worker.err",
+      "bytes": 49,
+      "sha256": "f53a224c0ec6bae90ed2aae1885b74d74407f4e434414cbf77e08f27d32fd5f1"
+    },
+    {
+      "path": "cases/modal/control-account/one-modal/worker.log",
+      "bytes": 4617,
+      "sha256": "f323af6ab8dc04fd36e2ad9c7ad58a3a5a285a29b01541518aeadbcc8da89fe2"
+    },
+    {
       "path": "cases/modal/dispatch-results.json",
       "bytes": 2554,
       "sha256": "2a70d56b5610204299d0df7a7b1802589a0643a258dff13fa34c011175fe1e42"
@@ -1345,6 +1915,11 @@
       "path": "cases/modal/lifecycle/latest.json",
       "bytes": 172,
       "sha256": "bcf2928bc4c65d62e9c6fcffed7108d74508e36f1f52c22df222e15bcd64b7e8"
+    },
+    {
+      "path": "cases/modal/recovery-worker.err",
+      "bytes": 49,
+      "sha256": "f53a224c0ec6bae90ed2aae1885b74d74407f4e434414cbf77e08f27d32fd5f1"
     },
     {
       "path": "cases/modal/recovery-worker.log",
@@ -1382,6 +1957,51 @@
       "sha256": "04a9f41367b71b6dc336925351633f391878fcb11021994c0e50f4630e730397"
     },
     {
+      "path": "cases/offline/control-account/one-offline/child.json",
+      "bytes": 71,
+      "sha256": "3220d511f047b131a23472b2684794039d47b7c5041e42efea89359aa151285d"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/completed.json",
+      "bytes": 1277,
+      "sha256": "7fe3eadff2581ac3eab527575d158696bd03e19a4c493f5b6d4406f8332deb19"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/input.json",
+      "bytes": 534,
+      "sha256": "69ad1bc687138f341f36144820c7e5634be8802a66dc5377ce5b70d3b0d47ffe"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/output/receipt.json",
+      "bytes": 8320,
+      "sha256": "3ee6192576176f581882abc95db46d066c60d0bc64818d99d35ae99f610f3180"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/output/request.json",
+      "bytes": 628,
+      "sha256": "9c5546eec5384e561e3bdff88a238eb54806e66204e0e8cacc9b0667182182a4"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/permit.json",
+      "bytes": 898,
+      "sha256": "a92b6f22c39f18e5861cc1265f2c784ab7fd5263828bbdda192349b69c9075fd"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/used.json",
+      "bytes": 117,
+      "sha256": "b4324a79a114f2d0a9fb56346ed81d6a88afef54a9b110678aaa3bc5e94365f2"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/worker.err",
+      "bytes": 48,
+      "sha256": "ef84ca0b3206f47b118843494dd7a2ff81d49335d89d7726b1c5438ed244b65c"
+    },
+    {
+      "path": "cases/offline/control-account/one-offline/worker.log",
+      "bytes": 1818,
+      "sha256": "ff455c8eba7a0e36022b54a4be2168f22158a5021f74d23902a579d9324848b0"
+    },
+    {
       "path": "cases/offline/dispatch-results.json",
       "bytes": 2562,
       "sha256": "ad34684c85187858cadb8fdb0d6a7f019def971ab67c8302b942207bcd158aa2"
@@ -1395,6 +2015,11 @@
       "path": "cases/offline/lifecycle/latest.json",
       "bytes": 171,
       "sha256": "da89720bb9ff75499914198f7ba2ca69d273537ba21c9e563b49551836e8caf7"
+    },
+    {
+      "path": "cases/offline/recovery-worker.err",
+      "bytes": 48,
+      "sha256": "ef84ca0b3206f47b118843494dd7a2ff81d49335d89d7726b1c5438ed244b65c"
     },
     {
       "path": "cases/offline/recovery-worker.log",
@@ -1427,6 +2052,51 @@
       "sha256": "43198865722dcd48941af060d4e93756792a5bb4cbbd3b972c9ce8c3db195dd1"
     },
     {
+      "path": "cases/orphan/control-account/one-orphan/child.json",
+      "bytes": 69,
+      "sha256": "a6729505a83730745d92fb2a2081e872a210a74433ed1864b1403e51dc1ed2a0"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/completed.json",
+      "bytes": 1276,
+      "sha256": "8f331be6be8f3f4fa9c8938c077ad241ddd2df99c0cc20aba389fa415f2b81a7"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/input.json",
+      "bytes": 533,
+      "sha256": "f7caf4923b10e18a3ef807d9387d8c8c822a6383455203bd78524bacfb5d9d9a"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/output/receipt.json",
+      "bytes": 8321,
+      "sha256": "3d5265ea202de78fb9e10536df924b441dcfd87767f65efda79c7ef5283dd5bd"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/output/request.json",
+      "bytes": 627,
+      "sha256": "3f04e6837f9e9b09adb8d84d0f0751f8bbc0b0fb755201fdbca50eaba278b246"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/permit.json",
+      "bytes": 897,
+      "sha256": "b72f89d057ae261b84572be7da0f29ca7b491cf6761532fe5872333f0fa1c596"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/used.json",
+      "bytes": 116,
+      "sha256": "cb65643e908194b7581cd58bfd4790a8e860b3ab06a1af8f6a9a0917f8776995"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/worker.err",
+      "bytes": 49,
+      "sha256": "16882e7f7fed7b903401185eda8927028b16ff5c113252da89e7c8c5c448f2ef"
+    },
+    {
+      "path": "cases/orphan/control-account/one-orphan/worker.log",
+      "bytes": 1819,
+      "sha256": "3cc8ec6f3dbf8d82de444bacd523f1915cf5f9ec57bd734c9f72012dbd9c9645"
+    },
+    {
       "path": "cases/orphan/dispatch-results.json",
       "bytes": 2560,
       "sha256": "233173f8c35b01be02d649187ffccf1f81f7a264f97b51332836274d7678fe1b"
@@ -1457,9 +2127,24 @@
       "sha256": "16338f2a0883741e724b2b80b329cafe2abeb05f06fb40422127dde6f1d02c7a"
     },
     {
+      "path": "cases/orphan/owner.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
       "path": "cases/orphan/owner.log",
       "bytes": 113,
       "sha256": "204323727a07748856aec2b2818a8c1ed44493b409e4e3b6473e82a3d566433e"
+    },
+    {
+      "path": "cases/orphan/owner.ts",
+      "bytes": 3130,
+      "sha256": "919e3bbdacb845b014552040fda5514141cf1494321a15a28518ee444120c9d5"
+    },
+    {
+      "path": "cases/orphan/recovery-worker.err",
+      "bytes": 49,
+      "sha256": "16882e7f7fed7b903401185eda8927028b16ff5c113252da89e7c8c5c448f2ef"
     },
     {
       "path": "cases/orphan/recovery-worker.log",
@@ -1522,9 +2207,24 @@
       "sha256": "8598c306bd6e642c6ce1065baa28c8f423cda21ca5abc567d24385272f994f6f"
     },
     {
+      "path": "cases/ownership/owner-release",
+      "bytes": 7,
+      "sha256": "a4d451ec23463726f72c43d64c710968f6b602cd653b4de8adee1b556240a829"
+    },
+    {
+      "path": "cases/ownership/owner.err",
+      "bytes": 49,
+      "sha256": "5cff4a8e166bd1c8dd8aa01659bdf8d5481eccef852662d199c393ddbcf9611b"
+    },
+    {
       "path": "cases/ownership/owner.log",
       "bytes": 137,
       "sha256": "97586c18864673ecda41006a80122c1e40dd2fe66fec44d9f410b0a6be69a910"
+    },
+    {
+      "path": "cases/ownership/owner.ts",
+      "bytes": 3149,
+      "sha256": "6aa5fa33fd0e814ca77c207dfadbf0d712f96441ce8b5a15c4f43da0155557e8"
     },
     {
       "path": "cases/ownership/refusal-interval.json",
@@ -1537,6 +2237,11 @@
       "sha256": "06a937e636e26e88b4841469c71e38237ea90b7f95efc7c0c2fe08f3cd3eaa70"
     },
     {
+      "path": "cases/ownership/remote-0.err",
+      "bytes": 182,
+      "sha256": "a44878b8c8893f02ea522d1214a22b885fee5727e00cf648f71dc346379243e2"
+    },
+    {
       "path": "cases/ownership/remote-0.json",
       "bytes": 245,
       "sha256": "2874be7dcf4c0e4e05b821a5514a6f28c27525da8255c44225179c9b880f107f"
@@ -1545,6 +2250,11 @@
       "path": "cases/ownership/remote-0.log",
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/ownership/remote-1.err",
+      "bytes": 170,
+      "sha256": "441d74242c2f52bc16b3f84879de8bca7e38fb6c09c99b168b9a49e5a1f31129"
     },
     {
       "path": "cases/ownership/remote-1.json",
@@ -1592,9 +2302,19 @@
       "sha256": "c040d4998039f4e05eec8bed2df6d2338c162961517f1d05047ecb1b24ce7c88"
     },
     {
+      "path": "cases/partial-owner-alive/owner.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
       "path": "cases/partial-owner-alive/owner.log",
       "bytes": 113,
       "sha256": "526d0a1dbc6cea30a17bb0c7e21978094ca103f2893e3eca88c1a802848a0adb"
+    },
+    {
+      "path": "cases/partial-owner-alive/owner.ts",
+      "bytes": 3222,
+      "sha256": "6071ead63d3b83814deeff57dfeb4782b2585b872fd55d9f55e40de1b06ad82a"
     },
     {
       "path": "cases/partial-owner-alive/partial-observations.json",
@@ -1632,6 +2352,51 @@
       "sha256": "fd1e645f788a986354e22073350cbdd61b760ca0b5d54baedfdc02dfac35aa59"
     },
     {
+      "path": "cases/partial/control-account/one-partial/child.json",
+      "bytes": 71,
+      "sha256": "20dfdb197919c05a3d9c2ac6beda8de6093b8bde3d35950a7efe038acb741031"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/completed.json",
+      "bytes": 1280,
+      "sha256": "96a23f6a70ebc852dfbd7f131ad5b421c0981dffb69e2802d5a1ffe7a99545f4"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/input.json",
+      "bytes": 535,
+      "sha256": "0b076700a6463f53e010cba8bdbc3145a6899fc8ccbdf6537ce9a2ecdeabf44a"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/output/receipt.json",
+      "bytes": 8324,
+      "sha256": "b356a2dde0203d23d32e15a6695c9c15f076da1c2ae1d4ea0c26a482038149c3"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/output/request.json",
+      "bytes": 629,
+      "sha256": "a00f1f14c0ca5d6f7234116e6b4a5672e5925975b3f3a8a21be3fa1eb41eebef"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/permit.json",
+      "bytes": 899,
+      "sha256": "dbe07a756ca347b0d16e2105051721463433bc65817134dd1c9869c5b4f426ba"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/used.json",
+      "bytes": 117,
+      "sha256": "1d58bbcfdda4900dbb7fa72f43c946f373e6c0105834781c721cd2cf5d8f073a"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/worker.err",
+      "bytes": 49,
+      "sha256": "6d03810a241e454e8ec9e77da7d4bc4e96c260b2acc48077ec001cae72b9102f"
+    },
+    {
+      "path": "cases/partial/control-account/one-partial/worker.log",
+      "bytes": 1746,
+      "sha256": "b5be63cbdf764d10516eaad22c7800106058483f45cb92164f22990300b20813"
+    },
+    {
       "path": "cases/partial/dispatch-results.json",
       "bytes": 3477,
       "sha256": "219840e866558a9534c1d636482af7234532921530355bba9be49fdc98cee87d"
@@ -1652,6 +2417,11 @@
       "sha256": "bd8f293e4ceffb3d2f0e5800aec33acc457465600362e7077c9f9502113a26f8"
     },
     {
+      "path": "cases/partial/recovery-worker.err",
+      "bytes": 49,
+      "sha256": "6d03810a241e454e8ec9e77da7d4bc4e96c260b2acc48077ec001cae72b9102f"
+    },
+    {
       "path": "cases/partial/recovery-worker.log",
       "bytes": 1746,
       "sha256": "b5be63cbdf764d10516eaad22c7800106058483f45cb92164f22990300b20813"
@@ -1665,6 +2435,56 @@
       "path": "cases/restart-late-callback/checks.json",
       "bytes": 346,
       "sha256": "120644414794e5caf136f3110eaa8e563751154858c618687a95df70f2abb9ca"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/lease.json",
+      "bytes": 899,
+      "sha256": "f1d82f80055d25fa2f26e5f710850475648c6dd9de7028734403d28c728bddc3"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/child.json",
+      "bytes": 71,
+      "sha256": "c66e45356b7a01f18ec398253cbf1da1f78f3fd67c3db087ceba8a8cb40f0b92"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/input.json",
+      "bytes": 535,
+      "sha256": "0d3ce4b32a4d9bbee83d5ac1c1b63655a300a05091f211121d64999b2276f44a"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/output/receipt.json",
+      "bytes": 1529,
+      "sha256": "e6d69e1a5fd61134c6d58fc1aff30c8dc9ba556545fb5a88ef0e36bce8ed9985"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/output/request.json",
+      "bytes": 629,
+      "sha256": "7cf28214f266b7484298687d321d2e68f725c1d8823ab68e1dccd309d41a0dd3"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/permit.json",
+      "bytes": 899,
+      "sha256": "f1d82f80055d25fa2f26e5f710850475648c6dd9de7028734403d28c728bddc3"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/used.json",
+      "bytes": 117,
+      "sha256": "3a9e209749f17540500695a7807a863df536d91d7a89aa8429b35207ce7b6d6b"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/one-timeout/worker.log",
+      "bytes": 1151,
+      "sha256": "6b763062ea3f0bd11c94bd8eed0056172ce6995cecf011c8fb6f4b0e624e0d5d"
+    },
+    {
+      "path": "cases/restart-late-callback/control-account/processing-held-two-timeout-1794820935061.json",
+      "bytes": 535,
+      "sha256": "8e6eca26195226b5ddd5c1a2dd698a2f41b7d78d23cf2b5a2a9765661f756f1c"
     },
     {
       "path": "cases/restart-late-callback/dispatch-results.json",
@@ -1697,6 +2517,101 @@
       "sha256": "8435167e469518414f58482e96938fa8106073056debb3792ea1647e645477a8"
     },
     {
+      "path": "cases/single-use/control-account/lease.json",
+      "bytes": 908,
+      "sha256": "a1fb0f60829ec6d1b4ab08101582d381f70c97107836998db2604d5c764f8bea"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/child.json",
+      "bytes": 81,
+      "sha256": "182c54f06c6ef66b794a40d421cf7549c328562a61675160866e574fb5c74d55"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/input.json",
+      "bytes": 544,
+      "sha256": "2c41c4c416f1550796cd5cd80df28653a54ea0e069a88601007a4197f2ecd9b5"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/output/receipt.json",
+      "bytes": 1537,
+      "sha256": "619f76951fa8a9d2c457ea63c4e1ec3f5fe44bf38e533d6ede8217a5c020b2ad"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/output/request.json",
+      "bytes": 638,
+      "sha256": "a412a26531db90336ff124eeb65975fee88898a24030e6ec4b3df5bd2a517846"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/permit.json",
+      "bytes": 908,
+      "sha256": "a1fb0f60829ec6d1b4ab08101582d381f70c97107836998db2604d5c764f8bea"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/used.json",
+      "bytes": 122,
+      "sha256": "0b1e9a6c1744619feec106e20cf5afc946f1aab86e66b35fbd1926b61feee7d1"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/single-use/control-account/one-auth-failure/worker.log",
+      "bytes": 1150,
+      "sha256": "fd6cc01f460f7dd183a88e66a51b3a49d8fc54ea74ef52b4f7ff6897610315fa"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/child.json",
+      "bytes": 71,
+      "sha256": "3220d511f047b131a23472b2684794039d47b7c5041e42efea89359aa151285d"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/completed.json",
+      "bytes": 1277,
+      "sha256": "7fe3eadff2581ac3eab527575d158696bd03e19a4c493f5b6d4406f8332deb19"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/input.json",
+      "bytes": 534,
+      "sha256": "69ad1bc687138f341f36144820c7e5634be8802a66dc5377ce5b70d3b0d47ffe"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/output/receipt.json",
+      "bytes": 8320,
+      "sha256": "3ee6192576176f581882abc95db46d066c60d0bc64818d99d35ae99f610f3180"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/output/request.json",
+      "bytes": 628,
+      "sha256": "9c5546eec5384e561e3bdff88a238eb54806e66204e0e8cacc9b0667182182a4"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/permit.json",
+      "bytes": 898,
+      "sha256": "a92b6f22c39f18e5861cc1265f2c784ab7fd5263828bbdda192349b69c9075fd"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/used.json",
+      "bytes": 117,
+      "sha256": "b4324a79a114f2d0a9fb56346ed81d6a88afef54a9b110678aaa3bc5e94365f2"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/worker.err",
+      "bytes": 48,
+      "sha256": "ef84ca0b3206f47b118843494dd7a2ff81d49335d89d7726b1c5438ed244b65c"
+    },
+    {
+      "path": "cases/single-use/control-account/one-offline/worker.log",
+      "bytes": 1818,
+      "sha256": "ff455c8eba7a0e36022b54a4be2168f22158a5021f74d23902a579d9324848b0"
+    },
+    {
+      "path": "cases/single-use/control-account/processing-held-two-single-use-1794820751632.json",
+      "bytes": 542,
+      "sha256": "c324004e9b799105c416d87cce6ca983b9c295e1ab0d6baa8f9f724bac890367"
+    },
+    {
       "path": "cases/single-use/dispatch-results.json",
       "bytes": 5041,
       "sha256": "5a8e484a5848f4db86b3acc36a5093362b3b9debbca3b6bed00ef0a3e33d47a4"
@@ -1715,6 +2630,11 @@
       "path": "cases/single-use/lifecycle/latest.json",
       "bytes": 171,
       "sha256": "375fcc592846f0eb94dd9b7031ac39339cbc3da821d1192e02d75eac16ebc654"
+    },
+    {
+      "path": "cases/single-use/replay.err",
+      "bytes": 174,
+      "sha256": "46d76048fc0d3ee2197365111bb632e4813435ad235f36000dc65f656d17851a"
     },
     {
       "path": "cases/single-use/replay.log",
@@ -1817,6 +2737,56 @@
       "sha256": "cda6ab244ba3c69e537935ee43f82acbdef0d1ae79184229ceb93f44c2b0e56b"
     },
     {
+      "path": "cases/timeout/control-account/lease.json",
+      "bytes": 899,
+      "sha256": "f1d82f80055d25fa2f26e5f710850475648c6dd9de7028734403d28c728bddc3"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/child.json",
+      "bytes": 71,
+      "sha256": "c66e45356b7a01f18ec398253cbf1da1f78f3fd67c3db087ceba8a8cb40f0b92"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/input.json",
+      "bytes": 535,
+      "sha256": "0d3ce4b32a4d9bbee83d5ac1c1b63655a300a05091f211121d64999b2276f44a"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/output/receipt.json",
+      "bytes": 1529,
+      "sha256": "e6d69e1a5fd61134c6d58fc1aff30c8dc9ba556545fb5a88ef0e36bce8ed9985"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/output/request.json",
+      "bytes": 629,
+      "sha256": "7cf28214f266b7484298687d321d2e68f725c1d8823ab68e1dccd309d41a0dd3"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/permit.json",
+      "bytes": 899,
+      "sha256": "f1d82f80055d25fa2f26e5f710850475648c6dd9de7028734403d28c728bddc3"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/used.json",
+      "bytes": 117,
+      "sha256": "3a9e209749f17540500695a7807a863df536d91d7a89aa8429b35207ce7b6d6b"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cases/timeout/control-account/one-timeout/worker.log",
+      "bytes": 1151,
+      "sha256": "6b763062ea3f0bd11c94bd8eed0056172ce6995cecf011c8fb6f4b0e624e0d5d"
+    },
+    {
+      "path": "cases/timeout/control-account/processing-held-two-timeout-1794820935061.json",
+      "bytes": 535,
+      "sha256": "8e6eca26195226b5ddd5c1a2dd698a2f41b7d78d23cf2b5a2a9765661f756f1c"
+    },
+    {
       "path": "cases/timeout/dispatch-results.json",
       "bytes": 2456,
       "sha256": "0979ef3954ce5fc75376c64da869945d7ded3ec23c84bfe1256dc04114678a98"
@@ -1835,6 +2805,11 @@
       "path": "cases/timeout/lifecycle/latest.json",
       "bytes": 172,
       "sha256": "adc7fe1001d664163281e9201e50f04b0c4a723be3e9c8382686df2e4aa39bd2"
+    },
+    {
+      "path": "cases/timeout/recovery-worker.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "cases/timeout/recovery-worker.log",
