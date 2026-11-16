@@ -1,9 +1,9 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,lstatSync,unlinkSync,chmodSync,statSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,lstatSync,unlinkSync,chmodSync,statSync,renameSync,readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,dirname,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {BASE_DIR,deliveredLedger,prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText} from '../src/build-workspace';
+import {BASE_DIR,deliveredLedger,prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText,replaceFile} from '../src/build-workspace';
 import {stageDeliveryPr} from '../src/delivery-pr';
 
 const mainTree=()=>{
@@ -12,6 +12,24 @@ const mainTree=()=>{
  return main;
 };
 const files=['scripts/worker.ts','packages/core/src/shared.ts'];
+
+test('atomic publish retries transient rename failures but preserves concurrent edits and permanent refusals',()=>{
+ const main=mainTree(),path=join(main,files[0]!),state={bytes:Buffer.from('published').toString('base64'),mode:0o600};
+ const failure=(code:string)=>Object.assign(Error(code),{code});let calls=0;
+ replaceFile(path,state,false,(from,to)=>{const attempt=calls++;if(attempt<25)throw failure(['EPERM','EBUSY','EACCES'][attempt%3]!);renameSync(from,to);});
+ expect(calls).toBe(26);expect(readFileSync(path,'utf8')).toBe('published');
+ expect(statSync(path).mode&0o777).toBe(process.platform==='win32'?0o666:0o600);
+ writeFileSync(path,'original');calls=0;
+ expect(()=>replaceFile(path,state,false,()=>{calls++;throw failure('ENOSPC');})).toThrow('ENOSPC');
+ expect(calls).toBe(1);expect(readFileSync(path,'utf8')).toBe('original');
+ calls=0;
+ expect(()=>replaceFile(path,state,false,()=>{calls++;writeFileSync(path,'concurrent edit');throw failure('EPERM');})).toThrow('source changed before replacement');
+ expect(calls).toBe(1);expect(readFileSync(path,'utf8')).toBe('concurrent edit');
+ calls=0;
+ expect(()=>replaceFile(path,state,false,()=>{calls++;throw failure('EBUSY');})).toThrow('EBUSY');
+ expect(calls).toBe(101);expect(readFileSync(path,'utf8')).toBe('concurrent edit');
+ expect(readdirSync(dirname(path)).filter(name=>name.includes('.publish-'))).toEqual([]);
+},15000);
 
 test('a build edits its own copy; the main checkout changes only on publish',()=>{
  const main=mainTree(),{root}=prepareWorkspace(main,'cap',files);

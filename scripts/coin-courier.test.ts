@@ -193,7 +193,7 @@ test('coin proof isolates real ownership files and profiles while keeping the wo
  const base=mkdtempSync(join(tmpdir(),'coin-proof-root-')),source=join(base,'source');let scratch='';
  const put=(path:string,text:string)=>{const target=join(source,path);mkdirSync(join(target,'..'),{recursive:true});writeFileSync(target,text);};
  try{
-  for(const path of ['scripts/coin-courier.ts','scripts/coin-courier.test.ts','packages/practice/src/coin-courier-proof.ts'])put(path,'fixture '+path);
+  for(const path of ['scripts/coin-courier.ts','scripts/coin-courier.test.ts','packages/practice/src/coin-courier-proof.ts','packages/practice/src/replay-root.ts'])put(path,'fixture '+path);
   put('swarm.json',JSON.stringify({maxBots:2,jobs:[{account:'Donor',enabled:true}]}));
   put('.practice/coordinator/state.json',JSON.stringify({version:1,tasks:[{status:'running',runId:'other',spec:{account:'Donor'}}]}));
   put('vendor/rs-sdk/bots/LiveActor/marker','private live profile');put('vendor/rs-sdk/bots/create-bot.ts','creator');
@@ -201,8 +201,10 @@ test('coin proof isolates real ownership files and profiles while keeping the wo
   put('fleet/owners.json',JSON.stringify({accounts:{Donor:{side:'cloud'}}}));
   scratch=prepareCoinProofRoot(source,base);
   expect(coinProofSource(scratch)).toBe(coinProofSource(source));
-  const copied=join(scratch,'scripts/coin-courier.ts'),workerText=readFileSync(copied,'utf8');writeFileSync(copied,workerText+' changed');
-  expect(coinProofSource(scratch)).not.toBe(coinProofSource(source));writeFileSync(copied,workerText);
+  for(const path of ['scripts/coin-courier.ts','packages/practice/src/replay-root.ts']){
+   const copied=join(scratch,path),workerText=readFileSync(copied,'utf8');writeFileSync(copied,workerText+' changed');
+   expect(coinProofSource(scratch)).not.toBe(coinProofSource(source));writeFileSync(copied,workerText);
+  }
   expect(lstatSync(join(scratch,'.practice')).isSymbolicLink()).toBe(false);
   expect(lstatSync(join(scratch,'vendor/rs-sdk/bots')).isSymbolicLink()).toBe(false);
   expect(existsSync(join(scratch,'vendor/rs-sdk/bots/LiveActor'))).toBe(false);

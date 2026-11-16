@@ -11,9 +11,9 @@ import { killTree } from './proc';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { readPracticeSave, waitPracticeSave } from '../../../scripts/measure/fleet-player-save';
 import { exactCoinDelta } from '../../../scripts/coin-courier';
-import {prepareReplayRoot,removeReplayRoot} from '../../router/src/build-workspace';
+import {prepareReplayRoot,removeReplayRoot} from './replay-root';
 
-const files = ['scripts/coin-courier.ts', 'scripts/coin-courier.test.ts', 'packages/practice/src/coin-courier-proof.ts'];
+const files = ['scripts/coin-courier.ts', 'scripts/coin-courier.test.ts', 'packages/practice/src/coin-courier-proof.ts', 'packages/practice/src/replay-root.ts'];
 const root = resolve(import.meta.dir, '../../..');
 export const coinProofSource = (base=root) => createHash('sha256').update(files.map(p => p + '\0' + readFileSync(join(base, p), 'utf8')).join('\0')).digest('hex');
 const source=coinProofSource;

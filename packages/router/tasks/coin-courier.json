@@ -6,6 +6,7 @@
     "scripts/coin-courier.ts",
     "scripts/coin-courier.test.ts",
     "packages/practice/src/coin-courier-proof.ts",
+    "packages/practice/src/replay-root.ts",
     "packages/core/src/leg-cache.ts",
     "packages/core/test/leg-cache.test.ts"
   ],
