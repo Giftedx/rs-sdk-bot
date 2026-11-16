@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794821324960-mmsmk1232-nabtheknob-staffoffire",
  "account": "NabTheKnob",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "2e27bd23-076a-40a1-904d-b25dd5fe19d8",
- "count": 0,
- "ok": false,
- "at": 1794821369682,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794821557552,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794821556864
+ },
+ "logout": {
+  "attemptId": "1794821369959-0000030444-0000000001",
+  "at": 1794821557542,
+  "sha256": "adf6740b190e5cc703d6d9ac85c90b41b5c0c41d40980108bf272551cf308328"
+ },
+ "screen": true
 }
