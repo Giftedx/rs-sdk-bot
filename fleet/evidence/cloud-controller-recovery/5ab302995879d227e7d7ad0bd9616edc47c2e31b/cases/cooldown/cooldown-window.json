@@ -1,0 +1,55 @@
+{
+  "runtime": {
+    "at": 1794820765990,
+    "pid": 35597,
+    "bun": "1.3.14",
+    "runner": "/workspace/rs-sdk-bot-cloud-controller/packages/core/src/session-recovery.ts",
+    "cwd": "/workspace/rs-sdk-bot-cloud-controller",
+    "execPath": "/workspace/.tools/bun/node_modules/bun/bin/bun.exe",
+    "adapter": "/workspace/rs-sdk-bot-cloud-controller/packages/core/src/inprocess.ts",
+    "repoRoot": "/workspace/rs-sdk-bot-cloud-controller",
+    "repoReal": "/workspace/rs-sdk-bot-cloud-controller",
+    "liteSession": "/workspace/rs-sdk-bot-cloud-controller/vendor/rs-sdk/server/webclient/src/lite/session.ts",
+    "liteSessionReal": "/workspace/rs-sdk-bot-cloud-controller/vendor/rs-sdk/server/webclient/src/lite/session.ts",
+    "clientStream": "/workspace/rs-sdk-bot-cloud-controller/vendor/rs-sdk/server/webclient/src/io/ClientStream.ts",
+    "clientStreamReal": "/workspace/rs-sdk-bot-cloud-controller/vendor/rs-sdk/server/webclient/src/io/ClientStream.ts"
+  },
+  "warm": {
+    "signalAt": 1794820765995,
+    "at": 1794820766778,
+    "signalSeenAt": 1794820765998,
+    "attemptId": "1794820765999-0000035578-0000000005"
+  },
+  "submittedAt": 1794820762855,
+  "releaseAt": 1794820768699,
+  "window": {
+    "ok": true,
+    "reason": "recovery login refused with response 3 inside the open takeover window",
+    "windowMs": 60000,
+    "takeoverReplyAt": 1794820766043,
+    "recoveryRequestAt": 1794820768166,
+    "gapMs": 2123,
+    "response": 3
+  },
+  "preserved": {
+    "ok": true,
+    "noRecoveryLoginSuccess": true,
+    "ownerLoginLatest": true,
+    "ownerAttemptLatest": true,
+    "ownerLogoutAfterRelease": true
+  },
+  "ownerAttempts": [
+    "1794820760858-0000035578-0000000001",
+    "1794820765999-0000035578-0000000005"
+  ],
+  "ownerProof": {
+    "state": "confirmed",
+    "account": "flrcvx4jzg19",
+    "server": "127.0.0.1:8890",
+    "domain": "practice",
+    "attemptId": "1794820765999-0000035578-0000000005",
+    "loggedOutAt": 1794820768970,
+    "ownerRun": "native-owner-flrcvx4jzg19",
+    "receiptSha256": "731b337f6c329b18cf3eeef3fd2a9233f4e1022586bca0b11aa40e737b1d5006"
+  }
+}

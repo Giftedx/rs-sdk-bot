@@ -1,0 +1,280 @@
+{
+  "at": 1794820760011,
+  "since": 1794820757233,
+  "auth": {
+    "requests": [
+      {
+        "at": 1794820652818,
+        "connection": 1,
+        "replyTo": "id_21bd41e0-1158-480d-a1e3-7c81b9aba8d8",
+        "type": "player_login",
+        "account": "flrcvxd3tf1"
+      },
+      {
+        "at": 1794820653519,
+        "connection": 1,
+        "replyTo": "id_755c4a6d-57f0-482a-8864-de7922d69b90",
+        "type": "player_logout",
+        "account": "flrcvxd3tf1"
+      },
+      {
+        "at": 1794820664193,
+        "connection": 1,
+        "replyTo": "id_7570eb0f-f47b-435c-be8f-6b8e8c73815e",
+        "type": "player_login",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820664960,
+        "connection": 1,
+        "replyTo": "id_57f4816b-1b63-47fa-bce0-1fcf5c6587a3",
+        "type": "player_logout",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820682498,
+        "connection": 1,
+        "replyTo": "id_535bc8ef-de3d-4270-8113-4a0bdf58b893",
+        "type": "player_login",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820683296,
+        "connection": 1,
+        "replyTo": "id_17ed4ee6-d33f-4199-a800-7a0d16659d84",
+        "type": "player_logout",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820719131,
+        "connection": 1,
+        "replyTo": "id_6f5ff37a-625f-4619-b73c-a6a2c272ab8f",
+        "type": "player_login",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820720947,
+        "connection": 1,
+        "replyTo": "id_bd184405-df1e-45ea-8104-d0122966c540",
+        "type": "player_logout",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820726373,
+        "connection": 1,
+        "replyTo": "id_ee9df1c3-4b28-4af4-8ad5-99742345268f",
+        "type": "player_login",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820727252,
+        "connection": 1,
+        "replyTo": "id_ec1f3e8f-e976-4979-ba2f-9c630eff4bc0",
+        "type": "player_logout",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820734079,
+        "connection": 1,
+        "replyTo": "id_fae251dc-bae4-4312-8e0f-bdfbb7fd6135",
+        "type": "player_login",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820735054,
+        "connection": 1,
+        "replyTo": "id_0b9e4c43-c4ba-4b6d-a16c-48d9b386494c",
+        "type": "player_logout",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820739910,
+        "connection": 1,
+        "replyTo": "id_9f073ab3-7da4-4d98-a448-94a97cadd472",
+        "type": "player_login",
+        "account": "flrcvx0css4"
+      },
+      {
+        "at": 1794820740596,
+        "connection": 1,
+        "replyTo": "id_45160b8c-6e96-4f9f-ba01-5c8595eb0415",
+        "type": "player_logout",
+        "account": "flrcvx0css4"
+      },
+      {
+        "at": 1794820751066,
+        "connection": 1,
+        "replyTo": "id_d0e5fc58-3032-46b1-8dba-18793c196864",
+        "type": "player_login",
+        "account": "flrcvxd3tf1"
+      },
+      {
+        "at": 1794820756447,
+        "connection": 1,
+        "replyTo": "id_d64e4ed3-3983-43d9-b27d-042de6c62fa5",
+        "type": "player_login",
+        "account": "flrcvxarjo18"
+      }
+    ],
+    "replies": [
+      {
+        "at": 1794820652979,
+        "connection": 1,
+        "replyTo": "id_21bd41e0-1158-480d-a1e3-7c81b9aba8d8",
+        "response": 0,
+        "requestAt": 1794820652818,
+        "type": "player_login",
+        "account": "flrcvxd3tf1"
+      },
+      {
+        "at": 1794820653530,
+        "connection": 1,
+        "replyTo": "id_755c4a6d-57f0-482a-8864-de7922d69b90",
+        "response": 0,
+        "requestAt": 1794820653519,
+        "type": "player_logout",
+        "account": "flrcvxd3tf1"
+      },
+      {
+        "at": 1794820664339,
+        "connection": 1,
+        "replyTo": "id_7570eb0f-f47b-435c-be8f-6b8e8c73815e",
+        "response": 0,
+        "requestAt": 1794820664193,
+        "type": "player_login",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820664965,
+        "connection": 1,
+        "replyTo": "id_57f4816b-1b63-47fa-bce0-1fcf5c6587a3",
+        "response": 0,
+        "requestAt": 1794820664960,
+        "type": "player_logout",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820682501,
+        "connection": 1,
+        "replyTo": "id_535bc8ef-de3d-4270-8113-4a0bdf58b893",
+        "response": 0,
+        "requestAt": 1794820682498,
+        "type": "player_login",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820683300,
+        "connection": 1,
+        "replyTo": "id_17ed4ee6-d33f-4199-a800-7a0d16659d84",
+        "response": 0,
+        "requestAt": 1794820683296,
+        "type": "player_logout",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820719134,
+        "connection": 1,
+        "replyTo": "id_6f5ff37a-625f-4619-b73c-a6a2c272ab8f",
+        "response": 0,
+        "requestAt": 1794820719131,
+        "type": "player_login",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820720950,
+        "connection": 1,
+        "replyTo": "id_bd184405-df1e-45ea-8104-d0122966c540",
+        "response": 0,
+        "requestAt": 1794820720947,
+        "type": "player_logout",
+        "account": "flrcvxrxnv2"
+      },
+      {
+        "at": 1794820726527,
+        "connection": 1,
+        "replyTo": "id_ee9df1c3-4b28-4af4-8ad5-99742345268f",
+        "response": 0,
+        "requestAt": 1794820726373,
+        "type": "player_login",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820727255,
+        "connection": 1,
+        "replyTo": "id_ec1f3e8f-e976-4979-ba2f-9c630eff4bc0",
+        "response": 0,
+        "requestAt": 1794820727252,
+        "type": "player_logout",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820734081,
+        "connection": 1,
+        "replyTo": "id_fae251dc-bae4-4312-8e0f-bdfbb7fd6135",
+        "response": 0,
+        "requestAt": 1794820734079,
+        "type": "player_login",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820735057,
+        "connection": 1,
+        "replyTo": "id_0b9e4c43-c4ba-4b6d-a16c-48d9b386494c",
+        "response": 0,
+        "requestAt": 1794820735054,
+        "type": "player_logout",
+        "account": "flrcvxwtdh3"
+      },
+      {
+        "at": 1794820740062,
+        "connection": 1,
+        "replyTo": "id_9f073ab3-7da4-4d98-a448-94a97cadd472",
+        "response": 0,
+        "requestAt": 1794820739910,
+        "type": "player_login",
+        "account": "flrcvx0css4"
+      },
+      {
+        "at": 1794820740599,
+        "connection": 1,
+        "replyTo": "id_45160b8c-6e96-4f9f-ba01-5c8595eb0415",
+        "response": 0,
+        "requestAt": 1794820740596,
+        "type": "player_logout",
+        "account": "flrcvx0css4"
+      },
+      {
+        "at": 1794820751143,
+        "connection": 1,
+        "replyTo": "id_d0e5fc58-3032-46b1-8dba-18793c196864",
+        "response": 1,
+        "requestAt": 1794820751066,
+        "type": "player_login",
+        "account": "flrcvxd3tf1"
+      },
+      {
+        "at": 1794820756587,
+        "connection": 1,
+        "replyTo": "id_d64e4ed3-3983-43d9-b27d-042de6c62fa5",
+        "response": 0,
+        "requestAt": 1794820756447,
+        "type": "player_login",
+        "account": "flrcvxarjo18"
+      }
+    ]
+  },
+  "attempts": [
+    "1794820755231-0000035519-0000000001"
+  ],
+  "result": {
+    "changed": false,
+    "sessionRecovered": false,
+    "reason": "recovery setup refused; no lease issued; no retry",
+    "setup": {
+      "phase": "launch",
+      "cause": "recovery previous session owner still alive"
+    }
+  },
+  "child": null,
+  "lease": false
+}

@@ -1,0 +1,334 @@
+{
+  "submittedAt": 1794820746561,
+  "fleet": {
+    "at": 1794820746561,
+    "observedAt": 1794820746561,
+    "ageMs": 0,
+    "verdict": "resolved"
+  },
+  "child": null,
+  "dispatch": "recovery setup refused; no lease issued; no retry",
+  "boundaries": [
+    {
+      "phase": "admitRecovery",
+      "at": 1794820746563,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxdq2d13",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 29.500110626220703,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794820746563,
+          "request": {
+            "account": "flrcvxdq2d13",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-completed-refusal-competing-owner-642755",
+            "nonce": "one-completed-refusal-competing-owner",
+            "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec",
+            "endedAt": 1794820746557
+          },
+          "controller": {
+            "pid": 34544,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec"
+          },
+          "processPid": 34544,
+          "task": {
+            "pid": 35383,
+            "runId": "native-rcv-completed-refusal-competing-owner-642755",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxdq2d13",
+            "sessionRecovery": {
+              "account": "flrcvxdq2d13",
+              "endedAt": 1794820746557
+            },
+            "repairs": [
+              {
+                "account": "flrcvxdq2d13",
+                "endedAt": 1794820746557
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 34544,
+            "runId": "native-rcv-completed-refusal-competing-owner-642755"
+          },
+          "requestLease": {
+            "pid": 35383,
+            "runId": "native-rcv-completed-refusal-competing-owner-642755",
+            "nonce": "one-completed-refusal-competing-owner"
+          },
+          "fleet": {
+            "at": 1794820746561,
+            "controllerPid": 34544
+          },
+          "end": {
+            "at": 1794820746557,
+            "reason": "done after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "admitRecovery",
+      "at": 1794820746566,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxdq2d13",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 29.500110626220703,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794820746563,
+          "request": {
+            "account": "flrcvxdq2d13",
+            "server": "127.0.0.1:8890",
+            "runId": "native-rcv-completed-refusal-competing-owner-642755",
+            "nonce": "one-completed-refusal-competing-owner",
+            "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec",
+            "endedAt": 1794820746557
+          },
+          "controller": {
+            "pid": 34544,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec"
+          },
+          "processPid": 34544,
+          "task": {
+            "pid": 35383,
+            "runId": "native-rcv-completed-refusal-competing-owner-642755",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxdq2d13",
+            "sessionRecovery": {
+              "account": "flrcvxdq2d13",
+              "endedAt": 1794820746557
+            },
+            "repairs": [
+              {
+                "account": "flrcvxdq2d13",
+                "endedAt": 1794820746557
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 34544,
+            "runId": "native-rcv-completed-refusal-competing-owner-642755"
+          },
+          "requestLease": {
+            "pid": 35383,
+            "runId": "native-rcv-completed-refusal-competing-owner-642755",
+            "nonce": "one-completed-refusal-competing-owner"
+          },
+          "fleet": {
+            "at": 1794820746561,
+            "controllerPid": 34544
+          },
+          "end": {
+            "at": 1794820746557,
+            "reason": "done after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794820746566,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794820746566,
+        "request": {
+          "account": "flrcvxdq2d13",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-completed-refusal-competing-owner-642755",
+          "nonce": "one-completed-refusal-competing-owner",
+          "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec",
+          "endedAt": 1794820746557
+        },
+        "controller": {
+          "pid": 34544,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec"
+        },
+        "processPid": 34544,
+        "task": {
+          "pid": 35383,
+          "runId": "native-rcv-completed-refusal-competing-owner-642755",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxdq2d13",
+          "sessionRecovery": {
+            "account": "flrcvxdq2d13",
+            "endedAt": 1794820746557
+          },
+          "repairs": [
+            {
+              "account": "flrcvxdq2d13",
+              "endedAt": 1794820746557
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 34544,
+          "runId": "native-rcv-completed-refusal-competing-owner-642755"
+        },
+        "requestLease": {
+          "pid": 35383,
+          "runId": "native-rcv-completed-refusal-competing-owner-642755",
+          "nonce": "one-completed-refusal-competing-owner"
+        },
+        "fleet": {
+          "at": 1794820746561,
+          "controllerPid": 34544
+        },
+        "end": {
+          "at": 1794820746557,
+          "reason": "done after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794820746571,
+      "outcome": "threw",
+      "reason": "recovery task owner changed",
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794820746566,
+        "request": {
+          "account": "flrcvxdq2d13",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-completed-refusal-competing-owner-642755",
+          "nonce": "one-completed-refusal-competing-owner",
+          "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec",
+          "endedAt": 1794820746557
+        },
+        "controller": {
+          "pid": 34544,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec"
+        },
+        "processPid": 34544,
+        "task": {
+          "pid": 35383,
+          "runId": "native-rcv-completed-refusal-competing-owner-642755",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxdq2d13",
+          "sessionRecovery": {
+            "account": "flrcvxdq2d13",
+            "endedAt": 1794820746557
+          },
+          "repairs": [
+            {
+              "account": "flrcvxdq2d13",
+              "endedAt": 1794820746557
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 34544,
+          "runId": "native-rcv-completed-refusal-competing-owner-642755"
+        },
+        "requestLease": {
+          "pid": 35383,
+          "runId": "native-rcv-completed-refusal-competing-owner-642755",
+          "nonce": "one-completed-refusal-competing-owner"
+        },
+        "fleet": {
+          "at": 1794820746561,
+          "controllerPid": 34544
+        },
+        "end": {
+          "at": 1794820746557,
+          "reason": "done after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    }
+  ],
+  "firstFailure": {
+    "phase": "launchPermittedRecovery",
+    "at": 1794820746571,
+    "outcome": "threw",
+    "reason": "recovery task owner changed",
+    "hostDeferred": false,
+    "inputs": {
+      "sampledAt": 1794820746566,
+      "request": {
+        "account": "flrcvxdq2d13",
+        "server": "127.0.0.1:8890",
+        "runId": "native-rcv-completed-refusal-competing-owner-642755",
+        "nonce": "one-completed-refusal-competing-owner",
+        "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec",
+        "endedAt": 1794820746557
+      },
+      "controller": {
+        "pid": 34544,
+        "nonce": "packages/practice/src/session-recovery-proof.ts",
+        "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec"
+      },
+      "processPid": 34544,
+      "task": {
+        "pid": 35383,
+        "runId": "native-rcv-completed-refusal-competing-owner-642755",
+        "status": "running",
+        "kind": "run",
+        "account": "flrcvxdq2d13",
+        "sessionRecovery": {
+          "account": "flrcvxdq2d13",
+          "endedAt": 1794820746557
+        },
+        "repairs": [
+          {
+            "account": "flrcvxdq2d13",
+            "endedAt": 1794820746557
+          }
+        ]
+      },
+      "taskOwner": {
+        "pid": 34544,
+        "runId": "native-rcv-completed-refusal-competing-owner-642755"
+      },
+      "requestLease": {
+        "pid": 35383,
+        "runId": "native-rcv-completed-refusal-competing-owner-642755",
+        "nonce": "one-completed-refusal-competing-owner"
+      },
+      "fleet": {
+        "at": 1794820746561,
+        "controllerPid": 34544
+      },
+      "end": {
+        "at": 1794820746557,
+        "reason": "done after 1 runs"
+      },
+      "releasePinMatches": true
+    }
+  }
+}

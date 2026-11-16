@@ -1,0 +1,20 @@
+{
+  "schema": "session-recovery/1",
+  "kind": "session-recovery",
+  "account": "flrcvxi1f923",
+  "server": "localhost:8899",
+  "runId": "native-rcv-partial-642755",
+  "nonce": "one-partial",
+  "endedAt": 1794820965223,
+  "source": "b6f9154ea988514cb0a3da98d1e4e1386475f7e922dad4b4cb0fb2ad2f0028ec",
+  "qualification": {
+    "delivery": {
+      "path": "native-fixture-not-qualified",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "proof": {
+      "path": "native-fixture-not-qualified",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}
