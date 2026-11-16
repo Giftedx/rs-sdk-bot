@@ -10,18 +10,18 @@ const attrs=(markup:string)=>Object.fromEntries([...markup.matchAll(/([\w-]+)="(
 function bank(){
  const code=shell.slice(shell.indexOf('  function openBank('),shell.indexOf('  // Orbs as RuneLite'));
  const doc:any={activeElement:null};let current:any={name:'Worker',bankAt:1,bank:[{id:1,name:'Body',count:1},{id:2,name:'Body',count:2},{id:2,name:'Body',count:3}]},items:any[]=[],removed=false;
- const make=(dataset:any={},parent:any=null)=>{const node:any={dataset,parent,isConnected:true,value:'',focus:()=>{doc.activeElement=node;}};return node;};
- const opener=make({op:'bank-window',value:'Worker'}),replacement=make({...opener.dataset}),outside=make(),fallback=make();let openers=[opener];
+ const make=(dataset:any={},parent:any=null)=>{const node:any={dataset,parent,isConnected:true,value:'',hidden:false,disabled:false,focus:()=>{if(!node.hidden&&!node.disabled)doc.activeElement=node;}};return node;};
+ const opener=make({op:'bank-window',value:'Worker'}),replacement=make({...opener.dataset}),outside=make(),fallback=make(),focusNow=make();let openers=[opener];
  const modal:any={attributes:{},setAttribute:(k:string,v:string)=>{modal.attributes[k]=v;},contains:(node:any)=>!!node&&(node===modal||node.parent===modal||node.parent===itemBox),remove:()=>{removed=true;if(modal.contains(doc.activeElement))doc.activeElement=null;},querySelectorAll:()=>items};
  const search=make({},modal),close=make({},modal),itemBox:any={parent:modal,querySelectorAll:()=>items};
  Object.defineProperty(itemBox,'innerHTML',{set:(html:string)=>{if(items.includes(doc.activeElement))doc.activeElement=null;items=[...html.matchAll(/<button([^>]*)>/g)].map(m=>{const a=attrs(m[1]!);return make({bankKey:a['data-bank-key']},itemBox);});}});
  const nodes:any={'input':search,'[aria-label="Close bank"]':close,'.bank-items':itemBox,'.bank-tabs':{}};
  modal.querySelector=(q:string)=>nodes[q]??=(make({},modal));
- Object.assign(doc,{createElement:()=>modal,querySelectorAll:()=>openers,querySelector:(q:string)=>q==='.op-command-button'?fallback:null});doc.activeElement=opener;
+ Object.assign(doc,{createElement:()=>modal,querySelectorAll:()=>openers,querySelector:(q:string)=>q==='.op-command-button'?fallback:q==='.focus-now'?focusNow:null});doc.activeElement=opener;
  const env:any={account:()=>current,document:doc,hud:{querySelector:()=>null,append:()=>{removed=false;}},window:{atlasOperator:()=>true},E:escape,safeName:String,age:String,stackValue:()=>({value:0,unpriced:0}),gp:String,icon:()=>'',qty:String,priceTip:()=>'',statTip:()=>''};
  const open=new Function(...Object.keys(env),code+';return openBank;')(...Object.values(env));
  const key=(key:string)=>{let prevented=false;modal.onkeydown?.({key,preventDefault:()=>{prevented=true;},stopPropagation(){}});return prevented;};
- return {open:()=>open(opener),doc,modal,search,close,opener,replacement,outside,fallback,key,items:()=>items,removed:()=>removed,replaceOpener:()=>{opener.isConnected=false;openers=[replacement];},removeOpeners:()=>{opener.isConnected=false;openers=[];},update:(b:any)=>{current=b;modal.refreshObservation();}};
+ return {open:()=>open(opener),doc,modal,search,close,opener,replacement,outside,fallback,focusNow,key,items:()=>items,removed:()=>removed,replaceOpener:()=>{opener.isConnected=false;openers=[replacement];},addReplacement:()=>{openers=[opener,replacement];},removeOpeners:()=>{opener.isConnected=false;openers=[];},update:(b:any)=>{current=b;modal.refreshObservation();}};
 }
 
 test('Bank focuses search, stays non-modal and restores connected or replaced openers on close and Escape',()=>{
@@ -41,6 +41,14 @@ test('Bank refresh keeps exact item occurrence focus and falls back to search wi
  b.update({name:'Worker',bank:[]});expect(b.doc.activeElement).toBe(b.search);
  b.outside.focus();b.update({name:'Other',bank:[]});expect(b.removed()).toBe(true);expect(b.doc.activeElement).toBe(b.outside);
  const close=bank();close.open();close.outside.focus();close.close.onclick();expect(close.doc.activeElement).toBe(close.outside);
+});
+
+test('Bank close tries usable fallbacks when a connected opener or command button cannot take focus',()=>{
+ for(const blocked of ['hidden','disabled']){
+  const b=bank();b.open();b.opener[blocked]=true;b.close.onclick();expect(b.doc.activeElement).toBe(b.fallback);
+  const replacement=bank();replacement.open();replacement.opener[blocked]=true;replacement.addReplacement();replacement.key('Escape');expect(replacement.doc.activeElement).toBe(replacement.replacement);
+  const title=bank();title.open();title.opener[blocked]=true;title.fallback[blocked]=true;title.close.onclick();expect(title.doc.activeElement).toBe(title.focusNow);
+ }
 });
 
 test('the bank-window action passes its original opener across the account redraw',()=>{
