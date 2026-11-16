@@ -400,7 +400,7 @@ const liveBots=()=>S.bots.filter(b=>!b.practice&&!b.reserved);
 const observedAt=(at,age=300000)=>{const then=S.now-(S.hostedAge||0);return Number.isFinite(at)&&at>0&&at<=then&&then-at<age;};
 const safeName=n=>String(n??'').replaceAll(MARK,'Main · reserved');
 const compact=n=>n==null||!Number.isFinite(n)?'—':Intl.NumberFormat('en',{notation:'compact',maximumFractionDigits:1}).format(n);
-const age=at=>at&&at<=S.now?ago(S.now-at):'?';
+const age=at=>{const published=S?.hosted?.at,elapsed=S?.hostedAge,display=Number.isFinite(published)&&published>0&&Number.isFinite(elapsed)&&elapsed>=0?published+elapsed:NaN,now=Number.isFinite(display)?Math.max(Number.isFinite(S?.now)?S.now:0,display):S?.now;return Number.isFinite(at)&&at>0&&at<=now?ago(now-at):'?';};
 const stateClass=s=>s==='observed'?'good':['failed','died','blocked'].includes(s)?'bad':['paused','active-stale','unobserved'].includes(s)?'warn':'dm';
 const stateName=s=>({'observed':'observed','active-stale':'stale','unobserved':'unseen','reserved':'reserved','offline':'offline','ended':'ended','paused':'paused','blocked':'blocked','failed':'failed','died':'died'}[s]||'unknown');
 const metric=(label,value)=>`<div class="statbox"><b class="${String(value).length>7?'word':''}">${E(value)}</b><span>${E(label)}</span></div>`;
