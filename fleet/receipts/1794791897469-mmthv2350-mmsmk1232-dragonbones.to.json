@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794791897469-mmthv2350-mmsmk1232-dragonbones",
+ "account": "mmsmk1232",
+ "partner": "mmthv2350",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 105,
+ "claim": "b4ecda6c-2cf1-4b24-948c-baaa90b1521b",
+ "count": 0,
+ "ok": false,
+ "at": 1794791908807,
+ "detail": "trade claimed"
+}
