@@ -100,6 +100,7 @@ jobs:
           bun run bench '^extra:(catalog-cut-sapphire|catalog-dommik-tools|remote-supply-producer|owned-bank-observation)$' --profile --budget 10
         env:
           BENCH_OUT: .practice/shared-preparation/supply-artisan.json
+          ROUTE_TRACE: '1'
       - name: Run the first AIO smoke group
         if: ${{ !cancelled() }}
         timeout-minutes: 10

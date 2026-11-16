@@ -607,8 +607,9 @@ async function run(directory:string){
   // can resolve to ::1 first; the world's login client then never connects and every login reads "login server offline".
   const env={...process.env,DB_BACKEND:'sqlite',LOGIN_SERVER:'true',LOGIN_HOST:'127.0.0.1',LOGIN_PORT:String(LOGIN_PORT),EASY_STARTUP:'false',NODE_ID:'77',NODE_PORT:'43651',NODE_MEMBERS:'true',NODE_TICKRATE:'150',WEB_PORT:'8890',WEB_MANAGEMENT_PORT:'8896',WEBSITE_REGISTRATION:'false',FRIEND_SERVER:'false',LOGGER_SERVER:'false'};
   // GameMap.init refuses to load packed locations without this immutable content/maps root.
-  env.BUILD_SRC_DIR=resolve(engine,'../content');
-  if(!existsSync(join(env.BUILD_SRC_DIR,'maps')))throw Error('native recovery map source missing');
+  const nativeMapSource=resolve(engine,'../content');
+  Object.assign(env,{BUILD_SRC_DIR:nativeMapSource});
+  if(!existsSync(join(nativeMapSource,'maps')))throw Error('native recovery map source missing');
   const spawnServer=(args:string[],log:string,extra:Record<string,string>={})=>{const p=Bun.spawn(args,{cwd:workspace,env:{...env,...extra},stdout:Bun.file(join(directory,log+'.out.log')),stderr:Bun.file(join(directory,log+'.err.log')),windowsHide:true});children.push(p);return p;};
   const waitLog=async(p:ReturnType<typeof Bun.spawn>,file:string,pattern:RegExp)=>{const until=Date.now()+60000;while(Date.now()<until){if(p.exitCode!==null)throw Error('native server exited: '+file);if(existsSync(join(directory,file))&&pattern.test(readFileSync(join(directory,file),'utf8')))return;await Bun.sleep(200);}throw Error('native server readiness timeout: '+file);};
   const login=spawnServer([process.execPath,'--preload',observer,join(engine,'src/login.ts')],'login',{WEB_MANAGEMENT_PORT:'8897',LOGIN_TAKEOVER_MIN_MS:String(TAKEOVER_WINDOW_MS)});await waitLog(login,'login.out.log',/Login server listening/);
