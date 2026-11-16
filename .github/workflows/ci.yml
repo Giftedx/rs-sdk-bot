@@ -86,22 +86,26 @@ jobs:
       - name: Pack the public game assets
         timeout-minutes: 10
         working-directory: vendor/rs-sdk/server/engine
-        run: bun run build
+        run: |
+          bun run build
       - name: Prove shared preparation and funded batch behavior
         timeout-minutes: 10
-        run: bun run bench '^extra:(bank-preflight-tanning-short|loot-wildcard-ignore|hunt-restock-partial-glory|owned-bank-ring-consumer|progressive-cooking-entry|bank-job-cook-lobster|inventory-best-effort)$' --profile --budget 10
+        run: |
+          bun run bench '^extra:(bank-preflight-tanning-short|loot-wildcard-ignore|hunt-restock-partial-glory|owned-bank-ring-consumer|progressive-cooking-entry|bank-job-cook-lobster|inventory-best-effort)$' --profile --budget 10
         env:
           BENCH_OUT: .practice/shared-preparation/cases.json
       - name: Run the first AIO smoke group
         if: ${{ !cancelled() }}
         timeout-minutes: 10
-        run: bun run bench '^quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$' --smoke --profile --budget 10
+        run: |
+          bun run bench '^quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$' --smoke --profile --budget 10
         env:
           BENCH_OUT: .practice/shared-preparation/smoke-a.json
       - name: Run the second AIO smoke group
         if: ${{ !cancelled() }}
         timeout-minutes: 10
-        run: bun run bench '^(?!quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$)' --smoke --profile --budget 10
+        run: |
+          bun run bench '^(?!quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$)' --smoke --profile --budget 10
         env:
           BENCH_OUT: .practice/shared-preparation/smoke-b.json
       - name: Retain preparation and smoke evidence
