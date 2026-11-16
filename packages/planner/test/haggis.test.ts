@@ -3,6 +3,34 @@ import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceabl
 import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
 import { xpForLevel } from '../src/curve';
+import { readFileSync } from 'node:fs';
+import { supplyBill } from '../src/supply-bill';
+
+test.each([
+    ['magic', 'sapphire ring', 1637, 1649],
+    ['magic', 'emerald ring', 1639, 1650],
+    ['magic', 'ruby ring', 1641, 1651],
+    ['magic', 'diamond ring', 1643, 1652],
+    ['magic', 'dragonstone amulet', 1702, 1683],
+    ['ranged', 'magic shortbow', 861, 72],
+    ['ranged', 'yew shortbow', 857, 68],
+    ['trade-start', 'pot of flour', 1933, 2516],
+    ['trade-start', 'raw shrimps', 317, 2514],
+    ['trade-start', 'coins', 995, 617],
+    ['woodcut', 'logs', 1511, 2511],
+    ['fish', 'logs', 1511, 2511],
+    ['fm-burn', 'logs', 1511, 2511],
+] as const)('route supply identity: %s stages %s as native item %i', (activityId, item, itemId, otherId) => {
+    const catalog = JSON.parse(readFileSync(join(import.meta.dir, '../../../knowledge/items.json'), 'utf8'));
+    const activity = haggisActivities().find(a => a.id === activityId)!;
+    const demand = suppliesFor([activity], { mode: 'realistic', tricks: new Set() }).find(s => s.item === item)!;
+    expect(demand).toMatchObject({ item, itemId });
+    expect(demand.count).toBeGreaterThan(0);
+    const otherStock = supplyBill([demand], catalog, [{ name: 'Other', bank: [{ id: otherId, count: demand.count }] }]);
+    expect(otherStock).toMatchObject([{ itemId, ids: [itemId], owned: 0, short: demand.count }]);
+    const usableStock = supplyBill([demand], catalog, [{ name: 'Usable', bank: [{ id: itemId, count: demand.count }] }]);
+    expect(usableStock).toMatchObject([{ itemId, ids: [itemId], owned: demand.count, short: 0 }]);
+});
 
 test('selected air-to-nature route supplies enough full essence packs for 99', () => {
     const supplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });

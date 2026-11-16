@@ -344,6 +344,7 @@
     },
     {
      "item": "pot of flour",
+     "itemId": 1933,
      "count": 1
     },
     {
@@ -352,10 +353,12 @@
     },
     {
      "item": "raw shrimps",
+     "itemId": 317,
      "count": 2
     },
     {
      "item": "coins",
+     "itemId": 995,
      "count": 10,
      "note": "Al Kharid toll"
     }
@@ -1669,6 +1672,7 @@
     },
     {
      "item": "logs",
+     "itemId": 1511,
      "count": 5
     }
    ],
@@ -1722,6 +1726,7 @@
     },
     {
      "item": "logs",
+     "itemId": 1511,
      "count": 20
     },
     {
@@ -2646,10 +2651,12 @@
     },
     {
      "item": "magic shortbow",
+     "itemId": 861,
      "count": 1
     },
     {
      "item": "yew shortbow",
+     "itemId": 857,
      "count": 1
     },
     {

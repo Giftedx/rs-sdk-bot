@@ -145,7 +145,7 @@ async function remoteSupplyProducer(name:string,cashName:string,hideName:string)
   const after=await Promise.all(sessions.map(audit));
   assert.deepEqual(after[0]!.bank,{995:70,1741:2});assert.deepEqual(after[0]!.pack,{});assert.deepEqual(after[1],afterItems[1]);assert.deepEqual(after[2],afterItems[2]);
   assert.deepEqual(global(after),{995:50070,1741:2});
-  sessions.forEach((s,i)=>{assert.deepEqual(s.sdk.getState()!.skills,skills[i]);assert.deepEqual(after[i]!.gear,before[i]!.gear);assert.equal(after[i]!.hp,before[i]!.hp);assert.equal(after[i]!.life,before[i]!.life);});
+  sessions.forEach((s,i)=>{assert.deepEqual([...s.sdk.getState()!.skills],skills[i]);assert.deepEqual(after[i]!.gear,before[i]!.gear);assert.equal(after[i]!.hp,before[i]!.hp);assert.equal(after[i]!.life,before[i]!.life);});
   const complete=planning(after)[0]!;assert.equal(complete.template,undefined);assert.equal(complete.fund,undefined);assert.equal(complete.send,undefined);
   evidence={case:'remote-supply-producer',completed:result.completed,banked:result.banked,fee:2,retainedReserve:FUND_RESERVE,stagedFare:fare,cashTransfer,hideTransfer,before,after,
    scope:'logical remote planner and actual local-practice transfer/production helpers; local fixture windows and meeting replace network lead/travel; no fleet CLI, multi-machine admission or live claim'};ok=true;

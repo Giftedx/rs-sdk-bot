@@ -121,6 +121,120 @@ test('GE observation support covers only the confirmed shortfall and duplicate c
  expect(alreadyHeld.get(first.id)!.value).toBeNull();
 });
 
+const ringGoals=()=>{
+ const board=goals();board.collection.missing=[{item:'Sapphire ring',id:1637,need:12,owned:0,verifyOwned:4,consumer:'main Overall'}];return board;
+};
+const ringInput=(patch:Partial<CoordTask>={}):CoordTask=>geOrder({env:{ITEM_ID:'2357',QUANTITY:'1',EXPECTED_OWNED:'0',LIMIT_PRICE:'3500',CASH_RESERVE:'90000',ORDER_MS:'900000'},accept:{bank:{2357:1}},...patch});
+const ringConsumer=(patch:Partial<CoordTask>={}):CoordTask=>run('ring-consumer',{goal:'main24',capability:'jewellery-trip',dependsOn:['ge-supply'],timeoutMs:900000,accept:{bank:{1637:1}},...patch});
+const ringContext={entryOf:(capability:string)=>capability==='ge-bulk-order'?'scripts/buy-owned-ge-item.ts':'scripts/microbot-jewellery-trip.ts'};
+
+test('a bounded same-account GE input can observe the bank for a finite unknown production consumer',()=>{
+ const board=ringGoals(),input=ringInput(),consumer=ringConsumer();
+ const {state}=evaluate([geProof,input,consumer],board);
+ for(const statuses of [[],[status('Helper',{bankAt:0})],[status('Helper',{bankAt:NOW-300000})]]){
+  const values=goalWork(state,board,statuses,NOW,ringContext);
+  expect(values.get(input.id)!.value).toBe(.01);
+  expect(values.get(input.id)!.reason).toContain('Bounded GE input observation');
+  expect(values.get(input.id)!.reason).toContain('not game progress');
+  expect(values.get(consumer.id)!.value).toBeNull();
+  expect(values.get(geProof.id)!.value).toBe(.01);
+ }
+ const proof=state.tasks.find(row=>row.spec.id===geProof.id)!;proof.status='succeeded';
+ const values=goalWork(state,board,[],NOW,ringContext),goalValue=(task:CoordTask)=>values.get(task.id)?.value??null;
+ expect(chooseTask(state,NOW,{goalValue})?.id).toBe(input.id);
+ expect(chooseTask(state,NOW,{goalValue,runHeld:()=>true})).toBeNull();
+ expect(chooseTask(state,NOW,{goalValue,liveLimit:0})).toBeNull();
+ expect(board.collection.missing[0]!.owned).toBe(0);
+ expect(state.goals.find(goal=>goal.id==='main24')!.completedTasks).toBe(0);
+});
+
+test('GE input observation follows pending dependencies without dispatching unknown production or multiplying duplicate support',()=>{
+ const prep:CoordTask={...geProof,id:'jewellery-qualified',capability:'jewellery-trip',dependsOn:['ge-supply']};
+ const consumer=ringConsumer({dependsOn:[prep.id]}),duplicate=ringConsumer({id:'ring-duplicate',dependsOn:[prep.id]});
+ const {state}=evaluate([geProof,ringInput(),prep,consumer,duplicate],ringGoals());
+ const values=goalWork(state,ringGoals(),[],NOW,ringContext);
+ expect(values.get('ge-supply')!.value).toBe(.01);
+ expect(values.get(geProof.id)!.value).toBe(.01);
+ for(const id of [prep.id,consumer.id,duplicate.id])expect(values.get(id)!.value).toBeNull();
+ const known=ringGoals();delete known.collection.missing[0]!.verifyOwned;
+ const fresh=goalWork(state,known,[status('Helper')],NOW,ringContext);
+ expect(fresh.get(consumer.id)!.value).toBe(1/12);
+ expect(fresh.get('ge-supply')!.value).toBe(1/12);
+});
+
+test('new GE input observation cannot dispatch an earlier ordinary run with an unknown bank',()=>{
+ const earlier=ringConsumer({id:'earlier-production',dependsOn:[]}),input=ringInput({dependsOn:[geProof.id,earlier.id]});
+ const {state}=evaluate([geProof,earlier,input,ringConsumer()],ringGoals());
+ const values=goalWork(state,ringGoals(),[],NOW,ringContext);
+ expect(values.get(input.id)!.value).toBe(.01);
+ expect(values.get(geProof.id)!.value).toBe(.01);
+ expect(values.get(earlier.id)!.value).toBeNull();
+ expect(values.get('ring-consumer')!.value).toBeNull();
+ state.tasks.find(row=>row.spec.id===geProof.id)!.status='succeeded';
+ expect(chooseTask(state,NOW,{goalValue:task=>values.get(task.id)?.value??null})).toBeNull();
+ const known=ringGoals();delete known.collection.missing[0]!.verifyOwned;
+ expect(goalWork(state,known,[status('Helper')],NOW,ringContext).get(earlier.id)!.value).toBe(1/12);
+ earlier.accept={bank:{1637:1},quests:['Lost City']};
+ expect(goalWork(state,ringGoals(),[],NOW,ringContext).get(earlier.id)!.value).toBe(1);
+});
+
+test('intermediate GE observation retains the order bounds, single account and real downstream demand',()=>{
+ const original=ringInput(),board=ringGoals();
+ const refused:CoordTask[]=[
+  ringInput({timeoutMs:undefined}),
+  ringInput({env:{...original.env,ORDER_MS:'2700001'}}),
+  ringInput({env:{...original.env,ORDER_MS:'0'}}),
+  ringInput({env:{...original.env,ITEM_ID:'1607'}}),
+  ringInput({env:{...original.env,EXPECTED_OWNED:'1'}}),
+  ringInput({env:{...original.env,LIMIT_PRICE:'0'}}),
+  ringInput({env:{...original.env,CASH_RESERVE:'-1'}}),
+  ringInput({accept:{bank:{2357:1,1607:1}}}),
+  ringInput({env:{...original.env,ITEM_ID:'995'},accept:{bank:{995:1}}}),
+  ringInput({account:'Other'}),
+  ringInput({account:undefined,participants:['Helper','Other']}),
+ ];
+ for(const input of refused){
+  const {state}=evaluate([geProof,input,ringConsumer()],board);
+  expect(goalWork(state,board,[],NOW,ringContext).get(input.id)!.value).toBeNull();
+ }
+ for(const consumer of [ringConsumer({account:'Other'}),ringConsumer({account:undefined,participants:['Helper','Other']}),ringConsumer({accept:{bank:{1637:9}}})]){
+  const {state}=evaluate([geProof,original,consumer],board);
+  expect(goalWork(state,board,[],NOW,ringContext).get(original.id)!.value).toBeNull();
+ }
+ const isolated=evaluate([geProof,original],board).state;
+ expect(goalWork(isolated,board,[],NOW,ringContext).get(original.id)!.value).toBe(0);
+ const linked=evaluate([geProof,original,ringConsumer()],board).state;
+ expect(goalWork(linked,board,[],NOW,{entryOf:()=> 'scripts/goldfarm.ts'}).get(original.id)!.value).toBeNull();
+});
+
+test('intermediate GE observation rejects nonpositive input and goal item IDs',()=>{
+ for(const id of [0,-1]){
+  const board=ringGoals(),input=ringInput({env:{...ringInput().env,ITEM_ID:String(id)},accept:{bank:{[id]:1}}});
+  const inputState=evaluate([geProof,input,ringConsumer()],board).state;
+  expect(goalWork(inputState,board,[],NOW,ringContext).get(input.id)!.value).toBeNull();
+  board.collection.missing[0]!.id=id;
+  const goalState=evaluate([geProof,ringInput(),ringConsumer({accept:{bank:{[id]:1}}})],board).state;
+  expect(goalWork(goalState,board,[],NOW,ringContext).get('ge-supply')!.value).toBeNull();
+ }
+});
+
+test('GE inputs get no observation credit for covered, ambiguous, unnamed, coin or dead goal consumers',()=>{
+ const input=ringInput(),consumer=ringConsumer();
+ for(const patch of [{owned:12},{id:undefined},{consumer:'unresolved named supply'}]){
+  const board=ringGoals();Object.assign(board.collection.missing[0]!,patch);
+  const {state}=evaluate([geProof,input,consumer],board);
+  expect(goalWork(state,board,[],NOW,ringContext).get(input.id)!.value).toBe(0);
+ }
+ const verified=ringGoals();verified.collection.missing[0]!.verifyOwned=12;
+ const verifyState=evaluate([geProof,input,consumer],verified).state;
+ expect(goalWork(verifyState,verified,[],NOW,ringContext).get(input.id)!.value).toBeNull();
+ const coins=ringGoals();coins.collection.missing=[{item:'Coins',id:995,need:12,owned:0,consumer:'main Overall'}];
+ const coinState=evaluate([geProof,input,ringConsumer({accept:{bank:{995:1}}})],coins).state;
+ expect(goalWork(coinState,coins,[],NOW,ringContext).get(input.id)!.value).toBeNull();
+ const {state}=evaluate([geProof,input,consumer],ringGoals());state.tasks.find(row=>row.spec.id===consumer.id)!.status='failed';
+ expect(goalWork(state,ringGoals(),[],NOW,ringContext).get(input.id)!.value).toBe(0);
+});
+
 test('coins have value only for a finite named acquisition consumer',()=>{
  const board=goals();board.collection.missing=[{id:995,item:'Coins',need:100,owned:0,consumer:'main Overall'}];
  const task=run('fund',{goal:'wealth',accept:{bank:{995:100}}});

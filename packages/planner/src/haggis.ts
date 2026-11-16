@@ -601,7 +601,7 @@ export function ladderSupplies(skill: Skill, tiers: Tier[], margin = 1, toLevel 
     return [...out.values()];
 }
 
-const each = (item: string, count = 1): Supply => ({ item, count });
+const each = (item: string, count = 1, itemId?: number): Supply => ({ item, count, ...(itemId === undefined ? {} : { itemId }) });
 const X = 25; // server XP rate
 
 export const FLETCHING_TIERS: Tier[] = [
@@ -649,7 +649,7 @@ export const HERBLORE_TIERS: Tier[] = [
     { id: 'zamorak brew', level: 78, xpPerAction: 175 * X, items: [each('torstol potion (unf)'), each('jangerberries')] },
 ];
 export const FIREMAKING_TIERS: Tier[] = [
-    { id: 'logs', level: 1, xpPerAction: 40 * X, items: [each('logs')] },
+    { id: 'logs', level: 1, xpPerAction: 40 * X, items: [each('logs', 1, 1511)] },
     { id: 'oak', level: 15, xpPerAction: 60 * X, items: [each('oak logs')] },
     { id: 'willow', level: 30, xpPerAction: 90 * X, items: [each('willow logs')] },
     { id: 'maple', level: 45, xpPerAction: 135 * X, items: [each('maple logs')] },
@@ -667,11 +667,11 @@ export const SMITHING_TIERS: Tier[] = [
 export const MAGIC_TIERS: Tier[] = [
     // enchant XP from magic_spells.dbrow (research/xp-per-tick.md); rune costs are the OSRS ones (ESTIMATE)
     { id: 'wind strike', level: 1, xpPerAction: 5.5 * X, items: [each('air rune'), each('mind rune')] },
-    { id: 'enchant 1 (sapphire ring)', level: 7, xpPerAction: 17.5 * X, items: [each('cosmic rune'), each('water rune'), each('sapphire ring')] },
-    { id: 'enchant 2 (emerald ring)', level: 27, xpPerAction: 37 * X, items: [each('cosmic rune'), each('air rune', 3), each('emerald ring')] },
-    { id: 'enchant 3 (ruby ring)', level: 49, xpPerAction: 59 * X, items: [each('cosmic rune'), each('fire rune', 5), each('ruby ring')] },
-    { id: 'enchant 4 (diamond ring)', level: 57, xpPerAction: 67 * X, items: [each('cosmic rune'), each('earth rune', 10), each('diamond ring')] },
-    { id: 'enchant 5 (dragonstone amulet)', level: 68, xpPerAction: 78 * X, items: [each('cosmic rune'), each('water rune', 15), each('earth rune', 15), each('dragonstone amulet')] },
+    { id: 'enchant 1 (sapphire ring)', level: 7, xpPerAction: 17.5 * X, items: [each('cosmic rune'), each('water rune'), each('sapphire ring', 1, 1637)] },
+    { id: 'enchant 2 (emerald ring)', level: 27, xpPerAction: 37 * X, items: [each('cosmic rune'), each('air rune', 3), each('emerald ring', 1, 1639)] },
+    { id: 'enchant 3 (ruby ring)', level: 49, xpPerAction: 59 * X, items: [each('cosmic rune'), each('fire rune', 5), each('ruby ring', 1, 1641)] },
+    { id: 'enchant 4 (diamond ring)', level: 57, xpPerAction: 67 * X, items: [each('cosmic rune'), each('earth rune', 10), each('diamond ring', 1, 1643)] },
+    { id: 'enchant 5 (dragonstone amulet)', level: 68, xpPerAction: 78 * X, items: [each('cosmic rune'), each('water rune', 15), each('earth rune', 15), each('dragonstone amulet', 1, 1702)] },
 ];
 
 // Stageable ladders (research/supply-logistics.md, Proposed substitutions). Rune dart tips, uncut dragonstones,
