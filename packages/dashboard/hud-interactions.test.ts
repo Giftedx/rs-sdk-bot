@@ -88,8 +88,8 @@ function spawnHarness(){
  const train=extract('  function trainInner(){','  function finderList(){'),retry=shell.split('\n').find(line=>line.includes("if(e.target.closest('[data-finder-retry]'))loadSpawns(true)"))!;
  const pending:Array<{resolve:(r:any)=>void;reject:(e:any)=>void}>=[],nodes:any={};
  let retryHandler:any;const body={querySelector:(selector:string)=>nodes[selector]??={innerHTML:''},addEventListener:(_kind:string,handler:any)=>{retryHandler=handler;}};
- const api=new Function('fetch','asset','body','S','safeName','E','nf',`const selectedPlugin='world',miniView={};${code};const combatText=()=>'',teleText=()=>'',thieveText=()=>'',meleeHitText=()=>'',npcHitsText=()=>'',killXpText=()=>'',lootText=()=>'',hourText=()=>'',trainRows=()=>[];${train}${list}${retry};return {loadSpawns,finderList,setQuery:q=>{finderQuery=q;}};`)
-  (()=>new Promise((resolve,reject)=>pending.push({resolve,reject})),String,body,{roster:[['Giantfan',3200,3200,0,3]]},String,String,String);
+ const api=new Function('fetch','asset','body','S','safeName','E','nf','document',`const selectedPlugin='world',miniView={};${code};const combatText=()=>'',teleText=()=>'',thieveText=()=>'',meleeHitText=()=>'',npcHitsText=()=>'',killXpText=()=>'',lootText=()=>'',hourText=()=>'',trainRows=()=>[];${train}${list}${retry};return {loadSpawns,finderList,setQuery:q=>{finderQuery=q;}};`)
+  (()=>new Promise((resolve,reject)=>pending.push({resolve,reject})),String,body,{roster:[['Giantfan',3200,3200,0,3]]},String,String,String,{activeElement:null});
  return {...api,pending,nodes,retry:()=>retryHandler({target:{closest:()=>({})}})};
 }
 

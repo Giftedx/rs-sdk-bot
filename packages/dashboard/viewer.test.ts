@@ -305,6 +305,43 @@ test('opponent information: the followed player\'s target after a hit, renamed w
  socket.message({t:'tick',k:5,p:[{i:8,fe:-1}]});expect(opp()[2]).toBeNull();
 });
 
+function feedStatusBrowser(){
+ const b=browser();
+ class Socket {
+  listeners=new Map<string,Function[]>();constructor(..._args:any[]){}
+  addEventListener(type:string,listener:Function){this.listeners.set(type,[...(this.listeners.get(type)||[]),listener]);}
+  event(type:string,data?:any){for(const listener of this.listeners.get(type)||[])listener({data:JSON.stringify(data)});}
+ }
+ b.host.WebSocket=Socket;
+ new Function('window',viewerBridgeSource())(b.host);
+ return {...b,socket:()=>new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),feed:()=>b.states().filter(Boolean).at(-1)?.feedConnected};
+}
+
+test('closing a second feed keeps the streaming feed connected until its own close',async()=>{
+ const b=feedStatusBrowser();expect(b.feed()).toBeNull();
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const a=b.socket(),second=b.socket();expect(b.feed()).toBeNull();
+ a.event('open');second.event('open');expect(b.feed()).toBe(true);
+ second.event('close');
+ a.event('message',{t:'roster',p:[[8,'Worker',3201,3201,0,50]]});
+ expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)?.data.atlasRoster.players).toEqual([['Worker',3201,3201,0,50]]);
+ expect(b.feed()).toBe(true);
+ a.event('close');expect(b.feed()).toBe(false);
+});
+
+test('failed feeds do not hide an open feed and a reconnect restores connection status',()=>{
+ const b=feedStatusBrowser(),a=b.socket(),second=b.socket();
+ expect(b.feed()).toBeNull();
+ a.event('open');second.event('error');expect(b.feed()).toBe(true);
+ second.event('close');expect(b.feed()).toBe(true);
+ a.event('error');expect(b.feed()).toBe(false);
+ const c=b.socket();expect(b.feed()).toBe(false);
+ c.event('open');expect(b.feed()).toBe(true);
+ a.event('close');second.event('error');expect(b.feed()).toBe(true);
+ c.event('error');expect(b.feed()).toBe(false);
+ c.event('close');expect(b.feed()).toBe(false);
+});
+
 test('a roster held past the 30 s limit is dropped at the ready state',async()=>{
  const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m),origin:'wss://x'});}}
  b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');

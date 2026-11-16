@@ -8,7 +8,7 @@ test('pending or failed lookups do not assert that a player is offline',()=>{
   const html=card({name:'Worker',rows:null,note},String,String,{});
   expect(html).toContain('presence not loaded');expect(html).not.toContain('not seen online');
  }
- expect(card({name:'Worker',rows:null,online:false},String,String,{})).toContain('not seen online');
+ expect(card({name:'Worker',rows:null,online:false,presenceObservedAt:Date.now()},String,String,{})).toContain('not seen online');
 });
 
 test('the current roster overrides cached online status without losing lookup details',()=>{
