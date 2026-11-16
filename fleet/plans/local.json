@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794870979418,
+ "at": 1794871331420,
  "jobs": [
   {
    "account": "Balls",
@@ -50,6 +50,34 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "99",
+    "1500"
+   ],
+   "env": {
+    "TARGET_LEVEL": "99",
+    "FOOD": "3",
+    "AMMO": "100",
+    "MAX_TRIPS": "50",
+    "COIN_RESERVE": "0",
+    "MAX_SPEND": "4000",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "local",
+   "resources": [
+    "pen:3229,3298",
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Shaftsinker",
@@ -104,26 +132,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "96"
-   ],
-   "env": {
-    "BONE_ID": "526",
-    "MAX_BURY": "469",
-    "BONE_RESERVE": "6",
-    "CAP": "1500",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-522d62a8-f3f3-46a0-acda-38ce397eef28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-prayer96-nab-owned-normal-1794870762693 [task-522d62a8-f3f3-46a0-acda-38ce397eef28]",
-   "role": "helper"
   }
  ],
  "army": [
