@@ -144,6 +144,23 @@ test('actual owner retains both children, checks observed effects and settles on
  }
 });
 
+test('Cook caller requires the bounded starter before quest entry or acquisition',async()=>{
+ const state:any={player:{name:'helper1',hp:10,lifeId:1,respawnCount:0,level:0,worldX:3094,worldZ:3106},inventory:[],equipment:[]};
+ const s:any={name:'helper1',tick:()=>0,onTick:()=>()=>{},ended:new Promise(()=>{}),sdk:{getState:()=>state},bot:{skipTutorial:async()=>{throw Error('legacy tutorial path');}}};
+ const open=spyOn(owner,'openBot').mockResolvedValue(s),starter=spyOn(runeSupply,'leaveRuneStarter').mockImplementation(async(session,stop)=>{
+  expect(session).toBe(s);expect(stop()).toBe(false);throw Error('starter entry deadline: grant unobserved');
+ });
+ const gather=spyOn(items,'gatherQuestItems').mockImplementation(async()=>{throw Error('must not acquire before starter grant');});
+ const complete=spyOn(cook,'completeCook').mockImplementation(async()=>{throw Error('must not hand in before starter grant');});
+ const settle=spyOn(owner,'settle').mockResolvedValue(true);
+ try{
+  const result=await runQuestCookJob('helper1',2400);
+  expect(result).toMatchObject({ok:false,detail:expect.stringContaining('starter entry deadline')});
+  expect(starter).toHaveBeenCalledTimes(1);expect(gather).not.toHaveBeenCalled();expect(complete).not.toHaveBeenCalled();
+  expect(settle).toHaveBeenCalledTimes(1);
+ }finally{for(const spy of [open,starter,gather,complete,settle])spy.mockRestore();}
+});
+
 test('Hetty checks exact price-limited purchases, reward, inputs, assets and life',()=>{
  const b=snapshot({magicXp:0,pack:[{id:1277,count:1}],bank:[{id:995,count:25}]});
  const a=snapshot({...b,quest:'complete',qp:1,magicXp:8125,bank:[{id:995,count:21}],bankGeneration:2});

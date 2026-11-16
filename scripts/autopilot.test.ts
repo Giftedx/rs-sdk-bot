@@ -6,7 +6,8 @@ import { jobLogStart } from '../packages/core/src/job-log';
 import { aioTemplates, BLOOD_FOOD, BLOOD_MEALS, BOUGHT_BONE_XP, CANNON_BARS, SWEEP_MEALS, catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
-import { missionSignature, startable } from './swarm';
+import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
+import { supervise } from '../packages/practice/src/supervise';
 import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 import { existsSync } from 'node:fs';
@@ -22,6 +23,81 @@ import { jewelleryOrderFromEnv, planJewelleryOrder, validateJewelleryOrder } fro
 import { smithRecipe } from './smith-batch';
 import { parseStep } from '../packages/core/src/chain-step';
 import { PROFILES, maximumUnitCost, selectItems } from './shop-buyer';
+
+test('settled finite makers wake the existing planner on success or failure without matching another job',()=>{
+    const t=aioTemplates().find(t=>t.id==='aio-sapphire-rings')!,side='local';
+    const job=jobFor({account:'Crafter',template:t,value:1,reason:'one useful ring',resources:[]},side);
+    expect(job.repeat).toBe(false);
+    const assigned={Crafter:{template:t.id,offset:10}};
+    for(const result of ['RESULT ok one ring banked','RESULT fail owned gem exhausted'])
+        expect(finishedTrainers([job],side,assigned,[t],()=>[result])).toEqual(['Crafter']);
+    expect(finishedTrainers([job],side,assigned,[t],()=>[])).toEqual([]);
+    expect(finishedTrainers([job],side,{Crafter:{template:'different',offset:10}},[t],()=>['RESULT ok'])).toEqual([]);
+    expect(finishedTrainers([{...job,autopilot:'cloud'}],side,assigned,[t],()=>['RESULT ok'])).toEqual([]);
+    const farm=catalogue().find(t=>t.id.startsWith('goldfarm@'))!;
+    expect(finishedTrainers([jobFor({account:'Farmer',template:farm,value:1,reason:'continuous funding',resources:[]},side)],side,
+        {Farmer:{template:farm.id,offset:0}},[farm],()=>['RESULT ok finite farm window'])).toEqual([]);
+});
+
+test('a declared finite maker keeps its exact pending mission until its own terminal result',()=>{
+    const t=aioTemplates().find(t=>t.id==='aio-sapphire-rings')!,side='local';
+    const job=jobFor({account:'Crafter',template:t,value:1,reason:'useful ring',resources:[]},side),assigned={template:t.id,offset:12};
+    expect(kitBuyRunning(job,assigned,()=>[],true)).toBe(true);
+    expect(kitBuyRunning(job,assigned,()=>['RESULT ok ring banked'],true)).toBe(false);
+    expect(kitBuyRunning(job,assigned,()=>['RESULT fail no gem'],true)).toBe(false);
+    expect(kitBuyRunning({...job,enabled:false},assigned,()=>[],true)).toBe(false);
+    expect(kitBuyRunning(job,{...assigned,template:'other'},()=>[],true)).toBe(false);
+});
+
+test('finite makers use one supervisor attempt and keep an unchanged failed mission held by the swarm',async()=>{
+    const t=aioTemplates().find(t=>t.id==='aio-sapphire-rings')!,side='local';
+    const make=(count:number)=>{
+        const account:Acct={name:'Crafter',side,skills:{Crafting:20},items:{'gold bar':count,sapphire:count,'ring mould':1}};
+        const [assignment]=plan({side,accounts:[account],owners:new Map([['crafter',{side}]]),templates:[t],pilots:new Set([t.id]),
+            bill:[{item:'sapphire ring',need:1,owned:0,short:1,ids:[],holders:[]}],prices:{'sapphire ring':900}});
+        return jobFor(assignment!,side);
+    };
+    const job=make(13),parsed=parseJob(job);
+    if('error' in parsed)throw Error(parsed.error);
+    const command=supervisorCommand(parsed,parsed.accounts);
+    expect(command.slice(0,5)).toEqual(['bun','packages/practice/src/supervise.ts','Crafter','scripts/aio.ts','0']);
+    let attempts=0;
+    const end=await supervise({run:async()=>{attempts++;return {stdout:'RESULT fail unfinished recipe ticks=20\n',exitCode:1};},
+        stopped:()=>false,pause:async()=>{},maxRestarts:Number(command[4])});
+    expect(end).toEqual({reason:'gave-up',runs:1});expect(attempts).toBe(1);
+    expect(job).toMatchObject({repeat:false,standing:true,standingRetry:false,maxRestarts:0});
+    expect(coordinatedAdmission(job,true)).toBe(true);
+    const reason=`${end.reason} after ${end.runs} runs`,revision=missionSignature(job);
+    // The existing standing retry would release this end, so a finite job must not opt into it.
+    expect(standingRetryable(reason)).toBe(true);
+    expect(standingRetryable(reason,undefined,job.standingRetry)).toBe(false);
+    const ended=new Map([['Crafter',{reason,at:1000,revision}]]);
+    expect(startable(['Crafter'],job.repeat,ended,()=>60_000,undefined,revision).start).toEqual([]);
+    expect(missionSignature(make(13))).toBe(revision);
+    const next=make(12);expect(missionSignature(next)).not.toBe(revision);
+    // A failed end still needs the supported repair/resume path; only success rearms on changed observed stock.
+    expect(startable(['Crafter'],next.repeat,ended,()=>60_000,undefined,missionSignature(next)).start).toEqual([]);
+    const done=new Map([['Crafter',{reason:'done after 1 runs',at:1000,revision}]]);
+    expect(startable(['Crafter'],job.repeat,done,()=>60_000,undefined,revision).start).toEqual([]);
+    expect(startable(['Crafter'],next.repeat,done,()=>60_000,undefined,missionSignature(next)).start).toEqual(['Crafter']);
+});
+
+test('finite maker polling and preservation ignore stale, foreign and incomplete job results',()=>{
+    const t=aioTemplates().find(t=>t.id==='aio-sapphire-rings')!,side='local';
+    const job=jobFor({account:'Crafter',template:t,value:1,reason:'useful ring',resources:[]},side),foreign={...job,args:[...job.args,'TARGET=2']};
+    const dir=mkdtempSync(join(tmpdir(),'autopilot-finite-log-')),log=join(dir,'account.log');
+    try{
+        const stale=jobLogStart(job)+'RESULT ok previous assignment\n';
+        writeFileSync(log,stale+jobLogStart(job)+'SUPERVISE start\n'+jobLogStart(foreign)+'RESULT ok foreign order\n');
+        const assigned={template:t.id,offset:Buffer.byteLength(stale)},read=(offset:number)=>readJobResultLines(log,offset,job);
+        const poll=()=>finishedTrainers([job],side,{Crafter:assigned},[t],(_a,offset,active)=>readJobResultLines(log,offset,active));
+        expect(kitBuyRunning(job,assigned,read,true)).toBe(true);expect(poll()).toEqual([]);
+        appendFileSync(log,jobLogStart(job)+'RESULT fail own recipe');
+        expect(kitBuyRunning(job,assigned,read,true)).toBe(true);expect(poll()).toEqual([]);
+        appendFileSync(log,'\n');
+        expect(kitBuyRunning(job,assigned,read,true)).toBe(false);expect(poll()).toEqual(['Crafter']);
+    }finally{rmSync(dir,{recursive:true,force:true});}
+});
 import { sideCard } from './fleet-sync';
 
 const side = 'claude-cloud';
@@ -508,11 +584,11 @@ test('a maker of a short bill line has the value of that line for an account tha
         'aio-blood-chest': { item: 'blood rune', perTick: 0.01, meets: { name: 'A', side, skills: { Thieving: 59 }, items: { lobster: BLOOD_MEALS } },
             lacks: { name: 'A', side, skills: { Thieving: 58 }, items: { lobster: BLOOD_MEALS } } },
         'aio-adamantite-bars': { item: 'adamantite bar', perTick: 0.07, meets: { name: 'A', side, skills: { Smithing: 70 }, items: { 'adamantite ore': 4, coal: 24 } },
-            lacks: { name: 'A', side, skills: { Smithing: 70 }, items: { 'adamantite ore': 4, coal: 23 } } },
+            lacks: { name: 'A', side, skills: { Smithing: 70 }, items: { 'adamantite ore': 4, coal: 5 } } },
         'aio-mithril-bars': { item: 'mithril bar', perTick: 0.08, meets: { name: 'A', side, skills: { Smithing: 50 }, items: { 'mithril ore': 5, coal: 20 } },
             lacks: { name: 'A', side, skills: { Smithing: 49 }, items: { 'mithril ore': 5, coal: 20 } } },
         'aio-iron-bars': { item: 'iron bar', perTick: 0.074, meets: { name: 'A', side, skills: { Smithing: 15 }, items: { 'iron ore': 28 } },
-            lacks: { name: 'A', side, skills: { Smithing: 15 }, items: { 'iron ore': 27 } } },
+            lacks: { name: 'A', side, skills: { Smithing: 15 }, items: { 'iron ore': 0 } } },
     };
     for (const [id, m] of Object.entries(makers)) {
         const run = (a: Acct, rows = bill) => plan({ ...inputs({...a,items:{...a.items,
@@ -527,6 +603,14 @@ test('a maker of a short bill line has the value of that line for an account tha
         expect(run(m.meets, bill.map(r => ({ ...r, short: 0 }))).template).toBeUndefined();
         expect(run(m.lacks)).toMatchObject({ value: 0 });
         expect(run(m.lacks).template).toBeUndefined();
+    }
+    for(const [id,a,units,ingredients]of [
+        ['aio-adamantite-bars',{name:'A',side,skills:{Smithing:70},items:{'adamantite ore':4,coal:23}},3,{'adamantite ore':3,coal:18}],
+        ['aio-iron-bars',{name:'A',side,skills:{Smithing:15},items:{'iron ore':27}},2,{'iron ore':2}],
+    ]as const){
+        const [partial]=plan({...inputs(a),templates:aioTemplates(),bill,prices,pilots:new Set([id])});
+        expect(partial!.template!.id).toBe(id);expect(partial!.template!.args).toContain(`MAX_MAKE=${units}`);
+        expect(partial!.template!.needs!.items).toEqual(ingredients);
     }
     expect([...BLOOD_FOOD].map(norm).sort()).toEqual(BANK_FOOD.map(norm).sort());
 });
@@ -555,10 +639,15 @@ test('the steel bar template has the value of a short line only while the bill i
         expect(run(smith(30, 9, 18), bill).value).toBe(0);
         expect(run(smith(30, 9, 18), bill).template).toBeUndefined();
     }
-    // A level under the bar, or a load short of one ore or one coal: no job.
-    for (const a of [smith(29, 9, 18), smith(30, 8, 18), smith(30, 9, 17)]) {
+    // An account below the level or without one complete recipe gets no production job.
+    for (const a of [smith(29, 9, 18), smith(30, 0, 18), smith(30, 9, 1)]) {
         expect(run(a, [line('cannonball', 1700)])).toMatchObject({ value: 0 });
         expect(run(a, [line('cannonball', 1700)]).template).toBeUndefined();
+    }
+    for(const a of [smith(30,8,18),smith(30,9,17)]){
+        const partial=run(a,[line('cannonball',1700)]);
+        expect(partial.template!.args).toContain('MAX_MAKE=8');
+        expect(partial.template!.needs!.items).toEqual({'iron ore':8,coal:16});
     }
 });
 

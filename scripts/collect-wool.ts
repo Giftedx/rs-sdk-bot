@@ -3,17 +3,13 @@ import { openBot, finish, getWorld, accountOf, countItems } from '../packages/co
 import { goTo, walkPath, sessionWalker } from '../packages/core/src/walk';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { bankCargo } from '../packages/core/src/cargo';
+import { leaveRuneStarter } from './rune-starter';
 
 let requestedStop = false;
 const s = await openBot(process.argv[2]!, {onStop:(session,reason)=>{requestedStop=true;return finish([session],false,reason);}});
 try {
     const CAP = Number(process.env.CAP ?? 15000);
-    const first = s.sdk.getState()?.player;
-    if (first && first.worldX < 3160 && first.worldZ < 3130) {
-        await waitUntil(s, st => (st?.nearbyNpcs?.length ?? 0) > 0, { timeoutTicks: 30 });
-        const tut = await s.bot.skipTutorial();
-        if (!tut.success) throw new Error(`tutorial: ${tut.message}`);
-    }
+    await leaveRuneStarter(s,()=>requestedStop);
     await waitTicks(s, 3);
     const t0 = s.tick();
     let ended = false, died = false, gathered = 0, spun = 0, trips = 0, rawBanked = 0;

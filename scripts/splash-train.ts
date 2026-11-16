@@ -30,6 +30,7 @@ import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { COW_NORTH_BANK, atNorthBank } from './cow-stage';
 import { walkTargetPersist } from './walk-to';
+import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 
 type Item = { id: number; count: number };
 export const BODY = 559, WATER = 555, EARTH = 557, MIND = 558, AIR = 556;
@@ -151,14 +152,8 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
         }
         await closeBank();
     }
-    // A first job after the account claim starts on Tutorial Island (claim-account.ts logs out at once): skip it as
-    // scripts/arrive-draynor.ts does. Live (Balls): the skip put the account at Lumbridge 3222,3222 by tick 14, with
-    // the starter kit in the pack.
-    const island = () => { const p = st()?.player; return !!p && p.worldX < 3160 && p.worldZ < 3130; };
-    if (!site.bank && island()) {
-        await waitUntil(s, () => (st()?.nearbyNpcs?.length ?? 0) > 0, { timeoutTicks: 30 });
-        const r = await s.bot.skipTutorial();
-        if (!r.success || !await waitUntil(s, () => !island(), { timeoutTicks: 30 })) throw Error(`splash: tutorial skip failed: ${r.message ?? 'still on the island'}`);
+    if (!site.bank && onStarterIsland(st()?.player)) {
+        await leaveRuneStarter(s,()=>ended||!!o.stop?.()||s.tick()-start>=o.cap);
         await waitTicks(s, 3);
         await s.direct({ type: 'closeModal', reason: 'SDK' });
     }

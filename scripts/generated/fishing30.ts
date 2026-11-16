@@ -15,6 +15,7 @@ import { openBot, finish, countItems, sessionDied } from '../../packages/core/sr
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { componentId } from '../../packages/core/src/logout';
 import { xpForLevel } from '../../packages/planner/src/curve';
+import { leaveRuneStarter, onStarterIsland } from '../rune-starter';
 
 const CAP = Number(process.env.CAP ?? 3000);
 // Target level from the environment, so the same script proves to 30 and runs live to 99.
@@ -67,10 +68,9 @@ try {
     await waitTicks(s, 5);
     // A new live account starts on Tutorial Island (seen: START 3094 3106 0 on the demo server). Skip it first.
     const p0 = s.sdk.getState()?.player;
-    if (p0 && p0.worldX < 3160 && p0.worldZ < 3130) {
-        const t = await s.bot.skipTutorial();
-        console.log(`MILESTONE tutorial ${t.success ? 'ok' : 'fail'}`);
-        if (!t.success) await finish([s], false, `tutorial skip failed: ${t.message}`);
+    if (onStarterIsland(p0)) {
+        await leaveRuneStarter(s,()=>false);
+        console.log('MILESTONE tutorial ok');
     }
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;

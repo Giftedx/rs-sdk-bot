@@ -1,5 +1,6 @@
-import { expect, test } from 'bun:test';
-import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom, onTutorialIsland, leaveTutorial } from './walk-to';
+import { expect, test, spyOn } from 'bun:test';
+import * as owner from '../packages/core/src/bot';
+import { approach, parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom, onTutorialIsland, leaveTutorial } from './walk-to';
 import { loadTravel } from '../packages/core/src/travel';
 import type { Outcome } from '../packages/core/src/act';
 
@@ -19,6 +20,30 @@ test('a walk that starts on Tutorial Island skips the tutorial first; no other s
     calls.length = 0;
     expect(await leaveTutorial(session(at(3222, 3218)), skip(true), ready)).toBeNull();
     expect(calls).toEqual([]);
+});
+
+test('approach cancellation bounds its default waiting tutorial before route dispatch',async()=>{
+    let tick=0,legacy=0;
+    const listeners=new Set<()=>void>(),state:any={player:{worldX:3094,worldZ:3106,level:0},nearbyNpcs:[{name:'RuneScape Guide'}],inventory:[],dialog:{isOpen:true,isWaiting:true,options:[]}};
+    const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),
+        sdk:{getState:()=>state,getDialog:()=>state.dialog,getInventory:()=>state.inventory},
+        bot:{skipTutorial:async()=>{legacy++;throw Error('legacy tutorial path');}}};
+    const world=spyOn(owner,'getWorld').mockResolvedValue({route:()=>{throw Error('must not route before tutorial exit');}} as any);
+    const log=spyOn(console,'log').mockImplementation(()=>{}),timer=setInterval(()=>{tick++;for(const cb of [...listeners])cb();},1);
+    try {
+        const result=await approach(s,{x:3092,z:3243,level:0},()=>tick>=5);
+        expect(result).toMatchObject({ok:false,reason:'aborted'});
+        expect(tick).toBeLessThanOrEqual(5);expect(legacy).toBe(0);
+    }finally{clearInterval(timer);world.mockRestore();log.mockRestore();}
+});
+
+test('default tutorial exit handles the whole island and refuses an unknown guide choice',async()=>{
+    const state:any={player:{worldX:3155,worldZ:3136,level:0},inventory:[],dialog:{isOpen:true,isWaiting:false,options:[{index:1,text:'Tell me about this place.',buttonType:1}]}};
+    let legacy=0,clicked=0;
+    const s:any={tick:()=>0,onTick:()=>()=>{},ended:new Promise(()=>{}),sdk:{getState:()=>state,getDialog:()=>state.dialog,getInventory:()=>state.inventory,sendClickDialog:async()=>{clicked++;return{success:true};}},bot:{skipTutorial:async()=>{legacy++;return{success:true};}}};
+    const log=spyOn(console,'log').mockImplementation(()=>{});
+    try{expect(await leaveTutorial(s)).toMatchObject({ok:false,reason:'precondition',detail:expect.stringContaining('unsupported tutorial choice')});expect(legacy).toBe(0);expect(clicked).toBe(0);}
+    finally{log.mockRestore();}
 });
 
 test('the target is account, x, z and an optional level', () => {

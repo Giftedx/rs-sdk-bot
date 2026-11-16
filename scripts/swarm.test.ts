@@ -897,6 +897,17 @@ test('the controller knows its own stop files, and a standing job retries the en
     expect(standingRetryable('stopped after 1 runs')).toBe(false);
 });
 
+test('a finite standing job keeps admission but opts out of standing retries', () => {
+    const job = {account:'Crafter',script:'scripts/aio.ts',enabled:true,standing:true,standingRetry:false,repeat:false,maxRestarts:0};
+    expect(coordinatedAdmission(job,true)).toBe(true);
+    const parsed=parseJob(job);expect(parsed).not.toHaveProperty('error');
+    for(const reason of ['gave-up after 1 runs','blocked: unfinished order','exit unknown','stopped after 1 runs']){
+        expect(standingRetryable(reason,'RESULT fail unfinished order')).toBe(true);
+        expect(standingRetryable(reason,'RESULT fail unfinished order',false)).toBe(false);
+    }
+    for(const value of ['false',0,null])expect(parseJob({...job,standingRetry:value} as unknown as Job)).toEqual({error:'bad standingRetry'});
+});
+
 
 test('controller stop and resume preserve a stop file the owner wrote', () => {
     const parent = resolve(tmpdir()), base = mkdtempSync(join(parent, 'rsbot-stop-owner-'));

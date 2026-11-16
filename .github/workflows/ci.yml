@@ -91,7 +91,7 @@ jobs:
       - name: Prove shared preparation and funded batch behavior
         timeout-minutes: 10
         run: |
-          bun run bench '^extra:(bank-preflight-tanning-short|loot-wildcard-ignore|hunt-restock-partial-glory|owned-bank-ring-consumer|progressive-cooking-entry|bank-job-cook-lobster|inventory-best-effort)$' --profile --budget 10
+          bun run bench '^(extra:(bank-preflight-tanning-short|loot-wildcard-ignore|hunt-restock-partial-glory|owned-bank-ring-consumer|progressive-cooking-entry|bank-job-cook-lobster|inventory-best-effort|catalog-finite-producer|catalog-gather-short)|fighter:ranged-starter)$' --profile --budget 10
         env:
           BENCH_OUT: .practice/shared-preparation/cases.json
       - name: Run the first AIO smoke group

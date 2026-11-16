@@ -1,17 +1,13 @@
 // Stage a fresh owned supplier at Draynor with its starter kit safely banked.
 import { openBot, finish } from '../packages/core/src/bot';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
-import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { waitTicks } from '../packages/core/src/ticks';
+import { leaveRuneStarter } from './rune-starter';
 
 const s=await openBot(process.argv[2]!);
 try {
     const start=s.tick();
-    const first=s.sdk.getState()?.player;
-    if(first && first.worldX<3160 && first.worldZ<3130) {
-        await waitUntil(s,st=>(st?.nearbyNpcs?.length??0)>0,{timeoutTicks:30});
-        const r=await s.bot.skipTutorial();
-        if(!r.success) throw new Error(`tutorial: ${r.message}`);
-    }
+    await leaveRuneStarter(s,()=>false);
     await waitTicks(s,3);
     const hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
     let hpMin=hp();

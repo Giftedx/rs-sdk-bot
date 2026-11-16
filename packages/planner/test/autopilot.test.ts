@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
-import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable } from '../src/autopilot';
+import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm } from '../src/autopilot';
 
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
@@ -1190,7 +1190,7 @@ test('an unfinished potion is mixed at its Herblore level from one herb and one 
     for (const a of [acct('A', { Herblore: 77 }, { torstol: 1, 'vial of water': 1 }), acct('A', { Herblore: 78 }, { 'vial of water': 1 }), acct('A', { Herblore: 78 }, { torstol: 1 })])
         expect(run(a, 'aio-unf-torstol', { bill: short, prices: potionPrices }).template).toBeUndefined();
     expect(jobFor(run(brewer, 'aio-unf-dwarf-weed', { bill: [row('dwarf weed potion (unf)', 100)], prices: potionPrices }), side)).toMatchObject({ script: 'scripts/aio.ts',
-        args: ['skiller', 'crafting', 'inventory', 'brew:unf_dwarf_weed_potion', `MAX_MAKE=${MAKE_BATCH}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'], repeat: true });
+        args: ['skiller', 'crafting', 'inventory', 'brew:unf_dwarf_weed_potion', 'MAX_MAKE=1', 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'], repeat: false });
     // The dusts: a pestle and mortar and one horn or scale.
     const dustPrices = { 'unicorn horn dust': 20, 'dragon scale dust': 52 };
     expect(run(acct('A', {}, { 'pestle and mortar': 1, 'unicorn horn': 1 }), 'aio-unicorn-horn-dust', { prices: dustPrices }).template?.args).toContain('grind:unicorn_horn');
@@ -1198,14 +1198,15 @@ test('an unfinished potion is mixed at its Herblore level from one herb and one 
     expect(run(acct('A', {}, { 'unicorn horn': 1 }), 'aio-unicorn-horn-dust', { prices: dustPrices }).template).toBeUndefined();
 });
 
-test('a ring trip needs its Crafting level, the mould and a whole batch of gold bars and cut gems; one rune axe needs Smithing 86', () => {
+test('a ring trip needs its Crafting level, the mould and one complete owned recipe; one rune axe needs Smithing 86', () => {
     const run = (a: Acct, id: string) => plan(aioInputs([a], [id], { prices: { 'sapphire ring': 900, 'emerald ring': 1275, 'ruby ring': 2025, 'diamond ring': 3525, 'rune axe': 12800 } }))[0]!;
     for (const [gem, level] of GEM_RINGS) {
         const id = `aio-${gem}-rings`, kit = { 'ring mould': 1, 'gold bar': RING_BATCH, [gem]: RING_BATCH };
         expect(`${id} ${run(acct('A', { Crafting: level }, kit), id).template?.id}`).toBe(`${id} ${id}`);
-        for (const a of [acct('A', { Crafting: level - 1 }, kit), acct('A', { Crafting: level }, { ...kit, 'ring mould': 0 }), acct('A', { Crafting: level }, { ...kit, 'gold bar': RING_BATCH - 1 }),
-            acct('A', { Crafting: level }, { ...kit, [gem]: RING_BATCH - 1 }), acct('A', { Crafting: level }, { ...kit, [gem]: 0, [`uncut ${gem}`]: RING_BATCH, chisel: 1 })])
+        for (const a of [acct('A', { Crafting: level - 1 }, kit), acct('A', { Crafting: level }, { ...kit, 'ring mould': 0 }), acct('A', { Crafting: level }, { ...kit, 'gold bar': 0 }),
+            acct('A', { Crafting: level }, { ...kit, [gem]: 0, [`uncut ${gem}`]: RING_BATCH, chisel: 1 })])
             expect(run(a, id).template).toBeUndefined();
+        expect(run(acct('A',{Crafting:level},{...kit,'gold bar':RING_BATCH-1}),id).template?.args).toContain(`TARGET=${RING_BATCH-1}`);
     }
     expect(GEM_RINGS.map(([gem, level]) => `${gem} ${level}`)).toEqual(['sapphire 20', 'emerald 27', 'ruby 34', 'diamond 43']);
     expect(jobFor(run(acct('A', { Crafting: 43 }, { 'ring mould': 1, 'gold bar': 13, diamond: 13 }), 'aio-diamond-rings'), side).args)
@@ -1243,10 +1244,14 @@ test('the two-recipe makers are pilots that run the bank-standing worker twice i
         `scripts/aio.ts skiller crafting inventory prepare:potato-stew MAX_MAKE=${STEW_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`,
         `scripts/aio.ts skiller crafting inventory prepare:uncooked-stew MAX_MAKE=${STEW_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`]);
     for (const a of [cook(24, {}), cook(25, { potato: 0 }), cook(25, { 'bowl of water': 0 }), cook(25, { 'cooked meat': 0 })]) expect(run(a, 'make-uncooked-stew').template).toBeUndefined();
-    // One run makes STEW_BATCH stews and needs STEW_BATCH of each input. 100 potatoes and 100 bowls of water with one
-    // cooked meat give no job: the first step would leave incomplete stews that the second step has no meat for.
-    expect(run(cook(25, { potato: 100, 'bowl of water': 100, 'cooked meat': 1 }), 'make-uncooked-stew').template).toBeUndefined();
-    expect(run(cook(25, { potato: 100, 'bowl of water': 100, 'cooked meat': STEW_BATCH - 1 }), 'make-uncooked-stew').template).toBeUndefined();
+    // Both steps use the same complete recipe count, so a short meat stock still makes useful whole stews.
+    for(const count of [1,STEW_BATCH-1]){
+        const partial=run(cook(25,{potato:100,'bowl of water':100,'cooked meat':count}),'make-uncooked-stew');
+        expect(partial.template!.args).toEqual([
+            `scripts/aio.ts skiller crafting inventory prepare:potato-stew MAX_MAKE=${count} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`,
+            `scripts/aio.ts skiller crafting inventory prepare:uncooked-stew MAX_MAKE=${count} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`]);
+        expect(partial.template!.needs!.items).toEqual({potato:count,'bowl of water':count,'cooked meat':count});
+    }
     expect(run(cook(25, { potato: 100, 'bowl of water': 100 }), 'make-uncooked-stew').template?.id).toBe('make-uncooked-stew');
 });
 
@@ -1296,22 +1301,32 @@ test('the ore route needs combat 13 and a pickaxe; the status combat level wins 
     expect(run({ ...acct('A', {}, { 'rune pickaxe': 1 }), combat: 13 })).toBe('aio-ore');
 });
 
-test('the production routes need their level and a whole batch of the input', () => {
+test('production routes need their level and tools, and resize to complete owned recipes', () => {
     const run = (a: Acct, id: string) => ids(plan(aioInputs([a], [id]))).A;
     expect(run(acct('A', { Crafting: 9 }, { flax: 56 }), 'aio-bowstrings')).toBe('vacant');
-    expect(run(acct('A', { Crafting: 10 }, { flax: 55 }), 'aio-bowstrings')).toBe('vacant');
+    expect(run(acct('A', { Crafting: 10 }, { flax: 0 }), 'aio-bowstrings')).toBe('vacant');
     expect(run(acct('A', { Crafting: 10 }, { flax: 56 }), 'aio-bowstrings')).toBe('aio-bowstrings');
-    expect(run(acct('A', {}, { knife: 1, log: 24 }), 'aio-shafts')).toBe('vacant');
+    expect(run(acct('A', {}, { knife: 0, log: 25 }), 'aio-shafts')).toBe('vacant');
     expect(run(acct('A', {}, { knife: 1, log: 25 }), 'aio-shafts')).toBe('aio-shafts');
     expect(run(acct('A', { Woodcutting: 59 }, { 'bronze axe': 1 }), 'aio-yews')).toBe('vacant');
     expect(run(acct('A', { Woodcutting: 60 }, { 'bronze axe': 1 }), 'aio-yews')).toBe('aio-yews');
     expect(run(acct('A', {}, { 'air talisman': 1, 'rune essence': 27 }), 'aio-air-runes')).toBe('vacant');
     expect(run(acct('A', {}, { 'air talisman': 1, 'rune essence': 28 }), 'aio-air-runes')).toBe('aio-air-runes');
-    // Steel: one pack load is 9 bars, one iron ore and two coal each.
+    // Steel takes one iron ore and two coal per complete bar; partial pack loads remain useful.
     expect(run(acct('A', { Smithing: 29 }, { 'iron ore': 9, coal: 18 }), 'aio-steel-bars')).toBe('vacant');
-    expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 8, coal: 18 }), 'aio-steel-bars')).toBe('vacant');
-    expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 9, coal: 17 }), 'aio-steel-bars')).toBe('vacant');
+    expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 0, coal: 18 }), 'aio-steel-bars')).toBe('vacant');
+    expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 9, coal: 1 }), 'aio-steel-bars')).toBe('vacant');
     expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 9, coal: 18 }), 'aio-steel-bars')).toBe('aio-steel-bars');
+    for(const [id,a,units,items]of [
+        ['aio-bowstrings',acct('A',{Crafting:10},{flax:55}),55,{flax:55}],
+        ['aio-shafts',acct('A',{},{knife:1,log:24}),24,{knife:1,logs:24}],
+        ['aio-steel-bars',acct('A',{Smithing:30},{'iron ore':8,coal:18}),8,{'iron ore':8,coal:16}],
+        ['aio-steel-bars',acct('A',{Smithing:30},{'iron ore':9,coal:17}),8,{'iron ore':8,coal:16}],
+    ]as const){
+        const [partial]=plan(aioInputs([a],[id]));
+        expect(partial!.template!.id).toBe(id);expect(partial!.template!.args).toContain(`MAX_MAKE=${units}`);
+        expect(partial!.template!.needs!.items).toEqual(items);expect(jobFor(partial!,side).repeat).toBe(false);
+    }
 });
 
 test('Rune Mysteries is planned for the essence mine it unlocks, once, and only with the sweep pack', () => {
@@ -1463,9 +1478,11 @@ test('a smith with runite ore and coal smelts bars, then smiths rune scimitars, 
     const smith = (items: Record<string, number>, skills: Record<string, number> = { Smithing: 99 }) => acct('Smith', skills, items);
     // The PC smith's stock: 13 runite ore, a hammer, and coal once mined.
     expect(run(smith({ 'runite ore': 13, coal: 104, hammer: 1 })).template!.id).toBe('aio-runite-bars');
-    expect(jobFor(run(smith({ 'runite ore': 13, coal: 104, hammer: 1 })), side)).toMatchObject({ script: 'scripts/aio.ts', args: ['skiller', 'smithing', 'smelt', '1500', 'runite', 'MAX_MAKE=28', 'ORE_RESERVE=0'] });
+    expect(jobFor(run(smith({ 'runite ore': 13, coal: 104, hammer: 1 })), side)).toMatchObject({ script: 'scripts/aio.ts', repeat:false,args: ['skiller', 'smithing', 'smelt', '1500', 'runite', 'MAX_MAKE=13', 'ORE_RESERVE=0'] });
     // Without 8 coal a bar, under Smithing 85, or not admitted: no smelt.
-    expect(run(smith({ 'runite ore': 13, coal: 15, hammer: 1 })).template).toBeUndefined();
+    expect(run(smith({ 'runite ore': 13, coal: 7, hammer: 1 })).template).toBeUndefined();
+    const single=run(smith({'runite ore':13,coal:15,hammer:1}));
+    expect(single.template!.args).toContain('MAX_MAKE=1');expect(single.template!.needs!.items).toEqual({'runite ore':1,coal:8});
     expect(run(smith({ 'runite ore': 13, coal: 104 }, { Smithing: 84 })).template).toBeUndefined();
     expect(run(smith({ 'runite ore': 13, coal: 104 }), []).template).toBeUndefined();
     // Bars banked: the anvil order, one blade a run, with the hammer and the toll.
@@ -2182,4 +2199,109 @@ test('a shop job needs an account that is short of an item the shop run buys', (
     // One rune under the stock keeps the rune run. The feather run and the arrowtip run stay shut.
     expect(pick({ ...full, 'earth rune': SHOP_STOCK - 1 })).toEqual(['shop-runes']);
     expect(pick({ ...full, feather: 760 })).toEqual([]);
+});
+
+test('finite ring production sizes the actual order and ingredient minima to the remaining demand', () => {
+    const t=catalogue().find(t=>t.id==='aio-sapphire-rings')!;
+    const crafter=acct('Crafter',{Crafting:20},{'ring mould':1,'gold bar':13,sapphire:13});
+    const run=(short:number,accounts=[crafter])=>plan(inputs(accounts,{templates:[t],pilots:new Set([t.id]),bill:[row('sapphire ring',short)],prices:{'sapphire ring':1000}}));
+    const [one]=run(1),job=jobFor(one!,side);
+    expect(job.repeat).toBe(false);
+    expect(job.args).toEqual(['skiller','crafting','jewellery-trip','RECIPE=sapphire_ring','TARGET=1','BATCH=1','CAP=1500']);
+    expect(one!.template!.needs!.items).toEqual({'ring mould':1,'gold bar':1,sapphire:1});
+    expect(run(0)[0]!.template).toBeUndefined();
+    expect(run(1,[crafter,{...crafter,name:'Second'}]).filter(x=>x.template)).toHaveLength(1);
+    const [partial]=run(5,[{...crafter,items:{...crafter.items,sapphire:2,'gold bar':2}}]);
+    expect(jobFor(partial!,side).args).toContain('TARGET=2');
+});
+
+test('finite inventory, bars, cannonballs and both stew steps retain their native input and output ratios', () => {
+    const run=(id:string,a:Acct,item:string,short:number)=>{
+        const t=catalogue().find(t=>t.id===id)!;
+        return plan(inputs([a],{templates:[t],pilots:new Set([id]),bill:[row(item,short)],prices:{[norm(item)]:100}}))[0]!;
+    };
+    const potion=run('aio-unf-torstol',acct('Herb',{Herblore:78},{torstol:3,'vial of water':3}),'torstol potion (unf)',7);
+    expect(jobFor(potion,side)).toMatchObject({repeat:false});
+    expect(potion.template!.args).toContain('MAX_MAKE=3');
+    const bars=run('aio-steel-bars',acct('Smith',{Smithing:30},{'iron ore':9,coal:18}),'cannonball',5);
+    expect(jobFor(bars,side).repeat).toBe(false);
+    expect(bars.template!.args).toContain('MAX_MAKE=2');
+    expect(bars.template!.needs!.items).toEqual({'iron ore':2,coal:4});
+    const cannon=run('aio-cannonballs',acct('Smith',{Smithing:35},{'steel bar':27,'ammo mould':1}),'cannonball',5);
+    expect(jobFor(cannon,side).repeat).toBe(false);
+    expect(cannon.template!.args!.slice(0,4)).toEqual(['skiller','smithing','cannonballs','2']);
+    expect(cannon.template!.needs!.items).toEqual({'ammo mould':1,'steel bar':2});
+    const shafts=run('aio-shafts',acct('Fletcher',{},{knife:1,log:25}),'arrow shaft',16);
+    expect(shafts.template!.args).toContain('MAX_MAKE=2');
+    expect(shafts.template!.needs!.items).toEqual({knife:1,logs:2});expect(jobFor(shafts,side).repeat).toBe(false);
+    const stew=run('make-uncooked-stew',acct('Cook',{Cooking:25},{potato:3,'bowl of water':3,'cooked meat':3}),'uncooked stew',1);
+    expect(jobFor(stew,side).repeat).toBe(false);
+    expect(stew.template!.args).toHaveLength(2);
+    for(const step of stew.template!.args!)expect(step).toContain('MAX_MAKE=1');
+    expect(stew.template!.needs!.items).toEqual({potato:1,'bowl of water':1,'cooked meat':1});
+});
+
+test('a combined cash and item shortfall serializes existing funding and item orders before the Zaff consumer', () => {
+    const t=catalogue().find(t=>t.id==='army-staff-zaff')!;
+    const caster=acct('Caster',{Magic:30},{feather:50,coin:0});
+    const extra:Partial<Inputs>={templates:[t],army:new Set(['caster']),pilots:new Set([t.id]),bill:[],
+        donors:[{name:'CashMule',coins:100000}],stock:[{name:'RuneMule',side,items:{'nature rune':100}}]};
+    const [cash]=plan(inputs([caster],extra));
+    expect(cash!.fund).toMatchObject({from:'CashMule',to:'Caster',coins:15000,template:t.id});
+    expect(cash!.send).toBeUndefined();
+    const funded={...caster,items:{...caster.items,coin:15000}};
+    const [runes]=plan(inputs([funded],extra));
+    expect(runes!.send).toEqual({from:'RuneMule',to:'Caster',item:'nature rune',count:50,template:t.id});
+    expect(runes!.fund).toBeUndefined();
+    const [ready]=plan(inputs([{...funded,items:{...funded.items,'nature rune':50}}],extra));
+    expect(ready!.template!.id).toBe(t.id);
+    expect(ready!.send).toBeUndefined();expect(ready!.fund).toBeUndefined();
+    const [held]=plan(inputs([caster],{...extra,unfundable:new Set(['caster']),current:new Map([['caster',t.id]]),running:new Set(['caster'])}));
+    expect(held!.send).toBeUndefined();expect(held!.fund).toBeUndefined();
+    expect(plan(inputs([caster],{...extra,stock:[]}))[0]!.fund).toBeUndefined();
+    expect(plan(inputs([caster],{...extra,stock:[{name:'RuneMule',side,items:{'nature rune':50}}]}))[0]!.fund).toBeUndefined();
+});
+
+test('a demanded scimitar with cash and bar shortfalls starts only after both arrive', () => {
+    const t=catalogue().find(t=>t.id==='aio-rune-scimitars')!;
+    const smith=acct('Smith',{Smithing:90},{hammer:1,'runite bar':1});
+    const extra:Partial<Inputs>={templates:[t],pilots:new Set([t.id]),bill:[row('rune scimitar',1)],prices:{'rune scimitar':15000},
+        donors:[{name:'CashMule',coins:50010}],stock:[{name:'BarMule',side,items:{'runite bar':3}}]};
+    const [cash]=plan(inputs([smith],extra));expect(cash!.fund?.coins).toBe(10);expect(cash!.send).toBeUndefined();
+    const funded={...smith,items:{...smith.items,coin:10}};
+    const [bar]=plan(inputs([funded],extra));expect(bar!.send).toMatchObject({from:'BarMule',item:'runite bar',count:1});expect(bar!.fund).toBeUndefined();
+    expect(plan(inputs([funded],{...extra,stock:[{name:'BarMule',side,items:{'runite bar':1}}]}))[0]!.send).toMatchObject({from:'BarMule',item:'runite bar',count:1});
+    const [ready]=plan(inputs([{...funded,items:{...funded.items,'runite bar':2}}],extra));
+    expect(jobFor(ready!,side)).toMatchObject({template:t.id,repeat:false});
+    expect(ready!.send).toBeUndefined();expect(ready!.fund).toBeUndefined();
+});
+
+test('market preparation retains the consumer fare and cash buffer without adding an overlapping explicit reserve',()=>{
+    const t=catalogue().find(t=>t.id==='aio-rune-scimitars')!;
+    const smith=acct('Smith',{Smithing:90},{hammer:1,'runite bar':1});
+    const run=(coins:number,template=t)=>plan(inputs([{...smith,items:{...smith.items,coin:coins}}],{
+        templates:[template],pilots:new Set([template.id]),bill:[row('rune scimitar',1)],prices:{'rune scimitar':15000},
+        donors:[{name:'CashMule',coins:100000}],market:{'runite bar':{id:2363,name:'Runite bar',limit:10000}}}))[0]!;
+    expect(run(0).fund).toMatchObject({coins:10,template:t.id});
+    for(const template of [t,{...t,keepCoins:()=>10}]){
+        const preparation=run(10,template);
+        expect(preparation.fund).toMatchObject({coins:11000,template:KIT_BUY+t.id});
+        const buy=run(11010,template);
+        expect(buy.fund).toBeUndefined();expect(buy.template!.id).toBe(KIT_BUY+t.id);
+        expect(buy.template!.args).toHaveLength(1);
+        expect(buy.template!.args![0]).toContain('QUANTITY=1');
+        expect(buy.template!.args![0]).toContain(`CASH_RESERVE=${KIT_CASH_RESERVE+10}`);
+    }
+    const zaff=catalogue().find(t=>t.id==='army-staff-zaff')!;
+    const caster=acct('Caster',{Magic:30},{feather:50});
+    const staff=(coins:number,template=zaff)=>plan(inputs([{...caster,items:{...caster.items,coin:coins}}],{
+        templates:[template],army:new Set(['caster']),pilots:new Set([template.id]),bill:[],
+        donors:[{name:'CashMule',coins:100000}],market:{'nature rune':{id:561,name:'Nature rune',limit:100}}}))[0]!;
+    expect(staff(0).fund).toMatchObject({coins:15000,template:zaff.id});
+    for(const template of [zaff,{...zaff,keepCoins:()=>15000}]){
+        expect(staff(15000,template).fund).toMatchObject({coins:6000,template:KIT_BUY+zaff.id});
+        const buy=staff(21000,template);expect(buy.fund).toBeUndefined();
+        expect(buy.template!.args![0]).toContain('QUANTITY=50');
+        expect(buy.template!.args![0]).toContain(`CASH_RESERVE=${KIT_CASH_RESERVE+15000}`);
+    }
 });

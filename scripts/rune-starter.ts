@@ -7,12 +7,15 @@ import {questFlags} from '../packages/core/src/quest-status';
 export function runeSupplyAssets(items:readonly {id:number;count:number}[]){
  const totals:Record<number,number>={};for(const i of items)totals[i.id]=(totals[i.id]??0)+i.count;return totals;
 }
+export const onStarterIsland=(p:{worldX:number;worldZ:number;level?:number}|null|undefined):boolean=>
+ !!p&&p.worldX>=3050&&p.worldX<=3160&&p.worldZ>=3050&&p.worldZ<=3140;
+// Shared Session tutorial exit. The export remains compatible with rune-supply callers.
 export async function leaveRuneStarter(s:Session,stop:()=>boolean){
  const pos=()=>s.sdk.getState()?.player;
  if(!await waitUntil(s,()=>stop()||!!pos(),{timeoutTicks:30}))throw Error('starter position unobserved');
  if(stop())throw Error('stopped during starter exit');
  const p=pos()!;
- if(p.worldX>=3080&&p.worldX<=3105&&p.worldZ>=3080&&p.worldZ<=3125){
+ if(onStarterIsland(p)){
   // Pinned rs-sdk b565f2d: actions.ts skipTutorial handles late design, but
   // chooses options[0] on unknown choices and has an unbounded isWaiting loop.
   // Adapt only its observed-modal handling here. Keep exact guide choices and
