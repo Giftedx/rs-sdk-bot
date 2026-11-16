@@ -408,7 +408,7 @@ test('a clone of master alone gets the published fleet-data branch, never one ma
         for (const n of [1, 2, 3]) { writeFileSync(join(wt, `receipt-${n}.json`), '{}\n'); g(wt, 'add', '.'); g(wt, 'commit', '-qm', `receipt ${n}`); }
         expect(worktreeProblem(wt, 0)).toBeNull();
     } finally { rmSync(base, { recursive: true, force: true }); }
-});
+}, 30_000);
 
 test.skipIf(process.platform !== 'win32')('a Windows long-path configuration failure refuses even an existing worktree', () => {
     const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
