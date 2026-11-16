@@ -13,7 +13,6 @@ import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-
 import {killTree} from './proc';
 import {SWARM_STOP,clearSwarmStop} from '../../../scripts/swarm';
 import {withPlanWrite} from '../../core/src/plan-lock';
-import {verifyArtisanEvidence} from '../../../scripts/measure/catalog-integration-proof';
 
 // An actual Swarm CLI with byte-identical source, loopback profiles and a private bare Git authority.
 // Recovery itself stays in the outer guarded dispatcher; no live controller root/server is redirected.
@@ -29,7 +28,9 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   if(!/^flrcvx[a-z0-9]+$/.test(account))throw Error('private swarm actor is not a generated recovery fixture');
   const report=JSON.parse(readFileSync(join(input.observerDelivery,'report.json'),'utf8'));
   if(report.id!=='owned-bank-observation'||report.ok!==true||report.stage!=='delivered'||report.runtimeRevision!==capabilityRevision(['scripts/fleet-inspect.ts'],sourceRoot))throw Error('private swarm needs current completed observer qualification before the outer native lock');
-  verifyArtisanEvidence('observer');
+  const verification=Bun.spawnSync([process.execPath,join(sourceRoot,'scripts/measure/catalog-integration-proof.ts'),'--verify','observer'],{cwd:sourceRoot,env:{...process.env,DELIVERY_DIR:input.observerDelivery},stdout:'pipe',stderr:'pipe',windowsHide:true});
+  writeFileSync(join(directory,'observer-verifier.log'),verification.stdout);writeFileSync(join(directory,'observer-verifier.err'),verification.stderr);
+  if(verification.exitCode!==0)throw Error('private swarm observer saved-proof verification failed');
   copyFileSync(join(input.observerDelivery,'report.json'),join(directory,'observer-delivery.json'));
   // Materialize only runtime code. Never copy any existing account profile or bot.env.
   for(const path of ['vendor/rs-sdk/sdk','vendor/rs-sdk/server']){const p=join(root,path);if(lstatSync(p).isSymbolicLink())unlinkSync(p);mkdirSync(p,{recursive:true});}

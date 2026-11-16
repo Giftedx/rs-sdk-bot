@@ -2,7 +2,7 @@
 import {writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {deliveryTask,runDeliveryTask} from '../../router/src/delivery-cli';
+import {deliveryTask,runDeliveryTask} from './delivery-cli';
 if(import.meta.main){
  if(!process.env.DELIVERY_DIR)throw Error('outer delivery required');
  const side=process.env.FLEET_SIDE;

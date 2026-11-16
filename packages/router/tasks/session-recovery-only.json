@@ -16,7 +16,7 @@
     "packages/core/test/bounded-recovery.test.ts",
     "packages/core/test/bounded-owners.test.ts",
     "packages/practice/src/swarm-recovery-chain.ts",
-    "packages/practice/src/bank-observer-qualification.ts",
+    "packages/router/src/bank-observer-qualification.ts",
     "packages/router/tasks/owned-bank-observation.json",
     "packages/core/src/coordinator-jobs.ts",
     "packages/core/test/coordinator-jobs.test.ts",
@@ -81,7 +81,7 @@
     {
       "id": "bank-observer-qualification",
       "phase": "regression",
-      "command": ["bun", "packages/practice/src/bank-observer-qualification.ts"],
+      "command": ["bun", "packages/router/src/bank-observer-qualification.ts"],
       "timeoutMs": 600000
     },
     {
