@@ -17,6 +17,41 @@ test('bank route cannot spend its reserved return budget as production time',()=
  for(const change of [{cap:50},{target:0},{batch:-1},{returnTicks:0},{reserve:-1},{bank:{x:1.5,z:2,level:0}},{family:'eval'}])expect(()=>validateBankJob({...job,...change}as BankJob)).toThrow();
 });
 
+function preflightFixture(stock:Record<number,number>,inputs:Record<number,number>={436:1,438:1},tools:number[]=[2347],known=true){
+ let tick=0,generation=1,open=true,calls=0;
+ const stored=new Map(Object.entries(stock).map(([id,n])=>[Number(id),n])),pack:{id:number;name:string;count:number;slot:number}[]=[],withdrawals:{id:number;count:number}[]=[],listeners=new Set<()=>void>();
+ const rows=()=>[...stored].filter(([,count])=>count>0).map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
+ const player={name:'BankPreflightFixture',lifeId:1,level:0,worldX:3185,worldZ:3436},bank={x:3185,z:3436,level:0};
+ const s:any={name:player.name,tick:()=>tick,ended:new Promise(()=>{}),onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bankObservation:()=>known&&open?{generation,items:rows()}:null,client:{objType:()=>({stackable:false})},
+  sdk:{getInventory:()=>pack,getSkill:()=>({level:99,baseLevel:99}),getState:()=>({player,inventory:pack,bank:{isOpen:open,items:open?rows():[]},interface:{isOpen:false},dialog:{isOpen:false}}),sendCloseModal:async()=>{}},
+  bot:{openBank:async()=>{open=true;generation++;return{success:known};},closeBank:async()=>{open=false;},withdrawItem:async(item:{id:number},n:number)=>{withdrawals.push({id:item.id,count:n});stored.set(item.id,(stored.get(item.id)??0)-n);generation++;for(let i=0;i<n;i++)pack.push({id:item.id,name:'item-'+item.id,count:1,slot:pack.length});},depositItem:async(item:{id:number})=>{const n=pack.filter(i=>i.id===item.id).reduce((a,i)=>a+i.count,0);stored.set(item.id,(stored.get(item.id)??0)+n);for(let i=pack.length-1;i>=0;i--)if(pack[i]!.id===item.id)pack.splice(i,1);generation++;return{success:true};}}};
+ const p:BankProfile={bank,site:bank,inputs,tools,outputs:[2349],run:async(n)=>{calls++;for(const[id,units]of Object.entries(inputs))for(let i=0;i<units*n;i++){const at=pack.findIndex(item=>item.id===Number(id));if(at<0)throw Error('fixture production input absent');pack.splice(at,1);}for(let i=0;i<n;i++)pack.push({id:2349,name:'item-2349',count:1,slot:pack.length});}};
+ const j={family:'smelting',recipe:'bronze',target:2,batch:2,cap:200,returnTicks:50,members:false};
+ const timer=setInterval(()=>{tick++;for(const f of [...listeners])f();},1);
+ return{s,p,j,stored,withdrawals,calls:()=>calls,close:()=>clearInterval(timer)};
+}
+
+test('bank preflight reports the missing second input before withdrawing any tool or ingredient',async()=>{
+ const f=preflightFixture({436:2,2347:1});
+ try{const r=await runBankProfile(f.s,f.j,f.p);expect(f.withdrawals).toEqual([]);expect(f.calls()).toBe(0);expect(r.completed).toBe(0);expect(r.ok).toBe(false);expect(r.preparation).toMatchObject({status:'short',amount:2,shortfalls:{438:2},missingTools:[]});expect(f.stored.get(436)).toBe(2);}finally{f.close();}
+});
+
+test('bank preflight distinguishes an observed empty bank from an unavailable observation',async()=>{
+ for(const known of[true,false]){const f=preflightFixture({},undefined,undefined,known);
+  try{const r=await runBankProfile(f.s,f.j,f.p);expect(f.withdrawals).toEqual([]);expect(f.calls()).toBe(0);expect(r.ok).toBe(false);if(known)expect(r.preparation).toMatchObject({status:'short',shortfalls:{436:2,438:2},missingTools:[2347]});else{expect(r.preparation).toEqual({status:'unknown'});expect(r.failure).toContain('fresh bank unavailable');}}finally{f.close();}}
+});
+
+test('whole-order shortages permit a complete batch but never mark an unmet finite target complete',async()=>{
+ const f=preflightFixture({436:2,438:2,2347:1});f.j.target=4;
+ const run=f.p.run;f.p.run=async(...args)=>{expect(f.withdrawals.reduce((n,i)=>n+i.count,0)).toBe(5);return run(...args);};
+ try{const r=await runBankProfile(f.s,f.j,f.p);expect(r.completed).toBe(2);expect(r.trips).toBe(1);expect(r.banked[2349]).toBe(2);expect(r.ok).toBe(false);expect(f.calls()).toBe(1);expect(r.preparation).toMatchObject({status:'short',amount:2,shortfalls:{436:2,438:2}});}finally{f.close();}
+});
+
+test('bank preflight aggregates retained tools with consumed inputs and preserves the reserve',async()=>{
+ for(const stock of[3,4]){const f=preflightFixture({436:stock},{436:1},[436,436]);const j={...f.j,reserve:1};
+  try{const r=await runBankProfile(f.s,j,f.p);expect(r.ok).toBe(stock===4);expect(f.calls()).toBe(stock===4?1:0);expect(f.withdrawals).toEqual(stock===4?[{id:436,count:3}]:[]);expect(f.stored.get(436)).toBe(stock===4?2:3);expect(r.preparation).toMatchObject(stock===4?{status:'ready',amount:2,shortfalls:{}}:{status:'short',amount:2,shortfalls:{436:1}});}finally{f.close();}}
+});
+
 function cookingLevelFixture(outcomes:boolean[],stock:number,wine=false){
  let tick=0,generation=1,open=true,xp=wine?xpForLevel(35):0,calls=0,processed=0;
  const raw=wine?1987:2138,product=wine?1993:2140,burnt=wine?1991:2144;

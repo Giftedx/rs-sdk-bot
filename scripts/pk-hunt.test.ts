@@ -1,5 +1,7 @@
-import { expect, test } from 'bun:test';
-import { BOW_TRIP, fleetNames, hitByPlayer, pickTarget, pickTrip, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { expect, spyOn, test } from 'bun:test';
+import { BOW_TRIP, fleetNames, hitByPlayer, hunt, loot, pickTarget, pickTrip, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import * as pk from './pk';
+import * as walking from '../packages/core/src/walk';
 
 const me = { z: 3556, combatLevel: 126 };
 const p = (index: number, name: string, combatLevel: number, distance: number, extra: object = {}) => ({ index, name, combatLevel, z: 3556, distance, ...extra });
@@ -114,4 +116,149 @@ test('pickTrip takes the bow trip with three more sharks at shallow spots, where
     expect(pickTrip(bow, false).name).toBe('staff');
     expect(pickTrip(SNARE_TRIP.map(w => ({ id: w.id, count: w.count })), false)).toMatchObject({ name: 'snare', moreFood: 0 });
     expect(pickTrip(bow.slice(1), true).name).toBe('staff');
+});
+
+test('pickTrip accepts a partial charged glory but keeps eight prayer doses in two slots', () => {
+    const bank = BOW_TRIP.map(w => ({ id: w.id === 1712 ? 1706 : w.id, count: w.count }));
+    expect(pickTrip(bank, true).name).toBe('bow');
+    expect(pickTrip(bank.map(w => w.id === 2434 ? { id: 139, count: 2 } : w), true).name).toBe('staff');
+    expect(pickTrip(bank.map(w => w.id === 1706 ? { id: 1704, count: 1 } : w), true).name).toBe('staff');
+});
+
+function supplyBank(rows: { id: number; count: number }[], worn: any[] = []) {
+    const inventory: any[] = [], bank = rows.map(r => ({ ...r })), withdrawals: { id: number; count: number }[] = [];
+    const s: any = {
+        sdk: { getInventory: () => inventory, getEquipment: () => worn, getBankItems: () => bank, sendUseItem: async () => {} },
+        bot: {
+            openBank: async () => ({ success: true }), closeBank: async () => {}, depositItem: async () => {},
+            withdrawItem: async (row: any, count: number) => { row.count -= count; withdrawals.push({ id: row.id, count }); inventory.push({ id: row.id, count, slot: inventory.length }); },
+        },
+    };
+    return { s, inventory, withdrawals };
+}
+
+test('restock refuses two partial prayer bottles before any withdrawal for an eight-dose trip', async () => {
+    const f = supplyBank([{ id: 139, count: 2 }, { id: 385, count: 20 }]);
+    expect(await restock(f.s, 2, [{ id: 2434, count: 2 }])).toContain('lacks');
+    expect(f.withdrawals).toEqual([]);
+});
+
+test('planning and restock choose the same exact partial charged glory', async () => {
+    const bank = [...BOW_TRIP.map(w => ({ id: w.id === 1712 ? 1706 : w.id, count: w.count })), { id: 385, count: 30 }];
+    const f = supplyBank(bank), selected = pickTrip(bank, true);
+    expect(selected.name).toBe('bow');
+    expect(await restock(f.s, 2, BOW_TRIP, TRIBRID_KIT, rows => pickTrip(rows, true))).toBeNull();
+    expect(f.withdrawals.filter(r => r.id !== 385)).toEqual(selected.resolution.items);
+    expect(f.withdrawals.filter(r => r.id !== 385)).toEqual(expect.arrayContaining([{ id: 861, count: 1 }, { id: 2434, count: 2 }, { id: 1706, count: 1 }]));
+});
+
+test('a worn glory cannot fund the pack-held emergency escape', async () => {
+    const f = supplyBank([{ id: 385, count: 20 }], [{ id: 1712, count: 1, slot: 2 }]);
+    const escape = BOW_TRIP.filter(r => r.id === 1712);
+    expect(await restock(f.s, 2, escape)).toContain('lacks');
+    expect(f.withdrawals).toEqual([]);
+});
+
+test('an explicit slot extension carries eight prayer doses in three partial bottles', async () => {
+    const f = supplyBank([{ id: 139, count: 2 }, { id: 141, count: 1 }, { id: 385, count: 20 }]);
+    expect(await restock(f.s, 2, [{ id: 2434, count: 2, minDoses: 8, maxSlots: 3 }])).toBeNull();
+    expect(f.withdrawals).toEqual(expect.arrayContaining([{ id: 139, count: 2 }, { id: 141, count: 1 }]));
+});
+
+test('restock checks the observed exact withdrawal effect', async () => {
+    const f = supplyBank([{ id: 861, count: 1 }, { id: 385, count: 20 }]);
+    f.s.bot.withdrawItem = async () => ({ success: true });
+    expect(await restock(f.s, 2, [{ id: 861, count: 1 }])).toContain('short');
+});
+
+test('malformed PK_TRIP arrays refuse before opening the bank or moving assets', async () => {
+    for (const trip of [null, {}, [null], [{ id: 2434, count: 2, minDoses: 'eight' }]]) {
+        const f = supplyBank([{ id: 385, count: 20 }]);
+        let opened = false;
+        f.s.bot.openBank = async () => { opened = true; return { success: true }; };
+        expect(await restock(f.s, 2, trip as any)).toContain('invalid');
+        expect(opened).toBe(false);
+        expect(f.withdrawals).toEqual([]);
+    }
+});
+
+test('a captured mixed-dose pack preserves its total doses without consuming the full bottles twice', async () => {
+    const f = supplyBank([{ id: 143, count: 1 }, { id: 2434, count: 2 }, { id: 385, count: 20 }]);
+    expect(await restock(f.s, 2, [{ id: 143, count: 1 }, { id: 2434, count: 2 }])).toBeNull();
+    expect(f.withdrawals).toEqual(expect.arrayContaining([{ id: 143, count: 1 }, { id: 2434, count: 2 }]));
+});
+
+test('restock keeps explicit per-line slot limits instead of weakening them to a family sum', async () => {
+    const f = supplyBank([{ id: 139, count: 1 }, { id: 141, count: 1 }, { id: 385, count: 20 }]);
+    expect(await restock(f.s, 2, [{ id: 2434, count: 1, minDoses: 4, maxSlots: 1 }, { id: 2434, count: 1, minDoses: 1, maxSlots: 2 }])).toContain('lacks');
+    expect(f.withdrawals).toEqual([]);
+});
+
+for (const danger of [false, true]) test(`hunt restocks after spending its escape charge even while food remains${danger ? ' after danger' : ''}`, async () => {
+    const f = supplyBank([{ id: 1706, count: 1 }, { id: 385, count: 20 }]);
+    f.inventory.push({ id: 1706, count: 1, slot: 0, name: 'Amulet of glory(1)', optionsWithIndex: [] },
+        ...[1, 2].map(slot => ({ id: 385, count: 1, slot, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 0 }] })));
+    let tick = 0, banked = 0, stopped = false, fights = 0;
+    const player = { worldX: 3094, worldZ: 3540, combatLevel: 100, hp: 99, maxHp: 99 };
+    const state = { player, inventory: f.inventory, skills: [{ name: 'Magic', level: 1 }], combatEvents: [], nearbyPlayers: [{ index: 3, name: 'Test stranger', combatLevel: 100, z: 3540, x: 3094, distance: 1 }] };
+    f.s.tick = () => tick; f.s.ended = new Promise(() => {}); f.s.client = {};
+    f.s.sdk.getState = () => state;
+    f.s.bot.openBank = async () => { banked++; return { success: true }; };
+    f.s.bot.closeBank = async () => { stopped = true; };
+    f.s.bot.depositItem = async (item: any) => { const index = f.inventory.indexOf(item); if (index >= 0) f.inventory.splice(index, 1); };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { player.worldX = path[0]!.x; player.worldZ = path[0]!.z; return { ok: true, ticks: 0, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { tick++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async () => { fights++; if (danger && fights % 2 === 1) return { outcome: 'danger' } as any; const glory = f.inventory.find(i => i.id === 1706); if (glory) glory.id = 1704; player.worldZ = 3496; return { outcome: 'escaped' } as any; }),
+    ];
+    try {
+        const result = await hunt(f.s, { cap: 5, food: 2, minFood: 1, escapeAt: 35, stop: () => stopped, log: () => {}, kit: {}, trip: [{ id: 1712, count: 1, minCharges: 1, maxSlots: 1 }], spots: [{ x: 3094, z: 3540, dwell: 1 }] });
+        expect(result.escapes).toBe(1);
+        expect(banked).toBe(1);
+        expect(f.withdrawals).toEqual(expect.arrayContaining([{ id: 1706, count: 1 }]));
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+function killLoot(native: { stackable: boolean } | undefined, eatWorks = true) {
+    const inventory: any[] = [{ id: 995, count: 1, slot: 0, optionsWithIndex: [] }, ...Array.from({ length: 27 }, (_, n) => ({ id: 385, count: 1, slot: n + 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 0 }] }))];
+    let eaten = 0, picked = 0;
+    const pile = { id: native?.stackable === false ? 1712 : 995, count: 1, x: 3094, z: 3540, distance: 0, name: 'Loot' };
+    const s: any = {
+        client: { objType: () => native }, sdk: { getInventory: () => inventory, getState: () => ({ groundItems: picked ? [] : [pile] }) },
+        bot: { eatFood: async () => { eaten++; if (eatWorks) inventory.pop(); }, pickupItem: async () => { picked++; const row = inventory.find(i => i.id === pile.id); if (row && native?.stackable) row.count++; else inventory.push({ id: pile.id, count: 1, slot: inventory.length }); return { success: true }; } },
+    };
+    return { s, inventory, eaten: () => eaten, picked: () => picked };
+}
+
+test('kill loot merges a native stack held at count one in a full pack without eating', async () => {
+    const f = killLoot({ stackable: true });
+    expect(await loot(f.s, { x: 3094, z: 3540 }, () => false)).toBe(1);
+    expect(f.eaten()).toBe(0);
+    expect(f.inventory.find(i => i.id === 995)?.count).toBe(2);
+    expect(f.inventory.filter(i => i.id === 385)).toHaveLength(27);
+});
+
+test('kill loot with unknown native capacity does not eat or pick up', async () => {
+    const f = killLoot(undefined);
+    expect(await loot(f.s, { x: 3094, z: 3540 }, () => false)).toBe(0);
+    expect(f.eaten()).toBe(0);
+    expect(f.picked()).toBe(0);
+});
+
+test('kill loot does not pick up when eating leaves no observed space', async () => {
+    const f = killLoot({ stackable: false }, false);
+    expect(await loot(f.s, { x: 3094, z: 3540 }, () => false)).toBe(0);
+    expect(f.picked()).toBe(0);
+    expect(f.eaten()).toBe(1);
+    expect(f.inventory.filter(i => i.id === 385)).toHaveLength(27);
+});
+
+test('kill loot proves one food debit and one exact pile credit after making room', async () => {
+    const f = killLoot({ stackable: false });
+    expect(await loot(f.s, { x: 3094, z: 3540 }, () => false)).toBe(1);
+    expect(f.eaten()).toBe(1);
+    expect(f.inventory.filter(i => i.id === 385)).toHaveLength(26);
+    expect(f.inventory.filter(i => i.id === 1712)).toEqual([{ id: 1712, count: 1, slot: 27 }]);
 });

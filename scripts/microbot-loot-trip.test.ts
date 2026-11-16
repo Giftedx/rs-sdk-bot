@@ -3,6 +3,25 @@ import{lootTripOutputs,fetchLootQuotes,lootQuoteDefinition,donorLootEligible,typ
 import{selectGroundLoot}from'./microbot-b-mining-loot';
 const base:LootTripJob['policy']={mode:'list',ids:[563],names:[],minimumValue:100,maximumValue:500,radius:4,idleTicks:40};
 const definition=(id:number)=>id===563?{name:'Law rune',cost:240,stackable:true}:id===556?{name:'Air rune',cost:4,stackable:true}:id===995?{name:'Coins',cost:1,stackable:true}:undefined;
+test('glob pickup stays inside declared bank outputs and ignores win for normal and donor filters',()=>{
+ const p={...base,ids:[],names:[],nameGlobs:['* rune'],ignoredNames:['LAW RUNE']};
+ expect(lootTripOutputs(p,definition)).toEqual([556]);
+ const st:any={inventory:[],nearbyPlayers:[],groundItems:[{id:556,name:'Air rune',count:1,x:1,z:1,distance:1},{id:563,name:'Law rune',count:1,x:1,z:2,distance:1}]};
+ expect(selectGroundLoot(st,{...p,maximumUnits:10,cap:10},definition)?.item.id).toBe(556);
+ for(const mode of ['list','value','mixed']as const){
+  const ignored={...p,mode,minimumValue:0,maximumValue:500,ignoredIds:[556,563,995]};
+  expect(donorLootEligible(st.groundItems[0],ignored,definition)).toBe(false);
+  expect(()=>lootTripOutputs(ignored,definition)).toThrow('unresolved');
+ }
+ expect(()=>lootTripOutputs({...base,ids:[],nameGlobs:['no such *']},definition)).toThrow('unresolved');
+});
+test('quoted list fallback uses the same name globs and ignores',()=>{
+ const snapshot={origin:'http://localhost:19081',observedAt:1000,prices:{563:{price:10,lastTradeAt:100}}};
+ const p={...base,ids:[],nameGlobs:['* rune'],ignoredNames:['Law rune']};
+ const quoted=lootQuoteDefinition(snapshot,snapshot.origin,definition,()=>1001,p);
+ expect(quoted(556)?.cost).toBe(4);
+ expect(lootTripOutputs(p,quoted)).toEqual([556]);
+});
 test('bank-loot output declaration covers exact list names and finite static-value pile candidates',()=>{
  expect(lootTripOutputs(base,definition)).toEqual([563]);expect(lootTripOutputs({...base,ids:[],names:['lAw RuNe']},definition)).toEqual([563]);
  // Two low-value units may meet a whole-pile minimum; the existing selector checks that actual pile.

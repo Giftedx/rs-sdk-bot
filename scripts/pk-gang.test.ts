@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { gangSummary, gangValid, packOf, pickAttacker, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, type GangResult } from './pk-gang';
+import { gangSummary, gangValid, packOf, pickAttacker, pickUp, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -8,6 +8,29 @@ import { wildernessLevel, type FightResult } from './pk';
 const fight = (outcome: FightResult['outcome'], attacks = 10): FightResult =>
     ({ outcome, ticks: 200, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: attacks }, freezes: 0, specs: 0 });
 const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, prayerDoses: 3, trips: 1, gangTrips: 0, prayerOut: -1, fights, gang });
+
+test('gang pickup merges one held native stack unit without eating and ignores unknown items',async()=>{
+ let pack=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,count:1,slot,optionsWithIndex:[{text:'Eat',opIndex:1}]}));
+ let ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1,distance:1}];let eaten=0,picked=0,tick=0;
+ const s:any={tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{queueMicrotask(()=>{tick++;cb();});return()=>{};},client:{objType:()=>({stackable:true})},sdk:{getState:()=>({inventory:pack,groundItems:ground}),getInventory:()=>pack,sendUseItem:async()=>{eaten++;pack.pop();}},bot:{pickupItem:async()=>{picked++;pack[0]!.count+=5;ground=[];return{success:true};}}};
+ expect(await pickUp(s,new Set([884]),{maxTicks:2})).toEqual({'884':5});expect(eaten).toBe(0);expect(picked).toBe(1);
+ ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1,distance:1}];s.client.objType=()=>undefined;picked=0;
+ expect(await pickUp(s,new Set([884]),{maxTicks:2})).toEqual({});expect(eaten).toBe(0);expect(picked).toBe(0);
+});
+
+test('gang pickup requires observed room after a refused food effect',async()=>{
+ const pack=Array.from({length:28},(_,slot)=>({id:385,count:1,slot,optionsWithIndex:[{text:'Eat',opIndex:1}]}));let tick=0,picked=0;
+ const s:any={tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{queueMicrotask(()=>{tick++;cb();});return()=>{};},client:{objType:()=>({stackable:false})},sdk:{getState:()=>({inventory:pack,groundItems:[{id:1215,name:'Dragon dagger',count:1,x:1,z:1,distance:1}]}),getInventory:()=>pack,sendUseItem:async()=>({success:true})},bot:{pickupItem:async()=>{picked++;return{success:true};}}};
+ expect(await pickUp(s,new Set([1215]),{maxTicks:2})).toEqual({});expect(picked).toBe(0);
+});
+
+test.each([1,2])('gang pickup reconciles exactly one food debit (observed %i)',async(debit)=>{
+ const pack=Array.from({length:28},(_,slot)=>({id:385,count:1,slot,optionsWithIndex:[{text:'Eat',opIndex:1}]}));let tick=0,picked=0;
+ let ground=[{id:1215,name:'Dragon dagger',count:1,x:1,z:1,distance:1}];
+ const s:any={tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{queueMicrotask(()=>{tick++;cb();});return()=>{};},client:{objType:()=>({stackable:false})},sdk:{getState:()=>({inventory:pack,groundItems:ground}),getInventory:()=>pack,sendUseItem:async()=>{pack.splice(0,debit);return{success:true};}},bot:{pickupItem:async()=>{picked++;pack.push({id:1215,count:1,slot:0,optionsWithIndex:[]});ground=[];return{success:true};}}};
+ expect(await pickUp(s,new Set([1215]),{maxTicks:2})).toEqual(debit===1?{'1215':1}:{});
+ expect(picked).toBe(debit===1?1:0);
+});
 
 test('our account fights the one of the gang that hit it last, else the nearest that lives', () => {
     const near = [{ name: 'Sugma', index: 5, distance: 3 }, { name: 'Ligma', index: 6, distance: 1 }, { name: 'Goondelf', index: 7, distance: 2 }, { name: 'Passerby', index: 8, distance: 0 }];

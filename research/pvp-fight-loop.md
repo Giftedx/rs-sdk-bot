@@ -1,6 +1,15 @@
 # Player fight loop
 
 The PK army's fight loop is `fightPlayer` in `scripts/pk.ts`; `scripts/measure/pk-duel.ts` measures it on practice.
+
+## Shared trip items and loot
+
+Source -> consumer -> adapt -> check: [Inventory Setups explicit variant grouping](https://github.com/dillydill123/inventory-setups/tree/16f2c0a319672c2e19738276a17de63aea7216fa), the pinned potion `dose_count` and `nextstage` chain, and local teleport charge definitions -> `item-requirements.ts` and hunter trip selection/restocking -> adapt explicit families, reuse native metadata, reject modern item tables and fuzzy equipment substitutions -> `item-requirements.test.ts`, `pk-hunt.test.ts` and `microbot-potion-care.test.ts`. Inventory Setups uses BSD-2-Clause. No upstream code is copied.
+
+The resolver reserves exact IDs before assigning dose or charge families. Joint allocation preserves each request's minimum units and slot cap. Notes cannot satisfy usable-unit requests. Invalid metadata, stock overflow and a search limit report unknown. The hunter requires eight Prayer doses in at most two bottles and a usable glory charge in one pack slot. Both escape paths force restocking before the next outing, even when food remains. Exact owned-gear contracts keep their existing meaning.
+
+Source -> consumer -> reuse -> check: native item stackability and the existing finite loot policy -> global loot, mining loot, loot trips and the hunter, gang and roam collectors -> reuse one capacity check and one list/value matcher -> the corresponding loot and PK tests. Name globs use `*` and `?` over the whole name. Ignore IDs, exact names and name globs take priority over every list/value match. Value thresholds retain each caller's source and boundary rules. A full pack can merge a stackable pile into an existing stack. New stacks and nonstackable piles need enough slots. Food used for room must debit exactly one item before pickup. A pickup needs the exact item credit. These unit checks do not establish live fight or loot reliability.
+
 Source -> local consumer -> reuse -> check: the pinned server's PvP scripts (`vendor/rs-sdk/server/content/scripts/skill_combat/scripts/pvp/`) and the
 in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `ClientEntity.ts`) -> `scripts/pk.ts` -> reuse the SDK sends
 (`sendInteractPlayer`, `sendSpellOnPlayer`, `sendTogglePrayer`, `sendUseItem`) and read head icons, worn items and the health bar from

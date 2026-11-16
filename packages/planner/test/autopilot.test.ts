@@ -726,9 +726,9 @@ test('with no buy, a free account sends the item: this side first, another side 
     expect(run({ stock: [stock[0]!, stock[2]!] }).template!.id).toMatch(/^goldfarm@/);
     expect(run({ stock: [stock[0]!, stock[2]!], templates: bandOnly() }).send).toMatchObject({ from: 'Far' });
     expect(run({ stock: [stock[2]!] }).template!.id).toMatch(/^goldfarm@/);
-    // A buy that failed twice is retired for the pair, and the donors take over.
+    // Spare local stock also supplies an account that could afford a purchase.
     const paying = { accounts: [mage('Needy', { ...needy.items, coin: 1_000_000 })] };
-    expect(run({ ...paying, stock, market }).template!.id).toBe(KIT_BUY + 'army-strike-magic-21');
+    expect(run({ ...paying, stock, market }).send).toMatchObject({ from: 'Near' });
     expect(run({ ...paying, stock, market, retired: new Set([pairKey('Needy', KIT_BUY + 'army-strike-magic-21')]) }).send).toMatchObject({ from: 'Near' });
 });
 
@@ -799,14 +799,141 @@ test('a market quote cannot hide a compatible donor kit when the account cannot 
     }
 });
 
-test('affordable market kit buys remain ahead of sending a donor alternative', () => {
+test('available owned kit stock supplies a free recipient before an affordable market alternative', () => {
     const templates = catalogue().filter(t => t.id === 'army-alch-magic-99');
     const caster = mage('Caster', { coin: 50_000, 'nature rune': 50, feather: 50 }, { Magic: 30 });
     const market: Market = { 'fire rune': { id: 554, name: 'Fire rune', limit: KIT_PRICE_CAPS['fire rune']! } };
     const [next] = plan(inputs([caster], { templates, army: new Set(['caster']), market, stock: [{ name: 'StaffMule', side, items: { 'staff of fire': 2 } }] }));
-    expect(next!.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
-    expect(next!.template!.args![0]).toContain('ITEM_ID=554 QUANTITY=250');
+    expect(next!.send).toEqual({ from: 'StaffMule', to: 'Caster', item: 'staff of fire', count: 1, template: 'army-alch-magic-99' });
+    const [reserved] = plan(inputs([caster], { templates, army: new Set(['caster']), market, stock: [{ name: 'StaffMule', side, items: { 'staff of fire': 1 } }] }));
+    expect(reserved!.send).toBeUndefined();
+    expect(reserved!.template!.args![0]).toContain('ITEM_ID=554 QUANTITY=250');
+});
+
+test('a frail thief receives spare owned food before buying, without a quote or cash', () => {
+    const thief = acct('Frail', { Thieving: 99, Hitpoints: 10 });
+    const stock = [{ name: 'FoodMule', side, items: { trout: 500 } }];
+    for (const market of [{}, { trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! } }]) {
+        for (const coin of [0, 1_000_000]) {
+            const [next] = plan(inputs([{ ...thief, items: { coin } }], { stock, market }));
+            expect(next!.send).toMatchObject({ from: 'FoodMule', to: 'Frail', item: 'trout', count: 200 });
+        }
+    }
+    expect(plan(inputs([thief], { stock, bill: [] }))[0]!.send).toBeUndefined();
+    const taken = Object.fromEntries(KNIGHT_SPOTS.map(spot => [`knight:${spot}`, 99]));
+    expect(plan(inputs([thief], { stock, taken }))[0]!.send).toBeUndefined();
+});
+
+test('a ready alchemy shop run cannot preempt a spare owned ingredient for the same band', () => {
+    const caster = mage('Caster', { coin: 12_000, 'nature rune': 50, 'staff of fire': 1 }, { Magic: 30 });
+    const templates = catalogue().filter(t => ['army-alch-magic-99', 'army-feathers-sarim'].includes(t.id));
+    const stock = [{ name: 'FeatherMule', side, items: { feather: 500 } }];
+    const opts = { templates, army: new Set(['caster']), stock };
+    expect(plan(inputs([caster], opts))[0]!.send).toMatchObject({ from: 'FeatherMule', item: 'feather', count: 50, template: 'army-alch-magic-99' });
+    expect(plan(inputs([caster], { ...opts, stock: [] }))[0]!.template?.id).toBe('army-feathers-sarim');
+    expect(plan(inputs([caster], { ...opts, stock: [{ ...stock[0]!, side: 'local' }] }))[0]!.template?.id).toBe('army-feathers-sarim');
+    expect(plan(inputs([caster], { ...opts, unfundable: new Set(['caster']), running: new Set(['caster']), current: new Map([['caster', 'army-feathers-sarim']]) }))[0]!.send).toBeUndefined();
+});
+
+test('shop-only alchemy kit lines can still receive owned air runes without becoming a market buy', () => {
+    const caster = mage('Caster', { 'nature rune': 50, 'staff of fire': 1 }, { Magic: 66 });
+    const templates = catalogue().filter(t => t.id === 'army-alch-air-magic-99');
+    const opts = { templates, army: new Set(['caster']), stock: [{ name: 'AirMule', side, items: { 'air rune': 100 } }] };
+    expect(plan(inputs([caster], opts))[0]!.send).toEqual({ from: 'AirMule', to: 'Caster', item: 'air rune', count: 50, template: 'army-alch-air-magic-99' });
+    expect(plan(inputs([{ ...caster, items: { ...caster.items, coin: 1_000_000 } }], { ...opts, stock: [], market }))[0]!.template?.id.startsWith(KIT_BUY)).not.toBe(true);
+});
+
+test('black dragon shop-supplied arrows and teleport runes accept spare owned stock', () => {
+    const maxed = { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
+    const kit = { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD };
+    const templates = catalogue().filter(t => t.id === 'army-hunt-black-dragons');
+    for (const [item, need] of [['iron arrow', HUNT_ARROWS], ['air rune', 3], ['fire rune', 1]] as const) {
+        const hunter = acct('Hunter', maxed, { ...kit, [item]: 0 });
+        const stock = [{ name: 'HuntMule', side, items: { [item]: need * 3 } }];
+        const [next] = plan(inputs([hunter], { templates, army: new Set(['hunter']), pilots: new Set(['army-hunt-black-dragons']), stock }));
+        expect(next!.send).toEqual({ from: 'HuntMule', to: 'Hunter', item, count: need, template: 'army-hunt-black-dragons' });
+    }
+});
+
+test('a failed owned transfer falls back to a bounded buy without reusing that donor', () => {
+    const templates = catalogue().filter(t => t.id === 'army-alch-magic-99');
+    const caster = mage('Caster', { coin: 50_000, 'nature rune': 50, feather: 50 }, { Magic: 30 });
+    const market: Market = { 'fire rune': { id: 554, name: 'Fire rune', limit: KIT_PRICE_CAPS['fire rune']! } };
+    const [next] = plan(inputs([caster], { templates, army: new Set(['caster']), market,
+        stock: [{ name: 'StaffMule', side, items: { 'staff of fire': 2 } }], noSend: new Set(['staffmule>caster']) }));
     expect(next!.send).toBeUndefined();
+    expect(next!.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
+});
+
+test('a demanded non-army crafting batch receives owned ingredients then launches its real worker', () => {
+    const t=catalogue().find(t=>t.id==='aio-sapphire-rings')!;
+    const crafter=acct('Crafter',{Crafting:20},{'ring mould':1,'gold bar':RING_BATCH});
+    const extra:Partial<Inputs>={templates:[t],pilots:new Set([t.id]),bill:[row('sapphire ring',RING_BATCH)],prices:{'sapphire ring':1000},
+        stock:[{name:'GemMule',side,items:{sapphire:RING_BATCH*2}}]};
+    const [prep]=plan(inputs([crafter],extra));
+    expect(prep!.send).toEqual({from:'GemMule',to:'Crafter',item:'sapphire',count:RING_BATCH,template:t.id});
+    expect(prep!.template!.id).toBe(t.id);
+    const [ready]=plan(inputs([{...crafter,items:{...crafter.items,sapphire:RING_BATCH}}],{...extra,stock:[]}));
+    expect(ready!.send).toBeUndefined();
+    expect(jobFor(ready!,side)).toMatchObject({script:'scripts/aio.ts',template:t.id,enabled:true});
+    expect(jobFor(ready!,side).args).toContain('jewellery-trip');
+    expect(plan(inputs([crafter],{...extra,bill:[]}))[0]!.send).toBeUndefined();
+    expect(plan(inputs([{...crafter,skills:{Crafting:19}}],extra))[0]!.send).toBeUndefined();
+});
+
+test('preparing a finite crafting consumer reserves its output against duplicate transfers', () => {
+    const t=catalogue().find(t=>t.id==='aio-sapphire-rings')!;
+    const make=(name:string)=>acct(name,{Crafting:20},{'ring mould':1,'gold bar':RING_BATCH});
+    const planned=plan(inputs([make('CrafterA'),make('CrafterB')],{templates:[t],pilots:new Set([t.id]),
+        bill:[row('sapphire ring',RING_BATCH)],prices:{'sapphire ring':1000},
+        stock:[{name:'GemMuleA',side,items:{sapphire:RING_BATCH*2}},{name:'GemMuleB',side,items:{sapphire:RING_BATCH*2}}]}));
+    expect(planned.filter(a=>a.send)).toHaveLength(1);
+});
+
+test('a quest unlock can receive its missing route item from another owned bank',()=>{
+    const templates=catalogue().filter(t=>['aio-quest-runemysteries','aio-essence'].includes(t.id));
+    const actor={...acct('Quester',{Mining:20},{'bronze pickaxe':1,trout:4,'law rune':1,'air rune':6,'fire rune':1,'earth rune':1}),quests:new Set<string>()};
+    const extra:Partial<Inputs>={templates,pilots:new Set(templates.map(t=>t.id)),bill:[row('rune essence',28)],prices:{'rune essence':50},
+        stock:[{name:'RuneMule',side,items:{'law rune':3}}]};
+    const [supply]=plan(inputs([actor],extra));
+    expect(supply!.send).toEqual({from:'RuneMule',to:'Quester',item:'law rune',count:1,template:'aio-quest-runemysteries'});
+    const [quest]=plan(inputs([{...actor,items:{...actor.items,'law rune':2}}],{...extra,stock:[]}));
+    expect(quest!.template!.id).toBe('aio-quest-runemysteries');
+    const [mine]=plan(inputs([{...actor,quests:new Set(['rune mysteries quest'])}],{...extra,stock:[]}));
+    expect(mine!.template!.id).toBe('aio-essence');
+});
+
+test('an early kitFirst band uses owned stock before buying while retaining its band priority',()=>{
+    const templates=catalogue().filter(t=>['army-splash-magic-66','army-alch-magic-99'].includes(t.id));
+    const caster=mage('Caster',{coin:5_000_000,'earth rune':30,'water rune':30,'mind rune':2,'air rune':2,'nature rune':50,feather:50,'staff of fire':1},{Magic:21});
+    const extra:Partial<Inputs>={templates,army:new Set(['caster']),pilots:new Set(['army-splash-magic-66']),
+        market:{'body rune':{id:559,name:'Body rune',limit:100}},stock:[{name:'BodyMule',side,items:{'body rune':1000}}]};
+    const [next]=plan(inputs([caster],extra));
+    expect(next!.send).toMatchObject({from:'BodyMule',to:'Caster',item:'body rune',template:'army-splash-magic-66'});
+    expect(next!.send!.count).toBeGreaterThanOrEqual(10);
+    const [purchase]=plan(inputs([caster],{...extra,stock:[]}));
+    expect(purchase!.template!.id).toBe(KIT_BUY+'army-splash-magic-66');
+});
+
+test('coin-funded non-army preparation reserves the useful output before funding another maker',()=>{
+    const t=catalogue().find(t=>t.id==='aio-steel-bars')!;
+    const make=(name:string)=>acct(name,{Smithing:30},{'iron ore':9});
+    const planned=plan(inputs([make('SmithA'),make('SmithB')],{templates:[t],pilots:new Set([t.id]),bill:[row('steel bar',9)],prices:{'steel bar':9000},
+        market:{coal:{id:453,name:'Coal',limit:600}},donors:[{name:'CashA',coins:100_000},{name:'CashB',coins:100_000}]}));
+    expect(planned.filter(a=>a.fund)).toHaveLength(1);
+});
+
+test('an owned upgrade weapon supplies an army account before the upgrade market buy',()=>{
+    const fighter=acct('Fighter',{Thieving:99,Attack:99,Strength:99,Defence:80,Hitpoints:90,Ranged:99,Magic:99,Prayer:99},{'bronze sword':1,shark:40,coin:1_000_000});
+    for(const extra of [
+        {market:{[WEAPON.item]:{id:1331,name:'Adamant scimitar',limit:12_000}}},
+        {market:{}},
+        {market:{},retired:new Set([pairKey('Fighter',KIT_BUY+WEAPON.id)])},
+    ]){
+        const [next]=plan(inputs([fighter],{templates:catalogue().filter(t=>t.id==='army-cow-strength-45'),army:new Set(['fighter']),
+            ...extra,stock:[{name:'BladeMule',side,items:{[WEAPON.item]:2}}]}));
+        expect(next!.send).toMatchObject({from:'BladeMule',to:'Fighter',item:WEAPON.item,count:1,template:WEAPON.id});
+    }
 });
 
 test('donor alternatives reconsider quantities and donors taken by an earlier account', () => {
@@ -998,12 +1125,12 @@ test('a line no market sells is sent first; a pair whose order failed is not ask
     const needy = acct('Needy', { Thieving: 99, Hitpoints: 35 }, { 'wooden shield': 1, coin: 100_000 });
     const stock: Stock[] = [{ name: 'Near', side, items: { 'bronze sword': 3, trout: 500 } }, { name: 'Next', side, items: { 'bronze sword': 2 } }];
     const run = (extra: Partial<Inputs> = {}) => plan(inputs([needy], { templates: cow, army, market, stock, capacity: CAPACITY, ...extra }))[0]!;
-    // The sword has no market entry, so no one buy covers the kit: the sword comes by order, the trout by a later buy.
+    // The sword is missing first; a later pass can transfer spare food for the same kit.
     expect(run().send).toEqual({ from: 'Near', to: 'Needy', item: 'bronze sword', count: 1, template: 'army-cow-strength-45' });
     expect(run({ noSend: new Set(['near>needy']) }).send).toMatchObject({ from: 'Next' });
     const armed = acct('Needy', { Thieving: 99, Hitpoints: 35 }, { 'wooden shield': 1, 'bronze sword': 1, coin: 100_000 });
-    expect(plan(inputs([armed], { templates: cow, army, market, stock, capacity: CAPACITY }))[0]!.template!.args).toEqual([
-        'scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=30 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=needy-kit0-333-0to30 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
+    expect(plan(inputs([armed], { templates: cow, army, market, stock, capacity: CAPACITY }))[0]!.send)
+        .toMatchObject({from:'Near',to:'Needy',item:'trout',count:30});
 });
 
 test('an account in a running band job gets no kit buy over it', () => {
@@ -1511,15 +1638,14 @@ test('a maxed army account hunts black dragons for hides: the key first, the kit
     expect(buy!.template!.id).toBe(KIT_BUY + 'army-hunt-black-dragons');
     expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[385, HUNT_FOOD - 1]]);
     expect(run([hunter('Kilt', { ...kit, 'iron arrow': 60 })])[0]!.template!.id).toBe('army-hunt-supply');
-    // No account is asked for the shop run's lines (live: a hunter with 123,028 coins stood waiting for 3 air runes
-    // from another side). Short of sharks with no market for them: this side's donor at once, another side's only
-    // when the account has no job of its own to start.
+    // Local owned shop supplies arrive before a purchase. Another side's order
+    // does not preempt a shop run the recipient can start.
     const donors = (s: string) => [{ name: 'Giver', side: s, items: { 'air rune': 500, 'iron arrow': 5000, shark: 50 } }];
     const noRunes = hunter('Kilt', { ...kit, 'air rune': 0, 'iron arrow': 60 }), { shark: _shark, ...noSharks } = caps;
     for (const s of [side, 'local']) {
         const out = run([noRunes], { stock: donors(s) })[0]!;
-        expect(out.template!.id).toBe('army-hunt-supply');
-        expect(out.send).toBeUndefined();
+        if (s === side) expect(out.send).toMatchObject({ from: 'Giver', item: 'iron arrow', count: HUNT_ARROWS - 60 });
+        else { expect(out.template!.id).toBe('army-hunt-supply'); expect(out.send).toBeUndefined(); }
     }
     const hungry = hunter('Kilt', { ...kit, shark: 1, 'iron arrow': 60 });
     expect(run([hungry], { market: noSharks, stock: donors(side) })[0]!.send).toMatchObject({ from: 'Giver', item: 'shark' });

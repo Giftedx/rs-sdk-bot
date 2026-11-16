@@ -72,14 +72,14 @@ export function planBankTripSchedule(options:{
  const freeSlots=options.freeSlots??28,reserve=options.reserve??0,stackable=options.stackable??(()=>false);
  const perTrip=fittingBankBatch(options.inputs,options.tools,options.target,freeSlots,stackable,options.outputs);
  if(perTrip<1)throw Error('bank schedule cannot fit a single unit in available slots');
- const missingTools=options.tools.filter(id=>(options.bankStock[id]??0)<1);
+ const tools=new Set(options.tools),missingTools=[...tools].filter(id=>(options.bankStock[id]??0)<1);
  const requiredInputs:Record<number,number>={},shortfalls:Record<number,number>={};
- let feasibleUnits=options.target;
+ let feasibleUnits=missingTools.length?0:options.target;
  for(const [rawId,units] of Object.entries(options.inputs)){
-  const id=Number(rawId),need=units*options.target+reserve,have=options.bankStock[id]??0;
+  const id=Number(rawId),retained=tools.has(id)?1:0,need=units*options.target+reserve+retained,have=options.bankStock[id]??0;
   requiredInputs[id]=need;
   if(have<need)shortfalls[id]=need-have;
-  const canMake=Math.max(0,Math.floor((have-reserve)/units));
+  const canMake=Math.max(0,Math.floor((have-reserve-retained)/units));
   feasibleUnits=Math.min(feasibleUnits,canMake);
  }
  return {

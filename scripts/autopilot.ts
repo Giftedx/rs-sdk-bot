@@ -9,8 +9,8 @@
 // An account gets only a job whose place it has a way to from the tile where it stands offline (the planner's reach
 // rule). The ferry fare of that way is a part of the job's coin need, and a coin order for an account in Kandarin
 // meets at the Ardougne north bank.
-// An army account that lacks only kit items for a goal band gets them first: a capped Grand Exchange buy with its own
-// coins, else an item order from a free account of this side, else of another side (fleet/snapshots and fleet/plans).
+// An army account that lacks kit items uses available spare stock on this side before a capped purchase. Remote
+// orders retain their sync lead and follow local purchases (fleet/snapshots and fleet/plans).
 // An AIO route proved on practice only (a `pilot` template) is planned only while the plan's `aio` array names its id.
 // Usage: bun scripts/autopilot.ts [swarm.json] [--dry] [--daemon]
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level
@@ -117,8 +117,9 @@ export function coinOrder(from: string, to: string, coins: number, server: strin
 export const ARMY_MEET: NonNullable<Order['meet']> = [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }];
 // A kit item order: the same window as a coin order, at the army's home bank. The id carries the item, so two orders
 // for one pair in one pass differ.
-export function itemOrder(from: string, to: string, item: string, count: number, server: string, now: number): Order {
-    const start = now + 15 * 60_000;
+export function itemOrder(from: string, to: string, item: string, count: number, server: string, now: number, leadMs=15 * 60_000): Order {
+    if(!Number.isSafeInteger(leadMs)||leadMs<0||leadMs>15*60_000)throw Error('invalid item order lead');
+    const start = now + leadMs;
     return { id: `${start}-${from}-${to}-${item.replace(/[^A-Za-z0-9]+/g, '')}`.toLowerCase().slice(0, 64), server, from, to, item, count, start, end: start + 40 * 60_000, meet: ARMY_MEET };
 }
 // A side's free accounts as kit donors, from its published snapshot and plan (fleet/snapshots, fleet/plans): the side
@@ -126,6 +127,22 @@ export function itemOrder(from: string, to: string, item: string, count: number,
 // will trade), and the account has no enabled job, open order or published owner hold. Registered and observed
 // servers must match the live recipient's server. That side's planner keeps an open order's parties vacant.
 export const SIDE_STOCK_MAX_AGE_MS = 30 * 60_000;
+// Transfer stock is observed pack or bank stock, never worn kit. A retained bank observation can describe the same
+// units before a withdrawal, so the two observations contribute their maximum rather than their sum.
+export function donorStock(name:string,side:string,status:any,now:number,maxAgeMs:number,itemName:(id:number)=>string|undefined,server='rs-sdk-demo.fly.dev'):Stock|undefined {
+    const recent=(at:unknown)=>typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=now&&now-at<maxAgeMs;
+    if(!status||typeof status.name!=='string'||status.name.toLowerCase()!==name.toLowerCase()||status.practice||typeof status.server!=='string'||status.server.toLowerCase()!==server.toLowerCase()||!recent(status.at))return;
+    const valid=(rows:unknown)=>Array.isArray(rows)&&rows.every(r=>r&&Number.isSafeInteger(r.count)&&r.count>0&&(typeof r.name==='string'||Number.isSafeInteger(r.baseId??r.id)));
+    const inventory=valid(status.inventory)?status.inventory:[];
+    const bank=recent(status.bankAt)&&status.bankAt<=status.at&&valid(status.bank)?status.bank:[];
+    const held=accountFrom(name,side,{inventory},itemName).items,stored=accountFrom(name,side,{bank},itemName).items;
+    const items:Record<string,number>={};
+    for(const key of new Set([...Object.keys(held),...Object.keys(stored)])){
+        const count=Math.max(held[key]??0,stored[key]??0);
+        if(Number.isSafeInteger(count)&&count>0)items[key]=count;
+    }
+    return Object.keys(items).length?{name,side,items}:undefined;
+}
 export function sideStock(side: string, snapshot: any, plan: any, open: ReadonlySet<string>, now: number, maxAgeMs: number, itemName: (id: number) => string | undefined,
     context: { owners: ReturnType<typeof loadOwners>; server: string; card?: unknown }): Stock[] {
     if (!Array.isArray(snapshot?.accounts) || !Array.isArray(plan?.jobs) || !Number.isFinite(plan.at) || plan.at > now || !(now - plan.at < maxAgeMs)) return [];
@@ -137,7 +154,7 @@ export function sideStock(side: string, snapshot: any, plan: any, open: Readonly
         return owner?.side === side && owner.server.toLowerCase() === server && !publishedSideHold(context.card, side, name)
             && !busy.has(name) && !open.has(name) && name !== 'haggis';
     })
-        .map((r: any) => { const a = accountFrom(r.name, side, r, itemName); return { name: a.name, side, items: a.items }; });
+        .flatMap((r:any)=>{const stock=donorStock(r.name,side,r,now,maxAgeMs,itemName,server);return stock?[stock]:[];});
 }
 // Donor and recipient pairs whose item order failed or needs reconciliation in the last `windowMs`, as `from>to` in lower
 // case. The same donor would fail the same way (an unpublished pause or a tile it cannot reach), so the planner asks another donor.
@@ -454,7 +471,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     // Kit donors: this side's free accounts (the coin donors' rule), then each other side's, on the same server.
     const free = (n: string) => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open, stranded].some(s => s.has(n.toLowerCase()));
-    const stock: Stock[] = listed.filter(free).map(n => { const a = accountFrom(n, side, observed(n), id => byId.get(id)); return { name: a.name, side, items: a.items }; });
+    const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server);return row?[row]:[];});
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
         const other = f.slice(0, -'.json'.length);
@@ -474,7 +491,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const funding = fundOrders(planned, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined),
-        s => itemOrder(s.from, s.to, market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item, s.count, serverOf(s.to), now));
+        s => itemOrder(s.from, s.to, market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item, s.count, serverOf(s.to), now,
+            owners.get(s.from.toLowerCase())?.side===side&&owners.get(s.to.toLowerCase())?.side===side?0:15*60_000));
     const out = funding.assignments;
     log.push(...funding.log);
 

@@ -334,6 +334,14 @@ test('a kit item order fits the fleet order format and meets at the army bank', 
     expect(meetingTiles({ x: 2619, z: 3332 })).toEqual(ARMY_MEET);
 });
 
+test('a same-side owned supply order can start immediately without the remote sync lead', () => {
+    const now=1_000_000;
+    const o=itemOrder('Near','Needy','Mind rune',20,'rs-sdk-demo.fly.dev',now,0);
+    expect(o.start).toBe(now);
+    expect(o.end).toBe(now+40*60_000);
+    expect(validOrder(o)).toBe(true);
+});
+
 test('a kit send becomes an item order and a vacant account; a party to an open order waits', () => {
     const band = catalogue().find(t => t.id === 'army-strike-magic-21')!;
     const out = [{ account: 'Needy', template: band, value: 0, reason: 'army band', resources: [], send: { from: 'Near', to: 'Needy', item: 'mind rune', count: 20, template: band.id } }];
@@ -351,7 +359,7 @@ test('another side gives only from accounts its fresh plan leaves free and no op
     const server = 'rs-sdk-demo.fly.dev';
     const snapshot = { accounts: [
         { name: 'Free', inventory: [{ name: 'Mind rune', count: 374 }], bank: [{ name: 'Coins', count: 4_000_000 }] },
-        { name: 'Working', bank: [{ name: 'Mind rune', count: 335 }] }, { name: 'Trading', bank: [{ name: 'Mind rune', count: 50 }] }, { name: 'Haggis', bank: [] }].map(row => ({ ...row, server })) };
+        { name: 'Working', bank: [{ name: 'Mind rune', count: 335 }] }, { name: 'Trading', bank: [{ name: 'Mind rune', count: 50 }] }, { name: 'Haggis', bank: [] }].map(row => ({ ...row, server, at:1_000_000,bankAt:1_000_000 })) };
     const context = { server, owners: new Map(snapshot.accounts.map(row => [row.name.toLowerCase(), { side: 'claude-cloud', server }])) };
     const plan = { at: 1_000_000, jobs: [{ account: 'Working', enabled: true }, { account: 'Free', enabled: false }] };
     const stock = (at: number) => sideStock('claude-cloud', snapshot, { ...plan, at }, new Set(['trading']), 1_000_000 + 60_000, 30 * 60_000, () => undefined, context);
@@ -364,7 +372,7 @@ test('another side gives only from accounts its fresh plan leaves free and no op
 
 test('published owner pauses and death holds keep remote kit orders on an available live donor', () => {
     const server = 'rs-sdk-demo.fly.dev', remote = 'local', now = 1_000_000;
-    const row = (name: string, count: number) => ({ name, server, inventory: [{ name: 'Mind rune', count }], bank: [] });
+    const row = (name: string, count: number) => ({ name, server, at:now,bankAt:now,inventory: [{ name: 'Mind rune', count }], bank: [] });
     const rows = [row('Paused', 1000), row('Dead', 900), row('Free', 100)];
     const owners = new Map<string, { side: string; server: string }>([...rows.map(r => [r.name.toLowerCase(), { side: remote, server }] as const), ['needy', { side, server }] as const]);
     const card = sideCard(remote, 5, rows.map(r => r.name), n => n === 'Paused' ? 'owner pause' : undefined, ['Dead']);
@@ -384,7 +392,7 @@ test('published owner pauses and death holds keep remote kit orders on an availa
 
 test('remote donor observations must belong to the registered live server and current side', () => {
     const server = 'rs-sdk-demo.fly.dev', remote = 'local', now = 1_000_000;
-    const row = (name: string) => ({ name, server, inventory: [{ name: 'Mind rune', count: 100 }], bank: [] });
+    const row = (name: string) => ({ name, server, at:now,bankAt:now,inventory: [{ name: 'Mind rune', count: 100 }], bank: [] });
     const rows = [row('Live'), { ...row('Practice'), practice: true }, { ...row('WrongServer'), server: 'localhost:8888' },
         row('WrongOwner'), row('Moved'), row('Unregistered'), { ...row('UndatedServer'), server: undefined }];
     const owners = new Map(rows.filter(r => r.name !== 'Unregistered').map(r => [r.name.toLowerCase(), {
@@ -392,6 +400,18 @@ test('remote donor observations must belong to the registered live server and cu
     }]));
     const stock = sideStock(remote, { accounts: rows }, { at: now, jobs: [] }, new Set(), now, 30 * 60_000, () => undefined, { owners, server });
     expect(stock.map(s => s.name)).toEqual(['Live']);
+});
+
+test('a fresh side plan cannot refresh stale donor bank stock or count worn kit as spare', () => {
+    const server='rs-sdk-demo.fly.dev',remote='local',now=4_000_000;
+    const row=(name:string,bankAt:number)=>({name,server,at:now,bankAt,inventory:[{id:558,name:'Mind rune',count:10}],
+        bank:[{id:558,name:'Mind rune',count:30}],equipment:[{id:1387,name:'Staff of fire',count:1}]});
+    const rows=[row('Fresh',now-1000),row('Stale',now-31*60_000),row('Future',now+1)];
+    const owners=new Map(rows.map(r=>[r.name.toLowerCase(),{side:remote,server}]));
+    const stock=sideStock(remote,{accounts:rows},{at:now,jobs:[]},new Set(),now,30*60_000,()=>undefined,{owners,server});
+    expect(stock.find(s=>s.name==='Fresh')?.items).toEqual({'mind rune':30});
+    expect(stock.find(s=>s.name==='Stale')?.items).toEqual({'mind rune':10});
+    expect(stock.find(s=>s.name==='Future')?.items).toEqual({'mind rune':10});
 });
 
 import { failedSends, kitBuyRunning, SEND_RETRY_MS } from './autopilot';

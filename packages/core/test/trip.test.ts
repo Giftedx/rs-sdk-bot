@@ -70,6 +70,35 @@ test('a bank that opens a travel is still searched, and its stop wins when cheap
     expect(p.cost).toBe(5 + 10 + 50);
 });
 
+test('a fourth known bank is considered when the nearest three cannot reach a funded route',()=>{
+    const candidates=[11,12,13,14,15].map(x=>({x,z:0,level:0})),calls:number[]=[];
+    const w={route:(a:typeof from,b:typeof to)=>{if(b.x===to.x)return a.x===14?{ok:true,cost:20,legs:[]}:{ok:false};calls.push(b.x);return b.x===14?{ok:true,cost:5,legs:[]}:{ok:false};}};
+    const p=planTrip(w as any,from,to,poor,{coins:100},candidates);
+    expect(p?.bank?.at).toEqual(candidates[3]);
+    expect(calls).toEqual([11,12,13,14,15]);
+});
+
+test('a successful nearest bank keeps the search in its initial bank group',()=>{
+    const candidates=[11,12,13,14].map(x=>({x,z:0,level:0})),calls:number[]=[];
+    const w={route:(a:typeof from,b:typeof to)=>{if(b.x===to.x)return a.x===from.x?{ok:false}:{ok:true,cost:20,legs:[]};calls.push(b.x);return {ok:true,cost:5,legs:[]};}};
+    expect(planTrip(w as any,from,to,poor,{coins:100},candidates)?.bank).toBeDefined();
+    expect(calls).toEqual([11,12,13]);
+});
+
+test('bank fallback tries at most eight same-plane banks',()=>{
+    const candidates=[...Array.from({length:10},(_,i)=>({x:11+i,z:0,level:0})),{x:10,z:0,level:1}],calls:number[]=[];
+    const w={route:(_a:typeof from,b:typeof to)=>{if(b.x!==to.x)calls.push(b.x);return {ok:false};}};
+    expect(planTrip(w as any,from,to,poor,{coins:100},candidates)).toBeNull();
+    expect(calls).toEqual([11,12,13,14,15,16,17,18]);
+});
+
+test('an exhausted route deadline prevents another bank fallback search',()=>{
+    const candidates=[11,12,13,14].map(x=>({x,z:0,level:0})),calls:number[]=[],options={deadline:performance.now()+60_000};
+    const w={route:(_a:typeof from,b:typeof to)=>{if(b.x!==to.x){calls.push(b.x);if(b.x===13)options.deadline=-1;}return {ok:false};}};
+    expect(planTrip(w as any,from,to,poor,{coins:100},candidates,3,options)).toBeNull();
+    expect(calls).toEqual([11,12,13]);
+});
+
 test('routeGain is true only when the second account may take a travel or pass a key door that the first may not', () => {
     const spell: Travel = { id: 's', kind: 'spell', name: 'Far teleport', from: null, to: { x: 2000, z: 0, level: 0 }, coins: 0, needs: [{ skill: 'magic', level: 25 }],
         runes: [{ item: 'lawrune', count: 1 }, { item: 'airrune', count: 3 }], run: { how: 'spell', component: 'magic:far' }, cost: 5 };
@@ -84,22 +113,25 @@ test('routeGain is true only when the second account may take a travel or pass a
     expect(w.routeGain!(poor, poor)).toBe(false);
 });
 
-function withdrawalFixture(stock: number, received: number, delay = 0) {
-    let tick = 0, held = 7, pending = false, closed = false;
+function withdrawalFixture(stock: number, received: number, delay = 0, mode='normal') {
+    let tick = 0, held = 7, pending = false, closed = false,open=false,generation=0;
     const row = { id: 995, count: stock };
     const requests: number[] = [];
     const s = {
         tick: () => tick,
-        sdk: { getState: () => ({ inventory: [{ id: 995, count: held }], bank: { items: [row] } }) },
+        bankObservation:()=>mode==='missing-observation'||!open?null:{generation,items:row.count>0?[row]:[]},
+        sdk: { getState: () => ({ inventory: [{ id: 995, count: held }], bank: { isOpen:open,items: [row] } }) },
         bot: {
-            openBank: async () => ({ success: true }),
+            openBank: async () => {open=true;generation++;return { success: true };},
             withdrawItem: async (_row: unknown, amount: number) => {
                 requests.push(amount);
-                row.count -= amount;
+                if(mode!=='no-debit')row.count -= amount;
+                if(mode!=='stale-generation')generation++;
                 if (delay) pending = true; else held += received;
+                if(mode==='lost-ack')throw Error('lost withdrawal reply');
                 return { success: true };
             },
-            closeBank: async () => { closed = true; },
+            closeBank: async () => { closed = true;open=false; },
         },
     };
     const wait = async () => {
@@ -109,10 +141,11 @@ function withdrawalFixture(stock: number, received: number, delay = 0) {
     return { s, wait, requests, held: () => held, closed: () => closed };
 }
 
-test('a bank stop reports the exact shortfall when only part of the route fare is banked', async () => {
+test('a bank stop reports the whole route fare shortage before taking any coins', async () => {
     const f = withdrawalFixture(20, 20);
-    expect(await takeItems(f.s, 100, {}, f.wait)).toEqual({ ok: false, detail: 'withdraw short 995:20/100' });
-    expect(f.requests).toEqual([20]);
+    expect(await takeItems(f.s, 100, {}, f.wait)).toMatchObject({ ok: false, shortfalls:{995:80} });
+    expect(f.requests).toEqual([]);
+    expect(f.held()).toBe(7);
     expect(f.closed()).toBe(true);
 });
 
@@ -126,18 +159,64 @@ test('a bank row emptied in place does not confirm a withdrawal before the pack 
 
 test('a bank debit with only partial pack credit cannot satisfy a bank stop', async () => {
     const f = withdrawalFixture(100, 60);
-    expect(await takeItems(f.s, 100, {}, f.wait)).toEqual({ ok: false, detail: 'withdraw short 995:60/100' });
+    expect(await takeItems(f.s, 100, {}, f.wait)).toMatchObject({ ok: false, unknown:true });
     expect(f.s.tick()).toBe(5);
 });
 
 test('a bank debit without pack credit cannot satisfy a bank stop', async () => {
     const f = withdrawalFixture(100, 0);
-    expect(await takeItems(f.s, 100, {}, f.wait)).toEqual({ ok: false, detail: 'withdraw short 995:0/100' });
+    expect(await takeItems(f.s, 100, {}, f.wait)).toMatchObject({ ok: false, unknown:true });
     expect(f.s.tick()).toBe(5);
 });
 
-test('a missing travel item holds the route even after its full fare is withdrawn', async () => {
+test('a missing travel item holds the route before its full fare is withdrawn', async () => {
     const f = withdrawalFixture(100, 100);
-    expect(await takeItems(f.s, 100, { lawrune: 1 }, f.wait)).toEqual({ ok: false, detail: 'withdraw short 563:none' });
+    expect(await takeItems(f.s, 100, { lawrune: 1 }, f.wait)).toMatchObject({ ok: false,shortfalls:{563:1} });
+    expect(f.requests).toEqual([]);
+    expect(f.closed()).toBe(true);
+});
+
+test('an observed empty bank is a known shortage without an empty-bank polling delay',async()=>{
+    const f=withdrawalFixture(0,0);
+    expect(await takeItems(f.s,10,{lawrune:2},f.wait)).toMatchObject({ok:false,shortfalls:{995:10,563:2}});
+    expect(f.s.tick()).toBe(0);
+    expect(f.requests).toEqual([]);
+});
+
+test('a cached bank row without a current bank observation cannot authorize withdrawal',async()=>{
+    const f=withdrawalFixture(100,100,0,'missing-observation');
+    expect(await takeItems(f.s,100,{},f.wait)).toMatchObject({ok:false,unknown:true});
+    expect(f.requests).toEqual([]);
+    expect(f.s.tick()).toBe(10);
+    expect(f.closed()).toBe(true);
+});
+
+test('pack gain alone and an unchanged bank generation cannot confirm a route withdrawal',async()=>{
+    for(const mode of['no-debit','stale-generation']){const f=withdrawalFixture(100,100,0,mode);
+        expect(await takeItems(f.s,100,{},f.wait)).toMatchObject({ok:false,unknown:true});
+        expect(f.requests).toEqual([100]);
+        expect(f.closed()).toBe(true);
+    }
+});
+
+test('a lost withdrawal reply reconciles a paid route supply without repeating the action',async()=>{
+    const f=withdrawalFixture(100,100,0,'lost-ack');
+    expect(await takeItems(f.s,100,{},f.wait)).toEqual({ok:true,detail:'took 995x100'});
+    expect(f.requests).toEqual([100]);
+    expect(f.closed()).toBe(true);
+});
+
+test('a caller stop prevents the bank stop from starting a withdrawal',async()=>{
+    const f=withdrawalFixture(100,100);
+    expect(await takeItems(f.s,100,{},f.wait,{stop:()=>true})).toMatchObject({ok:false});
+    expect(f.requests).toEqual([]);
+});
+
+test('an expired bank-stop deadline ends observation polling without dispatching a withdrawal',async()=>{
+    const f=withdrawalFixture(100,100,0,'missing-observation'),options={deadline:performance.now()+60_000};
+    const wait=async()=>{await f.wait();options.deadline=-1;};
+    expect(await takeItems(f.s,100,{},wait,options)).toMatchObject({ok:false,unknown:true});
+    expect(f.s.tick()).toBe(1);
+    expect(f.requests).toEqual([]);
     expect(f.closed()).toBe(true);
 });

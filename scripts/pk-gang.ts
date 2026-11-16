@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
+import { lootCapacity } from '../packages/core/src/loot-policy';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 import { fightPlayer, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
 import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT } from './pk-hunt';
@@ -291,16 +292,24 @@ export async function pickUp(a: Session, ids: ReadonlySet<number>, o: { radius?:
     const got: Record<string, number> = {}, start = a.tick(), tried = new Set<string>();
     if (process.env.PICKUP_TRACE === '1') { const g = a.sdk.getState()?.groundItems ?? [], me = a.sdk.getState()?.player; console.log(`PICKUP at ${me?.worldX},${me?.worldZ} ground ${g.length}: ${g.slice(0, 12).map(i => `${i.id}x${i.count}@${i.x},${i.z}d${i.distance}`).join(' ')}`); }
     while (a.tick() - start < (o.maxTicks ?? 200) && !o.stop?.()) {
-        const inv = a.sdk.getInventory(), full = inv.length >= 28;
+        const inv = a.sdk.getInventory();
         const edible = inv.find(i => i.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
-        // A full pack takes a stack it holds already, or eats a food for an item that is no food (`ids` order: dearer).
+        const definition=(id:number)=>(a.client as {objType?:(id:number)=>{stackable:boolean}|undefined}|undefined)?.objType?.(id);
+        // The worker owns its combat-food choice. Native metadata decides if it needs room.
         const next = plannedPickups((a.sdk.getState()?.groundItems ?? []) as { id: number; count: number; x: number; z: number; distance: number; name: string }[], ids, o.radius ?? 12)
-            .find(g => !tried.has(`${g.id}@${g.x},${g.z}`) && (!full || inv.some(i => i.id === g.id && i.count > 1) || (!!edible && edible.id !== g.id)));
+            .find(g => !tried.has(`${g.id}@${g.x},${g.z}`) && typeof definition(g.id)?.stackable==='boolean' && (lootCapacity({inventory:inv},g,definition(g.id)) || (!!edible && edible.id !== g.id && lootCapacity({inventory:inv.filter(i=>i.slot!==edible.slot)},g,definition(g.id)))));
         if (!next) { if (a.tick() - start < (o.wait ?? 0) && await nextTick(a)) continue; break; }
-        if (full && edible && !inv.some(i => i.id === next.id && i.count > 1)) { const op = edible.optionsWithIndex.find(x => /^eat$/i.test(x.text)); if (op) { await a.sdk.sendUseItem(edible.slot, op.opIndex); await nextTick(a); } }
         tried.add(`${next.id}@${next.x},${next.z}`);
+        if (!lootCapacity({inventory:inv},next,definition(next.id)) && edible) {
+            const op = edible.optionsWithIndex.find(x => /^eat$/i.test(x.text)),before=inv.filter(i=>i.id===edible.id).reduce((n,i)=>n+i.count,0);
+            if(!op)continue;
+            await a.sdk.sendUseItem(edible.slot,op.opIndex);if(!await nextTick(a))break;
+            if(a.sdk.getInventory().filter(i=>i.id===edible.id).reduce((n,i)=>n+i.count,0)!==before-1)break;
+        }
+        if(!lootCapacity({inventory:a.sdk.getInventory()},next,definition(next.id)))continue;
+        const before=a.sdk.getInventory().filter(i=>i.id===next.id).reduce((n,i)=>n+i.count,0);
         const r = await a.bot.pickupItem(next as never);
-        if (r.success) got[next.id] = (got[next.id] ?? 0) + next.count;
+        if (r.success && a.sdk.getInventory().filter(i=>i.id===next.id).reduce((n,i)=>n+i.count,0)-before===next.count) got[next.id] = (got[next.id] ?? 0) + next.count;
     }
     return got;
 }
