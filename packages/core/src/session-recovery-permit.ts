@@ -8,7 +8,7 @@ import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {savedProcessAlive,type ProcessStarts} from './session-takeover';
 import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
-import {readMergedPlan} from './coordinator-jobs';
+import {readMergedPlan,ownerPlanPath} from './coordinator-jobs';
 
 export const RECOVERY_SCHEMA='session-recovery/1';
 export const RECOVERY_BINDING_MS=45000;
@@ -41,7 +41,7 @@ export function assertNativeFixtureRoot(base:string,server:string){
     if(info.isDirectory())for(const child of readdirSync(path))privatePath(join(path,child));}
    catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
   };
-  privatePath(join(base,'.practice'));privatePath(join(base,'swarm.json'));
+  privatePath(join(base,'.practice'));privatePath(join(base,'swarm.json'));privatePath(ownerPlanPath(base));
   const candidate=join(base,'.practice/coordinator');
   if(existsSync(candidate)&&inside(key(realpathSync(candidate)),control))throw Error('production control alias');
  }catch{throw Error('native fixture boundary invalid');}

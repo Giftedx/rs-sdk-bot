@@ -4,6 +4,18 @@ import { SWARM_STOP } from './swarm';
 import * as cloudSide from './cloud-side';
 
 describe('cloud side bootstrap', () => {
+    test('recovery requires an explicit finite watch and manages only the owning coordinator',()=>{
+        expect(()=>parseOptions(['--side','cloud','--recover','scope.json'],{})).toThrow('explicit watch');
+        expect(parseOptions(['--side','cloud','--recover','scope.json','--watch-minutes','15','--stop-at-end'],{}).recover).toBe('scope.json');
+        expect(cloudSide.managedCommands(true,'cloud.json')).toEqual({coordinator:['packages/router/src/coordinator-cli.ts','--run']});
+        expect(cloudSide.managedCommands(false,'cloud.json',true)).toEqual({swarm:['scripts/swarm.ts','cloud.json']});
+        expect(()=>parseOptions(['--side','cloud','--inspect','scope.json','--recover','scope.json','--watch-minutes','3','--stop-at-end'],{})).toThrow('one manifest');
+        expect(Object.keys(cloudSide.managedCommands(false,'cloud.json'))).toEqual(['swarm','fleet-agent','autopilot']);
+    });
+    test('bounded shutdown cannot remove its fence while either owning controller is alive',()=>{
+        expect(cloudSide.boundedStopSettled(false,false)).toBe(true);
+        for(const [swarm,coordinator] of [[true,false],[false,true],[true,true]])expect(cloudSide.boundedStopSettled(swarm!,coordinator!)).toBe(false);
+    });
     test('options: the side comes from the flag or FLEET_SIDE, never local', () => {
         expect(parseOptions([], { FLEET_SIDE: 'claude-cloud' })).toEqual({ side: 'claude-cloud', watchMinutes: DEFAULT_WATCH_MINUTES, capacity: 4, stopAtEnd: false, setupOnly: false });
         expect(parseOptions(['--side', 'cloud', '--watch-minutes', '50', '--stop-at-end', '--capacity', '8'], {})).toMatchObject({ side: 'cloud', watchMinutes: 50, capacity: 8, stopAtEnd: true });

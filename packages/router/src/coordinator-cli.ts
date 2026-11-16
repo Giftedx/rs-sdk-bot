@@ -11,7 +11,8 @@ import {executeTask,provisionParticipantHold} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs,recoveryWaitsForMemory,liveAccountWait,ordinaryRunWaitsForMemory,validLiveMemoryWait} from './coordinator-live';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
-import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
+import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,ownerPlanPath,jobAccounts,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
+import {validateBoundedRecovery,assertBoundedRecoveryQueue} from '../../core/src/bounded-recovery';
 import {assignedWorker} from './model-worker';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
@@ -45,7 +46,7 @@ export async function migrateJobsAtStart(base=projectRoot){
 // Coordinator-owned jobs and settings written into swarm.json by an earlier coordinator move to the coordinator's
 // file; the owner's jobs keep their order. Returns what moved, or null when swarm.json holds none.
 export function migrateCoordinatorJobs(base=projectRoot){
- const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),plan=JSON.parse(raw);
+ const path=ownerPlanPath(base),raw=readFileSync(path,'utf8'),plan=JSON.parse(raw);
  const owned=(plan.jobs??[]).filter((j:any)=>j.coordinatorOwner==='coordinator');
  const settings=['focusCapability','focusSince','lastExpansionAt'].filter(k=>plan.coordination&&k in plan.coordination);
  if(!owned.length&&!settings.length)return null;
@@ -90,7 +91,7 @@ async function expandUsefulFleet(state:CoordinatorState,config:any,runHeld:(task
  const target=fleetExpansion({limit:plan.maxBots,demand,freeGB:freemem()/2**30,reserveGB:plan.minFreeGB,cpu:usage,tickMs:latencies.length?Math.max(...latencies):null,stalled,usefulResults:useful,now,lastExpandedAt:last});
  if(target===plan.maxBots)return;
  // The grant lives in the coordinator's file over the owner's current maxBots; an owner edit of maxBots discards it.
- await withPlanWrite(()=>{const current=readPlan();if(current.maxBots!==plan.maxBots)return;const own=readCoordinatorJobs(projectRoot);own.expansion={maxBots:target,over:json(join(projectRoot,'swarm.json')).maxBots};own.coordination.lastExpansionAt=now;writeCoordinatorJobs(projectRoot,own);config.maxLive=target;config.lastExpansionAt=now;event('fleet-capacity-expanded',{from:plan.maxBots,to:target,freeGB:freemem()/2**30,cpu:usage,tickMs:Math.max(...latencies),usefulResults:useful});});
+ await withPlanWrite(()=>{const current=readPlan();if(current.maxBots!==plan.maxBots)return;const own=readCoordinatorJobs(projectRoot);own.expansion={maxBots:target,over:json(ownerPlanPath(projectRoot)).maxBots};own.coordination.lastExpansionAt=now;writeCoordinatorJobs(projectRoot,own);config.maxLive=target;config.lastExpansionAt=now;event('fleet-capacity-expanded',{from:plan.maxBots,to:target,freeGB:freemem()/2**30,cpu:usage,tickMs:Math.max(...latencies),usefulResults:useful});});
 }
 const existsPid=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
 export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid,startupGraceMs=15000){
@@ -282,7 +283,11 @@ export function intakeRequests(state:CoordinatorState,base=projectRoot,{save=sav
  for(const file of readdirSync(requests).filter(f=>f.endsWith('.request.json'))){
   const path=join(requests,file),bytes=readFileSync(path);
   let prepared:ReturnType<typeof prepareProposal>;
-  try{prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base);}
+  try{
+   prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base);
+   const scope=existsSync(ownerPlanPath(base))?readMergedPlan(base).coordination?.boundedRecovery:undefined;
+   if(scope){if(prepared.capabilities.length)throw Error('bounded recovery refuses capability publication');assertBoundedRecoveryQueue(validateBoundedRecovery(scope),prepared.candidate);}
+  }
   catch(error){
    if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
    move(path,path+'.rejected');
@@ -337,8 +342,10 @@ let releasedAt=0;
 // A run task with a repair is a recovery: it parks owner jobs and needs them until its install.
 export const recoveryRuns=(state:Pick<CoordinatorState,'tasks'>)=>state.tasks.some(r=>r.status==='running'&&r.spec.kind==='run'&&(!!r.spec.repairs?.length||!!r.spec.sessionRecovery));
 async function tick(state:CoordinatorState,config:any){
+ const bounded=config.boundedRecovery?validateBoundedRecovery(config.boundedRecovery):null;
+ if(bounded)assertBoundedRecoveryQueue(bounded,state);
  recoverPlanWrite();
- openDeliveryPrs();
+ if(!bounded)openDeliveryPrs();
  if(Date.now()-releasedAt>=RELEASE_EVERY_MS){
   releasedAt=Date.now();
   try{const freed=await releaseFinishedOwnJobs(projectRoot,!recoveryRuns(state));if(freed.length)event('own-jobs-released',{accounts:freed});}
@@ -355,6 +362,7 @@ async function tick(state:CoordinatorState,config:any){
  });
  reconcile(state);
  intakeRequests(state);
+ if(bounded)assertBoundedRecoveryQueue(bounded,state);
  // Reuse current evidence; refresh only capabilities with waiting live consumers.
  {
   const caps=qualificationRefreshCapabilities(state,cap=>deliveryTask(cap).files);
@@ -363,7 +371,7 @@ async function tick(state:CoordinatorState,config:any){
   catch(error){const detail=String(error);if(sourceErrors.get(cap)!==detail)event('qualification-source-unavailable',{cap,error:detail});sourceErrors.set(cap,detail);}
   refreshQualifications(state,fingerprints);
  }
- settlePlanner(state);
+ if(!bounded)settlePlanner(state);
  const retired=retireDeadTasks(state,Date.now());
  if(retired.length){saveState(state);event('tasks-retired',{count:retired.length,tasks:retired});}
  // Model/native capacity is independent from finite live account jobs.
@@ -388,9 +396,9 @@ async function tick(state:CoordinatorState,config:any){
   let held=false;try{held=reviewHold(state,cap,()=>capabilitySource(ownedFiles(cap)))!==null;}catch{/* the worker reports an unreadable source */}
   reviewHolds.set(cap,held);return held;
  };
- await expandUsefulFleet(state,config,runHeld);
+ if(!bounded)await expandUsefulFleet(state,config,runHeld);
  const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??readPlan().maxBots;
- runRules(state,liveLimit);
+ if(!bounded)runRules(state,liveLimit);
  let controllerPrepared=false,liveBlocked=false;
  // Standing swarm jobs run without a coordinator task, so the controller must run whenever one is enabled.
  // Also while a rollout has standing jobs paused: they are off then, and only this call turns them on again.
@@ -432,7 +440,7 @@ async function tick(state:CoordinatorState,config:any){
   }
   launchTask(state,task.id);
  }
- const planReason=diskLow?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
+ const planReason=diskLow||bounded?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
  if(planReason){
   if(existsSync(planRequest))unlinkSync(planRequest);
   const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
@@ -503,6 +511,12 @@ async function main(){
  if(mode!=='--run'&&mode!=='--once'){
   const state=loadState();
   if(mode==='--status'){console.log(JSON.stringify(state,null,2));return;}
+  if(mode==='--release-finished'){
+   if(recoveryRuns(state))throw Error('recovery still running; assignments preserved');
+   const accounts=arg?.split(',');
+   if(!accounts?.length||accounts.some(a=>!/^[A-Za-z0-9]{1,12}$/.test(a))||readCoordinatorJobs(projectRoot).jobs.some(j=>jobAccounts(j).some(a=>!accounts.includes(a))))throw Error('release accounts do not cover existing assignments');
+   console.log(JSON.stringify({released:await releaseFinishedOwnJobs(projectRoot,true)}));return;
+  }
   if(mode==='--submit'){
    if(!arg)throw Error('proposal file required');const request=json(arg),requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
    atomicJson(join(requests,randomUUID()+'.request.json'),request);console.log('Submitted to shared queue');return;
@@ -516,6 +530,7 @@ async function main(){
  const nonce=arg??randomUUID(),state=await claimCoordinatorState(nonce);
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))throw Error('coordinator or swarm is paused; resume only under owner authority');
  if(!state.tasks.length){addTasks(state,config.bootstrap??[]);saveState(state);}
+ if(config.boundedRecovery)assertBoundedRecoveryQueue(validateBoundedRecovery(config.boundedRecovery),state);
  event('coordinator-started',{pid:process.pid,nonce});
  {const moved=await migrateJobsAtStart();if(moved)event('coordinator-jobs-moved',moved);}
  do{

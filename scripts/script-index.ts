@@ -22,6 +22,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/ci-gate.ts': 'developer tool: runs the CI checks on this PC',
  'scripts/claim-account.ts': 'fleet control: registers a new account name',
  'scripts/cloud-recover.ts': 'fleet control: recovers held live sessions',
+ 'scripts/cloud-recovery.ts': 'fleet control helper: bounds exact recovery and bank inspection participants',
  'scripts/cloud-launch.ts': 'fleet control: starts Claude Code and Codex cloud sessions for silent cloud sides',
  'scripts/cloud-side.ts': 'fleet control: sets up a cloud side and keeps its swarm, fleet agent and planner running',
  'scripts/fleet-vault.ts': 'fleet control: seals and restores account credentials in the fleet vault',

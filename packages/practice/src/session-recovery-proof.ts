@@ -15,6 +15,7 @@ import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
 import {accountDir,domainOf,readLogoutProof,listAttempts,beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {launchRevision,cachedLaunchRevision} from '../../core/src/worker-release';
+import {readMergedPlan} from '../../core/src/coordinator-jobs';
 import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -573,7 +574,7 @@ async function run(directory:string){
  const source=launchRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
  const children:ReturnType<typeof Bun.spawn>[]=[],recoveryChildren:{pid:number;nonce:string}[]=[],cases:any[]=[],tasks=new Map<string,any>(),ends:Record<string,any>={},jobs:any[]=[];
  const ownedStops:OwnedStop[]=[],junctions:string[]=[];
- const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE};
+ const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE,plan:process.env.SWARM_PLAN};
  let relay:ReturnType<typeof startRelay>|undefined,pulse:ReturnType<typeof setInterval>|undefined,stamp=String(Date.now()).slice(-6);
  const put=(path:string,value:unknown)=>publishControlFile(join(base,path),value);
  const progress=()=>writeFileSync(join(directory,'progress.json'),JSON.stringify({source,runnerSha256,cases},null,2));
@@ -619,7 +620,10 @@ async function run(directory:string){
   put('packages/router/tasks/'+capability+'.json',JSON.parse(readFileSync(join(root,'packages/router/tasks',capability+'.json'),'utf8')));
   put('.practice/swarm-script-holds.json',[]);
   put('.practice/coordinator/swarm-owner.json',{pid:process.pid,nonce:CONTROLLER_MARKER,source});
-  const writeState=()=>{put('.practice/coordinator/state.json',{tasks:[...tasks.values()]});put('.practice/swarm-deaths.json',ends);put('swarm.json',{maxBots:17,minFreeGB:FREE_FLOOR_GB,jobs});};
+  // A decoy root plan must never grant or block a handoff plan's recovery authority.
+  put('swarm.json',{maxBots:1,minFreeGB:1000,jobs:[{account:'NotOurActor',enabled:true,script:'scripts/session-check.ts'}]});
+  process.env.SWARM_PLAN=join(base,'handoff/swarm.json');
+  const writeState=()=>{put('.practice/coordinator/state.json',{tasks:[...tasks.values()]});put('.practice/swarm-deaths.json',ends);put('handoff/swarm.json',{maxBots:17,minFreeGB:FREE_FLOOR_GB,jobs});};
   const beat=()=>put('.practice/swarm-state.json',{at:Date.now(),controllerPid:process.pid,jobs:jobs.map(j=>({account:j.account,state:'disabled'}))});
   // A failed timer publish keeps the previous complete view; the strict reader refuses it as stale, never malformed.
   writeState();beat();pulse=setInterval(()=>{try{beat();}catch{}},1000);
@@ -699,6 +703,11 @@ async function run(directory:string){
   };
   const caseDir=(id:string)=>{const d=join(directory,'cases',id);mkdirSync(d,{recursive:true});return d;};
   const deathBytes=()=>readFileSync(join(base,'.practice/swarm-deaths.json'),'utf8');
+  record('selected-plan','native-actual-controller-selection',{
+   handoffLimits:readMergedPlan(base).maxBots===17&&readMergedPlan(base).minFreeGB===FREE_FLOOR_GB,
+   excludesRootJobs:!readMergedPlan(base).jobs.some((j:any)=>j.account==='NotOurActor'),
+   rootPlanRetained:JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).maxBots===1,
+  });
   // An owner process using the real per-account producer. The root chooses whether the controller can see it.
   const owner=async(f:Fixture,dir:string,mode:'hold'|'warm'|'orphan'|'partial',lifecycle:string)=>{
    const script=join(dir,'owner.ts'),ready=join(dir,'owner-ready.json'),release=join(dir,'owner-release'),takeover=join(dir,'owner-takeover'),warmFile=join(dir,'owner-warm.json');
@@ -782,7 +791,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // Retired successful ordinary account with no producer history: actual controller -> installed core CLI.
   {
    const C=await fixture(HOST,preset,true),dir=caseDir('completed');
-   const holds=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignments=readFileSync(join(base,'swarm.json'),'utf8');
+   const holds=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignments=readFileSync(join(base,'handoff/swarm.json'),'utf8');
    const beforeProof=readLogoutProof(C.name,C.server,{root:lifeRoot});
    const out=await positive('completed',C),end=ends[C.name],entry=JSON.parse(readFileSync(join(base,'packages/router/tasks',capability+'.json'),'utf8')).entry;
    const revision=missionSignature({account:C.name,script:entry,env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500',COORDINATOR_RUN_ID:out.runId}});
@@ -797,7 +806,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     oldMissionRefused:startable([C.name],false,retained,()=>Infinity,undefined,end.revision).start.length===0,
     newMissionReleased:startable([C.name],false,retained,()=>Infinity,undefined,revision).start.includes(C.name),
     holdsRetained:readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8')===holds,
-    assignmentsRetained:readFileSync(join(base,'swarm.json'),'utf8')===assignments,
+    assignmentsRetained:readFileSync(join(base,'handoff/swarm.json'),'utf8')===assignments,
     noStopCreated:!existsSync(join(base,'.practice','stop-'+C.name)),
    });
   }
@@ -841,12 +850,12 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
      if(fault==='wrong-source')r.source='f'.repeat(64);
      writeState();
     });
-    const endsBefore=deathBytes(),holdsBefore=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignmentsBefore=readFileSync(join(base,'swarm.json'),'utf8'),attempts=listAttempts(C.name,C.server,{root:lifeRoot}).map(a=>a.attemptId);
+    const endsBefore=deathBytes(),holdsBefore=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignmentsBefore=readFileSync(join(base,'handoff/swarm.json'),'utf8'),attempts=listAttempts(C.name,C.server,{root:lifeRoot}).map(a=>a.attemptId);
     const out=await h.finish(),stopped=join(base,'.practice','stop-'+C.name);
     const row={fault,refused:!h.sub.child&&!existsSync(out.paths.lease)&&!existsSync(out.paths.permit)&&out.result?.sessionRecovered===false,
      noLogin:noRecoveryLogin(loginLog(),h.since,C.name),noNewIntent:isDeepStrictEqual(attempts,listAttempts(C.name,C.server,{root:lifeRoot}).map(a=>a.attemptId)),
      endsRetained:deathBytes()===endsBefore,holdsRetained:readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8')===holdsBefore,
-     assignmentsRetained:readFileSync(join(base,'swarm.json'),'utf8')===assignmentsBefore,stopRetained:fault!=='stopped'||existsSync(stopped)};
+     assignmentsRetained:readFileSync(join(base,'handoff/swarm.json'),'utf8')===assignmentsBefore,stopRetained:fault!=='stopped'||existsSync(stopped)};
     rows.push(row);writeFileSync(join(dir,fault+'.json'),JSON.stringify(row));cpSync(h.dir,join(dir,fault),{recursive:true});
     // Fault setup belongs only to this private fixture; stopped identities remain retired.
     put('.practice/swarm-script-holds.json',[]);jobs.find(j=>j.account===C.name).enabled=false;writeState();
@@ -1055,6 +1064,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   }
   const checks=deriveChecks(cases);
   const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
+   'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
+   'packages/router/src/coordinator-cli.ts','packages/router/src/coordinator-live.ts','packages/router/tasks/session-recovery-only.json',
    'vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
   if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');
   const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===launchRevision()&&runnerSha256===hash(runner),
@@ -1076,6 +1087,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   if(saved.rsan===undefined)delete process.env.LOGIN_RSAN;else process.env.LOGIN_RSAN=saved.rsan;
   if(saved.rsae===undefined)delete process.env.LOGIN_RSAE;else process.env.LOGIN_RSAE=saved.rsae;
   if(saved.release===undefined)delete process.env.WORKER_RELEASE;else process.env.WORKER_RELEASE=saved.release;
+  if(saved.plan===undefined)delete process.env.SWARM_PLAN;else process.env.SWARM_PLAN=saved.plan;
   // Remove only the junction entries, never their shared targets.
   for(const j of junctions)try{if(lstatSync(j).isSymbolicLink())rmdirSync(j);}catch{}
   closeSync(fd);unlinkSync(lock);
