@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794861646590,
+ "at": 1794861724615,
  "jobs": [
   {
    "account": "Balls",
@@ -107,18 +107,49 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
+   "script": "scripts/microbot-production.ts",
+   "args": [
+    "cut-sapphire"
+   ],
    "env": {
-    "REQUIRE_BANK": "1",
+    "MAX_MAKE": "2",
+    "MAX_ATTEMPTS": "2",
+    "CAP": "600",
+    "RAW_RESERVE": "7",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-9cbe9448-6734-4b0e-852f-8a1828b27ca1"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-cut-bow-owned-bars-two [task-9cbe9448-6734-4b0e-852f-8a1828b27ca1]",
+   "role": "helper"
+  },
+  {
+   "accounts": [
+    "mmthv2350",
+    "NabTheKnob"
+   ],
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "125:Dragon bones",
+    "--notes",
+    "--bank-x=3185",
+    "--bank-z=3436",
+    "--approach-ms=900000",
+    "--request-ms=60000",
+    "--timeout-ms=240000"
+   ],
+   "env": {
+    "HANDOFF_ORDER": "mmthv-nab-prayer85-bones125",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-6ded8eff-a042-49f2-aeff-ee8e4922a561"
+    "COORDINATOR_RUN_ID": "task-5b12e2df-6b33-4faa-93f0-e296274dbf87"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-inspect-bow-two-rings-after-bars [task-6ded8eff-a042-49f2-aeff-ee8e4922a561]",
+   "goal": "run-handoff-mmthv-nab-prayer85-bones [task-5b12e2df-6b33-4faa-93f0-e296274dbf87]",
    "role": "helper"
   }
  ],
