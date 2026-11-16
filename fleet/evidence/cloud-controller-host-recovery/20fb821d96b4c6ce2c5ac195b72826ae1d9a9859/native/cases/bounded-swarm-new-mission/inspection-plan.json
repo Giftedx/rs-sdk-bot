@@ -1,0 +1,98 @@
+{
+  "maxBots": 4,
+  "minFreeGB": 4,
+  "fleetCapacity": 4,
+  "jobs": [
+    {
+      "account": "flrcvxsrnr2",
+      "script": "scripts/fleet-inspect.ts",
+      "enabled": true,
+      "repeat": false,
+      "maxRestarts": 0,
+      "standingRetry": false,
+      "env": {
+        "LOOT_WATCH": "0",
+        "RANDOM_EVENTS": "0",
+        "TICK_RECORD": "1",
+        "REQUIRE_BANK": "1"
+      }
+    },
+    {
+      "account": "fxreserve0",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve1",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve2",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve3",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve4",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve5",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve6",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve7",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve8",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve9",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve10",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    },
+    {
+      "account": "fxreserve11",
+      "enabled": false,
+      "repeat": false,
+      "role": "reserved"
+    }
+  ],
+  "coordination": {
+    "boundedInspection": [
+      "flrcvxsrnr2"
+    ]
+  }
+}

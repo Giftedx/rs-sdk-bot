@@ -1,0 +1,15 @@
+[
+  {
+    "at": 1794831589961,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxree95\",\"server\":\"127.0.0.1:8890\",\"runId\":\"native-rcv-completed-refusal-same-revision-489454\",\"nonce\":\"one-completed-refusal-same-revision\",\"endedAt\":1794831589948,\"source\":\"68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery setup refused; no lease issued; no retry",
+      "setup": {
+        "phase": "launch",
+        "cause": "recovery completed work needs a different mission"
+      }
+    }
+  }
+]

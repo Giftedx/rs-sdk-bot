@@ -1,0 +1,14 @@
+{
+  "id": "single-use",
+  "level": "native-actual-dispatcher-restart",
+  "checks": {
+    "replayRefused": true,
+    "newerIntentRefused": true,
+    "cliReplayRefused": true,
+    "noNewProducerIntent": true,
+    "consumptionUnchanged": true,
+    "leaseStillHeld": true
+  },
+  "account": "flrcvxiyv31",
+  "cliCode": 1
+}

@@ -1,0 +1,147 @@
+{
+ "attach": "{\"state\":\"attached\"}",
+ "ready": true,
+ "malformed": 0,
+ "runtime": {
+  "wire": true,
+  "cwd": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794831433542-V6HiMW/isolated-engine",
+  "execPath": "/workspace/.tools/bun/node_modules/bun/bin/bun.exe"
+ },
+ "rows": [
+  {
+   "kind": "BUTTON_WIRE",
+   "tick": 1843,
+   "at": 1794831769445,
+   "account": "flrcvxyn9621",
+   "length": 17,
+   "before": 0,
+   "after": 17,
+   "state": 1
+  },
+  {
+   "kind": "BUTTON_DESIGN",
+   "tick": 1843,
+   "at": 1794831769463,
+   "account": "flrcvxyn9621",
+   "allowDesign": true,
+   "gender": 0,
+   "result": true,
+   "modalMain": 3559
+  },
+  {
+   "kind": "BUTTON_HANDLE",
+   "tick": 1843,
+   "at": 1794831769464,
+   "account": "flrcvxyn9621",
+   "com": 3651,
+   "defined": true,
+   "buttonType": 1,
+   "rootLayer": 3559,
+   "rootOverlay": false,
+   "visible": true,
+   "modalMain": 3559,
+   "modalState": 9,
+   "protect": false,
+   "delayed": false,
+   "busy": true,
+   "resumeButton": false,
+   "activeScript": false,
+   "allowDesign": true,
+   "result": true,
+   "runs": [
+    {
+     "script": "[if_close,player_kit]",
+     "protectRequested": false,
+     "force": false,
+     "protect": false,
+     "delayed": false,
+     "state": 1
+    },
+    {
+     "script": "[if_button,player_kit:accept]",
+     "protectRequested": true,
+     "force": false,
+     "protect": false,
+     "delayed": false,
+     "state": 1
+    }
+   ],
+   "modalMainAfter": -1,
+   "modalStateAfter": 0
+  },
+  {
+   "kind": "BUTTON_LIVE",
+   "tick": 1843,
+   "at": 1794831769464,
+   "account": "flrcvxyn9621"
+  },
+  {
+   "kind": "BUTTON_DECODE",
+   "tick": 1843,
+   "at": 1794831769464,
+   "account": "flrcvxyn9621",
+   "before": 17,
+   "after": 0,
+   "packets": [
+    27,
+    86
+   ],
+   "modalMain": -1,
+   "limits": [
+    2,
+    0,
+    0
+   ]
+  },
+  {
+   "kind": "BUTTON_HANDLE",
+   "tick": 1844,
+   "at": 1794831769613,
+   "account": "flrcvxyn9621",
+   "com": 2458,
+   "defined": true,
+   "buttonType": 1,
+   "rootLayer": 2449,
+   "rootOverlay": true,
+   "visible": true,
+   "modalMain": -1,
+   "modalState": 0,
+   "protect": false,
+   "delayed": false,
+   "busy": false,
+   "resumeButton": false,
+   "activeScript": false,
+   "allowDesign": false,
+   "result": true,
+   "runs": [
+    {
+     "script": "[if_button,logout:try_logout]",
+     "protectRequested": false,
+     "force": false,
+     "protect": false,
+     "delayed": false,
+     "state": 1
+    }
+   ],
+   "modalMainAfter": -1,
+   "modalStateAfter": 0
+  },
+  {
+   "kind": "BUTTON_DECODE",
+   "tick": 1844,
+   "at": 1794831769614,
+   "account": "flrcvxyn9621",
+   "before": 3,
+   "after": 0,
+   "packets": [
+    86
+   ],
+   "modalMain": -1,
+   "limits": [
+    1,
+    0,
+    0
+   ]
+  }
+ ]
+}

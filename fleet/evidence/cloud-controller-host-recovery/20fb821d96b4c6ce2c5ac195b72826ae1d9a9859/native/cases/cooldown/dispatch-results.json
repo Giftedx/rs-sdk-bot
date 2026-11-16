@@ -1,0 +1,11 @@
+[
+  {
+    "at": 1794831613218,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxxt2519\",\"server\":\"127.0.0.1:8890\",\"runId\":\"native-rcv-cooldown-489454\",\"nonce\":\"one-cooldown\",\"endedAt\":1794831604676,\"source\":\"68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery child held; inspect fixed child output and retained account lease; no retry"
+    }
+  }
+]

@@ -1,0 +1,7 @@
+{
+ "flrcvxsrnr2": {
+  "at": 1794831526528,
+  "reason": "done after 1 runs",
+  "revision": "[\"scripts/session-check.ts\",false,[\"flrcvxsrnr2\"],[[\"LOOT_WATCH\",\"0\"],[\"RANDOM_EVENTS\",\"0\"],[\"TICK_RECORD\",\"1\"]]]"
+ }
+}

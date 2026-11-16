@@ -1,0 +1,15 @@
+[
+  {
+    "at": 1794831590981,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxnbmm15\",\"server\":\"127.0.0.1:8890\",\"runId\":\"native-rcv-completed-refusal-wrong-source-489454\",\"nonce\":\"one-completed-refusal-wrong-source\",\"endedAt\":1794831590968,\"source\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery setup refused; no lease issued; no retry",
+      "setup": {
+        "phase": "launch",
+        "cause": "recovery controller owner changed"
+      }
+    }
+  }
+]

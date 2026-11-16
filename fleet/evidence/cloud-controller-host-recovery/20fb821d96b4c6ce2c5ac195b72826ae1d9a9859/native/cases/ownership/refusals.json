@@ -1,0 +1,17 @@
+{
+  "result": {
+    "changed": false,
+    "sessionRecovered": false,
+    "reason": "recovery setup refused; no lease issued; no retry",
+    "setup": {
+      "phase": "launch",
+      "cause": "recovery previous session owner still alive"
+    }
+  },
+  "directError": "Error: live authenticated recovery is not qualified; no connection attempted",
+  "connects": 0,
+  "cliCodes": [
+    1,
+    1
+  ]
+}
