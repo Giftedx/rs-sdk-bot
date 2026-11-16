@@ -11,7 +11,7 @@ test('the actual copied worker runtime loads its immutable danger content before
  try{
   links.push(...materializeSwarmRuntime(source,root));
   expect(capabilityRevision(['scripts/session-check.ts'],root)).toBe(capabilityRevision(['scripts/session-check.ts'],source));
-  const p=Bun.spawnSync([process.execPath,'-e','import {loadDanger} from "./packages/core/src/randomevents";console.log(loadDanger().size);'],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});
-  expect(p.exitCode).toBe(0);expect(Number(p.stdout.toString().trim())).toBe(loadDanger().size);expect(loadDanger().size).toBeGreaterThan(0);
+  const p=Bun.spawnSync([process.execPath,'-e','import {loadDanger} from "./packages/core/src/randomevents";const lite=await import("./vendor/rs-sdk/server/webclient/src/lite/session.ts");console.log(JSON.stringify({danger:loadDanger().size,lite:typeof lite.startSession}));'],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});
+  expect(p.exitCode,p.stderr.toString()).toBe(0);const result=JSON.parse(p.stdout.toString().trim());expect(result.danger).toBe(loadDanger().size);expect(result.lite).toBe('function');expect(loadDanger().size).toBeGreaterThan(0);
  }finally{for(const p of links)if(existsSync(p)&&lstatSync(p).isSymbolicLink())unlinkSync(p);expect(removeCoinProofRoot(root)).toBe(true);}
 },30000);

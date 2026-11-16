@@ -21,6 +21,7 @@ export function materializeSwarmRuntime(sourceRoot:string,root:string){
  for(const dir of ['vendor/rs-sdk/server/webclient','vendor/rs-sdk/server/engine']){
   mkdirSync(join(root,dir),{recursive:true});
   if(existsSync(join(sourceRoot,dir,'package.json')))copyFileSync(join(sourceRoot,dir,'package.json'),join(root,dir,'package.json'));
+  if(existsSync(join(sourceRoot,dir,'tsconfig.json')))copyFileSync(join(sourceRoot,dir,'tsconfig.json'),join(root,dir,'tsconfig.json'));
   const link=join(root,dir,'node_modules');linkSourceDirectory(join(sourceRoot,dir,'node_modules'),link);if(existsSync(link))links.push(link);
  }
  copySourceTree(join(sourceRoot,'vendor/rs-sdk/server/engine/src'),join(root,'vendor/rs-sdk/server/engine/src'));
@@ -36,7 +37,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
  const put=(p:string,value:unknown)=>{mkdirSync(dirname(join(root,p)),{recursive:true});writeFileSync(join(root,p),JSON.stringify(value,null,2));};
  let passed=false;const privateLinks:string[]=[];
  const git=(args:string[])=>{const r=Bun.spawnSync(['git',...args],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});if(r.exitCode!==0)throw Error('private swarm Git operation failed');return r.stdout.toString().trim();};
- const wait=async(check:()=>boolean,reason:string,ms=90000)=>{const end=Date.now()+ms;while(Date.now()<end){if(check())return;if(children.some(p=>p.exitCode!==null&&p.exitCode!==0))throw Error('private swarm child exited; retain phase logs');await Bun.sleep(100);}throw Error('private swarm '+reason);};
+ const wait=async(check:()=>boolean,reason:string,ms=90000)=>{const end=Date.now()+ms;while(Date.now()<end){if(check())return;if(children.some(p=>p.exitCode!==null&&p.exitCode!==0))throw Error('private swarm child exited; retain phase logs');if(/^(gave-up|blocked|died|exit)\b/.test(json('.practice/swarm-deaths.json')?.[account]?.reason??''))throw Error('private swarm worker ended unsuccessfully; retain worker log');await Bun.sleep(100);}throw Error('private swarm '+reason);};
  const json=(p:string)=>{try{return JSON.parse(readFileSync(join(root,p),'utf8'));}catch{return null;}};
  try{
   if(!/^flrcvx[a-z0-9]+$/.test(account))throw Error('private swarm actor is not a generated recovery fixture');

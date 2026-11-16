@@ -1075,7 +1075,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','packages/core/src/bounded-owners.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
    'packages/practice/src/swarm-recovery-chain.ts','packages/router/src/bank-observer-qualification.ts',
    'packages/router/src/coordinator-cli.ts','packages/router/src/coordinator-live.ts','packages/router/tasks/session-recovery-only.json',
-   'vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
+   'vendor/rs-sdk/server/webclient/tsconfig.json','vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
   if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');
   const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===launchRevision()&&runnerSha256===hash(runner),
    level:'native-controller-recovery',at:Date.now(),runtimeRevision:source,runnerSha256,bindings,
