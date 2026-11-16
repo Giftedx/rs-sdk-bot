@@ -24,6 +24,33 @@ test('a network fault is tried again inside the budget; a rejected push fails at
     expect(gitErrorDetail('fatal: unable to access \'https://user:token123@github.com/x.git\'')).toBe('fatal: unable to access \'https://github.com/x.git\'');
 });
 
+test('a long push failure retains its transport prefix for the existing bounded retry', () => {
+    const tail=" ! [remote failure] HEAD -> fleet-trade-claim/a (failed)\nerror: failed to push some refs to 'https://github.com/x/y.git'";
+    const stderr='error: RPC failed; HTTP 503 curl 22 The requested URL returned error: 503\n'+'remote progress '.repeat(40)+'\n'+tail;
+    let calls=0;
+    const flaky=fleetGitWindow('.', 'fleet swarm claim authority',5000,()=>{if(++calls===1)throw Object.assign(Error('push failed'),{stderr});return'landed';});
+    expect(flaky(['push'])).toBe('landed');expect(calls).toBe(2);
+    expect(gitErrorDetail(stderr)).toContain('error: RPC failed; HTTP 503');
+    expect(gitErrorDetail(stderr)).toContain('failed to push some refs');expect(gitErrorDetail(stderr).length).toBeLessThanOrEqual(320);
+});
+
+test('a long ref rejection never retries even beside a transport diagnostic', () => {
+    const stderr=' ! [rejected] HEAD -> fleet-trade-claim/a (fetch first)\n'+'remote progress '.repeat(40)+'\nerror: RPC failed; failed to push some refs';
+    let calls=0;
+    const rejected=fleetGitWindow('.', 'fleet swarm claim authority',5000,()=>{calls++;throw Object.assign(Error('push failed'),{stderr});});
+    expect(()=>rejected(['push'])).toThrow('fetch first');expect(calls).toBe(1);
+});
+
+test('long Git diagnostics redact URL credentials before display and retry classification', () => {
+    const stderr="fatal: authentication failed for 'https://first:TLS@github.com/x.git'\n"+'remote progress '.repeat(40)+"\nerror: failed to push some refs to 'https://last:tail-secret@github.com/x.git'";
+    const detail=gitErrorDetail(stderr);
+    expect(detail).toContain('fatal: authentication failed');expect(detail).toContain('https://github.com/x.git');
+    expect(detail).not.toContain('first:TLS');expect(detail).not.toContain('tail-secret');expect(detail.length).toBeLessThanOrEqual(320);
+    let calls=0;
+    const auth=fleetGitWindow('.', 'fleet swarm claim authority',5000,()=>{calls++;throw Object.assign(Error('push failed'),{stderr});});
+    expect(()=>auth(['push'])).toThrow('authentication failed');expect(calls).toBe(1);
+});
+
 test('the remote lease excludes another checkout, fences old workers, and permits expired takeover', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
     try {
