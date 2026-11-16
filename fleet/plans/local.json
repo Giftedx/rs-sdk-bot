@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794820244758,
+ "at": 1794820319186,
  "jobs": [
   {
    "account": "Balls",
@@ -139,25 +139,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-scorpion-mmsmk-ardougne-cure [task-d38a2813-ef13-4c76-9b76-f19a24c3e96f]",
-   "role": "helper"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "25",
-    "MAX_CASTS": "60",
-    "CAP": "6000",
-    "RUNE_BUDGET": "500",
-    "CASH_RESERVE": "400000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-c92ce08d-f1ac-4449-a4d4-fb6fb2ddda3d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-magic-nab25-xp-proof [task-c92ce08d-f1ac-4449-a4d4-fb6fb2ddda3d]",
    "role": "helper"
   }
  ],
