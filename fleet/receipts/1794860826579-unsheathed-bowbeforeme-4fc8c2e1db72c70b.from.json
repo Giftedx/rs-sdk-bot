@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794860826579-unsheathed-bowbeforeme-4fc8c2e1db72c70b",
+ "account": "Unsheathed",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 2,
+ "claim": "815f026c-b11a-45d6-80ca-6a7397e7175e",
+ "count": 0,
+ "ok": false,
+ "at": 1794860830794,
+ "detail": "trade claimed"
+}
