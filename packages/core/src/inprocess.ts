@@ -580,7 +580,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
         if (live && (stopped('stop-' + opts.name) || stopped('stop-' + opts.name.toLowerCase()) || swarm && stopped('stop-swarm'))) {
             throw Error('live admission paused by stop file');
         }
-        if (live && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server);
+        if (live && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server,repoRoot);
         opts.beforeConnect?.();
         if (currentTicket) {
             assertWorkerRelease();
@@ -590,7 +590,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
     };
     return startInProcessSession(opts, { startSession, sdk: new BotSDK(inProcessSdkConfig(opts)), Actions: BotActions, cacheDir,
         beforeConnect,planLock:opts.lockPlan||ticket||opts.trade?planLockDir:undefined,lifecycle,
-        sharedAccount:live?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm,trade:opts.trade}:undefined });
+        sharedAccount:live?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm,admission:opts.recoverSwarm,trade:opts.trade}:undefined });
 }
 
 // Read-only observation of the lite bootstrap HTTP calls (session.ts /api/version, cache.ts /crc and archives,
@@ -629,7 +629,7 @@ export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; 
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;trade?:TradeAdmission} }): Promise<Session> {
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission} }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
@@ -641,10 +641,10 @@ export async function startInProcessSession(opts: { name: string; password: stri
         // Async imports/pathfinding can outlive an owner stop. Recheck before any intent or network work.
         deps.beforeConnect?.();
         if (deps.sharedAccount) {
-            const { root, side, recover, trade } = deps.sharedAccount;
+            const { root, side, recover, admission, trade } = deps.sharedAccount;
             const target = { account: opts.name, server: host, side };
             if (trade) tradeClaim = acquireFleetTradeClaim(root, {...target, orderId: trade.orderId, role: trade.role});
-            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover });
+            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover,admission });
             deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
             if (trade && tradeClaim) trade.prepare(tradeClaim);
         }

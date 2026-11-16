@@ -728,19 +728,19 @@ async function run(directory:string){
   const owner=async(f:Fixture,dir:string,mode:'hold'|'warm'|'orphan'|'partial',lifecycle:string)=>{
    const script=join(dir,'owner.ts'),ready=join(dir,'owner-ready.json'),release=join(dir,'owner-release'),takeover=join(dir,'owner-takeover'),warmFile=join(dir,'owner-warm.json');
    const core=(p:string)=>JSON.stringify(join(root,'packages/core/src',p));
-   writeFileSync(script,`import{readFileSync,writeFileSync,existsSync}from'node:fs';import{connectInProcess}from${core('inprocess.ts')};import{logoutSession}from${core('bot.ts')};import{waitUntil}from${core('ticks.ts')};
+   writeFileSync(script,`import{readFileSync,existsSync}from'node:fs';import{publishControlFile}from${JSON.stringify(import.meta.path)};import{connectInProcess}from${core('inprocess.ts')};import{logoutSession}from${core('bot.ts')};import{waitUntil}from${core('ticks.ts')};
 const password=readFileSync(${JSON.stringify(f.envPath)},'utf8').match(/^PASSWORD=(.*)$/m)?.[1]?.trim()!,mode=${JSON.stringify(mode)};
 const open=()=>connectInProcess({name:${JSON.stringify(f.name)},password,server:${JSON.stringify(f.server)},lifecycleRoot:${JSON.stringify(lifecycle)}});
 const view=(s:any)=>{const x=s.sdk.getState();return{inGame:x?.inGame,player:x?.player&&{x:x.player.worldX,z:x.player.worldZ,level:x.player.level,hp:x.player.hp},inventory:x?.inventory?.map((i:any)=>({id:i.id,count:i.count})),equipment:x?.equipment?.map((i:any)=>({id:i.id,count:i.count}))};};
-if(mode==='partial'){writeFileSync(${JSON.stringify(ready)},JSON.stringify({at:Date.now(),pid:process.pid}));await open();throw Error('partial owner unexpectedly connected');}
+if(mode==='partial'){publishControlFile(${JSON.stringify(ready)},{at:Date.now(),pid:process.pid});await open();throw Error('partial owner unexpectedly connected');}
 let s=await open();if(!await waitUntil(s,x=>x?.inGame&&x.player?.hp>0,{timeoutTicks:100,idleMs:10000}))throw Error('owner not ready');
 const loggedInAt=Date.now(),first=s.lifecycle?.attemptId;
-writeFileSync(${JSON.stringify(ready)},JSON.stringify({at:Date.now(),loggedInAt,pid:process.pid,first,attemptId:s.lifecycle?.attemptId,state:view(s)}));
+publishControlFile(${JSON.stringify(ready)},{at:Date.now(),loggedInAt,pid:process.pid,first,attemptId:s.lifecycle?.attemptId,state:view(s)});
 if(mode==='warm'){const signal=Date.now()+300000;while(!existsSync(${JSON.stringify(takeover)})&&Date.now()<signal)await Bun.sleep(20);if(!existsSync(${JSON.stringify(takeover)}))throw Error('warm takeover signal timeout');
  const signalSeenAt=Date.now(),b=await open();if(!await waitUntil(b,x=>x?.inGame&&x.player?.hp>0,{timeoutTicks:100,idleMs:10000}))throw Error('warm takeover not ready');await s.close();s=b;
- writeFileSync(${JSON.stringify(warmFile)},JSON.stringify({at:Date.now(),signalSeenAt,attemptId:s.lifecycle?.attemptId}));}
+ publishControlFile(${JSON.stringify(warmFile)},{at:Date.now(),signalSeenAt,attemptId:s.lifecycle?.attemptId});}
 const until=Date.now()+300000;while(!existsSync(${JSON.stringify(release)})&&Date.now()<until)await Bun.sleep(50);
-writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at:Date.now(),state:view(s)}));console.log('OWNER_LOGOUT '+await logoutSession(s));await s.close();`);
+publishControlFile(${JSON.stringify(join(dir,'owner-after.json'))},{at:Date.now(),state:view(s)});console.log('OWNER_LOGOUT '+await logoutSession(s));await s.close();`);
    const p=Bun.spawn([process.execPath,script],{cwd:root,env:{...process.env,BOT_GOAL:'native-recovery-owner-fixture',COORDINATOR_RUN_ID:'native-owner-'+f.name,WORKER_RELEASE:source},stdout:Bun.file(join(dir,'owner.log')),stderr:Bun.file(join(dir,'owner.err')),windowsHide:true});children.push(p);
    const until=Date.now()+90000;while(!existsSync(ready)&&Date.now()<until){if(p.exitCode!==null)throw Error('owner fixture exited before ready: '+mode);await Bun.sleep(100);}
    if(!existsSync(ready))throw Error('owner fixture readiness timeout: '+mode);
@@ -1086,7 +1086,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    retainRequiredRecoveryCase(row,()=>progress());
   }
   const checks=deriveChecks(cases);
-  const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','packages/core/src/route-plan.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
+  const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','packages/core/src/route-plan.ts','packages/core/src/fleet-trade-claim.ts','packages/core/src/fleet-lease.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
    'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','packages/core/src/bounded-owners.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
    'packages/practice/src/swarm-recovery-chain.ts','packages/router/src/bank-observer-qualification.ts',
    'packages/router/src/coordinator-cli.ts','packages/router/src/coordinator-live.ts','packages/router/tasks/session-recovery-only.json',

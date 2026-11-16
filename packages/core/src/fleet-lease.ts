@@ -175,14 +175,27 @@ export function allLeaseLastSeen(git: FleetGit, legacyDir?: string): Map<string,
 // The newest renewal one checkout recorded on its side's lease ref (each renewal is a child commit, so the ref's
 // history is the side's controller record), with the record at the head. seen is null when the checkout is not among
 // the last `depth` records; head is null when the side has no lease ref.
+function sideLeaseHistory(git:FleetGit,side:string,depth=600):RemoteLease[]{
+    if(!SIDE_NAME.test(side))throw Error('invalid fleet lease side');
+    const ref = 'refs/heads/fleet-lease/' + side, tip = readFleetGitRefs(git, [ref]).get(ref);
+    if (!tip) return [];
+    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', tip]);
+    return git(['log', '-n', String(depth), '--format=%B%x00', tip]).split('\0').map(r => r.trim()).filter(Boolean).map(r => parseRemote(r, side));
+}
 export function fleetCheckoutLastSeen(git: FleetGit, side: string, checkout: string, depth = 600): { head: RemoteLease | null; seen: number | null } {
     if (!SIDE_NAME.test(side) || !HOLDER.test(checkout)) throw Error('invalid fleet lease checkout');
-    const ref = 'refs/heads/fleet-lease/' + side, tip = readFleetGitRefs(git, [ref]).get(ref);
-    if (!tip) return { head: null, seen: null };
-    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', tip]);
-    const records = git(['log', '-n', String(depth), '--format=%B%x00', tip]).split('\0').map(r => r.trim()).filter(Boolean).map(r => parseRemote(r, side));
+    const records=sideLeaseHistory(git,side,depth);
     const head = records[0] ?? null, mine = records.find(r => r.holder === checkout);
     return { head, seen: mine ? mine.at : null };
+}
+
+// Evidence only: callers still need the spent recovery permit and exact inherited producer.
+export function recoveryHostLease(git:FleetGit,side:string,checkout:string,previousHost:string,now:number){
+    const records=sideLeaseHistory(git,side),current=records[0],previous=records.find(r=>r.holder===checkout&&r.host===previousHost);
+    if(!current||!previous||current.host!==hostname()||current.host===previousHost||current.holder!==checkout
+        ||current.epoch===previous.epoch||current.at>now||now-current.at>=FLEET_LEASE_TTL_MS
+        ||current.at<previous.at+FLEET_LEASE_TTL_MS)return null;
+    return {current,previous};
 }
 
 // The remote ref is the authority. A contender writes a child of the exact head it read.

@@ -2,8 +2,14 @@ import {test,expect,spyOn} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync,statSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import * as childProcess from 'node:child_process';
+import {hostname} from 'node:os';
+import {acquireFleetSwarmClaim,readFleetAccountClaim} from '../src/fleet-trade-claim';
+import {fleetCheckoutId,fleetGitWindow,commitFleetGitRecord,pushFleetGitRecord,acquireFleetLease,FLEET_LEASE_TTL_MS} from '../src/fleet-lease';
 import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,cachedProcessStarts,releaseExpiredRecoveryLease,releaseExpiredRecoveryLeases,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
-import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir} from '../src/session-lifecycle';
+import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir,lifecycleOwner} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
@@ -14,6 +20,134 @@ import * as recoveryProcesses from '../../practice/src/proc';
 const source='a'.repeat(64),runner='b'.repeat(64),now=1793258000000;
 const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
 mkdirSync(fixtureRoot,{recursive:true});
+if(process.env.HOST_RECOVERY_FIXTURE==='1')test('qualified cross-host fixture body',async()=>{
+ const f=fixture(),git=(...args:string[])=>execFileSync('git',args,{cwd:f.base,encoding:'utf8',stdio:'pipe',windowsHide:true}).trim();
+ const started=performance.now();let fixtureGitCalls=0,fixtureGitMs=0;
+ try{
+  const remote=join(f.base,'private-origin.git');git('init','--bare',remote);git('init');git('remote','add','origin',remote);
+  // The matrix performs independent Git operations; do not share a spent authority
+  // deadline across the whole Windows fixture. Production admission budgets stay unchanged.
+  const authority=(args:string[],input?:string)=>{const at=performance.now();fixtureGitCalls++;try{return fleetGitWindow(f.base)(args,input);}finally{fixtureGitMs+=performance.now()-at;}},tree=authority(['hash-object','-w','-t','tree','--stdin'],'');
+  const append=(ref:string,body:unknown)=>{const prior=authority(['ls-remote','--refs','origin',ref]).split(/\s/)[0]||undefined;const head=commitFleetGitRecord(authority,prior,tree,(ref.includes('fleet-trade-claim/')?'Fixture claim\n\n':'')+JSON.stringify(body));pushFleetGitRecord(authority,ref,head);return head;};
+  const nonce=randomUUID(),old=beginSessionAttempt({account:'Rod',server:'rs-sdk-demo.fly.dev',secret:'unit-fixture'}, {root:join(f.base,'.practice/session-lifecycle'),owner:{...lifecycleOwner(),pid:process.pid,sharedClaimNonce:nonce},now:Date.now});
+  old.record('connect-failed','unit fixture; no network');
+  const receipt=listAttempts('Rod','rs-sdk-demo.fly.dev',{root:join(f.base,'.practice/session-lifecycle')}).find(a=>a.attemptId===old.attemptId)!.receipt!,at=receipt.createdAt;
+  let clock=at+2*FLEET_LEASE_TTL_MS;
+  const claim={kind:'swarm',account:'rod',server:'rs-sdk-demo.fly.dev',side:'cloud',checkout:fleetCheckoutId(f.base),host:'previous-runtime',pid:process.pid,nonce,phase:'held',at:at-1};
+  append('refs/heads/fleet-trade-claim/rod',claim);
+  const oldLease={side:'cloud',host:claim.host,holder:claim.checkout,epoch:randomUUID(),pid:process.pid,at:at-1};append('refs/heads/fleet-lease/cloud',oldLease);
+  const lease=acquireFleetLease(f.base,'cloud',()=>clock);expect(lease.allows()).toBe(true);
+  f.request.server=claim.server;f.request.endedAt=receipt.updatedAt+5;
+  const state=JSON.parse(readFileSync(join(f.base,'.practice/coordinator/state.json'),'utf8'));state.tasks[0].spec.repairs[0].endedAt=f.request.endedAt;state.tasks[0].spec.sessionRecovery.endedAt=f.request.endedAt;f.put('.practice/coordinator/state.json',state);
+  f.put('.practice/swarm-deaths.json',{Rod:{at:f.request.endedAt,reason:'blocked'}});f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
+  const reportPath=join(f.base,'.practice/deliveries/fixture/report.json'),report=JSON.parse(readFileSync(reportPath,'utf8'));report.at=clock-1;writeFileSync(reportPath,JSON.stringify(report));f.request.qualification.delivery.sha256=createHash('sha256').update(readFileSync(reportPath)).digest('hex');
+  const options={...f.options,now:()=>clock,pidAlive:()=>false};
+  if(process.env.HOST_RECOVERY_MODE==='interrupted'){
+   const target={account:'Rod',server:claim.server,side:'cloud'},ref='refs/heads/fleet-trade-claim/rod';
+   const body=()=>authority(['show','-s','--format=%b',authority(['ls-remote','--refs','origin',ref]).split(/\s/)[0]!]);
+   const original=body(),pointer=join(accountDir('Rod',claim.server,join(f.base,'.practice/session-lifecycle')),'latest.json'),latest=readFileSync(pointer);
+   const input=join(f.base,'interrupted-input.json');
+   const code=`import {readFileSync,existsSync} from 'node:fs';
+    import {consumeRecoveryConnection,spendRecoveryConnection,recoveryPermitPaths} from ${JSON.stringify(resolve(import.meta.dir,'../src/session-recovery-permit.ts'))};
+    import {acquireFleetSwarmClaim} from ${JSON.stringify(resolve(import.meta.dir,'../src/fleet-trade-claim.ts'))};
+    const {request,base,clock,source}=JSON.parse(readFileSync(process.argv[1],'utf8'));
+    const deadline=Date.now()+5000;
+    while(!existsSync(recoveryPermitPaths(request,base).child)){if(Date.now()>deadline)throw Error('fixture child binding timed out');await Bun.sleep(10);}
+    const options={now:()=>clock,pidAlive:()=>false,matches:()=>true,source:()=>source,capability:()=>source};
+    const {admission}=consumeRecoveryConnection(request,base,options);spendRecoveryConnection(admission,request);
+    acquireFleetSwarmClaim(base,{account:request.account,server:request.server,side:'cloud'},{recover:true,admission,now:()=>clock});
+    process.exit(0);`;
+   let interrupted:NonNullable<ReturnType<typeof readFleetAccountClaim>>|undefined,childPid=0;
+   for(const nonce of ['one','two']){
+    f.request.nonce=nonce;f.put('.practice/swarm-repair.json.lease',{pid:10,runId:'task-run',nonce});
+    issueRecoveryPermit(f.request,f.base,options);writeFileSync(input,JSON.stringify({request:f.request,base:f.base,clock,source}));
+    const child=Bun.spawn([process.execPath,'-e',code,input],{cwd:f.base,stdout:'pipe',stderr:'pipe',windowsHide:true});
+    bindRecoveryChild(f.request,child.pid,f.base,options);
+    const [exit,out,err]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);expect({exit,output:out+err}).toEqual({exit:0,output:''});
+    const prior=interrupted;interrupted=readFleetAccountClaim(f.base,target)!;childPid=child.pid;
+    expect(interrupted.host).toBe(hostname());expect(interrupted.pid).toBe(child.pid);expect(interrupted.nonce).not.toBe(prior?.nonce??claim.nonce);
+    expect(readFileSync(pointer)).toEqual(latest);
+    expect(()=>acquireFleetSwarmClaim(f.base,target,{recover:true,now:()=>clock,ownerAlive:()=>false})).toThrow();
+    clock+=150001;f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
+    expect(releaseExpiredRecoveryLease('Rod',f.base,{now:()=>clock,matches:()=>true}).basis).toBe('not-connected');
+   }
+   f.request.nonce='three';f.put('.practice/swarm-repair.json.lease',{pid:10,runId:'task-run',nonce:'three'});
+   issueRecoveryPermit(f.request,f.base,options);bindRecoveryChild(f.request,process.pid,f.base,options);
+   const {admission}=consumeRecoveryConnection(f.request,f.base,options);spendRecoveryConnection(admission,f.request);
+   const markerPath=join(f.base,'.practice/fleet-account-pending',interrupted!.nonce+'.json'),markerRaw=readFileSync(markerPath),marker=JSON.parse(markerRaw.toString());
+   const retry=()=>acquireFleetSwarmClaim(f.base,target,{recover:true,admission,now:()=>clock,ownerAlive:()=>{throw Error('remote PID is not local death proof');}});
+   const unrelated=commitFleetGitRecord(authority,undefined,tree,'Unrelated witness\n\n'+JSON.stringify(claim));
+   for(const changed of [{...marker,inherited:{...marker.inherited,nonce:randomUUID()}},{...marker,claim:'{}'},{...marker,inheritedHead:'0'.repeat(40)},{...marker,inheritedHead:unrelated}]){
+    writeFileSync(markerPath,JSON.stringify(changed));const unchanged=body();expect(retry).toThrow();expect(body()).toBe(unchanged);writeFileSync(markerPath,markerRaw);
+   }
+   const intent=beginSessionAttempt({account:'Rod',server:claim.server,secret:'unit-fixture'},{root:join(f.base,'.practice/session-lifecycle'),owner:{...lifecycleOwner(),pid:childPid,sharedClaimNonce:interrupted!.nonce},now:()=>clock});
+   writeFileSync(pointer,latest);expect(retry).toThrow();rmSync(join(dirname(pointer),'attempts',intent.attemptId+'.json'));expect(readFileSync(pointer)).toEqual(latest);
+   const recovered=retry();
+   recovered.abortBeforeNetwork();expect(body()).toBe(original);expect(readFileSync(pointer)).toEqual(latest);
+   console.log('QUALIFIED_HOST_INTERRUPTED_PASS two real child exits after push, durable original Git witness, ordinary refusal, supported expired lease retirement, qualified retry, exact inherited hold restored');return;
+  }
+  issueRecoveryPermit(f.request,f.base,options);bindRecoveryChild(f.request,process.pid,f.base,options);
+  const {admission}=consumeRecoveryConnection(f.request,f.base,options);spendRecoveryConnection(admission,f.request);
+  const mode=process.env.HOST_RECOVERY_MODE??'';
+  const recovery={recover:true,admission,now:()=>clock,ownerAlive:()=>{throw Error('must not inspect a remote PID on the new host');}};
+  const target={account:'Rod',server:claim.server,side:'cloud'},claimRef='refs/heads/fleet-trade-claim/rod',leaseRef='refs/heads/fleet-lease/cloud';
+  const body=(ref:string)=>authority(['show','-s',ref===claimRef?'--format=%b':'--format=%B',authority(['ls-remote','--refs','origin',ref]).split(/\s/)[0]!]);
+  const pointer=join(accountDir('Rod',claim.server,join(f.base,'.practice/session-lifecycle')),'latest.json');
+  const originalPointer=readFileSync(pointer);
+  const deny=(action:()=>unknown)=>{const heldBody=body(claimRef),latest=readFileSync(pointer);expect(action).toThrow();expect(body(claimRef)).toBe(heldBody);expect(readFileSync(pointer)).toEqual(latest);};
+  if(mode==='admission'){
+  deny(()=>acquireFleetSwarmClaim(f.base,target,{recover:true,now:()=>clock,ownerAlive:()=>false}));
+  deny(()=>acquireFleetSwarmClaim(f.base,target,{...recovery,admission:{nonce:admission.nonce}}));
+  deny(()=>acquireFleetSwarmClaim(f.base,{...target,account:'Other'},recovery));
+  deny(()=>acquireFleetSwarmClaim(f.base,{...target,server:'other.example'},recovery));
+  deny(()=>acquireFleetSwarmClaim(f.base,{...target,side:'local'},recovery));
+  deny(()=>acquireFleetSwarmClaim(remote,target,recovery));
+  }
+  if(mode==='identity')for(const change of [{checkout:randomUUID()},{side:'local'},{nonce:randomUUID()},{pid:claim.pid+1}]){
+   append(claimRef,{...claim,...change});deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));append(claimRef,claim);
+  }
+  if(mode==='provenance'){
+  for(const change of [{host:'unknown-runtime'},{kind:undefined,orderId:'held-order',role:'from'}]){
+   append(claimRef,{...claim,...change});deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));append(claimRef,claim);
+  }
+  const newer=beginSessionAttempt({account:'Rod',server:claim.server,secret:'unit-fixture'},{root:join(f.base,'.practice/session-lifecycle'),now:()=>clock,owner:{...lifecycleOwner(),pid:claim.pid,sharedClaimNonce:claim.nonce}});
+  deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));writeFileSync(pointer,originalPointer);rmSync(join(dirname(pointer),'attempts',newer.attemptId+'.json'));
+  const oldReceipt=join(dirname(pointer),'attempts',old.attemptId+'.json'),originalReceipt=readFileSync(oldReceipt),changed=JSON.parse(originalReceipt.toString());changed.owner.pid++;writeFileSync(oldReceipt,JSON.stringify(changed));
+  deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));writeFileSync(oldReceipt,originalReceipt);
+  }
+  if(mode==='lease'){
+  const currentLease=JSON.parse(body(leaseRef)),fence=join(f.base,'.practice/fleet-controller-fence.json'),originalFence=readFileSync(fence);
+  writeFileSync(fence,JSON.stringify({holder:'cloud:'+randomUUID(),until:clock+10000}));deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));writeFileSync(fence,originalFence);
+  append(leaseRef,{...currentLease,at:clock-FLEET_LEASE_TTL_MS-1});deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));append(leaseRef,currentLease);
+  append(leaseRef,{...currentLease,epoch:oldLease.epoch});writeFileSync(fence,JSON.stringify({...JSON.parse(originalFence.toString()),holder:'cloud:'+oldLease.epoch}));deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));append(leaseRef,currentLease);writeFileSync(fence,originalFence);
+  clock+=150001;f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));clock-=150001;f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
+  append(leaseRef,{...oldLease,at:clock-1});append(leaseRef,currentLease);deny(()=>acquireFleetSwarmClaim(f.base,target,recovery));
+  }
+  if(mode==='lifecycle'){
+  const before=body(claimRef),held=acquireFleetSwarmClaim(f.base,target,recovery);
+  expect(held.nonce).not.toBe(claim.nonce);expect(readFleetAccountClaim(f.base,target)?.host).toBe(hostname());
+  held.abortBeforeNetwork();expect(body(claimRef)).toBe(before);
+  const completed=acquireFleetSwarmClaim(f.base,target,recovery);expect(()=>completed.releaseAfterLogout(old.attemptId)).toThrow('exact logout');completed.armNetwork();
+  const next=beginSessionAttempt({account:'Rod',server:claim.server,secret:'unit-fixture'},{root:join(f.base,'.practice/session-lifecycle'),now:()=>clock,owner:{...lifecycleOwner(),pid:process.pid,sharedClaimNonce:completed.nonce}});
+  next.record('ready');next.record('ended','logged-out');completed.releaseAfterLogout(next.attemptId);expect(readFleetAccountClaim(f.base,target)?.phase).toBe('released');
+  writeFileSync(pointer,originalPointer);rmSync(join(dirname(pointer),'attempts',next.attemptId+'.json'));append(claimRef,claim);
+  const native=childProcess.execFileSync,competing={...claim,nonce:randomUUID()};let raced=false;
+  const race=spyOn(childProcess,'execFileSync').mockImplementation(((file:any,args:any,options:any)=>{
+   if(!raced&&file==='git'&&args?.includes('push')&&args.some((a:string)=>a.endsWith(':'+claimRef))){raced=true;append(claimRef,competing);}
+   return native(file,args,options);
+  }) as any);
+  try{expect(()=>acquireFleetSwarmClaim(f.base,target,recovery)).toThrow();expect(raced).toBe(true);}finally{race.mockRestore();}
+  expect(readFleetAccountClaim(f.base,target)?.nonce).toBe(competing.nonce);append(claimRef,claim);
+  }
+  expect(['admission','identity','provenance','lease','lifecycle']).toContain(mode);
+  console.log('QUALIFIED_HOST_FIXTURE_PASS '+mode);
+ }finally{if(process.env.HOST_RECOVERY_PROFILE==='1')console.log('HOST_RECOVERY_PROFILE '+JSON.stringify({mode:process.env.HOST_RECOVERY_MODE,fixtureGitCalls,fixtureGitMs,wallMs:performance.now()-started}));rmSync(f.base,{recursive:true,force:true});}
+},30000);
+else for(const mode of ['admission','identity','provenance','lease','lifecycle','interrupted'])test('qualified cross-host recovery '+mode,async()=>{
+ const child=Bun.spawn([process.execPath,'test',import.meta.path,'--test-name-pattern','^qualified cross-host fixture body$'],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,HOST_RECOVERY_FIXTURE:'1',HOST_RECOVERY_MODE:mode,FLEET_SIDE:'cloud'},stdout:'pipe',stderr:'pipe',windowsHide:true});
+ const timer=setTimeout(()=>child.kill(),30000);
+ try{const [code,out,err]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);expect({code,output:code?out+err:''}).toEqual({code:0,output:''});if(code===0)console.log(out.trim());}finally{clearTimeout(timer);}
+},30000);
 test('the controller launches the core recovery worker inside the gameplay ownership scope',()=>{
  expect(RECOVERY_SCRIPT).toBe('packages/core/src/session-recovery.ts');
 });

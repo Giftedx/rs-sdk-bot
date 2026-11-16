@@ -995,6 +995,15 @@ test('a timer-only fleet snapshot stays stale at a late handoff; a fresh owned h
   expect(fleetHandoff(()=>rmSync(path),path,account,process.pid,()=>now).verdict).toBe('missing');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+test('initial owner readiness remains absent until its complete JSON is published',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'owner-ready-')),path=join(dir,'owner-warm.json'),value={at:1794829094072,attemptId:'fixture-attempt'};
+ try{
+  publishControlFile(path,value,{
+   write:(temporary,data)=>{writeFileSync(temporary,'',{flag:'wx'});expect(existsSync(path)).toBe(false);writeFileSync(temporary,data);expect(existsSync(path)).toBe(false);},
+   rename:(from,to)=>{expect(existsSync(to)).toBe(false);renameSync(from,to);expect(JSON.parse(readFileSync(to,'utf8'))).toEqual(value);},pause:()=>{}});
+  expect(JSON.parse(readFileSync(path,'utf8'))).toEqual(value);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 test('the orphan child reading mid-heartbeat sees a complete fleet view, never fleet-malformed',()=>{
  const dir=mkdtempSync(join(tmpdir(),'fleet-publish-')),path=join(dir,'.practice','swarm-state.json'),account='flrcvxxhah18';
  const view=(at:number)=>({at,controllerPid:process.pid,jobs:[{account,state:'disabled'}]});
