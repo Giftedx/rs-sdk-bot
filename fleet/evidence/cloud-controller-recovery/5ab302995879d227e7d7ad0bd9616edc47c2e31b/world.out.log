@@ -1,0 +1,6 @@
+11/16/2026 9:17:24 AM	 INFO	 Starting world
+11/16/2026 9:17:25 AM	 DEBUG	 Loading game map
+11/16/2026 9:17:25 AM	 DEBUG	 8142/16383 static NPCs added
+11/16/2026 9:17:25 AM	 INFO	 World ready: Visit http://localhost:8890/rs2.cgi
+[web-transport] listening on 8890
+11/16/2026 9:22:58 AM	 INFO	 Server shutdown complete

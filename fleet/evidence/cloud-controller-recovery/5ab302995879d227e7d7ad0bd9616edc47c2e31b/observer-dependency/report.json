@@ -1,0 +1,62 @@
+{
+  "ok": true,
+  "stage": "delivered",
+  "evidence": "native",
+  "consumer": "Observe an eligible helper after native qualifications and immediately before its pending finite goal-supply consumer when stale or unknown holdings block dispatch. REQUIRE_BANK=1 must prove a new bank generation after login and emit bankObserved=1 only after successful logout. The coordinator accepts that exact observation counter; it does not count it as acquired stock or game progress. A missing nearby bank, stale payload, failed open or stop cannot claim observation. Use a safe nearby bank, LOOT_WATCH=0, RANDOM_EVENTS=0, a single owned account, no worker arguments and a task deadline of at most120000ms. Keep all other account leases and reservations. The existing courier enforces its declared donor reserve before funding, and production retains its exact stock checks.",
+  "reason": "native capability and named consumer verified",
+  "checks": [
+    {
+      "id": "bank-observation-regressions",
+      "phase": "regression",
+      "exitCode": 0,
+      "timedOut": false,
+      "detail": "{\"stdout\":\"/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/owned-bank-observation-1794820622869-kcHnxn/0.out.log\",\"stderr\":\"/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/owned-bank-observation-1794820622869-kcHnxn/0.err.log\"}"
+    },
+    {
+      "id": "bank-observation-native",
+      "phase": "practice",
+      "exitCode": 0,
+      "timedOut": false,
+      "detail": "{\"stdout\":\"/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/owned-bank-observation-1794820622869-kcHnxn/1.out.log\",\"stderr\":\"/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/owned-bank-observation-1794820622869-kcHnxn/1.err.log\"}"
+    },
+    {
+      "id": "bank-observation-saved",
+      "phase": "consumer",
+      "exitCode": 0,
+      "timedOut": false,
+      "detail": "{\"stdout\":\"/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/owned-bank-observation-1794820622869-kcHnxn/2.out.log\",\"stderr\":\"/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/owned-bank-observation-1794820622869-kcHnxn/2.err.log\"}"
+    }
+  ],
+  "source": "bb654e429607195687a50bfe65a0e1e8a5829059afa494e12907ad736c4f07d2",
+  "id": "owned-bank-observation",
+  "goal": "Observe an owned account's actual nearby bank without spending or changing its assets, then confirm logout.",
+  "at": 1794820639498,
+  "runtimeRevision": "17fe24235b3a9155490903c0c088e56268d4aa014a054996d3a86e0c5464fbbb",
+  "directory": "/workspace/rs-sdk-bot-cloud-controller/.practice/deliveries/owned-bank-observation-1794820622869-kcHnxn",
+  "files": [
+    {
+      "path": "scripts/fleet-inspect.ts",
+      "sha256": "78d06c86e233bf894a71e4267ffa9a09cda8f38ace846803a920659c004916f9"
+    },
+    {
+      "path": "scripts/fleet-inspect.test.ts",
+      "sha256": "45ed6db0a189dbf4ba74a6e9b81c1a72749794a84f11b3294cc358f57bf386b7"
+    },
+    {
+      "path": "scripts/measure/catalog-integration-proof.ts",
+      "sha256": "a72f4ec92a10f9b648abb0cd1993ab1d831ba9abc1897ad66bbfdf2726514c28"
+    },
+    {
+      "path": "scripts/measure/catalog-integration-proof.test.ts",
+      "sha256": "4b8ab80b1031430f31fe7f3d18e455f941299e651c0805f3badc641c9d5267be"
+    },
+    {
+      "path": "scripts/measure/aio-bench-cases.ts",
+      "sha256": "f150ac978b04ef5c831b79a3f4a5dd5f09344eb7312e278111ac947b3e746fd3"
+    },
+    {
+      "path": "scripts/measure/fleet-player-save.ts",
+      "sha256": "ee5744f3202561202e21ba4b095c641d584ce7548c9e08af1f11e275507983e5"
+    }
+  ]
+}
