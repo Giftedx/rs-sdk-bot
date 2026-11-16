@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794869742168,
+ "at": 1794870363724,
  "jobs": [
   {
    "account": "Balls",
@@ -104,32 +104,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "accounts": [
-    "Woodpecker",
-    "OreElse"
-   ],
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "2:Gold ore",
-    "--bank-x=3269",
-    "--bank-z=3167",
-    "--approach-ms=900000",
-    "--request-ms=60000",
-    "--timeout-ms=240000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "wood-oreelse-bow-two-rings-1794869332260",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-497e37e2-d048-4271-9bc2-7fb46e0b1269"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-handoff-ore-wood-bow-two-rings-1794869332260 [task-497e37e2-d048-4271-9bc2-7fb46e0b1269]",
-   "role": "helper"
   }
  ],
  "army": [
