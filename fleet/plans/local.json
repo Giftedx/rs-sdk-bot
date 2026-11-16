@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794852669238,
+ "at": 1794853286438,
  "jobs": [
   {
    "account": "Balls",
@@ -106,31 +106,32 @@
    "role": "supply"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/shop-buyer.ts",
+   "account": "NabTheKnob",
+   "script": "scripts/ranged-train.ts",
    "args": [
-    "dommik",
-    "1500"
+    "75",
+    "20000"
    ],
    "env": {
-    "ITEMS": "ring mould|chisel",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "MAX_ITEMS": "2",
-    "MAX_SPEND": "20",
-    "FLOAT": "100",
-    "COIN_RESERVE": "0",
-    "NO_BUY_TICKS": "25",
-    "BANK_PACK": "1",
+    "CAP": "20000",
+    "MIN_ARROWS": "30",
+    "BUY_ARROWS": "0",
+    "BUY_ARROW_ID": "882",
+    "MAX_SPEND": "500",
+    "COIN_RESERVE": "382483",
+    "AMMO": "100",
+    "FOOD": "3",
+    "FOOD_ID": "329",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-59804261-0dda-49cf-9d58-6889540c2596"
+    "COORDINATOR_RUN_ID": "task-bae63647-18fb-4650-b449-4173bb92eafe"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-tools-bow-owned-ring-entry [task-59804261-0dda-49cf-9d58-6889540c2596]",
-   "role": "supply"
+   "goal": "run-ranged-nab75-confirmed-entry [task-bae63647-18fb-4650-b449-4173bb92eafe]",
+   "role": "helper"
   }
  ],
  "army": [
