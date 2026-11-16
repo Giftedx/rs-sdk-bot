@@ -38,6 +38,49 @@ describe('cloud launch', () => {
         expect(plan({ history: many })).toEqual(['claude-cloud']);
     });
 
+    test('proved native busy refusals preserve attempts without spending the admission budget', () => {
+        const busy:Launch={side:'cloud',kind:'codex',via:'codex',at:NOW-COOLDOWN_MS-1,ok:false,
+            detail:'exit 1 CLOUD_NATIVE fail Target Cloud thread is busy; no fleet prompt was sent.'};
+        const history=[...Array.from({length:10},(_,i)=>({...busy,at:busy.at-i*60_000})),
+            ...Array.from({length:2},(_,i)=>({...busy,at:NOW-6*60*60_000-i*60_000,ok:true,detail:'admitted'}))];
+        const saved=JSON.stringify(history);
+        expect(plan({history})).toContain('cloud');
+        const decision=launchDecisions({config,seen:new Map(),owned:new Map([['cloud',14]]),stranded:0,history,now:NOW}).find(d=>d.config.side==='cloud')!;
+        expect(decision).toMatchObject({reason:'due',attempts24h:12,budgeted24h:2});
+        expect(JSON.stringify(history)).toBe(saved);
+
+        // The refusal still backs off and never overrides a current controller or provider cap.
+        expect(plan({history:[...history,{...busy,at:NOW-1}]})).not.toContain('cloud');
+        expect(launchDecisions({config,seen:new Map(),owned:new Map([['cloud',14]]),stranded:0,history:[{...busy,at:NOW-1}],now:NOW}).find(d=>d.config.side==='cloud')!.reason).toBe('cooldown');
+        expect(plan({history,seen:new Map([['cloud',NOW]])})).not.toContain('cloud');
+        expect(plan({history,config:{...config,maxCodex:0}})).not.toContain('cloud');
+    });
+
+    test('admitted, ambiguous and differently classified failures still spend all twelve slots', () => {
+        const exact='exit 1 CLOUD_NATIVE fail Target Cloud thread is busy; no fleet prompt was sent.';
+        const base:Launch={side:'cloud',kind:'codex',via:'codex',at:NOW-COOLDOWN_MS-1,ok:false,detail:exact};
+        const counted:Launch[]=[{...base,ok:true},{...base,kind:'claude'},{...base,via:'cli'},
+            {...base,detail:'busy'},{...base,detail:exact+' additional output'},
+            {...base,detail:'exit 1 CLOUD_NATIVE fail Cloud admission was not confirmed. Submission remains blocked to avoid duplicates.'},
+            {...base,detail:'exit null timed out'},{...base,detail:'exit 1 bootstrap failed'},{...base,detail:''}];
+        for(const event of counted){
+            const history=Array.from({length:MAX_PER_DAY},(_,i)=>({...event,at:event.at-i*60_000}));
+            const decision=launchDecisions({config,seen:new Map(),owned:new Map([['cloud',14]]),stranded:0,history,now:NOW}).find(d=>d.config.side==='cloud')!;
+            expect(decision).toMatchObject({reason:'daily-cap',attempts24h:12,budgeted24h:12});
+            expect(plan({history})).not.toContain('cloud');
+        }
+    });
+
+    test('the budget clearing time ignores busy refusals and retains excess counted attempts', () => {
+        const oldest=NOW-24*60*60_000;
+        const counted=Array.from({length:13},(_,i):Launch=>({side:'cloud',kind:'codex',via:'codex',at:oldest+(i+1)*60_000,ok:false,detail:'unknown outcome'}));
+        const busy:Launch={...counted[0]!,at:oldest+1,detail:'exit 1 CLOUD_NATIVE fail Target Cloud thread is busy; no fleet prompt was sent.'};
+        const history=[busy,...counted];
+        const decision=launchDecisions({config,seen:new Map(),owned:new Map([['cloud',14]]),stranded:0,history,now:NOW}).find(d=>d.config.side==='cloud')!;
+        expect(decision).toMatchObject({reason:'daily-cap',attempts24h:14,budgeted24h:13,retryMs:120_000});
+        expect(launchDecisionLine(decision)).toBe('CLOUD_LAUNCH hold cloud: 24h admission budget 13/12 (14 attempts); retry in 120s');
+    });
+
     test('every configured side explains its launch hold without a session link or credential', () => {
         const history: Launch[] = [{ side: 'cloud', kind: 'codex', via: 'codex', at: NOW - 60_000, ok: true, detail: 'private-session-link secret' }];
         const decisions=launchDecisions({config,seen:new Map([['claude-cloud',NOW-30_000]]),owned:new Map([['cloud',15]]),stranded:2,history,now:NOW});
@@ -57,7 +100,7 @@ describe('cloud launch', () => {
         const history=Array.from({length:MAX_PER_DAY},(_,i)=>({...failed,at:NOW-COOLDOWN_MS-i*60_000}));
         const capped=launchDecisions({...input,history}).find(d=>d.config.side==='cloud')!;
         expect(capped.reason).toBe('daily-cap');
-        expect(launchDecisionLine(capped)).toContain('24h attempt budget 12/12; retry in ');
+        expect(launchDecisionLine(capped)).toContain('24h admission budget 12/12 (12 attempts); retry in ');
         expect(launchDecisions(input)[0]!.reason).toBe('no-demand');
         expect(launchDecisionLine(launchDecisions(input)[0]!)).toContain('no owned or stranded accounts');
         expect(launchDecisions({...input,config:{...config,enabled:false}}).every(d=>d.reason==='disabled')).toBe(true);
