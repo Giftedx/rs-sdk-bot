@@ -1,6 +1,7 @@
 import { beforeAll, test, expect } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync,mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,lstatSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot, BANK_MEETS } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadPathfinding } from '../packages/core/src/pathcache';
@@ -184,4 +185,52 @@ test('owned coin endpoints reach the stack, new profiles, registration and every
   expect(child.windowsHide).toBe(true);
  }
  expect(()=>selectCoinProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
+});
+
+test('coin proof isolates real ownership files and profiles while keeping the worker guards',async()=>{
+ const {prepareCoinProofRoot,removeCoinProofRoot,coinProofSource,coinChildConfiguration,coinProofEndpoints}=await import('../packages/practice/src/coin-courier-proof');
+ const {checkTransferAccounts}=await import('./transfer-admission');
+ const base=mkdtempSync(join(tmpdir(),'coin-proof-root-')),source=join(base,'source');let scratch='';
+ const put=(path:string,text:string)=>{const target=join(source,path);mkdirSync(join(target,'..'),{recursive:true});writeFileSync(target,text);};
+ try{
+  for(const path of ['scripts/coin-courier.ts','scripts/coin-courier.test.ts','packages/practice/src/coin-courier-proof.ts'])put(path,'fixture '+path);
+  put('swarm.json',JSON.stringify({maxBots:2,jobs:[{account:'Donor',enabled:true}]}));
+  put('.practice/coordinator/state.json',JSON.stringify({version:1,tasks:[{status:'running',runId:'other',spec:{account:'Donor'}}]}));
+  put('vendor/rs-sdk/bots/LiveActor/marker','private live profile');put('vendor/rs-sdk/bots/create-bot.ts','creator');
+  put('vendor/rs-sdk/bots/_template/marker','template');put('vendor/rs-sdk/bots/_template/bot.env','PASSWORD={{PASSWORD}}\n');put('vendor/rs-sdk/sdk/marker','sdk');
+  put('fleet/owners.json',JSON.stringify({accounts:{Donor:{side:'cloud'}}}));
+  scratch=prepareCoinProofRoot(source,base);
+  expect(coinProofSource(scratch)).toBe(coinProofSource(source));
+  const copied=join(scratch,'scripts/coin-courier.ts'),workerText=readFileSync(copied,'utf8');writeFileSync(copied,workerText+' changed');
+  expect(coinProofSource(scratch)).not.toBe(coinProofSource(source));writeFileSync(copied,workerText);
+  expect(lstatSync(join(scratch,'.practice')).isSymbolicLink()).toBe(false);
+  expect(lstatSync(join(scratch,'vendor/rs-sdk/bots')).isSymbolicLink()).toBe(false);
+  expect(existsSync(join(scratch,'vendor/rs-sdk/bots/LiveActor'))).toBe(false);
+  expect(JSON.parse(readFileSync(join(scratch,'swarm.json'),'utf8')).jobs).toEqual([]);
+  expect(JSON.parse(readFileSync(join(scratch,'.practice/coordinator/state.json'),'utf8'))).toEqual({version:1,tasks:[]});
+  const io={owned:()=>new Set(['donor']),logoutState:()=> 'confirmed'};
+  expect(()=>checkTransferAccounts(scratch,['Donor'],'127.0.0.1:21000',[],'',io)).not.toThrow();
+  expect(()=>checkTransferAccounts(source,['Donor'],'rs-sdk-demo.fly.dev',[],'',io)).toThrow('account lease conflict');
+  rmSync(join(scratch,'.practice/coordinator/state.json'));
+  for(const server of ['127.0.0.1:21000','rs-sdk-demo.fly.dev'])expect(()=>checkTransferAccounts(scratch,['Donor'],server,[],'',io)).toThrow('ownership unavailable');
+  const p=coinProofEndpoints({engine:21000,gateway:21001,management:21002,tcp:21003},'coin-fixture');
+  const child=coinChildConfiguration(['scripts/coin-courier.ts','Donor','Receiver','45000'],{},p,{FLEET_VAULT_KEY:'inherited-fixture',FLEET_DIR:source,COORDINATOR_RUN_ID:'live-run'},scratch);
+  expect(child.cwd).toBe(scratch);expect(child.env.FLEET_DIR).toBe(join(scratch,'fleet'));
+  expect(child.env.FLEET_VAULT_KEY).toBe('');expect(child.env.COORDINATOR_RUN_ID).toBe('');
+  expect(removeCoinProofRoot(scratch)).toBe(true);scratch='';
+  expect(readFileSync(join(source,'vendor/rs-sdk/bots/LiveActor/marker'),'utf8')).toBe('private live profile');
+  expect(JSON.parse(readFileSync(join(source,'.practice/coordinator/state.json'),'utf8')).tasks).toHaveLength(1);
+  put('vendor/rs-sdk/bots/_template/bot.env','PASSWORD=fixture-not-a-placeholder\n');
+  expect(()=>prepareCoinProofRoot(source,base)).toThrow('placeholder credentials');
+ }finally{if(scratch)removeCoinProofRoot(scratch);rmSync(base,{recursive:true,force:true});}
+});
+
+test('reserve proof reports admission failure before waiting for a fresh save',async()=>{
+ const {assertCoinReserveRefusal}=await import('../packages/practice/src/coin-courier-proof');
+ const denied='LOGOUT \nRESULT fail Error: coordinator account ownership unavailable\nCOIN_RESULT {"ok":false,"detail":"Error: coordinator account ownership unavailable"}';
+ expect(()=>assertCoinReserveRefusal(1,denied)).toThrow('coordinator account ownership unavailable');
+ const expected='LOGOUT logged-out logged-out\nCOIN_RESULT {"ok":false,"detail":"Error: coin donor bank reserve short"}';
+ expect(()=>assertCoinReserveRefusal(1,expected)).not.toThrow();
+ expect(()=>assertCoinReserveRefusal(0,expected)).toThrow();
+ expect(()=>assertCoinReserveRefusal(1,expected.replace('logged-out logged-out',''))).toThrow();
 });

@@ -1,8 +1,7 @@
-import { existsSync, readFileSync, writeFileSync, copyFileSync, openSync, closeSync, unlinkSync,statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, copyFileSync, openSync, closeSync, unlinkSync,statSync,mkdirSync,lstatSync,readdirSync,symlinkSync,cpSync,rmSync } from 'node:fs';
+import { join, resolve,basename } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { freemem } from 'node:os';
-import { createBot } from './bots';
+import { freemem,tmpdir } from 'node:os';
 import { applyPreset } from './presets';
 import { runBotName } from './prove';
 import { startStack, PROOF_TICK_MS, type StackOptions } from './stack';
@@ -12,10 +11,61 @@ import { killTree } from './proc';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { readPracticeSave, waitPracticeSave } from '../../../scripts/measure/fleet-player-save';
 import { exactCoinDelta } from '../../../scripts/coin-courier';
+import {prepareReplayRoot,removeReplayRoot} from '../../router/src/build-workspace';
 
 const files = ['scripts/coin-courier.ts', 'scripts/coin-courier.test.ts', 'packages/practice/src/coin-courier-proof.ts'];
 const root = resolve(import.meta.dir, '../../..');
-const source = () => createHash('sha256').update(files.map(p => p + '\0' + readFileSync(join(root, p), 'utf8')).join('\0')).digest('hex');
+export const coinProofSource = (base=root) => createHash('sha256').update(files.map(p => p + '\0' + readFileSync(join(base, p), 'utf8')).join('\0')).digest('hex');
+const source=coinProofSource;
+
+// Source copies give import.meta.dir a private authority root. Only SDK code/content is shared;
+// generated profiles, ownership, leases, lifecycle records and vault paths belong to this fixture.
+export function prepareCoinProofRoot(sourceRoot:string,parent:string):string{
+    const scratch=prepareReplayRoot(sourceRoot,parent);
+    writeFileSync(join(scratch,'.coin-proof-root.json'),JSON.stringify({root:resolve(scratch)}));
+    try{
+        const vendor=join(scratch,'vendor');
+        if(!lstatSync(vendor).isSymbolicLink())throw Error('coin proof expected replay vendor link');
+        unlinkSync(vendor);mkdirSync(join(vendor,'rs-sdk','bots'),{recursive:true});
+        const sdk=join(sourceRoot,'vendor','rs-sdk'),privateSdk=join(vendor,'rs-sdk');
+        for(const dir of ['sdk','server','node_modules'])if(existsSync(join(sdk,dir)))
+            symlinkSync(join(sdk,dir),join(privateSdk,dir),process.platform==='win32'?'junction':'dir');
+        for(const file of ['package.json','tsconfig.json','bunfig.toml'])if(existsSync(join(sdk,file)))copyFileSync(join(sdk,file),join(privateSdk,file));
+        copyFileSync(join(sdk,'bots/create-bot.ts'),join(privateSdk,'bots/create-bot.ts'));
+        const template=join(sdk,'bots/_template'),templateEnv=join(template,'bot.env');
+        if(existsSync(templateEnv)&&!/^PASSWORD=\{\{PASSWORD\}\}\r?$/m.test(readFileSync(templateEnv,'utf8')))throw Error('coin proof template must contain only placeholder credentials');
+        cpSync(template,join(privateSdk,'bots/_template'),{recursive:true});
+        const plan=JSON.parse(readFileSync(join(scratch,'swarm.json'),'utf8'));
+        writeFileSync(join(scratch,'swarm.json'),JSON.stringify({...plan,jobs:[]}));
+        mkdirSync(join(scratch,'.practice/coordinator'),{recursive:true});
+        writeFileSync(join(scratch,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
+        mkdirSync(join(scratch,'fleet'),{recursive:true});writeFileSync(join(scratch,'fleet/owners.json'),JSON.stringify({accounts:{}}));
+        if(coinProofSource(scratch)!==coinProofSource(sourceRoot))throw Error('coin proof source copy differs');
+        return scratch;
+    }catch(error){if(!removeCoinProofRoot(scratch))throw Error('coin proof setup failed; scratch cleanup incomplete: '+scratch,{cause:error});throw error;}
+}
+
+export function removeCoinProofRoot(scratch:string):boolean{
+    const base=resolve(scratch),marker=join(base,'.coin-proof-root.json');
+    if(!basename(base).startsWith('replay-root-')||!existsSync(marker)||JSON.parse(readFileSync(marker,'utf8')).root!==base)return false;
+    const vendor=join(base,'vendor');
+    if(existsSync(vendor)){
+        if(lstatSync(vendor).isSymbolicLink())unlinkSync(vendor);
+        else{
+            const sdk=join(vendor,'rs-sdk');
+            if(existsSync(sdk))for(const entry of readdirSync(sdk)){
+                const path=join(sdk,entry);if(lstatSync(path).isSymbolicLink())unlinkSync(path);
+            }
+            rmSync(vendor,{recursive:true,force:true});
+        }
+    }
+    return removeReplayRoot(base);
+}
+
+export function assertCoinReserveRefusal(code:number,output:string):void{
+    if(code!==0&&output.includes('coin donor bank reserve short')&&output.includes('COIN_RESULT {"ok":false')&&output.includes('LOGOUT logged-out logged-out'))return;
+    throw Error('reserve refusal did not reach the expected bank check (exit '+code+'): '+output.trim());
+}
 type Save = ReturnType<typeof readPracticeSave>;
 const count = (s: Save, container: number) => (s.inventories[container] ?? []).filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
 const itemTotals = (items: { id: number; count: number }[]) => {
@@ -63,9 +113,10 @@ export async function startCoinProofStack(p:ProofEndpoints,start:(opts:StackOpti
     try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:PROOF_TICK_MS,xpRate:25,readyTimeoutMs:60000});}
     finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 }
-export function coinChildConfiguration(args:string[],env:Record<string,string>,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
-    return{cmd:['bun',...args],cwd:resolve(import.meta.dir,'../../..'),windowsHide:true,
-        env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0'}};
+export function coinChildConfiguration(args:string[],env:Record<string,string>,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env,workerRoot=root){
+    return{cmd:['bun',...args],cwd:workerRoot,windowsHide:true,
+        env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',
+            FLEET_SIDE:'local',FLEET_DIR:join(workerRoot,'fleet'),FLEET_VAULT_KEY:'',FLEET_SEED:'',COORDINATOR_RUN_ID:'',STANDING:'0',SWARM_LEASE_HOLDER:'',WORKER_RELEASE:'',BOT_GOAL:'practice coin courier'}};
 }
 // The shared registration CLI admits only default ports. Keep its session owner
 // and tick wait, with the exact generated profile bound to this proof's endpoints.
@@ -74,7 +125,7 @@ export function coinRegistrationArgs(name:string,p:ProofEndpoints){
     return['--eval',`import {readFileSync} from 'node:fs';
 import {openBot,finish} from './packages/core/src/bot';
 import {waitTicks} from './packages/core/src/ticks';
-const lines=readFileSync(${JSON.stringify(join(rsSdkRoot(),'bots',name,'bot.env'))},'utf8').split(/\\r?\\n/);
+const lines=readFileSync(${JSON.stringify('vendor/rs-sdk/bots/'+name+'/bot.env')},'utf8').split(/\\r?\\n/);
 if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
 const session=await openBot(${JSON.stringify(name)});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
 }
@@ -91,7 +142,7 @@ export function verify(directory: string) {
     const receiptLine=log.split(/\r?\n/).findLast(line=>line.startsWith('COIN_RECEIPT '));
     const receipt=receiptLine?JSON.parse(receiptLine.slice('COIN_RECEIPT '.length)):null;
     const checks = {
-        source: meta.source === source(),
+        source: meta.source === source()&&meta.workerSource===meta.source,
         fullDonor: meta.amount === 45000 && count(before[0]!, 93) === 0 && before[0]!.inventories[93]?.length === 28
             && before[0]!.inventories[93]!.filter(i => i.id === 1436 && i.count === 1).length === 27
             && before[0]!.inventories[93]!.filter(i => i.id === 1446 && i.count === 1).length === 1,
@@ -123,19 +174,26 @@ async function run(directory: string) {
     const lock = join(practiceDir(), 'delivery-practice.lock'), fd = openSync(lock, 'wx');
     writeFileSync(fd, JSON.stringify({ pid: process.pid, task: 'coin-courier', directory }));
     let stack: Awaited<ReturnType<typeof startStack>> | undefined;
+    let workerRoot='';const revision=source();
     const command = async (args: string[], label: string, env: Record<string, string> = {}) => {
-        const child = Bun.spawn({ ...coinChildConfiguration(args, env, endpoints), windowsHide: true, stdout: Bun.file(join(directory, label + '.log')), stderr: Bun.file(join(directory, label + '.err')) });
+        if(!workerRoot||coinProofSource(workerRoot)!==revision)throw Error('coin proof worker source changed');
+        const child = Bun.spawn({ ...coinChildConfiguration(args, env, endpoints,process.env,workerRoot), windowsHide: true, stdout: Bun.file(join(directory, label + '.log')), stderr: Bun.file(join(directory, label + '.err')) });
         let timedOut = false;
         const timer = setTimeout(() => { timedOut = true; void killTree(child.pid); }, 240000);
         try { const code = await child.exited; return timedOut ? -1 : code; } finally { clearTimeout(timer); }
     };
     try {
-        const revision = source(), amount = 45000,reserve=5000, names = [runBotName('cgive', 1), runBotName('ctake', 1)], saves: string[] = [];
+        workerRoot=prepareCoinProofRoot(root,tmpdir());
+        const amount = 45000,reserve=5000, names = [runBotName('cgive', 1), runBotName('ctake', 1)], saves: string[] = [];
         stack = await startCoinProofStack(endpoints);
         for (const [i, name] of names.entries()) {
             if (existsSync(join(rsSdkRoot(), 'bots', name))) throw Error('practice name already exists');
-            const account = await createBot(name);
-            writeFileSync(account.envPath, coinProofAccountEnv(readFileSync(account.envPath, 'utf8'), endpoints));
+            const create=['--eval',`import {readFileSync,writeFileSync} from 'node:fs';
+import {createBot} from './packages/practice/src/bots';
+import {coinProofAccountEnv} from './packages/practice/src/coin-courier-proof';
+const account=await createBot(${JSON.stringify(name)});
+writeFileSync(account.envPath,coinProofAccountEnv(readFileSync(account.envPath,'utf8'),${JSON.stringify(endpoints)}));`];
+            if(await command(create,'profile-'+i)!==0)throw Error('private practice profile creation failed');
             const inventory = i ? [{ id: 995, count: 7 }, { id: 1265, count: 1 }]
                 : [{ id: 1446, count: 1 }, ...Array.from({ length: 27 }, () => ({ id: 1436, count: 1 }))];
             const path = await applyPreset(name, { position: { x: i ? 3184 : 3183, z: 3436, level: 0 }, skills: { Hitpoints: 15 }, inventory, bank: [{ id: 995, count: i ? 500 : 50000 }, { id: 2347, count: 1 }] });
@@ -151,11 +209,13 @@ async function run(directory: string) {
         // banking its talisman for a slot; retain raw saved inventories and every skill for independent verification.
         const priorSaveTimes=saves.map(path=>statSync(path).mtimeMs),reserveStartedAt=Date.now(),reserveOrder='proof-reserve-'+crypto.randomUUID();
         const reserveRefusalCode=await command(['scripts/coin-courier.ts',...names,String(amount),`--reserve=${reserve+1}`],'reserve-refusal',{COIN_ORDER:reserveOrder});
-        const reserveRefusal={code:reserveRefusalCode,amount,reserve:reserve+1,order:reserveOrder,startedAt:reserveStartedAt,savePublications:[] as {before:number;after:number}[],journalCreated:existsSync(join(root,'.practice/coin-courier',reserveOrder))};
+        const reserveOutput=readFileSync(join(directory,'reserve-refusal.log'),'utf8')+readFileSync(join(directory,'reserve-refusal.err'),'utf8');
+        assertCoinReserveRefusal(reserveRefusalCode,reserveOutput);
+        const reserveRefusal={code:reserveRefusalCode,amount,reserve:reserve+1,order:reserveOrder,startedAt:reserveStartedAt,savePublications:[] as {before:number;after:number}[],journalCreated:existsSync(join(workerRoot,'.practice/coin-courier',reserveOrder))};
         for(const [i,path]of saves.entries()){
             const initial=readPracticeSave(join(directory,`before-${i}.sav`));
             const saved=await waitPracticeSave(path,s=>statSync(path).mtimeMs>priorSaveTimes[i]!&&statSync(path).mtimeMs>=reserveStartedAt&&unchangedRefusal(initial,s));
-            if(!saved.matched)throw Error('reserve refusal mutated saved assets or skills');
+            if(!saved.matched)throw Error(unchangedRefusal(initial,saved.save)?'reserve refusal fresh save publication unobserved':'reserve refusal mutated saved assets or skills');
             reserveRefusal.savePublications.push({before:priorSaveTimes[i]!,after:statSync(path).mtimeMs});
             copyFileSync(path,join(directory,`reserve-refused-${i}.sav`));
         }
@@ -166,10 +226,22 @@ async function run(directory: string) {
         }
         const refusalCode = await command(['scripts/coin-courier.ts', ...names, '50001'], 'refusal', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
         for (const [i, path] of saves.entries()) copyFileSync(path, join(directory, `refused-${i}.sav`));
-        writeFileSync(join(directory, 'native.json'), JSON.stringify({ source: revision, amount,reserve,reserveRefusal, names, code, refusalCode, endpoints: { ports: endpoints.ports, instance: endpoints.instance }, server: endpoints.server }));
+        writeFileSync(join(directory, 'native.json'), JSON.stringify({ source: revision,workerSource:coinProofSource(workerRoot), amount,reserve,reserveRefusal, names, code, refusalCode, endpoints: { ports: endpoints.ports, instance: endpoints.instance }, server: endpoints.server }));
         return verify(directory);
     } finally {
-        try { await stack?.stop(); } finally { closeSync(fd); unlinkSync(lock); }
+        try { await stack?.stop(); } finally {
+            try{
+                if(workerRoot){
+                    // Retain authority and raw receipts, never the private profiles or vault.
+                    try{
+                        for(const path of ['coordinator','coin-courier','session-lifecycle','status','owned-accounts.json']){
+                            const from=join(workerRoot,'.practice',path);if(!existsSync(from))continue;
+                            mkdirSync(join(directory,'control'),{recursive:true});cpSync(from,join(directory,'control',path),{recursive:true});
+                        }
+                    }finally{if(!removeCoinProofRoot(workerRoot))throw Error('coin proof scratch cleanup incomplete: '+workerRoot);}
+                }
+            }finally{closeSync(fd);unlinkSync(lock);}
+        }
     }
 }
 if (import.meta.main) {
