@@ -731,7 +731,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // account in game and logs out. Its producer attempt goes to the checkout's own lifecycle tree (the CLI has no root
   // option), and a fresh save after its logout must hold the same items, skills and tile.
   const sessionCheckCli=async(f:Fixture,dir:string,before:Save)=>{
-   const since=Date.now(),env:Record<string,string|undefined>={...process.env,WORKER_RELEASE:source};delete env.COORDINATOR_RUN_ID;
+   const since=Date.now(),env:Record<string,string|undefined>={...process.env,FLEET_SIDE:'local',WORKER_RELEASE:source};delete env.COORDINATOR_RUN_ID;
    const cli=Bun.spawn([process.execPath,'scripts/session-check.ts',f.name],{cwd:root,env,stdout:Bun.file(join(dir,'session-check.out.log')),stderr:Bun.file(join(dir,'session-check.err.log')),windowsHide:true});
    children.push(cli);const t=setTimeout(()=>void killTree(cli.pid),120000);const code=await cli.exited;clearTimeout(t);
    const persisted=await freshSave(f,before);copyFileSync(f.save,join(dir,'session-check-after.sav'));
