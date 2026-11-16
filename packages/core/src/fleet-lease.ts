@@ -25,8 +25,15 @@ type RemoteLease = { side: string; host: string; holder: string; epoch: string; 
 // the ref) is never one of these, so a claim keeps exactly one winner.
 export const TRANSIENT_GIT = /Could not resolve host|Failed to connect|Connection (?:reset|refused|timed out)|Operation timed out|early EOF|unexpected disconnect|RPC failed|The requested URL returned error: 5\d\d|gnutls|SSL|TLS|schannel/i;
 export const NETWORK_RETRIES = 2;
-// The tail of Git's error text for the message, with any credential in a URL removed.
-export const gitErrorDetail = (text: string) => text.replace(/(https?:\/\/)[^\s/@]+@/gi, '$1').replace(/\s+/g, ' ').trim().slice(-160);
+const REF_REJECTION = /\b(?:non-fast-forward|fetch first|stale info|cannot lock ref|cannot update ref|reference already exists)\b/i;
+const sanitizeGitError = (text: string) => text.replace(/(https?:\/\/)[^\s/@]+@/gi, '$1');
+// Keep the first cause and bounded tail after removing URL credentials. Classification uses the complete text.
+export function gitErrorDetail(text: string): string {
+    const clean = sanitizeGitError(text), flat = clean.replace(/\s+/g, ' ').trim();
+    if (flat.length <= 320) return flat;
+    const first = clean.split(/\r?\n/).find(line => /\b(?:fatal|error|rejected|failed|unable|denied)\b/i.test(line)) ?? flat;
+    return first.replace(/\s+/g, ' ').trim().slice(0, 155) + ' ... ' + flat.slice(-160);
+}
 const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 // Each Git command of an authority within one time budget. A failure names the authority and ends with Git's own error
@@ -49,10 +56,10 @@ export function fleetGitWindow(root: string, authority = 'fleet controller lease
                 // Windows Bun can report an empty timeout before Git starts after an idle period.
                 if (attempt === 0 && process.platform === 'win32' && failure.code === 'ETIMEDOUT'
                     && !failure.stdout?.length && !failure.stderr?.length && performance.now() < deadline) continue;
-                const detail = gitErrorDetail(String(failure.stderr ?? '') || failure.message || '');
+                const full = sanitizeGitError(String(failure.stderr ?? '') || failure.message || ''), detail = gitErrorDetail(full);
                 // A network fault: try again after a short pause while the budget lasts.
                 const wait = 300 * (network + 1);
-                if (network < NETWORK_RETRIES && TRANSIENT_GIT.test(detail) && performance.now() + wait < deadline) { network++; pause(wait); continue; }
+                if (network < NETWORK_RETRIES && !REF_REJECTION.test(full) && TRANSIENT_GIT.test(full) && performance.now() + wait < deadline) { network++; pause(wait); continue; }
                 throw Error(authority + ' unavailable or changed' + (detail ? ': ' + detail : ''));
             }
         }
