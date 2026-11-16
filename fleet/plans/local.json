@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794806298973,
+ "at": 1794806353718,
  "jobs": [
   {
    "account": "Balls",
@@ -147,33 +147,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "magic_guild",
-    "2500"
-   ],
-   "env": {
-    "ITEMS": "law rune",
-    "STOCK_TARGET": "8",
-    "MAX_ITEMS": "8",
-    "STOP_AT_TARGET": "1",
-    "MAX_SPEND": "4000",
-    "COIN_RESERVE": "80000",
-    "FLOAT": "84000",
-    "NO_BUY_TICKS": "350",
-    "BANK_PACK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-1a4fa664-4b32-43a5-bbd6-4c947d43afd8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-shop-mmsmk-scorpion-law8-filter-fixed [task-1a4fa664-4b32-43a5-bbd6-4c947d43afd8]",
    "role": "supply"
   }
  ],
