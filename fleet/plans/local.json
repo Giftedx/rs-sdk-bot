@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794805772790,
+ "at": 1794806046222,
  "jobs": [
   {
    "account": "Balls",
@@ -148,6 +148,29 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "2",
+    "QUANTITY": "227",
+    "EXPECTED_OWNED": "273",
+    "LIMIT_PRICE": "13600",
+    "CASH_RESERVE": "3000000",
+    "ORDER_KEY": "pocketrocket-overall-cannon227-quoted",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-28b268c0-0a84-4512-a416-829a59729e24"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-pocketrocket-overall-cannon227-quoted [task-28b268c0-0a84-4512-a416-829a59729e24]",
    "role": "supply"
   }
  ],
