@@ -1,4 +1,4 @@
-import{existsSync}from'node:fs';
+import{readFileSync,existsSync}from'node:fs';
 import{openBot,settle}from'../packages/core/src/bot';import type{Session}from'../packages/core/src/inprocess';import{waitUntil,waitTicks}from'../packages/core/src/ticks';
 export type PotionCarePolicy={id:number;below?:number;prayerPercent?:number;monitorStat?:string;prevent?:boolean;poisonMessage?:boolean};
 export type PotionCareOrder={policies:PotionCarePolicy[];maximumDoses:number;maximumVials:number;cap:number;monitor?:boolean;enabled?:boolean;vialsAfterDoseOnly?:boolean;inventoryFirst?:boolean};

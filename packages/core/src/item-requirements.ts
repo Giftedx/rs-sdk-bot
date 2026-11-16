@@ -122,8 +122,9 @@ export function resolveItemRequirements(requirements: readonly ItemRequirement[]
         const unit = native.unit;
         if (!unit || unit.kind !== r.kind || !unit.family || !whole(unit.units, 1)) { short(r, 'unknown'); continue; }
         const key = r.kind + ':' + unit.family;
-        const group = families.get(key) ?? { requests: [], kind: r.kind, family: unit.family };
-        group.requests.push(r); families.set(key, group);
+        let group = families.get(key);
+        if (!group) { group = { requests: [], kind: r.kind, family: unit.family }; families.set(key, group); }
+        group.requests.push(r);
     }
     for (const group of families.values()) {
         const candidates = [...remaining].flatMap(([id, count]) => {

@@ -640,19 +640,9 @@ export function plan(inp: Inputs): Assignment[] {
             else if (usableNormalBones && fundable(a) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs), fare });
             else if (coinShort(a, t.needs) === 0) {
-                // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
-                // A line no market sells and a shop job brings (shopLine) is left to that job.
-                const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]), buys = t.kitFirst ? (lacks ?? []).filter(l => !shopLine(l)) : [];
-                const picks = buys.map(l => l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]);
-                // The band's batch for the account when it can pay for it, else what the band needs to start.
-                const batchOf = t.batchFor?.(a) ?? t.batch, price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0);
-                const sized = (batch: boolean): KitLine[] => picks.length && picks.every(p => p !== undefined) ? picks.map((p, n) => { const held = a.items[p!] ?? 0, m = inp.market![p!]!;
-                    return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(buys[n]!.count, batch ? (batchOf?.[p!] ?? 0) - held : 0) }; }) : [];
-                const afford = (ls: readonly KitLine[]) => (a.items.coin ?? 0) >= price(ls) + KIT_CASH_RESERVE + (t.needs?.items?.coins ?? 0);
-                const lines = afford(sized(true)) ? sized(true) : sized(false), cost = price(lines);
-                if (lines.length && afford(lines) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
-                    cands.push({ account: a.name, template:t,value:0,resources:t.resources??[],reason,goal,lacks });
-                else if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
+                // Acquisition chooses the source, purchase batch and price after donor arbitration.
+                const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]);
+                if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
             }
             continue;
         }

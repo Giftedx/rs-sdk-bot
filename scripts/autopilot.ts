@@ -9,8 +9,8 @@
 // An account gets only a job whose place it has a way to from the tile where it stands offline (the planner's reach
 // rule). The ferry fare of that way is a part of the job's coin need, and a coin order for an account in Kandarin
 // meets at the Ardougne north bank.
-// An army account that lacks kit items uses available spare stock on this side before a capped purchase. Remote
-// orders retain their sync lead and follow local purchases (fleet/snapshots and fleet/plans).
+// Missing supplies for useful combat, production and quest jobs use spare owned stock from a free local account
+// before purchases. Cross-side transfers retain their sync lead and do not preempt useful local work.
 // An AIO route proved on practice only (a `pilot` template) is planned only while the plan's `aio` array names its id.
 // Usage: bun scripts/autopilot.ts [swarm.json] [--dry] [--daemon]
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level

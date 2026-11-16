@@ -83,7 +83,7 @@ async function bankPreflight(s:Session){
  try{result=await runBankJob(s,{family:'tanning',recipe:'soft',target:2,batch:2,cap:200,returnTicks:50,members:true,bank:{x:3269,z:3167,level:0},site:{x:3276,z:3192,level:0}});}finally{s.bot.withdrawItem=withdraw;}
  const after=await audit(s);
  assert.equal(result.ok,false);assert.equal(result.completed,0);assert.equal(result.trips,0);assert.equal(result.atBank,true);
- assert.equal(result.preparation?.status,'short');if(result.preparation?.status==='unknown')throw Error('bank stock unknown');
+ assert.equal(result.preparation?.status,'short');
  assert.deepEqual(result.preparation?.shortfalls,{995:2});assert.deepEqual(result.banked,{});
  assert.equal(dispatches,0);assert.deepEqual(after,before);assert.equal(after.assets[1741]??0,0);
  return {case:'bank-preflight-tanning-short',shortfalls:result.preparation?.shortfalls,dispatches,assetsPreserved:true,completed:result.completed};
@@ -100,7 +100,7 @@ async function lootFilters(s:Session){
  let result:Awaited<ReturnType<typeof runLootTrip>>;
  try{result=await runLootTrip(s,{target:2,batch:2,cap:600,returnTicks:120,members:true,bank,site,policy:{mode:'list',ids:[],names:[],nameGlobs:['Log?','Leather*'],ignoredIds:[1129],minimumValue:0,maximumValue:2147483647,radius:8,idleTicks:12}});}finally{s.sdk.sendPickup=pickup;}
  const after=await audit(s);
- assert.equal(result.ok,true);assert.equal(result.completed,2);assert.equal(result.bankReconciled,true);assert.deepEqual(result.acquired,{1511:2});
+ assert.equal(result.ok,true,JSON.stringify(result));assert.equal(result.completed,2);assert.equal(result.bankReconciled,true);assert.deepEqual(result.acquired,{1511:2});
  assert.deepEqual(pickups,[1511,1511]);assert.equal((after.bank[1511]??0)-(before.bank[1511]??0),2);
  assert.equal(after.assets[1129]??0,before.assets[1129]??0);assert.deepEqual(after.pack,before.pack);assert.deepEqual(after.gear,before.gear);
  return {case:'loot-wildcard-ignore',names:['Logs','Leather body'],pickups,banked:result.banked,ignoredPicked:false};

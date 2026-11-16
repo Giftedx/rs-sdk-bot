@@ -1228,7 +1228,7 @@ const EXTRA_CASES: BenchCase[] = [
     pass:s=>ok(s)&&s.includes('"shortfalls":{"995":2}')&&s.includes('"dispatches":0')&&s.includes('"assetsPreserved":true')&&s.includes('LOGOUT logged-out')},
   // m50_53.jm2: Logs at (3243,3395) and (3243,3397), Leather body at (3244,3398).
   {key:'extra:loot-wildcard-ignore',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['loot'],timeoutMs:60_000,
-    presetConfig:{position:{x:3253,z:3421,level:0}},
+    presetConfig:{position:{x:3253,z:3421,level:0},skills:{Defence:99,Hitpoints:99}},
     pass:s=>ok(s)&&s.includes('"pickups":[1511,1511]')&&s.includes('"banked":{"1511":2}')&&s.includes('"ignoredPicked":false')&&s.includes('LOGOUT logged-out')},
   {key:'extra:hunt-restock-partial-glory',script:'scripts/measure/shared-preparation-proof.ts',preset:'fresh_lumbridge',scriptArgs:['partial'],timeoutMs:60_000,
     presetConfig:{position:{x:3092,z:3496,level:0},skills:{Prayer:43,Hitpoints:40},bank:[{id:861,count:1},{id:139,count:2},{id:1706,count:1},{id:385,count:4}]},

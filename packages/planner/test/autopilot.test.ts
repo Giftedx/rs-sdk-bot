@@ -813,7 +813,8 @@ test('available owned kit stock supplies a free recipient before an affordable m
 test('a frail thief receives spare owned food before buying, without a quote or cash', () => {
     const thief = acct('Frail', { Thieving: 99, Hitpoints: 10 });
     const stock = [{ name: 'FoodMule', side, items: { trout: 500 } }];
-    for (const market of [{}, { trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! } }]) {
+    const markets: Market[] = [{}, { trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! } }];
+    for (const market of markets) {
         for (const coin of [0, 1_000_000]) {
             const [next] = plan(inputs([{ ...thief, items: { coin } }], { stock, market }));
             expect(next!.send).toMatchObject({ from: 'FoodMule', to: 'Frail', item: 'trout', count: 200 });
@@ -925,11 +926,12 @@ test('coin-funded non-army preparation reserves the useful output before funding
 
 test('an owned upgrade weapon supplies an army account before the upgrade market buy',()=>{
     const fighter=acct('Fighter',{Thieving:99,Attack:99,Strength:99,Defence:80,Hitpoints:90,Ranged:99,Magic:99,Prayer:99},{'bronze sword':1,shark:40,coin:1_000_000});
-    for(const extra of [
+    const cases: Partial<Inputs>[] = [
         {market:{[WEAPON.item]:{id:1331,name:'Adamant scimitar',limit:12_000}}},
         {market:{}},
         {market:{},retired:new Set([pairKey('Fighter',KIT_BUY+WEAPON.id)])},
-    ]){
+    ];
+    for(const extra of cases){
         const [next]=plan(inputs([fighter],{templates:catalogue().filter(t=>t.id==='army-cow-strength-45'),army:new Set(['fighter']),
             ...extra,stock:[{name:'BladeMule',side,items:{[WEAPON.item]:2}}]}));
         expect(next!.send).toMatchObject({from:'BladeMule',to:'Fighter',item:WEAPON.item,count:1,template:WEAPON.id});

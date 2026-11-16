@@ -21,7 +21,7 @@ const MAX_STACK = 2147483647;
 type Item = { id: number; name?: string; count: number };
 
 // Ground and held quantities do not tell us whether an item stacks.
-export function lootCapacity(s: { inventory: readonly { id: number; count: number }[] }, item: Pick<Item, 'id' | 'count'>, definition?: { stackable: boolean }): boolean {
+export function lootCapacity(s: { inventory: readonly { id: number; count: number }[] }, item: Pick<Item, 'id' | 'count'>, definition?: { stackable: boolean; cost?: number }): boolean {
     if (typeof definition?.stackable !== 'boolean' || s.inventory.length > 28 || !Number.isSafeInteger(item.count) || item.count < 1 || item.count > MAX_STACK) return false;
     if (s.inventory.some(i => !Number.isSafeInteger(i.count) || i.count < 1 || i.count > MAX_STACK)) return false;
     const free = 28 - s.inventory.length;
