@@ -68,7 +68,7 @@ function market(){
  const body={querySelector:(q:string)=>q==='#ge-search'?node(q):results,addEventListener:(kind:string,fn:any)=>{handlers[kind]=fn;}};
  const env:any={S:{bots:[],economy:{supplies:[{id:1,name:'Coal',ask:100,stock:10}]}},window:{atlasOperator:()=>false},E:escape,nf:String,icon:()=>'',age:()=> '1m',body,document:doc,put:(el:any,html:string)=>{if(el.innerHTML!==html){el.innerHTML=html;doc.activeElement=null;}},loadItemSources:()=>{},itemSourcesData:{1:[['gather','Coal rock',[3000,3000,0]]]},geTele:()=>'',sourcePin:null};
  const api=new Function(...Object.keys(env),`${code}${clicks}${keys};return {geResults,refreshGe};`)(...Object.values(env));
- const row:any={inside:true,dataset:{geSrc:'1',geName:'Coal'},matches:(q:string)=>q==='[data-ge-src]',closest:(q:string)=>q==='[data-ge-src]'?row:null,click:()=>handlers.click({target:{closest:(q:string)=>q==='[data-ge-src]'?row:null}})};
+ const row:any={inside:true,dataset:{geSrc:'1',geName:'Coal'},matches:(q:string)=>q.split(',').includes('[data-ge-src]'),closest:(q:string)=>q==='[data-ge-src]'?row:null,click:()=>handlers.click({target:{closest:(q:string)=>q==='[data-ge-src]'?row:null}})};
  return {...api,doc,focused,row,omit:(selector:string)=>missing.add(selector),key:(key:string)=>{let prevented=false;handlers.keydown?.({key,target:row,preventDefault:()=>{prevented=true;}});return prevented;},pin:()=>({inside:true,dataset:{srcPin:'0'},matches:(q:string)=>q==='[data-src-pin]',closest:(q:string)=>q==='[data-ge-sources]'?{dataset:{geSources:'1'}}:null})};
 }
 

@@ -549,9 +549,12 @@ const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'
 const recapCache = new Map<string, { at: number; recap: DeathRecap | null }>();
 const wornOf = (name: string, seen: { x: number; z: number } | undefined) => seen && OBJS.size ? readWorn(gameDialAddress(DEMO.replace(/^http/, 'ws') + '/worldfeed'), name, seen, OBJS) : Promise.resolve(null);
 let lookupChain: Promise<unknown> = Promise.resolve();
+const lookupPending = new Map<string, Promise<Lookup | null>>();
 function lookupPlayer(name: string): Promise<Lookup | null> {
     const key = name.toLowerCase(), hit = lookups.get(key);
     if (hit && Date.now() - hit.at < 1_800_000) return Promise.resolve(hit);
+    const pending = lookupPending.get(key);
+    if (pending) return pending;
     const job = lookupChain.then(async () => {
         const again = lookups.get(key);
         if (again && Date.now() - again.at < 1_800_000) return again;
@@ -565,7 +568,8 @@ function lookupPlayer(name: string): Promise<Lookup | null> {
             if (lookups.size > 400) lookups.delete(lookups.keys().next().value!);
             return entry;
         } catch { return null; } finally { await Bun.sleep(1200); }
-    });
+    }).finally(() => { lookupPending.delete(key); });
+    lookupPending.set(key, job);
     lookupChain = job.catch(() => null);
     return job;
 }

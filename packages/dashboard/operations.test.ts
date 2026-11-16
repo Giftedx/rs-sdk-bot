@@ -41,6 +41,7 @@ function paletteHarness(){
  const overlay:any={className:'',remove:()=>{removed=true;},querySelector:(s:string)=>s==='input'?input:s==='.op-palette-results'?results:close,querySelectorAll:()=>[input,close,...buttons]};
  const opened:string[]=[];doc.activeElement=trigger;
  const env:any={$:()=>null,document:{...doc,createElement:()=>overlay},app:{append:()=>{removed=false;}},isOwner:()=>true,window:{atlasOperator:()=>true},pluginNames:{fleet:'Fleet',xp:'XP Tracker',world:'World'},hiddenHere:()=>false,bots:()=>[],caps:()=>[],tasks:()=>[],api:{openPlugin:(id:string)=>opened.push(id)},body:{querySelector:()=>null},E:escapeText,commandButton:trigger};
+ env.window.atlasCommandPlugins=()=>Object.entries(env.pluginNames);
  Object.defineProperty(env.document,'activeElement',{get:()=>doc.activeElement});
  const open=new Function(...Object.keys(env),code+';return openPalette;')(...Object.values(env));
  const key=(key:string,shiftKey=false)=>overlay.onkeydown({key,shiftKey,preventDefault:()=>{},stopPropagation:()=>{}});
