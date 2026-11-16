@@ -34,6 +34,9 @@ export { orderLines, validOrder, type Order, type Receipt } from './fleet-trade-
 // logout belong to the caller, outside this scope; cancellation cannot undo a trade.
 export async function runOrderWork<T>(order: Pick<Order, 'end'>, work: () => Promise<T>, now = Date.now): Promise<T> {
     const remaining = order.end - now();
+    // The SDK uses setTimeout; larger or non-finite delays are coerced to 1 ms.
+    if (!Number.isFinite(remaining) || remaining > 2147483647)
+        throw Error('unsupported order window: remaining time must be finite and at most 2147483647 ms');
     if (remaining <= 0) throw Error('order window ended before work');
     return withExecutionDeadline(remaining, work, () => { throw Error('order window ended during work'); });
 }

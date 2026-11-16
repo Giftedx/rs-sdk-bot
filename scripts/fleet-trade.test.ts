@@ -30,14 +30,15 @@ const claimedReceipt = (role: 'from' | 'to' = 'to'): TradeReceipt => ({
 });
 const logout = { state: 'confirmed', account: 'Taker', server: 's', domain: 'live', attemptId, loggedOutAt: 2400, ownerRun: null, receiptSha256: sha256 } as const;
 
-test('an expired order starts no post-login work, including at exactly zero remaining', async () => {
+test('an expired or unsupported order window starts no post-login work', async () => {
     expect(typeof fleetTrade.runOrderWork).toBe('function');
     let actions = 0;
-    for (const end of [2199, 2200]) {
+    for (const end of [2199, 2200, NaN, Infinity, -Infinity, 2200 + 2147483648]) {
         await expect(fleetTrade.runOrderWork(order({ end }), async () => { actions++; }, () => 2200))
-            .rejects.toThrow('order window ended');
+            .rejects.toThrow('order window');
     }
     expect(actions).toBe(0);
+    expect(await fleetTrade.runOrderWork(order({ end: 2200 + 2147483647 }), async () => 'supported', () => 2200)).toBe('supported');
 });
 
 test('order expiry cancels a pending SDK action and blocks a late continuation while cleanup can dispatch', async () => {
