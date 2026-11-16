@@ -1,0 +1,22 @@
+{
+ "id": "1794810691751-billionaire-bigchopper-dragonbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "Bigchopper",
+ "item": "Dragon bones",
+ "count": 30,
+ "start": 1794810691751,
+ "end": 1794813091751,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
