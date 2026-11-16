@@ -252,6 +252,15 @@ export function installAuthObserver(Server:any,write:(line:string)=>void=(line)=
 // While a player's main modal is open it also records, with wall-clock times: each websocket message the world
 // buffers for that player (pinned web/websocket.ts message -> ClientSocket.buffer; length only) and each tick's
 // decode read (available bytes). This separates a missing client write, a transport delay and a world scheduling delay.
+export function installLocObserver(m:{OpLocHandler:any;LocType:any;World:any},write:(line:string)=>void){
+ const handle=m.OpLocHandler.prototype.handle;
+ m.OpLocHandler.prototype.handle=function(this:any,message:any,player:any){
+  let evidence:unknown=null;
+  try{const loc=m.World.getLoc(message.x,message.z,player.level,message.loc),type=loc?m.LocType.get(loc.type):null;evidence={account:player.username,packet:{x:message.x,z:message.z,loc:message.loc,op:message.op},player:{x:player.x,z:player.z,level:player.level,originX:player.originX,originZ:player.originZ,delayed:player.delayed},loc:loc?{type:loc.type,x:loc.x,z:loc.z}:null,options:type?.op??null};}catch{/* observation cannot change dispatch */}
+  let result:unknown;try{result=Reflect.apply(handle,this,[message,player]);return result;}finally{try{write('LOC_HANDLE '+JSON.stringify({at:Date.now(),tick:m.World.currentTick,evidence,result}));}catch{/* observation cannot change dispatch */}}
+ };
+}
+
 export function installButtonObserver(m:{NetworkPlayer:any;IfButtonHandler:any;IdkSaveDesignHandler:any;Component:any;Repository:any;World:any;WSClientSocket?:any},write:(line:string)=>void=(line)=>console.log(line),now:()=>number=Date.now){
  // IDK_SAVEDESIGN, IF_BUTTON, CLOSE_MODAL
  const watch=[27,86,93],live=new Set<string>();let count=0,wireCount=0,decoding:{packets:number[]}|null=null,button:{runs:object[]}|null=null;
@@ -597,6 +606,9 @@ async function run(directory:string){
   // 127.0.0.1, not localhost: the login server binds 0.0.0.0 (IPv4 only, LoginServer.ts:379), and on this PC localhost
   // can resolve to ::1 first; the world's login client then never connects and every login reads "login server offline".
   const env={...process.env,DB_BACKEND:'sqlite',LOGIN_SERVER:'true',LOGIN_HOST:'127.0.0.1',LOGIN_PORT:String(LOGIN_PORT),EASY_STARTUP:'false',NODE_ID:'77',NODE_PORT:'43651',NODE_MEMBERS:'true',NODE_TICKRATE:'150',WEB_PORT:'8890',WEB_MANAGEMENT_PORT:'8896',WEBSITE_REGISTRATION:'false',FRIEND_SERVER:'false',LOGGER_SERVER:'false'};
+  // GameMap.init refuses to load packed locations without this immutable content/maps root.
+  env.BUILD_SRC_DIR=resolve(engine,'../content');
+  if(!existsSync(join(env.BUILD_SRC_DIR,'maps')))throw Error('native recovery map source missing');
   const spawnServer=(args:string[],log:string,extra:Record<string,string>={})=>{const p=Bun.spawn(args,{cwd:workspace,env:{...env,...extra},stdout:Bun.file(join(directory,log+'.out.log')),stderr:Bun.file(join(directory,log+'.err.log')),windowsHide:true});children.push(p);return p;};
   const waitLog=async(p:ReturnType<typeof Bun.spawn>,file:string,pattern:RegExp)=>{const until=Date.now()+60000;while(Date.now()<until){if(p.exitCode!==null)throw Error('native server exited: '+file);if(existsSync(join(directory,file))&&pattern.test(readFileSync(join(directory,file),'utf8')))return;await Bun.sleep(200);}throw Error('native server readiness timeout: '+file);};
   const login=spawnServer([process.execPath,'--preload',observer,join(engine,'src/login.ts')],'login',{WEB_MANAGEMENT_PORT:'8897',LOGIN_TAKEOVER_MIN_MS:String(TAKEOVER_WINDOW_MS)});await waitLog(login,'login.out.log',/Login server listening/);
@@ -606,6 +618,8 @@ async function run(directory:string){
   writeFileSync(buttonTrace,'',{flag:'wx'});
   const engineModule=(p:string)=>JSON.stringify(join(engine,'src',p));
   writeFileSync(worldObserver,`import{appendFileSync,existsSync,writeFileSync}from'node:fs';const trace=${JSON.stringify(buttonTrace)};const timer=setInterval(async()=>{if(!existsSync(${JSON.stringify(attachRequest)}))return;clearInterval(timer);try{const[n,b,d,c,r,w,s]=await Promise.all([${['engine/entity/NetworkPlayer.ts','network/game/client/handler/IfButtonHandler.ts','network/game/client/handler/IdkSaveDesignHandler.ts','cache/config/Component.ts','network/game/client/ClientGameProtRepository.ts','engine/World.ts','server/ws/WSClientSocket.ts'].map(p=>'import('+engineModule(p)+')').join(',')}]);(${installButtonObserver.toString()})({NetworkPlayer:n.NetworkPlayer,IfButtonHandler:b.default,IdkSaveDesignHandler:d.default,Component:c.default,Repository:r.default,World:w.default,WSClientSocket:s.default},line=>appendFileSync(trace,line+'\\n'));writeFileSync(${JSON.stringify(attachAck)},'attached');}catch{writeFileSync(${JSON.stringify(attachAck)},'failed');}},50);timer.unref();`);
+  const locTrace=join(directory,'loc-observations.log');
+  appendFileSync(worldObserver,`\nconst locTimer=setInterval(async()=>{if(!existsSync(${JSON.stringify(attachAck)}))return;clearInterval(locTimer);try{const[h,l,w]=await Promise.all([import(${engineModule('network/game/client/handler/OpLocHandler.ts')}),import(${engineModule('cache/config/LocType.ts')}),import(${engineModule('engine/World.ts')})]);(${installLocObserver.toString()})({OpLocHandler:h.default,LocType:l.default,World:w.default},line=>appendFileSync(${JSON.stringify(locTrace)},line+'\\n'));appendFileSync(${JSON.stringify(locTrace)},'LOC_ATTACHED\\n');}catch{appendFileSync(${JSON.stringify(locTrace)},'LOC_ATTACH_FAILED\\n');}},50);locTimer.unref();`);
   const world=spawnServer([process.execPath,'--preload',worldObserver,join(engine,'src/app.ts')],'world');await waitLog(world,'world.out.log',/World ready|World is ready|World started|world is ready/i);
   writeFileSync(attachRequest,'attach');
   for(const until=Date.now()+10000;!existsSync(attachAck)&&Date.now()<until;)await Bun.sleep(50);
