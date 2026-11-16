@@ -62,7 +62,7 @@ test('AP resolves qualified adaptive resources before cohort capacity allocation
  const t={...template(ranged.step.script),args:ranged.step.args,env:ranged.step.env,resources:['pen:3229,3298','trooper:battlefield']};
  const {planner}=setup([ranged]);
  const bound=planner.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
- expect(bound.resources).toEqual(['trooper:battlefield']);expect(bound.env.PROGRESSION_METHOD).toBe('ranged/troopers');
+ expect(bound.resources).toEqual(['trooper:battlefield']);expect(bound.env).toMatchObject({PROGRESSION_METHOD:'ranged/troopers'});
  const a=Array.from({length:3},(_,i)=>({name:'Archer'+i,side:'local',skills:{Ranged:40},items:{}}));
  const result=plan({side:'local',accounts:a,owners:new Map(a.map(x=>[x.name.toLowerCase(),{side:'local'}])),bill:[],templates:[t],prices:{},army:new Set(a.map(x=>x.name.toLowerCase())),capacity:{'pen:3229,3298':1,'trooper:battlefield':14},
   templateFor:(listed,account)=>({...listed,resources:bound.resources,env:bound.env})});
@@ -90,7 +90,7 @@ test('AP keeps only the exact active finite mission after its admitted arrows ar
  const p=setup([m],{observed:()=>active,jobs:[job]}).planner,kept=p.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
  expect(kept.env).toEqual(env);expect(kept.args).toEqual(job.args);expect(kept.resources).toEqual(['trooper:battlefield']);
  const ended=setup([m],{observed:()=>({...active,result:'RESULT ok'}),jobs:[job]}).planner.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
- expect(ended.env.PROGRESSION_METHOD).toBeUndefined();
+ expect(ended.env).toEqual(t.env);expect(ended.env?.PROGRESSION_METHOD).toBeUndefined();
  const changed={...t,trains:{...t.trains!,to:51}},fresh=p.templateFor(changed,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
- expect(fresh.env.PROGRESSION_METHOD).toBeUndefined();
+ expect(fresh.env).toEqual(t.env);expect(fresh.env?.PROGRESSION_METHOD).toBeUndefined();
 });

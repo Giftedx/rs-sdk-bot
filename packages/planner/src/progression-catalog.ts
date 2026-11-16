@@ -105,11 +105,40 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   const category=args[0],entry=category&&['skiller','fighter','boss','pvp','quester','market','logistics'].includes(category)?category:args[1];
   if(entry)return intentForEntry('scripts/aio-'+entry+'.ts',args.slice(entry===category?1:2),env,accept,catalog);
  }
+ if(script==='scripts/ranged-starter.ts')return{kind:'train',skill:'ranged',targetLevel:5};
+ if(script==='scripts/generated/rcair.ts')return{kind:'service',objective:'craft current carried rune essence into air runes once',units:1};
+ if(script==='scripts/gather-spawn.ts'){
+  const id=Number(args[0]),count=Number(args[1]??27),ticks=Number(env.TICKS??6000);
+  return whole(id)&&id>0&&whole(count)&&count>0&&Number.isFinite(ticks)&&ticks>0?{kind:'acquire',items:{[id]:count},consumer}:null;
+ }
+ const trainerDefaults:Record<string,{skill:string;target:number;cap:number;minimumCap:number}>={
+  'scripts/generated/fishing30.ts':{skill:'fishing',target:30,cap:3000,minimumCap:1},
+  'scripts/generated/thieving60.ts':{skill:'thieving',target:60,cap:2500,minimumCap:240},
+  'scripts/generated/woodcutting.ts':{skill:'woodcutting',target:45,cap:3000,minimumCap:1},
+ };
+ const trainer=trainerDefaults[script];if(trainer){const target=Number(env.TARGET??trainer.target),cap=Number(env.CAP??trainer.cap);return finiteLevel(target)&&whole(cap)&&cap>=trainer.minimumCap?{kind:'train',skill:trainer.skill,targetLevel:target}:null;}
  const trainingSkill=setting(env,args,'TRAIN_SKILL');
  let target=Number(setting(env,args,'TARGET_LEVEL'));
- if(script==='scripts/ranged-train.ts'){target=Number(setting(env,args,'TARGET_LEVEL')??args.find(a=>!a.includes('=')));return finiteLevel(target)?{kind:'train',skill:'ranged',targetLevel:target}:null;}
+ if(script==='scripts/ranged-train.ts'){
+  const number=(value:string|undefined,fallback:number)=>value===undefined||value===''?fallback:Number(value);
+  target=number(args[0]??env.TARGET_LEVEL,10);const cap=number(args[1]??env.CAP,3000);
+  return finiteLevel(target)&&target>=2&&whole(cap)&&cap>=800?{kind:'train',skill:'ranged',targetLevel:target}:null;
+ }
  if(trainingSkill&&finiteLevel(target)&&PROGRESSION_SKILLS.includes(key(trainingSkill) as typeof PROGRESSION_SKILLS[number]))return{kind:'train',skill:key(trainingSkill),targetLevel:target};
  const data=catalog??(existsSync(resolve(root,'packages/planner/data/progression-routes.json'))?loadProgressionCatalog():undefined);
+ if(script==='scripts/microbot-jewellery-trip.ts'){
+  try{
+   const order=args[0]?JSON.parse(readFileSync(args[0],'utf8')):{recipe:env.RECIPE,target:Number(env.TARGET),stringAmulet:env.STRING_AMULET==='1'};
+   if(typeof order.recipe!=='string'||!whole(order.target)||order.target<1||order.target>10000)return null;
+   const native=data?.methods.find(m=>{const job=m.execution?.bankJob;return!!job&&job.family==='jewellery'&&job.recipe===order.recipe;});
+   let products=native&&Object.keys(native.effects.items??{});if(products?.length!==1)return null;
+   if(order.stringAmulet){
+    const id=Number(products[0]),stringers=data?.methods.filter(m=>{const job=m.execution?.bankJob;return!!job&&job.family==='inventory'&&typeof job.recipe==='string'&&job.recipe.startsWith('string-')&&!!m.inputs?.[id];})??[];
+    if(stringers.length!==1)return null;products=Object.keys(stringers[0]!.effects.items??{});if(products.length!==1)return null;
+   }
+   return{kind:'produce',items:{[Number(products[0])]:order.target},consumer};
+  }catch{return null;}
+ }
  if(/^scripts\/aio-(?:skiller|fighter|boss|pvp|quester|market|logistics)\.ts$/.test(script)&&data){
   const matches=matchingProgressionRoutes(script,args,env,data);
   if(matches.length===1){const route=matches[0]!,skip=route.category==='skiller'?2:1,supplied=parseStep([route.script,...args.slice(skip).map(a=>JSON.stringify(a))].join(' '));
@@ -136,13 +165,13 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  if(['scripts/microbot-production.ts','scripts/smelt-bars.ts'].includes(script)){
   const recipe=script==='scripts/microbot-production.ts'?args.find(a=>!a.includes('=')&&!/^\d+$/.test(a)):setting(env,args,'BAR_TYPE')??args[1];
   const maximum=Number(setting(env,args,'MAX_MAKE'));
-  const method=data?.methods.find(m=>script==='scripts/microbot-production.ts'?m.execution?.bankJob?.family==='inventory'&&m.execution.bankJob.recipe===recipe:m.step.script===script&&m.step.args[1]===recipe);
+  const method=data?.methods.find(m=>{const job=m.execution?.bankJob;return script==='scripts/microbot-production.ts'?!!job&&job.family==='inventory'&&job.recipe===recipe:m.step.script===script&&m.step.args[1]===recipe;});
   const items=method&&Object.fromEntries(Object.entries(method.effects.items??{}).map(([id,n])=>[id,n*maximum]));
   if(whole(maximum)&&maximum>0&&positiveItems(items))return{kind:'produce',items:items!,consumer};
  }
  if(script==='scripts/aio-skiller.ts'&&args[0]==='bank-job'){
   try{const raw=args[1]??'',job=JSON.parse(raw.startsWith('--job=')?decodeURIComponent(raw.slice(6)):readFileSync(raw,'utf8'));
-   const method=data?.methods.find(m=>m.execution?.bankJob?.family===job.family&&m.execution.bankJob.recipe===job.recipe),skill=method&&Object.keys(method.effects.xp??{})[0];
+   const method=data?.methods.find(m=>{const profile=m.execution?.bankJob;return!!profile&&profile.family===job.family&&profile.recipe===job.recipe;}),skill=method&&Object.keys(method.effects.xp??{})[0];
    if(skill&&finiteLevel(job.targetLevel))return{kind:'train',skill,targetLevel:job.targetLevel};
    const product=method&&Object.keys(method.effects.items??{})[0];if(product&&whole(job.target)&&job.target>0)return{kind:'produce',items:{[Number(product)]:job.target},consumer};
   }catch{return null;}

@@ -8,6 +8,7 @@
   "prayer-order-saved": ["packages/practice/src/prayer-order-proof.ts"],
   "quest-sweep-saved": ["packages/practice/src/quest-sweep-proof.ts"],
   "ranged-train-saved": ["packages/practice/src/ranged-train-proof.ts"],
+  "adaptive-ranged-saved": ["packages/practice/src/ranged-progression-case.ts"],
   "rune-bank-craft-saved": ["packages/practice/src/rune-bank-craft-proof.ts"],
   "rune-carrier-saved": ["packages/practice/src/rune-carriers-proof.ts"],
   "rune-continuation-saved": ["packages/practice/src/rune-continuation-proof.ts"],

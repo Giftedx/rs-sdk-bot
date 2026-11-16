@@ -43,6 +43,12 @@
       "timeoutMs": 900000
     },
     {
+      "id": "adaptive-ranged-native",
+      "phase": "practice",
+      "command": ["bun", "run", "bench", "^extra:progression-ranged-adaptive85$", "--profile", "--budget", "10"],
+      "timeoutMs": 660000
+    },
+    {
       "id": "ranged-train-saved",
       "phase": "consumer",
       "command": [
@@ -51,12 +57,6 @@
         "--verify"
       ],
       "timeoutMs": 30000
-    },
-    {
-      "id": "adaptive-ranged-native",
-      "phase": "practice",
-      "command": ["bun", "run", "bench", "^extra:progression-ranged-adaptive85$", "--profile", "--budget", "10"],
-      "timeoutMs": 660000
     },
     {
       "id": "adaptive-ranged-saved",

@@ -5,7 +5,8 @@ import {levelForXp,xpForLevel} from './curve';
 
 export type WorkIntent =
  | {kind:'train';skill:string;targetLevel:number}
- | {kind:'produce'|'acquire';items:Record<number,number>;consumer:string}
+ | {kind:'produce';items:Record<number,number>;consumer:string}
+ | {kind:'acquire';items:Record<number,number>;consumer:string}
  | {kind:'quest';quest:string}
  | {kind:'pvp'|'observe'|'service';objective:string;units?:number};
 export interface Observation<T>{at:number;value:T;source?:string;generation?:number}
@@ -221,5 +222,6 @@ export function chooseProgression(intent:WorkIntent,account:ObservedAccount,meth
  base.followUps=[...follow.values()].sort((a,b)=>a.method.localeCompare(b.method)).map(({method,state,reason})=>({method,state,reason}));
  if(best){const first=best.path[0]!;return {...base,state:'execute',selected:first.method,step:first.step,path:best.path,expectedTicks:best.ticks,basis:best.model?'model':'measured',reason:'Lowest total expected ticks among the finite supplied routes reached by this search.'};}
  const next=base.followUps.find(f=>f.state==='observe')??base.followUps.find(f=>f.state==='acquire')??base.followUps.find(f=>f.state==='qualify')??base.followUps.find(f=>f.state==='measure');
- return {...base,state:next?.state??'blocked',reason:next?next.reason.join('; '):base.reason};
+ const pending=next?.state;
+ return {...base,state:pending==='observe'||pending==='acquire'||pending==='qualify'||pending==='measure'?pending:'blocked',reason:next?next.reason.join('; '):base.reason};
 }

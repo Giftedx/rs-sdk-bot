@@ -2161,10 +2161,10 @@
    "args": [],
    "env": {},
    "intents": [
-    "quest"
+    "service"
    ],
    "skills": [],
-   "description": "Authored native quest"
+   "description": "Alfred Grimhand's Barcrawl"
   },
   {
    "id": "quester:quest:biohazard",
@@ -2372,7 +2372,7 @@
     "quest"
    ],
    "skills": [],
-   "description": "Authored native quest"
+   "description": "Dwarf Cannon"
   },
   {
    "id": "quester:quest:eadgar",
@@ -2655,10 +2655,10 @@
    "args": [],
    "env": {},
    "intents": [
-    "quest"
+    "service"
    ],
    "skills": [],
-   "description": "Authored native quest"
+   "description": "The Mage Arena"
   },
   {
    "id": "quester:quest:merlin",
@@ -2996,7 +2996,7 @@
     "quest"
    ],
    "skills": [],
-   "description": "Authored native quest"
+   "description": "Waterfall Quest"
   },
   {
    "id": "quester:quest:zanaris",
@@ -5459,6 +5459,49 @@
    }
   },
   {
+   "id": "quest:dwarfcannon",
+   "routeId": "quester:quest:dwarfcannon",
+   "ladderIds": [],
+   "sourceEntry": "scripts/quest-sweep.ts",
+   "step": {
+    "script": "scripts/quest-sweep.ts",
+    "args": [
+     "dwarfcannon"
+    ],
+    "env": {}
+   },
+   "source": "scripts/generated/dwarfcannon.ts",
+   "effects": {
+    "xp": {
+     "crafting": 18750
+    },
+    "quests": [
+     "Dwarf Cannon"
+    ]
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": false,
+   "requirements": {
+    "levels": {},
+    "items": {
+     "995": 500
+    },
+    "facts": {
+     "fact": "quest-entry:dwarfcannon"
+    }
+   }
+  },
+  {
    "id": "quest:eadgar",
    "routeId": "quester:quest:eadgar",
    "ladderIds": [],
@@ -7597,6 +7640,51 @@
     },
     "facts": {
      "fact": "quest-entry:viking"
+    }
+   }
+  },
+  {
+   "id": "quest:waterfall",
+   "routeId": "quester:quest:waterfall",
+   "ladderIds": [],
+   "sourceEntry": "scripts/quest-sweep.ts",
+   "step": {
+    "script": "scripts/quest-sweep.ts",
+    "args": [
+     "waterfall"
+    ],
+    "env": {}
+   },
+   "source": "scripts/generated/waterfall.ts",
+   "effects": {
+    "xp": {
+     "attack": 343750,
+     "strength": 343750
+    },
+    "quests": [
+     "Waterfall Quest"
+    ]
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": false,
+   "requirements": {
+    "levels": {},
+    "items": {
+     "954": 2,
+     "995": 500
+    },
+    "facts": {
+     "fact": "quest-entry:waterfall"
     }
    }
   },
@@ -48460,6 +48548,44 @@
      "fact": "quest-entry:zombiequeen"
     }
    }
+  },
+  {
+   "id": "dwarfcannon",
+   "name": "Dwarf Cannon",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "xp": {
+    "crafting": 18750
+   },
+   "source": "scripts/general/scripts/quests.rs2:224",
+   "requirements": {
+    "levels": {},
+    "items": {
+     "995": 500
+    },
+    "facts": {
+     "fact": "quest-entry:dwarfcannon"
+    }
+   }
+  },
+  {
+   "id": "waterfall",
+   "name": "Waterfall Quest",
+   "script": "scripts/generated/waterfall.ts",
+   "xp": {
+    "attack": 343750,
+    "strength": 343750
+   },
+   "source": "scripts/generated/waterfall.ts",
+   "requirements": {
+    "levels": {},
+    "items": {
+     "954": 2,
+     "995": 500
+    },
+    "facts": {
+     "fact": "quest-entry:waterfall"
+    }
+   }
   }
  ],
  "entries": [
@@ -49727,7 +49853,7 @@
   {
    "script": "scripts/generated/quest-barcrawl.ts",
    "intents": [
-    "quest"
+    "service"
    ],
    "skills": [],
    "routeIds": [
@@ -50127,7 +50253,7 @@
   {
    "script": "scripts/generated/quest-magearena.ts",
    "intents": [
-    "quest"
+    "service"
    ],
    "skills": [],
    "routeIds": [

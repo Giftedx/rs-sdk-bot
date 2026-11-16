@@ -65,7 +65,8 @@ function nativeMethod(family:string,recipe:string,skill:string,level:number,prod
 function questRows(base:string,generated:string[]):CatalogQuest[]{
  const native=json<{folder:string|null;xp:{skill:string;xp:number}[];src:string}[]>(base,'knowledge/quests.json');
  const all99=Object.fromEntries(PROGRESSION_SKILLS.map(s=>[s,99]));
- return Object.entries(QUEST_NAMES).flatMap(([id,name])=>{
+ const names={...QUEST_NAMES,dwarfcannon:'Dwarf Cannon',waterfall:'Waterfall Quest'};
+ return Object.entries(names).flatMap(([id,name])=>{
   let script:string;try{script=resolveQuestScript(id,base);}catch{return[];}
   if(!generated.includes(script))return[];
   const text=readFileSync(resolve(base,script),'utf8'),matches=native.filter(q=>q.folder&&text.includes(q.folder));
@@ -87,7 +88,8 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
  });
  const generated=listGeneratedQuestScripts(base).filter(script=>!script.endsWith('-owned.ts'));
  const quests=questRows(base,generated),questByScript=new Map(quests.map(q=>[q.script,q]));
- for(const script of generated){const q=questByScript.get(script),id=script.split('/').at(-1)!.replace(/^quest-/,'').replace(/\.ts$/,'');routes.push({id:`quester:quest:${id}`,category:'quester',name:id,script,args:[],env:{},intents:['quest'],skills:[],description:q?.name??'Authored native quest'});}
+ const finiteServices:Record<string,string>={barcrawl:"Alfred Grimhand's Barcrawl",magearena:'The Mage Arena'};
+ for(const script of generated){const q=questByScript.get(script),id=script.split('/').at(-1)!.replace(/^quest-/,'').replace(/\.ts$/,'');routes.push({id:`quester:quest:${id}`,category:'quester',name:id,script,args:[],env:{},intents:finiteServices[id]?['service']:['quest'],skills:[],description:q?.name??finiteServices[id]??'Authored native quest'});}
  const methods:CatalogMethod[]=[];
  for(const [skill,tiers]of Object.entries(PROGRESSIVE_TIERS)){
   const alternatives=progressiveSkillerAlternatives(skill,98,99);

@@ -128,7 +128,7 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
     });
 }
 
-export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
+export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null;binding?():{boundMethod:string|null;source:string|null;consumer:unknown}} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
     captureMilestones();
     const key = s.name.toLowerCase(), lines = emptyLines(perBot.get(key)?.attributed ?? false);
     perBot.set(key, lines);

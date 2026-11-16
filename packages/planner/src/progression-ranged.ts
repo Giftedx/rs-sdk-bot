@@ -62,7 +62,7 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
   id,step,execution:{targetArg:0,targetEnv:['TARGET_LEVEL']},effects:{xp:{Ranged:1}},requirements,rate,costs:{setupTicks:20,travelTicks,acquisitionTicks:0,unlockTicks:0},source,
  });
  const methods:ProgressionMethod[]=[];
- const required=kit?{[kit.bow]:1,[kit.arrow]:3}:{841:1,882:3};
+ const required:Record<number,number>=kit?{[kit.bow]:1,[kit.arrow]:3}:{841:1,882:3};
  const food=foods.find(id=>(owned[id]??0)>=3);
  const chickenFood=[329,333,1985].find(id=>(owned[id]??0)>=3);
  const chicken=base('ranged/chickens',{levels:{Ranged:1},items:{...required,...chickenFood?{[chickenFood]:3}:{995:20}}},

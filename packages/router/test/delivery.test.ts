@@ -17,6 +17,14 @@ test('delivery reaches the consumer after regressions and native work',async()=>
     expect(r).toMatchObject({ok:true,stage:'delivered',consumer:'Ranged supply',evidence:'native'});
     expect(h.calls).toEqual(['regression','native','banked']);
 });
+
+test('the shipped adaptive Ranged contract keeps native checks before read-only consumers',async()=>{
+ const actual=JSON.parse(readFileSync(new URL('../tasks/ranged-train.json',import.meta.url),'utf8')) as DeliveryTask;
+ const h=harness(),r=await deliver(actual,h.deps);
+ expect(r.ok).toBe(true);expect(h.calls).toEqual(actual.checks.map(c=>c.id));
+ const {isSavedProofVerifier}=await import('../src/delivery-cli');
+ expect(isSavedProofVerifier(actual.checks.find(c=>c.id==='adaptive-ranged-saved')!)).toBe(true);
+});
 test('the 400ms carrier proof fits a finite check budget while excessive budgets run nothing',async()=>{
     const carrier=JSON.parse(readFileSync(new URL('../tasks/rune-bank-craft.json',import.meta.url),'utf8')) as DeliveryTask;
     const h=harness();expect((await deliver(carrier,h.deps)).ok).toBe(true);

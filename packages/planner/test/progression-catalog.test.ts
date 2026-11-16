@@ -1,4 +1,6 @@
 import {expect,test} from 'bun:test';
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
 import {accountFromStatus,catalogCoverage,intentForEntry,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
 
 const now=10_000;
@@ -42,7 +44,7 @@ test('an explicit item or quest consumer outranks incidental training targets',(
 
 test('unknown scripts and missing finite goals remain explicit',()=>{
  expect(intentForEntry('scripts/not-a-route.ts',[],{})).toBeNull();
- expect(intentForEntry('scripts/ranged-train.ts',[],{})).toBeNull();
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{})).toBeNull();
 });
 
 test('catalog coverage counts executable mapping separately from rate and qualification',()=>{
@@ -152,4 +154,58 @@ test('a script-wide proof cannot qualify distinct native methods',()=>{
  }]} as ProgressionCatalog;
  const methods=progressionMethods({kind:'train',skill:'crafting',targetLevel:40},accountFromStatus('Example',status,now),c,{qualifications:{'scripts/craft.ts':{source:'current',bands:[{}]}}}).methods;
  expect(methods[0]?.qualification).toBeUndefined();
+});
+
+test('authored starter and inside-altar workers retain their actual finite defaults',()=>{
+ expect(intentForEntry('scripts/ranged-starter.ts',[],{})).toEqual({kind:'train',skill:'ranged',targetLevel:5});
+ expect(intentForEntry('scripts/ranged-starter.ts',['99'],{TARGET_LEVEL:'99'})).toEqual({kind:'train',skill:'ranged',targetLevel:5});
+ expect(intentForEntry('scripts/generated/rcair.ts',[],{})).toEqual({kind:'service',objective:'craft current carried rune essence into air runes once',units:1});
+ expect(intentForEntry('scripts/aio.ts',['skiller','runecraft','air'],{})).toEqual(intentForEntry('scripts/generated/rcair.ts',[],{}));
+ expect(intentForEntry('scripts/ranged-starter.ts',[],{},{bank:{536:10}})).toMatchObject({kind:'acquire',items:{536:10}});
+ expect(intentForEntry('scripts/generated/rcair.ts',[],{},{skills:{Runecraft:20}})).toEqual({kind:'train',skill:'runecraft',targetLevel:20});
+ expect(intentForEntry('scripts/unknown-fixed-craft.ts',[],{})).toBeNull();
+});
+
+test('spawn acquisition follows positional item and quantity defaults with a finite tick cap',()=>{
+ expect(intentForEntry('scripts/gather-spawn.ts',['554'],{})).toMatchObject({kind:'acquire',items:{554:27}});
+ expect(intentForEntry('scripts/gather-spawn.ts',['554','3'],{TARGET:'99',ITEM_ID:'557',TICKS:'100'})).toMatchObject({kind:'acquire',items:{554:3}});
+ for(const [args,env]of [[[],{}],[['0'],{}],[['NaN'],{}],[['554','0'],{}],[['554','Infinity'],{}],[['554'],{TICKS:'Infinity'}],[['554'],{TICKS:'0'}]] as const)
+  expect(intentForEntry('scripts/gather-spawn.ts',args,env)).toBeNull();
+});
+
+test('jewellery TARGET is an item count and never the current Crafting level',()=>{
+ expect(intentForEntry('scripts/microbot-jewellery-trip.ts',[],{RECIPE:'sapphire_ring',TARGET:'1',BATCH:'1'})).toMatchObject({kind:'produce',items:{1637:1}});
+ expect(intentForEntry('scripts/aio.ts',['skiller','crafting','jewellery-trip','RECIPE=sapphire_ring','TARGET=1','BATCH=1'],{})).toMatchObject({kind:'produce',items:{1637:1}});
+ expect(intentForEntry('scripts/microbot-jewellery-trip.ts',[],{RECIPE:'not-native',TARGET:'1'})).toBeNull();
+ expect(intentForEntry('scripts/microbot-jewellery-trip.ts',[],{RECIPE:'sapphire_ring',TARGET:'Infinity'})).toBeNull();
+});
+
+test('trainer defaults and overrides match each authored worker contract',()=>{
+ const rows=[
+  {script:'scripts/generated/fishing30.ts',skill:'fishing',target:30,cap:3000},
+  {script:'scripts/generated/thieving60.ts',skill:'thieving',target:60,cap:2500},
+  {script:'scripts/generated/woodcutting.ts',skill:'woodcutting',target:45,cap:3000},
+ ];
+ for(const row of rows){
+  const source=readFileSync(resolve(import.meta.dir,'../../..',row.script),'utf8');
+  expect(source).toContain(`Number(process.env.TARGET ?? ${row.target})`);expect(source).toContain(`Number(process.env.CAP ?? ${row.cap})`);
+  expect(intentForEntry(row.script,[],{})).toEqual({kind:'train',skill:row.skill,targetLevel:row.target});
+  expect(intentForEntry(row.script,['99'],{TARGET:'55',CAP:'1000'})).toEqual({kind:'train',skill:row.skill,targetLevel:55});
+  for(const env of [{TARGET:'Infinity'},{TARGET:'NaN'},{TARGET:'0'},{TARGET:'100'},{CAP:'Infinity'},{CAP:'0'}])expect(intentForEntry(row.script,[],env)).toBeNull();
+ }
+ const source=readFileSync(resolve(import.meta.dir,'../../../scripts/ranged-train.ts'),'utf8');
+ expect(source).toContain('target:n(argv[3]??env.TARGET_LEVEL,10)');expect(source).toContain('cap:n(argv[4]??env.CAP,3000)');
+ expect(intentForEntry('scripts/ranged-train.ts',[],{})).toEqual({kind:'train',skill:'ranged',targetLevel:10});
+ expect(intentForEntry('scripts/ranged-train.ts',['50','800'],{TARGET_LEVEL:'99',CAP:'Infinity'})).toEqual({kind:'train',skill:'ranged',targetLevel:50});
+ for(const env of [{TARGET_LEVEL:'Infinity'},{TARGET_LEVEL:'NaN'},{TARGET_LEVEL:'1'},{CAP:'Infinity'},{CAP:'799'}])expect(intentForEntry('scripts/ranged-train.ts',[],env)).toBeNull();
+});
+
+test('fixed quest entry aliases carry their exact named finite quest consumer',()=>{
+ const rows=[['scripts/generated/dwarfcannon.ts','Dwarf Cannon'],['scripts/generated/waterfall.ts','Waterfall Quest']] as const;
+ for(const[script,quest]of rows)expect(intentForEntry(script,[],{})).toEqual({kind:'quest',quest});
+ const flags=readFileSync(resolve(import.meta.dir,'../../../vendor/rs-sdk/server/content/scripts/player/interfaces/questlist.if'),'utf8');
+ for(const[id,name]of [['barcrawl',"Alfred Grimhand's Barcrawl"],['magearena','The Mage Arena']]){
+  expect(flags).not.toContain('text='+name);
+  expect(intentForEntry('scripts/generated/quest-'+id+'.ts',[],{})).toEqual({kind:'service',objective:'quester:quest:'+id});
+ }
 });

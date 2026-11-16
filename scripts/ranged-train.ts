@@ -45,7 +45,7 @@ const sum=(items:readonly Item[],ids:readonly number[])=>ids.reduce((n,id)=>n+co
 export function bestBow(owned:readonly Item[],ranged:number){
  return BOWS.filter(b=>b.req<=ranged&&count(owned,b.id)>0).reduce<typeof BOWS[number]|undefined>((best,b)=>!best||b.req>best.req?b:best,undefined);
 }
-export const usableArrows=(bowReq:number,ranged:number)=>ARROWS.filter(a=>a.req<=bowReq&&a.req<=ranged).map(a=>a.id);
+export const usableArrows=(bowReq:number,ranged:number):number[]=>ARROWS.filter(a=>a.req<=bowReq&&a.req<=ranged).map(a=>a.id);
 // The strongest owned usable arrow whose stack can start a trip (at least MIN_TRIP_ARROWS). A stronger stack too small
 // for a trip gives way to a weaker usable one instead of stopping the order.
 export const MIN_TRIP_ARROWS=3;
@@ -396,7 +396,7 @@ async function runAdaptiveRangedBand(s:Session,o:RangedTrainOptions,options:{com
  const guarded={...s,bot:new Proxy(s.bot,{get(bot,key){
   if(key==='closeBank')return async()=>{observeBank();return bot.closeBank();};
   if(key==='withdrawItem')return async(item:Parameters<Session['bot']['withdrawItem']>[0],amount:number,...rest:unknown[])=>{
-   if(item.id===COINS){
+   if(typeof item==='object'&&'id' in item&&item.id===COINS){
     const held=count(s.sdk.getInventory(),COINS),spent=coinsBefore-(totals().get(COINS)??0),available=preparationFunds(coinsBefore,spent,o.maxSpend,o.coinReserve);
     if(!Number.isSafeInteger(amount)||amount<0||held+amount>available)throw Error('adaptive Ranged fare budget refused');
    }

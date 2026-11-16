@@ -18,6 +18,14 @@ test('every AIO route and all nineteen skills have a progression classification'
  expect(c.routes.filter(r=>!r.intents.length)).toEqual([]);
 });
 
+test('fixed quest aliases have named quest metadata rather than a filename guess',()=>{
+ const c=buildProgressionCatalog();
+ for(const[id,name]of [['dwarfcannon','Dwarf Cannon'],['waterfall','Waterfall Quest']])expect(c.quests.find(q=>q.id===id)?.name).toBe(name);
+ for(const[id,name]of [['barcrawl',"Alfred Grimhand's Barcrawl"],['magearena','The Mage Arena']]){
+  expect(c.quests.find(q=>q.id===id)).toBeUndefined();expect(c.routes.find(r=>r.id==='quester:quest:'+id)).toMatchObject({description:name,intents:['service']});
+ }
+});
+
 test('generated runtime metadata matches its real catalog source',()=>{
  const root=resolve(import.meta.dir,'..');
  expect(JSON.parse(readFileSync(resolve(root,'packages/planner/data/progression-routes.json'),'utf8'))).toEqual(buildProgressionCatalog(root));

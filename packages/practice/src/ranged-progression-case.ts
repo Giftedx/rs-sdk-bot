@@ -17,9 +17,10 @@ const root=resolve(import.meta.dir,'../../..');
 const sourceStatus=resolve(import.meta.dir,'ranged-progression-entry.json');
 const proofSource=()=>createHash('sha256').update(readFileSync(import.meta.path)).digest('hex');
 export const RANGED_COMPARISON_TARGET=83;
+const entryInventory:readonly {id:number;count:number}[]=entry.inventory;
 export const RANGED_COMPARISON_PRESET:SaveConfig={
  position:entry.pos,skills:Object.fromEntries(entry.skills.filter(k=>!k.name.startsWith('Stat')).map(k=>[k.name,k.level])),
- inventory:entry.inventory.map(i=>({id:i.id,count:i.count})),equipment:entry.equipment.map(i=>({id:i.id,count:i.count,slot:i.slot})),
+ inventory:entryInventory.map(i=>({id:i.id,count:i.count})),equipment:entry.equipment.map(i=>({id:i.id,count:i.count,slot:i.slot})),
  bank:entry.bank.map(i=>({id:i.id,count:i.count})),
 };
 const total=(save:ReturnType<typeof readPracticeSave>,id:number)=>Object.values(save.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
