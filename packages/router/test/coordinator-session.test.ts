@@ -11,6 +11,7 @@ import {sha} from '../../core/src/launch-evidence';
 import {missionSignature} from '../../core/src/session-admission';
 import {assertSpecialistLogin, specialistContext, specialistTokenPath} from '../../core/src/specialist-launch';
 import {readCoordinatorJobs} from '../../core/src/coordinator-jobs';
+import type {Order,TradeReceipt} from '../../../scripts/fleet-trade-settlement';
 const server='rs-sdk-demo.fly.dev';
 function fixture(){
  const base=mkdtempSync(join(tmpdir(),'router-session-')),root=join(base,'.practice/session-lifecycle');
@@ -114,6 +115,56 @@ test('a closed failed producer is a repair fact, not a known active owner',()=>{
  attempt.record('connect-failed');attempt.record('closed');
  writeFileSync(join(f.base,'swarm.json'),JSON.stringify({jobs:[]}));
  expect(liveAccountWait({kind:'run'},['Rod'],f.base,()=>true)).toBeNull();
+});
+
+function fleetOrderFixture(){
+ const f=fixture(),now=Date.now();
+ writeFileSync(join(f.base,'swarm.json'),JSON.stringify({maxBots:17,minFreeGB:4,jobs:[]}));
+ const dir=join(f.base,'fleet');for(const sub of ['orders','receipts'])mkdirSync(join(dir,sub),{recursive:true});
+ const order:Order={id:'owned-gold-bars',server,from:'Unsheathed',to:'BowBeforeMe',item:'Gold bar',count:2,start:now+15*60000,end:now+30*60000};
+ const putOrder=(value:any)=>writeFileSync(join(dir,'orders',order.id+'.json'),JSON.stringify(value));
+ const putReceipt=(value:any)=>writeFileSync(join(dir,'receipts',order.id+'.'+value.role+'.json'),JSON.stringify(value));
+ return{...f,now,order,putOrder,putReceipt};
+}
+
+test('a future fleet order holds both idle participants through dispatch and installation before any login claim',()=>{
+ const f=fleetOrderFixture();f.putOrder(f.order);
+ const task:any={id:'bow-consumer',kind:'run',goal:'main24',capability:'owned-bank-observation',account:'BowBeforeMe',launch:'ordinary',dependsOn:[],priority:49,estimatedMs:60000,why:'finite consumer',accept:{counters:{bankObserved:1}}};
+ expect(liveAccountWait(task,['BowBeforeMe'],f.base,()=>false)).toEqual({account:'BowBeforeMe',reason:'fleet-order',attemptId:null,pid:null});
+ expect(liveAccountWait(task,['Unsheathed'],f.base,()=>false)?.reason).toBe('fleet-order');
+ expect(liveAccountWait(task,['Other'],f.base,()=>false)).toBeNull();
+ const state=initialState();addTasks(state,[task]);
+ expect(chooseTask(state,Date.now(),{runHeld:t=>liveAccountWait(t,[t.account!],f.base,()=>false)!==null})).toBeNull();
+ expect(()=>installJob(task,'BowBeforeMe','scripts/fleet-inspect.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).toThrow('fleet-order');
+ expect(readCoordinatorJobs(f.base).jobs).toEqual([]);
+});
+
+test('expired empty, invalid and other-server fleet orders do not hold a new local mission',()=>{
+ const f=fleetOrderFixture(),task:any={kind:'run'};
+ for(const order of [{...f.order,start:f.now-60000,end:f.now-1},{...f.order,count:0},{...f.order,server:'localhost:8888'}]){
+  f.putOrder(order);expect(liveAccountWait(task,['BowBeforeMe'],f.base,()=>false)).toBeNull();
+ }
+ writeFileSync(join(f.base,'fleet/orders',f.order.id+'.json'),'{');
+ expect(liveAccountWait(task,['BowBeforeMe'],f.base,()=>false)).toBeNull();
+});
+
+function terminalFleetReceipt(order:Order,role:'from'|'to',state:'settled'|'failed',now:number):TradeReceipt{
+ const settled=state==='settled';
+ return{version:2,state,id:order.id,role,account:order[role],partner:order[role==='from'?'to':'from'],side:role==='from'?'cloud':'local',server:order.server,item:order.item,requested:order.count,claim:role==='from'?'12345678-1234-1234-1234-123456789012':'87654321-1234-1234-1234-123456789012',at:now-1,ok:settled,detail:'',count:settled?order.count:0,inventory:settled?(role==='from'?{before:order.count,after:0}:{before:0,after:order.count}):{before:0,after:0},...(settled&&role==='to'?{bank:{count:order.count,at:now-3}}:{}),logout:{attemptId:'0000000002400-1-1',at:now-2,sha256:'a'.repeat(64)}};
+}
+
+for(const outcome of ['settled','failed'] as const)test('matched '+outcome+' fleet receipts release both parties before the window expires',()=>{
+ const f=fleetOrderFixture(),order={...f.order,start:f.now-60000};f.putOrder(order);
+ f.putReceipt(terminalFleetReceipt(order,'from',outcome,f.now));
+ expect(liveAccountWait({kind:'run'},['BowBeforeMe'],f.base,()=>false)?.reason).toBe('fleet-order');
+ f.putReceipt(terminalFleetReceipt(order,'to',outcome,f.now));
+ expect(liveAccountWait({kind:'run'},['BowBeforeMe','Unsheathed'],f.base,()=>false)).toBeNull();
+});
+
+test('an expired fleet order with an unmatched completed transfer still waits for reconciliation',()=>{
+ const f=fleetOrderFixture(),order={...f.order,start:f.now-60000,end:f.now-10};f.putOrder(order);
+ f.putReceipt(terminalFleetReceipt(order,'from','settled',f.now));
+ expect(liveAccountWait({kind:'run'},['BowBeforeMe'],f.base,()=>false)?.reason).toBe('fleet-order');
 });
 test('a new unstarted autopilot mission waits for its own result and cannot inherit prior success',()=>{
  const f=settledAutopilotFixture(),task:any={kind:'run'};

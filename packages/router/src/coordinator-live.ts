@@ -8,7 +8,9 @@ import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {evaluateSpecialist, MAX_SPECIALIST_RUN_MS, SPECIALIST_BOARDS, specialistTokenPath} from '../../core/src/specialist-launch';
-import {loadOwners} from '../../core/src/fleet';
+import {loadOwners,FLEET_DIR} from '../../core/src/fleet';
+import {inOpenOrder} from '../../../scripts/autopilot';
+import {validOrder} from '../../../scripts/fleet-trade-settlement';
 import {cachedLaunchRevision,cachedReleaseFor,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
@@ -233,7 +235,7 @@ function settledAutopilotJob(job:any,account:string,base:string):boolean{
   &&(status.coordinatorRunId??null)===null&&Number.isFinite(status.started)&&status.started>=receipt.createdAt&&status.started<=proof.loggedOutAt
   &&Number.isFinite(status.at)&&status.at>=status.started&&status.at<=end.at;
 }
-export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment';attemptId:string|null;pid:number|null};
+export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment'|'fleet-order';attemptId:string|null;pid:number|null};
 type MemoryCapacity=Parameters<typeof admissionDecision>[0];
 type LiveMemoryWait={account:string;reason:'memory';capacity:MemoryCapacity};
 type LiveWait=LiveAccountWait|LiveMemoryWait;
@@ -269,6 +271,7 @@ export function ordinaryRunWaitsForMemory(task:CoordTask,state:CoordinatorState,
 export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>,accounts:readonly string[],base=projectRoot,alive=pidAlive):LiveAccountWait|null{
  if(!ordinaryDeferrable(task))return null;
  const root=join(base,'.practice/session-lifecycle');
+ let ordered:Set<string>|undefined;
  for(const account of accounts){
   const proof=readLogoutProof(account,LIVE_SERVER,{root});
   const receipt=(proof.state==='held'||proof.state==='confirmed')?listAttempts(account,LIVE_SERVER,{root}).find(a=>a.attemptId===proof.attemptId)?.receipt:null;
@@ -276,6 +279,15 @@ export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'re
   if(proof.state==='held'&&receipt&&Number.isSafeInteger(receipt.owner.pid)&&receipt.owner.pid>0&&receipt.owner.script
    &&!receipt.events.some(e=>['ended','connect-failed','logout','closed'].includes(e.kind))&&alive(receipt.owner.pid))
    return{account,reason:'active-session',attemptId:receipt.attemptId,pid:receipt.owner.pid};
+  if(!ordered){
+   const synced=join(base,'.practice/fleet-data/fleet'),fleet=base===projectRoot?FLEET_DIR():existsSync(join(synced,'owners.json'))?synced:join(base,'fleet');
+   const rows=(folder:string)=>{const dir=join(fleet,folder);return existsSync(dir)?readdirSync(dir).filter(f=>f.endsWith('.json')).flatMap(file=>{try{return[JSON.parse(readFileSync(join(dir,file),'utf8'))];}catch{return[];}}):[];};
+   const names=new Set(accounts.map(n=>n.toLowerCase()));
+   const orders=rows('orders').filter(validOrder).filter(o=>o.server.toLowerCase()===LIVE_SERVER&&(names.has(o.from.toLowerCase())||names.has(o.to.toLowerCase())));
+   // The order intent precedes login claims. Reuse the autopilot's settlement rules, including unresolved receipts.
+   ordered=orders.length?inOpenOrder(orders,rows('receipts'),Date.now()):new Set();
+  }
+  if(ordered.has(account.toLowerCase()))return{account,reason:'fleet-order',attemptId:null,pid:null};
   let job:any;try{job=readMergedPlan(base).jobs.find((j:any)=>jobAccounts(j).some(n=>n.toLowerCase()===account.toLowerCase()));}catch{continue;}
   if(job?.standing===true&&job.enabled===true&&typeof job.autopilot==='string'&&job.autopilot&&!settledAutopilotJob(job,account,base))
    return{account,reason:'autopilot-assignment',attemptId:receipt?.attemptId??null,pid:receipt?.owner.pid??null};
