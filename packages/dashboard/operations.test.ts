@@ -86,12 +86,56 @@ test('the displayed bank ledger retains exact variants, canonical notes and sepa
  const code=operations.slice(operations.indexOf(' function stock(){'),operations.indexOf(' // Fleet deck:'));
  const bank=[{id:1,name:'Ring',count:2},{id:2,name:'Ring',count:3},{id:3,baseId:1,name:'Ring (noted)',count:5},
   {name:'Ring',count:9},{id:4,name:'Zero',count:1},{id:617,name:'Coins',count:100},{id:-1,name:'Coins',count:4},{name:'Odd',count:8}];
- const bots=[{name:'Worker',bankAt:1,bank}],env:any={S:{economy},window:{},stockView:'stock',stockAccount:'',stockQuery:'',bots:()=>bots,page:String,title:()=>'',stockTabs:()=>'',E:String,nf:String,gp:String,safeName:String,age:String,button:()=>'',icon:()=>''};
+ const bots=[{name:'Worker',bankAt:1,bank}],env:any={S:{economy},window:{},stockView:'stock',stockAccount:'',stockQuery:'',stockSort:'quantity',stockLimit:80,bots:()=>bots,page:String,title:()=>'',stockTabs:()=>'',E:String,nf:String,gp:String,safeName:String,age:String,button:()=>'',icon:()=>''};
  const html=new Function(...Object.keys(env),`${moneySource}${code};return stock();`)(...Object.values(env)) as string;
  expect(html).toContain('<b>370 + ?</b>');expect(html).toContain('4 item kinds without a price');expect(html).toContain('<b>7</b><span>item kinds</span>');
  expect(html).toContain('<strong>7 <small class="op-sub">· 70</small>');expect(html).toContain('<strong>3 <small class="op-sub">· 300</small>');
  expect(html).toContain('<strong>9 <small class="op-sub">· unpriced</small>');expect(html).toContain('<strong>1 <small class="op-sub">· 0</small>');
  expect(html).not.toContain('9999');
+});
+
+function stockView(bank:any[],options:Record<string,unknown>={}){
+ const code=operations.slice(operations.indexOf(' function stock(){'),operations.indexOf(' // Fleet deck:'));
+ const env:any={S:{economy:{itemPricesById:{1:{value:10},2:{value:100}}}},window:{},stockView:'stock',stockAccount:'',stockQuery:'',stockSort:'quantity',stockLimit:80,bots:()=>[{name:'Worker',bankAt:1,bank}],page:String,title:()=>'',stockTabs:()=>'',E:String,nf:String,gp:String,safeName:String,age:String,button:(label:string,action:string)=>`<button data-op="${action}">${label}</button>`,icon:()=>'',...options};
+ return new Function(...Object.keys(env),`${moneySource}${code};return stock();`)(...Object.values(env)) as string;
+}
+
+test('supply search trims whitespace and the summary counts every matching item',()=>{
+ const html=stockView([{id:1,name:'Air rune',count:2},{id:2,name:'Shark',count:5}],{stockQuery:'  SHARK  '});
+ expect(html).toContain('<b>500</b>');expect(html).toContain('<b>1</b><span>item kinds</span>');
+ expect(html).toContain('Shark');expect(html).not.toContain('Air rune');expect(html).toContain('id="op-stock-summary"');
+ expect(html).toContain('1 of 1 item kinds');
+});
+
+test('supply ledger exposes the render limit and show more reaches the remaining stock',()=>{
+ const bank=Array.from({length:81},(_,n)=>({id:n+10,name:'Supply '+n,count:100-n}));
+ const first=stockView(bank),more=stockView(bank,{stockLimit:160});
+ expect(first).toContain('80 of 81 item kinds');expect(first).toContain('data-op="stock-more"');
+ expect(first).not.toContain('> Supply 80<');expect(more).toContain('> Supply 80<');
+ expect(more).toContain('81 of 81 item kinds');expect(more).not.toContain('data-op="stock-more"');
+});
+
+test('stock sort uses stack value, keeps unpriced stock last and sorts names predictably',()=>{
+ const bank=[{id:1,name:'Zamorak rune',count:2},{id:2,name:'Air rune',count:1},{id:9,name:'Unpriced',count:100}];
+ const value=stockView(bank,{stockSort:'value'}),name=stockView(bank,{stockSort:'name'});
+ expect(value.indexOf('> Air rune<')).toBeLessThan(value.indexOf('> Zamorak rune<'));
+ expect(value.indexOf('> Zamorak rune<')).toBeLessThan(value.indexOf('> Unpriced<'));
+ expect(name.indexOf('> Air rune<')).toBeLessThan(name.indexOf('> Unpriced<'));
+});
+
+test('supply ledger distinguishes an empty bank, missing observations and a search with no match',()=>{
+ expect(stockView([])).toContain('The reported banks are empty.');
+ expect(stockView([],{bots:()=>[]})).toContain('No bank snapshots have been reported.');
+ expect(stockView([{id:1,name:'Air rune',count:2}],{stockQuery:'shark'})).toContain('No items match');
+});
+
+test('stock input refreshes both totals and rows without replacing the search field',()=>{
+ const start=operations.indexOf("if(e.target.id==='op-stock-search')"),handler=operations.slice(start,operations.indexOf('\n',start));
+ const refresh=operations.slice(operations.indexOf(' function refreshStock(){'),operations.indexOf(' // Fleet deck:'));
+ const replaced:string[]=[];
+ new Function('document','$','stock',`${refresh};refreshStock();`)({createElement:()=>({set innerHTML(_v:string){},querySelector:(id:string)=>({id})})},(id:string)=>({replaceWith:()=>replaced.push(id)}),()=>'');
+ expect(replaced).toEqual(['#op-stock-summary','#op-stock-list']);
+ expect(handler).toContain('refreshStock()');expect(handler).toContain('stockLimit=80');
 });
 
 test('activity flow totals and tooltips price retained IDs and mark unknown historical names as partial',()=>{
