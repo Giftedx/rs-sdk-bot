@@ -1,79 +1,7 @@
 {
  "side": "cloud",
- "at": 1794843935823,
+ "at": 1794851219092,
  "jobs": [
-  {
-   "account": "BraveHardon",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "TossTheCaber",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "Porksword",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "YewGotWood",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "Spitroaster",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "Stirmypot",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "BoneToPick",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "Crownjewels",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "FullSporran",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "Heavyload",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
-  {
-   "account": "Coinpurse",
-   "enabled": false,
-   "repeat": false,
-   "role": "reserved"
-  },
   {
    "account": "FullLoad",
    "script": "scripts/fleet-inspect.ts",
@@ -100,5 +28,7 @@
    "goal": "fresh bounded bank observation for Woodpecker ring supply; no transfer",
    "role": "inspect"
   }
- ]
+ ],
+ "army": [],
+ "builds": {}
 }
