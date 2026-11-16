@@ -1,6 +1,6 @@
 // Native acceptance for finite planner output and partial ground-supply completion.
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdirSync,mkdtempSync,realpathSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,mkdtempSync,realpathSync,statSync} from 'node:fs';
 import {basename,dirname,join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {serverFromEnv} from '../../packages/core/src/bot';
@@ -21,8 +21,8 @@ const totals=(save:Save,skip:number[]=[])=>{
   if(!skip.includes(row.id))result[row.id]=(result[row.id]??0)+row.count;
  return result;
 };
-type ArtisanMode='cut'|'producer'|'tools';
-const entries={cut:'scripts/microbot-production.ts',producer:'scripts/microbot-jewellery-trip.ts',tools:'scripts/shop-buyer.ts'} as const;
+type ArtisanMode='cut'|'producer'|'tools'|'observer';
+const entries={cut:'scripts/microbot-production.ts',producer:'scripts/microbot-jewellery-trip.ts',tools:'scripts/shop-buyer.ts',observer:'scripts/fleet-inspect.ts'} as const;
 export const toolsEnv={ITEMS:'ring mould|chisel',STOCK_TARGET:'1',STOP_AT_TARGET:'1',MAX_ITEMS:'2',MAX_SPEND:'20',FLOAT:'100',COIN_RESERVE:'0',NO_BUY_TICKS:'25',BANK_PACK:'1'};
 export const artisanSourceEntries=(mode:ArtisanMode):string[]=>[entries[mode],'scripts/measure/catalog-integration-proof.ts',...(mode==='producer'?['scripts/aio.ts']:[])];
 export const artisanSourceRevision=(mode:ArtisanMode,base=root)=>capabilityRevision(artisanSourceEntries(mode),base);
@@ -41,9 +41,21 @@ function startArtifact(name:string,mode:ArtisanMode,server:string,before:Uint8Ar
 
 export function artisanTransition(mode:ArtisanMode,beforeBytes:Uint8Array,afterBytes:Uint8Array,stdout:string){
  const before=parsePracticeSave(beforeBytes),after=parsePracticeSave(afterBytes),expectedXp=mode==='cut'?2500:mode==='producer'?1000:0;
- let spentTotal:number|undefined,fareTotal:number|undefined;
+ let spentTotal:number|undefined,fareTotal:number|undefined,observation:{generation:number;at:number;items:number}|undefined;
  assert.match(stdout,/^RESULT ok\b/m,'successful actual worker');assert.match(stdout,/^LOGOUT logged-out\s*$/m,'worker logout acknowledgement');
- if(mode==='tools'){
+ if(mode==='observer'){
+  assert.deepEqual(before.position,{x:3085,z:3250,level:0});assert.equal(before.skills[12]!.level,51);assert.equal(before.skills[3]!.level,64);
+  assert.equal(amount(before,995,95),100470);assert.equal(amount(before,1623,95),4);
+  const lines=stdout.split(/\r?\n/),markers=lines.filter(line=>line.startsWith('BANK_OBSERVED ')),banks=lines.filter(line=>line.startsWith('BANK ')),results=lines.filter(line=>line.startsWith('RESULT '));
+  assert.equal(markers.length,1,'one fresh bank marker');assert.equal(banks.length,1,'one fresh BANK payload');assert.equal(results.length,1,'one settled inspection result');
+  observation=JSON.parse(markers[0]!.slice('BANK_OBSERVED '.length));assert.ok(observation);
+  assert.ok(Number.isSafeInteger(observation.generation)&&observation.generation>0);assert.ok(Number.isSafeInteger(observation.at)&&observation.at>0);assert.equal(observation.items,2);
+  assert.equal(results[0],`RESULT ok inspection bankObserved=1 bankGeneration=${observation.generation} bankObservedAt=${observation.at} bankItems=${observation.items}`,'settled fresh bank result');
+  assert.ok(lines.indexOf(markers[0]!)<lines.indexOf('LOGOUT logged-out')&&lines.indexOf('LOGOUT logged-out')<lines.indexOf(results[0]!), 'bank observed before confirmed logout and success');
+  const bank=JSON.parse(banks[0]!.slice('BANK '.length));assert.ok(Array.isArray(bank));
+  assert.deepEqual(bank.map((row:any)=>({id:row.id,count:row.count})).sort((a:any,b:any)=>a.id-b.id),[{id:995,count:100470},{id:1623,count:4}],'exact observed bank assets');
+  assert.deepEqual(totals(after),totals(before),'observation preserves all assets');assert.deepEqual(after.inventories[93]??[],before.inventories[93]??[]);
+ }else if(mode==='tools'){
   assert.deepEqual(before.position,{x:3085,z:3250,level:0});assert.equal(before.skills[12]!.level,51);assert.equal(before.skills[3]!.level,64);
   assert.equal(amount(before,995,95),100470);assert.equal(amount(before,1623,95),4);assert.equal(amount(before,1755),0);assert.equal(amount(before,1592),0);
   assert.equal(amount(after,1755,95),1);assert.equal(amount(after,1592,95),1);assert.equal(amount(after,1755),1);assert.equal(amount(after,1592),1);assert.equal(amount(after,1623,95),4);
@@ -69,7 +81,8 @@ export function artisanTransition(mode:ArtisanMode,beforeBytes:Uint8Array,afterB
  assert.equal(after.skills[12]!.rawExperience-before.skills[12]!.rawExperience,expectedXp*10,'exact native25x Crafting XP');
  assert.equal(after.skills[12]!.level,levelForXp(after.skills[12]!.xp));
  for(let i=0;i<21;i++)if(i!==12)assert.deepEqual(after.skills[i],before.skills[i],'unrelated skill '+i);
- return{mode,xpGain:expectedXp,item:mode==='cut'?1607:mode==='producer'?1637:1755,count:mode==='producer'?1:2,
+ return{mode,xpGain:expectedXp,item:mode==='cut'?1607:mode==='producer'?1637:mode==='tools'?1755:undefined,count:mode==='observer'?0:mode==='producer'?1:2,
+  ...(mode==='observer'?{bankObserved:true,observation}:{}),
   ...(mode==='tools'?{items:{1755:1,1592:1},spentTotal,fareTotal}:{})};
 }
 
@@ -87,11 +100,18 @@ export function verifyArtisanEvidence(mode:ArtisanMode){
  assert.equal(execution.exitCode,0);assert.equal(execution.expired,false);assert.equal(execution.script,mode==='producer'?'scripts/aio.ts':entries[mode]);
  if(mode==='cut'){assert.deepEqual(execution.args,['cut-sapphire']);assert.equal(execution.env.MAX_MAKE,'2');assert.equal(execution.env.CAP,'600');}
  else if(mode==='tools'){assert.deepEqual(execution.args,['dommik','1500']);for(const [key,value]of Object.entries(toolsEnv))assert.equal(execution.env[key],value,'finite shop control '+key);}
+ else if(mode==='observer'){
+  assert.deepEqual(execution.args,[]);assert.equal(execution.env.REQUIRE_BANK,'1');
+  assert.ok(Number.isFinite(execution.save?.beforeMtimeMs)&&execution.save.afterMtimeMs>execution.save.beforeMtimeMs,'same-attempt saved observation');
+  assert.ok(execution.save.afterMtimeMs>=record.startedAt&&execution.save.afterMtimeMs<=record.completedAt!,'save belongs to retained attempt');
+ }
  else for(const value of ['jewellery-trip','RECIPE=sapphire_ring','TARGET=1','BATCH=1'])assert.ok(execution.args.includes(value),'one-ring launch '+value);
  const logout=JSON.parse(readFileSync(join(directory,'logout.json'),'utf8'));
  assert.equal(logout.state,'confirmed');assert.equal(logout.domain,'practice');assert.equal(logout.account,record.account);assert.equal(logout.server,record.server);
  assert.match(logout.attemptId,/^\d{13}-\d{1,10}-\d{1,10}$/);assert.ok(logout.loggedOutAt>=record.startedAt&&logout.loggedOutAt<=record.completedAt!);
- return artisanTransition(mode,readFileSync(join(directory,'before.sav')),readFileSync(join(directory,'after.sav')),readFileSync(join(directory,'stdout.log'),'utf8'));
+ const result=artisanTransition(mode,readFileSync(join(directory,'before.sav')),readFileSync(join(directory,'after.sav')),readFileSync(join(directory,'stdout.log'),'utf8'));
+ if(mode==='observer'){assert.ok(result.observation);assert.ok(result.observation.at>=record.startedAt&&result.observation.at<=logout.loggedOutAt,'bank observed during retained session');}
+ return result;
 }
 
 async function worker(name:string,script:string,args:string[],env:Record<string,string>={},expected=0,directory?:string){
@@ -111,7 +131,8 @@ async function prove(name:string,mode:string,savePath:string){
  assert.equal(dirname(realpathSync(savePath)),realpathSync(resolve(root,'vendor/rs-sdk/server/engine/data/players/main')),'generated practice save required');
  const server=serverFromEnv(readFileSync(resolve(root,'vendor/rs-sdk/bots',name,'bot.env'),'utf8'));
  assert.equal(isLocalServer(server),true,'native proof is local only');
- const beforeBytes=readFileSync(savePath),before=parsePracticeSave(beforeBytes),artifact=mode==='producer'||mode==='cut'||mode==='tools'?startArtifact(name,mode,server,beforeBytes):undefined;
+ const beforeBytes=readFileSync(savePath),before=parsePracticeSave(beforeBytes),beforeMtimeMs=statSync(savePath).mtimeMs,
+  artifact=mode==='producer'||mode==='cut'||mode==='tools'||mode==='observer'?startArtifact(name,mode,server,beforeBytes):undefined;
  let stdout:string,expectedItem:number;
  if(mode==='producer'){
   assert.equal(amount(before,1607,95),13);assert.equal(amount(before,2357,95),13);assert.equal(amount(before,1592,95),1);
@@ -136,6 +157,11 @@ async function prove(name:string,mode:string,savePath:string){
   assert.equal(amount(before,1755),0);assert.equal(amount(before,1592),0);
   stdout=await worker(name,entries.tools,['dommik','1500'],toolsEnv,0,artifact!.directory);expectedItem=1755;
   const saved=await waitPracticeSave(savePath,save=>amount(save,1755,95)===1&&amount(save,1592,95)===1);assert.equal(saved.matched,true);
+ }else if(mode==='observer'){
+  stdout=await worker(name,entries.observer,[],{REQUIRE_BANK:'1'},0,artifact!.directory);expectedItem=995;
+  const saved=await waitPracticeSave(savePath,()=>statSync(savePath).mtimeMs>beforeMtimeMs);assert.equal(saved.matched,true,'same-attempt observation save');
+  const executionPath=join(artifact!.directory,'execution.json'),execution=JSON.parse(readFileSync(executionPath,'utf8'));
+  execution.save={beforeMtimeMs,afterMtimeMs:statSync(savePath).mtimeMs};writeFileSync(executionPath,JSON.stringify(execution,null,2));
  }else{
   assert.equal(mode,'gather-short');assert.equal((before.inventories[93]??[]).length,28);assert.equal(amount(before,1059,93),1);
   stdout=await worker(name,'scripts/gather-spawn.ts',['1059','2'],{TICKS:'1'},1);
@@ -159,8 +185,8 @@ if(import.meta.main){
  const [name,mode,save]=process.argv.slice(2);
  try{
   if(name==='--verify'){
-   assert.ok(mode==='cut'||mode==='producer'||mode==='tools','verify mode cut|producer|tools required');const result=verifyArtisanEvidence(mode);
+   assert.ok(mode==='cut'||mode==='producer'||mode==='tools'||mode==='observer','verify mode cut|producer|tools|observer required');const result=verifyArtisanEvidence(mode);
    console.log('CATALOG_ARTISAN_VERIFIED '+JSON.stringify(result));console.log('RESULT ok artisan native verified '+mode);
-  }else{if(!name||!mode||!save)throw Error('usage: catalog-integration-proof.ts account cut|producer|tools|gather-short save, or --verify cut|producer|tools');await prove(name,mode,resolve(root,save));}
+  }else{if(!name||!mode||!save)throw Error('usage: catalog-integration-proof.ts account cut|producer|tools|observer|gather-short save, or --verify cut|producer|tools|observer');await prove(name,mode,resolve(root,save));}
  }catch(error){console.error(String(error));process.exitCode=1;}
 }

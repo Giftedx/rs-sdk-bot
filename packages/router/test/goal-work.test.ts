@@ -1,8 +1,9 @@
 import {expect,test} from 'bun:test';
-import {addTasks,chooseTask,initialState,type CoordTask} from '../src/coordinator';
+import {acceptStatus,addTasks,chooseTask,initialState,type CoordTask} from '../src/coordinator';
 import {goalWork,ruleGoalValue} from '../src/goal-work';
 import type {OwnerGoals} from '../src/goal-scoreboard';
 import {applyRules} from '../src/coordinator-rules';
+import {resultCounters} from '../../core/src/status';
 
 const NOW=1_000_000;
 const goals=(patch:Record<string,unknown>={}):OwnerGoals=>({version:1,at:NOW,
@@ -233,6 +234,106 @@ test('GE inputs get no observation credit for covered, ambiguous, unnamed, coin 
  expect(goalWork(coinState,coins,[],NOW,ringContext).get(input.id)!.value).toBeNull();
  const {state}=evaluate([geProof,input,consumer],ringGoals());state.tasks.find(row=>row.spec.id===consumer.id)!.status='failed';
  expect(goalWork(state,ringGoals(),[],NOW,ringContext).get(input.id)!.value).toBe(0);
+});
+
+const bankObserver=(patch:Partial<CoordTask>={}):CoordTask=>run('bank-observe',{goal:'main24',capability:'bank-observation',dependsOn:['bank-qualified'],
+ timeoutMs:120000,args:[],env:{REQUIRE_BANK:'1'},accept:{counters:{bankObserved:1}},...patch});
+const bankProof:CoordTask={...geProof,id:'bank-qualified',capability:'bank-observation'};
+const bankContext={entryOf:(capability:string)=>capability==='bank-observation'?'scripts/fleet-inspect.ts':ringContext.entryOf(capability)};
+const observationChain=(observer=bankObserver(),consumer=ringConsumer())=>[bankProof,geProof,observer,
+ run('fund-ring',{goal:'main24',capability:'coin-courier',account:undefined,participants:['Donor','Helper'],acceptIndex:1,
+  dependsOn:[observer.id],timeoutMs:600000,accept:{bank:{995:111470}}}),
+ ringInput({dependsOn:[geProof.id,'fund-ring']}),consumer];
+const observedRingGoals=()=>{const board=ringGoals();delete board.collection.missing[0]!.verifyOwned;return board;};
+
+test('a strict bounded bank observer unblocks observation before an unknown funded production chain',()=>{
+ const board=observedRingGoals(),{state}=evaluate(observationChain(),board,[]);
+ for(const statuses of [[],[status('Helper',{bankAt:0})],[status('Helper',{bankAt:NOW-300000})]]){
+  const values=goalWork(state,board,statuses,NOW,bankContext);
+  expect(values.get('bank-observe')!.value).toBe(.01);
+  expect(values.get('bank-observe')!.reason).toContain('Bounded bank observation');
+  expect(values.get('bank-observe')!.reason).toContain('not game progress');
+  expect(values.get('bank-qualified')!.value).toBe(.01);
+  expect(values.get('fund-ring')!.value).toBeNull();
+  expect(values.get('ring-consumer')!.value).toBeNull();
+  expect(values.get('ge-supply')!.value).toBe(.01);
+ }
+ for(const row of state.tasks)if(row.spec.kind==='qualify')row.status='succeeded';
+ const values=goalWork(state,board,[],NOW,bankContext),goalValue=(task:CoordTask)=>values.get(task.id)?.value??null;
+ expect(chooseTask(state,NOW,{goalValue})?.id).toBe('bank-observe');
+ expect(chooseTask(state,NOW,{goalValue,runHeld:()=>true})).toBeNull();
+ expect(chooseTask(state,NOW,{goalValue,liveLimit:0})).toBeNull();
+ state.tasks.find(row=>row.spec.id==='bank-observe')!.status='succeeded';
+ const fresh=goalWork(state,board,[status('Helper',{bank:[{id:1623,count:4},{id:995,count:100470}]})],NOW,bankContext);
+ for(const id of ['fund-ring','ge-supply','ring-consumer'])expect(fresh.get(id)!.value).toBe(1/12);
+ expect(chooseTask(state,NOW,{goalValue:task=>fresh.get(task.id)?.value??null})?.id).toBe('fund-ring');
+ expect(board.collection.missing[0]!.owned).toBe(0);
+ expect(state.goals.find(goal=>goal.id==='main24')!.completedTasks).toBe(0);
+});
+
+test('bank observation support cannot leak into ordinary run ancestors',()=>{
+ const earlier=ringConsumer({id:'earlier-worker',dependsOn:[]}),observer=bankObserver({dependsOn:[bankProof.id,earlier.id]});
+ const {state}=evaluate([earlier,...observationChain(observer)],observedRingGoals(),[]);
+ const values=goalWork(state,observedRingGoals(),[],NOW,bankContext);
+ expect(values.get(observer.id)!.value).toBe(.01);expect(values.get(earlier.id)!.value).toBeNull();
+ expect(values.get(bankProof.id)!.value).toBe(.01);
+ for(const row of state.tasks)if(row.spec.kind==='qualify')row.status='succeeded';
+ expect(chooseTask(state,NOW,{goalValue:task=>values.get(task.id)?.value??null})).toBeNull();
+ expect(goalWork(state,observedRingGoals(),[status('Helper')],NOW,bankContext).get(earlier.id)!.value).toBe(1/12);
+});
+
+test('bank observers require the strict entry, one account, a short timeout and exact observation counter',()=>{
+ const refused:CoordTask[]=[bankObserver({env:{}}),bankObserver({env:{REQUIRE_BANK:'0'}}),bankObserver({args:['unexpected']}),
+  bankObserver({timeoutMs:undefined}),bankObserver({timeoutMs:120001}),bankObserver({account:undefined,participants:['Helper','Other']}),
+  bankObserver({accept:{counters:{bankObserved:2}}}),bankObserver({accept:{counters:{bankItems:1}}}),bankObserver({accept:{counters:{bankObserved:1,bankItems:1}}}),
+  bankObserver({accept:{bank:{1623:3}}}),bankObserver({accept:{bank:{1623:3},counters:{bankObserved:1}}})];
+ for(const task of refused){const {state}=evaluate(observationChain(task),observedRingGoals(),[]);expect(goalWork(state,observedRingGoals(),[],NOW,bankContext).get(task.id)!.value??0).toBe(0);}
+ const {state}=evaluate(observationChain(),observedRingGoals(),[]);
+ expect(goalWork(state,observedRingGoals(),[],NOW,{entryOf:c=>c==='bank-observation'?'scripts/goldfarm.ts':bankContext.entryOf(c)}).get('bank-observe')!.value??0).toBe(0);
+ const invalid=state.tasks.find(row=>row.spec.id==='bank-observe')!.spec;
+ for(const timeout of [0,-1,1.5,Infinity]){invalid.timeoutMs=timeout;expect(goalWork(state,observedRingGoals(),[],NOW,bankContext).get(invalid.id)!.value??0).toBe(0);}
+});
+
+test('bank observation needs a pending same-account exact unmet noncoin consumer',()=>{
+ for(const consumer of [ringConsumer({account:'Other'}),ringConsumer({account:undefined,participants:['Helper','Other']}),
+  ringConsumer({accept:{bank:{1637:13}}}),ringConsumer({accept:{counters:{rings:1}}}),ringConsumer({accept:{bank:{995:1}}})]){
+  const {state}=evaluate(observationChain(bankObserver(),consumer),observedRingGoals(),[]);
+  expect(goalWork(state,observedRingGoals(),[],NOW,bankContext).get('bank-observe')!.value??0).toBe(0);
+ }
+ for(const patch of [{owned:12},{id:undefined},{consumer:'unresolved named supply'},{verifyOwned:12}]){
+  const board=observedRingGoals();Object.assign(board.collection.missing[0]!,patch);
+  const {state}=evaluate(observationChain(),board,[]);expect(goalWork(state,board,[],NOW,bankContext).get('bank-observe')!.value??0).toBe(0);
+ }
+ const board=observedRingGoals(),{state}=evaluate(observationChain(),board,[]);
+ state.tasks.find(row=>row.spec.id==='ring-consumer')!.status='failed';
+ expect(goalWork(state,board,[],NOW,bankContext).get('bank-observe')!.value).toBe(0);
+ const isolated=evaluate([bankProof,bankObserver()],board,[]).state;
+ expect(goalWork(isolated,board,[],NOW,bankContext).get('bank-observe')!.value??0).toBe(0);
+});
+
+test('an observer accepts an empty bank but cannot claim item, coin, quest or counter progress itself',()=>{
+ const observer=bankObserver(),board=observedRingGoals(),{state}=evaluate(observationChain(observer),board,[]);
+ expect(goalWork(state,board,[],NOW,bankContext).get(observer.id)!.value).toBe(.01);
+ expect(goalWork(state,board,[status('Helper',{bank:[],bankAt:NOW-300000})],NOW,bankContext).get(observer.id)!.value).toBe(.01);
+ const effects:NonNullable<CoordTask['accept']>[]=[{bank:{1637:1}},{bank:{995:90000}},{counters:{bankObserved:1}},{quests:['Lost City']}];
+ for(const accept of effects){
+  const own=bankObserver({accept}),only=evaluate([bankProof,own],board,[status('Helper')]).state;
+  expect(goalWork(only,board,[status('Helper')],NOW,bankContext).get(own.id)!.value??0).toBe(0);
+ }
+ const fresh=goalWork(state,board,[status('Helper')],NOW,bankContext);
+ expect(fresh.get(observer.id)!.value).toBe(1/12);
+ expect(fresh.get(observer.id)!.reason).not.toContain('Bounded bank observation');
+});
+
+test('the strict observer result counter satisfies only its current successful coordinator run',()=>{
+ const task=bankObserver(),detail='ok inspection bankObserved=1 bankGeneration=2 bankObservedAt=999990 bankItems=0';
+ const observed=status('Helper',{result:detail,counters:resultCounters(detail),workRevision:'source',coordinatorRunId:'observe-run',started:NOW-10}) as ReturnType<typeof status>&{counters:ReturnType<typeof resultCounters>};
+ const context={account:'Helper',goal:'main24',source:'source',startedAt:NOW-10,now:NOW,runId:'observe-run'};
+ expect(observed.counters).toMatchObject({bankObserved:1,bankItems:0});
+ expect(acceptStatus(task,observed,context)).toBe(true);
+ expect(acceptStatus(task,{...observed,coordinatorRunId:'old-run'},context)).toBe(false);
+ expect(acceptStatus(task,{...observed,result:'fail bank not observed'},context)).toBe(false);
+ expect(acceptStatus(task,{...observed,counters:resultCounters('ok inspection')},context)).toBe(false);
 });
 
 test('coins have value only for a finite named acquisition consumer',()=>{

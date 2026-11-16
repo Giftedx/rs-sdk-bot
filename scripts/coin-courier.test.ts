@@ -74,7 +74,16 @@ test('trade diagnostics keep missing entry evidence explicit', () => {
 test('named consumer retains its CLI and shared bank', () => {
     const c = parseCoins(['Pocketpython', 'Abracadickra', '2000000']);
     expect(c.amount).toBe(2000000);
+    expect(c.reserve).toBe(0);
     expect([c.x, c.z]).toEqual([3185, 3436]);
+});
+
+test('coin courier accepts an explicit donor bank reserve and rejects invalid or duplicate bounds before login',()=>{
+    for(const reserve of [0,5000,2147483647])expect(parseCoins(['Giver','Taker','1',`--reserve=${reserve}`]).reserve).toBe(reserve);
+    for(const reserve of ['-1','1.5','NaN','Infinity','2147483648','','1e3','1=2'])
+        expect(()=>parseCoins(['Giver','Taker','1',`--reserve=${reserve}`])).toThrow();
+    expect(()=>parseCoins(['Giver','Taker','1','--reserve'])).toThrow();
+    expect(()=>parseCoins(['Giver','Taker','1','--reserve=0','--reserve=5000'])).toThrow();
 });
 test('meeting tiles are adjacent public floor joined to the bank tile, off the booth counter', async () => {
     const c = parseCoins(['Pocketpython', 'Abracadickra', '2000000']);
@@ -125,6 +134,14 @@ test('both bank deltas must match, with original pocket coins retained', () => {
     expect(exactCoinDelta(before, [{ bank: 1999, pack: 10 }, after[1]!], 1000)).toBe(false);
     expect(exactCoinDelta(before, [after[0]!, { bank: 1051, pack: 6 }], 1000)).toBe(false);
     expect(exactCoinDelta(before, [], 1000)).toBe(false);
+});
+
+test('exact courier deltas also retain the declared donor bank reserve',()=>{
+    const before=[{bank:3000,pack:9},{bank:50,pack:7}],after=[{bank:2000,pack:9},{bank:1050,pack:7}];
+    expect(exactCoinDelta(before,after,1000,2000)).toBe(true);
+    expect(exactCoinDelta(before,after,1000,2001)).toBe(false);
+    for(const reserve of [-1,NaN,Infinity,1.5,2147483648])expect(exactCoinDelta(before,after,1000,reserve)).toBe(false);
+    expect(exactCoinDelta(before,[{bank:2000,pack:10},after[1]!],1000,2000)).toBe(false);
 });
 
 test('owned coin endpoints reach the stack, new profiles, registration and every worker child',async()=>{

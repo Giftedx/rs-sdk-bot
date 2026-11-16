@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, copyFileSync, openSync, closeSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, copyFileSync, openSync, closeSync, unlinkSync,statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { freemem } from 'node:os';
@@ -35,6 +35,8 @@ const retainedAssets = (before: Save, after: Save, donor: boolean) => {
         && JSON.stringify(itemTotals(containers.flatMap(c => before.inventories[c] ?? [])))
             === JSON.stringify(itemTotals(containers.flatMap(c => after.inventories[c] ?? [])));
 };
+const unchangedRefusal = (before:Save,after:Save) => JSON.stringify(before.inventories)===JSON.stringify(after.inventories)
+    && JSON.stringify(before.skills)===JSON.stringify(after.skills);
 
 export function coinProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
     const values=[ports?.engine,ports?.gateway,ports?.management,ports?.tcp];
@@ -84,18 +86,29 @@ export function verify(directory: string) {
     const log = readFileSync(join(directory, 'transfer.log'), 'utf8');
     const refusal = readFileSync(join(directory, 'refusal.log'), 'utf8') + readFileSync(join(directory, 'refusal.err'), 'utf8');
     const refused = [0, 1].map(i => readPracticeSave(join(directory, `refused-${i}.sav`)));
+    const reserveRefusal=readFileSync(join(directory,'reserve-refusal.log'),'utf8')+readFileSync(join(directory,'reserve-refusal.err'),'utf8');
+    const reserveRefused=[0,1].map(i=>readPracticeSave(join(directory,`reserve-refused-${i}.sav`)));
+    const receiptLine=log.split(/\r?\n/).findLast(line=>line.startsWith('COIN_RECEIPT '));
+    const receipt=receiptLine?JSON.parse(receiptLine.slice('COIN_RECEIPT '.length)):null;
     const checks = {
         source: meta.source === source(),
         fullDonor: meta.amount === 45000 && count(before[0]!, 93) === 0 && before[0]!.inventories[93]?.length === 28
             && before[0]!.inventories[93]!.filter(i => i.id === 1436 && i.count === 1).length === 27
             && before[0]!.inventories[93]!.filter(i => i.id === 1446 && i.count === 1).length === 1,
         transfer: meta.code === 0 && log.includes('COIN_RESULT {"ok":true'),
-        coins: exactCoinDelta(before.map(s => ({ bank: count(s, 95), pack: count(s, 93) })), after.map(s => ({ bank: count(s, 95), pack: count(s, 93) })), meta.amount),
+        coins: exactCoinDelta(before.map(s => ({ bank: count(s, 95), pack: count(s, 93) })), after.map(s => ({ bank: count(s, 95), pack: count(s, 93) })), meta.amount,meta.reserve),
+        donorReserve:meta.reserve===5000&&receipt?.reserve===meta.reserve&&count(after[0]!,95)===meta.reserve,
         assets: before.every((s, i) => retainedAssets(s, after[i]!, i === 0)),
         health: before.every((s, i) => s.skills[3]!.level === after[i]!.skills[3]!.level),
         logout: log.includes('LOGOUT logged-out logged-out'),
         refusal: meta.refusalCode !== 0 && refusal.includes('coin bank funds short') && refusal.includes('COIN_RESULT {"ok":false') && refusal.includes('LOGOUT logged-out logged-out'),
         refusalAssets: after.every((s, i) => [93, 94, 95].every(c => JSON.stringify(s.inventories[c] ?? []) === JSON.stringify(refused[i]!.inventories[c] ?? [])) && s.skills[3]!.level === refused[i]!.skills[3]!.level),
+        reserveRefusal:meta.reserveRefusal?.code!==0&&meta.reserveRefusal?.amount===meta.amount&&meta.reserveRefusal?.reserve===5001
+            &&count(before[0]!,95)>=meta.reserveRefusal.amount&&count(before[0]!,95)-meta.reserveRefusal.amount<meta.reserveRefusal.reserve
+            &&reserveRefusal.includes('coin donor bank reserve short')&&reserveRefusal.includes('COIN_RESULT {"ok":false')&&reserveRefusal.includes('LOGOUT logged-out logged-out'),
+        reserveRefusalAssets:before.every((s,i)=>unchangedRefusal(s,reserveRefused[i]!)),
+        reserveRefusalFreshSaves:meta.reserveRefusal?.savePublications?.length===2&&meta.reserveRefusal.savePublications.every((s:any)=>s.after>s.before&&s.after>=meta.reserveRefusal.startedAt),
+        reserveRefusalBeforeMutation:meta.reserveRefusal?.journalCreated===false&&!reserveRefusal.includes('COIN_TRADE')&&!reserveRefusal.includes('COIN_RECEIPT'),
     };
     const report = { ok: Object.values(checks).every(Boolean), checks, source: meta.source, scope: 'One native preset transfer; no live or repeat qualification' };
     writeFileSync(join(directory, 'consumer.json'), JSON.stringify(report, null, 2));
@@ -117,7 +130,7 @@ async function run(directory: string) {
         try { const code = await child.exited; return timedOut ? -1 : code; } finally { clearTimeout(timer); }
     };
     try {
-        const revision = source(), amount = 45000, names = [runBotName('cgive', 1), runBotName('ctake', 1)], saves: string[] = [];
+        const revision = source(), amount = 45000,reserve=5000, names = [runBotName('cgive', 1), runBotName('ctake', 1)], saves: string[] = [];
         stack = await startCoinProofStack(endpoints);
         for (const [i, name] of names.entries()) {
             if (existsSync(join(rsSdkRoot(), 'bots', name))) throw Error('practice name already exists');
@@ -134,14 +147,26 @@ async function run(directory: string) {
             copyFileSync(path, join(directory, `before-${i}.sav`));
         }
         if (freemem() / 2 ** 30 < FREE_FLOOR_GB) throw Error('practice memory floor reached before transfer');
-        const code = await command(['scripts/coin-courier.ts', ...names, String(amount)], 'transfer', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
+        // The full donor can afford the amount, but would be one coin below this reserve. Refuse before even
+        // banking its talisman for a slot; retain raw saved inventories and every skill for independent verification.
+        const priorSaveTimes=saves.map(path=>statSync(path).mtimeMs),reserveStartedAt=Date.now(),reserveOrder='proof-reserve-'+crypto.randomUUID();
+        const reserveRefusalCode=await command(['scripts/coin-courier.ts',...names,String(amount),`--reserve=${reserve+1}`],'reserve-refusal',{COIN_ORDER:reserveOrder});
+        const reserveRefusal={code:reserveRefusalCode,amount,reserve:reserve+1,order:reserveOrder,startedAt:reserveStartedAt,savePublications:[] as {before:number;after:number}[],journalCreated:existsSync(join(root,'.practice/coin-courier',reserveOrder))};
+        for(const [i,path]of saves.entries()){
+            const initial=readPracticeSave(join(directory,`before-${i}.sav`));
+            const saved=await waitPracticeSave(path,s=>statSync(path).mtimeMs>priorSaveTimes[i]!&&statSync(path).mtimeMs>=reserveStartedAt&&unchangedRefusal(initial,s));
+            if(!saved.matched)throw Error('reserve refusal mutated saved assets or skills');
+            reserveRefusal.savePublications.push({before:priorSaveTimes[i]!,after:statSync(path).mtimeMs});
+            copyFileSync(path,join(directory,`reserve-refused-${i}.sav`));
+        }
+        const code = await command(['scripts/coin-courier.ts', ...names, String(amount),`--reserve=${reserve}`], 'transfer', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
         for (const [i, path] of saves.entries()) {
             await waitPracticeSave(path, s => count(s, 95) === (i ? 500 + amount : 50000 - amount));
             copyFileSync(path, join(directory, `after-${i}.sav`));
         }
         const refusalCode = await command(['scripts/coin-courier.ts', ...names, '50001'], 'refusal', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
         for (const [i, path] of saves.entries()) copyFileSync(path, join(directory, `refused-${i}.sav`));
-        writeFileSync(join(directory, 'native.json'), JSON.stringify({ source: revision, amount, names, code, refusalCode, endpoints: { ports: endpoints.ports, instance: endpoints.instance }, server: endpoints.server }));
+        writeFileSync(join(directory, 'native.json'), JSON.stringify({ source: revision, amount,reserve,reserveRefusal, names, code, refusalCode, endpoints: { ports: endpoints.ports, instance: endpoints.instance }, server: endpoints.server }));
         return verify(directory);
     } finally {
         try { await stack?.stop(); } finally { closeSync(fd); unlinkSync(lock); }

@@ -1219,6 +1219,9 @@ const SAME_JOB_CASES: BenchCase[] = [
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
 const EXTRA_CASES: BenchCase[] = [
+  {key:'extra:owned-bank-observation',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['observer','{save}'],timeoutMs:120_000,
+    presetConfig:{position:{x:3085,z:3250,level:0},skills:{Crafting:51,Hitpoints:64},inventory:[],equipment:[],bank:[{id:995,count:100470},{id:1623,count:4}]},
+    pass:s=>ok(s)&&s.includes('"mode":"observer"')&&s.includes('bankObserved=1')&&s.includes('"assets":true')&&s.includes('"logout":true')},
   {key:'extra:catalog-dommik-tools',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['tools','{save}'],timeoutMs:180_000,
     presetConfig:{position:{x:3085,z:3250,level:0},skills:{Crafting:51,Hitpoints:64},inventory:[],equipment:[],bank:[{id:995,count:100470},{id:1623,count:4}]},
     pass:s=>ok(s)&&s.includes('"mode":"tools"')&&s.includes('"assets":true')&&s.includes('"logout":true')},

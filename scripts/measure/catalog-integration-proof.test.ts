@@ -16,14 +16,15 @@ import {runtimeTrees,releaseFiles} from '../../packages/core/src/worker-release'
 
 const stdout='RESULT ok finite native artisan\nLOGOUT logged-out\n';
 const toolsStdout='RESULT ok ticks=400 boughtTotal=2 bankedTotal=2 spentTotal=6 maxSpend=20 maxItems=2 targetMet=1 fareTotal=10\nLOGOUT logged-out\n';
-async function fixture(mode:'cut'|'producer'|'tools',delta=mode==='cut'?2500:mode==='producer'?1000:0,output=mode==='producer'?1:2){
+const observerStdout='BANK [{"id":995,"name":"Coins","count":100470},{"id":1623,"name":"Uncut sapphire","count":4}]\nBANK_OBSERVED {"generation":2,"at":2001,"items":2}\nLOGOUT logged-out\nRESULT ok inspection bankObserved=1 bankGeneration=2 bankObservedAt=2001 bankItems=2\n';
+async function fixture(mode:'cut'|'producer'|'tools'|'observer',delta=mode==='cut'?2500:mode==='producer'?1000:0,output=mode==='producer'?1:2){
  const name=()=>`flat${randomUUID().replaceAll('-','').slice(0,8)}`;
- const skills=mode==='tools'?{Crafting:51,Hitpoints:64}:{Crafting:20,Hitpoints:40};
- const before=await applyPreset(name(),{position:mode==='tools'?{x:3085,z:3250,level:0}:{x:3269,z:3167,level:0},skills,inventory:[],equipment:[],
+ const skills=mode==='tools'||mode==='observer'?{Crafting:51,Hitpoints:64}:{Crafting:20,Hitpoints:40};
+ const before=await applyPreset(name(),{position:mode==='tools'||mode==='observer'?{x:3085,z:3250,level:0}:{x:3269,z:3167,level:0},skills,inventory:[],equipment:[],
   bank:mode==='cut'?[{id:1623,count:2},{id:1755,count:1}]:mode==='producer'?[{id:1607,count:13},{id:2357,count:13},{id:1592,count:1}]:[{id:995,count:100470},{id:1623,count:4}]});
  const after=await applyPreset(name(),{position:{x:3269,z:3167,level:0},skills,equipment:[],
   inventory:mode==='cut'?[{id:1755,count:1}]:[],bank:mode==='cut'?[{id:1607,count:output}]:mode==='producer'?[{id:1607,count:12},{id:2357,count:12},{id:1592,count:1},{id:1637,count:output}]:
-   [{id:995,count:100454},{id:1623,count:4},{id:1755,count:1},...(output===2?[{id:1592,count:1}]:[])]});
+   mode==='observer'?[{id:995,count:100470},{id:1623,count:output===2?4:3}]:[{id:995,count:100454},{id:1623,count:4},{id:1755,count:1},...(output===2?[{id:1592,count:1}]:[])]});
  const afterSkills=readPracticeSave(after).skills.map(s=>({level:s.level,xp:s.xp}));afterSkills[12]!.xp+=delta;afterSkills[12]!.level=levelForXp(afterSkills[12]!.xp);setPracticeSkills(after,afterSkills);
  return{before:readFileSync(before),after:readFileSync(after),close:()=>{rmSync(before,{force:true});rmSync(after,{force:true});}};
 }
@@ -36,6 +37,18 @@ for(const mode of ['cut','producer','tools'] as const)test(`retained ${mode} art
   expect(()=>artisanTransition(mode,f.before,f.after,'RESULT ok claimed without logout\n')).toThrow('worker logout acknowledgement');
   const corrupt=Buffer.from(f.after);corrupt[corrupt.length-1]=(corrupt[corrupt.length-1]??0)^1;expect(()=>artisanTransition(mode,f.before,corrupt,log)).toThrow('CRC mismatch');
  }finally{f.close();}
+});
+
+test('retained observer bytes require a fresh bank marker, exact BANK payload and preserved state',async()=>{
+ const valid=await fixture('observer'),changed=await fixture('observer',0,1),xp=await fixture('observer',1);
+ try{
+  expect(artisanTransition('observer',valid.before,valid.after,observerStdout)).toMatchObject({mode:'observer',xpGain:0,count:0,bankObserved:true});
+  for(const log of [observerStdout.replace('bankObserved=1','bankObserved=0'),observerStdout.replace('bankGeneration=2','bankGeneration=1'),
+   observerStdout.replace('100470','100469'),observerStdout.replace('BANK_OBSERVED','UNOBSERVED'),observerStdout.replace('LOGOUT logged-out\n','')])
+   expect(()=>artisanTransition('observer',valid.before,valid.after,log)).toThrow();
+  expect(()=>artisanTransition('observer',changed.before,changed.after,observerStdout)).toThrow();
+  expect(()=>artisanTransition('observer',xp.before,xp.after,observerStdout)).toThrow('exact native25x Crafting XP');
+ }finally{valid.close();changed.close();xp.close();}
 });
 
 test('tool acquisition requires both banked tools and reconciled bounded spend',async()=>{
@@ -57,6 +70,7 @@ test('retained artisan source pins include dispatcher, planner and save reader d
  const base=mkdtempSync(join(tmpdir(),'artisan-release-'));
  const sources:Record<string,string>={'package.json':'{}','bun.lock':'','tsconfig.json':'{}',
   'scripts/microbot-production.ts':'export const cut=1;','scripts/microbot-jewellery-trip.ts':'export const ring=1;','scripts/shop-buyer.ts':'export const shop=1;',
+  'scripts/fleet-inspect.ts':"import '../packages/core/src/inprocess';",'packages/core/src/inprocess.ts':'export const bankObservation=1;',
   'scripts/measure/catalog-integration-proof.ts':"import './fleet-player-save'; import '../../packages/planner/src/autopilot';",
   'scripts/measure/fleet-player-save.ts':'export const reader=1;','packages/planner/src/autopilot.ts':'export const plan=1;',
   'scripts/aio.ts':"import './aio-skiller';",'scripts/aio-skiller.ts':'export const dispatch=1;',
@@ -64,9 +78,9 @@ test('retained artisan source pins include dispatcher, planner and save reader d
  try{
   for(const dir of runtimeTrees)mkdirSync(join(base,dir),{recursive:true});
   for(const [file,text]of Object.entries(sources)){mkdirSync(dirname(join(base,file)),{recursive:true});writeFileSync(join(base,file),text);}
-  for(const mode of ['cut','producer','tools'] as const){
+  for(const mode of ['cut','producer','tools','observer'] as const){
    const closure=releaseFiles(artisanSourceEntries(mode),base),pin=artisanSourceRevision(mode,base);
-   const dependencies=['scripts/measure/fleet-player-save.ts','packages/planner/src/autopilot.ts',...(mode==='producer'?['scripts/aio.ts','scripts/aio-skiller.ts']:[])];
+   const dependencies=['scripts/measure/fleet-player-save.ts','packages/planner/src/autopilot.ts',...(mode==='producer'?['scripts/aio.ts','scripts/aio-skiller.ts']:[]),...(mode==='observer'?['scripts/fleet-inspect.ts','packages/core/src/inprocess.ts']:[])];
    for(const file of dependencies){
     expect(closure).toContain(file);writeFileSync(join(base,file),sources[file]+'\nexport const edited=true;');
     expect(artisanSourceRevision(mode,base)).not.toBe(pin);writeFileSync(join(base,file),sources[file]!);
