@@ -27,7 +27,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -48,7 +48,7 @@ export const heldResources = (jobs: readonly any[]) => jobs.filter(j => j?.enabl
 const swarmPaused = () => existsSync(join(prac, 'stop-swarm'));
 // A retirement records the hash of its template's script; an entry from before that is a bare reason.
 type Retirement = string | { reason: string; script: string };
-// `kitSeq`: each account's kit-buy count, which names its Grand Exchange order keys (kitBuyTemplate).
+// `kitSeq`: each account's supply episode, used by GE order keys and settled held-bone batch missions.
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement>; kitSeq?: Record<string, number>;
     // `unsold`: when a kit buy last got none of an item, by item id. The market leaves the item out for UNSOLD_RETRY_MS.
     unsold?: Record<string, number> };
@@ -108,8 +108,9 @@ function routeBill(items: any[]): BillRow[] {
 // The fleet order format of scripts/fleet-order.ts, built here so the planner does not load the bot client that
 // scripts/fleet-trade.ts imports. scripts/fleet-agent.ts checks every order with validOrder before it trades.
 // `meet`: the tile pair of the meeting place (absent: Varrock West, the default of scripts/fleet-trade.ts).
-export function coinOrder(from: string, to: string, coins: number, server: string, now: number, meet?: Order['meet']): Order {
-    const start = now + 15 * 60_000;
+export function coinOrder(from: string, to: string, coins: number, server: string, now: number, meet?: Order['meet'], leadMs=15*60_000): Order {
+    if(!Number.isSafeInteger(leadMs)||leadMs<0||leadMs>15*60_000)throw Error('invalid coin order lead');
+    const start = now + leadMs;
     return { id: `${start}-${from}-${to}`.toLowerCase(), server, from, to, item: 'coins', count: coins, start, end: start + 40 * 60_000, ...(meet ? { meet } : {}) };
 }
 // The tile pair at the Ardougne north bank, the army's home bank: scripts/coin-courier.ts meetingTiles for the bank
@@ -205,6 +206,21 @@ export function kitBuyRunning(job: any, assigned: { template: string; offset: nu
     const lines=linesSince(assigned.offset);
     const r = assess(finiteMaker?lines.filter(l=>l.startsWith('RESULT ')):lines);
     return r.ok + r.fail + r.drains === 0;
+}
+
+export function completedHeldOrderSeq(jobs:readonly any[],side:string,assigned:Readonly<Record<string,{template:string;offset:number}>>,templates:readonly Template[],
+    sequence:Readonly<Record<string,number>>,linesSince:Parameters<typeof finishedTrainers>[4]):Record<string,number>{
+    const held=jobs.filter(j=>j?.enabled&&j.script==='scripts/train-prayer.ts'&&j.env?.BURY_HELD==='1');
+    const finished=new Set(finishedTrainers(held,side,assigned,templates,linesSince)),next={...sequence};
+    for(const j of held)if(finished.delete(j.account)){
+        const terminal=linesSince(j.account,assigned[j.account]!.offset,j).filter(l=>l.startsWith('RESULT ')).at(-1);
+        // A met level stays settled even if a delayed observation still shows the old level. Only a useful partial
+        // held-stock batch needs a new episode; mergeJobs advances its result offset with the changed mission.
+        if(terminal&&/^RESULT ok\b/.test(terminal)&&/\btargetMet=false\b/.test(terminal)){
+            const name=j.account.toLowerCase();next[name]=(next[name]??0)+1;
+        }
+    }
+    return next;
 }
 // The accounts whose last session has no confirmed logout (session-lifecycle `held`), in lower case. Such an account
 // cannot take a trade claim until a recovery confirms the logout, so it is no donor.
@@ -398,7 +414,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const stopText = (n: string): string | undefined => { try { return readFileSync(join(prac, `stop-${n}`), 'utf8'); } catch { return undefined; } };
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
     const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused);
-    const finiteMakers=new Set(catalogue().filter(t=>t.production).map(t=>t.id));
+    const templates=catalogue(),finiteMakers=new Set(templates.filter(t=>t.production).map(t=>t.id));
     for (const j of swarm.jobs.filter(mineMarked)) if (typeof j.account === 'string'
         && kitBuyRunning(j, state.assigned[j.account], offset => readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), offset, j),finiteMakers.has(j.template))) keep.add(j.account.toLowerCase());
 
@@ -490,12 +506,15 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     // Coins fund finite route and army acquisition demand.
     log.push('AUTOPILOT finite route and army demand');
     const bill = routeBill(items);
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates: catalogue(), prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    state.kitSeq=completedHeldOrderSeq(swarm.jobs.filter((j:any)=>mineMarked(j)&&!keep.has(String(j.account).toLowerCase())),side,state.assigned,templates,state.kitSeq??{},
+        (name,offset,job)=>readJobResultLines(join(prac,'swarm-logs',`${name}.log`),offset,job));
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
-    const funding = fundOrders(planned, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined),
+    const lead=(from:string,to:string)=>owners.get(from.toLowerCase())?.side===side&&owners.get(to.toLowerCase())?.side===side?0:15*60_000;
+    const funding = fundOrders(planned, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined,lead(from,to)),
         s => itemOrder(s.from, s.to, market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item, s.count, serverOf(s.to), now,
-            owners.get(s.from.toLowerCase())?.side===side&&owners.get(s.to.toLowerCase())?.side===side?0:15*60_000));
+            lead(s.from,s.to)));
     const out = funding.assignments;
     log.push(...funding.log);
 

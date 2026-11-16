@@ -143,7 +143,7 @@ export type Inputs = {
     // Legacy aggregate balance. Funding uses each recipient's own coins and usable donors; excluded or reserved
     // wealth cannot pay another account's kit. This value does not override those funding limits.
     sideCoins?: number;
-    // Each account's kit-buy count, by lower-case name (kitBuyTemplate `seq`; default 0).
+    // Each account's supply episode, by lower-case name (kit buys and settled held-bone batches; default 0).
     kitSeq?: ReadonlyMap<string, number>;
     // Donor and recipient pairs whose item order failed lately, as `from>to` in lower case: no new order for them.
     noSend?: ReadonlySet<string>;
@@ -569,7 +569,8 @@ export function plan(inp: Inputs): Assignment[] {
         return direct(item) + cash.route + own + gift;
     };
     const finiteOrder = (t: Template, a: Acct): Template | null => {
-        const p=t.production;if(!p)return t;
+        const p=t.production;if(!p)return t.script==='scripts/train-prayer.ts'&&t.env?.BURY_HELD==='1'
+            ?{...t,repeats:false,env:{...t.env,AUTOPILOT_ORDER:String(inp.kitSeq?.get(a.name.toLowerCase())??0)}}:t;
         const demand=Math.ceil(needed(norm(p.output),a.name)/p.outputPerUnit);
         if(demand<1)return null;
         const available=Math.min(...Object.entries(p.inputs).map(([item,n])=>Math.max(0,Math.floor(((a.items[norm(item)]??0)-(p.reserves?.[item]??0))/n))));
@@ -610,7 +611,8 @@ export function plan(inp: Inputs): Assignment[] {
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
     // A donor can fund the account: it has no enabled job, and a meeting place that it can reach (meetFor).
     const meetOf = new Map(mine.map(a => [a.name, meetFor(a.pos)]));
-    const fundable = (a: Acct) => !!inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && meetOf.get(a.name) !== null;
+    const fundable = (a: Acct) => (!!inp.donors?.length || !!inp.stock?.some(s=>s.side!==inp.side&&(s.items.coin??0)>FUND_RESERVE))
+        && !inp.unfundable?.has(a.name.toLowerCase()) && meetOf.get(a.name) !== null;
     // The jobs an account could start but for coins of a ferry fare: the constraint of a slot that ends vacant.
     const fareShort = new Map<string, { id: string; coins: number; fare: number; resources: string[] }[]>();
     const lacksFare = (a: Acct, t: Template, fare: number) => { fareShort.set(a.name, [...(fareShort.get(a.name) ?? []), { id: t.id, coins: coinShort(a, t.needs), fare, resources: t.resources ?? [] }]); };
@@ -715,14 +717,15 @@ export function plan(inp: Inputs): Assignment[] {
     const pool = new Map(fundingDonors.map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
     // Accounts that give an item this pass, and accounts that leave a coin job so a kit order can reach them.
     const gaveItems = new Set<string>(), vacated = new Map<string, string>();
-    const take = (c: Cand, value: number) => {
+    const take = (c: Cand, value: number, far=false) => {
         if (c.lacks || (!c.goal && value <= 0) || done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        if(far&&(ready.has(c.account)||inp.unfundable?.has(c.account.toLowerCase())||inp.running?.has(c.account.toLowerCase())))return;
         const selected=finiteOrder(c.template,localByName.get(c.account.toLowerCase())!);if(!selected)return;
         let fund: Funding | undefined;
         if (c.coins) {
-            const from = [...pool].filter(([n, left]) => canGiveCoins(n, c.account) && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
+            const from = cashSource(c.account,c.coins,far);
             if (!from) return;
-            pool.set(from, pool.get(from)! - c.coins); gave.add(from);
+            if(pool.has(from))pool.set(from, pool.get(from)! - c.coins); gave.add(from);
             fund = { from, to: c.account, coins: c.coins, template: c.template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) };
         }
         pool.delete(c.account);
@@ -755,6 +758,16 @@ export function plan(inp: Inputs): Assignment[] {
         return ownReserve.get(a.name)!;
     };
     const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (keepsOf(s)[item] ?? 0);
+    // Remote stock has already passed the publishing side's freshness, ownership and free-account checks. Its
+    // cash keeps the same reserve as local donors and is used only by the idle-recipient fallback below.
+    const cashSource=(recipient:string,coins:number,far:boolean):string|undefined=>{
+        const own=[...pool].filter(([name,left])=>left>=coins&&!done.has(name)&&!gaveItems.has(name)&&canGiveCoins(name,recipient)).sort((x,y)=>y[1]-x[1])[0]?.[0];
+        if(own||!far)return own;
+        return stock.filter(s=>s.side!==inp.side&&!gave.has(s.name)&&!gaveItems.has(s.name)&&!done.has(s.name)
+            &&!inp.unfundable?.has(s.name.toLowerCase())&&!inp.running?.has(s.name.toLowerCase())
+            &&!inp.noSend?.has(`${s.name}>${recipient}`.toLowerCase())&&(s.items.coin??0)-FUND_RESERVE>=coins&&canGiveCoins(s.name,recipient))
+            .sort((x,y)=>(y.items.coin??0)-(x.items.coin??0)||x.name.localeCompare(y.name))[0]?.name;
+    };
     const banded = (id: string) => byId.get(id)?.tier === 'goal' && !byId.get(id)?.filler;
     const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || banded(id)); };
     const acquire = (c: Cand, step: 'buy' | 'send', far: boolean) => {
@@ -773,25 +786,26 @@ export function plan(inp: Inputs): Assignment[] {
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
-        const donorFor = (item: string, count: number) => stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= count
+        const donorFor = (item: string, count: number, remote=far) => stock.find(s => (s.side !== inp.side) === remote && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= count
             && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
         // Fund the worker's own cash prerequisite first, then reobserve before acquiring its missing items.
         // fundOrders parks the intended worker until this one owned transfer settles.
         if(c.coins){
-            if(busy||far)return;
+            if(busy)return;
             const mountain=inp.mountain?.(a)??true,toMeet=wayCost(a.pos,ARMY_BANK,mountain),fromMeet=wayCost(ARMY_BANK,placeOf(c.template),mountain);
             // The cash transfer precedes the item trip. Its recipient can use that staged cash for the meeting
             // fare, and must still retain the consumer's cash and return fare after the item arrives.
             const canMeet=toMeet!==null&&fromMeet!==null;
-            const obtainable=(item:string,count:number)=>!!c.template.ownSupply?.includes(item)||!c.template.shopKit&&!!inp.market?.[item]||canMeet&&!!donorFor(item,count);
+            const itemSource=(item:string,count:number)=>donorFor(item,count,false)??(far?donorFor(item,count,true):undefined);
+            const obtainable=(item:string,count:number)=>!!c.template.ownSupply?.includes(item)||!c.template.shopKit&&!!inp.market?.[item]||canMeet&&!!itemSource(item,count);
             const lacks=kitLacks(a,c.template.needs,obtainable);
             if(!lacks||lacks.some(l=>!l.of.some(item=>obtainable(item,l.count))))return;
-            const owned=canMeet&&lacks.some(l=>l.of.some(item=>!!donorFor(item,l.count)));
+            const owned=canMeet&&lacks.some(l=>l.of.some(item=>!!itemSource(item,l.count)));
             const detour=a.pos&&owned?Math.max(0,toMeet!+fromMeet!-(wayCost(a.pos,placeOf(c.template),mountain)??0)):0;
             const coins=c.coins+detour;
-            const from=[...pool].filter(([name,left])=>!done.has(name)&&!gaveItems.has(name)&&left>=coins&&canGiveCoins(name,c.account)).sort((x,y)=>y[1]-x[1])[0]?.[0];
+            const from=cashSource(c.account,coins,far);
             if(!from)return;
-            pool.set(from,pool.get(from)!-coins);gave.add(from);pool.delete(c.account);
+            if(pool.has(from))pool.set(from,pool.get(from)!-coins);gave.add(from);pool.delete(c.account);
             done.set(c.account,{account:c.account,template:c.template,value:0,reason:`funds ${coins} coins before preparing ${c.template.id}`,resources:[],
                 fund:{from,to:c.account,coins,template:c.template.id,...(meetOf.get(c.account)?{meet:'ardougne' as const}:{})}});
             return;
@@ -820,12 +834,9 @@ export function plan(inp: Inputs): Assignment[] {
             if (frailFood) return;
             if (!busy && meetOf.get(c.account) !== null) {
                 // A coin donor of this side, else a free account of another side with coins above the reserve.
-                const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
-                const own = [...pool].filter(([n, left]) => canGiveCoins(n, c.account) && !done.has(n) && !gaveItems.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
-                const other = own || !far ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
-                const from = own ?? other;
+                const from = cashSource(c.account,short,far);
                 if (from) {
-                    if (own) pool.set(own, pool.get(own)! - short);
+                    if(pool.has(from))pool.set(from,pool.get(from)!-short);
                     gave.add(from); pool.delete(c.account);
                     done.set(c.account, { account: c.account, template, value: 0, reason: `${c.reason}, funded ${short} coins by ${from} to buy ${what}`, resources:purchaseResources, fund: { from, to: c.account, coins: short, template: template.id, ...(meetOf.get(c.account) ? { meet: 'ardougne' as const } : {}) } });
                     reservePurchase();
@@ -915,6 +926,9 @@ export function plan(inp: Inputs): Assignment[] {
         const c = rest.shift()!;
         take(c, worth(c));
     }
+    // A fully owned recipe or band may lack only its cash/fare. Keep local work and its donor arbitration first;
+    // only a remaining idle slot asks remote cash through the same Funding order.
+    for(const c of [...cands.filter(c=>c.goal&&!c.lacks&&c.coins).sort(goalOrder),...cands.filter(c=>!c.goal&&!c.lacks&&c.coins).sort(order)])take(c,worth(c),true);
     // A vacant slot names its constraint: the fare it lacks for a job whose place is still free, when that is all it lacks.
     const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
         return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
@@ -1608,7 +1622,7 @@ export function catalogue(): Template[] {
     const water = waterJob('army-water-aubury', "Aubury's in Varrock", 'aubury'), waterBetty = waterJob('army-water-betty', "Betty's in Port Sarim", 'betty');
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
-        goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
+        goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: false, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
         needs: { items: { bones: 100 } },
     };
     // Prayer from bought bones, bands just after the held bones. On the field a buried trooper kill gives 3.84 Prayer XP
@@ -1622,7 +1636,7 @@ export function catalogue(): Template[] {
     // they complete a tribrid, not to an account with a day of Ranged ahead of it.
     const boneBand = (id: string, bone: string, boneId: number, band: number): Template => ({
         id, family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_ID: String(boneId), BONE_RESERVE: String(BONE_KEEP), CAP: '4000' }, role: 'combat',
-        goal: `train Prayer to 99 burying bought ${bone}`, tier: 'goal', band, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
+        goal: `train Prayer to 99 burying bought ${bone}`, tier: 'goal', band, repeats: false, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
         needs: { skills: { Ranged: BONE_SKILL, Magic: BONE_SKILL }, items: { [bone]: BONE_START } }, partBatch: true,
         // An account with Ranged or Magic still to finish keeps BONE_PURSE for arrows, a staff and a blade.
         keepCoins: a => (a.skills.Ranged ?? 1) < 99 || (a.skills.Magic ?? 1) < 99 ? BONE_PURSE : 0,

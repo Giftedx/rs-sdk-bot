@@ -328,7 +328,7 @@ export function planShopPurchases(targets: ShopPurchaseTarget[], shop: ShopStock
         const item = shop.find(i => target.re.test(i.name));
         if (!item || item.count <= 0 || !Number.isFinite(item.buyPrice) || item.buyPrice < 0) return [];
         const held = inventory.filter(i => target.re.test(i.name)).reduce((n, i) => n + i.count, 0);
-        const limit = /axe|pickaxe|tinderbox|hammer|chisel|mould|knife|pestle|harpoon|lobster pot/i.test(item.name) ? 2 : stockTarget;
+        const limit = /axe|pickaxe|tinderbox|hammer|chisel|mould|knife|pestle|harpoon|lobster pot/i.test(item.name) ? Math.min(2,stockTarget) : stockTarget;
         const desired = Math.max(0, Math.min(item.count, target.buyPerTick, limit - held - (bank.get(item.name.toLowerCase()) ?? 0)));
         return desired > 0 ? [{ ...item, desired, amount: 0, stackable: /arrow|rune|feather|thread|fishing bait/i.test(item.name), held }] : [];
     });
@@ -355,7 +355,7 @@ export function shopTargetsMet(targets: ShopPurchaseTarget[], inventory: { name:
         const banked = [...bank].filter(([name]) => t.re.test(name));
         const held = inventory.filter(i => t.re.test(i.name));
         const name = banked[0]?.[0] ?? held[0]?.name ?? '';
-        const goal = /axe|pickaxe|tinderbox|hammer|chisel|mould|knife|pestle|harpoon|lobster pot/i.test(name) ? 2 : stockTarget;
+        const goal = /axe|pickaxe|tinderbox|hammer|chisel|mould|knife|pestle|harpoon|lobster pot/i.test(name) ? Math.min(2,stockTarget) : stockTarget;
         return !!name && banked.reduce((n, [, count]) => n + count, 0) + held.reduce((n, i) => n + i.count, 0) >= goal;
     });
 }

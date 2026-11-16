@@ -4,6 +4,15 @@ import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTarget
 
 const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}$`, 'i'), buyPerTick });
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
+
+test('finite artisan tool targets retain one owned tool and buy only the missing other tool', () => {
+    const targets=PROFILES.dommik!.items,bank=new Map([['chisel',1]]),shop=[item('Ring mould',4),item('Chisel',2)];
+    expect(planShopPurchases(targets,shop,[],bank,20,1,2)).toEqual([{name:'Ring mould',amount:1}]);
+    expect(shopTargetsMet(targets,[{name:'Ring mould',count:1}],bank,1)).toBe(true);
+    expect(shopTargetsMet(targets,[],bank,1)).toBe(false);
+    expect(planShopPurchases(targets,shop,[],new Map([['ring mould',1],['chisel',1]]),20,1,2)).toEqual([]);
+    expect(shopTargetsMet(targets,[],new Map([['ring mould',1],['chisel',1]]),500)).toBe(false);
+});
 test('full tools do not divide the remaining vial slots', () => {
     const plan = planShopPurchases([target('Vial of water', 25), target('Iron axe', 1), target('Tinderbox', 1)],
         [item('Vial of water'), item('Iron axe'), item('Tinderbox')], [{ name: 'Coins', count: 1000 }],

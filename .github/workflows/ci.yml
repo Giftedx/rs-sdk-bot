@@ -94,6 +94,12 @@ jobs:
           bun run bench '^(extra:(bank-preflight-tanning-short|loot-wildcard-ignore|hunt-restock-partial-glory|owned-bank-ring-consumer|progressive-cooking-entry|bank-job-cook-lobster|inventory-best-effort|catalog-finite-producer|catalog-gather-short)|fighter:ranged-starter)$' --profile --budget 10
         env:
           BENCH_OUT: .practice/shared-preparation/cases.json
+      - name: Prove remote supply and artisan entry cases
+        timeout-minutes: 10
+        run: |
+          bun run bench '^extra:(catalog-cut-sapphire|catalog-dommik-tools|remote-supply-producer)$' --profile --budget 10
+        env:
+          BENCH_OUT: .practice/shared-preparation/supply-artisan.json
       - name: Run the first AIO smoke group
         if: ${{ !cancelled() }}
         timeout-minutes: 10
@@ -118,6 +124,7 @@ jobs:
           retention-days: 7
           path: |
             .practice/shared-preparation/*.json
+            .practice/artisan-native/**
             .practice/aio-bench/output/*.log
             .practice/aio-bench/profile/*
             .practice/logs/engine-aiobench-*.log
