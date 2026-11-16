@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794789025734-pocketrocket-mmsmk1232",
+ "account": "Pocketrocket",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 71882,
+ "claim": "dd7ae4f9-f484-4e21-9223-a8c23f19057b",
+ "count": 0,
+ "ok": false,
+ "at": 1794789032324,
+ "detail": "trade claimed"
+}
