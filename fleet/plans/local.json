@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794787116000,
+ "at": 1794787237738,
  "jobs": [
   {
    "account": "Balls",
@@ -52,43 +52,6 @@
    "role": "market"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=28 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit9-536-0to28 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 28 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -103,6 +66,45 @@
    "goal": "buy 14 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
    "role": "supply",
    "template": "kit-buy:army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=234 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bigchopper-kit10-536-0to234 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 234 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
    "autopilot": "local",
    "resources": []
   },
@@ -158,75 +160,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "109",
-    "QUANTITY": "13",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "20000",
-    "CASH_RESERVE": "9000000",
-    "ORDER_KEY": "pocketrocket-dwarfweedunf13-owned",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d1682cc3-fbf4-4601-8a49-35e7bd22dd9e"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-pocketrocket-dwarfweedunf13-owned [task-d1682cc3-fbf4-4601-8a49-35e7bd22dd9e]",
-   "role": "supply"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "1617",
-    "QUANTITY": "11",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "15000",
-    "CASH_RESERVE": "2800000",
-    "ORDER_KEY": "yewfirst-uncutdiamond11-owned",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a7abef6c-01de-4b1c-bb14-f9f8fc6f7d26"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-yewfirst-uncutdiamond11-owned [task-a7abef6c-01de-4b1c-bb14-f9f8fc6f7d26]",
-   "role": "supply"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "247",
-    "QUANTITY": "176",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "500",
-    "CASH_RESERVE": "3800000",
-    "ORDER_KEY": "moneyshot-janger176-owned",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d7d57a94-1f03-4747-8b04-038a971c0d06"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-moneyshot-janger176-owned [task-d7d57a94-1f03-4747-8b04-038a971c0d06]",
    "role": "supply"
   }
  ],
