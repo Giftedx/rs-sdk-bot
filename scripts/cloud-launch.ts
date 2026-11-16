@@ -51,7 +51,12 @@ export function readConfig(text: string): Config {
 // Which configured sides to start now. `seen`: each side's newest lease renewal. `owned`: accounts each side owns,
 // the main and specialist accounts aside. `stranded`: accounts whose side has been silent STRANDED_MS.
 type LaunchInput = { config: Config; seen: ReadonlyMap<string, number>; owned: ReadonlyMap<string, number>; stranded: number; history: readonly Launch[]; now: number };
-export type LaunchDecision = { config: SideConfig; reason: 'due' | 'disabled' | 'controller-recent' | 'starting' | 'no-demand' | 'cooldown' | 'daily-cap' | 'provider-cap'; leaseAgeMs: number | null; retryMs: number | null; attempts24h: number; lastOk: boolean | null; busy: number; cap: number };
+export type LaunchDecision = { config: SideConfig; reason: 'due' | 'disabled' | 'controller-recent' | 'starting' | 'no-demand' | 'cooldown' | 'daily-cap' | 'provider-cap'; leaseAgeMs: number | null; retryMs: number | null; attempts24h: number; budgeted24h: number; lastOk: boolean | null; busy: number; cap: number };
+
+// The native bridge throws this exact refusal before creating its journal or calling AddUserMessage.
+// Every admitted, ambiguous or other failed attempt still reserves an admission slot.
+const refusedBeforeAdmission = (l: Launch) => l.ok === false && l.kind === 'codex' && l.via === 'codex'
+    && l.detail === 'exit 1 CLOUD_NATIVE fail Target Cloud thread is busy; no fleet prompt was sent.';
 
 // Admission and its report share this selector. A submitted session proves no controller renewal or useful work.
 export function launchDecisions(v: LaunchInput): LaunchDecision[] {
@@ -66,15 +71,16 @@ export function launchDecisions(v: LaunchInput): LaunchDecision[] {
     for (const s of sides) {
         const history = v.history.filter(l => l.side === s.side).sort((a,b) => b.at-a.at);
         const recent = history.filter(l => now-l.at < 24*60*60_000);
+        const budgeted = recent.filter(l => !refusedBeforeAdmission(l));
         const record = (reason: LaunchDecision['reason'], retryMs: number | null = null) => out.push({ config:s, reason,
-            leaseAgeMs:seen.has(s.side)?now-seen.get(s.side)!:null, retryMs, attempts24h:recent.length,
+            leaseAgeMs:seen.has(s.side)?now-seen.get(s.side)!:null, retryMs, attempts24h:recent.length, budgeted24h:budgeted.length,
             lastOk:history[0]?.ok??null, busy:busy[s.kind], cap:cap[s.kind] });
         if (config.enabled === false) { record('disabled'); continue; }
         if (live(s.side)) { record('controller-recent'); continue; }
         if (starting(s.side)) { record('starting', Math.max(...history.filter(l=>l.ok).map(l=>l.at+COOLDOWN_MS))-now); continue; }
         if ((v.owned.get(s.side) ?? 0) === 0 && v.stranded === 0) { record('no-demand'); continue; }
         if (history.some(l => now-l.at < COOLDOWN_MS)) { record('cooldown',history[0]!.at+COOLDOWN_MS-now); continue; }
-        if (recent.length >= MAX_PER_DAY) { record('daily-cap',recent.map(l=>l.at).sort((a,b)=>a-b)[recent.length-MAX_PER_DAY]!+24*60*60_000-now); continue; }
+        if (budgeted.length >= MAX_PER_DAY) { record('daily-cap',budgeted.map(l=>l.at).sort((a,b)=>a-b)[budgeted.length-MAX_PER_DAY]!+24*60*60_000-now); continue; }
         if (busy[s.kind] >= cap[s.kind]) { record('provider-cap'); continue; }
         record('due'); busy[s.kind]++;
     }
@@ -90,7 +96,7 @@ export function launchDecisionLine(d: LaunchDecision): string {
     const reason = d.reason==='controller-recent' ? `controller renewal ${Math.floor(d.leaseAgeMs!/1000)}s old (launch silence threshold ${LIVE_MS/1000}s)`
         : d.reason==='starting' ? `admitted launch awaiting controller renewal; ${retry}`
         : d.reason==='cooldown' ? `last attempt ${d.lastOk?'admitted':'failed'}; ${retry}`
-        : d.reason==='daily-cap' ? `24h attempt budget ${d.attempts24h}/${MAX_PER_DAY}; ${retry}`
+        : d.reason==='daily-cap' ? `24h admission budget ${d.budgeted24h}/${MAX_PER_DAY} (${d.attempts24h} attempts); ${retry}`
         : d.reason==='provider-cap' ? `${d.config.kind} session cap ${d.busy}/${d.cap}`
         : d.reason==='no-demand' ? 'no owned or stranded accounts'
         : d.reason==='disabled' ? 'launcher disabled in config' : 'launch due';
