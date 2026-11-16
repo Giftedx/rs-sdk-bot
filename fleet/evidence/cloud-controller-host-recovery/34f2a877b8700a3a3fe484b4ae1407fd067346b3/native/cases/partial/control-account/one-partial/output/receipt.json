@@ -1,0 +1,412 @@
+{
+  "schema": "session-recovery/1",
+  "state": "confirmed",
+  "request": {
+    "schema": "session-recovery/1",
+    "kind": "session-recovery",
+    "account": "flrcvxdx7r23",
+    "server": "localhost:8899",
+    "runId": "native-rcv-partial-526382",
+    "nonce": "one-partial",
+    "endedAt": 1794829850181,
+    "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d",
+    "qualification": {
+      "delivery": {
+        "path": "native-fixture-not-qualified",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "proof": {
+        "path": "native-fixture-not-qualified",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "startedAt": 1794829854797,
+  "endedAt": 1794829857273,
+  "attemptId": "1794829855264-0000088969-0000000001",
+  "lifecycleSha256": "2bea8dade1759612c92e7256622fb33872ce0f54bca06bb9a6a77b08a2d00722",
+  "proof": {
+    "state": "confirmed",
+    "account": "flrcvxdx7r23",
+    "server": "localhost:8899",
+    "domain": "practice",
+    "attemptId": "1794829855264-0000088969-0000000001",
+    "loggedOutAt": 1794829857270,
+    "ownerRun": "native-rcv-partial-526382",
+    "receiptSha256": "2bea8dade1759612c92e7256622fb33872ce0f54bca06bb9a6a77b08a2d00722"
+  },
+  "before": {
+    "player": {
+      "name": "Flrcvxdx7r23",
+      "x": 2618,
+      "z": 3332,
+      "level": 0,
+      "hp": 43
+    },
+    "inventory": [
+      {
+        "slot": 0,
+        "id": 995,
+        "name": "Coins",
+        "count": 1200,
+        "optionsWithIndex": []
+      },
+      {
+        "slot": 1,
+        "id": 311,
+        "name": "Harpoon",
+        "count": 1,
+        "optionsWithIndex": []
+      },
+      {
+        "slot": 2,
+        "id": 329,
+        "name": "Salmon",
+        "count": 4,
+        "optionsWithIndex": [
+          {
+            "text": "Eat",
+            "opIndex": 1
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "slot": 3,
+        "id": 1275,
+        "name": "Rune pickaxe",
+        "count": 1,
+        "optionsWithIndex": [
+          {
+            "text": "Wield",
+            "opIndex": 2
+          }
+        ]
+      }
+    ],
+    "skills": [
+      {
+        "name": "Attack",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Defence",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Strength",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Hitpoints",
+        "level": 43,
+        "baseLevel": 43,
+        "experience": 19684
+      },
+      {
+        "name": "Ranged",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Prayer",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Magic",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Cooking",
+        "level": 99,
+        "baseLevel": 99,
+        "experience": 998458
+      },
+      {
+        "name": "Woodcutting",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Fletching",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Fishing",
+        "level": 99,
+        "baseLevel": 99,
+        "experience": 998458
+      },
+      {
+        "name": "Firemaking",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Crafting",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Smithing",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Mining",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Herblore",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Agility",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Thieving",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Stat18",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Stat19",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Runecraft",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      }
+    ],
+    "bank": null,
+    "modalOpen": false,
+    "modalInterface": -1
+  },
+  "after": {
+    "player": {
+      "name": "Flrcvxdx7r23",
+      "x": 2618,
+      "z": 3332,
+      "level": 0,
+      "hp": 43
+    },
+    "inventory": [
+      {
+        "slot": 0,
+        "id": 995,
+        "name": "Coins",
+        "count": 1200,
+        "optionsWithIndex": []
+      },
+      {
+        "slot": 1,
+        "id": 311,
+        "name": "Harpoon",
+        "count": 1,
+        "optionsWithIndex": []
+      },
+      {
+        "slot": 2,
+        "id": 329,
+        "name": "Salmon",
+        "count": 4,
+        "optionsWithIndex": [
+          {
+            "text": "Eat",
+            "opIndex": 1
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "slot": 3,
+        "id": 1275,
+        "name": "Rune pickaxe",
+        "count": 1,
+        "optionsWithIndex": [
+          {
+            "text": "Wield",
+            "opIndex": 2
+          }
+        ]
+      }
+    ],
+    "skills": [
+      {
+        "name": "Attack",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Defence",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Strength",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Hitpoints",
+        "level": 43,
+        "baseLevel": 43,
+        "experience": 19684
+      },
+      {
+        "name": "Ranged",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Prayer",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Magic",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Cooking",
+        "level": 99,
+        "baseLevel": 99,
+        "experience": 998458
+      },
+      {
+        "name": "Woodcutting",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Fletching",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Fishing",
+        "level": 99,
+        "baseLevel": 99,
+        "experience": 998458
+      },
+      {
+        "name": "Firemaking",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Crafting",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Smithing",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Mining",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Herblore",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Agility",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Thieving",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Stat18",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Stat19",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      },
+      {
+        "name": "Runecraft",
+        "level": 1,
+        "baseLevel": 1,
+        "experience": 0
+      }
+    ],
+    "bank": null,
+    "modalOpen": false,
+    "modalInterface": -1
+  },
+  "logout": "logged-out",
+  "failure": "",
+  "scope": {
+    "gameplay": false,
+    "production": 0,
+    "repairsFailure": false,
+    "qualifiesScript": false,
+    "bankObservation": "unobserved"
+  },
+  "runnerSha256": "2717fa5c4e7454a68cf7c4b82d7f5beba2ca88c7eccda07208b00caa66f57b24"
+}

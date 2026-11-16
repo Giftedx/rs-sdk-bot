@@ -1,0 +1,55 @@
+{
+  "runtime": {
+    "at": 1794829650797,
+    "pid": 88264,
+    "bun": "1.3.14",
+    "runner": "/workspace/rs-sdk-bot-host-recovery/packages/core/src/session-recovery.ts",
+    "cwd": "/workspace/rs-sdk-bot-host-recovery",
+    "execPath": "/workspace/.tools/bun/node_modules/bun/bin/bun.exe",
+    "adapter": "/workspace/rs-sdk-bot-host-recovery/packages/core/src/inprocess.ts",
+    "repoRoot": "/workspace/rs-sdk-bot-host-recovery",
+    "repoReal": "/workspace/rs-sdk-bot-host-recovery",
+    "liteSession": "/workspace/rs-sdk-bot-host-recovery/vendor/rs-sdk/server/webclient/src/lite/session.ts",
+    "liteSessionReal": "/workspace/rs-sdk-bot-host-recovery/vendor/rs-sdk/server/webclient/src/lite/session.ts",
+    "clientStream": "/workspace/rs-sdk-bot-host-recovery/vendor/rs-sdk/server/webclient/src/io/ClientStream.ts",
+    "clientStreamReal": "/workspace/rs-sdk-bot-host-recovery/vendor/rs-sdk/server/webclient/src/io/ClientStream.ts"
+  },
+  "warm": {
+    "signalAt": 1794829650831,
+    "at": 1794829651514,
+    "signalSeenAt": 1794829650852,
+    "attemptId": "1794829650852-0000088248-0000000005"
+  },
+  "submittedAt": 1794829648278,
+  "releaseAt": 1794829653767,
+  "window": {
+    "ok": true,
+    "reason": "recovery login refused with response 3 inside the open takeover window",
+    "windowMs": 60000,
+    "takeoverReplyAt": 1794829650927,
+    "recoveryRequestAt": 1794829653197,
+    "gapMs": 2270,
+    "response": 3
+  },
+  "preserved": {
+    "ok": true,
+    "noRecoveryLoginSuccess": true,
+    "ownerLoginLatest": true,
+    "ownerAttemptLatest": true,
+    "ownerLogoutAfterRelease": true
+  },
+  "ownerAttempts": [
+    "1794829645987-0000088248-0000000001",
+    "1794829650852-0000088248-0000000005"
+  ],
+  "ownerProof": {
+    "state": "confirmed",
+    "account": "flrcvxnb4u19",
+    "server": "127.0.0.1:8890",
+    "domain": "practice",
+    "attemptId": "1794829650852-0000088248-0000000005",
+    "loggedOutAt": 1794829653866,
+    "ownerRun": "native-owner-flrcvxnb4u19",
+    "receiptSha256": "08d2b29b542603335af2811f2cdf8c7e73e5de5ece41c0664379e90631884e4a"
+  }
+}

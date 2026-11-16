@@ -1,0 +1,53 @@
+[
+  {
+    "at": 1794829553681,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxtbqa2\",\"server\":\"127.0.0.1:8890\",\"runId\":\"native-rcv-bounded-swarm-new-mission-526382\",\"nonce\":\"one-bounded-swarm-new-mission\",\"endedAt\":1794829542987,\"source\":\"68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": true,
+      "completed": {
+        "at": 1794829553681,
+        "request": {
+          "schema": "session-recovery/1",
+          "kind": "session-recovery",
+          "account": "flrcvxtbqa2",
+          "server": "127.0.0.1:8890",
+          "runId": "native-rcv-bounded-swarm-new-mission-526382",
+          "nonce": "one-bounded-swarm-new-mission",
+          "endedAt": 1794829542987,
+          "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d",
+          "qualification": {
+            "delivery": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            "proof": {
+              "path": "native-fixture-not-qualified",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        "childPid": 87312,
+        "receiptPath": "/workspace/rs-sdk-bot-host-recovery/.practice/deliveries/session-recovery-only-1794829475101-p9YlLs/control/.practice/coordinator/session-recovery/accounts/flrcvxtbqa2/one-bounded-swarm-new-mission/output/receipt.json",
+        "receiptSha256": "b6689ff02f352e10ef50fc589d43728bdb90471f6988c44ca5bca8d868e636bd",
+        "proof": {
+          "state": "confirmed",
+          "account": "flrcvxtbqa2",
+          "server": "127.0.0.1:8890",
+          "domain": "practice",
+          "attemptId": "1794829546588-0000087312-0000000001",
+          "loggedOutAt": 1794829548641,
+          "ownerRun": "native-rcv-bounded-swarm-new-mission-526382",
+          "receiptSha256": "d27cc26d4697c25fd95707e547afe4619fcadb156f4dd203c8592cbf0ebdc980"
+        },
+        "nativeFixture": true,
+        "scope": {
+          "repairsFailure": false,
+          "qualifiesScript": false,
+          "production": 0
+        }
+      },
+      "reason": "confirmed session cleanup; old failure retained"
+    }
+  }
+]

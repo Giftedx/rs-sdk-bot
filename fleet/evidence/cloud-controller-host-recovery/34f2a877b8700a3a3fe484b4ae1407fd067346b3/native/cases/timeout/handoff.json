@@ -1,0 +1,276 @@
+{
+  "submittedAt": 1794829815595,
+  "fleet": {
+    "at": 1794829815595,
+    "observedAt": 1794829815596,
+    "ageMs": 1,
+    "verdict": "resolved"
+  },
+  "child": 88885,
+  "dispatch": "recovery child held; inspect fixed child output and retained account lease; no retry",
+  "boundaries": [
+    {
+      "phase": "admitRecovery",
+      "at": 1794829815598,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxw9qh22",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 28.283740997314453,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794829815598,
+          "request": {
+            "account": "flrcvxw9qh22",
+            "server": "localhost:8899",
+            "runId": "native-rcv-timeout-526382",
+            "nonce": "one-timeout",
+            "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d",
+            "endedAt": 1794829815590
+          },
+          "controller": {
+            "pid": 87168,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d"
+          },
+          "processPid": 87168,
+          "task": {
+            "pid": 88883,
+            "runId": "native-rcv-timeout-526382",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxw9qh22",
+            "sessionRecovery": {
+              "account": "flrcvxw9qh22",
+              "endedAt": 1794829815590
+            },
+            "repairs": [
+              {
+                "account": "flrcvxw9qh22",
+                "endedAt": 1794829815590
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 88883,
+            "runId": "native-rcv-timeout-526382"
+          },
+          "requestLease": {
+            "pid": 88883,
+            "runId": "native-rcv-timeout-526382",
+            "nonce": "one-timeout"
+          },
+          "fleet": {
+            "at": 1794829815595,
+            "controllerPid": 87168
+          },
+          "end": {
+            "at": 1794829815590,
+            "reason": "blocked after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "admitRecovery",
+      "at": 1794829815602,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "admission": {
+          "account": "flrcvxw9qh22",
+          "active": [],
+          "running": 0,
+          "external": 0,
+          "pending": 0,
+          "freeGB": 28.283740997314453,
+          "minFreeGB": 4,
+          "maxBots": 17
+        },
+        "heldOwners": [],
+        "authority": {
+          "sampledAt": 1794829815598,
+          "request": {
+            "account": "flrcvxw9qh22",
+            "server": "localhost:8899",
+            "runId": "native-rcv-timeout-526382",
+            "nonce": "one-timeout",
+            "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d",
+            "endedAt": 1794829815590
+          },
+          "controller": {
+            "pid": 87168,
+            "nonce": "packages/practice/src/session-recovery-proof.ts",
+            "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d"
+          },
+          "processPid": 87168,
+          "task": {
+            "pid": 88883,
+            "runId": "native-rcv-timeout-526382",
+            "status": "running",
+            "kind": "run",
+            "account": "flrcvxw9qh22",
+            "sessionRecovery": {
+              "account": "flrcvxw9qh22",
+              "endedAt": 1794829815590
+            },
+            "repairs": [
+              {
+                "account": "flrcvxw9qh22",
+                "endedAt": 1794829815590
+              }
+            ]
+          },
+          "taskOwner": {
+            "pid": 88883,
+            "runId": "native-rcv-timeout-526382"
+          },
+          "requestLease": {
+            "pid": 88883,
+            "runId": "native-rcv-timeout-526382",
+            "nonce": "one-timeout"
+          },
+          "fleet": {
+            "at": 1794829815595,
+            "controllerPid": 87168
+          },
+          "end": {
+            "at": 1794829815590,
+            "reason": "blocked after 1 runs"
+          },
+          "releasePinMatches": true
+        }
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794829815602,
+      "outcome": "entered",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794829815602,
+        "request": {
+          "account": "flrcvxw9qh22",
+          "server": "localhost:8899",
+          "runId": "native-rcv-timeout-526382",
+          "nonce": "one-timeout",
+          "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d",
+          "endedAt": 1794829815590
+        },
+        "controller": {
+          "pid": 87168,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d"
+        },
+        "processPid": 87168,
+        "task": {
+          "pid": 88883,
+          "runId": "native-rcv-timeout-526382",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxw9qh22",
+          "sessionRecovery": {
+            "account": "flrcvxw9qh22",
+            "endedAt": 1794829815590
+          },
+          "repairs": [
+            {
+              "account": "flrcvxw9qh22",
+              "endedAt": 1794829815590
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 88883,
+          "runId": "native-rcv-timeout-526382"
+        },
+        "requestLease": {
+          "pid": 88883,
+          "runId": "native-rcv-timeout-526382",
+          "nonce": "one-timeout"
+        },
+        "fleet": {
+          "at": 1794829815595,
+          "controllerPid": 87168
+        },
+        "end": {
+          "at": 1794829815590,
+          "reason": "blocked after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    },
+    {
+      "phase": "launchPermittedRecovery",
+      "at": 1794829815613,
+      "outcome": "returned",
+      "reason": null,
+      "hostDeferred": false,
+      "inputs": {
+        "sampledAt": 1794829815602,
+        "request": {
+          "account": "flrcvxw9qh22",
+          "server": "localhost:8899",
+          "runId": "native-rcv-timeout-526382",
+          "nonce": "one-timeout",
+          "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d",
+          "endedAt": 1794829815590
+        },
+        "controller": {
+          "pid": 87168,
+          "nonce": "packages/practice/src/session-recovery-proof.ts",
+          "source": "68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d"
+        },
+        "processPid": 87168,
+        "task": {
+          "pid": 88883,
+          "runId": "native-rcv-timeout-526382",
+          "status": "running",
+          "kind": "run",
+          "account": "flrcvxw9qh22",
+          "sessionRecovery": {
+            "account": "flrcvxw9qh22",
+            "endedAt": 1794829815590
+          },
+          "repairs": [
+            {
+              "account": "flrcvxw9qh22",
+              "endedAt": 1794829815590
+            }
+          ]
+        },
+        "taskOwner": {
+          "pid": 88883,
+          "runId": "native-rcv-timeout-526382"
+        },
+        "requestLease": {
+          "pid": 88883,
+          "runId": "native-rcv-timeout-526382",
+          "nonce": "one-timeout"
+        },
+        "fleet": {
+          "at": 1794829815595,
+          "controllerPid": 87168
+        },
+        "end": {
+          "at": 1794829815590,
+          "reason": "blocked after 1 runs"
+        },
+        "releasePinMatches": true
+      }
+    }
+  ],
+  "firstFailure": null
+}

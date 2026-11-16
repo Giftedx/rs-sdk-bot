@@ -1,0 +1,4 @@
+SWARM plan /tmp/replay-root-DH9nUg/.practice/selected-swarm.json
+SWARM start flrcvxtbqa2 scripts/session-check.ts {"LOOT_WATCH":"0","RANDOM_EVENTS":"0","TICK_RECORD":"1"}
+SWARM end flrcvxtbqa2 done after 1 runs
+SWARM stopped (stop-swarm)

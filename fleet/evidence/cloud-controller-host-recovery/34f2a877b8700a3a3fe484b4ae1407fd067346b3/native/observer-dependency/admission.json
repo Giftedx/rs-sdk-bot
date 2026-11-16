@@ -1,0 +1,8 @@
+{
+  "state": "native-ready",
+  "at": 1794829519755,
+  "freeGB": 28.76360321044922,
+  "requiredGB": 6.5,
+  "deadline": 1794830419755,
+  "check": "bank-observation-saved"
+}

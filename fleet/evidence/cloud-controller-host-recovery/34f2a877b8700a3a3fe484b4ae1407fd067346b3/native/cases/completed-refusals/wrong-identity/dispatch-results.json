@@ -1,0 +1,15 @@
+[
+  {
+    "at": 1794829630719,
+    "raw": "{\"schema\":\"session-recovery/1\",\"kind\":\"session-recovery\",\"account\":\"flrcvxew6q14\",\"server\":\"127.0.0.1:8890\",\"runId\":\"native-rcv-completed-refusal-wrong-identity-526382\",\"nonce\":\"one-completed-refusal-wrong-identity\",\"endedAt\":1794829630697,\"source\":\"68867dce2e864a6dc90a8ebd361777b70b351237121d8566feb1a0e93b7f2c9d\",\"qualification\":{\"delivery\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"},\"proof\":{\"path\":\"native-fixture-not-qualified\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}",
+    "result": {
+      "changed": false,
+      "sessionRecovered": false,
+      "reason": "recovery setup refused; no lease issued; no retry",
+      "setup": {
+        "phase": "launch",
+        "cause": "recovery task authorization missing"
+      }
+    }
+  }
+]
