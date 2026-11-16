@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794806353718,
+ "at": 1794808743205,
  "jobs": [
   {
    "account": "Balls",
@@ -148,6 +148,25 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/microbot-jewellery-trip.ts",
+   "args": [],
+   "env": {
+    "RECIPE": "sapphire_ring",
+    "TARGET": "1",
+    "BATCH": "1",
+    "CAP": "800",
+    "RETURN_TICKS": "100",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-97103b67-1844-410d-b7ed-5eede7b5a3cb"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-make-woodpecker-overall-ring1 [task-97103b67-1844-410d-b7ed-5eede7b5a3cb]",
+   "role": "production"
   }
  ],
  "army": [
