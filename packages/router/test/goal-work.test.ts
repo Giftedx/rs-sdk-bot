@@ -59,6 +59,23 @@ test('old owned supply needs verification before making its replacement',()=>{
  expect(values.get('supply')!.value).toBeNull();
  expect(values.get('quest')!.value).toBeGreaterThan(0);
 });
+test('finite new supply uses only demand beyond reserved unverified stock with a fresh own bank',()=>{
+ const board=goals();board.collection.missing=[{item:'Sapphire ring',id:1637,need:12,owned:0,verifyOwned:2,consumer:'main Overall'}];
+ const proof:CoordTask={id:'ring-proof',kind:'qualify',goal:'main24',capability:'ring-worker',dependsOn:[],priority:50,estimatedMs:60000,why:'Qualify one finite useful ring batch'};
+ const consumer=(target:number)=>run('ring',{goal:'main24',capability:'ring-worker',dependsOn:[proof.id],accept:{bank:{1637:target}}});
+ const own=status('Helper',{bank:[{id:2357,count:10},{id:1607,count:10}]});
+ for(const count of [1,10]){
+  const {values}=evaluate([proof,consumer(count)],board,[own]);
+  expect(values.get('ring')!.value).toBe(count/12);
+  expect(values.get(proof.id)!.value).toBe(count/12);
+  expect(values.get('ring')!.reason).toContain('previously observed');
+ }
+ for(const count of [11,12])expect(evaluate([proof,consumer(count)],board,[own]).values.get('ring')!.value).toBeNull();
+ const covered=goals();covered.collection.missing=[{...board.collection.missing[0]!,verifyOwned:12}];
+ expect(evaluate([proof,consumer(1)],covered,[own]).values.get('ring')!.value).toBeNull();
+ for(const bankAt of [0,NOW-300000])expect(evaluate([proof,consumer(1)],board,[{...own,bankAt}]).values.get('ring')!.value).toBeNull();
+ expect(board.collection.missing[0]).toMatchObject({owned:0,verifyOwned:2});
+});
 
 const geOrder=(patch:Partial<CoordTask>={}):CoordTask=>run('ge-supply',{goal:'main24',capability:'ge-bulk-order',dependsOn:['ge-qualified'],timeoutMs:2700000,
  env:{ITEM_ID:'561',QUANTITY:'60',EXPECTED_OWNED:'0',LIMIT_PRICE:'250',CASH_RESERVE:'1000',ORDER_MS:'900000'},accept:{bank:{561:60}},...patch});
