@@ -1,0 +1,126 @@
+bun test v1.3.14 (0d9b296a)
+
+scripts/cloud-side.test.ts:
+(pass) cloud side bootstrap > recovery requires an explicit finite watch and manages only the owning coordinator [2.31ms]
+(pass) cloud side bootstrap > bounded shutdown cannot remove its fence while either owning controller is alive [0.13ms]
+(pass) cloud side bootstrap > options: the side comes from the flag or FLEET_SIDE, never local [0.22ms]
+(pass) cloud side bootstrap > a healthy launched session runs the existing side command [0.44ms]
+(pass) cloud side bootstrap > a failed claude bootstrap permits bounded diagnosis and a checked repair [0.14ms]
+(pass) cloud side bootstrap > a failed codex bootstrap permits bounded diagnosis and a checked repair [0.02ms]
+(pass) cloud side bootstrap > a setup mismatch stays visible and retained when later output fills the tail [2.27ms]
+(pass) cloud side bootstrap > retained setup diagnostics redact secrets while stdout names only failed steps [1.09ms]
+(pass) cloud side bootstrap > an unclassified setup error retains its evidence and a healthy setup stays quiet [0.20ms]
+(pass) cloud side bootstrap > daemons and restarts [0.63ms]
+(pass) cloud side bootstrap > an owner's stop file holds the side and is never replaced at the end of a watch [0.21ms]
+
+scripts/cloud-recovery.test.ts:
+(pass) bounded recovery parks only its inspectors and preserves reservation bytes and limits [2.73ms]
+(pass) bounded recovery retries preserve only exact selected parked owner copies without releasing held state [102.97ms]
+(pass) completed recovery admits only its new inspector mission and retains exact success/producer lineage [2.11ms]
+(pass) invalid manifest, side or owner plan cannot release a retained overlay [0.94ms]
+
+packages/core/test/bounded-recovery.test.ts:
+(pass) only the exact finite recovery proposal can dispatch; old tasks remain retained [0.91ms]
+(pass) a bounded swarm refuses an enabled owner job or a foreign overlay before dispatch [0.88ms]
+(pass) inspection accepts only finite selected inspectors and disabled reservations with no remaining overlay [0.78ms]
+
+packages/core/test/coordinator-jobs.test.ts:
+(pass) a coordinator job takes its accounts away from the owner job that names them; the rest stay in order [0.46ms]
+(pass) a host job loses only the named accounts; a composed job that loses one participant is kept off [0.33ms]
+(pass) later coordinator jobs shadow earlier ones, so a reinstalled account appears once [0.22ms]
+(pass) a legacy retired cohort keeps each participant parked as a valid single assignment [0.48ms]
+(pass) the plan keeps owner limits; a granted expansion applies only while the owner maxBots it was granted over stands [0.61ms]
+(pass) a selected cloud plan merges the same overlay without reading or changing the root plan [1.05ms]
+(pass) a missing file is an empty overlay; a written file reads back and merges from disk [0.69ms]
+
+packages/router/test/coordinator-recovery.test.ts:
+{"at":1794833264318,"kind":"task-finished","detail":{"id":"run-blood","status":"failed","runId":"blood-pause"}}
+{"at":1794833264318,"kind":"coordinator-paused","detail":{"reason":"owner stop file","unsettledRuns":[]}}
+(pass) owner pause persists a receipt written during worker shutdown [111.84ms]
+{"at":1794833264320,"kind":"coordinator-paused","detail":{"reason":"owner stop file","unsettledRuns":["recovery-run"]}}
+(pass) owner pause reports a worker that could not be stopped without inventing a receipt [0.93ms]
+(pass) concurrent coordinator starts leave exactly one owner [0.99ms]
+(pass) a reload reads state written while its predecessor still owns the queue [1002.02ms]
+(pass) authenticated recovery selects the newest current delivery after its exact failed end [2.06ms]
+(pass) authenticated recovery refuses deliveries at or before the failed end [0.47ms]
+(pass) completed recovery preserves success and refuses missing authorization, same mission or unrelated producer proof [10.76ms]
+(pass) authenticated recovery authorization is exact and ordinary-account only [0.52ms]
+(pass) only authenticated preflight may park an uncertain session; production install still refuses it [3.88ms]
+(pass) authenticated request timeout cancels only its unclaimed input and never changes the failure [12.11ms]
+(pass) an authenticated recovery waits at a full fleet under its lease and takes the bot slot that frees [1005.56ms]
+(pass) the wait for a bot slot is bounded, and a memory refusal does not wait [65.08ms]
+(pass) the wait reads the bot count of the controller, which has a bot that wrote no status yet [564.96ms]
+(pass) rollout waits for a post-lock tick and never kills a child omitted by the old state [4.13ms]
+(pass) actual rollout handles lock/repair refusals and failed new-controller acknowledgement without open admission [14.78ms]
+(pass) a rollout fence is archived once its controller is gone, and holds while it lives [1.36ms]
+(pass) recovery preflight leaves the block and assignments untouched on stop, session, binding or reservation refusal [5.34ms]
+(pass) successful preflight parks the failed assignment and retains its evidence before any controller request [1.60ms]
+(pass) same-script death repair refuses before spending the failure or disabling the old assignment [0.72ms]
+(pass) qualified same-script blocked after 1 runs preflights without clearing its exact end or enabling the job [2.17ms]
+(pass) qualified same-script gave-up after 1 runs preflights without clearing its exact end or enabling the job [2.19ms]
+(pass) a qualified five-actor non-death repair checks every exact end and keeps all actors disabled [8.76ms]
+(pass) same-script non-death repair preserves its end on stale [1.08ms]
+(pass) same-script non-death repair preserves its end on failed [0.63ms]
+(pass) same-script non-death repair preserves its end on foreign capability [1.00ms]
+(pass) same-script non-death repair preserves its end on wrong source [0.58ms]
+(pass) same-script non-death repair preserves its end on unconfirmed logout [0.71ms]
+(pass) a recovery timeout fails, cancels its own unclaimed request and never writes controller end state [14.26ms]
+(pass) an owned controller processing file and another repair lease are preserved [12.27ms]
+(pass) a new partial connection after preflight prevents the repair request [1.52ms]
+(pass) an exact controller refusal keeps its reason and a different nonce cannot fail our request [503.22ms]
+(pass) controller acknowledgement clears only the exact block after the old assignment is parked [503.70ms]
+(pass) reassignment retains unrelated group partners and removes overlapping old assignments [0.58ms]
+{"at":1794833268072,"kind":"task-finished","detail":{"id":"producer","status":"succeeded","runId":"recovery-run"}}
+(pass) restart adopts a matching child receipt and advances dependent work exactly once [3.91ms]
+(pass) restart keeps an owned live worker and retains a lost worker as failure [0.62ms]
+(pass) a mismatched receipt cannot complete a different run [0.59ms]
+{"at":1794833268075,"kind":"task-deferred","detail":{"id":"live","runId":"busy-run","wait":{"account":"Rod","reason":"active-session","attemptId":"1794777984832-0000029060-0000000001","pid":29060},"receipt":"/tmp/coord-live-defer-OZXw5A/runs/busy-run/receipt.json"}}
+(pass) a proved pre-install account deferral restores the exact run to pending without credit or lost receipt [1.01ms]
+{"at":1794833268083,"kind":"task-deferred","detail":{"id":"buy-ge-0-approved-rescue","runId":"memory-buy-ge-0-approved-rescue","wait":{"account":"GeBuyer0","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-0-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-1-approved-rescue","runId":"memory-buy-ge-1-approved-rescue","wait":{"account":"GeBuyer1","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-1-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-2-approved-rescue","runId":"memory-buy-ge-2-approved-rescue","wait":{"account":"GeBuyer2","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-2-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-3-approved-rescue","runId":"memory-buy-ge-3-approved-rescue","wait":{"account":"GeBuyer3","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-3-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-4-approved-rescue","runId":"memory-buy-ge-4-approved-rescue","wait":{"account":"GeBuyer4","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-4-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-5-approved-rescue","runId":"memory-buy-ge-5-approved-rescue","wait":{"account":"GeBuyer5","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-5-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-6-approved-rescue","runId":"memory-buy-ge-6-approved-rescue","wait":{"account":"GeBuyer6","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-6-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-7-approved-rescue","runId":"memory-buy-ge-7-approved-rescue","wait":{"account":"GeBuyer7","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-7-approved-rescue/receipt.json"}}
+{"at":1794833268084,"kind":"task-deferred","detail":{"id":"buy-ge-8-approved-rescue","runId":"memory-buy-ge-8-approved-rescue","wait":{"account":"GeBuyer8","reason":"memory","capacity":{"running":0,"external":0,"starting":1,"startingReserve":1,"pending":0,"freeGB":4.75,"minFreeGB":4,"maxBots":25}},"receipt":"/tmp/coord-ge-memory-pnGcIb/.practice/coordinator/runs/memory-buy-ge-8-approved-rescue/receipt.json"}}
+(pass) nine ordinary GE memory refusals remain pending with exact admission evidence and no assignments [8.65ms]
+(pass) ordinary dispatch reserves each unseen child and releases that reservation only when the controller includes its exact run [5.13ms]
+{"at":1794833268090,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"memory-run"}}
+(pass) a memory deferral cannot hide allowed admission inputs [0.53ms]
+{"at":1794833268090,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"memory-run"}}
+(pass) a memory deferral cannot hide negative count admission inputs [0.32ms]
+{"at":1794833268091,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"memory-run"}}
+(pass) a memory deferral cannot hide wrong slots admission inputs [0.23ms]
+{"at":1794833268091,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"memory-run"}}
+(pass) a memory deferral cannot hide wrong reserve admission inputs [0.47ms]
+{"at":1794833268091,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"memory-run"}}
+(pass) a memory deferral cannot hide nonfinite memory admission inputs [0.28ms]
+{"at":1794833268092,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"memory-run"}}
+(pass) a memory deferral cannot hide missing count admission inputs [0.46ms]
+{"at":1794833268092,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"busy-run"}}
+(pass) a live deferral cannot hide wrong account [0.61ms]
+(pass) a live deferral cannot hide wrong run [0.31ms]
+{"at":1794833268093,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"busy-run"}}
+(pass) a live deferral cannot hide installed [0.22ms]
+{"at":1794833268093,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"busy-run"}}
+(pass) a live deferral cannot hide other evidence [0.25ms]
+{"at":1794833268094,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"busy-run"}}
+(pass) a live deferral cannot hide recovery [0.39ms]
+{"at":1794833268094,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"busy-run"}}
+(pass) a live deferral cannot hide repair [0.30ms]
+{"at":1794833268094,"kind":"task-finished","detail":{"id":"live","status":"failed","runId":"busy-run"}}
+(pass) a live deferral cannot hide qualification [0.42ms]
+(pass) live child polling does not launch command-line inspection while OS liveness is known [0.44ms]
+(pass) planner rejects unknown capabilities and credentials without changing queue [2.85ms]
+(pass) detached worker survives its launcher exiting and writes its own receipt [981.78ms]
+(pass) a detached-run controller rolls over without drain or pause, and is stopped alone [1.87ms]
+(pass) a run rolls a controller whose release differs from its source; a standing check reuses it [1.68ms]
+(pass) the recovery preflight parks an enabled standing hand job whose last session failed; production install still checks [3.03ms]
+(pass) after the recovery, the production install treats the parked hand job as released only by this run confirmed recovery [2.07ms]
+
+ 84 pass
+ 0 fail
+ 530 expect() calls
+Ran 84 tests across 5 files. [5.82s]

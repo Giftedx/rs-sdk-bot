@@ -1,0 +1,11 @@
+{
+  "head": "c72e31a5f6750b5fe245f6fde1717f3fe08b3878",
+  "sessionCheckRuntime": "f09ac1a8d892583e6c600f85d6c43b16fd8b37a5f41b63bff8c4af09e25a54c7",
+  "acceptedRuntime": "f09ac1a8d892583e6c600f85d6c43b16fd8b37a5f41b63bff8c4af09e25a54c7",
+  "runtimeMatches": true,
+  "freeGB": 28.611343383789062,
+  "credentials": {
+    "vault": true,
+    "seed": true
+  }
+}

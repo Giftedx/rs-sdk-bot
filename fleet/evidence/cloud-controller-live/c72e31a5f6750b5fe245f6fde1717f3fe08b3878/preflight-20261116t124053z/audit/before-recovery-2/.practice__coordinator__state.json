@@ -1,0 +1,404 @@
+{
+  "version": 1,
+  "sequence": 8,
+  "tasks": [
+    {
+      "spec": {
+        "id": "cloud-recovery-qualified-20261116t101433z",
+        "goal": "wealth",
+        "kind": "qualify",
+        "capability": "session-recovery-only",
+        "dependsOn": [],
+        "priority": 90,
+        "estimatedMs": 600000,
+        "why": "Qualify authenticated session recovery"
+      },
+      "status": "succeeded",
+      "createdAt": 1794824075329,
+      "attempts": 1,
+      "runId": "task-6effa5d9-aaf6-4566-8faf-b86819e45ad7",
+      "startedAt": 1794824077519,
+      "agent": "codex",
+      "pid": 48360,
+      "receipt": {
+        "taskId": "cloud-recovery-qualified-20261116t101433z",
+        "runId": "task-6effa5d9-aaf6-4566-8faf-b86819e45ad7",
+        "agent": "codex",
+        "ok": true,
+        "at": 1794824460711,
+        "output": {
+          "ok": true,
+          "delivery": {
+            "ok": true,
+            "stage": "delivered",
+            "evidence": "native",
+            "consumer": "A held-logout live account reaches producer-confirmed logout through authenticated controller recovery within one bounded unresolved lineage. The actual account-parameterized session-check CLI then reports sessionChecked=1 and confirmed logout with reconciled assets. Sausagefest's finite recovery releases the unchanged Witch's Potion and Cook's Assistant consumers on its existing provision identity.",
+            "reason": "native capability and named consumer verified",
+            "checks": [
+              {
+                "id": "session-recovery-only-regressions",
+                "phase": "regression",
+                "exitCode": 0,
+                "timedOut": false,
+                "detail": "{\"stdout\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/0.out.log\",\"stderr\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/0.err.log\"}"
+              },
+              {
+                "id": "bank-observer-qualification",
+                "phase": "regression",
+                "exitCode": 0,
+                "timedOut": false,
+                "detail": "{\"stdout\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/1.out.log\",\"stderr\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/1.err.log\"}"
+              },
+              {
+                "id": "native-session-recovery",
+                "phase": "practice",
+                "exitCode": 0,
+                "timedOut": false,
+                "detail": "{\"stdout\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/2.out.log\",\"stderr\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/2.err.log\"}"
+              },
+              {
+                "id": "session-recovery-only-verified",
+                "phase": "consumer",
+                "exitCode": 0,
+                "timedOut": false,
+                "detail": "{\"stdout\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/3.out.log\",\"stderr\":\"/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb/3.err.log\"}"
+              }
+            ],
+            "source": "ec6c7f7cdb6b27e9c970b94993d131174f373030ec28b1834fc38ee80d9bcf66",
+            "id": "session-recovery-only",
+            "goal": "Release an owned live account whose last session ended without a confirmed logout: the controller authenticated recovery logs it in and out, then the entry logs in, confirms it is in game and logs out. No gameplay.",
+            "at": 1794824460147,
+            "runtimeRevision": "37b0e5a82d72cf817a9ff334873932a2662cb65a2a92073bb5a7cd468e26dea6",
+            "directory": "/workspace/rs-sdk-bot/.practice/deliveries/session-recovery-only-1794824078033-wZM4kb",
+            "files": [
+              {
+                "path": "scripts/session-check.ts",
+                "sha256": "badf5dcd028a35e5f81202b8f4cf7d59cb2dc43c53ec65d60c6d0b49a9f695f6"
+              },
+              {
+                "path": "scripts/swarm.ts",
+                "sha256": "5d7a113e7f73395da1a1a2fc9d85c278d71b5d78d9012cc955921016ef26c15f"
+              },
+              {
+                "path": "scripts/cloud-recover.ts",
+                "sha256": "45ef628f92fe87b6f68eb7fa3ecd6d2c9d7cf57e5b7ef62b5d15836b99f57f54"
+              },
+              {
+                "path": "scripts/cloud-recover.test.ts",
+                "sha256": "828665ebdcf4e2707df44f73913e66b078b8d211ccda45c6e8a20260f311e3f5"
+              },
+              {
+                "path": "scripts/cloud-side.ts",
+                "sha256": "5468d507fcc978a1ffaa73412c55fdc5dc710fd5437065142940cc269eb55a70"
+              },
+              {
+                "path": "scripts/cloud-side.test.ts",
+                "sha256": "be56396348903e6e05e07974bf8e5aa368157b49573186727aea4fca4564f7c9"
+              },
+              {
+                "path": "scripts/cloud-recovery.ts",
+                "sha256": "7e88705d91464696a17bf3b8fef17cace1b05f59a07a16451fbdb778c9288c0e"
+              },
+              {
+                "path": "scripts/cloud-recovery.test.ts",
+                "sha256": "9a4c192f7f5a2881274e2a93d0e5361b7e1bc9276a83113081c6d5a2d603f332"
+              },
+              {
+                "path": "packages/core/src/bounded-recovery.ts",
+                "sha256": "a664a72d09e5e4b62edd969a7155aed14542d58bdf65f8bf585a80b5b88b837f"
+              },
+              {
+                "path": "packages/core/src/bounded-owners.ts",
+                "sha256": "de9d467a2ab8ffab599c54163d7029a9c451b9d3280cf3695f3e23c05d830d04"
+              },
+              {
+                "path": "packages/core/test/bounded-recovery.test.ts",
+                "sha256": "eef7e1d27f0146c96aa00c217a280d3211a9c28be0ff92d8dffe1feff0831b1e"
+              },
+              {
+                "path": "packages/core/test/bounded-owners.test.ts",
+                "sha256": "3f9459a0d227bf446f0b130036a3e1bcd826df8e2e1e6c82f5396f0bcd125858"
+              },
+              {
+                "path": "packages/practice/src/swarm-recovery-chain.ts",
+                "sha256": "18ba4fd899e4eae4aac141288ce5fe2366baa43ebd9d451f6a9fe43c1f9922e9"
+              },
+              {
+                "path": "packages/practice/test/swarm-recovery-chain.test.ts",
+                "sha256": "a816cb606b4e3bfc817460b79f52dca000d7c18afe872fd68b6ae7b992527eef"
+              },
+              {
+                "path": "packages/router/src/bank-observer-qualification.ts",
+                "sha256": "9f5898d3fda85c7ccfc1b888aa75df25477ad2b7689933b2ebe61433dc47b150"
+              },
+              {
+                "path": "packages/router/tasks/owned-bank-observation.json",
+                "sha256": "77b2d18cee114c69664494d14646382924a71bd89cc56f5ec3e7f6944d12b626"
+              },
+              {
+                "path": "packages/core/src/coordinator-jobs.ts",
+                "sha256": "b2ed45f8faec7725cce263594c9a81bcf58e6a28400e0f879ecb68165600b7ad"
+              },
+              {
+                "path": "packages/core/test/coordinator-jobs.test.ts",
+                "sha256": "0b3c9b411600c5575b62cfa60f67f2bf0778fbe54056eb5ca34c240c9054b979"
+              },
+              {
+                "path": "packages/router/src/coordinator-cli.ts",
+                "sha256": "d7a0b49118cf2079c1847dd086b6bfeb4d1e7067e9e868f2d68dbed7ff8fe15f"
+              },
+              {
+                "path": "packages/router/src/coordinator-live.ts",
+                "sha256": "b902c2bb00ed2c5af924ccf7595b047179db00704c9425a4437c9189e29dd46b"
+              },
+              {
+                "path": "packages/core/src/session-lifecycle.ts",
+                "sha256": "f33c6600b2f46d72d579ea94e68956adfffef3f0d2a86805ce057b7734c7e2e8"
+              },
+              {
+                "path": "packages/core/src/inprocess.ts",
+                "sha256": "c84d57411492e3157a8dd0e5f486100fc6f124c7f48459f5ba3d371a39a0891c"
+              },
+              {
+                "path": "packages/core/src/bot.ts",
+                "sha256": "b0f0e62d0a2bd816267f306b1db8b8287aa48fd5f875e5c5289b1916bcd40548"
+              },
+              {
+                "path": "packages/core/src/status.ts",
+                "sha256": "c691d7f8465212c621bc87f0a7a36ff15285e475ceecff6229439a918ca395d2"
+              },
+              {
+                "path": "packages/core/src/session-recovery.ts",
+                "sha256": "2717fa5c4e7454a68cf7c4b82d7f5beba2ca88c7eccda07208b00caa66f57b24"
+              },
+              {
+                "path": "packages/core/src/session-recovery-permit.ts",
+                "sha256": "d96daa843efdcf5b816e96f2f38603a22cd5437bed7428c913ed289cf09a2a02"
+              },
+              {
+                "path": "packages/core/src/session-recovery-dispatch.ts",
+                "sha256": "c6e2b770e29be24fa1f37a1775d8d5a82af5e3e5a04ceaa377ba47ffaa1b7024"
+              },
+              {
+                "path": "packages/core/src/session-admission.ts",
+                "sha256": "8d0b3607e853aa878a4810bdf476977029c79a8698fc1c43cca22c2c00e1795f"
+              },
+              {
+                "path": "packages/core/src/worker-release.ts",
+                "sha256": "2cd75d05e21c14d33da53e11f18e3727be75035407ab5583690aaf3a11c3cae8"
+              },
+              {
+                "path": "packages/practice/src/session-recovery-proof.ts",
+                "sha256": "0947f201db616a9245e21a42cb8b40ecc084e98e378af57452f6c49c26f4d1c1"
+              },
+              {
+                "path": "scripts/session-check.test.ts",
+                "sha256": "46ca8f44a1dd84414b5ef2817fe503cd2d150af662ef9796ee7a8f22bf9ae4db"
+              },
+              {
+                "path": "packages/core/test/session-lifecycle.test.ts",
+                "sha256": "1769a926964edc648cb6468995cdb3d730f1f052d403a51c33e016b48514826e"
+              },
+              {
+                "path": "packages/core/test/inprocess.test.ts",
+                "sha256": "9233efa82af1b8c38bfb58e06e19ea2e194c77c81505bd1bb487cffca43b042e"
+              },
+              {
+                "path": "packages/core/src/route-plan.ts",
+                "sha256": "d707a111610a138dcf3b00061392ca7ca5bc4a5011100f756687cca887e9cafd"
+              },
+              {
+                "path": "packages/core/test/inprocess-route-work.test.ts",
+                "sha256": "2a62e74659e18c5750276358961dfa90fd19630f63ac3b7e2601019699fd579a"
+              },
+              {
+                "path": "packages/core/test/inprocess-lockstep-wait.test.ts",
+                "sha256": "1a19d6d33fb340fa73e251bdcec9b2d223ba5b27763544ebb30c915e0366e4e2"
+              },
+              {
+                "path": "packages/core/test/route-plan.test.ts",
+                "sha256": "ba8979e11352bf53453af3885c85abeba0fc6c8af7a3742dd20a7bf974f57739"
+              },
+              {
+                "path": "packages/core/test/bot.test.ts",
+                "sha256": "e4211bc833176411477a8e1173346711a4109b6e7838c554ef9ced360e48b9ed"
+              },
+              {
+                "path": "packages/core/test/status.test.ts",
+                "sha256": "8161431da0047e1b603dd4168cc1bfdd3a0379a36adfd6befcb39a8f12581d79"
+              },
+              {
+                "path": "scripts/swarm.test.ts",
+                "sha256": "62bfd290ec949827b33f5a2bc59eac71cf4c7604c37f512586cad5e9c4c896e0"
+              },
+              {
+                "path": "packages/core/test/session-recovery.test.ts",
+                "sha256": "9b95a391d9a534fe3e64ab0cf0fbac7a9ab76ef04fad9194e19742cb59c8c6fa"
+              },
+              {
+                "path": "packages/core/test/session-recovery-permit.test.ts",
+                "sha256": "39c83c3188978c0bcbbf7f151a4f56637aa39667aa022076481b335621946f88"
+              },
+              {
+                "path": "packages/core/test/session-recovery-dispatch.test.ts",
+                "sha256": "05d2456823ff05d8ff0efacb49c335b25bfe52db2bc28dcad5f52c53fd98a59d"
+              },
+              {
+                "path": "packages/core/test/session-admission.test.ts",
+                "sha256": "bb15e6472626c3752e6ff2fdf686064ee39a353b9fea019c71fab9b5038cf1a4"
+              },
+              {
+                "path": "packages/core/test/worker-release.test.ts",
+                "sha256": "2d382bc89f586b2b1a1ad83f09978392dc7cc29e0a6660017898726f23d3a9a0"
+              },
+              {
+                "path": "packages/core/test/inprocess-auth-order.test.ts",
+                "sha256": "b0d854cb5de8831308687b3ebc934e85556a6f1ef50111103fe8c5436ceae0e7"
+              },
+              {
+                "path": "packages/practice/test/session-recovery-proof.test.ts",
+                "sha256": "634c092fec1ce0cd2b2f5e3cf8c2f14740de22bf2648f0446706415fee652527"
+              }
+            ]
+          },
+          "evidence": "native"
+        }
+      },
+      "receiptSequence": 4
+    },
+    {
+      "spec": {
+        "id": "cloud-recover-fullload-20261116t101433z",
+        "goal": "wealth",
+        "kind": "run",
+        "capability": "session-recovery-only",
+        "account": "FullLoad",
+        "dependsOn": [
+          "cloud-recovery-qualified-20261116t101433z"
+        ],
+        "repairs": [
+          {
+            "account": "FullLoad",
+            "endedAt": 1794807014127
+          }
+        ],
+        "sessionRecovery": {
+          "account": "FullLoad",
+          "endedAt": 1794807014127
+        },
+        "accept": {
+          "counters": {
+            "sessionChecked": 1
+          }
+        },
+        "priority": 90,
+        "estimatedMs": 120000,
+        "why": "Authenticated recovery of FullLoad's orphaned session"
+      },
+      "status": "failed",
+      "createdAt": 1794824075329,
+      "attempts": 1,
+      "runId": "task-8f41d7a0-7ed5-4ff2-a5af-ab2be6464391",
+      "startedAt": 1794824463855,
+      "agent": "codex",
+      "pid": 51103,
+      "receipt": {
+        "taskId": "cloud-recover-fullload-20261116t101433z",
+        "runId": "task-8f41d7a0-7ed5-4ff2-a5af-ab2be6464391",
+        "ok": false,
+        "at": 1794824475401,
+        "output": null,
+        "error": "Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry"
+      },
+      "receiptSequence": 6
+    },
+    {
+      "spec": {
+        "id": "cloud-recover-unsheathed-20261116t101433z",
+        "goal": "wealth",
+        "kind": "run",
+        "capability": "session-recovery-only",
+        "account": "Unsheathed",
+        "dependsOn": [
+          "cloud-recovery-qualified-20261116t101433z",
+          "cloud-recover-fullload-20261116t101433z"
+        ],
+        "repairs": [
+          {
+            "account": "Unsheathed",
+            "endedAt": 1794807013505
+          }
+        ],
+        "sessionRecovery": {
+          "account": "Unsheathed",
+          "endedAt": 1794807013505
+        },
+        "accept": {
+          "counters": {
+            "sessionChecked": 1
+          }
+        },
+        "priority": 90,
+        "estimatedMs": 120000,
+        "why": "Authenticated recovery of Unsheathed's orphaned session"
+      },
+      "status": "failed",
+      "createdAt": 1794824075329,
+      "attempts": 1,
+      "runId": "task-72b07a24-aa98-4e81-bc32-a9599d4a9137",
+      "startedAt": 1794824475650,
+      "agent": "codex",
+      "pid": 51141,
+      "receipt": {
+        "taskId": "cloud-recover-unsheathed-20261116t101433z",
+        "runId": "task-72b07a24-aa98-4e81-bc32-a9599d4a9137",
+        "ok": false,
+        "at": 1794824484511,
+        "output": null,
+        "error": "Error: controller held authenticated recovery: recovery child held; inspect fixed child output and retained account lease; no retry"
+      },
+      "receiptSequence": 8
+    }
+  ],
+  "goals": [
+    {
+      "id": "wealth",
+      "lastStartedAt": 1794824475650,
+      "lastSucceededAt": 1794824460711,
+      "completedTasks": 1
+    },
+    {
+      "id": "skills",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "quests",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "gear",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "specialists",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    },
+    {
+      "id": "main24",
+      "lastStartedAt": 0,
+      "lastSucceededAt": 0,
+      "completedTasks": 0
+    }
+  ],
+  "lastPlanAt": 0,
+  "lastPlanReason": "Exact bounded authenticated recovery",
+  "latestReceiptSequence": 8
+}

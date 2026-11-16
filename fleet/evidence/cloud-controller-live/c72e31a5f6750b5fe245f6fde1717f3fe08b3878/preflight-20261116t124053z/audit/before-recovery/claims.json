@@ -1,0 +1,212 @@
+[
+  {
+    "account": "bonetopick",
+    "claim": {
+      "kind": "swarm",
+      "account": "bonetopick",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "60ac53a4-ee4a-44c7-a49f-87e14eedac6f",
+      "host": "b5f2832b55d4",
+      "pid": 1968,
+      "nonce": "1244e549-64cf-4449-a4fe-f83f90f1ddfe",
+      "phase": "held",
+      "at": 1794631828492
+    }
+  },
+  {
+    "account": "bravehardon",
+    "claim": {
+      "kind": "swarm",
+      "account": "bravehardon",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "60ac53a4-ee4a-44c7-a49f-87e14eedac6f",
+      "host": "b5f2832b55d4",
+      "pid": 1328,
+      "nonce": "fed4352e-48de-467f-bd53-f3ee25677698",
+      "phase": "held",
+      "at": 1794631587146
+    }
+  },
+  {
+    "account": "coinpurse",
+    "claim": {
+      "kind": "swarm",
+      "account": "coinpurse",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "b0da4f650e5a",
+      "pid": 2006,
+      "nonce": "60a58551-369c-47e0-8b66-692f954747d9",
+      "phase": "released",
+      "at": 1794640538509
+    }
+  },
+  {
+    "account": "crownjewels",
+    "claim": {
+      "kind": "swarm",
+      "account": "crownjewels",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "60ac53a4-ee4a-44c7-a49f-87e14eedac6f",
+      "host": "b5f2832b55d4",
+      "pid": 2158,
+      "nonce": "ab2e8eb3-e84e-402f-a6f9-97e597167355",
+      "phase": "held",
+      "at": 1794631847723
+    }
+  },
+  {
+    "account": "fullload",
+    "claim": {
+      "kind": "swarm",
+      "account": "fullload",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "c495244f1bc5",
+      "pid": 10716,
+      "nonce": "b8c567f0-c952-4e2c-bf03-d0cb1c5dfe06",
+      "phase": "held",
+      "at": 1794807012497
+    }
+  },
+  {
+    "account": "fullsporran",
+    "claim": {
+      "kind": "swarm",
+      "account": "fullsporran",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "60ac53a4-ee4a-44c7-a49f-87e14eedac6f",
+      "host": "b5f2832b55d4",
+      "pid": 2176,
+      "nonce": "d5c37af6-18d3-4736-8a91-a81660e8c6f0",
+      "phase": "held",
+      "at": 1794631848018
+    }
+  },
+  {
+    "account": "heavyload",
+    "claim": {
+      "kind": "swarm",
+      "account": "heavyload",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "b0da4f650e5a",
+      "pid": 11187,
+      "nonce": "04e9d000-c24c-453f-9928-fff80bfe7c81",
+      "phase": "released",
+      "at": 1794642196493
+    }
+  },
+  {
+    "account": "meatntwoveg",
+    "claim": {
+      "kind": "swarm",
+      "account": "meatntwoveg",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "b0da4f650e5a",
+      "pid": 12860,
+      "nonce": "812c8a7b-d582-4c52-82d6-88e5ef6f0e2d",
+      "phase": "released",
+      "at": 1794644419290
+    }
+  },
+  {
+    "account": "porksword",
+    "claim": {
+      "kind": "swarm",
+      "account": "porksword",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "60ac53a4-ee4a-44c7-a49f-87e14eedac6f",
+      "host": "b5f2832b55d4",
+      "pid": 2043,
+      "nonce": "873d6a2a-9755-4058-a4ac-aa29bc4eaab5",
+      "phase": "held",
+      "at": 1794631834643
+    }
+  },
+  {
+    "account": "spitroaster",
+    "claim": {
+      "kind": "swarm",
+      "account": "spitroaster",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "b0da4f650e5a",
+      "pid": 8246,
+      "nonce": "98c04aeb-8ca7-4e1d-9a85-73d225d2df18",
+      "phase": "held",
+      "at": 1794640052682
+    }
+  },
+  {
+    "account": "stirmypot",
+    "claim": {
+      "kind": "swarm",
+      "account": "stirmypot",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "b0da4f650e5a",
+      "pid": 15035,
+      "nonce": "5173af16-6ac0-4bfc-b4f3-6a6ea485dc05",
+      "phase": "released",
+      "at": 1794644115258
+    }
+  },
+  {
+    "account": "tossthecaber",
+    "claim": {
+      "kind": "swarm",
+      "account": "tossthecaber",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "60ac53a4-ee4a-44c7-a49f-87e14eedac6f",
+      "host": "b5f2832b55d4",
+      "pid": 1347,
+      "nonce": "7d57a8a8-3dc5-47e3-962d-7edeb58b51be",
+      "phase": "held",
+      "at": 1794631587478
+    }
+  },
+  {
+    "account": "unsheathed",
+    "claim": {
+      "kind": "swarm",
+      "account": "unsheathed",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "c495244f1bc5",
+      "pid": 10703,
+      "nonce": "2a637834-6fde-40ba-bd57-392bdc4aef20",
+      "phase": "held",
+      "at": 1794807011741
+    }
+  },
+  {
+    "account": "yewgotwood",
+    "claim": {
+      "kind": "swarm",
+      "account": "yewgotwood",
+      "server": "rs-sdk-demo.fly.dev",
+      "side": "cloud",
+      "checkout": "a93dd57f-8bd9-4668-a00d-00eee067a4e8",
+      "host": "b0da4f650e5a",
+      "pid": 18605,
+      "nonce": "b55a94ca-3d2f-4962-a2f1-8e7c1aaa3972",
+      "phase": "released",
+      "at": 1794644430421
+    }
+  }
+]

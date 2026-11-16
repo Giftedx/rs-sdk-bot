@@ -1,0 +1,90 @@
+{
+  "at": 1794832813680,
+  "head": "c72e31a5f6750b5fe245f6fde1717f3fe08b3878",
+  "runtime": "f09ac1a8d892583e6c600f85d6c43b16fd8b37a5f41b63bff8c4af09e25a54c7",
+  "acceptedRuntime": "f09ac1a8d892583e6c600f85d6c43b16fd8b37a5f41b63bff8c4af09e25a54c7",
+  "runtimeMatches": true,
+  "gitClean": true,
+  "acceptedTreeMatches": true,
+  "sdk": {
+    "head": "db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb",
+    "trackedDiffSha256": "674d91dd8a976c068ac5316f7e9b47b9db6790eba94b811277e16b0ab3da3eb8",
+    "untracked": [
+      "server/engine/data/market-aiobench-0.sqlite",
+      "server/engine/data/market-aiobench-0.sqlite-shm",
+      "server/engine/data/market-aiobench-0.sqlite-wal",
+      "server/engine/src/simseed.ts",
+      "server/webclient/src/lite/session-end.test.ts"
+    ]
+  },
+  "sdkPreserved": true,
+  "planPreserved": true,
+  "manifestPreserved": true,
+  "manifestSha256": "dbd2b823ded8b0d51cd7a774fefb8ec088970c6754382c7e4519f45e227a9cf1",
+  "otherRows": [
+    {
+      "account": "BraveHardon",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "TossTheCaber",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "Porksword",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "MeatNTwoVeg",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "YewGotWood",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "Spitroaster",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "Stirmypot",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "BoneToPick",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "Crownjewels",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "FullSporran",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "Heavyload",
+      "enabled": false,
+      "autopilot": null
+    },
+    {
+      "account": "Coinpurse",
+      "enabled": false,
+      "autopilot": null
+    }
+  ],
+  "limits": {
+    "maxBots": 4,
+    "minFreeGB": 4
+  }
+}

@@ -1,0 +1,30 @@
+bun test v1.3.14 (0d9b296a)
+
+scripts/cloud-side.test.ts:
+(pass) cloud side bootstrap > recovery requires an explicit finite watch and manages only the owning coordinator [1.98ms]
+(pass) cloud side bootstrap > bounded shutdown cannot remove its fence while either owning controller is alive [0.21ms]
+(pass) cloud side bootstrap > options: the side comes from the flag or FLEET_SIDE, never local [0.41ms]
+(pass) cloud side bootstrap > a healthy launched session runs the existing side command [0.69ms]
+(pass) cloud side bootstrap > a failed claude bootstrap permits bounded diagnosis and a checked repair [0.11ms]
+(pass) cloud side bootstrap > a failed codex bootstrap permits bounded diagnosis and a checked repair [0.02ms]
+(pass) cloud side bootstrap > a setup mismatch stays visible and retained when later output fills the tail [2.04ms]
+(pass) cloud side bootstrap > retained setup diagnostics redact secrets while stdout names only failed steps [0.55ms]
+(pass) cloud side bootstrap > an unclassified setup error retains its evidence and a healthy setup stays quiet [0.23ms]
+(pass) cloud side bootstrap > daemons and restarts [0.53ms]
+(pass) cloud side bootstrap > an owner's stop file holds the side and is never replaced at the end of a watch [0.16ms]
+
+scripts/cloud-recovery.test.ts:
+(pass) bounded recovery parks only its inspectors and preserves reservation bytes and limits [3.11ms]
+(pass) bounded recovery retries preserve only exact selected parked owner copies without releasing held state [80.41ms]
+(pass) completed recovery admits only its new inspector mission and retains exact success/producer lineage [1.59ms]
+(pass) invalid manifest, side or owner plan cannot release a retained overlay [0.93ms]
+
+packages/core/test/bounded-recovery.test.ts:
+(pass) only the exact finite recovery proposal can dispatch; old tasks remain retained [0.98ms]
+(pass) a bounded swarm refuses an enabled owner job or a foreign overlay before dispatch [0.52ms]
+(pass) inspection accepts only finite selected inspectors and disabled reservations with no remaining overlay [0.67ms]
+
+ 18 pass
+ 0 fail
+ 167 expect() calls
+Ran 18 tests across 3 files. [344.00ms]

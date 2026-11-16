@@ -1,0 +1,19 @@
+bun test v1.3.14 (0d9b296a)
+
+scripts/cloud-recovery.test.ts:
+32 |     const next=boundedRecoveryPlan(plan,targets,owned,now);
+33 |     // Use the actual side in task ids; the proposal contract and recovery proof remain unchanged.
+34 |     const proposal=recoveryProposal(side,targets,now);
+35 |     next.coordination.bootstrap=proposal.tasks;
+36 |     next.coordination.boundedRecovery.taskIds=proposal.tasks.map(t=>t.id);
+37 |     if(readCoordinatorJobs(base).jobs.length)throw Error('bounded recovery preserves existing coordinator assignments; settle them first');
+                                                                                                                                              ^
+error: bounded recovery preserves existing coordinator assignments; settle them first
+      at prepareBoundedRecovery (/workspace/rs-sdk-bot-host-recovery/scripts/cloud-recovery.ts:37:138)
+      at <anonymous> (/workspace/rs-sdk-bot-host-recovery/scripts/cloud-recovery.test.ts:39:14)
+(fail) bounded recovery retries preserve only exact selected parked owner copies without releasing held state [51.62ms]
+
+ 0 pass
+ 3 filtered out
+ 1 fail
+Ran 1 test across 1 file. [272.00ms]

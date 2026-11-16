@@ -1,0 +1,40 @@
+{
+  "at": 1794833219067,
+  "scope": "mutation-free candidate preflight against frozen c72 original state; no controller or producer started",
+  "targets": [
+    {
+      "account": "FullLoad",
+      "attemptId": "1794807014059-0000010716-0000000001",
+      "endedAt": 1794807014127
+    },
+    {
+      "account": "Unsheathed",
+      "attemptId": "1794807013455-0000010703-0000000001",
+      "endedAt": 1794807013505
+    }
+  ],
+  "nextScope": {
+    "targets": [
+      {
+        "account": "FullLoad",
+        "attemptId": "1794807014059-0000010716-0000000001",
+        "endedAt": 1794807014127
+      },
+      {
+        "account": "Unsheathed",
+        "attemptId": "1794807013455-0000010703-0000000001",
+        "endedAt": 1794807013505
+      }
+    ],
+    "taskIds": [
+      "cloud-recovery-qualified-20261116t124658z",
+      "cloud-recover-fullload-20261116t124658z",
+      "cloud-recover-unsheathed-20261116t124658z"
+    ]
+  },
+  "overlayPreserved": true,
+  "planPreserved": true,
+  "overlaySha256": "1010dc273978cd6b5a5cede9e289c8f5df4b496919303dfc24bccced899d2c4d",
+  "maxBots": 4,
+  "minFreeGB": 4
+}
