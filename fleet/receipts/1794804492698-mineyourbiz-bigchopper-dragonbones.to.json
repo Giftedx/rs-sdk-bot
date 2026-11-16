@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794804492698-mineyourbiz-bigchopper-dragonbones",
  "account": "Bigchopper",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 46,
  "claim": "b468d297-ed1a-498c-981c-5b6a6bbc543c",
- "count": 0,
- "ok": false,
- "at": 1794804917748,
- "detail": "trade claimed"
+ "count": 46,
+ "ok": true,
+ "at": 1794805177083,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 46
+ },
+ "bank": {
+  "count": 46,
+  "at": 1794805176304
+ },
+ "logout": {
+  "attemptId": "1794804917864-0000028276-0000000001",
+  "at": 1794805177069,
+  "sha256": "b936582b22abfea690b06cfb3326d57741df63cd5ffa348985ba11ffb4366b7b"
+ },
+ "screen": true
 }
