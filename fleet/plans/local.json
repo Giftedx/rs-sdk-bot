@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794810097206,
+ "at": 1794811301120,
  "jobs": [
   {
    "account": "Balls",
@@ -50,32 +50,6 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "0",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
   },
   {
    "account": "Shaftsinker",
