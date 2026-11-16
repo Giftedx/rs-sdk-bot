@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794820130386,
+ "at": 1794820244758,
  "jobs": [
   {
    "account": "Balls",
@@ -155,7 +155,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-c92ce08d-f1ac-4449-a4d4-fb6fb2ddda3d"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-magic-nab25-xp-proof [task-c92ce08d-f1ac-4449-a4d4-fb6fb2ddda3d]",
    "role": "helper"
