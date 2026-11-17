@@ -758,10 +758,19 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // While suspended by p_delay (DDS spec p_delay(0), potion p_delay(1), karambwan p_delay(2)), processClientsIn
         // drops OpHeld/InvButton/OpPlayer/MoveClick and protected scripts fail p_finduid(uid); wait until un-delayed.
         if (now < delayedUntil) continue;
+        // Food and movement share the native five-USER_EVENT limit with gear, prayers and attacks.
+        let sentEvents = 0;
+        const walk = (x: number, z: number): boolean => {
+            if (sentEvents >= 5) return false;
+            void sdk.sendWalk(x, z);
+            sentEvents++;
+            return true;
+        };
         const use = (item: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }, verb: RegExp): boolean => {
             const op = item.optionsWithIndex.find(x => verb.test(x.text));
-            if (!op) return false;
+            if (!op || sentEvents >= 5) return false;
             void sdk.sendUseItem(item.slot, op.opIndex);
+            sentEvents++;
             return true;
         };
         if (state.combatStyle?.currentStyle === 1) rapidSet = true;
@@ -785,10 +794,14 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const castShield = (o.kiteMelee !== undefined || o.freezeStill === true) && now <= freezeCastAt + 2 && me.hp > oppMax;
         // freezeStill: the ticks after a cast until the hold shows (the target stood: held two ticks after the cast).
         const freezeHolding = o.freezeStill === true && now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2 && !!frozenTile);
-        if (!castShield && me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
+        const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
+        // A worn glory needs a pack slot before it can be rubbed. Eat for that slot even at full HP, then read the
+        // credited inventory on the next tick before removing it. With no food, the walking fallback still applies.
+        const gloryRoom = escapeNow(inv) && wildernessLevel(at.z) <= 30 && !!wornGlory && !slotOf(ITEMS.glory)
+            && inv.length >= 28 && typeof sdk.sendUseEquipmentItem === 'function';
+        if ((!castShield || gloryRoom) && (gloryRoom || me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8)) && now >= foodReady) {
             const food = bestFood(inv);
-            if (food) {
-                use(food, /^Eat$/i);
+            if (food && use(food, /^Eat$/i)) {
                 foodReady = now + 3;
                 nextAttack = (hasAttacked ? nextAttack : now) + 3;
                 hasAttacked = true;
@@ -797,33 +810,32 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 // Combo-eat a cooked karambwan in the same tick when dangerously low (consume_messages.dbrow:779 p_delay(2)).
                 if (me.hp <= oppMax && now >= karambwanReady && food.id !== ITEMS.karambwan) {
                     const kw = slotOf([ITEMS.karambwan]);
-                    if (kw) {
-                        use(kw, /^Eat$/i);
+                    if (kw && use(kw, /^Eat$/i)) {
                         karambwanReady = now + 3;
                         delayedUntil = Math.max(delayedUntil, now + 4);
                         nextAttack = Math.max(nextAttack + 2, delayedUntil);
                         result.eaten++;
                     }
                 }
+                if (gloryRoom) continue;
             }
         }
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
         if (o.escapeWalk !== undefined && escapeNow(inv) && wildernessLevel(at.z) <= o.escapeWalk) {
-            if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; }
+            if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); walk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; }
             continue;
         }
         // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option), so a worn one comes off first:
         // the amulet that an account wears is then its way out, and its pack needs no second one.
-        const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
         // The escape spell counts only when its runes, staff and level allow a cast (escapeCastable).
         const spellReady = o.escapeSpell !== undefined && escapeCastable(o.escapeSpell, inv, state.equipment.map(e => e.id), state.skills.find(k => k.name === 'Magic')?.level ?? 1);
         const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : spellReady ? 20 : 0;
         // No teleport at all (no glory, no escape spell): the way out is a run south, at any level, or the escape
         // stands beside its attacker until its cap (review of PR #804).
-        const runSouth = () => { if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; } };
+        const runSouth = () => { if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); walk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; } };
         if (escapeNow(inv) && !reach && wildernessLevel(at.z) > 0) { runSouth(); continue; }
         if (escapeNow(inv) && reach && wildernessLevel(at.z) > reach) {
-            if (now - ranAt > 3) { if (ranAt < 0) log(`PK run south at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
+            if (now - ranAt > 3) { if (ranAt < 0) log(`PK run south at HP ${me.hp}`); walk(at.x, at.z - 14); ranAt = now; }
             continue;
         }
         if (escapeNow(inv) && wildernessLevel(at.z) <= 30) {
@@ -872,7 +884,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             const ahead = o.cutOff !== undefined && now < fleeingUntil;
             const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
-            if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
+            if (to && walk(to.x, to.z)) chaseAt = now;
         }
         if (!target) continue;
         if (o.holdFire?.()) {
@@ -881,7 +893,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (cheb(at, target) > range && stoodStill && now - stepAt >= 2) {
                 const dx = Math.sign(at.x - target.x), dz = Math.sign(at.z - target.z);
                 const side = range <= 1 ? (Math.abs(at.x - target.x) >= Math.abs(at.z - target.z) ? { x: dx, z: 0 } : { x: 0, z: dz }) : { x: dx * (range - 1), z: dz * (range - 1) };
-                void sdk.sendWalk(target.x + side.x, target.z + side.z); stepAt = now;
+                if (walk(target.x + side.x, target.z + side.z)) stepAt = now;
             }
             continue;
         }
@@ -972,7 +984,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     for (const id of [...(o.kit.melee ?? []), ...tankIds]) {
                         if (state.equipment.some(e => e.id === id)) continue;
                         const item = slotOf([id]);
-                        if (item) use(item, /^(Wield|Wear)$/i);
+                        // NPC distance is Chebyshev: even distance 1 can need MOVE_OPCLICK before OPNPC.
+                        if (item && sentEvents < 3) use(item, /^(Wield|Wear)$/i);
                     }
                     void sdk.sendInteractNpc(npc.index, op.opIndex);
                     nextAttack = now + 8;
@@ -1002,7 +1015,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             // A spell click while the account still runs is re-pathed and mostly never cast (Player.ts tryInteract: the
             // ap trigger runs only within the approach distance after movement). So the account stops first, and casts on
             // the next tick, stood still.
-            if (kiteCast && !stoodStill) { void sdk.sendWalk(at.x, at.z); kiteCast = false; stepAt = now; kiteStopAt = now; }
+            if (kiteCast && !stoodStill) { walk(at.x, at.z); kiteCast = false; stepAt = now; kiteStopAt = now; }
             const want = held ? Math.min(o.kiteMelee!, 10) : 10;
             // After a cast the account holds still until the hold shows (the target stood a tick: held two ticks after the
             // cast), 3 ticks at most: the server re-queues the spell while our attack delay runs (pvp_magic.rs2
@@ -1021,22 +1034,22 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     const score = cheb(end, target) * 2 + (sight(end) ? 3 : 0) + (ddx * Math.sign(at.x - target.x) + ddz * Math.sign(at.z - target.z));
                     if (score > bestScore) { bestScore = score; best = { x: end.x, z: end.z }; }
                 }
-                if (best && cheb(best, target) > gap) { void sdk.sendWalk(best.x, best.z); stepAt = now; }
+                if (best && cheb(best, target) > gap && walk(best.x, best.z)) stepAt = now;
             }
         }
         // Cooldown ticks: never send OpHeld/InvButton (which call clearPendingAction on the server), but configure
         // prayers and one-time combat-style settings once any melee approach walk has finished.
         if (now < nextAttack || unattackableSince >= 0) {
-            let budget = 5;
+            let budget = 5 - sentEvents;
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
             // Not on the tick before our own attack: that tick sets the prayers of the turn.
             if (o.prayerFlick !== false && now - flickAt >= (o.flickEvery ?? 4) && now < nextAttack - 1 && !walkingToMelee) {
                 const active = prayers.activePrayers.flatMap((on, p) => (on ? [p] : []));
-                if (active.length > 0 && active.length <= 4) {
+                if (active.length > 0 && active.length < budget) {
                     // The overhead first: it is the one that must be back on in this tick.
                     const order = [...active].sort((a, b) => Number(b >= PRAYER.magic && b <= PRAYER.melee) - Number(a >= PRAYER.magic && a <= PRAYER.melee));
                     for (const p of order) void sdk.sendTogglePrayer(p);
-                    for (const p of order.slice(0, 5 - order.length)) void sdk.sendTogglePrayer(p);
+                    for (const p of order.slice(0, budget - order.length)) void sdk.sendTogglePrayer(p);
                     flickAt = now;
                     result.flicks = (result.flicks ?? 0) + 1;
                     continue;
@@ -1046,12 +1059,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             // diagonalFrozen: the tile at the corner of the frozen target on our side; melee reaches the 4 side tiles only.
             const corner = { x: target.x + (Math.sign(at.x - target.x) || 1), z: target.z + (Math.sign(at.z - target.z) || 1) };
             if (o.diagonalFrozen && heldMelee && !walkingToMelee && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && (at.x !== corner.x || at.z !== corner.z)) {
-                void sdk.sendWalk(corner.x, corner.z);
-                stepAt = now;
+                if (walk(corner.x, corner.z)) { budget--; stepAt = now; }
             } else if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
                 const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
-                void sdk.sendWalk(target.x + dx * keep, target.z + dz * keep);
-                stepAt = now;
+                if (walk(target.x + dx * keep, target.z + dz * keep)) { budget--; stepAt = now; }
             }
             if (!walkingToMelee && !rapidSet && state.combatStyle && state.combatStyle.styles.length > 1 && state.combatStyle.currentStyle !== 1 && budget > 0) {
                 void sdk.sendSetCombatStyle?.(1);
@@ -1128,7 +1139,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (spec && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
             && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
-            let budget = 5 - attackPackets - (energy.on ? 0 : 1);
+            let budget = 5 - sentEvents - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
             for (const id of [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])]) {
                 if (state.equipment.some(e => e.id === id)) continue;
@@ -1177,7 +1188,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 continue;
             }
         }
-        let budget = 5 - attackPackets;
+        let budget = 5 - sentEvents - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
         const keepWeapon = castFreeze && hasFreezeRunes && o.freezeWithStaff !== true;
         // freezeWear: items (debugnames) worn for a freeze cast, such as a god cape (magic attack +10); the other turns'

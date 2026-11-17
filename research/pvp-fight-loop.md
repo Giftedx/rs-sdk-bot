@@ -2,6 +2,28 @@
 
 The PK army's fight loop is `fightPlayer` in `scripts/pk.ts`; `scripts/measure/pk-duel.ts` measures it on practice.
 
+## Fight input and escape
+
+Source -> consumer -> reuse/adapt -> check: the pinned engine's `ClientGameProtCategory.USER_EVENT` limit and
+`NetworkPlayer.decodeIn`, native food consumption and glory teleport scripts, and `pk-roam.ts` food-for-space escape
+-> `fightPlayer` -> reuse the five-input limit and adapt the existing escape method; no upstream code copied ->
+`pk-food.test.ts`, `pk-escape.test.ts` and `extra:spar-escape-full-pack`.
+
+Food and movement debit the same tick's prayer and attack budget. A prayer flick starts only when the remaining
+inputs can switch every active prayer off and restore the overhead. The overhead returns first. Unit regressions
+cover food with a flick, a chase, a positioning step and a combat-style change.
+
+A fleeing fighter at Wilderness level 30 or below eats one food when its full pack prevents removal of its charged
+glory, including at full health. It reads the next inventory before removing the glory. With no food it retains the
+walking fallback. The native case starts at full health with 28 occupied pack slots and a worn glory(4), then checks
+one shark debit, one glory charge, retained kit, the same life and the Edgeville landing. Seeds 7, 8 and 9 pass in
+8, 7 and 9 ticks. Evidence: `.practice/pvp-escape/escape-native-green.log` and the seed reports in
+`.practice/aio-bench/`. Gap: this proves the escape on practice with an idle player nearby, not survival under a live attack.
+
+The finite live consumer is a 900-tick hunter trip through `aio-pvp.ts hunt` after the owning controller qualifies
+the source and observes a complete owned kit. Existing account assignments, supply reservations and stops apply.
+Saved local stock does not establish a complete hunter kit. Credited live kills and Wilderness control remain unknown.
+
 ## Shared trip items and loot
 
 Source -> consumer -> adapt -> check: [Inventory Setups explicit variant grouping](https://github.com/dillydill123/inventory-setups/tree/16f2c0a319672c2e19738276a17de63aea7216fa), the pinned potion `dose_count` and `nextstage` chain, and local teleport charge definitions -> `item-requirements.ts` and hunter trip selection/restocking -> adapt explicit families, reuse native metadata, reject modern item tables and fuzzy equipment substitutions -> `item-requirements.test.ts`, `pk-hunt.test.ts` and `microbot-potion-care.test.ts`. Inventory Setups uses BSD-2-Clause. No upstream code is copied.
@@ -2092,8 +2114,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     kit, so the removal failed and the follower stood 120 ticks. Both now eat a food to free a slot when the pack is
     full, take the glory off (three tries), rub it, and else walk, stepping 10 tiles to the side when a walk moves
     them nowhere. `extra:army-route-defend-deep` seeds 1-6: the leader and both followers reach Edgeville at the end
-    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. Gap: the fight loop's own escape
-    is not checked with a full pack.
+    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. The fight loop's full-pack glory
+    escape has the native case `extra:spar-escape-full-pack` (Fight input and escape). Gap: live survival under an attack.
 67. **Spears on a melee tile at the opening kill the target that eats and leaves a crowd at level 34: 18 of 18.**
     The dragon spear's special has no hit roll: it pushes the target a tile and holds it with `p_delay(4)`, no
     move, no eat and no glory rub, for 25% energy (`pvp_dragon_spear.rs2`). `extra:army-route-defend-deep-x5` (the

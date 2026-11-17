@@ -51285,6 +51285,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/pk-escape-proof.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/pk-hunt-trip.ts",
    "intents": [
     "observe"
