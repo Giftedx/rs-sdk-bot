@@ -65,12 +65,12 @@ export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: stri
         const sp = spawns.get(n.debug) ?? 0, cur = kept.get(n.name);
         if (!out[n.name] || sp > cur! || (sp === cur && list.length > out[n.name]!.length)) { out[n.name] = list; kept.set(n.name, sp); }
     }
-    return out;
+    return Object.fromEntries(Object.entries(out).sort(([a], [b]) => a.localeCompare(b)));
 }
 
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..'), scripts = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts');
-    const npcFiles = (d: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? npcFiles(p) : f.endsWith('.npc') ? [readFileSync(p, 'utf8')] : []; });
+    const npcFiles = (d: string): string[] => readdirSync(d).sort().flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? npcFiles(p) : f.endsWith('.npc') ? [readFileSync(p, 'utf8')] : []; });
     const items = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { id?: number; debugname?: string; name?: string }[];
     const names = new Map(items.filter(i => i.debugname && i.name).map(i => [i.debugname!, i.name!]));
     const ids = new Map(items.filter(i => i.debugname && Number.isSafeInteger(i.id) && i.id! >= 0).map(i => [i.debugname!, i.id!]));

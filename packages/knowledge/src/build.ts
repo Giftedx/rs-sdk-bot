@@ -31,7 +31,7 @@ const gear = buildGear(blocksOf('.obj'), objPack, parseRequirements(requireFiles
 
 const npcSpawns: Spawn[] = [];
 const locSpawns: LocSpawn[] = [];
-for (const f of readdirSync(join(root, 'maps')).filter(f => f.endsWith('.jm2'))) {
+for (const f of readdirSync(join(root, 'maps')).filter(f => f.endsWith('.jm2')).sort()) {
     const r = parseJm2(f, read(`maps/${f}`));
     npcSpawns.push(...r.npcs);
     locSpawns.push(...r.locs);
@@ -45,7 +45,7 @@ const scriptFiles = listConfigFiles('.rs2').map(f => ({ text: read(f), file: f }
 const triggers = parseTriggers(scriptFiles);
 const classified:{locName:string;handler:string;kind:string;reason:string}[]=[];
 const ladderDir = 'scripts/ladders+stairs/scripts';
-for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2'))) {
+for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2')).sort()) {
     const r = parseTransportHandlers(read(`${ladderDir}/${f}`), `${ladderDir}/${f}`,{triggers});
     handlers.push(...r.handlers);
     skipped.push(...r.skipped);

@@ -22,7 +22,7 @@ export interface Gear {
     attackRate?: number; // ticks between attacks (param attackrate)
     attackRange?: number; // tiles (param attackrange)
     tier?: number; // param levelrequire: a bow fires arrows of its tier or lower (player_ranged.rs2:97)
-    special?: { energy: number; pvp: boolean }; // param sa_energy (of 1000); pvp: pvp_special_attack.rs2 has a case
+    special?: { energy: number; pvp: boolean }; // param sa_energy (of 1000) or specwep=^true; pvp: pvp_special_attack.rs2 has a case
     requires: { skills: Partial<Record<Skill, number>>; quest?: string; note?: string; src?: string };
     members: boolean;
     tradeable: boolean;
@@ -56,9 +56,11 @@ export function parseRequirements(files: readonly { text: string; file: string }
             const src = `${file}:${i + 1}`;
             if (label === 'iban_staff') { out.set(item!, { skills: { magic: 50, attack: 50 }, note: 'Iban staff', src }); return; }
             const questKey = Object.keys(QUESTS).find(k => label!.startsWith(`${k}_quest`) || (k === 'viking' && label!.startsWith('viking_quest')));
-            const skills = label!.split('_').filter((t): t is Skill => (SKILLS as readonly string[]).includes(t));
+            const parsedSkills = label!.split('_').filter((t): t is Skill => (SKILLS as readonly string[]).includes(t));
+            // levelrequire_viking_quest_helm delegates to levelrequire_defence($level); levelrequire_defence_and_strength passes one $level for both skills.
+            const skills: Skill[] = label === 'viking_quest_helm' ? ['defence'] : parsedSkills;
             const req: Gear['requires'] = { skills: {}, src };
-            skills.forEach((s, j) => { if (Number.isFinite(args[j])) req.skills[s] = args[j]!; });
+            skills.forEach((s, j) => { const n = args.length === 1 ? args[0] : args[j]; if (Number.isFinite(n)) req.skills[s] = n!; });
             if (questKey) req.quest = QUESTS[questKey];
             out.set(item!, req);
         });
@@ -89,10 +91,11 @@ export function buildGear(blocks: ConfigBlock[], pack: Map<number, string>, requ
         const id = ids.get(b.name);
         if (!slot || id === undefined) continue;
         const bonuses = Object.fromEntries(BONUSES.map(k => [k, 0])) as Record<Bonus, number>;
-        const param = (key: string) => { const v = b.props.param?.find(p => p.startsWith(key + ',')); return v === undefined ? undefined : Number(v.slice(key.length + 1)); };
+        const rawParam = (key: string) => { const v = b.props.param?.find(p => p.startsWith(key + ',')); return v?.slice(key.length + 1).trim(); };
+        const param = (key: string) => { const v = rawParam(key); return v === undefined ? undefined : Number(v); };
         for (const [key, name] of Object.entries(BONUS_PARAMS)) bonuses[name] = param(key) ?? 0;
         // A special weapon with no sa_energy costs the param's default; a weapon with no attackrate attacks at its default.
-        const special = pvpSpecials.has(b.name) || param('sa_energy') !== undefined;
+        const special = pvpSpecials.has(b.name) || param('sa_energy') !== undefined || rawParam('specwep') === '^true';
         const energy = special ? param('sa_energy') ?? defaults.get('sa_energy') : undefined;
         const weapon = slot === 'righthand';
         out.push({
