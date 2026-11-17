@@ -28,6 +28,35 @@ export const BOOTSTRAP_STATUS_AGE_MS=15*60*1000;
 // No log reconstruction: the producer owns every new connection attempt. Historical sessions need an
 // explicitly sealed legacy claim; a missing status or a RESULT string never proves their logout.
 // A repair (required) keeps the authenticated recovery path: it needs producer proof, never a takeover start.
+function assertStatusCovered(status:any,account:string,attemptId:string,createdAt:number,loggedOutAt:number){
+ if(status?.server!==LIVE_SERVER)return;
+ if(Number.isFinite(status.at)&&status.at>loggedOutAt&&!Number.isFinite(status.started)&&!status.sessionAttemptId)throw Error('latest status is not covered by the producer logout: '+account);
+ if((Number.isFinite(status.started)&&status.started>loggedOutAt)
+  ||(status.sessionAttemptId&&status.sessionAttemptId!==attemptId&&(!Number.isFinite(status.started)||status.started>=createdAt)))throw Error('latest status is not covered by the producer logout: '+account);
+}
+
+function isDeadPreConnectFailure(receipt:ReturnType<typeof listAttempts>[number]['receipt'],account:string,alive:(pid:number)=>boolean):boolean{
+ if(!receipt||receipt.account.toLowerCase()!==account.toLowerCase()||receipt.server!==LIVE_SERVER)return false;
+ if(!Number.isFinite(receipt.owner?.pid)||receipt.owner.pid<=0||alive(receipt.owner.pid))return false;
+ return receipt.events.some(e=>e.kind==='connect-failed')&&!receipt.events.some(e=>e.kind==='connected'||e.kind==='ready'||e.kind==='ended'||e.kind==='logout');
+}
+
+function priorConfirmedAfterDeadPreConnects(account:string,root:string,status:any,alive:(pid:number)=>boolean):ProducerProofRef|null{
+ const attempts=listAttempts(account,LIVE_SERVER,{root});
+ let skipped=0;
+ for(let i=attempts.length-1;i>=0;i--){
+  const r=attempts[i]!.receipt;
+  if(!r)return null;
+  if(isDeadPreConnectFailure(r,account,alive)){skipped++;continue;}
+  if(skipped===0||r.account.toLowerCase()!==account.toLowerCase()||r.server!==LIVE_SERVER)return null;
+  const end=r.events.find(e=>e.kind==='ended');
+  if(end?.detail!=='logged-out')return null;
+  assertStatusCovered(status,account,r.attemptId,r.createdAt,end.at);
+  return{kind:'producer',attemptId:r.attemptId};
+ }
+ return null;
+}
+
 export function liveLogoutRef(account:string,base:string,required=false,now=Date.now(),
  takeover=serverTakesOver(LIVE_SERVER),alive:(pid:number)=>boolean=pidAlive):LiveLogoutRef|null{
  assertNoRecoveryLease(account,base);
@@ -38,14 +67,16 @@ export function liveLogoutRef(account:string,base:string,required=false,now=Date
  if(proof.state==='confirmed'){
   const latest=listAttempts(account,LIVE_SERVER,{root}).find(a=>a.attemptId===proof.attemptId)?.receipt;
   if(!latest)throw Error('producer logout receipt changed: '+account);
-  if(status?.server===LIVE_SERVER&&Number.isFinite(status.at)&&status.at>proof.loggedOutAt&&!Number.isFinite(status.started)&&!status.sessionAttemptId)throw Error('latest status is not covered by the producer logout: '+account);
-  if(status?.server===LIVE_SERVER&&((Number.isFinite(status.started)&&status.started>proof.loggedOutAt)
-   ||(status.sessionAttemptId&&status.sessionAttemptId!==proof.attemptId&&(!Number.isFinite(status.started)||status.started>=latest.createdAt))))throw Error('latest status is not covered by the producer logout: '+account);
+  assertStatusCovered(status,account,proof.attemptId,latest.createdAt,proof.loggedOutAt);
   return{kind:'producer',attemptId:proof.attemptId};
  }
- if(proof.state==='held'&&takeover&&!required){
-  const ref=takeoverRef(proof,root,alive);
-  if(ref&&!(status?.server===LIVE_SERVER&&status.sessionAttemptId&&status.sessionAttemptId>ref.attemptId))return ref;
+ if(proof.state==='held'){
+  const fallback=priorConfirmedAfterDeadPreConnects(account,root,status,alive);
+  if(fallback)return fallback;
+  if(takeover&&!required){
+   const ref=takeoverRef(proof,root,alive);
+   if(ref&&!(status?.server===LIVE_SERVER&&status.sessionAttemptId&&status.sessionAttemptId>ref.attemptId))return ref;
+  }
  }
  if(proof.state!=='none')throw Error('account logout is not confirmed: '+account+' '+proof.reason);
  const claimPath=join(base,'.practice/coordinator/session-proofs',account.toLowerCase()+'.json');

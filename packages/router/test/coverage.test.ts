@@ -264,6 +264,14 @@ test('scoreboard progress counts canonical fleet achievements, stock and same-si
         const explicit = buildScoreboard(root, NOW, fixtureFleet);
         expect(explicit.skills.find(s => s.skill === 'Magic')!.bestLive).toBe(40);
         expect(explicit.skills.find(s => s.skill === 'Fishing')!.bestLive).toBe(1);
+
+        // Fresh workspace without .practice/coordinator/ still writes scoreboard.json and skips non-result dirs.
+        rmSync(join(root, '.practice', 'coordinator'), { recursive: true, force: true });
+        mkdirSync(join(root, '.practice', 'session-lifecycle'), { recursive: true });
+        writeFileSync(join(root, '.practice', 'session-lifecycle', 'results.jsonl'), JSON.stringify({ ok: true, goal: 'quest-cook' }) + '\n');
+        expect(practicePasses(join(root, '.practice'), new Map([['quest-cook.ts', 'quest_cook']])).size).toBe(0);
+        const recreated = buildScoreboard(root, NOW, fixtureFleet);
+        expect(recreated.progress).toEqual(explicit.progress);
     } finally {
         if (oldSide === undefined) delete process.env.FLEET_SIDE; else process.env.FLEET_SIDE = oldSide;
         if (oldFleet === undefined) delete process.env.FLEET_DIR; else process.env.FLEET_DIR = oldFleet;

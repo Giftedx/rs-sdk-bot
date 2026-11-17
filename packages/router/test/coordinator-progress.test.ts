@@ -509,3 +509,30 @@ test('planner intake accepts two new participants while their shared proof is pe
  expect(acceptProposal(s,{reason:'Prepare a bounded handoff',capabilities:[],tasks})).toBe(4);
  expect(chooseTask(s,1)?.id).toBe('proof');
 });
+
+test('failed timed-out session-recovery qualification and changed-source explicit qualification refresh cleanly without superseding new demand',()=>{
+ const s=initialState();
+ const recoveryBase:Partial<CoordTask>={goal:'gear',capability:'local-recovery',account:'FishAndChips',repairs:[{account:'FishAndChips',endedAt:1}],sessionRecovery:{account:'FishAndChips',endedAt:1},accept:{counters:{sessionChecked:1}}};
+ addTasks(s,[
+  task('qualify-local-recovery-unblock',{capability:'local-recovery',goal:'gear'}),
+  {...run('local-recover-fishandchips',['qualify-local-recovery-unblock']),...recoveryBase},
+  task('qualify-route-sapphire-old',{capability:'route-sapphire',goal:'skills'}),
+  {...run('bow-route-sapphire',['qualify-route-sapphire-old']),goal:'skills',capability:'route-sapphire'},
+ ],0);
+ complete(s,'qualify-local-recovery-unblock',false,2,{delivery:{ok:false,id:'local-recovery',source:'rec-src-a',reason:'check timed out',checks:[{timedOut:true}]}});
+ complete(s,'qualify-route-sapphire-old',false,3,{delivery:{ok:false,id:'route-sapphire',source:'old-src'}});
+
+ refreshQualifications(s,{'local-recovery':'rec-src-a','route-sapphire':'new-src-0123456789abcdef'});
+ const recRefresh=s.tasks.find(r=>r.spec.id==='refresh-local-recovery-rec-src-a')!;
+ const routeRefresh=s.tasks.find(r=>r.spec.id==='refresh-route-sapphire-new-src-01234567')!;
+ expect(recRefresh.status).toBe('pending');
+ expect(routeRefresh.status).toBe('pending');
+ expect(s.tasks.find(r=>r.spec.id==='local-recover-fishandchips')!.spec.dependsOn).toEqual([recRefresh.spec.id]);
+ expect(s.tasks.find(r=>r.spec.id==='bow-route-sapphire')!.spec.dependsOn).toEqual([routeRefresh.spec.id]);
+
+ // If the generated refresh fails on the unchanged source, it never retries automatically.
+ complete(s,recRefresh.spec.id,false,5,{delivery:{ok:false,id:'local-recovery',source:'rec-src-a',reason:'check timed out',checks:[{timedOut:true}]}});
+ refreshQualifications(s,{'local-recovery':'rec-src-a','route-sapphire':'new-src-0123456789abcdef'});
+ expect(recRefresh.status).toBe('failed');
+ expect(recRefresh.attempts).toBe(1);
+});

@@ -284,6 +284,91 @@
    "x": 2952,
    "z": 3451,
    "note": "Doric's house north of Falador, npc doric (knowledge/ubermouse/world.json; scripts/generated/quest-doric.ts:7)"
+  },
+  "varrock-teleport": {
+   "x": 3213,
+   "z": 3424,
+   "note": "Varrock Teleport landing tile 0_50_53_13_32 (magic_spells.dbrow:69)"
+  },
+  "falador-teleport": {
+   "x": 2965,
+   "z": 3378,
+   "note": "Falador Teleport landing tile 0_46_52_21_50 (magic_spells.dbrow:87)"
+  },
+  "camelot-teleport": {
+   "x": 2757,
+   "z": 3478,
+   "note": "Camelot Teleport landing tile 0_43_54_5_22 (magic_spells.dbrow:96)"
+  },
+  "ardougne-lever": {
+   "x": 2562,
+   "z": 3311,
+   "note": "East Ardougne Wilderness lever tile 0_40_51_2_47 (wilderness_lever.constant:2)"
+  },
+  "deserted-keep-lever": {
+   "x": 3154,
+   "z": 3924,
+   "note": "Deserted Keep Wilderness lever landing tile 0_49_61_18_20 (wilderness_lever.constant:1)"
+  },
+  "poison-spiders": {
+   "x": 3287,
+   "z": 3810,
+   "note": "Wilderness level 37 multiway poison spiders spot (research/combat-measure.md:1068)"
+  },
+  "ardougne-zoo": {
+   "x": 2604,
+   "z": 3235,
+   "note": "Six iron rocks south of Ardougne Zoo 2602-2605,3233-3237 (research/aio-bench.md:91)"
+  },
+  "shantay-pass": {
+   "x": 3303,
+   "z": 3113,
+   "note": "Irena outside Shantay Pass for The Tourist Trap (scripts/generated/quest-desertrescue.ts:22)"
+  },
+  "wizard-tower": {
+   "x": 3109,
+   "z": 3166,
+   "note": "Wizards' Tower for Imp Catcher (scripts/generated/quest-imp.ts)"
+  },
+  "spirit-tree-village": {
+   "x": 2542,
+   "z": 3169,
+   "note": "Tree Gnome Village spirit tree landing and hub (spirit_tree.constant ^village_tree)"
+  },
+  "spirit-tree-stronghold": {
+   "x": 2461,
+   "z": 3444,
+   "note": "Tree Gnome Stronghold spirit tree hub and landing (spirit_tree.constant ^stronghold_tree)"
+  },
+  "spirit-tree-khazard": {
+   "x": 2555,
+   "z": 3259,
+   "note": "Battlefield of Khazard spirit tree landing (spirit_tree.constant ^khazard_tree)"
+  },
+  "spirit-tree-varrock": {
+   "x": 3179,
+   "z": 3507,
+   "note": "Forest north-east of Varrock spirit tree landing (spirit_tree.constant ^varrock_tree)"
+  },
+  "glider-grandtree": {
+   "x": 2465,
+   "z": 3501,
+   "note": "Grand Tree gnome glider platform (glider.constant ^ta_quir_priw)"
+  },
+  "glider-digsite": {
+   "x": 3320,
+   "z": 3430,
+   "note": "Dig Site gnome glider landing (glider.constant ^lemanto_andra)"
+  },
+  "glider-al-kharid": {
+   "x": 3284,
+   "z": 3211,
+   "note": "Al Kharid gnome glider landing (glider.constant ^kar_hewo)"
+  },
+  "glider-karamja": {
+   "x": 2971,
+   "z": 2969,
+   "note": "Karamja gnome glider landing (glider.constant ^gandius)"
   }
  },
  "activities": [
@@ -388,8 +473,8 @@
    ],
    "evidence": "MEASURED",
    "source": "deposit: realistic bank open 3 + deposit 2 (research/crafting-board.md cycle 1), floor booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ); + 1 tick for grapes on jug (wine.rs2:7-20, no delay, Cooking 35 checked at :8)",
-   "at": "bank:al-kharid-bank:0",
-   "atNote": "Al Kharid bank through the 10-coin toll gate (border_gate.rs2:20-53): 76.5 run ticks + 2 from the kitchen vs Draynor 92 + 2 (world.json nearest.bank of range:lumbridge:0)",
+   "at": "bank",
+   "atNote": "Nearest bank booth (Al Kharid through toll gate from Lumbridge for solo Cooking; Draynor bank when scheduled after Firemaking in Overall)",
    "pending": "Shared staging cost retains the previous conservative budget. Qualify activation separately for each cooking option."
   },
   {
@@ -987,14 +1072,15 @@
    "serves": [
     "smithing"
    ],
-   "ticks": {
-    "floor": 991,
-    "realistic": 992,
-    "evidence": "MEASURED",
-    "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
-   },
-   "xp": {
-    "smithing": "to99"
+   "train": {
+    "skill": "smithing",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 1007.5,
+     "realistic": 1006.5,
+     "evidence": "MEASURED",
+     "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
+    }
    },
    "requires": [
     "tutorial"
@@ -1025,14 +1111,15 @@
    "serves": [
     "smithing"
    ],
-   "ticks": {
-    "floor": 991,
-    "realistic": 992,
-    "evidence": "MEASURED",
-    "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
-   },
-   "xp": {
-    "smithing": "to99"
+   "train": {
+    "skill": "smithing",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 1007.5,
+     "realistic": 1006.5,
+     "evidence": "MEASURED",
+     "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
+    }
    },
    "requires": [
     "tutorial"
@@ -1058,6 +1145,39 @@
    "bankTripsSource": "helper trades at the anvil replace the bank trips (research/supply-floors.md)"
   },
   {
+   "id": "magic-45",
+   "label": "Wind Strike + Enchant ladder to Magic 45 (Camelot Teleport)",
+   "serves": [
+    "magic"
+   ],
+   "train": {
+    "skill": "magic",
+    "toLevel": 45,
+    "xpPerTick": {
+     "floor": 212.8,
+     "realistic": 194.6,
+     "evidence": "ESTIMATE",
+     "source": "36 casts 1 -> 45 (5 Wind Strike, 12 Sapphire Enchant, 19 Emerald Enchant = 22,767 XP on curve.ts) at MEASURED 2.96 floor / 3.23 realistic ticks per cast (magic row) = 107 / 117 ticks"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "anvil"
+   },
+   "evidence": "ESTIMATE",
+   "source": "36 casts 1 -> 45 at MEASURED 2.96 floor / 3.23 realistic ticks per cast (magic row)",
+   "suppliesLadder": {
+    "skill": "magic",
+    "tiers": "magic-no-dragonstone",
+    "margin": 1,
+    "toLevel": 45
+   },
+   "at": "bank"
+  },
+  {
    "id": "magic-anvil",
    "label": "Enchant ladder to Magic 80 (Charge level), foreground",
    "serves": [
@@ -1074,21 +1194,89 @@
     }
    },
    "requires": [
-    "tutorial"
+    "magic-45"
    ],
    "variant": {
     "group": "magic-smithing",
     "option": "anvil"
    },
+   "patches": [
+    {
+     "lever": "superheat-stun",
+     "set": {
+      "label": "Enchant ladder to Magic 75 foreground (superheat-stun finishes 75->80)",
+      "train": {
+       "skill": "magic",
+       "toLevel": 75,
+       "xpPerTick": {
+        "floor": 528.5,
+        "realistic": 483.8,
+        "evidence": "ESTIMATE",
+        "source": "45 -> 75 (165,955 XP on curve.ts: 9 Emerald, 16 Ruby, 79 Diamond enchants = 104 casts at MEASURED 2.96 / 3.23 ticks/cast = 308 / 336 ticks)"
+       }
+      }
+     }
+    }
+   ],
    "evidence": "ESTIMATE",
    "source": "Cairn route (research/community-and-upstream.md section 7): rings 8-59, then Magic 80 for Charge. 183 enchant casts 7 -> 80 without dragonstone (MAGIC_TIERS, enchant 4 diamond from 57); ticks per cast from the MEASURED magic row: 2.96 at the booth (floor, 542 ticks), 3.23 with its bank trips (1,762 ticks / 545 casts, realistic, 592 ticks). Rate = 267,169 XP / ticks. Foreground, not inside the thieving stuns: the separate route's magic row is a stun guest, and thieving needs Monkey Madness (Magic 75), so that route never finishes.",
    "suppliesLadder": {
     "skill": "magic",
     "tiers": "magic-no-dragonstone",
     "margin": 1,
-    "toLevel": 80
+    "toLevel": 75
    },
    "at": "bank"
+  },
+  {
+   "id": "superheat-stun",
+   "label": "Superheat iron ore via courier during Ardougne knight stuns (Magic 75->80 + Smithing XP)",
+   "serves": [
+    "magic",
+    "smithing"
+   ],
+   "ticks": {
+    "floor": 395,
+    "realistic": 395,
+    "evidence": "ESTIMATE",
+    "source": "CODE-READ p_delay(1) (superheat.rs2:67) at 3.21 ticks/cast (MEASURED superheat gold cycle) with courier beside knights (no bank trip): 123 iron ore casts = 162,975 Magic XP (covers 75->80) + 38,438 Smithing XP in 395 stun ticks, leaving 210 of 605 stun ticks for fletch (49) and charge (161)"
+   },
+   "xp": {
+    "magic": 162975,
+    "smithing": 38438
+   },
+   "inside": "thieve",
+   "requires": [
+    "magic-45"
+   ],
+   "minLevel": {
+    "magic": 43
+   },
+   "lever": {
+    "id": "superheat-stun",
+    "role": "add"
+   },
+   "variant": {
+    "group": "magic-smithing",
+    "option": "anvil"
+   },
+   "evidence": "ESTIMATE",
+   "source": "research/combat-measure.md \"Superheat during pickpocket stuns\" + superheat.rs2:67 p_delay(1) 3.21 ticks/cast with courier ore delivery beside knights",
+   "supplies": [
+    {
+     "item": "nature rune",
+     "count": 123
+    },
+    {
+     "item": "staff of fire",
+     "count": 1
+    },
+    {
+     "item": "iron ore",
+     "count": 123
+    }
+   ],
+   "at": "ardougne-market"
   },
   {
    "id": "magic",
@@ -1264,6 +1452,14 @@
     "id": "charge-spam",
     "role": "add"
    },
+   "patches": [
+    {
+     "lever": "stun-guests",
+     "set": {
+      "inside": "thieve"
+     }
+    }
+   ],
    "evidence": "CODE-READ",
    "source": "charge.rs2:1-26; magic_spells.dbrow:206-212; 3 blood + 3 fire + 3 air per cast; research/gap-closers.md",
    "supplies": [
@@ -1562,6 +1758,28 @@
        "nature-ruins"
       ]
      }
+    },
+    {
+     "lever": "spiders-combat",
+     "set": {
+      "supplies": [
+       {
+        "item": "rune essence",
+        "count": 5346
+       },
+       {
+        "item": "air talisman",
+        "count": 1
+       },
+       {
+        "item": "body talisman",
+        "count": 1
+       }
+      ],
+      "via": [
+       "body-ruins"
+      ]
+     }
     }
    ],
    "at": "air-ruins",
@@ -1685,6 +1903,23 @@
        "realistic": 1155,
        "evidence": "ESTIMATE",
        "source": "prayer ticks less the rival cost of burying inside the knife loop: 1,169 - 115 and 1,300 - 145 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S25b; docs/speedrun/skills/interleaving.md rule 6); measured by them on the 3-tick loop, not on our 2-tick flinch"
+      }
+     }
+    },
+    {
+     "lever": "woodcut-givers",
+     "set": {
+      "ticks": {
+       "floor": 3223,
+       "realistic": 3329,
+       "evidence": "MEASURED",
+       "source": "research/aio-bench.md \"Bones from a giver at the trees\": extra:woodcut-givers-block5 at seeds 7, 8, 9 = 3,431, 3,223, 3,334 ticks (mean 3,329) covering Woodcutting 1->99 and burying 600 dragon bones"
+      },
+      "deadTicks": {
+       "floor": 1260,
+       "realistic": 1260,
+       "evidence": "MEASURED",
+       "source": "research/aio-bench.md: extra:woodcut-givers-block5 absorbs all 1,260 ticks of dragon bone burial inside the 3,223 / 3,329 total ticks"
       }
      }
     }
@@ -1946,6 +2181,17 @@
        "source": "research/quest-plan.md section 1e: scripts/generated/quest-tree.ts, preset quest_tree (beside King Bolren; Attack, Strength, Defence 1, 10 HP, Magic 43, Prayer 43; staff of fire, Fire Bolt runes, 6 logs, 2 prayer potions), lockstep bench case quester:quest:tree at seeds 7, 8 and 9: 734, 639, 653 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Protect from Melee on near the troopers, the commander and the warlord, HP min 10 in every run; Bolren to Bolren, the walk to Bolren not counted; the rival burst run (665, Fire Blast under Protect from Melee, bleugreen/rs-sdk@3bd2ab0a RUN-ORDER.md S10b) is not measured by us"
       }
      }
+    },
+    {
+     "lever": "q-burst",
+     "set": {
+      "ticks": {
+       "floor": 539,
+       "realistic": 620,
+       "evidence": "MEASURED",
+       "source": "docs/plans/joined-plan.md: Q_BURST=1 dialogue burst saves 114 ticks on practice (3/3 each) on quest-tree (734 -> 620 realistic, 639 -> 539 proportional floor)"
+      }
+     }
     }
    ],
    "at": "bolren",
@@ -1972,8 +2218,12 @@
     }
    },
    "requires": [
-    "tutorial"
+    "magic-45"
    ],
+   "variant": {
+    "group": "agility-route",
+    "option": "grandtree"
+   },
    "evidence": "MEASURED",
    "source": "research/agility.md: gnome course 9 practice runs of 10 laps at Agility 1, 70, 90: 32.9-33.0 XP/tick (65.6-65.8 ticks per lap, 2,162.5 XP per lap, 0 fails)",
    "at": "gnome-course"
@@ -2058,6 +2308,19 @@
    "evidence": "MEASURED",
    "source": "XP: quest_druid.rs2:3 stat_advance(herblore, 2500) = 6,250 at 25x, measured 6,250 per run; QP quest.constant druid_questpoints 4; ticks research/quest-plan.md; serves only questpoints, but herb-unf, herb-drops and herblore-10 require it: rev 289 has no quest gate on Herblore (skill_herblore/scripts/identifying/identify.rs2:65), yet every identify and mix needs Herblore 3 (identify.param:1-3, brew_potion.param:1-3) and this quest is the only route source of Herblore XP below 3, so its deadline is the Herblore deadline. OPEN: the MEASURED runs had every skill 99; at the Herblore deadline the main has combat 3 and 10 HP, and opening the cauldron door wakes 2 suits of armour (vislevel 19, areas/area_taverly/dungeon/scripts/prison_doors.rs2:1-22); not run at low combat",
    "at": "kaqemeex",
+   "patches": [
+    {
+     "lever": "q-burst",
+     "set": {
+      "ticks": {
+       "floor": 177,
+       "realistic": 177,
+       "evidence": "MEASURED",
+       "source": "docs/plans/joined-plan.md: Q_BURST=1 dialogue burst saves 31 ticks on practice (3/3 each) on quest-druid (208 -> 177)"
+      }
+     }
+    }
+   ],
    "xp": {
     "herblore": 6250
    }
@@ -2229,10 +2492,6 @@
    "requires": [
     "tutorial"
    ],
-   "lever": {
-    "id": "rival-dragon-combat",
-    "role": "add"
-   },
    "evidence": "MEASURED",
    "source": "quest_doric.rs2:97-101 (1,300 Mining XP x25 = 32,500, 1 QP); research/leader-forensics.md:202; ticks MEASURED practice 30/30/30",
    "supplies": [
@@ -2250,6 +2509,120 @@
     }
    ],
    "at": "doric"
+  },
+  {
+   "id": "imp-catcher",
+   "label": "Imp Catcher (21,875 Magic XP, 1 QP)",
+   "serves": [
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 38,
+    "realistic": 38,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"Short rest quests\": quest-imp.ts 38/38/38 on practice from preset quest_imp (start beside Mizgog; the walk to it not counted)"
+   },
+   "xp": {
+    "magic": 21875
+   },
+   "lump": true,
+   "qp": 1,
+   "requires": [
+    "trade-start"
+   ],
+   "lever": {
+    "id": "spiders-combat",
+    "role": "add"
+   },
+   "evidence": "MEASURED",
+   "source": "quest_imp.rs2:4 stat_advance(magic, 8750) = 21,875 XP at 25x (CODE-READ); 1 QP; ticks MEASURED practice 38/38/38",
+   "patches": [
+    {
+     "lever": "q-burst",
+     "set": {
+      "ticks": {
+       "floor": 9,
+       "realistic": 9,
+       "evidence": "MEASURED",
+       "source": "research/aio-bench.md Recorded dialogue plans: scripts/generated/talk-plans.json imp measured 9, 9, 9 ticks at seeds 7, 8 and 9"
+      }
+     }
+    }
+   ],
+   "supplies": [
+    {
+     "item": "red bead",
+     "count": 1
+    },
+    {
+     "item": "yellow bead",
+     "count": 1
+    },
+    {
+     "item": "black bead",
+     "count": 1
+    },
+    {
+     "item": "white bead",
+     "count": 1
+    }
+   ],
+   "at": "wizard-tower"
+  },
+  {
+   "id": "plague-city",
+   "label": "Plague City (60,625 Mining XP, Ardougne Teleport unlock, 1 QP)",
+   "serves": [
+    "mining",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 749,
+    "realistic": 784,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"Medium rest quests\": quest-elena.ts 780/784/749 on practice (floor = best run, realistic = worst run; the walk to start not counted)"
+   },
+   "xp": {
+    "mining": 60625
+   },
+   "lump": true,
+   "qp": 1,
+   "requires": [
+    "tutorial"
+   ],
+   "lever": {
+    "id": "spiders-combat",
+    "role": "add"
+   },
+   "evidence": "MEASURED",
+   "source": "quest_elena.rs2:12 stat_advance(mining, 24250) = 60,625 XP at 25x (CODE-READ); unlocks Ardougne Teleport (teleport.rs2:22,35); ticks MEASURED 780/784/749",
+   "supplies": [
+    {
+     "item": "dwellberries",
+     "count": 1
+    },
+    {
+     "item": "rope",
+     "count": 1
+    },
+    {
+     "item": "bucket of milk",
+     "count": 1
+    },
+    {
+     "item": "chocolate dust",
+     "count": 1
+    },
+    {
+     "item": "snape grass",
+     "count": 1
+    },
+    {
+     "item": "spade",
+     "count": 1
+    }
+   ],
+   "at": "ardougne-market"
   },
   {
    "id": "dragon",
@@ -2282,11 +2655,28 @@
    "source": "research/quest-plan.md section 1g: scripts/generated/quest-dragon.ts, preset quest_dragon (beside the Guild master; every skill 99, 46 QP of quest varps, rune helm, body, legs, scimitar), lockstep bench case quester:quest:dragon at seeds 7, 8 and 9: 1,330, 1,355, 1,305 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Guild master to Elvarg's death (quest complete), the walk to the Champions' Guild not counted; helper items 12,000 coins, 3 planks, 12 nails, hammer, mind bomb, unfired bowl, lobster pot, silk, teleport runes; XP: quest_dragon.rs2:33-34 (CODE-READ)",
    "supplies": [
     {
-     "item": "anti-dragon shield (quest)",
+     "item": "dragonfire shield",
+     "itemId": 1540,
      "count": 1
     },
     {
-     "item": "rune armour set",
+     "item": "rune full helm",
+     "itemId": 1163,
+     "count": 1
+    },
+    {
+     "item": "rune platebody",
+     "itemId": 1127,
+     "count": 1
+    },
+    {
+     "item": "rune platelegs",
+     "itemId": 1079,
+     "count": 1
+    },
+    {
+     "item": "rune scimitar",
+     "itemId": 1333,
      "count": 1
     },
     {
@@ -2312,6 +2702,33 @@
        "evidence": "MEASURED",
        "source": "research/quest-plan.md section 1g: scripts/generated/quest-dragon.ts, preset quest_dragon (beside the Guild master; every skill 99, 46 QP of quest varps, rune helm, body, legs, scimitar), lockstep bench case quester:quest:dragon at seeds 7, 8 and 9: 1,330, 1,355, 1,305 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Guild master to Elvarg's death (quest complete), the walk to the Champions' Guild not counted; helper items 12,000 coins, 3 planks, 12 nails, hammer, mind bomb, unfired bowl, lobster pot, silk, teleport runes; the rival burst run is not measured by us"
       }
+     }
+    },
+    {
+     "lever": "spiders-combat",
+     "set": {
+      "serves": [
+       "strength",
+       "defence",
+       "questpoints"
+      ],
+      "requires": [
+       "cooks-assistant",
+       "druid",
+       "gobdip",
+       "rj",
+       "doric",
+       "plague-city",
+       "imp-catcher",
+       "rival-seaslug",
+       "tree",
+       "grandtree",
+       "rival-fight-arena",
+       "rival-mm",
+       "cannon"
+      ],
+      "minLevelSource": "Champions' Guild door needs 32 QP: Cook's 1 + Druidic 4 + GobDip 5 + R&J 5 + Doric 1 + Plague City 1 + Imp Catcher 1 + Sea Slug 1 + Tree 2 + Grand Tree 5 + Fight Arena 2 + Monkey Madness 3 + Dwarf Cannon 1 = 32 real QP; minQp 0 because rival-seaslug/arena/mm hold their 6 QP in quests-rest.",
+      "minQp": 0
      }
     },
     {
@@ -2579,7 +2996,7 @@
    "lump": true,
    "qp": 1,
    "requires": [
-    "tutorial"
+    "magic-45"
    ],
    "evidence": "MEASURED",
    "source": "XP: quest_mcannon.rs2:24-26 (stat_advance(crafting, 7500) = 18,750 at 25x), measured 18,870 Crafting per run with the 4 repairs; ticks research/quest-plan.md",
@@ -2590,6 +3007,136 @@
    "minLevel": {
     "magic": 45
    }
+  },
+  {
+   "id": "ranged-entry",
+   "label": "Progressive bows + cannon Ranged 1 -> 55 at Poison Spiders",
+   "serves": [
+    "ranged"
+   ],
+   "train": {
+    "skill": "ranged",
+    "toLevel": 55,
+    "xpPerTick": {
+     "floor": 250,
+     "realistic": 210,
+     "evidence": "ESTIMATE",
+     "source": "Progressive rev-289 Shortbow (1) -> Oak shortbow (5) -> Willow shortbow (20) -> Maple shortbow (30) -> Yew shortbow (40) -> Magic shortbow (50) with cannon at Wilderness Poison Spiders (1->55 = 46,534 XP); combat-measure.md 6a band-40 bow+cannon 206-274 (mean 235) and 6b Att99 scimitar+cannon 1->50 74-78t"
+    },
+    "side": {
+     "hitpoints": 0.12
+    }
+   },
+   "requires": [
+    "cannon",
+    "prayer-43"
+   ],
+   "minLevel": {
+    "prayer": 43
+   },
+   "variant": {
+    "group": "ranged-entry-method",
+    "option": "bows"
+   },
+   "lever": {
+    "id": "spiders-combat",
+    "role": "add"
+   },
+   "evidence": "ESTIMATE",
+   "source": "Progressive rev-289 bow tiers + cannon at Poison Spiders 1->55",
+   "supplies": [
+    {
+     "item": "shortbow",
+     "itemId": 841,
+     "count": 1
+    },
+    {
+     "item": "oak shortbow",
+     "itemId": 843,
+     "count": 1
+    },
+    {
+     "item": "willow shortbow",
+     "itemId": 849,
+     "count": 1
+    },
+    {
+     "item": "maple shortbow",
+     "itemId": 853,
+     "count": 1
+    },
+    {
+     "item": "bronze arrow",
+     "itemId": 882,
+     "count": 100
+    },
+    {
+     "item": "iron arrow",
+     "itemId": 884,
+     "count": 150
+    },
+    {
+     "item": "steel arrow",
+     "itemId": 886,
+     "count": 150
+    },
+    {
+     "item": "mithril arrow",
+     "itemId": 888,
+     "count": 200
+    },
+    {
+     "item": "green d'hide chaps",
+     "itemId": 1099,
+     "count": 1
+    },
+    {
+     "item": "green d'hide vambraces",
+     "itemId": 1065,
+     "count": 1
+    }
+   ],
+   "at": "poison-spiders"
+  },
+  {
+   "id": "ranged-entry-melee",
+   "label": "Attack 99 rune scimitar + cannon Ranged 1 -> 55 at Poison Spiders",
+   "serves": [
+    "ranged"
+   ],
+   "train": {
+    "skill": "ranged",
+    "toLevel": 55,
+    "xpPerTick": {
+     "floor": 440.8,
+     "realistic": 429.2,
+     "evidence": "MEASURED",
+     "source": "research/combat-measure.md 6b extra:cannon-spiders-r1: Attack 99 + rune scimitar accurate + cannon 1 -> 50 (32,619 XP) in 74 / 76 / 78 ticks (seeds 7/8/9, lockstep) = 440.8 / 429.2 XP/tick"
+    },
+    "side": {
+     "hitpoints": 0.12
+    }
+   },
+   "requires": [
+    "cannon",
+    "prayer-43",
+    "rival-fight-arena"
+   ],
+   "minLevel": {
+    "attack": 99,
+    "prayer": 43
+   },
+   "variant": {
+    "group": "ranged-entry-method",
+    "option": "melee-cannon"
+   },
+   "lever": {
+    "id": "spiders-combat",
+    "role": "add"
+   },
+   "evidence": "MEASURED",
+   "source": "research/combat-measure.md 6b extra:cannon-spiders-r1: Attack 99 + rune scimitar + cannon at Poison Spiders (74/76/78 ticks 1->50)",
+   "at": "poison-spiders"
   },
   {
    "id": "ranged",
@@ -2614,6 +3161,36 @@
    "requires": [
     "cannon",
     "fletch-arrows"
+   ],
+   "patches": [
+    {
+     "lever": "spiders-combat",
+     "set": {
+      "label": "Rapid magic shortbow + special + cannon 55 -> 99 at Poison Spiders",
+      "at": "poison-spiders",
+      "requires": [
+       "cannon",
+       "prayer-43"
+      ],
+      "minLevel": {
+       "ranged": 55,
+       "prayer": 43
+      },
+      "train": {
+       "skill": "ranged",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 553.0,
+        "realistic": 526.7,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md sections 6b & 6c: fighter:cannon 55 -> 99 (1,973 / 1,889 / 1,792 ticks, mean 1,885) minus 6c magic shortbow special savings (49 / 73 / 101 ticks across seeds 7/8/9, mean 73 ticks) = 1,720 floor / 1,812 mean -> 553.0 / 526.7 XP/tick"
+       },
+       "side": {
+        "hitpoints": 0.12
+       }
+      }
+     }
+    }
    ],
    "evidence": "MEASURED",
    "source": "research/combat-measure.md section 6: side XP = measured Defence and Hitpoints per Ranged XP per band (Defence 0.167 / 0.191 / 0.177, Hitpoints 0.110 / 0.126 / 0.117), XP-weighted; longrange splits the bow's XP 2 Ranged + 2 Defence per damage (combat.rs2:157-159). Rapid gives 384.2 realistic with no Defence and made Overall later (section 6). Below Ranged 40 (1.6% of the XP) a lower bow is needed; not measured",
@@ -2701,6 +3278,10 @@
    "requires": [
     "grandtree"
    ],
+   "variant": {
+    "group": "agility-route",
+    "option": "grandtree"
+   },
    "evidence": "MEASURED",
    "source": "research/agility.md: gnome course 9 practice runs of 10 laps at Agility 1, 70, 90: 32.9-33.0 XP/tick (65.6-65.8 ticks per lap, 2,162.5 XP per lap, 0 fails); Barbarian (52.4-54.0 XP/tick) needs the Barcrawl",
    "patches": [
@@ -2723,6 +3304,41 @@
    "viaNote": "gnome course only: the Barbarian course needs Alfred Grimhand's Barcrawl (world.json reach of agility-course:barbarian-agility-course:0; outpost_gate.rs2:2)"
   },
   {
+   "id": "tourist-trap-post",
+   "label": "The Tourist Trap (post-Overall QP/XP)",
+   "serves": [
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 1604,
+    "realistic": 1624,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"Long rest quests\": scripts/generated/quest-desertrescue.ts 1617/1604/1624 (floor = best run, realistic = worst run)"
+   },
+   "lump": true,
+   "qp": 2,
+   "xp": {
+    "agility": 232500
+   },
+   "requires": [
+    "dragon",
+    "grail",
+    "grandtree",
+    "dig",
+    "cannon",
+    "scorpion",
+    "waterfall",
+    "quests-medium"
+   ],
+   "variant": {
+    "group": "agility-route",
+    "option": "grandtree"
+   },
+   "evidence": "MEASURED",
+   "source": "scripts/generated/quest-desertrescue.ts 1617/1604/1624; irena.rs2:76-90 2x116,250 = 232,500 Agility XP, 2 QP",
+   "at": "shantay-pass"
+  },
+  {
    "id": "agility",
    "label": "Wilderness course to Agility 99",
    "serves": [
@@ -2741,6 +3357,10 @@
    "requires": [
     "agility-52"
    ],
+   "variant": {
+    "group": "agility-route",
+    "option": "grandtree"
+   },
    "evidence": "MEASURED",
    "source": "MEASURED practice (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 52/60/76 and 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)",
    "supplies": [
@@ -2764,6 +3384,186 @@
        }
       }
      }
+    },
+    {
+     "lever": "spiders-combat",
+     "set": {
+      "train": {
+       "skill": "agility",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 212.9,
+        "realistic": 198.8,
+        "evidence": "MEASURED",
+        "source": "research/agility.md V2 pooled band rates 76-87 (192.5, 28,322t) and 88-99 (202.1, 14,164t) weighted over post-Grand Tree 76->99 (263,269 + 532,872 = 796,141 XP) = 198.8 realistic; 212.9 floor"
+       }
+      }
+     }
+    }
+   ],
+   "at": "wilderness-course"
+  },
+  {
+   "id": "fletch-10",
+   "label": "Fletch arrows to 10 (Tourist Trap gate)",
+   "serves": [
+    "agility"
+   ],
+   "train": {
+    "skill": "fletching",
+    "toLevel": 10,
+    "xpPerTick": {
+     "floor": 500,
+     "realistic": 500,
+     "evidence": "CODE-READ",
+     "source": "1 arrow fletching set (19.5*25=487.5 XP per 15 headless+tips) + 1 bronze/iron fletch gives 980 XP = level 10 in 2 ticks"
+    }
+   },
+   "requires": [
+    "trade-start"
+   ],
+   "variant": {
+    "group": "agility-route",
+    "option": "tourist-trap"
+   },
+   "evidence": "CODE-READ",
+   "source": "desertrescue_journal.rs2:9 Fletching 10 gate (980 XP on curve.ts)",
+   "at": "anywhere"
+  },
+  {
+   "id": "magic-43-tt",
+   "label": "Wind Strike + Enchant ladder to Magic 43 (Superheat)",
+   "serves": [
+    "agility"
+   ],
+   "train": {
+    "skill": "magic",
+    "toLevel": 43,
+    "xpPerTick": {
+     "floor": 200.9,
+     "realistic": 184.0,
+     "evidence": "ESTIMATE",
+     "source": "33 casts 1 -> 43 (5 Wind Strike, 12 Sapphire Enchant, 16 Emerald Enchant = 19,684 XP on curve.ts) at MEASURED 2.96 / 3.23 ticks/cast = 98 / 107 ticks"
+    }
+   },
+   "requires": [
+    "trade-start"
+   ],
+   "variant": {
+    "group": "agility-route",
+    "option": "tourist-trap"
+   },
+   "evidence": "ESTIMATE",
+   "source": "33 casts 1 -> 43 at MEASURED 2.96 / 3.23 ticks/cast",
+   "at": "bank"
+  },
+  {
+   "id": "smith-20",
+   "label": "Superheat bronze/iron at bank to Smithing 20 + Magic 52 (Tourist Trap + Camelot Tele)",
+   "serves": [
+    "agility"
+   ],
+   "train": {
+    "skill": "smithing",
+    "toLevel": 20,
+    "xpPerTick": {
+     "floor": 64.7,
+     "realistic": 64.7,
+     "evidence": "CODE-READ",
+     "source": "12 bronze bars (156.25 XP each) + 4 iron bars (312.5 XP each) = 16 superheat casts (3,125 Smithing XP > 3,105 level 20 + 21,200 Magic XP -> lvl 52) at p_delay(1) = 3 ticks/cast = 48 ticks at bank (superheat.rs2:67)"
+    },
+    "side": {
+     "magic": 6.784
+    }
+   },
+   "requires": [
+    "magic-43-tt"
+   ],
+   "minLevel": {
+    "magic": 43
+   },
+   "variant": {
+    "group": "agility-route",
+    "option": "tourist-trap"
+   },
+   "evidence": "CODE-READ",
+   "source": "desertrescue_journal.rs2:14 Smithing 20 + superheat.rs2:67",
+   "at": "bank"
+  },
+  {
+   "id": "tourist-trap-agility",
+   "label": "The Tourist Trap (232,500 Agility XP -> lvl 77, 2 QP)",
+   "serves": [
+    "agility",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 1604,
+    "realistic": 1624,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"Long rest quests\": scripts/generated/quest-desertrescue.ts 1,617 / 1,604 / 1,624t MEASURED; Mercenary Captain safe under Protect from Melee + Magic 52 Wind Blast"
+   },
+   "lump": true,
+   "qp": 2,
+   "xp": {
+    "agility": 232500
+   },
+   "requires": [
+    "fletch-10",
+    "smith-20",
+    "prayer-43"
+   ],
+   "minLevel": {
+    "fletching": 10,
+    "smithing": 20,
+    "prayer": 43,
+    "magic": 43
+   },
+   "variant": {
+    "group": "agility-route",
+    "option": "tourist-trap"
+   },
+   "evidence": "MEASURED",
+   "source": "scripts/generated/quest-desertrescue.ts 1,604 / 1,624t; irena.rs2:83 232,500 Agility XP",
+   "at": "shantay-pass"
+  },
+  {
+   "id": "agility-tt",
+   "label": "Wilderness course 77 -> 99 after The Tourist Trap",
+   "serves": [
+    "agility"
+   ],
+   "train": {
+    "skill": "agility",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 212.9,
+     "realistic": 199.1,
+     "evidence": "MEASURED",
+     "source": "research/agility.md V2 pooled band rates 76-87 (192.5, 28,322t) and 88-99 (202.1, 14,164t) weighted over 77->99 (765,958 XP) = 199.1 realistic; 212.9 best 20-lap run floor"
+    }
+   },
+   "requires": [
+    "tourist-trap-agility"
+   ],
+   "variant": {
+    "group": "agility-route",
+    "option": "tourist-trap"
+   },
+   "patches": [
+    {
+     "lever": "def-at-ranged-spot",
+     "addRequires": [
+      "def-top"
+     ]
+    }
+   ],
+   "evidence": "MEASURED",
+   "source": "research/agility.md sections V2 and Agility 88-99",
+   "supplies": [
+    {
+     "item": "lobster",
+     "count": 40
     }
    ],
    "at": "wilderness-course"
@@ -2910,6 +3710,24 @@
        "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), lockstep bench case quester:quest:dig at seeds 7, 8 and 9: 1,374, 1,968, 1,477 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46. The rival burst run is not measured by us"
       }
      }
+    },
+    {
+     "lever": "spiders-combat",
+     "set": {
+      "serves": [
+       "questpoints"
+      ],
+      "requires": [
+       "grail",
+       "grandtree",
+       "cannon",
+       "scorpion",
+       "waterfall",
+       "agility-25",
+       "thieving-25",
+       "herblore-10"
+      ]
+     }
     }
    ],
    "at": "exam-centre"
@@ -2968,6 +3786,26 @@
         "realistic": 250,
         "evidence": "ESTIMATE",
         "source": "rival lab: knife starter on the 6-rock Ardougne zoo iron rotation (2602-2605,3233-3237), 3.00 ticks/ore at respawn 13 = 11.67 base x25 = 292; 3.50 ticks/ore at respawn 19 = 10.0 base x25 = 250 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/skills/mining.md section 1, skills/tick-manipulation.md section 1); third-party lab, not run by us; respawn depends on player count (player_count.rs2:4)"
+       }
+      }
+     }
+    },
+    {
+     "lever": "spiders-combat",
+     "set": {
+      "at": "ardougne-zoo",
+      "requires": [
+       "doric",
+       "plague-city"
+      ],
+      "train": {
+       "skill": "mining",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 274,
+        "realistic": 273.3,
+        "evidence": "MEASURED",
+        "source": "research/aio-bench.md \"Ardougne zoo iron\": extra:mining-zoo-knife seeds 7/8/9 = 3.22, 3.19, 3.19 ticks/ore = 272, 274, 274 XP/tick (mean 273.3, floor 274) with rune pickaxe and knife reset from Mining 65 (Doric + Plague City = 93,125 XP)"
        }
       }
      }
@@ -3034,19 +3872,41 @@
      }
     },
     {
-     "lever": "def-at-ranged-spot",
+     "lever": "spiders-combat",
      "addRequires": [
-      "ranged"
+      "dragon"
      ],
      "set": {
       "train": {
        "skill": "defence",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 158.3,
-        "realistic": 151.8,
+        "floor": 202.0,
+        "realistic": 176.0,
         "evidence": "MEASURED",
-        "source": "research/combat-measure.md section 7: Gnome battlefield (the ranged row spot), preset combat_gb_def93 (Attack, Strength, Hitpoints 99, Defence 93 as the plan reaches this row), rune scimitar block style (STYLE=3), practice, 3 x 300 ticks: 158.3 / 153.0 / 144.0 Defence XP per tick (floor = best run, realistic = mean)"
+        "source": "research/combat-measure.md section 6c (extra:cannon-step24-melee Defence 98->99 = 66,883 XP in 331 / 380 / 438 ticks with rune scimitar on block at Poison Spiders = 176.0 mean, 202.0 floor)"
+       },
+       "side": {
+        "hitpoints": 0.331
+       }
+      }
+     }
+    },
+    {
+     "lever": "def-at-ranged-spot",
+     "addRequires": [
+      "ranged"
+     ],
+     "set": {
+      "at": "poison-spiders",
+      "train": {
+       "skill": "defence",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 202.0,
+        "realistic": 176.0,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md section 6c: Defence 98->99 at Poison Spiders right after ranged (0 travel) = 176.0 mean / 202.0 floor"
        },
        "side": {
         "hitpoints": 0.331
@@ -3152,6 +4012,17 @@
        "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109)"
       }
      }
+    },
+    {
+     "lever": "q-burst",
+     "set": {
+      "ticks": {
+       "floor": 13775,
+       "realistic": 22040,
+       "evidence": "ESTIMATE",
+       "source": "research/aio-bench.md Routes: Q_BURST=1 saves 0.7% across passing quests (30,203 vs 30,426) stacked on non-talk-plans quests"
+      }
+     }
     }
    ],
    "at": "anywhere"
@@ -3198,18 +4069,18 @@
   },
   {
    "id": "quests-short",
-   "label": "Short quests (10) from quests-rest, MEASURED",
+   "label": "Short quests (9) from quests-rest, MEASURED (Doric split out)",
    "serves": [
     "questpoints"
    ],
    "ticks": {
-    "floor": 2605,
-    "realistic": 2664,
+    "floor": 2575,
+    "realistic": 2634,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Short rest quests\": 10 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-short.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Sheep Shearer 70/70/70 (quest-sheep.ts, 1 QP); Doric's Quest 30/30/30 (quest-doric.ts, 1 QP); Imp Catcher 38/38/38 (quest-imp.ts, 1 QP); Witch's Potion 80/78/79 (quest-hetty.ts, 1 QP); Rune Mysteries 449/432/441 (quest-runemysteries.ts, 1 QP); The Restless Ghost 519/516/519 (quest-priest.ts, 1 QP); Vampire Slayer 338/330/331 (quest-vampire.ts, 3 QP); Gertrude's Cat 369/385/397 (quest-fluffs.ts, 1 QP); Monk's Friend 327/328/327 (quest-drunkmonk.ts, 1 QP); Fishing Contest 415/415/415 (quest-fishingcompo.ts, 1 QP)"
+    "source": "quests-short without Doric's Quest (30/30/30, 1 QP on row doric): research/quest-points-board.md \"Short rest quests\": Sheep Shearer 70/70/70 (1 QP); Imp Catcher 38/38/38 (1 QP); Witch's Potion 80/78/79 (1 QP); Rune Mysteries 449/432/441 (1 QP); The Restless Ghost 519/516/519 (1 QP); Vampire Slayer 338/330/331 (3 QP); Gertrude's Cat 369/385/397 (1 QP); Monk's Friend 327/328/327 (1 QP); Fishing Contest 415/415/415 (1 QP)"
    },
    "lump": true,
-   "qp": 12,
+   "qp": 11,
    "requires": [
     "dragon",
     "grail",
@@ -3220,28 +4091,17 @@
     "waterfall"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-points-board.md \"Short rest quests\": 10 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-short.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Sheep Shearer 70/70/70 (quest-sheep.ts, 1 QP); Doric's Quest 30/30/30 (quest-doric.ts, 1 QP); Imp Catcher 38/38/38 (quest-imp.ts, 1 QP); Witch's Potion 80/78/79 (quest-hetty.ts, 1 QP); Rune Mysteries 449/432/441 (quest-runemysteries.ts, 1 QP); The Restless Ghost 519/516/519 (quest-priest.ts, 1 QP); Vampire Slayer 338/330/331 (quest-vampire.ts, 3 QP); Gertrude's Cat 369/385/397 (quest-fluffs.ts, 1 QP); Monk's Friend 327/328/327 (quest-drunkmonk.ts, 1 QP); Fishing Contest 415/415/415 (quest-fishingcompo.ts, 1 QP)",
+   "source": "research/quest-points-board.md \"Short rest quests\" less Doric's Quest (on row doric)",
    "patches": [
     {
-     "lever": "rival-dialogue-burst",
+     "lever": "spiders-combat",
      "set": {
+      "qp": 10,
       "ticks": {
-       "floor": 2605,
-       "realistic": 2664,
+       "floor": 2537,
+       "realistic": 2596,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Short rest quests\": 10 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-short.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Sheep Shearer 70/70/70 (quest-sheep.ts, 1 QP); Doric's Quest 30/30/30 (quest-doric.ts, 1 QP); Imp Catcher 38/38/38 (quest-imp.ts, 1 QP); Witch's Potion 80/78/79 (quest-hetty.ts, 1 QP); Rune Mysteries 449/432/441 (quest-runemysteries.ts, 1 QP); The Restless Ghost 519/516/519 (quest-priest.ts, 1 QP); Vampire Slayer 338/330/331 (quest-vampire.ts, 3 QP); Gertrude's Cat 369/385/397 (quest-fluffs.ts, 1 QP); Monk's Friend 327/328/327 (quest-drunkmonk.ts, 1 QP); Fishing Contest 415/415/415 (quest-fishingcompo.ts, 1 QP); the rival burst run is not measured by us"
-      }
-     }
-    },
-    {
-     "lever": "rival-dragon-combat",
-     "set": {
-      "qp": 11,
-      "ticks": {
-       "floor": 2575,
-       "realistic": 2634,
-       "evidence": "MEASURED",
-       "source": "quests-short without Doric's Quest (30/30/30, its own row under rival-dragon-combat): research/quest-points-board.md \"Short rest quests\": 10 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-short.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Sheep Shearer 70/70/70 (quest-sheep.ts, 1 QP); Doric's Quest 30/30/30 (quest-doric.ts, 1 QP); Imp Catcher 38/38/38 (quest-imp.ts, 1 QP); Witch's Potion 80/78/79 (quest-hetty.ts, 1 QP); Rune Mysteries 449/432/441 (quest-runemysteries.ts, 1 QP); The Restless Ghost 519/516/519 (quest-priest.ts, 1 QP); Vampire Slayer 338/330/331 (quest-vampire.ts, 3 QP); Gertrude's Cat 369/385/397 (quest-fluffs.ts, 1 QP); Monk's Friend 327/328/327 (quest-drunkmonk.ts, 1 QP); Fishing Contest 415/415/415 (quest-fishingcompo.ts, 1 QP)"
+       "source": "quests-short without Doric's Quest (30/30) and Imp Catcher (38/38, row imp-catcher)"
       }
      }
     }
@@ -3275,13 +4135,14 @@
    "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 780/784/749 (quest-elena.ts, 1 QP); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)",
    "patches": [
     {
-     "lever": "rival-dialogue-burst",
+     "lever": "spiders-combat",
      "set": {
+      "qp": 32,
       "ticks": {
-       "floor": 14722,
-       "realistic": 15841,
+       "floor": 13973,
+       "realistic": 15057,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 780/784/749 (quest-elena.ts, 1 QP); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP); the rival burst run is not measured by us"
+       "source": "quests-medium without Plague City (749/784, 1 QP on row plague-city)"
       }
      }
     }
@@ -3290,18 +4151,18 @@
   },
   {
    "id": "quests-long",
-   "label": "Long quests (9) from quests-rest, MEASURED",
+   "label": "Long quests (8) from quests-rest, MEASURED (Tourist Trap split out)",
    "serves": [
     "questpoints"
    ],
    "ticks": {
-    "floor": 15614,
-    "realistic": 16530,
+    "floor": 14010,
+    "realistic": 14906,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Long rest quests\": 9 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP); Troll Romance 1092/1138/1084 (scripts/generated/quest-trolllove.ts, 2 QP); Horror from the Deep 687/701/678 (scripts/generated/quest-horror.ts, 2 QP); Regicide 3536/3525/3592 (scripts/generated/quest-regicide.ts, 3 QP)"
+    "source": "research/quest-points-board.md \"Long rest quests\" less The Tourist Trap (1,604 / 1,624, 2 QP on tourist-trap-post / tourist-trap-agility): Underground Pass 2764/2859/2898 (5 QP); Troll Stronghold 847/788/824 (1 QP); Shilo Village 2133/2478/2357 (2 QP); Eadgar's Ruse 2175/2161/2091 (1 QP); Temple of Ikov 947/1077/972 (1 QP); Troll Romance 1092/1138/1084 (2 QP); Horror from the Deep 687/701/678 (2 QP); Regicide 3536/3525/3592 (3 QP)"
    },
    "lump": true,
-   "qp": 19,
+   "qp": 17,
    "requires": [
     "dragon",
     "grail",
@@ -3313,20 +4174,7 @@
     "quests-medium"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-points-board.md \"Long rest quests\": 9 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP); Troll Romance 1092/1138/1084 (scripts/generated/quest-trolllove.ts, 2 QP); Horror from the Deep 687/701/678 (scripts/generated/quest-horror.ts, 2 QP); Regicide 3536/3525/3592 (scripts/generated/quest-regicide.ts, 3 QP)",
-   "patches": [
-    {
-     "lever": "rival-dialogue-burst",
-     "set": {
-      "ticks": {
-       "floor": 15614,
-       "realistic": 16530,
-       "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Long rest quests\": 9 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP); Troll Romance 1092/1138/1084 (scripts/generated/quest-trolllove.ts, 2 QP); Horror from the Deep 687/701/678 (scripts/generated/quest-horror.ts, 2 QP); Regicide 3536/3525/3592 (scripts/generated/quest-regicide.ts, 3 QP); the rival burst run is not measured by us"
-      }
-     }
-    }
-   ],
+   "source": "research/quest-points-board.md \"Long rest quests\" less The Tourist Trap",
    "at": "anywhere"
   },
   {
