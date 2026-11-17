@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794956609352,
+ "at": 1794956646602,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -170,24 +170,6 @@
    "resources": []
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit4-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
@@ -207,6 +189,25 @@
    "resources": [
     "ge:armour"
    ]
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=853 QUANTITY=1 LIMIT_PRICE=5000 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-853-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"853\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Maple shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "kit-buy:army-arrows-catherby",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Bigpackage",
@@ -277,7 +278,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -314,26 +316,7 @@
    ]
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=853 QUANTITY=1 LIMIT_PRICE=5000 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-853-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"853\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Maple shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
-   "role": "supply",
-   "template": "kit-buy:army-arrows-catherby",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Swordinhand",
+   "account": "PickpockDick",
    "script": "scripts/alch-train.ts",
    "args": [
     "99",
@@ -352,6 +335,23 @@
    "resources": []
   },
   {
+   "account": "Swordinhand",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -359,8 +359,7 @@
     "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":60}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
