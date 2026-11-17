@@ -309,3 +309,65 @@ test('fleet Wilderness filter counts and isolates playing accounts in the Wilder
   {atlasOperator:()=>true},()=>[],()=>null,()=>0,()=>['','observed'],()=>'',String,()=>'',String,()=>null,()=>'',String,String) as string;
  expect(rowHtml).toContain('Observed · wildy 46');
 });
+
+test('Command centre shows unused bot slots, RAM headroom, fast-fail loops and stale controller leases',()=>{
+ const code=operations.slice(operations.indexOf(' function operations(){'),operations.indexOf(' // Why a new bot cannot start now'));
+ const S={
+  coordination:{counts:{running:2,pending:1},fresh:true,available:true,agents:[]},
+  wilderness:[],
+  capacity:{fresh:true,active:14,cap:25,queued:1,freeGB:6.8,floorGB:4.0,headroomGB:2.8},
+  scoreboard:{available:false},
+  fleetSides:{sides:[]},
+  diagnostics:{
+   failLoops:[{name:'⟦MAIN⟧',goal:'thieving',error:'stall timeout',runs:5,medianSec:11,lastAt:1000}],
+   leases:[{side:'local',host:'pc',pid:10,at:1000,ageMs:60_000,stale:false},{side:'cloud',host:'c1',pid:20,at:100,ageMs:1_200_000,stale:true}],
+  },
+ };
+ const safeName=(s:string)=>String(s).replaceAll('⟦MAIN⟧','Main · reserved');
+ const env={S,meta:{controllers:[]},bots:()=>[{name:'Bot1',operation:'observed',inWorld:true}],issues:()=>[],incidentCards:()=>'',startBlock:()=>'',page:String,title:String,button:()=>'',badge:(_s:string,l:string)=>`[${l}]`,E:String,safeName,age:(ms:number)=>Math.round(ms/60_000)+'m',metaError:'',message:''};
+ const html=new Function(...Object.keys(env),`${code};return operations();`)(...Object.values(env)) as string;
+ expect(html).toContain('14 / 25');
+ expect(html).toContain('11 unused · 1 queued');
+ expect(html).toContain('GiB RAM headroom');
+ expect(html).toContain('Fast-fail loops (2 h)');
+ expect(html).toContain('Main · reserved');
+ expect(html).toContain('5× · 11s');
+ expect(html).toContain('Controller leases');
+ expect(html).toContain('STALE 20m');
+ expect(html).not.toContain('Haggis');
+});
+
+test('server diagnostics mark stale leases cleanly and exclude protected main account loops',async()=>{
+ const {mkdtempSync,rmSync,writeFileSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const {failLoops,LOOP_WINDOW_MS}=await import('../../scripts/fail-loops');
+ const {LEASE_MAX_AGE_MS,SIDE_NAME}=await import('../core/src/fleet');
+ const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('function readLeaseDiagnostics('),server.indexOf('let gearCatalogCache:')));
+ const dir=mkdtempSync(join(tmpdir(),'dash-leases-'));
+ try{
+  const now=10_000_000;
+  writeFileSync(join(dir,'cloud.json'),JSON.stringify({side:'cloud',host:'cloud-box',pid:101,at:now-LEASE_MAX_AGE_MS}));
+  writeFileSync(join(dir,'local.json'),JSON.stringify({side:'local',host:'pc-box',pid:202,at:now-60_000}));
+  writeFileSync(join(dir,'bad.json'),'{corrupt');
+  writeFileSync(join(dir,'mismatch.json'),JSON.stringify({side:'other',host:'x',pid:1,at:now}));
+  const fn=new Function('existsSync','readdirSync','readFileSync','join','SIDE_NAME','LEASE_MAX_AGE_MS','FILES','root','allResults','MAIN','failLoops','LOOP_WINDOW_MS',`${code};return {readLeaseDiagnostics,fleetDiagnostics};`)(
+   (await import('node:fs')).existsSync,(await import('node:fs')).readdirSync,readFileSync,join,SIDE_NAME,LEASE_MAX_AGE_MS,{fleet:dir},dir,
+   [
+    {started:now-5000,at:now-1000,name:'Haggis',goal:'thieving',ok:false,text:'fail no food'},
+    {started:now-5000,at:now-1000,name:'Haggis',goal:'thieving',ok:false,text:'fail no food'},
+    {started:now-5000,at:now-1000,name:'Haggis',goal:'thieving',ok:false,text:'fail no food'},
+    {started:now-5000,at:now-1000,name:'WorkerA',goal:'woodcutting',ok:false,text:'fail stall'},
+    {started:now-5000,at:now-1000,name:'WorkerA',goal:'woodcutting',ok:false,text:'fail stall'},
+    {started:now-5000,at:now-1000,name:'WorkerA',goal:'woodcutting',ok:false,text:'fail stall'},
+   ],
+   'Haggis',failLoops,LOOP_WINDOW_MS);
+  const leases=fn.readLeaseDiagnostics(dir,now);
+  expect(leases.map((l:any)=>[l.side,l.stale])).toEqual([['bad',null],['cloud',true],['local',false],['mismatch',null]]);
+  const diag=fn.fleetDiagnostics(now);
+  expect(diag.failLoops.map((l:any)=>l.name)).toEqual(['WorkerA']);
+ }finally{
+  rmSync(dir,{recursive:true,force:true});
+ }
+});

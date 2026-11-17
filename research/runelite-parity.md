@@ -28,9 +28,9 @@ Use this for every new or changed part.
 | Hiscores: Overall, 19 skills, Quest Points, plus the demo's Equipment, Bank and Runite boards. Each row has rank, level and time. | `SKILL_BOARDS`, `EXTRA` in `server.ts`; `research/boards-special.md` | No bosses, minigames, clue scrolls or ironman endpoints. Our boards rank by time to level, not only by XP. |
 | One game world. The fleet runs on three machines (sides: local, cloud, claude-cloud). | `fleet/owners.json`; fleet-data snapshots | RuneLite's world hopper has nothing to hop. Sides are not worlds. |
 | A market API with ask, bid, stock and average for each item. There is no Grand Exchange interface or offer slots in our state. | `economy.supplies` in `/api/state` | RuneLite's GE plugin reads offer slots and wiki prices. |
-| A world feed: every player's name, position, plane and combat level, and in 3D each player's animations and chat. | `wss://rs-sdk-demo.fly.dev/worldfeed`; `roster` in `server.ts` | RuneLite reads the local client. We see all players, but no client state (no run energy, special attack, active prayers or boosts). |
+| A world feed: every player's name, position, plane and combat level, and in 3D each player's animations and chat. | `wss://rs-sdk-demo.fly.dev/worldfeed`; `roster` in `server.ts` | RuneLite reads the local client. We see all players on the world feed without run energy, special attack energy or boosts; active prayers come only from local status `progressionContext`. |
 | Our bots' status files: skills with XP, HP, inventory, worn items, bank, quests, phase and results. Other sides share levels without XP. | `.practice/status/<name>.json`; `remoteBots` in `fleet-view.ts` | RuneLite sees one player live. We see many players, each from its last snapshot. |
-| Spellbook and prayers of 2004: the standard spellbook and the 2004 prayer list. | `client-shell.js` (tabs removed: no active state is reported) | No Ancient, Lunar or Arceuus books, and no Piety, Rigour or Augury. |
+| Spellbook and prayers of 2004: the standard spellbook and the 2004 prayer list. | `client-shell.js` (Prayer and Magic tabs, active prayers when `progressionContext.prayers` is reported) | No Ancient, Lunar or Arceuus books, and no Piety, Rigour or Augury. |
 
 ## Parts
 
@@ -40,6 +40,7 @@ Use this for every new or changed part.
 |---|---|---|---|---|
 | `fleet` | `friendlist`, `party` | adapt | Every account on every side, with filters (working, attention, held, side), side sync age and cross-side orders. RuneLite has no fleet. Party is the nearest idea: shared status of a group. A spectator's list has one row for each account, and the watched account's row opens with its combat level, place, goal and last run. | none |
 | `xp` | `xptracker` | adapt | XP gained, XP/hr, progress to level, time to level, reset, pause, hide maxed skills, saved between sessions (browser storage). XP comes from status snapshots, not per drop. | Reject "actions done/left/hr", because no per-action XP is reported. |
+| `gear` | `itemstats` (`ItemStatPlugin.java`, `ItemStatConfig.java`), rev 289 `knowledge/gear.json` | adapt | Worn rev 289 equipment combat bonuses, melee/ranged/magic max hit, weapon attack speed, special attack cost (`sa_energy`), and next unlocked combat gear or gathering tool (axe/pickaxe) tier from observed skills, quests, pack and bank stock. Leaves worn slots unknown when `equipmentObserved` is false. | Reject consumable tooltip deltas without active consumable state. |
 | `boards` | `hiscore` | adapt | Player view: RuneLite's layout (skill grid, overall, rank on hover) for any player: a fleet account from the snapshot, another player from the player service with combat level, online state and place, worn items and a button to watch them in 3D. Right-click any dot on the map to look that player up. Fleet view: our scoreboard and the best fleet rank on each of the 24 boards as a grid of icon and rank; a spectator's click on a board opens its top 10. Rivals view: each board's top 10 from the demo hiscores, with our accounts marked and who is online now and where, and the Overtake planner: the XP and hours our best account needs to pass the next rows (or, at 99, the time a new account must beat, because board time stops at 99). RuneLite has no fleet or rivals view. | Reject the endpoint selector and the bounty lookup: there are no such boards here. |
 | `ge` | `grandexchange` | adapt | Route supplies in one table with the market's buy, sell and stock, and an Ours column from the fleet's banks for the owner. An unidentified herb is named by its item id. Our market has no offer slots. | Show our bots' open market offers once a status file reports them. Reject GE limits and the limit timer: no data. |
 | `world` | `playerindicators` | adapt | The player lookup is in `boards`. Our spots: other players within 10 tiles of each tile or named resource our bots claim (fleet-data `claims`). Bot farms: three or more online players with one name pattern (a numbered series, or random names with the same first two characters and length), and how many stand at our spots. Online count. The local server reads the hiscores; the hosted page has the lookups the server keeps (each board's 10 rivals and the players at our spots), because the demo hiscores send no CORS header. In 3D, Follow points the camera at any online player; picking one of our accounts returns it. Each skill's tooltip gives our best level and account, and a level where the player is ahead of every fleet account is red. Online players also show their worn items, read from their appearance block in the world feed with the lookup (`appearance.ts`; item names from the pinned server's obj configs). | none |
@@ -47,12 +48,12 @@ Use this for every new or changed part.
 | `account` | `account`, `info` | adapt | The owner's plugin; a spectator gets these facts in the open Fleet row. One account: status, HP, combat, total, its Overall board time and rank (the playtime when it reached the total the board shows), bank coins, assignment, why it stopped, commands, linked jobs. | none |
 | `activity` | `chathistory`, `loottracker` (history list) | adapt | The owner's plugin; a spectator sees an account's last run in the open Fleet row. Finished and stopped game runs, live or practice, as readable lines with repeats folded. | none |
 | `info` | `info` | adapt | What the page is and how often each part gets new data, the keys and the pointer actions (the Fleet wall's too), the marks as the minimap draws them, and each source with its licence. RuneLite's panel gives the client version and links. | Reject the RuneLite account and version rows: no client login or build here. |
-| `operations` | none | own | The Command centre: one clickable number per fleet question. RuneLite has no fleet. | none |
+| `operations` | none | own | The Command centre: clickable KPIs, active vs unused bot slots, RAM headroom, fast-fail loop alerts and side controller lease freshness. RuneLite has no fleet. | none |
 | `jobs` | none | own | The coordinator queue. | none |
 | `dispatch` | none | own | The Jobs desk: job form and script list. | none |
 | `goals` | none | own | The plan's lanes, with blockers and next actions. | none |
 | `prs` | none | own | Pull requests by agent. | none |
-| `machine` | none | own | Bots running against the cap, RAM headroom, CPU and processes. | none |
+| `machine` | none | own | Bots running against the cap (with unused slots), RAM headroom, fast-fail loop alerts, controller leases, CPU and processes. | none |
 | `manager` | `config` | copy | The plugin list with switches and search, notifications and sidebar width, opened by the wrench at the foot of the rail as in RuneLite. | none |
 | `raw` | `devtools` | adapt | The selected account's observed record as JSON. It is in the ⋮ menu, not the rail. | none |
 
@@ -64,8 +65,8 @@ Use this for every new or changed part.
 | `quests` | `questlist` | adapt | The account's quest states, colour-coded, with a detail view, the snapshot age, a filter (done, started, to do) and search. | none |
 | `inventory` | game Inventory tab, `itemprices` | adapt | The 28 slots from the snapshot, with item options. Hover shows the server's item value (the vault's: 7-day market average after 3 trades, else the shop price), and the market's buy and sell for route supplies. | Reject the high alchemy value: no alchemy data is checked for this world. |
 | `equipment` | game Worn Equipment tab | adapt | The doll by slot. Cloud snapshots have no slot numbers, so those show as a list. | none |
-| `prayer` | game Prayer tab, `prayer` | adapt | The 15 rev 289 prayers (Thick Skin through Protect from Melee), dimmed below the account's Prayer level, with points, worn Prayer bonus and Protect duration. | Reject active-prayer highlights: active prayers are not reported. |
-| `magic` | game Magic tab | adapt | Standard rev 289 spells from `spellbook.json` and standard utility spells, dimmed when Magic level, required staff or carried runes are short, with cast counts on hover. | none |
+| `prayer` | game Prayer tab, `prayer` | adapt | The 15 rev 289 prayers (Thick Skin through Protect from Melee), dimmed below the account's Prayer level, active prayers highlighted when `progressionContext.prayers` is reported, with points, worn Prayer bonus and Protect duration. | Active prayer highlights stay off when `progressionContext.prayers` is absent. |
+| `magic` | game Magic tab | adapt | Standard rev 289 spells from `spellbook.json` and standard utility spells (using `spell-*.png` and `magicon.png` / `magicon2.png` for Fire Wave and Entangle), dimmed when Magic level, required staff or carried runes are short, with cast counts on hover. | none |
 | `friends` | `friendlist` | adapt | The fleet as a friends list: online accounts show their side (RuneLite shows the world). Click to follow. | none |
 | `settings` | game Settings tab, `stretchedmode` | adapt | Display mode, render quality, chat and places buttons. | none |
 | `logout` | game Logout tab | adapt | Signs the owner out of the hosted page. It never logs a bot out. | none |
@@ -91,6 +92,8 @@ Use this for every new or changed part.
 | `3d` | none (the rs-world viewer) | own | The rs-world viewer (branch `fleet-v2` build) with the live world feed; the main account renamed "Hidden". | none |
 | `wall` | none | own | Fleet wall: up to 16 of our accounts in the world, each in its own 3D view, tiled in four layouts. Drag a title strip to swap two views, pin a view in its place, and drag a gap to size the rows, the columns, the main view or the focus strip. The pins and the sizes stay in the browser. The keys are in `info`. | none |
 | `screens` | `loginscreen` | adapt | The game's loading and connection-lost screens, driven by the state stream. | none |
+| `pvp-hud` | `combatlevel` (`Show level range in wilderness`), `timersandbuffs` (`Freeze timer`, `Teleblock timer`, `Antifire timer`, `Antipoison/venom timers`, `Pickpocket stun timer`), `prayer` (`Overhead indicator`), game combat interface (`sa_energy`) | adapt | 2004 Wilderness skull level and attackable combat bracket, 2004 multiway crossed-swords badge (`multiway.json`), 2004 `sa_energy` bar, active overhead protection prayer icon, and freeze/stun/immunity chips from reported status or tick timeline (explicit `n/r` fallback when `sa_energy` or spell timers are omitted). | Live `sa_energy` percent and spell/potion cooldown ticks await bot status emission. |
+| `title-diag` | none | own | Operator titlebar strip showing active/cap and unused bot slots, RAM headroom, fast-fail loop alerts and stale cloud-side leases. | none |
 
 ## Not used
 
@@ -99,9 +102,9 @@ Use this for every new or changed part.
 | `worldhopper` | One world. Fleet sides are shown in Fleet. |
 | `music` | No region or audio data in the state. |
 | `statusbars` | A copy of the HP and Prayer orbs. |
-| `prayer`, `spellbook`, `attackstyles` | No active prayer, spell or combat style is reported. |
+| `spellbook`, `attackstyles` | No spell filter or standalone attack-style warning UI (`combatStyle` sits in `progressionContext`). |
 | `loottracker` (NPC drops) | No drop events. Fleet transfers are in Supply ledger. |
-| `timersandbuffs` (buffs), `poison`, `specialcounter` | No buff, poison or special attack state. |
+| `poison`, `specialcounter` | No DPS special drain counter; 2004 `sa_energy` bar and freeze/stun/antipoison indicators sit in `pvp-hud`. |
 | Boss, raid and minigame plugins (`barrows`, `raids`, `corp`, `zalcano`, `wintertodt`, `tithefarm` and others) | That content is not in a 2004 world. |
 | `slayer`, `herbiboars`, `hunter`, `poh` | Skills or content not in a 2004 world. |
 | `screenshot`, `discord`, `twitch`, `gpu` settings | Client features; the page is a viewer, not the game client. |
