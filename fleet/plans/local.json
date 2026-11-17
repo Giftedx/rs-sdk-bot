@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794933019650,
+ "at": 1794933138364,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -202,7 +202,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -319,7 +320,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "60",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
@@ -329,9 +330,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-defence-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -350,8 +351,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":60}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -390,7 +390,9 @@
     "99",
     "5000"
    ],
-   "env": {},
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -470,29 +472,24 @@
   },
   {
    "account": "Sausagefest",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   }
  ],
  "army": [
