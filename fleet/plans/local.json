@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794928552514,
+ "at": 1794928686470,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -206,6 +206,24 @@
    "resources": []
   },
   {
+   "account": "mmthv2350",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit3-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 50 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/splash-train.ts",
    "args": [
@@ -248,25 +266,34 @@
    ]
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
+   "account": "Moneyshot",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit3-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "3000",
+    "cow"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
+   "repeat": true,
+   "goal": "train Defence to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-45",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
-   "account": "Moneyshot",
+   "account": "NabTheKnob",
    "script": "scripts/ranged-train.ts",
    "args": [
     "99",
@@ -316,17 +343,15 @@
    "account": "Pocketpython",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=35 LIMIT_PRICE=120 CASH_RESERVE=1060 ORDER_KEY=pocketpython-kit2-558-0to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=35 LIMIT_PRICE=160 CASH_RESERVE=1060 ORDER_KEY=pocketpython-kit2-556-0to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=35 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit2-556-0to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":35}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 35 Mind rune, 35 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "goal": "buy 35 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
    "role": "supply",
    "template": "kit-buy:army-strike-magic-21",
    "autopilot": "local",
@@ -360,28 +385,31 @@
   },
   {
    "account": "Woodenstaff",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "3000",
-    "cow"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "shop:catherby_arrows"
    ]
   },
   {
@@ -397,7 +425,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
    },
    "enabled": true,
    "standing": true,
@@ -455,28 +484,31 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "3000",
-    "cow"
+    "ardy",
+    "400"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "shop:ardy"
    ]
   },
   {
@@ -492,7 +524,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
