@@ -17,7 +17,7 @@ const HUD: Record<string, [string, string]> = {
     places: [shell, 'game-places'], overlay: [shell, 'game-overlay'], infoboxes: [shell, 'game-infoboxes'], chat: [shell, 'game-chat'],
     idle: [shell, 'function idleNotifier'], notify: [shell, 'function desktopNotify'], 'bank-window': [shell, 'game-bank'],
     'context-menu': [shell, 'game-context'], opponent: [shell, 'game-opponent'], 'name-tags': [page, 'Tile indicator (RuneLite)'], '3d': [page, 'id="rsw"'], wall: [shell, 'wall-chrome'], screens: [shell, 'game-loading'],
-    'pvp-hud': [shell, 'game-pvp-hud'], 'title-diag': [shell, 'title-diag'],
+    'pvp-hud': [shell, 'game-pvp-hud'], 'title-diag': [shell, 'title-diag'], 'wild-overlay': [shell, 'wildernessHotspotsBox'],
 };
 const parts = doc.slice(doc.indexOf('## Parts'), doc.indexOf('## Not used'));
 const rows = new Map([...parts.matchAll(/^\| `([a-z0-9-]+)` \| ([^|]+) \| (copy|adapt|reject|own) \|/gm)].map(m => [m[1]!, { source: m[2]!.trim(), decision: m[3]! }]));
@@ -49,12 +49,16 @@ test('client-assets contains only rev 289 skills, prayers and standard spells', 
 test('every spell, prayer and rail icon referenced by client-shell exists in client-assets', () => {
     const assets = new Set(readdirSync(new URL('./client-assets', import.meta.url)));
     const spellbook = JSON.parse(readFileSync(new URL('./client-assets/spellbook.json', import.meta.url), 'utf8'));
-    const spellSlug = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const util = ['Low Level Alchemy', 'Superheat Item', 'High Level Alchemy', 'Bones to Bananas', 'Telekinetic Grab', 'Charge'];
+    const spellSlug = (n: string) => n.toLowerCase().replace(/\blvl-(\d+)\b/g, 'level-$1').replace(/\bjewelry\b/g, 'jewellery').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const utilMatch = shell.match(/const util=\[([\s\S]*?)\]\.map\(/);
+    expect(utilMatch).toBeTruthy();
+    const util: string[] = (Function(`return [${utilMatch![1]}]`)() as any[]).map((x: any) => String(x[0]));
     const allSpells = [...(spellbook.combat || []).map((x: any) => x[0]), ...util, ...(spellbook.spells || []).map((x: any) => x[0])];
+    expect(new Set(allSpells).size).toBe(52);
+    const spriteOnly = new Set(['charge-air-orb', 'fire-wave', 'vulnerability', 'enfeeble', 'stun']);
     for (const sp of allSpells) {
         const slug = spellSlug(sp);
-        if (slug === 'fire-wave') expect(assets.has('magicon.png') && assets.has('magicoff.png')).toBe(true);
+        if (spriteOnly.has(slug)) expect(assets.has('magicon.png') && assets.has('magicoff.png')).toBe(true);
         else if (slug === 'entangle') expect(assets.has('magicon2.png') && assets.has('magicoff2.png')).toBe(true);
         else expect(assets.has(`spell-${slug}.png`), `missing client-assets/spell-${slug}.png`).toBe(true);
     }

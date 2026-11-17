@@ -1746,8 +1746,9 @@ test('Inventory Tags: food, potions, teleports and runes get their group class; 
  const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Equipment Stats (the game's"));
  const hl:any={invTags:true};
  const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
- expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
-  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-rune','']);
+ expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Enchanted lyre','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
+  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-tele',' tag-rune','']);
+ expect(invTag({name:'Skills necklace',count:1})).toBe('');expect(invTag({name:'Combat bracelet',count:1})).toBe('');
  hl.invTags=false;expect(invTag({name:'Shark'})).toBe('');expect(invTag(null)).toBe('');
 });
 test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
@@ -2093,6 +2094,15 @@ test('wildernessWatchBox highlights rivals within attack range of our Wilderness
  expect(wpHtml).toContain('lvl 46 · multi');
  expect(wpHtml).toContain('Kept on death');
  expect(wpHtml).toContain('Rune scimitar, Shark');
+ const hsCode=shell.slice(shell.indexOf('  function wildernessHotspotsBox()'),shell.indexOf('  function wildernessWatchBox()'));
+ const hsHtml=new Function('S','E','safeName','window',`${hsCode};return wildernessHotspotsBox();`)(
+  {
+   wildernessOverlay:{bands:[{label:'Lvl 1–20 (Tele)',colour:'#86c862',note:'Tele'},{label:'Lvl 21–30 (Glory)',colour:'#e8a844',note:'Glory'},{label:'Lvl 31+ (Deep Wild)',colour:'#e05347',note:'Blocked'}],hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,note:'Ditch'},{label:"Rogue's Castle",x:3285,z:3930,wild:52,note:'Castle'}],resolveTarget:(b:any)=>b.target||null},
+   bots:[{name:'⟦MAIN⟧',inWorld:true,pos:{x:3094,z:3520,level:0},target:{x:3098,z:3955,label:'Mage Bank'}}],
+  },
+  String,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),{});
+ expect(hsHtml).toContain('Lvl 1–20 (Tele)');expect(hsHtml).toContain('Edgeville Ditch');expect(hsHtml).toContain("Rogue's Castle");
+ expect(hsHtml).toContain('Main · reserved');expect(hsHtml).toContain('Mage Bank (3098, 3955)');expect(hsHtml).not.toContain('Haggis');
 });
 
 test('dashboard skills list matches the 19 skills of 2004 rev 225',()=>{
@@ -2126,14 +2136,30 @@ test('Magic tab renders rev 289 spells, counts casts, and locks missing runes or
  const code=shell.slice(start,end);
  const runeCastsSrc=shell.slice(shell.indexOf('  function runeCasts('),shell.indexOf('  function bestSpell('));
  const spellbookData={spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']},combat:[['Wind Strike',1,2,[['Mind rune',1],["Air rune",1]],null,55],['Fire Wave',75,20,[['Blood rune',1],['Fire rune',7],['Air rune',5]],null,425],['Entangle',79,5,[['Nature rune',4],['Water rune',5],['Earth rune',5]],null,890]]};
- const bot={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:5},{name:'Law rune',count:2},{name:'Blood rune',count:2}]};
+ const bot={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:30},{name:'Cosmic rune',count:4},{name:'Unpowered orb',count:2},{name:'Water rune',count:15},{name:'Earth rune',count:15},{name:'Body rune',count:2},{name:'Soul rune',count:1},{name:'Law rune',count:1},{name:'Blood rune',count:2}]};
  const html=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>80,spellbookData,()=>'');
  expect(html).toContain('spell-icon" title="High Level Alchemy (Magic 55) · alch · ×10"');
  expect(html).toContain('spell-icon" title="Varrock teleport (Magic 25) · teleport · ×1"');
  expect(html).toContain('spell-locked" title="Wind Strike (Magic 1)');
+ expect(html).toContain('spell-icon" title="Confuse (Magic 3)');
+ expect(html).toContain('spell-icon" title="Bind (Magic 20)');
+ expect(html).toContain('spell-icon" title="Charge Air Orb (Magic 66) · charge orb · ×1"');
+ expect(html).toContain("magicon.png');background-position:-180px -20px");
+ expect(html).toContain('spell-enchant-level-1-jewellery.png');
+ expect(html).toContain('spell-enchant-level-5-jewellery.png');
+ expect(html).toContain("magicon.png');background-position:-320px -20px");
+ expect(html).toContain("magicon.png');background-position:-360px -20px");
+ expect(html).toContain('spell-crumble-undead.png');
  expect(html).toContain("magicon.png');background-position:-240px -20px");
- expect(html).toContain("magicoff2.png');background-position:-40px 0px");
+ expect(html).toContain("magicon2.png');background-position:-40px 0px");
+ const lockedHtml=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)({...bot,inventory:[]},String,(f:string)=>f,()=>75,spellbookData,()=>'');
+ expect(lockedHtml).toContain("magicoff2.png');background-position:-40px 0px");
+ expect(lockedHtml).toContain("magicoff.png');background-position:-180px -20px");
  expect(html).not.toContain('spell-fire-wave.png');
+ expect(html).not.toContain('spell-charge-air-orb.png');
+ expect(html).not.toContain('spell-vulnerability.png');
+ expect(html).not.toContain('spell-enfeeble.png');
+ expect(html).not.toContain('spell-stun.png');
  expect(html).not.toContain('spell-entangle.png');
  expect(html).not.toContain('Ice Barrage');
 });
@@ -2278,4 +2304,31 @@ test('Wilderness & PvP HUD displays skull bracket, multiway crossed swords, sa_e
  expect(minimal.pvpHtml).toContain('Overhead: n/r');
  expect(minimal.pvpHtml).toContain('Timers: stun obs · freeze n/r');
  expect(minimal.diagHidden).toBe(true);
+});
+
+test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall edge RAF cleans up on release',()=>{
+ const code=shell.slice(shell.indexOf('  function minimap(){'),shell.indexOf('  // A click on the minimap'));
+ const account={name:'Roamer',pos:{x:3094,z:3525,level:0},target:{x:3094,z:3532,label:'Edgeville bank gate'}};
+ const hits:any[]=[],strokes:string[]=[];
+ const g:any=new Proxy({stroke(){strokes.push(String(g.strokeStyle));}},{get:(o:any,k)=>k in o?o[k]:()=>{}});
+ const canvas={width:146,height:151,getContext:()=>g};
+ const wildOverlay={hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,band:'tele'},{label:'Mage Bank / Arena',x:3098,z:3955,wild:55,band:'deep'}],resolveTarget:(b:any)=>b.target||null};
+ const env:any={
+  S:{bots:[account],roster:[],map:{x0:2900,z0:3500,w:500,h:500,scale:1}},
+  hud:{querySelector:(q:string)=>q.endsWith('canvas')?canvas:null},account:()=>account,
+  mapWorld:()=>({bots:[account],roster:[]}),window:{atlasWildOverlay:wildOverlay},mode:'2d',st:()=>['on'],safeName:String,
+  hl:{wildOverlay:true},clipLine:(x0:number,z0:number,x1:number,z1:number)=>([x0,z0,x1,z1]),
+ };
+ const res=new Function(...Object.keys(env),`let miniView;${code};minimap();return minimap.hits;`)(...Object.values(env));
+ for(const h of res)hits.push(h[2]);
+ expect(hits).toContain('Edgeville Ditch (Wildy 1)');
+ expect(hits).toContain('Target: Edgeville bank gate');
+ expect(strokes).toContain('#86c862');
+ expect(strokes).toContain('#e8a844');
+ expect(strokes).toContain('#e05347');
+ expect(strokes).toContain('#58d5ff');
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('max-width:calc(50vw - 180px)');
+ expect(css).toContain('overflow-x:hidden');
+ expect(shell).toContain('cancelAnimationFrame(d.wait)');
 });

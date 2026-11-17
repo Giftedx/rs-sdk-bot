@@ -371,3 +371,34 @@ test('server diagnostics mark stale leases cleanly and exclude protected main ac
   rmSync(dir,{recursive:true,force:true});
  }
 });
+
+test('Supply bill tab calculates route fulfillment for operators only and stays redacted for spectators',()=>{
+ require('./xp-tracker.js');
+ const atlasXp=(globalThis as any).atlasXp;
+ const stockFn=operations.slice(operations.indexOf(' const stockTabs='),operations.indexOf(' function refreshStock('));
+ const make=(owner:boolean,stockView='bill',billBatches=1,billQuery='')=>{
+  const env:any={
+   stockView,billQuery,billBatches,stockAccount:'',stockQuery:'',stockSort:'quantity',stockLimit:80,
+   isOwner:()=>owner,
+   S:{race:{supplies:[{item:'Dragon bones',itemId:536,count:100},{item:'Shark',itemId:385,count:40}]},scoreboard:{goals:{collection:{missing:[{item:'Super restore(4)',need:10,consumer:'pk'}]}}},economy:{}},
+   window:{atlasXp},
+   bots:()=>[{name:'⟦MAIN⟧',bank:[{id:536,name:'Dragon bones',count:500}]},{name:'Supply1',bank:[{id:536,name:'Dragon bones',count:25},{id:385,name:'Shark',count:40}],inventory:[{id:536,name:'Dragon bones',count:5}]}],
+   page:(s:string)=>s,title:()=>'',E:String,nf:String,gp:String,safeName:(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),age:String,button:()=>'',icon:()=>'',bestInSlot:()=>'',collectionLog:()=>'',transfers:()=>'',
+   moneyKey:()=>'',moneyPrice:()=>null,
+  };
+  return new Function(...Object.keys(env),`${stockFn};return {tabs:stockTabs(),html:stock()};`)(...Object.values(env));
+ };
+ const op=make(true,'bill',2);
+ expect(op.tabs).toContain('data-value="bill"');
+ expect(op.html).toContain('Supply bill');
+ expect(op.html).toContain('bill fulfilled (2× route)');
+ expect(op.html).toContain('30 / 200');
+ expect(op.html).toContain('40 / 80');
+ expect(op.html).toContain('Supply1');
+ expect(op.html).not.toContain('Main · reserved');
+ expect(op.html).not.toContain('Haggis');
+ const pub=make(false,'bill');
+ expect(pub.tabs).not.toContain('data-value="bill"');
+ expect(pub.html).toContain('operator view only');
+ expect(pub.html).not.toContain('Dragon bones');
+});

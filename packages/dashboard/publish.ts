@@ -196,6 +196,64 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
 }
 
 let lastSitePush=0,lastPublic='',lastControl='',coldSince=0;
+export type BundleAudit={ok:boolean;checkedFiles:number;checkedAssets:number;missing:string[];leaks:string[]};
+const STATIC_TEXT_EXT=/\.(html|css|js)$/i;
+const ASSET_PREFIX_PLACEHOLDERS=new Set(['rl-','skill-','spell-','prayer-']);
+
+export function verifyStaticBundle(dir:string,secretAccount=MAIN_ACCOUNT,options:{allowDevFiles?:boolean}={}):BundleAudit{
+ const missing:string[]=[],leaks:string[]=[],assets=new Set<string>();
+ let checkedFiles=0;
+ const checkFile=(rel:string,source:string)=>{
+  const clean=rel.split(/[?#]/)[0]!.replace(/^\/+/,'');
+  if(!clean||clean.startsWith('http://')||clean.startsWith('https://'))return;
+  const tail=clean.split('/').pop()||'';
+  if(ASSET_PREFIX_PLACEHOLDERS.has(tail)||clean.endsWith('item-sources.json.'))return;
+  if(!existsSync(join(dir,clean)))missing.push(`${source} -> ${clean}`);
+  assets.add(clean);
+ };
+ const walk=(sub:string)=>{
+  const full=join(dir,sub);
+  if(!existsSync(full))return;
+  for(const ent of readdirSync(full,{withFileTypes:true})){
+   const rel=sub?`${sub}/${ent.name}`:ent.name;
+   if(ent.isDirectory()){if(ent.name!=='.git'&&ent.name!=='map-squares'&&ent.name!=='tools')walk(rel);continue;}
+   const skipDevJson=options.allowDevFiles===true&&rel==='haggis-plan.json';
+   if((rel==='public.json'||rel.endsWith('.json'))&&rel!=='client-assets/npcs.json'&&!skipDevJson){
+    const raw=readFileSync(join(dir,rel),'utf8');
+    if(secretAccount&&new RegExp(`\\b${secretAccount.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`,'i').test(raw))leaks.push(rel);
+   }
+   if(!STATIC_TEXT_EXT.test(ent.name))continue;
+   checkedFiles++;
+   const text=readFileSync(join(dir,rel),'utf8');
+   if(secretAccount&&(rel==='index.html'||rel==='client-shell.js'||rel==='operations.js'||rel==='xp-tracker.js')){
+    if(new RegExp(`\\b${secretAccount.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`,'i').test(text))leaks.push(rel);
+   }
+   for(const m of text.matchAll(/['"(](?:\/?client-assets\/([a-zA-Z0-9_.-]+))/g)){
+    const tail=m[1]!;
+    if(!ASSET_PREFIX_PLACEHOLDERS.has(tail)&&!tail.endsWith('.'))checkFile(`client-assets/${tail}`,rel);
+   }
+   for(const m of text.matchAll(/(?:href|src)=["'](\/[a-zA-Z0-9_.-]+\.(?:css|js|png|json))(?:\?[^"']*)?["']/g))checkFile(m[1]!,rel);
+   for(const m of text.matchAll(/url\(["']?(\/[a-zA-Z0-9_.-]+\.(?:png|ttf|css))(?:\?[^"']*)?["']?\)/g))checkFile(m[1]!,rel);
+  }
+ };
+ walk('');
+ if(existsSync(join(dir,'client-shell.js'))&&existsSync(join(dir,'client-assets/spellbook.json'))){
+  const shell=readFileSync(join(dir,'client-shell.js'),'utf8');
+  const sb=JSON.parse(readFileSync(join(dir,'client-assets/spellbook.json'),'utf8'));
+  const utilMatch=shell.match(/const util=\[([\s\S]*?)\]\.map\(/);
+  const util:string[]=utilMatch?(Function(`return [${utilMatch[1]}]`)() as any[]).map((x:any)=>String(x[0])):[];
+  const slug=(n:string)=>n.toLowerCase().replace(/\blvl-(\d+)\b/g,'level-$1').replace(/\bjewelry\b/g,'jewellery').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const spriteOnly=new Set(['charge-air-orb','fire-wave','vulnerability','enfeeble','stun']);
+  for(const sp of [...(sb.combat||[]).map((x:any)=>x[0]),...util,...(sb.spells||[]).map((x:any)=>x[0])]){
+   const s=slug(sp);
+   if(spriteOnly.has(s)){checkFile('client-assets/magicon.png','spell:'+sp);checkFile('client-assets/magicoff.png','spell:'+sp);}
+   else if(s==='entangle'){checkFile('client-assets/magicon2.png','spell:'+sp);checkFile('client-assets/magicoff2.png','spell:'+sp);}
+   else checkFile(`client-assets/spell-${s}.png`,'spell:'+sp);
+  }
+ }
+ return {ok:missing.length===0&&leaks.length===0,checkedFiles,checkedAssets:assets.size,missing:[...new Set(missing)],leaks:[...new Set(leaks)]};
+}
+
 async function cycle(){
  const now=Date.now();
  let {state,meta,map}=await collect();

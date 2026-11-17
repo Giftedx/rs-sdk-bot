@@ -95,3 +95,54 @@ test('tick efficiency counts each kind of tick and names the biggest waste',()=>
  expect(xp.efficiency('')).toBeNull();expect(xp.efficiency(undefined)).toBeNull();
  expect(xp.efficiency('xxxx').waste).toBeNull();
 });
+
+test('rev 289 EHP rates and session/remaining calculations exclude post-2004 skills and adapt to server tickMs', () => {
+ expect(Object.keys(xp.EHP_XP_PER_TICK)).toHaveLength(19);
+ expect(xp.ehpRate('Slayer')).toBeNull();
+ expect(xp.ehpRate('Hunter')).toBeNull();
+ expect(xp.ehpRate('Overall')).toBeNull();
+ expect(xp.ehpRate('Mining', 400)).toBeCloseTo(97 * 9000, 2);
+ expect(xp.ehpRate('Mining', 600)).toBeCloseTo(97 * 6000, 2);
+ expect(xp.ehpHours('Agility', 196 * 9000, 400)).toBeCloseTo(1, 5);
+ const rem = xp.remainingEhp('Mining', 0, 99, 400);
+ expect(rem.xpLeft).toBe(xp.xpForLevel(99));
+ expect(rem.ehpHours).toBeCloseTo(xp.xpForLevel(99) / (97 * 9000), 5);
+ const sess = xp.sessionEhp([
+  { skill: 'Mining', gained: 97 * 4500, rate: 97 * 9000 },
+  { skill: 'Woodcutting', gained: 3759.6 * 2250, rate: 3759.6 * 4500 },
+ ], 400);
+ expect(sess.gainedEhp).toBeCloseTo(0.75, 4);
+ expect(sess.ehpPerHour).toBeCloseTo(1.5, 4);
+});
+
+test('supplyBillProgress tracks fleet stock fulfillment against route bills while hiding secret and unverified accounts', () => {
+ const supplies = [
+  { item: 'Dragon bones', itemId: 536, count: 100 },
+  { item: 'Shark', itemId: 385, count: 50 },
+ ];
+ const bots = [
+  { name: 'Haggis', bank: [{ id: 536, name: 'Dragon bones', count: 500 }], inventory: [] },
+  { name: 'HelperA', bank: [{ id: 537, baseId: 536, name: 'Dragon bones', count: 40 }, { id: 385, name: 'Shark', count: 50 }], inventory: [{ id: 536, name: 'Dragon bones', count: 10 }] },
+  { name: 'HelperB', equipmentObserved: false, equipment: [{ id: 536, name: 'Dragon bones', count: 5 }], inventory: [], bank: [] },
+  { name: 'TestLab', practice: true, bank: [{ id: 536, name: 'Dragon bones', count: 999 }], inventory: [] },
+ ];
+ const b1 = xp.supplyBillProgress(supplies, bots, { batches: 1, secretName: 'Haggis' });
+ expect(b1.batches).toBe(1);
+ expect(b1.fulfilledCount).toBe(1);
+ expect(b1.shortageCount).toBe(1);
+ expect(b1.items.map((x: any) => [x.item, x.need, x.have, x.short])).toEqual([
+  ['Dragon bones', 100, 50, 50],
+  ['Shark', 50, 50, 0],
+ ]);
+ const bill = xp.supplyBillProgress(supplies, bots, { batches: 2, secretName: 'Haggis' });
+ expect(bill.batches).toBe(2);
+ expect(bill.fulfilledCount).toBe(0);
+ expect(bill.shortageCount).toBe(2);
+ expect(bill.items.map((x: any) => [x.item, x.need, x.have, x.short])).toEqual([
+  ['Dragon bones', 200, 50, 150],
+  ['Shark', 100, 50, 50],
+ ]);
+ expect(bill.completionPct).toBeCloseTo((50 + 50) * 100 / 300, 3);
+ expect(JSON.stringify(bill)).not.toContain('Haggis');
+ expect(JSON.stringify(bill)).not.toContain('TestLab');
+});
