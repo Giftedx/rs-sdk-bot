@@ -17,6 +17,7 @@
  function page(html){return '<div class="op-page">'+html+'</div>';}
  function operations(){
   const c=S?.coordination||{},all=bots(),playing=all.filter(b=>b.operation==='observed').length,attention=issues(),cap=S?.capacity,board=S?.scoreboard,sides=S?.fleetSides?.sides||[],late=sides.filter(x=>x.late);
+  const wild=S?.wilderness||[],wildRivals=wild.filter(x=>!x.fleet).length,wildOurs=wild.filter(x=>x.fleet).length;
   // The fleet agent and the autopilot. Down: nothing runs it and no owner stop file explains that. The watchdog starts it again.
   const ctl=meta?.controllers||[],down=ctl.filter(x=>x.state==='down');
   const kpi=(n,label,small,op,value,bad)=>'<button class="op-kpi'+(bad?' op-kpi-bad':'')+'" data-op="'+op+'" data-value="'+E(value)+'"><b>'+E(n)+'</b><span>'+E(label)+'</span><small>'+E(small)+'</small></button>';
@@ -25,6 +26,7 @@
    '<div class="op-kpis">'+
    kpi(playing,'accounts playing',all.filter(b=>b.inWorld).length+' in the world feed','fleet-open','working')+
    kpi(attention.length,'accounts need attention','stopped, failed or stale','fleet-open','attention',attention.length>0)+
+   kpi(wild.length,'in Wilderness',wildRivals+' rival'+(wildRivals===1?'':'s')+' · '+wildOurs+' ours','open','world',wildRivals>0)+
    kpi(c.counts?.running??'—','jobs marked running',(c.counts?.pending??'—')+' waiting · queue '+(c.fresh?'fresh':'stale'),'jobs-open','running',c.available&&!c.fresh)+
    kpi(c.counts?.failed??'—','failed jobs','retained in the queue','jobs-open','failed')+
    kpi(cap?.headroomGB!=null?cap.headroomGB.toFixed(1):'—','GiB RAM headroom',(cap?.active??'—')+' / '+(cap?.cap??'—')+' bots · '+(cap?.freeGB!=null?cap.freeGB.toFixed(1):'—')+' GiB free','open','machine',cap?.headroomGB<0)+

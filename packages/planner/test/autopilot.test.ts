@@ -2450,3 +2450,16 @@ test('remote shortage preparation spends a remote cash donor once and retains it
     expect(out.find(x=>x.fund)!.fund).toMatchObject({from:'CloudCash',coins:15000});
     expect(plan(inputs(accounts,{...extra,stock:[{name:'CloudCash',side:'local',items:{coin:64999}},extra.stock![1]!]})).some(x=>!!x.fund)).toBe(false);
 });
+
+test('plan stays fast with an expanded army roster, pilot allowlist and full supply bill',()=>{
+    const templates=catalogue(),pilots=new Set(templates.filter(t=>t.pilot&&t.id!=='aio-ore').map(t=>t.id));
+    const spots=[{x:2582,z:3297,level:0},{x:3185,z:3436,level:0},{x:2653,z:3300,level:0},{x:3269,z:3166,level:0}];
+    const accounts=Array.from({length:28},(_,i)=>({...acct(`Helper${i}`,{Thieving:70,Cooking:50,Crafting:50,Smithing:70,Woodcutting:60,Magic:30},{coin:100_000,flax:56,'yew logs':20}),pos:spots[i%4]}));
+    const army=new Set(accounts.map(a=>a.name.toLowerCase()));
+    const names=['sapphire ring','emerald ring','ruby ring','diamond ring','mithril bar','adamantite bar','yew shortbow','uncooked stew','unicorn horn dust','dragon scale dust'];
+    const bill=Array.from({length:30},(_,i)=>row(names[i%10]!,50));
+    const started=performance.now();
+    const out=plan(inputs(accounts,{templates,pilots,army,bill,capacity:CAPACITY,prices:{...prices,'bow string':200,'yew shortbow':800,flax:50,'mithril bar':500},donors:accounts.map(a=>({name:a.name,coins:100_000}))}));
+    expect(performance.now()-started).toBeLessThan(5000);
+    expect(out.filter(x=>x.template).length).toBeGreaterThan(0);
+});
