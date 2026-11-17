@@ -37,7 +37,7 @@ for (const f of readdirSync(join(root, 'maps')).filter(f => f.endsWith('.jm2')).
     locSpawns.push(...r.locs);
 }
 const npcs = buildNpcs(blocksOf('.npc'), pack('npc'), npcSpawns);
-const shops = buildShops(blocksOf('.inv'));
+const shops = buildShops(blocksOf('.inv').filter(b => !b.file.endsWith('/skill_guide.inv') && !b.file.includes('/skill_crafting/') && !b.file.includes('/skill_smithing/')));
 
 const handlers: Handler[] = [];
 const skipped: { locName: string; handler: string }[] = [];
@@ -104,8 +104,13 @@ for (const s of scriptFiles.filter(s => s.file.startsWith('scripts/quests/'))) {
     questScripts.set(k, [...(questScripts.get(k) ?? []), s]);
 }
 const questFile = 'scripts/general/configs/quest.constant';
+const questConstants = parseConstants(read(questFile), questFile);
+for (const cf of listConfigFiles('.constant')) {
+    if (cf === questFile) continue;
+    for (const [k, v] of parseConstants(read(cf), cf)) if (!questConstants.has(k)) questConstants.set(k, v);
+}
 const procFile = 'scripts/general/scripts/quests.rs2';
-const quests = buildQuests({ constants: parseConstants(read(questFile), questFile), proc: { text: read(procFile), file: procFile }, varpFolders: questVarpFolders, folderScripts: questScripts });
+const quests = buildQuests({ constants: questConstants, proc: { text: read(procFile), file: procFile }, varpFolders: questVarpFolders, folderScripts: questScripts });
 const drops = scriptFiles.flatMap(s => parseDrops(s.text, s.file));
 // Items a roll on a shared drop proc (~randomherb, ~randomjewel, ~ultrarare_getitem, then ~megararetable) can give.
 const dropProcs = new Map(scriptFiles.flatMap(s => [...parseDropProcs(s.text, s.file)]));
@@ -177,7 +182,7 @@ writeFileSync(join(out, 'BUILD.md'), [
     '- `doors.json`: wall-layer locs with an Open option, classified from their trigger. About 1459 of the `locked` doors are `macro_maze_wallhigh` walls in the sealed random-event maze (random events are off on this server). `unknown` means the trigger shape was not understood; the router treats those as blocked.',
     '',
     '- `skills.json`: one row per skill action from the skill dbtables; `xp` is whole XP (content stores tenths). Smithing XP lives in structs and is `null` for now.',
-    '- `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete. The live Quest Points #1 has 141 QP; this build finds fewer (see questLinesSkipped).',
+    '- `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete across all 68 quests.',
     '- `drops.json`: ai_queue3 tables and shared `label:` tables. Chances are per kill out of the roll die. Tables with two rolls are known to sum over 1.',
     '',
     '## Skipped quest lines (condition form not understood)',

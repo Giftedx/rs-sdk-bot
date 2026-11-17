@@ -36,6 +36,18 @@ function blocks(text: string): { line: number; text: string }[][] {
 }
 
 const COND = /^%(\w+)\s*(?:=|>=)\s*\^(\w+)$/;
+const BIT_COND = /^testbit\(%(\w+),\s*\^(\w+)\)\s*=\s*\^true$/;
+const COG_COND = /^~get_cog_progress\s*=\s*\^(\w+)$/;
+
+function parseClause(clause: string): { varp: string; completeName: string; bit: boolean } | null {
+    const c = clause.match(COND);
+    if (c) return { varp: c[1]!, completeName: c[2]!, bit: false };
+    const b = clause.match(BIT_COND);
+    if (b) return { varp: b[1]!, completeName: b[2]!, bit: true };
+    const g = clause.match(COG_COND);
+    if (g) return { varp: 'cogquest', completeName: g[1]!, bit: false };
+    return null;
+}
 
 export function buildQuests(input: {
     constants: Map<string, { value: number; src: string }>;
@@ -50,30 +62,57 @@ export function buildQuests(input: {
         const qp = lines[i + 1]?.match(/add\(\$questpoints, \^(\w+)\)/);
         if (!qp) return; // not a quest-point line (random rolls, recount checks, ...)
         const inner = l.match(/^if \((.*)\) \{$/)?.[1];
-        const conds = inner?.split('|').map(c => c.trim().match(COND));
+        const conds = inner?.split('|').map(c => parseClause(c.trim()));
         const points = input.constants.get(qp[1]!);
         if (!conds || conds.some(c => !c) || !points) { skipped.push({ line: `${input.proc.file}:${i + 1}`, text: l }); return; }
-        const [first, ...rest] = conds as RegExpMatchArray[];
-        const complete = input.constants.get(first![2]!);
+        const [first, ...rest] = conds as { varp: string; completeName: string; bit: boolean }[];
+        const complete = input.constants.get(first.completeName);
         if (!complete) { skipped.push({ line: `${input.proc.file}:${i + 1}`, text: l }); return; }
-        const varp = first![1]!;
-        const folder = input.varpFolders.get(varp) ?? null;
-        // Completion is set directly (`%varp = ^x_complete`) or through a setter proc that takes the complete
-        // constant (`~quest_vampire_set_progress(^vampire_complete)`, quest_vampire.rs2:41-43).
-        const c = first![2]!;
-        const setsComplete = new RegExp(`%${varp}\\s*=\\s*\\^${c}\\b|~\\w+\\(\\s*\\^${c}\\s*\\)`);
+        const varp = first.varp;
+        const c = first.completeName;
+        const stem = varp.replace(/(?:_quest|quest)$/, '');
+        const setsComplete = new RegExp(
+            `%${varp}\\s*=\\s*\\^${c}\\b|~\\w+\\(\\s*\\^${c}\\s*\\)|~cog_update_main_quest_step\\(\\s*\\^${c}\\s*\\)|setbit\\(\\s*%${varp}\\s*,\\s*\\^${c}\\s*\\)`,
+        );
+        const queueComplete = new RegExp(`~send_quest_complete2?\\(\\s*questlist:(?:${varp}|${stem})\\b`);
+        let folder = input.varpFolders.get(varp) ?? null;
+        if (!folder) {
+            for (const [candidate, files] of input.folderScripts) {
+                if (files.some(f => setsComplete.test(f.text))) { folder = candidate; break; }
+            }
+        }
+        if (!folder) {
+            for (const [candidate, files] of input.folderScripts) {
+                if (files.some(f => queueComplete.test(f.text))) { folder = candidate; break; }
+            }
+        }
+        // Completion is set directly (`%varp = ^x_complete`), via bitfield (`setbit`), or via a setter/complete queue.
         const xp: Quest['xp'] = [];
-        for (const f of folder ? input.folderScripts.get(folder) ?? [] : []) {
+        const folderFiles = folder ? input.folderScripts.get(folder) ?? [] : [];
+        const addBlockXp = (b: { line: number; text: string }[], file: string) => {
+            for (const x of b) for (const a of x.text.matchAll(/stat_advance\((\w+),\s*(\d+)\)/g)) {
+                xp.push({ skill: a[1]!, xp: Number(a[2]) / 10, src: `${file}:${x.line}` });
+            }
+        };
+        for (const f of folderFiles) {
             for (const b of blocks(f.text)) {
-                if (!b.some(x => setsComplete.test(x.text))) continue;
-                for (const x of b) for (const a of x.text.matchAll(/stat_advance\((\w+),\s*(\d+)\)/g)) xp.push({ skill: a[1]!, xp: Number(a[2]) / 10, src: `${f.file}:${x.line}` });
+                if (b.some(x => setsComplete.test(x.text))) addBlockXp(b, f.file);
+            }
+        }
+        if (xp.length === 0) {
+            for (const f of folderFiles) {
+                for (const b of blocks(f.text)) {
+                    if (/^\[queue,[^\]]+\]/.test(b[0]?.text ?? '') && b.some(x => queueComplete.test(x.text))) {
+                        addBlockXp(b, f.file);
+                    }
+                }
             }
         }
         quests.push({
             varp,
-            ...(rest.length ? { alternatives: rest.map(c => c![1]!) } : {}),
+            ...(rest.length ? { alternatives: rest.map(x => x.varp) } : {}),
             folder,
-            complete: complete.value,
+            complete: first.bit ? (1 << complete.value) : complete.value,
             questPoints: points.value,
             xp,
             src: `${input.proc.file}:${i + 1}`,

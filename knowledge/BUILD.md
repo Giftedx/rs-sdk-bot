@@ -10,8 +10,8 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - certsExcluded: 1333
 - npcs: 1597
 - npcSpawns: 8142
-- shops: 206
-- shopStockLines: 1696
+- shops: 126
+- shopStockLines: 1120
 - transportHandlers: 86
 - transportEdges: 981
 - transportPhysicalEdges: 979
@@ -25,10 +25,10 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - unmatchedAngles: 0
 - dbTables: 29
 - skillActions: 370
-- quests: 64
-- questPoints: 138
-- questLinesSkipped: 4
-- dropTables: 258
+- quests: 68
+- questPoints: 145
+- questLinesSkipped: 0
+- dropTables: 257
 - pickablePlants: 2080
 - doors: 2718
 - doors_open: 984
@@ -50,15 +50,12 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - `doors.json`: wall-layer locs with an Open option, classified from their trigger. About 1459 of the `locked` doors are `macro_maze_wallhigh` walls in the sealed random-event maze (random events are off on this server). `unknown` means the trigger shape was not understood; the router treats those as blocked.
 
 - `skills.json`: one row per skill action from the skill dbtables; `xp` is whole XP (content stores tenths). Smithing XP lives in structs and is `null` for now.
-- `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete. The live Quest Points #1 has 141 QP; this build finds fewer (see questLinesSkipped).
+- `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete across all 68 quests.
 - `drops.json`: ai_queue3 tables and shared `label:` tables. Chances are per kill out of the roll die. Tables with two rolls are known to sum over 1.
 
 ## Skipped quest lines (condition form not understood)
 
-- scripts/general/scripts/quests.rs2:227: `if (~get_cog_progress = ^quest_cog_complete) {`
-- scripts/general/scripts/quests.rs2:257: `if (testbit(%elemental_workshop_bits, ^elemental_workshop_complete) = ^true) {`
-- scripts/general/scripts/quests.rs2:272: `if (%troll_love = ^troll_love_complete) {`
-- scripts/general/scripts/quests.rs2:293: `if (%mm_main >= ^mm_complete) {`
+- none
 
 ## Skipped transport handlers (shape not understood, not guessed)
 

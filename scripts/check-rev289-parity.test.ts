@@ -1,7 +1,10 @@
 import { expect, test } from 'bun:test';
-import { resolve } from 'node:path';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import {
     checkAllRev289Parity,
+    checkCoreAndKnowledgeCodeParity,
     checkDashboardAssetsParity,
     checkKnowledgeParity,
     checkPlannerRouterPracticeParity,
@@ -12,6 +15,7 @@ import {
     checkSpellsList,
     findScriptParityIssues,
     loadRev289Baseline,
+    runRev289Parity,
     validateItemIds,
 } from './check-rev289-parity';
 
@@ -41,10 +45,37 @@ test('packages/dashboard/client-assets/ passes strict Rev 289 parity', () => {
     expect(checkDashboardAssetsParity(repoRoot, baseline)).toEqual([]);
 }, 20_000);
 
-test('owned scripts/, planner, router, and practice pass strict Rev 289 parity', () => {
+test('owned scripts/, core, knowledge code, planner, router, and practice pass strict Rev 289 parity', () => {
     expect(checkScriptsParity(repoRoot, baseline, { includeCrossWorker: false })).toEqual([]);
+    expect(checkCoreAndKnowledgeCodeParity(repoRoot, baseline)).toEqual([]);
     expect(checkPlannerRouterPracticeParity(repoRoot, baseline)).toEqual([]);
     expect(checkAllRev289Parity(repoRoot, { includeCrossWorker: false })).toEqual([]);
+}, 20_000);
+
+test('--strict mode fails on cross-worker holes and passes with zero errors and zero warnings once cleared', () => {
+    const strictWithOpen = runRev289Parity({ repoRoot, strict: true });
+    expect(strictWithOpen.ownedIssues).toEqual([]);
+    expect(strictWithOpen.crossIssues.length).toBeGreaterThan(0);
+    expect(strictWithOpen.passed).toBe(false);
+
+    // Simulate post-merge repo state with no cross-worker exclusions on a clean temp root sharing content/knowledge.
+    const tmp = mkdtempSync(join(tmpdir(), 'rev289-strict-'));
+    try {
+        mkdirSync(join(tmp, 'scripts'), { recursive: true });
+        writeFileSync(join(tmp, 'scripts', 'clean.ts'), `const SHARK = { id: 385, count: 1 };\nexport const XP = Math.pow(2, 10 / 10);\n`);
+        const ownedOnly = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
+        expect(ownedOnly).toEqual([]);
+
+        writeFileSync(join(tmp, 'scripts', 'gather-essence.ts'), `const PURE_ESSENCE = 7936;\n`);
+        const flaggedWhenCleared = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
+        expect(flaggedWhenCleared.map(i => i.scope)).toEqual(['scripts']);
+
+        writeFileSync(join(tmp, 'scripts', 'gather-essence.ts'), `const RUNE_ESSENCE = { id: 1436, count: 28 };\n`);
+        const cleanAfterFix = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
+        expect(cleanAfterFix).toEqual([]);
+    } finally {
+        rmSync(tmp, { recursive: true, force: true });
+    }
 }, 20_000);
 
 test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS quest leaks while preserving native Market/GE', () => {
@@ -89,4 +120,8 @@ test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS ques
 
     // Explicitly detects post-289 bank-sort keywords in microbot-bank-sort.ts.
     expect(findScriptParityIssues('scripts/microbot-bank-sort.ts', `const p = ['chestplate'];`, baseline).length).toBe(1);
+
+    // Catches structured item/npc/loc IDs, OSRS 2^(L/7) XP curves, and Wave 3B banned phrases (e.g. 75-Def dragonfire shield, salve (e)).
+    expect(findScriptParityIssues('scripts/bad-dfs.ts', `const shield = [/^dragonfire shield$/i, 75];\nconst ammy = 'salve amulet (e)';\nconst x = { id: 11283, count: 1 };\nconst npc = { npcId: 9999 };\nconst loc = { locId: 9999 };\nconst xp = Math.pow(2, level / 7);\n`, baseline).length).toBe(6);
+    expect(findScriptParityIssues('packages/core/src/ok.ts', `const anti = { id: 1540, count: 1, name: 'dragonfire shield' };\nconst salve = { id: 4081, count: 1, name: 'salve amulet' };\nconst fl = 2 ** (level / 10);\nconst absent = ['Lunar Isle', 'Port Phasmatys'];\n`, baseline, 'core')).toEqual([]);
 });
