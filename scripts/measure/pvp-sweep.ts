@@ -21,6 +21,12 @@ const DEFAULT_MS = 90_000;
 export const QUICK_CASES = ['extra:spar-rivals-tribrid-snare-sara-x12', 'extra:spar-escape-tribrid-snare-sara-x8', 'extra:army-route-spear-x5',
     'extra:roam-pick', 'extra:hunt-pick', 'extra:team-2v2-multi-x4', 'extra:gang-ganker-x4'] as const;
 export const quickPattern = () => new RegExp(`^(pvp:.*|${QUICK_CASES.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`);
+export function sweepPattern(argv: readonly string[]): RegExp {
+    if (argv.includes('--quick')) return quickPattern();
+    const valueFlags = new Set(['--parallel', '--budget', '--seed', '--batch']);
+    const pattern = argv.find((a, i) => !a.startsWith('--') && (i === 0 || !valueFlags.has(argv[i - 1]!)));
+    return new RegExp(pattern ?? '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))');
+}
 
 // Longest first onto the least loaded engine; a batch closes when its busiest engine would pass the budget.
 export function packBatches(cases: readonly { key: string; ms: number }[], engines: number, budgetMs: number): string[][] {
@@ -38,11 +44,12 @@ export function packBatches(cases: readonly { key: string; ms: number }[], engin
 
 if (import.meta.main) {
     const argv = process.argv.slice(2), value = (k: string) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
-    const pattern = argv.includes('--quick') ? quickPattern() : new RegExp(argv.find(a => !a.startsWith('--') && !/^\d+$/.test(a)) ?? '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))');
+    const pattern = sweepPattern(argv);
     const engines = Number(value('--parallel') ?? 6), budgetMs = Number(value('--budget') ?? 3.5) * 60_000, seed = value('--seed');
     mkdirSync(dir, { recursive: true });
     const times: Record<string, number> = existsSync(timesFile) ? JSON.parse(readFileSync(timesFile, 'utf8')) : {};
     const keys = benchCases().filter(c => pattern.test(c.key) && !c.known).map(c => c.key);
+    if (!keys.length) { console.log(`PVP_SWEEP no runnable cases match ${pattern}`); process.exit(2); }
     // A case's own time leaves out its engine start and the load of the other engines: `_scale` (actual batch time over
     // its estimate, from the last batch; 1.4 at first) turns the case times into batch time.
     let scale = times._scale ?? 1.4;

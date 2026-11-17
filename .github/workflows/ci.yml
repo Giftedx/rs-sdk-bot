@@ -44,7 +44,8 @@ jobs:
       - name: Pack the public game assets
         timeout-minutes: 10
         working-directory: vendor/rs-sdk/server/engine
-        run: bun run build
+        run: |
+          bun run build
       - name: Bind the proof to its source
         run: |
           mkdir -p .practice/pvp-sweep
@@ -55,12 +56,18 @@ jobs:
         run: |
           set -o pipefail
           bun scripts/measure/pvp-sweep.ts --parallel 4 --budget 3.5 | tee .practice/pvp-sweep/full.log
-      - name: Run the AIO smoke set
+      - name: Run the first AIO smoke group
         if: ${{ !cancelled() }}
         timeout-minutes: 10
         run: |
           set -o pipefail
-          bun run bench --smoke --parallel 4 --budget 10 | tee .practice/pvp-sweep/smoke.log
+          bun run bench '^quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$' --smoke --parallel 1 --budget 10 | tee .practice/pvp-sweep/smoke-a.log
+      - name: Run the second AIO smoke group
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          bun run bench '^(?!quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$)' --smoke --parallel 1 --budget 10 | tee .practice/pvp-sweep/smoke-b.log
       - name: Retain the source-bound PvP evidence
         if: always()
         uses: actions/upload-artifact@v4

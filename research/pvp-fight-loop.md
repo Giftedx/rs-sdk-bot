@@ -16,8 +16,8 @@ cover food with a flick, a chase, a positioning step and a combat-style change.
 A fleeing fighter at Wilderness level 30 or below eats one food when its full pack prevents removal of its charged
 glory, including at full health. It reads the next inventory before removing the glory. With no food it retains the
 walking fallback. The native case starts at full health with 28 occupied pack slots and a worn glory(4), then checks
-one shark debit, one glory charge, retained kit, the same life and the Edgeville landing. Seeds 7, 8 and 9 pass in
-8, 7 and 9 ticks. Evidence: `.practice/pvp-escape/escape-native-green.log` and the seed reports in
+one shark debit, one glory charge, retained kit, the same life and the Edgeville landing. Seeds 7, 8 and 9 pass.
+Evidence: `.practice/pvp-escape/escape-final-source.log` and the seed reports in
 `.practice/aio-bench/`. Gap: this proves the escape on practice with an idle player nearby, not survival under a live attack.
 
 The finite live consumer is a 900-tick hunter trip through `aio-pvp.ts hunt` after the owning controller qualifies
