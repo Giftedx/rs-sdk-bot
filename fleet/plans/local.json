@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794931621520,
+ "at": 1794931706864,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -197,19 +197,20 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "45",
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "60",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-strength-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -228,7 +229,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
    },
    "enabled": true,
    "standing": true,
@@ -280,7 +282,8 @@
     "AMMO": "100",
     "MAX_TRIPS": "50",
     "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000"
+    "MAX_SPEND": "4000",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -365,24 +368,20 @@
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/chain.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
+    "99",
+    "5000"
    ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":500}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
-   "role": "supply",
-   "template": "army-fire-aubury",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
    "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
+   "resources": []
   },
   {
    "account": "YewFirst",
@@ -391,9 +390,7 @@
     "21",
     "1500"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":21}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -479,8 +476,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
