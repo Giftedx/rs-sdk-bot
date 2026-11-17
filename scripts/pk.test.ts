@@ -739,8 +739,60 @@ test('pickFakieWeapon and dragon spear spotanim 254 trigger stunShare overlap an
         spec: defaultSpec({ melee: [1231] }), stunShare, burstOnStun: true, specReserve: 500, cap: 2, log: () => {},
     });
     expect(res.specs).toBe(1);
-    expect(stunShare.stunnedUntil).toBeGreaterThanOrEqual(16);
+    expect(stunShare.stunnedUntil).toBeGreaterThanOrEqual(15);
     expect(actions.some(a => a.startsWith('click:7562@'))).toBe(true);
+});
+
+test('stunSpec fires secondary dragon spear spec right on stunShare overlap tick (until - 1) while target is still stunned', async () => {
+    let tick = 10;
+    const actions: string[] = [];
+    const enemyEntity = { headicons: 0, appearance: new Uint16Array(12), health: 90, totalHealth: 99, spotanimId: -1 };
+    const stunShare = { clock: () => tick, until: 15, stunnedUntil: 15, overlap: 1 };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 1, id: 1249, name: 'Dragon spear', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        ],
+        equipment: [{ slot: 3, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        name: 'SpearChainer',
+        client: { var: { 300: 1000, 301: 0, 172: 1 }, players: [null, enemyEntity] },
+        tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                if (tick === 11) enemyEntity.spotanimId = STUNNED_SHOVE_SPOTANIM;
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => {
+                actions.push(`use:${slot}:${op}@${tick}`);
+                if (slot === 1) state.equipment = [{ slot: 3, id: 1249, name: 'Dragon spear', count: 1, optionsWithIndex: [] }];
+            },
+            sendClickComponent: (id: number) => { actions.push(`click:${id}@${tick}`); },
+            sendInteractPlayer: (idx: number, op: number) => { actions.push(`attack:${idx}:${op}@${tick}`); },
+            sendTogglePrayer: () => {},
+        },
+    };
+    const kit = { melee: [1231, 1249] };
+    // Start at tick 11 (first attack), then melee delay 4 -> nextAttack at tick 15? Start with tick skipping to 14 on tick 14: wait melee rate 4 from 11 puts nextAttack at 15, right on until! Actually verify with stunShare.until = 15, attack at tick 14: set tick = 13 before first tick so tick 14 is first attack tick (`until - 1`, while `stunnedUntil` 15 is STILL active!).
+    tick = 13;
+    const res = await fightPlayer(session, 'Dummy', {
+        kit, rotation: ['melee'], freeze: false, prayerFlick: false,
+        spec: defaultSpec(kit), stunSpec: defaultStunSpec(kit), stunShare, burstOnStun: true, cap: 2, log: () => {},
+    });
+    expect(res.specs).toBe(1);
+    expect(actions).toContain('use:1:2@14'); // equipped dragon spear on exact overlap tick (until - 1 = 14)
+    expect(stunShare.until).toBe(20); // extended cleanly from 15 + 5 = 20 with zero gap
 });
 
 test('fightPlayer performs 1-tick fakie switch on cooldown, stepUnderFrozen onto frozen melee foe, and zeroDrainFlick', async () => {

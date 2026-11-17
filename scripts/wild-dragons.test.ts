@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { DRAGONFIRE_SHIELD_ID, GREEN_DRAGON_ID, GREEN_DRAGON_SPOT, selectGreenDragon, wildDragonEscapeAction, wildDragonPreflight, wildDragonRetreatReason, wildDragonThreat } from './wild-dragons';
+import { DRAGONFIRE_SHIELD_ID, GREEN_DRAGON_ID, GREEN_DRAGON_SPOT, SAFE_SOUTH_TILE, selectGreenDragon, wildDragonEscapeAction, wildDragonEscapeKeep, wildDragonPreflight, wildDragonRetreatReason, wildDragonThreat } from './wild-dragons';
 import { ITEMS, wildernessLevel } from './pk';
 
 const baseState = (over: Partial<any> = {}): any => ({
@@ -40,6 +40,7 @@ test('wildDragonRetreatReason triggers on PKer threat, low HP, full pack, or mis
 });
 
 test('wildDragonEscapeAction runs south above level 30, uses glory below 30, and Varrock Teleport below 20', () => {
+    expect(wildernessLevel(SAFE_SOUTH_TILE.z)).toBe(0);
     const withGlory = baseState({ inventory: [{ id: ITEMS.glory[0], count: 1, slot: 0 }] });
     expect(wildDragonEscapeAction(withGlory).kind).toBe('run');
     expect(wildDragonEscapeAction({ ...withGlory, player: { ...withGlory.player, worldZ: 3750 } }).kind).toBe('glory');
@@ -49,6 +50,13 @@ test('wildDragonEscapeAction runs south above level 30, uses glory below 30, and
         inventory: [{ id: ITEMS.lawRune, name: 'Law rune', count: 1, slot: 0 }, { id: ITEMS.airRune, name: 'Air rune', count: 3, slot: 1 }, { id: ITEMS.fireRune, name: 'Fire rune', count: 1, slot: 2 }],
     });
     expect(wildDragonEscapeAction(withTele).kind).toBe('teleport');
+    // Escape keep preserves food, glory(1..4), and staged tele runes while allowing unreserved law drops to bank.
+    expect(wildDragonEscapeKeep({ id: ITEMS.glory[2] }, 0)).toBe(true);
+    expect(wildDragonEscapeKeep({ id: ITEMS.airRune }, 0)).toBe(true);
+    expect(wildDragonEscapeKeep({ id: ITEMS.fireRune }, 0)).toBe(true);
+    expect(wildDragonEscapeKeep({ id: ITEMS.lawRune }, 1)).toBe(true);
+    expect(wildDragonEscapeKeep({ id: ITEMS.lawRune }, 0)).toBe(false);
+    expect(wildDragonEscapeKeep({ id: 536 }, 1)).toBe(false);
 });
 
 test('selectGreenDragon prefers a dragon targeting us, then nearest free reachable dragon', () => {

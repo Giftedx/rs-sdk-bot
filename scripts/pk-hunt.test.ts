@@ -1,6 +1,6 @@
 import { expect, spyOn, test } from 'bun:test';
 import { BOW_TRIP, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
-import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, WILDERNESS_ESCAPES, wildernessCombatMargin } from './pk-roam';
+import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
 import * as walking from '../packages/core/src/walk';
@@ -328,4 +328,55 @@ test('restockPlan and restockPlanFromStock restock glory(4), prayer potions, sup
     ]));
     const stockSteps = restockPlanFromStock([{ id: 563, count: 5 }, { id: 561, count: 10 }, { id: 555, count: 20 }, { id: 385, count: 20 }, { id: 139, count: 1 }], { magic: 85 }, 100_000);
     expect(stockSteps.map(s => (s.kind === 'ge' ? s.item : 0))).toEqual([1712, 2434]);
+});
+
+test('wildernessDepth treats Mage Bank cellar as level 0, slashWebThrough retries 50%-fail webs, and hunt uses Varrock tele fallback', async () => {
+    expect(wildernessDepth(2542, 4713)).toBe(0); // Mage Bank cellar is safe despite z >= 3520
+    expect(wildernessDepth(3095, 3957)).toBe(55);
+    expect(wildernessDepth(3100, 9928)).toBe(2);
+
+    // Web 733 fails twice (web.rs2 50% fail) before clearing to 734 on the 3rd slash.
+    let slashes = 0;
+    let webPresent = true;
+    const webLoc = { id: 733, x: 3095, z: 3957, option: 'Slash' };
+    const fakeSess: any = {
+        sdk: {
+            getState: () => ({ nearbyLocs: webPresent ? [{ id: 733, x: 3095, z: 3957, distance: 1 }] : [{ id: 734, x: 3095, z: 3957, distance: 1 }] }),
+            waitForTicks: async () => {},
+        },
+        bot: {
+            interactLoc: async () => { slashes++; if (slashes >= 3) webPresent = false; },
+        },
+    };
+    expect(await slashWebThrough(fakeSess, webLoc)).toBe(true);
+    expect(slashes).toBe(3);
+
+    // hunt starting inside Mage Bank cellar (2542, 4713) with Varrock tele runes and no PK_TELE casts Varrock Teleport automatically.
+    let tick = 0;
+    const clickedSpells: number[] = [];
+    const player = { worldX: 2542, worldZ: 4713, combatLevel: 126, hp: 99, maxHp: 99 };
+    const inv = [
+        { id: pk.ITEMS.lawRune, name: 'Law rune', count: 2, slot: 0, optionsWithIndex: [] },
+        { id: pk.ITEMS.airRune, name: 'Air rune', count: 6, slot: 1, optionsWithIndex: [] },
+        { id: pk.ITEMS.fireRune, name: 'Fire rune', count: 2, slot: 2, optionsWithIndex: [] },
+    ];
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { player.worldX = path[0]!.x; player.worldZ = path[0]!.z; return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { tick++; return true; }),
+    ];
+    const huntSess: any = {
+        tick: () => tick, ended: new Promise(() => {}), client: {},
+        sdk: {
+            getState: () => ({ player, inventory: inv, equipment: [], skills: [{ name: 'Magic', level: 50 }], combatEvents: [], nearbyPlayers: [], nearbyLocs: [] }),
+            getInventory: () => inv, getEquipment: () => [], getBankItems: () => [],
+            sendClickComponent: async (id: number) => { clickedSpells.push(id); player.worldX = 3213; player.worldZ = 3424; },
+        },
+        bot: { openBank: async () => ({ success: false }), closeBank: async () => {} },
+    };
+    try {
+        const res = await hunt(huntSess, { cap: 20, food: 2, minFood: 1, escapeAt: 35, stop: () => false, log: () => {}, kit: {} });
+        expect(clickedSpells).toEqual([pk.SPELLS.varrockTeleport]);
+        expect(res.end).toBe('bank did not open');
+    } finally { for (const m of mocks) m.mockRestore(); }
 });

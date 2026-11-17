@@ -30,6 +30,12 @@ export function wildLevel(x: number, z: number): number {
     return Math.floor((z - 3520) / 8) + 1;
 }
 
+// Wilderness level across both surface (2944..3391, 3520..3967) and dungeon (z 9920..10367); safe zones like Mage Bank cellar return 0.
+export function wildernessDepth(x: number, z: number): number {
+    if (x >= 2944 && x <= 3391 && z >= 9920 && z <= 10367) return Math.floor((z - 9920) / 8) + 1;
+    return wildLevel(x, z);
+}
+
 // pvp_combat.rs2: the combat gap must be no more than the lower of the two Wilderness levels.
 export function canAttack(me: { x: number; z: number; combat: number }, them: { x: number; z: number; combatLevel: number }): boolean {
     const a = wildLevel(me.x, me.z), b = wildLevel(them.x, them.z);
@@ -143,6 +149,28 @@ export function planWildernessEscape(pos: { x: number; z: number }, has: { glory
     }
     const obstacle = WILDERNESS_ESCAPES.find(e => (e.kind === 'gate' || e.kind === 'web') && Math.abs(e.x - pos.x) <= 6 && e.z <= pos.z && pos.z - e.z <= 20);
     return { kind: 'run', obstacle, distance: southDist, detail: `run south to level ${has.glory ? 30 : has.teleport ? 20 : 0}` };
+}
+
+// Slash a bigweb_slashable (id 733) repeatedly until it disappears (web.rs2:26 fails 50% of attempts with random(2)=1).
+export async function slashWebThrough(
+    s: Pick<Session, 'sdk' | 'bot'>,
+    web: { id: number; option: string; x: number; z: number },
+    stop: () => boolean = () => false,
+    maxTries = 6,
+): Promise<boolean> {
+    const findWeb = () => {
+        const locs = s.sdk.getState()?.nearbyLocs ?? [];
+        return locs.find(l => l.id === web.id && Math.max(Math.abs(l.x - web.x), Math.abs(l.z - web.z)) <= 2)
+            ?? locs.find(l => l.id === web.id);
+    };
+    for (let i = 0; i < maxTries && !stop(); i++) {
+        const live = findWeb();
+        if (!live) return true;
+        if (typeof s.bot?.interactLoc !== 'function') return false;
+        await s.bot.interactLoc(live, web.option).catch(() => {});
+        await s.sdk.waitForTicks(2);
+    }
+    return !findWeb();
 }
 
 export function wildernessCombatMargin(me: { z: number; combat: number }, opponentCombat: number) {
@@ -529,10 +557,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 const findLoc = (loc: { id: number; x: number; z: number }) => sdk.getState()?.nearbyLocs.find(l => l.id === loc.id && Math.max(Math.abs(l.x - loc.x), Math.abs(l.z - loc.z)) <= 2)
                     ?? sdk.getState()?.nearbyLocs.find(l => l.id === loc.id);
                 if ((plan.kind === 'lever' || plan.kind === 'ladder') && plan.loc) {
-                    const webLoc = plan.web && cheb(m, plan.web) <= 3 ? findLoc(plan.web) : undefined;
-                    if (webLoc && typeof bot.interactLoc === 'function') {
-                        await bot.interactLoc(webLoc, plan.web!.option).catch(() => {});
-                    }
+                    if (plan.web && cheb(m, plan.web) <= 3) await slashWebThrough(session, plan.web, () => false);
                     await walkPath(walker, [{ x: plan.loc.x, z: plan.loc.z, tol: 2 }], { maxTicks: 16, idleMs: 9000 });
                     const exitLoc = findLoc(plan.loc);
                     if (exitLoc && typeof bot.interactLoc === 'function') {
@@ -541,9 +566,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                         continue;
                     }
                 }
-                const obstacleLoc = plan.obstacle && cheb(m, plan.obstacle) <= 3 ? findLoc(plan.obstacle) : undefined;
-                if (obstacleLoc && typeof bot.interactLoc === 'function') {
-                    await bot.interactLoc(obstacleLoc, plan.obstacle!.option).catch(() => {});
+                if (plan.obstacle && cheb(m, plan.obstacle) <= 3) {
+                    if (plan.obstacle.kind === 'web') await slashWebThrough(session, plan.obstacle, () => false);
+                    else {
+                        const obstacleLoc = findLoc(plan.obstacle);
+                        if (obstacleLoc && typeof bot.interactLoc === 'function') await bot.interactLoc(obstacleLoc, plan.obstacle.option).catch(() => {});
+                    }
                 }
                 // A walk that moved us nowhere goes 10 tiles to the side, east and west in turn, before south again.
                 const side = blocked ? (blocked % 2 ? 10 : -10) : 0;

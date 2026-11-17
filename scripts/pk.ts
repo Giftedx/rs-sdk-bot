@@ -947,11 +947,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 frozenUntil = now; freezeReady = now; frozenTile = null;
                 log(`PK freeze missed (graphic) at distance ${cheb(at, target)}`);
             } else if (spot !== lastSpot && spot === STUNNED_SHOVE_SPOTANIM) {
-                targetStunnedUntil = Math.max(targetStunnedUntil, now + 5);
+                // Observed in the tick after server .p_delay(4) sets delayedUntil = fireTick + 5 -> 4 ticks left.
+                targetStunnedUntil = Math.max(targetStunnedUntil, now + 4);
                 if (o.stunShare) {
-                    const shareEnd = Math.max(o.stunShare.until, o.stunShare.clock() + 5);
-                    o.stunShare.stunnedUntil = Math.max(o.stunShare.stunnedUntil ?? -1, shareEnd);
-                    o.stunShare.until = shareEnd;
+                    const shareClock = o.stunShare.clock();
+                    if (o.stunShare.until <= shareClock) o.stunShare.until = shareClock + 4;
+                    o.stunShare.stunnedUntil = Math.max(o.stunShare.stunnedUntil ?? -1, shareClock + 4);
                 }
                 log(`PK target stunned (shove graphic) at distance ${cheb(at, target)}`);
             }
@@ -1386,8 +1387,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const energy = special(s.client);
         const stunOverlap = o.stunShare?.overlap ?? 1;
         const targetStunned = now < targetStunnedUntil || (!!o.stunShare && o.stunShare.clock() < (o.stunShare.stunnedUntil ?? -1));
-        const stunOpenForChain = !o.stunShare || o.stunShare.clock() >= o.stunShare.until - stunOverlap;
-        const canSecondaryStun = !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain && !targetStunned
+        const stunOpenForChain = o.stunShare ? o.stunShare.clock() >= o.stunShare.until - stunOverlap : !targetStunned;
+        const canSecondaryStun = !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain
             && (fled || lowHealth(seen, o.stunSpec.below) || !!o.stunShare);
         // In a burst the bow special goes first, then a melee special if one is ready, then the bow again: the target
         // prays against the weapon it saw last, so each lands off its prayer.
@@ -1410,12 +1411,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             } else if (readyNow) continue;
         }
         const stunWaits = !!spec?.stun && !!o.stunShare && o.stunShare.clock() < o.stunShare.until - stunOverlap;
+        const chainStun = !!spec?.stun && !!o.stunShare && o.stunShare.until >= 0 && stunOpenForChain;
         const volleying = (!!vs?.fired && !vs.done.has(myKey))
             || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1))
             || (!!o.burstOnStun && !spec?.stun && targetStunned);
         const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5) && inv.length >= 28;
-        if (spec && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
-            && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
+        if (spec && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
+            && (fled || bursting || volleying || chainStun || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];

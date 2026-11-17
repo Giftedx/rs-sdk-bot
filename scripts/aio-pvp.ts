@@ -15,7 +15,7 @@ import {
 } from './pk-hunt';
 import {
  WILDERNESS_ESCAPES,assessWildernessThreat,escapeStep,itemCost,multiPileThreat,
- planWildernessEscape,restockPlan,restockPlanFromStock,wildernessCombatMargin,
+ planWildernessEscape,restockPlan,restockPlanFromStock,slashWebThrough,wildernessCombatMargin,wildernessDepth,
 } from './pk-roam';
 
 export {
@@ -25,7 +25,7 @@ export {
  EDGEVILLE_BANK,HUNT_PRESETS,HUNT_SPOTS,KIT_IDS,TRIBRID_KIT,TRIBRID_TRIP,
  fleetNames,verdict,pickTarget,hitByPlayer,resolveHuntSpots,type Spot,
  WILDERNESS_ESCAPES,assessWildernessThreat,escapeStep,itemCost,multiPileThreat,
- planWildernessEscape,restockPlan,restockPlanFromStock,wildernessCombatMargin,
+ planWildernessEscape,restockPlan,restockPlanFromStock,slashWebThrough,wildernessCombatMargin,wildernessDepth,
 };
 
 export interface PvpModeSpec {

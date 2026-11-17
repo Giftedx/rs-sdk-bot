@@ -20,7 +20,7 @@ export const DRAGONFIRE_SHIELD_ID = 1540;
 export const DRAGON_BONES_ID = 536;
 export const GREEN_DHIDE_ID = 1753;
 export const GREEN_DRAGON_SPOT = { x: 3092, z: 3810 } as const;
-export const SAFE_SOUTH_TILE = { x: 3092, z: 3520 } as const;
+export const SAFE_SOUTH_TILE = { x: 3092, z: 3518 } as const;
 export const DRAGON_FOOD_IDS = [385, 373, 379, 329, 333] as const;
 export const DRAGON_LOOT_IDS = new Set<number>([DRAGON_BONES_ID, GREEN_DHIDE_ID, 561, 563, 995, 1213, 449, 447]);
 
@@ -89,6 +89,14 @@ export function wildDragonEscapeAction(state: BotWorldState) {
     return planWildernessEscape({ x: p.worldX, z: p.worldZ }, { glory: hasPackGlory || (hasWornGlory && state.inventory.length < 28), teleport });
 }
 
+export function wildDragonEscapeKeep(item: { id: number }, escapeLawReserve = 0): boolean {
+    if ((DRAGON_FOOD_IDS as readonly number[]).includes(item.id)) return true;
+    if ((ITEMS.glory as readonly number[]).includes(item.id)) return true;
+    if (item.id === ITEMS.airRune || item.id === ITEMS.fireRune) return true;
+    if (item.id === ITEMS.lawRune && escapeLawReserve > 0) return true;
+    return false;
+}
+
 const countId = (state: BotWorldState, id: number) => state.inventory.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
 const countFood = (state: BotWorldState) => state.inventory.filter(i => (DRAGON_FOOD_IDS as readonly number[]).includes(i.id)).reduce((n, i) => n + i.count, 0);
 
@@ -101,6 +109,10 @@ export async function runWildDragons(s: Session, o: WildDragonsOptions) {
     const p0 = st()!.player!;
     const start = s.tick();
     const ours = fleetNames();
+    const magic0 = st()!.skills.find(k => k.name === 'Magic')?.level ?? 1;
+    const escapeLawReserve = hasVarrockTeleport(magic0, st()!.inventory, st()!.equipment)
+        ? Math.min(countId(st()!, ITEMS.lawRune), 5)
+        : 0;
     const inWild0 = wildernessLevel(p0.worldZ) > 0;
     const preflight = wildDragonPreflight(st(), !!o.staged || inWild0);
     if (preflight) throw Error(`wild-dragons preflight: ${preflight}`);
@@ -168,7 +180,16 @@ export async function runWildDragons(s: Session, o: WildDragonsOptions) {
         const inv = st()!;
         bonesBanked += countId(inv, DRAGON_BONES_ID);
         hidesBanked += countId(inv, GREEN_DHIDE_ID);
-        await depositPack(s, i => (DRAGON_FOOD_IDS as readonly number[]).includes(i.id));
+        // Bank any looted law runes above the initial escape teleport reserve before depositPack keeps the reserve.
+        const excessLaws = Math.max(0, countId(inv, ITEMS.lawRune) - escapeLawReserve);
+        if (excessLaws > 0 && escapeLawReserve > 0) {
+            const lawItem = inv.inventory.find(i => i.id === ITEMS.lawRune);
+            if (lawItem) {
+                await s.bot.depositItem(lawItem, excessLaws);
+                await waitTicks(s, 1);
+            }
+        }
+        await depositPack(s, i => wildDragonEscapeKeep(i, escapeLawReserve));
         if (!depositOnly) {
             let remaining = Math.max(0, o.foodCount - countFood(st()!));
             for (const id of DRAGON_FOOD_IDS) {
