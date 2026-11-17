@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794956286769,
+ "at": 1794956348828,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -206,23 +206,26 @@
    "resources": []
   },
   {
-   "account": "Pocketrocket",
+   "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=843 QUANTITY=1 LIMIT_PRICE=800 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-843-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1163 QUANTITY=1 LIMIT_PRICE=45000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1163-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1201 QUANTITY=1 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1201-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"843\":1}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1201\":1}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 1 Oak shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "goal": "buy 1 Rune full helm, 1 Rune kiteshield on the Grand Exchange to wear rune armour",
    "role": "supply",
-   "template": "kit-buy:army-arrows-catherby",
+   "template": "kit-buy:army-armour-rune",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "ge:armour"
+   ]
   },
   {
    "account": "Bigpackage",
@@ -278,28 +281,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1163 QUANTITY=1 LIMIT_PRICE=45000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1163-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1201 QUANTITY=1 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1201-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1201\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune full helm, 1 Rune kiteshield on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
    ]
   },
   {
@@ -390,6 +371,25 @@
    ]
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=849 QUANTITY=1 LIMIT_PRICE=2500 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-849-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"849\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Willow shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "kit-buy:army-arrows-catherby",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -397,7 +397,8 @@
     "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -468,27 +469,28 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/ranged-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99",
+    "1500"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "FOOD": "3",
+    "AMMO": "100",
+    "MAX_TRIPS": "50",
+    "COIN_RESERVE": "0",
+    "MAX_SPEND": "55000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-trooper-ranged-99",
    "autopilot": "local",
    "resources": [
+    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
@@ -517,29 +519,28 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/ranged-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "1500"
+    "1500",
+    "trooper"
    ],
    "env": {
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
-    "FOOD": "3",
-    "AMMO": "100",
-    "MAX_TRIPS": "50",
-    "COIN_RESERVE": "0",
-    "MAX_SPEND": "55000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "local",
    "resources": [
-    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
