@@ -74,7 +74,8 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {evaluateProgressionWork,preflightProgressionWork,processWork} from CORE_PROGRESSION;
 const root=process.env.FIXTURE_ROOT,stage=process.env.FIXTURE_STAGE;
-process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421',...(process.env.FIXTURE_ARGS??'').split(' ').filter(Boolean)];
+const [bankX,bankZ]=(process.env.FIXTURE_BANK??'3253,3421').split(',').map(Number);
+process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x='+bankX,'--bank-z='+bankZ,...(process.env.FIXTURE_ARGS??'').split(' ').filter(Boolean)];
 const file=join(root,'holdings.json');
 const load=()=>JSON.parse(readFileSync(file,'utf8'));
 const save=x=>writeFileSync(file,JSON.stringify(x));
@@ -82,12 +83,16 @@ const hold=async point=>{if(stage===point){console.log('HOLD '+point);await new 
 // Keep a blocked login alive until the parent kills it, with a hard deadline.
 const deadline=setTimeout(()=>process.exit(9),8000);
 await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
- approach:{ground:async()=>{throw Error('ground approach used');},planned:async(s,to)=>{
+ approach:{ground:async(s,to)=>{
+  if(stage!=='mainland')throw Error('ground approach used');
+  console.log('GROUND '+s.name+' '+to.x+','+to.z+','+to.level);s.at=to.x;s.az=to.z;return {ok:true};
+ },planned:async(s,to)=>{
   console.log('PLANNED '+s.name+' '+to.x+','+to.z+','+to.level);
+  if(stage==='mainland'&&to.x===3185&&to.z===3436)return {ok:false,reason:'precondition',detail:'no route to 3185,3436,0'};
   if(stage==='approach-refused')return {ok:false,reason:'precondition',detail:'no route'};
   await hold('approach');
   if(stage==='approach-slow'){await new Promise(yes=>setTimeout(yes,1500));console.log('IDLE RESET '+s.name+' '+(s.client.idleTimer>0));}
-  s.at=to.x;return {ok:true};
+  s.at=to.x;s.az=to.z;return {ok:true};
  }},
  openBot:async (name,options)=>{
   if(process.env.FIXTURE_PROGRESSION==='1'){
@@ -106,9 +111,10 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
   const role=name==='Donor'?'donor':'receiver';
   const items=(n,noted=0)=>[...(n?[{id:40,name:'Iron arrowtips',count:n,slot:0}]:[]),...(noted?[{id:41,name:'Iron arrowtips',count:noted,slot:1}]:[])];
   const pack=()=>items(load()[role].pack,load()[role].noted);
-  const s={name,client:{idleTimer:0},at:(process.env.FIXTURE_FAR??'').split(',').includes(name)?3092:3253,tick:()=>0,onTick:()=>()=>{},
+  const start=name==='Receiver'&&process.env.FIXTURE_RECEIVER_START?process.env.FIXTURE_RECEIVER_START.split(',').map(Number):[(process.env.FIXTURE_FAR??'').split(',').includes(name)?3092:bankX,bankZ];
+  const s={name,client:{idleTimer:0},at:start[0],az:start[1],tick:()=>0,onTick:()=>()=>{},
    bankObservation:()=>opened?{generation,at:Date.now(),items:items(load()[role].bank)}:null,
-   sdk:{getInventory:pack,getSkill:()=>({level:10}),getState:()=>({player:{worldX:s.at,worldZ:3421,level:0},bank:{isOpen:opened},inventory:pack()})},
+   sdk:{getInventory:pack,getSkill:()=>({level:10}),getState:()=>({player:{worldX:s.at,worldZ:s.az,level:0},bank:{isOpen:opened},inventory:pack()})},
    bot:{walkTo:async x=>{console.log('LOCAL '+name);await hold('bank-entry');s.at=x;return {success:true};},
     openBank:async()=>{opened=true;generation++;return {success:true};},closeBank:async()=>{opened=false;return {success:true};},
     withdrawItem:async(_,count,options)=>{const x=load();x[role].bank-=count;if(options?.asNote)x[role].noted=(x[role].noted??0)+count;else x[role].pack+=count;save(x);generation++;return {success:true};},
@@ -283,6 +289,22 @@ test('planned distant entry transfers exactly after travel; refusal, deadline an
   expect(p.output()).toContain('LOCAL Donor');expect(p.output()).not.toContain('PLANNED ');
  }finally{await h.cleanup();}
 },20000);
+
+test('Varrock West approach decomposes the failed Port Sarim final leg before the exact transfer',async()=>{
+ for(const start of ['3029,3217','2727,3493']){
+  const f=cliFixture();try{
+   const p=f.start('mainland',{FIXTURE_BANK:'3185,3436',FIXTURE_RECEIVER_START:start,FIXTURE_ARGS:'--approach-ms=5000'});
+   expect(await p.done).toBe(0);
+   expect(p.output()).not.toContain('PLANNED Receiver 3185,3436,0');
+   expect(p.output().includes('PLANNED Receiver 3029,3217,0')).toBe(start==='2727,3493');
+   expect(p.output().split(/\r?\n/).filter(l=>l.startsWith('GROUND '))).toEqual(
+    ['3047,3237','3060,3265','3100,3285','3180,3258','3225,3240','3235,3300','3210,3380','3185,3436'].map(tile=>'GROUND Receiver '+tile+',0'));
+   expect(p.output().indexOf('LOCAL Donor')).toBeGreaterThan(p.output().indexOf('GROUND Receiver 3185,3436,0'));
+   expect(JSON.parse(readFileSync(join(f.root,'holdings.json'),'utf8'))).toEqual({donor:{bank:0,pack:0},receiver:{bank:90,pack:0},sends:1});
+   expect(p.output().match(/LOGOUT /g)).toHaveLength(2);
+  }finally{await f.cleanup();}
+ }
+},15000);
 
 test('noted transfer leaves the donor pre-held plain stack in its pack',async()=>{
  const f=cliFixture();try{
