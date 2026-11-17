@@ -23,7 +23,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { closeWithin } from '../packages/core/src/bot';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
+import { attackable, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { EDGEVILLE_BANK } from './pk-hunt';
 import { connectRadar, kitFrom, Radar } from './pk-roam';
@@ -119,8 +119,15 @@ export function watchSquadTicks(squad: readonly Session[], dropped: (name: strin
     }));
     return () => { for (const stop of off) stop(); };
 }
-// A dropped account logged in again: eat to near full, then Camelot Teleport where it can (Magic 45, a law rune and
-// 5 air runes, Wilderness 20 or less), else walk to the nearer bank (bankNear). The session when it ends out of the Wilderness, else null.
+// Best teleport escape below Wilderness 20: Camelot Teleport (1174), else Varrock Teleport (1164), counting worn staves.
+export function squadEscapeSpell(z: number, carried: readonly { id: number; count: number }[], wornIds: readonly number[], magic: number): number | null {
+    if (wildernessLevel(z) > 20) return null;
+    for (const spell of [1174, 1164]) if (escapeCastable(spell, carried, wornIds, magic)) return spell;
+    return null;
+}
+
+// A dropped account logged in again: eat to near full, then teleport where it can (Camelot or Varrock below Wilderness
+// 20, counting worn staves), else walk to the nearer bank (bankNear). The session when it ends out of the Wilderness, else null.
 export async function rescue(s: Session, log: (l: string) => void, stopped: () => boolean = () => false): Promise<Session | null> {
     const me = () => s.sdk.getState()?.player;
     const tick = async () => !stopped() && await nextTick(s) && !stopped();
@@ -137,9 +144,9 @@ export async function rescue(s: Session, log: (l: string) => void, stopped: () =
             for (let t = 0; t < 3; t++) if (!await tick()) return null;
         }
         const st = s.sdk.getState(), magic = st?.skills.find(k => k.name === 'Magic')?.level ?? 1;
-        const held = (id: number) => (st?.inventory ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-        if (st && wildernessLevel(start.worldZ) <= 20 && magic >= 45 && held(ITEMS.lawRune) >= 1 && held(ITEMS.airRune) >= 5)
-            for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) { if (stopped()) return null; await s.direct({ type: 'clickComponent', componentId: 1174, reason: 'SDK' }); for (let t = 0; t < 6; t++) if (!await tick()) return null; }
+        const escapeSpell = st ? squadEscapeSpell(start.worldZ, st.inventory ?? [], s.sdk.getEquipment().map(e => e.id), magic) : null;
+        if (escapeSpell !== null)
+            for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) { if (stopped()) return null; await s.direct({ type: 'clickComponent', componentId: escapeSpell, reason: 'SDK' }); for (let t = 0; t < 6; t++) if (!await tick()) return null; }
         if (stopped()) return null;
         if (wildernessLevel(me()?.worldZ ?? 0) > 0) await walkPath(await sessionWalker(s), [{ ...bankNear(me()?.worldX ?? start.worldX), tol: 2 }], { maxTicks: 500, idleMs: 9000, stop: stopped });
     }
