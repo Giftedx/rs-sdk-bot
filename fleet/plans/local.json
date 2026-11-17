@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794925906038,
+ "at": 1794925941633,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -170,34 +170,6 @@
    "resources": []
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/ranged-train.ts",
-   "args": [
-    "99",
-    "1500"
-   ],
-   "env": {
-    "TARGET_LEVEL": "99",
-    "FOOD": "3",
-    "AMMO": "100",
-    "MAX_TRIPS": "50",
-    "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "local",
-   "resources": [
-    "pen:3229,3298",
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -293,8 +265,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
