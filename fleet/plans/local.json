@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794878999200,
+ "at": 1794879614856,
  "jobs": [
   {
    "account": "Balls",
@@ -104,33 +104,6 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
-  },
-  {
-   "accounts": [
-    "mmthv2350",
-    "NabTheKnob"
-   ],
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "64:Dragon bones",
-    "--notes",
-    "--bank-x=3185",
-    "--bank-z=3436",
-    "--approach-ms=900000",
-    "--request-ms=60000",
-    "--timeout-ms=240000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "mmthv-nab-prayer99-owned64",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-c10c4e70-73e8-42f8-9c21-3539c13e7e5a"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-handoff-mmthv-nab-prayer99-owned64 [task-c10c4e70-73e8-42f8-9c21-3539c13e7e5a]",
-   "role": "helper"
   }
  ],
  "army": [
