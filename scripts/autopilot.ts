@@ -38,7 +38,7 @@ import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
 import { createAutopilotProgression } from './autopilot-progression';
 import { accountFromStatus } from '../packages/planner/src/progression-catalog';
-import {boundAccounts,type CoordinatorState} from '../packages/router/src/coordinator';
+import {boundAccounts,type AccountBindingState} from '../packages/core/src/coordinator-accounts';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -342,7 +342,7 @@ export function mountainWalk(hunters: readonly Hunter[] = loadHunters()): (a: Ac
     };
 }
 
-export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>,queue?:CoordinatorState) {
+export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>,queue?:AccountBindingState) {
     // A parked coordinator job still shadows its owner job until the coordinator releases it.
     const held = new Set(coordinatorJobs.flatMap(jobAccounts).map(account => account.toLowerCase()));
     for(const record of queue?.tasks??[])if(record.status==='pending'||record.status==='running')for(const account of boundAccounts(record.spec,queue!)??[])held.add(account.toLowerCase());
