@@ -12,7 +12,7 @@
 //  - Regions (theirs, from the collision map): the hill (tower, Og, caves 1-5, Toban's cave, the enclave exit) is one walk
 //    region; the west city, the east pocket, the jump pocket, the city-guard ledge, Toban's plateau and Grew's island are
 //    closed pockets reached only by their scripted crossings. The two Gu'Tanoth gates are walls for the walk planner.
-import { openQuest } from './quest-lib';
+import { CHOICE_ROOTS, CONTINUE_ROOTS, createBurstPageRecorder, openQuest } from './quest-lib';
 import * as pf from '../../vendor/rs-sdk/sdk/pathfinding';
 
 const N = { wizard: 872, og: 853, grew: 854, toban: 855, gorad: 856, guard1: 858, guard2: 859, guard4: 861, cityGuard: 862,
@@ -45,17 +45,42 @@ try {
     const x = () => q.pos()?.worldX ?? 0;
     const z = () => q.pos()?.worldZ ?? 0;
     const inBox = (x0: number, z0: number, x1: number, z1: number, level = 0) => q.lvl() === level && x() >= x0 && x() <= x1 && z() >= z0 && z() <= z1;
-    // Dialogue text with a mark: quest-lib sawText keeps every page, so a later step would match an earlier page.
+    // Dialogue text with a mark: capture both burst-rendered IF_SETTEXT pages and open-tick fallbacks.
     const texts: string[] = [];
-    let lastText = '';
+    let lastTickText = '';
+    const lite: any = (q.s as any).client;
+    if (lite && typeof lite.ifMutable === 'function') {
+        const prevMutable = lite.ifMutable;
+        const chatRoots = new Set([...CONTINUE_ROOTS, ...CHOICE_ROOTS]);
+        const recordBurstLine = createBurstPageRecorder(chatRoots, joined => { texts.push(joined); lastTickText = joined; });
+        lite.ifMutable = function (id: number) {
+            const com: any = prevMutable.call(this, id);
+            if (com && !com.__stepText) {
+                const desc = Object.getOwnPropertyDescriptor(com, 'text');
+                let v = com.text;
+                Object.defineProperty(com, 'text', {
+                    configurable: true,
+                    enumerable: true,
+                    get: () => (desc?.get ? desc.get.call(com) : v),
+                    set: (x: any) => {
+                        if (desc?.set) desc.set.call(com, x);
+                        else v = x;
+                        recordBurstLine(id, com.layerId, x);
+                    },
+                });
+                com.__stepText = true;
+            }
+            return com;
+        };
+    }
     q.s.onTick(() => {
         const d: any = q.s.sdk.getDialog();
         const t = d?.isOpen ? [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].filter(Boolean).join(' ') : '';
-        if (t && t !== lastText) { texts.push(t); lastText = t; }
+        if (t && t !== lastTickText) { texts.push(t); lastTickText = t; }
         for (const m of (q.st()?.gameMessages ?? []).slice(-3)) { const k = `#${m.tick}:${m.text}`; if (!texts.includes(k)) texts.push(k); }
     });
     const mark = () => texts.length;
-    const seen = (re: RegExp, m: number) => texts.slice(m).some(t => re.test(t)) || re.test(lastText);
+    const seen = (re: RegExp, m: number) => texts.slice(m).some(t => re.test(t));
 
     // The gates are walls for this session's walk planner; every crossing below is an explicit op.
     for (const [gx, gz] of GATES) if (!q.blockDoor(0, gx, gz)) console.log(`WARN no door at ${gx},${gz}`);
@@ -401,13 +426,30 @@ try {
     await talk('wizard crystals', N.wizard, [], () => seen(/throw the lever|all the crystals|not activated/i, m));
     await opLocUntil('lever', L.lever, () => questDone || q.has(O.scroll), { ticks: 15 });
     await q.waitUntil(() => q.has(O.scroll) && questDone, 15);
-    await q.converse([], () => !q.dialogOpen(), 20);
-    const sc = q.inv().find((i: any) => i.id === O.scroll);
-    if (sc) await q.step('read scroll', async () => {
-        const s2 = q.inv().find((i: any) => i.id === O.scroll);
-        if (s2) await q.s.direct({ type: 'useInventoryItem', slot: s2.slot, optionIndex: 1, reason: 'SDK' });
-        await q.converse([], () => !q.dialogOpen() && !q.has(O.scroll), 10);
-    }, () => !q.has(O.scroll) && !q.dialogOpen(), 10, 3);
+    const hasUi = () => Boolean(q.st()?.interface?.isOpen || q.st()?.modalOpen);
+    const clearUi = async () => {
+        for (let i = 0; i < 4 && (q.dialogOpen() || hasUi()); i++) {
+            if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 12);
+            if (hasUi()) {
+                await q.s.direct({ type: 'closeModal', reason: 'SDK' });
+                await q.waitUntil(() => !hasUi(), 6);
+            }
+        }
+    };
+    await clearUi();
+    if (q.has(O.scroll)) {
+        let blockedByComplete = false;
+        await q.step('read scroll', async () => {
+            await clearUi();
+            const s2 = q.inv().find((i: any) => i.id === O.scroll);
+            if (s2) {
+                const reply: any = await q.s.direct({ type: 'useInventoryItem', slot: s2.slot, optionIndex: 1, reason: 'SDK' });
+                if (reply?.reason === 'progression_replan' && questDone) { blockedByComplete = true; return; }
+            }
+            await q.converse([], () => !q.dialogOpen() && !q.has(O.scroll), 15);
+        }, () => blockedByComplete || !q.has(O.scroll), 20, 3);
+        await clearUi();
+    }
     q.milestone(14);
     await q.end(questDone, 'qp=4');
 } catch (e) {

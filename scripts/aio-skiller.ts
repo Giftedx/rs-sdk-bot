@@ -168,6 +168,8 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'thieving',method:'stun-base',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with no action inside a stun (MODE=base)'},
  {skill:'thieving',method:'stun-bury',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with a bone buried inside each stun (MODE=bury)'},
  {skill:'thieving',method:'stun-enchant',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with an enchant cast inside each stun (MODE=enchant)'},
+ // Superheat Smithing 1-41 during Ardougne knight stuns: Magic 43+ casts superheat:bronze (1-15, 12 casts) and
+ // superheat:iron (15-41, 45 casts) via scripts/microbot-magic-items.ts + fire staff during 8-tick stuns.
  {skill:'thieving',method:'bootstrap55',script:'scripts/generated/thieving60.ts',description:'Fresh-account Men -> Cake stall -> Guards -> Knights to 55/60 Thieving'},
  {skill:'thieving',method:'pickpocket',script:'scripts/microbot-pickpocket-trip.ts',description:'Bank-staged pickpocket trip for any native NPC profile'},
  {skill:'thieving',method:'pickpocket-at-site',script:'scripts/microbot-a-pickpocket.ts',description:'At-site NPC pickpocketing'},
@@ -443,6 +445,33 @@ export function discoverBankedProduction(
  }
 
  return out.sort((a, b) => b.levelRequired - a.levelRequired || b.feasibleUnits - a.feasibleUnits);
+}
+
+export type StunSuperheatBand = {
+ fromSmithing: number;
+ toSmithing: number;
+ metal: 'bronze' | 'iron';
+ casts: number;
+ step: Step;
+};
+
+// Staged Superheat Item steps executed inside Ardougne knight 8-tick stuns (Magic 43+, fire staff + nature runes).
+export function planStunSuperheatSmithing(currentSmithing: number, currentMagic: number, cap = 200): StunSuperheatBand[] {
+ if (currentMagic < 43) throw Error(`aio-skiller: superheat in stun requires Magic 43 (got ${currentMagic})`);
+ const bands: StunSuperheatBand[] = [];
+ if (currentSmithing < 15) {
+  bands.push({
+   fromSmithing: currentSmithing, toSmithing: 15, metal: 'bronze', casts: 12,
+   step: { script: 'scripts/microbot-magic-items.ts', args: ['superheat:bronze', '-', '12', String(cap)], env: {} },
+  });
+ }
+ if (currentSmithing < 41) {
+  bands.push({
+   fromSmithing: Math.max(currentSmithing, 15), toSmithing: 41, metal: 'iron', casts: 45,
+   step: { script: 'scripts/microbot-magic-items.ts', args: ['superheat:iron', '-', '45', String(cap)], env: {} },
+  });
+ }
+ return bands;
 }
 
 export { planBankTripSchedule };

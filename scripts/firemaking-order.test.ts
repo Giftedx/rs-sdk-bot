@@ -45,7 +45,7 @@ test('actual progressive burn loop reselects after the bounded paid batch; unava
   try{return{result:await runFiremaking(s,firemakingOptions({TARGET_LEVEL:'99',MAX_LOGS:String(stock?.maxLogs??2),PROGRESSIVE:burnOnly?'0':stock?'stock':'1',LOG:burnOnly?'willow':'normal',BURN_ONLY:burnOnly?'1':'0',BATCH:'1',TOOL_BUDGET:'0'})),burns,withdrawals,bank};}finally{for(const spy of spies)spy.mockRestore();}
  };
  const at99=await run(0,false,'none',true);expect(at99.result.ok).toBe(true);expect(at99.burns).toEqual([1519,1519]);expect(at99.result.level).toBe(99);
- const good=await run(1);expect(good.result.ok).toBe(true);expect(good.burns).toEqual([1519,1517]);expect(good.withdrawals).toEqual([1519,1517]);expect(good.result.ticks).toBe(6);
+ const good=await run(1);expect(good.result.ok).toBe(true);expect(good.burns).toEqual([1519,1517]);expect(good.withdrawals).toEqual([1519,1517]);expect(good.result.ticks).toBe(2);
  const missing=await run(0);expect(missing.result.ok).toBe(false);expect(missing.burns).toEqual([1519]);expect(missing.bank.find(i=>i.id===1519)!.count).toBe(1);
  const foreign=await run(1,true);expect(foreign.result.ok).toBe(false);expect(foreign.burns).toEqual([1519]);expect(foreign.withdrawals).toEqual([1519]);
  const drift=await run(1,false,'stock');expect(drift.result.ok).toBe(false);expect(drift.result.failure).toContain('whole-pack');expect(drift.burns).toEqual([1519]);

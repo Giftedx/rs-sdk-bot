@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {planProgressiveSkiller,readBankJobArgument,bankJobStep,resolveSkillerStep,validateBankJob,inventoryRecipes,jewelleryRecipes,miningProfiles,firemakingOptions,prayerOptions,agilityOptions} from './aio-skiller';
+import {planProgressiveSkiller,planStunSuperheatSmithing,readBankJobArgument,bankJobStep,resolveSkillerStep,validateBankJob,inventoryRecipes,jewelleryRecipes,miningProfiles,firemakingOptions,prayerOptions,agilityOptions} from './aio-skiller';
 import {magicOptions} from './magic-order';
 import {parseStep} from '../packages/core/src/chain-step';
 import {resolvePvpStep} from './aio-pvp';
@@ -75,4 +75,16 @@ test('progression refuses unavailable unlocks, non-XP activities and invalid rat
  expect(()=>planProgressiveSkiller('herblore',1,20)).toThrow('quest unlock');
  expect(()=>planProgressiveSkiller('foraging',1,20)).toThrow('no XP progression');
  for(const rate of [NaN,Infinity,0,-1])expect(()=>planProgressiveSkiller('firemaking',1,20,rate)).toThrow('invalid progressive');
+});
+
+test('stun superheat plan stages bronze then iron superheat casts for Smithing 1-41', () => {
+ expect(() => planStunSuperheatSmithing(1, 42)).toThrow('Magic 43');
+ const full = planStunSuperheatSmithing(1, 43);
+ expect(full.map(b => [b.metal, b.fromSmithing, b.toSmithing, b.casts])).toEqual([
+  ['bronze', 1, 15, 12],
+  ['iron', 15, 41, 45],
+ ]);
+ expect(full[0]!.step).toEqual({ script: 'scripts/microbot-magic-items.ts', args: ['superheat:bronze', '-', '12', '200'], env: {} });
+ expect(planStunSuperheatSmithing(20, 43).map(b => b.metal)).toEqual(['iron']);
+ expect(planStunSuperheatSmithing(41, 43)).toEqual([]);
 });

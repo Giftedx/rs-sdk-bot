@@ -125,3 +125,27 @@ test('a route search past its deadline stops with reason budget; without a deadl
     expect(w.route(from, to, acct(), { deadline: performance.now() + 60_000 }).ok).toBe(true);
     expect(w.route(from, to, acct()).ok).toBe(true);
 });
+
+test('areaOf prunes disjoint same-level walks without calling pathLength while keeping -2 unknown labels eligible', () => {
+    const from = { x: 0, z: 0, level: 0 }, mid = { x: 10, z: 0, level: 0 }, unk = { x: 20, z: 0, level: 0 }, to = { x: 30, z: 0, level: 0 };
+    const linkMid = { locName: 'gate', option: 'op1', exact: false, from: mid, to: { x: 11, z: 0, level: 0 }, src: 't', toSrc: 't', handler: 't' };
+    const linkUnk = { locName: 'gate2', option: 'op1', exact: false, from: unk, to: { x: 21, z: 0, level: 0 }, src: 't', toSrc: 't', handler: 't' };
+    const seenPairs: string[] = [];
+    const path = Object.assign(
+        (a: Tile, b: Tile) => {
+            seenPairs.push(`${a.x}->${b.x}`);
+            if (a.x === 0 && b.x === 20) return 20;
+            if (a.x === 21 && b.x === 30) return 9;
+            return null;
+        },
+        {
+            areaOf: (t: Tile) => t.x === 0 ? 1 : t.x === 10 ? 2 : t.x === 30 ? 3 : -2,
+        },
+    );
+    const w = createWorld({ transports: [linkMid, linkUnk], doors: [], goalTolerance: 0, pathLength: path });
+    const res = w.route(from, to, acct());
+    expect(res.ok).toBe(true);
+    expect(seenPairs).not.toContain('0->10');
+    expect(seenPairs).not.toContain('0->30');
+    expect(seenPairs).toContain('0->20');
+});
