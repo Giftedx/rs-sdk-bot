@@ -546,6 +546,8 @@ type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: stri
 const lookups = new Map<string, Lookup>();
 // Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
 const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
+const itemExamines = buildItemExamine(OBJS);
+const icons = catalogueIconAliases(OBJS);
 const recapCache = new Map<string, { at: number; recap: DeathRecap | null }>();
 const wornOf = (name: string, seen: { x: number; z: number } | undefined) => seen && OBJS.size ? readWorn(gameDialAddress(DEMO.replace(/^http/, 'ws') + '/worldfeed'), name, seen, OBJS) : Promise.resolve(null);
 let lookupChain: Promise<unknown> = Promise.resolve();
@@ -1169,13 +1171,12 @@ function buildState() {
         // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
         // else the shop base price), for the page's item prices and bank value.
         // The game's examine text of each held item (obj configs), for the page's Examine option.
-        ...projectItemExamine(buildItemExamine(OBJS),(bots as any[]).flatMap(b=>[b.inventory,b.bank,b.equipment].flatMap(l=>l??[]).filter(Boolean))),
+        ...projectItemExamine(itemExamines,(bots as any[]).flatMap(b=>[b.inventory,b.bank,b.equipment].flatMap(l=>l??[]).filter(Boolean))),
         // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
         itemValues: (() => { const out: Record<string, number> = {}; for (const i of visiblePrices) { const name=typeof i==='string'?i:i.name; if(!name)continue; const p=itemPrice({byId:{},byName:projectedPrices.byName},name); if(p)out[name]=p.value; } return out; })(),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
         gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
     };
-    const icons=catalogueIconAliases(OBJS);
     const prac = practiceNames();
     const sys = {
         freeGB: freemem() / 2 ** 30, totalGB: totalmem() / 2 ** 30, cpu: cpuPct, cores: cpus().length, buildMs,

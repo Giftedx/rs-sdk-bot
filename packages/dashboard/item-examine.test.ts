@@ -33,12 +33,12 @@ test('invalid or unknown raw identities never borrow an examine alias or a certi
 
 test('the actual server projection keeps sibling descriptions regardless of account and list order',()=>{
  const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
- const line=server.split('\n').find(line=>line.includes('...projectItemExamine(buildItemExamine(OBJS)'))!;
+ const line=server.split('\n').find(line=>line.includes('...projectItemExamine('))!;
  expect(line).toBeDefined();
  const code=new Bun.Transpiler({loader:'ts'}).transformSync(`const result={${line}};`);
- const project=new Function('bots','OBJS','projectItemExamine','buildItemExamine',code+'return result;');
+ const project=new Function('bots','itemExamines','projectItemExamine',code+'return result;'),facts=buildItemExamine(catalogue());
  const first={inventory:[{id:2399,name:'Key'}],equipment:[{id:2400,name:'Key'}]},second={bank:[{id:2401,name:'Key'}]};
- const forward=project([first,second],catalogue(),projectItemExamine,buildItemExamine),reverse=project([second,first],catalogue(),projectItemExamine,buildItemExamine);
+ const forward=project([first,second],facts,projectItemExamine),reverse=project([second,first],facts,projectItemExamine);
  expect(reverse).toEqual(forward);expect(forward.itemExamineById[2399]).toBe('A key given to me by Wizard Traiborn.');
  expect(forward.itemExamineById[2401]).toBe('A key I found in a drain.');expect(forward.itemExamineByName).toEqual({});
 });

@@ -13,7 +13,7 @@ import {inOpenOrder} from '../../../scripts/autopilot';
 import {validOrder,type Order,type Receipt} from '../../../scripts/fleet-trade-settlement';
 import {readHeldFleetTradeClaims} from '../../core/src/fleet-trade-claim';
 import {cachedLaunchRevision,cachedReleaseFor,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
-import {importClosure} from './delivery-cli';
+import {hashImportClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
 import {acceptStatus,boundedWorkerEndMessage,boundAccounts,type CoordTask,type CoordinatorState} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
@@ -92,8 +92,7 @@ export const ROLLOUT_DRAIN_MS=5*60*1000,ROLLOUT_BACKOFF_MS=60*60*1000;
 export const SWARM_FILES=['scripts/swarm.ts','packages/practice/src/supervise.ts','packages/practice/src/supervise-host.ts'];
 export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=true){
  const base=deps.base??projectRoot,dir=join(base,'.practice/coordinator'),ownerFile=join(dir,'swarm-owner.json'),lock=join(dir,'build-lock.json');
- const closure=createHash('sha256');for(const f of importClosure(SWARM_FILES,base))closure.update(f+'\0').update(readFileSync(join(base,f))).update('\0');
- const swarmSource=closure.digest('hex');
+ const swarmSource=hashImportClosure(SWARM_FILES,base);
  const stopped=()=>existsSync(join(base,'.practice/stop-coordinator'))||existsSync(join(base,'.practice/stop-swarm'));
  if(stopped())throw Error('controller rollout owner stopped');
  const diskSource=deps.diskSource??(()=>cachedLaunchRevision(base));
