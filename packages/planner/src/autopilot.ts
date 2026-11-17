@@ -858,7 +858,7 @@ export function plan(inp: Inputs): Assignment[] {
                 fund:{from,to:c.account,coins,template:c.template.id,...(meetOf.get(c.account)?{meet:'ardougne' as const}:{})}});
             return;
         }
-        if (step === 'buy' && c.template.shopKit) return;
+        if (step === 'buy' && (c.template.shopKit || cachedWayCost(a.pos, PLACES['shop:zaff'], inp.mountain?.(a) ?? true) === null)) return;
         const own = (l: Lack) => l.of.some(i => !!c.template.ownSupply?.includes(i));
         const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
@@ -1185,6 +1185,8 @@ const onTutorialIsland = (p: Spot) => p.x >= 3050 && p.x <= 3160 && p.z >= 3050 
 export const onKaramja = (p: Spot) => p.x >= 2704 && p.z >= 2939 && p.x <= (p.z <= 3149 ? 2959 : p.z <= 3193 ? 2948 : p.z <= 3247 ? 2812 : 0);
 const inEast = (p: Spot) => !onKaramja(p) && p.x >= 2870 && p.x <= 3280 && p.z >= 3150 && p.z <= 3510;
 const inKandarin = (p: Spot) => !onKaramja(p) && p.x >= 2440 && p.x < 2870 && p.z >= 3040 && p.z <= 3530;
+// Walled West Ardougne compound: city doors stay shut until Biohazard completes and world.route finds no exit across the wall.
+export const inWestArdougne = (p: Spot) => p.x >= 2496 && p.x <= 2557 && p.z >= 3264 && p.z <= 3335;
 const ardougneTarget = (p: Spot) => p.x >= 2600 && p.x <= 2690 && p.z >= 3260 && p.z <= 3360;
 // The tile a job's worker walks to first, by resource: the Ardougne north bank for the cow field, its two Magic tiles
 // and the troopers; the bank of each shop (scripts/shop-buyer.ts PROFILES bankSpot; scripts/autopilot.test.ts keeps
@@ -1216,6 +1218,7 @@ export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
 export function wayCost(pos: Spot | undefined, place: Spot | undefined, mountain: boolean): number | null {
     if (!pos || !place) return 0;
     const at = onTutorialIsland(pos) ? LUMBRIDGE : pos;
+    if (inWestArdougne(at) !== inWestArdougne(place)) return null;
     if (onKaramja(at)) return onKaramja(place) ? 0 : FERRY_FARE;
     if (inEast(at) && ardougneTarget(place)) return 2 * FERRY_FARE + (at.x >= 3250 && at.z <= 3230 ? TOLL : 0);
     if (inEast(at) && inKandarin(place)) return mountain ? 0 : null;
@@ -1223,9 +1226,9 @@ export function wayCost(pos: Spot | undefined, place: Spot | undefined, mountain
     return 0;
 }
 // Where a coin order meets an account that stands at `pos`: the Ardougne north bank for a start in Kandarin, which
-// has no way east without the fare; null on Karamja, where no order can reach the account; else Varrock West (undefined).
+// has no way east without the fare; null on Karamja or inside West Ardougne, where no order can reach the account; else Varrock West (undefined).
 export function meetFor(pos: Spot | undefined): 'ardougne' | null | undefined {
-    return !pos ? undefined : onKaramja(pos) ? null : inKandarin(pos) ? 'ardougne' : undefined;
+    return !pos ? undefined : onKaramja(pos) || inWestArdougne(pos) ? null : inKandarin(pos) ? 'ardougne' : undefined;
 }
 // The template with `fare` more coins in its coin need.
 function withFare(t: Template, fare: number): Template {

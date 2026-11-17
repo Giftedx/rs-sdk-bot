@@ -12,9 +12,10 @@
 import { existsSync } from 'node:fs';
 import { openBot, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
+import { componentId } from '../packages/core/src/logout';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { bestFood, fightPlayer, newVolley, nextTick, wildernessLevel, type FightOptions, type VolleyState } from './pk';
-import { escapeStep, huntOnce, kitFrom, wearGlory, type Cfg } from './pk-roam';
+import { escapeStep, hasVarrockTeleport, huntOnce, kitFrom, wearGlory, type Cfg } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
 export type FollowerStats = { name: string; fights: number; kills: number; died: boolean; escaped: boolean; attacks: number };
@@ -70,14 +71,27 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
     return stats;
 }
 
+// Follower escape choice at a Wilderness depth: rubbed glory up to 30, Varrock Teleport up to 20, else run south.
+export function armyEscapeMethod<I extends { name: string; count?: number }, E extends { name: string }>(
+    magic: number,
+    z: number,
+    inventory: readonly I[],
+    equipment: readonly E[],
+    removeTries: number,
+): { how: ReturnType<typeof escapeStep>; glory: I | undefined; worn: E | undefined } {
+    const glory = inventory.find(i => GLORY.test(i.name));
+    const worn = equipment.find(i => GLORY.test(i.name));
+    const how = escapeStep(wildernessLevel(z), { glory: !!glory || (!!worn && removeTries < 3), teleport: hasVarrockTeleport(magic, inventory, equipment) });
+    return { how, glory, worn };
+}
+
 async function leave(s: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, emit: (e: object) => void): Promise<boolean> {
     let removeTries = 0;
     for (let step = 0; step < 120; step++) {
         const p = s.sdk.getState()?.player;
         if (!p) { if (!await nextTick(s)) return false; continue; }
-        const glory = s.sdk.getInventory().find(i => GLORY.test(i.name));
-        const worn = s.sdk.getEquipment().find(i => GLORY.test(i.name));
-        const how = escapeStep(wildernessLevel(p.worldZ), { glory: !!glory || (!!worn && removeTries < 3), teleport: false });
+        const magic = s.sdk.getSkill('Magic')?.level ?? 1;
+        const { how, glory, worn } = armyEscapeMethod(magic, p.worldZ, s.sdk.getInventory(), s.sdk.getEquipment(), removeTries);
         if (how === 'out') { emit({ e: 'follower-out', name: s.name, at: [p.worldX, p.worldZ] }); return true; }
         if (how === 'glory') {
             // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option). It comes off into a
@@ -94,6 +108,9 @@ async function leave(s: Session, walker: Awaited<ReturnType<typeof sessionWalker
             await s.sdk.clickDialogByText(/^Edgeville/i);
             await s.sdk.waitForTicks(6);
             if (removeTries > 0) await wearGlory(s);
+        } else if (how === 'teleport') {
+            await s.sdk.sendClickComponent(componentId('magic:varrock_teleport'));
+            await s.sdk.waitForTicks(6);
         } else await walkPath(walker, [{ x: p.worldX, z: Math.max(3510, p.worldZ - 20), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
     }
     return false;
