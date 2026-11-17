@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794930535040,
+ "at": 1794930570027,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -406,7 +406,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -481,7 +482,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
    },
    "enabled": true,
    "standing": true,
