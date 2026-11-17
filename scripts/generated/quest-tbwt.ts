@@ -20,7 +20,7 @@
 //    (tbwt_jogre_bones.rs2:13-23); karambwanji paste on them, then the fire (cooking 30).
 //  - Karamja rum is untradeable and sold by Zambo (karamja.inv:10). The glory rubs to Karamja 2918,3176
 //    (amulet_of_glory.rs2, 0_45_49_38_40).
-import { openQuest } from './quest-lib';
+import { CHOICE_ROOTS, CONTINUE_ROOTS, createBurstPageRecorder, openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 
 const ITEM = {
@@ -48,17 +48,42 @@ try {
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the.*tai bwo wannai/i) > 0) questDone = true; });
     const x = () => q.pos()?.worldX ?? 0;
     const z = () => q.pos()?.worldZ ?? 0;
-    // Dialogue text with a mark: quest-lib sawText keeps every page, so a later step would match an earlier page.
+    // Dialogue text with a mark: capture both burst-rendered IF_SETTEXT pages and open-tick fallbacks.
     const texts: string[] = [];
-    let lastText = '';
+    let lastTickText = '';
+    const lite: any = (q.s as any).client;
+    if (lite && typeof lite.ifMutable === 'function') {
+        const prevMutable = lite.ifMutable;
+        const chatRoots = new Set([...CONTINUE_ROOTS, ...CHOICE_ROOTS]);
+        const recordBurstLine = createBurstPageRecorder(chatRoots, joined => { texts.push(joined); lastTickText = joined; });
+        lite.ifMutable = function (id: number) {
+            const com: any = prevMutable.call(this, id);
+            if (com && !com.__stepText) {
+                const desc = Object.getOwnPropertyDescriptor(com, 'text');
+                let v = com.text;
+                Object.defineProperty(com, 'text', {
+                    configurable: true,
+                    enumerable: true,
+                    get: () => (desc?.get ? desc.get.call(com) : v),
+                    set: (x: any) => {
+                        if (desc?.set) desc.set.call(com, x);
+                        else v = x;
+                        recordBurstLine(id, com.layerId, x);
+                    },
+                });
+                com.__stepText = true;
+            }
+            return com;
+        };
+    }
     q.s.onTick(() => {
         const d: any = q.s.sdk.getDialog();
         const t = d?.isOpen ? [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].filter(Boolean).join(' ') : '';
-        if (t && t !== lastText) { texts.push(t); lastText = t; }
+        if (t && t !== lastTickText) { texts.push(t); lastTickText = t; }
         for (const m of (q.st()?.gameMessages ?? []).slice(-3)) { const k = `#${m.tick}:${m.text}`; if (!texts.includes(k)) texts.push(k); }
     });
     const mark = () => texts.length;
-    const seen = (re: RegExp, m: number) => texts.slice(m).some(t => re.test(t)) || re.test(lastText);
+    const seen = (re: RegExp, m: number) => texts.slice(m).some(t => re.test(t));
     const glory = () => q.inv().find((i: any) => GLORY.includes(i.id));
     const drop = async (label: string, keep: Set<number>) => {
         for (let i = 0; i < 40; i++) {
