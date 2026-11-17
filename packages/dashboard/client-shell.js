@@ -171,24 +171,24 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Teleport casts: how many casts of each teleport spell the pack's runes give (a wielded staff gives its rune without
   // limit; client-assets/spellbook.json); a spell above the account's current Magic level is dim.
   // How many casts the pack's runes give for a rune list ([[rune, count], ...]); a wielded staff gives its rune without limit.
-  function runeCasts(b,runes){const have=n=>(b.inventory||[]).filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipment?.find(e=>e.slot===3)?.name;const free=new Set(Object.entries(spellbookData?.staffs||{}).filter(([,s])=>Array.isArray(s)&&s.includes(weapon)).map(([r])=>r));return Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c)));}
+  function runeCasts(b,runes){const have=n=>(b.inventory||[]).filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipmentObserved===false?null:b.equipment?.find(e=>e.slot===3)?.name;const free=new Set(Object.entries(spellbookData?.staffs||{}).filter(([,s])=>Array.isArray(s)&&s.includes(weapon)).map(([r])=>r));return Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c)));}
   // Magic max hit (Equipment Stats): the combat spell with the highest max hit (spellbook.json, the server's
   // magic_combat_spells.dbrow) that the account can cast now: its current Magic level, the runes for one cast, the staff
   // a spell needs worn. A spell's max hit is fixed in this game (no magic damage bonus).
   function bestSpell(b){
     if(!spellbookData?.combat?.length||!Array.isArray(b?.inventory))return null;
     const mg=curLevel(b,'Magic');if(!Number.isFinite(mg))return null;
-    const worn=new Set((b.equipment||[]).map(e=>e?.name));
+    const worn=new Set((b.equipmentObserved===false?[]:b.equipment||[]).map(e=>e?.name));
     let best=null;for(const [name,lv,max,runes,staff,exp] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max))best={name,max,casts,xp:(exp||0)*2.5};}
     return best;
   }
   function teleCasts(b){
     if(!spellbookData||!Array.isArray(b?.inventory))return [];
-    const have=n=>b.inventory.filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipment?.find(e=>e.slot===3)?.name;
+    const have=n=>b.inventory.filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipmentObserved===false?null:b.equipment?.find(e=>e.slot===3)?.name;
     const free=new Set(Object.entries(spellbookData.staffs||{}).filter(([,s])=>Array.isArray(s)&&s.includes(weapon)).map(([r])=>r)),mg=curLevel(b,'Magic');
     return spellbookData.spells.map(([name,lv,runes])=>({name,lv,casts:Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c))),can:Number.isFinite(mg)?mg>=lv:null})).filter(s=>s.casts>0&&Number.isFinite(s.casts));
   }
-  const teleLine=b=>{const l=teleCasts(b);return l.length?'<p class="tele-casts" title="'+E(l.map(s=>s.name+' ×'+s.casts+(s.can==null?' (Magic level not reported)':s.can?'':' (Magic '+s.lv+' needed)')).join(', '))+'">Tele: '+l.map(s=>'<span class="'+(s.can===true?'':'tele-low')+'" title="'+E(s.name+' · Magic '+s.lv+(s.can==null?' (Magic level not reported)':s.can?'':' (too low)'))+'">'+E(s.name.slice(0,3))+' ×'+s.casts+'</span>').join(' · ')+'</p>':'';};
+  const teleLine=b=>{const l=teleCasts(b),note=b?.equipmentObserved===false?'; equipment not reported; counts use pack runes.':'';return l.length?'<p class="tele-casts" title="'+E(l.map(s=>s.name+' ×'+s.casts+(s.can==null?' (Magic level not reported)':s.can?'':' (Magic '+s.lv+' needed)')).join(', ')+note)+'">Tele: '+l.map(s=>'<span class="'+(s.can===true?'':'tele-low')+'" title="'+E(s.name+' · Magic '+s.lv+(s.can==null?' (Magic level not reported)':s.can?'':' (too low)')+note)+'">'+E(s.name.slice(0,3))+' ×'+s.casts+'</span>').join(' · ')+'</p>':'';};
   // Items kept on death (RuneLite's Items Kept on Death): in the Wilderness, the 3 items the account keeps (pvpState,
   // green) and the items of value it loses (red), on the worn items and the pack. deathMarks gives the kept units by name
   // (pvpState counts each unit of a stack once); deathCls uses them up by the stack's count, in the order the cells are
@@ -368,9 +368,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const questReady=(b,q)=>!!questReqData&&['not started','in progress'].includes(questState(q))&&questReqs(b,q.name).every(x=>x.ok===true);
   // Quest items: i [[item, count, src]] (src 1 the quest's scripts name the item, 0 only the wiki lists it), held across
   // the pack, worn gear and the bank (the bank as last observed). Items do not count for Ready: they can be bought.
-  function questItems(b,name){const l=questReqData?.[name]?.i;if(!l)return [];const all=[...(b?.inventory||[]),...(b?.equipment||[]),...(b?.bank||[])].filter(Boolean);
-    return l.map(([n,c,src])=>{const have=all.filter(x=>x.name===n).reduce((t,x)=>t+(x.count||1),0);return {text:(c>1?c+' ':'')+n,ok:have>=c,have,src};});}
-  const itemHtml=(b,name)=>{const l=questItems(b,name);return l.length?'<p class="quest-reqs">Items: '+l.map(x=>'<span class="'+(x.ok?'req-ok':'req-miss')+(x.src===1?'':' req-soft')+'" title="'+E((x.src===1?'the quest scripts use this item':'only the wiki lists this')+' · holds '+x.have+(b?.bankAt?'':' (no bank snapshot)'))+'">'+E(x.text)+(!x.ok&&x.have?' ('+x.have+')':'')+'</span>').join(', ')+'</p>':'';};
+  function questItems(b,name){const l=questReqData?.[name]?.i;if(!l)return [];const all=[...(b?.inventory||[]),...(b?.equipmentObserved===false?[]:b?.equipment||[]),...(b?.bank||[])].filter(Boolean);
+    return l.map(([n,c,src])=>{const have=all.filter(x=>x.name===n).reduce((t,x)=>t+(x.count||1),0);return {text:(c>1?c+' ':'')+n,ok:have>=c?true:b?.equipmentObserved===false?null:false,have,src};});}
+  const itemHtml=(b,name)=>{const l=questItems(b,name);return l.length?'<p class="quest-reqs">Items: '+l.map(x=>'<span class="'+(x.ok===true?'req-ok':x.ok===false?'req-miss':'req-unknown')+(x.src===1?'':' req-soft')+'" title="'+E((x.src===1?'the quest scripts use this item':'only the wiki lists this')+(b?.equipmentObserved===false?' · reported holdings ':' · holds ')+x.have+(b?.equipmentObserved===false?'; equipment not reported':'')+(b?.bankAt?'':' (no bank snapshot)'))+'">'+E(x.text)+(!x.ok&&x.have?' ('+x.have+')':'')+'</span>').join(', ')+'</p>':'';};
   const reqHtml=(b,name)=>{const l=questReqs(b,name);return l.length?'<p class="quest-reqs">Needs: '+l.map(x=>'<span class="'+(x.ok===true?'req-ok':x.ok===false?'req-miss':'req-unknown')+(x.src===1?'':' req-soft')+'" title="'+E(REQ_SRC[x.src]+(x.have!=null&&!x.ok?' · has '+x.have:''))+'">'+E(x.text)+(x.have!=null&&x.ok===false?' ('+x.have+')':'')+'</span>').join(', ')+'</p>':'';};
   // The third list is XP that is one of several outcomes (a random reward): "one of".
   const rewardText=name=>{const r=questRewardData?.[name];if(!r)return '';const alt=r[2]||[];return [r[0]?r[0]+(r[0]===1?' quest point':' quest points'):'',...r[1].map(([s,x])=>nf(x)+' '+s+' XP'),alt.length?'one of: '+alt.map(([s,x])=>nf(x)+' '+s).join(', ')+' XP':''].filter(Boolean).join(' · ');};
@@ -505,9 +505,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function gatherText(b,item,lvl,skill){const g=gatherData[item],cur=skill&&typeof curLevel==='function'?curLevel(b,skill):null;if(Number.isFinite(cur))lvl=cur;if(!g||!Number.isFinite(lvl))return '';
     const roll=([lo,hi])=>{const l=Math.min(lvl,99);return Math.min(Math.floor(lo*(99-l)/98)+Math.floor(hi*(l-1)/98)+1,256)/256;};
     if(g.roll)return Math.round(roll(g.roll)*100)+'% a try';
-    const held=new Set([...(b?.inventory||[]),...(b?.equipment||[])].filter(Boolean).map(i=>i.name));
+    const held=new Set([...(b?.inventory||[]),...(b?.equipmentObserved===false?[]:b?.equipment||[])].filter(Boolean).map(i=>i.name));
     const t=(g.tool||[]).filter(([n])=>held.has(n)).map(([n,lo,hi])=>({n,p:roll([lo,hi])})).sort((x,y)=>y.p-x.p)[0];
-    return t?Math.round(t.p*100)+'% a try with the '+t.n.toLowerCase():'no axe held';}
+    return t?Math.round(t.p*100)+'% a try with the '+t.n.toLowerCase()+(b?.equipmentObserved===false?' (equipment not reported)':''):b?.equipmentObserved===false?'axe not reported':'no axe held';}
   const bestSpotLine=(b,lvl)=>{const s=bestSpot(b,calcSkill,lvl);return s?'<div class="calc-best">Best now: <b>'+E(s.name)+'</b> (level '+s.level+')'+(gatherText(b,s.item,lvl,calcSkill)?' · '+E(gatherText(b,s.item,lvl,calcSkill)):'')+(s.near?' · nearest '+nf(s.near.d)+' tiles':'')+' <button class="xp-reset" data-best-pin="'+E(s.name)+'">'+(sourcePin?.key==='best|'+s.name?'Shown':'Show on map')+'</button></div>':'';};
   const guideText=g=>!g?'':(g.best?' · '+nf(g.best.count)+' × '+g.best.name+' to level':'')+(g.next.length?' · next: '+g.next[0].name+' at '+g.next[0].level:'');
   function calcBox(b,row){
@@ -1253,12 +1253,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Ammo (RuneLite's ammo plugin): the stack in the ammo slot (13) with its count.
     // Food (RuneLite's supplies count): the food in the pack (item-stats.json: what heals) with its count; red at 2 or fewer.
     const foodBox=b=>{const f=typeof foodOf==='function'?foodOf(b):{total:0};if(!f.total)return '';const top=f.items[0],hp=f.items.reduce((n,i)=>n+(Number(String(itemStats[i.name]||'').match(/heals (\d+)/)?.[1])||0)*i.count,0);return `<button class="infobox${f.total<=2?' boost-down':''}" title="${E('Food: '+f.items.map(i=>i.name+' × '+i.count).join(', ')+(hp?' · heals '+hp+' hitpoints in all':''))}">${icon(top.name,24)}<span>${f.total}</span></button>`;};
-    const ammoBox=b=>{const a=b.equipment?.find(e=>e.slot===13&&e.count>0);return a?`<button class="infobox ammo" title="${E(a.name)} × ${E(a.count)}">${icon(a,24)}<span>${a.count>=1e5?Math.floor(a.count/1e3)+'K':E(a.count)}</span></button>`:'';};
+    const ammoBox=b=>{const a=b.equipmentObserved===false?null:b.equipment?.find(e=>e.slot===13&&e.count>0);return a?`<button class="infobox ammo" title="${E(a.name)} × ${E(a.count)}">${icon(a,24)}<span>${a.count>=1e5?Math.floor(a.count/1e3)+'K':E(a.count)}</span></button>`:'';};
     if(b){set((b.uptime?box(asset('rl-activity.png'),short(b.uptime),'Session: '+dur(b.uptime)):'')+(b.goalSkill&&!(b.goalNow>=b.goalLevel)?box(asset('skill-'+skillFile(b.goalSkill)+'.png'),b.eta||String(b.goalNow??''),b.goalSkill+' '+(b.goalNow??'?')+' → '+b.goalLevel+(b.eta?' in '+b.eta:'')):'')+(b.death?box(asset('skill-hitpoints.png'),'died','Died '+age(b.death.at)+' ago: '+b.death.text+' · click for the recap').replace('class="infobox"','class="infobox boost-down" data-death="'+E(b.name)+'"'):'')+foodBox(b)+ammoBox(b)+nearBox(b)
       // NPC aggression timer: the time left until the NPCs that spawn here stop hunting the account.
       +(()=>{if(typeof aggroText!=='function')return '';const a=aggroText(b,Date.now());return a?box(asset('skill-attack.png'),a.text,a.title).replace('class="infobox"','class="infobox'+(a.red?' boost-down':'')+'"'):'';})()
       // Item charges: teleport jewellery on its last charge, or used up (an amulet of glory with no charges has no number).
-      +(()=>{const l=[...(b.inventory||[]),...(b.equipment||[])].filter(i=>i&&/^(Amulet of glory|Ring of dueling|Games necklace)(\(1\))?$/.test(i.name)&&i.name!=='Ring of dueling'&&i.name!=='Games necklace');return l.length?`<button class="infobox boost-down" title="${E('Last charge: '+l.map(i=>i.name).join(', '))}">${icon(l[0],24)}<span>${l.length}</span></button>`:'';})()
+      +(()=>{const l=[...(b.inventory||[]),...(b.equipmentObserved===false?[]:b.equipment||[])].filter(i=>i&&/^(Amulet of glory|Ring of dueling|Games necklace)(\(1\))?$/.test(i.name)&&i.name!=='Ring of dueling'&&i.name!=='Games necklace');return l.length?`<button class="infobox boost-down" title="${E('Last charge: '+l.map(i=>i.name).join(', '))}">${icon(l[0],24)}<span>${l.length}</span></button>`:'';})()
       // PvP Tools: in the Wilderness, a red count of the players who can attack the account now.
       +(()=>{const p=b.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null;return p?.threats.length?box(asset('prayer-protect-item.png'),String(p.threats.length),p.threats.length+(p.threats.length===1?' player':' players')+' can attack: '+p.threats.slice(0,6).map(t=>t.name+' ('+t.combat+', '+t.dist+' tiles)').join(', ')).replace('class="infobox"','class="infobox boost-down"'):'';})()
       // Boosts (RuneLite boosts): a skill whose current level differs from its base; Hitpoints and Prayer are the orbs.
