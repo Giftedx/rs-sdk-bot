@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794925571965,
+ "at": 1794925635370,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -152,24 +152,6 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=35 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=woodpecker-kit4-556-0to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 35 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/ranged-train.ts",
    "args": [
@@ -265,23 +247,19 @@
    "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=3 EXPECTED_OWNED=2 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit14-385-2to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "repeat": false,
+   "goal": "buy 3 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "supply",
-   "template": "army-hunt-supply",
+   "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
-   ]
+   "resources": []
   },
   {
    "account": "mmthv2350",
@@ -315,7 +293,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
@@ -356,21 +335,45 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
+    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "role": "supply",
+   "template": "army-hunt-supply",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "shop:lowe",
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "21",
+    "1500"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":21}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-strike-magic-21",
+   "autopilot": "local",
+   "resources": [
+    "strike:ardougne-guard-dog"
    ]
   },
   {
