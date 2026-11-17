@@ -262,7 +262,7 @@ function runRules(state:CoordinatorState,liveLimit:number){
    allowed:account=>owners.get(account.toLowerCase())?.side===side&&owners.get(account.toLowerCase())?.server==='rs-sdk-demo.fly.dev'&&['confirmed','none'].includes(readLogoutProof(account,'rs-sdk-demo.fly.dev',{root:join(projectRoot,'.practice/session-lifecycle')}).state),
    paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
    definition:id=>{const def=deliveryTask(id);return{id:def.id,entry:def.entry,source:observedSource(id)};},
-   capabilityFor:entry=>definitions.filter(d=>d.entry===entry&&reviewApproved(state,d.id)).sort((a,b)=>Number(!!currentQualification(state,b.id,observedSource(b.id)))-Number(!!currentQualification(state,a.id,observedSource(a.id)))||a.id.localeCompare(b.id))[0]?.id??null,
+   capabilityFor:entry=>entry==='scripts/ranged-train.ts'?definitions.filter(d=>d.entry===entry&&reviewApproved(state,d.id)).sort((a,b)=>Number(!!currentQualification(state,b.id,observedSource(b.id)))-Number(!!currentQualification(state,a.id,observedSource(a.id)))||a.id.localeCompare(b.id))[0]?.id??null:null,
    prepare:finiteBand,
    needsEntryObservation:(task,_account,status)=>{
     if(entryOf(task.capability!)!=='scripts/ranged-train.ts'||!status?.pos||status.pos.level!==0)return false;
