@@ -112,6 +112,11 @@ describe('cloud side bootstrap', () => {
         expect(endStopWrites(SWARM_STOP.all)).toBe(true);
         expect(endStopWrites('owner: pause for the quest')).toBe(false);
     });
+    test('a watch with unknown normal owners reports failure even when it leaves daemons running',()=>{
+        expect(cloudSide.watchResult({normalOwnershipError:'normal live owner command unknown'})).toBe('fail');
+        expect(cloudSide.watchResult({normalOwnershipError:null})).toBe('ok');
+        expect(cloudSide.watchResult({ownerStopped:true})).toBe('stop');
+    });
 });
 
 const normalFixture=async(run:(base:string,write:(path:string,value:unknown)=>void)=>Promise<void>|void)=>{

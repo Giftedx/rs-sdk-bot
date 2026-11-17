@@ -115,6 +115,9 @@ export function mayRestart(restarts: readonly number[], now: number): boolean {
 export const ownerStop = (text: string | undefined) => text !== undefined && !swarmWroteStop(text);
 // Whether the end of a --stop-at-end watch writes the swarm's stop text: never over an owner's file.
 export const endStopWrites = (existing: string | undefined) => !ownerStop(existing);
+export function watchResult(v:{inspectionStartupError?:boolean;boundedOwnershipError?:boolean;normalOwnershipError?:string|null;ownerStopped?:boolean}){
+    return v.inspectionStartupError||v.boundedOwnershipError||v.normalOwnershipError?'fail':v.ownerStopped?'stop':'ok';
+}
 // A new side plan: the repository's admission limits, no jobs (the planner writes one per account).
 export function newPlan(capacity: number) {
     return { maxBots: 4, minFreeGB: 4, fleetCapacity: capacity, jobs: [] as unknown[] };
@@ -412,6 +415,7 @@ if (import.meta.main) {
     }
     const up = Object.keys(commands).map(n => `${n}=${records[n] && alive(records[n]!.pid, commands[n]![0]!) ? 'up' : 'down'}`).join(' ');
     const starts = Object.keys(commands).reduce((s, n) => s + (records[n]?.restarts.filter(t => t >= began).length ?? 0), 0);
-    console.log(`RESULT ${inspectionStartupError||boundedOwnershipError?'fail':ownerStopped ? 'stop' : 'ok'} cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${ownerStopped ? ' owner stop file' : ''}${o.stopAtEnd ? ' stopped' : ''}`);
-    if(inspectionStartupError||boundedOwnershipError)process.exitCode=1;
+    const result=watchResult({inspectionStartupError,boundedOwnershipError,normalOwnershipError,ownerStopped});
+    console.log(`RESULT ${result} cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${ownerStopped ? ' owner stop file' : ''}${o.stopAtEnd ? ' stopped' : ''}${normalOwnershipError?' normal ownership unknown; owners preserved':''}`);
+    if(result==='fail')process.exitCode=1;
 }
