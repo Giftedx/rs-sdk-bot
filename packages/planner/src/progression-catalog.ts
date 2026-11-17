@@ -74,6 +74,36 @@ export function accountFromStatus(account:string,status:any,now=Date.now()):Obse
 function setting(env:Readonly<Record<string,string|undefined>>,args:readonly string[],name:string){return env[name]??args.find(a=>a.startsWith(name+'='))?.slice(name.length+1);}
 function positiveItems(value:Record<number,number>|undefined){return value&&Object.keys(value).length&&Object.entries(value).every(([id,n])=>whole(Number(id))&&Number(id)>0&&whole(n)&&n>0)?value:null;}
 
+// openBot removes a leading actor name: the donor retains [receiver, amount],
+// while the receiver retains [donor, receiver, amount]. The worker supplies the
+// same exact participant pair for both; ownership and bank reserves stay its guards.
+function coinTransferIntent(args:readonly string[],env:Readonly<Record<string,string|undefined>>):WorkIntent|null{
+ const account=(s:unknown):s is string=>typeof s==='string'&&s.trim()===s&&/^[A-Za-z0-9_ -]{1,12}$/.test(s)&&!/^(main|haggis)$/i.test(s);
+ const pair=(v:unknown):v is [string,string]=>Array.isArray(v)&&v.length===2&&v.every(account)&&key(v[0])!==key(v[1]);
+ let participants:[string,string]|undefined;
+ if(env.COORDINATOR_PARTICIPANTS!==undefined){try{const parsed:unknown=JSON.parse(env.COORDINATOR_PARTICIPANTS);if(!pair(parsed))return null;participants=parsed;}catch{return null;}}
+ let from:string,to:string,amountText:string,options:readonly string[];
+ if(account(args[0])&&account(args[1])&&/^\d+$/.test(args[2]??'')){
+  from=args[0]!;to=args[1]!;amountText=args[2]!;options=args.slice(3);
+  if(!pair([from,to])||participants&&(key(from)!==key(participants[0])||key(to)!==key(participants[1])))return null;
+ }else if(participants&&key(args[0]??'')===key(participants[1])&&/^\d+$/.test(args[1]??'')){
+  [from,to]=participants;amountText=args[1]!;options=args.slice(2);
+ }else return null;
+ const amount=Number(amountText);
+ if(!whole(amount)||amount<1||amount>2147483647)return null;
+ const values:Record<string,number>={reserve:0,'bank-x':3185,'bank-z':3436,'request-ms':30000,'timeout-ms':240000,'grace-ms':45000},seen=new Set<string>();
+ for(const option of options){
+  const match=/^--(reserve|bank-x|bank-z|approach-ms|request-ms|timeout-ms|grace-ms)=(\d+)$/.exec(option);
+  if(!match||seen.has(match[1]!))return null;
+  const value=Number(match[2]);if(!whole(value))return null;seen.add(match[1]!);values[match[1]!]=value;
+ }
+ if(values.reserve!>2147483647||!['bank-x','bank-z'].every(k=>values[k]!>0&&values[k]!<16384)
+  ||values['approach-ms']!==undefined&&(values['approach-ms']!<1000||values['approach-ms']!>1800000)
+  ||values['request-ms']!<1000||values['request-ms']!>60000||values['timeout-ms']!<values['request-ms']!||values['timeout-ms']!>600000
+  ||values['grace-ms']!<1000||values['grace-ms']!>60000)return null;
+ return{kind:'service',objective:`finite owned coin transfer ${from} -> ${to}: ${amount} coins; donor bank reserve ${values.reserve}`};
+}
+
 export function matchingProgressionRoutes(script:string,args:readonly string[]=[],env:Readonly<Record<string,string|undefined>>={},catalog:ProgressionCatalog=loadProgressionCatalog()):CatalogRoute[]{
  script=scriptPath(script);
  if(script==='scripts/aio.ts'){
@@ -95,6 +125,7 @@ export function matchingProgressionRoutes(script:string,args:readonly string[]=[
 // Declared finite output owns the intent. Side XP never changes a quest or item order into a trainer.
 export function intentForEntry(script:string,args:readonly string[]=[],env:Readonly<Record<string,string|undefined>>={},accept?:CatalogAccept,catalog?:ProgressionCatalog):WorkIntent|null{
  script=scriptPath(script);
+ if(script==='scripts/coin-courier.ts')return coinTransferIntent(args,env);
  const consumer=setting(env,args,'CONSUMER')??setting(env,args,'GOAL')??script;
  const requestedItems=positiveItems(accept?.bank);
  if(requestedItems)return{kind:'acquire',items:{...requestedItems},consumer};

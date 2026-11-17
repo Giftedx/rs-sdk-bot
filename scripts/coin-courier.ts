@@ -214,7 +214,8 @@ export async function main() {
     try {
         check(); release = acquireAccountLeases([c.donor, c.receiver], runId);
         process.on('SIGINT', cancel); process.on('SIGTERM', cancel);
-        for (const name of [c.donor, c.receiver]) { check(); sessions.push(await openBot(name, { onStop: async () => cancel(), onSessionEnd: async () => cancel() })); }
+        const record={script:import.meta.file,argv:process.argv.slice(2),env:{...process.env,COORDINATOR_PARTICIPANTS:JSON.stringify([c.donor,c.receiver])}};
+        for (const name of [c.donor, c.receiver]) { check(); sessions.push(await openBot(name, {record,onStop: async () => cancel(), onSessionEnd: async () => cancel() })); }
         await moveCoins(c, sessions, journal, server, check);
         ok = true; detail = `transferred ${c.amount} coins ${c.donor} -> ${c.receiver}`;
     } catch (error) { detail = String(error); }
