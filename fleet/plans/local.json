@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794957619758,
+ "at": 1794957758726,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -198,7 +198,8 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune"
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -232,27 +233,28 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/ranged-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99",
+    "1500"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "TARGET_LEVEL": "99",
+    "FOOD": "3",
+    "AMMO": "100",
+    "MAX_TRIPS": "50",
+    "COIN_RESERVE": "0",
+    "MAX_SPEND": "55000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
    "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "template": "army-trooper-ranged-99",
    "autopilot": "local",
    "resources": [
+    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
@@ -284,20 +286,29 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Swordinhand",
@@ -380,29 +391,28 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/ranged-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "1500"
+    "1500",
+    "trooper"
    ],
    "env": {
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
-    "FOOD": "3",
-    "AMMO": "100",
-    "MAX_TRIPS": "50",
-    "COIN_RESERVE": "0",
-    "MAX_SPEND": "55000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "local",
    "resources": [
-    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
