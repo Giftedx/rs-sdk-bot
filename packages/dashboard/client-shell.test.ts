@@ -1483,6 +1483,12 @@ test('PvP Tools: risk, the 3 kept items, and only the players the server lets at
  // Far is 38 tiles away, Strong is 25 levels apart, Mate is ours, Outside is not in the Wilderness, Upstairs is on another floor.
  expect(p.threats.map((t:any)=>t.name)).toEqual(['Near']);
  expect(pvpState({name:'Ours1',inWorld:false})).toBeNull();
+ // Multi-way zone detection uses the loaded multiLines half-open edge parity.
+ const multiLines=[[3064,3624,3064,3632,0],[3072,3624,3072,3632,0],[3064,3624,3072,3624,0],[3064,3632,3072,3632,0]];
+ const withMulti=new Function('S','price','multiLines',`${code};return {pvpState};`)(S,pricing(S).price,multiLines).pvpState;
+ expect(withMulti({name:'Ours1',inWorld:true,combat:70,pos:{x:3064,z:3624,level:0},equipment:[],inventory:[]}).multi).toBe(true);
+ expect(withMulti({name:'Ours1',inWorld:true,combat:70,pos:{x:3072,z:3624,level:0},equipment:[],inventory:[]}).multi).toBe(false);
+ expect(withMulti({name:'Ours1',inWorld:true,combat:70,pos:{x:3068,z:3632,level:0},equipment:[],inventory:[]}).multi).toBe(false);
 });
 test('the death recap card shows the tile, the last hit, hitsplats and what the death took',()=>{
  const code=shell.slice(shell.indexOf('  let recap={name:null'),shell.indexOf('  // Quest Journal, Fleet view'));

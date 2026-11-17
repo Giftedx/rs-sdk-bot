@@ -1,5 +1,5 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart,openShopWithDoor,runAdaptiveRanged,rangedComparisonMethod} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryBank,recoveryWalker,recoverRangedStart,openShopWithDoor,runAdaptiveRanged,rangedComparisonMethod} from './ranged-train';
 import * as combat from './gather-combat';
 import * as walking from '../packages/core/src/walk';
 import * as bot from '../packages/core/src/bot';
@@ -506,4 +506,20 @@ test('an empty target list outside the pen walks back to the pen entry instead o
 test('banking recovered arrows between trips does not count as firing',async()=>{
  const f=trainingFixture(['kill','kill'],false,false,false,'foreign',true);
  try{const r=await f.run({killsPerTrip:1});expect(r).toMatchObject({ok:true,trips:2,kills:2,shots:2,picked:2,arrowsSpent:0,accounting:true});}finally{f.close();}
+});
+
+test('Kandarin recovery walks to Ardougne North bank instead of crossing White Wolf Mountain with zero coins',async()=>{
+ expect(recoveryBank({worldX:2614,worldZ:3296,level:0})).toEqual({x:2619,z:3332});
+ expect(recoveryBank({worldX:3185,worldZ:3436,level:0})).toEqual({x:3253,z:3421});
+ const client={};setEquipmentObserved(client,true);
+ const p={worldX:2614,worldZ:3296,level:0};
+ const s={name:'Bigpackage',client,tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getState:()=>({player:p}),getEquipment:()=>[]}} as unknown as Session;
+ const world=spyOn(bot,'getWorld').mockImplementation(async()=>({} as any));
+ const actor=spyOn(bot,'accountOf').mockImplementation(()=>({skills:{magic:99},items:[],coins:5000} as any));
+ const go=spyOn(walking,'goTo').mockImplementation(async(_s,_w,to)=>{expect(to).toEqual({x:2619,z:3332,level:0});p.worldX=2619;p.worldZ=3332;return{ok:true} as any;});
+ try{
+  expect(await recoverRangedStart(s)).toEqual({from:{x:2614,z:3296,level:0},stopped:false});
+  expect(go).toHaveBeenCalledTimes(1);
+ }finally{go.mockRestore();world.mockRestore();actor.mockRestore();}
 });
