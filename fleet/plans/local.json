@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794937387656,
+ "at": 1794937454970,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -172,25 +172,6 @@
    ]
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=46 EXPECTED_OWNED=4 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit5-561-4to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":50}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 46 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -229,8 +210,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -290,6 +270,26 @@
     "shop:lowe",
     "shop:aubury"
    ]
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Moneyshot",
@@ -458,7 +458,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -502,19 +503,20 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "60",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":60}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-defence-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
