@@ -290,7 +290,8 @@ export function weaponStyle(id: number | undefined, names = getObjNames()): Styl
 }
 const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 };
 
-// Switch overhead to Smite to drain an escaping or low-HP target's prayer when our HP is safely above eat threshold.
+// Switch overhead to Smite to drain an escaping or low-HP target's prayer when our HP is safely above eat threshold
+// and we are not outnumbered in multi-way combat.
 export function selectOverheadPrayer(
     baseOverhead: number | null,
     prayerBase: number,
@@ -298,8 +299,9 @@ export function selectOverheadPrayer(
     eatAt: number,
     targetLowOrFled: boolean,
     smite?: boolean | number,
+    outnumbered = false,
 ): number | null {
-    if (!smite || prayerBase < PRAYER_REQ[PRAYER.smite]! || !targetLowOrFled || myHp <= eatAt + 12) return baseOverhead;
+    if (!smite || outnumbered || prayerBase < PRAYER_REQ[PRAYER.smite]! || !targetLowOrFled || myHp <= eatAt + 12) return baseOverhead;
     return PRAYER.smite;
 }
 
@@ -946,7 +948,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         if (o.overheadPrayer !== false && o.smite) {
             const smiteThreshold = typeof o.smite === 'number' ? o.smite : 0.35;
-            wantedOverhead = selectOverheadPrayer(wantedOverhead, prayerBase, me.hp, eatAt, fled || lowHealth(seen, smiteThreshold), o.smite);
+            wantedOverhead = selectOverheadPrayer(wantedOverhead, prayerBase, me.hp, eatAt, fled || lowHealth(seen, smiteThreshold), o.smite, facers.length >= 2 && isMulti(at.x, at.z));
         }
         if (o.prayerLag?.length) {
             if (lagHas === undefined) lagWant = lagHas = wantedOverhead;

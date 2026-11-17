@@ -331,7 +331,7 @@ export const DECK_REACH = 3;
 export async function leaveDeck(s: Walker, stop: () => boolean = () => false): Promise<'none' | 'ground' | 'stuck'> {
     const p = s.sdk.getState()?.player, b = s as unknown as BoatSession;
     if (!p || p.level !== 1 || typeof b.sdk.findNearbyLoc !== 'function') return 'none';
-    const plank = b.sdk.findNearbyLoc(/^gangplank$/i) as { x?: number; z?: number; distance?: number } | null | undefined;
+    const plank = b.sdk.findNearbyLoc(/^gangplank$/i, { withOption: /^cross$/i, reachable: true }) as { x?: number; z?: number; distance?: number } | null | undefined;
     const near = !!plank && (plank.distance ?? Math.max(Math.abs((plank.x ?? 0) - p.worldX), Math.abs((plank.z ?? 0) - p.worldZ))) <= DECK_REACH;
     if (!near) return 'none';
     const off = await disembark(b, { stop });
