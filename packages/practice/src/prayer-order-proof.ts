@@ -73,7 +73,8 @@ export async function startPrayerProofStack(p:ProofEndpoints,start:(opts:StackOp
 }
 export function childConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env,endpoints?:ProofEndpoints){
  return{cmd:['bun','scripts/train-prayer.ts',name,String(TARGET)],cwd:root,windowsHide:true,
-  env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'5000',MAX_BURY:'600',BONE_RESERVE:String(RESERVE),TARGET_LEVEL:String(TARGET)}};
+  env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'5000',MAX_BURY:'600',BONE_ID:String(BONE),BONE_RESERVE:String(RESERVE),BURY_HELD:'0',TARGET_LEVEL:String(TARGET),
+   PROGRESSION_CONSUMER:JSON.stringify({skills:{Prayer:TARGET},bank:{[BONE]:RESERVE}})}};
 }
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const ids=(a:Save,b:Save)=>new Set([...Object.values(a.inventories).flat(),...Object.values(b.inventories).flat()].map(i=>i.id));
