@@ -763,7 +763,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     finderResults();if(tb){tb.innerHTML=trainInner();if(retry)(tb.querySelector('[data-finder-retry]')||body.querySelector('[data-finder]'))?.focus({preventScroll:true});}
   }};
   const loadSpawns=(retry=false)=>{if(npcSpawnsPending||npcSpawns!==null||npcSpawnsError&&!retry)return;npcSpawnsPending=true;npcSpawnsError='';
-    fetch(asset('npc-spawns.json')).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();}).then(j=>{if(!Array.isArray(j))throw Error('Invalid NPC spawn data');npcSpawns=j;}).catch(e=>{npcSpawnsError=String(e?.message||e);}).finally(()=>{npcSpawnsPending=false;paintSpawns();});paintSpawns();
+    const controller=new AbortController();let timer;
+    const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{reject(Error('NPC spawn request timed out.'));controller.abort();},10000);});
+    const request=fetch(asset('npc-spawns.json'),{signal:controller.signal}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();});
+    Promise.race([request,deadline]).then(j=>{if(!Array.isArray(j))throw Error('Invalid NPC spawn data');npcSpawns=j;}).catch(e=>{npcSpawnsError=String(e?.message||e);}).finally(()=>{clearTimeout(timer);npcSpawnsPending=false;paintSpawns();});paintSpawns();
   };
   const spawnStatus=()=>npcSpawnsPending?'<span class="xp-muted" role="status">Loading NPC spawns…</span>':npcSpawnsError?'<span class="xp-muted" role="status" title="'+E(npcSpawnsError)+'">NPC spawns unavailable.</span> <button class="xp-reset" data-finder-retry aria-label="Retry NPC data">Retry</button>':'';
   const spawnTiles=row=>{const t=[];for(let i=0;i+2<(row?.[3]?.length||0);i+=3)t.push({x:row[3][i],z:row[3][i+1],l:row[3][i+2]});return t;};
@@ -1754,9 +1757,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   let linkRead=false,wall=null,wallLinked=false;
   function followLinkedAccount(){
-    if(linkRead)return;linkRead=true;
+    if(linkRead)return;
     const q=new URLSearchParams(location.hash.slice(1)),name=q.get('a');
     const linked=S.bots.find(b=>b.name===name);
+    if(name&&!linked)return;
+    linkRead=true;
     if(linked)pick(linked.name);
     wallLinked=q.get('wall')==='1';wallLinkRead(q);
     const watch=q.get('watch');
@@ -1786,7 +1791,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const orbBox=hud.querySelector('.game-orbs'),orbHtml=!b?'':[['hp','Hitpoints',health?.now,health?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','Run energy',b.runEnergy,100]].filter(o=>o[2]!=null).map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${Math.floor(value)} / ${max}${id==='hp'?healthNote(b)+(typeof regenHpText==='function'?regenHpText(b,Date.now()):''):''}${id==='prayer'&&typeof prayerText==='function'?E(prayerText(b)):''}"><canvas class="orb-art" width="60" height="34" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas><span class="orb-num" style="color:${id==='hp'&&!healthCurrent?'#b8b8b8':orbColour(value,max)}">${Math.floor(value)}</span></div>`).join('');if(orbBox._h!==orbHtml){orbBox._h=orbHtml;orbBox.innerHTML=orbHtml;orbBox.querySelectorAll('canvas').forEach(drawOrb);}if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
-  const previousPick=pick;pick=function(name){wallEnd(false);if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
+  const previousPick=pick;pick=function(name){if(name)linkRead=true;wallEnd(false);if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
   rail.onclick=e=>{const b=e.target.closest('[data-client-plugin]');if(b){showPlugin(b.dataset.clientPlugin);writeLink();}};
   $('#client-share').onclick=async()=>{writeLink();try{await navigator.clipboard.writeText(location.href);toast('Link copied.');}catch{toast('Copy this link from the address bar.');}};
   const togglePlugin=()=>{app.classList.toggle('client-collapsed');app.classList.toggle('mobile-plugin',!app.classList.contains('client-collapsed'));syncSidebar();};$('#client-sidebar').onclick=togglePlugin;plugin.querySelector('[aria-label="Close plugin"]').onclick=togglePlugin;
@@ -1835,7 +1840,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(to===from)return;
     flightTo=shown;focus.classList.add('flying');focusNote.classList.add('flying');focusSay('Flying to '+shown,15000);
   }
-  const focusFree=(name=null)=>{sel=name;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
+  const focusFree=(name=null)=>{linkRead=true;sel=name;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
   // The viewer loads these places while it is idle, so a swap to them has nothing to wait for. The [ and ] neighbours come
   // first, and a row under the pointer goes before them. One place stands for the accounts in the same 32-tile cell.
   let warmSent='';
@@ -1945,6 +1950,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(wall||mode!=='3d'||VIEWER.state!=='ready')return false;
     const names=wallOrdered(wallNames(),wallPrefs.order);
     if(!names.length){focusSay('None of our accounts is in the world. The wall has nothing to show.',3200);return false;}
+    linkRead=true;
     focusOpen(false);
     const main=names.find(n=>wallSame(n,wallPrefs.main))??names[0];
     // The wall keeps the page's follow state and the tour, and gives them back when it closes.
@@ -2363,7 +2369,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   // A change between the 3D view and the 2D map shows or hides the button at once, and closes an open wall.
   const previousSetMode=setMode;setMode=function(m,preserve){const stale=depletedNow.list.length&&(m!=='3d'||VIEWER.state!=='ready');if(stale)depletedNow={tick:0,list:[],at:0};previousSetMode(m,preserve);if(S){wallSync();focusPaint();if(stale&&selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();}};
-  const follow3d=window.atlasFollow3d;window.atlasFollow3d=(name,allowLoading)=>{wallEnd(false);return follow3d(name,allowLoading);};
+  const follow3d=window.atlasFollow3d;window.atlasFollow3d=(name,allowLoading)=>{const read=linkRead;linkRead=true;wallEnd(false);const followed=follow3d(name,allowLoading);if(!followed)linkRead=read;return followed;};
   focusFind.addEventListener('input',focusRows);
   focusList.addEventListener('pointerover',e=>{const r=e.target.closest('[data-focus]');if(r&&r.dataset.focus&&!r.disabled)warmPlaces(r.dataset.focus);});
   focusFind.addEventListener('keydown',e=>{const rows=[...focusList.querySelectorAll('.focus-row:not([disabled])')],hot=focusList.querySelector('.hot');if(e.key==='Escape'){e.stopPropagation();focusOpen(false);focusNow.focus({preventScroll:true});}else if(e.key==='Enter'){e.preventDefault();const r=hot||rows[0];if(r)focusChoose(r.dataset.focus);}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!rows.length)return;const i=rows.indexOf(hot),next=rows[i<0?(e.key==='ArrowDown'?0:rows.length-1):(i+(e.key==='ArrowDown'?1:-1)+rows.length)%rows.length];hot?.classList.remove('hot');next.classList.add('hot');next.scrollIntoView({block:'nearest'});}});
@@ -2498,6 +2504,6 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(F_KEYS[e.key]&&!e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}
     if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();showPlugin('fleet');($('#op-fleet-search')||$('#search'))?.focus();}
   },true);
-  window.atlasClient={follow:name=>{wallEnd(false);tourSet(false);previousPick(name);},openPlugin:showPlugin,restoreLinkedPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
+  window.atlasClient={follow:name=>{if(name)linkRead=true;wallEnd(false);tourSet(false);previousPick(name);},openPlugin:showPlugin,restoreLinkedPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
   app.classList.remove('focus-map','right-hidden','left-hidden');app.classList.toggle('public-view',!window.atlasOperator());showPlugin('fleet');renderChat();if(S)refresh();
 })();

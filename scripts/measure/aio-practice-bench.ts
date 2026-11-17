@@ -61,6 +61,18 @@ import {
 
 const root = resolve(import.meta.dir, '..', '..');
 
+// Multi-seed children keep separate evidence even when only one engine fits.
+export function seedArtifacts(seed: number, job: number, jobs: number, env: Record<string, string | undefined>): {out: string; stdout: string; env: Record<string, string | undefined>} {
+  const out = join(env.BENCH_SEED_OUT ?? '.practice/aio-bench', `seed-${seed}.json`);
+  return {out, stdout: join(dirname(out), `seed-${seed}.log`), env: {
+    ...env, BENCH_OUT: out,
+    BENCH_OUTPUT_DIR: env.BENCH_OUTPUT_DIR ? join(env.BENCH_OUTPUT_DIR, `seed-${seed}`) : `.practice/aio-bench/output-seed-${seed}`,
+    BENCH_PROFILE_DIR: join(env.BENCH_PROFILE_DIR ?? join(dirname(out), 'profile'), `seed-${seed}`),
+    ...(env.BENCH_TRACE ? {BENCH_TRACE: join(env.BENCH_TRACE, `seed-${seed}`)} : {}),
+    ...(jobs > 1 ? {BENCH_SLOT_BASE: String(job * 8), BENCH_PARALLEL: '1'} : {}),
+  }};
+}
+
 // Command line: `bun run bench [pattern] [--smoke] [--all] [--seed n] [--parallel n] [--set KEY=value]... [--save-baseline]
 // [--no-keep] [--wall-clock] [--wait minutes] [--force]`. A pattern is a regular expression on the case key ("cook", "^quester:quest:").
 // The defaults give comparable numbers with nothing to remember: the lockstep engine, a fresh engine per case, seed 7,
@@ -132,12 +144,12 @@ if (import.meta.main) {
     const table = new Map<string, string[]>();
     // Each round of seeds at once gets an equal share of the budget.
     env.BENCH_BUDGET_MIN = String(Number(env.BENCH_BUDGET_MIN ?? BUDGET_MIN) / Math.ceil(list.length / seedJobs));
-    const outOf = (one: number) => join(env.BENCH_SEED_OUT ?? '.practice/aio-bench', `seed-${one}.json`);
+    const outOf = (one: number) => seedArtifacts(one, 0, seedJobs, env).out;
     let overBudget = false;
     const runSeed = async (one: number, job: number) => {
-      mkdirSync(dirname(resolve(root, outOf(one))), { recursive: true });
-      const own = seedJobs > 1 ? { BENCH_SLOT_BASE: String(job * 8), BENCH_PARALLEL: '1', BENCH_OUTPUT_DIR: `.practice/aio-bench/output-seed-${one}` } : {};
-      const child = Bun.spawn(['bun', import.meta.path, ...argv, '--seed', String(one), ...SET_KEYS.flatMap(k => ['--set', `${k}=${env[k]}`])], { cwd: root, env: { ...env, BENCH_OUT: outOf(one), ...own }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
+      const artifacts = seedArtifacts(one, job, seedJobs, env);
+      mkdirSync(dirname(resolve(root, artifacts.out)), { recursive: true });
+      const child = Bun.spawn(['bun', import.meta.path, ...argv, '--seed', String(one), ...SET_KEYS.flatMap(k => ['--set', `${k}=${artifacts.env[k]}`])], { cwd: root, env: artifacts.env, stdout: Bun.file(resolve(root, artifacts.stdout)), stderr: 'inherit', windowsHide: true });
       const code = await child.exited;
       if (code === BUDGET_EXIT) { overBudget = true; return; }
       if (code !== 0 && code !== 1) throw new Error(`seed ${one}: bench exited with code ${code}`);
@@ -472,7 +484,8 @@ async function main() {
   const profile = process.env.BENCH_PROFILE === '1';
   // A fresh-engine slot's engine writes its own stat file (stack instance aiobench-<slot>); the shared stack has none.
   const statFileOf = (slot: number) => simStatFile(FRESH ? instanceOf(slot) : undefined);
-  if (profile) mkdirSync(join(dirname(OUT), 'profile'), { recursive: true });
+  const profileDir = process.env.BENCH_PROFILE_DIR ?? join(dirname(OUT), 'profile');
+  if (profile) mkdirSync(profileDir, { recursive: true });
   let stack = FRESH ? null : await start();
   const rows: Awaited<ReturnType<typeof runCase>>[] = [];
   try {
@@ -501,7 +514,7 @@ async function main() {
             const engineStartMs = Date.now() - engineAt;
             // --profile: the bots of this case write their ACK_STAT lines here; the engine's wait lines are read from
             // the bytes its stat file gains during the case.
-            const ackFile = profile ? resolve(dirname(OUT), 'profile', `${c.key.replace(/[^a-z0-9-]/gi, '_')}.ack`) : '';
+            const ackFile = profile ? resolve(profileDir, `${c.key.replace(/[^a-z0-9-]/gi, '_')}.ack`) : '';
             if (profile) { rmSync(ackFile, { force: true }); process.env.SIM_ACK_FILE = ackFile; }
             const statFile = statFileOf(slot), statFrom = profile && existsSync(statFile) ? readFileSync(statFile).length : 0;
             const row = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888);

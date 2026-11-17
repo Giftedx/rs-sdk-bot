@@ -55,7 +55,7 @@ test('the fleet search shortcut focuses the visible search control',()=>{
 test('Free camera clears the selected account and asks the 3D viewer to stop following',()=>{
  const code=shell.slice(shell.indexOf('  const focusFree='),shell.indexOf('  function focusStep('));
  const messages:any[]=[],window:any={atlasFollowOther:'Worker'};let renders=0;
- const selected=new Function('$','window','location','render',`let sel='Worker',picked=false,rswFor='Worker';${code};return()=>{focusFree();return sel;};`)(()=>({contentWindow:{postMessage:(m:any)=>messages.push(m)}}),window,{origin:'http://localhost'},()=>renders++);
+ const selected=new Function('$','window','location','render',`let sel='Worker',picked=false,rswFor='Worker',linkRead=true;${code};return()=>{focusFree();return sel;};`)(()=>({contentWindow:{postMessage:(m:any)=>messages.push(m)}}),window,{origin:'http://localhost'},()=>renders++);
  expect(selected()).toBeNull();expect(window.atlasFollowOther).toBeNull();expect(window.atlasFreeCamera).toBe(true);
  expect(messages).toEqual([{atlasFreeCamera:true}]);expect(renders).toBe(1);
 });
@@ -101,7 +101,7 @@ test('the tour steps through the switcher only while the 3D view is ready and sh
 });
 
 test('a choice made in the 3D view ends the tour',()=>{
- expect(shell).toContain('window.atlasClient={follow:name=>{wallEnd(false);tourSet(false);previousPick(name);},');
+ expect(shell).toContain('window.atlasClient={follow:name=>{if(name)linkRead=true;wallEnd(false);tourSet(false);previousPick(name);},');
  const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
  const ended:boolean[]=[],steps:number[]=[];(globalThis as any).atlasFollowOther='Someone';
  try{new Function('mode','VIEWER','document','focusStep','tourSet','let touring=false;'+code+';tourStep();')('3d',{state:'ready'},{hidden:false},(n:number)=>steps.push(n),(on:boolean)=>ended.push(on));}finally{delete (globalThis as any).atlasFollowOther;}
@@ -341,7 +341,7 @@ function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:strin
  const hud=dom.createElement('div'),wallButton=dom.createElement('button');
  const api=new Function('S','VIEWER','window','MARK','st','$','focusSay','focusOpen','focus','focusNote','log','safeName','phoneWidth','document','hud','wallButton','localStorage','writeLink','requestAnimationFrame',`
   let keysOpened=0;window.atlasWallKeys=()=>{keysOpened++;};
-  let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0,depletedNow={list:[]};
+  let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,linkRead=true,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0,depletedNow={list:[]};
   const TOUR_MS=45000,tourStep=()=>{},focusPaint=()=>{paints++;},render=()=>{renders++;};
   let pick=name=>{wallEnd(false);log.push({pick:name});sel=name;window.atlasFreeCamera=false;},setMode=m=>{mode=m;};
   ${live}${state}${code}
