@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794926511399,
+ "at": 1794926718606,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -226,7 +226,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
@@ -246,7 +247,8 @@
     "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=4 EXPECTED_OWNED=2 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mightyrod-kit2-385-2to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":6}}"
    },
    "enabled": true,
    "standing": true,
@@ -336,7 +338,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
@@ -399,29 +402,31 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "3000",
-    "cow"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "shop:catherby_arrows"
    ]
   },
   {
@@ -437,8 +442,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -490,7 +494,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
