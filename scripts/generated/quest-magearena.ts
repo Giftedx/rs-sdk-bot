@@ -34,14 +34,18 @@
 // leash for a test. The script finds its stage from what Kolodion says and what the account holds.
 import { openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
+import { GOD_LOADOUTS, type GodName } from '../pk-kits';
 
 const POOL_CELLAR = { id: 2878, x: 2541, z: 4719 }, POOL_CHAMBER = { id: 2879, x: 2508, z: 4686 };
-const STATUE = { id: 2874, x: 2516, z: 4721 };
 const GUARDIAN = { x: 2508, z: 4696 };
 const LADDER_UP = { id: 2872, x: 2542, z: 4713 }, LADDER_DOWN = { id: 2871, x: 3091, z: 3957 };
 const WEBS = [{ x: 3093, z: 3957 }, { x: 3095, z: 3957 }];
 const PORTAL = { id: 2880, x: 3105, z: 3953 };
-const ITEM = { cape: 2414, staff: 2417, knife: 946, prayerPot: [2434, 139, 141, 143], food: 385 };
+const rawGod = (process.env.MA_GOD ?? 'zamorak').toLowerCase();
+const GOD: GodName = rawGod === 'saradomin' || rawGod === 'guthix' || rawGod === 'zamorak' ? rawGod : 'zamorak';
+const GOD_SPEC = GOD_LOADOUTS[GOD];
+const STATUE = GOD_SPEC.statue;
+const ITEM = { cape: GOD_SPEC.capeId, staff: GOD_SPEC.staffId, knife: 946, prayerPot: [2434, 139, 141, 143], food: 385 };
 const NPC = { kolodion: 905, guardian: 904, forms: [907, 908, 909, 910, 911], mages: [912, 913, 914] };
 const PFMAGIC = 12;                                         // protect_from_magic (sdk PRAYER_INDICES)
 // The leash method. The floor of the arena is 25 tiles wide (x 3093 to 3117, z 3921 to 3945), too small for a tile 17
@@ -64,8 +68,9 @@ try {
     const MODE = process.env.MA_MODE ?? 'pray';
     if (MODE === 'pray' && base('Prayer') < 37) await q.fail(`Prayer ${base('Prayer')} under the 37 of Protect from Magic (MA_MODE=leash runs the method with no prayer)`);
     const SPELL = base('Magic') >= 75 ? 'magic:fire_wave' : 'magic:fire_blast';
-    const FLAMES = componentId('magic:flames_of_zamorak');
-    let potions = 0, casts = 0, lures = 0;
+    const GOD_SPELL = GOD_SPEC.spell;
+    const CHARGE_SPELL = componentId('magic:charge');
+    let potions = 0, casts = 0, lures = 0, charged = false;
     const setPray = async (on: boolean): Promise<void> => {
         if (MODE !== 'pray' || prayOn() === on || (on && points() <= 0)) return;
         await q.step(`protect from magic ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFMAGIC, reason: 'SDK' }), () => prayOn() === on, 3, 3);
@@ -189,8 +194,10 @@ try {
     }
 
     // 1. Kolodion. At %magearena 0 to 5 he sends the player into the arena; at 6 or more he does not.
+    const anyCapeHeld = (Object.values(GOD_LOADOUTS)).some(g => held(g.capeId));
+    const anyStaffHeld = (Object.values(GOD_LOADOUTS)).some(g => held(g.staffId));
     let fought = false;
-    if (!held(ITEM.cape) && !held(ITEM.staff)) {
+    if (!anyCapeHeld && !anyStaffHeld) {
         await setPray(true);
         // Kolodion shuts the pages 4 ticks before the player lands in the arena, so the talk ends only on the landing.
         const told = () => inArena() || (q.sawText(/step into the magic pool|carrying weapons or armour/i) && !q.dialogOpen());
@@ -208,10 +215,15 @@ try {
     }
     const fightXp = q.gains();
 
-    // 2. The pool, the statue of Zamorak, the guardian, the pool.
+    // 2. The pool, the chosen god statue, the guardian, the pool.
+    const otherCapes = Object.values(GOD_LOADOUTS).filter(g => g.god !== GOD).map(g => g.capeId);
     if (!held(ITEM.staff)) {
         if (!held(ITEM.cape)) {
             if (inBank()) await locThen('pool to chamber', POOL_CELLAR, () => q.near(2509, 4689, 4));
+            for (const oldCape of otherCapes) {
+                if (worn(oldCape)) await q.step(`remove old cape ${oldCape}`, () => q.s.sdk.sendUseEquipmentItem?.(1, 1), () => !worn(oldCape), 3, 2);
+                if (q.has(oldCape)) await q.step(`drop old cape ${oldCape}`, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(oldCape)!, optionIndex: 5, reason: 'SDK' }), () => !q.has(oldCape), 3, 2);
+            }
             const ground = () => (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.cape);
             await locThen('statue', STATUE, () => !!ground() || q.has(ITEM.cape), 20);
             await q.converse([], () => !q.dialogOpen(), 10);
@@ -244,7 +256,9 @@ try {
     await q.walk('to ladder', [{ x: LADDER_UP.x - 1, z: LADDER_UP.z, tol: 1 }]);
     await q.climb('ladder up', () => q.locAt(LADDER_UP.x, LADDER_UP.z), /climb-up/i, () => !inCellar());
     await cutWebs(WEBS);
-    const unlocked = (): boolean => q.msgCount(/can now cast Flames of Zamorak outside/i) > 0 || q.sawText(/may now use this spell outside/i);
+    const unlocked = (): boolean => q.msgCount(/can now cast (Saradomin Strike|Claws of Guthix|Flames of Zamorak) outside/i) > 0
+        || q.sawText(/may now use this spell outside/i)
+        || (((q.s.client as { var?: number[] } | undefined)?.var?.[GOD_SPEC.castVarp] ?? 0) >= 99);
     await q.dash('to portal', PORTAL.x, PORTAL.z + 1, 0, 40);
     await setPray(true);
     await q.step('portal in', () => q.opLoc(PORTAL, 1), () => inArena(), 8, 4);
@@ -254,15 +268,19 @@ try {
     // under attack!") and does not count. So the target is the mage that attacks the player, else the mage of the
     // cast before, else the nearest. The leash does not work here: a mage of another god follows the player into the
     // gap, and its reach ends past the end of the ring. An account with no prayer takes the hits and eats; with
-    // FOOD_FLOOR pieces or fewer left it goes out, and a later run goes on from the count that %zamomage holds.
+    // FOOD_FLOOR pieces or fewer left it goes out, and a later run goes on from the count that the god cast varp holds.
     let mage = -1;
     const foodLow = (): boolean => MODE !== 'pray' && q.cnt(ITEM.food) <= FOOD_FLOOR;
     await fight('casts', () => {
         const all = npcs(NPC.mages), n = all.find((m: any) => m.targetIndex >= 32768 && m.distance <= 10) ?? all.find((m: any) => m.index === mage) ?? all[0];
         mage = n?.index ?? -1;
         return n;
-    }, FLAMES, () => unlocked() || foodLow(), 1200);
+    }, GOD_SPELL, () => unlocked() || foodLow(), 1200);
     if (unlocked()) q.milestone('casts');
+    if (process.env.MA_CHARGE === '1' && base('Magic') >= 80 && q.cnt(554) >= 3 && q.cnt(565) >= 3 && q.cnt(556) >= 3) {
+        await q.step('charge', () => q.s.sdk.sendClickComponent(CHARGE_SPELL), () => q.sawText(/feel charged with magic power/i), 4, 2);
+        charged = q.sawText(/feel charged with magic power/i);
+    }
     await q.converse([], () => !q.dialogOpen(), 10);
     await q.dash('to portal inside', PORTAL.x, PORTAL.z, 0, 40);
     await q.step('portal out', () => q.opLoc(PORTAL, 1), () => !inArena(), 8, 4);
@@ -273,5 +291,5 @@ try {
     q.milestone('complete');
     const ok = held(ITEM.cape) && held(ITEM.staff) && unlocked();
     if (!ok && foodLow()) console.log(`WARN food low after ${casts} casts: the count stays, a second run ends the casts`);
-    await q.end(ok, `mode=${MODE} spell=${SPELL} fought=${fought} fightXp=${fightXp || '-'} casts=${casts} lures=${lures} potions=${potions} prayerLeft=${points()} cape=${held(ITEM.cape)} staff=${held(ITEM.staff)} unlocked=${unlocked()}`);
+    await q.end(ok, `god=${GOD} mode=${MODE} spell=${SPELL} fought=${fought} fightXp=${fightXp || '-'} casts=${casts} charged=${charged} lures=${lures} potions=${potions} prayerLeft=${points()} cape=${held(ITEM.cape)} staff=${held(ITEM.staff)} unlocked=${unlocked()}`);
 } catch (e) { await q.fail(String(e)); }

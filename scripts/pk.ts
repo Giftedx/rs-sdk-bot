@@ -21,7 +21,8 @@ import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
     shark: 385, karambwan: 3144, glory: [1712, 1710, 1708, 1706],
-    prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030],
+    dragonMace: 1434, dragonBattleaxe: 1377,
+    prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030], restorePotion: [2430, 127, 129, 131],
     superAttack: [2436, 145, 147, 149], attackPotion: [2428, 121, 123, 125],
     superStrength: [2440, 157, 159, 161], strengthPotion: [113, 115, 117, 119],
     superDefence: [2442, 163, 165, 167], defencePotion: [2432, 133, 135, 137],
@@ -270,6 +271,10 @@ export type FightOptions = {
     // spell then hits up to 30, not 20 (pvp/spells/scripts/flames_of_zamorak.rs2:27; Charge needs Magic 80, 3 fire,
     // 3 blood and 3 air runes, and the Mage Arena done, skill_magic/scripts/spells/charge.rs2).
     charge?: boolean;
+    // Trigger Dragon Battleaxe (1377) combat_axe:specbar Strength warcry self-buff when carrying 1377 at 100% energy
+    // (specwep.rs2:61-78 drains Attack/Defence/Ranged/Magic by 10% and boosts Strength by 10 + sum/4).
+    // 'restore' also prioritizes super restore/attack potion after buffing to recover drained combat stats.
+    battleaxeBuff?: boolean | 'restore';
     maxWild?: number;
     maxDistance?: number;
     stop?: () => boolean;
@@ -699,6 +704,31 @@ export function bestDamageSpell(magic: number, carried: readonly { id: number; c
     if (has(ITEMS.mindRune)) return SPELLS.fireStrike;
     return SPELLS.fireWave;
 }
+
+// Rev 289 Charge varp (%magearena_charge = varp 272, set to 350 and decremented every 2 ticks by [timer,charge]).
+export const chargeVarpTicks = (client: unknown): number | undefined => {
+    const val = (client as { var?: number[] } | undefined)?.var?.[272];
+    return typeof val === 'number' ? val : undefined;
+};
+
+// Charge eligibility: Magic 80+, 3 fire/3 blood/3 air runes, and varp 272 <= 0 when observable.
+export function canCastChargeNow(magicLevel: number, inv: readonly { id: number; count: number }[], chargeVarp?: number): boolean {
+    if (magicLevel < 80 || (chargeVarp !== undefined && chargeVarp > 0)) return false;
+    const countOf = (id: number) => inv.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    return countOf(ITEMS.fireRune) >= 3 && countOf(ITEMS.bloodRune) >= 3 && countOf(ITEMS.airRune) >= 3;
+}
+
+// Exact rev-289 Dragon Battleaxe warcry stat drains & Strength boost (specwep.rs2:67-77).
+export function battleaxeWarcryMath(levels: { Attack: number; Defence: number; Ranged: number; Magic: number }) {
+    const drained = {
+        attack: Math.floor(levels.Attack / 10),
+        defence: Math.floor(levels.Defence / 10),
+        ranged: Math.floor(levels.Ranged / 10),
+        magic: Math.floor(levels.Magic / 10),
+    };
+    const sum = drained.attack + drained.defence + drained.ranged + drained.magic;
+    return { drained, strengthBoost: 10 + Math.floor(sum / 4) };
+}
 // A repeatable random number source (mulberry32): the same seed gives the same numbers.
 export function seededRandom(seed: number): () => number {
     let a = seed >>> 0;
@@ -832,7 +862,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // A bench name is aiob…x<4-character token><role>; the role (1, 1b, …) is the same on every run.
         ? Number(process.env.BENCH_SEED) * 100_003 + [...(s.name.toLowerCase().match(/^aiob[a-z0-9]*x[a-z0-9]{4}(.+)$/)?.[1] ?? s.name.toLowerCase())].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) : undefined;
     const rand = o.mixSeed !== undefined ? seededRandom(o.mixSeed) : benchSeed !== undefined ? seededRandom(benchSeed) : Math.random;
-    let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, prayerDrainAt = -1, targetStunnedUntil = -1, lastFakieAt = -10, lastSpecStyle: Style | null = null;
+    let charged = (chargeVarpTicks(s.client) ?? 0) > 0, chargeAt = -10, battleaxeAt = -10, stepAt = -10, flickAt = start, prayerDrainAt = -1, targetStunnedUntil = -1, lastFakieAt = -10, lastSpecStyle: Style | null = null;
     let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10, outnumbered = o.escapeLatch?.outnumbered ?? false;
     // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.
     let lagWant: number | null | undefined, lagAt = start, lagHas: number | null | undefined;
@@ -1105,7 +1135,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (!potion && now + 3 <= nextAttack) {
                 const skill = (n: string) => state.skills.find(k => k.name === n);
                 const unboosted = (n: string) => { const k = skill(n); return !!k && k.level <= k.baseLevel; };
-                if (hasStyle(o.kit, 'melee') && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
+                const drained = (n: string) => { const k = skill(n); return !!k && k.level < k.baseLevel; };
+                if (o.battleaxeBuff === 'restore' && (drained('Attack') || drained('Defence') || drained('Ranged') || drained('Magic'))) {
+                    potion = slotOf([...ITEMS.superRestore, ...ITEMS.restorePotion]);
+                }
+                if (!potion && hasStyle(o.kit, 'melee') && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
                 if (!potion && hasStyle(o.kit, 'melee') && unboosted('Attack')) potion = slotOf([...ITEMS.superAttack, ...ITEMS.attackPotion]);
                 if (!potion && hasStyle(o.kit, 'ranged') && unboosted('Ranged')) potion = slotOf(ITEMS.rangingPotion);
                 if (!potion && hasStyle(o.kit, 'magic') && unboosted('Magic')) potion = slotOf(ITEMS.magicPotion);
@@ -1360,11 +1394,28 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // kiteMelee: an attack tick with no freeze to cast is a step, not a hit.
         if (kiteTarget && !kiteCast) continue;
         // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
-        // that the server still has in hand. One try each 6 ticks, until the game confirms it.
-        if (o.charge && !charged && now - chargeAt >= 6) {
+        // that the server still has in hand. One try each 6 ticks, until the game confirms it or varp 272 > 0.
+        const magicSkill = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+        const chargeVarp = chargeVarpTicks(s.client);
+        if (chargeVarp !== undefined) charged = chargeVarp > 0;
+        if (o.charge && !charged && now - chargeAt >= 6 && canCastChargeNow(magicSkill, inv, chargeVarp)) {
             log('PK cast Charge');
             void sdk.sendClickComponent(SPELLS.charge);
             chargeAt = now; nextAttack = now + 2;
+            continue;
+        }
+        // Dragon Battleaxe warcry (specwep.rs2:61-78): 100% energy immediate Strength buff when carrying item 1377.
+        const hasBattleaxe = state.equipment.some(e => e.id === ITEMS.dragonBattleaxe) || inv.some(i => i.id === ITEMS.dragonBattleaxe);
+        const strSkill = state.skills.find(k => k.name === 'Strength');
+        if (o.battleaxeBuff && hasBattleaxe && !kiteTarget && now - battleaxeAt >= 12 && special(s.client).energy >= 1000
+            && (!strSkill || strSkill.level <= strSkill.baseLevel + 4)) {
+            const axeItem = state.equipment.some(e => e.id === ITEMS.dragonBattleaxe) ? undefined : slotOf([ITEMS.dragonBattleaxe]);
+            if (axeItem) use(axeItem, /^(Wield|Wear)$/i);
+            void sdk.sendClickComponent(componentId('combat_axe:specbar'));
+            log('PK Dragon Battleaxe warcry');
+            battleaxeAt = now;
+            result.specs++;
+            nextAttack = Math.max(nextAttack, now + 1);
             continue;
         }
         // When not cardinally adjacent, client interactPlayer/spellOnPlayer emits MOVE_OPCLICK + OPPLAYER* (2 USER_EVENT packets).
@@ -1467,7 +1518,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const turn = castFreeze ? { style: 'magic' as Style, index: last } : upcomingTurn;
         if (!turn) continue;
         const rawMeleeIds = o.kit.melee ?? [];
-        const nonSpearMelee = rawMeleeIds.filter(id => !isDragonSpearName(names.get(id) ?? ''));
+        const nonSpearMelee = rawMeleeIds.filter(id => !isDragonSpearName(names.get(id) ?? '') && id !== ITEMS.dragonBattleaxe);
         const meleeIds = nonSpearMelee.some(id => !/(shield)$/.test(names.get(id) ?? '')) ? nonSpearMelee : rawMeleeIds;
         const turnIds = turn.style === 'ranged' ? shootingKit(o.kit, names) : turn.style === 'melee' ? meleeIds : (o.kit[turn.style] ?? []);
         const kitIds = new Set(turnIds);

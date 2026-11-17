@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import {
-    attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
+    attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
@@ -864,4 +864,80 @@ test('fightPlayer performs 1-tick fakie switch on cooldown, stepUnderFrozen onto
     expect(flat.some(a => a.startsWith('walk:3095,3555@'))).toBe(true); // stepped onto frozen melee foe's tile
     expect(flat.some(a => a.startsWith('use:0:2@1'))).toBe(true); // equipped melee dagger fakie during cooldown
     expect(res.flicks).toBeGreaterThanOrEqual(1); // zeroDrainFlick reset active prayer cycle cleanly
+});
+
+test('battleaxeWarcryMath, Charge varp/rune gating, and Dragon Battleaxe warcry self-buff', async () => {
+    // Exact specwep.rs2:67-77 math at maxed combat stats: each 99 drains 9 -> sum 36 -> +19 Strength.
+    expect(battleaxeWarcryMath({ Attack: 99, Defence: 99, Ranged: 99, Magic: 99 })).toEqual({
+        drained: { attack: 9, defence: 9, ranged: 9, magic: 9 },
+        strengthBoost: 19,
+    });
+    const runes = (f: number, b: number, a: number) => [{ id: 554, count: f }, { id: 565, count: b }, { id: 556, count: a }];
+    expect(canCastChargeNow(80, runes(3, 3, 3), 0)).toBe(true);
+    expect(canCastChargeNow(80, runes(3, 3, 3), 120)).toBe(false); // varp 272 already active -> skip recast
+    expect(canCastChargeNow(79, runes(3, 3, 3), 0)).toBe(false);
+    expect(canCastChargeNow(80, runes(2, 3, 3), 0)).toBe(false);
+    expect(chargeVarpTicks({ var: { 272: 240 } })).toBe(240);
+
+    let tick = 10;
+    const clicks: number[] = [], uses: number[] = [];
+    const state: any = {
+        tick,
+        player: { worldX: 3060, worldZ: 3880, level: 0, hp: 99, maxHp: 99, combatLevel: 126 },
+        skills: [
+            { name: 'Attack', level: 99, baseLevel: 99 },
+            { name: 'Strength', level: 99, baseLevel: 99 },
+            { name: 'Defence', level: 99, baseLevel: 99 },
+            { name: 'Magic', level: 99, baseLevel: 99 },
+            { name: 'Hitpoints', level: 99, baseLevel: 99 },
+            { name: 'Prayer', level: 99, baseLevel: 99 },
+        ],
+        prayers: { activePrayers: new Array(15).fill(false), prayerPoints: 99 },
+        inventory: [
+            { id: ITEMS.dragonBattleaxe, slot: 0, count: 1, name: 'Dragon battleaxe', optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { id: 554, slot: 1, count: 3, name: 'Fire rune', optionsWithIndex: [] },
+            { id: 565, slot: 2, count: 3, name: 'Blood rune', optionsWithIndex: [] },
+            { id: 556, slot: 3, count: 3, name: 'Air rune', optionsWithIndex: [] },
+        ],
+        equipment: [{ id: 1231, slot: 3, count: 1, name: 'Dragon dagger(p)', optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 2, name: 'Foe', x: 3060, z: 3881, combatLevel: 126, distance: 1 }],
+        combatEvents: [], gameMessages: [], dialog: { isOpen: false },
+    };
+    const varArr = new Array(400).fill(0);
+    varArr[300] = 1000;
+    varArr[272] = 200; // Charge already active -> Charge click must be skipped
+    const session: any = {
+        name: 'AxeBot',
+        client: { var: varArr, players: [null, null, { appearance: [], headicons: 0, health: 99, totalHealth: 99 }] },
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => { tick++; state.tick = tick; cb(); }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number) => {
+                const it = state.inventory.find((i: any) => i.slot === slot);
+                if (it) uses.push(it.id);
+            },
+            sendClickComponent: (id: number) => { clicks.push(id); },
+            sendInteractPlayer: () => {},
+            sendTogglePrayer: () => {},
+            sendWalk: () => {},
+        },
+    };
+    await fightPlayer(session, 'Foe', {
+        kit: { melee: [1231, ITEMS.dragonBattleaxe] },
+        rotation: ['melee'],
+        charge: true,
+        battleaxeBuff: true,
+        freeze: false,
+        prayerFlick: false,
+        cap: 4,
+        log: () => {},
+    });
+    expect(clicks).not.toContain(SPELLS.charge); // Charge already active via varp 272 -> zero wasted cast
+    expect(uses).toContain(ITEMS.dragonBattleaxe); // equipped 1377 and triggered warcry specbar
+    expect(clicks.length).toBeGreaterThanOrEqual(1);
 });

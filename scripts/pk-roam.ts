@@ -72,6 +72,65 @@ export function preyScore(t: Track, meetTicks: number, ganged = false): number {
 // fight a target, so a claimed target is left to its hunter; in multi-combat a claimed target is ganged.
 export type Claims = Map<string, { hunter: string; at: number }>;
 export const CLAIM_TTL_MS = 60_000;
+export const SCOUT_INTEL_TTL_MS = 25_000;
+
+export type ScoutIntel = {
+    target: string;
+    x: number;
+    z: number;
+    combatLevel: number;
+    hpFrac?: number;
+    skulled?: boolean;
+    multi: boolean;
+    wild: number;
+    scout: string;
+    at: number;
+};
+
+export function readScoutIntel(file = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json'), now = Date.now()): ScoutIntel[] {
+    try {
+        const rows = JSON.parse(readFileSync(file, 'utf8')) as ScoutIntel[];
+        return Array.isArray(rows) ? rows.filter(r => now - r.at <= SCOUT_INTEL_TTL_MS) : [];
+    } catch { return []; }
+}
+
+export function publishScoutIntel(entry: ScoutIntel, file = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json')): void {
+    try {
+        const fresh = readScoutIntel(file, entry.at).filter(r => r.target.toLowerCase() !== entry.target.toLowerCase());
+        fresh.push(entry);
+        mkdirSync(join(file, '..'), { recursive: true });
+        writeFileSync(file, JSON.stringify(fresh));
+    } catch { /* scout handoff is best-effort */ }
+}
+
+export function clearScoutIntel(target: string, file = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json'), now = Date.now()): void {
+    try {
+        const left = readScoutIntel(file, now).filter(r => r.target.toLowerCase() !== target.toLowerCase());
+        mkdirSync(join(file, '..'), { recursive: true });
+        writeFileSync(file, JSON.stringify(left));
+    } catch { /* ignore */ }
+}
+
+// Select the highest-priority scouted target for a roaming squad/army within maxWild and attackable combat bracket.
+export function pickScoutTargetForSquad(opts: {
+    me: { x: number; z: number; combat: number };
+    intel: readonly ScoutIntel[];
+    maxWild: number;
+    friends?: ReadonlySet<string>;
+    now?: number;
+}): ScoutIntel | null {
+    const { me, intel, maxWild, friends = new Set(), now = Date.now() } = opts;
+    const candidates = intel.filter(i => now - i.at <= SCOUT_INTEL_TTL_MS
+        && !friends.has(i.target.toLowerCase())
+        && i.wild > 0 && i.wild <= maxWild
+        && Math.abs(i.combatLevel - me.combat) <= i.wild);
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => Number(b.multi) - Number(a.multi)
+        || Number(Boolean(b.skulled)) - Number(Boolean(a.skulled))
+        || (a.hpFrac ?? 1) - (b.hpFrac ?? 1)
+        || cheb(me, a) - cheb(me, b));
+    return candidates[0] ?? null;
+}
 // A target this many combat levels above us outclasses us; this many strangers within 6 tiles of it is a pile.
 export const OUTCLASS_GAP = 3;
 export const PILE_SIZE = 2;
@@ -464,8 +523,20 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const myName = session.name.toLowerCase();
     // Our own weapon's value: the best of the staged melee and ranged weapons.
     const myWeaponValue = () => Math.max(0, ...[...(kit.melee ?? []), ...(kit.ranged ?? []), ...(kit.magic ?? [])].map(id => itemCost(id)));
+    const intelFile = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json');
+    const shareIntel = (t: Pick<Track, 'name' | 'x' | 'z' | 'combatLevel' | 'hpFrac' | 'skulled'>) => {
+        const wild = wildLevel(t.x, t.z);
+        if (wild > 0) publishScoutIntel({
+            target: t.name, x: t.x, z: t.z, combatLevel: t.combatLevel,
+            hpFrac: t.hpFrac, skulled: t.skulled, multi: isMulti(t.x, t.z),
+            wild, scout: myName, at: Date.now(),
+        }, intelFile);
+    };
     const claim = (target: string) => writeClaims(c => c.set(target.toLowerCase(), { hunter: myName, at: Date.now() }));
-    const release = (target: string) => writeClaims(c => { if (c.get(target.toLowerCase())?.hunter === myName) c.delete(target.toLowerCase()); });
+    const release = (target: string) => {
+        writeClaims(c => { if (c.get(target.toLowerCase())?.hunter === myName) c.delete(target.toLowerCase()); });
+        clearScoutIntel(target, intelFile);
+    };
     const pickNow = (m: { x: number; z: number; combat: number }) =>
         pickTrack({ ...m, name: myName, weaponValue: myWeaponValue() }, tracks(), friends, cfg.maxWild, skip, MIN_ESCAPE_TILES, readClaims(), Date.now());
     let wentIn = false;
@@ -634,8 +705,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const m = me()!;
             const near = sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
             const track = radar.tracks.get(name.toLowerCase());
-            if (session.tick() % 10 === 0) claim(name);
             const opp = near ? readOpponent(session.client, name) : null;
+            if (session.tick() % 10 === 0) {
+                claim(name);
+                if (near) shareIntel({ name, x: near.x, z: near.z, combatLevel: near.combatLevel, hpFrac: opp?.hp?.fresh ? opp.hp.current / Math.max(1, opp.hp.max) : undefined, skulled: opp?.skulled });
+                else if (track) shareIntel(track);
+            }
             if (opp?.hp?.fresh && opp.hp.current === 0) {
                 stats.kills++; emit({ e: 'kill', target: name, at: lastTile });
                 await sdk.waitForTicks(4);
@@ -786,6 +861,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             stats.targets.push(name);
             emit({ e: 'target', target: name, combat: pick.track.combatLevel, wild: wildLevel(pick.track.x, pick.track.z), meetIn: Math.round(pick.at.ticks), at: [pick.track.x, pick.track.z] });
             claim(name);
+            shareIntel(pick.track);
             const outcome = await chase(name).finally(() => release(chasing));
             emit({ e: 'chase-end', target: chasing, outcome });
             if (outcome === 'dead' || outcome === 'stop') break;
