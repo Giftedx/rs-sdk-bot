@@ -1138,7 +1138,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const volleying = (!!vs?.fired && !vs.done.has(myKey)) || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1));
         if (spec && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
             && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
-            && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
+            // A spear stun deals no damage and its hold ignores protection prayers (pvp_dragon_spear.rs2).
+            && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - sentEvents - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
             for (const id of [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])]) {

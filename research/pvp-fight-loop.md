@@ -28,6 +28,19 @@ The separate starter-kit stage has a fixed acquisition intent: two cheese, with 
 The native `pvp:stage-kit` case buys and banks both cheese for 68 GP, keeps HP10, XP and protected stock, and logs out.
 Evidence: `.practice/pvp-escape/kit-stage-native.log`. This is starter supply, not a complete tribrid hunting kit.
 
+## Spear holds and protection prayers
+
+Source -> consumer -> adapt -> check: the pinned `pvp_dragon_spear.rs2` push and `p_delay(4)`, which perform no
+damage or protection-prayer check -> `fightPlayer`'s existing `SpecConfig.stun` gate -> exempt the non-damaging
+hold from the protection-prayer veto; retain health, energy, range, freeze and shared-hold gates; no upstream code
+copied -> `pk-spear.test.ts` and `extra:spar-spear-protected`.
+
+The six unit cases cover a spear opening through Protect Melee, retained health and energy limits, a shared-hold
+wait, and the damaging special's quarter-health rule. The native case requires an observed Protect Melee overhead
+above quarter health, special energy 1000 to 750, a one-tile push, `stunned_shove` graphic 254, no target HP loss,
+retained assets, the same lives and confirmed logout. Gap: native execution is unverified. Dispatch counters do
+not establish a hold, a kill or a speed gain. The existing `extra:army-route-spear-x5` case is the army consumer.
+
 ## Shared trip items and loot
 
 Source -> consumer -> adapt -> check: [Inventory Setups explicit variant grouping](https://github.com/dillydill123/inventory-setups/tree/16f2c0a319672c2e19738276a17de63aea7216fa), the pinned potion `dose_count` and `nextstage` chain, and local teleport charge definitions -> `item-requirements.ts` and hunter trip selection/restocking -> adapt explicit families, reuse native metadata, reject modern item tables and fuzzy equipment substitutions -> `item-requirements.test.ts`, `pk-hunt.test.ts` and `microbot-potion-care.test.ts`. Inventory Setups uses BSD-2-Clause. No upstream code is copied.

@@ -991,6 +991,10 @@ const ROUTE_CASES: BenchCase[] = [
     scriptArgs: ['{bot:b}'], presetConfig: sparFixture(3094, 3700, {food: 19}),
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3700)}],
     pass: s => ok(s) && /PK_ESCAPE_PROOF \{"ok":true,/.test(s), timeoutMs: 90_000},
+  {key: 'extra:spar-spear-protected', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-spear-proof.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}'], presetConfig: kitFixture('tribrid-snare-spear', 3150, 3560),
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {...sparFixture(3151, 3560), varps: {...sparFixture(3151, 3560).varps, 172: 1}}}],
+    pass: s => ok(s) && /PK_SPEAR_PROOF \{"ok":true,/.test(s), timeoutMs: 90_000},
   // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.
   sparBatch('extra:spar-escape-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   sparBatch('extra:spar-x8', 8, sparFixture(3094), sparFixture(3096)),

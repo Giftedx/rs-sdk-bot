@@ -51366,6 +51366,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/pk-spear-proof.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/progression-bench-cases.ts",
    "intents": [
     "observe"
