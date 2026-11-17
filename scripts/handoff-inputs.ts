@@ -143,8 +143,8 @@ export function parseHandoff(args: string[]): Handoff {
     return cfg;
 }
 
-// openBot removes the session owner's leading argument. Keep the complete
-// composed CLI for both roles, and bind the parent's bank target only to its acceptIndex.
+// Record the complete CLI once. Both progression descriptors retain its participants,
+// and bind the parent's bank target only to its acceptIndex.
 export function ammoOrderRecord(account:string,args:string[],env:Record<string,string|undefined>=process.env,base=resolve(import.meta.dir,'..')) {
     const workEnv={...env},script='scripts/handoff-inputs.ts';
     if(args[1]==='--headless-order')return{script,argv:[...args],env:workEnv};
@@ -167,7 +167,7 @@ export function ammoOrderRecord(account:string,args:string[],env:Record<string,s
             }
         }
     }
-    return{script,argv:[account,...args],env:workEnv};
+    return{script,argv:[...args],workArgs:[...args],env:workEnv};
 }
 
 export type HandoffChild = { code(): number | null; output(): string; goal?: string };

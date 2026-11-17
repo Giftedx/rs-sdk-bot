@@ -1,5 +1,25 @@
 import { test, expect } from 'bun:test';
-import { closeWithin, releaseLine, settle, sessionDied, watchUnexpectedEnd } from '../src/bot';
+import { botWork, closeWithin, releaseLine, settle, sessionDied, watchUnexpectedEnd } from '../src/bot';
+
+test('explicit composed work arguments do not change complete recorded CLI arguments',()=>{
+    const argv=['Donor','Receiver','90:Iron arrowtips','--notes'],env={HANDOFF_ORDER:'record-cli-order',PROGRESSION_CONSUMER:'{"bank":{"40":90}}'};
+    for(const name of ['Donor','Receiver']){
+        const record={script:'scripts/handoff-inputs.ts',argv:[...argv],workArgs:[...argv],env};
+        const work=botWork(name,record,['bun','wrong-entry.ts','Wrong'],{});
+        expect(work).toEqual({script:record.script,args:argv,env});
+        expect(record.argv).toEqual(argv);
+        expect(work.args).not.toBe(record.workArgs);
+    }
+});
+
+test('record normalization preserves hosted and standalone single-account argument behavior',()=>{
+    const argv=['Bigchopper','--headless-order','135','14'],env={CAP:'1600'};
+    expect(botWork('Bigchopper',{script:'scripts/handoff-inputs.ts',argv,env})).toEqual({script:'scripts/handoff-inputs.ts',args:argv.slice(1),env});
+    expect(botWork('Worker',undefined,['bun','scripts/cannon-fight.ts','worker','STOP=99','STOP_LEVEL=99'],env)).toEqual({script:'scripts/cannon-fight.ts',args:['STOP=99','STOP_LEVEL=99'],env});
+    expect(botWork('Worker',{script:'scripts/fixture.ts',argv:['TARGET=5'],workArgs:[],env}).args).toEqual([]);
+    expect(botWork('Worker',{script:'scripts/fixture.ts',argv:['TARGET=5'],env}).args).toEqual(['TARGET=5']);
+    expect(argv).toEqual(['Bigchopper','--headless-order','135','14']);
+});
 
 test('the RELEASE line names the first 12 hex of the worker release, or unpinned', () => {
     expect(releaseLine('ABCDEF0123456789abcdef')).toBe('RELEASE abcdef012345');

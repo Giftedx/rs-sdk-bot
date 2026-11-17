@@ -8,12 +8,39 @@ import {parseHeadlessOrder,runOwnedHeadless,ammoOrderRecord} from './handoff-inp
 import {loadProgressionCatalog} from '../packages/planner/src/progression-catalog';
 import {evaluateProgressionWork,preflightProgressionWork,parentProgressionAccept} from '../packages/core/src/progression-session';
 import {ammoChildConfiguration,selectAmmoProofEndpoints} from '../packages/practice/src/ammo-order-proof';
+import {tickRecorder} from '../packages/core/src/tick-record';
+import {botWork} from '../packages/core/src/bot';
 
 test('headless CLI validates exact arguments before login and preserves two-account parsing',()=>{
  expect(parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'1600')).toEqual({account:'Bigchopper',maximum:135,logsToCut:14,cap:1600});
  for(const args of [['Haggis','--headless-order','135','14'],['Bigchopper','--headless-order','129','14'],['Bigchopper','--headless-order','135','26'],['Bigchopper','--headless-order','135','14','extra'],['Bigchopper','--headless-order','NaN','14']])expect(()=>parseHeadlessOrder(args)).toThrow();
  expect(()=>parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'0')).toThrow();
  expect(parseHandoff(['Donor','Receiver','90:Iron arrowtips']).items).toEqual([{name:'Iron arrowtips',count:90}]);
+});
+
+test('both handoff roles record the complete CLI once while retaining their progression arguments',()=>{
+ const args=['Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421'];
+ for(const account of ['Donor','Receiver']){
+  const descriptor=ammoOrderRecord(account,args,{HANDOFF_ORDER:'record-cli-order'},'.');
+  const lines:any[]=[];
+  const recorder=tickRecorder({account,server:'localhost:8888',script:descriptor.script,argv:descriptor.argv,startedAt:1},
+   {write:line=>lines.push(JSON.parse(line)),close:()=>{}});
+  recorder.end(0,'logged-out');
+  expect(lines[0].argv).toEqual(args);
+  expect(parseHandoff(lines[0].argv)).toEqual(parseHandoff(args));
+  expect(botWork(account,descriptor).args).toEqual(args);
+  expect(descriptor.argv).not.toBe(args);
+ }
+});
+
+test('a headless CLI record retains its single account while progression receives only its arguments',()=>{
+ const args=['Bigchopper','--headless-order','135','14'],descriptor=ammoOrderRecord('Bigchopper',args,{CAP:'1600'},'.');
+ const lines:any[]=[];
+ tickRecorder({account:'Bigchopper',server:'localhost:8888',script:descriptor.script,argv:descriptor.argv,startedAt:1},
+  {write:line=>lines.push(JSON.parse(line)),close:()=>{}}).end(0,'logged-out');
+ expect(lines[0].argv).toEqual(args);
+ expect(parseHeadlessOrder(lines[0].argv,'1600')).toMatchObject({account:'Bigchopper',maximum:135,logsToCut:14});
+ expect(botWork('Bigchopper',descriptor).args).toEqual(['--headless-order','135','14']);
 });
 
 function headlessFixture(feathers=5705){
@@ -72,7 +99,8 @@ const entryFixture=String.raw`
 import {main} from ENTRY;
 import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {evaluateProgressionWork,preflightProgressionWork,processWork} from CORE_PROGRESSION;
+import {evaluateProgressionWork,preflightProgressionWork} from CORE_PROGRESSION;
+import {botWork} from CORE_BOT;
 const root=process.env.FIXTURE_ROOT,stage=process.env.FIXTURE_STAGE;
 const [bankX,bankZ]=(process.env.FIXTURE_BANK??'3253,3421').split(',').map(Number);
 process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x='+bankX,'--bank-z='+bankZ,...(process.env.FIXTURE_ARGS??'').split(' ').filter(Boolean)];
@@ -96,8 +124,7 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
  }},
  openBot:async (name,options)=>{
   if(process.env.FIXTURE_PROGRESSION==='1'){
-   const record=options?.record,argv=record?.argv??process.argv.slice(2);
-   const work=record?{script:record.script,args:argv[0]?.toLowerCase()===name.toLowerCase()?argv.slice(1):argv,env:record.env??{...process.env}}:processWork();
+   const work=botWork(name,options?.record);
    preflightProgressionWork(work,'rs-sdk-demo.fly.dev',undefined,name);
    const evaluation=evaluateProgressionWork(work,{name,at:Date.now()},{base:root,requireQualification:true});
    if(!evaluation.supported)throw Error('finite entry refused: '+evaluation.reason);
@@ -129,7 +156,8 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
 });
 clearTimeout(deadline);
 `.replace('ENTRY',JSON.stringify(resolve(import.meta.dir,'handoff-inputs.ts')))
- .replace('CORE_PROGRESSION',JSON.stringify(resolve(import.meta.dir,'../packages/core/src/progression-session.ts')));
+ .replace('CORE_PROGRESSION',JSON.stringify(resolve(import.meta.dir,'../packages/core/src/progression-session.ts')))
+ .replace('CORE_BOT',JSON.stringify(resolve(import.meta.dir,'../packages/core/src/bot.ts')));
 
 function cliFixture(){
  const root=mkdtempSync(join(tmpdir(),'handoff-main-'));
@@ -159,7 +187,7 @@ test('productive catalog admits finite composed participants and standalone CLI 
  const f=cliFixture(),args=['Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421'];
  const workFor=(name:string,argv:string[],env:Record<string,string>)=>{
   const record=ammoOrderRecord(name,argv,env,f.root);
-  return{script:record.script,args:record.argv.slice(1),env:record.env};
+  return botWork(name,record);
  };
  try{
   const runId='task-ammo-finite',accept={bank:{40:90}};
