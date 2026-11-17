@@ -2490,3 +2490,90 @@ test('assess keeps a single preparation/acquire block as drain but retires RETIR
     expect(assess([prep,prep])).toMatchObject({retire:true,drains:2});
     expect(assess([prep,'RESULT ok xpGain=50',prep])).toMatchObject({retire:false,drains:2});
 });
+
+import { ARMOUR_BAND, ARMOUR_MARKET, RANGED_ARMOUR_BAND, WEAPON_BAND } from '../src/autopilot';
+
+test('progressive weapon and armour ladder stages Zeke, Adamant, Rune, Dragon, and Green Dhide tiers', () => {
+    const all = catalogue();
+    const zekeIron = all.find(t => t.id === 'army-weapon-zeke-iron')!;
+    const zekeMith = all.find(t => t.id === 'army-weapon-zeke-mithril')!;
+    const scavvo = all.find(t => t.id === 'army-armour-scavvo')!;
+    expect(zekeIron.resources).toEqual(['shop:zeke']);
+    expect(zekeMith.needs?.skills).toEqual({ Attack: 20 });
+    expect(scavvo.resources).toEqual(['shop:scavvo']);
+    expect(scavvo.needs?.questPoints).toBe(32);
+
+    const army = new Set(['fighter']);
+    const cowOnly = all.filter(t => t.id === 'army-cow-strength-45');
+    const mk = (skills: Record<string, number>, items: Record<string, number>, quests: string[] = []): Acct =>
+        ({ ...acct('Fighter', { Hitpoints: 70, ...skills }, { shark: 40, coin: 1_000_000, ...items }), quests: new Set(quests) });
+    const runeMkt = {
+        'rune scimitar': { id: 1333, name: 'Rune scimitar', limit: KIT_PRICE_CAPS['rune scimitar']! },
+        'rune longsword': { id: 1303, name: 'Rune longsword', limit: KIT_PRICE_CAPS['rune longsword']! },
+        'dragon dagger': { id: 1215, name: 'Dragon dagger', limit: KIT_PRICE_CAPS['dragon dagger']! },
+        'rune chainbody': { id: 1113, name: 'Rune chainbody', limit: KIT_PRICE_CAPS['rune chainbody']! },
+        'rune platebody': { id: 1127, name: 'Rune platebody', limit: KIT_PRICE_CAPS['rune platebody']! },
+        'rune plateleg': { id: 1079, name: 'Rune platelegs', limit: KIT_PRICE_CAPS['rune plateleg']! },
+        'rune full helm': { id: 1163, name: 'Rune full helm', limit: KIT_PRICE_CAPS['rune full helm']! },
+        'rune kiteshield': { id: 1201, name: 'Rune kiteshield', limit: KIT_PRICE_CAPS['rune kiteshield']! },
+        'dragonhide body': { id: 1135, name: 'Dragonhide body', limit: KIT_PRICE_CAPS['dragonhide body']! },
+        'dragonhide chap': { id: 1099, name: 'Dragonhide chaps', limit: KIT_PRICE_CAPS['dragonhide chap']! },
+        'dragon vambrace': { id: 1065, name: 'Dragon vambraces', limit: KIT_PRICE_CAPS['dragon vambrace']! },
+    };
+
+    const at40 = plan(inputs([mk({ Attack: 40, Strength: 30 }, {})], { templates: cowOnly, army, market: runeMkt }))[0]!;
+    expect(at40.template!.id).toBe(KIT_BUY + 'army-weapon-rune');
+    expect(at40.resources).toEqual([WEAPON_MARKET]);
+    expect(WEAPON_BAND).toBe(3.5);
+
+    const longFallback = plan(inputs([mk({ Attack: 40, Strength: 30 }, {})], {
+        templates: cowOnly, army, market: { 'rune longsword': runeMkt['rune longsword'] },
+    }))[0]!;
+    expect(longFallback.template!.id).toBe(KIT_BUY + 'army-weapon-rune');
+    expect(longFallback.reason).toContain('Rune longsword');
+
+    const dragonPreQuest = plan(inputs([mk({ Attack: 60, Strength: 60 }, { 'rune scimitar': 1 })], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(dragonPreQuest.template?.id).not.toBe(KIT_BUY + 'army-weapon-dragon');
+
+    const dragonReady = plan(inputs([mk({ Attack: 60, Strength: 60 }, { 'rune scimitar': 1 }, ['lost city'])], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(dragonReady.template!.id).toBe(KIT_BUY + 'army-weapon-dragon');
+
+    const runeArmourPreDs = plan(inputs([mk({ Attack: 60, Defence: 40, Strength: 60 }, { 'dragon dagger': 1 }, ['lost city'])], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(runeArmourPreDs.template!.id).toBe(KIT_BUY + 'army-armour-rune');
+    expect(runeArmourPreDs.resources).toEqual([ARMOUR_MARKET]);
+    expect(runeArmourPreDs.reason).toContain(`army band ${ARMOUR_BAND}`);
+    expect(runeArmourPreDs.reason).toContain('Rune chainbody');
+    expect(runeArmourPreDs.reason).not.toContain('Rune platebody');
+
+    const dhideAt40 = plan(inputs([mk({ Attack: 60, Defence: 1, Ranged: 40, Strength: 60 }, { 'dragon dagger': 1 }, ['lost city'])], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(dhideAt40.template!.id).toBe(KIT_BUY + 'army-armour-dhide');
+    expect(dhideAt40.reason).toContain(`army band ${RANGED_ARMOUR_BAND}`);
+    expect(dhideAt40.reason).toContain('Dragonhide chaps');
+    expect(dhideAt40.reason).not.toContain('Dragonhide body');
+});
+
+test('Nurmof pickaxe shop tiers upgrade miners only up to their Mining level threshold', () => {
+    const all = catalogue().filter(t => t.id.startsWith('tool-pickaxe-'));
+    expect(all.map(t => [t.id, t.resources?.[0]])).toEqual([
+        ['tool-pickaxe-rune', 'shop:nurmof'],
+        ['tool-pickaxe-adamant', 'shop:nurmof'],
+        ['tool-pickaxe-mithril', 'shop:nurmof'],
+        ['tool-pickaxe-steel', 'shop:nurmof'],
+        ['tool-pickaxe-iron', 'shop:nurmof'],
+    ]);
+    const miner = acct('Miner', { Mining: 41 }, { coin: 50_000, 'bronze pickaxe': 1 });
+    const next = plan(inputs([miner], { templates: all, army: new Set(['miner']), bill: [row('iron ore', 10)], prices: { 'iron ore': 100 } }))[0]!;
+    expect(next.template!.id).toBe('tool-pickaxe-rune');
+
+    const alreadyRune = acct('Miner', { Mining: 41 }, { coin: 50_000, 'rune pickaxe': 1 });
+    const none = plan(inputs([alreadyRune], { templates: all, army: new Set(['miner']), bill: [row('iron ore', 10)], prices: { 'iron ore': 100 } }))[0]!;
+    expect(none.template).toBeUndefined();
+});
