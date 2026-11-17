@@ -23,7 +23,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { closeWithin } from '../packages/core/src/bot';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
+import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { EDGEVILLE_BANK } from './pk-hunt';
 import { connectRadar, kitFrom, Radar } from './pk-roam';
@@ -208,6 +208,7 @@ export function squadTarget<P extends { name: string; index: number; distance: n
 
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
+    stunShareFor?: (target: string) => FightOptions['stunShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
     trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void }): Promise<SquadStats> {
     const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player, life0 = st?.player?.lifeId;
@@ -286,8 +287,15 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             }
             const began = s.tick();
             stats.fights++;
-            const r = await fightPlayer(s, target.name, { ...o.options, allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began,
-                log: l => o.log(`[${s.name}] ${l}`) });
+            const stunShare = o.stunShareFor?.(target.name.toLowerCase());
+            const r = await fightPlayer(s, target.name, {
+                ...o.options,
+                ...(stunShare ? { stunShare } : {}),
+                ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
+                ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
+                allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began,
+                log: l => o.log(`[${s.name}] ${l}`),
+            });
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
             if (r.outcome === 'kill') stats.kills++;
@@ -438,9 +446,26 @@ if (import.meta.main) {
     // Our accounts walk to the post first.
     // Far from the post (MARCH=1, the default): march there; hold() walks each account to the post's current step.
     { const c = centroid(); if (get('MARCH', '1') === '1' && Math.max(Math.abs(c.x - post.x), Math.abs(c.z - post.z)) > step) march({ ...post }); }
-    const results = await Promise.all(squad.map(s => hold(s, { targets, post, options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []), 1200),
-        allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), deadline,
-        stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); } })));
+    const squadHasSpear = squad.some(s => [...(s.sdk.getState()?.equipment ?? []), ...(s.sdk.getState()?.inventory ?? [])].some(i => /^dragon spear/i.test(i.name)));
+    const spearLock = get('SPEAR_LOCK', squadHasSpear ? '1' : '0') === '1';
+    const stunShares = new Map<string, NonNullable<FightOptions['stunShare']>>();
+    const stunShareFor = (t: string) => {
+        const key = t.toLowerCase();
+        let share = stunShares.get(key);
+        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stunnedUntil: -1, overlap: 1 }; stunShares.set(key, share); }
+        return share;
+    };
+    const results = await Promise.all(squad.map(s => {
+        const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
+        const stunSpec = defaultStunSpec(kit);
+        return hold(s, {
+            targets, post,
+            options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
+            ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
+            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), deadline,
+            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); },
+        });
+    }));
     squadDone = true;
     await Promise.all(gangRuns);
     unwatchMarch(); unwatchRadar?.(); unwatchFollow?.();
