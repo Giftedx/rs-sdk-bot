@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794940119270,
+ "at": 1794940243244,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -254,7 +254,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -495,52 +496,53 @@
    "account": "Ballspinner",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
     "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-trooper-strength-99",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   },
   {
    "account": "Sausagefest",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-trooper-strength-99",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   }
  ],
