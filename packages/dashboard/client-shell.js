@@ -164,7 +164,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const sg=v=>(v>0?'+':'')+v,cells=(from,names)=>names.map((n,i)=>'<i title="'+n+'">'+sg(t[from+i])+'</i>').join('');
     const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),weapon=b.equipment.find(e=>e.slot===3),ranged=(equipmentValue(itemBonusData,weapon)?.[4]||0)>0;
     const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' · prayer '+maxHit(str,t[10],3,115):'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
-    {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+' ×'+sp.casts);}
+    {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+(sp.charge?' (30 charged)':'')+' ×'+sp.casts);}
     const names=['Stab','Slash','Crush','Magic','Range'];
     return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join('<br>')+'</b></div>':'')+'</div>';
   }
@@ -179,7 +179,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!spellbookData?.combat?.length||!Array.isArray(b?.inventory))return null;
     const mg=curLevel(b,'Magic');if(!Number.isFinite(mg))return null;
     const worn=new Set((b.equipmentObserved===false?[]:b.equipment||[]).map(e=>e?.name));
-    let best=null;for(const [name,lv,max,runes,staff,exp] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max))best={name,max,casts,xp:(exp||0)*2.5};}
+    let best=null;for(const [name,lv,max,runes,staff,exp] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max)){const charge=mg>=80&&/^(Saradomin Strike|Claws of Guthix|Flames of Zamorak)$/.test(name)&&runeCasts(b,[['Blood rune',3],['Fire rune',3],['Air rune',3]])>=1;best={name,max,casts,charge,xp:(exp||0)*2.5};}}
     return best;
   }
   function teleCasts(b){

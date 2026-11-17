@@ -865,6 +865,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 if (hasStyle(o.kit, 'melee') && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
                 if (!potion && hasStyle(o.kit, 'melee') && unboosted('Attack')) potion = slotOf([...ITEMS.superAttack, ...ITEMS.attackPotion]);
                 if (!potion && hasStyle(o.kit, 'ranged') && unboosted('Ranged')) potion = slotOf(ITEMS.rangingPotion);
+                if (!potion && hasStyle(o.kit, 'magic') && unboosted('Magic')) potion = slotOf(ITEMS.magicPotion);
                 if (!potion && unboosted('Defence')) potion = slotOf([...ITEMS.superDefence, ...ITEMS.defencePotion]);
             }
             if (potion) {
