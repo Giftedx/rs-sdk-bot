@@ -1,4 +1,4 @@
-import {readFileSync,writeFileSync,mkdirSync,existsSync,realpathSync,lstatSync,openSync,fstatSync,readSync,closeSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,existsSync,realpathSync,lstatSync,openSync,fstatSync,readSync,closeSync,constants} from 'node:fs';
 import {join,resolve,relative,isAbsolute,dirname} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual as same} from 'node:util';
@@ -26,7 +26,8 @@ const artifactLimit=(name:string)=>name.endsWith('.log')?16*MiB:name.endsWith('.
 function artifactBytes(folder:string,name:string,root:string,limit=artifactLimit(name)){
  const physicalFolder=realpathSync(folder);requireProof(within(root,physicalFolder),'artifact folder leaves its selected practice root');
  const file=realpathSync(join(physicalFolder,name));requireProof(within(physicalFolder,file)&&within(root,file),'artifact file leaves its declared folder or practice root');
- const fd=openSync(file,'r');
+ const flags=constants.O_RDONLY|(process.platform==='win32'?0:(constants.O_NONBLOCK??0)|(constants.O_NOFOLLOW??0));
+ const fd=openSync(file,flags);
  try{
   const stat=fstatSync(fd);requireProof(stat.isFile(),'artifact is not a regular file');
   requireProof(Number.isSafeInteger(stat.size)&&stat.size>=0&&stat.size<=limit,'artifact exceeds its bounded size limit');

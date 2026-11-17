@@ -110,6 +110,22 @@ test('an artifact directory is rejected as data before the verifier can run',asy
   expect(f.verified()).toBe(0);
  }finally{f.cleanup();}
 });
+
+test.skipIf(process.platform==='win32')('a FIFO artifact is rejected without waiting for a writer',async()=>{
+ const f=fixture();try{
+  const file=join(f.folder,'before.sav');rmSync(file);
+  expect(Bun.spawnSync(['mkfifo',file],{stdout:'pipe',stderr:'pipe'}).exitCode).toBe(0);
+  const code=`import {readFileSync} from 'node:fs';import {registerProgressionQualification} from ${JSON.stringify(join(import.meta.dir,'../src/progression-qualification.ts'))};
+   try{await registerProgressionQualification(process.argv[1],{base:process.argv[2],task:JSON.parse(readFileSync(process.argv[1]+'/task.json','utf8')),fingerprint:()=>${JSON.stringify(source)},runtimeRevision:()=>${JSON.stringify(runtime)},verifyProof:()=>({checks:{accepted:true}})});process.exitCode=2;}catch(error){console.error(String(error));process.exitCode=1;}`;
+  const child=Bun.spawn([process.execPath,'-e',code,f.directory,f.base],{stdout:'pipe',stderr:'pipe'});
+  const timer=setTimeout(()=>child.kill('SIGKILL'),1500);
+  try{
+   const [exit,error]=await Promise.all([child.exited,new Response(child.stderr).text()]);
+   expect(exit).toBe(1);expect(error).toMatch(/artifact is not a regular file/);
+   expect(existsSync(join(f.practice,'progression-system/qualifications.json'))).toBe(false);
+  }finally{clearTimeout(timer);}
+ }finally{f.cleanup();}
+});
 test('the output system cannot follow a junction outside the actual base practice directory',async()=>{
  const f=fixture();try{
   const outside=join(f.base,'outside');mkdirSync(outside);symlinkSync(outside,join(f.practice,'progression-system'),'junction');
