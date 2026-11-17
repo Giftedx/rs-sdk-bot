@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794953170109,
+ "at": 1794953590163,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -296,8 +296,8 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
@@ -306,9 +306,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
@@ -316,21 +316,45 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/chain.ts",
+   "script": "scripts/splash-train.ts",
    "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
+    "66",
+    "6000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy water runes at Aubury's in Varrock for the curse band",
-   "role": "supply",
-   "template": "army-water-aubury",
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
    "autopilot": "local",
    "resources": [
+    "splash:ardougne-cow-fence"
+   ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
+    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":60}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "role": "supply",
+   "template": "army-hunt-supply",
+   "autopilot": "local",
+   "resources": [
+    "shop:lowe",
     "shop:aubury"
    ]
   },
@@ -448,8 +472,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
