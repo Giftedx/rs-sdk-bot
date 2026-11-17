@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794928686470,
+ "at": 1794928722759,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -341,21 +341,24 @@
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/chain.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=35 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit2-556-0to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "21",
+    "1500"
    ],
    "env": {
-    "ROUNDS": "1"
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":21}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 35 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
+   "repeat": true,
+   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-strike-magic-21",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "strike:ardougne-guard-dog"
+   ]
   },
   {
    "account": "Swordinhand",
