@@ -38,7 +38,7 @@
   "port-sarim-monks": {
    "x": 3048,
    "z": 3236,
-   "note": "Entrana monks at Port Sarim (OSRS position, not verified in world.json)"
+   "note": "Entrana monks at Port Sarim, beside ship_to_entrana_on at 3048,3233 (knowledge/ubermouse/world.json)"
   },
   "entrana-dock": {
    "x": 2834,
@@ -50,12 +50,12 @@
     "boatTicks": 18,
     "source": "ESTIMATE: same sail.rs2 p_delay(7) voyage as the Karamja boat (research/walking.md)"
    },
-   "note": "Entrana landing (OSRS position, not verified in world.json)"
+   "note": "Entrana landing, beside ship_from_entrana_on at 2834,3334 (knowledge/ubermouse/world.json)"
   },
   "mortton": {
    "x": 3489,
    "z": 3288,
-   "note": "Mort'ton (OSRS position, not verified)"
+   "note": "Mort'ton centre inside mortton area 3467..3514, 3257..3304 (knowledge/ubermouse/world.json)"
   },
   "varrock-west-anvil": {
    "x": 3187,
@@ -66,7 +66,7 @@
   "mage-arena-lever": {
    "x": 3090,
    "z": 3956,
-   "note": "Mage Arena lever, Wilderness (OSRS position, not verified)"
+   "note": "Mage Arena house, beside magearena_ladder_to_cellar at 3091,3957 (knowledge/ubermouse/world.json)"
   },
   "dimintheis": {
    "x": 3279,
@@ -192,12 +192,12 @@
   "falador-castle": {
    "x": 2965,
    "z": 3343,
-   "note": "Black Knights' Fortress hand-in, Sir Amik (OSRS position, not verified)"
+   "note": "Black Knights' Fortress hand-in, White Knights' Castle ground tile for sir_amik_varze at 2960,3336 level 2 (knowledge/ubermouse/world.json)"
   },
   "witch-house": {
    "x": 2928,
    "z": 3456,
-   "note": "Witch's House, the boy (OSRS position, not verified)"
+   "note": "Witch's House, npc ballboy at 2928,3456 (knowledge/ubermouse/world.json)"
   },
   "guildmaster": {
    "x": 3191,
@@ -222,7 +222,7 @@
   "lawgof": {
    "x": 2567,
    "z": 3460,
-   "note": "Dwarf Cannon, Captain Lawgof (OSRS position, not verified)"
+   "note": "Dwarf Cannon, beside npc lawgof2 at 2571,3463 (knowledge/ubermouse/world.json)"
   },
   "barbarian-course": {
    "x": 2550,
@@ -2395,7 +2395,7 @@
     "prayer": 31
    },
    "evidence": "MEASURED",
-   "source": "XP: quest_scorpcatcher.rs2:60, 165,625 Strength seen in each of the 3 proof runs; ticks MEASURED (research/quest-plan.md section 1o); Prayer 31 is the OSRS requirement",
+   "source": "XP: quest_scorpcatcher.rs2:60, 165,625 Strength seen in each of the 3 proof runs; ticks MEASURED (research/quest-plan.md section 1o); Prayer 31 from scorpcatcher_journal.rs2:9",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -2866,7 +2866,7 @@
     }
    ],
    "at": "camelot",
-   "minLevelSource": "combat gate (CODE-READ): Black Knight Titan attack 91, strength 100, 142 HP, crush, max hit 11 (quest_grail/configs/fisher_realm.npc:293-308), so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Attack 20 kept (OSRS)"
+   "minLevelSource": "combat gate (CODE-READ): Black Knight Titan attack 91, strength 100, 142 HP, crush, max hit 11 (quest_grail/configs/fisher_realm.npc:293-308), so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Attack 20 for Excalibur (levelrequire/scripts/tier20.rs2:16)"
   },
   {
    "id": "dig",
