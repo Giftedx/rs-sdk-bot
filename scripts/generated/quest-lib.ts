@@ -51,6 +51,17 @@ export function clickDialoguePage(sdk: DialogueClickSdk, option?: { text: string
     return option ? sdk.clickDialogByText(new RegExp('^' + option.text.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&') + '$', 'i')) : sdk.sendClickDialog(0);
 }
 type DialogueOption = { text: string; componentId?: number; buttonType?: number };
+const CONTINUE_TEXT = /click here to continue/i;
+export const BUTTON_OK = 1;
+export const BUTTON_CONTINUE = 6;
+export const BURST_SETTLE_TICKS = 4;
+export const BURST_GRACE_TICKS = 2;
+export const isContinueOnlyOptions = (options: readonly DialogueOption[], strictButtonType = false): boolean =>
+    options.length > 0 && options.every(o =>
+        CONTINUE_TEXT.test(o.text)
+        && o.buttonType !== BUTTON_OK
+        && (!strictButtonType || o.buttonType === undefined || o.buttonType === BUTTON_CONTINUE),
+    );
 // One dialogue page: the SDK state, or the page that the live client holds.
 export type DialoguePage = { isOpen: boolean; isWaiting: boolean; options: readonly DialogueOption[] };
 const pageKey = (p: DialoguePage): string =>
@@ -72,6 +83,86 @@ export const dialogueTransition = (clicked: DialoguePage, live: DialoguePage | u
 };
 // Refused clicks that an observed transition can excuse in one conversation.
 export const MAX_DIALOGUE_TRANSITIONS = 6;
+export type BurstClient = {
+    chatModalId: number;
+    resumedPauseButton?: boolean;
+    dialogInputOpen?: boolean;
+    writeOpcode(opcode: number): void;
+    out: { p2(value: number): void };
+    flush?(): void;
+    getDialogOptions?(): readonly DialogueOption[];
+};
+export type DialogueBurstDeps = {
+    enabled: boolean;
+    client(): BurstClient | undefined;
+    tick(): number;
+    textSeq(): number;
+    continueRoots?: ReadonlySet<number>;
+    maxBatch?: number;
+    settleTicks?: number;
+    onBurst?(textSeq: number, tick: number): void;
+};
+// Safe Q_BURST state machine: bursts only continue-only chat modals, latches client.resumedPauseButton,
+// and falls back to single-step for the rest of the conversation when a burst stalls or reopens unchanged.
+export function createDialogueBurster(deps: DialogueBurstDeps) {
+    const maxBatch = deps.maxBatch ?? 5;
+    const settleTicks = deps.settleTicks ?? BURST_SETTLE_TICKS;
+    let singleStep = false;
+    let pending: { tick: number; seq: number; modalId: number } | null = null;
+    const begin = (allowBurst = true): void => {
+        singleStep = !allowBurst;
+        pending = null;
+    };
+    const settle = (): { fallback: boolean; reason?: 'unchanged' | 'settlement' } => {
+        if (!pending) return { fallback: false };
+        const c = deps.client();
+        const live = liveDialoguePage(c);
+        const seq = deps.textSeq();
+        const t = deps.tick();
+        if (!live || !live.isOpen || seq > pending.seq || c!.chatModalId !== pending.modalId) {
+            pending = null;
+            return { fallback: false };
+        }
+        if (!live.isWaiting && t > pending.tick) {
+            pending = null;
+            singleStep = true;
+            return { fallback: true, reason: 'unchanged' };
+        }
+        if (live.isWaiting && t - pending.tick >= settleTicks) {
+            if (c) c.resumedPauseButton = false;
+            pending = null;
+            singleStep = true;
+            return { fallback: true, reason: 'settlement' };
+        }
+        return { fallback: false };
+    };
+    const onRefused = (): void => {
+        pending = null;
+        singleStep = true;
+    };
+    const tryBurst = (dialog: DialoguePage | undefined, option: DialogueOption | undefined, choice: boolean): boolean => {
+        if (!deps.enabled || singleStep || option || choice) return false;
+        if (!dialog?.isOpen || dialog.isWaiting || !isContinueOnlyOptions(dialog.options ?? [])) return false;
+        const c = deps.client();
+        if (!c || typeof c.chatModalId !== 'number' || c.chatModalId === -1 || c.dialogInputOpen) return false;
+        if (deps.continueRoots && !deps.continueRoots.has(c.chatModalId)) return false;
+        const live = liveDialoguePage(c);
+        if (!live?.isOpen || live.isWaiting || !isContinueOnlyOptions(live.options, true)) return false;
+        const seq = deps.textSeq();
+        const t = deps.tick();
+        const modalId = c.chatModalId;
+        for (let k = 0; k < maxBatch; k++) {
+            c.writeOpcode(RESUME);
+            c.out.p2(modalId);
+        }
+        c.flush?.();
+        c.resumedPauseButton = true;
+        pending = { tick: t, seq, modalId };
+        deps.onBurst?.(seq, t);
+        return true;
+    };
+    return { begin, settle, onRefused, tryBurst, isSingleStep: () => singleStep };
+}
 export type ConverseIO = {
     tick(): number;
     stopped(): boolean;
@@ -82,32 +173,43 @@ export type ConverseIO = {
     wait(): Promise<void>;
     fail(why: string): Promise<never>;
     log(line: string): void;
-    // True while a sent plan drains: the SDK can show a page that the plan has answered.
+    // True while a sent plan or burst drains: the SDK can show a page that the batch already answered.
     planGrace(): boolean;
     // True when it answered the page itself (Q_BURST continues).
-    burst?(option: DialogueOption | undefined, choice: boolean): boolean;
+    burst?(option: DialogueOption | undefined, choice: boolean, dialog?: DialoguePage): boolean;
+    settleBurst?(): void;
+    burstRefused?(): void;
     clicked?(dialog: any, option: DialogueOption | undefined, choice: boolean): void;
 };
 // One dialog page per tick: the first option matching a pattern, else "continue". Stops when ok() holds.
-export async function converseDialogue(io: ConverseIO, pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> {
+export async function converseDialogue(
+    io: ConverseIO,
+    pats: RegExp[],
+    ok: () => boolean,
+    maxTicks: number,
+    options?: { allowBurst?: boolean },
+): Promise<boolean> {
     const deadline = io.tick() + maxTicks;
+    const allowBurst = options?.allowBurst ?? true;
     let transitions = 0;
     while (io.tick() < deadline && !io.stopped()) {
         await io.guard();
+        io.settleBurst?.();
         if (ok()) return true;
         const d: any = io.dialog();
         if (d?.isOpen && !d.isWaiting) {
-            const options: DialogueOption[] = d.options ?? [];
-            const opt = options.find(o => pats.some(re => re.test(o.text)));
-            const choice = options.some(o => !/click here to continue/i.test(o.text));
-            if (choice && !opt) io.log(`WARN no option match: ${options.map(o => o.text).join(' | ')}`);
+            const opts: DialogueOption[] = d.options ?? [];
+            const opt = opts.find(o => pats.some(re => re.test(o.text)));
+            const choice = opts.some(o => !CONTINUE_TEXT.test(o.text) || o.buttonType === BUTTON_OK);
+            if (choice && !opt) io.log(`WARN no option match: ${opts.map(o => o.text).join(' | ')}`);
             const beforeClick = io.tick();
-            if (io.burst?.(opt, choice)) { await io.wait(); continue; }
+            if (allowBurst && io.burst?.(opt, choice, d)) { await io.wait(); continue; }
             const reply = await io.click(opt);
             if (!reply.success) {
+                io.burstRefused?.();
                 if (io.planGrace()) { await io.wait(); continue; }
                 const live = io.live();
-                const moved = dialogueTransition({ isOpen: true, isWaiting: false, options }, live);
+                const moved = dialogueTransition({ isOpen: true, isWaiting: false, options: opts }, live);
                 const what = opt ? `option "${opt.text}"` : 'continue';
                 if (moved && transitions < MAX_DIALOGUE_TRANSITIONS) {
                     transitions++;
@@ -115,7 +217,7 @@ export async function converseDialogue(io: ConverseIO, pats: RegExp[], ok: () =>
                     await io.wait(); continue;
                 }
                 const flags = live ? `open=${live.isOpen} waiting=${live.isWaiting}${moved ? ` ${moved} after ${transitions} waits` : ' same page'}` : 'unobserved';
-                await io.fail(`dialogue click refused: ${reply.message} (${what}; options ${JSON.stringify(options.map(o => o.text))}; live ${flags})`);
+                await io.fail(`dialogue click refused: ${reply.message} (${what}; options ${JSON.stringify(opts.map(o => o.text))}; live ${flags})`);
             }
             io.clicked?.(d, opt, choice);
             if (io.tick() !== beforeClick) continue;
@@ -125,9 +227,13 @@ export async function converseDialogue(io: ConverseIO, pats: RegExp[], ok: () =>
     return ok();
 }
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
+const CONTINUE_CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|objbox[1-4]|doubleobjbox|inter_213)$/;
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
-const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
-    .split(/\r?\n/).map(l => l.split('=')).filter(([, n]) => n && CHAT_NAMES.test(n.trim())).map(([id]) => Number(id)));
+const INTERFACE_PACK_ROWS = readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
+    .split(/\r?\n/).map(l => l.split('=')).filter((parts): parts is [string, string] => parts.length >= 2 && !!parts[1]?.trim());
+const CHAT_ROOTS = new Set(INTERFACE_PACK_ROWS.filter(([, n]) => CHAT_NAMES.test(n.trim())).map(([id]) => Number(id)));
+export const CONTINUE_ROOTS = new Set(INTERFACE_PACK_ROWS.filter(([, n]) => CONTINUE_CHAT_NAMES.test(n.trim())).map(([id]) => Number(id)));
+export const CHOICE_ROOTS = new Set([...CHAT_ROOTS].filter(id => !CONTINUE_ROOTS.has(id)));
 const RESUME = ClientProt.RESUME_PAUSEBUTTON;
 // Magic level per spell: skill_magic/scripts/magic.rs2 refuses a cast while stat(magic) < levelrequired.
 export const parseSpellLevels = (dbrow: string): Map<string, number> => {
@@ -502,28 +608,40 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     let recording: PlanToken[] | null = null;
     const plannedLabels = new Set<string>();
     let planSentAt = -100;
-    const converse = (pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> => converseDialogue({
-        tick: () => s.tick(), stopped: () => stats.died, guard: () => guard('dialogue'),
-        dialog: () => s.sdk.getDialog(), live: () => liveDialoguePage((s as any).client),
-        click: opt => clickDialoguePage(s.sdk, opt), wait: () => waitTicks(s, 1), fail, log: line => console.log(line),
-        planGrace: () => s.tick() - planSentAt <= 8,
-        // Q_BURST=1 sends 5 blind continues on a page with no choice (the USER_EVENT cap).
-        // ResumePauseButtonHandler.ts refuses a continue while a choice is pending, so a choice is never skipped.
-        burst: (opt, choice) => {
-            const c: any = (s as any).client;
-            const live = liveDialoguePage(c);
-            if (!(BURST && !opt && !choice && c && c.chatModalId !== -1 && live?.isOpen && !live.isWaiting && !live.options.some(o => !/click here to continue/i.test(o.text)))) return false;
-            for (let k = 0; k < 5; k++) { c.writeOpcode(RESUME); c.out.p2(c.chatModalId); }
-            c.flush?.(); bursts++; answeredSeq = textSeq; planSentAt = s.tick();
-            return true;
+    let burstSentAt = -100;
+    const burster = createDialogueBurster({
+        enabled: BURST,
+        client: () => (s as any).client,
+        tick: () => s.tick(),
+        textSeq: () => textSeq,
+        continueRoots: CONTINUE_ROOTS,
+        onBurst: (seq, tick) => {
+            bursts++;
+            answeredSeq = seq;
+            burstSentAt = tick;
         },
-        // A choice records its component; a choice with no component ends the record for this talk.
-        clicked: (d, opt, choice) => {
-            if (!recording) return;
-            const id = choice ? (opt ?? d.options[0])?.componentId : 'R';
-            if (id === undefined) recording = null; else recording.push(id);
-        },
-    }, pats, ok, maxTicks);
+    });
+    const converse = (pats: RegExp[], ok: () => boolean, maxTicks: number, allowBurst = true): Promise<boolean> => {
+        burster.begin(allowBurst);
+        return converseDialogue({
+            tick: () => s.tick(), stopped: () => stats.died, guard: () => guard('dialogue'),
+            dialog: () => s.sdk.getDialog(), live: () => liveDialoguePage((s as any).client),
+            click: opt => clickDialoguePage(s.sdk, opt), wait: () => waitTicks(s, 1), fail, log: line => console.log(line),
+            planGrace: () => (s.tick() - planSentAt <= 8) || (s.tick() - burstSentAt <= BURST_GRACE_TICKS),
+            settleBurst: () => {
+                const res = burster.settle();
+                if (res.fallback) console.log(`NOTE dialogue burst fallback: ${res.reason}`);
+            },
+            burstRefused: () => burster.onRefused(),
+            burst: (opt, choice, dlg) => burster.tryBurst(dlg, opt, choice),
+            // A choice records its component; a choice with no component ends the record for this talk.
+            clicked: (d, opt, choice) => {
+                if (!recording) return;
+                const id = choice ? (opt ?? d.options[0])?.componentId : 'R';
+                if (id === undefined) recording = null; else recording.push(id);
+            },
+        }, pats, ok, maxTicks, { allowBurst });
+    };
 
     // A planned conversation, adapted from TestingPurposes/rs-stun-toolkit q-lib.ts `talk` (MIT). The whole token list
     // leaves in one write on the tick the first page shows: 'R' continues a page, a number clicks that choice
@@ -608,7 +726,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             if (planned && dialogOpen()) await waitTicks(s, sendPlan(planned));
             recording = TALK_RECORD && first && !planned ? [] : null;
             let shut = 0;
-            await converse(pats, () => { shut = dialogOpen() ? 0 : shut + 1; return (ok() && (stopOpen || !dialogOpen())) || shut >= 3; }, maxTicks);
+            await converse(pats, () => { shut = dialogOpen() ? 0 : shut + 1; return (ok() && (stopOpen || !dialogOpen())) || shut >= 3; }, maxTicks, !stopOpen);
             if (ok()) { if (recording?.length) recordedPlans[label] = recording; recording = null; return; }
             recording = null;
         }
