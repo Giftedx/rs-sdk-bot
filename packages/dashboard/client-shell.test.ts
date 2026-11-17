@@ -1893,12 +1893,17 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  t2.set({'Staff of fire':[0,0,0,10,0,0,0,0,10,0,0,0,0]},{spells:[],staffs:{'Fire rune':['Staff of fire']},combat:[['Fire Strike',13,8,[['Mind rune',1],['Fire rune',3],['Air rune',2]],null],['Fire Bolt',35,12,[['Chaos rune',1],['Fire rune',4],['Air rune',3]],null],['Iban Blast',50,25,[['Death rune',1],['Fire rune',5]],"Iban's staff"],['Fire Blast',59,16,[['Death rune',1],['Fire rune',5],['Air rune',4]],null]]});
  const mage:any={skills:[{name:'Magic',level:55,currentLevel:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Air rune',count:30},{name:'Chaos rune',count:6},{name:'Mind rune',count:50},{name:'Death rune',count:20}]};
  // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
- expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6,xp:0});
+ expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6,charge:false,xp:0});
  expect(t2.equipStats(mage)).toContain('Magic Fire Bolt 12 ×6');
  // Against the shipped spellbook: the pure-iban loadout (Magic 50, Staff of iban, death and fire runes, no air) casts Iban Blast.
  const book=JSON.parse(readFileSync(new URL('./client-assets/spellbook.json',import.meta.url),'utf8'));
  t2.set({},book);
- expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20,xp:750});
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20,charge:false,xp:750});
+ // God Spell with Magic >= 80 and Charge runes reports charged max hit 30.
+ t2.set({'Staff of zamorak':[0,0,0,10,0,0,0,0,10,0,0,0,0]},book);
+ const god={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of zamorak'}],inventory:[{name:'Blood rune',count:10},{name:'Fire rune',count:20},{name:'Air rune',count:10}]};
+ expect(t2.bestSpell(god)).toMatchObject({name:'Flames of Zamorak',max:20,casts:5,charge:true});
+ expect(t2.equipStats(god)).toContain('Magic Flames of Zamorak 20 (30 charged) ×5');
  // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
 });

@@ -488,3 +488,55 @@ test('PRAYER indices match the 15 prayers (0-14) in the 2004 server config', asy
     expect(Object.values(PRAYER).every(idx => idx >= 0 && idx < PRAYER_NAMES.length)).toBe(true);
     expect('smite' in PRAYER).toBe(false);
 });
+
+test('fightPlayer drinks Magic potion when magic kit is present and Magic is unboosted', async () => {
+    const { fightPlayer } = await import('./pk');
+    let tick = 10;
+    const used: number[] = [];
+    const state: any = {
+        tick,
+        player: { worldX: 3060, worldZ: 3880, level: 0, hp: 99, maxHp: 99, combatLevel: 100 },
+        skills: [
+            { name: 'Hitpoints', level: 99, baseLevel: 99 },
+            { name: 'Magic', level: 80, baseLevel: 80 },
+            { name: 'Defence', level: 99, baseLevel: 99 },
+            { name: 'Prayer', level: 99, baseLevel: 99 },
+        ],
+        prayers: { activePrayers: new Array(15).fill(false), prayerPoints: 99 },
+        inventory: [
+            { id: 3040, slot: 0, count: 1, name: 'Magic potion(4)', optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] },
+            { id: 565, slot: 1, count: 50, name: 'Blood rune', optionsWithIndex: [] },
+            { id: 554, slot: 2, count: 50, name: 'Fire rune', optionsWithIndex: [] },
+            { id: 556, slot: 3, count: 50, name: 'Air rune', optionsWithIndex: [] },
+        ],
+        equipment: [{ id: 2417, slot: 3, count: 1, name: 'Staff of zamorak', optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 2, name: 'Dummy', x: 3060, z: 3884, combatLevel: 100, distance: 4 }],
+        combatEvents: [], gameMessages: [], dialog: { isOpen: false },
+    };
+    const session: any = {
+        name: 'MagePker',
+        client: { getPlayer: () => undefined, objType: () => undefined },
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (fn: () => void) => {
+            setTimeout(() => { tick++; state.tick = tick; fn(); }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number) => {
+                used.push(state.inventory[slot]?.id);
+                state.skills[1]!.level = 84;
+            },
+            sendWalk: () => {},
+            sendTogglePrayer: () => {},
+            sendSpellOnPlayer: () => {},
+            sendClickComponent: () => {},
+        },
+    };
+    await fightPlayer(session, 'Dummy', {
+        kit: { magic: [2417] }, rotation: ['magic'], damageSpell: 1192,
+        freeze: false, prayerFlick: false, cap: 5, log: () => {},
+    });
+    expect(used).toContain(3040);
+});
