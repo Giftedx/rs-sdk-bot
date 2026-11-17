@@ -1,6 +1,32 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {BotSDK} from '../../vendor/rs-sdk/sdk';
+import {clickDialoguePage} from './quest-lib';
+
+test.each([
+ "You're a sailor? Could you take me to the island of Crandor?",
+ 'Yes (take all) + [one] \\ two.*',
+])('a selected dialogue answer stays literal through SDK matching: %s', async text => {
+ const sdk=Object.create(BotSDK.prototype) as BotSDK;
+ const actions:unknown[]=[];
+ Object.assign(sdk,{state:{dialog:{isOpen:true,pageId:'page-7',options:[{text,index:2,componentId:2496}]}},
+  sendAction:async(action:unknown)=>{actions.push(action);return{success:true};}});
+ expect(await clickDialoguePage(sdk,{text})).toEqual({success:true});
+ expect(actions).toEqual([{type:'clickDialogOption',optionIndex:2,guard:{pageId:'page-7',componentId:2496},reason:'SDK'}]);
+});
+
+test('literal dialogue selection keeps a stale page refusal without an index fallback', async () => {
+ const text='Take one (1)?';
+ const sdk=Object.create(BotSDK.prototype) as BotSDK;
+ const actions:unknown[]=[];
+ const refusal={success:false,reason:'stale_dialog',message:'page changed'};
+ Object.assign(sdk,{state:{dialog:{isOpen:true,pageId:'page-7',options:[{text,index:2,componentId:2496}]}},
+  sendAction:async(action:unknown)=>{actions.push(action);return refusal;}});
+ expect(await clickDialoguePage(sdk,{text})).toBe(refusal);
+ expect(actions).toHaveLength(1);
+ expect(actions[0]).toMatchObject({type:'clickDialogOption',guard:{pageId:'page-7',componentId:2496}});
+});
 
 test('quest handoff belongs only to its matching named or explicit session',()=>{
  const root=resolve(import.meta.dir,'../..');
