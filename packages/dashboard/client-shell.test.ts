@@ -2107,3 +2107,29 @@ test('wildLine in overlay shows multi-way vs single-way combat zone',()=>{
  expect(shell).toContain("(p.multi?' · multi-way':' · single-way')");
  expect(shell).toContain("inMulti({x:l.wild.x,z:l.wild.z,level:l.wild.plane??0})?' · multi-way':' · single-way'");
 });
+
+test('Prayer tab renders the 15 rev 289 prayers and locks prayers above Prayer level',()=>{
+ const start=shell.indexOf("    if(selectedTab==='prayer'){"),end=shell.indexOf("    if(selectedTab==='magic'){");
+ const code=shell.slice(start,end);
+ const render=(lv:number,cur=lv)=>new Function('b','E','asset','level','wornBonuses','prayerLasts','dur',`const selectedTab='prayer';let html='';${code};return html;`)({name:'test'},String,(f:string)=>f,()=>({level:lv,currentLevel:cur}),()=>[0,0,0,0,0,0,0,0,0,0,0,0,5],()=>100,()=>'1m');
+ const h25=render(25);
+ expect(h25).toContain('Thick Skin (level 1)');
+ expect(h25).toContain('Protect Item (level 25)');
+ expect(h25).toContain('prayer-locked" title="Steel Skin');
+ expect(h25).not.toContain('Piety');
+ expect(h25).not.toContain('Smite');
+ expect(h25).toContain('Prayer: 25 / 25 · Bonus +5');
+});
+
+test('Magic tab renders rev 289 spells, counts casts, and locks missing runes or levels',()=>{
+ const start=shell.indexOf("    if(selectedTab==='magic'){"),end=shell.indexOf("    const active=document.activeElement");
+ const code=shell.slice(start,end);
+ const runeCastsSrc=shell.slice(shell.indexOf('  function runeCasts('),shell.indexOf('  function bestSpell('));
+ const spellbookData={spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']},combat:[['Wind Strike',1,2,[['Mind rune',1],['Air rune',1]],null,55]]};
+ const bot={skills:[{name:'Magic',level:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:3},{name:'Law rune',count:2}]};
+ const html=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>55,spellbookData,()=>'');
+ expect(html).toContain('spell-icon" title="High Level Alchemy (Magic 55) · alch · ×10"');
+ expect(html).toContain('spell-icon" title="Varrock teleport (Magic 25) · teleport · ×1"');
+ expect(html).toContain('spell-locked" title="Wind Strike (Magic 1)');
+ expect(html).not.toContain('Ice Barrage');
+});
