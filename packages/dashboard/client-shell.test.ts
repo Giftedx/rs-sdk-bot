@@ -2155,6 +2155,7 @@ test('Prayer tab highlights active prayers from progressionContext without fabri
 test('game tab CSS top row fits 5 tabs and weapon special costs match rev 289',()=>{
  const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
  expect(css).toContain('.game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(5,minmax(0,1fr))!important}');
+ expect(css).toContain('@media(max-width:479px){.game-hud:not(.chat-hidden) .game-pvp-hud{bottom:481px}');
  const combatCode=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
  const harness=new Function('asset','fetch','E','window','weaponSpeedData',`${combatCode};return {equipStats,set:(i)=>{itemBonusData=i;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{},{'Magic shortbow':4,'Magic longbow':6,'Rune claws':4,'Rune thrownaxe':5});
  harness.set({'Magic shortbow':[0,0,0,0,69,0,0,0,0,0,0,0,0],'Magic longbow':[0,0,0,0,69,0,0,0,0,0,0,0,0],'Rune claws':[26,39,0,0,0,0,19,0,0,0,39,0,0],'Rune thrownaxe':[0,0,0,0,32,0,0,0,0,0,0,0,0]});
@@ -2170,25 +2171,57 @@ test('Gear Advisor handles rev 289 ID tiers, quests, tools, operator privacy and
  const block=shell.slice(shell.indexOf('  // Gear & Upgrade Advisor:'),shell.indexOf('  new MutationObserver(followTitle)'));
  const setup=(bot:any,owner=true)=>{
   const els=new Map<string,any>([['#client-diag',{hidden:true,innerHTML:''}]]);
+  const win:any={atlasOperator:()=>owner};
   const env={
    account:()=>bot,S:{bots:[bot],roster:[],world:{tickMs:600},capacity:{fresh:true,active:15,cap:25,freeGB:6.8,headroomGB:2.8,queued:0},diagnostics:{failLoops:[],leases:[]}},
    E:String,safeName:(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),icon:(i:any)=>`[${i?.id??i?.name}]`,asset:String,age:()=>'5s',
    equipmentValue:(t:any,i:any)=>t?.[i?.id]??t?.[i?.name],itemBonusData:{1333:[7,45,-2,0,0,0,1,0,0,0,44,0,0],1135:[0,0,0,0,15,0,32,0,0,0,0,0,0]},weaponSpeedData:{1333:4},
    wornBonuses:(b:any)=>b.equipmentObserved===false?null:[7,45,-2,0,15,0,33,0,0,0,44,0,0],curLevel:()=>70,maxHit:(lv:number,s:number,st:number)=>Math.floor(((lv+8+st)*(s+64)+320)/640),
    bestSpell:()=>null,wildLevel:()=>0,inMulti:()=>false,pvpState:()=>null,hud:{querySelector:()=>null},$:(s:string)=>els.get(s),
-   window:{atlasOperator:()=>owner},fetch:undefined,plugin:{querySelector:()=>null},document:{},
+   window:win,fetch:undefined,plugin:{querySelector:()=>null},document:{},
   };
-  return {els,...new Function(...Object.keys(env),`${block};return {gearAdvisorFor,gearAdvisorPanel,equipAdvisorHtml,titleDiag};`)(...Object.values(env))};
+  return {els,win,...new Function(...Object.keys(env),`${block};return {gearAdvisorFor,gearAdvisorPanel,equipAdvisorHtml,titleDiag};`)(...Object.values(env))};
  };
- // Green d'hide body (1135) must recommend Black d'hide body (2503) at Ranged 70 / Def 40, not confuse shared item names.
+ // Green d'hide body (1135) must recommend Black d'hide body (2503) at Ranged 70 / Def 40 on body-ranged without mixing melee plate, and melee Rune body/legs stay separated on body-melee / legs-melee.
  const rangerBot={name:'Ranger1',combat:80,skills:[{name:'Attack',level:60},{name:'Strength',level:70},{name:'Defence',level:40},{name:'Ranged',level:70},{name:'Magic',level:50},{name:'Mining',level:41}],
   equipment:[{slot:3,id:1333,name:'Rune scimitar'},{slot:4,id:1135,name:'Dragonhide body'}],
   inventory:[{id:1269,name:'Steel pickaxe',count:1}],bank:[{id:1305,name:'Dragon longsword',count:1}],
   quests:[{name:'Lost City',state:'not started'},{name:'Dragon Slayer',state:'complete'}]};
  const ownerAdvice=setup(rangerBot,true).gearAdvisorFor(rangerBot);
- expect(ownerAdvice.rows.find((r:any)=>r.id==='body')).toMatchObject({status:'ready',target:{id:2503,name:'Dragonhide body (Black)'}});
+ expect(ownerAdvice.rows.find((r:any)=>r.id==='body-ranged')).toMatchObject({status:'ready',target:{id:2503,name:'Dragonhide body (Black)'}});
  expect(ownerAdvice.rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'locked',target:{id:1231,name:'Dragon dagger(p)'},reason:'Needs Lost City'});
  expect(ownerAdvice.rows.find((r:any)=>r.id==='pickaxe')).toMatchObject({status:'ready',target:{id:1275,name:'Rune pickaxe'}});
+ const meleeBot={name:'Melee1',combat:85,skills:[{name:'Attack',level:60},{name:'Strength',level:70},{name:'Defence',level:40},{name:'Ranged',level:50},{name:'Magic',level:1}],
+  equipment:[{slot:4,id:1127,name:'Rune platebody'},{slot:7,id:1079,name:'Rune platelegs'}],
+  inventory:[],bank:[],quests:[{name:'Dragon Slayer',state:'complete'}]};
+ const meleeAdvice=setup(meleeBot,true).gearAdvisorFor(meleeBot);
+ expect(meleeAdvice.rows.find((r:any)=>r.id==='body-melee')).toMatchObject({status:'locked',target:{id:3140,name:'Dragon chainbody'},reason:'Needs Defence 60'});
+ expect(meleeAdvice.rows.find((r:any)=>r.id==='legs-melee')).toMatchObject({status:'locked',target:{id:4087,name:'Dragon platelegs'},reason:'Needs Defence 60'});
+ const rangeBot={...meleeBot,equipment:[{slot:4,id:2499,name:'Dragonhide body'},{slot:7,id:1099,name:'Dragonhide chaps'}]};
+ const rangeAdvice=setup(rangeBot,true).gearAdvisorFor(rangeBot);
+ expect(rangeAdvice.rows.find((r:any)=>r.id==='body-ranged')).toMatchObject({status:'locked',target:{id:2501,name:'Dragonhide body (Red)'},reason:'Needs Ranged 60'});
+ expect(rangeAdvice.rows.find((r:any)=>r.id==='legs-ranged')).toMatchObject({status:'ready',target:{id:2493,name:'Dragonhide chaps (Blue)'}});
+ // Populated /api/gear-catalog with empty requires.skills:{} must NEVER wipe tier.skills; Dragon halberd keeps Strength 30.
+ const harness=setup(rangerBot,true);
+ harness.win.atlasGearCatalog([
+  {id:3751,requires:{skills:{},quest:null}},
+  {id:2417,requires:{skills:{},quest:null}},
+  {id:892,requires:{skills:{},quest:null}},
+  {id:1275,requires:{skills:{attack:40},quest:null}},
+  {id:3204,requires:{skills:{attack:60,strength:30},quest:'Regicide'}},
+ ]);
+ const lvl1={name:'Noob',skills:[{name:'Attack',level:1},{name:'Strength',level:1},{name:'Defence',level:1},{name:'Ranged',level:1},{name:'Magic',level:1},{name:'Mining',level:41}],equipment:[],inventory:[],quests:[]};
+ const lvl1Adv=harness.gearAdvisorFor(lvl1);
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='helm')).toMatchObject({status:'ready',target:{id:1153,name:'Iron full helm'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='magic-weapon')).toMatchObject({status:'ready',target:{id:1387,name:'Staff of fire'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='ammo')).toMatchObject({status:'ready',target:{id:884,name:'Iron arrow'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='pickaxe')).toMatchObject({status:'ready',target:{id:1275,name:'Rune pickaxe'},reason:'Mining 41'});
+ const mid={...lvl1,skills:[{name:'Attack',level:60},{name:'Strength',level:25},{name:'Defence',level:40},{name:'Ranged',level:35},{name:'Magic',level:55}],equipment:[{slot:0,id:1163,name:'Rune full helm'},{slot:3,id:1434,name:'Dragon mace'},{slot:3,id:1409,name:'Staff of iban'},{slot:13,id:890,name:'Adamant arrow'}],quests:[{name:'Lost City',state:'complete'},{name:"Heroes' Quest",state:'complete'},{name:'Regicide',state:'complete'},{name:'The Fremennik Trials',state:'complete'}]};
+ const midAdv=harness.gearAdvisorFor(mid);
+ expect(midAdv.rows.find((r:any)=>r.id==='helm')).toMatchObject({status:'locked',target:{id:3751,name:'Berserker helm'},reason:'Needs Defence 45'});
+ expect(midAdv.rows.find((r:any)=>r.id==='magic-weapon')).toMatchObject({status:'locked',target:{id:2417,name:'Staff of zamorak'},reason:'Needs Magic 60'});
+ expect(midAdv.rows.find((r:any)=>r.id==='ammo')).toMatchObject({status:'locked',target:{id:892,name:'Rune arrow'},reason:'Needs Ranged 40'});
+ expect(midAdv.rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'locked',target:{id:3204,name:'Dragon halberd'},reason:'Needs Strength 30'});
  // Completing Lost City reveals banked Dragon longsword to operator as 'owned', but hides bank from public viewer.
  const completed={...rangerBot,quests:[{name:'Lost City',state:'complete'},{name:'Dragon Slayer',state:'complete'}]};
  expect(setup(completed,true).gearAdvisorFor(completed).rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'owned',target:{id:1305},reason:'Held in bank'});

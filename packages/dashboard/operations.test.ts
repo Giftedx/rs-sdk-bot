@@ -324,7 +324,7 @@ test('Command centre shows unused bot slots, RAM headroom, fast-fail loops and s
   },
  };
  const safeName=(s:string)=>String(s).replaceAll('⟦MAIN⟧','Main · reserved');
- const env={S,meta:{controllers:[]},bots:()=>[{name:'Bot1',operation:'observed',inWorld:true}],issues:()=>[],incidentCards:()=>'',startBlock:()=>'',page:String,title:String,button:()=>'',badge:(_s:string,l:string)=>`[${l}]`,E:String,safeName,age:(ms:number)=>Math.round(ms/60_000)+'m',metaError:'',message:''};
+ const env={S,meta:{controllers:[]},bots:()=>[{name:'Bot1',operation:'observed',inWorld:true}],issues:()=>[],incidentCards:()=>'',startBlock:()=>'',page:String,title:String,button:()=>'',badge:(_s:string,l:string)=>`[${l}]`,E:String,safeName,age:(at:number)=>at<1e9?'BAD_EPOCH_ARG':'0m',ago:(ms:number)=>Math.round(ms/60_000)+'m',metaError:'',message:''};
  const html=new Function(...Object.keys(env),`${code};return operations();`)(...Object.values(env)) as string;
  expect(html).toContain('14 / 25');
  expect(html).toContain('11 unused · 1 queued');

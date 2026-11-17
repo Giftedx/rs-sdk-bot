@@ -1417,7 +1417,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       {id:1231,name:'Dragon dagger(p)',slot:3,skills:{Attack:60},quest:'Lost City',also:[1215]},
       {id:1305,name:'Dragon longsword',slot:3,skills:{Attack:60},quest:'Lost City'},
       {id:1434,name:'Dragon mace',slot:3,skills:{Attack:60},quest:"Heroes' Quest"},
-      {id:3204,name:'Dragon halberd',slot:3,skills:{Attack:60},quest:'Regicide'}
+      {id:3204,name:'Dragon halberd',slot:3,skills:{Attack:60,Strength:30},quest:'Regicide'}
     ]},
     {id:'ranged-weapon',label:'Ranged bow',items:[
       {id:841,name:'Shortbow',slot:3,skills:{Ranged:1},quest:null},
@@ -1453,24 +1453,43 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       {id:3751,name:'Berserker helm',slot:0,skills:{Defence:45},quest:'The Fremennik Trials',also:[3753,3749,3755]},
       {id:1149,name:'Dragon med helm',slot:0,skills:{Defence:60},quest:null}
     ]},
-    {id:'body',label:'Body armour',items:[
+    {id:'body-melee',label:'Body armour (Melee)',items:[
+      {id:1117,name:'Bronze platebody',slot:4,skills:{Defence:1},quest:null},
+      {id:1115,name:'Iron platebody',slot:4,skills:{Defence:1},quest:null},
+      {id:1119,name:'Steel platebody',slot:4,skills:{Defence:5},quest:null},
+      {id:1125,name:'Black platebody',slot:4,skills:{Defence:10},quest:null},
+      {id:1121,name:'Mithril platebody',slot:4,skills:{Defence:20},quest:null},
+      {id:1123,name:'Adamant platebody',slot:4,skills:{Defence:30},quest:null},
+      {id:1113,name:'Rune chainbody',slot:4,skills:{Defence:40},quest:null},
+      {id:1127,name:'Rune platebody',slot:4,skills:{Defence:40},quest:'Dragon Slayer'},
+      {id:3140,name:'Dragon chainbody',slot:4,skills:{Defence:60},quest:null}
+    ]},
+    {id:'body-ranged',label:'Body armour (Ranged)',items:[
       {id:1129,name:'Leather body',slot:4,skills:{Ranged:1},quest:null},
       {id:1131,name:'Hardleather body',slot:4,skills:{Defence:10},quest:null},
       {id:1133,name:'Studded body',slot:4,skills:{Ranged:20,Defence:20},quest:null},
       {id:1135,name:'Dragonhide body (Green)',slot:4,skills:{Ranged:40,Defence:40},quest:'Dragon Slayer'},
       {id:2499,name:'Dragonhide body (Blue)',slot:4,skills:{Ranged:50,Defence:40},quest:null},
-      {id:1113,name:'Rune chainbody',slot:4,skills:{Defence:40},quest:null},
-      {id:1127,name:'Rune platebody',slot:4,skills:{Defence:40},quest:'Dragon Slayer'},
-      {id:2503,name:'Dragonhide body (Black)',slot:4,skills:{Ranged:70,Defence:40},quest:null},
-      {id:3140,name:'Dragon chainbody',slot:4,skills:{Defence:60},quest:null}
+      {id:2501,name:'Dragonhide body (Red)',slot:4,skills:{Ranged:60,Defence:40},quest:null},
+      {id:2503,name:'Dragonhide body (Black)',slot:4,skills:{Ranged:70,Defence:40},quest:null}
     ]},
-    {id:'legs',label:'Leg armour',items:[
+    {id:'legs-melee',label:'Leg armour (Melee)',items:[
+      {id:1075,name:'Bronze platelegs',slot:7,skills:{Defence:1},quest:null},
+      {id:1067,name:'Iron platelegs',slot:7,skills:{Defence:1},quest:null},
+      {id:1069,name:'Steel platelegs',slot:7,skills:{Defence:5},quest:null},
+      {id:1077,name:'Black platelegs',slot:7,skills:{Defence:10},quest:null},
+      {id:1071,name:'Mithril platelegs',slot:7,skills:{Defence:20},quest:null},
+      {id:1073,name:'Adamant platelegs',slot:7,skills:{Defence:30},quest:null},
+      {id:1079,name:'Rune platelegs',slot:7,skills:{Defence:40},quest:null,also:[1093]},
+      {id:4087,name:'Dragon platelegs',slot:7,skills:{Defence:60},quest:null}
+    ]},
+    {id:'legs-ranged',label:'Leg armour (Ranged)',items:[
       {id:1095,name:'Leather chaps',slot:7,skills:{Ranged:1},quest:null},
       {id:1097,name:'Studded chaps',slot:7,skills:{Ranged:20},quest:null},
       {id:1099,name:'Dragonhide chaps (Green)',slot:7,skills:{Ranged:40},quest:null},
-      {id:1079,name:'Rune platelegs',slot:7,skills:{Defence:40},quest:null,also:[1093]},
-      {id:2497,name:'Dragonhide chaps (Black)',slot:7,skills:{Ranged:70},quest:null},
-      {id:4087,name:'Dragon platelegs',slot:7,skills:{Defence:60},quest:null}
+      {id:2493,name:'Dragonhide chaps (Blue)',slot:7,skills:{Ranged:50},quest:null},
+      {id:2495,name:'Dragonhide chaps (Red)',slot:7,skills:{Ranged:60},quest:null},
+      {id:2497,name:'Dragonhide chaps (Black)',slot:7,skills:{Ranged:70},quest:null}
     ]},
     {id:'shield',label:'Shield',items:[
       {id:1171,name:'Wooden shield',slot:5,skills:{},quest:null},
@@ -1518,12 +1537,23 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(row.state==='not started'||row.state==='started')return false;
     return null;
   }
-  function tierRequirements(b,tier){
+  function mergedTierSkills(tier,cat,isTool){
+    const out={...(tier.skills||{})};
+    if(!isTool&&cat?.requires?.skills){
+      for(const [k,v] of Object.entries(cat.requires.skills)){
+        if(!Number.isFinite(v)||v<=0)continue;
+        const sk=k[0].toUpperCase()+k.slice(1).toLowerCase();
+        out[sk]=Math.max(out[sk]||0,v);
+      }
+    }
+    return out;
+  }
+  function tierRequirements(b,tier,isTool=false){
     const cat=Array.isArray(gearCatalogData)?gearCatalogData.find(g=>g.id===tier.id):null;
-    const reqSkills=tier.tool?tier.skills:(cat?.requires?.skills?Object.fromEntries(Object.entries(cat.requires.skills).map(([k,v])=>[k[0].toUpperCase()+k.slice(1),v])):tier.skills);
-    const reqQuest=cat?.requires?.quest??tier.quest??null;
+    const reqSkills=mergedTierSkills(tier,cat,isTool);
+    const reqQuest=cat?.requires?.quest||tier.quest||null;
     const unmet=[];let unknown=false;
-    for(const [sk,req] of Object.entries(reqSkills||{})){
+    for(const [sk,req] of Object.entries(reqSkills)){
       const lv=skillBaseOf(b,sk);
       if(lv==null)unknown=true;
       else if(lv<req)unmet.push(sk+' '+req);
@@ -1533,7 +1563,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(qState===false)unmet.push(reqQuest);
       else if(qState===null)unknown=true;
     }
-    return {ok:!unmet.length&&!unknown,unknown:!unmet.length&&unknown,unmet,quest:reqQuest};
+    return {ok:!unmet.length&&!unknown,unknown:!unmet.length&&unknown,unmet,quest:reqQuest,skills:reqSkills};
   }
   function matchesTier(item,tier){
     if(!item)return false;
@@ -1550,32 +1580,33 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const packKnown=Array.isArray(b.inventory);
     const bankKnown=allowBank&&Array.isArray(b.bank);
     const rows=GEAR_LADDERS.map(ladder=>{
+      const isTool=!!ladder.tool;
       let bestWorn=-1,bestHeld=-1,bestHeldPlace=null,bestUnlocked=-1,nextLocked=-1;
       for(let i=0;i<ladder.items.length;i++){
-        const tier=ladder.items[i],req=tierRequirements(b,tier);
+        const tier=ladder.items[i],req=tierRequirements(b,tier,isTool);
         if(gearKnown&&b.equipment.some(e=>matchesTier(e,tier)))bestWorn=i;
         if(packKnown&&b.inventory.some(e=>matchesTier(e,tier))){bestHeld=i;bestHeldPlace='pack';}
         else if(bankKnown&&b.bank.some(e=>matchesTier(e,tier))&&i>bestHeld){bestHeld=i;bestHeldPlace='bank';}
         if(req.ok)bestUnlocked=i;
         else if(nextLocked<0&&i>(Math.max(bestWorn,bestUnlocked)))nextLocked=i;
       }
-      const currentIdx=Math.max(bestWorn,ladder.tool?bestHeld:-1);
+      const currentIdx=Math.max(bestWorn,isTool?bestHeld:-1);
       const current=currentIdx>=0?ladder.items[currentIdx]:null;
-      const currentPlace=bestWorn>=0&&(bestWorn>=bestHeld||!ladder.tool)?'worn':bestHeld>=0?bestHeldPlace:null;
+      const currentPlace=bestWorn>=0&&(bestWorn>=bestHeld||!isTool)?'worn':bestHeld>=0?bestHeldPlace:null;
       let targetIdx=-1,status='bis',reason='';
-      if(bestHeld>currentIdx&&tierRequirements(b,ladder.items[bestHeld]).ok){
+      if(bestHeld>currentIdx&&tierRequirements(b,ladder.items[bestHeld],isTool).ok){
         targetIdx=bestHeld;status='owned';reason='Held in '+bestHeldPlace;
       }else if(bestUnlocked>currentIdx){
         targetIdx=bestUnlocked;status='ready';
         if(bestHeld===bestUnlocked)reason='Held in '+bestHeldPlace;
         else{
-          const req=tierRequirements(b,ladder.items[bestUnlocked]);
-          reason=Object.entries(ladder.items[bestUnlocked].skills||{}).map(([s,n])=>s+' '+n).join(', ')||'Unlocked';
-          if(req.quest)reason+=(reason?' · ':'')+req.quest;
+          const req=tierRequirements(b,ladder.items[bestUnlocked],isTool);
+          const skillTxt=Object.entries(req.skills||{}).map(([s,n])=>s+' '+n).join(', ');
+          reason=skillTxt?(req.quest?skillTxt+' · '+req.quest:skillTxt):(req.quest||'Unlocked');
         }
       }else if(nextLocked>=0){
         targetIdx=nextLocked;status='locked';
-        const req=tierRequirements(b,ladder.items[nextLocked]);
+        const req=tierRequirements(b,ladder.items[nextLocked],isTool);
         reason=req.unmet.length?'Needs '+req.unmet.join(', '):'Needs quest/level check';
       }else{
         targetIdx=ladder.items.length-1;status=currentIdx===ladder.items.length-1?'bis':'locked';
