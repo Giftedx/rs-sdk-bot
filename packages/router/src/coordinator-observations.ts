@@ -97,7 +97,7 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
   if(ready&&ready.id===row.spec.id&&ready.account===account&&ready.capability===row.spec.capability&&ready.dependsOn.every(id=>row.spec.dependsOn.includes(id))){if(JSON.stringify(ready)!==JSON.stringify(row.spec)){row.spec=ready;prepared.push(row.spec.id);}}
   else{clearBinding(row.spec);requestQualification(row.spec,account,status);}
  }
- const durable=state.tasks.filter(r=>r.status==='succeeded'&&generatedObservationConsumer(r.spec)&&r.receipt?.ok&&r.receipt.output?.evidence==='live').flatMap(r=>{try{const consumer=JSON.parse(r.spec.env?.PROGRESSION_REQUEST??'null');return consumer?[{account:r.spec.account!,action:'observe',method:'continuation',reason:'Accepted finite band retains its original selected consumer.',consumer}]:[];}catch{return[];}});
+ const durable:FleetProgressionRequest[]=state.tasks.filter(r=>r.status==='succeeded'&&generatedObservationConsumer(r.spec)&&r.receipt?.ok&&r.receipt.output?.evidence==='live').flatMap(r=>{try{const consumer=JSON.parse(r.spec.env?.PROGRESSION_REQUEST??'null');return consumer?[{account:r.spec.account!,action:'observe',method:'continuation',reason:'Accepted finite band retains its original selected consumer.',consumer}]:[];}catch{return[];}});
  for(const request of [...requests,...durable]){
   if(!['observe','qualify','measure'].includes(request.action)||!request.consumer||!eligible(request.account))continue;
   const {work,accept}=request.consumer;
