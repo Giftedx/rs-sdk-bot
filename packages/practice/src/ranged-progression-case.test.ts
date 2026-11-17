@@ -7,9 +7,10 @@ import {xpForLevel} from '../../planner/src/curve';
 import fixture from './ranged-progression-entry.json';
 import {parseRangedEntry,rangedComparisonPreset,rangedComparisonChecks,rangedEntryProofChecks,rangedSupportedMethods,RANGED_COMPARISON_PRESET} from './ranged-progression-case';
 import * as rangedCase from './ranged-progression-case';
+import type {RangedComparisonEntry} from './ranged-progression-case';
 
 const bytes=(value:unknown)=>Buffer.from(JSON.stringify(value));
-const fresh=()=>{const entry=structuredClone(fixture);entry.skills[5]={...entry.skills[5]!,level:96,currentLevel:53,xp:xpForLevel(96)};return entry;};
+const fresh=():RangedComparisonEntry=>{const entry=structuredClone(fixture);entry.skills[5]={...entry.skills[5]!,level:96,currentLevel:53,xp:xpForLevel(96)};return entry;};
 const save=(entry:ReturnType<typeof parseRangedEntry>['entry'])=>({version:10,position:entry.pos,vars:{},
  skills:entry.skills.map((s,index)=>({index,xp:s.xp,level:s.currentLevel,rawExperience:s.xp*10})),
  inventories:{93:entry.inventory.map((i,slot)=>({...i,slot})),94:entry.equipment,95:entry.bank.map((i,slot)=>({...i,slot}))}});
