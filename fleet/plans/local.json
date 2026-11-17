@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794956348828,
+ "at": 1794956486090,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -228,6 +228,25 @@
    ]
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=849 QUANTITY=1 LIMIT_PRICE=2500 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-849-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"849\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Willow shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "kit-buy:army-arrows-catherby",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -303,25 +322,6 @@
    ]
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {
-    "ALCH_ITEM": "airrune"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-air-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -369,25 +369,6 @@
    "resources": [
     "shop:magic_guild"
    ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=849 QUANTITY=1 LIMIT_PRICE=2500 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-849-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"849\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Willow shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
-   "role": "supply",
-   "template": "kit-buy:army-arrows-catherby",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Wandwaver",
