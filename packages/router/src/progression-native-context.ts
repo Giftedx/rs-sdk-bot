@@ -26,7 +26,7 @@ export async function runQualifiedDelivery<T>(definition:Pick<DeliveryTask,'id'>
   const expected=env.PROGRESSION_ENTRY_SHA256;
   if(!/^[a-f0-9]{64}$/.test(expected!)||hash(raw)!==expected||String(status.at)!==env.PROGRESSION_ENTRY_AT)throw Error('native progression observation changed');
   const time=now(),fresh=(at:unknown)=>typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=time&&time-at<=300000;
-  if(status.name?.toLowerCase()!==account.toLowerCase()||status.server!=='rs-sdk-demo.fly.dev'||status.practice||!fresh(status.at)||!fresh(status.bankAt)||status.bankAt>status.at||status.bankAt<status.started||status.equipmentObserved!==true||!/^ok\b/.test(status.result??''))throw Error('native progression requires fresh observed skills, bank, equipment and a successful settled entry');
+  if(status.name?.toLowerCase()!==account.toLowerCase()||status.server!=='rs-sdk-demo.fly.dev'||status.practice||!Number.isSafeInteger(status.started)||status.started<=0||!fresh(status.at)||!fresh(status.bankAt)||status.bankAt>status.at||status.bankAt<status.started||status.equipmentObserved!==true||!/^ok\b/.test(status.result??''))throw Error('native progression requires fresh observed skills, bank, equipment and a successful settled entry');
   const logout=options.logout??((name,server)=>readLogoutProof(name,server,{root:join(base,'.practice/session-lifecycle')}));
   const proof=logout(account,status.server);
   if(proof.state!=='confirmed'||proof.attemptId!==status.sessionAttemptId||proof.ownerRun!==(status.coordinatorRunId??null)||proof.loggedOutAt<status.started||proof.loggedOutAt>status.at||proof.loggedOutAt<status.bankAt)throw Error('native progression requires the exact confirmed observer logout');

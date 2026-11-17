@@ -37,7 +37,7 @@ test('a bound finite native qualification freezes the actual entry and scopes on
 test('changed, unobserved, held, foreign or oversized entry contexts never start native practice',async()=>{
  for(const mutate of [(s:any)=>s.status.equipmentObserved=false,(s:any)=>s.proof.state='held',(s:any)=>s.proof.attemptId='new-attempt',
   (s:any)=>s.deps.owns=()=>false,(s:any)=>s.task.env.PROGRESSION_TARGET_LEVEL='99',(s:any)=>s.status.at--,
-  (s:any)=>s.status.bankAt-=300001,(s:any)=>s.task.account='Haggis']){
+  (s:any)=>s.status.bankAt-=300001,(s:any)=>delete s.status.started,(s:any)=>s.task.account='Haggis']){
   const s=setup();try{mutate(s);s.task.env.PROGRESSION_ENTRY_SHA256=s.save();let called=false;await expect(native.runQualifiedDelivery({id:'ranged-train'},s.task,async()=>{called=true;},s.deps)).rejects.toThrow();expect(called).toBe(false);}finally{s.close();}
  }
 });
