@@ -247,11 +247,20 @@ export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged 
 }
 
 // Damage spell components (vendor/rs-sdk/sdk/spells.ts) by SPELL name.
-const SPELL_IDS: Record<string, number> = { FIRE_STRIKE: 1158, FIRE_BOLT: 1169, FIRE_BLAST: 1181, FIRE_WAVE: 1189 };
+const SPELL_IDS: Record<string, number> = {
+    FIRE_STRIKE: 1158, FIRE_BOLT: 1169, FIRE_BLAST: 1181, FIRE_WAVE: 1189,
+    SARADOMIN_STRIKE: 1190, CLAWS_OF_GUTHIX: 1191, FLAMES_OF_ZAMORAK: 1192, IBAN_BLAST: 1539,
+};
 export function spellId(name: string): number {
     const n = Number(name);
     return SPELL_IDS[name.toUpperCase()] ?? (Number.isInteger(n) && n > 0 ? n : SPELL_IDS.FIRE_BOLT);
 }
+
+const GOD_SPELLS: readonly { staffId: number; spell: number; fire: number; blood: number; air: number }[] = [
+    { staffId: 2415, spell: 1190, fire: 2, blood: 2, air: 4 }, // Saradomin Strike
+    { staffId: 2416, spell: 1191, fire: 1, blood: 2, air: 4 }, // Claws of Guthix
+    { staffId: 2417, spell: 1192, fire: 4, blood: 2, air: 1 }, // Flames of Zamorak
+];
 
 // The strongest fire spell the Magic level and carried runes allow (a fire staff or fire runes assumed):
 // Fire Wave 75 (blood), Fire Blast 59 (death), Fire Bolt 35 (chaos), else Fire Strike.
@@ -261,6 +270,24 @@ export function bestFireSpell(magic: number, carried: readonly { id: number; cou
     if (magic >= 59 && has(560)) return SPELL_IDS.FIRE_BLAST!;
     if (magic >= 35 && has(562)) return SPELL_IDS.FIRE_BOLT!;
     return SPELL_IDS.FIRE_STRIKE!;
+}
+
+// Prefer a 2004 God Spell when Magic >= 60, the matching God Staff is held/worn, and its runes are carried.
+export function bestDamageSpell(magic: number, carried: readonly { id: number; count: number }[], worn: readonly { id: number }[] = []): number {
+    const countOf = (id: number) => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    if (magic >= 60) {
+        for (const g of GOD_SPELLS) {
+            const hasStaff = worn.some(i => i.id === g.staffId) || carried.some(i => i.id === g.staffId);
+            if (hasStaff && countOf(554) >= g.fire && countOf(565) >= g.blood && countOf(556) >= g.air) return g.spell;
+        }
+    }
+    return bestFireSpell(magic, carried);
+}
+
+export function canCastCharge(magic: number, carried: readonly { id: number; count: number }[], damageSpell: number): boolean {
+    if (magic < 80 || !GOD_SPELLS.some(g => g.spell === damageSpell)) return false;
+    const countOf = (id: number) => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    return countOf(565) >= 3 && countOf(554) >= 3 && countOf(556) >= 3;
 }
 
 // The account's server, from the SERVER line of its bot.env (the same file openBot reads).
@@ -534,11 +561,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // special, food, prayer, glory escape). It exits immediately if the target leaves range or the
                 // Wilderness, exceeds maxWild, or a stop condition fires.
                 stats.attacks++; fought = true;
+                const damageSpell = cfg.spell.toUpperCase() === 'AUTO' ? bestDamageSpell(magic, sdk.getInventory(), sdk.getEquipment()) : spellId(cfg.spell);
                 const fight = await fightPlayer(session, name, {
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
                     kit, spec: specAll(defaultSpec(kit)), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
-                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell),
+                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell, ...(canCastCharge(magic, sdk.getInventory(), damageSpell) ? { charge: true } : {}),
                     cap: 120, maxWild: cfg.maxWild, maxDistance: 15, ...cfg.fight, stop: () => stopped() || !going(),
                     log: line => emit({ e: "fight", line }),
                 });
