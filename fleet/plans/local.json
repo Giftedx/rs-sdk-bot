@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794930356314,
+ "at": 1794930535040,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -208,6 +208,25 @@
    ]
   },
   {
+   "account": "Swordinhand",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=26 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=15060 ORDER_KEY=swordinhand-kit3-557-4to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"557\":30}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 26 Earth rune on the Grand Exchange to buy water runes at Betty's in Port Sarim for the curse band",
+   "role": "supply",
+   "template": "kit-buy:army-water-betty",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/splash-train.ts",
    "args": [
@@ -230,7 +249,7 @@
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=150 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=9000 COIN_RESERVE=500 MAX_SPEND=8000"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
    ],
    "env": {
     "ROUNDS": "1"
@@ -238,9 +257,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy body runes at Aubury's in Varrock for the curse band",
+   "goal": "buy water runes at Aubury's in Varrock for the curse band",
    "role": "supply",
-   "template": "army-body-aubury",
+   "template": "army-water-aubury",
    "autopilot": "local",
    "resources": [
     "shop:aubury"
@@ -312,7 +331,7 @@
    ],
    "env": {
     "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "45",
+    "TARGET_LEVEL": "60",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
@@ -321,9 +340,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-defence-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -373,25 +392,6 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=26 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=15060 ORDER_KEY=swordinhand-kit3-557-4to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"557\":30}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 26 Earth rune on the Grand Exchange to buy water runes at Betty's in Port Sarim for the curse band",
-   "role": "supply",
-   "template": "kit-buy:army-water-betty",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "YewFirst",
