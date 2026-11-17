@@ -290,3 +290,18 @@ test('the account HP KPI dates recorded health and labels it current only while 
  expect(html({...bot,pos:{x:3060,z:3880,level:0}})).toContain('3060, 3880 · floor 0 · Wilderness 46');
  expect(html({...bot,pos:{x:3185,z:3436,level:0}})).not.toContain('Wilderness');
 });
+
+test('fleet Wilderness filter counts and isolates playing accounts in the Wilderness',()=>{
+ const code=operations.slice(operations.indexOf(' function fleet(){'),operations.indexOf(' function account(){'));
+ const list=[
+  {name:'WildOne',operation:'observed',inWorld:true,pos:{x:3060,z:3880,level:0}},
+  {name:'SafeOne',operation:'observed',inWorld:true,pos:{x:3185,z:3436,level:0}},
+ ];
+ const render=(fleetFilter:string)=>new Function('S','window','bots','fleetQuery','fleetFilter','issues','idleOf','isOwner','fleetDeck','fleetRow','publicRow','safeName','page','title','E',`${code};return fleet();`)(
+  {fleetSides:{sides:[],orders:[]}},{atlasOperator:()=>false},()=>list,'',fleetFilter,()=>[],()=>null,()=>false,()=>'',()=>'',(b:any)=>`[ROW:${b.name}]`,String,(s:string)=>s,()=>'',String) as string;
+ const all=render('all');
+ expect(all).toContain('Wilderness<span class="op-count">1</span>');
+ const wild=render('wildy');
+ expect(wild).toContain('[ROW:WildOne]');
+ expect(wild).not.toContain('[ROW:SafeOne]');
+});

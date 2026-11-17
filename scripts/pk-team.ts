@@ -31,6 +31,9 @@ const out = (s: Session, life0: number | undefined) => {
 // `pair` the enemy in its own place on the other side while that one is in, else as `low`. On a single-way tile an
 // account fights one enemy at a time (pvp_combat.rs2:104-131), so pairs on both sides make one fight of each pair.
 export type TeamPick = 'low' | 'near' | 'pair';
+// Only count ticks toward the unseen timeout when no living enemy is in view; enemies in an 8-tick refusal cooldown keep the loop alive.
+export const shouldStopUnseen = (anyEnemyInView: boolean, unseen: number, wait: number) => !anyEnemyInView && unseen > wait;
+
 // The enemy that an account takes from those in view (`own`: the enemy in its own place on the other side).
 export function pickEnemy<F, X extends { f: F; p?: { distance: number } }>(live: readonly X[], own: F | undefined, pick: TeamPick, health: (x: X) => number): X | undefined {
     return (pick === 'pair' ? live.find(x => x.f === own) : undefined)
@@ -71,7 +74,8 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
             const pick = pickEnemy(live, foes[member], picks[key], health);
             // No enemy in view for SPAR_TEAM_WAIT ticks (default 100): the enemies left are away, as the gang meeting's `away`.
-            if (!pick) { if (++unseen > wait) { stopped.add(s); return; } if (!await nextTick(s)) return; continue; }
+            const anyEnemyInView = foes.some(f => !isOut(f) && view.some(v => v.name.toLowerCase() === f.name.toLowerCase()));
+            if (!pick) { if (!anyEnemyInView && shouldStopUnseen(false, ++unseen, wait)) { stopped.add(s); return; } if (!await nextTick(s)) return; continue; }
             unseen = 0;
             const began = s.tick();
             const r = await fightPlayer(s, pick.f.name, { ...options, allies, cap: Math.max(1, cap - (s.tick() - start)), stop: () => ended() || isOut(pick.f) || refusedAt > began,
