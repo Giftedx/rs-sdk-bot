@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794926754345,
+ "at": 1794926773729,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -374,22 +374,21 @@
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=3 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=woodpecker-kit5-385-0to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "repeat": false,
+   "goal": "buy 3 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "resources": []
   },
   {
    "account": "YewFirst",
