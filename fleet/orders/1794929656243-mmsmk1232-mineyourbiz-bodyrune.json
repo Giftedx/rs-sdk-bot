@@ -1,0 +1,22 @@
+{
+ "id": "1794929656243-mmsmk1232-mineyourbiz-bodyrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "MineYourBiz",
+ "item": "Body rune",
+ "count": 1,
+ "start": 1794929656243,
+ "end": 1794932056243,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
