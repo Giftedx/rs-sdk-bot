@@ -2077,4 +2077,7 @@ test('wildernessWatchBox highlights rivals within attack range of our Wilderness
  expect(html).not.toContain('more in Wilderness');
  const overflow=Array.from({length:14},(_,i)=>({name:`Scout${i}`,fleet:false,x:3094,z:3536,plane:0,combat:10,wild:3,minCombat:7,maxCombat:13}));
  expect(make(overflow,bots)).toContain('+2 more in Wilderness');
+ const multiLines=[[3064,3872,3064,3888,0],[3072,3872,3072,3888,0],[3064,3872,3072,3872,0],[3064,3888,3072,3888,0]];
+ const withMulti=new Function('S','E','nameButtons','placeOf','multiLines',`${wildHelpers}${code};return wildernessWatchBox();`)({wilderness:[{name:'ThreatPker',fleet:false,x:3070,z:3880,plane:0,combat:120,wild:46,minCombat:74,maxCombat:126}],bots},String,(ns:string[])=>ns.join(','),()=>'Lava Maze',multiLines);
+ expect(withMulti).toContain('wildy 46 · multi');
 });
