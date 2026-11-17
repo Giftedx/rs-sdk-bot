@@ -26,6 +26,86 @@ const consumers=(state:ReturnType<typeof initialState>)=>state.tasks.filter(r=>g
 const observations=(state:ReturnType<typeof initialState>)=>state.tasks.filter(r=>r.spec.id.startsWith('progression-observe-'));
 const settle=(r:any,at=NOW)=>{r.status='succeeded';r.runId=r.spec.id;r.receipt={taskId:r.spec.id,runId:r.spec.id,ok:true,at,output:{ok:true,evidence:'live',account:r.spec.account}};};
 
+function bowSupply(){
+ const {state,deps}=fixture(['BowBeforeMe']);
+ deps.goals.collection.missing=[{id:1637,item:'Sapphire ring',need:12,owned:0,verifyOwned:10,consumer:'main Overall'}];
+ deps.statuses=[{...status('BowBeforeMe'),bank:[{id:1637,count:5}]}];
+ deps.definition=id=>({id,entry:id==='owned-bank-observation'?'scripts/fleet-inspect.ts':id==='ge'?'scripts/buy-owned-ge-item.ts':id==='cut'?'scripts/microbot-production.ts':'scripts/microbot-jewellery-trip.ts',source:'source-'+id});
+ const task=(id:string,kind:CoordTask['kind'],capability:string,dependsOn:string[],accept:CoordTask['accept']={}):CoordTask=>({id,kind,capability,dependsOn,goal:'main24',...(kind==='run'?{account:'BowBeforeMe',launch:'ordinary' as const}:{}),priority:45,estimatedMs:60000,timeoutMs:900000,args:[],env:{LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept,why:'Finite two-ring Overall supply chain'});
+ addTasks(state,[task('ge-build','build','ge',[]),task('ge-qualified','qualify','ge',['ge-build']),task('cut-qualified','qualify','cut',[]),task('jewel-qualified','qualify','jewel',[]),
+  task('buy-bars','run','ge',['ge-qualified'],{bank:{2357:2}}),task('cut-two','run','cut',['buy-bars','cut-qualified'],{bank:{1607:2}}),
+  {...task('make-two','run','jewel',['cut-two','jewel-qualified'],{bank:{1637:7}}),env:{RECIPE:'sapphire_ring',TARGET:'2',BATCH:'2',CAP:'1500',RETURN_TICKS:'200',LOOT_WATCH:'0',RANDOM_EVENTS:'0'}}],NOW);
+ return{state,deps};
+}
+
+test('stale Bow supply stock gets one strict observer after every slow qualification without changing the two-ring budget',()=>{
+ const {state,deps}=bowSupply(),original=structuredClone(state.tasks.find(r=>r.spec.id==='make-two')!.spec);
+ const result=applyObservationRequests(state,[],deps),observer=result.added.find(t=>t.capability==='owned-bank-observation')!;
+ expect(observer).toBeDefined();expect(result.added).toHaveLength(1);
+ expect(observer.env).toEqual({REQUIRE_BANK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'});expect(observer.timeoutMs).toBe(120000);expect(observer.accept).toEqual({counters:{bankObserved:1}});
+ for(const id of ['native-owned-bank-observation','ge-qualified','cut-qualified','jewel-qualified'])expect(observer.dependsOn).toContain(id);
+ const consumer=state.tasks.find(r=>r.spec.id==='make-two')!.spec;expect({...consumer,dependsOn:original.dependsOn}).toEqual(original);expect(consumer.dependsOn).toContain(observer.id);
+ const values=goalWork(state,deps.goals,deps.statuses,NOW,{entryOf:cap=>deps.definition(cap).entry});
+ expect(values.get(observer.id)?.value).toBe(.01);expect(values.get('make-two')?.value).toBeNull();
+ for(const id of ['ge-build','ge-qualified','cut-qualified','jewel-qualified'])expect(values.get(id)?.value).toBe(.01);
+ expect(applyObservationRequests(state,[],deps).added).toEqual([]);
+});
+
+test('fresh bank, orphan and unknown coin targets do not create supply observers',()=>{
+ for(const mode of ['fresh','orphan','coins']){
+  const {state,deps}=bowSupply();if(mode==='fresh')deps.statuses=[{...status('BowBeforeMe',NOW),bank:[{id:1637,count:5}]}];
+  if(mode==='orphan')deps.goals.collection.missing=[];
+  if(mode==='coins')state.tasks.find(r=>r.spec.id==='make-two')!.spec.accept={bank:{995:2}};
+  expect(applyObservationRequests(state,[],deps).added).toEqual([]);
+ }
+});
+
+test('a pending prequalification bank observer is reused and ordered after all slow qualifications',()=>{
+ const {state,deps}=bowSupply();
+ const observer:CoordTask={id:'existing-bank-observer',kind:'run',goal:'main24',capability:'owned-bank-observation',account:'BowBeforeMe',launch:'ordinary',dependsOn:['native-owned-bank-observation'],priority:49,estimatedMs:30000,timeoutMs:120000,args:[],env:{REQUIRE_BANK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:{counters:{bankObserved:1}},why:'Observe the same finite supply consumer'};
+ addTasks(state,[observer],NOW);expect(applyObservationRequests(state,[],deps).added).toEqual([]);
+ for(const id of ['ge-qualified','cut-qualified','jewel-qualified'])expect(observer.dependsOn).toContain(id);
+ expect(state.tasks.find(r=>r.spec.id==='make-two')!.spec.dependsOn).toContain(observer.id);
+});
+
+test('a queued strict bank observer keeps its identity across source refresh instead of duplicating the manual queue repair',()=>{
+ const {state,deps}=bowSupply();
+ const observer:CoordTask={id:'manual-bank-observer',kind:'run',goal:'main24',capability:'owned-bank-observation',account:'BowBeforeMe',launch:'ordinary',dependsOn:['native-owned-bank-observation','ge-qualified','cut-qualified','jewel-qualified'],priority:49,estimatedMs:30000,timeoutMs:120000,args:[],env:{REQUIRE_BANK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:{counters:{bankObserved:1}},why:'Accepted queue-only fresh bank repair'};
+ addTasks(state,[observer],NOW);const definition=deps.definition;deps.definition=id=>({...definition(id),...(id==='owned-bank-observation'?{source:'new-source'}:{})});
+ const result=applyObservationRequests(state,[],deps);expect(result.added.filter(t=>t.kind==='run')).toEqual([]);
+ const refresh=result.added.find(t=>t.kind==='qualify')!;expect(refresh.capability).toBe('owned-bank-observation');expect(observer.dependsOn).toContain(refresh.id);
+ expect(state.tasks.find(r=>r.spec.id==='make-two')!.spec.dependsOn).toContain(observer.id);expect(applyObservationRequests(state,[],deps).added).toEqual([]);
+});
+
+test('reusing an observer cannot move it behind a qualification that requires its captured entry',()=>{
+ const {state,deps}=bowSupply();
+ const observer:CoordTask={id:'entry-bank-observer',kind:'run',goal:'main24',capability:'owned-bank-observation',account:'BowBeforeMe',launch:'ordinary',dependsOn:['native-owned-bank-observation'],priority:49,estimatedMs:30000,timeoutMs:120000,args:[],env:{REQUIRE_BANK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:{counters:{bankObserved:1}},why:'Capture an entry for qualification'};
+ addTasks(state,[observer,{id:'captured-entry-qualified',kind:'qualify',goal:'main24',capability:'jewel',dependsOn:[observer.id],priority:49,estimatedMs:600000,why:'Qualify the captured observer entry'}],NOW);
+ state.tasks.find(r=>r.spec.id==='make-two')!.spec.dependsOn.push('captured-entry-qualified');
+ applyObservationRequests(state,[],deps);expect(observer.dependsOn).not.toContain('captured-entry-qualified');expect(()=>addTasks(state,[],NOW)).not.toThrow();
+ expect(state.tasks.find(r=>r.spec.id==='captured-entry-qualified')!.spec.dependsOn).toContain(observer.id);
+});
+
+test('an expired successful prequalification bank snapshot cannot hold the consumer forever',()=>{
+ const {state,deps}=bowSupply();const old:CoordTask={id:'old-bank-observer',kind:'run',goal:'main24',capability:'owned-bank-observation',account:'BowBeforeMe',launch:'ordinary',dependsOn:['native-owned-bank-observation'],priority:49,estimatedMs:30000,timeoutMs:120000,args:[],env:{REQUIRE_BANK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:{counters:{bankObserved:1}},why:'Earlier successful bank inspection'};
+ addTasks(state,[old],NOW-400000);settle(state.tasks.find(r=>r.spec.id===old.id),NOW-400000);
+ deps.statuses=[{...deps.statuses[0],coordinatorRunId:old.id}];state.tasks.find(r=>r.spec.id==='make-two')!.spec.dependsOn.push(old.id);
+ const added=applyObservationRequests(state,[],deps).added;expect(added).toHaveLength(1);expect(added[0].id).not.toBe(old.id);
+ expect(added[0].dependsOn).toContain('jewel-qualified');expect(applyObservationRequests(state,[],deps).added).toEqual([]);
+});
+
+test('a generated Ranged consumer refreshes an accepted bank and kit snapshot after its slow qualification',()=>{
+ const {state,deps}=fixture();deps.statuses=[{...status('Fighter',NOW-800000),equipmentObserved:true}];
+ deps.needsEntryObservation=(_t,_a,s)=>!s||deps.now-s.bankAt>=300000;
+ applyObservationRequests(state,[request('Fighter')],deps);const old=observations(state)[0];settle(old,NOW-400000);
+ deps.statuses=[{...status('Fighter',NOW-400000),equipmentObserved:true,coordinatorRunId:old.runId}];
+ addTasks(state,[{id:'slow-state-qualification',kind:'qualify',capability:'ranged-train',goal:'skills',account:'Fighter',dependsOn:[old.spec.id],priority:49,estimatedMs:600000,why:'Actual captured-state proof after prior bank inspection'}],NOW-300000);
+ settle(state.tasks.find(r=>r.spec.id==='slow-state-qualification'));consumers(state)[0].spec.dependsOn.push('slow-state-qualification');
+ const result=applyObservationRequests(state,[],deps);expect(result.added).toHaveLength(1);expect(result.added[0].env?.REQUIRE_BANK).toBe('1');
+ expect(result.added[0].id).not.toBe(old.spec.id);expect(result.added[0].dependsOn).toContain('slow-state-qualification');
+ expect(old.status).toBe('succeeded');expect(applyObservationRequests(state,[],deps).added).toEqual([]);
+});
+
 test('internal stops permit a linked observer; owner, unknown and lowercase pauses remain held',()=>{
  const directory=mkdtempSync(join(tmpdir(),'observer-pauses-'));mkdirSync(join(directory,'.practice'));
  try{

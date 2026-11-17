@@ -46,6 +46,12 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
  const running=new Set(state.tasks.filter(r=>r.status==='running').flatMap(r=>boundAccounts(r.spec,state)??[]).map(normalized));
  const eligible=(name:string)=>/^[A-Za-z0-9]{1,12}$/.test(name)&&!['haggis','shaftshooter','polevaulter'].includes(normalized(name))&&d.allowed(name)&&!d.paused(name)&&!running.has(normalized(name));
  const fresh=(s:any,t:CoordTask)=>s&&d.now-s.at<300000&&Array.isArray(s.skills)&&Object.keys(t.accept?.skills??{}).every(skill=>s.skills.some((r:any)=>normalized(r.name??'')===normalized(skill)&&Number.isSafeInteger(r.level)&&r.level>=1&&r.level<=99&&Number.isFinite(r.xp)&&r.xp>=0));
+ const freshBank=(s:any)=>s&&Number.isFinite(s.bankAt)&&s.bankAt>0&&s.bankAt<=s.at&&d.now-s.bankAt<300000&&Array.isArray(s.bank);
+ const dependencies=(task:CoordTask)=>{
+  const visit=[...task.dependsOn],seen=new Set<string>();
+  while(visit.length){const id=visit.pop()!;if(seen.has(id))continue;seen.add(id);const row=state.tasks.find(r=>r.spec.id===id);if(row)visit.push(...row.spec.dependsOn);}
+  return seen;
+ };
  const qualification=(cap:string,goal:CoordTask['goal'],priority:number)=>{
   if(!reviewApproved(state,cap))return null;
   const source=d.definition(cap).source,current=currentQualification(state,cap,source);if(current)return current.spec.id;
@@ -64,8 +70,8 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
   if(fresh(status,consumer)&&!bank)return true;
   const cap='owned-bank-observation',source=d.definition(cap).source;
   const matching=(t:CoordTask)=>(bank?boundedBankObserver:boundedSkillsObserver)(t,entryOf(t.capability!));
-  if(bank&&state.tasks.some(r=>r.status==='succeeded'&&matching(r.spec)&&r.spec.account?.toLowerCase()===normalized(account)&&r.runId===status?.coordinatorRunId&&r.spec.dependsOn.some(id=>state.tasks.find(q=>q.spec.id===id)?.receipt?.output?.delivery?.source===source)))return false;
-  const existing=state.tasks.find(r=>['pending','running'].includes(r.status)&&r.spec.account?.toLowerCase()===normalized(account)&&matching(r.spec)&&r.spec.dependsOn.some(id=>{const q=state.tasks.find(x=>x.spec.id===id);return q?.spec.capability===cap&&(!q.receipt||q.receipt.output?.delivery?.source===source);}));
+  if(bank&&freshBank(status)&&state.tasks.some(r=>r.status==='succeeded'&&matching(r.spec)&&r.spec.account?.toLowerCase()===normalized(account)&&r.runId===status?.coordinatorRunId&&r.spec.dependsOn.some(id=>state.tasks.find(q=>q.spec.id===id)?.receipt?.output?.delivery?.source===source)))return false;
+  const existing=state.tasks.find(r=>['pending','running'].includes(r.status)&&r.spec.account?.toLowerCase()===normalized(account)&&matching(r.spec)&&(bank?r.spec.capability===cap:r.spec.dependsOn.some(id=>{const q=state.tasks.find(x=>x.spec.id===id);return q?.spec.capability===cap&&(!q.receipt||q.receipt.output?.delivery?.source===source);})));
   const id=existing?.spec.id??'progression-observe-'+normalized(account)+'-'+createHash('sha256').update(JSON.stringify([source,status?.at??0,bank])).digest('hex').slice(0,16);
   const old=state.tasks.find(r=>r.spec.id===id);if(old&&!['pending','running'].includes(old.status))return false;
   const observer:CoordTask=existing?.spec??{id,goal:consumer.goal,kind:'run',capability:cap,account,launch:'ordinary',dependsOn:[],priority:Math.min(100,consumer.priority+1),estimatedMs:30000,timeoutMs:120000,args:[],env:{REQUIRE_BANK:bank?'1':'0',LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:bank?{counters:{bankObserved:1}}:{skills:{Hitpoints:1}},why:'Read current owned skills and location for '+consumer.id+' without travel or spending. Required bank data must come from the supported nearby entry; this is not acquired stock or game progress.'};
@@ -75,7 +81,10 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
   if(!candidate.tasks.some(r=>r.spec.id===id))addTasks(candidate,[observer],d.now);
   const target=candidate.tasks.find(r=>r.spec.id===consumer.id)!;target.spec.dependsOn=[...new Set([...target.spec.dependsOn,id])];
   if(goalWork(candidate,d.goals,d.statuses,d.now,{entryOf}).get(id)?.value!==.01)return false;
-  if(!existing){const q=qualification(cap,consumer.goal,consumer.priority+2);if(!q)return false;observer.dependsOn=[...new Set([q,...consumer.dependsOn.filter(id=>state.tasks.find(r=>r.spec.id===id)?.spec.kind==='qualify')])];addTasks(state,[observer],d.now);added.push(observer);}
+  const required=[...(bank?dependencies(consumer):consumer.dependsOn)].filter(id=>state.tasks.find(r=>r.spec.id===id)?.spec.kind==='qualify');
+  const q=!existing||bank?qualification(cap,consumer.goal,consumer.priority+2):null;if((!existing||bank)&&!q)return false;
+  if(!existing){observer.dependsOn=[...new Set([q!,...required])];addTasks(state,[observer],d.now);added.push(observer);}
+  else if(bank)for(const id of [q!,...required])if(!dependencies(state.tasks.find(r=>r.spec.id===id)!.spec).has(observer.id))depend(observer,id);
   depend(consumer,id);return true;
  }
  // Resume the exact requested consumer only after its successful observer supplied fresh account state.
@@ -124,9 +133,10 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
  // Authored useful consumers keep their exact work and receive only a prerequisite edge.
  const dead=deadRoots(state);
  for(const row of state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&!generatedObservationConsumer(r.spec)&&!r.spec.sessionRecovery&&!dead.has(r.spec.id))){
-  const t=row.spec,names=boundAccounts(t,state);if(t.launch&&t.launch!=='ordinary'||names?.length!==1||!eligible(names[0]!)||Object.keys(t.accept?.skills??{}).length!==1)continue;
+  const t=row.spec,names=boundAccounts(t,state),skills=Object.keys(t.accept?.skills??{}).length===1,bank=!skills&&Object.keys(t.accept?.bank??{}).length>0;
+  if(t.launch&&t.launch!=='ordinary'||names?.length!==1||!eligible(names[0]!)||!skills&&!bank)continue;
   if(entryOf(t.capability!)==='scripts/fleet-inspect.ts')continue;
-  observe(t,names[0]!,statusOf(names[0]!));
+  observe(t,names[0]!,statusOf(names[0]!),bank);
  }
  return{added,linked:[...new Set(linked)],prepared,invalidated:[...new Set(invalidated)]};
 }
