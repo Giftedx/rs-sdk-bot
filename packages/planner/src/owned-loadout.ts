@@ -5,6 +5,7 @@
 export type GearCount={id:number;count:number};
 export type GearOption=GearCount&{preference:number;equippable:boolean|null;occupies?:string[]};
 export type GearSlot={key:string;options:readonly GearOption[]};
+export type OptionalGearSlot=GearSlot&{optional?:boolean;missPreference?:number};
 export type GearChoice=GearCount&{slot:string;preference:number};
 export type OwnedLoadout={state:'ready'|'missing'|'unknown';selected:GearChoice[];preference:number|null;reasons:string[];searched:number};
 
@@ -19,11 +20,14 @@ function totals(items:readonly GearCount[]){
  return out;
 }
 
-export function ownedLoadout(slots:readonly GearSlot[],stock:readonly GearCount[],reserved:readonly GearCount[]=[],stockComplete=true):OwnedLoadout{
+function solveLoadout(slots:readonly OptionalGearSlot[],stock:readonly GearCount[],reserved:readonly GearCount[]=[],stockComplete=true):OwnedLoadout{
  if(new Set(slots.map(s=>s.key)).size!==slots.length||slots.some(s=>!s.key))throw Error('Gear slot identity must be unique');
- for(const slot of slots)for(const o of slot.options){
-  if(!whole(o.id)||!whole(o.count)||o.count===0||!whole(o.preference)||![true,false,null].includes(o.equippable)
-   ||o.occupies?.some(k=>!k))throw Error('Invalid gear option');
+ for(const slot of slots){
+  if(slot.missPreference!==undefined&&!whole(slot.missPreference))throw Error('Invalid slot missPreference');
+  for(const o of slot.options){
+   if(!whole(o.id)||!whole(o.count)||o.count===0||!whole(o.preference)||![true,false,null].includes(o.equippable)
+    ||o.occupies?.some(k=>!k))throw Error('Invalid gear option');
+  }
  }
  const available=totals(stock),held=totals(reserved);
  for(const [id,n] of held)available.set(id,Math.max(0,(available.get(id)??0)-n));
@@ -34,7 +38,13 @@ export function ownedLoadout(slots:readonly GearSlot[],stock:readonly GearCount[
   if(rank>=bestRank)return;
   if(index===slots.length){best=[...chosen];bestRank=rank;return;}
   const slot=slots[index]!;
-  if(occupied.has(slot.key))return;
+  if(occupied.has(slot.key)){
+   if(!slot.optional)return;
+   const skipRank=rank+(slot.missPreference??0);
+   if(!whole(skipRank))throw Error('Gear preference overflow');
+   visit(index+1,chosen,skipRank,occupied);
+   return;
+  }
   for(const option of [...slot.options].sort((a,b)=>a.preference-b.preference||a.id-b.id)){
    if(option.equippable!==true||(available.get(option.id)??0)<option.count)continue;
    const occupies=[slot.key,...(option.occupies??[])];
@@ -45,12 +55,25 @@ export function ownedLoadout(slots:readonly GearSlot[],stock:readonly GearCount[
    available.set(option.id,available.get(option.id)!+option.count);
    if(limited)return;
   }
+  if(slot.optional){
+   const skipRank=rank+(slot.missPreference??1000000);
+   if(!whole(skipRank))throw Error('Gear preference overflow');
+   visit(index+1,chosen,skipRank,occupied);
+  }
  };
  visit(0,[],0,new Set());
  if(limited)return{state:'unknown',selected:[],preference:null,reasons:['Gear search bound reached; no complete selection accepted'],searched};
  if(best)return{state:'ready',selected:best,preference:bestRank,reasons:[],searched};
  return{state:unknown||!stockComplete?'unknown':'missing',selected:[],preference:null,
-  reasons:[...slots.filter(s=>!s.options.some(o=>o.equippable===true&&(available.get(o.id)??0)>=o.count)).map(s=>s.key+': no known unreserved usable option'),...(unknown?['Unknown equip prerequisite']:[]),...(!stockComplete?['Stock observation incomplete']:[]),...(slots.length?['No simultaneous assignment satisfies quantities and occupied slots']:[])],searched};
+  reasons:[...slots.filter(s=>!s.optional&&!s.options.some(o=>o.equippable===true&&(available.get(o.id)??0)>=o.count)).map(s=>s.key+': no known unreserved usable option'),...(unknown?['Unknown equip prerequisite']:[]),...(!stockComplete?['Stock observation incomplete']:[]),...(slots.length?['No simultaneous assignment satisfies quantities and occupied slots']:[])],searched};
+}
+
+export function ownedLoadout(slots:readonly GearSlot[],stock:readonly GearCount[],reserved:readonly GearCount[]=[],stockComplete=true):OwnedLoadout{
+ return solveLoadout(slots,stock,reserved,stockComplete);
+}
+
+export function ownedBestLoadout(slots:readonly OptionalGearSlot[],stock:readonly GearCount[],reserved:readonly GearCount[]=[],stockComplete=true):OwnedLoadout{
+ return solveLoadout(slots,stock,reserved,stockComplete);
 }
 
 // Pinned rev289 content: levelrequire/scripts/tier1.rs2 and tier30.rs2.
