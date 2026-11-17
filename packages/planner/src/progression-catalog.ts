@@ -128,6 +128,14 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  if(script==='scripts/coin-courier.ts')return coinTransferIntent(args,env);
  const consumer=setting(env,args,'CONSUMER')??setting(env,args,'GOAL')??script;
  const requestedItems=positiveItems(accept?.bank);
+ if(script==='scripts/train-prayer.ts'&&requestedItems&&accept?.skills){
+  const skills=Object.entries(accept.skills),target=Number(args[0]??env.TARGET_LEVEL??43),bone=Number(env.BONE_ID??526),reserve=Number(env.BONE_RESERVE??6),cap=Number(env.CAP??1500),maximum=Number(env.MAX_BURY??175);
+  // Matching Prayer work owns the intent; retained bank stock stays a coordinator postcondition.
+  if(args.length<=1&&skills.length===1&&key(skills[0]![0])==='prayer'&&skills[0]![1]===target&&finiteLevel(target)&&target>=43
+   &&[526,532,536].includes(bone)&&whole(reserve)&&reserve>=6&&requestedItems[bone]!==undefined&&requestedItems[bone]!>=reserve
+   &&whole(cap)&&cap>=1&&cap<=1000000&&whole(maximum)&&maximum>=1&&maximum<=1000000
+   &&(env.BURY_HELD===undefined||env.BURY_HELD==='0')&&accept.quests===undefined&&accept.counters===undefined)return{kind:'train',skill:'prayer',targetLevel:target};
+ }
  if(requestedItems)return{kind:'acquire',items:{...requestedItems},consumer};
  if(accept?.quests?.length===1&&accept.quests[0]?.trim())return{kind:'quest',quest:accept.quests[0]};
  const acceptedSkills=Object.entries(accept?.skills??{});

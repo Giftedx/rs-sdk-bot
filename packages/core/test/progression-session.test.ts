@@ -23,6 +23,20 @@ test('fleet preparation preserves its finite consumer and coordinator acceptance
  }finally{rmSync(base,{recursive:true,force:true});}
 });
 
+test('Prayer99 with a six-bone reserve is not complete at the actual Prayer96 entry',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-prayer-reserve-')),now=Date.now();
+ const work={script:'scripts/train-prayer.ts',args:['99'],env:{BONE_ID:'536',MAX_BURY:'105',BONE_RESERVE:'6',CAP:'1500',COORDINATOR_RUN_ID:'prayer-run'}};
+ const status={name:'Fixture',server:'rs-sdk-demo.fly.dev',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Prayer',level:96,xp:811012},{name:'Hitpoints',level:99,xp:1115790}],inventory:[],equipment:[],bank:[{id:536,count:111}],quests:[]};
+ try{
+  mkdirSync(join(base,'.practice/coordinator'),{recursive:true});
+  writeFileSync(join(base,'.practice/coordinator/state.json'),JSON.stringify({tasks:[{runId:'prayer-run',spec:{account:'Fixture',accept:{skills:{Prayer:99},bank:{536:6}}}}]}));
+  const live=evaluateProgressionWork(work,status,{base,now,requireQualification:true});
+  expect(live.intent).toEqual({kind:'train',skill:'prayer',targetLevel:99});expect(live.decision?.state).not.toBe('complete');expect(live.supported).toBe(true);
+  const done=evaluateProgressionWork(work,{...status,skills:[{name:'Prayer',level:99,xp:1000012},{name:'Hitpoints',level:99,xp:1115790}],bank:[{id:536,count:6}]},{base,now,requireQualification:true});
+  expect(done.decision?.state).toBe('complete');
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
 test('learned rates separate boosts, combat levels, active prayers and attack style',()=>{
  const status={server:'server',skills:[{name:'Ranged',level:80,currentLevel:80},{name:'Hitpoints',level:99,currentLevel:99}],equipment:[{slot:3,id:841}],progressionCrowding:0,progressionContext:{style:'rapid',prayers:[false]}};
  const key=progressionRateConditions(status);
