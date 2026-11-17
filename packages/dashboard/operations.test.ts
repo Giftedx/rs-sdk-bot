@@ -287,4 +287,6 @@ test('the account HP KPI dates recorded health and labels it current only while 
  expect(html({...bot,hpAt:now-1})).toContain('<b>2 / 20</b><span>current hitpoints</span><small>1 old</small>');
  for(const b of [{...bot,hpAt:null},{...bot,hp:{now:NaN,max:20}},{...bot,hpAt:now+1}])expect(html(b)).toContain('<b>—</b><span>recorded hitpoints</span><small>Not reported</small>');
  expect(html(bot,false)).toContain('<b>—</b><span>recorded hitpoints</span>');
+ expect(html({...bot,pos:{x:3060,z:3880,level:0}})).toContain('3060, 3880 · floor 0 · Wilderness 46');
+ expect(html({...bot,pos:{x:3185,z:3436,level:0}})).not.toContain('Wilderness');
 });

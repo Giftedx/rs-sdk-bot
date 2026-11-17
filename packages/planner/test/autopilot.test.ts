@@ -2113,7 +2113,7 @@ test('the halberd build trains Thieving and Agility, then takes Underground Pass
     expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
 });
 
-import { ARMY_BANK, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
+import { ARMY_BANK, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, inWestArdougne, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
 
 const TAVERLEY = { x: 2877, z: 3501, level: 0 }, DRAYNOR = { x: 3092, z: 3242, level: 0 }, ARDOUGNE = { x: 2654, z: 3283, level: 0 }, SEERS = { x: 2727, z: 3493, level: 0 };
 const MUSA_POINT = { x: 2920, z: 3160, level: 0 }, TUTORIAL = { x: 3094, z: 3106, level: 0 }, TOLL_SIDE = { x: 3269, z: 3164, level: 0 };
@@ -2462,4 +2462,18 @@ test('plan stays fast with an expanded army roster, pilot allowlist and full sup
     const out=plan(inputs(accounts,{templates,pilots,army,bill,capacity:CAPACITY,prices:{...prices,'bow string':200,'yew shortbow':800,flax:50,'mithril bar':500},donors:accounts.map(a=>({name:a.name,coins:100_000}))}));
     expect(performance.now()-started).toBeLessThan(5000);
     expect(out.filter(x=>x.template).length).toBeGreaterThan(0);
+});
+
+test('accounts trapped inside West Ardougne cannot reach outside targets, donors or kit-buy GE trips',()=>{
+    const west={x:2547,z:3325,level:0};
+    expect(inWestArdougne(west)).toBe(true);
+    expect(inWestArdougne(ARDOUGNE)).toBe(false);
+    expect(inWestArdougne({x:2525,z:3242,level:0})).toBe(false);
+    expect(wayCost(west,KNIGHT_BANK,true)).toBeNull();
+    expect(wayCost(west,{x:3185,z:3436},true)).toBeNull();
+    expect(meetFor(west)).toBeNull();
+    const dragon=catalogue().find(t=>t.id==='army-hunt-black-dragons')!;
+    const trapped={...acct('Mightyrod',{Attack:99,Strength:99,Defence:99,Ranged:99,Magic:99,Prayer:99,Hitpoints:99},{coin:500_000,'law rune':4}),pos:west};
+    const out=plan(inputs([trapped],{templates:[dragon],army:new Set(['mightyrod']),pilots:new Set([dragon.id]),donors:[{name:'Rich',coins:500_000}]}))[0]!;
+    expect(out.template).toBeUndefined();expect(out.fund).toBeUndefined();expect(out.send).toBeUndefined();
 });
