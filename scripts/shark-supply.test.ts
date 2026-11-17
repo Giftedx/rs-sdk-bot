@@ -21,7 +21,7 @@ test('a finite order key is claimed once; duplicate and uncertain output refuse 
 });
 import {walkPath,type PathDeps,type PathTile} from '../packages/core/src/walk';
 import {resultCounters} from '../packages/core/src/status';
-import {sharkSpot,catchSharks,sharkFishingTrace,SHARK_IDLE_TICKS,SHARK_PROGRESS_TICKS} from './gather-fish';
+import {sharkSpot,catchSharks,ensureCatherbyFishingTool,sharkFishingTrace,SHARK_IDLE_TICKS,SHARK_PROGRESS_TICKS} from './gather-fish';
 import {sharkCookDelta,cookSharks} from './cook-food';
 
 const spot={id:322,index:5,name:'Fishing spot',x:2845,z:3431,distance:3,optionsWithIndex:[{text:'Net',opIndex:1},{text:'Harpoon',opIndex:3}]};
@@ -380,3 +380,67 @@ test('the order owns a two-catch stall: raw stock banks, cooked credit stays zer
         expect(sharkSummary(r)).toContain('newBankedSharks=0 caught=2 cooked=0');
     });}finally{f.stop();}
 },30000);
+
+test('ensureCatherbyFishingTool buys missing Lobster pot from Harry when funded and banks change', async () => {
+    let bankOpen = true, shopOpen = false, gen = 1, tick = 0;
+    const inv: any[] = [];
+    const bank: any[] = [{ id: 995, name: 'Coins', count: 200, slot: 0 }];
+    const shopItems = [{ id: 301, name: 'Lobster pot', count: 2, buyPrice: 20, slot: 0 }];
+    const walks: string[] = [];
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 1);
+    const s: any = {
+        tick: () => tick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
+        bankObservation: () => bankOpen ? { generation: gen, items: bank } : null,
+        sdk: {
+            getState: () => ({ inventory: inv, equipment: [], bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+        },
+        bot: {
+            openBank: async () => { bankOpen = true; gen++; return { success: true }; },
+            closeBank: async () => { bankOpen = false; return { success: true }; },
+            withdrawItem: async (item: any, n: number) => {
+                const row = bank.find(r => r.id === item.id);
+                row.count -= n;
+                if (row.count <= 0) bank.splice(bank.indexOf(row), 1);
+                inv.push({ id: item.id, name: item.name, count: n });
+                gen++;
+                return { success: true };
+            },
+            depositItem: async (item: any) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const [removed] = inv.splice(idx, 1);
+                const row = bank.find(r => r.id === removed.id);
+                if (row) row.count += removed.count;
+                else bank.push({ ...removed });
+                gen++;
+                return { success: true };
+            },
+            openShop: async () => { shopOpen = true; return { success: true }; },
+            buyFromShop: async (row: any, n: number) => {
+                row.count -= n;
+                inv.find(i => i.id === 995).count -= row.buyPrice * n;
+                inv.push({ id: row.id, name: row.name, count: n });
+                return { success: true };
+            },
+            closeShop: async () => { shopOpen = false; return { success: true }; },
+        },
+    };
+    try {
+        const r = await ensureCatherbyFishingTool(s, {
+            toolId: 301,
+            maxCost: 50,
+            walkTo: async spot => { walks.push(`${spot.x},${spot.z}`); return true; },
+            openBank: () => s.bot.openBank(),
+            stop: () => false,
+        });
+        expect(r).toEqual({ ok: true, bought: true, coinsSpent: 20 });
+        expect(walks).toEqual(['2834,3445', '2809,3441']);
+        expect(inv.map(i => i.id)).toEqual([301]);
+        expect(bank.find(i => i.id === 995)?.count).toBe(180);
+    } finally {
+        clearInterval(timer);
+    }
+});

@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {test,expect} from 'bun:test';
-import {chopProcessingTree,processingTreeEdges,seersProcessingGrove,treeAfterBank,runDraynorOak,oakGrove,westOakPathAllowed,woodTreeOrder,normalGrove} from './gather-yews';
+import {chopProcessingTree,processingTreeEdges,seersProcessingGrove,treeAfterBank,runDraynorOak,oakGrove,westOakPathAllowed,woodTreeOrder,normalGrove,reconcileWoodcuttingAxeAtBank} from './gather-yews';
 import type {Session} from '../packages/core/src/inprocess';
 
 const woodTree=(x:number,distance:number)=>({x,z:3285,distance,reachable:true,optionsWithIndex:[{text:'Chop down',opIndex:1}]});
@@ -100,3 +100,186 @@ test('persistent nonzero Lite render routeLength permits chop only after two fre
 test('actual Lite same-tile walk no-op cannot retain an old corner destination: consumer selects a different complete edge',async()=>{const a=processingActor();a.state.player.worldX=2690;a.state.player.worldZ=3429;let packets=0,calls=0;a.s.sdk.sendWalk=async(x:number,z:number)=>{calls++;if(x===a.state.player.worldX&&z===a.state.player.worldZ)return{success:true};packets++;a.state.player.worldX=x;a.state.player.worldZ=z;return{success:true};};const r=await chopProcessingTree(a.s,a.tree,()=>false);expect(r.success).toBe(true);expect(calls).toBe(1);expect(packets).toBe(1);expect(a.inputs()).toBe(1);expect(processingTreeEdges(a.tree,2,2)).toContainEqual({x:a.state.player.worldX,z:a.state.player.worldZ});});
 
 test('cached loc type mutation after approach cannot alter the snapshotted Native footprint receipt',async()=>{const a=processingActor(),type={width:2,length:2},old=console.log,logs:string[]=[];a.s.client.locTypeOf=()=>type;console.log=(message:unknown)=>{logs.push(String(message));};try{const r=await chopProcessingTree(a.s,a.tree,()=>false,async(x,z)=>{a.state.player.worldX=x;a.state.player.worldZ=z;type.width=1;type.length=1;return true;});expect(r.success).toBe(true);const receipt=JSON.parse(logs.find(l=>l.startsWith('WOOD_TREE_APPROACH '))!.slice('WOOD_TREE_APPROACH '.length));expect(receipt.tree.width).toBe(2);expect(receipt.tree.length).toBe(2);expect(type.width).toBe(1);expect(a.inputs()).toBe(1);}finally{console.log=old;}});
+
+test('reconcileWoodcuttingAxeAtBank buys Bob upgrade when funded on starter Bronze and equips when Attack allows', async () => {
+    let tick = 0, bankOpen = true, shopOpen = false, gen = 1, attack = 1;
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 1);
+    const inv: any[] = [];
+    const eq: any[] = [{ id: 1351, name: 'Bronze axe', count: 1, slot: 3 }];
+    const bank: any[] = [{ id: 995, name: 'Coins', count: 400, slot: 0 }];
+    const shopItems = [{ id: 1353, name: 'Steel axe', count: 3, buyPrice: 200, slot: 0 }];
+    const walks: string[] = [];
+
+    const state: any = { inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } };
+    const s: any = {
+        tick: () => tick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
+        bankObservation: () => bankOpen ? { generation: gen, items: bank } : null,
+        sdk: {
+            getState: () => ({ ...state, inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: (n: string) => ({ level: n === 'Attack' ? attack : 15, baseLevel: n === 'Attack' ? attack : 15 }),
+        },
+        bot: {
+            openBank: async () => { bankOpen = true; gen++; return { success: true }; },
+            closeBank: async () => { bankOpen = false; return { success: true }; },
+            withdrawItem: async (item: any, n: number) => {
+                const row = bank.find(r => r.id === item.id);
+                row.count -= n;
+                if (row.count <= 0) bank.splice(bank.indexOf(row), 1);
+                inv.push({ id: item.id, name: item.name, count: n });
+                gen++;
+                return { success: true };
+            },
+            depositItem: async (item: any) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const [removed] = inv.splice(idx, 1);
+                const row = bank.find(r => r.id === removed.id);
+                if (row) row.count += removed.count;
+                else bank.push({ ...removed });
+                gen++;
+                return { success: true };
+            },
+            equipItem: async (item: any) => {
+                bankOpen = false;
+                const old = eq.splice(0, eq.length);
+                for (const o of old) inv.push({ id: o.id, name: o.name, count: o.count });
+                const idx = inv.findIndex(r => r.id === item.id);
+                const [removed] = inv.splice(idx, 1);
+                eq.push({ ...removed, slot: 3 });
+                return { success: true };
+            },
+            openShop: async () => { shopOpen = true; return { success: true }; },
+            buyFromShop: async (row: any, n: number) => {
+                row.count -= n;
+                inv.find(i => i.id === 995).count -= row.buyPrice * n;
+                inv.push({ id: row.id, name: row.name, count: n });
+                return { success: true };
+            },
+            closeShop: async () => { shopOpen = false; return { success: true }; },
+        },
+    };
+
+    try {
+        // Attack 1 keeps Steel axe in inventory while preserving existing Bronze axe in slot 3.
+        const r1 = await reconcileWoodcuttingAxeAtBank(s, {
+            bankSpot: { x: 3092, z: 3243 },
+            stop: () => false,
+            allowShop: true,
+            walkTo: async spot => { walks.push(`${spot.x},${spot.z}`); return true; },
+        });
+        expect(r1).toEqual({ activeId: 1353, worn: false, bought: 1353 });
+        expect(walks).toEqual(['3231,3203', '3092,3243']);
+        expect(inv.map(i => i.id)).toEqual([1353]);
+        expect(bank.find(i => i.id === 995)?.count).toBe(200);
+
+        // Attack 5 swaps Steel axe into slot 3 and banks Bronze axe cleanly.
+        attack = 5;
+        const r2 = await reconcileWoodcuttingAxeAtBank(s, {
+            bankSpot: { x: 3092, z: 3243 },
+            stop: () => false,
+            allowShop: false,
+        });
+        expect(r2.activeId).toBe(1353);
+        expect(r2.worn).toBe(true);
+        expect(eq[0]?.id).toBe(1353);
+        expect(inv).toHaveLength(0);
+        expect(bank.find(i => i.id === 1351)?.count).toBe(1);
+    } finally {
+        clearInterval(timer);
+    }
+});
+
+test('runDraynorOak withdraws best owned axe over lower-tier bank axes', async () => {
+    const f = fixture();
+    f.bank.push({ id: 1359, name: 'Rune axe', count: 1, slot: 6 });
+    try {
+        const r = await runDraynorOak(f.s, { cap: 500, maximum: 25, prepare: true, walk: async () => true });
+        expect(r.ok).toBe(true);
+        expect(f.inv.find(i => i.id === 1359)?.count).toBe(1);
+        expect(f.bank.find(i => i.id === 1349)?.count).toBe(2);
+    } finally {
+        f.dispose();
+    }
+});
+
+test('reconcileWoodcuttingAxeAtBank recovers coins on empty Bob stock and cools down per tier for 700 ticks', async () => {
+    let tick = 50, bankOpen = true, shopOpen = false, gen = 1, wc = 15;
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 2);
+    const inv: any[] = [];
+    const eq: any[] = [{ id: 1351, name: 'Bronze axe', count: 1, slot: 3 }];
+    const bank: any[] = [{ id: 995, name: 'Coins', count: 400, slot: 0 }];
+    const shopItems = [{ id: 1353, name: 'Steel axe', count: 0, buyPrice: 200, slot: 0 }];
+    const walks: string[] = [];
+
+    const state: any = { inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } };
+    const s: any = {
+        tick: () => tick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
+        bankObservation: () => bankOpen ? { generation: gen, items: bank } : null,
+        sdk: {
+            getState: () => ({ ...state, inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: (n: string) => ({ level: n === 'Woodcutting' ? wc : 1, baseLevel: n === 'Woodcutting' ? wc : 1 }),
+        },
+        bot: {
+            openBank: async () => { bankOpen = true; gen++; return { success: true }; },
+            closeBank: async () => { bankOpen = false; return { success: true }; },
+            withdrawItem: async (item: any, n: number) => {
+                const row = bank.find(r => r.id === item.id);
+                row.count -= n;
+                if (row.count <= 0) bank.splice(bank.indexOf(row), 1);
+                inv.push({ id: item.id, name: item.name, count: n, slot: 0 });
+                gen++;
+                return { success: true };
+            },
+            depositItem: async (item: any, n: number) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const cur = inv[idx];
+                const amt = n === -1 ? cur.count : n;
+                cur.count -= amt;
+                if (cur.count <= 0) inv.splice(idx, 1);
+                const row = bank.find(r => r.id === item.id);
+                if (row) row.count += amt;
+                else bank.push({ id: item.id, name: item.name, count: amt, slot: 0 });
+                gen++;
+                return { success: true };
+            },
+            openShop: async () => { shopOpen = true; return { success: true }; },
+            buyFromShop: async (row: any, n: number) => {
+                row.count -= n;
+                inv.find(i => i.id === 995).count -= row.buyPrice * n;
+                inv.push({ id: row.id, name: row.name, count: n, slot: 1 });
+                return { success: true };
+            },
+            closeShop: async () => { shopOpen = false; return { success: true }; },
+        },
+    };
+    const walkTo = async (spot: { x: number; z: number }) => { walks.push(`${spot.x},${spot.z}`); return true; };
+
+    try {
+        const r1 = await reconcileWoodcuttingAxeAtBank(s, { bankSpot: { x: 3092, z: 3243 }, stop: () => false, allowShop: true, walkTo });
+        expect(r1).toEqual({ activeId: 1351, worn: true, bought: undefined });
+        expect(walks).toEqual(['3231,3203', '3092,3243']);
+        expect(bank.find(i => i.id === 995)?.count).toBe(400);
+        expect(inv.filter(i => i.id === 995)).toHaveLength(0);
+
+        // Next trip within 700 ticks skips Bob even after restock.
+        shopItems[0]!.count = 1;
+        tick += 40;
+        await reconcileWoodcuttingAxeAtBank(s, { bankSpot: { x: 3092, z: 3243 }, stop: () => false, allowShop: true, walkTo });
+        expect(walks).toHaveLength(2);
+
+        // Reaching 700-tick boundary retries Bob and acquires Steel axe.
+        tick += 700;
+        const r2 = await reconcileWoodcuttingAxeAtBank(s, { bankSpot: { x: 3092, z: 3243 }, stop: () => false, allowShop: true, walkTo });
+        expect(r2).toEqual({ activeId: 1353, worn: false, bought: 1353 });
+        expect(inv.map(i => i.id)).toEqual([1353]);
+    } finally {
+        clearInterval(timer);
+    }
+});

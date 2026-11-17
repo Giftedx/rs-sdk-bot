@@ -7,6 +7,7 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import type {BotWorldState,NearbyLoc} from '../vendor/rs-sdk/sdk/types';
 import {componentId} from '../packages/core/src/logout';
 import {runRotationMining,siteTiles,MINING_SITES,type MiningAction,type RotationOptions} from './mining-rotation';
+import {MINING_PICKAXES_DESC,bestMiningPickaxe} from '../packages/planner/src/gear-progression';
 const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content');
 const pack=(kind:string)=>new Map(readFileSync(resolve(content,'pack',kind+'.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
 const obj=pack('obj'),loc=pack('loc'),item=(name:string)=>{const n=obj.get(name);if(n===undefined)throw Error('native mining item missing '+name);return n;};
@@ -28,9 +29,25 @@ export function miningProfiles():MiningProfile[]{
 }
 export const incidentalMiningGems=['uncut_diamond','uncut_ruby','uncut_emerald','uncut_sapphire'].map(item);
 const pickaxes=configs('scripts/skill_mining/configs/pickaxes.obj').filter(b=>/^(bronze|iron|steel|mithril|adamant|rune)_pickaxe$/.test(b.name)).map(b=>({id:item(b.name),level:Number((b.props.param??[]).find(v=>v.startsWith('levelrequire,'))?.split(',')[1]),rate:Number((b.props.param??[]).find(v=>v.startsWith('mining_rate,'))?.split(',')[1])}));
+const PICKAXE_RATE_BY_ID=new Map(pickaxes.map(p=>[p.id,p]));
 export function eligiblePickaxe(s:{skills:readonly{name:string;level:number}[];inventory:readonly{id:number}[];equipment:readonly{id:number;slot:number}[]}){
  const level=s.skills.find(k=>k.name==='Mining')?.level??0;
- return pickaxes.filter(p=>level>=p.level&&(s.inventory.some(i=>i.id===p.id)||s.equipment.some(i=>i.id===p.id&&i.slot===3))).sort((a,b)=>a.rate-b.rate)[0];
+ const stock=[...s.inventory,...s.equipment.filter(e=>e.slot===3)].map(i=>({id:i.id,count:1}));
+ const rec=bestMiningPickaxe(stock,{mining:level,attack:1});
+ return rec.current?PICKAXE_RATE_BY_ID.get(rec.current.item.id):undefined;
+}
+/** Equip the best usable carried pickaxe if Attack meets wield requirements and weapon slot is empty or holds another pickaxe. */
+export async function equipUsablePickaxeInPack(s:{sdk:{getSkill:(name:string)=>{level:number;baseLevel?:number}|null|undefined;getInventory:()=>readonly{id:number;name:string;count:number;slot?:number}[];getEquipment:()=>readonly{id:number;slot:number}[]};bot:{equipItem:(item:any)=>Promise<unknown>}}){
+ const mining=s.sdk.getSkill('Mining')?.level??1,attack=s.sdk.getSkill('Attack')?.baseLevel??s.sdk.getSkill('Attack')?.level??1;
+ const inv=s.sdk.getInventory(),eq=s.sdk.getEquipment();
+ const rec=bestMiningPickaxe([...inv,...eq.filter(e=>e.slot===3).map(e=>({id:e.id,count:1}))],{mining,attack}).current;
+ if(!rec||!rec.canWield||eq.some(e=>e.slot===3&&e.id===rec.item.id))return false;
+ const weapon=eq.find(e=>e.slot===3);
+ if(weapon&&!(MINING_PICKAXES_DESC as readonly number[]).includes(weapon.id))return false;
+ const item=inv.find(i=>i.id===rec.item.id);
+ if(!item)return false;
+ await s.bot.equipItem(item);
+ return s.sdk.getEquipment().some(e=>e.slot===3&&e.id===rec.item.id);
 }
 export function inPerfectMine(s:BotWorldState){const p=s.player;return !!p&&p.level===0&&p.worldX>=2736&&p.worldX<=2740&&p.worldZ>=9684&&p.worldZ<=9693;}
 export function selectMiningRock(s:BotWorldState,p:MiningProfile):NearbyLoc|undefined{
@@ -81,10 +98,12 @@ export async function runAtSiteMining(d:MiningDriver,p:MiningProfile,o:{maximum:
 if(import.meta.main){
  const name=process.argv[2],profile=miningProfiles().find(p=>p.name===process.argv[3]),maximum=Number(process.argv[4]??1),cap=Number(process.argv[5]??2000);if(!name||!profile)throw Error('account and native mining table profile required');
  const s=await openBot(name).catch(e=>finish([],false,`login: ${String(e)}`));let ended=false;void s.ended.then(()=>{ended=true;});
+ await equipUsablePickaxeInPack(s);
  // MINING_ROTATE=1: rock rotation over the site (MINING_SITE=<key of MINING_SITES>, or the rocks within 3 tiles);
  // MINING_KNIFE=1 adds the knife reset, MINING_DROP=1 drops each ore. s.direct sends the actions of one tick together.
  const env=process.env,site=MINING_SITES.find(t=>t.key===env.MINING_SITE);if(env.MINING_SITE&&!site)throw Error('unknown MINING_SITE '+env.MINING_SITE);
- const rotation=env.MINING_ROTATE==='1'||env.MINING_KNIFE==='1'?{knife:env.MINING_KNIFE==='1',drop:env.MINING_DROP==='1',make1:componentId('skill_multi3:make1_a'),players:Number(env.MINING_PLAYERS??1),rocks:site?siteTiles(profile,site):undefined,keep:(env.MINING_KEEP??'').split(',').filter(Boolean).map(Number),pick:env.MINING_PICK==='nearest'||env.MINING_PICK==='roll'?env.MINING_PICK as 'nearest'|'roll':undefined}:undefined;
+ const keepIds=env.MINING_KEEP?env.MINING_KEEP.split(',').filter(Boolean).map(Number):[...MINING_PICKAXES_DESC];
+ const rotation=env.MINING_ROTATE==='1'||env.MINING_KNIFE==='1'?{knife:env.MINING_KNIFE==='1',drop:env.MINING_DROP==='1',make1:componentId('skill_multi3:make1_a'),players:Number(env.MINING_PLAYERS??1),rocks:site?siteTiles(profile,site):undefined,keep:keepIds,pick:env.MINING_PICK==='nearest'||env.MINING_PICK==='roll'?env.MINING_PICK as 'nearest'|'roll':undefined}:undefined;
  try{const r=await runAtSiteMining({state:()=>s.sdk.getState(),tick:()=>s.tick(),stop:()=>ended||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all'),mine:async l=>(await s.sdk.sendInteractLoc(l.x,l.z,l.id,1)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),clearModal:async()=>{await s.sdk.sendCloseModal();},send:async acts=>{for(const a of acts)await s.direct({...a,reason:'SDK'});}},profile,{maximum,cap,idleTicks:Number(process.env.IDLE_TICKS??1200),rotation});
   // Ticks per ore from the first ore to the last, so the walk and the login are not in it.
   const rolls=(r as {rolls?:number[]}).rolls;if(rolls&&rolls.length>1){const per=(rolls.at(-1)!-rolls[0]!)/(rolls.length-1);console.log(`MINING_RATE ores=${r.made} ticksPerOre=${per.toFixed(2)} xpPerTick=${(r.xp/r.made/per).toFixed(1)} runTicks=${r.ticks} runXpPerTick=${(r.xp/r.ticks).toFixed(1)}`);}

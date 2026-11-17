@@ -1,15 +1,25 @@
 import { expect, test } from 'bun:test';
 import { ownedBestLoadout } from './owned-loadout';
 import {
+    ELEMENTAL_RUNES,
+    SHOP_RESTOCK_COOLDOWN_TICKS,
+    WOODCUTTING_AXES_DESC,
+    bestElementalStaffForRunes,
     bestGearForSlot,
     bestMiningPickaxe,
     bestWoodcuttingAxe,
     canWearGear,
     crossedTierBoundary,
+    executeShopToolPurchase,
     gearById,
     normalizeCompletedQuests,
+    planBankToolSwap,
+    planToolShopUpgrade,
+    reconcileBankTool,
+    recordShopAttempt,
     selectProgressiveLoadout,
     shopCatalog,
+    shouldAttemptShopUpgrade,
     weaponSupportsTrainSkill,
 } from './gear-progression';
 
@@ -289,4 +299,290 @@ test('ownedBestLoadout resolves optional slots and 2h vs 1h+shield tradeoffs cle
     expect(res.state).toBe('ready');
     expect(res.selected.map(s => s.id)).toEqual([1319]);
     expect(bestGearForSlot('melee', 'weapon', { attack: 40 }, [])[0]?.id).toBe(1333);
+});
+
+test('bestElementalStaffForRunes recognizes battlestaves, gates members/stats, and prioritizes highest rune savings', () => {
+    // Battlestaves (1391..1399, 3053) are magic weapons, never melee weapons.
+    expect(bestGearForSlot('melee', 'weapon', { attack: 40 }, []).some(g => g.id === 1399 || g.id === 3053)).toBe(false);
+    expect(bestGearForSlot('magic', 'weapon', { magic: 30, attack: 30 }, []).some(g => g.id === 1399)).toBe(true);
+
+    // Curse (3 Earth + 2 Water) prefers Staff of earth (1385) over Staff of water (1383) and Staff of air (1381).
+    const curseRunes = [
+        ELEMENTAL_RUNES.earth,
+        ELEMENTAL_RUNES.earth,
+        ELEMENTAL_RUNES.earth,
+        ELEMENTAL_RUNES.water,
+        ELEMENTAL_RUNES.water,
+    ];
+    const staffMix = [
+        { id: 1381, count: 1 }, // Air
+        { id: 1383, count: 1 }, // Water
+        { id: 1385, count: 1 }, // Earth
+        { id: 1399, count: 1 }, // Earth battlestaff (Magic 30 / Attack 30)
+        { id: 1407, count: 1 }, // Mystic earth staff (Magic 40 / Attack 40)
+    ];
+
+    const low = bestElementalStaffForRunes(staffMix, { magic: 19, attack: 1 }, [], { runeIds: curseRunes });
+    expect(low.current?.item.id).toBe(1385);
+    expect(low.current?.providedRunes).toEqual([557]);
+    expect(low.nextUnlock?.id).toBe(1399);
+
+    const mid = bestElementalStaffForRunes(staffMix, { magic: 35, attack: 30 }, [], { runeIds: curseRunes });
+    expect(mid.current?.item.id).toBe(1399);
+    expect(mid.nextUnlock?.id).toBe(1407);
+
+    const high = bestElementalStaffForRunes(staffMix, { magic: 40, attack: 40 }, [], { runeIds: curseRunes });
+    expect(high.current?.item.id).toBe(1407);
+
+    // F2P restriction skips Mystic/Battlestaves cleanly.
+    const f2p = bestElementalStaffForRunes(staffMix, { magic: 40, attack: 40 }, [], { runeIds: curseRunes, members: false });
+    expect(f2p.current?.item.id).toBe(1385);
+
+    // Dual Fire + Earth runes select Mystic lava staff (3054) over single-element staves.
+    const lava = bestElementalStaffForRunes(
+        [{ id: 1385, count: 1 }, { id: 1387, count: 1 }, { id: 3054, count: 1 }],
+        { magic: 40, attack: 40 },
+        [],
+        { runeIds: [ELEMENTAL_RUNES.fire, ELEMENTAL_RUNES.earth] },
+    );
+    expect(lava.current?.item.id).toBe(3054);
+    expect(lava.current?.providedRunes).toEqual([554, 557]);
+});
+
+test('planToolShopUpgrade recommends Bob axes, Nurmof pickaxes, and Zaff elemental staffs within coin budget', () => {
+    // Bob's Axes (axeshop): Steel axe costs 200 (250 buffered), Iron axe costs 56 (70 buffered).
+    const axeSteel = planToolShopUpgrade('woodcutting-axe', [{ id: 1351, count: 1 }], 300, { woodcutting: 1, attack: 1 }, { allowedShops: ['axeshop'] });
+    expect(axeSteel?.target.id).toBe(1353);
+    expect(axeSteel?.shop.shop).toBe('axeshop');
+
+    const axeIron = planToolShopUpgrade('woodcutting-axe', [{ id: 1351, count: 1 }], 100, { woodcutting: 1, attack: 1 }, { allowedShops: ['axeshop'] });
+    expect(axeIron?.target.id).toBe(1349);
+
+    expect(planToolShopUpgrade('woodcutting-axe', [{ id: 1353, count: 1 }], 10000, { woodcutting: 20, attack: 20 }, { allowedShops: ['axeshop'] })).toBeNull();
+
+    // Nurmof's Pickaxe Shop (pickaxeshop): recommends best usable within Mining requirement and coins.
+    const pick21 = planToolShopUpgrade('mining-pickaxe', [{ id: 1265, count: 1 }], 2000, { mining: 21, attack: 1 }, { allowedShops: ['pickaxeshop'] });
+    expect(pick21?.target.id).toBe(1273); // Mithril pickaxe (cost 1300 -> budget 1625 <= 2000)
+
+    const pick41 = planToolShopUpgrade('mining-pickaxe', [{ id: 1271, count: 1 }], 50000, { mining: 41, attack: 40 }, { allowedShops: ['pickaxeshop'] });
+    expect(pick41?.target.id).toBe(1275); // Rune pickaxe (cost 32000 -> budget 40000 <= 50000)
+    expect(planToolShopUpgrade('mining-pickaxe', [{ id: 1271, count: 1 }], 50000, { mining: 41, attack: 40 }, { allowedShops: ['pickaxeshop'], onlyWhenStarterOrMissing: true })).toBeNull();
+
+    // Zaff's Staff Shop (staffshop): recommends Staff of earth for Curse when missing covering staff and funded.
+    const zaffEarth = planToolShopUpgrade('magic-staff', [], 2500, { magic: 19, attack: 1 }, {
+        allowedShops: ['staffshop'],
+        runeIds: [ELEMENTAL_RUNES.earth, ELEMENTAL_RUNES.earth, ELEMENTAL_RUNES.water],
+    });
+    expect(zaffEarth?.target.id).toBe(1385);
+    expect(zaffEarth?.shop.shop).toBe('staffshop');
+    expect(planToolShopUpgrade('magic-staff', [{ id: 1385, count: 1 }], 5000, { magic: 19, attack: 1 }, {
+        allowedShops: ['staffshop'],
+        runeIds: [ELEMENTAL_RUNES.earth],
+        onlyWhenStarterOrMissing: true,
+    })).toBeNull();
+});
+
+test('planBankToolSwap and reconcileBankTool withdraw, equip when Attack allows, and deposit inferior tools cleanly', async () => {
+    let bankOpen = true;
+    let gen = 1;
+    const bank: { id: number; name: string; count: number; slot?: number }[] = [
+        { id: 1359, name: 'Rune axe', count: 1, slot: 0 },
+    ];
+    const inv: { id: number; name: string; count: number; slot?: number }[] = [
+        { id: 1351, name: 'Bronze axe', count: 1, slot: 0 },
+    ];
+    const eq: { id: number; name: string; count: number; slot: number }[] = [];
+
+    const hooks = {
+        openBank: async () => { bankOpen = true; gen++; },
+        closeBank: async () => { bankOpen = false; },
+        withdrawItem: async (item: { id: number; name: string; count: number }, count: number) => {
+            const b = bank.find(r => r.id === item.id)!;
+            b.count -= count;
+            if (b.count <= 0) bank.splice(bank.indexOf(b), 1);
+            inv.push({ id: item.id, name: item.name, count });
+            gen++;
+        },
+        depositItem: async (item: { id: number; name: string; count: number }) => {
+            const idx = inv.findIndex(r => r.id === item.id);
+            const [removed] = inv.splice(idx, 1);
+            const existing = bank.find(r => r.id === removed!.id);
+            if (existing) existing.count += removed!.count;
+            else bank.push({ id: removed!.id, name: removed!.name, count: removed!.count });
+            gen++;
+        },
+        equipItem: async (item: { id: number; name: string; count: number }) => {
+            const idx = inv.findIndex(r => r.id === item.id);
+            const [removed] = inv.splice(idx, 1);
+            eq.push({ ...removed!, slot: 3 });
+        },
+        getInventory: () => inv,
+        getEquipment: () => eq,
+        getBankState: () => ({ isOpen: bankOpen, items: bank }),
+        getBankGeneration: () => bankOpen ? gen : undefined,
+        waitUntil: async (pred: () => boolean) => pred(),
+    };
+
+    // Attack 1 carries Rune axe in inventory and banks Bronze axe.
+    const lowSwap = planBankToolSwap({
+        targetId: 1359,
+        canWield: false,
+        inventory: inv,
+        equipment: eq,
+        bank,
+        toolGroupIds: WOODCUTTING_AXES_DESC,
+    });
+    expect(lowSwap).toEqual({
+        targetId: 1359,
+        withdrawFromBank: true,
+        equipInWeaponSlot: false,
+        depositInventoryIds: [1351],
+        alreadyActive: false,
+    });
+
+    const lowRes = await reconcileBankTool(hooks, { targetId: 1359, canWield: false, toolGroupIds: WOODCUTTING_AXES_DESC });
+    expect(lowRes).toEqual({ activeId: 1359, worn: false, changed: true });
+    expect(inv.map(i => i.id)).toEqual([1359]);
+    expect(bank.map(i => i.id)).toEqual([1351]);
+
+    // Attack 40 equips the carried Rune axe into slot 3 without needing another withdrawal.
+    const highRes = await reconcileBankTool(hooks, { targetId: 1359, canWield: true, toolGroupIds: WOODCUTTING_AXES_DESC });
+    expect(highRes).toEqual({ activeId: 1359, worn: true, changed: true });
+    expect(eq[0]?.id).toBe(1359);
+    expect(inv).toHaveLength(0);
+    expect(bank.map(i => i.id)).toEqual([1351]);
+});
+
+test('executeShopToolPurchase withdraws coins, buys upgraded tool cleanly, and reconciles spent coins', async () => {
+    let bankOpen = true;
+    let shopOpen = false;
+    let gen = 1;
+    const bank: { id: number; name: string; count: number; slot?: number }[] = [
+        { id: 995, name: 'Coins', count: 2000, slot: 0 },
+    ];
+    const inv: { id: number; name: string; count: number; slot?: number }[] = [];
+    const shopItems = [{ id: 1385, name: 'Staff of earth', count: 2, buyPrice: 1500, slot: 0 }];
+    const walks: string[] = [];
+
+    const hooks = {
+        openBank: async () => { bankOpen = true; gen++; },
+        closeBank: async () => { bankOpen = false; },
+        withdrawItem: async (item: { id: number; name: string; count: number }, count: number) => {
+            const b = bank.find(r => r.id === item.id)!;
+            b.count -= count;
+            inv.push({ id: item.id, name: item.name, count });
+            gen++;
+        },
+        depositItem: async () => undefined,
+        getInventory: () => inv,
+        getEquipment: () => [],
+        getBankState: () => ({ isOpen: bankOpen, items: bank }),
+        getBankGeneration: () => bankOpen ? gen : undefined,
+        walkTo: async (spot: { x: number; z: number }) => { walks.push(`${spot.x},${spot.z}`); return true; },
+        openShop: async () => { shopOpen = true; return { success: true }; },
+        buyFromShop: async (row: any, n: number) => {
+            row.count -= n;
+            const c = inv.find(i => i.id === 995)!;
+            c.count -= row.buyPrice! * n;
+            inv.push({ id: row.id, name: row.name, count: n });
+            return { success: true };
+        },
+        closeShop: async () => { shopOpen = false; },
+        getShopState: () => ({ isOpen: shopOpen, shopItems }),
+        waitUntil: async (pred: () => boolean) => pred(),
+    };
+
+    const res = await executeShopToolPurchase(hooks, {
+        targetId: 1385,
+        shop: 'staffshop',
+        maxBudget: 1875,
+        returnBankSpot: { x: 3185, z: 3436 },
+    });
+    expect(res).toEqual({ bought: true, id: 1385, coinsSpent: 1500 });
+    expect(walks).toEqual(['3203,3433', '3185,3436']);
+    expect(bank.find(i => i.id === 995)?.count).toBe(125);
+    expect(inv.find(i => i.id === 995)?.count).toBe(375);
+    expect(inv.find(i => i.id === 1385)?.count).toBe(1);
+});
+
+test('executeShopToolPurchase closes shop, walks back to bank, and re-deposits withdrawn coins when stock absent or shop fails', async () => {
+    for (const mode of ['empty-stock', 'shop-refused', 'walk-failed'] as const) {
+        let bankOpen = true;
+        let shopOpen = false;
+        let gen = 1;
+        const bank: { id: number; name: string; count: number; slot?: number }[] = [
+            { id: 995, name: 'Coins', count: 2000, slot: 0 },
+        ];
+        const inv: { id: number; name: string; count: number; slot?: number }[] = [];
+        const walks: string[] = [];
+
+        const hooks = {
+            openBank: async () => { bankOpen = true; gen++; },
+            closeBank: async () => { bankOpen = false; },
+            withdrawItem: async (item: { id: number; name: string; count: number }, count: number) => {
+                const b = bank.find(r => r.id === item.id)!;
+                b.count -= count;
+                inv.push({ id: item.id, name: item.name, count, slot: 0 });
+                gen++;
+            },
+            depositItem: async (item: { id: number; name: string; count: number }, count: number) => {
+                const amt = count === -1 ? item.count : count;
+                const idx = inv.findIndex(r => r.id === item.id);
+                if (idx >= 0) {
+                    inv[idx]!.count -= amt;
+                    if (inv[idx]!.count <= 0) inv.splice(idx, 1);
+                }
+                const b = bank.find(r => r.id === item.id);
+                if (b) b.count += amt;
+                else bank.push({ id: item.id, name: item.name, count: amt, slot: 0 });
+                gen++;
+            },
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getBankState: () => ({ isOpen: bankOpen, items: bank }),
+            getBankGeneration: () => bankOpen ? gen : undefined,
+            walkTo: async (spot: { x: number; z: number }) => {
+                walks.push(`${spot.x},${spot.z}`);
+                if (mode === 'walk-failed' && spot.x === 2998) return false;
+                return true;
+            },
+            openShop: async () => {
+                if (mode === 'shop-refused') return { success: false, message: 'busy' };
+                shopOpen = true;
+                return { success: true };
+            },
+            buyFromShop: async () => ({ success: false }),
+            closeShop: async () => { shopOpen = false; },
+            getShopState: () => ({ isOpen: shopOpen, shopItems: [{ id: 1275, name: 'Rune pickaxe', count: 0, buyPrice: 32000, slot: 0 }] }),
+            waitUntil: async (pred: () => boolean) => pred(),
+        };
+
+        const res = await executeShopToolPurchase(hooks, {
+            targetId: 1275,
+            shop: 'pickaxeshop',
+            maxBudget: 1500,
+            returnBankSpot: { x: 3013, z: 3355 },
+        });
+        expect(res.bought).toBe(false);
+        expect(res.coinsSpent).toBe(0);
+        expect(shopOpen).toBe(false);
+        expect(walks).toEqual(['2998,9844', '3013,3355']);
+        expect(bank.find(i => i.id === 995)?.count).toBe(2000);
+        expect(inv.filter(i => i.id === 995)).toHaveLength(0);
+    }
+});
+
+test('shouldAttemptShopUpgrade gates repeat checks per tier and cools down failed shelf walks for 700 ticks', () => {
+    const gate: { checkedTier?: number; failedAt?: { tier: number; tick: number } } = {};
+    expect(shouldAttemptShopUpgrade(gate, 21, 100)).toBe(true);
+
+    recordShopAttempt(gate, 21, 100, false);
+    expect(shouldAttemptShopUpgrade(gate, 21, 101)).toBe(false);
+    expect(shouldAttemptShopUpgrade(gate, 21, 100 + SHOP_RESTOCK_COOLDOWN_TICKS - 1)).toBe(false);
+    expect(shouldAttemptShopUpgrade(gate, 31, 150)).toBe(true);
+    expect(shouldAttemptShopUpgrade(gate, 21, 100 + SHOP_RESTOCK_COOLDOWN_TICKS)).toBe(true);
+
+    recordShopAttempt(gate, 31, 820, true);
+    expect(shouldAttemptShopUpgrade(gate, 31, 2000)).toBe(false);
+    expect(shouldAttemptShopUpgrade(gate, 41, 2000)).toBe(true);
 });

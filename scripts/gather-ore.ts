@@ -6,7 +6,23 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
 import { runSoftenClay } from './soften-clay';
 import { bankCargo } from '../packages/core/src/cargo';
+import { depositObserved } from '../packages/core/src/deposit';
 import { leaveRuneStarter } from './rune-starter';
+import {
+    MINING_PICKAXES_DESC,
+    type ShopRetryGate,
+    bestMiningPickaxe,
+    crossedTierBoundary,
+    executeShopToolPurchase,
+    planToolShopUpgrade,
+    readSkillLevels,
+    reconcileBankTool,
+    recordShopAttempt,
+    sessionShopGate,
+    sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
+} from '../packages/planner/src/gear-progression';
 
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyLoc } from '../vendor/rs-sdk/sdk/types';
@@ -64,6 +80,94 @@ export async function mineRock(s: Session, rock: NearbyLoc, over: () => boolean,
 }
 
 export function oreStalled(waitTicks: number, limit: number): boolean { return waitTicks >= limit; }
+
+export const ORE_TOOL_TIERS = [5, 6, 20, 21, 30, 31, 40, 41] as const;
+
+export function selectActiveOrePickaxe(s: Session, extra: readonly { id: number; count: number }[] = []) {
+    const mining = s.sdk.getSkill('Mining')?.level ?? 1;
+    const attack = s.sdk.getSkill('Attack')?.baseLevel ?? s.sdk.getSkill('Attack')?.level ?? 1;
+    const eq = (s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? []).filter(e => e.slot === 3);
+    return bestMiningPickaxe([...s.sdk.getInventory(), ...eq, ...extra], { mining, attack });
+}
+
+const oreShopGates = new WeakMap<object, ShopRetryGate>();
+
+export async function reconcileOrePickaxeAtBank(
+    s: Session,
+    options: {
+        bankSpot: { x: number; z: number; level?: number };
+        stop: () => boolean;
+        allowShop?: boolean;
+        refusedWields?: Set<number>;
+        walkTo?: (spot: { x: number; z: number; level?: number }) => Promise<boolean>;
+        shopGate?: ShopRetryGate;
+    },
+): Promise<{ activeId: number | null; worn: boolean; bought?: number }> {
+    const openBank = async () => {
+        if (!s.sdk.getState()?.bank?.isOpen) await s.bot.openBank();
+    };
+    const hooks = sessionToolHooks(s, {
+        openBank,
+        walkTo: options.walkTo ?? (async spot => {
+            const { approach, walkTargetPersist } = await import('./walk-to');
+            return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, options.stop))).ok;
+        }),
+        waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),
+        stop: options.stop,
+    });
+    await openBank();
+    if (!await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }) || options.stop()) {
+        return { activeId: selectActiveOrePickaxe(s).current?.item.id ?? null, worn: false };
+    }
+
+    const wornItems = () => s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? [];
+    const bankItems = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
+    const levels = {
+        mining: s.sdk.getSkill('Mining')?.level ?? 1,
+        attack: s.sdk.getSkill('Attack')?.baseLevel ?? s.sdk.getSkill('Attack')?.level ?? 1,
+    };
+    let bought: number | undefined;
+    const miningTier = tierBoundaryOf(levels.mining, [1, 6, 21, 31, 41]);
+    const shopGate = sessionShopGate(oreShopGates, s, options.shopGate);
+
+    if (options.allowShop !== false && shouldAttemptShopUpgrade(shopGate, miningTier, s.tick?.() ?? 0)) {
+        const stock = [...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...bankItems];
+        const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
+        const shopPlan = planToolShopUpgrade('mining-pickaxe', stock, totalCoins, levels, {
+            allowedShops: ['pickaxeshop'],
+            onlyWhenStarterOrMissing: false,
+        });
+        if (shopPlan && !options.stop()) {
+            const res = await executeShopToolPurchase(hooks, {
+                targetId: shopPlan.target.id,
+                shop: 'pickaxeshop',
+                maxBudget: shopPlan.coinBudgetNeeded,
+                returnBankSpot: options.bankSpot,
+            });
+            recordShopAttempt(shopGate, miningTier, s.tick?.() ?? 0, res.bought);
+            if (res.bought) {
+                bought = res.id;
+                console.log(`ORE_SHOP_PICKAXE ${JSON.stringify(res)}`);
+                await openBank();
+                await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 });
+                const spareCoins = s.sdk.getInventory().find(i => i.id === 995);
+                if (spareCoins && !options.stop()) await depositObserved(s, spareCoins);
+            }
+        }
+    }
+
+    const latestBank = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
+    const rec = bestMiningPickaxe([...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...latestBank], levels);
+    if (!rec.current) return { activeId: null, worn: false, bought };
+
+    const res = await reconcileBankTool(hooks, {
+        targetId: rec.current.item.id,
+        canWield: rec.current.canWield,
+        toolGroupIds: MINING_PICKAXES_DESC,
+        refusedWields: options.refusedWields,
+    });
+    return { activeId: res.activeId, worn: res.worn, bought };
+}
 
 export function oreDamageEvidence(st:any,before:number,after:number,tick:number) {
     if(before<=0||after<=0||after>=before)return;
@@ -189,13 +293,15 @@ try {
         return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
     };
 
+    const refusedPickWields = new Set<number>();
+    let toolLevels = readSkillLevels(s.sdk);
     const travel = async (destination:'bank'|'mine') => {
         const p=destination==='bank'?BANK_SPOT:MINE_SPOT;
         return walk(p.x,p.z,destination==='bank'?2:3);
     };
-    const bank = async () => {
+    const bank = async (forceToolCheck = false) => {
         const n = oreCount();
-        if (n === 0) return;
+        if (n === 0 && !forceToolCheck) return;
         if(!await travel('bank'))return;
         if(damage||requestedStop||ended||died)return;
         const b = await s.bot.openBank();
@@ -204,15 +310,24 @@ try {
             await waitTicks(s, 2);
             return;
         }
-        for (const id of new Set(s.sdk.getInventory().filter(i => ORE.test(i.name)).map(i => i.id))) {
-            const item = s.sdk.getInventory().find(i => i.id === id);
-            if(item) await s.bot.depositItem(item, -1);
+        if (n > 0) {
+            for (const id of new Set(s.sdk.getInventory().filter(i => ORE.test(i.name)).map(i => i.id))) {
+                const item = s.sdk.getInventory().find(i => i.id === id);
+                if(item) await s.bot.depositItem(item, -1);
+            }
+            await waitTicks(s, 1);
+            const after = oreCount();
+            banked += n - after;
+            bankTrips++;
+            if(!over())await bankCargo(s, [ORE], 0, { stopped: over });
         }
-        await waitTicks(s, 1);
-        const after = oreCount();
-        banked += n - after;
-        bankTrips++;
-        if(!over())await bankCargo(s, [ORE], 0, { stopped: over });
+        if (!over()) {
+            await reconcileOrePickaxeAtBank(s, {
+                bankSpot: BANK_SPOT,
+                stop: over,
+                refusedWields: refusedPickWields,
+            });
+        }
         await s.bot.closeInterface();
         await waitTicks(s, 1);
         console.log(`MILESTONE bank t=${used()} banked=${banked} totalMined=${mined}`);
@@ -238,7 +353,7 @@ try {
         const problem=mixedOreCombatProblem(pos()?.combatLevel);
         if(problem)throw Error(problem);
     }
-    if ((pos()?.worldZ ?? 0) < 3330 && !s.sdk.getInventory().some(i=>/pickaxe$/i.test(i.name))) {
+    if ((pos()?.worldZ ?? 0) < 3330 && !selectActiveOrePickaxe(s).current) {
         // Bob sells the bronze pickaxe for one coin. Bootstrap here before heading north.
         await walk(3222,3218,3);
         for(let i=0;i<8 && countItems(s,/^coins$/i)<2;i++) {
@@ -258,27 +373,32 @@ try {
             if (!(await walk(x!,z!,3))) throw new Error(`cannot reach safe mine approach ${x},${z}`);
         }
     }
-    // Keep a ready miner at the mine. Only visit storage for junk or a missing tool.
+    // Keep a ready miner at the mine unless carrying junk, missing a usable pickaxe, or not yet at mine to inspect bank upgrades.
+    const initialPick = selectActiveOrePickaxe(s).current;
+    const atMineNow = !!pos() && Math.max(Math.abs(pos()!.worldX - MINE_SPOT.x), Math.abs(pos()!.worldZ - MINE_SPOT.z)) <= 15;
     if (s.sdk.getInventory().some(i=>!/pickaxe$|^(shrimps|bread|trout|salmon)$/i.test(i.name)) ||
-        !s.sdk.getInventory().some(i=>/pickaxe$/i.test(i.name))) {
-    if(!await travel('bank'))throw Error('no ore progress: cannot reach bank route');
-    const opened = await s.bot.openBank();
-    if (!opened.success) throw new Error(`initial bank: ${opened.message}`);
-    // Deposit-all clears every slot of that ID. Repeating stale slot entries waits on absent items.
-    const junkIds=new Set(s.sdk.getInventory().filter(i=>!/pickaxe$|^(shrimps|bread|trout|salmon)$/i.test(i.name)).map(i=>i.id));
-    const oreBeforeInitialBank = oreCount();
-    for(const id of junkIds) {
-        const item=s.sdk.getInventory().find(i=>i.id===id);
-        if(item) await s.bot.depositItem(item,-1);
+        !initialPick ||
+        !atMineNow ||
+        (initialPick.item.id === 1265 && (s.sdk.getSkill('Mining')?.level ?? 1) >= 6)) {
+        if(!await travel('bank'))throw Error('no ore progress: cannot reach bank route');
+        const opened = await s.bot.openBank();
+        if (!opened.success) throw new Error(`initial bank: ${opened.message}`);
+        const junkIds=new Set(s.sdk.getInventory().filter(i=>!/pickaxe$|^(shrimps|bread|trout|salmon)$/i.test(i.name)).map(i=>i.id));
+        const oreBeforeInitialBank = oreCount();
+        for(const id of junkIds) {
+            const item=s.sdk.getInventory().find(i=>i.id===id);
+            if(item) await s.bot.depositItem(item,-1);
+        }
+        banked += oreBeforeInitialBank - oreCount();
+        const pickRes = await reconcileOrePickaxeAtBank(s, {
+            bankSpot: BANK_SPOT,
+            stop: over,
+            refusedWields: refusedPickWields,
+        });
+        if (!pickRes.activeId) await s.bot.withdrawItem(/^coins$/i, 25);
+        await s.bot.closeBank();
     }
-    banked += oreBeforeInitialBank - oreCount();
-    if (!s.sdk.getInventory().some(i=>/pickaxe$/i.test(i.name))) {
-        await s.bot.withdrawItem(/pickaxe$/i, 1);
-        if (!s.sdk.getInventory().some(i=>/pickaxe$/i.test(i.name))) await s.bot.withdrawItem(/^coins$/i, 25);
-    }
-    await s.bot.closeBank();
-    }
-    if (!s.sdk.getInventory().some(i=>/pickaxe$/i.test(i.name))) {
+    if (!selectActiveOrePickaxe(s).current) {
         console.log('MILESTONE recover pickaxe from Bob');
         const world = await getWorld();
         const there = await goTo(s, world, { x:3231,z:3203,level:0 }, accountOf(s));
@@ -324,8 +444,15 @@ try {
         if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen)
             await s.direct({ type: 'closeModal', reason: 'SDK' });
         const r = await mineRock(s, rock, over, Math.min(60, NO_ORE_TICKS - oreWaitTicks), ORE);
-        if (r.reason === 'mined') { mined += r.ore; oreWaitTicks = 0; }
-        else {
+        if (r.reason === 'mined') {
+            mined += r.ore;
+            oreWaitTicks = 0;
+            const curToolLevels = readSkillLevels(s.sdk);
+            if (crossedTierBoundary(toolLevels, curToolLevels, ['mining', 'attack'], ORE_TOOL_TIERS)) {
+                toolLevels = curToolLevels;
+                await bank(true);
+            }
+        } else {
             const adjacent=peers.filter(p=>Math.max(Math.abs(p.x-rock.x),Math.abs(p.z-rock.z))<=1).length;
             console.log(`WARN mine attempt=${attempt} rock=${rock.id}@${rock.x},${rock.z} players=${peers.length} adjacent=${adjacent} reason=${r.reason} ticks=${r.ticks} observedOre=${r.ore} observedXp=${r.xp}`);
             oreWaitTicks += r.ticks;

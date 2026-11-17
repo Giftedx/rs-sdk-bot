@@ -16,9 +16,9 @@ for(const mode of ['stalled','productive','stopped','event-stalled','last-tick']
     }finally{clearInterval(timer);}
 },2000);
 
-test('isEssence identifies Rune essence and Pure essence IDs', () => {
-    expect(isEssence(1436)).toBe(true); // Rune essence
-    expect(isEssence(7936)).toBe(true); // Pure essence
+test('isEssence identifies rev-289 Rune essence ID only (no post-2004 Pure essence)', () => {
+    expect(isEssence(1436)).toBe(true);  // Rune essence
+    expect(isEssence(7936)).toBe(false); // Pure essence is post-rev-289
     expect(isEssence(995)).toBe(false);  // Coins
     expect(isEssence(1265)).toBe(false); // Bronze pickaxe
 });
