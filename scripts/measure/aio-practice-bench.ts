@@ -202,8 +202,9 @@ const OUTPUT_DIR = process.env.BENCH_OUTPUT_DIR ?? '.practice/aio-bench/output';
 const TRACE_DIR = process.env.BENCH_TRACE;
 
 // Kept results: a lockstep case on a fresh engine with one seed gives the same row each time, so the row is stored
-// under a hash of everything that can change it: the seed, the case, its preset, the Q_* environment, the vendor
-// patch, and the content of the worker script with every file it imports by a relative path. A data file a worker
+// under a hash of the seed, the fixtures, engine rules, job files, acceptance rules, Q_* environment, vendor patch,
+// and the relative import closures of the bench and worker. The bench closure includes helpers and captured
+// constants used by pass predicates; a function's text alone does not describe its closure. A data file a worker
 // reads at run time (knowledge/, vendor content) is not in the hash: use BENCH_CACHE=0 after such a change.
 const CACHE = FRESH && LOCKSTEP && process.env.BENCH_CACHE !== '0';
 const CACHE_DIR = '.practice/aio-bench/cache';
@@ -222,18 +223,30 @@ function importClosure(entry: string, seen = new Set<string>()): Set<string> {
 }
 // The start check and the run both ask for the hash of a case, so one run computes it once.
 const caseHashes = new Map<string, string>();
+let harnessHash: string | undefined;
+function benchHarnessHash(): string {
+  if (harnessHash === undefined) {
+    const h = createHash('sha256');
+    for (const file of [...importClosure(import.meta.path)].sort()) { h.update(file.slice(root.length)); h.update(readFileSync(file)); }
+    harnessHash = h.digest('hex');
+  }
+  return harnessHash;
+}
 function caseHash(c: BenchCase): string {
   let hash = caseHashes.get(c.key);
   if (!hash) caseHashes.set(c.key, hash = computeCaseHash(c));
   return hash;
 }
-function computeCaseHash(c: BenchCase): string {
+export function computeCaseHash(c: BenchCase): string {
   let worker = c.script;
   const category = /aio-([a-z]+)\.ts$/.exec(c.script)?.[1];
   if (category) { try { worker = resolveAioStep(category, c.scriptArgs).script; } catch { /* a dispatcher-only case hashes the dispatcher */ } }
   const h = createHash('sha256');
   h.update(JSON.stringify({ seed: SEED, key: c.key, script: c.script, args: c.scriptArgs, preset: c.presetConfig ?? PRESETS[c.preset], runs: RUNS,
+    engineEnv: c.engineEnv, companions: c.companions?.map(k => ({suffix: k.suffix, preset: k.presetConfig ?? PRESETS[k.preset]})),
+    jobFiles: c.jobFiles, sharedJobFiles: BENCH_JOB_FILES, pass: c.pass.toString(), output: c.output?.toString(), timeoutMs: c.timeoutMs ?? TIMEOUT,
     env: Object.entries(process.env).filter(([k]) => k.startsWith('Q_') || k === 'SIM_BUSY_MS' || SET_KEYS.includes(k)).sort() }));
+  h.update(benchHarnessHash());
   h.update(readFileSync(resolve(root, 'patches/rs-sdk-working.patch')));
   for (const file of [...new Set([...importClosure(c.script), ...importClosure(worker)])].sort()) { h.update(file.slice(root.length)); h.update(readFileSync(file)); }
   return h.digest('hex').slice(0, 32);
