@@ -5,6 +5,45 @@ const now=100000,obs=<T>(value:T)=>({at:now,value});
 const account=(over:Partial<ObservedAccount>={}):ObservedAccount=>({account:'Trainee',at:now,skills:{Ranged:{level:40,xp:xpForLevel(40)}},inventory:obs({}),equipment:obs({}),bank:obs({}),quests:obs({}),...over});
 const intent:WorkIntent={kind:'train',skill:'Ranged',targetLevel:50};
 const method=(id:string,rate:number|null,over:Partial<ProgressionMethod>={}):ProgressionMethod=>({id,step:{script:`scripts/${id}.ts`,args:[],env:{}},source:'s1',effects:{xp:{Ranged:1}},rate:{unitsPerTick:rate,basis:rate===null?'unknown':'model',evidence:'content fixture'},costs:{setupTicks:0,travelTicks:0,acquisitionTicks:0,unlockTicks:0},...over});
+
+test('compound training completes only after every observed skill reaches its target',()=>{
+ const goal={kind:'train-all',targets:{Ranged:50,Defence:50}} as unknown as WorkIntent;
+ const a=account({skills:{Ranged:{level:50,xp:xpForLevel(50)},Defence:{level:40,xp:xpForLevel(40)}}});
+ const defence=method('defence',100,{effects:{xp:{Defence:1}}});
+ const pending=chooseProgression(goal,a,[defence,method('unknown',null)],{now});
+ expect(pending.state).toBe('execute');expect(pending.selected).toBe('defence');
+ expect(pending.expectedTicks).toBe((xpForLevel(50)-xpForLevel(40))/100);
+ expect(chooseProgression(goal,{...a,skills:{...a.skills,Defence:{level:50,xp:xpForLevel(50)}}},[],{now}).state).toBe('complete');
+ expect(chooseProgression(goal,account(),[defence],{now}).state).toBe('observe');
+});
+
+test('compound training joins finite methods and preserves each qualification and build ceiling',()=>{
+ const goal={kind:'train-all',targets:{Ranged:41,Defence:41}} as unknown as WorkIntent;
+ const a=account({skills:{Ranged:{level:40,xp:xpForLevel(40)},Defence:{level:40,xp:xpForLevel(40)}}});
+ const ranged=method('ranged',100,{qualification:{source:'s1',bands:[{}]}}),defence=method('defence',100,{effects:{xp:{Defence:1}},qualification:{source:'s1',bands:[{}]}});
+ const both=chooseProgression(goal,a,[ranged,defence],{now,requireQualification:true});
+ expect(both.state).toBe('execute');expect(both.path.map(step=>step.method).sort()).toEqual(['defence','ranged']);
+ const missing={...defence,qualification:undefined};
+ expect(chooseProgression(goal,a,[ranged,missing],{now,requireQualification:true}).state).not.toBe('execute');
+ expect(chooseProgression(goal,{...a,build:{maxLevels:{Defence:40}}},[ranged,defence],{now}).state).toBe('blocked');
+ expect(chooseProgression(goal,a,[method('side-xp',100,{effects:{xp:{Ranged:1,Defence:1,Strength:100}}})],{now}).state).toBe('execute');
+ const capped={...a,skills:{...a.skills,Strength:{level:1,xp:0}},build:{maxLevels:{Strength:1}}};
+ expect(chooseProgression(goal,capped,[method('side-xp',100,{effects:{xp:{Ranged:1,Defence:1,Strength:100}}})],{now}).state).toBe('blocked');
+});
+
+test('compound training refuses empty, invalid, duplicate and unobserved target maps',()=>{
+ for(const targets of [{},{Ranged:100},{Ranged:0},{Ranged:40.5},{Ranged:41,ranged:41},{Nonsense:41}]){
+  const goal={kind:'train-all',targets} as unknown as WorkIntent;
+  expect(chooseProgression(goal,account(),[method('ranged',100)],{now}).state).toBe('observe');
+ }
+});
+
+test('compound side XP needs an observed starting level for every protected build skill',()=>{
+ const goal={kind:'train-all',targets:{Ranged:41,Defence:41}} as unknown as WorkIntent;
+ const a=account({skills:{Ranged:{level:40,xp:xpForLevel(40)},Defence:{level:40,xp:xpForLevel(40)}},build:{maxLevels:{Strength:50}}});
+ const result=chooseProgression(goal,a,[method('side-xp',100,{effects:{xp:{Ranged:1,Defence:1,Strength:1}}})],{now});
+ expect(result.state).toBe('observe');expect(result.reason).toContain('Strength');
+});
 test('total time includes setup, travel and recurring resupply',()=>{
  const fast=method('fast',100,{costs:{setupTicks:1000,travelTicks:1000,acquisitionTicks:0,unlockTicks:0,resupply:{everyUnits:100,ticks:2}}});
  expect(chooseProgression(intent,account(),[fast,method('near',10)],{now}).selected).toBe('near');
