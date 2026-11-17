@@ -29,10 +29,31 @@ import { xpForLevel } from '../packages/planner/src/curve';
 import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { COW_NORTH_BANK, atNorthBank } from './cow-stage';
-import { walkTargetPersist } from './walk-to';
+import { approach, walkTargetPersist } from './walk-to';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
+import { depositObserved } from '../packages/core/src/deposit';
+import {
+    ELEMENTAL_STAFF_RUNES,
+    bestElementalStaffForRunes,
+    executeShopToolPurchase,
+    planToolShopUpgrade,
+    readSkillLevels,
+    reconcileBankTool,
+    sessionToolHooks,
+} from '../packages/planner/src/gear-progression';
 
 type Item = { id: number; count: number };
+export const ALL_ELEMENTAL_STAFF_IDS = Object.keys(ELEMENTAL_STAFF_RUNES).map(Number);
+
+export function freeRunesFromEquipment(
+    equipment: readonly { id: number; slot: number }[] = [],
+): Set<number> {
+    const out = new Set<number>();
+    const weapon = equipment.find(e => e.slot === 3);
+    if (!weapon) return out;
+    for (const r of ELEMENTAL_STAFF_RUNES[weapon.id] ?? []) out.add(r);
+    return out;
+}
 export const BODY = 559, WATER = 555, EARTH = 557, MIND = 558, AIR = 556;
 // Best spell first. `runes` are a cast's cost.
 export const SPLASH_SPELLS = [
@@ -68,13 +89,14 @@ const count = (items: readonly Item[], id: number) => items.filter(i => i.id ===
 
 // The spell a level casts.
 export const splashSpell = (level: number) => SPLASH_SPELLS.find(s => level >= s.level) ?? SPLASH_SPELLS[SPLASH_SPELLS.length - 1]!;
-export const hasSpellRunes = (spell: typeof SPLASH_SPELLS[number], pack: readonly Item[]) =>
-    Object.entries(spell.runes).every(([id, each]) => count(pack, Number(id)) >= each);
+export const hasSpellRunes = (spell: typeof SPLASH_SPELLS[number], pack: readonly Item[], freeRunes?: ReadonlySet<number>) =>
+    Object.entries(spell.runes).every(([id, each]) => freeRunes?.has(Number(id)) || count(pack, Number(id)) >= each);
 // The best spell of the level that the pack has the runes for; the level's best spell when the pack pays for none.
-export const packSpell = (level: number, pack: readonly Item[]) => SPLASH_SPELLS.find(s => level >= s.level && hasSpellRunes(s, pack)) ?? splashSpell(level);
+export const packSpell = (level: number, pack: readonly Item[], freeRunes?: ReadonlySet<number>) =>
+    SPLASH_SPELLS.find(s => level >= s.level && hasSpellRunes(s, pack, freeRunes)) ?? splashSpell(level);
 // Stat-lowering debuff spells available at this level with held runes, best XP first.
-export const splashDebuffSpells = (level: number, pack: readonly Item[]) =>
-    SPLASH_SPELLS.filter(s => s.component !== 'magic:wind_strike' && level >= s.level && hasSpellRunes(s, pack));
+export const splashDebuffSpells = (level: number, pack: readonly Item[], freeRunes?: ReadonlySet<number>) =>
+    SPLASH_SPELLS.filter(s => s.component !== 'magic:wind_strike' && level >= s.level && hasSpellRunes(s, pack, freeRunes));
 // Picks the nearest in-reach target for the highest-XP spell not on cooldown for that target.
 export function pickSplashTarget<T extends { index: number; distance: number }>(
     targets: readonly T[],
@@ -89,7 +111,7 @@ export function pickSplashTarget<T extends { index: number; distance: number }>(
     return null;
 }
 // Casts from this experience to the target level, spell by spell as the levels unlock them, and the runes they cost.
-export function splashPlan(xp: number, target: number): { casts: number; runes: Record<number, number> } {
+export function splashPlan(xp: number, target: number, freeRunes?: ReadonlySet<number>): { casts: number; runes: Record<number, number> } {
     const runes: Record<number, number> = Object.fromEntries(SPLASH_RUNES.map(id => [id, 0])), goal = xpForLevel(target);
     let casts = 0, at = xp;
     for (const spell of [...SPLASH_SPELLS].reverse()) {
@@ -97,9 +119,103 @@ export function splashPlan(xp: number, target: number): { casts: number; runes: 
         const better = SPLASH_SPELLS[SPLASH_SPELLS.indexOf(spell) - 1], until = Math.min(goal, better ? xpForLevel(better.level) : goal);
         const n = Math.max(0, Math.ceil((until - at) / spell.xp));
         casts += n; at += n * spell.xp;
-        for (const [id, each] of Object.entries(spell.runes)) runes[Number(id)]! += n * each;
+        for (const [id, each] of Object.entries(spell.runes)) {
+            const runeId = Number(id);
+            if (!freeRunes?.has(runeId)) runes[runeId]! += n * each;
+        }
     }
     return { casts, runes };
+}
+
+export function selectSplashPriorityRunes(xp: number, target: number): number[] {
+    const { runes } = splashPlan(xp, target);
+    const ordered: number[] = [];
+    const pairs = Object.entries(runes)
+        .map(([id, n]) => [Number(id), n] as const)
+        .filter(([, n]) => n > 0)
+        .sort((a, b) => b[1] - a[1]);
+    for (const [id, n] of pairs) {
+        const cap = Math.min(20, n);
+        for (let k = 0; k < cap; k++) ordered.push(id);
+    }
+    return ordered;
+}
+
+export async function prepareSplashStaffAtBank(
+    s: Session,
+    options: {
+        xp: number;
+        target: number;
+        bankSpot?: { x: number; z: number; level?: number };
+        allowZaffShop?: boolean;
+        members?: boolean;
+        stop: () => boolean;
+        walkTo?: (spot: { x: number; z: number; level?: number }) => Promise<boolean>;
+    },
+): Promise<{ activeId: number | null; bought?: number; freeRunes: Set<number> }> {
+    const openBank = async () => {
+        if (!s.sdk.getState()?.bank?.isOpen) await s.bot.openBank();
+    };
+    const hooks = sessionToolHooks(s, {
+        openBank,
+        walkTo: options.walkTo ?? (async spot => (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, options.stop))).ok),
+        waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),
+        stop: options.stop,
+    });
+    const runeIds = selectSplashPriorityRunes(options.xp, options.target);
+    const levels = readSkillLevels(s.sdk);
+    const members = options.members ?? true;
+    const eq = () => s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? [];
+    const bankItems = () => s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
+
+    await openBank();
+    if (!await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }) || options.stop()) {
+        return { activeId: eq().find(e => e.slot === 3)?.id ?? null, freeRunes: freeRunesFromEquipment(eq()) };
+    }
+
+    let bought: number | undefined;
+    if (options.allowZaffShop) {
+        const stock = [...s.sdk.getInventory(), ...eq().filter(e => e.slot === 3), ...bankItems()];
+        const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
+        const shopPlan = planToolShopUpgrade('magic-staff', stock, totalCoins, levels, {
+            allowedShops: ['staffshop'],
+            onlyWhenStarterOrMissing: true,
+            runeIds,
+            members,
+        });
+        if (shopPlan && !options.stop()) {
+            const res = await executeShopToolPurchase(hooks, {
+                targetId: shopPlan.target.id,
+                shop: 'staffshop',
+                maxBudget: shopPlan.coinBudgetNeeded,
+                returnBankSpot: options.bankSpot ?? COW_NORTH_BANK,
+            });
+            if (res.bought) {
+                bought = res.id;
+                console.log(`SPLASH_SHOP_STAFF ${JSON.stringify(res)}`);
+                await openBank();
+                await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 });
+                const spareCoins = s.sdk.getInventory().find(i => i.id === 995);
+                if (spareCoins && !options.stop()) await depositObserved(s, spareCoins);
+            }
+        }
+    }
+
+    const rec = bestElementalStaffForRunes([...s.sdk.getInventory(), ...eq().filter(e => e.slot === 3), ...bankItems()], levels, [], {
+        runeIds,
+        members,
+        requireWieldable: true,
+    }).current;
+    if (!rec) {
+        return { activeId: eq().find(e => e.slot === 3)?.id ?? null, bought, freeRunes: freeRunesFromEquipment(eq()) };
+    }
+    const swapped = await reconcileBankTool(hooks, {
+        targetId: rec.item.id,
+        canWield: true,
+        allowReplaceWeapon: true,
+        toolGroupIds: ALL_ELEMENTAL_STAFF_IDS,
+    });
+    return { activeId: swapped.activeId, bought, freeRunes: freeRunesFromEquipment(eq()) };
 }
 // Whether a cast from `from` reaches a cow whose south-west tile is `sw`: in range and in sight of its whole footprint.
 export function castReaches(from: { x: number; z: number }, sw: { x: number; z: number }, range: number = CAST_RANGE, size: number = COW_SIZE): boolean {
@@ -147,20 +263,29 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
         }
     };
     const runeIds = new Set<number>(SPLASH_RUNES);
+    const eq = () => s.sdk.getEquipment?.() ?? st()?.equipment ?? [];
+    const activeFreeRunes = () => freeRunesFromEquipment(eq());
     // A site with no bank casts the best spell that the pack pays for: the starter pack has runes for 2 Confuse casts
     // and 15 Wind Strikes.
-    const spellNow = () => site.bank ? splashSpell(level()) : packSpell(level(), inv());
-    const affordable = () => site.bank ? splashDebuffSpells(level(), inv()).length > 0 : hasSpellRunes(spellNow(), inv());
+    const spellNow = () => site.bank ? splashSpell(level()) : packSpell(level(), inv(), activeFreeRunes());
+    const affordable = () => site.bank ? splashDebuffSpells(level(), inv(), activeFreeRunes()).length > 0 : hasSpellRunes(spellNow(), inv(), activeFreeRunes());
     const runesHeld = () => SPLASH_RUNES.reduce((n, id) => n + count(inv(), id), 0);
     const onTile = () => { const p = st()?.player; return !!p && p.worldX === TILE.x && p.worldZ === TILE.z; };
     const reach = (n: { tileX?: number; tileZ?: number; x: number; z: number }) => castReaches(TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z }, CAST_RANGE, site.size);
     const refusals = () => Math.max(-1, ...(st()?.gameMessages ?? []).filter(m => /already been (weakened|lowered)/i.test(m.text)).map(m => m.tick));
-    // Stage: bank the pack, take the runes the casts need. A site with no bank casts from the pack as it is.
-    const plan = splashPlan(xp(), o.target);
+    // Stage: bank the pack, equip any matching elemental staff, and take only the remaining runes needed.
     if (site.bank) {
         await toBank();
         await openBank();
         await depositAll(runeIds);
+        const staffRes = await prepareSplashStaffAtBank(s, {
+            xp: xp(),
+            target: o.target,
+            bankSpot: COW_NORTH_BANK,
+            allowZaffShop: (st()?.player?.worldX ?? 0) >= 3040,
+            stop: () => ended || !!o.stop?.() || s.tick() - start >= o.cap,
+        });
+        const plan = splashPlan(xp(), o.target, staffRes.freeRunes);
         for (const id of runeIds) {
             const want = Math.min(Math.max(0, plan.runes[id]! - count(inv(), id)), count(observe()?.items ?? [], id)), before = count(inv(), id);
             if (want < 1) continue;
@@ -168,6 +293,14 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
             if (!row || !(await s.bot.withdrawItem(row, want, { asNote: false })).success || !await waitUntil(s, () => count(inv(), id) >= before + want, { timeoutTicks: 10 })) throw Error(`splash: withdraw ${want}x${id} failed`);
         }
         await closeBank();
+    } else if (typeof s.bot?.equipItem === 'function') {
+        const staff = bestElementalStaffForRunes([...inv(), ...eq().filter(e => e.slot === 3)], readSkillLevels(s.sdk), [], {
+            runeIds: selectSplashPriorityRunes(xp(), o.target),
+        }).current;
+        if (staff && !eq().some(e => e.slot === 3 && e.id === staff.item.id)) {
+            const held = inv().find(i => i.id === staff.item.id);
+            if (held) await s.bot.equipItem(held);
+        }
     }
     if (!site.bank && onStarterIsland(st()?.player)) {
         await leaveRuneStarter(s,()=>ended||!!o.stop?.()||s.tick()-start>=o.cap);
@@ -201,7 +334,7 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
             // A cast the server cannot make from here walks the account along the fence: back to the tile first.
             if (!onTile() && (!(await walkPath(walker, [{ ...TILE, tol: 0 }], { maxTicks: 200, stop: () => ended })).ok || !onTile())) throw Error(`splash: fence tile ${TILE.x},${TILE.z} not reached`);
             const inReach = (st()?.nearbyNpcs ?? []).filter(n => site.target(n) && n.hp !== 0 && reach(n));
-            const spells = site.bank ? splashDebuffSpells(level(), inv()) : [spellNow()];
+            const spells = site.bank ? splashDebuffSpells(level(), inv(), activeFreeRunes()) : [spellNow()];
             const pick = pickSplashTarget(inReach, spells, rest, s.tick());
             if (!pick) { waited++; await waitTicks(s, 1); continue; }
             const { target: cow, spell } = pick;

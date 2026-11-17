@@ -210,8 +210,48 @@ export async function runStagedFishing(d:FishDriver,o:FishBatchOptions):Promise<
    if(o.method!=='bigNet'&&o.method!=='karambwan'){const next=state(),received=fishCount(next,o.method)-pendingCatch,used=profile.bait?pendingBait-count(next,profile.bait):0,gained=xp(next)-pendingXp;if(received<0||received>1||profile.bait&&used!==received||received===0&&gained!==0||received>0&&gained<=0||o.method==='lava'&&gained!==received*60*xpRate)throw Error('fishing step catch/bait/XP does not reconcile');baitUsed+=used;last+=received;if(received)progress=d.tick();}
   }
  }
- const final=state();if(last-base<o.amount||xp(final)<=((o.method==='bigNet'||o.method==='lava')?initialXp:xp(initial)))throw Error('fishing target unobserved');
- return{caught:last-base,baitUsed,attempts,ticks:d.tick()-start,...o.method==='bigNet'?{byproducts:netByproducts,rawXp:netRawXp,publicXpDelta:xp(final)-initialXp}:{}};
+  const final=state();if(last-base<o.amount||xp(final)<=((o.method==='bigNet'||o.method==='lava')?initialXp:xp(initial)))throw Error('fishing target unobserved');
+  return{caught:last-base,baitUsed,attempts,ticks:d.tick()-start,...o.method==='bigNet'?{byproducts:netByproducts,rawXp:netRawXp,publicXpDelta:xp(final)-initialXp}:{}};
+ }
+const MEMBERS_FISH_METHODS = new Set<FishMethod>(['bigNet', 'karambwanji', 'karambwan', 'lava']);
+const CATHERBY_SHOP_TOOLS = new Set<number>([301, 303, 305, 307, 311, 313]);
+
+export function fishingMethodRequirements(method: FishMethod) {
+ const profile = FISH_PROFILES[method];
+ return {
+  method,
+  level: profile.level,
+  toolId: profile.tool,
+  baitId: profile.bait,
+  members: MEMBERS_FISH_METHODS.has(method),
+  shop: CATHERBY_SHOP_TOOLS.has(profile.tool) ? ('fishingshop2' as const) : profile.tool === 309 ? ('fishingshop' as const) : null,
+ };
+}
+
+/** Select the highest-level Fishing method unlocked at `fishingLevel` (and owned in `stock` unless `requireTool: false`). */
+export function bestFishingMethod(
+ fishingLevel: number,
+ stock: readonly { id: number; count: number }[],
+ options: { members?: boolean; methods?: readonly FishMethod[]; requireTool?: boolean } = {},
+) {
+ const allowMembers = options.members !== false;
+ const requireTool = options.requireTool !== false;
+ const totals = new Map<number, number>();
+ for (const row of stock) totals.set(row.id, (totals.get(row.id) ?? 0) + row.count);
+ const has = (id: number) => (totals.get(id) ?? 0) > 0;
+ const candidates = (options.methods ?? (Object.keys(FISH_PROFILES) as FishMethod[]))
+  .map(fishingMethodRequirements)
+  .filter(req => fishingLevel >= req.level && (allowMembers || !req.members))
+  .sort((a, b) => b.level - a.level);
+
+ for (const req of candidates) {
+  const hasTool = has(req.toolId) || (req.method === 'karambwan' && has(3159));
+  const hasBait = req.baitId === 0 || has(req.baitId) || (req.method === 'karambwan' && has(3159));
+  if (!requireTool || (hasTool && hasBait)) {
+   return { ...req, hasTool, hasBait };
+  }
+ }
+ return null;
 }
 if(import.meta.main){
  const name=process.argv[2],method=process.argv[3]??'fly',amount=Number(process.argv[4]??10),cap=Number(process.argv[5]??1000);

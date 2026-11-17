@@ -1,5 +1,5 @@
 import { beforeAll, expect, test } from 'bun:test';
-import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, packSpell, pickSplashTarget, splashBatchDone, splashDebuffSpells, splashPlan, splashSite, splashSpell } from './splash-train';
+import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, freeRunesFromEquipment, packSpell, pickSplashTarget, prepareSplashStaffAtBank, splashBatchDone, splashDebuffSpells, splashPlan, splashSite, splashSpell } from './splash-train';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { SPLASH_KIT, SPLASH_TO } from '../packages/planner/src/autopilot';
 import { loadPathfinding } from '../packages/core/src/pathcache';
@@ -121,4 +121,94 @@ test('the coop tile is open floor that sees most of the coop within reach', () =
     }
     expect(seen).toBeGreaterThanOrEqual(100);
     expect(seen).toBeLessThanOrEqual(open);
+});
+
+test('elemental staff in slot 3 eliminates its rune from splashPlan and splashDebuffSpells', () => {
+    const free = freeRunesFromEquipment([{ id: 1385, slot: 3 }]); // Staff of earth
+    expect([...free]).toEqual([EARTH]);
+    expect(splashPlan(xpForLevel(21), 66, free)).toEqual({
+        casts: 135,
+        runes: { [BODY]: 135, [WATER]: 270, [EARTH]: 0, [MIND]: 0, [AIR]: 0 },
+    });
+    expect(splashDebuffSpells(21, [{ id: BODY, count: 1 }, { id: WATER, count: 2 }], free).map(s => s.component)).toEqual(['magic:curse']);
+});
+
+test('prepareSplashStaffAtBank equips best covering bank staff or buys Staff of earth from Zaff', async () => {
+    let bankOpen = true, shopOpen = false, gen = 1, tick = 0;
+    const inv: any[] = [];
+    const eq: any[] = [];
+    const bank: any[] = [{ id: 995, name: 'Coins', count: 2500, slot: 0 }, { id: 1381, name: 'Staff of air', count: 1, slot: 1 }];
+    const shopItems = [{ id: 1385, name: 'Staff of earth', count: 2, buyPrice: 1500, slot: 0 }];
+    const walks: string[] = [];
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 1);
+    const s: any = {
+        tick: () => tick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
+        bankObservation: () => bankOpen ? { generation: gen, items: bank } : null,
+        sdk: {
+            getState: () => ({ inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: (n: string) => ({ level: n === 'Magic' ? 21 : 1, baseLevel: n === 'Magic' ? 21 : 1 }),
+        },
+        bot: {
+            openBank: async () => { bankOpen = true; gen++; return { success: true }; },
+            closeBank: async () => { bankOpen = false; return { success: true }; },
+            withdrawItem: async (item: any, n: number) => {
+                const row = bank.find(r => r.id === item.id);
+                row.count -= n;
+                if (row.count <= 0) bank.splice(bank.indexOf(row), 1);
+                inv.push({ id: item.id, name: item.name, count: n });
+                gen++;
+                return { success: true };
+            },
+            depositItem: async (item: any) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const [removed] = inv.splice(idx, 1);
+                const row = bank.find(r => r.id === removed.id);
+                if (row) row.count += removed.count;
+                else bank.push({ ...removed });
+                gen++;
+                return { success: true };
+            },
+            equipItem: async (item: any) => {
+                bankOpen = false;
+                const old = eq.splice(0, eq.length);
+                for (const o of old) inv.push({ id: o.id, name: o.name, count: o.count });
+                const idx = inv.findIndex(r => r.id === item.id);
+                const [removed] = inv.splice(idx, 1);
+                eq.push({ ...removed, slot: 3 });
+                return { success: true };
+            },
+            openShop: async () => { shopOpen = true; return { success: true }; },
+            buyFromShop: async (row: any, n: number) => {
+                row.count -= n;
+                inv.find(i => i.id === 995).count -= row.buyPrice * n;
+                inv.push({ id: row.id, name: itemName(row.id), count: n });
+                return { success: true };
+            },
+            closeShop: async () => { shopOpen = false; return { success: true }; },
+        },
+    };
+    function itemName(id: number) { return id === 1385 ? 'Staff of earth' : 'Item'; }
+    try {
+        const res = await prepareSplashStaffAtBank(s, {
+            xp: xpForLevel(21),
+            target: 66,
+            bankSpot: { x: 3185, z: 3436 },
+            allowZaffShop: true,
+            stop: () => false,
+            walkTo: async spot => { walks.push(`${spot.x},${spot.z}`); return true; },
+        });
+        expect(res.activeId).toBe(1385);
+        expect(res.bought).toBe(1385);
+        expect([...res.freeRunes]).toEqual([EARTH]);
+        expect(walks).toEqual(['3203,3433', '3185,3436']);
+        expect(eq[0]?.id).toBe(1385);
+        expect(bank.find(i => i.id === 995)?.count).toBe(1000);
+        expect(inv).toHaveLength(0);
+    } finally {
+        clearInterval(timer);
+    }
 });

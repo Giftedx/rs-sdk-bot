@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {miningProfiles,eligiblePickaxe,miningEffect,selectMiningRock,inPerfectMine,runAtSiteMining,type MiningDriver} from './microbot-b-mining';
+import {miningProfiles,eligiblePickaxe,equipUsablePickaxeInPack,miningEffect,selectMiningRock,inPerfectMine,runAtSiteMining,type MiningDriver} from './microbot-b-mining';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 const profile=()=>miningProfiles().find(p=>p.name==='runite_rock_table')!;
 const state=()=>({player:{worldX:3000,worldZ:3500,level:0,lifeId:1},skills:[{name:'Mining',level:85,experience:1000},{name:'Hitpoints',level:99}],inventory:[{id:1275,count:1,slot:0}],equipment:[],nearbyPlayers:[],nearbyLocs:[{id:profile().rocks[0],x:3001,z:3500,level:0,distance:1,optionsWithIndex:[{text:'Mine',opIndex:1}]}]} as unknown as BotWorldState);
@@ -27,4 +27,15 @@ test('a depleted rock without own ore/XP does not count; stop prevents action',a
  const d:MiningDriver={state:()=>current,tick:()=>tick,stop:()=>false,mine:async()=>{dispatch++;return true;},step:async()=>{tick++;},wait:async test=>{current={...current,nearbyLocs:[]};return test();}};
  await expect(runAtSiteMining(d,profile(),{maximum:1,cap:100,idleTicks:3})).rejects.toThrow('no useful ore');expect(dispatch).toBe(1);
  await expect(runAtSiteMining({...d,stop:()=>true},profile(),{maximum:1,cap:100,idleTicks:3})).rejects.toThrow('stopped');expect(dispatch).toBe(1);
+});
+
+test('equipUsablePickaxeInPack equips higher carried pickaxe only when Attack meets wield level',async()=>{
+ const eq:any[]=[];
+ const lowSession={sdk:{getSkill:(n:string)=>({level:n==='Mining'?41:1,baseLevel:n==='Attack'?1:41}),getInventory:()=>[{id:1275,name:'Rune pickaxe',count:1}],getEquipment:()=>eq},bot:{equipItem:async(i:any)=>{eq.push({...i,slot:3});}}};
+ expect(await equipUsablePickaxeInPack(lowSession)).toBe(false);
+ expect(eq).toHaveLength(0);
+
+ const highSession={sdk:{getSkill:(n:string)=>({level:n==='Mining'?41:40,baseLevel:n==='Attack'?40:41}),getInventory:()=>[{id:1275,name:'Rune pickaxe',count:1}],getEquipment:()=>eq},bot:{equipItem:async(i:any)=>{eq.push({...i,slot:3});}}};
+ expect(await equipUsablePickaxeInPack(highSession)).toBe(true);
+ expect(eq[0]?.id).toBe(1275);
 });

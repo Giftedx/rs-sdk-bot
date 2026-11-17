@@ -9,6 +9,7 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {componentId} from '../packages/core/src/logout';
 import {watchProductionLife} from './microbot-c-lifetime';
 import {objId} from './measure/floor-bands';
+import {bestElementalStaffForRunes,readSkillLevels} from '../packages/planner/src/gear-progression';
 const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts')+'/';
 export interface Recipe {name:string;spell:string;level:number;smithing:number;target:number;product:number;inputs:Record<number,number>;output:number;members:boolean}
 function blocks(text:string){return [...text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)].map(m=>({name:m[1]!,body:m[2]!}));}
@@ -80,6 +81,22 @@ export async function runItemMagic(s:Session,recipe:Recipe,o:{count:number;cap:n
  if((s.sdk.getSkill('Magic')?.level??0)<recipe.level||(s.sdk.getSkill('Smithing')?.level??0)<recipe.smithing)throw Error('spell skill requirement');
  const life=watchProductionLife(s,o.stop);
  const over=()=>ended||life.stopped()||s.tick()-start>=o.cap;
+ if(typeof s.bot?.equipItem==='function'){
+  const spellRunes:number[]=[];
+  for(const [idStr,rawCount] of Object.entries(recipe.inputs)){
+   const id=Number(idStr),used=rawCount-(id===recipe.target?1:0);
+   for(let k=0;k<used;k++)spellRunes.push(id);
+  }
+  const eq=(state()?.equipment??[]) as readonly{id:number;slot:number}[];
+  const staff=bestElementalStaffForRunes([...inv(),...eq.filter(e=>e.slot===3).map(e=>({id:e.id,count:1}))],readSkillLevels(s.sdk),[],{runeIds:spellRunes,members:o.members??false}).current;
+  if(staff&&!eq.some(e=>e.slot===3&&e.id===staff.item.id)){
+   const held=inv().find(i=>i.id===staff.item.id);
+   if(held){
+    await s.bot.equipItem(held);
+    await waitUntil(s,()=>over()||(state()?.equipment??[]).some(e=>e.slot===3&&e.id===staff.item.id),{timeoutTicks:4});
+   }
+  }
+ }
  while(casts<o.count){
   if(over()){stop=ended?'session ended':life.stopped()?'stopped':'cap';break;}
   const p=state()?.player;if(!p||p.worldX!==p0.worldX||p.worldZ!==p0.worldZ||p.lifeId!==p0.lifeId||p.isDead)throw Error('unsafe player change');
