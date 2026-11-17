@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794933236709,
+ "at": 1794933362401,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -197,19 +197,20 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "60",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":60}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-defence-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -236,29 +237,24 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "mmthv2350",
@@ -324,7 +320,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -335,6 +332,27 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "local",
+   "resources": [
+    "splash:ardougne-cow-fence"
    ]
   },
   {
@@ -389,9 +407,7 @@
     "99",
     "5000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -452,21 +468,22 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/splash-train.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "66",
-    "6000"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=150 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=9000 COIN_RESERVE=500 MAX_SPEND=8000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "combat",
-   "template": "army-splash-magic-66",
+   "goal": "buy body runes at Aubury's in Varrock for the curse band",
+   "role": "supply",
+   "template": "army-body-aubury",
    "autopilot": "local",
    "resources": [
-    "splash:ardougne-cow-fence"
+    "shop:aubury"
    ]
   },
   {
@@ -479,7 +496,8 @@
     "BURY_HELD": "1",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "1"
+    "AUTOPILOT_ORDER": "1",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
    },
    "enabled": true,
    "standing": true,
