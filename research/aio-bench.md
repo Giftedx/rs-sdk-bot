@@ -2,6 +2,14 @@
 
 Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). Engine patch: `patches/rs-sdk.md` item 10. Raw results: `.practice/aio-bench/`.
 
+## Kept result inputs
+
+**Claim:** a kept result binds its engine rules, main and partner fixtures, job files, pass and output rules, timeout, and bench source dependencies. The bench source binds helper code and constants captured by pass predicates. **Conditions:** a fresh lockstep engine with caching enabled; worker runtime data still needs `BENCH_CACHE=0` after it changes. **Evidence:** `scripts/measure/aio-practice-bench.test.ts`; `computeCaseHash` in `scripts/measure/aio-practice-bench.ts`. **Gap:** these checks prevent reuse across the tested input changes. They do not prove every route or live behavior.
+
+| Source | Local consumer | Decision | Check |
+|---|---|---|---|
+| Existing AIO bench import closure and case definitions | Kept `AIO_BENCH_RESULT` rows | Adapt the cache key to include materialized fixtures and acceptance dependencies. Keep the existing bench. | Input changes require a different key. An unchanged case retains its key. |
+
 ## Lockstep engine
 
 **Claim:** a lockstep engine with one seed and a new engine for each case gives the same tick count on each run. **Conditions:** `bun run bench --smoke --no-keep`, seed 7, six engines at a time, three runs. **Evidence:** 15 of 15 cases equal in the three runs (`.practice/aio-bench/smkw1.log` to `smkw3.log`); the per-tick world traces of `crest` and `dwarfcannon` are byte-identical between two runs (`trA/`, `trB/`). **Gap:** a case with a partner account is not in the three-run check.
