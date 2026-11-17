@@ -199,8 +199,13 @@ let lastSitePush=0,lastPublic='',lastControl='',coldSince=0;
 export type BundleAudit={ok:boolean;checkedFiles:number;checkedAssets:number;missing:string[];leaks:string[]};
 const STATIC_TEXT_EXT=/\.(html|css|js)$/i;
 const ASSET_PREFIX_PLACEHOLDERS=new Set(['rl-','skill-','spell-','prayer-']);
+const IMPORT_PAGE_FILES=['index.html','xp-tracker.js','client-shell.js','client-shell.css','client-viewer.css','map-shell.js','map-shell.css','operations.js','operations.css','items.json','RUNELITE-LICENSE.txt'];
 
-export function verifyStaticBundle(dir:string,secretAccount=MAIN_ACCOUNT,options:{allowDevFiles?:boolean}={}):BundleAudit{
+export function verifyStaticBundle(
+ dir:string,
+ secretAccount=MAIN_ACCOUNT,
+ options:{allowDevFiles?:boolean;verifyImportContract?:boolean;allowWebpImages?:boolean}={}
+):BundleAudit{
  const missing:string[]=[],leaks:string[]=[],assets=new Set<string>();
  let checkedFiles=0;
  const checkFile=(rel:string,source:string)=>{
@@ -208,8 +213,10 @@ export function verifyStaticBundle(dir:string,secretAccount=MAIN_ACCOUNT,options
   if(!clean||clean.startsWith('http://')||clean.startsWith('https://'))return;
   const tail=clean.split('/').pop()||'';
   if(ASSET_PREFIX_PLACEHOLDERS.has(tail)||clean.endsWith('item-sources.json.'))return;
-  if(!existsSync(join(dir,clean)))missing.push(`${source} -> ${clean}`);
-  assets.add(clean);
+  const webpClean=options.allowWebpImages&&/\.png$/i.test(clean)?clean.replace(/\.png$/i,'.webp'):null;
+  const found=existsSync(join(dir,clean))||(webpClean!=null&&existsSync(join(dir,webpClean)));
+  if(!found)missing.push(`${source} -> ${clean}`);
+  assets.add(webpClean&&!existsSync(join(dir,clean))&&existsSync(join(dir,webpClean))?webpClean:clean);
  };
  const walk=(sub:string)=>{
   const full=join(dir,sub);
@@ -232,23 +239,41 @@ export function verifyStaticBundle(dir:string,secretAccount=MAIN_ACCOUNT,options
     const tail=m[1]!;
     if(!ASSET_PREFIX_PLACEHOLDERS.has(tail)&&!tail.endsWith('.'))checkFile(`client-assets/${tail}`,rel);
    }
-   for(const m of text.matchAll(/(?:href|src)=["'](\/[a-zA-Z0-9_.-]+\.(?:css|js|png|json))(?:\?[^"']*)?["']/g))checkFile(m[1]!,rel);
-   for(const m of text.matchAll(/url\(["']?(\/[a-zA-Z0-9_.-]+\.(?:png|ttf|css))(?:\?[^"']*)?["']?\)/g))checkFile(m[1]!,rel);
+   const linkRe=options.allowWebpImages||options.verifyImportContract
+    ?/(?:href|src)=["'](\/?[a-zA-Z0-9_.-]+\.(?:css|js|png|webp|json))(?:\?[^"']*)?["']/g
+    :/(?:href|src)=["'](\/[a-zA-Z0-9_.-]+\.(?:css|js|png|json))(?:\?[^"']*)?["']/g;
+   for(const m of text.matchAll(linkRe))checkFile(m[1]!,rel);
+   const urlRe=options.allowWebpImages||options.verifyImportContract
+    ?/url\(["']?(\/?[a-zA-Z0-9_.-]+\.(?:png|webp|ttf|css))(?:\?[^"']*)?["']?\)/g
+    :/url\(["']?(\/[a-zA-Z0-9_.-]+\.(?:png|ttf|css))(?:\?[^"']*)?["']?\)/g;
+   for(const m of text.matchAll(urlRe))checkFile(m[1]!,rel);
   }
  };
  walk('');
- if(existsSync(join(dir,'client-shell.js'))&&existsSync(join(dir,'client-assets/spellbook.json'))){
+ if(options.verifyImportContract){
+  for(const req of IMPORT_PAGE_FILES)if(!existsSync(join(dir,req)))missing.push(`import-contract -> ${req}`);
+  const hasItemsSprite=existsSync(join(dir,'items.png'))||(options.allowWebpImages&&existsSync(join(dir,'items.webp')));
+  if(!hasItemsSprite)missing.push('import-contract -> items.png');
+  if(!existsSync(join(dir,'client-assets')))missing.push('import-contract -> client-assets');
+ }
+ if(existsSync(join(dir,'client-shell.js'))){
   const shell=readFileSync(join(dir,'client-shell.js'),'utf8');
-  const sb=JSON.parse(readFileSync(join(dir,'client-assets/spellbook.json'),'utf8'));
-  const utilMatch=shell.match(/const util=\[([\s\S]*?)\]\.map\(/);
-  const util:string[]=utilMatch?(Function(`return [${utilMatch[1]}]`)() as any[]).map((x:any)=>String(x[0])):[];
-  const slug=(n:string)=>n.toLowerCase().replace(/\blvl-(\d+)\b/g,'level-$1').replace(/\bjewelry\b/g,'jewellery').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  const spriteOnly=new Set(['charge-air-orb','fire-wave','vulnerability','enfeeble','stun']);
-  for(const sp of [...(sb.combat||[]).map((x:any)=>x[0]),...util,...(sb.spells||[]).map((x:any)=>x[0])]){
-   const s=slug(sp);
-   if(spriteOnly.has(s)){checkFile('client-assets/magicon.png','spell:'+sp);checkFile('client-assets/magicoff.png','spell:'+sp);}
-   else if(s==='entangle'){checkFile('client-assets/magicon2.png','spell:'+sp);checkFile('client-assets/magicoff2.png','spell:'+sp);}
-   else checkFile(`client-assets/spell-${s}.png`,'spell:'+sp);
+  if(options.verifyImportContract){
+   if(shell.split("  window.addEventListener('keydown',e=>{").length!==2)missing.push('contract:connectViewerControls-keydown-start');
+   if((shell.match(/  \},true\);\r?\n  window\.atlasClient=/g)||[]).length!==1)missing.push('contract:connectViewerControls-keydown-end');
+  }
+  if(existsSync(join(dir,'client-assets/spellbook.json'))){
+   const sb=JSON.parse(readFileSync(join(dir,'client-assets/spellbook.json'),'utf8'));
+   const utilMatch=shell.match(/const util=\[([\s\S]*?)\]\.map\(/);
+   const util:string[]=utilMatch?(Function(`return [${utilMatch[1]}]`)() as any[]).map((x:any)=>String(x[0])):[];
+   const slug=(n:string)=>n.toLowerCase().replace(/\blvl-(\d+)\b/g,'level-$1').replace(/\bjewelry\b/g,'jewellery').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+   const spriteOnly=new Set(['charge-air-orb','fire-wave','vulnerability','enfeeble','stun']);
+   for(const sp of [...(sb.combat||[]).map((x:any)=>x[0]),...util,...(sb.spells||[]).map((x:any)=>x[0])]){
+    const s=slug(sp);
+    if(spriteOnly.has(s)){checkFile('client-assets/magicon.png','spell:'+sp);checkFile('client-assets/magicoff.png','spell:'+sp);}
+    else if(s==='entangle'){checkFile('client-assets/magicon2.png','spell:'+sp);checkFile('client-assets/magicoff2.png','spell:'+sp);}
+    else checkFile(`client-assets/spell-${s}.png`,'spell:'+sp);
+   }
   }
  }
  return {ok:missing.length===0&&leaks.length===0,checkedFiles,checkedAssets:assets.size,missing:[...new Set(missing)],leaks:[...new Set(leaks)]};

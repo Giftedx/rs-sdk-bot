@@ -200,5 +200,39 @@
             completionPct: totalNeed > 0 ? totalCappedHave * 100 / totalNeed : 100,
         };
     }
-    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, goalBar, total, combat, efficiency, TICK_KINDS, EHP_XP_PER_TICK, ehpRate, ehpHours, sessionEhp, remainingEhp, supplyBillProgress };
+    // Archive a completed or reset XP session summary without keeping mutable baseline state.
+    function archiveSession(store, bot, now, options = {}) {
+        const base = store && bot && bot.name ? store[bot.name] : null;
+        if (!base || !base.xp) return null;
+        const at = base.paused && base.paused.at != null ? base.paused.at : now;
+        const seen = base.paused && base.paused.xp
+            ? { ...bot, skills: (bot.skills || []).map(k => ({ ...k, xp: base.paused.xp[k.name] ?? k.xp })) }
+            : bot;
+        const rowList = rows(seen, { ...base, xp: { ...base.xp } }, at, null);
+        const gainedXp = total(rowList);
+        if (gainedXp <= 0 && !options.includeZero) return null;
+        const elapsedMs = Math.max(0, at - base.at);
+        const xpPerHour = elapsedMs >= 1000 ? Math.round(gainedXp / (elapsedMs / 3.6e6)) : 0;
+        const ehp = sessionEhp(rowList, options.tickMs || 400);
+        return {
+            started: base.started ?? null,
+            fromAt: base.at,
+            at,
+            elapsedMs,
+            gainedXp,
+            xpPerHour,
+            gainedEhp: ehp.gainedEhp,
+            ehpPerHour: ehp.ehpPerHour,
+            skills: rowList.slice(0, 3).map(r => ({ skill: r.skill, gained: r.gained, level: r.level })),
+        };
+    }
+    function recordSessionHistory(historyMap, accountKey, entry, maxEntries = 6) {
+        const out = historyMap && typeof historyMap === 'object' && !Array.isArray(historyMap) ? { ...historyMap } : {};
+        if (!accountKey || !entry) return out;
+        const prev = Array.isArray(out[accountKey]) ? out[accountKey] : [];
+        const deduped = prev.filter(h => !(h && h.fromAt === entry.fromAt && h.at === entry.at && h.gainedXp === entry.gainedXp));
+        out[accountKey] = [entry, ...deduped].slice(0, Math.max(1, maxEntries));
+        return out;
+    }
+    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, goalBar, total, combat, efficiency, TICK_KINDS, EHP_XP_PER_TICK, ehpRate, ehpHours, sessionEhp, remainingEhp, supplyBillProgress, archiveSession, recordSessionHistory };
 })(globalThis);
