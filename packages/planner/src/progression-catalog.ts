@@ -97,10 +97,27 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  script=scriptPath(script);
  const consumer=setting(env,args,'CONSUMER')??setting(env,args,'GOAL')??script;
  const requestedItems=positiveItems(accept?.bank);
+ if(script==='scripts/train-prayer.ts'&&requestedItems&&accept?.skills){
+  const skills=Object.entries(accept.skills),target=Number(args[0]??env.TARGET_LEVEL??43),bone=Number(env.BONE_ID??526),reserve=Number(env.BONE_RESERVE??6),cap=Number(env.CAP??1500),maximum=Number(env.MAX_BURY??175);
+  // Matching Prayer work owns the intent; retained bank stock stays a coordinator postcondition.
+  if(args.length<=1&&skills.length===1&&key(skills[0]![0])==='prayer'&&skills[0]![1]===target&&finiteLevel(target)&&target>=43
+   &&[526,532,536].includes(bone)&&whole(reserve)&&reserve>=6&&requestedItems[bone]!==undefined&&requestedItems[bone]!>=reserve
+   &&whole(cap)&&cap>=1&&cap<=1000000&&whole(maximum)&&maximum>=1&&maximum<=1000000
+   &&(env.BURY_HELD===undefined||env.BURY_HELD==='0')&&accept.quests===undefined&&accept.counters===undefined)return{kind:'train',skill:'prayer',targetLevel:target};
+ }
  if(requestedItems)return{kind:'acquire',items:{...requestedItems},consumer};
  if(accept?.quests?.length===1&&accept.quests[0]?.trim())return{kind:'quest',quest:accept.quests[0]};
  const acceptedSkills=Object.entries(accept?.skills??{});
  if(acceptedSkills.length===1&&finiteLevel(acceptedSkills[0]![1]))return{kind:'train',skill:key(acceptedSkills[0]![0]),targetLevel:acceptedSkills[0]![1]};
+ // Native GE counterparties have finite fixture work, admitted only on local practice.
+ if(script==='packages/practice/src/ge-bulk-order-proof.ts'){
+  const actor=args[1];if(!actor||!/^[A-Za-z0-9]{1,12}$/.test(actor))return null;
+  if(args[0]==='--snapshot')return args.length===2?{kind:'observe',objective:`observe the owned native GE bank of ${actor} once`,units:1}:null;
+  if(args[0]!=='--sell'||args.length!==5)return null;
+  const item=Number(args[2]),quantity=Number(args[3]),price=Number(args[4]);
+  return [item,quantity,price].every(n=>whole(n)&&n>0)&&item!==995&&item<=2147483647&&Number.isSafeInteger(quantity*price)&&quantity*price<=2147483647
+   ?{kind:'service',objective:`post one owned native GE sell offer: ${quantity} of item ${item} at ${price} each; confirm escrow debit and logout`,units:1}:null;
+ }
  if(script==='scripts/handoff-inputs.ts'){
   // These are new-output/delta orders. Existing stock cannot satisfy them before
   // the worker reconciles the exact debit, bank credit and logout. Explicit parent targets still win above.
@@ -167,8 +184,13 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   const item=Number(setting(env,args,'ITEM_ID')),quantity=Number(setting(env,args,'QUANTITY')),owned=Number(setting(env,args,'EXPECTED_OWNED')??0);
   if(whole(item)&&item>0&&whole(quantity)&&quantity>0&&whole(owned)&&whole(owned+quantity))return{kind:'acquire',items:{[item]:owned+quantity},consumer};
  }
+ if(script==='scripts/earth-shop.ts'){
+  const profile=args[0],cap=Number(args[1]),target=Number(setting(env,args,'STOCK_TARGET')),maximum=Number(setting(env,args,'MAX_ITEMS')),spend=Number(setting(env,args,'MAX_SPEND')),reserve=Number(setting(env,args,'COIN_RESERVE')),seedUsed=Number(setting(env,args,'EARTH_SEED_USED')??0);
+  return(profile==='aubury'||profile==='betty')&&[cap,target,maximum,spend,reserve].every(whole)&&[0,1].includes(seedUsed)&&cap>=1&&cap<=16000&&target>=1&&maximum>=1&&maximum<=target
+   ?{kind:'acquire',items:{557:target},consumer}:null;
+ }
  if(script==='scripts/shop-buyer.ts'){
-  const count=Number(setting(env,args,'STOCK_TARGET')??setting(env,args,'MAX_ITEMS')),pattern=setting(env,args,'ITEMS');
+  const count=Number(setting(env,args,'STOCK_TARGET')??setting(env,args,'MAX_ITEMS')),pattern=setting(env,args,'ITEMS')??(args[0]==='jukat'?'^dragon longsword$':undefined);
   if(!whole(count)||count<1||!pattern)return null;
   let matches:CatalogMethod[]=[];
   try{const re=new RegExp(pattern,'i');matches=(data?.methods??[]).filter(m=>m.step.script===script&&m.step.args[0]===args[0]&&m.step.env.ITEMS&&re.test(m.step.env.ITEMS.replace(/^\^|\$$/g,'').replace(/\\(.)/g,'$1')));}catch{return null;}
@@ -176,8 +198,19 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   if(ids.length===1)return{kind:'acquire',items:{[Number(ids[0])]:count},consumer};
   return{kind:'service',objective:`finite shop order ${args[0]??'unknown'} ${pattern} stock ${count} for ${consumer}`};
  }
+ if(script==='scripts/chain.ts'){
+  const steps=args.map(a=>parseStep(a));if(!steps.length)return null;
+  const resolved=steps.map(st=>intentForEntry(st.script,st.args,{...env,...st.env},accept,data));
+  if(resolved.some(r=>!r))return null;
+  const last=resolved.at(-1)!;
+  return last.kind==='service'||last.kind==='observe'?{kind:'service',objective:`chain:${steps.map(s=>s.script).join('+')}`,units:steps.length}:last;
+ }
  if(['scripts/fleet-trade.ts','scripts/courier-handoff.ts'].includes(script)){
   const file=args.find(a=>a.endsWith('.json')&&!a.includes('='));return file?{kind:'service',objective:'finite owned order '+file}:null;
+ }
+ if(script==='scripts/smelt-bars.ts'&&(setting(env,args,'ORDER_ACTION')==='smith'||setting(env,args,'PRODUCT_ID')!==undefined)){
+  const product=Number(setting(env,args,'PRODUCT_ID')),maximum=Number(setting(env,args,'MAX_MAKE'));
+  if(whole(product)&&product>0&&whole(maximum)&&maximum>0)return{kind:'service',objective:`smith-anvil:${product}:${maximum}`,units:1};
  }
  if(['scripts/microbot-production.ts','scripts/smelt-bars.ts'].includes(script)){
   const recipe=script==='scripts/microbot-production.ts'?args.find(a=>!a.includes('=')&&!/^\d+$/.test(a)):setting(env,args,'BAR_TYPE')??args[1];
@@ -199,8 +232,20 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  const singleSkill=matching?.skills.length===1?matching.skills[0]:undefined;
  if(singleSkill&&matching?.intents.includes('train')){
   const positional=routes.find(r=>r.skills.includes(singleSkill))?.name;
-  target=Number(setting(env,args,'TARGET_LEVEL')??setting(env,args,'TARGET')??(/agility|runecraft|prayer|alch/.test(positional??'')?args.find(a=>/^\d+$/.test(a)):undefined));
+  target=Number(setting(env,args,'TARGET_LEVEL')??setting(env,args,'TARGET')??(/agility|runecraft|prayer|alch|splash/.test(positional??'')?args.find(a=>/^\d+$/.test(a)):undefined));
   if(finiteLevel(target))return{kind:'train',skill:singleSkill,targetLevel:target};
+ }
+ if(script==='scripts/dusty-key.ts')return{kind:'acquire',items:{1590:1},consumer};
+ if(script==='scripts/quest-chain.ts'){const quests=(args[0]||'').split(',').filter(Boolean);if(quests.length)return{kind:'service',objective:'quest-chain:'+quests.join(','),units:quests.length};}
+ if(script==='scripts/goldfarm.ts'){const ticks=Number(env.TICKS??9000);if(whole(ticks)&&ticks>0)return{kind:'service',objective:`goldfarm:${env.KNIGHT_SPOT??'2653,3302'}`,units:1};}
+ if(script==='scripts/gather-feathers.ts'){const feathers=Number(env.TARGET??2000),ticks=Number(env.TICKS??3000);if(whole(feathers)&&feathers>0&&whole(ticks)&&ticks>0)return{kind:'acquire',items:{314:feathers},consumer};}
+ if(script==='scripts/black-dragon-camp.ts'){const kills=Number(setting(env,args,'KILLS')??9);if(whole(kills)&&kills>0)return{kind:'service',objective:'black-dragon-camp',units:kills};}
+ if(script==='scripts/black-dhide-sets.ts')return{kind:'service',objective:'black-dhide-sets',units:1};
+ if(script==='scripts/gather-combat.ts'&&setting(env,args,'GIANT_BURY')==='1'){const kills=Number(setting(env,args,'GIANT_KILLS'));if(whole(kills)&&kills>0)return{kind:'service',objective:'trooper-bury',units:kills};}
+ if(['scripts/gather-flax.ts','scripts/spin-bowstrings.ts','scripts/fletch-arrows.ts','scripts/gather-fish.ts','scripts/cook-food.ts','scripts/gather-yews.ts','scripts/gather-ore.ts','scripts/gather-essence.ts','scripts/blood-chest.ts'].includes(script)){
+  const capText=setting(env,args,'CAP')??args.find(a=>/^\d+$/.test(a));
+  const cap=capText===undefined?15000:Number(capText);
+  if(whole(cap)&&cap>0)return{kind:'service',objective:`${script.replace(/^scripts\/|\.ts$/g,'')}:${args.find(a=>!/^\d+$/.test(a)&&!a.includes('='))??'batch'}`,units:1};
  }
  if(matching?.intents.includes('pvp'))return{kind:'pvp',objective:routes[0]?.id??script};
  if(matching?.intents.length===1&&matching.intents[0]==='observe')return{kind:'observe',objective:routes[0]?.id??script};

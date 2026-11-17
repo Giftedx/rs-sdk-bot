@@ -52,8 +52,43 @@ export function rivalsView(tops: ReadonlyMap<string, { at: number; rows: BoardRo
     }));
 }
 
-// Players near each claimed resource with a tile ("knight:2582,3297"): ours and others, within SPOT_RADIUS tiles on
-// the ground floor. Named resources without a tile ("shop:aubury") are listed with no count.
+// Canonical ground-floor (or dungeon) coordinates for named resource claims in contentionView.
+export const NAMED_SPOT_TILES: Readonly<Record<string, { x: number; z: number; level?: number }>> = {
+    'shop:aubury': { x: 3253, z: 3402 },
+    'shop:lowe': { x: 3232, z: 3423 },
+    'shop:zaff': { x: 3203, z: 3433 },
+    'shop:betty': { x: 3012, z: 3259 },
+    'shop:sarim': { x: 3013, z: 3225 },
+    'shop:ardy': { x: 2613, z: 3294 },
+    'shop:catherby': { x: 2821, z: 3444 },
+    'shop:catherby_arrows': { x: 2821, z: 3444 },
+    'shop:dargaud': { x: 2673, z: 3434 },
+    'shop:magic_guild': { x: 2595, z: 3087, level: 1 },
+    'shop:jukat': { x: 3252, z: 9572 },
+    'shop:harry': { x: 2834, z: 3445 },
+    'shop:khazard_paste': { x: 2641, z: 3171 },
+    'cow:ardougne-north': { x: 2664, z: 3345 },
+    'trooper:battlefield': { x: 2525, z: 3242 },
+    'catherby:lobster': { x: 2838, z: 3431 },
+    'aio:seers-flax': { x: 2744, z: 3445 },
+    'aio:seers-yews': { x: 2710, z: 3460 },
+    'aio:varrock-east-mine': { x: 3286, z: 3368 },
+    'aio:essence-mine': { x: 2910, z: 4832 },
+    'aio:air-altar': { x: 2985, z: 3292 },
+    'aio:ardougne-blood-chests': { x: 2586, z: 9736 },
+    'cave:taverley-black-dragons': { x: 2835, z: 9824 },
+};
+
+export function wildernessInfo(pos: { x: number; z: number; level?: number } | null | undefined, combat?: number | null) {
+    if (!pos || !Number.isFinite(pos.z)) return { wild: 0, minCombat: null, maxCombat: null };
+    const south = pos.z >= 3520 && pos.z < 4000 ? 3520 : pos.z >= 9920 && pos.z < 10400 ? 9920 : 0;
+    const wild = south ? Math.floor((pos.z - south) / 8) + 1 : 0;
+    if (!wild || typeof combat !== 'number' || !Number.isFinite(combat) || combat < 3) return { wild, minCombat: null, maxCombat: null };
+    return { wild, minCombat: Math.max(3, combat - wild), maxCombat: Math.min(126, combat + wild) };
+}
+
+// Players near each claimed resource with a tile ("knight:2582,3297") or named spot ("shop:aubury"): ours and others,
+// within SPOT_RADIUS tiles on that plane.
 export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen & { name?: string }>, fleet: ReadonlySet<string>, now: number, radius = SPOT_RADIUS) {
     const online = [...roster].filter(([, p]) => now - p.seen < ONLINE_MS);
     const spots: { side: string; resource: string; kind: string; x: number | null; z: number | null; others: string[]; ours: string[] }[] = [];
@@ -65,10 +100,14 @@ export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen &
             const key = c.side + ' ' + resource;
             if (listed.has(key)) continue;
             listed.add(key);
-            const m = String(resource).match(/^([a-z]+):(\d{3,5}),(\d{3,5})$/);
-            if (!m) { spots.push({ side: c.side, resource: String(resource), kind: String(resource).split(':')[0]!, x: null, z: null, others: [], ours: [] }); continue; }
-            const x = Number(m[2]), z = Number(m[3]), near = online.filter(([, p]) => p.level === 0 && Math.abs(p.x - x) <= radius && Math.abs(p.z - z) <= radius).map(([n, p]) => p.name ?? n);
-            spots.push({ side: c.side, resource: String(resource), kind: m[1]!, x, z, others: near.filter(n => !fleet.has(n.toLowerCase())).sort(), ours: near.filter(n => fleet.has(n.toLowerCase())).sort() });
+            const raw = String(resource);
+            const m = raw.match(/^([a-z]+):(\d{3,5}),(\d{3,5})$/);
+            const named = !m ? NAMED_SPOT_TILES[raw] : undefined;
+            if (!m && !named) { spots.push({ side: c.side, resource: raw, kind: raw.split(':')[0]!, x: null, z: null, others: [], ours: [] }); continue; }
+            const x = m ? Number(m[2]) : named!.x, z = m ? Number(m[3]) : named!.z, plane = m ? 0 : named!.level ?? 0;
+            const kind = m ? m[1]! : raw.split(':')[0]!;
+            const near = online.filter(([, p]) => p.level === plane && Math.abs(p.x - x) <= radius && Math.abs(p.z - z) <= radius).map(([n, p]) => p.name ?? n);
+            spots.push({ side: c.side, resource: raw, kind, x, z, others: near.filter(n => !fleet.has(n.toLowerCase())).sort(), ours: near.filter(n => fleet.has(n.toLowerCase())).sort() });
         }
     }
     return spots.sort((a, b) => b.others.length - a.others.length || a.resource.localeCompare(b.resource));
@@ -82,7 +121,8 @@ export function lookupView(name: string, rows: HiscoreRow[] | null, at: number |
     const presenceObservedAt = typeof feedAt === 'number' && Number.isFinite(feedAt) && feedAt > 0 && feedAt <= now && now - feedAt < ONLINE_MS ? feedAt : null;
     const sightingFresh = !!seen && Number.isFinite(seen.seen) && seen.seen > 0 && seen.seen <= now && now - seen.seen < ONLINE_MS;
     const online = !dated ? !!seen && now - seen.seen < ONLINE_MS : presenceObservedAt === null ? null : sightingFresh;
-    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null, worn, wornAt, ...(dated ? { presenceObservedAt } : {}) };
+    const wild = seen ? wildernessInfo({ x: seen.x, z: seen.z, level: seen.level }, seen.combat) : null;
+    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null, worn, wornAt, ...(wild && wild.wild > 0 ? { wild } : {}), ...(dated ? { presenceObservedAt } : {}) };
 }
 
 // Bot farms: other players whose names follow one pattern, online now. A numbered series ("Money 01" … "Money 43",

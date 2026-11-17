@@ -17,9 +17,14 @@
     "packages/practice/src/shop-supply-order-proof.ts",
     "packages/practice/test/shop-supply-order-proof.test.ts",
     "scripts/measure/fleet-player-save.ts",
-    "scripts/measure/fleet-player-save.test.ts"
+    "scripts/measure/fleet-player-save.test.ts",
+    "scripts/progression-catalog.ts",
+    "scripts/progression-catalog.test.ts",
+    "packages/planner/src/progression-catalog.ts",
+    "packages/planner/test/progression-catalog.test.ts",
+    "packages/planner/data/progression-routes.json"
   ],
-  "consumer": "Preserve existing ordinary GE entry, authorized rescue, law-rune and Earth top-up consumers. For the connected Haggis Earth order, OreElse acquires and banks both actual talismans1438/1440, buys at most500 essence within36000 coins, then crafts to1139 banked Earth557 while retaining1482 Fire554 and30000 coins. Existing run-earth-oreelse-own-talismans, run-ge-oreelse-earth-input500 and run-earth-oreelse-owned-craft1139 own those finite live steps. Practice invokes the actual buyer CLI for a bounded two-kill hunt and useful crafting. Check assets, a clear refusal and logout. Native hunt proof does not promise random talisman drops. Preserve existing consumer acceptance and journal compatibility.",
+  "consumer": "Preserve existing ordinary GE entry, authorized rescue, law-rune and Earth top-up consumers. OreElse's finite Earth consumers acquire both talismans1438/1440, buy at most500 essence within36000 coins and craft to1139 banked Earth557 while retaining1482 Fire554 and30000 coins. The pending run-buy-bow-route-sapphire-two buys exactly two Gold bars2357 with LIMIT_PRICE5000, CASH_RESERVE1000000 and EXPECTED_OWNED0; run-cut-bow-route-sapphire-two cuts exactly two owned sapphires while retaining three raw gems; run-make-bow-route-sapphire-two banks two new rings to reach seven held rings for the Overall twelve-ring supply demand. Preserve journal compatibility and all finite consumer acceptance. Native checks invoke the actual buyer CLI and inspect useful output, reconciled assets, clear refusal and logout. Practice seller and snapshot fixtures remain local-only.",
   "checks": [
     {
       "id": "ge-bulk-regressions",
@@ -34,10 +39,12 @@
         "scripts/earth-production.test.ts",
         "packages/practice/test/shop-supply-order-proof.test.ts",
         "scripts/measure/fleet-player-save.test.ts",
+        "scripts/progression-catalog.test.ts",
+        "packages/planner/test/progression-catalog.test.ts",
         "--timeout",
         "10000"
       ],
-      "timeoutMs": 60000
+      "timeoutMs": 120000
     },
     {
       "id": "native-ge-bulk-order",

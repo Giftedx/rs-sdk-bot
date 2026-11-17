@@ -32,7 +32,7 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear' | 'comboFood' | 'comboAt'>;
     // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
     // Dragon Slayer and full special energy.
     skills?: Record<string, number>;
@@ -84,6 +84,11 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-kara': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS], food: 18, foodItem: 'tbwt_cooked_karambwan',
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
+    // Shark + karambwan same-tick combo-eating kit for high-burst survivability.
+    'tribrid-combo': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, ...Array.from({ length: 6 }, () => 'tbwt_cooked_karambwan')], food: 12,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] },
+        options: { comboFood: true } },
     // The tribrid with another special weapon: the mace special is one hit of 150% damage at 125% accuracy against
     // crush defence, the longsword special one hit of 125% damage (pvp/specs/scripts).
     'tribrid-mace': { worn: { ...RUNE, weapon: 'dragon_mace', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
