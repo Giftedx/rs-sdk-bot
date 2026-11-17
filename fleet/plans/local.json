@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794924638104,
+ "at": 1794924669637,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -148,27 +148,6 @@
    "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
   },
   {
    "account": "Woodpecker",
