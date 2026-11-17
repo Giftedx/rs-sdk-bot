@@ -4,7 +4,8 @@ import { SWARM_STOP,clearSwarmStop } from './swarm';
 import * as cloudSide from './cloud-side';
 import {pauseCoordinator} from '../packages/router/src/coordinator-cli';
 import {loadState} from '../packages/router/src/coordinator-store';
-import {existsSync,mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
+import {prepareWorkspace} from '../packages/router/src/build-workspace';
+import {existsSync,mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync,unlinkSync} from 'node:fs';
 import {join,dirname,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 
@@ -199,6 +200,37 @@ describe('normal cloud coordinator ownership',()=>{
             const settledAfterUnknown=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:()=>false,command:()=>null,groups:()=>[]});
             expect(settledAfterUnknown.known).toBe(true);expect(settledAfterUnknown.settled).toBe(true);
             expect(cloudSide.watchResult({normalOwnershipError:settledAfterUnknown.reason})).toBe('ok');
+        });
+    });
+    test('normal watch owns an isolated build only through its saved task, workspace and shared authority',async()=>{
+        await normalFixture((parent,write)=>{
+            const base=join(parent,'repo'),plan=join(base,'.practice/cloud-handoff/swarm.json'),runId='task-build-fixture',startedAt=Date.now()-1;
+            const spec={id:'build-fixture',kind:'build',capability:'fixture-build'},record={spec,status:'running',pid:21,runId,startedAt};
+            const put=(path:string,value:unknown)=>write(join('repo',path),value);
+            const owner={pid:11,nonce:'owner',plan:resolve(plan),side:'cloud'};
+            put('packages/router/src/coordinator-cli.ts','fixture');put('.practice/coordinator/owner.json',owner);
+            put('.practice/coordinator/state.json',{tasks:[record]});put(`.practice/coordinator/runs/${runId}/owner.json`,{pid:21,runId});
+            const input={task:spec,runId,startedAt};put(`.practice/coordinator/runs/${runId}/input.json`,input);
+            const workspace=prepareWorkspace(base,spec.capability,[]).root;
+            const dependencies={alive:(pid:number)=>pid===21,command:()=>`${join(workspace,'packages/router/src/coordinator-cli.ts')} --worker ${runId}`,groups:()=>[22]};
+            const live=()=>cloudSide.observeNormalOwners(base,plan,'cloud',{},dependencies);
+            expect(live().known).toBe(true);expect(live().active).toEqual([21,22]);expect(live().settled).toBe(false);
+            const marker=readFileSync(join(workspace,'.workspace.json'),'utf8');
+            unlinkSync(join(workspace,'.workspace.json'));expect(live().known).toBe(false);writeFileSync(join(workspace,'.workspace.json'),marker);
+            writeFileSync(join(workspace,'.workspace.json'),JSON.stringify({capability:'other',created:Date.now(),base:{}}));
+            expect(live().known).toBe(false);writeFileSync(join(workspace,'.workspace.json'),marker);
+            writeFileSync(join(workspace,'.workspace.json'),JSON.stringify({capability:spec.capability,created:startedAt-1,base:{}}));
+            expect(live().known).toBe(false);writeFileSync(join(workspace,'.workspace.json'),marker);
+            put(`.practice/coordinator/runs/${runId}/input.json`,{...input,task:{...spec,id:'crossed-task'}});
+            expect(live().known).toBe(false);put(`.practice/coordinator/runs/${runId}/input.json`,{...input,runId:'crossed-run'});
+            expect(live().known).toBe(false);put(`.practice/coordinator/runs/${runId}/input.json`,input);
+            put('.practice/coordinator/owner.json',{...owner,side:'local'});expect(live().known).toBe(false);
+            put('.practice/coordinator/owner.json',{...owner,plan:join(base,'other.json')});expect(live().known).toBe(false);
+            put('.practice/coordinator/owner.json',owner);
+            expect(cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,command:()=>`${join(parent,'arbitrary/packages/router/src/coordinator-cli.ts')} --worker ${runId}`} ).known).toBe(false);
+            expect(cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,command:()=>`${join(workspace,'packages/router/src/coordinator-cli.ts')} --worker ${runId}-other`} ).known).toBe(false);
+            expect(cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,alive:()=>false,groups:()=>[]}).settled).toBe(true);
+            unlinkSync(join(workspace,'.practice'));mkdirSync(join(workspace,'.practice'));expect(live().known).toBe(false);
         });
     });
     test('watch shutdown preserves an existing owner fleet pause',async()=>{

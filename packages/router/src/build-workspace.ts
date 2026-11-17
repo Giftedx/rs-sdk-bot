@@ -5,12 +5,14 @@
 // .practice (coordinator state, deliveries and practice bots stay shared).
 import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,statSync,writeFileSync,copyFileSync,lstatSync,unlinkSync,openSync,closeSync,fchmodSync,renameSync,linkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {basename,dirname,join,resolve,relative,isAbsolute} from 'node:path';
+import {dirname,join,resolve,relative,isAbsolute} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import type {Stats} from 'node:fs';
 import {renameRetry} from '../../core/src/status';
 import {copySourceTree as copyTree,linkSourceDirectory as link,SOURCE_COPY_SKIP as SKIP} from '../../practice/src/replay-root';
+import {workspaceRoot} from '../../core/src/build-workspace-root';
+export {workspaceRoot} from '../../core/src/build-workspace-root';
 export {prepareReplayRoot,removeReplayRoot} from '../../practice/src/replay-root';
 
 export const COPY_DIRS=['scripts','packages','knowledge','research','docs','patches'];
@@ -24,10 +26,6 @@ export function sharedWorkspacePlan(mainRoot:string,workspace:string,selected:st
 
 export interface WorkspaceBase{capability:string;created:number;base:Record<string,string|null>;published?:number}
 
-export function workspaceRoot(mainRoot:string,capability:string):string{
- if(!/^[-a-z0-9]+$/.test(capability))throw Error('workspace capability id invalid');
- return join(dirname(mainRoot),basename(mainRoot)+'-build',capability);
-}
 export const fileHash=(file:string):string|null=>existsSync(file)?createHash('sha256').update(readFileSync(file)).digest('hex'):null;
 
 // Fresh copy of the main checkout's source, except the declared files of an unpublished earlier attempt: a repair

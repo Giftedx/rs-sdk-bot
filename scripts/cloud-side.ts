@@ -29,6 +29,8 @@ import {withPlanWrite} from '../packages/core/src/plan-lock';
 import {randomUUID} from 'node:crypto';
 import {observeBoundedOwners,boundedProcessAlive,boundedGroupMembers,type BoundedOwnerBinding} from '../packages/core/src/bounded-owners';
 import {commandLine} from '../packages/practice/src/proc';
+import {workspaceRoot} from '../packages/core/src/build-workspace-root';
+import {isDeepStrictEqual} from 'node:util';
 
 const root = resolve(import.meta.dir, '..');
 export const DEFAULT_WATCH_MINUTES = 110;
@@ -159,11 +161,12 @@ export function observeNormalOwners(base:string,plan:string,side:string,records:
     const alive=deps.alive??boundedProcessAlive,command=deps.command??commandLine,roots=new Set(priorRoots),active=new Set<number>(),observed=new Map<string,string>();
     let coordinator:{pid:number;nonce:string}|null=null,swarm:number|null=null;
     const read=(file:string)=>{if(!existsSync(file))return;const raw=readFileSync(file,'utf8');observed.set(file,raw);return JSON.parse(raw);};
-    const match=(owner:any,role:'coordinator'|'swarm'|'worker'|'planner')=>{
+    const match=(owner:any,role:'coordinator'|'swarm'|'worker'|'planner',sourceRoot=base)=>{
         if(!Number.isSafeInteger(owner?.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce)throw Error('normal owner identity unreadable');
         roots.add(owner.pid);if(!alive(owner.pid))return false;
-        const line=command(owner.pid),script=join(base,role==='swarm'?'scripts/swarm.ts':'packages/router/src/coordinator-cli.ts'),flag=role==='swarm'?'--coordinator=':role==='coordinator'?'--run':'--'+role;
+        const line=command(owner.pid),script=join(sourceRoot,role==='swarm'?'scripts/swarm.ts':'packages/router/src/coordinator-cli.ts'),flag=role==='swarm'?'--coordinator=':role==='coordinator'?'--run':'--'+role;
         if(!line?.includes(script)||!line.includes(owner.nonce)||!line.includes(flag))throw Error('normal live owner command unknown');
+        if(sourceRoot!==base&&!line.split(/[\s"']+/).includes(owner.nonce))throw Error('normal build run command changed');
         active.add(owner.pid);return true;
     };
     try{
@@ -187,7 +190,17 @@ export function observeNormalOwners(base:string,plan:string,side:string,records:
         for(const task of [...(queue?.tasks??[]).filter((r:any)=>r.status==='running'),...(queue?.planner?[queue.planner]:[])]){
             const child=read(join(directory,'runs',task.runId,'owner.json'))??{pid:task.pid,runId:task.runId};
             if(task.pid&&child.pid!==task.pid||child.runId!==task.runId)throw Error('normal child owner changed');
-            match({pid:child.pid,nonce:task.runId},task===queue.planner?'planner':'worker');
+            let sourceRoot=base;
+            if(task.spec?.kind==='build'&&alive(child.pid)){
+                if(owner?.plan!==resolve(plan)||owner.side!==side)throw Error('normal build authority changed');
+                const input=read(join(directory,'runs',task.runId,'input.json'));
+                if(input?.runId!==task.runId||input.startedAt!==task.startedAt||!isDeepStrictEqual(input.task,task.spec))throw Error('normal build input changed');
+                sourceRoot=workspaceRoot(base,task.spec.capability);
+                const marker=read(join(sourceRoot,'.workspace.json'));
+                if(marker?.capability!==task.spec.capability||!Number.isFinite(task.startedAt)||!Number.isFinite(marker.created)||marker.created<task.startedAt||!marker.base||Array.isArray(marker.base)||typeof marker.base!=='object')throw Error('normal build workspace identity changed');
+                if(realpathSync(join(sourceRoot,'.practice'))!==realpathSync(join(base,'.practice')))throw Error('normal build state is not shared');
+            }
+            match({pid:child.pid,nonce:task.runId},task===queue.planner?'planner':'worker',sourceRoot);
         }
         for(const row of read(join(base,'.practice/swarm-runs.json'))??[]){if(!Number.isSafeInteger(row.pid)||row.pid<1)throw Error('normal supervisor identity unreadable');roots.add(row.pid);if(alive(row.pid))active.add(row.pid);}
         for(const name of ['fleet-agent','autopilot'])if(records[name]){const pid=records[name]!.pid;roots.add(pid);
