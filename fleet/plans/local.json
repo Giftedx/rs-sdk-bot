@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794929677513,
+ "at": 1794929818042,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -293,46 +293,56 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/chain.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
-    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+    "3000",
+    "cow"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy nature and air runes at the Magic Guild in Yanille for the alchemy band",
-   "role": "supply",
-   "template": "army-nature-guild",
+   "goal": "train Defence to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-45",
    "autopilot": "local",
    "resources": [
-    "shop:magic_guild"
+    "cow:ardougne-north"
    ]
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "3000",
+    "cow"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "2",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "60",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
+   "repeat": true,
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-cow-strength-60",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "Woodenstaff",
@@ -373,7 +383,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -470,8 +481,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
