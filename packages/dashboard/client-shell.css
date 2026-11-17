@@ -306,6 +306,7 @@ button.title-chip:hover{background:#343434;border-color:#5a5a5a}
 @media(min-width:1600px){.game-pvp-hud{width:246px;bottom:388px}}
 @media(max-width:1000px){.game-pvp-hud{width:218px;bottom:353px}}
 @media(max-width:740px){.game-pvp-hud{width:208px;bottom:341px;font-size:12px;padding:4px 5px}}
+@media(max-width:479px){.game-hud:not(.chat-hidden) .game-pvp-hud{bottom:481px}.game-hud.game-panel-hidden:not(.chat-hidden) .game-pvp-hud{bottom:218px}}
 @media(max-height:620px){.game-pvp-hud{bottom:auto;top:178px;right:210px}}
 
 /* Gear & Upgrade Advisor sidebar plugin and Equipment tab advisor summary. */
