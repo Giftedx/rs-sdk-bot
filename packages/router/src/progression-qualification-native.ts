@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs';import {join} from 'node:path';import {crea
 import {capabilityRevision} from '../../core/src/worker-release';
 import {rangedComparisonChecks,rangedEntryProofChecks} from '../../practice/src/ranged-progression-case';
 import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
-import {deliveryFingerprint} from './delivery-cli';import type {DeliveryTask} from './delivery';
+import {deliveryFingerprint} from './delivery-cli';import type {DeliveryTask,DeliveryResult} from './delivery';
 import {registerProgressionQualification} from './progression-qualification';
 
 /** Reuse the native producer's saved-entry, state-band and asset checks without running gameplay. */
@@ -17,4 +17,9 @@ export async function registerAcceptedProgressionDelivery(task:DeliveryTask,deli
  if(task.id!=='ranged-train'||!delivery.ok)return{registered:0,index:''};
  if(!delivery.directory)throw Error('accepted progression delivery has no evidence directory');
  return registerProgressionQualification(delivery.directory,{base,practiceRoot,additionalProof,task,fingerprint:t=>deliveryFingerprint(t,base),runtimeRevision:t=>capabilityRevision([t.entry],base),verifyProof:(folder,proof)=>verifyRegisteredRangedProof(folder,proof,base)});
+}
+export async function completeProgressionQualification<T extends DeliveryResult>(task:DeliveryTask,delivery:T,base:string,register:(task:DeliveryTask,delivery:{ok:boolean;directory?:string},base:string)=>Promise<{registered:number;index:string;proof?:{path:string;sha256:string}}>=registerAcceptedProgressionDelivery){
+ if(!delivery.ok)return{ok:false,delivery,evidence:'native' as const};
+ try{return{ok:true,delivery,evidence:'native' as const,progressionRegistration:{ok:true,...await register(task,delivery,base)}};}
+ catch(error){return{ok:true,delivery,evidence:'native' as const,progressionRegistration:{ok:false,retry:true,error:('native method registration: '+String(error)).replace(/[\r\n]+/g,' ').slice(0,300)}};}
 }

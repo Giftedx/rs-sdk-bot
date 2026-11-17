@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,existsSync,symlinkSync,readdirSync,cpSync} from 'node:fs';
 import {tmpdir} from 'node:os';import {join,dirname} from 'node:path';import {createHash} from 'node:crypto';
 import {registerProgressionQualification,type ProgressionRegistrationOptions} from '../src/progression-qualification';
 import {progressionProofs,evaluateProgressionWork} from '../../core/src/progression-session';
@@ -76,4 +76,73 @@ test('complete native acceptance logs stay immutable and a changed saved-verifie
   for(let i=0;i<f.task.checks.length;i++)for(const kind of ['out','err'])expect(readFileSync(join(bundle,'checks',i+'.'+kind+'.log')).equals(readFileSync(join(f.directory,i+'.'+kind+'.log')))).toBe(true);
  }finally{f.cleanup();}
  const changed=fixture();try{changed.options.verifyProof=()=>{writeFileSync(join(changed.directory,'2.out.log'),'changed after native acceptance');return{checks:{verified:true}};};await expect(registerProgressionQualification(changed.directory,changed.options)).rejects.toThrow();expect(existsSync(join(changed.practice,'progression-system/qualifications.json'))).toBe(false);}finally{changed.cleanup();}
+});
+test('each fixed native artifact is bounded before verification or publication',async()=>{
+ const MiB=1024*1024;
+ for(const[name,limit,place]of [
+  ['report.json',MiB,'delivery'],['task.json',MiB,'delivery'],['ranged-adaptive-proof.json',4096,'delivery'],
+  ['proof.json',MiB,'method'],['entry.json',MiB,'method'],['before.sav',4*MiB,'method'],['after.sav',4*MiB,'method'],
+  ['worker.log',16*MiB,'method'],['0.out.log',16*MiB,'delivery'],['2.out.log',16*MiB,'delivery'],['0.err.log',16*MiB,'delivery'],
+ ]as const){
+  const f=fixture();try{
+   const file=join(place==='delivery'?f.directory:f.folder,name),original=readFileSync(file),oversized=Buffer.concat([original,Buffer.alloc(limit+1-original.length,32)]);
+   writeFileSync(file,oversized);
+   if(name==='entry.json'){f.proof.entrySha256=hash(oversized);writeFileSync(join(f.folder,'proof.json'),JSON.stringify(f.proof));}
+   await expect(registerProgressionQualification(f.directory,f.options)).rejects.toThrow(/artifact.*(limit|bounded)/);
+   expect(existsSync(join(f.practice,'progression-system/qualifications.json'))).toBe(false);
+  }finally{f.cleanup();}
+ }
+},30000);
+test('a fixed artifact symlink cannot leave its declared folder even within the selected practice root',async()=>{
+ for(const[name,place]of [['report.json','delivery'],['entry.json','method'],['worker.log','method'],['before.sav','method']]as const){
+  const f=fixture();try{
+   const file=join(place==='delivery'?f.directory:f.folder,name),other=join(f.practice,'other');mkdirSync(other);
+   const target=join(other,name);writeFileSync(target,readFileSync(file));rmSync(file);symlinkSync(target,file,'file');
+   await expect(registerProgressionQualification(f.directory,f.options)).rejects.toThrow(/artifact.*(folder|root)/);
+   expect(existsSync(join(f.practice,'progression-system/qualifications.json'))).toBe(false);
+  }finally{f.cleanup();}
+ }
+});
+test('an artifact directory is rejected as data before the verifier can run',async()=>{
+ const f=fixture();try{
+  const file=join(f.folder,'before.sav');rmSync(file);mkdirSync(file);
+  await expect(registerProgressionQualification(f.directory,f.options)).rejects.toThrow(/artifact.*regular file/);
+  expect(f.verified()).toBe(0);
+ }finally{f.cleanup();}
+});
+test('the output system cannot follow a junction outside the actual base practice directory',async()=>{
+ const f=fixture();try{
+  const outside=join(f.base,'outside');mkdirSync(outside);symlinkSync(outside,join(f.practice,'progression-system'),'junction');
+  await expect(registerProgressionQualification(f.directory,f.options)).rejects.toThrow(/output.*practice root/);
+  expect(readdirSync(outside)).toEqual([]);
+ }finally{f.cleanup();}
+});
+test('immutable destination ancestry is checked under the write lock and retains the index on escape',async()=>{
+ const f=fixture();try{
+  const system=join(f.practice,'progression-system'),outside=join(f.base,'outside'),index=join(system,'qualifications.json');mkdirSync(system);mkdirSync(outside);writeFileSync(index,'{"proofs":[],"keep":true}');
+  let calls=0;f.options.fingerprint=()=>{
+   if(++calls===2){const proofs=join(system,'proofs');mkdirSync(proofs);symlinkSync(outside,join(proofs,hash(readFileSync(join(f.folder,'proof.json')))),'junction');}
+   return source;
+  };
+  await expect(registerProgressionQualification(f.directory,f.options)).rejects.toThrow(/output.*practice root/);
+  expect(readFileSync(index,'utf8')).toBe('{"proofs":[],"keep":true}');expect(readdirSync(outside)).toEqual([]);
+ }finally{f.cleanup();}
+});
+test('escaped immutable files and atomic index temporary files cannot redirect output writes',async()=>{
+ for(const kind of ['proof','temporary']as const){const f=fixture();try{
+  const system=join(f.practice,'progression-system'),outside=join(f.base,'outside'),index=join(system,'qualifications.json');mkdirSync(system);mkdirSync(outside);writeFileSync(index,'{"proofs":[],"keep":true}');
+  const raw=readFileSync(join(f.folder,'proof.json')),target=join(outside,'sentinel');writeFileSync(target,kind==='proof'?raw:'retained outside');
+  const bundle=join(system,'proofs',hash(raw));mkdirSync(bundle,{recursive:true});symlinkSync(target,kind==='proof'?join(bundle,'proof.json'):index+'.tmp-'+process.pid,'file');
+  await expect(registerProgressionQualification(f.directory,f.options)).rejects.toThrow(/output.*practice root/);
+  expect(readFileSync(index,'utf8')).toBe('{"proofs":[],"keep":true}');expect(readFileSync(target).equals(kind==='proof'?raw:Buffer.from('retained outside'))).toBe(true);
+ }finally{f.cleanup();}}
+});
+test('a relocated artifact root stays valid while publication remains in the actual base practice root',async()=>{
+ const f=fixture();try{
+  const downloaded=join(f.base,'downloaded');cpSync(f.practice,downloaded,{recursive:true});
+  const directory=join(downloaded,'deliveries','ranged-train-fixture');
+  expect((await registerProgressionQualification(directory,{...f.options,practiceRoot:downloaded})).registered).toBe(1);
+  expect(existsSync(join(f.practice,'progression-system/qualifications.json'))).toBe(true);
+  expect(existsSync(join(downloaded,'progression-system'))).toBe(false);
+ }finally{f.cleanup();}
 });
