@@ -68,9 +68,26 @@ const count = (items: readonly Item[], id: number) => items.filter(i => i.id ===
 
 // The spell a level casts.
 export const splashSpell = (level: number) => SPLASH_SPELLS.find(s => level >= s.level) ?? SPLASH_SPELLS[SPLASH_SPELLS.length - 1]!;
+export const hasSpellRunes = (spell: typeof SPLASH_SPELLS[number], pack: readonly Item[]) =>
+    Object.entries(spell.runes).every(([id, each]) => count(pack, Number(id)) >= each);
 // The best spell of the level that the pack has the runes for; the level's best spell when the pack pays for none.
-export const packSpell = (level: number, pack: readonly Item[]) => SPLASH_SPELLS.find(s => level >= s.level
-    && Object.entries(s.runes).every(([id, each]) => count(pack, Number(id)) >= each)) ?? splashSpell(level);
+export const packSpell = (level: number, pack: readonly Item[]) => SPLASH_SPELLS.find(s => level >= s.level && hasSpellRunes(s, pack)) ?? splashSpell(level);
+// Stat-lowering debuff spells available at this level with held runes, best XP first.
+export const splashDebuffSpells = (level: number, pack: readonly Item[]) =>
+    SPLASH_SPELLS.filter(s => s.component !== 'magic:wind_strike' && level >= s.level && hasSpellRunes(s, pack));
+// Picks the nearest in-reach target for the highest-XP spell not on cooldown for that target.
+export function pickSplashTarget<T extends { index: number; distance: number }>(
+    targets: readonly T[],
+    spells: readonly (typeof SPLASH_SPELLS[number])[],
+    rest: ReadonlyMap<string, number>,
+    tick: number,
+): { target: T; spell: typeof SPLASH_SPELLS[number] } | null {
+    for (const spell of spells) {
+        const ready = targets.filter(t => (rest.get(`${t.index}:${spell.component}`) ?? 0) <= tick).sort((a, b) => a.distance - b.distance);
+        if (ready.length) return { target: ready[0]!, spell };
+    }
+    return null;
+}
 // Casts from this experience to the target level, spell by spell as the levels unlock them, and the runes they cost.
 export function splashPlan(xp: number, target: number): { casts: number; runes: Record<number, number> } {
     const runes: Record<number, number> = Object.fromEntries(SPLASH_RUNES.map(id => [id, 0])), goal = xpForLevel(target);
@@ -133,7 +150,7 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
     // A site with no bank casts the best spell that the pack pays for: the starter pack has runes for 2 Confuse casts
     // and 15 Wind Strikes.
     const spellNow = () => site.bank ? splashSpell(level()) : packSpell(level(), inv());
-    const affordable = () => Object.entries(spellNow().runes).every(([id, each]) => count(inv(), Number(id)) >= each);
+    const affordable = () => site.bank ? splashDebuffSpells(level(), inv()).length > 0 : hasSpellRunes(spellNow(), inv());
     const runesHeld = () => SPLASH_RUNES.reduce((n, id) => n + count(inv(), id), 0);
     const onTile = () => { const p = st()?.player; return !!p && p.worldX === TILE.x && p.worldZ === TILE.z; };
     const reach = (n: { tileX?: number; tileZ?: number; x: number; z: number }) => castReaches(TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z }, CAST_RANGE, site.size);
@@ -165,7 +182,7 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
         if (!there.ok) throw Error(`splash: walk to ${TILE.x},${TILE.z} failed: ${there.reason ?? ''} ${there.detail ?? ''}`);
     }
     try {
-        const rest = new Map<number, number>();
+        const rest = new Map<string, number>();
         let quiet = s.tick();
         while (level() < o.target) {
             if (ended) { stop = 'session ended'; break; }
@@ -183,15 +200,17 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
             }
             // A cast the server cannot make from here walks the account along the fence: back to the tile first.
             if (!onTile() && (!(await walkPath(walker, [{ ...TILE, tol: 0 }], { maxTicks: 200, stop: () => ended })).ok || !onTile())) throw Error(`splash: fence tile ${TILE.x},${TILE.z} not reached`);
-            const cow = (st()?.nearbyNpcs ?? []).filter(n => site.target(n) && n.hp !== 0 && (rest.get(n.index) ?? 0) <= s.tick() && reach(n))
-                .sort((a, b) => a.distance - b.distance)[0];
-            if (!cow) { waited++; await waitTicks(s, 1); continue; }
+            const inReach = (st()?.nearbyNpcs ?? []).filter(n => site.target(n) && n.hp !== 0 && reach(n));
+            const spells = site.bank ? splashDebuffSpells(level(), inv()) : [spellNow()];
+            const pick = pickSplashTarget(inReach, spells, rest, s.tick());
+            if (!pick) { waited++; await waitTicks(s, 1); continue; }
+            const { target: cow, spell } = pick;
             const before = xp(), runes = runesHeld(), said = refusals();
-            await s.direct({ type: 'spellOnNpc', npcIndex: cow.index, spellComponent: componentId(spellNow().component), reason: 'SDK' });
+            await s.direct({ type: 'spellOnNpc', npcIndex: cow.index, spellComponent: componentId(spell.component), reason: 'SDK' });
             await waitUntil(s, () => xp() > before || runesHeld() < runes || refusals() > said || ended, { timeoutTicks: CAST_WAIT });
-            if (xp() > before || runesHeld() < runes) { casts++; quiet = s.tick(); rest.set(cow.index, s.tick() + WEAK_TICKS); await waitTicks(s, CAST_GAP); }
-            else if (refusals() > said) { refused++; rest.set(cow.index, s.tick() + WEAK_TICKS); }
-            else { missed++; rest.set(cow.index, s.tick() + MISS_TICKS); }
+            if (xp() > before || runesHeld() < runes) { casts++; quiet = s.tick(); rest.set(`${cow.index}:${spell.component}`, s.tick() + WEAK_TICKS); await waitTicks(s, CAST_GAP); }
+            else if (refusals() > said) { refused++; rest.set(`${cow.index}:${spell.component}`, s.tick() + WEAK_TICKS); }
+            else { missed++; rest.set(`${cow.index}:${spell.component}`, s.tick() + MISS_TICKS); }
         }
     } finally {
         // Back to the bank with what is left, so the next job starts from a clean pack.

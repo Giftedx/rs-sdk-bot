@@ -1,5 +1,5 @@
 import { beforeAll, expect, test } from 'bun:test';
-import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, packSpell, splashBatchDone, splashPlan, splashSite, splashSpell } from './splash-train';
+import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, packSpell, pickSplashTarget, splashBatchDone, splashDebuffSpells, splashPlan, splashSite, splashSpell } from './splash-train';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { SPLASH_KIT, SPLASH_TO } from '../packages/planner/src/autopilot';
 import { loadPathfinding } from '../packages/core/src/pathcache';
@@ -92,6 +92,22 @@ test('the coop site casts from the starter pack: the best spell the pack pays fo
     expect(splashSite('coop').target({ id: 41, name: 'Chicken' })).toBe(true);
     expect(splashSite('coop').target({ id: 81, name: 'Cow' })).toBe(false);
     expect(() => splashSite('varrock')).toThrow('SPLASH_SITE');
+});
+
+test('pickSplashTarget falls back to Weaken and Confuse when Curse is on cooldown for all cows in reach', () => {
+    const runes = [{ id: BODY, count: 10 }, { id: WATER, count: 30 }, { id: EARTH, count: 30 }];
+    const spells = splashDebuffSpells(65, runes);
+    expect(spells.map(s => s.component)).toEqual(['magic:curse', 'magic:weaken', 'magic:confuse']);
+    const cows = [{ index: 1, distance: 3 }, { index: 2, distance: 5 }];
+    const rest = new Map<string, number>();
+    expect(pickSplashTarget(cows, spells, rest, 100)).toEqual({ target: cows[0]!, spell: spells[0]! });
+    rest.set('1:magic:curse', 120);
+    expect(pickSplashTarget(cows, spells, rest, 100)).toEqual({ target: cows[1]!, spell: spells[0]! });
+    rest.set('2:magic:curse', 120);
+    expect(pickSplashTarget(cows, spells, rest, 100)).toEqual({ target: cows[0]!, spell: spells[1]! });
+    rest.set('1:magic:weaken', 120);
+    rest.set('2:magic:weaken', 120);
+    expect(pickSplashTarget(cows, spells, rest, 100)).toEqual({ target: cows[0]!, spell: spells[2]! });
 });
 
 test('the coop tile is open floor that sees most of the coop within reach', () => {
