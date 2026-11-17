@@ -14,7 +14,7 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
 import {rsPathLength,type World,type Transport,type Account,type PathLength} from '../packages/core/src/world';
 import {deadlyTo,loadHunters} from '../packages/core/src/danger';
-import {loadTravel} from '../packages/core/src/travel';
+import {loadTravel,travelAllowed,type Travel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance,locsByDistance} from '../packages/core/src/spawn-index';
 import {gatherPlan,gatherItems,rangedKit,magicKit,arrowsFor,castsFor,ARROWS,BOWS,NPC_SOURCES,PICK_SOURCES} from '../packages/core/src/gather';
@@ -403,9 +403,12 @@ export async function reserveInputSlots(s:Session,inputs:readonly Item[],keep:Re
  console.log(`QUEST_SWEEP_CAPACITY ${JSON.stringify({required,free})}`);
  return free>=required?null:`input capacity short: free ${free}, required ${required}`;
 }
-export function nearestBanks(at:Tile):Tile[]{
+export function nearestBanks(at:Tile,actor?:Account,edges?:readonly Travel[]):Tile[]{
  const a=surfaceOf(at);
- return BANKS.filter(b=>b.level===a.level).sort((x,y)=>Math.max(Math.abs(x.x-a.x),Math.abs(x.z-a.z))-Math.max(Math.abs(y.x-a.x),Math.abs(y.z-a.z)));
+ const landings=actor?(edges??loadTravel()).filter(t=>t.from===null&&t.to.level===a.level&&travelAllowed(t,actor)):[];
+ // Rank candidates only. The router still owns access, cost and execution from the observed entry.
+ const score=(bank:Tile)=>Math.min(cheb(a,bank),...landings.map(t=>t.cost+cheb(t.to,bank)));
+ return BANKS.filter(b=>b.level===a.level).sort((x,y)=>score(x)-score(y));
 }
 // The sweep eats on its own walks (the quest script brings its own eater at the handover): anything that heals, from
 // 60 percent of the account's hitpoints down. A quest that failed leaves the account where it stood, and the next
@@ -609,6 +612,7 @@ export async function fetchHeckelDust(io:HeckelIO):Promise<{ok:boolean;detail?:s
  if(!(p.level===0&&p.x>=2369&&p.x<=2505&&p.z>=3385&&p.z<=3524)){
   const south={...STRONGHOLD_GATE.south,level:0};
   const approach=await io.travel(south);
+  console.log(`QUEST_SWEEP_HECKEL_APPROACH ${JSON.stringify({from:p,to:south,at:io.pos(),observed:approach.ok&&at(south,1)})}`);
   if(!approach.ok||!at(south,1))return fail(`Stronghold south leg to 2461,3382,0 failed: ${approach.detail??'arrival unobserved'}`);
   try{await io.gate();}catch(error){return fail(`Stronghold gate leg 2461,3382,0 -> 2461,3385,0 failed: ${String(error)}`);}
   if(!at({...STRONGHOLD_GATE.north,level:0},0))return fail('Stronghold gate leg to 2461,3385,0 failed: north arrival unobserved');
@@ -644,6 +648,7 @@ export async function fetchHeckelDust(io:HeckelIO):Promise<{ok:boolean;detail?:s
 }
 export function heckelIO(s:Session,world:World):HeckelIO{
  const st=()=>s.sdk.getState(),held=(id:number)=>count(st()?.inventory??[],id);
+ const walk=async(to:Tile)=>walkPath(await sessionWalker(s),[{x:to.x,z:to.z,tol:0}],{maxTicks:150});
  const gate=async()=>{
   const initial=st()?.player;
   const live=()=>{if(!st()?.inGame)throw Error('session interrupted');if(sessionDied(initial,st()?.player)||(s.sdk.getSkill('Hitpoints')?.level??0)<=0)throw Error('died');};
@@ -654,8 +659,14 @@ export function heckelIO(s:Session,world:World):HeckelIO{
  return{
   gate,
   pos:()=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:undefined;},held:()=>held(1975),coins:()=>held(COINS),
-  travel:async to=>{const r=await goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,maxRetriesPerLeg:1});return r.ok?{ok:true}:{ok:false,detail:`${r.reason} ${r.detail}`};},
-  walk:async to=>walkPath(await sessionWalker(s),[{x:to.x,z:to.z,tol:0}],{maxTicks:150}),
+  travel:async to=>{
+   const r=await walkFar(s,world,to,150);if(!r.ok)return{ok:false,detail:`${r.reason} ${r.detail}`};
+   const ground=HECKEL_DUST.ground,p=st()?.player;
+   // Match fetchHeckelDust's ground arrival; the gate entry still needs the exact approach.
+   if(to.x===ground.x&&to.z===ground.z&&to.level===ground.level&&p?.level===ground.level&&Math.max(Math.abs(p.worldX-ground.x),Math.abs(p.worldZ-ground.z))<=2)return{ok:true};
+   const last=await walk(to);return last.ok?{ok:true}:{ok:false,detail:`final approach ${last.detail??'arrival unobserved'}`};
+  },
+  walk,
   climb:async up=>s.direct({type:'interactLoc',...HECKEL_DUST.ladder,locId:up?1747:1748,optionIndex:up?1:3,reason:'SDK'}),
   open:async()=>{const npc=st()?.nearbyNpcs.find(n=>n.id===603);if(!npc)return false;await s.bot.openShop(npc);return waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});},
   row:()=>st()?.shop?.shopItems.find(i=>i.id===1975&&i.count>0),
@@ -1396,20 +1407,23 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||foodShort(food,pack(),need)||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
-  // The nearest bank may be out of reach: try the next three.
-  let walked:Walked={ok:false,reason:'precondition',detail:'no bank tried',ticks:0};
-  for(const bank of nearestBanks(here()).slice(0,4)){
-   console.log(`QUEST_SWEEP_BANK ${JSON.stringify({from:here(),to:bank})}`);
-   walked=await walkFar(s,world,bank,100);
-   console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
-   if(walked.ok)break;
-  }
+  const bankTravel=world.navigationGraph?.().travel??loadTravel();
+  const findBank=async()=>{
+   let result:Walked={ok:false,reason:'precondition',detail:'no bank tried',ticks:0};
+   const tried=new Set<string>();
+   for(let attempt=0;attempt<4;attempt++){
+    const bank=nearestBanks(here(),accountOf(s),bankTravel).find(b=>!tried.has(`${b.x},${b.z},${b.level}`));
+    if(!bank)break;tried.add(`${bank.x},${bank.z},${bank.level}`);
+    console.log(`QUEST_SWEEP_BANK ${JSON.stringify({from:here(),to:bank})}`);
+    result=await walkFar(s,world,bank,100);
+    console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:result})}`);
+    if(result.ok)break;
+   }
+   return result;
+  };
+  let walked=await findBank();
   // No bank in reach with few coins: the exit may be a fare. Raise it at a general store and try again.
-  if(!walked.ok&&count(pack(),COINS)<200&&await raiseFare(s,world))for(const bank of nearestBanks(here()).slice(0,4)){
-   walked=await walkFar(s,world,bank,100);
-   console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
-   if(walked.ok)break;
-  }
+  if(!walked.ok&&count(pack(),COINS)<200&&await raiseFare(s,world))walked=await findBank();
   if(!walked.ok)return fail(`bank walk failed at ${JSON.stringify(here())}: ${walked.reason} ${walked.detail}`);
   const opened=await s.bot.openBank();
   if(!opened.success)return fail('bank did not open');

@@ -2,6 +2,56 @@ import { test, expect } from 'bun:test';
 import { walkRoute } from '../src/walk';
 import { fakeGame } from './fakegame';
 
+const mcGruborLeg=(outside=true)=>{
+ const travel={id:'loc:mcgruborlooserailing',kind:'passage',name:'mcgruborlooserailing op1',from:{x:outside?2663:2661,z:3500,level:0},
+  to:{x:outside?2661:2663,z:3500,level:0},coins:0,needs:[],runes:[],cost:5,
+  run:{how:'loc',loc:'mcgruborlooserailing',op:1,option:null,id:51,at:{x:2662,z:3500,level:0}}};
+ return{kind:'travel',travel,at:travel.from,to:travel.to} as any;
+};
+const mcGruborRail={id:51,name:'Loose railing',x:2662,z:3500,level:0,optionsWithIndex:[{text:'Squeeze-through',opIndex:1}]};
+
+test('McGrubor exit waits beyond the railing tile before the next movement can cancel its squeeze',async()=>{
+ const g=fakeGame({x:2663,z:3500,level:0,nearbyLocs:[mcGruborRail]});let pending=false,crossAt=0;
+ g.quirks.onDirectLoc=()=>{g.state.player.worldX=2662;pending=true;crossAt=g.tick()+3;};
+ const off=g.onTick(()=>{
+  if(!pending)return;
+  if(g.calls.some(c=>c.startsWith('walk '))){pending=false;g.calls.push('squeeze canceled');return;}
+  if(g.tick()>=crossAt){pending=false;g.state.player.worldX=2661;g.calls.push('native outside');}
+ });
+ try{
+  const result=await walkRoute(g as any,[mcGruborLeg(),{kind:'walk',to:{x:2670,z:3502,level:0}}],{maxRetriesPerLeg:1,legTimeoutTicks:30});
+  expect(result.ok).toBe(true);
+  expect(g.calls).not.toContain('squeeze canceled');
+  expect(g.calls.indexOf('native outside')).toBeGreaterThanOrEqual(0);
+  expect(g.calls.indexOf('walk 2670,3502')).toBeGreaterThan(g.calls.indexOf('native outside'));
+ }finally{off();g.stop();}
+});
+
+test('McGrubor exit times out at the inside railing tile without claiming a crossing',async()=>{
+ const g=fakeGame({x:2663,z:3500,level:0,nearbyLocs:[mcGruborRail]});g.quirks.onDirectLoc=()=>{g.state.player.worldX=2662;};
+ try{expect(await walkRoute(g as any,[mcGruborLeg()],{maxRetriesPerLeg:1,legTimeoutTicks:30})).toMatchObject({ok:false,reason:'timeout'});}
+ finally{g.stop();}
+});
+
+test('McGrubor entry accepts the native inside tile even though the route landing is one tile farther',async()=>{
+ const g=fakeGame({x:2661,z:3500,level:0,nearbyLocs:[mcGruborRail]});g.quirks.onDirectLoc=()=>{g.state.player.worldX=2662;};
+ try{expect((await walkRoute(g as any,[mcGruborLeg(false)],{maxRetriesPerLeg:1,legTimeoutTicks:30})).ok).toBe(true);}
+ finally{g.stop();}
+});
+
+test('McGrubor already-outside travel does not squeeze back into the wood',async()=>{
+ const g=fakeGame({x:2661,z:3500,level:0,nearbyLocs:[mcGruborRail]});g.quirks.onDirectLoc=()=>{g.state.player.worldX=2662;};
+ try{expect((await walkRoute(g as any,[mcGruborLeg()],{maxRetriesPerLeg:1,legTimeoutTicks:30})).ok).toBe(true);expect(g.calls).toEqual([]);}
+ finally{g.stop();}
+});
+
+test('McGrubor stop during the pending exit issues no later movement',async()=>{
+ const g=fakeGame({x:2663,z:3500,level:0,nearbyLocs:[mcGruborRail]}),abort=new AbortController();
+ g.quirks.onDirectLoc=()=>{g.state.player.worldX=2662;abort.abort();};
+ try{expect(await walkRoute(g as any,[mcGruborLeg()],{signal:abort.signal,maxRetriesPerLeg:1,legTimeoutTicks:30})).toMatchObject({ok:false,reason:'aborted'});expect(g.calls.some(c=>c.startsWith('walk '))).toBe(false);}
+ finally{g.stop();}
+});
+
 test('same-floor exact CW landing cannot pass at its unmoved start two tiles away',async()=>{
  const g=fakeGame({x:2418,z:3074,level:0,nearbyLocs:[{id:1,x:2417,z:3074,level:0}]});g.state.equipment=[];g.quirks.climbFails=1;
  try{const result=await walkRoute(g as any,[{kind:'transport',loc:'castlewars_outsidestairs_saradomin_linked',option:'op1',at:{x:2417,z:3074,level:0},entry:{x:2418,z:3074,level:0},to:{x:2416,z:3074,level:0},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:3});expect(result).toMatchObject({ok:false,reason:'timeout'});}finally{g.stop();}
