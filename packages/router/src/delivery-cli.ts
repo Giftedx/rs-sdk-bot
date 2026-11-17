@@ -63,8 +63,8 @@ export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmis
 }
 const importParses=new Map<string,{source:string;relative:string[]}>();
 const IMPORT_PARSE_LIMIT=2048;
-function relativeImports(path:string):readonly string[]{
- const content=readFileSync(path,'utf8'),source=createHash('sha256').update(content).digest('hex');
+function relativeImports(path:string,bytes:Buffer):readonly string[]{
+ const content=bytes.toString('utf8'),source=createHash('sha256').update(content).digest('hex');
  const prior=importParses.get(path);if(prior?.source===source)return prior.relative;
  const relative=ts.preProcessFile(content,true,true).importedFiles.map(s=>s.fileName).filter(s=>s.startsWith('.'));
  if(!prior&&importParses.size>=IMPORT_PARSE_LIMIT)importParses.clear();
@@ -74,6 +74,9 @@ function relativeImports(path:string):readonly string[]{
 // Every repo file a capability can load: its entry, owned files and check scripts, then their relative imports.
 // An edit outside this set does not change what the capability runs, so it keeps its qualification.
 export function importClosure(starts:readonly string[],base=root):string[]{
+ return scanImportClosure(starts,base);
+}
+function scanImportClosure(starts:readonly string[],base:string,contents?:Map<string,Buffer>):string[]{
  const seen=new Set<string>(),queue=[...starts];
  const resolved=new Map<string,string|undefined>();
  const resolveFile=(file:string,spec:string):string|undefined=>{
@@ -85,11 +88,19 @@ export function importClosure(starts:readonly string[],base=root):string[]{
  while(queue.length){
   const file=queue.pop()!;if(seen.has(file)||!existsSync(join(base,file)))continue;seen.add(file);
   if(!/\.(?:ts|tsx|js|mjs)$/.test(file))continue;
-  for(const spec of relativeImports(join(base,file))){
+  const bytes=readFileSync(join(base,file));contents?.set(file,bytes);
+  for(const spec of relativeImports(join(base,file),bytes)){
    const next=resolveFile(file,spec);if(next&&!seen.has(next))queue.push(next);
   }
  }
  return [...seen].sort();
+}
+// Import discovery and hashing share bytes only within this call. Every later scan reads fresh source.
+export function hashImportClosure(starts:readonly string[],base=root,hash=createHash('sha256')):string{
+ const contents=new Map<string,Buffer>();
+ for(const file of scanImportClosure(starts,base,contents))
+  hash.update(file+'\0').update(contents.get(file)??readFileSync(join(base,file))).update('\0');
+ return hash.digest('hex');
 }
 // The capability release of the entry (packages/core/src/worker-release.ts); null when the entry cannot be released.
 function runtimeRevision(task:DeliveryTask):string|null{try{return capabilityRevision([task.entry],root);}catch{return null;}}
@@ -102,9 +113,7 @@ function fingerprintWithPolicy(t:DeliveryTask,base:string,policy:SavedProofPolic
  const hash=createHash('sha256').update(JSON.stringify(t));
  // Only admission choices for this task belong to its qualification source.
  hash.update('\0saved-proof-policy\0').update(JSON.stringify(t.checks.map(c=>savedProofVerifierAllowed(c,policy))));
- for(const file of importClosure([t.entry,...t.files,...scripts,'packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts'],base))
-  hash.update(file+'\0').update(readFileSync(join(base,file))).update('\0');
- return hash.digest('hex');
+ return hashImportClosure([t.entry,...t.files,...scripts,'packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts'],base,hash);
 }
 export function deliveryTask(value:string):DeliveryTask{
     const file=value.endsWith('.json')?resolve(root,value):join(root,'packages/router/tasks',value+'.json');
