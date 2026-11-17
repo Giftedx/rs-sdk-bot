@@ -10,7 +10,6 @@ import type {Session} from '../packages/core/src/inprocess';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import type {NearbyLoc} from '../vendor/rs-sdk/sdk/types';
 import {productionStopRequested} from './microbot-c-lifetime';
-import { approach, walkTargetPersist } from './walk-to';
 import {
     WOODCUTTING_AXES_DESC,
     type ShopRetryGate,
@@ -92,6 +91,11 @@ export function westOakPathAllowed(from:{x:number;z:number},corners:readonly {x:
 }
 const axeShopGates = new WeakMap<object, ShopRetryGate>();
 
+async function walkViaRoute(s: Session, spot: { x: number; z: number; level?: number }, stop: () => boolean): Promise<boolean> {
+    const { approach, walkTargetPersist } = await import('./walk-to');
+    return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, stop))).ok;
+}
+
 export async function reconcileWoodcuttingAxeAtBank(
     s: Session,
     options: {
@@ -108,15 +112,16 @@ export async function reconcileWoodcuttingAxeAtBank(
     };
     const hooks = sessionToolHooks(s, {
         openBank,
-        walkTo: options.walkTo ?? (async spot => (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, options.stop))).ok),
+        walkTo: options.walkTo ?? (spot => walkViaRoute(s, spot, options.stop)),
         waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),
         stop: options.stop,
     });
+    const wornItems = () => s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? [];
     await openBank();
     if (!await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }) || options.stop()) {
         const levels = readSkillLevels(s.sdk);
-        const cur = bestWoodcuttingAxe([...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3)], levels).current;
-        return { activeId: cur?.item.id ?? null, worn: !!cur && s.sdk.getEquipment().some(e => e.slot === 3 && e.id === cur.item.id) };
+        const cur = bestWoodcuttingAxe([...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3)], levels).current;
+        return { activeId: cur?.item.id ?? null, worn: !!cur && wornItems().some(e => e.slot === 3 && e.id === cur.item.id) };
     }
 
     const bankItems = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
@@ -126,7 +131,7 @@ export async function reconcileWoodcuttingAxeAtBank(
     const shopGate = sessionShopGate(axeShopGates, s, options.shopGate);
 
     if (options.allowShop && shouldAttemptShopUpgrade(shopGate, axeTier, s.tick?.() ?? 0)) {
-        const stock = [...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3), ...bankItems];
+        const stock = [...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...bankItems];
         const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
         const shopPlan = planToolShopUpgrade('woodcutting-axe', stock, totalCoins, levels, {
             allowedShops: ['axeshop'],
@@ -152,7 +157,7 @@ export async function reconcileWoodcuttingAxeAtBank(
     }
 
     const latestBank = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
-    const rec = bestWoodcuttingAxe([...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3), ...latestBank], levels).current;
+    const rec = bestWoodcuttingAxe([...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...latestBank], levels).current;
     if (!rec) return { activeId: null, worn: false, bought };
 
     const res = await reconcileBankTool(hooks, {
@@ -310,7 +315,7 @@ try {
 
     const refusedWields = new Set<number>();
     let toolLevels = readSkillLevels(s.sdk);
-    const activeAxe = () => bestWoodcuttingAxe([...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3)], readSkillLevels(s.sdk)).current;
+    const activeAxe = () => bestWoodcuttingAxe([...s.sdk.getInventory(), ...(s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? []).filter(e => e.slot === 3)], readSkillLevels(s.sdk)).current;
     const bank = async (forceToolCheck = false) => {
         const n = yewLogs();
         if (n === 0 && freeSpace() > 0 && !forceToolCheck) return;
@@ -354,7 +359,7 @@ try {
                     }
                     return walk(SEERS_BANK.x, SEERS_BANK.z, 2);
                 }
-                return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, over))).ok;
+                return walkViaRoute(s, spot, over);
             };
             await reconcileWoodcuttingAxeAtBank(s, {
                 bankSpot: SEERS_BANK,

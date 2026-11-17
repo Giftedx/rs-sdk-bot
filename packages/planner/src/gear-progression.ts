@@ -1540,9 +1540,10 @@ export interface SessionToolLike {
         getState: () => {
             bank?: { isOpen: boolean; items: readonly { id: number; name: string; count: number; slot?: number }[] };
             shop?: { isOpen: boolean; shopItems: readonly { id: number; name: string; count: number; buyPrice?: number; slot?: number }[] };
+            equipment?: readonly { id: number; name?: string; count?: number; slot: number }[];
         } | null | undefined;
         getInventory: () => readonly { id: number; name: string; count: number; slot?: number }[];
-        getEquipment: () => readonly { id: number; name?: string; count?: number; slot: number }[];
+        getEquipment?: () => readonly { id: number; name?: string; count?: number; slot: number }[];
     };
     bot: {
         openBank: () => Promise<unknown>;
@@ -1575,7 +1576,7 @@ export function sessionToolHooks(
         depositItem: (item, n) => s.bot.depositItem(item, n),
         equipItem: s.bot.equipItem ? item => s.bot.equipItem!(item) : undefined,
         getInventory: () => s.sdk.getInventory(),
-        getEquipment: () => s.sdk.getEquipment(),
+        getEquipment: () => s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? [],
         getBankState: () => {
             const b = s.sdk.getState()?.bank;
             if (!b) return undefined;

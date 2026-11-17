@@ -8,7 +8,6 @@ import { runSoftenClay } from './soften-clay';
 import { bankCargo } from '../packages/core/src/cargo';
 import { depositObserved } from '../packages/core/src/deposit';
 import { leaveRuneStarter } from './rune-starter';
-import { approach, walkTargetPersist } from './walk-to';
 import {
     MINING_PICKAXES_DESC,
     type ShopRetryGate,
@@ -87,7 +86,7 @@ export const ORE_TOOL_TIERS = [5, 6, 20, 21, 30, 31, 40, 41] as const;
 export function selectActiveOrePickaxe(s: Session, extra: readonly { id: number; count: number }[] = []) {
     const mining = s.sdk.getSkill('Mining')?.level ?? 1;
     const attack = s.sdk.getSkill('Attack')?.baseLevel ?? s.sdk.getSkill('Attack')?.level ?? 1;
-    const eq = s.sdk.getEquipment().filter(e => e.slot === 3);
+    const eq = (s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? []).filter(e => e.slot === 3);
     return bestMiningPickaxe([...s.sdk.getInventory(), ...eq, ...extra], { mining, attack });
 }
 
@@ -109,7 +108,10 @@ export async function reconcileOrePickaxeAtBank(
     };
     const hooks = sessionToolHooks(s, {
         openBank,
-        walkTo: options.walkTo ?? (async spot => (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, options.stop))).ok),
+        walkTo: options.walkTo ?? (async spot => {
+            const { approach, walkTargetPersist } = await import('./walk-to');
+            return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, options.stop))).ok;
+        }),
         waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),
         stop: options.stop,
     });
@@ -118,6 +120,7 @@ export async function reconcileOrePickaxeAtBank(
         return { activeId: selectActiveOrePickaxe(s).current?.item.id ?? null, worn: false };
     }
 
+    const wornItems = () => s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? [];
     const bankItems = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
     const levels = {
         mining: s.sdk.getSkill('Mining')?.level ?? 1,
@@ -128,7 +131,7 @@ export async function reconcileOrePickaxeAtBank(
     const shopGate = sessionShopGate(oreShopGates, s, options.shopGate);
 
     if (options.allowShop !== false && shouldAttemptShopUpgrade(shopGate, miningTier, s.tick?.() ?? 0)) {
-        const stock = [...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3), ...bankItems];
+        const stock = [...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...bankItems];
         const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
         const shopPlan = planToolShopUpgrade('mining-pickaxe', stock, totalCoins, levels, {
             allowedShops: ['pickaxeshop'],
@@ -154,7 +157,7 @@ export async function reconcileOrePickaxeAtBank(
     }
 
     const latestBank = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
-    const rec = bestMiningPickaxe([...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3), ...latestBank], levels);
+    const rec = bestMiningPickaxe([...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...latestBank], levels);
     if (!rec.current) return { activeId: null, worn: false, bought };
 
     const res = await reconcileBankTool(hooks, {
