@@ -567,6 +567,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     // 3 ticks at full HP.
                     kit, spec: specAll(defaultSpec(kit)), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell, ...(canCastCharge(magic, sdk.getInventory(), damageSpell) ? { charge: true } : {}),
+                    escapeOutnumbered: 2, allies: [...friends],
                     cap: 120, maxWild: cfg.maxWild, maxDistance: 15, ...cfg.fight, stop: () => stopped() || !going(),
                     log: line => emit({ e: "fight", line }),
                 });
