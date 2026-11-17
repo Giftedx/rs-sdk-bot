@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794881383162,
+ "at": 1794881989126,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -39,20 +39,9 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "TICK_RECORD": "1",
-    "WORKER_RELEASE": "ba621c2c3fd17556c71d7e25f20ed6eadd5932c3372f19d66b264b7149e828a9",
-    "PROGRESSION_CONSUMER": "{\"counters\":{\"bankObserved\":1}}"
-   },
    "enabled": false,
    "repeat": false,
-   "goal": "Fresh bank/ore/tool/arrow readiness for two missing Sapphire rings and declared PK-army arrow supply; no production or transfer",
-   "role": "inspect"
+   "role": "reserved"
   },
   {
    "account": "YewGotWood",
