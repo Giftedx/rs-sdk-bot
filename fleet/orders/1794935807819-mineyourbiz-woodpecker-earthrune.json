@@ -1,0 +1,22 @@
+{
+ "id": "1794935807819-mineyourbiz-woodpecker-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Woodpecker",
+ "item": "Earth rune",
+ "count": 81,
+ "start": 1794935807819,
+ "end": 1794938207819,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
