@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794926180553,
+ "at": 1794926296442,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -307,72 +307,79 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "3000",
-    "cow"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "shop:catherby_arrows"
    ]
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-   "role": "supply",
-   "template": "army-hunt-supply",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "shop:lowe",
-    "shop:aubury"
+    "knight:2582,3297"
    ]
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "21",
-    "1500"
+    "lowe",
+    "2500"
    ],
    "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":21}}"
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-strike-magic-21",
+   "goal": "buy iron and bronze arrows at Lowe's in Varrock for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-lowe",
    "autopilot": "local",
    "resources": [
-    "strike:ardougne-guard-dog"
+    "shop:lowe"
    ]
   },
   {
@@ -440,7 +447,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
@@ -455,31 +463,28 @@
   },
   {
    "account": "Sausagefest",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "catherby_arrows",
-    "600"
+    "3000",
+    "cow"
    ],
    "env": {
-    "ITEMS": "iron arrow|bronze arrow",
-    "STOCK_TARGET": "1000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "21000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "20000"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-catherby",
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
    "autopilot": "local",
    "resources": [
-    "shop:catherby_arrows"
+    "cow:ardougne-north"
    ]
   }
  ],
