@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794934099629,
+ "at": 1794934115938,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -184,8 +184,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":60}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -200,23 +199,22 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=150 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=9000 COIN_RESERVE=500 MAX_SPEND=8000"
+    "99",
+    "5000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy body runes at Aubury's in Varrock for the curse band",
-   "role": "supply",
-   "template": "army-body-aubury",
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
    "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
+   "resources": []
   },
   {
    "account": "Hocuspokeus",
@@ -302,9 +300,7 @@
     "66",
     "6000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -367,7 +363,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
    },
    "enabled": true,
    "standing": true,
