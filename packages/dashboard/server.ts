@@ -24,7 +24,7 @@ import {dashboardStatuses,fleetSidesView,healthObservation,localDisplayNames,rem
 import {buildItemPrices,expectedLootPrices,itemPrice,priceItemKey,projectItemPrices,type ItemPrices,type PriceCatalogItem,type PriceIdentity} from './item-prices';
 import {buildItemExamine,catalogueIconAliases,projectItemExamine} from './item-examine';
 import {createVaultItems,type VaultItem} from './vault-items';
-import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,wildernessView,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import {folderScan} from './folder-scan';
@@ -1210,7 +1210,7 @@ function buildState() {
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
             lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).map(x => x.name)), ...contention.flatMap(s => s.others)])];
             const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase().replace(SECRET_RE, SECRET_MARK), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt, world.connected ? world.tickAt : null)]));
-            return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
+            return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), wilderness: wildernessView(roster, fleet, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
         scoreboard:currentScoreboard, fleetSides:fleetSides(now),

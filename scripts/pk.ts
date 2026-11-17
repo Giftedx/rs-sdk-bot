@@ -257,6 +257,9 @@ export type FightOptions = {
     charge?: boolean;
     maxWild?: number;
     maxDistance?: number;
+    // true (default 0.35) or health fraction threshold: switch overhead to Smite while safely above eat threshold
+    // and the target is fleeing or at/below that health fraction.
+    smite?: boolean | number;
     stop?: () => boolean;
     cap?: number;
     log?: (line: string) => void;
@@ -286,6 +289,19 @@ export function weaponStyle(id: number | undefined, names = getObjNames()): Styl
     return styleOfName(id !== undefined && id >= 0 ? names.get(id) ?? '' : '');
 }
 const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 };
+
+// Switch overhead to Smite to drain an escaping or low-HP target's prayer when our HP is safely above eat threshold.
+export function selectOverheadPrayer(
+    baseOverhead: number | null,
+    prayerBase: number,
+    myHp: number,
+    eatAt: number,
+    targetLowOrFled: boolean,
+    smite?: boolean | number,
+): number | null {
+    if (!smite || prayerBase < PRAYER_REQ[PRAYER.smite]! || !targetLowOrFled || myHp <= eatAt + 12) return baseOverhead;
+    return PRAYER.smite;
+}
 
 // Prayers for the current combat state (player_combat_stat.rs2:33-35, 62-67): Protect Item, the best Defence prayer
 // (boosts melee, ranged and 30% of magic defence), the overhead for the opponent's weapon, and on melee/spec turns the
@@ -928,6 +944,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
         })() : null;
         let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        if (o.overheadPrayer !== false && o.smite) {
+            const smiteThreshold = typeof o.smite === 'number' ? o.smite : 0.35;
+            wantedOverhead = selectOverheadPrayer(wantedOverhead, prayerBase, me.hp, eatAt, fled || lowHealth(seen, smiteThreshold), o.smite);
+        }
         if (o.prayerLag?.length) {
             if (lagHas === undefined) lagWant = lagHas = wantedOverhead;
             else if (wantedOverhead !== lagWant) { lagWant = wantedOverhead; lagAt = now + pickWeighted(o.prayerLag, rand); }
@@ -1047,7 +1067,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 const active = prayers.activePrayers.flatMap((on, p) => (on ? [p] : []));
                 if (active.length > 0 && active.length <= 4) {
                     // The overhead first: it is the one that must be back on in this tick.
-                    const order = [...active].sort((a, b) => Number(b >= PRAYER.magic && b <= PRAYER.melee) - Number(a >= PRAYER.magic && a <= PRAYER.melee));
+                    const order = [...active].sort((a, b) => Number(b >= PRAYER.magic && b <= PRAYER.smite) - Number(a >= PRAYER.magic && a <= PRAYER.smite));
                     for (const p of order) void sdk.sendTogglePrayer(p);
                     for (const p of order.slice(0, 5 - order.length)) void sdk.sendTogglePrayer(p);
                     flickAt = now;

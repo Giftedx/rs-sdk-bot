@@ -189,6 +189,11 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   return(profile==='aubury'||profile==='betty')&&[cap,target,maximum,spend,reserve].every(whole)&&[0,1].includes(seedUsed)&&cap>=1&&cap<=16000&&target>=1&&maximum>=1&&maximum<=target
    ?{kind:'acquire',items:{557:target},consumer}:null;
  }
+ if(script==='scripts/earth-production.ts'){
+  const mode=args[0],cap=Number(args[1]),target=Number(setting(env,args,'STOCK_TARGET')),reserve=Number(setting(env,args,'COIN_RESERVE')),kills=Number(setting(env,args,'HUNT_KILLS_PER_TARGET')??0);
+  return(mode==='talismans'||mode==='craft')&&[cap,target,reserve,kills].every(whole)&&cap>=1&&cap<=20000&&target>=1&&kills>=0&&kills<=3
+   ?{kind:'acquire',items:{557:target},consumer}:null;
+ }
  if(script==='scripts/shop-buyer.ts'){
   const count=Number(setting(env,args,'STOCK_TARGET')??setting(env,args,'MAX_ITEMS')),pattern=setting(env,args,'ITEMS')??(args[0]==='jukat'?'^dragon longsword$':undefined);
   if(!whole(count)||count<1||!pattern)return null;

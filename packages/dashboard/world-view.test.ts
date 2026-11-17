@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView, valueBoardRows, wildernessInfo } from './world-view';
+import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView, valueBoardRows, wildernessInfo, wildernessView } from './world-view';
 
 const now = 1_000_000;
 const roster = new Map([
@@ -39,7 +39,23 @@ test('wildernessInfo computes wilderness level and combat bracket for surface an
     expect(wildernessInfo({ x: 3094, z: 3555, level: 0 }, 90)).toEqual({ wild: 5, minCombat: 85, maxCombat: 95 });
     expect(wildernessInfo({ x: 3100, z: 9928, level: 0 }, 5)).toEqual({ wild: 2, minCombat: 3, maxCombat: 7 });
     expect(wildernessInfo({ x: 3222, z: 3222, level: 0 }, 90)).toEqual({ wild: 0, minCombat: null, maxCombat: null });
+    expect(wildernessInfo({ x: 2800, z: 9950, level: 0 }, 90)).toEqual({ wild: 0, minCombat: null, maxCombat: null });
     expect(lookupView('WildyPker', null, null, { x: 3094, z: 3555, level: 0, combat: 100, seen: now - 100 }, now).wild).toEqual({ wild: 5, minCombat: 95, maxCombat: 105 });
+});
+
+test('wildernessView lists online Wilderness sightings sorted with rivals first and deeper levels higher', () => {
+    const ext = new Map([
+        ...roster,
+        ['wildy1', { name: 'Wildy1', x: 3094, z: 3555, level: 0, combat: 100, seen: now - 500 }],
+        ['deeppk', { name: 'DeepPk', x: 3180, z: 3780, level: 0, combat: 120, seen: now - 500 }],
+        ['wildybot', { name: 'MyBot', x: 3100, z: 3600, level: 0, combat: 40, seen: now - 500 }],
+        ['stalewild', { name: 'StaleWild', x: 3100, z: 3600, level: 0, combat: 80, seen: now - 60_000 }],
+    ]);
+    expect(wildernessView(ext, fleet, now).map(r => [r.name, r.fleet, r.wild])).toEqual([
+        ['DeepPk', false, 33],
+        ['Wildy1', false, 5],
+        ['MyBot', true, 11],
+    ]);
 });
 test('a spot that several claims of one side name is listed once; another side keeps its own row', () => {
     const v = contentionView([{ side: 'local', resources: ['knight:2582,3297'] }, { side: 'local', resources: ['knight:2582,3297', 'knight:2582,3297'] }, { side: 'cloud', resources: ['knight:2582,3297'] }], roster, fleet, now);
