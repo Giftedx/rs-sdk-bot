@@ -1,0 +1,22 @@
+{
+ "id": "1794959270433-bigchopper-woodpecker-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "Woodpecker",
+ "item": "Earth rune",
+ "count": 252,
+ "start": 1794959270433,
+ "end": 1794961670433,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
