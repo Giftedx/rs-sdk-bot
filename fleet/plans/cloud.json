@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794879021400,
+ "at": 1794879631840,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -26,7 +26,7 @@
     "WORKER_RELEASE": "ba621c2c3fd17556c71d7e25f20ed6eadd5932c3372f19d66b264b7149e828a9",
     "PROGRESSION_CONSUMER": "{\"counters\":{\"bankObserved\":1}}"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Fresh gold bar/ore/tool observation for two remaining Sapphire rings; no transfer or production",
    "role": "inspect"
@@ -97,7 +97,7 @@
     "WORKER_RELEASE": "ba621c2c3fd17556c71d7e25f20ed6eadd5932c3372f19d66b264b7149e828a9",
     "PROGRESSION_CONSUMER": "{\"counters\":{\"bankObserved\":1}}"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Fresh gold bar/ore/tool observation for two remaining Sapphire rings; no transfer or production",
    "role": "inspect"
