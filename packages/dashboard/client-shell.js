@@ -1087,8 +1087,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function wildernessWatchBox(){
     const list=S.wilderness||[];
     if(!list.length)return '';
-    const rivals=list.filter(w=>!w.fleet);
-    return `<div class="xp-box"><div class="xp-head" title="Online players spotted inside the Wilderness rectangle in the last 30 seconds."><span>Wilderness watch</span><span class="${rivals.length?'xp-bad':'xp-muted'}">${rivals.length} rival${rivals.length===1?'':'s'} · ${list.length} total</span></div>`+list.slice(0,12).map(w=>`<div class="xp-meta"><span class="spot-names">${nameButtons([w.name],1)}${w.fleet?' <i class="xp-muted">ours</i>':''}</span><span>cb ${w.combat} · wildy ${w.wild}${w.minCombat?' ('+w.minCombat+'-'+w.maxCombat+')':''} · ${E(placeOf(w.x,w.z))}</span></div>`).join('')+'</div>';
+    const rivals=list.filter(w=>!w.fleet),ourWild=(S.bots||[]).filter(b=>!b.practice&&!b.reserved&&b.inWorld&&wildLevel(b.pos));
+    return `<div class="xp-box"><div class="xp-head" title="Online players spotted inside the Wilderness rectangle in the last 30 seconds."><span>Wilderness watch</span><span class="${rivals.length?'xp-bad':'xp-muted'}">${rivals.length} rival${rivals.length===1?'':'s'} · ${list.length} total</span></div>`+list.slice(0,12).map(w=>{const hit=!w.fleet&&ourWild.some(b=>canAttack({pos:{x:w.x,z:w.z,level:w.plane??0},combat:w.combat},b));return `<div class="xp-meta"><span class="spot-names">${nameButtons([w.name],1)}${w.fleet?' <i class="xp-muted">ours</i>':''}${hit?' <b class="xp-bad" title="Within combat bracket of our Wilderness account">· can attack ours</b>':''}</span><span>cb ${w.combat} · wildy ${w.wild}${w.minCombat?' ('+w.minCombat+'-'+w.maxCombat+')':''} · ${E(placeOf(w.x,w.z))}</span></div>`;}).join('')+(list.length>12?`<div class="xp-meta"><span class="xp-muted">+${list.length-12} more in Wilderness</span></div>`:'')+'</div>';
   }
   // A new snapshot rewrites the panel; the rows a viewer opened stay open.
   function refreshWorld(){

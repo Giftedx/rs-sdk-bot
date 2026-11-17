@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, castableFreeze, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, castableFreeze, hasVarrockTeleport, multiPileThreat, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('roam pickup joins one native stack without eating combat food',async()=>{
  const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;
@@ -283,4 +283,34 @@ test('outclasses: higher combat, or a far better weapon at about our level', () 
     expect(outclasses(me, { combatLevel: 126, weapon: 1331 })).toBe(false);
     expect(outclasses(me, { combatLevel: 110, weapon: 1215 })).toBe(false);  // much lower combat
     expect(outclasses({ combat: 126 }, { combatLevel: 126, weapon: 1215 })).toBe(false); // our weapon unknown
+});
+
+test('hasVarrockTeleport recognizes Mystic/battlestaff air and fire staves alongside rune stacks', () => {
+    const runes = (law: number, air: number, fire: number) => [
+        ...(law ? [{ name: 'Law rune', count: law }] : []),
+        ...(air ? [{ name: 'Air rune', count: air }] : []),
+        ...(fire ? [{ name: 'Fire rune', count: fire }] : []),
+    ];
+    expect(hasVarrockTeleport(24, runes(1, 3, 1), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(0, 3, 1), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(1, 2, 1), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(1, 3, 0), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(1, 3, 1), [])).toBe(true);
+    expect(hasVarrockTeleport(70, runes(1, 3, 0), [{ name: 'Mystic fire staff' }])).toBe(true);
+    expect(hasVarrockTeleport(70, runes(1, 0, 1), [{ name: 'Mystic air staff' }])).toBe(true);
+    expect(hasVarrockTeleport(70, runes(1, 0, 1), [{ name: 'Air battlestaff' }])).toBe(true);
+});
+
+test('multiPileThreat flags 2+ attackable strangers near us only in multi-combat', () => {
+    const me = { x: 3040, z: 3900, combat: 100 }; // wildy 48
+    const single = () => false, multi = () => true;
+    const foes = [
+        { name: 'PkerA', combatLevel: 100, distance: 4 },
+        { name: 'PkerB', combatLevel: 102, distance: 7 },
+    ];
+    expect(multiPileThreat(me, foes, new Set(), single)).toBeNull();
+    expect(multiPileThreat(me, foes, new Set(), multi)).toContain('multi pile: 2 attackable enemies');
+    expect(multiPileThreat(me, foes, new Set(['pkera']), multi)).toBeNull(); // ally excluded
+    expect(multiPileThreat(me, [foes[0]!, { name: 'Far', combatLevel: 100, distance: 9 }], new Set(), multi)).toBeNull();
+    expect(multiPileThreat({ x: 3094, z: 3555, combat: 100 }, [{ name: 'PkerA', combatLevel: 100, distance: 3 }, { name: 'LowScout', combatLevel: 60, distance: 3 }], new Set(), multi)).toBeNull(); // wildy 5: cb 60 cannot attack 100
 });

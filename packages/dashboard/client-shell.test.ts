@@ -2049,3 +2049,19 @@ test('Screenshot: a level-up, a death or valuable loot of the watched account as
  t.lootShots();b.flow={loot:[{name:'Rune scimitar',count:2},{name:'Dragon chainbody',count:1}]};t.lootShots();
  expect(posted.length).toBe(2);
 });
+test('wildernessWatchBox highlights rivals within attack range of our Wilderness accounts and counts overflow',()=>{
+ const code=shell.slice(shell.indexOf('  function wildernessWatchBox()'),shell.indexOf('  // A new snapshot rewrites the panel'));
+ const wildHelpers=shell.slice(shell.indexOf('  const wildLevel='),shell.indexOf('  function pvpState('));
+ const make=(wilderness:any[],bots:any[])=>new Function('S','E','nameButtons','placeOf',`${wildHelpers}${code};return wildernessWatchBox();`)({wilderness,bots},String,(ns:string[])=>ns.join(','),()=>'Lava Maze');
+ const bots=[{name:'OurRoamer',inWorld:true,pos:{x:3060,z:3880,level:0},combat:100}];
+ const html=make([
+  {name:'ThreatPker',fleet:false,x:3070,z:3880,plane:0,combat:120,wild:46,minCombat:74,maxCombat:126},
+  {name:'SafeScout',fleet:false,x:3094,z:3536,plane:0,combat:30,wild:3,minCombat:27,maxCombat:33},
+  {name:'OurRoamer',fleet:true,x:3060,z:3880,plane:0,combat:100,wild:46,minCombat:54,maxCombat:126},
+ ],bots);
+ expect(html).toContain('ThreatPker');expect(html).toContain('can attack ours');
+ expect(html.split('can attack ours').length-1).toBe(1);
+ expect(html).not.toContain('more in Wilderness');
+ const overflow=Array.from({length:14},(_,i)=>({name:`Scout${i}`,fleet:false,x:3094,z:3536,plane:0,combat:10,wild:3,minCombat:7,maxCombat:13}));
+ expect(make(overflow,bots)).toContain('+2 more in Wilderness');
+});
