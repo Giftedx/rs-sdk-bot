@@ -102,7 +102,7 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
   if(!['observe','qualify','measure'].includes(request.action)||!request.consumer||!eligible(request.account))continue;
   const {work,accept}=request.consumer;
   if(!work||typeof work.script!=='string'||!Array.isArray(work.args)||work.args.some(a=>typeof a!=='string')||!work.env||Object.values(work.env).some(v=>typeof v!=='string')||!accept||Object.keys(accept.skills??{}).length!==1)continue;
-  const target=Object.values(accept.skills!)[0];if(!Number.isSafeInteger(target)||target<2||target>99)continue;
+  const target=Object.values(accept.skills!)[0];if(typeof target!=='number'||!Number.isSafeInteger(target)||target<2||target>99)continue;
   const cap=d.capabilityFor(work.script);if(!cap||!reviewApproved(state,cap))continue;
   const family=createHash('sha256').update(JSON.stringify(canonical([normalized(request.account),work,accept]))).digest('hex').slice(0,20),prefix=OBSERVATION_CONSUMER_PREFIX+family+'-';
   const familyRows=state.tasks.filter(r=>r.spec.id.startsWith(prefix));
