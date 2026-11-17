@@ -2304,3 +2304,30 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     in `.practice/pvp-wave2/climb-results.jsonl`). Evidence: `scripts/measure/pk-spar-climb.ts`,
     `.practice/pvp-wave2/climb-results.jsonl`. Gap: `comboFood: true` on karambwan kits (`tribrid-combo`) and
     multi-client Dragon Spear / God-Spell Charge matchup matrices await dedicated bench headroom.
+83. **Root-cause trace and paired `extra:spar-x8` evaluation of `zeroDrainFlick`, `offensiveFlick`, and `comboFood` keep
+    `scripts/pk-champion.json` unchanged.** Claim: forcing `nextIsMelee = false` on `nextAttack - 1` leaves
+    `Ultimate Strength` and `Incredible Reflexes` unactivated when melee/DDS switches exhaust the 5-packet tick budget
+    (`mean -5.67`, `t -1.10`); pre-enabling melee prayers on `nextAttack - 1` while dropping `OFFENSIVE_MELEE_PRAYERS`
+    only on cooldown (`now < nextAttack - 1`) lifts `offensiveFlick: true` to `mean +7.42` (`sd 15.94`, `t +1.86`,
+    `n = 16`, seeds `1`–`2`) and `mean +5.08` (`sd 17.98`, `t +1.38`, `n = 24`, seeds `1`–`3`, `reject` under
+    `t >= 2`). Enforcing `active.length * 2 <= budget` (`maxFlick = 2` keeping overhead and `Steel Skin`, stepping down
+    excess prayers only at `now <= nextAttack - 3`) prevents truncated off+on toggles from leaving `Steel Skin` off, yet
+    `zeroDrainFlick: true` scores `mean -14.75` (`sd 13.25`, `t -3.15`, `n = 8`, `reject`) because step-down churn
+    sheds active prayers inside 500-tick supplies where Prayer points do not run out; `comboFood: true` on
+    `tribrid-combo` scores `mean -5.50` (`sd 19.22`, `t -1.14`, `n = 16`, `reject`). Conditions: lockstep
+    `extra:spar-x8` and `extra:spar-kit-tribrid-combo-x8`, `SPAR_A=champion`, `SPAR_B=champion`, `SPAR_SWAP=1`,
+    `SPAR_CAP=500`, seeds `1`–`3`. Evidence: `scripts/pk.ts` (`planPrayerTick`), `scripts/pk.test.ts`,
+    `.practice/pvp-wave3/climb-fixed.jsonl`. Gap: multi-seed `tribrid-food`, `tribrid-lean`, `hybrid`,
+    `tribrid-spear-dds`, and pure-vs-`melee` matrix runs await dedicated bench headroom.
+84. **Live pilot, staging, standby, and sweep/matrix hardening enforce Rev 289 parity and cross-platform execution.**
+    Claim: `scripts/pk-live/live-pilot.ts` selects matching Mage Arena god gear (`detectGodGearForPilot`, rejecting
+    `godCapeStaffConflict`), gates `PK_RISK_DSQ=1` on Rev 289 `dragon sq shield` (`shields.obj:217`, Defence 60 rather
+    than 1-Defence `antidragonbreathshield`), checks full Varrock Teleport runes (`hasVarrockTeleport` via
+    `assessPilotEscapePreflight`), forwards glory/prayer/boost/antipoison counts (`buildPilotRestockInput`), and exits
+    Wilderness (`z >= 3520`) before `settle`; `scripts/pvp-kit-stage.ts` exports `verifyPvpStageSupplies` and
+    `stageSupplyDeficit`; `scripts/pvp-standby.ts` adds `standbyEscapePlan`; `scripts/measure/pvp-sweep.ts` replaces
+    POSIX `timeout` with `Bun.spawn` timer termination (`runWithTimeout`) and `scripts/measure/pk-spar-matrix.ts` adds
+    `parseMatrixArgs` (`--wait`, `--kits`, `--a-opts`, `--b-opts`). Conditions: offline unit checks and Rev 289
+    configs. Evidence: `scripts/pk-live/live-pilot.test.ts`, `scripts/pvp-kit-stage.test.ts`,
+    `scripts/pvp-standby.test.ts`, `scripts/measure/pvp-sweep.test.ts`. Gap: live pilot Wilderness run and multi-batch
+    `pvp-sweep.ts --quick` remain unexecuted on live worlds.

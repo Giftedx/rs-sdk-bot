@@ -356,6 +356,12 @@ export type PrayerPlanInput = {
 };
 export type PrayerPlanResult = { toggles: number[]; didFlick: boolean; nextDrainAt: number; nextFlickAt: number };
 
+const keepPrayerPriority = (p: number, overhead: number | null) =>
+    p === overhead || isOverheadPrayer(p) ? 3
+        : (p === PRAYER.steelSkin || p === PRAYER.rockSkin || p === PRAYER.thickSkin) ? 2
+        : p === PRAYER.item ? 1
+        : 0;
+
 // Plan prayer toggles during cooldown ticks under rev 289's 5-tick prayer_drain timer (prayer.rs2:30-43).
 export function planPrayerTick(input: PrayerPlanInput): PrayerPlanResult {
     const {
@@ -375,27 +381,31 @@ export function planPrayerTick(input: PrayerPlanInput): PrayerPlanResult {
     const active = sim.flatMap((on, p) => (on ? [p] : []));
     const flickAllowed = (zeroDrainFlick || prayerFlick) && !walkingToMelee && active.length > 0;
     const elapsed = zeroDrainFlick ? (drainAt >= 0 ? now - drainAt : 0) : now - flickAt;
-    const urgentReset = zeroDrainFlick && drainAt >= 0 && now - drainAt >= Math.max(1, flickEvery) && now <= nextAttack - 1;
-    const canFlickWindow = now < nextAttack - 1 || urgentReset;
+    const canFlickWindow = now < nextAttack - 1;
+    const maxFlick = Math.floor(budget / 2);
 
     if (flickAllowed && canFlickWindow && budget >= 2) {
-        // Step down from 5+ active prayers one tick before reset so all remaining prayers fit an off+on cycle inside the 5-packet limit.
-        if (zeroDrainFlick && active.length >= budget && elapsed >= Math.max(1, flickEvery - 1)) {
-            const dropCount = Math.min(budget, active.length - Math.min(3, budget - 2));
-            const toDrop = active.filter(p => p !== overhead && !isOverheadPrayer(p))
-                .sort((a, b) => Number(b === PRAYER.item) - Number(a === PRAYER.item))
-                .slice(0, dropCount);
+        // Under zeroDrainFlick, never truncate an off+on cycle (active * 2 <= budget); step down lowest-priority
+        // prayers (offensive -> item) when >= 2 ticks remain before nextAttack so nextAttack - 1 stays free to buff.
+        if (zeroDrainFlick && active.length > maxFlick && elapsed >= Math.max(1, flickEvery - 1) && now <= nextAttack - 3) {
+            const toDrop = active
+                .filter(p => p !== overhead && !isOverheadPrayer(p) && p !== PRAYER.steelSkin && p !== PRAYER.rockSkin && p !== PRAYER.thickSkin)
+                .sort((a, b) => keepPrayerPriority(a, overhead) - keepPrayerPriority(b, overhead))
+                .slice(0, Math.min(budget, active.length - maxFlick));
             if (toDrop.length > 0) {
                 for (const p of toDrop) apply(p);
                 return { toggles: toDrop, didFlick: false, nextDrainAt: drainAt, nextFlickAt: flickAt };
             }
         }
         const due = zeroDrainFlick
-            ? (elapsed >= flickEvery || (nextAttack === drainAt + flickEvery + 1 && elapsed >= Math.max(1, flickEvery - 1)))
+            ? (elapsed >= flickEvery || (now === nextAttack - 2 && elapsed >= Math.max(1, flickEvery - 1)))
             : elapsed >= flickEvery;
-        if (due && active.length < budget) {
-            const order = [...active].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
-            const toggles = [...order, ...order.slice(0, budget - order.length)];
+        const canCycle = zeroDrainFlick ? active.length <= maxFlick : active.length < budget;
+        if (due && canCycle) {
+            const order = [...active].sort((a, b) => keepPrayerPriority(b, overhead) - keepPrayerPriority(a, overhead));
+            const toggles = zeroDrainFlick
+                ? [...order, ...order]
+                : [...order, ...order.slice(0, budget - order.length)];
             for (const p of toggles) apply(p);
             return { toggles, didFlick: true, nextDrainAt: drainAt, nextFlickAt: now };
         }
@@ -403,13 +413,12 @@ export function planPrayerTick(input: PrayerPlanInput): PrayerPlanResult {
 
     const toggles: number[] = [];
     if (budget > 0) {
-        const nextIsMelee = offensiveFlick
-            ? false
-            : now === nextAttack - 1 && (upcomingStyle === 'melee' || specMeleeLikely);
+        const nextIsMelee = now === nextAttack - 1 && (upcomingStyle === 'melee' || specMeleeLikely);
         const { want, off } = combatPrayers(prayerBase, overhead, nextIsMelee, defencePrayer, protectItem);
-        const dropSet = offensiveFlick && now === lastAttackAt + 1 ? new Set([...off, ...OFFENSIVE_MELEE_PRAYERS]) : new Set(off);
+        const dropOffensive = offensiveFlick && now < nextAttack - 1 && (now === lastAttackAt + 1 || !nextIsMelee);
+        const dropSet = dropOffensive ? new Set([...off, ...OFFENSIVE_MELEE_PRAYERS]) : new Set(off);
         // Priority order on activation: keep overhead active first, then non-overhead boosts.
-        const prioritizedWant = [...want].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
+        const prioritizedWant = [...want].sort((a, b) => keepPrayerPriority(b, overhead) - keepPrayerPriority(a, overhead));
         let rem = budget;
         for (const p of prioritizedWant) {
             if (!sim[p] && rem > 0) { toggles.push(p); apply(p); rem--; }
@@ -1340,7 +1349,6 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 didFlick = plan.didFlick;
                 if (didFlick) {
                     result.flicks = (result.flicks ?? 0) + 1;
-                    continue;
                 }
             }
             const kiteStep = (heldMelee && (o.stepUnderFrozen || o.diagonalFrozen || kiteTiles)) || o.standOff

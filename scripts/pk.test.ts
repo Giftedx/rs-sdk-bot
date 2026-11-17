@@ -542,11 +542,11 @@ test('fightPlayer drinks Magic potion when magic kit is present and Magic is unb
     expect(used).toContain(3040);
 });
 
-test('planPrayerTick handles zeroDrainFlick (including 5-prayer step-down) while preserving overhead, and 1-tick offensiveFlick', () => {
+test('planPrayerTick handles zeroDrainFlick (non-truncating step-down preserving Steel Skin + overhead) and offensiveFlick pre-enable', () => {
     const active = new Array(15).fill(false);
     // 5 active prayers at start (Protect Item, Steel Skin, Protect from Melee, Ultimate Strength, Incredible Reflexes)
     for (const p of [PRAYER.item, PRAYER.steelSkin, PRAYER.melee, PRAYER.ultimateStrength, PRAYER.incredibleReflexes]) active[p] = true;
-    // Tick 13 (3 ticks after prayerDrainAt=10): step down 5 -> 3 while keeping Protect from Melee active.
+    // Tick 13 (3 ticks after prayerDrainAt=10, >= 3 ticks before nextAttack=20): step down 5 -> 2 (keeping overhead + Steel Skin).
     const step = planPrayerTick({
         now: 13, nextAttack: 20, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
         activePrayers: active, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
@@ -556,11 +556,13 @@ test('planPrayerTick handles zeroDrainFlick (including 5-prayer step-down) while
     expect(step.didFlick).toBe(false);
     expect(step.nextDrainAt).toBe(10);
     expect(step.toggles).not.toContain(PRAYER.melee);
+    expect(step.toggles).not.toContain(PRAYER.steelSkin);
     for (const p of step.toggles) active[p] = !active[p];
-    expect(active.filter(Boolean).length).toBeLessThanOrEqual(3);
+    expect(active.filter(Boolean).length).toBe(2);
     expect(active[PRAYER.melee]).toBe(true);
+    expect(active[PRAYER.steelSkin]).toBe(true);
 
-    // Tick 14 (4 ticks after prayerDrainAt=10): full off+on cycle clears prayer_drain timer cleanly inside 5 packets and leaves overhead ON.
+    // Tick 14 (4 ticks after prayerDrainAt=10): full 2-prayer off+on cycle clears prayer_drain timer cleanly inside 4 packets and leaves both ON.
     const flick = planPrayerTick({
         now: 14, nextAttack: 20, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
         activePrayers: active, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
@@ -569,11 +571,23 @@ test('planPrayerTick handles zeroDrainFlick (including 5-prayer step-down) while
     });
     expect(flick.didFlick).toBe(true);
     expect(flick.nextDrainAt).toBe(14);
-    expect(flick.toggles.length).toBeLessThanOrEqual(5);
+    expect(flick.toggles.length).toBe(4);
     for (const p of flick.toggles) active[p] = !active[p];
     expect(active[PRAYER.melee]).toBe(true);
+    expect(active[PRAYER.steelSkin]).toBe(true);
 
-    // offensiveFlick drops Ultimate Strength + Incredible Reflexes on tick after melee hit and refuses pre-activation on nextAttack - 1.
+    // zeroDrainFlick must never truncate a 3-prayer flick when active.length * 2 > budget (would leave Steel Skin off).
+    const threeActive = new Array(15).fill(false);
+    for (const p of [PRAYER.item, PRAYER.steelSkin, PRAYER.melee]) threeActive[p] = true;
+    const noTruncate = planPrayerTick({
+        now: 14, nextAttack: 16, lastAttackAt: 11, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: threeActive, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
+        zeroDrainFlick: true, prayerFlick: true, offensiveFlick: false,
+        upcomingStyle: 'ranged', specMeleeLikely: false, defencePrayer: true, protectItem: true, budget: 5,
+    });
+    expect(noTruncate.didFlick).toBe(false);
+
+    // offensiveFlick drops Ultimate Strength + Incredible Reflexes on cooldown ticks after melee hit, then pre-enables on nextAttack - 1.
     const offState = new Array(15).fill(false);
     offState[PRAYER.melee] = true; offState[PRAYER.ultimateStrength] = true; offState[PRAYER.incredibleReflexes] = true;
     const dropOff = planPrayerTick({
@@ -584,14 +598,14 @@ test('planPrayerTick handles zeroDrainFlick (including 5-prayer step-down) while
     });
     expect(dropOff.toggles).toContain(PRAYER.ultimateStrength);
     expect(dropOff.toggles).toContain(PRAYER.incredibleReflexes);
-    const noPre = planPrayerTick({
+    const preOn = planPrayerTick({
         now: 12, nextAttack: 13, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
         activePrayers: new Array(15).fill(false), prayerDrainAt: -1, flickAt: 8, flickEvery: 4,
         zeroDrainFlick: false, prayerFlick: false, offensiveFlick: true,
         upcomingStyle: 'melee', specMeleeLikely: false, defencePrayer: false, protectItem: false, budget: 5,
     });
-    expect(noPre.toggles).not.toContain(PRAYER.ultimateStrength);
-    expect(noPre.toggles).not.toContain(PRAYER.incredibleReflexes);
+    expect(preOn.toggles).toContain(PRAYER.ultimateStrength);
+    expect(preOn.toggles).toContain(PRAYER.incredibleReflexes);
 });
 
 test('defaultSpec/defaultStunSpec/meleeWeaponDelay cover all 3 dragon spears and rev-289 weapon speeds', () => {
