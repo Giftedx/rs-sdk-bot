@@ -1,7 +1,25 @@
 {
  "side": "local",
- "at": 1794879614856,
+ "at": 1794923294296,
  "jobs": [
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0",
+    "RUN": "2"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
   {
    "account": "Balls",
    "script": "scripts/firemaking-order.ts",
@@ -33,6 +51,25 @@
    "role": "crafter"
   },
   {
+   "account": "Shaftsinker",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
    "account": "Abracadickra",
    "script": "scripts/shop-to-bid.ts",
    "args": [
@@ -50,60 +87,6 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "elena"
-   ],
-   "env": {
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-98a7cf6b-a890-4019-aac5-217ce2a36ee1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-plague-masterbaiter-biohazard-gate [task-98a7cf6b-a890-4019-aac5-217ce2a36ee1]",
-   "role": "helper"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 1500 lobster"
-   ],
-   "env": {
-    "ROUNDS": "0",
-    "RUN": "2"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
   }
  ],
  "army": [
@@ -112,7 +95,28 @@
   "Mightyrod",
   "NabTheKnob",
   "Wandwaver",
-  "mmsmk1232"
+  "mmsmk1232",
+  "Bigpackage",
+  "BowBeforeMe",
+  "Hocuspokeus",
+  "MineYourBiz",
+  "mmtha0205",
+  "mmthv2350",
+  "Moneyshot",
+  "OreElse",
+  "PickpockDick",
+  "Pocketpython",
+  "Pocketrocket",
+  "Shaftmaker",
+  "Swordinhand",
+  "Woodenstaff",
+  "Woodpecker",
+  "YewFirst",
+  "Billionaire",
+  "CoinCock",
+  "Ballspinner",
+  "SporranBulge",
+  "Sausagefest"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
