@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794931706864,
+ "at": 1794931796181,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -202,8 +202,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -218,29 +217,21 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/splash-train.ts",
    "args": [
-    "3000",
-    "cow"
+    "66",
+    "6000"
    ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-splash-magic-66",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "splash:ardougne-cow-fence"
    ]
   },
   {
@@ -404,21 +395,22 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/splash-train.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "66",
-    "6000"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "combat",
-   "template": "army-splash-magic-66",
+   "goal": "buy water runes at Aubury's in Varrock for the curse band",
+   "role": "supply",
+   "template": "army-water-aubury",
    "autopilot": "local",
    "resources": [
-    "splash:ardougne-cow-fence"
+    "shop:aubury"
    ]
   },
   {
@@ -471,19 +463,20 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "45",
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "60",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-strength-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
