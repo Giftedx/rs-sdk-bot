@@ -1,9 +1,11 @@
 import {expect,test} from 'bun:test';
 import {randomBytes} from 'node:crypto';
-import {mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {pushPublicCommit,run} from './publish';
+import {fileURLToPath} from 'node:url';
+import {pushPublicCommit,run,verifyStaticBundle} from './publish';
+import {publicView} from './publish-relay';
 
 test('a command that outlives its limit is stopped and reported as a failure',async()=>{
  const start=Date.now();
@@ -73,3 +75,35 @@ test('the public branch keeps its parent and sends a small pack for a snapshot-o
   expect(request.stdout.length).toBeLessThan(4096);
  }finally{rmSync(dir,{recursive:true,force:true});}
 },20_000);
+
+test('verifyStaticBundle confirms zero 404 asset links in dashboard sources and clean public.json exports',()=>{
+ const dashDir=fileURLToPath(new URL('.',import.meta.url));
+ const liveAudit=verifyStaticBundle(dashDir,'Haggis',{allowDevFiles:true});
+ expect(liveAudit.ok).toBe(true);
+ expect(liveAudit.missing).toEqual([]);
+ expect(liveAudit.leaks).toEqual([]);
+ expect(liveAudit.checkedAssets).toBeGreaterThan(50);
+
+ const dir=mkdtempSync(join(tmpdir(),'dash-bundle-'));
+ try{
+  const bundle=join(dir,'site');
+  mkdirSync(bundle);
+  for(const f of ['index.html','client-shell.js','client-shell.css','operations.js','operations.css','map-shell.js','map-shell.css','client-viewer.css','xp-tracker.js','items.png','worldmap.png']){
+   if(existsSync(join(dashDir,f)))cpSync(join(dashDir,f),join(bundle,f));
+  }
+  cpSync(join(dashDir,'client-assets'),join(bundle,'client-assets'),{recursive:true});
+  const pub=publicView({
+   now:1_000_000,
+   bots:[{name:'Haggis',inWorld:true,operation:'observed',bank:[{id:995,name:'Coins',count:99}]},{name:'Worker1',inWorld:true,operation:'observed'}],
+   boards:[],roster:[],wilderness:[],events:[],results:[],
+  },'Haggis');
+  writeFileSync(join(bundle,'public.json'),JSON.stringify(pub));
+  const cleanAudit=verifyStaticBundle(bundle,'Haggis');
+  expect(cleanAudit).toMatchObject({ok:true,missing:[],leaks:[]});
+
+  writeFileSync(join(bundle,'public.json'),JSON.stringify({bots:[{name:'Haggis'}]}));
+  const leakAudit=verifyStaticBundle(bundle,'Haggis');
+  expect(leakAudit.ok).toBe(false);
+  expect(leakAudit.leaks).toContain('public.json');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
