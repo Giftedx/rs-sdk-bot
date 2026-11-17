@@ -1,5 +1,6 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour} from './gather-combat';
+import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 import {existsSync,readFileSync} from 'node:fs';
@@ -304,4 +305,203 @@ test('cow mode gives a cow up after 12 ticks in someone else\'s combat, or 40 ti
     expect(cowReleased(11, 39)).toBe(false);
     expect(cowReleased(12, 0)).toBe(true);
     expect(cowReleased(0, 40)).toBe(true);
+});
+
+test('selectGiantArmour picks best owned armour per Defence level and quest unlocks', () => {
+    const stock = [
+        { id: 1725, count: 1 }, { id: 1731, count: 1 }, { id: 3105, count: 1 },
+        { id: 1163, count: 1 }, { id: 1127, count: 1 }, { id: 1113, count: 1 },
+        { id: 4087, count: 1 }, { id: 1079, count: 1 }, { id: 1201, count: 1 },
+        { id: 3751, count: 1 }, { id: 1052, count: 1 },
+    ];
+    // Defence 1: only neck (Amulet of strength 1725) and feet (Climbing boots 3105) have no Defence requirement.
+    expect(selectGiantArmour(stock, 1, new Set())).toEqual([{ slot: 2, id: 1725 }, { slot: 10, id: 3105 }]);
+    // Defence 45 with no quests: Rune chainbody (1113) instead of Rune platebody (1127), Rune full helm (1163) instead of Berserker helm (3751).
+    expect(selectGiantArmour(stock, 45, new Set())).toEqual([
+        { slot: 2, id: 1725 }, { slot: 10, id: 3105 }, { slot: 0, id: 1163 },
+        { slot: 4, id: 1113 }, { slot: 7, id: 1079 }, { slot: 5, id: 1201 },
+    ]);
+    // Defence 60 with Dragon Slayer, The Fremennik Trials, and Legends' Quest: Berserker helm, Rune platebody, Dragon platelegs, Cape of legends.
+    expect(selectGiantArmour(stock, 60, new Set(['dragon slayer', 'the fremennik trials', "legends' quest"]))).toEqual([
+        { slot: 2, id: 1725 }, { slot: 10, id: 3105 }, { slot: 0, id: 3751 },
+        { slot: 4, id: 1127 }, { slot: 7, id: 4087 }, { slot: 5, id: 1201 }, { slot: 1, id: 1052 },
+    ]);
+});
+
+function progressiveCowFixture(opts: {
+    startEquipment?: any[];
+    startInv?: any[];
+    bankItems?: any[];
+    attackLevel?: () => number;
+    defenceLevel?: () => number;
+    onAttack?: (wornIds: number[]) => void;
+} = {}) {
+    let tick = 0, open = false, generation = 0, style = 0;
+    const xp: Record<string, number> = { Attack: 0, Strength: 0, Defence: 0 };
+    const listeners = new Set<() => void>();
+    const equipment: any[] = [...(opts.startEquipment ?? [])];
+    const inv: any[] = [...(opts.startInv ?? [{ id: 333, name: 'Trout', count: 2, slot: 0 }])];
+    const bank: any[] = [...(opts.bankItems ?? [{ id: 333, name: 'Trout', count: 5, slot: 0 }])];
+    let ground: any[] = [];
+    let npc: any = { id: 81, index: 7, name: 'Cow', tileX: 2664, tileZ: 3344, x: 2664, z: 3344, hp: 8, maxHp: 8, inCombat: false };
+    const wearPosFor = (id: number) => ({ righthand: 3, lefthand: 5, hat: 0, torso: 4, legs: 7, front: 2, back: 1, hands: 9, feet: 10 }[gearById(id)?.slot ?? 'righthand'] ?? 3);
+    const wornWeapon = () => equipment.find(i => i.slot === 3);
+    const stylesFor = (w: any) => {
+        if (!w) return [{ index: 0, trainsSkills: ['Attack'] }, { index: 1, trainsSkills: ['Strength'] }, { index: 2, trainsSkills: ['Defence'] }];
+        // Warhammers (weapon_blunt) put Defence at index 2 rather than sword/scimitar index 3.
+        if (/warhammer/i.test(w.name)) {
+            return [{ index: 0, trainsSkills: ['Attack'] }, { index: 1, trainsSkills: ['Strength'] }, { index: 2, trainsSkills: ['Defence'] }];
+        }
+        return [{ index: 0, trainsSkills: ['Attack'] }, { index: 1, trainsSkills: ['Strength'] }, { index: 3, trainsSkills: ['Defence'] }];
+    };
+    const timer = setInterval(() => { tick++; for (const f of [...listeners]) f(); }, 1);
+    const session: any = {
+        name: 'cow-prog',
+        tick: () => tick,
+        onTick: (f: () => void) => { listeners.add(f); return () => listeners.delete(f); },
+        ended: new Promise(() => {}),
+        bankObservation: () => open ? { generation, at: Date.now(), items: bank } : null,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 2654, worldZ: 3283, level: 0, lifeId: 1, respawnCount: 0, hp: 10 },
+                inventory: inv, equipment, nearbyPlayers: [], nearbyNpcs: npc ? [npc] : [], groundItems: ground,
+                bank: { isOpen: open, items: bank },
+                combatStyle: { known: true, currentStyle: style, weaponName: wornWeapon()?.name ?? '', styles: stylesFor(wornWeapon()) },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => equipment,
+            getSkill: (n: string) => {
+                if (n === 'Hitpoints') return { level: 10, baseLevel: 10 };
+                if (n === 'Attack') { const l = opts.attackLevel?.() ?? 1; return { level: l, baseLevel: l }; }
+                if (n === 'Defence') { const l = opts.defenceLevel?.() ?? 1; return { level: l, baseLevel: l }; }
+                return { level: 1, baseLevel: 1 };
+            },
+            getSkillXp: (n: string) => xp[n] ?? 0,
+            sendSetCombatStyle: async (n: number) => { style = n; return { success: true }; },
+        },
+        bot: {
+            openBank: async () => { open = true; generation++; return { success: true }; },
+            closeBank: async () => { open = false; return { success: true }; },
+            equipItem: async (item: any) => {
+                const slot = wearPosFor(item.id);
+                const oldIdx = equipment.findIndex(i => i.slot === slot);
+                if (oldIdx >= 0) inv.push(...equipment.splice(oldIdx, 1));
+                inv.splice(inv.indexOf(item), 1);
+                equipment.push({ ...item, slot });
+                return { success: true };
+            },
+            attack: async () => {
+                opts.onAttack?.(equipment.map(i => i.id).sort((a, b) => a - b));
+                const tab = stylesFor(wornWeapon());
+                const trained = tab.find(s => s.index === style)?.trainsSkills[0] ?? 'Attack';
+                xp[trained] = (xp[trained] ?? 0) + 800;
+                ground = [
+                    { id: 1739, name: 'Cowhide', count: 1, x: 2664, z: 3344 },
+                    { id: 526, name: 'Bones', count: 1, x: 2664, z: 3344 },
+                    { id: 2132, name: 'Raw beef', count: 1, x: 2664, z: 3344 },
+                ];
+                npc = null;
+                return { success: true };
+            },
+            pickupItem: async (item: any) => {
+                ground = ground.filter(i => i !== item);
+                const held = inv.find(i => i.id === item.id);
+                if (held) held.count++; else inv.push({ ...item, slot: inv.length });
+                if (!ground.length) npc = { id: 81, index: 7, name: 'Cow', tileX: 2664, tileZ: 3344, x: 2664, z: 3344, hp: 8, maxHp: 8, inCombat: false };
+                return { success: true };
+            },
+            depositItem: async (item: any, n: number) => {
+                const held = inv.find(i => i.id === item.id);
+                if (!held) return { success: false };
+                const take = n < 0 ? held.count : Math.min(held.count, n);
+                const row = bank.find(i => i.id === item.id);
+                if (row) row.count += take; else bank.push({ id: held.id, name: held.name, count: take, slot: bank.length });
+                held.count -= take;
+                if (held.count <= 0) inv.splice(inv.indexOf(held), 1);
+                generation++;
+                return { success: true };
+            },
+            withdrawItem: async (item: any, n: number) => {
+                item.count -= n;
+                if (item.count <= 0) bank.splice(bank.indexOf(item), 1);
+                inv.push({ id: item.id, name: item.name, count: n, slot: inv.length });
+                generation++;
+                return { success: true };
+            },
+        },
+    };
+    return { session: session as Session, equipment, inv, bank, getStyle: () => style, dispose: () => clearInterval(timer) };
+}
+
+test('runCows equips banked melee weapon+armour upgrades, reconciles assets, and dynamically matches warhammer styles', async () => {
+    const f = progressiveCowFixture({
+        startEquipment: [{ id: 1337, name: 'Bronze warhammer', count: 1, slot: 3 }, { id: 1171, name: 'Wooden shield', count: 1, slot: 5 }],
+        bankItems: [
+            { id: 333, name: 'Trout', count: 5, slot: 0 },
+            { id: 1335, name: 'Iron warhammer', count: 1, slot: 1 },
+            { id: 1191, name: 'Iron kiteshield', count: 1, slot: 2 },
+            { id: 1153, name: 'Iron full helm', count: 1, slot: 3 },
+            { id: 1725, name: 'Amulet of strength', count: 1, slot: 4 },
+        ],
+    });
+    try {
+        const r = await runCows(f.session, { cap: 500, maximum: 2, trainSkill: 'Defence', walk: async () => true });
+        expect(r.ok).toBe(true);
+        expect(r.preserved).toBe(true);
+        expect(r.banked).toEqual({ hide: 2, bones: 2, beef: 2 });
+        // Warhammer (weapon_blunt) puts Block (Defence) at index 2 rather than sword's 3.
+        expect(f.getStyle()).toBe(2);
+        expect(f.equipment.map(i => i.id).sort((a, b) => a - b)).toEqual([1153, 1191, 1335, 1725]);
+        // Replaced Bronze warhammer (1337) and Wooden shield (1171) were returned cleanly to bank.
+        expect(f.bank.some(i => i.id === 1337 && i.count === 1)).toBe(true);
+        expect(f.bank.some(i => i.id === 1171 && i.count === 1)).toBe(true);
+    } finally {
+        f.dispose();
+    }
+});
+
+test('runCows re-checks inventory and bank gear upgrades when crossing level tier boundaries 5..60', async () => {
+    const attackSequence: number[][] = [];
+    let kills = 0;
+    const invUpgrade = progressiveCowFixture({
+        startEquipment: [{ id: 1277, name: 'Bronze sword', count: 1, slot: 3 }, { id: 1171, name: 'Wooden shield', count: 1, slot: 5 }],
+        startInv: [{ id: 333, name: 'Trout', count: 2, slot: 0 }, { id: 1325, name: 'Steel scimitar', count: 1, slot: 1 }],
+        attackLevel: () => (kills >= 1 ? 5 : 1),
+        onAttack: (worn) => { kills++; attackSequence.push(worn); },
+    });
+    try {
+        const r = await runCows(invUpgrade.session, { cap: 500, maximum: 2, trainSkill: 'Attack', walk: async () => true });
+        expect(r.ok).toBe(true);
+        expect(r.preserved).toBe(true);
+        expect(attackSequence[0]).toEqual([1171, 1277]);
+        // After Attack reaches 5 on kill 1, Steel scimitar (1325) in inv is worn immediately for kill 2.
+        expect(attackSequence[1]).toEqual([1171, 1325]);
+    } finally {
+        invUpgrade.dispose();
+    }
+
+    const bankSequence: number[][] = [];
+    let defKills = 0;
+    const bankUpgrade = progressiveCowFixture({
+        startEquipment: [{ id: 1277, name: 'Bronze sword', count: 1, slot: 3 }, { id: 1171, name: 'Wooden shield', count: 1, slot: 5 }],
+        bankItems: [
+            { id: 333, name: 'Trout', count: 5, slot: 0 },
+            { id: 1193, name: 'Steel kiteshield', count: 1, slot: 1 },
+            { id: 1157, name: 'Steel full helm', count: 1, slot: 2 },
+        ],
+        defenceLevel: () => (defKills >= 1 ? 5 : 1),
+        onAttack: (worn) => { defKills++; bankSequence.push(worn); },
+    });
+    try {
+        const r = await runCows(bankUpgrade.session, { cap: 500, maximum: 2, trainSkill: 'Defence', targetLevel: 10, walk: async () => true });
+        expect(r.ok).toBe(true);
+        expect(r.preserved).toBe(true);
+        expect(r.bankTrips).toBeGreaterThanOrEqual(3);
+        expect(bankSequence[0]).toEqual([1171, 1277]);
+        // Crossing Defence 5 on kill 1 triggers a bank trip to equip Steel kiteshield + Steel full helm.
+        expect(bankSequence[1]).toEqual([1157, 1193, 1277]);
+        expect(bankUpgrade.bank.some(i => i.id === 1171 && i.count === 1)).toBe(true);
+    } finally {
+        bankUpgrade.dispose();
+    }
 });
