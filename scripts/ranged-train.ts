@@ -304,6 +304,10 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
 }
 // A disconnect mid-trip leaves the account on the route or in the coop with the bow and quiver worn. Walk back to
 // Varrock East bank and take them off first, so the bounded run starts from a supported entry instead of refusing every retry.
+// Kandarin accounts recover to Ardougne North bank (already a rangedEntry) so zero-coin recovery walks avoid White Wolf Mountain.
+export function recoveryBank(p:{worldX:number;worldZ:number;level:number}){
+ return p.worldX<2850?{x:2619,z:3332}:BANK;
+}
 export function needsRangedRecovery(p:{worldX:number;worldZ:number;level:number},worn:readonly number[]){
  return !rangedEntry(p)||worn.some(id=>BOW_IDS.includes(id)||ARROW_IDS.includes(id));
 }
@@ -319,7 +323,7 @@ export async function recoverRangedStart(s:Session,stop:()=>boolean=()=>false){
  if(!rangedEntry(p)){
   const abort=new AbortController(),off=s.onTick(()=>{if(stop()&&!abort.signal.aborted)abort.abort('stop requested');});
   let r:Awaited<ReturnType<typeof goTo>>;
-  try{r=await goTo(s,await getWorld(),{...BANK,level:0},recoveryWalker(accountOf(s)),{legTimeoutTicks:100,signal:abort.signal});}finally{off();}
+  try{r=await goTo(s,await getWorld(),{...recoveryBank(p),level:0},recoveryWalker(accountOf(s)),{legTimeoutTicks:100,signal:abort.signal});}finally{off();}
   if(stop())return{from,stopped:true};
   if(!r.ok)throw Error('ranged-train recovery walk failed '+JSON.stringify(r));
  }

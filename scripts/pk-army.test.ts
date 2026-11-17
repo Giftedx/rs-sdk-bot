@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { armyEscapeMethod } from './pk-army';
+import { armyEscapeFood, armyEscapeMethod } from './pk-army';
 
 test('armyEscapeMethod prefers glory up to level 30, Varrock Teleport up to 20, else runs south', () => {
     const runes = [{ name: 'Law rune', count: 1 }, { name: 'Air rune', count: 3 }, { name: 'Fire rune', count: 1 }];
@@ -12,4 +12,11 @@ test('armyEscapeMethod prefers glory up to level 30, Varrock Teleport up to 20, 
     expect(armyEscapeMethod(70, 3632, runes, [], 0).how).toBe('teleport');
     expect(armyEscapeMethod(70, 3632, [{ name: 'Law rune', count: 1 }], [{ name: 'Mystic fire staff' }], 0).how).toBe('run');
     expect(armyEscapeMethod(70, 3632, [{ name: 'Law rune', count: 1 }, { name: 'Air rune', count: 3 }], [{ name: 'Mystic fire staff' }], 0).how).toBe('teleport');
+});
+
+test('armyEscapeFood eats best food when missing more than 20 HP and skips when near full', () => {
+    const eat = [{ text: 'Eat' }];
+    const inv = [{ name: 'Lobster', slot: 0, optionsWithIndex: eat }, { name: 'Shark', slot: 1, optionsWithIndex: eat }];
+    expect(armyEscapeFood(85, 99, inv)).toBeUndefined();
+    expect(armyEscapeFood(78, 99, inv)?.name).toBe('Shark');
 });

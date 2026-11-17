@@ -85,6 +85,11 @@ export function armyEscapeMethod<I extends { name: string; count?: number }, E e
     return { how, glory, worn };
 }
 
+// Eat the best food in the pack during Wilderness retreat whenever HP is more than one shark below max.
+export function armyEscapeFood<I extends { name: string; optionsWithIndex: { text: string }[] }>(hp: number, maxHp: number, inventory: readonly I[]): I | undefined {
+    return hp < maxHp - 20 ? bestFood(inventory) : undefined;
+}
+
 async function leave(s: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, emit: (e: object) => void): Promise<boolean> {
     let removeTries = 0;
     for (let step = 0; step < 120; step++) {
@@ -93,6 +98,8 @@ async function leave(s: Session, walker: Awaited<ReturnType<typeof sessionWalker
         const magic = s.sdk.getSkill('Magic')?.level ?? 1;
         const { how, glory, worn } = armyEscapeMethod(magic, p.worldZ, s.sdk.getInventory(), s.sdk.getEquipment(), removeTries);
         if (how === 'out') { emit({ e: 'follower-out', name: s.name, at: [p.worldX, p.worldZ] }); return true; }
+        const heal = armyEscapeFood(p.hp, p.maxHp, s.sdk.getInventory());
+        if (heal) { await s.bot.eatFood(heal as any); await s.sdk.waitForTicks(1); }
         if (how === 'glory') {
             // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option). It comes off into a
             // free slot: a full pack eats a food for one. Three tries, then the run south.
