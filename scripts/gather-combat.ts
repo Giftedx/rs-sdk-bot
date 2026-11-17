@@ -11,6 +11,7 @@
 // the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
 // (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
 import { openBot, finish, countItems, getWorld, accountOf, sessionDied } from '../packages/core/src/bot';
+import { questFlags } from '../packages/core/src/quest-status';
 import {startQuestSustain} from './quest-sustain';
 import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
 import{combatPotionPolicy,createCombatPotions,combatPotionSession,combatPotionRecovery,type CombatPotionPolicy}from'./microbot-combat-potions';
@@ -359,6 +360,29 @@ export function selectGiantWeapon(stock:readonly {id:number;count:number}[],atta
     const choice=ownedLoadout([slot],stock);
     return choice.state==='ready'?choice.selected[0]!.id:0;
 }
+type ArmourOption={id:number;def?:number;quest?:string};
+const GIANT_ARMOUR_SLOTS:{slot:number;options:readonly ArmourOption[]}[]=[
+    {slot:2,options:[{id:1712},{id:1710},{id:1708},{id:1706},{id:1704},{id:1725},{id:1731},{id:1478}]},
+    {slot:10,options:[{id:3105},{id:3791},{id:1061}]},
+    {slot:0,options:[{id:3751,def:45,quest:'The Fremennik Trials'},{id:3753,def:45,quest:'The Fremennik Trials'},{id:1163,def:40},{id:1147,def:40},{id:1161,def:30},{id:1159,def:20},{id:1157,def:5}]},
+    {slot:4,options:[{id:1127,def:40,quest:'Dragon Slayer'},{id:1113,def:40},{id:1123,def:30},{id:1109,def:30},{id:1121,def:20},{id:1119,def:5}]},
+    {slot:7,options:[{id:4087,def:60},{id:1079,def:40},{id:1093,def:40},{id:1073,def:30},{id:1071,def:20},{id:1069,def:5}]},
+    {slot:5,options:[{id:1201,def:40},{id:1185,def:40},{id:1199,def:30},{id:1197,def:20},{id:1193,def:5}]},
+    {slot:1,options:[{id:1052,quest:"Legends' Quest"},{id:1007},{id:1019}]},
+];
+export function selectGiantArmour(stock:readonly {id:number;count:number}[],defence:number,completedQuests:ReadonlySet<string>|null){
+    const chosen:{slot:number;id:number}[]=[];
+    for(const group of GIANT_ARMOUR_SLOTS){
+        const best=group.options.find(opt=>{
+            if(stockOf(stock,opt.id)<1)return false;
+            if(opt.def!==undefined&&defence<opt.def)return false;
+            if(opt.quest!==undefined&&(!completedQuests||!completedQuests.has(opt.quest.toLowerCase())))return false;
+            return true;
+        });
+        if(best)chosen.push({slot:group.slot,id:best.id});
+    }
+    return chosen;
+}
 // Ranged (TRAIN_SKILL=Ranged): the best owned bow for the Ranged level, a shortbow before a longbow in a tier (a longbow's
 // attackrate is 6, ranged/bows.obj), and the best owned arrows it fires: an arrow's levelrequire may not exceed the
 // bow's (player_ranged.rs2 player_ranged_check_ammo).
@@ -595,7 +619,44 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         ammoStart=bankCount(ammoId)+count(allKit(),ammoId);
         return bow.id;
     };
-    const trip=async()=>{if(ranged)await gatherAmmo(true);await leave();await open();await deposit();await restock();if(ranged)await withdrawAmmo();await s.bot.closeBank();if(ranged)await equipAmmo();if(over())return;await enter();lastProgress=s.tick();};
+    const equipMeleeUpgrades=async()=>{
+        if(ranged)return;
+        const stock=[...(s.bankObservation?.()?.items??[]),...allKit()];
+        const att=s.sdk.getSkill('Attack')?.baseLevel??null,def=s.sdk.getSkill('Defence')?.baseLevel??1;
+        const qList=questFlags(s.client);
+        const doneQuests=qList?new Set(qList.filter(q=>q.state==='complete').map(q=>q.name.toLowerCase())):null;
+        const nextWeapon=selectGiantWeapon(stock,att);
+        const toEquip:number[]=[];
+        if(nextWeapon&&!state()?.equipment?.some(i=>i.slot===3&&i.id===nextWeapon)){
+            if(!allKit().some(i=>i.id===nextWeapon)){
+                const row=state()?.bank?.items.find(i=>i.id===nextWeapon);
+                if(row&&(await s.bot.withdrawItem(row,1,{asNote:false})).success)await waitUntil(s,()=>held(nextWeapon)===1,{timeoutTicks:10});
+            }
+            if(inv().some(i=>i.id===nextWeapon))toEquip.push(nextWeapon);
+        }
+        for(const {slot,id} of selectGiantArmour(stock,def,doneQuests)){
+            if(state()?.equipment?.some(i=>i.slot===slot&&i.id===id))continue;
+            if(inv().length>=28&&!inv().some(i=>i.id===id))break;
+            if(!allKit().some(i=>i.id===id)){
+                const row=state()?.bank?.items.find(i=>i.id===id);
+                if(row&&(await s.bot.withdrawItem(row,1,{asNote:false})).success)await waitUntil(s,()=>held(id)>=1,{timeoutTicks:10});
+            }
+            if(inv().some(i=>i.id===id))toEquip.push(id);
+        }
+        return toEquip;
+    };
+    const wearMeleeUpgrades=async(ids:readonly number[]|undefined)=>{
+        if(!ids?.length)return;
+        for(const id of ids){
+            const item=inv().find(i=>i.id===id);if(!item)continue;
+            if((await s.bot.equipItem(item)).success)await waitUntil(s,()=>!!state()?.equipment?.some(i=>i.id===id),{timeoutTicks:8});
+        }
+        if(state()?.combatStyle?.known){
+            const nextStyle=giantStyle(state()?.combatStyle,training.skill);style=nextStyle;
+            if(state()?.combatStyle?.currentStyle!==nextStyle.index)await s.sdk.sendSetCombatStyle(nextStyle.index);
+        }
+    };
+    const trip=async()=>{if(ranged)await gatherAmmo(true);await leave();await open();await deposit();await restock();const upgrades=await equipMeleeUpgrades();if(ranged)await withdrawAmmo();await s.bot.closeBank();await wearMeleeUpgrades(upgrades);if(ranged)await equipAmmo();if(over())return;await enter();lastProgress=s.tick();};
     try{
         if(!near(site.bank.x,site.bank.z,6))await leave();
         await open();initialAssets=assetTotals();for(const id of site.drops){baseline[id]=bankCount(id)+held(id);picked[id]=0;}initialFood=ownedFood();if(initialFood!==undefined)initialFood+=eaten;
@@ -609,11 +670,13 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
                 if(!row||!(await s.bot.withdrawItem(row,1,{asNote:false})).success||!await waitUntil(s,()=>held(weapon)===1&&bankCount(weapon)===before-1,{timeoutTicks:20}))throw new Error('giant prerequisite: weapon withdrawal unobserved');
             }
             if(ranged)await withdrawAmmo();
+            const armourUpgrades=ranged?undefined:await equipMeleeUpgrades();
             await s.bot.closeBank();
             if(!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon)){
                 const item=inv().find(i=>i.id===weapon);
                 if(!item||!(await s.bot.equipItem(item)).success||!await waitUntil(s,()=>!!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon),{timeoutTicks:10}))throw new Error('giant prerequisite: melee weapon equip unobserved');
             }
+            await wearMeleeUpgrades(armourUpgrades);
             if(ranged){await equipAmmo();if(quiver()<1)throw new Error('giant prerequisite: no arrows in the quiver');}
             if(!await waitUntil(s,()=>!!state()?.combatStyle?.known&&state()?.combatStyle?.weaponName===state()?.equipment?.find(i=>i.slot===3)?.name,{timeoutTicks:10}))throw new Error('giant prerequisite: equipped combat styles unknown');
             const selectedStyle=giantStyle(state()?.combatStyle,training.skill);style=selectedStyle;

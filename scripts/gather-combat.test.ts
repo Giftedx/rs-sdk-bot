@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 import {existsSync,readFileSync} from 'node:fs';
@@ -304,4 +304,25 @@ test('cow mode gives a cow up after 12 ticks in someone else\'s combat, or 40 ti
     expect(cowReleased(11, 39)).toBe(false);
     expect(cowReleased(12, 0)).toBe(true);
     expect(cowReleased(0, 40)).toBe(true);
+});
+
+test('selectGiantArmour picks best owned armour per Defence level and quest unlocks', () => {
+    const stock = [
+        { id: 1725, count: 1 }, { id: 1731, count: 1 }, { id: 3105, count: 1 },
+        { id: 1163, count: 1 }, { id: 1127, count: 1 }, { id: 1113, count: 1 },
+        { id: 4087, count: 1 }, { id: 1079, count: 1 }, { id: 1201, count: 1 },
+        { id: 3751, count: 1 }, { id: 1052, count: 1 },
+    ];
+    // Defence 1: only neck (Amulet of strength 1725) and feet (Climbing boots 3105) have no Defence requirement.
+    expect(selectGiantArmour(stock, 1, new Set())).toEqual([{ slot: 2, id: 1725 }, { slot: 10, id: 3105 }]);
+    // Defence 45 with no quests: Rune chainbody (1113) instead of Rune platebody (1127), Rune full helm (1163) instead of Berserker helm (3751).
+    expect(selectGiantArmour(stock, 45, new Set())).toEqual([
+        { slot: 2, id: 1725 }, { slot: 10, id: 3105 }, { slot: 0, id: 1163 },
+        { slot: 4, id: 1113 }, { slot: 7, id: 1079 }, { slot: 5, id: 1201 },
+    ]);
+    // Defence 60 with Dragon Slayer, The Fremennik Trials, and Legends' Quest: Berserker helm, Rune platebody, Dragon platelegs, Cape of legends.
+    expect(selectGiantArmour(stock, 60, new Set(['dragon slayer', 'the fremennik trials', "legends' quest"]))).toEqual([
+        { slot: 2, id: 1725 }, { slot: 10, id: 3105 }, { slot: 0, id: 3751 },
+        { slot: 4, id: 1127 }, { slot: 7, id: 4087 }, { slot: 5, id: 1201 }, { slot: 1, id: 1052 },
+    ]);
 });
