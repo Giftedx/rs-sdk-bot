@@ -17,6 +17,7 @@ import {boundedOwnerBinding} from '../../core/src/bounded-owners';
 import {assignedWorker} from './model-worker';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
+import {SWARM_STOP,writeSwarmStop} from '../../../scripts/swarm';
 import {prepareWorkspace,sharedWorkspacePlan} from './build-workspace';
 import {applyRules,skillUnlocks,currentQualification,reviewApproved} from './coordinator-rules';
 import {evaluateCoordinatorProgression} from './coordinator-progression';
@@ -512,9 +513,11 @@ export async function claimCoordinatorState(nonce:string,directory=coordinationD
 }
 export async function pauseCoordinator(state:CoordinatorState,base=projectRoot,stopWorker=safeKill){
  const practice=join(base,'.practice'),directory=join(practice,'coordinator');
+ const swarmStop=join(practice,'stop-swarm');
+ const systemDrain=!existsSync(join(practice,'stop-coordinator'))&&existsSync(swarmStop)&&readFileSync(swarmStop,'utf8').trim()===SWARM_STOP.all;
  for(const job of readCoordinatorJobs(base).jobs.filter((j:any)=>j.coordinatorOwner==='coordinator'&&j.enabled!==false)){
   await disableOwnJob(job.env?.COORDINATOR_RUN_ID,base);
-  for(const account of job.accounts??[job.account])if(account){const file=join(practice,'stop-'+account);if(!existsSync(file))writeFileSync(file,'coordinator owner pause');}
+  for(const account of job.accounts??[job.account])if(account)writeSwarmStop(join(practice,'stop-'+account),systemDrain?SWARM_STOP.all:'coordinator owner pause');
  }
  const running=state.tasks.filter(r=>r.status==='running');
  // Live task watchers check for the pause once a second, then disable their job before writing the receipt.
@@ -528,7 +531,7 @@ export async function pauseCoordinator(state:CoordinatorState,base=projectRoot,s
  reconcile(state,undefined,directory,undefined,0);
  saveState(state,directory);
  const unsettledRuns=running.filter(r=>r.status==='running').map(r=>r.runId);
- event('coordinator-paused',{reason:'owner stop file',unsettledRuns},directory);
+ event('coordinator-paused',{reason:systemDrain?'cloud watch drain':'owner stop file',unsettledRuns},directory);
 }
 async function main(){
  const mode=process.argv[2]??'--status',arg=process.argv[3];
