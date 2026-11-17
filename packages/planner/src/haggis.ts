@@ -626,7 +626,7 @@ export const CRAFTING_TIERS: Tier[] = [
     { id: 'dragonstone', level: 55, xpPerAction: 137.5 * X, items: [each('uncut dragonstone')] },
 ];
 export const HERBLORE_TIERS: Tier[] = [
-    // brew_potion.struct brew_potion_level / brew_potion_exp (tenths); secondaries are the OSRS recipes (ESTIMATE)
+    // brew_potion.struct brew_potion_ingredient, brew_potion_level / brew_potion_exp (tenths)
     { id: 'attack', level: 1, xpPerAction: 25 * X, items: [each('guam potion (unf)'), each("eye of newt")] },
     { id: 'antipoison', level: 5, xpPerAction: 37.5 * X, items: [each('marrentill potion (unf)'), each('unicorn horn dust')] },
     { id: 'strength', level: 12, xpPerAction: 50 * X, items: [each('tarromin potion (unf)'), each('limpwurt root')] },
@@ -665,7 +665,7 @@ export const SMITHING_TIERS: Tier[] = [
     { id: 'adamant platebody', level: 88, xpPerAction: 312.5 * X, items: [each('adamantite bar', 5)] },
 ];
 export const MAGIC_TIERS: Tier[] = [
-    // enchant XP from magic_spells.dbrow (research/xp-per-tick.md); rune costs are the OSRS ones (ESTIMATE)
+    // enchant XP from magic_spells.dbrow (research/xp-per-tick.md); rune costs from skill_magic/interfaces/magic.if
     { id: 'wind strike', level: 1, xpPerAction: 5.5 * X, items: [each('air rune'), each('mind rune')] },
     { id: 'enchant 1 (sapphire ring)', level: 7, xpPerAction: 17.5 * X, items: [each('cosmic rune'), each('water rune'), each('sapphire ring', 1, 1637)] },
     { id: 'enchant 2 (emerald ring)', level: 27, xpPerAction: 37 * X, items: [each('cosmic rune'), each('air rune', 3), each('emerald ring', 1, 1639)] },

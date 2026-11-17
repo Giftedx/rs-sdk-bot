@@ -24,7 +24,7 @@
   // The 2004 client's side icons (client-assets/sideicons.png, 30 px each): the place of each tab's icon in the strip.
   const TAB_ICON={skills:1,quests:2,inventory:3,equipment:4,friends:7,logout:9,settings:10};
   const realSkill=k=>!/^Stat\d+$/.test(k.name)&&k.name!=='Overall';const reported=(acct,n)=>{const set=acct?.skills?.length?acct.skills:S?.bots?.flatMap(x=>x.skills||[])||[];return !set.length||set.some(k=>k.name===n||(n==='Runecraft'&&/runecraft/i.test(k.name)));};
-const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Defence','Herblore','Fishing','Ranged','Thieving','Cooking','Prayer','Crafting','Firemaking','Magic','Fletching','Woodcutting','Runecraft','Slayer','Farming','Construction','Hunter','Sailing'];
+const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Defence','Herblore','Fishing','Ranged','Thieving','Cooking','Prayer','Crafting','Firemaking','Magic','Fletching','Woodcutting','Runecraft'];
   const skillFile=n=>n.toLowerCase()==='runecraft'?'runecraft':n.toLowerCase();
   const hud=document.createElement('div');hud.className='game-hud';
   // A phone has no room for the chat beside the inventory: it starts hidden behind its toggle.

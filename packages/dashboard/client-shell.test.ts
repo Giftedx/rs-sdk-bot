@@ -2089,3 +2089,11 @@ test('wildernessWatchBox highlights rivals within attack range of our Wilderness
  expect(wpHtml).toContain('Kept on death');
  expect(wpHtml).toContain('Rune scimitar, Shark');
 });
+
+test('dashboard skills list matches the 19 skills of 2004 rev 225',()=>{
+ const match=shell.match(/^const skills=\[([^\]]+)\];/m);
+ expect(match).not.toBeNull();
+ const list=JSON.parse(`[${match![1].replace(/'/g,'"')}]`);
+ expect(list).toHaveLength(19);
+ for(const post2004 of ['Slayer','Farming','Construction','Hunter','Sailing'])expect(list).not.toContain(post2004);
+});
