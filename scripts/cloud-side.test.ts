@@ -195,6 +195,10 @@ describe('normal cloud coordinator ownership',()=>{
             expect(drained.known).toBe(true);expect(drained.settled).toBe(true);
             const unknown=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,command:()=>null});
             expect(unknown.known).toBe(false);expect(unknown.settled).toBe(false);
+            expect(cloudSide.watchResult({normalOwnershipError:unknown.reason})).toBe('fail');
+            const settledAfterUnknown=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:()=>false,command:()=>null,groups:()=>[]});
+            expect(settledAfterUnknown.known).toBe(true);expect(settledAfterUnknown.settled).toBe(true);
+            expect(cloudSide.watchResult({normalOwnershipError:settledAfterUnknown.reason})).toBe('ok');
         });
     });
     test('watch shutdown preserves an existing owner fleet pause',async()=>{

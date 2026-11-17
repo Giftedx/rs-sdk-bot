@@ -336,7 +336,7 @@ if (import.meta.main) {
         log(`started ${name} pid ${child.pid}`);
     };
     const normalRoots=new Set<number>();let normalOwnershipError:string|null=null;
-    const normalOwners=()=>{const view=observeNormalOwners(root,plan,o.side,records,{},[...normalRoots]);for(const pid of view.roots)normalRoots.add(pid);return view;};
+    const normalOwners=()=>{const view=observeNormalOwners(root,plan,o.side,records,{},[...normalRoots]);normalOwnershipError=view.known?null:view.reason;for(const pid of view.roots)normalRoots.add(pid);return view;};
     const tend = () => {
         if(!o.inspect&&existsSync(join(root,'.practice/stop-coordinator')))return;
         if(o.recover&&recoveryLaunched){
@@ -346,7 +346,7 @@ if (import.meta.main) {
             else if(!current.active.length){boundedOwnershipError=true;log('bounded coordinator exited; no automatic retry');}
             return;
         }
-        if(!bounded){const view=normalOwners();normalOwnershipError=view.known?null:view.reason;
+        if(!bounded){const view=normalOwners();
             if(!view.known){log('normal ownership held: '+view.reason);return;}
             if(view.coordinator)records.coordinator={pid:view.coordinator.pid,nonce:view.coordinator.nonce,started:records.coordinator?.started??Date.now(),restarts:records.coordinator?.restarts??[]};
         }
