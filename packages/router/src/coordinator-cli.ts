@@ -17,7 +17,7 @@ import {boundedOwnerBinding} from '../../core/src/bounded-owners';
 import {assignedWorker,type ModelWorker} from './model-worker';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
-import {SWARM_STOP,writeSwarmStop} from '../../../scripts/swarm';
+import {SWARM_STOP,writeSwarmStop,swarmWroteStop} from '../../../scripts/swarm';
 import {prepareWorkspace,sharedWorkspacePlan} from './build-workspace';
 import {applyRules,skillUnlocks,currentQualification,reviewApproved,retarget} from './coordinator-rules';
 import {evaluateCoordinatorProgression,type CoordinatorProgressionResult} from './coordinator-progression';
@@ -34,6 +34,15 @@ import {liveHelperStatuses} from '../../planner/src/supply-bill';
 import {recoverConcurrentPlanWrite} from '../../core/src/plan-lock';
 
 const cli='packages/router/src/coordinator-cli.ts';
+// Only the installing controller clears a reusable system stop. Unknown text and
+// unreadable files remain owner pauses, including lowercase paths on Linux.
+export function coordinatorAccountPaused(account:string,base=projectRoot):boolean{
+ for(const name of new Set([account,account.toLowerCase()])){
+  try{if(!swarmWroteStop(readFileSync(join(base,'.practice','stop-'+name),'utf8')))return true;}
+  catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')return true;}
+ }
+ return false;
+}
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
 // The owner's swarm.json with the coordinator's own jobs and settings merged in (packages/core/src/coordinator-jobs.ts).
 const readPlan=()=>readMergedPlan(projectRoot);
@@ -260,7 +269,7 @@ function runRules(state:CoordinatorState,liveLimit:number){
   try{const saved=json(join(projectRoot,'.practice/progression-system',`fleet-${side}.json`));if(saved.version===1&&saved.side===side&&Number.isFinite(saved.at)&&saved.at>0&&saved.at<=now&&now-saved.at<=900000&&Array.isArray(saved.requests))observationRequests=saved.requests;}catch{/* No request is authority to invent a finite consumer. */}
   const observations=board?.goals?applyObservationRequests(state,observationRequests,{now,side,goals:board.goals,statuses:goalStatuses,
    allowed:account=>owners.get(account.toLowerCase())?.side===side&&owners.get(account.toLowerCase())?.server==='rs-sdk-demo.fly.dev'&&['confirmed','none'].includes(readLogoutProof(account,'rs-sdk-demo.fly.dev',{root:join(projectRoot,'.practice/session-lifecycle')}).state),
-   paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
+   paused:account=>coordinatorAccountPaused(account),
    definition:id=>{const def=deliveryTask(id);return{id:def.id,entry:def.entry,source:observedSource(id)};},
    capabilityFor:entry=>entry==='scripts/ranged-train.ts'?definitions.filter(d=>d.entry===entry&&reviewApproved(state,d.id)).sort((a,b)=>Number(!!currentQualification(state,b.id,observedSource(b.id)))-Number(!!currentQualification(state,a.id,observedSource(a.id)))||a.id.localeCompare(b.id))[0]?.id??null:null,
    prepare:finiteBand,
@@ -288,7 +297,7 @@ function runRules(state:CoordinatorState,liveLimit:number){
    side:board?.fleet?.side??process.env.FLEET_SIDE??'local',
    fleetBest:skill=>fleetSkills?.find(r=>String(r.skill).toLowerCase()===skill.toLowerCase()),
    skipped:skip=>{const key=JSON.stringify(skip);if(!ruleSkips.has(key)){ruleSkips.add(key);event('rule-skipped',{rule:'next-band',...skip});}},
-   paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
+   paused:account=>coordinatorAccountPaused(account),
    level:(account,skill)=>goalStatuses.find((row:any)=>row.name?.toLowerCase()===account.toLowerCase())?.skills?.find((v:any)=>v.name?.toLowerCase()===skill.toLowerCase())?.level},now);
   atomicJson(join(coordinationDir,'progression-requests.json'),{at:now,rows:progressionRows});
   if(added.length||observations.added.length||observations.linked.length||observations.prepared.length||observations.invalidated.length){saveState(state);event('rule-tasks-added',{tasks:[...added,...observations.added].map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept})),observations:{linked:observations.linked,prepared:observations.prepared,invalidated:observations.invalidated}});}

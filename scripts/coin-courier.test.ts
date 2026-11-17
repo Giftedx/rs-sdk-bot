@@ -172,10 +172,10 @@ test('owned coin endpoints reach the stack, new profiles, registration and every
  expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
  const registration=coinRegistrationArgs('fixture',p);
  expect(registration[0]).toBe('--eval');
- expect(registration[1]).toContain(JSON.stringify(`SERVER=${p.server}`));
- expect(registration[1]).toContain(JSON.stringify(`GATEWAY_URL=${p.gateway}`));
- expect(registration[1]).toContain('openBot(');
- expect(registration[1]).toContain('finish([session]');
+ expect(registration[1]).toContain(JSON.stringify(p.server));
+ expect(registration[1]).toContain(JSON.stringify(p.gateway));
+ expect(registration[1]).toContain('registerCoinProofAccount(');
+ expect(registration[1]).not.toContain('openBot(');
  for(const args of [registration,['scripts/coin-courier.ts','donor','receiver','12345']]){
   const child=coinChildConfiguration(args,{CAP:'1600'},p,{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',ENGINE_MANAGEMENT_URL:'http://localhost:8898',NODE_PORT:'43594',GE_DATABASE:'data/market.sqlite'});
   expect(child.cmd).toEqual(['bun',...args]);

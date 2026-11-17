@@ -13,6 +13,7 @@ import {killTree} from './proc';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {capabilityRevision,cachedReleaseFor} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {validOrder,type Order} from '../../../scripts/fleet-trade-settlement';
 
 const root=resolve(import.meta.dir,'../../..');
 const sourceFiles=['packages/practice/src/fleet-trade-capacity-proof.ts','scripts/fleet-trade.ts','knowledge/items.json',
@@ -31,6 +32,15 @@ const totals=(save:Save,containers=[93,94,95])=>{
  for(const item of containers.flatMap(c=>save.inventories[c]??[]))counts[item.id]=(counts[item.id]??0)+item.count;
  return Object.entries(counts).sort(([a],[b])=>Number(a)-Number(b));
 };
+
+// The generated child executes this exact order through the fleet-trade helper.
+// Its record names that work, rather than its temporary .practice entry path.
+export function fleetTradeCapacityRecord(file:string,order:Order,account:string,env:Record<string,string|undefined>=process.env){
+ if(!file.endsWith('.json')||file.includes('\0')||!validOrder(order)||![order.from,order.to].some(n=>n.toLowerCase()===account.toLowerCase()))throw Error('finite participant order required');
+ if(JSON.stringify(JSON.parse(readFileSync(file,'utf8')))!==JSON.stringify(order))throw Error('native order record differs');
+ return{script:'scripts/fleet-trade.ts',argv:[account,file],env:{...env,COORDINATOR_RUN_ID:undefined,
+  COORDINATOR_PARTICIPANTS:JSON.stringify([order.from,order.to]),PROGRESSION_CONSUMER:undefined,PROGRESSION_METHOD:undefined,PROGRESSION_SOURCE:undefined}};
+}
 
 export function verifyFleetTradeCapacity(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
@@ -112,11 +122,14 @@ import {openBot,settle} from ${JSON.stringify(moduleUrl('packages/core/src/bot.t
 import {readLogoutProof} from ${JSON.stringify(moduleUrl('packages/core/src/session-lifecycle.ts'))};
 import {waitTicks} from ${JSON.stringify(moduleUrl('packages/core/src/ticks.ts'))};
 import {performFleetTransfer,runOrderWork,watchTradeScreen} from ${JSON.stringify(moduleUrl('scripts/fleet-trade.ts'))};
+import {fleetTradeCapacityRecord} from ${JSON.stringify(moduleUrl('packages/practice/src/fleet-trade-capacity-proof.ts'))};
 const names=${JSON.stringify(names)},sessions=[],progress=[{uncertain:false,count:0},{uncertain:false,count:0}],off=[];
 let ok=false,error='';const at=Date.now();
+const order={id:'native-helper-'+at,server:${JSON.stringify(endpoints.server)},from:names[0],to:names[1],item:'Fire rune',count:250,start:at,end:at+60000,meet:[{x:3183,z:3436,level:0},{x:3184,z:3436,level:0}]};
+const orderPath=${JSON.stringify(join(directory,'order.json'))};writeFileSync(orderPath,JSON.stringify(order));
+process.env.COORDINATOR_PARTICIPANTS=JSON.stringify(names);
 try{
- for(const name of names){const s=await openBot(name);sessions.push(s);await waitTicks(s,3);}
- const order={id:'native-helper-'+at,server:${JSON.stringify(endpoints.server)},from:names[0],to:names[1],item:'Fire rune',count:250,start:at,end:Date.now()+60000,meet:[{x:3183,z:3436,level:0},{x:3184,z:3436,level:0}]};
+ for(const name of names){const s=await openBot(name,{record:fleetTradeCapacityRecord(orderPath,order,name)});sessions.push(s);await waitTicks(s,3);}
  const metadata=sessions.map(s=>({name:s.name,fire:s.client.objType(554).stackable,jug:s.client.objType(1935).stackable,pack:s.sdk.getInventory(),equipment:s.sdk.getState().equipment,attemptId:s.lifecycle?.attemptId}));
  for(const [i,s]of sessions.entries())off.push(watchTradeScreen(s,progress[i]));
  await Promise.all(sessions.map((s,i)=>runOrderWork(order,()=>performFleetTransfer(s,order,i?'to':'from',progress[i]))));

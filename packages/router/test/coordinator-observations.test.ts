@@ -4,6 +4,11 @@ import {applyObservationRequests,generatedObservationConsumer,observationConsume
 import {goalWork} from '../src/goal-work';
 import type {OwnerGoals} from '../src/goal-scoreboard';
 import type {FleetProgressionRequest} from '../../planner/src/progression-fleet';
+import {mkdtempSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {coordinatorAccountPaused} from '../src/coordinator-cli';
+import {SWARM_STOP} from '../../../scripts/swarm';
 const NOW=1_000_000,server='rs-sdk-demo.fly.dev';
 const status=(name:string,at=NOW-400000)=>({name,at,server,bankAt:at,skills:[{name:'Ranged',level:80,xp:285700},{name:'Hitpoints',level:99,xp:1000000}],bank:[],inventory:[],equipment:[]});
 const request=(account:string):FleetProgressionRequest=>({account,action:'observe',method:'ranged/troopers',reason:'Fresh valid account skill observations are required.',consumer:{work:{script:'scripts/ranged-train.ts',args:['99','1500'],env:{MAX_TRIPS:'50'}},accept:{skills:{Ranged:99}}}});
@@ -20,6 +25,21 @@ function fixture(names=['Fighter']){
 const consumers=(state:ReturnType<typeof initialState>)=>state.tasks.filter(r=>generatedObservationConsumer(r.spec));
 const observations=(state:ReturnType<typeof initialState>)=>state.tasks.filter(r=>r.spec.id.startsWith('progression-observe-'));
 const settle=(r:any,at=NOW)=>{r.status='succeeded';r.runId=r.spec.id;r.receipt={taskId:r.spec.id,runId:r.spec.id,ok:true,at,output:{ok:true,evidence:'live',account:r.spec.account}};};
+
+test('internal stops permit a linked observer; owner, unknown and lowercase pauses remain held',()=>{
+ const directory=mkdtempSync(join(tmpdir(),'observer-pauses-'));mkdirSync(join(directory,'.practice'));
+ try{
+  const file=join(directory,'.practice/stop-Fighter'),lower=join(directory,'.practice/stop-fighter');
+  for(const text of Object.values(SWARM_STOP)){
+   writeFileSync(file,text);const {state,deps}=fixture();deps.paused=account=>coordinatorAccountPaused(account,directory);
+   expect(deps.paused('Fighter')).toBe(false);expect(applyObservationRequests(state,[request('Fighter')],deps).added).toHaveLength(2);expect(readFileSync(file,'utf8')).toBe(text);
+  }
+  for(const text of ['owner pause','', 'unknown stop']){
+   writeFileSync(file,SWARM_STOP.all);writeFileSync(lower,text);const {state,deps}=fixture();deps.paused=account=>coordinatorAccountPaused(account,directory);
+   expect(deps.paused('Fighter')).toBe(true);expect(applyObservationRequests(state,[request('Fighter')],deps).added).toEqual([]);expect(readFileSync(lower,'utf8')).toBe(text);
+  }
+ }finally{rmSync(directory,{recursive:true,force:true});}
+});
 
 test('22 actual selected useful consumers fan out once, then resume qualified finite bands from fresh state',()=>{
  const names=Array.from({length:22},(_,i)=>'Helper'+i),{state,deps}=fixture(names),requests=names.map(request);
