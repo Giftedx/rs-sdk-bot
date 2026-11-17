@@ -314,3 +314,12 @@ test('multiPileThreat flags 2+ attackable strangers near us only in multi-combat
     expect(multiPileThreat(me, [foes[0]!, { name: 'Far', combatLevel: 100, distance: 9 }], new Set(), multi)).toBeNull();
     expect(multiPileThreat({ x: 3094, z: 3555, combat: 100 }, [{ name: 'PkerA', combatLevel: 100, distance: 3 }, { name: 'LowScout', combatLevel: 60, distance: 3 }], new Set(), multi)).toBeNull(); // wildy 5: cb 60 cannot attack 100
 });
+
+test('pickTrack skips attackable piles while ignoring non-attackable bystanders', () => {
+    const me = { x: 3060, z: 3880, combat: 100 };
+    const target = { name: 'Prey', x: 3064, z: 3880, combatLevel: 100, vx: 0, vz: 0 };
+    const pile = [target, { name: 'Friend1', x: 3065, z: 3881, combatLevel: 100, vx: 0, vz: 0 }, { name: 'Friend2', x: 3066, z: 3882, combatLevel: 100, vx: 0, vz: 0 }];
+    expect(pickTrack(me, pile, new Set(), 56, new Set(), 40, new Map(), 0, () => true)).toBeNull();
+    const lowPile = [target, { name: 'Skiller1', x: 3065, z: 3881, combatLevel: 3, vx: 0, vz: 0 }, { name: 'Skiller2', x: 3066, z: 3882, combatLevel: 3, vx: 0, vz: 0 }];
+    expect(pickTrack(me, lowPile, new Set(), 56, new Set(), 40, new Map(), 0, () => true)?.track.name).toBe('Prey');
+});

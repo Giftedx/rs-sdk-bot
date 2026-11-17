@@ -20,7 +20,8 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
-import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, getObjNames, isMulti, observePlayer, type FightOptions, type Kit } from './pk';
+import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, type FightOptions, type Kit } from './pk';
+export { castableFreeze, freezeSpell };
 import { armourDefence } from './pk-read';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
@@ -143,12 +144,9 @@ export function pickTrack(me: { x: number; z: number; combat: number; name?: str
         const claim = claims.get(key);
         const claimedByOther = !!claim && now - claim.at < CLAIM_TTL_MS && claim.hunter !== me.name?.toLowerCase();
         if (!multiHere && (t.fighting === 'player' || claimedByOther)) continue;
-        // Survival first: never pick a fight with someone stronger, or with a crowd round them.
-        if (t.combatLevel > me.combat + OUTCLASS_GAP) continue;
-        // Live: Goondelf (combat 126, dragon dagger) out-hit Mightyrod (126, adamant scimitar) about 10 to 1. At about
-        // our combat level, a weapon worth more than twice ours means we lose the trade.
-        if (me.weaponValue !== undefined && t.weapon !== undefined && t.combatLevel >= me.combat - 5 && itemCost(t.weapon) > 2 * me.weaponValue) continue;
-        if (tracks.filter(o => o !== t && !friends.has(o.name.toLowerCase()) && cheb(o, t) <= 6).length >= PILE_SIZE) continue;
+        // Survival first: never pick a fight with someone who outclasses us, or a pile of attackable strangers.
+        if (outclasses(me, t)) continue;
+        if (tracks.filter(o => o !== t && !friends.has(o.name.toLowerCase()) && cheb(o, t) <= 6 && canAttack({ x: t.x, z: t.z, combat: me.combat }, o)).length >= PILE_SIZE) continue;
         const score = preyScore(t, at.ticks, multiHere && claimedByOther);
         if (!best || score < best.score) best = { track: t, at, score };
     }
@@ -188,22 +186,6 @@ export function connectRadar(server: string, radar: Radar) {
     socket.addEventListener('message', ({ data }) => { try { radar.accept(feed.expand(JSON.parse(String(data)))); } catch { /* not a roster frame */ } });
     socket.addEventListener('close', () => { if (beat) clearInterval(beat); });
     return () => { if (beat) clearInterval(beat); socket.close(); };
-}
-
-// Strongest freeze the account can cast (components from pack/interface.pack magic:bind/snare/entangle).
-const FREEZE_RUNES: Record<number, [number, number, number]> = { 1592: [5, 5, 4], 1582: [4, 4, 3], 1572: [3, 3, 2] };
-// The strongest freeze the Magic level allows and the pack holds the runes for (557 earth, 555 water, 561 nature).
-// Live: Mightyrod (Magic 91) tried Entangle with 1 water and no nature runes: "Not enough runes to cast spell".
-export function castableFreeze(magic: number, carried: readonly { id: number; count: number }[]): number | null {
-    const held = (id: number) => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-    for (const spell of [1592, 1582, 1572]) {
-        const [earth, water, nature] = FREEZE_RUNES[spell]!;
-        if (freezeSpell(magic) !== null && freezeSpell(magic)! >= spell && held(557) >= earth && held(555) >= water && held(561) >= nature) return spell;
-    }
-    return null;
-}
-export function freezeSpell(magic: number): number | null {
-    return magic >= 79 ? 1592 : magic >= 50 ? 1582 : magic >= 20 ? 1572 : null;
 }
 
 // Wear the glory in the pack (after a rub: the game rubs a glory only from the pack).
