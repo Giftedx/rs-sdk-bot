@@ -161,11 +161,16 @@
                 row[place] += count;
                 owners.set(label, row);
             };
+            const itemCount = it => {
+                if (it.count == null) return 1;
+                const n = Number(it.count);
+                return Number.isFinite(n) && n > 0 ? n : 0;
+            };
             for (const b of eligible) {
-                for (const it of Array.isArray(b.bank) ? b.bank : []) if (matches(it)) { const c = Math.max(0, Number(it.count) || 1); bankCount += c; addOwner(b, c, 'bank'); }
-                for (const it of Array.isArray(b.inventory) ? b.inventory : []) if (matches(it)) { const c = Math.max(0, Number(it.count) || 1); packCount += c; addOwner(b, c, 'pack'); }
+                for (const it of Array.isArray(b.bank) ? b.bank : []) if (matches(it)) { const c = itemCount(it); bankCount += c; addOwner(b, c, 'bank'); }
+                for (const it of Array.isArray(b.inventory) ? b.inventory : []) if (matches(it)) { const c = itemCount(it); packCount += c; addOwner(b, c, 'pack'); }
                 if (b.equipmentObserved !== false) {
-                    for (const it of Array.isArray(b.equipment) ? b.equipment : []) if (matches(it)) { const c = Math.max(0, Number(it.count) || 1); wornCount += c; addOwner(b, c, 'worn'); }
+                    for (const it of Array.isArray(b.equipment) ? b.equipment : []) if (matches(it)) { const c = itemCount(it); wornCount += c; addOwner(b, c, 'worn'); }
                 }
             }
             const have = bankCount + packCount + wornCount;

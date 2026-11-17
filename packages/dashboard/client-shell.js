@@ -355,7 +355,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       const teles=(spellbookData?.spells||[]).map(([name,req,runes])=>({name,req,runes,staff:null,info:'teleport'}));
       const allSpells=[...list,...util,...teles];
       const spellSlug=n=>n.toLowerCase().replace(/\blvl-(\d+)\b/g,'level-$1').replace(/\bjewelry\b/g,'jewellery').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-      const spellSprites={'charge-air-orb':['',-180,-20],'fire-wave':['',-240,-20],'vulnerability':['',-320,-20],'enfeeble':['',-340,-20],'stun':['',-360,-20],'entangle':['2',-40,0]};
+      const spellSprites={'charge-air-orb':['',-180,-20],'fire-wave':['',-240,-20],'vulnerability':['',-440,-20],'enfeeble':['',-460,-20],'stun':['',-480,-20],'entangle':['2',-40,0]};
       const spellIcon=(name,ok)=>{const slug=spellSlug(name),sp=spellSprites[slug];if(sp)return `<span class="spell-sprite" style="background-image:url('${asset((ok?'magicon':'magicoff')+sp[0]+'.png')}');background-position:${sp[1]}px ${sp[2]}px" role="img" aria-label="${E(name)}"></span>`;return `<img src="${asset('spell-'+slug+'.png')}" alt="${E(name)}">`;};
       html='<h3>Magic</h3><div class="game-grid-icons spell-grid">'+allSpells.map(sp=>{const casts=Array.isArray(b?.inventory)?runeCasts(b,sp.runes):0,ok=Number.isFinite(mg)&&mg>=sp.req&&(!sp.staff||worn.has(sp.staff))&&casts>0;return `<button class="spell-icon${ok?'':' spell-locked'}" title="${E(sp.name)} (Magic ${sp.req}) · ${E(sp.info)}${sp.staff?' · needs '+E(sp.staff):''}${casts>0&&Number.isFinite(casts)?' · ×'+casts:''}">${spellIcon(sp.name,ok)}</button>`;}).join('')+'</div>'+teleLine(b);
     }
@@ -909,7 +909,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     }
     if(hl.skilling&&b?.inWorld&&b.pos&&agilityTiles&&agilityFor(b))for(const [x,z,l,label,roll] of agilityTiles)if(l===(b.pos.level||0)&&Math.abs(x-b.pos.x)<=15&&Math.abs(z-b.pos.z)<=15)o.tiles.push({x,z,l,colour:'#00ff00',label:agilityLabel(label,roll,b)});
     if(hl.trail&&b){const t=trails.get(b.name)||[];for(let i=1;i<t.length;i++)if(t[i].l===t[i-1].l)o.lines.push({x0:t[i-1].x,z0:t[i-1].z,x1:t[i].x,z1:t[i].z,l:t[i].l,colour:t.length-i<=20?'#ffff00':'#9a9a00'});}
-    if(hl.wildOverlay&&at&&b?.pos&&typeof window!=='undefined'&&window.atlasWildOverlay?.resolveTarget){const dest=window.atlasWildOverlay.resolveTarget(b);if(dest&&(dest.level||0)===(b.pos.level||0)&&(dest.x!==b.pos.x||dest.z!==b.pos.z)){const c=clipLine(b.pos.x,b.pos.z,dest.x,dest.z,at.x,at.z,60);if(c)o.lines.push({x0:c[0],z0:c[1],x1:c[2],z1:c[3],l:dest.level||0,colour:'#58d5ff',label:dest.label});}}
+    if(hl.wildOverlay&&at&&typeof window!=='undefined'&&window.atlasWildOverlay?.resolveTarget){const bp=b?.live||b?.pos,dest=bp?window.atlasWildOverlay.resolveTarget(b):null;if(dest&&(dest.level||0)===(bp.level||0)&&(dest.x!==bp.x||dest.z!==bp.z)){const c=clipLine(bp.x,bp.z,dest.x,dest.z,at.x,at.z,60);if(c)o.lines.push({x0:c[0],z0:c[1],x1:c[2],z1:c[3],l:dest.level||0,colour:'#58d5ff',label:dest.label});}}
     if(hl.tiles){
       if(typeof recap!=='undefined'&&recap.state==='ok'&&recap.data?.pos&&b&&recap.name===b.name)o.tiles.push({x:recap.data.pos.x,z:recap.data.pos.z,l:recap.data.pos.level||0,colour:'#ff0000',fill:true,label:'Death'});
       for(const r of respawnRows())if(r.left!=null&&r.total)o.pies.push({x:r.x,z:r.z,l:r.l,p:Math.max(0,Math.min(1,1-r.left/r.total))});
