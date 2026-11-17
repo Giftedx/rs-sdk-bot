@@ -1209,7 +1209,7 @@ function buildState() {
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
             lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).map(x => x.name)), ...contention.flatMap(s => s.others)])];
-            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase().replace(SECRET_RE, SECRET_MARK), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
+            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase().replace(SECRET_RE, SECRET_MARK), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt, world.connected ? world.tickAt : null)]));
             return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
@@ -1338,7 +1338,7 @@ const dashboardServer = Bun.serve({
             const name = url.searchParams.get('name') ?? '';
             if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return Response.json({ error: 'a player name is 1-12 letters, digits, spaces, - or _' }, { status: 400 });
             if (name.replace(/[ _-]/g, '').toLowerCase().includes(MAIN.toLowerCase())) return Response.json({ error: 'not available' }, { status: 404 });
-            return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
+            return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt, world.connected ? world.tickAt : null)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
         }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/?live='+encodeURIComponent(gameDialAddress(DEMO.replace(/^http/,'ws')+'/worldfeed')),reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
