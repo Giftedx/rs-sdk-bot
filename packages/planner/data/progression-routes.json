@@ -50671,6 +50671,18 @@
    ]
   },
   {
+   "script": "scripts/handoff-inputs.ts",
+   "intents": [
+    "acquire",
+    "produce",
+    "service"
+   ],
+   "skills": [
+    "fletching"
+   ],
+   "routeIds": []
+  },
+  {
    "script": "scripts/item-fanin.ts",
    "intents": [
     "acquire"

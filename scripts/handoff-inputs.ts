@@ -20,6 +20,7 @@ import {runHeadless} from './fletch-arrows';
 import {walkTarget} from './walk-to';
 import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
 import {readMergedPlan} from '../packages/core/src/coordinator-jobs';
+import {finiteProgressionAccept} from '../packages/core/src/progression-session';
 
 // The coordinator installs its assignments only in its overlay, so ownership reads the merged plan.
 // A missing swarm.json leaves the jobs unknown, and assertAccountOwnership refuses.
@@ -94,7 +95,7 @@ async function headlessMain(io:{root?:string;openBot?:typeof openBot;settle?:typ
     try{
         check();release=acquireAccountLeases([c.account],runId,join(dir,'account-leases'));check();
         process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
-        sessions.push(await (io.openBot??openBot)(c.account,{onStop:async()=>cancel(),onSessionEnd:async()=>cancel()}));
+        sessions.push(await (io.openBot??openBot)(c.account,{record:ammoOrderRecord(c.account,process.argv.slice(2),process.env,root),onStop:async()=>cancel(),onSessionEnd:async()=>cancel()}));
         out=await runOwnedHeadless(sessions[0]!,c,check);
     }catch(e){out.reason=String(e);}
     finally{
@@ -140,6 +141,33 @@ export function parseHandoff(args: string[]): Handoff {
         || !Number.isSafeInteger(cfg.graceMs) || cfg.graceMs < 1000 || cfg.graceMs > 60_000) throw new Error('invalid handoff bounds/items');
     if (cfg.keep && cfg.items.some(i => new RegExp(cfg.keep!, 'i').test(i.name))) throw new Error('requested item overlaps protected KEEP');
     return cfg;
+}
+
+// openBot removes the session owner's leading argument. Keep the complete
+// composed CLI for both roles, and bind the parent's bank target only to its acceptIndex.
+export function ammoOrderRecord(account:string,args:string[],env:Record<string,string|undefined>=process.env,base=resolve(import.meta.dir,'..')) {
+    const workEnv={...env},script='scripts/handoff-inputs.ts';
+    if(args[1]==='--headless-order')return{script,argv:[...args],env:workEnv};
+    const c=parseHandoff(args);
+    if(![c.donor,c.receiver].some(n=>n.toLowerCase()===account.toLowerCase()))throw Error('handoff descriptor account mismatch');
+    // A receiver target cannot become a donor acquisition goal, including on standalone CLI calls.
+    if(account.toLowerCase()===c.donor.toLowerCase())delete workEnv.PROGRESSION_CONSUMER;
+    const runId=env.COORDINATOR_RUN_ID??(env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1];
+    const file=join(base,'.practice/coordinator/state.json');
+    if(runId&&existsSync(file)){
+        const state=JSON.parse(readFileSync(file,'utf8')),tasks=Array.isArray(state?.tasks)?state.tasks:[];
+        const spec=tasks.find((r:any)=>r.runId===runId)?.spec;
+        if(Array.isArray(spec?.participants)){
+            delete workEnv.PROGRESSION_CONSUMER;
+            const names=spec.participants.map((n:string)=>n.startsWith('@')?tasks.find((r:any)=>r.spec?.id===n.slice(1))?.receipt?.output?.account:n);
+            if(names.length===2&&names.every((n:unknown,i:number)=>typeof n==='string'&&n.toLowerCase()===[c.donor,c.receiver][i]!.toLowerCase())
+                &&names[spec.acceptIndex??0]?.toLowerCase()===account.toLowerCase()){
+                const accept=finiteProgressionAccept(spec.accept);
+                if(accept)workEnv.PROGRESSION_CONSUMER=JSON.stringify(accept);
+            }
+        }
+    }
+    return{script,argv:[account,...args],env:workEnv};
 }
 
 export type HandoffChild = { code(): number | null; output(): string; goal?: string };
@@ -435,8 +463,8 @@ export async function main(io:{root?:string;openBot?:typeof openBot;settle?:type
         check();release=acquireAccountLeases([c.donor,c.receiver],runId,join(dir,'account-leases'));
         check();order.claim(); // Durable owner/recoveryOwner precede the first login.
         process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
-        check();sessions.push(await (io.openBot??openBot)(c.donor,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
-        check();sessions.push(await (io.openBot??openBot)(c.receiver,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
+        check();sessions.push(await (io.openBot??openBot)(c.donor,{record:ammoOrderRecord(c.donor,process.argv.slice(2),process.env,root),onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
+        check();sessions.push(await (io.openBot??openBot)(c.receiver,{record:ammoOrderRecord(c.receiver,process.argv.slice(2),process.env,root),onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
         out=await runExactHandoff(c,sessions[0]!,sessions[1]!,order,check,io.approach);
     }catch(e){out={ok:false,phase:'transfer',reason:String(e)};}
     finally{

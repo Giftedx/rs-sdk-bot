@@ -173,6 +173,7 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
  for(const script of ['scripts/fleet-inspect.ts','scripts/session-check.ts','scripts/where.ts','scripts/goal-readiness.ts','scripts/preparation-report.ts'])entries.set(script,{script,intents:['observe'],skills:[],routeIds:[]});
  for(const script of ['scripts/claim-account.ts','packages/core/src/session-recovery.ts'])entries.set(script,{script,intents:['service'],skills:[],routeIds:[]});
  entries.set('scripts/courier-handoff.ts',{script:'scripts/courier-handoff.ts',intents:['service'],skills:[],routeIds:[]});
+ entries.set('scripts/handoff-inputs.ts',{script:'scripts/handoff-inputs.ts',intents:['acquire','produce','service'],skills:['fletching'],routeIds:[]});
  const probes=resolve(base,'scripts/measure');if(existsSync(probes))for(const file of readdirSync(probes).filter(f=>f.endsWith('.ts')&&!f.endsWith('.test.ts')))entries.set('scripts/measure/'+file,{script:'scripts/measure/'+file,intents:['observe'],skills:[],routeIds:[],practiceOnly:true});
  // Direct gameplay entry files must be classified; helper modules without a login remain libraries.
  for(const folder of CATALOG_FOLDERS)for(const file of readdirSync(resolve(base,folder)).filter(f=>f.endsWith('.ts')&&!f.endsWith('.test.ts'))){const path=folder+'/'+file;if(entries.has(path))continue;

@@ -45,10 +45,10 @@ export async function startAmmoProofStack(p:ProofEndpoints,start:(opts:StackOpti
 }
 export function ammoChildConfiguration(args:string[],env:Record<string,string>,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
     return{cmd:['bun',...args],cwd:resolve(import.meta.dir,'../../..'),windowsHide:true,
-        env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0'}};
+        env:{...inherited,...env,...p.env,PROGRESSION_CONSUMER:env.PROGRESSION_CONSUMER,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0'}};
 }
 // The shared registration CLI admits only default ports. Keep its session owner
-// and tick wait, with the exact generated profile bound to this proof's endpoints.
+// and tick wait, with session-check metadata and the generated profile bound to this proof's endpoints.
 export function ammoRegistrationArgs(name:string,p:ProofEndpoints){
     if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
     return['--eval',`import {readFileSync} from 'node:fs';
@@ -56,7 +56,7 @@ import {openBot,finish} from './packages/core/src/bot';
 import {waitTicks} from './packages/core/src/ticks';
 const lines=readFileSync(${JSON.stringify(join(rsSdkRoot(),'bots',name,'bot.env'))},'utf8').split(/\\r?\\n/);
 if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
-const session=await openBot(${JSON.stringify(name)});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
+const session=await openBot(${JSON.stringify(name)},{record:{script:'scripts/session-check.ts',argv:[${JSON.stringify(name)}]}});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
 }
 const totals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
 const reconciled=(before:Save,after:Save,changes:Map<number,number>)=>{const a=totals(before),b=totals(after);return [...new Set([...a.keys(),...b.keys(),...changes.keys()])].every(id=>(b.get(id)??0)===(a.get(id)??0)+(changes.get(id)??0));};
@@ -150,12 +150,12 @@ async function run(directory:string){
             copyFileSync(paths[i]!,join(directory,`before-${i}.sav`));
         }
         const args=['scripts/handoff-inputs.ts',...names,'90:Iron arrowtips','--bank-x=3253','--bank-z=3421','--keep=^(?!Iron arrowtips$).+$','--timeout-ms=150000'];
-        const transfer=await command(args,{HANDOFF_ORDER:order,HANDOFF_ITEM_ID:'40'},'transfer');
+        const transfer=await command(args,{HANDOFF_ORDER:order,HANDOFF_ITEM_ID:'40',PROGRESSION_CONSUMER:JSON.stringify({bank:{40:90}})},'transfer');
         const donor=await waitPracticeSave(paths[0]!,s=>qty(s,40)===0),received=await waitPracticeSave(paths[1]!,s=>qty(s,40)===90);
         copyFileSync(paths[0]!,join(directory,'donor.sav'));copyFileSync(paths[1]!,join(directory,'received.sav'));
         const receiptPath=join(practiceDir(),'item-handoffs',order,`${names[0]}-${names[1]}.json`);
         writeFileSync(join(directory,'receipt.json'),existsSync(receiptPath)?readFileSync(receiptPath):'null');
-        const craft=transfer.code===0&&donor.matched&&received.matched?await command(['scripts/fletch-arrows.ts',names[1]!,'400','iron'],{MAX_MAKE:'90',TIP_RESERVE:'0',HEADLESS_RESERVE:'200'},'craft'):{code:1,log:''};
+        const craft=transfer.code===0&&donor.matched&&received.matched?await command(['scripts/fletch-arrows.ts',names[1]!,'400','iron'],{MAX_MAKE:'90',TIP_RESERVE:'0',HEADLESS_RESERVE:'200',PROGRESSION_CONSUMER:JSON.stringify({bank:{884:90}})},'craft'):{code:1,log:''};
         if(craft.log===''){writeFileSync(join(directory,'craft.log'),'');writeFileSync(join(directory,'craft.err'),'producer failed');}
         await waitPracticeSave(paths[1]!,s=>qty(s,884)===90);copyFileSync(paths[1]!,join(directory,'final.sav'));
         const repeat=await command(args,{HANDOFF_ORDER:order,HANDOFF_ITEM_ID:'40'},'repeat');
@@ -169,7 +169,7 @@ async function run(directory:string){
         if(!(await waitPracticeSave(headlessPath,s=>qty(s,53)===300&&qty(s,1511)===15)).matched)throw Error('headless entry state not retained');
         copyFileSync(headlessPath,join(directory,'headless-before.sav'));
         const headlessArgs=['scripts/handoff-inputs.ts',headlessName,'--headless-order','135','14'];
-        const headless=await command(headlessArgs,{CAP:'1600'},'headless');
+        const headless=await command(headlessArgs,{CAP:'1600',PROGRESSION_CONSUMER:JSON.stringify({bank:{53:435}})},'headless');
         await waitPracticeSave(headlessPath,s=>qty(s,53)===435);copyFileSync(headlessPath,join(directory,'headless-final.sav'));
         const refusal=await command(headlessArgs,{CAP:'1600'},'headless-refusal');
         copyFileSync(headlessPath,join(directory,'headless-refused.sav'));
@@ -185,7 +185,7 @@ async function run(directory:string){
             copyFileSync(plannedPaths[i]!,join(directory,`planned-before-${i}.sav`));
         }
         const plannedArgs=['scripts/handoff-inputs.ts',...plannedNames,'100:Lobster','--notes',`--bank-x=${PLANNED_BANK.x}`,`--bank-z=${PLANNED_BANK.z}`,'--request-ms=60000','--timeout-ms=600000','--grace-ms=45000'];
-        const plannedEnv={HANDOFF_ORDER:plannedOrder,HANDOFF_ITEM_ID:'379'};
+        const plannedEnv={HANDOFF_ORDER:plannedOrder,HANDOFF_ITEM_ID:'379',PROGRESSION_CONSUMER:JSON.stringify({bank:{379:100}})};
         // A short budget ends before any item moves. The same order then completes on the full budget.
         const plannedRefusal=await command([...plannedArgs,'--approach-ms=1000'],plannedEnv,'planned-refusal');
         plannedPaths.forEach((path,i)=>copyFileSync(path,join(directory,`planned-refused-${i}.sav`)));
