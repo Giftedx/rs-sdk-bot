@@ -132,6 +132,9 @@ export type FightOptions = {
     flickEvery?: number;
     // true: eat a carried karambwan on each tick where it costs no attack (see the loop). Default off.
     freeFood?: boolean;
+    // true: pair standard food with a cooked karambwan in the same tick at or below comboAt (default Math.max(eatAt - 10, oppMax)).
+    comboFood?: boolean;
+    comboAt?: number;
     // Tiles to keep from the target between turns that are not melee: on a cooldown tick the loop steps away to this
     // distance, so an opponent with a melee weapon must walk for each hit.
     standOff?: number;
@@ -311,6 +314,7 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (/^dragon_dagger/.test(n)) return { kit: kit.melee!, bar: 'combat_stabsword:specbar', cost: 250, below: 0.65, style: 'melee' };
         if (n === 'dragon_longsword') return { kit: kit.melee!, bar: 'combat_hacksword:specbar', cost: 250, below: 0.6, style: 'melee' };
         if (n === 'dragon_mace') return { kit: kit.melee!, bar: 'combat_spiked:specbar', cost: 250, below: 0.6, style: 'melee' };
+        if (n === 'dragon_halberd') return { kit: kit.melee!, bar: 'combat_halberd:specbar', cost: 300, below: 0.6, style: 'melee' };
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
         // The dragon spear's special does no damage: it holds the target 5 ticks with no input (pvp_dragon_spear.rs2
         // p_delay(4)), so it cannot eat or change its prayer: it goes out when the target is low enough to want food.
@@ -782,6 +786,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // An account with few Hitpoints is under every threshold at full health, so full health never eats.
         // kiteMelee: an inventory click (OpHeld) in the two ticks of a cast clears the spell before the server casts it,
         // so food and potions wait unless the next hit could kill.
+        let ateThisTick = false;
         const castShield = (o.kiteMelee !== undefined || o.freezeStill === true) && now <= freezeCastAt + 2 && me.hp > oppMax;
         // freezeStill: the ticks after a cast until the hold shows (the target stood: held two ticks after the cast).
         const freezeHolding = o.freezeStill === true && now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2 && !!frozenTile);
@@ -792,10 +797,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 foodReady = now + 3;
                 nextAttack = (hasAttacked ? nextAttack : now) + 3;
                 hasAttacked = true;
+                ateThisTick = true;
                 result.eaten++;
                 if (food.id === ITEMS.karambwan) { delayedUntil = Math.max(delayedUntil, now + 4); nextAttack = Math.max(nextAttack, delayedUntil); }
-                // Combo-eat a cooked karambwan in the same tick when dangerously low (consume_messages.dbrow:779 p_delay(2)).
-                if (me.hp <= oppMax && now >= karambwanReady && food.id !== ITEMS.karambwan) {
+                // Combo-eat a cooked karambwan in the same tick when dangerously low or comboFood is enabled.
+                const comboLimit = o.comboFood ? Math.max(o.comboAt ?? Math.max(18, eatAt - 10), oppMax) : oppMax;
+                if (me.hp <= comboLimit && now >= karambwanReady && food.id !== ITEMS.karambwan) {
                     const kw = slotOf([ITEMS.karambwan]);
                     if (kw) {
                         use(kw, /^Eat$/i);
@@ -828,12 +835,17 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         if (escapeNow(inv) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);
+            const dropVial = !glory && wornGlory && !ateThisTick && inv.length >= 28 ? slotOf([229]) : undefined;
+            const slotFood = !glory && wornGlory && !ateThisTick && inv.length >= 28 && !dropVial && now >= foodReady ? bestFood(inv) : undefined;
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
             else if (!glory && wornGlory && inv.length < 28 && typeof sdk.sendUseEquipmentItem === 'function') { if (now - gloryOffAt > 2) { log(`PK takes its glory off at HP ${me.hp}`); void sdk.sendUseEquipmentItem(wornGlory.slot, 1); gloryOffAt = now; } }
+            else if (dropVial && use(dropVial, /^Drop$/i)) { log(`PK drops vial for glory at HP ${me.hp}`); }
+            else if (slotFood && use(slotFood, /^Eat$/i)) { foodReady = now + 3; result.eaten++; log(`PK eats for glory slot at HP ${me.hp}`); }
+            else if (!glory && wornGlory && ateThisTick && inv.length >= 28) { /* wait one tick for eaten food to free a pack slot */ }
             else if (!glory && spellReady && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
                 log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
             }
-            // A worn glory with a full pack, or a spell out of its reach: nothing to click, so run south.
+            // A worn glory with a full pack and nothing to drop or eat, or a spell out of its reach: run south.
             else if (!glory && (!wornGlory || inv.length >= 28) && (!spellReady || wildernessLevel(at.z) > 20) && !state.dialog?.isOpen) runSouth();
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
             continue;
@@ -1030,7 +1042,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             let budget = 5;
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
             // Not on the tick before our own attack: that tick sets the prayers of the turn.
-            if (o.prayerFlick !== false && now - flickAt >= (o.flickEvery ?? 4) && now < nextAttack - 1 && !walkingToMelee) {
+            const flickEvery = o.flickEvery ?? (lastStyle === 'ranged' || upcomingTurn?.style === 'ranged' ? 3 : 4);
+            if (o.prayerFlick !== false && now - flickAt >= flickEvery && now < nextAttack - 1 && !walkingToMelee) {
                 const active = prayers.activePrayers.flatMap((on, p) => (on ? [p] : []));
                 if (active.length > 0 && active.length <= 4) {
                     // The overhead first: it is the one that must be back on in this tick.
@@ -1127,7 +1140,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const volleying = (!!vs?.fired && !vs.done.has(myKey)) || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1));
         if (spec && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
             && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
-            && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
+            && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
             for (const id of [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])]) {

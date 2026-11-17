@@ -33,6 +33,13 @@ test('generated runtime metadata matches its real catalog source',()=>{
  expect(runtime).not.toMatch(/from\s+['"][^'"]*(?:scripts\/aio|scripts\/microbot|scripts\/gather)/);
 });
 
+test('native GE fixture modes are classified only for local practice without a live route',()=>{
+ const c=buildProgressionCatalog(),script='packages/practice/src/ge-bulk-order-proof.ts';
+ expect(c.entries.find(e=>e.script===script)).toEqual({script,intents:['service','observe'],skills:[],routeIds:[],practiceOnly:true});
+ expect(c.routes.some(r=>r.script===script)).toBe(false);
+ expect(c.methods.some(m=>m.step.script===script)).toBe(false);
+});
+
 test('skiller alternatives retain lower unlocked methods and finite targets',()=>{
  const alternatives=progressiveSkillerAlternatives('firemaking',80,90);
  expect(alternatives.map(r=>r.unlockLevel)).toEqual([1,15,30,45,60,75]);

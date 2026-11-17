@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView, valueBoardRows } from './world-view';
+import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView, valueBoardRows, wildernessInfo } from './world-view';
 
 const now = 1_000_000;
 const roster = new Map([
@@ -24,10 +24,22 @@ test('rivals mark fleet accounts, online players and their tile', () => {
     expect(v[0]!.ours).toEqual({ rank: 2, name: 'MyBot' });
     expect(v[0]!.rows.map(r => [r.name, r.fleet, r.online, r.x])).toEqual([['Zezima', false, true, 2585], ['MyBot', true, true, 2583], ['Gone', false, false, null]]);
 });
-test('spot contention counts other players near a claimed tile on the ground floor only', () => {
-    const v = contentionView([{ side: 'local', resources: ['knight:2582,3297', 'shop:aubury'] }, { bad: 1 }], roster, fleet, now);
-    expect(v[0]).toEqual({ side: 'local', resource: 'knight:2582,3297', kind: 'knight', x: 2582, z: 3297, others: ['Zezima'], ours: ['MyBot'] });
-    expect(v[1]).toEqual({ side: 'local', resource: 'shop:aubury', kind: 'shop', x: null, z: null, others: [], ours: [] });
+test('spot contention counts other players near a claimed tile or named spot on its plane', () => {
+    const ext = new Map([
+        ...roster,
+        ['auburyvisitor', { name: 'AuburyVisitor', x: 3253, z: 3403, level: 0, combat: 50, seen: now - 500 }],
+    ]);
+    const v = contentionView([{ side: 'local', resources: ['knight:2582,3297', 'shop:aubury', 'unknown:place'] }, { bad: 1 }], ext, fleet, now);
+    expect(v.find(s => s.resource === 'knight:2582,3297')).toEqual({ side: 'local', resource: 'knight:2582,3297', kind: 'knight', x: 2582, z: 3297, others: ['Zezima'], ours: ['MyBot'] });
+    expect(v.find(s => s.resource === 'shop:aubury')).toEqual({ side: 'local', resource: 'shop:aubury', kind: 'shop', x: 3253, z: 3402, others: ['AuburyVisitor'], ours: [] });
+    expect(v.find(s => s.resource === 'unknown:place')).toEqual({ side: 'local', resource: 'unknown:place', kind: 'unknown', x: null, z: null, others: [], ours: [] });
+});
+
+test('wildernessInfo computes wilderness level and combat bracket for surface and dungeon Wilderness tiles', () => {
+    expect(wildernessInfo({ x: 3094, z: 3555, level: 0 }, 90)).toEqual({ wild: 5, minCombat: 85, maxCombat: 95 });
+    expect(wildernessInfo({ x: 3100, z: 9928, level: 0 }, 5)).toEqual({ wild: 2, minCombat: 3, maxCombat: 7 });
+    expect(wildernessInfo({ x: 3222, z: 3222, level: 0 }, 90)).toEqual({ wild: 0, minCombat: null, maxCombat: null });
+    expect(lookupView('WildyPker', null, null, { x: 3094, z: 3555, level: 0, combat: 100, seen: now - 100 }, now).wild).toEqual({ wild: 5, minCombat: 95, maxCombat: 105 });
 });
 test('a spot that several claims of one side name is listed once; another side keeps its own row', () => {
     const v = contentionView([{ side: 'local', resources: ['knight:2582,3297'] }, { side: 'local', resources: ['knight:2582,3297', 'knight:2582,3297'] }, { side: 'cloud', resources: ['knight:2582,3297'] }], roster, fleet, now);

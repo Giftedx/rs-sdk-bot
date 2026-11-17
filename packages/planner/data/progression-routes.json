@@ -635,6 +635,15 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "tribrid-combo": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "tribrid-dlong": {
    "Attack": 99,
    "Strength": 99,
@@ -48596,6 +48605,16 @@
    ],
    "skills": [],
    "routeIds": []
+  },
+  {
+   "script": "packages/practice/src/ge-bulk-order-proof.ts",
+   "intents": [
+    "service",
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
   },
   {
    "script": "scripts/agility-order.ts",

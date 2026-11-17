@@ -2084,7 +2084,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     lands 13 specials, and it still leaves with 54 to 70 HP: three dragon dagger specials into Protect from Melee
     and rune armour deal less than the target heals from its sharks. Escape HP (three accounts, mean of 6): none 78,
     `OPEN_FREEZE` set 61, all five with the graphic read 76. The army's prey stays the target with no food or no
-    escape (findings 52 to 56). Gap: no kit with another special weapon (`pvp_special_attack.rs2` also has the dragon longsword, dragon mace, rune claws and dragon halberd) was tried; 6 seeds a setup.
+    escape (findings 52 to 56). `defaultSpec` handles dragon dagger, dragon longsword, dragon mace, dragon halberd, rune claws, dragon spear, magic longbow and magic shortbow. Gap: no kit with dragon longsword, dragon mace, rune claws or dragon halberd has been bench-compared against the dagger kit across 6 seeds.
 66. **The roam and the army left the Wilderness on foot with their glory worn.** The game rubs a glory only from the
     pack (`amulet_of_glory.rs2` has no worn option). The roam's escape rubbed only a glory in the pack, so with the
     glory worn it ran south; on `extra:army-route-defend-deep` seed 1 a blocked walk stood 908 ticks at level 14 and the
@@ -2092,8 +2092,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     kit, so the removal failed and the follower stood 120 ticks. Both now eat a food to free a slot when the pack is
     full, take the glory off (three tries), rub it, and else walk, stepping 10 tiles to the side when a walk moves
     them nowhere. `extra:army-route-defend-deep` seeds 1-6: the leader and both followers reach Edgeville at the end
-    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. Gap: the fight loop's own escape
-    is not checked with a full pack.
+    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. `fightLoop` also drops a vial or eats a food item before taking off a worn glory when the pack holds 28 items (unit-tested in `scripts/pk.test.ts`; live practice full-pack glory escape remains to be run).
 67. **Spears on a melee tile at the opening kill the target that eats and leaves a crowd at level 34: 18 of 18.**
     The dragon spear's special has no hit roll: it pushes the target a tile and holds it with `p_delay(4)`, no
     move, no eat and no glory rub, for 25% energy (`pvp_dragon_spear.rs2`). `extra:army-route-defend-deep-x5` (the

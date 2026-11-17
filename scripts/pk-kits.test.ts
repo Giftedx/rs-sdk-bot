@@ -222,4 +222,8 @@ test('a kit gets the completion varp of each quest its items need (levelrequire.
     expect(kitVarps('tribrid-sara-mace')).toMatchObject({ 188: 15 });
     expect(kitVarps('tribrid-dragon')).toMatchObject({ 139: 75, 147: 6 });
     expect(kitVarps('tribrid-snare')[139]).toBeUndefined();
+    const combo = kitItems('tribrid-combo');
+    expect(combo.inventory).toHaveLength(27);
+    expect(combo.inventory.filter(i => i.id === itemId('shark'))).toHaveLength(12);
+    expect(combo.inventory.filter(i => i.id === itemId('tbwt_cooked_karambwan'))).toHaveLength(6);
 });

@@ -418,3 +418,65 @@ test('a thrown weapon attacks one tick sooner than a shortbow, and Rapid takes o
     expect([rangedWeaponDelay([868, 1201], false, names), rangedWeaponDelay([868, 1201], true, names)]).toEqual([3, 2]);
     expect([rangedWeaponDelay([811], true, names), rangedWeaponDelay([5667], true, names), rangedWeaponDelay(undefined, true, names)]).toEqual([2, 2, 3]);
 });
+
+test('defaultSpec supports dragon halberd alongside dragon dagger, longsword, mace, claws and spear', () => {
+    const names = new Map([[3204, 'dragon_halberd'], [3122, 'rune_claws'], [1249, 'dragon_spear']]);
+    expect(defaultSpec({ melee: [3204] }, names)).toEqual({ kit: [3204], bar: 'combat_halberd:specbar', cost: 300, below: 0.6, style: 'melee' });
+    expect(defaultSpec({ melee: [3122] }, names)).toEqual({ kit: [3122], bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' });
+    expect(defaultSpec({ melee: [1249] }, names)).toMatchObject({ bar: 'combat_spear:specbar', stun: 4 });
+});
+
+test('fightPlayer eats standard food and karambwan on the same tick with comboFood, and frees a full pack slot for worn glory escape', async () => {
+    let tick = 10;
+    const perTick: string[][] = [];
+    const client = { var: { 300: 0, 301: 0, 172: 1 }, players: [null, { headicons: 0, appearance: new Uint16Array(12), health: 99, totalHealth: 99 }] };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 35, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: ITEMS.shark, name: 'Shark', count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+            { slot: 1, id: ITEMS.karambwan, name: 'Cooked karambwan', count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+            ...Array.from({ length: 26 }, (_, i) => ({ slot: i + 2, id: 556, name: 'Air rune', count: 1, optionsWithIndex: [] })),
+        ],
+        equipment: [{ slot: 2, id: ITEMS.glory[0]!, name: 'Amulet of glory(4)', count: 1, optionsWithIndex: [] }, { slot: 3, id: 861, name: 'Magic shortbow', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3098, z: 3555, distance: 4 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        client, tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                perTick.push([]);
+                if (tick === 18) state.player.worldZ = 3087; // Teleported out of Wilderness after glory slot freed and unequipped
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => {
+                perTick[perTick.length - 1]!.push(`use:${slot}:${op}`);
+                state.inventory = state.inventory.filter((x: any) => x.slot !== slot);
+            },
+            sendUseEquipmentItem: (slot: number, op: number) => {
+                perTick[perTick.length - 1]!.push(`unequip:${slot}:${op}`);
+                state.equipment = state.equipment.filter((x: any) => x.slot !== slot);
+                state.inventory.push({ slot: 0, id: ITEMS.glory[0]!, name: 'Amulet of glory(4)', count: 1, optionsWithIndex: [{ text: 'Rub', opIndex: 1 }] });
+            },
+            sendClickComponent: (id: number) => { perTick[perTick.length - 1]!.push(`click:${id}`); },
+            sendInteractPlayer: () => {},
+            sendWalk: (x: number, z: number) => { perTick[perTick.length - 1]!.push(`walk:${x},${z}`); },
+            sendTogglePrayer: () => {},
+        },
+    };
+    const res = await fightPlayer(session, 'Dummy', {
+        kit: { ranged: [861] }, rotation: ['ranged'], freeze: false, prayerFlick: false,
+        eatAt: 50, comboFood: true, comboAt: 40, flee: true, escapeAt: 50, log: () => {},
+    });
+    expect(res.eaten).toBe(2); // Ate Shark + Cooked karambwan in the first tick window
+    expect(perTick[0]).toEqual(['use:0:1', 'use:1:1']);
+    expect(perTick.flat()).toContain('unequip:2:1');
+    expect(perTick.flat()).toContain('use:0:1');
+});
