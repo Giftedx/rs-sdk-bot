@@ -56,16 +56,17 @@ test('only audited saved-result commands can run without a practice turn',()=>{
  }
 });
 
-test('the declared Scorpion saved consumer accepts only audited bounded case selectors',()=>{
+test('the declared quest saved consumer accepts only audited bounded case selectors',()=>{
  const check=deliveryTask('quest-sweep').checks.find(c=>c.id==='quest-sweep-saved')!;
  expect(isSavedProofVerifier(check)).toBe(true);
  const base=['bun','packages/practice/src/quest-sweep-proof.ts','--verify'];
- const cases=['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal'];
+ const cases=['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal','elena-heckel-dust'];
  for(const id of cases)expect(isSavedProofVerifier({...check,command:[...base,`--case=${id}`]})).toBe(true);
  expect(isSavedProofVerifier({...check,command:[...base,...cases.map(id=>`--case=${id}`)]})).toBe(true);
  for(const extra of [
   ['--case='],['--case=unknown'],['--case=ball-worn-kit'],['--case'],['scorpion-barcrawl'],
   ['--case','scorpion-barcrawl'],['--case=scorpion-barcrawl','--case=scorpion-barcrawl'],
+  ['--case=elena-heckel-dust','--case=elena-heckel-dust'],['--case=elena-heckel-dust','--snapshot'],
   ['--case=scorpion-barcrawl','--snapshot'],['--case=scorpion-barcrawl','--verify'],
   [...cases.map(id=>`--case=${id}`),'--case=other'],
  ])expect(isSavedProofVerifier({...check,command:[...base,...extra]})).toBe(false);
