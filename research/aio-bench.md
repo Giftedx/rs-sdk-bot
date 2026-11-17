@@ -2,6 +2,12 @@
 
 Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). Engine patch: `patches/rs-sdk.md` item 10. Raw results: `.practice/aio-bench/`.
 
+## Seed evidence
+
+The `--seeds` driver keeps each seed's worker log, stdout, ACK profile and action trace in separate paths, including with `--seed-jobs 1`. Custom output roots retain the seed suffix. Parallel engines retain their eight-slot spacing. Stdout streams to a file so a child failure retains its partial output. Single-case paths keep their existing defaults.
+
+Source -> consumer -> reuse -> check: the existing seed runner and profile path -> matched route comparisons -> separate evidence by seed without changing the game worker or acceptance -> path-allocation regressions, three serial early-Dragon seeds and three parallel paired jewellery seeds. The checked harness SHA-256 is `d4ea6a05fbc72c26ee66e21af4c4c88d0b3465891460ffa1d2cab9928c537ad4`. Raw serial receipts are in the cannon-route worktree's `.practice/cannon-route/dragon-seeds/`; the jewellery-route worktree's `.practice/jewellery-route/paired/verified.json` binds all six parallel saves, logs and profiles. These checks prove evidence isolation and those finite practice outcomes, not live route reliability.
+
 ## Kept result inputs
 
 **Claim:** a kept result binds its engine rules, main and partner fixtures, job files, pass and output rules, timeout, and bench source dependencies. The bench source binds helper code and constants captured by pass predicates. **Conditions:** a fresh lockstep engine with caching enabled; worker runtime data still needs `BENCH_CACHE=0` after it changes. **Evidence:** `scripts/measure/aio-practice-bench.test.ts`; `computeCaseHash` in `scripts/measure/aio-practice-bench.ts`. **Gap:** these checks prevent reuse across the tested input changes. They do not prove every route or live behavior.

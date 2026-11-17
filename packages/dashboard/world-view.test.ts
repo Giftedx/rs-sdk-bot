@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView, valueBoardRows } from './world-view';
 
 const now = 1_000_000;
@@ -36,6 +37,72 @@ test('a lookup carries the hiscore rows and the last world-feed sighting', () =>
     expect(lookupView('Zezima', [], 7, roster.get('zezima'), now)).toEqual({ name: 'Zezima', at: 7, rows: [], online: true, x: 2585, z: 3300, plane: 0, combat: 99, lastSeen: now - 1000, worn: null, wornAt: null });
     expect(lookupView('Zezima', [], 7, roster.get('zezima'), now, [{ slot: 'Weapon', name: 'Bronze sword' }], 8)).toMatchObject({ worn: [{ slot: 'Weapon', name: 'Bronze sword' }], wornAt: 8 });
     expect(lookupView('Nobody', null, null, undefined, now).online).toBe(false);
+});
+
+// The optional eighth argument is the feed observation. Omitting it keeps legacy callers compatible.
+const observedLookup=lookupView as (...args:any[])=>any;
+const lookupRows=[{board:'Overall',rank:23,level:72,time:'1h'}],lookupWorn=[{slot:'Weapon',name:'Bronze sword'}];
+const seenPlayer={x:3200,z:3300,level:2,combat:50,seen:now-1000};
+
+test('explicit fresh lookup feed receipts date positive and negative presence without changing historical facts',()=>{
+ for(const feedAt of [now,now-29_999]){
+  const present=observedLookup('ProbeFriend',lookupRows,7,seenPlayer,now,lookupWorn,8,feedAt);
+  expect(present).toMatchObject({online:true,presenceObservedAt:feedAt,rows:lookupRows,at:7,worn:lookupWorn,wornAt:8,lastSeen:seenPlayer.seen,x:3200,z:3300});
+  for(const seen of [undefined,{...seenPlayer,seen:now-60_000}]){
+   const absent=observedLookup('ProbeFriend',lookupRows,7,seen,now,lookupWorn,8,feedAt);
+   expect(absent).toMatchObject({online:false,presenceObservedAt:feedAt,rows:lookupRows,worn:lookupWorn});
+  }
+ }
+});
+
+test('explicit unknown, stale, invalid and future lookup feed observations cannot assert positive or negative presence',()=>{
+ for(const feedAt of [null,undefined,0,-1,NaN,Infinity,String(now),now+1,now-30_000])for(const seen of [undefined,seenPlayer,{...seenPlayer,seen:now-60_000}]){
+  const value=observedLookup('ProbeFriend',lookupRows,7,seen,now,lookupWorn,8,feedAt);
+  expect(value).toMatchObject({online:null,presenceObservedAt:null,name:'ProbeFriend',at:7,rows:lookupRows,worn:lookupWorn,wornAt:8,lastSeen:seen?.seen??null});
+ }
+});
+
+test('a fresh lookup feed does not make invalid, future or expired player sightings positive',()=>{
+ for(const seen of [0,-1,undefined,null,NaN,Infinity,String(now),now+1,now-30_000]){
+  expect(observedLookup('ProbeFriend',lookupRows,7,{...seenPlayer,seen},now,null,null,now).online).not.toBe(true);
+ }
+ // Existing callers with no feed argument retain the exact legacy shape, including explicit empty hiscores.
+ expect(lookupView('Nobody',[],7,undefined,now)).toEqual({name:'Nobody',at:7,rows:[],online:false,x:null,z:null,plane:null,combat:null,lastSeen:null,worn:null,wornAt:null});
+});
+
+const serverSource=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+const snapshotLookupLine=serverSource.split('\n').find(line=>line.includes('const looked = Object.fromEntries('));
+if(!snapshotLookupLine)throw Error('Missing native snapshot lookup producer');
+const playerRouteAt=serverSource.indexOf("        if (url.pathname === '/api/player') {"),playerRouteEnd=serverSource.indexOf("        if (url.pathname === '/api/viewer-health')",playerRouteAt);
+if(playerRouteAt<0||playerRouteEnd<0)throw Error('Missing native player lookup route');
+const playerRoute=serverSource.slice(playerRouteAt,playerRouteEnd);
+
+function snapshotLookup(world:any,seen:any){
+ const hit={name:'ProbeFriend',rows:lookupRows,at:7,worn:lookupWorn,wornAt:8},lookups=new Map([['probefriend',hit]]),roster=new Map(seen?[['probefriend',seen]]:[]);
+ return new Function('lookups','roster','lookupView','now','world','SECRET_RE','SECRET_MARK',snapshotLookupLine+';return looked.probefriend;')(lookups,roster,lookupView,now,world,/PrivateMain/gi,'MAIN');
+}
+async function nativeLookup(world:any,seen:any,name='ProbeFriend'){
+ let calls=0;
+ const hit={name:'ProbeFriend',rows:lookupRows,at:7,worn:lookupWorn,wornAt:8};
+ const env={url:new URL('http://dashboard.test/api/player?name='+encodeURIComponent(name)),MAIN:'PrivateMain',world,roster:new Map(seen?[['probefriend',seen]]:[]),lookupView,Date:{now:()=>now},Response,
+  lookupPlayer:async()=>{calls++;return hit;}};
+ const response=await new Function(...Object.keys(env),playerRoute)(...Object.values(env)) as Response;
+ return {status:response.status,body:await response.json(),calls};
+}
+
+test('both native lookup producers bind presence to the actual connected feed observation',async()=>{
+ for(const world of [{connected:true,tickAt:now-1000},{connected:true,tickAt:now-40_000},{connected:true,tickAt:0},{connected:true,tickAt:undefined},{connected:true,tickAt:now+1},{connected:false,tickAt:now-1000}])for(const seen of [undefined,seenPlayer]){
+  const snapshot=snapshotLookup(world,seen),endpoint=await nativeLookup(world,seen),fresh=world.connected&&world.tickAt===now-1000;
+  expect(endpoint.status).toBe(200);expect(endpoint.calls).toBe(1);
+  for(const value of [snapshot,endpoint.body])expect(value).toMatchObject({online:fresh?!!seen:null,presenceObservedAt:fresh?now-1000:null,at:7,rows:lookupRows,worn:lookupWorn,wornAt:8});
+ }
+});
+
+test('native player-route validation and hidden-account privacy run before lookup or presence projection',async()=>{
+ for(const name of ['PrivateMain','pRiVaTe_MaIn']){
+  const result=await nativeLookup({connected:true,tickAt:now},seenPlayer,name);expect(result.status).toBe(404);expect(result.calls).toBe(0);expect(result.body).toEqual({error:'not available'});
+ }
+ const invalid=await nativeLookup({connected:true,tickAt:now},seenPlayer,'<invalid>');expect(invalid.status).toBe(400);expect(invalid.calls).toBe(0);expect(invalid.body).not.toHaveProperty('rows');
 });
 
 test('farms group numbered series and random names, without fleet accounts, and count them at our spots', () => {

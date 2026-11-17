@@ -1,5 +1,30 @@
 import {test,expect} from 'bun:test';
 import {ammoOrderChecks,headlessOrderChecks,plannedEntryChecks,selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from '../src/ammo-order-proof';
+import type {openBot} from '../../core/src/bot';
+import {evaluateProgressionWork} from '../../core/src/progression-session';
+
+test('generated registration supplies supported session-check metadata only after both owned endpoints match',async()=>{
+ const name='fixture',p=selectAmmoProofEndpoints(()=>true,()=>0),session={name};
+ const registration=ammoRegistrationArgs(name,p);
+ // Run the generated body with local dependencies. No client or account is opened.
+ const execute=new Function('readFileSync','openBot','waitTicks','finish',`return (async()=>{${registration[1]!.replace(/^import .*;\r?$/gm,'')}})();`);
+ const opened:{name:string;options:Parameters<typeof openBot>[1]}[]=[],waits:unknown[]=[],finishes:unknown[]=[];
+ const run=(profile:string)=>execute(()=>profile,async(account:string,options:Parameters<typeof openBot>[1])=>{
+  opened.push({name:account,options});return session;
+ },async(s:unknown,ticks:number)=>{waits.push([s,ticks]);},async(...args:unknown[])=>{finishes.push(args);});
+ const profile=`SERVER=${p.server}\r\nGATEWAY_URL=${p.gateway}\r\n`;
+ await run(profile);
+ expect(opened).toHaveLength(1);expect(opened[0]!.name).toBe(name);
+ const record=opened[0]!.options?.record;
+ expect(record).toMatchObject({script:'scripts/session-check.ts',argv:[name]});
+ const evaluation=evaluateProgressionWork({script:record!.script,args:record!.argv.slice(1),env:record!.env??{}},{name,at:Date.now()},{requireQualification:true});
+ expect(evaluation.intent).toEqual({kind:'observe',objective:'scripts/session-check.ts'});
+ expect(evaluation.supported).toBe(true);
+ expect(waits).toEqual([[session,3]]);expect(finishes).toEqual([[[session],true,'practice ownership registered']]);
+ for(const invalid of [profile.replace(p.server,'localhost:8888'),profile.replace(p.gateway,'ws://localhost:7780')])
+  await expect(run(invalid)).rejects.toThrow('owned practice account required');
+ expect(opened).toHaveLength(1);expect(waits).toHaveLength(1);expect(finishes).toHaveLength(1);
+});
 
 test('owned ammo endpoints reach the stack, new profiles, registration and every worker child',async()=>{
  const checked:number[]=[],samples=[0,0.01];
