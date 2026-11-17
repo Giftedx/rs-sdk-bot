@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794928840605,
+ "at": 1794928938719,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -263,32 +263,6 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "NabTheKnob",
    "script": "scripts/ranged-train.ts",
    "args": [
     "99",
@@ -300,8 +274,7 @@
     "AMMO": "100",
     "MAX_TRIPS": "50",
     "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
@@ -341,9 +314,7 @@
     "21",
     "1500"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":21}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -421,7 +392,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -436,42 +408,60 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/chain.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy water runes at Betty's in Port Sarim for the curse band",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
    "role": "supply",
-   "template": "army-water-betty",
+   "template": "army-arrows-catherby",
    "autopilot": "local",
    "resources": [
-    "shop:betty"
+    "shop:catherby_arrows"
    ]
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/chain.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=150 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=9000 COIN_RESERVE=500 MAX_SPEND=8000"
+    "ardy",
+    "400"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy body runes at Aubury's in Varrock for the curse band",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
    "role": "supply",
-   "template": "army-body-aubury",
+   "template": "army-arrows-ardy",
    "autopilot": "local",
    "resources": [
-    "shop:aubury"
+    "shop:ardy"
    ]
   },
   {
