@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {randomBytes} from 'node:crypto';
-import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -105,5 +105,39 @@ test('verifyStaticBundle confirms zero 404 asset links in dashboard sources and 
   const leakAudit=verifyStaticBundle(bundle,'Haggis');
   expect(leakAudit.ok).toBe(false);
   expect(leakAudit.leaks).toContain('public.json');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('verifyStaticBundle enforces sibling import-page contracts including relative webp bundles and keyboard hooks',()=>{
+ const dashDir=fileURLToPath(new URL('.',import.meta.url));
+ const contractAudit=verifyStaticBundle(dashDir,'Haggis',{allowDevFiles:true,verifyImportContract:true});
+ expect(contractAudit).toMatchObject({ok:true,missing:[],leaks:[]});
+
+ const dir=mkdtempSync(join(tmpdir(),'dash-import-'));
+ try{
+  const bundle=join(dir,'site');
+  mkdirSync(bundle);
+  for(const f of ['index.html','xp-tracker.js','client-shell.js','client-shell.css','client-viewer.css','map-shell.js','map-shell.css','operations.js','operations.css','items.json','RUNELITE-LICENSE.txt']){
+   let text=readFileSync(join(dashDir,f),'utf8');
+   if(/\.(html|css|js)$/i.test(f)){
+    text=text.replace(/\/(client-shell|client-viewer|map-shell|operations|xp-tracker|items|worldmap)\.(css|js|png|json)/g,'$1.$2')
+     .replace(/['"]\/client-assets\//g,m=>m[0]+'client-assets/')
+     .replace(/items\.png/g,'items.webp')
+     .replace(/worldmap\.png/g,'worldmap.webp');
+   }
+   writeFileSync(join(bundle,f),text);
+  }
+  writeFileSync(join(bundle,'items.webp'),'webp');
+  writeFileSync(join(bundle,'worldmap.webp'),'webp');
+  cpSync(join(dashDir,'client-assets'),join(bundle,'client-assets'),{recursive:true});
+  writeFileSync(join(bundle,'public.json'),JSON.stringify({bots:[{name:'⟦MAIN⟧',inWorld:true}],roster:[]}));
+
+  const webpAudit=verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true});
+  expect(webpAudit).toMatchObject({ok:true,missing:[],leaks:[]});
+
+  writeFileSync(join(bundle,'client-shell.js'),readFileSync(join(bundle,'client-shell.js'),'utf8').replace('  window.atlasClient=','  window.brokenClient='));
+  const brokenAudit=verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true});
+  expect(brokenAudit.ok).toBe(false);
+  expect(brokenAudit.missing).toContain('contract:connectViewerControls-keydown-end');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

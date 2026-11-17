@@ -2337,3 +2337,66 @@ test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall 
   {economy:{itemValues:{}},rivals:[]},()=>liveBot,(n:string)=>n,()=>new Promise(()=>{}),{getItem:()=>null,setItem:()=>{}},{atlasCam3d:{x:3094,z:3530,at:Date.now()},atlasWildOverlay:{resolveTarget:(b:any)=>b.target||null}},()=>1,()=>null,{state:'idle'},()=>[],{state:'loading'},()=>null,String,{origin:''});
  expect(ov.lines).toContainEqual({x0:3094,z0:3522,x1:3094,z1:3540,l:0,colour:'#58d5ff',label:'Ditch target'});
 });
+
+test('HUD layering clears desktop opponent/XP globes and infoboxes track b.live with safeName masking',()=>{
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('@media(min-width:741px){.game-hud:has(.xp-globes:not(:empty)) .game-opponent{top:54px}}');
+ expect(css).toMatch(/\.game-places\{[^}]*z-index:44/);
+ expect(css).toMatch(/\.game-bank\{[^}]*z-index:46/);
+ expect(css).toContain('.xp-row:focus-visible');
+
+ const code=shell.slice(shell.indexOf('  function infoboxes(){'),shell.indexOf('  // Board progress'));
+ const el:any={innerHTML:''};
+ let curBot:any={name:'Scout',inWorld:true,live:{x:3100,z:3550,level:0,seen:Date.now()},skills:[],combat:80};
+ const threat={name:'⟦MAIN⟧',combat:81,dist:4};
+ const run=new Function('S','account','hud','E','asset','skillFile','dur','age','realSkill','safeName','wildLevel','pvpState',code+';return infoboxes;')(
+  {bots:[curBot,{name:'Buddy',inWorld:true}],roster:[['Scout',3100,3550,0,80],['Buddy',3104,3552,0,70],['Outsider',3110,3545,0,75]]},
+  ()=>curBot,
+  {querySelector:()=>el},
+  String,(n:string)=>n,(n:string)=>n.toLowerCase(),String,String,()=>true,
+  (n:string)=>n==='⟦MAIN⟧'?'Main · reserved':n,
+  ()=>3,
+  ()=>({wild:3,multi:false,threats:[threat]}),
+ );
+ run();
+ expect(el.innerHTML).toContain('2 players within 15 tiles · 1 ours');
+ curBot={...curBot,pos:{x:3100,z:3550,level:0}};
+ run();
+ expect(el.innerHTML).toContain('Main · reserved (81, 4 tiles)');
+ expect(el.innerHTML).not.toContain('⟦MAIN⟧');
+});
+
+test('XP Tracker archives positive session XP/EHP on reset across account keys and clears history on demand',()=>{
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ let now=1_000,stored='{}',bot:any={name:'MainActual',started:10,goalSkill:'Mining',goalLevel:99,xpPerHour:0,timeline:'x',skills:[{name:'Mining',xp:1000}]};
+ const nodes:any={},panel:any={querySelector:(s:string)=>nodes[s]??={innerHTML:'',textContent:''},contains:()=>false};
+ const xpCode=shell.slice(shell.indexOf("  const XP_STORE='atlas-xp-baselines';"),shell.indexOf('  // Hiscore plugin'));
+ const actions=shell.slice(shell.indexOf("if(e.target.closest('[data-xp-reset]'))"),shell.indexOf("if(e.target.closest('[data-xp-pause]'))"));
+ const env:any={
+  body:{querySelector:()=>panel},account:()=>bot,sel:'StaleSel',S:{bots:[],world:{tickMs:400}},
+  window:{atlasXp:X,atlasOperator:()=>true},Date:{now:()=>now},
+  localStorage:{getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v;}},
+  document:{activeElement:null},put:(el:any,h:string)=>{el.innerHTML=h;},
+  E:String,safeName:(n:string)=>n==='MainActual'?'Main':n,nf:String,dur:(ms:number)=>Math.round(ms/1000)+'s',
+  efficiencyBox:()=>'',calcBox:()=>'',asset:String,skillFile:String,
+ };
+ const api=new Function(...Object.keys(env),`let calcSkill=null,calcTarget=null,calcAccount=null,xpHideMaxed=false,xpSort='rate';${xpCode};return {refreshXp,click:(attr)=>((e)=>{${actions}})({target:{closest:(s)=>s==='['+attr+']'?{}:null}})};`)(...Object.values(env));
+
+ api.refreshXp();
+ now+=60_000;
+ bot={...bot,skills:[{name:'Mining',xp:1000+970}]};
+ api.refreshXp();
+ api.click('data-xp-reset');
+
+ expect(nodes['.xp-history'].innerHTML).toContain('Recent sessions');
+ expect(nodes['.xp-history'].innerHTML).toContain('+970 xp');
+ expect(nodes['.xp-history'].innerHTML).toContain('Mining +970');
+ const parsed=JSON.parse(stored);
+ expect(parsed.MainActual.at).toBe(61_000);
+ expect(parsed.__history.Main).toBeDefined();
+ expect(JSON.stringify(parsed.__history)).not.toContain('MainActual');
+
+ api.click('data-xp-clear-history');
+ expect(nodes['.xp-history'].innerHTML).toBe('');
+ expect(JSON.parse(stored).__history.Main).toBeUndefined();
+});

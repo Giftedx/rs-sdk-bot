@@ -147,3 +147,33 @@ test('supplyBillProgress tracks fleet stock fulfillment against route bills whil
  expect(JSON.stringify(bill)).not.toContain('Haggis');
  expect(JSON.stringify(bill)).not.toContain('TestLab');
 });
+
+test('archiveSession and recordSessionHistory snapshot positive gains and cap deduplicated history entries', () => {
+ const bot = { name: 'MinerOne', started: 100, skills: [{ name: 'Mining', xp: 1000 }] };
+ const store: any = {};
+ xp.baseline(store, bot, 1_000);
+ expect(xp.archiveSession(store, bot, 61_000)).toBeNull();
+ const gainedBot = { ...bot, skills: [{ name: 'Mining', xp: 1000 + 97 * 900 }] };
+ const entry = xp.archiveSession(store, gainedBot, 1_801_000, { tickMs: 400 });
+ expect(entry).toMatchObject({
+  started: 100,
+  fromAt: 1_000,
+  at: 1_801_000,
+  elapsedMs: 1_800_000,
+  gainedXp: 87_300,
+  xpPerHour: 174_600,
+  skills: [{ skill: 'Mining', gained: 87_300 }],
+ });
+ expect(entry.gainedEhp).toBeCloseTo(0.1, 4);
+ const pausedStore: any = { MinerOne: { started: 100, at: 1_000, xp: { Mining: 1000 }, paused: { at: 901_000, xp: { Mining: 5000 } } } };
+ const pausedEntry = xp.archiveSession(pausedStore, gainedBot, 1_801_000, { tickMs: 400 });
+ expect(pausedEntry.gainedXp).toBe(4000);
+ expect(pausedEntry.elapsedMs).toBe(900_000);
+
+ let hist = xp.recordSessionHistory(null, 'MinerOne', entry, 2);
+ hist = xp.recordSessionHistory(hist, 'MinerOne', entry, 2);
+ expect(hist.MinerOne.length).toBe(1);
+ hist = xp.recordSessionHistory(hist, 'MinerOne', { ...entry, at: 1_900_000, gainedXp: 90_000 }, 2);
+ hist = xp.recordSessionHistory(hist, 'MinerOne', { ...entry, at: 2_000_000, gainedXp: 95_000 }, 2);
+ expect(hist.MinerOne.map((h: any) => h.gainedXp)).toEqual([95_000, 90_000]);
+});
