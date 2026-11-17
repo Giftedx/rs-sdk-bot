@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794928938719,
+ "at": 1794929159354,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -230,7 +230,9 @@
     "66",
     "6000"
    ],
-   "env": {},
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -274,7 +276,8 @@
     "AMMO": "100",
     "MAX_TRIPS": "50",
     "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000"
+    "MAX_SPEND": "4000",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -290,40 +293,22 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/splash-train.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "66",
-    "6000"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=150 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=9000 COIN_RESERVE=500 MAX_SPEND=8000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "combat",
-   "template": "army-splash-magic-66",
+   "goal": "buy body runes at Aubury's in Varrock for the curse band",
+   "role": "supply",
+   "template": "army-body-aubury",
    "autopilot": "local",
    "resources": [
-    "splash:ardougne-cow-fence"
-   ]
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "21",
-    "1500"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-strike-magic-21",
-   "autopilot": "local",
-   "resources": [
-    "strike:ardougne-guard-dog"
+    "shop:aubury"
    ]
   },
   {
@@ -392,8 +377,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -408,60 +392,41 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/splash-train.ts",
    "args": [
-    "catherby_arrows",
-    "600"
+    "66",
+    "6000"
    ],
-   "env": {
-    "ITEMS": "iron arrow|bronze arrow",
-    "STOCK_TARGET": "1000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "21000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "20000"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-catherby",
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
    "autopilot": "local",
    "resources": [
-    "shop:catherby_arrows"
+    "splash:ardougne-cow-fence"
    ]
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "ardy",
-    "400"
+    "scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
    ],
    "env": {
-    "ITEMS": "bronze arrow",
-    "STOCK_TARGET": "500",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "5000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "4000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "goal": "buy water runes at Betty's in Port Sarim for the curse band",
    "role": "supply",
-   "template": "army-arrows-ardy",
+   "template": "army-water-betty",
    "autopilot": "local",
    "resources": [
-    "shop:ardy"
+    "shop:betty"
    ]
   },
   {
@@ -477,8 +442,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
