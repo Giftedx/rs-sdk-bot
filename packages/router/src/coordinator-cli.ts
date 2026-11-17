@@ -14,7 +14,7 @@ import {cachedLaunchRevision,cachedReleaseFor} from '../../core/src/worker-relea
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,ownerPlanPath,jobAccounts,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {validateBoundedRecovery,assertBoundedRecoveryQueue} from '../../core/src/bounded-recovery';
 import {boundedOwnerBinding} from '../../core/src/bounded-owners';
-import {assignedWorker} from './model-worker';
+import {assignedWorker,type ModelWorker} from './model-worker';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {SWARM_STOP,writeSwarmStop} from '../../../scripts/swarm';
@@ -505,9 +505,9 @@ async function tick(state:CoordinatorState,config:any){
   launchTask(state,task.id);
  }
  const planReason=diskLow||bounded?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
- if(planReason){
+ const agent=plannerAgent(config.agents,state.tasks);
+ if(planReason&&agent){
   if(existsSync(planRequest))unlinkSync(planRequest);
-  const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
   const runId='plan-'+randomUUID(),dir=runDirectory(runId);atomicJson(join(dir,'input.json'),{statePath:join(coordinationDir,'state.json'),agent,timeoutMs:config.modelTimeoutMs??600000});
   // Snapshot the receipts available when the planner starts. Receipts settled during its call trigger the next pass.
   state.plannerReceiptSequence=state.latestReceiptSequence??0;
@@ -515,6 +515,11 @@ async function tick(state:CoordinatorState,config:any){
  }
  const archived=archiveFinishedTasks(state);if(archived)event('tasks-archived',{count:archived,remaining:state.tasks.length});
  saveState(state);
+}
+export function plannerAgent(configured:readonly ModelWorker[]|undefined,records:readonly {status:string;agent?:ModelWorker;spec:{kind:string}}[]):ModelWorker|null{
+ const allowed=(['codex','claude'] as const).filter(agent=>configured===undefined||configured.includes(agent));
+ const preferred=assignedWorker('build',records.filter(r=>r.status==='running'&&r.spec.kind==='build'));
+ return allowed.includes(preferred)?preferred:allowed[0]??null;
 }
 // One recursive watch is one OS handle on Windows: 16 ms CPU per 10 s over 2,447 run folders, against 63 ms for a
 // watch per open folder. The folder count does not make it dearer.
