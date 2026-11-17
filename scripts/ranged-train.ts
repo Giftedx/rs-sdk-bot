@@ -3,6 +3,7 @@
 // Env: MIN_ARROWS, BUY_ARROWS, BUY_ARROW_ID, MAX_SPEND, COIN_RESERVE, AMMO, FOOD, FOOD_ID, KILLS_PER_TRIP, MAX_TRIPS.
 // MAX_SPEND includes food, arrows and fares. COIN_RESERVE protects total owned coins.
 // Missing trout/salmon falls back to observed Wydin cheese stock; FOOD remains the per-trip meal target.
+import {existsSync,readFileSync} from 'node:fs';
 import {openBot,finish,accountOf,getWorld,sessionDied} from '../packages/core/src/bot';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import type {Session} from '../packages/core/src/inprocess';
@@ -12,6 +13,7 @@ import {sessionWalker,walkPath,walkRoute,expandPath,goTo,type PathPoint} from '.
 import {rangedCredit,selectRangedTarget} from './gather-ranged';
 import {startQuestSustain} from './quest-sustain';
 import {buyWithBudget} from './shop-buyer';
+import {orderPaths,runOwnedItem,type ItemRequest} from './buy-owned-ge-item';
 import {planTripOffThread} from '../packages/core/src/route-plan';
 import {routeFares,type Account} from '../packages/core/src/world';
 import {chooseProgression,type ObservedAccount,type ProgressionDecision} from '../packages/planner/src/progression';
@@ -351,6 +353,130 @@ export function rangedAccountObservation(s:Session,reserve=0,now=Date.now()):Obs
   reservations:reserve?{995:reserve}:{},
  };
 }
+const RANGED_SHOP_ACQUIRE:Record<string,{itemId:number;name:string;count:number;maxUnitCost:number;minRanged:number}>={
+ 'ranged/lowe-buy-shortbow':{itemId:841,name:'Shortbow',count:1,maxUnitCost:100,minRanged:1},
+ 'ranged/lowe-buy-oak':{itemId:843,name:'Oak shortbow',count:1,maxUnitCost:200,minRanged:5},
+ 'ranged/lowe-buy-bronze':{itemId:882,name:'Bronze arrow',count:100,maxUnitCost:3,minRanged:1},
+ 'ranged/lowe-buy-iron':{itemId:884,name:'Iron arrow',count:100,maxUnitCost:8,minRanged:1},
+ 'ranged/lowe-buy-steel':{itemId:886,name:'Steel arrow',count:100,maxUnitCost:24,minRanged:5},
+ 'ranged/guild-buy-willow':{itemId:849,name:'Willow shortbow',count:1,maxUnitCost:1000,minRanged:40},
+ 'ranged/guild-buy-mithril':{itemId:888,name:'Mithril arrow',count:250,maxUnitCost:192,minRanged:40},
+};
+const RANGED_GE_ACQUIRE=new Set(['ranged/ge-buy-willow','ranged/ge-buy-mithril','ranged/ge-buy-maple']);
+const RANGED_TRAIN_METHODS=new Set(['ranged/chickens','ranged/chickens-oak','ranged/troopers','ranged/troopers-oak','ranged/troopers-willow','ranged/troopers-maple','ranged/guild-willow-mithril']);
+export const isRangedAcquireMethod=(method:string|null|undefined):method is string=>!!method&&(method in RANGED_SHOP_ACQUIRE||RANGED_GE_ACQUIRE.has(method));
+
+async function walkRangedAcquirePoint(s:Session,to:{x:number;z:number},stop?:()=>boolean){
+ const p=s.sdk.getState()?.player;
+ if(p&&p.level===0&&Math.max(Math.abs(p.worldX-to.x),Math.abs(p.worldZ-to.z))<=4)return true;
+ const world=await getWorld();
+ const out=await ferryWalk(s,{x:to.x,z:to.z,level:0},(tile,budgetMs)=>goTo(s,world,tile,recoveryWalker(accountOf(s)),{maxRetriesPerLeg:2,legTimeoutTicks:150,planBudgetMs:budgetMs}),stop);
+ const cur=s.sdk.getState()?.player;
+ return out.ok&&!!cur&&cur.level===0&&Math.max(Math.abs(cur.worldX-to.x),Math.abs(cur.worldZ-to.z))<=8;
+}
+
+async function executeRangedAcquireStep(s:Session,o:RangedTrainOptions,account:ObservedAccount,method:string,step:ProgressionDecision['step']|undefined,decision:ProgressionDecision,start:number){
+ const level=()=>s.sdk.getSkill('Ranged')?.baseLevel??0;
+ const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),bankItems=()=>s.bankObservation?.()?.items??[];
+ const total=(id:number)=>count(inv(),id)+count(bankItems(),id)+count(s.sdk.getEquipment(),id);
+ if(!st()?.bank?.isOpen){
+  if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!st()?.bank?.isOpen,{timeoutTicks:15}))
+   return{ok:false,acquired:false,targetMet:false,stop:'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,coinsSpent:0,coinDebit:0,arrowsSpent:0,failure:'ranged acquire bank unavailable'};
+ }
+ const totalCoins=total(COINS),spendEnv=Number(step?.env?.MAX_SPEND??o.maxSpend);
+ const spendCap=Number.isFinite(spendEnv)&&spendEnv>=0?Math.min(o.maxSpend,spendEnv):o.maxSpend;
+ const budget=preparationFunds(totalCoins,0,spendCap,o.coinReserve);
+ if(method in RANGED_SHOP_ACQUIRE){
+  const spec=RANGED_SHOP_ACQUIRE[method]!;
+  if(level()<spec.minRanged)return{ok:false,acquired:false,targetMet:false,stop:'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,coinsSpent:0,coinDebit:0,arrowsSpent:0,failure:`progression requires Ranged ${spec.minRanged} for ${method}`};
+  const maxEnv=Number(step?.env?.MAX_ITEMS);
+  const wanted=Number.isSafeInteger(maxEnv)&&maxEnv>0?Math.min(spec.count,maxEnv):spec.count;
+  const minNeed=Math.min(spec.maxUnitCost,totalCoins);
+  if(budget<spec.maxUnitCost&&budget<1){
+   await s.bot.closeBank();
+   return{ok:false,acquired:false,targetMet:false,stop:'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,coinsSpent:0,coinDebit:0,arrowsSpent:0,failure:`ranged acquire budget short for ${spec.name}: budget=${budget} min=${minNeed}`};
+  }
+  const p=st()?.player,hicktonItems=[841,843,882,884];
+  const useDargaud=method.startsWith('ranged/guild-');
+  const useHickton=!useDargaud&&!!p&&p.worldX<2850&&hicktonItems.includes(spec.itemId);
+  const shop=useDargaud?{npc:/^bow and arrow salesman$/i,spot:{x:2673,z:3434},bank:{x:2727,z:3492}}
+   :useHickton?{npc:/^hickton$/i,spot:{x:2821,z:3444},bank:{x:2809,z:3441}}
+   :{npc:/^lowe$/i,spot:LOWE,bank:BANK};
+  const packCoins=count(inv(),COINS),needWithdraw=Math.max(0,budget-packCoins);
+  let withdrawn=0;
+  if(needWithdraw>0&&count(bankItems(),COINS)>0){
+   const amt=Math.min(needWithdraw,count(bankItems(),COINS));
+   if(amt>0){
+    const beforeW=count(inv(),COINS);
+    await s.bot.withdrawItem({id:COINS,name:'Coins',count:amt,slot:0} as any,amt);
+    await waitUntil(s,()=>count(inv(),COINS)>beforeW,{timeoutTicks:8});
+    withdrawn=Math.max(0,count(inv(),COINS)-beforeW);
+   }
+  }
+  await s.bot.closeBank();await waitUntil(s,()=>!st()?.bank?.isOpen,{timeoutTicks:5});
+  if(o.stop?.())return{ok:false,acquired:false,targetMet:false,stop:'stop-file',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,coinsSpent:0,coinDebit:0,arrowsSpent:0};
+  const beforeWalkOut=total(COINS);
+  const walked=await walkRangedAcquirePoint(s,shop.spot,o.stop);
+  const fareOut=Math.max(0,beforeWalkOut-total(COINS));
+  let bought=0,spent=0;
+  if(walked&&!o.stop?.()){
+   if(await openShopWithDoor(s.bot,shop.npc,()=>waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10}))){
+    const wallet=count(inv(),COINS),allowed=Math.min(Math.max(0,budget-fareOut),wallet);
+    if(allowed>0){
+     const res=await buyWithBudget(s.bot,s.sdk,spec.name,wanted,Math.max(0,wallet-allowed),allowed);
+     bought=res.bought;spent=res.spent;
+    }
+    await s.bot.closeShop();await waitUntil(s,()=>!st()?.shop?.isOpen,{timeoutTicks:5});
+   }
+  }
+  const beforeWalkBack=total(COINS);
+  await walkRangedAcquirePoint(s,shop.bank,o.stop);
+  const fareBack=Math.max(0,beforeWalkBack-total(COINS)),travelSpent=fareOut+fareBack;
+  if((await s.bot.openBank()).success&&await waitUntil(s,()=>!!st()?.bank?.isOpen,{timeoutTicks:12})){
+   for(const id of [spec.itemId,...(withdrawn>0||spent>0||travelSpent>0?[COINS]:[])]){
+    for(const slot of inv().filter(i=>i.id===id))await s.bot.depositItem(slot as any,slot.count);
+   }
+   await waitTicks(s,1);
+   await s.bot.closeBank();await waitUntil(s,()=>!st()?.bank?.isOpen,{timeoutTicks:5});
+  }
+  const coinsAfter=total(COINS),debit=Math.max(0,totalCoins-coinsAfter);
+  const reconciled=coinsAfter>=o.coinReserve&&debit<=o.maxSpend&&debit===spent+travelSpent;
+  const ok=bought>0&&reconciled&&!o.stop?.();
+  return{ok,acquired:ok,targetMet:false,stop:ok?'acquire':'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,
+   coinsSpent:debit,coinDebit:debit,travelSpent,arrowsSpent:0,bow:BOW_IDS.includes(spec.itemId)?spec.itemId:0,arrow:ARROW_IDS.includes(spec.itemId)?spec.itemId:0,
+   ...(ok?{}:{failure:bought===0?`ranged acquire unavailable or empty stock for ${spec.name}`:'ranged acquire coin reconciliation mismatch'})};
+ }
+ // GE acquire (willow shortbow, mithril arrows, maple shortbow).
+ const itemId=Number(step?.env?.ITEM_ID??(method==='ranged/ge-buy-willow'?849:method==='ranged/ge-buy-maple'?853:888));
+ const limitPrice=Number(step?.env?.LIMIT_PRICE??(itemId===849?2500:itemId===853?4000:120));
+ const reqQty=Number(step?.env?.QUANTITY??1);
+ const maxQty=limitPrice>0?Math.min(reqQty,Math.floor(budget/limitPrice)):0;
+ await s.bot.closeBank();await waitUntil(s,()=>!st()?.bank?.isOpen,{timeoutTicks:5});
+ if(!Number.isSafeInteger(itemId)||!Number.isSafeInteger(limitPrice)||limitPrice<=0||maxQty<=0)
+  return{ok:false,acquired:false,targetMet:false,stop:'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,coinsSpent:0,coinDebit:0,arrowsSpent:0,failure:`ranged GE acquire budget short for ${method}`};
+ const server=s.lifecycle?.server??'local',now=Date.now();
+ const expectedOwned=step?.env?.EXPECTED_OWNED!==undefined?Number(step.env.EXPECTED_OWNED):undefined;
+ let goal=`ranged-acquire-${itemId}`,journalPath=orderPaths(server,s.name,goal).journal,reused:ItemRequest|undefined;
+ for(let seq=0;seq<50&&existsSync(journalPath);seq++){
+  try{
+   const prev=JSON.parse(readFileSync(journalPath,'utf8'));
+   if(prev?.version===1&&['placing','open','cancelling','collecting'].includes(prev.phase)&&prev.request?.item===itemId&&prev.request?.actor?.toLowerCase()===s.name.toLowerCase()){
+    reused=prev.request as ItemRequest;
+    break;
+   }
+  }catch{}
+  goal=`ranged-acquire-${itemId}-${seq+1}`;
+  journalPath=orderPaths(server,s.name,goal).journal;
+ }
+ const req:ItemRequest=reused??{actor:s.name,server,goal,item:itemId,quantity:maxQty,...(expectedOwned!==undefined?{expectedOwned}:{}),limit:limitPrice,reserve:o.coinReserve,createdAt:now,reviewAt:now+60_000,deadline:now+300_000};
+ const res=await runOwnedItem(s,req,journalPath,()=>!!o.stop?.(),false,100);
+ const coinsAfter=total(COINS),debit=Math.max(0,totalCoins-coinsAfter);
+ const ok=res.acquired>0&&coinsAfter>=o.coinReserve&&debit<=o.maxSpend&&!o.stop?.();
+ return{ok,acquired:ok,targetMet:false,stop:ok?'acquire':'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,
+  coinsSpent:debit,coinDebit:debit,arrowsSpent:0,bow:BOW_IDS.includes(itemId)?itemId:0,arrow:ARROW_IDS.includes(itemId)?itemId:0,
+  ...(ok?{}:{failure:res.failure??`ranged GE acquire unfilled for ${method}`})};
+}
+
 async function runAdaptiveRangedBand(s:Session,o:RangedTrainOptions,options:{comparison?:'chickens'|'troopers';decision?:ProgressionDecision}={}){
  const start=s.tick(),generation=s.bankObservation?.()?.generation??0;
  if(s.sdk.getState()?.bank?.isOpen)await s.bot.closeBank();
@@ -359,18 +485,26 @@ async function runAdaptiveRangedBand(s:Session,o:RangedTrainOptions,options:{com
  const account=rangedAccountObservation(s,o.coinReserve),methods=rangedProgressionMethods(account,o.target);
  const coins=Object.values([account.bank,account.inventory,account.equipment]).reduce((n,b)=>n+(b?.value[COINS]??0),0);
  if(coins<o.coinReserve)throw Error('ranged-train prerequisite: coin reserve short');
- let decision=chooseProgression({kind:'train',skill:'Ranged',targetLevel:o.target},account,methods,{now:Date.now()});
- if(s.lifecycle?.domain==='live'){
+ const localDecision=options.decision??chooseProgression({kind:'train',skill:'Ranged',targetLevel:o.target},account,methods,{now:Date.now()});
+ let decision=localDecision;
+ if(!options.decision&&s.lifecycle?.domain==='live'){
   const live=s.progression?.refresh('Ranged fresh bank');
   if(!live?.decision)throw Error('adaptive Ranged live progression decision unavailable');
   decision=live.decision;
  }
  console.log('RANGED_PROGRESSION '+JSON.stringify(decision));
+ const method=options.comparison?'ranged/'+options.comparison:decision.path[0]?.method??decision.selected;
+ const step=decision.path[0]?.step??decision.step;
+ if(!options.comparison&&isRangedAcquireMethod(method)&&(decision.state==='acquire'||decision.state==='execute'))
+  return executeRangedAcquireStep(s,o,account,method,step,decision,start);
+ if(!options.comparison&&(decision.state==='acquire'||decision.state==='qualify')&&!method&&!rangedKit(account)){
+  const starterMethod=localDecision.path[0]?.method??localDecision.selected;
+  if(isRangedAcquireMethod(starterMethod))return executeRangedAcquireStep(s,o,account,starterMethod,localDecision.path[0]?.step??localDecision.step,decision,start);
+ }
  await s.bot.closeBank();
  if(!await waitUntil(s,()=>!s.sdk.getState()?.bank?.isOpen,{timeoutTicks:5}))throw Error('adaptive Ranged bank close unobserved');
  if(decision.state==='complete')return{ok:true,targetMet:true,stop:'target-level',targetLevel:o.target,finalLevel:account.skills.Ranged!.level,xpGain:0,ticks:s.tick()-start,method:null,decision};
- const method=options.comparison?'ranged/'+options.comparison:decision.path[0]?.method??decision.selected;
- if(!options.comparison&&(decision.state!=='execute'||!method||!['ranged/chickens','ranged/troopers','ranged/guild-willow-mithril'].includes(method)))
+ if(!options.comparison&&(decision.state!=='execute'||!method||!RANGED_TRAIN_METHODS.has(method)))
   return{ok:false,targetMet:false,stop:'preparation',targetLevel:o.target,finalLevel:account.skills.Ranged?.level??0,xpGain:0,ticks:s.tick()-start,method,decision,failure:'progression requires '+decision.state};
  const remaining=o.cap-(s.tick()-start);if(remaining<800)throw Error('adaptive Ranged preparation exhausted the finite cap');
  const kit=rangedKit(account);if(!kit)throw Error('adaptive Ranged selected kit unavailable');
@@ -378,7 +512,7 @@ async function runAdaptiveRangedBand(s:Session,o:RangedTrainOptions,options:{com
  if(!Number.isSafeInteger(declaredTarget)||declaredTarget<1||declaredTarget>99)throw Error('adaptive Ranged policy target unknown');
  const bandTarget=Math.min(rangedBandTarget(account,o.target),declaredTarget);
  s.progression?.executing(method!);
- if(method==='ranged/chickens'){
+ if(method==='ranged/chickens'||method==='ranged/chickens-oak'){
   const r=await runRangedTrain(s,{...o,target:bandTarget,cap:remaining,kit});
   return{...r,ticks:s.tick()-start,method,decision,bandTarget};
  }
@@ -439,7 +573,7 @@ export async function runAdaptiveRanged(s:Session,o:RangedTrainOptions,options:{
    const recovery=await recoverRangedStart(s,o.stop);if(recovery?.stopped)break;
   }
   const r=await runAdaptiveRangedBand(s,{...o,cap:remaining,maxSpend:Math.max(0,o.maxSpend-spent())},options);segments.push(r);
-  if(!r.ok||s.sdk.getSkill('Ranged')!.baseLevel>=o.target||s.sdk.getSkill('Ranged')!.baseLevel<=before)break;
+  if(!r.ok||s.sdk.getSkill('Ranged')!.baseLevel>=o.target||(!('acquired' in r&&r.acquired)&&s.sdk.getSkill('Ranged')!.baseLevel<=before))break;
  }
  const last=segments.at(-1);if(!last)throw Error('adaptive Ranged stopped before a finite band could start');
  const finalLevel=s.sdk.getSkill('Ranged')!.baseLevel,targetMet=finalLevel>=o.target;

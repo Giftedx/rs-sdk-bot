@@ -167,9 +167,27 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 // planner only has to put one in the bank: an army account with Attack 30 and no blade of WEAPON_HELD buys one adamant
 // scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: before its Ranged band, so every account gets one now
 // (owner: all of them, until rune blades arrive), WEAPON_BUYERS accounts away for it at a time.
+// Progressive weapon, armour, and skilling-tool tiers (rev-289 equipment requirements and shop/GE sources).
 export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
-export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword'] as const;
+export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword', 'dragon dagger'] as const;
 export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
+export const ARMOUR_BAND = 3.55, RANGED_ARMOUR_BAND = 3.95, ARMOUR_MARKET = 'ge:armour', ARMOUR_BUYERS = 2;
+type WeaponStage = { id: string; item: string; fallbacks?: readonly string[]; attack: number; quest?: string; goal: string; held: readonly string[] };
+const RUNE_WEAPONS = ['rune scimitar', 'rune longsword', 'rune sword', 'dragon longsword', 'dragon dagger'] as const;
+const DRAGON_WEAPONS = ['dragon longsword', 'dragon dagger'] as const;
+const WEAPON_STAGES: readonly WeaponStage[] = [
+    { id: 'army-weapon-dragon', item: 'dragon dagger', attack: 60, quest: 'Lost City', goal: 'fight with a dragon dagger', held: DRAGON_WEAPONS },
+    { id: 'army-weapon-rune', item: 'rune scimitar', fallbacks: ['rune longsword'], attack: 40, goal: 'fight with a rune blade', held: RUNE_WEAPONS },
+    { id: WEAPON.id, item: WEAPON.item, attack: WEAPON.attack, goal: WEAPON.goal, held: WEAPON_HELD },
+];
+const RUNE_ARMOUR_BAND = 'army-armour-rune';
+const DHIDE_ARMOUR_BAND = 'army-armour-dhide';
+const PICKAXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
+    [41, 'rune pickaxe', 40_000], [31, 'adamant pickaxe', 5_000], [21, 'mithril pickaxe', 2_500], [6, 'steel pickaxe', 1_000], [1, 'iron pickaxe', 300],
+];
+const AXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
+    [41, 'rune axe', 25_000], [31, 'adamant axe', 10_000], [21, 'mithril axe', 4_000], [6, 'steel axe', 1_500], [1, 'iron axe', 200],
+];
 // The quest band of the army: after the blade, before Ranged, so an account does its quests once and goes back to
 // training. One account at a time does Lost City: its tree spirit serves one fighter (practice: of three accounts at
 // the dramen tree together one finished and two ended "Someone else is fighting that"). LOST_CITY_MEALS is the food
@@ -231,6 +249,15 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
     // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
     'adamant scimitar': 80_000,
+    'rune scimitar': 50_000, 'rune longsword': 45_000, 'dragon dagger': 50_000, 'dragon longsword': 120_000,
+    shortbow: 500, 'oak shortbow': 800, 'willow shortbow': 2_500, 'maple shortbow': 5_000,
+    coif: 1_000, 'studded body': 2_500, 'studded chap': 2_000,
+    'dragonhide body': 15_000, 'dragonhide chap': 8_000, 'dragon vambrace': 6_000,
+    'adamant full helm': 8_000, 'adamant plateleg': 15_000, 'adamant platebody': 25_000,
+    'rune full helm': 45_000, 'rune kiteshield': 65_000, 'rune plateleg': 75_000, 'rune plateskirt': 75_000, 'rune chainbody': 60_000, 'rune platebody': 80_000,
+    // Lumber & mining skilling tools (Bob's Axes in Lumbridge lacks mithril+ axes and has no shop profile).
+    'steel axe': 1_500, 'mithril axe': 4_000, 'adamant axe': 10_000, 'rune axe': 25_000,
+    'adamant pickaxe': 6_000, 'rune pickaxe': 40_000,
     // The hunters' kit (army-hunt-black-dragons). Live claude-cloud: 5 law runes for 5,260 coins and 7 sharks for 7,189;
     // magic shortbows 108 listed from 51,000.
     'law rune': 1_600, 'magic shortbow': 60_000,
@@ -395,11 +422,76 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
     return (gross - cost * work / VALUE_TICKS) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
 }
 
+const hasMarket = (inp: Inputs, item: string) => !!inp.market?.[item];
+const hasStock = (inp: Inputs, item: string) => !!(inp.stock ?? []).some(s => (s.items[item] ?? 0) > 0);
+const hasSupply = (inp: Inputs, item: string) => hasMarket(inp, item) || hasStock(inp, item);
+function weaponStageFor(a: Acct, inp: Inputs): { id: string; item: string; goal: string } | null {
+    const att = a.skills.Attack ?? 1;
+    for (const s of WEAPON_STAGES) {
+        if (att < s.attack || (s.quest && !questDone(a, s.quest))) continue;
+        if (s.held.some(w => (a.items[w] ?? 0) > 0)) return null;
+        const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + s.id));
+        const choices = [s.item, ...(s.fallbacks ?? [])];
+        const available = choices.find(c => hasStock(inp, c) || (!buyRetired && hasMarket(inp, c)));
+        if (available) return { id: s.id, item: available, goal: s.goal };
+        if (s.id === WEAPON.id && !buyRetired) return { id: s.id, item: s.item, goal: s.goal };
+    }
+    return null;
+}
+function armourItemsFor(a: Acct, inp: Inputs): { id: string; band: number; items: string[]; goal: string }[] {
+    const out: { id: string; band: number; items: string[]; goal: string }[] = [];
+    if ((a.skills.Defence ?? 1) >= 40) {
+        const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + RUNE_ARMOUR_BAND));
+        const torso = questDone(a, 'Dragon Slayer') ? 'rune platebody' : 'rune chainbody';
+        const heldTorso = (a.items['rune platebody'] ?? 0) > 0 || (!questDone(a, 'Dragon Slayer') && (a.items['rune chainbody'] ?? 0) > 0);
+        const need = [
+            ...(heldTorso ? [] : [torso]),
+            ...((a.items['rune plateleg'] ?? 0) > 0 || (a.items['rune plateskirt'] ?? 0) > 0 ? [] : ['rune plateleg']),
+            ...((a.items['rune full helm'] ?? 0) > 0 ? [] : ['rune full helm']),
+            ...((a.items['rune kiteshield'] ?? 0) > 0 ? [] : ['rune kiteshield']),
+        ].filter(item => hasStock(inp, item) || (!buyRetired && hasMarket(inp, item)));
+        if (need.length) out.push({ id: RUNE_ARMOUR_BAND, band: ARMOUR_BAND, items: need, goal: 'wear rune armour' });
+    }
+    if ((a.skills.Ranged ?? 1) >= 40) {
+        const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + DHIDE_ARMOUR_BAND));
+        const bodyReady = (a.skills.Defence ?? 1) >= 40 && questDone(a, 'Dragon Slayer');
+        const need = [
+            ...(bodyReady && !(a.items['dragonhide body'] ?? 0) ? ['dragonhide body'] : []),
+            ...((a.items['dragonhide chap'] ?? 0) > 0 ? [] : ['dragonhide chap']),
+            ...((a.items['dragon vambrace'] ?? 0) > 0 ? [] : ['dragon vambrace']),
+        ].filter(item => hasStock(inp, item) || (!buyRetired && hasMarket(inp, item)));
+        if (need.length) out.push({ id: DHIDE_ARMOUR_BAND, band: RANGED_ARMOUR_BAND, items: need, goal: "wear green dragonhide armour" });
+    }
+    return out;
+}
+function toolUpgradeNeed(a: Acct, routeDemand: ReadonlySet<string>): string | null {
+    const miningDemand = ['iron ore', 'mithril bar', 'adamantite bar', 'steel bar', 'rune essence', 'coal'].some(x => routeDemand.has(x));
+    const wcDemand = ['yew log', 'maple log', 'yew shortbow', 'arrow shaft'].some(x => routeDemand.has(x));
+    if (miningDemand) {
+        const mining = a.skills.Mining ?? 1;
+        for (const [lvl, item] of PICKAXE_LADDER) {
+            if (mining < lvl) continue;
+            if (PICKAXE_LADDER.filter(([l]) => l >= lvl).some(([, p]) => (a.items[p] ?? 0) > 0)) break;
+            return item;
+        }
+    }
+    if (wcDemand && (a.skills.Woodcutting ?? 1) >= 60) {
+        const wc = a.skills.Woodcutting ?? 1;
+        for (const [lvl, item] of AXE_LADDER) {
+            if (wc < lvl) continue;
+            if (AXE_LADDER.filter(([l]) => l >= lvl).some(([, x]) => (a.items[x] ?? 0) > 0)) break;
+            return item;
+        }
+    }
+    return null;
+}
+
 type GoalNeed = { names: string[]; short: number; consumer: string; account?: string; bought?: number; budget?: () => number };
 // Route shortages and the missing kits of eligible army bands are the consumers. Army purchase budgets retain
 // their recipient, so wealth that account cannot spend or receive cannot hide its funding gap.
 function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
     const route: GoalNeed[] = inp.bill.filter(r => r.short > 0).map(r => ({ names: [r.item, ...(r.aliases ?? [])].map(norm), short: r.short, consumer: `Overall route: ${r.item}` }));
+    const routeDemand = new Set(route.flatMap(r => r.names));
     const needs = [...route];
     const budget = (consumer: string, cost: () => number, account?: string) => {
         const coins = cost();
@@ -428,8 +520,11 @@ function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
                 entry.count = Math.max(entry.count, count); entry.bands.add(t.id); kit.set(item, entry);
             }
         }
-        if ((a.skills.Attack ?? 1) >= WEAPON.attack && !WEAPON_HELD.some(item => (a.items[item] ?? 0) > 0)
-            && !inp.retired?.has(pairKey(a.name, KIT_BUY + WEAPON.id))) kit.set(WEAPON.item, { count: 1, bands: new Set([WEAPON.id]) });
+        const wStage = weaponStageFor(a, inp);
+        if (wStage) kit.set(wStage.item, { count: 1, bands: new Set([wStage.id]) });
+        for (const arm of armourItemsFor(a, inp)) for (const item of arm.items) if (!kit.has(item)) kit.set(item, { count: 1, bands: new Set([arm.id]) });
+        const toolItem = toolUpgradeNeed(a, routeDemand);
+        if (toolItem && !kit.has(toolItem)) kit.set(toolItem, { count: 1, bands: new Set(['tool-upgrade']) });
         const lines = [...kit].map(([item, entry]) => {
             const need: GoalNeed = { names: [item], short: entry.count, consumer: `army kit ${a.name}: ${[...entry.bands].join(', ')}`, account: lower };
             needs.push(need);
@@ -741,13 +836,20 @@ export function plan(inp: Inputs): Assignment[] {
                 supply:{template:t,account:a,share:1}});
         }
     }
-    // The weapon kit comes before the melee bands. Owned stock can supply it without a market quote.
-    // The buy script refuses a second scimitar through its owned baseline.
+    // Progressive weapon & armour kit buys precede combat bands. Owned stock can supply them without a market quote.
     for (const a of mine) {
         const lower = a.name.toLowerCase();
-        if (!inp.army?.has(lower) || (a.skills.Attack ?? 1) < WEAPON.attack || WEAPON_HELD.some(w => (a.items[w] ?? 0) > 0)) continue;
-        const template:Template={...WEAPON,family:'kit-buy',script:KIT_BUY_SCRIPT,role:'supply',yields:()=>[],kitFirst:true,needs:{items:{[WEAPON.item]:1}}};
-        cands.push({account:a.name,template,value:0,resources:[WEAPON_MARKET],reason:`army band ${WEAPON_BAND}: stages 1 ${WEAPON.item}`,goal:{band:WEAPON_BAND,left:0},lacks:[{of:[WEAPON.item],count:1}]});
+        if (!inp.army?.has(lower)) continue;
+        const wStage = weaponStageFor(a, inp);
+        if (wStage) {
+            const template: Template = { id: wStage.id, item: wStage.item, attack: 30, goal: wStage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: { [wStage.item]: 1 } } } as Template & { item: string; attack: number };
+            cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: stages 1 ${wStage.item}`, goal: { band: WEAPON_BAND, left: 0 }, lacks: [{ of: [wStage.item], count: 1 }] });
+        }
+        for (const arm of armourItemsFor(a, inp)) {
+            const needsItems = Object.fromEntries(arm.items.map(i => [i, 1]));
+            const template: Template = { id: arm.id, goal: arm.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: needsItems } };
+            cands.push({ account: a.name, template, value: 0, resources: [ARMOUR_MARKET], reason: `army band ${arm.band}: stages ${arm.items.join(', ')}`, goal: { band: arm.band, left: 0 }, lacks: arm.items.map(i => ({ of: [i], count: 1 })) });
+        }
     }
     // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
@@ -875,7 +977,7 @@ export function plan(inp: Inputs): Assignment[] {
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
-            const purchaseResources=c.template.id===WEAPON.id||frailFood?c.resources:[];
+            const purchaseResources=c.template.id===WEAPON.id||c.template.id.startsWith('army-weapon-')||c.template.id.startsWith('army-armour-')||frailFood?c.resources:[];
             const reservePurchase=()=>{for(const r of purchaseResources)used.set(r,(used.get(r)??0)+1);reserveKit(c.account,lines);if(c.supply)reserveOutput(c.supply.template,c.supply.account);};
             const buyReason=`${c.goal&&c.template.kitFirst?`army band ${c.goal.band}: `:''}buys ${what} for ${c.template.id}, at most ${cost} coins`;
             if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason:buyReason, resources:purchaseResources });reservePurchase();return; }
@@ -1166,7 +1268,7 @@ export function splashKit(magic: number): Record<string, number> {
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
 // side and Kandarin runs for more than 30 s (research/walking.md, Planner reach rule), so the planner asks none. It
@@ -1207,6 +1309,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
@@ -1314,6 +1417,7 @@ const BOW_IDENTITIES: Readonly<Record<string, readonly [strung: number, unstrung
     'yew shortbow': [857, 68], 'yew longbow': [855, 66], 'magic shortbow': [861, 72], 'magic longbow': [859, 70],
 };
 export const BOW_IDS: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(BOW_IDENTITIES).map(([name, [id]]) => [name, id]));
+export const ARMOUR_IDS: Readonly<Record<string, number>> = { 'dragonhide body': 1135, 'dragonhide chap': 1099, 'dragon vambrace': 1065 };
 const bowStockNames = new Map(Object.entries(BOW_IDENTITIES).flatMap(([name, [strung, unstrung]]) => [[strung, name], [unstrung, `unstrung ${name}`]] as [number, string][]));
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
 // A staff that stands for the fire runes of a cast.
@@ -1933,7 +2037,7 @@ export function catalogue(): Template[] {
     };
     const ranged: Template = {
         id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/ranged-train.ts', args: ['99', '1500'],
-        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '4000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
+        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '55000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['pen:3229,3298',TROOPER_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
@@ -1987,6 +2091,42 @@ export function catalogue(): Template[] {
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:lowe'], yields: () => [],
         needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
+    const holdsUnderKeys = (items: readonly string[]) => Object.fromEntries(items.map(i => [i, 1]));
+    const zekeShop = (tier: string, item: string, minAtt: number, maxAtt: number, coins: number, better: readonly string[]): Template => ({
+        id: `army-weapon-zeke-${tier}`, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zeke', '1200'],
+        env: { ITEMS: `^${item}$`, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(coins), COIN_RESERVE: '200', MAX_SPEND: String(Math.max(200, coins - 200)) },
+        role: 'supply', goal: `buy ${item} from Zeke in Al Kharid`, tier: 'goal', band: WEAPON_BAND, stock: { item, to: 1 }, repeats: false,
+        resources: ['shop:zeke'], yields: () => [],
+        needs: { ...(minAtt > 1 ? { skills: { Attack: minAtt } } : {}), under: { Attack: maxAtt }, items: { coins }, holdsUnder: holdsUnderKeys([item, ...better]) },
+    });
+    const zekeIron = zekeShop('iron', 'iron scimitar', 1, 5, 400, ['steel scimitar', 'mithril scimitar', ...WEAPON_HELD]);
+    const zekeSteel = zekeShop('steel', 'steel scimitar', 5, 20, 800, ['mithril scimitar', ...WEAPON_HELD]);
+    const zekeMithril = zekeShop('mithril', 'mithril scimitar', 20, 30, 2000, [...WEAPON_HELD]);
+    const scavvoArmour: Template = {
+        id: 'army-armour-scavvo', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['scavvo', '1500'],
+        env: { ITEMS: 'rune platelegs|rune chainbody', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '120000', COIN_RESERVE: '5000', MAX_SPEND: '115000' },
+        role: 'supply', goal: "buy rune platelegs and rune chainbody from Scavvo in the Champions' Guild",
+        tier: 'goal', band: ARMOUR_BAND, stock: { item: 'rune platelegs', to: 1 }, repeats: false, resources: ['shop:scavvo'], yields: () => [],
+        needs: { skills: { Defence: 40 }, questPoints: PEN_QUEST_POINTS['3197,3353'], items: { coins: 120_000 }, shortOf: { 'rune platelegs': 1, 'rune chainbody': 1 }, holdsUnder: { 'rune platebody': 1 } },
+    };
+    const nurmofPickaxes: Template[] = PICKAXE_LADDER.map(([lvl, item, coins], idx) => {
+        const better = PICKAXE_LADDER.slice(0, idx + 1).map(([, p]) => p);
+        const tier = item.split(' ')[0]!;
+        return {
+            id: `tool-pickaxe-${tier}`, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['nurmof', '1200'],
+            env: { ITEMS: `^${item}$`, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(coins), COIN_RESERVE: '200', MAX_SPEND: String(Math.max(200, coins - 200)) },
+            role: 'mining', goal: `buy ${item} from Nurmof in the Dwarven Mine`, repeats: false,
+            resources: ['shop:nurmof'], yields: () => [{ item, perTick: 0.01 }],
+            needs: { ...(lvl > 1 ? { skills: { Mining: lvl } } : {}), items: { coins }, holdsUnder: holdsUnderKeys(better) },
+        };
+    });
+    const ardyIronAxe: Template = {
+        id: 'tool-axe-iron', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '1200'],
+        env: { ITEMS: '^iron axe$', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
+        role: 'woodcutting', goal: "buy iron axe from Aemad in East Ardougne (Bob's Axes has no profile)", repeats: false,
+        resources: ['shop:ardy'], yields: () => [{ item: 'iron axe', perTick: 0.01 }],
+        needs: { items: { coins: 300 }, holdsUnder: holdsUnderKeys(['iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe']) },
+    };
     return [
         ...goldfarm,
         ...cows,
@@ -2024,6 +2164,12 @@ export function catalogue(): Template[] {
         huntBronze,
         huntSupply,
         jakut,
+        zekeIron,
+        zekeSteel,
+        zekeMithril,
+        scavvoArmour,
+        ...nurmofPickaxes,
+        ardyIronAxe,
         dhideSets,
         leatherFlax,
         leatherSpin,
@@ -2162,8 +2308,8 @@ export function jobResources(job: ResourceJob): string[] {
         }
         if (file === 'scripts/ranged-train.ts') {
             const method=env.PROGRESSION_METHOD;
-            if(method==='ranged/chickens')out.push('pen:3229,3298');
-            else if(method==='ranged/troopers'||method==='ranged/guild-willow-mithril')out.push(TROOPER_FIELD);
+            if(method==='ranged/chickens'||method==='ranged/chickens-oak')out.push('pen:3229,3298');
+            else if(method==='ranged/troopers'||method==='ranged/troopers-oak'||method==='ranged/troopers-willow'||method==='ranged/troopers-maple'||method==='ranged/guild-willow-mithril')out.push(TROOPER_FIELD);
             else out.push('pen:3229,3298',TROOPER_FIELD);
         }
         if (file === 'scripts/shop-buyer.ts') out.push(`shop:${(args[0] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);

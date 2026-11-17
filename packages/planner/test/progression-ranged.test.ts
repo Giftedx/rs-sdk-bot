@@ -77,3 +77,42 @@ test('an incomplete or stale stock observation cannot select a borrowed or absen
  const d=chooseProgression({kind:'train',skill:'Ranged',targetLevel:85},a,rangedProgressionMethods(a,85),{now});
  expect(d.state).not.toBe('execute');
 });
+
+import {rangedBandTarget} from '../src/progression-ranged';
+
+test('rangedProgressionMethods provides rev-289 Lowe 1-19 and GE 20-39 acquisition so level-1 accounts prepare starter gear',()=>{
+    const now=Date.now();
+    const obs=(value:any)=>({at:now,value,source:'test'});
+    const starter:ObservedAccount={
+        account:'starter',at:now,
+        skills:{Ranged:{level:1,xp:0},Hitpoints:{level:10,xp:xpForLevel(10)},Defence:{level:1,xp:0}},
+        inventory:obs({995:20_000}),equipment:obs({}),bank:obs({}),quests:obs({}),position:obs({x:3253,z:3421,level:0}),
+    };
+    const d1=chooseProgression({kind:'train',skill:'Ranged',targetLevel:40},starter,rangedProgressionMethods(starter,40),{now});
+    expect(d1.state).toBe('execute');
+    expect(d1.path[0]?.method).toBe('ranged/lowe-buy-bronze');
+    expect(d1.path.some(p=>p.method==='ranged/lowe-buy-shortbow')).toBe(true);
+    expect(d1.path.some(p=>p.method==='ranged/chickens')).toBe(true);
+
+    const methods=rangedProgressionMethods({...starter,skills:{...starter.skills,Ranged:{level:25,xp:xpForLevel(25)}}},40);
+    expect(methods.find(m=>m.id==='ranged/lowe-buy-oak')?.effects.items).toEqual({843:1});
+    expect(methods.find(m=>m.id==='ranged/lowe-buy-steel')?.effects.items).toEqual({886:250});
+    expect(methods.find(m=>m.id==='ranged/ge-buy-willow')?.requirements?.levels?.Ranged).toBe(20);
+    expect(methods.find(m=>m.id==='ranged/ge-buy-mithril')?.requirements?.levels?.Ranged).toBe(20);
+    expect(methods.find(m=>m.id==='ranged/ge-buy-maple')?.requirements?.levels?.Ranged).toBe(30);
+    expect(methods.find(m=>m.id==='ranged/guild-willow-mithril')?.requirements?.levels?.Ranged).toBe(40);
+});
+
+test('rangedBandTarget splits at acquirable bow and arrow tier unlocks before 40',()=>{
+    const now=Date.now();
+    const obs=(value:any)=>({at:now,value,source:'test'});
+    const mk=(level:number,items:Record<number,number>):ObservedAccount=>({
+        account:'tier',at:now,
+        skills:{Ranged:{level,xp:xpForLevel(level)},Hitpoints:{level:20,xp:xpForLevel(20)},Defence:{level:10,xp:xpForLevel(10)}},
+        inventory:obs({995:50_000}),equipment:obs({}),bank:obs(items),quests:obs({}),
+    });
+    expect(rangedBandTarget(mk(1,{841:1,882:100}),40)).toBe(5);
+    expect(rangedBandTarget(mk(5,{843:1,886:200}),40)).toBe(20);
+    expect(rangedBandTarget(mk(20,{849:1,888:200}),40)).toBe(30);
+    expect(rangedBandTarget(mk(30,{853:1,888:200}),40)).toBe(40);
+});

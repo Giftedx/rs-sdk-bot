@@ -1020,10 +1020,10 @@ test('the fare of the reach rule is the fare the shared walker asks for', async 
     expect(fare('npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226')).toBe(TOLL);
 });
 
-test('the place of each shop job is the bank of its shop profile, and the reach rule covers 55 of the 113 templates', () => {
+test('the place of each shop job is the bank of its shop profile, and the reach rule covers 65 of the 123 templates', () => {
     for (const [resource, spot] of Object.entries(PLACES)) if (resource.startsWith('shop:')) expect([resource, spot]).toEqual([resource, PROFILES[resource.slice(5)]!.bankSpot]);
     // The templates the reach rule covers, of the whole catalogue.
-    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([55, 113]);
+    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([65, 123]);
     // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
     const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
     expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
@@ -1034,4 +1034,68 @@ test('an account whose logout is not confirmed is stranded and gives nothing', a
     const proofs: Record<string, string> = { mmtha0205: 'held', Masterbaiter: 'confirmed', Fresh: 'none' };
     const out = strandedAccounts(['mmtha0205', 'Masterbaiter', 'Fresh', 'Broken'], n => { if (n === 'Broken') throw Error('unreadable'); return proofs[n]!; });
     expect([...out]).toEqual(['mmtha0205']);
+});
+
+import { OFFLINE_GUARDED, isJobEnded, readSwarmActiveAccounts, readSwarmEnded } from './autopilot';
+import { ARMOUR_IDS, KIT_BUY } from '../packages/planner/src/autopilot';
+
+test('kitMarket pins exact green dragonhide item ids ahead of blue, red and black variants', () => {
+    const table = kitMarket([
+        { id: 2499, name: 'Dragonhide body', debugname: 'blue_dragonhide_body' },
+        { id: 1135, name: 'Dragonhide body', debugname: 'dragonhide_body' },
+        { id: 2493, name: 'Dragonhide chaps', debugname: 'blue_dragonhide_chaps' },
+        { id: 1099, name: 'Dragonhide chaps', debugname: 'dragonhide_chaps' },
+        { id: 2487, name: 'Dragon vambraces', debugname: 'blue_dragon_vambraces' },
+        { id: 1065, name: 'Dragon vambraces', debugname: 'dragon_vambraces' },
+    ]);
+    expect(ARMOUR_IDS).toEqual({ 'dragonhide body': 1135, 'dragonhide chap': 1099, 'dragon vambrace': 1065 });
+    expect(table['dragonhide body']?.id).toBe(1135);
+    expect(table['dragonhide chap']?.id).toBe(1099);
+    expect(table['dragon vambrace']?.id).toBe(1065);
+});
+
+test('kitBuyRunning releases exit-4, orphaned and died kit buys while keeping active or fresh buys and paused stop files', () => {
+    const job = { account: 'SporranBulge', template: `${KIT_BUY}army-weapon`, enabled: true };
+    const assigned = { template: `${KIT_BUY}army-weapon`, offset: 0, at: 1000 };
+    expect(kitBuyRunning(job, assigned, () => [])).toBe(true);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: true, ended: { at: 900, reason: 'exit 4 after 1 runs' } })).toBe(true);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 900, reason: 'exit 4 after 1 runs' } })).toBe(true);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 1100, reason: 'exit 4 after 1 runs' } })).toBe(false);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 1100, reason: 'exit orphaned: attempt x gone' } })).toBe(false);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 1100, reason: 'died after 1 runs' } })).toBe(false);
+    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit 4 after 1 runs' } })).toBe(true);
+
+    const stopMap = pauses(new Map([['Woodenstaff', 'owner pause']]));
+    const pausedJob = { account: 'Woodenstaff', autopilot: 'local', script: 'scripts/goldfarm.ts', enabled: false };
+    const owned = planningOwnership([pausedJob], [], stopMap.paused);
+    expect(stopMap.paused.has('woodenstaff')).toBe(true);
+    expect(owned.keep.has('woodenstaff')).toBe(true);
+    expect(plannableAccounts([pausedJob], 'local', ['Woodenstaff'], owned.keep)).toEqual([]);
+    expect(mergeJobs([pausedJob], 'local', [], owned.keep).jobs).toEqual([pausedJob]);
+
+    const tmp = mkdtempSync(join(tmpdir(), 'autopilot-runs-'));
+    try {
+        const runsFile = join(tmp, 'swarm-runs.json'), deathsFile = join(tmp, 'swarm-deaths.json');
+        writeFileSync(runsFile, JSON.stringify([{ accounts: ['CoinCock'] }, { account: 'Ballspinner' }]));
+        writeFileSync(deathsFile, JSON.stringify({ SporranBulge: { at: 1200, reason: 'exit 4 after 1 runs' }, Magicwanda: { at: 1300, reason: 'died after 1 runs' } }));
+        expect([...readSwarmActiveAccounts(runsFile)]).toEqual(['coincock', 'ballspinner']);
+        expect(readSwarmEnded(deathsFile).get('magicwanda')?.reason).toBe('died after 1 runs');
+    } finally {
+        rmSync(tmp, { recursive: true, force: true });
+    }
+});
+
+test('OFFLINE_GUARDED excludes main and specialists from stock transfers and planner work', () => {
+    expect([...OFFLINE_GUARDED].sort()).toEqual(['haggis', 'polevaulter', 'shaftshooter']);
+    const owners = new Map([
+        ['haggis', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['shaftshooter', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['polevaulter', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['freebee', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+    ]);
+    const at = Date.now() - 1000;
+    const row = (name: string) => ({ name, server: 'rs-sdk-demo.fly.dev', at, bankAt: at, inventory: [{ id: 995, count: 50000 }], bank: [], skills: [] });
+    const stock = sideStock('local', { accounts: ['Haggis', 'Shaftshooter', 'Polevaulter', 'Freebee'].map(row) },
+        { at, jobs: [] }, new Set(), Date.now(), 60_000, id => (id === 995 ? 'Coins' : undefined), { owners, server: 'rs-sdk-demo.fly.dev' });
+    expect(stock.map(s => s.name)).toEqual(['Freebee']);
 });
