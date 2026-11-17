@@ -1,0 +1,22 @@
+{
+ "id": "1794924538586-oreelse-woodenstaff-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Woodenstaff",
+ "item": "Earth rune",
+ "count": 26,
+ "start": 1794924538586,
+ "end": 1794926938586,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
