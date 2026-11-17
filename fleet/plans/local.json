@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794923889613,
+ "at": 1794924339150,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -70,80 +70,6 @@
    "role": "market"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1060 ORDER_KEY=hocuspokeus-kit0-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=hocuspokeus-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
@@ -158,65 +84,6 @@
    "standing": true,
    "repeat": false,
    "goal": "buy 1 Magic shortbow, 1 Law rune, 6 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=4 EXPECTED_OWNED=2 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mightyrod-kit1-385-2to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":6}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 4 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit0-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=861 QUANTITY=1 LIMIT_PRICE=60000 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit12-861-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=6 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit12-385-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":6}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Magic shortbow, 6 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
    "role": "supply",
    "template": "kit-buy:army-hunt-black-dragons",
    "autopilot": "local",
@@ -244,118 +111,6 @@
    "resources": []
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=150 LIMIT_PRICE=200 CASH_RESERVE=1060 ORDER_KEY=mmthv2350-kit0-559-0to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=300 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=mmthv2350-kit0-555-0to300 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=2 LIMIT_PRICE=120 CASH_RESERVE=1060 ORDER_KEY=mmthv2350-kit0-558-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=2 LIMIT_PRICE=160 CASH_RESERVE=1060 ORDER_KEY=mmthv2350-kit0-556-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 150 Body rune, 300 Water rune, 2 Mind rune, 2 Air rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "21",
-    "1500"
-   ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":21}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-strike-magic-21",
-   "autopilot": "local",
-   "resources": [
-    "strike:ardougne-guard-dog"
-   ]
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/ranged-train.ts",
-   "args": [
-    "99",
-    "1500"
-   ],
-   "env": {
-    "TARGET_LEVEL": "99",
-    "FOOD": "3",
-    "AMMO": "100",
-    "MAX_TRIPS": "50",
-    "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "local",
-   "resources": [
-    "pen:3229,3298",
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1070 ORDER_KEY=oreelse-kit0-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1070 ORDER_KEY=oreelse-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1060 ORDER_KEY=pickpockdick-kit1-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=pickpockdick-kit1-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=pickpockdick-kit1-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 421 Earth rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/chain.ts",
    "args": [
@@ -377,56 +132,6 @@
    "template": "kit-buy:army-splash-magic-66",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=150 LIMIT_PRICE=200 CASH_RESERVE=1060 ORDER_KEY=pocketrocket-kit0-559-0to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=425 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=pocketrocket-kit0-557-0to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=300 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=pocketrocket-kit0-555-0to300 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=2 LIMIT_PRICE=120 CASH_RESERVE=1060 ORDER_KEY=pocketrocket-kit0-558-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=2 LIMIT_PRICE=160 CASH_RESERVE=1060 ORDER_KEY=pocketrocket-kit0-556-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 150 Body rune, 425 Earth rune, 300 Water rune, 2 Mind rune, 2 Air rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
   },
   {
    "account": "Wandwaver",
@@ -493,6 +198,330 @@
    "resources": []
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=coincock-kit0-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=coincock-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 148 Body rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=oreelse-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=425 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit0-557-0to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=300 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit0-555-0to300 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=2 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit0-558-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=2 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit0-556-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 425 Earth rune, 300 Water rune, 2 Mind rune, 2 Air rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=3 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit12-333-0to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"333\":3}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 3 Trout on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=mineyourbiz-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=sausagefest-kit0-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=sausagefest-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 421 Earth rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "local",
+   "resources": [
+    "splash:ardougne-cow-fence"
+   ]
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=4 EXPECTED_OWNED=2 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mightyrod-kit1-385-2to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":6}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 4 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "local",
+   "resources": [
+    "splash:ardougne-cow-fence"
+   ]
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "21",
+    "1500"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":21}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-strike-magic-21",
+   "autopilot": "local",
+   "resources": [
+    "strike:ardougne-guard-dog"
+   ]
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "99",
+    "1500"
+   ],
+   "env": {
+    "TARGET_LEVEL": "99",
+    "FOOD": "3",
+    "AMMO": "100",
+    "MAX_TRIPS": "50",
+    "COIN_RESERVE": "0",
+    "MAX_SPEND": "4000",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "local",
+   "resources": [
+    "pen:3229,3298",
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
+   ]
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
    "account": "YewFirst",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -547,26 +576,6 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=coincock-kit0-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=coincock-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -592,27 +601,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1060 ORDER_KEY=sausagefest-kit0-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=sausagefest-kit0-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=sausagefest-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 421 Earth rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
   }
  ],
  "army": [
