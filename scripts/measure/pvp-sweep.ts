@@ -6,8 +6,8 @@
 // Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 3.5] [--seed n] [--quick] [--batch k] [--shard i/n]
 // A batch's hard limit is the budget plus 90 s: with the default 3.5 minutes no batch runs past 5 minutes. --batch k
 // runs only the k-th batch of the packing (1-based), one bench of 5 minutes or less.
-// Default pattern: every pvp: case and every extra: spar, gang, kite, army, team and hunt-trip case (233 cases, about
-// 32 minutes in four batches on 4 cores; 10 engines at once are no faster than 6). --quick: every pvp: route case and
+// Default pattern: every pvp: case and every extra: spar, gang, kite, army, team and hunt-trip case.
+// --quick: every pvp: route case and
 // one case of each climb (QUICK_CASES), a few minutes, for the turns of a change; the full sweep before a merge.
 // --shard i/n takes positions i-1 modulo n from the selected cases: all n shards cover that selection exactly once.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';

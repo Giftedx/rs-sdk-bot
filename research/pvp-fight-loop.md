@@ -18,7 +18,7 @@ glory, including at full health. It reads the next inventory before removing the
 walking fallback. The native case starts at full health with 28 occupied pack slots and a worn glory(4), then checks
 one shark debit, one glory charge, retained kit, the same life and the Edgeville landing. Seeds 7, 8 and 9 pass.
 Evidence: `.practice/pvp-escape/escape-final-source.log` and the seed reports in
-`.practice/aio-bench/`. Gap: this proves the escape on practice with an idle player nearby, not survival under a live attack.
+`.practice/aio-bench/`. Gap: this proves the escape on practice without a player attacking the runner, not survival under a live attack.
 
 The finite live consumer is a 900-tick hunter trip through `aio-pvp.ts hunt` after the owning controller qualifies
 the source and observes a complete owned kit. Existing account assignments, supply reservations and stops apply.
@@ -42,6 +42,17 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 `Session.client`, which leaves the SDK state and the swarm's launch release unchanged -> `scripts/pk.test.ts` and the duels below.
 
 ## Spar and ladder
+
+Source -> consumer -> reuse/adapt -> check: the pinned `auto_retaliate.rs2`, retained player Attack action and
+`logout.rs2` combat window -> `pk-spar.ts` pair teardown -> reuse the native retaliation OFF control's action
+cancellation, then require fresh target release before ordinary confirmed logout -> `pk-spar-cleanup.test.ts`
+and `extra:spar-kit-mage-tank-x8`.
+
+Each finished pair stops its native attacks before the other pairs finish. Scoring uses only the completed fight.
+The teardown has a 16-tick and 4.5-second bound. An unobserved retaliation OFF or target release fails the run.
+The last-hit combat window can remain active while the normal logout retry waits for it to end.
+Native evidence: `.practice/pvp-escape/mage-tank-repair.log` and the case log in `.practice/aio-bench/output/`.
+All eight pairs confirm target release in two or three ticks and all sixteen sessions confirm logout.
 
 `scripts/pk-spar.ts` puts the fight loop on both sides: two own accounts fight each other, each with a named profile
 (a set of fight options; `PROFILES`). The bench case `pvp:spar` stages a mirror: both sides get the duel conditions

@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p .practice/pvp-sweep
           git rev-parse HEAD > .practice/pvp-sweep/source.txt
-          sha256sum scripts/pk.ts scripts/measure/pk-escape-proof.ts scripts/measure/aio-bench-cases.ts patches/rs-sdk-working.patch >> .practice/pvp-sweep/source.txt
+          sha256sum scripts/pk.ts scripts/pk-spar.ts scripts/measure/pk-escape-proof.ts scripts/measure/aio-bench-cases.ts patches/rs-sdk-working.patch >> .practice/pvp-sweep/source.txt
       - name: Run this shard of the complete PvP sweep in bounded batches
         timeout-minutes: 45
         run: |
