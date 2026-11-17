@@ -10,6 +10,7 @@
 // silk). All quest items are untradeable (quest_dragon.obj); the shield is tradeable but only the Duke gives it.
 // Combat: Elvarg breath max 70, 10 with the anti-dragon shield worn (elvarg.rs2 elvarg_max_hit); her melee is 0 under
 // Protect from Melee. DS_FROM=<milestone> starts later (debug presets); DS_STOP=<milestone> ends early.
+// DS_RETURN=varrock requires one additional Varrock teleport's runes and returns there after completion.
 import { openQuest } from './quest-lib';
 
 const GUILDMASTER = { x: 3191, z: 3362 };                 // guildmaster 198 (maps/m49_52.jm2 0 55 34)
@@ -37,6 +38,8 @@ const q = await openQuest({ cap: 6000, eatAt: 60, food: [ITEM.food], lumbridgeOk
 try {
     const FROM = Number(process.env.DS_FROM || 0);
     const STOP = Number(process.env.DS_STOP || 99);
+    const RETURN = process.env.DS_RETURN ?? '';
+    if (RETURN && RETURN !== 'varrock') throw Error('DS_RETURN must be varrock or empty');
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+dragon slayer/i) > 0) questDone = true; });
     const ms = async (k: number): Promise<void> => { q.milestone(k); if (k >= STOP) await q.end(true, `stopped at ${k}`); };
@@ -327,6 +330,10 @@ try {
         await ms(16);
     }
 
+    if (questDone && RETURN === 'varrock') {
+        if (!q.canCast('magic:varrock_teleport')) throw Error('DS_RETURN varrock needs its teleport runes and Magic level');
+        await tele('dragon return varrock', 'magic:varrock_teleport', 3212, 3424);
+    }
     offDone();
     await q.end(questDone, `qp=2 questMsg=${questDone}`);
 } catch (e) { await q.fail(String(e)); }

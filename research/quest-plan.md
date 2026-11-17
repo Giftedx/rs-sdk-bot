@@ -864,14 +864,47 @@ Findings:
 - Ned's hire and the map can go in one visit only after the repair (`give_map_to_ned` needs 176 = 7).
 - Elvarg: with the shield worn her breath is at most 10 (`elvarg_max_hit`); with Protect from Melee her melee is 0.
   HP min 54-66 in the proof runs comes from the maze and Crandor before the prayer, not from Elvarg.
-- The save generator keeps varps 0-308 only (`presets.ts` `generateSave`), so Monkey Madness (365) is not in the
-  46 QP.
+- The `quest_dragon` preset's 46 QP omit Monkey Madness by fixture choice. `applyPreset` extends varps above 308
+  through `extendVarps`, so the early combat fixture can include Monkey Madness at varp 365 = 10.
 
-Planner: row `dragon` 1,488 / 1,577 MEASURED (base ticks and the `rival-dialogue-burst` patch; was 1,500 / 4,000 and
-1,387 / 3,699 ESTIMATE). Scenario a, `research/hiscores-live.json`: Overall finish 40,212 floor / 45,105 realistic
-before and after (the row runs after the last 99, so it moves the quest rows after it, not the Overall finish; the
-39,360 / 46,019 at the start of this work changed because of other rows edited by other sessions). `bun test
-packages/planner`: 42 pass.
+The planner's `dragon` row uses 1,305 floor / 1,355 realistic ticks for its all-99 start. An early combat entry
+needs its own measurement and exit cost.
+
+### Early combat entry and literal dialogue choices
+
+Bench `extra:dragon-post-mm` completes the full quest in **2,252 / 1,957 / 1,852 playtime ticks** at lockstep seeds
+7 / 8 / 9. It starts beside the Guild master with Attack 99, Strength 97, Defence 89, Hitpoints 97, Prayer 99,
+Magic 80 and Ranged 1. Other skills are 99. The combat values are level floors, below the route's carried XP.
+The twelve completed quests supply exactly 32 QP. The kit uses a rune chainbody, which is wearable before the
+quest, instead of a rune platebody.
+
+Each run awards 466,250 Strength and 466,250 Defence XP with no death and confirmed logout. Independent native
+save checks require Dragon Slayer varp 176 = 10, 34 QP and both reward deltas. Raw worker logs, per-seed profiles,
+action traces and native save receipts are under `.practice/cannon-route/dragon-seeds/` in the cannon-route
+worktree. All three profiles have zero capped ticks. The quest library SHA-256 is
+`acd3ca23375df554db2a27d3cdbaf522a895d4209e7ae2c01666c9198bc6b70f`.
+
+Source → consumer → decision → check: `BotSDK.clickDialogByText` compiles string selectors as regular expressions
+→ `clickDialoguePage` receives the already selected visible answer → adapt it to an escaped, anchored regular
+expression → real SDK matcher tests cover `?`, parentheses, brackets, backslashes and other regex characters;
+the native Ned conversation completes in all three runs. Author-supplied selection patterns stay unchanged.
+The SDK's page and component guards still own the click. A stale-page refusal has no index fallback.
+
+The optional `DS_RETURN=varrock` reuses the quest library's teleport helper. It requires the spell's runes and
+Magic level, and fails clearly if they are absent. Without this option, the quest keeps its Crandor endpoint.
+Bench `extra:dragon-post-mm-return` adds one fire rune to the same fixture and completes the quest and return in
+**2,256 / 1,961 / 1,856 playtime ticks** at seeds 7 / 8 / 9. The three profiles have zero capped ticks.
+
+Native saves confirm Varrock landings 3214,3423 / 3215,3426 / 3213,3425 on plane 0, with 68 / 70 / 63 current
+Hitpoints. The full quest and return spend 3 law, 9 air, 1 earth, 1 water and 1 fire rune, and give 3,100 Magic XP.
+Each run keeps the quest flag, both 466,250 XP rewards, no death and confirmed logout. The return spell itself
+gives 875 Magic XP. Raw outputs and native receipts are under `.practice/cannon-route/dragon-return-seeds/`.
+The worker SHA-256 is `6ea1c33abd7c0b7472dcc65db2cf60f3b7d79b6ff6655fbe54274b7b061d33ab`.
+
+Gap: these cases prove the early combat fixture, not the full Overall route or a live run. Travel to the Guild
+is outside both cases. The plain quest case ends at 2846,9636 inside Crandor; only the explicit return case
+supports a Varrock exit in a route model. The carried route XP, other skill levels and full phased cannon
+segment still need route qualification before a model saving can count as measured.
 
 Still open: the walk to the Champions' Guild is not counted; the route uses the Lumbridge teleport for the Duke
 (about 175 tiles from Lumbridge to Port Sarim).

@@ -130,7 +130,9 @@ export async function setupCannon(s: Session, o: { centre?: { x: number; z: numb
             if (tries >= 30) break;
             if (dx || dz) { const w = await s.bot.walkTo(p1.worldX + dx!, p1.worldZ + dz!, 0); if (!w.success) continue; await waitTicks(s, 1); }
             m0 = feed.mark(); tries++;
-            await s.direct({ type: 'useInventoryItem', slot: slot(CANNON_PARTS[0])!.slot, optionIndex: op, reason: 'cannon set-up' });
+            const setupSlot = slot(CANNON_PARTS[0])!.slot;
+            const sent = await s.direct({ type: 'useInventoryItem', slot: setupSlot, optionIndex: op, reason: 'cannon set-up' }) as {success?: boolean; message?: string; reason?: string} | undefined;
+            if (sent?.success === false) throw Error(`cannon set-up dispatch rejected: ${sent.message ?? sent.reason ?? 'unknown refusal'} (slot=${setupSlot} option=${op})`);
             await waitUntil(s, () => feed.saw(/place the cannon base|can't|cannot|isn't enough|won't be happy|not permitted|too dank/i, m0), { timeoutTicks: 8 });
             if (feed.saw(/place the cannon base/i, m0)) { placed = true; break; }
             if (!feed.saw(/isn't enough space/i, m0)) break;
@@ -300,6 +302,10 @@ export async function reclaimCannon(s: Session, o: { at?: { x: number; z: number
 
 export type CannonFightOptions = { spot: CannonSpot; cap: number; stop: Record<string, number>; phases: Phase[]; reload: number; prayer: PrayerName | 'none'; eatAt?: number; special?: boolean; halt?: () => boolean; walk?: Walk };
 
+export function cannonWalker(s: Session, spot: CannonSpot, walk?: Walk): Walk {
+    return walk ?? (async to => (await walkTarget(s, to, to === spot.clear)).ok);
+}
+
 export async function runCannonFight(s: Session, o: CannonFightOptions) {
     if (!Number.isSafeInteger(o.cap) || o.cap < 1 || !Number.isSafeInteger(o.reload) || o.reload < 1 || o.reload > 30) throw Error('cannon fight: cap >= 1 and reload 1..30');
     if (!Object.keys(o.stop).length) throw Error('cannon fight: no stop levels');
@@ -313,7 +319,7 @@ export async function runCannonFight(s: Session, o: CannonFightOptions) {
     const target = new RegExp(o.spot.target, 'i');
     const prayerIndex = o.prayer === 'none' ? -1 : PRAYER_NAMES.indexOf(o.prayer);
     const eatAt = o.eatAt ?? Math.max(Math.floor(maxHp * 0.4), Math.min(maxHp - 12, 8));
-    const walk: Walk = o.walk ?? (async to => (await s.bot.walkTo(to.x, to.z, 1)).success);
+    const walk = cannonWalker(s, o.spot, o.walk);
     const life0 = { respawn: me().respawnCount, life: me().lifeId };
     // sessionDied reads the state's player with no assertion: a blank state is no death and no throw.
     const died = () => sessionDied({ respawnCount: life0.respawn, lifeId: life0.life }, s.sdk.getState()?.player);
@@ -503,7 +509,7 @@ if (import.meta.main) {
     let halted = false;
     // A death reaches onStop as 'died'; the fight sees it itself (respawnCount) and reclaims the cannon.
     const s = await openBot(bot, { onStop: async (_s, detail) => { if (detail !== 'died') halted = true; } }).catch(e => finish([], false, `login: ${String(e)}`));
-    const walk: Walk = async to => (await walkTarget(s, to, false)).ok;
+    const walk = cannonWalker(s, spot);
     try {
         await waitTicks(s, 2);
         if (env.MODE === 'reclaim') {
