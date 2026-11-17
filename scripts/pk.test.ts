@@ -481,12 +481,10 @@ test('fightPlayer eats standard food and karambwan on the same tick with comboFo
     expect(perTick.flat()).toContain('use:0:1');
 });
 
-test('selectOverheadPrayer switches to Smite when safe and target is low or fleeing, and falls back otherwise', async () => {
-    const { selectOverheadPrayer, PRAYER } = await import('./pk');
-    expect(selectOverheadPrayer(PRAYER.melee, 99, 80, 50, true, true)).toBe(PRAYER.smite);
-    expect(selectOverheadPrayer(PRAYER.melee, 99, 80, 50, false, true)).toBe(PRAYER.melee);
-    expect(selectOverheadPrayer(PRAYER.melee, 99, 60, 50, true, true)).toBe(PRAYER.melee);
-    expect(selectOverheadPrayer(PRAYER.magic, 51, 90, 50, true, true)).toBe(PRAYER.magic);
-    expect(selectOverheadPrayer(PRAYER.missiles, 99, 90, 50, true, false)).toBe(PRAYER.missiles);
-    expect(selectOverheadPrayer(PRAYER.melee, 99, 90, 50, true, true, true)).toBe(PRAYER.melee);
+test('PRAYER indices match the 15 prayers (0-14) in the 2004 server config', async () => {
+    const { PRAYER } = await import('./pk');
+    const { PRAYER_NAMES } = await import('../vendor/rs-sdk/sdk/types');
+    expect(PRAYER_NAMES.length).toBe(15);
+    expect(Object.values(PRAYER).every(idx => idx >= 0 && idx < PRAYER_NAMES.length)).toBe(true);
+    expect('smite' in PRAYER).toBe(false);
 });
