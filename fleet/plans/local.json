@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794926978197,
+ "at": 1794927089467,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -189,73 +189,64 @@
    "resources": []
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "STOCK_TARGET": "500",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Mightyrod",
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/shop-buyer.ts jukat 9000 BLIND_BUY=1 STOCK_TARGET=2 STOP_AT_TARGET=1 BANK_AT=0 NO_BUY_TICKS=3000 STALL_TICKS=0 COIN_RESERVE=5000 FLOAT=211000"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1060 ORDER_KEY=swordinhand-kit1-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1305\":1}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":35}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy dragon longswords from Jakut in the Zanaris market",
+   "goal": "buy 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
    "role": "supply",
-   "template": "army-jakut-swords",
+   "template": "kit-buy:army-strike-magic-21",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=yewfirst-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
    "autopilot": "local",
    "resources": [
-    "shop:jukat"
+    "ge:weapon"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy nature and air runes at the Magic Guild in Yanille for the alchemy band",
+   "role": "supply",
+   "template": "army-nature-guild",
+   "autopilot": "local",
+   "resources": [
+    "shop:magic_guild"
    ]
   },
   {
@@ -366,8 +357,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -379,25 +369,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1060 ORDER_KEY=swordinhand-kit1-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":35}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Wandwaver",
@@ -478,27 +449,6 @@
    ]
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=yewfirst-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -523,6 +473,29 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "STOCK_TARGET": "500",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
    ]
   },
   {
