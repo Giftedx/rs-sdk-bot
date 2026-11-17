@@ -25,6 +25,7 @@ import {applyObservationRequests,observationConsumerHeld,observationBudget,prepa
 import {loadOwners,mySide} from '../../core/src/fleet';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 import {prayerBank} from '../../../scripts/train-prayer';
+import {rangedEntry} from '../../../scripts/ranged-train';
 import {evaluateProgressionWork,progressionProofs} from '../../core/src/progression-session';
 import {processDeliveryPrs} from './delivery-pr';
 import {freshScoreboard} from './coverage';
@@ -265,7 +266,8 @@ function runRules(state:CoordinatorState,liveLimit:number){
    prepare:finiteBand,
    needsEntryObservation:(task,_account,status)=>{
     if(entryOf(task.capability!)!=='scripts/ranged-train.ts'||!status?.pos||status.pos.level!==0)return false;
-    try{const bank=prayerBank({worldX:status.pos.x,worldZ:status.pos.z,level:status.pos.level});if(Math.max(Math.abs(bank.x-status.pos.x),Math.abs(bank.z-status.pos.z))>3)return false;}catch{return false;}
+    let nearby=false;for(const locate of [prayerBank,rangedEntry])try{const bank=locate({worldX:status.pos.x,worldZ:status.pos.z,level:status.pos.level});if(bank&&Math.max(Math.abs(bank.x-status.pos.x),Math.abs(bank.z-status.pos.z))<=3)nearby=true;}catch{/* Unsupported entry never implies a bank journey. */}
+    if(!nearby)return false;
     return status.equipmentObserved!==true||!Number.isFinite(status.bankAt)||status.bankAt<status.started||now-status.bankAt>=300000;
    },
    qualificationFor:(task,account,status)=>{
