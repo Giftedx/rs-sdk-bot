@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, castableFreeze, hasVarrockTeleport, multiPileThreat, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, hasVarrockTeleport, multiPileThreat, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('roam pickup joins one native stack without eating combat food',async()=>{
  const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;
@@ -322,4 +322,20 @@ test('pickTrack skips attackable piles while ignoring non-attackable bystanders'
     expect(pickTrack(me, pile, new Set(), 56, new Set(), 40, new Map(), 0, () => true)).toBeNull();
     const lowPile = [target, { name: 'Skiller1', x: 3065, z: 3881, combatLevel: 3, vx: 0, vz: 0 }, { name: 'Skiller2', x: 3066, z: 3882, combatLevel: 3, vx: 0, vz: 0 }];
     expect(pickTrack(me, lowPile, new Set(), 56, new Set(), 40, new Map(), 0, () => true)?.track.name).toBe('Prey');
+});
+
+test('bestDamageSpell picks matching 2004 God Spell and canCastCharge gates on 80 Magic and runes', () => {
+    const runes = (fire: number, blood: number, air: number) => [{ id: 554, count: fire }, { id: 565, count: blood }, { id: 556, count: air }];
+    expect(spellId('FLAMES_OF_ZAMORAK')).toBe(1192);
+    expect(spellId('CLAWS_OF_GUTHIX')).toBe(1191);
+    expect(spellId('SARADOMIN_STRIKE')).toBe(1190);
+    expect(bestDamageSpell(80, runes(4, 2, 1), [{ id: 2417 }])).toBe(1192);
+    expect(bestDamageSpell(80, runes(1, 2, 4), [{ id: 2416 }])).toBe(1191);
+    expect(bestDamageSpell(80, runes(2, 2, 4), [{ id: 2415 }])).toBe(1190);
+    expect(bestDamageSpell(59, runes(4, 2, 1), [{ id: 2417 }])).toBe(1158);
+    expect(bestDamageSpell(80, runes(3, 2, 1), [{ id: 2417 }])).toBe(1189); // short 1 fire for Flames -> Fire Wave
+    expect(canCastCharge(80, runes(3, 3, 3), 1192)).toBe(true);
+    expect(canCastCharge(79, runes(3, 3, 3), 1192)).toBe(false);
+    expect(canCastCharge(80, runes(2, 3, 3), 1192)).toBe(false);
+    expect(canCastCharge(80, runes(3, 3, 3), 1189)).toBe(false);
 });

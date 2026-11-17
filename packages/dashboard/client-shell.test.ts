@@ -2097,3 +2097,7 @@ test('dashboard skills list matches the 19 skills of 2004 rev 225',()=>{
  expect(list).toHaveLength(19);
  for(const post2004 of ['Slayer','Farming','Construction','Hunter','Sailing'])expect(list).not.toContain(post2004);
 });
+
+test('wildLine in overlay shows multi-way vs single-way combat zone',()=>{
+ expect(shell).toContain("(p.multi?' · multi-way':' · single-way')");
+});
