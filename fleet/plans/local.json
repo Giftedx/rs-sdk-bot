@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794924428484,
+ "at": 1794924460260,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -233,25 +233,6 @@
    "goal": "buy 3 Trout on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "supply",
    "template": "kit-buy:aio-blood-chest",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=sausagefest-kit0-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=sausagefest-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 421 Earth rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
    "autopilot": "local",
    "resources": []
   },
@@ -595,6 +576,35 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby_arrows",
+    "600"
+   ],
+   "env": {
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby_arrows"
    ]
   }
  ],
