@@ -41,6 +41,24 @@ export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
 // Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
 export type Spot = { x: number; z: number; dwell?: number };
 export const HUNT_SPOTS: readonly Spot[] = [{ x: 3094, z: 3540 }, { x: 3100, z: 3556 }, { x: 3094, z: 3562 }];
+// Named rev 289 Wilderness patrol routes selectable via HUNT_SPOT=<name>.
+export const HUNT_PRESETS: Readonly<Record<string, readonly Spot[]>> = {
+    edgeville: HUNT_SPOTS,
+    'varrock-multi': [{ x: 3240, z: 3540 }, { x: 3255, z: 3565 }, { x: 3235, z: 3585 }],
+    'chaos-temple': [{ x: 3236, z: 3630 }, { x: 3242, z: 3640 }, { x: 3228, z: 3635 }],
+    'dark-warriors': [{ x: 3028, z: 3630 }, { x: 3036, z: 3638 }, { x: 3022, z: 3638 }],
+    'bone-yard': [{ x: 3230, z: 3740 }, { x: 3248, z: 3752 }, { x: 3236, z: 3762 }],
+    'green-dragons': [{ x: 3092, z: 3810 }, { x: 3107, z: 3812 }, { x: 3118, z: 3820 }],
+    'lava-maze': [{ x: 3067, z: 3856 }, { x: 3055, z: 3868 }, { x: 3045, z: 3855 }],
+    'mage-bank': [{ x: 3090, z: 3955 }, { x: 3098, z: 3956 }, { x: 3104, z: 3952 }],
+};
+export function resolveHuntSpots(env: Record<string, string | undefined>): readonly Spot[] | undefined {
+    if (env.PK_SPOTS) return JSON.parse(env.PK_SPOTS) as Spot[];
+    if (!env.HUNT_SPOT) return undefined;
+    const preset = HUNT_PRESETS[env.HUNT_SPOT];
+    if (!preset) throw new Error(`unknown HUNT_SPOT ${env.HUNT_SPOT} (expected ${Object.keys(HUNT_PRESETS).join(', ')})`);
+    return preset;
+}
 export const KIT_IDS = { mysticFireStaff: 1401, magicShortbow: 861, runeArrow: 892, dragonDaggerP: 1231, runeKiteshield: 1201 } as const;
 export const TRIBRID_KIT: Kit = { magic: [KIT_IDS.mysticFireStaff], ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
 // What a trip carries besides food: the switch weapons, Fire Wave runes (air, blood; the staff gives fire), two prayer
@@ -365,7 +383,7 @@ if (import.meta.main) {
     const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
         kit: env.PK_KIT === 'snare' ? SNARE_KIT : env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : env.PK_KIT === 'snare' ? SNARE_TRIP : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
-        spots: env.PK_SPOTS ? JSON.parse(env.PK_SPOTS) as Spot[] : undefined, observe: env.PK_OBSERVE === '1' });
+        spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1' });
     console.log('HUNT ' + JSON.stringify(r));
     // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
     if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');
