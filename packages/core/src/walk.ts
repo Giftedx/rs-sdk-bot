@@ -185,11 +185,17 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
         const loc = (st()?.nearbyLocs ?? []).filter((l: any) => at && run.id !== undefined ? l.id === run.id && l.x === at.x && l.z === at.z && l.level === at.level : name.test(l.name ?? ''))
             .sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
         if (!loc) return fail('precondition', `no ${run.loc} in sight`);
-        await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
         // A short passage on one floor (the Grand Tree door moves the player two tiles) ends on its landing: within 8
         // tiles of it the player already stood, on the wrong side.
         const short = !!t.from && t.from.level === t.to.level && cheb(t.from, { worldX: t.to.x, worldZ: t.to.z }) <= 8;
-        const landed = () => { const p = here(); return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1; };
+        const railing = t.kind === 'passage' && run.loc === 'mcgruborlooserailing' && run.id === 51 ? run.at : undefined;
+        // mcgrubors_wood.rs2 squeezes onto x=loc.x going in and x<loc.x going out. The railing tile is still inside;
+        // accepting it on exit lets the next movement cancel the pending squeeze before it crosses.
+        const landed = () => { const p = here(); return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1
+            && (!railing || (t.to.x < railing.x ? p.x < railing.x : p.x >= railing.x)); };
+        if (stop()) return fail('aborted', 'stopped before location travel');
+        if (railing && landed()) return { ok: true, ticks: s.tick() - start };
+        await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
         await answer(short ? landed : arrived, 20);
         if (short && !landed()) return fail('timeout', `not through ${run.loc} to ${t.to.x},${t.to.z} (at ${JSON.stringify(here())})`);
     }
