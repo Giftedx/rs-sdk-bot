@@ -76,9 +76,13 @@ export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen &
 
 // One looked-up player: hiscore rows (or null when not fetched), and where the world feed last saw them.
 // worn: the player's worn items read from the world feed when the lookup ran (online players only).
-export function lookupView(name: string, rows: HiscoreRow[] | null, at: number | null, seen: Seen | undefined, now: number, worn: { slot: string; name: string }[] | null = null, wornAt: number | null = null) {
-    const online = !!seen && now - seen.seen < ONLINE_MS;
-    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null, worn, wornAt };
+// A supplied feed time dates presence independently of the hiscores. Omitted feed times keep the legacy shape.
+export function lookupView(name: string, rows: HiscoreRow[] | null, at: number | null, seen: Seen | undefined, now: number, worn: { slot: string; name: string }[] | null = null, wornAt: number | null = null, feedAt?: number | null) {
+    const dated = arguments.length >= 8;
+    const presenceObservedAt = typeof feedAt === 'number' && Number.isFinite(feedAt) && feedAt > 0 && feedAt <= now && now - feedAt < ONLINE_MS ? feedAt : null;
+    const sightingFresh = !!seen && Number.isFinite(seen.seen) && seen.seen > 0 && seen.seen <= now && now - seen.seen < ONLINE_MS;
+    const online = !dated ? !!seen && now - seen.seen < ONLINE_MS : presenceObservedAt === null ? null : sightingFresh;
+    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null, worn, wornAt, ...(dated ? { presenceObservedAt } : {}) };
 }
 
 // Bot farms: other players whose names follow one pattern, online now. A numbered series ("Money 01" … "Money 43",
