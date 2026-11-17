@@ -4,7 +4,7 @@ import {freemem} from 'node:os';
 import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
 import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
 import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
-import {registerAcceptedProgressionDelivery} from './progression-qualification-native';
+import {completeProgressionQualification} from './progression-qualification-native';
 import {runQualifiedDelivery} from './progression-native-context';
 import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
 import {readWorld,parseModelObject,runSubscriptionModel,type SubscriptionModelDeps} from './coordinator-planner';
@@ -176,8 +176,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
  }
  if(task.kind==='qualify'){
   const delivery=await runQualifiedDelivery(definition,task,()=>runDeliveryTask(definition),{base:projectRoot});
-  await registerAcceptedProgressionDelivery(definition,delivery,projectRoot);
-  return{ok:delivery.ok,delivery,evidence:'native'};
+  return completeProgressionQualification(definition,delivery,projectRoot);
  }
  const lock=join(coordinationDir,'build-lock.json'),request=join(coordinationDir,'publish-request.json');
  // The source lock guards every write to the main checkout that live workers run from.

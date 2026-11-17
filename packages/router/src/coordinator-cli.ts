@@ -32,6 +32,7 @@ import {freshScoreboard} from './coverage';
 import {goalWork,ruleGoalValue} from './goal-work';
 import {liveHelperStatuses} from '../../planner/src/supply-bill';
 import {recoverConcurrentPlanWrite} from '../../core/src/plan-lock';
+import {createProgressionProofReconciler} from './progression-proof-reconcile';
 
 const cli='packages/router/src/coordinator-cli.ts';
 // Only the installing controller clears a reusable system stop. Unknown text and
@@ -412,6 +413,8 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
 // the coordinator's file the pass reads one receipt, and one logout proof for each account of the job.
 const RELEASE_EVERY_MS=60_000;
 let releasedAt=0;
+const reconcileProgressionProofs=createProgressionProofReconciler(projectRoot);
+let proofPublicationPass={at:0,receiptSequence:-1};
 // A run task with a repair is a recovery: it parks owner jobs and needs them until its install.
 export const recoveryRuns=(state:Pick<CoordinatorState,'tasks'>)=>state.tasks.some(r=>r.status==='running'&&r.spec.kind==='run'&&(!!r.spec.repairs?.length||!!r.spec.sessionRecovery));
 async function tick(state:CoordinatorState,config:any){
@@ -434,6 +437,14 @@ async function tick(state:CoordinatorState,config:any){
   event('fleet-focus-adopted',{capability:config.focusCapability,since:config.focusSince});
  });
  reconcile(state);
+ const proofSequence=state.latestReceiptSequence??0,proofAt=Date.now();
+ if(proofPublicationPass.receiptSequence!==proofSequence||proofAt-proofPublicationPass.at>=60_000){
+  proofPublicationPass={at:proofAt,receiptSequence:proofSequence};
+  for(const publication of await reconcileProgressionProofs(state)){
+   const key='progression-proof:'+(publication.runId??publication.directory??'discovery'),seen=publication.status+':'+publication.reason;
+   if(sourceErrors.get(key)!==seen){sourceErrors.set(key,seen);if(publication.status!=='unchanged')event('progression-proof-'+publication.status,publication);}
+  }
+ }
  intakeRequests(state);
  if(bounded)assertBoundedRecoveryQueue(bounded,state);
  // Reuse current evidence; refresh only capabilities with waiting live consumers.
