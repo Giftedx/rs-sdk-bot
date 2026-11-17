@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794959782915,
+ "at": 1794959824361,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -430,6 +430,23 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "elena"
+   ],
+   "env": {
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-0a9186de-3f98-4796-94d5-7649cc57259a"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-plague-mmsmk-funded-upstairs-entry-v3 [task-0a9186de-3f98-4796-94d5-7649cc57259a]",
+   "role": "helper"
   }
  ],
  "army": [
