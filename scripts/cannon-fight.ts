@@ -50,7 +50,7 @@ export const CANNON_SPOTS: Readonly<Record<string, CannonSpot>> = {
 
 export const CANNON_PARTS = [/^cannon base$/i, /^cannon stand$/i, /^cannon barrels$/i, /^cannon furnace$/i] as const;
 export const CANNON_BALL = /^cannonball$/i;
-const FOOD = /^(shrimps|trout|salmon|tuna|lobster|swordfish|monkfish|shark)$/i;
+const FOOD = /^(shrimps|trout|salmon|tuna|lobster|swordfish|bass|pike|cooked karambwan|karambwan|anchovy pizza|pineapple pizza|shark)$/i;
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 // "You load the cannon with 30 cannonballs." (cannon_setup.rs2:276); 0 for any other message.
