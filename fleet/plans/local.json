@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794933396489,
+ "at": 1794933508890,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -173,30 +173,24 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":60}}"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "BowBeforeMe",
@@ -219,25 +213,29 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "3000",
+    "cow"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "1",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "60",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
+   "repeat": true,
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-cow-strength-60",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "mmthv2350",
@@ -323,9 +321,7 @@
     "66",
     "6000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
