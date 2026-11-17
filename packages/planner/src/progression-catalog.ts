@@ -132,6 +132,19 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  if(accept?.quests?.length===1&&accept.quests[0]?.trim())return{kind:'quest',quest:accept.quests[0]};
  const acceptedSkills=Object.entries(accept?.skills??{});
  if(acceptedSkills.length===1&&finiteLevel(acceptedSkills[0]![1]))return{kind:'train',skill:key(acceptedSkills[0]![0]),targetLevel:acceptedSkills[0]![1]};
+ if(script==='scripts/handoff-inputs.ts'){
+  // These are new-output/delta orders. Existing stock cannot satisfy them before
+  // the worker reconciles the exact debit, bank credit and logout. Explicit parent targets still win above.
+  if(args[0]==='--headless-order'){
+   const maximum=Number(args[1]),logs=Number(args[2]),cap=Number(env.CAP??1600);
+   return args.length===3&&[maximum,logs,cap].every(whole)&&maximum>=15&&maximum%15===0&&logs>=1&&logs<=25&&cap>0
+    ?{kind:'service',objective:`bank ${maximum} new headless arrows (53) from ${logs} plain logs (1511), owned shafts (52) and feathers (314); retain knife (946) and input reserves; CAP ${cap}`,units:1}:null;
+  }
+  const [donor,receiver,...rest]=args,order=env.HANDOFF_ORDER,items=rest.filter(a=>!a.startsWith('--'));
+  if(!donor||!receiver||donor.toLowerCase()===receiver.toLowerCase()||![donor,receiver].every(n=>/^[A-Za-z0-9_ -]{1,12}$/.test(n)&&n.trim()===n&&!/^(main|haggis)$/i.test(n))
+   ||!order||!/^[a-zA-Z0-9-]{1,64}$/.test(order)||!items.length||items.some(item=>{const m=item.match(/^([1-9]\d*):([^\r\n\0]+)$/);return!m||!whole(Number(m[1]))||!m[2]!.trim();}))return null;
+  return{kind:'service',objective:`settle exact owned handoff ${order} ${JSON.stringify(args)}${env.HANDOFF_ITEM_ID?' plain item ID '+env.HANDOFF_ITEM_ID:''}; reconcile donor debit and receiver bank credit`,units:1};
+ }
  if(script==='scripts/aio.ts'){
   const category=args[0],entry=category&&['skiller','fighter','boss','pvp','quester','market','logistics'].includes(category)?category:args[1];
   if(entry)return intentForEntry('scripts/aio-'+entry+'.ts',args.slice(entry===category?1:2),env,accept,catalog);
