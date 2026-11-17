@@ -2260,3 +2260,47 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     in `scripts/progression-catalog.test.ts`. Evidence: `scripts/wild-dragons.ts`, `scripts/aio-boss.ts`,
     `scripts/measure/aio-bench-cases.ts`, `packages/planner/data/progression-routes.json`. Gap: full multi-trip
     practice run (`boss:green-dragon`) waits dedicated bench time.
+79. **Mage Arena workflow supports all three god spells, Charge varp gating (`varp 272`), god gear conflict checks,
+    and rev-289 Dragon Battleaxe (`1377`) vs Dragon Mace (`1434`) special comparison.** Claim: `GOD_LOADOUTS` defines
+    Saradomin Strike (`1190`, `2412`/`2415`, statue `2873` at `2500,4721`, Prayer drain 1, varp `268`), Claws of
+    Guthix (`1191`, `2413`/`2416`, statue `2875` at `2507,4724`, 5% Defence drain, varp `269`), and Flames of Zamorak
+    (`1192`, `2414`/`2417`, statue `2874` at `2516,4721`, 5% Magic drain, varp `270`); `godCapeStaffConflict` rejects
+    mismatched god capes and staves (`god_gear.rs2`); `fightPlayer` gates Charge (`1193`) on `varp 272`
+    (`%magearena_charge`) and rune counts (`>= 3` fire/blood/air), and triggers Dragon Battleaxe (`1377`)
+    `combat_axe:specbar` warcry self-buff (`battleaxeWarcryMath` boosts Strength by `10 + sum(floor(stat/10))/4` while
+    draining Attack/Defence/Ranged/Magic by 10%; `specwep.rs2:61-78`) separately from Dragon Mace (`1434`, 150% damage,
+    125% crush accuracy, 5 ticks; `pvp_dragon_mace.rs2`) and Dragon Dagger(p) (`1231`). Conditions: rev-289 server
+    scripts plus unit checks (`scripts/pk.test.ts`, `scripts/pk-kits.test.ts`, `scripts/lava-maze-escorted-ore.test.ts`).
+    Evidence: `scripts/generated/quest-magearena.ts`, `scripts/pk-kits.ts`, `scripts/pk.ts`, `scripts/aio-pvp.ts`.
+    Gap: live multi-god unlock casts (`MA_GOD=saradomin|guthix`) and Dragon Mace vs DDS paired spar runs remain unbenched.
+80. **Shared scout-to-squad intel handoffs, multi-way stun-focus pile switching, and coordinated fallback align roamers,
+    squads, and armies.** Claim: `publishScoutIntel`, `readScoutIntel`, and `pickScoutTargetForSquad` pass fresh
+    Wilderness target records (`SCOUT_INTEL_TTL_MS = 25_000`) from `pk-roam.ts` to `pk-squad.ts` (`FOLLOW=1`) and
+    `pk-army.ts` (`pickArmyScoutHandoff`); `pickSquadFocus` and `armyFocusTarget` prioritize stunned targets
+    (`STUNNED_SHOVE_SPOTANIM = 254`), skip busy single-way fights for anti-PJ safety, and trigger `squadFallbackPlan`
+    retreats when outnumbered or out of food. Conditions: mocked-roster unit suites (`scripts/pk-roam.test.ts`,
+    `scripts/pk-squad.test.ts`, `scripts/pk-army.test.ts`). Evidence: `scripts/pk-roam.ts`, `scripts/pk-squad.ts`,
+    `scripts/pk-army.ts`. Gap: live multi-account squad interception on `extra:squad-*` requires multi-client engine headroom.
+81. **Wilderness Runite escort recovery and Wilderness Agility obstacle-delay anti-PK guards enforce depth-aware
+    retreats.** Claim: `scripts/lava-maze-escorted-ore.ts` provides configurable combat brackets (`ESCORT_COMBAT`,
+    `MINER_COMBAT`), south-heading waypoint recovery (`selectInboundRecovery`), glory/Varrock Teleport retreat fallback
+    (`retreatOrTeleportPlan`), and escort screening (`escortInterceptDecision`); `wildernessAgilityEscapeGuard`
+    (`scripts/aio-pvp.ts`) evaluates `attackable` combat-bracket hostiles across `COURSES.wilderness`
+    (`x 2988..3012, z 3916..3972`) and its underground pit (`3005,10363`), deferring eat/teleport packets during
+    `inObstacleDelay` before routing pit ladder exits or Edgeville/lever/glory escapes with protect prayers. Conditions:
+    unit tests in `scripts/lava-maze-escorted-ore.test.ts`. Evidence: `scripts/lava-maze-escorted-ore.ts`,
+    `scripts/aio-pvp.ts`, `scripts/lava-maze-escorted-ore.test.ts`. Gap: end-to-end live Wilderness Agility lap
+    interruption and Lava Maze escort interception runs remain unexecuted.
+82. **Paired `extra:spar-x8` climb runs evaluate four Wave 1 combat options against `champion` across 64 paired
+    500-tick mirror fights and keep `scripts/pk-champion.json` unchanged (`verdict !== 'accept'`).** Claim: none
+    of the four standalone options clears `verdict()` acceptance (`n >= 16 && t >= 2`) against `champion` on
+    `tribrid`: `zeroDrainFlick: true` scores `mean -7.48` (`sd 16.39`, `t -1.82`, `n = 16`, `reject`),
+    `offensiveFlick: true` scores `mean -5.67` (`sd 20.54`, `t -1.10`, `n = 16`, `reject`), `fakieSwitch: true`
+    scores `mean -3.86` (`sd 19.74`, `t -0.78`, `n = 16`, `reject`), and `{ freeze: "low", stepUnderFrozen: true }`
+    scores `mean +3.20` (`sd 18.76`, `t +0.68`, `n = 16`, `reject`). Early prayer step-downs and decoy switches trade
+    active buff/cooldown packets inside 500-tick supplies where `champion` does not exhaust prayer, while
+    `stepUnderFrozen` shows a small positive mean against ranged/melee tribrids short of `t >= 2`. Conditions:
+    `extra:spar-x8`, seeds `1` and `2` (`SPAR_A=champion`, `SPAR_B=champion`, `SPAR_SWAP=1`, `SPAR_CAP=500`, raw nets
+    in `.practice/pvp-wave2/climb-results.jsonl`). Evidence: `scripts/measure/pk-spar-climb.ts`,
+    `.practice/pvp-wave2/climb-results.jsonl`. Gap: `comboFood: true` on karambwan kits (`tribrid-combo`) and
+    multi-client Dragon Spear / God-Spell Charge matchup matrices await dedicated bench headroom.

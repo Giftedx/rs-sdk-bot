@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { corridorThreat, RosterEvidence, entryRosterReady, waitForRosterEntry, stageRelease, readEscortRoute, alignAtBank, type RosterPlayer } from './lava-maze-escorted-ore';
+import { corridorThreat, RosterEvidence, entryRosterReady, waitForRosterEntry, stageRelease, readEscortRoute, alignAtBank, selectInboundRecovery, retreatOrTeleportPlan, escortInterceptDecision, type RosterPlayer } from './lava-maze-escorted-ore';
+import { assessGodSpellReadiness, resolveMageArenaWorkflow, wildernessAgilityEscapeGuard } from './aio-pvp';
 import type { PathDeps } from '../packages/core/src/walk';
 import { filterFixtureRoster, hasEscortLogouts } from '../packages/practice/src/lava-maze-escorted-ore-proof';
 
@@ -174,4 +175,60 @@ test('release resets if the escort moves, miner leaves Edgeville, or roster is s
         feed.accept({t:'roster',k:30,p:interrupt==='escort'?roster(3061):roster()},30);
         expect(release(interrupt==='stale'?undefined:feed.fresh(30),interrupt!=='miner')).toBe(false);
     }
+});
+
+test('escort intercept decision, south inbound recovery, and retreat teleport fallback', () => {
+    expect(retreatOrTeleportPlan({ tile: [3060, 3885], magic: 99, inventory: [{ name: 'Amulet of glory(4)' }], equipment: [] })).toBe('run');
+    expect(retreatOrTeleportPlan({ tile: [3060, 3715], magic: 99, inventory: [{ name: 'Amulet of glory(4)' }], equipment: [] })).toBe('glory');
+    expect(retreatOrTeleportPlan({ tile: [3060, 3632], magic: 70, inventory: [{ name: 'Law rune', count: 1 }, { name: 'Air rune', count: 3 }, { name: 'Fire rune', count: 1 }], equipment: [] })).toBe('teleport');
+    expect(selectInboundRecovery([3060, 3800], [[3060, 3883], [3060, 3810], [3060, 3780], [3094, 3492]])).toBe(2);
+
+    expect(escortInterceptDecision({
+        escortTile: [3060, 3883], escortCombat: 75,
+        threat: { name: 'Pker', x: 3060, z: 3880, combatLevel: 78 },
+        hasWeapon: true, hasFood: true, prayerPoints: 35,
+    }).action).toBe('intercept');
+    expect(escortInterceptDecision({
+        escortTile: [3060, 3883], escortCombat: 75,
+        threat: { name: 'MainPker', x: 3060, z: 3880, combatLevel: 115 },
+        hasWeapon: true, hasFood: true, prayerPoints: 35,
+    }).action).toBe('screen-retreat');
+});
+
+test('assessGodSpellReadiness, resolveMageArenaWorkflow, and wildernessAgilityEscapeGuard', () => {
+    const ready = assessGodSpellReadiness({
+        god: 'guthix', magicLevel: 85, prayerLevel: 43,
+        mageArenaVarp: 8, godCastVarp: 99, chargeVarp: 0,
+        wornIds: [2413, 2416],
+        inventory: [{ id: 554, count: 10 }, { id: 565, count: 10 }, { id: 556, count: 10 }],
+    });
+    expect(ready).toMatchObject({ ready: true, maxHit: 30, drainEffect: 'defence', chargeReady: true, conflict: null });
+    expect(assessGodSpellReadiness({
+        god: 'saradomin', magicLevel: 85, prayerLevel: 43,
+        wornIds: [2414, 2415], inventory: [{ id: 554, count: 5 }, { id: 565, count: 5 }, { id: 556, count: 5 }],
+    }).conflict).toEqual({ capeGod: 'zamorak', staffGod: 'saradomin' });
+    expect(resolveMageArenaWorkflow('saradomin', { charge: true })).toEqual({
+        script: 'scripts/generated/quest-magearena.ts', args: [], env: { MA_GOD: 'saradomin', MA_MODE: 'pray', MA_CHARGE: '1' },
+    });
+
+    // Obstacle p_delay settlement defers eat/exit packets; pit routes through ladder climb; surface routes exit-course + protect prayer.
+    const hostile = { name: 'AgilityPker', x: 3004, z: 3948, combatLevel: 95, distance: 8, wornWeapon: 861 };
+    expect(wildernessAgilityEscapeGuard({
+        me: { x: 3004, z: 3945, level: 0, hp: 50, maxHp: 99, combatLevel: 90 },
+        nearby: [hostile], inObstacleDelay: true, hasGlory: true, hasVarrockTele: false, foodCount: 8,
+    })).toMatchObject({ onCourse: true, inPit: false, action: 'wait-obstacle-settle', protectPrayer: 13 });
+    expect(wildernessAgilityEscapeGuard({
+        me: { x: 3005, z: 10363, level: 0, hp: 40, maxHp: 99, combatLevel: 90 },
+        nearby: [hostile], inObstacleDelay: false, hasGlory: true, hasVarrockTele: false, foodCount: 4,
+    })).toMatchObject({ onCourse: true, inPit: true, action: 'climb-pit-then-escape', protectPrayer: 13 });
+    expect(wildernessAgilityEscapeGuard({
+        me: { x: 3004, z: 3955, level: 0, hp: 50, maxHp: 99, combatLevel: 90 },
+        nearby: [{ name: 'Skiller', x: 3004, z: 3955, combatLevel: 3, distance: 2 }],
+        inObstacleDelay: false, hasGlory: true, hasVarrockTele: false, foodCount: 8,
+    })).toMatchObject({ action: 'eat', threat: null });
+    expect(wildernessAgilityEscapeGuard({
+        me: { x: 3004, z: 3955, level: 0, hp: 85, maxHp: 99, combatLevel: 90 },
+        nearby: [{ name: 'Skiller', x: 3004, z: 3955, combatLevel: 3, distance: 2 }],
+        inObstacleDelay: false, hasGlory: true, hasVarrockTele: false, foodCount: 8,
+    })).toMatchObject({ action: 'continue', threat: null });
 });
