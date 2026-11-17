@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794931555573,
+ "at": 1794931621520,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -190,26 +190,6 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=woodpecker-kit6-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=woodpecker-kit6-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":250}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Nature rune, 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -300,8 +280,7 @@
     "AMMO": "100",
     "MAX_TRIPS": "50",
     "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
@@ -382,6 +361,27 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":500}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-fire-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
    ]
   },
   {
@@ -479,7 +479,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
    },
    "enabled": true,
    "standing": true,
