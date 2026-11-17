@@ -520,17 +520,38 @@ export function plan(inp: Inputs): Assignment[] {
     const bridges = new Map<string, { recipient: string; target: number }>(), bridged = new Set<string>();
     const fundingDonors = (inp.donors ?? []).filter(d => !inp.unfundable?.has(d.name.toLowerCase()) && !inp.running?.has(d.name.toLowerCase())
         && (inp.owners.get(d.name.toLowerCase())?.side ?? inp.side) === inp.side);
+    const fareCache = new Map<string, number | null>();
+    const cachedWayCost = (from: Parameters<typeof wayCost>[0], to: Parameters<typeof wayCost>[1], mountain: boolean): number | null => {
+        if (!to) return 0;
+        if (!from) return wayCost(from, to, mountain);
+        const k = `${from.x},${from.z},${from.level ?? 0}>${to.x},${to.z},${to.level ?? 0}:${mountain ? 1 : 0}`;
+        if (fareCache.has(k)) return fareCache.get(k)!;
+        const c = wayCost(from, to, mountain);
+        fareCache.set(k, c);
+        return c;
+    };
+    const canGiveCache = new Map<string, boolean>();
     const canGiveCoins = (name: string, recipient: string) => {
-        const lower = recipient.toLowerCase(), to = localByName.get(lower), from = localByName.get(name.toLowerCase());
-        if (!to || name.toLowerCase() === lower || inp.unfundable?.has(lower)) return false;
-        const meet = meetFor(to.pos);
-        if (meet === null) return false;
-        const fare = wayCost(from?.pos, meet === 'ardougne' ? ARMY_BANK : PLACES['shop:zaff'], from ? inp.mountain?.(from) ?? true : true);
-        return fare !== null && (fare === 0 || (from?.items.coin ?? 0) >= fare);
+        const lower = recipient.toLowerCase(), fromKey = name.toLowerCase(), cacheKey = `${fromKey}>${lower}`;
+        if (canGiveCache.has(cacheKey)) return canGiveCache.get(cacheKey)!;
+        const to = localByName.get(lower), from = localByName.get(fromKey);
+        let ok = false;
+        if (to && fromKey !== lower && !inp.unfundable?.has(lower)) {
+            const meet = meetFor(to.pos);
+            if (meet !== null) {
+                const fare = cachedWayCost(from?.pos, meet === 'ardougne' ? ARMY_BANK : PLACES['shop:zaff'], from ? inp.mountain?.(from) ?? true : true);
+                ok = fare !== null && (fare === 0 || (from?.items.coin ?? 0) >= fare);
+            }
+        }
+        canGiveCache.set(cacheKey, ok);
+        return ok;
     };
     // Own kit cash stays with its recipient. A free donor contributes only transferable surplus, once across all
     // recipients. One donor must be able to give each credited share: several small, unusable trades are no funding.
+    let fundingEpoch = 0;
+    let cachedFunding: { epoch: number; value: { army: Map<string, number>; kits: Map<string, number>; route: number } } | undefined;
     const funding = () => {
+        if (cachedFunding?.epoch === fundingEpoch) return cachedFunding.value;
         const army = new Map<string, number>();
         let route = 0;
         for (const d of demand) if (d.budget) {
@@ -552,23 +573,39 @@ export function plan(inp: Inputs): Assignment[] {
         }
         let available = [...cash].reduce((n, [name, coins]) => n + Math.max(0, coins - Math.max(army.get(name) ?? 0, bridges.get(name)?.target ?? 0) - (given.get(name) ?? 0)), 0);
         for (const [name, coins] of pool) if (!cash.has(name.toLowerCase()) && mine.some(a => canGiveCoins(name, a.name))) available += coins;
-        return { army: lacks, kits: army, route: Math.max(0, route - available) };
+        const value = { army: lacks, kits: army, route: Math.max(0, route - available) };
+        cachedFunding = { epoch: fundingEpoch, value };
+        return value;
     };
     // Banked inputs already cover their downstream need. Reserve direct bill stock and army kits before treating
     // an input as spare; producing it again would count the same route requirement twice.
     const inputStock = new Map<string, number>();
+    const armyKits = mine.filter(a => inp.army?.has(a.name.toLowerCase())).map(a => [a, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a)] as const);
     for (const item of Object.keys(FEEDS)) {
         const holders = new Map<string, number>();
         for (const a of inp.accounts) holders.set(a.name.toLowerCase(), a.items[item] ?? 0);
         for (const s of inp.stock ?? []) holders.set(s.name.toLowerCase(), Math.max(holders.get(s.name.toLowerCase()) ?? 0, s.items[item] ?? 0));
         const rows = inp.bill.filter(r => [r.item, ...(r.aliases ?? [])].some(name => norm(name) === item));
         const held = Math.max([...holders.values()].reduce((n, count) => n + count, 0), rows.reduce((n, r) => n + r.owned, 0));
-        const army = mine.filter(a => inp.army?.has(a.name.toLowerCase())).reduce((n, a) => n + Math.min(a.items[item] ?? 0,
-            kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a)[item] ?? 0), 0);
+        const army = armyKits.reduce((n, [a, kit]) => n + Math.min(a.items[item] ?? 0, kit[item] ?? 0), 0);
         inputStock.set(item, Math.max(0, held - rows.reduce((n, r) => n + r.need, 0) - army));
     }
-    const direct = (item: string) => demand.reduce((n, d) => n + (!d.budget && d.names.includes(item) ? d.short : 0), 0);
-    const downstream = (item: string) => demand.reduce((n, d) => n + (d.names.includes(item) ? 0 : d.short * Math.max(0, ...d.names.map(name => feedUnits(item, name)))), 0);
+    let demandCacheEpoch = -1, directCache = new Map<string, number>(), downstreamCache = new Map<string, number>();
+    const ensureDemandCaches = () => {
+        if (demandCacheEpoch === fundingEpoch) return;
+        demandCacheEpoch = fundingEpoch;
+        directCache = new Map<string, number>();
+        downstreamCache = new Map<string, number>();
+        for (const d of demand) if (!d.budget && d.short > 0) for (const name of d.names) directCache.set(name, (directCache.get(name) ?? 0) + d.short);
+    };
+    const direct = (item: string) => { ensureDemandCaches(); return directCache.get(item) ?? 0; };
+    const downstream = (item: string) => {
+        ensureDemandCaches();
+        if (downstreamCache.has(item)) return downstreamCache.get(item)!;
+        const val = demand.reduce((n, d) => n + (d.names.includes(item) ? 0 : d.short * Math.max(0, ...d.names.map(name => feedUnits(item, name)))), 0);
+        downstreamCache.set(item, val);
+        return val;
+    };
     const needed = (item: string, account?: string) => {
         if (item !== 'coin') return direct(item) + Math.max(0, downstream(item) - (inputStock.get(item) ?? 0) - (fed.get(item) ?? 0));
         const cash = funding();
@@ -594,6 +631,7 @@ export function plan(inp: Inputs): Assignment[] {
         for (const d of demand) if (count > 0 && !d.budget && d.names.includes(item) && (account === undefined || d.account === account.toLowerCase())) {
             const used = Math.min(d.short, count); d.short -= used; count -= used;
             if (bought) d.bought = (d.bought ?? 0) + used;
+            if (used > 0) fundingEpoch++;
         }
         return count;
     };
@@ -604,7 +642,7 @@ export function plan(inp: Inputs): Assignment[] {
         for (const f of t.yields(a)) {
             const item = norm(f.item), count = Math.min(t.production&&item===norm(t.production.output)?t.production.maximum*t.production.outputPerUnit:Math.max(0, f.perTick) * VALUE_TICKS, needed(item, a.name));
             const rest = consume(item, count);
-            if (item === 'coin') earnedCoins.set(a.name.toLowerCase(), (earnedCoins.get(a.name.toLowerCase()) ?? 0) + rest);
+            if (item === 'coin') { earnedCoins.set(a.name.toLowerCase(), (earnedCoins.get(a.name.toLowerCase()) ?? 0) + rest); if (rest > 0) fundingEpoch++; }
             else if (rest > 0) fed.set(item, (fed.get(item) ?? 0) + rest);
         }
     };
@@ -632,7 +670,7 @@ export function plan(inp: Inputs): Assignment[] {
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
         const finite=finiteOrder(band,a);if(!finite)continue;
         const selected=inp.templateFor?.(finite,a)??finite;
-        const fare = wayCost(a.pos, placeOf(selected), inp.mountain?.(a) ?? true);
+        const fare = cachedWayCost(a.pos, placeOf(selected), inp.mountain?.(a) ?? true);
         if (fare === null) continue;
         const t = fare ? withFare(selected, fare) : selected;
         if (t.quest && t.tier !== 'goal') {
@@ -795,14 +833,14 @@ export function plan(inp: Inputs): Assignment[] {
         if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
-        const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
+        const reachesMeet = (name: string) => { const p = byName.get(name), cost = cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
         const donorFor = (item: string, count: number, remote=far) => stock.find(s => (s.side !== inp.side) === remote && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= count
             && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
         // Fund the worker's own cash prerequisite first, then reobserve before acquiring its missing items.
         // fundOrders parks the intended worker until this one owned transfer settles.
         if(c.coins){
             if(busy)return;
-            const mountain=inp.mountain?.(a)??true,toMeet=wayCost(a.pos,ARMY_BANK,mountain),fromMeet=wayCost(ARMY_BANK,placeOf(c.template),mountain);
+            const mountain=inp.mountain?.(a)??true,toMeet=cachedWayCost(a.pos,ARMY_BANK,mountain),fromMeet=cachedWayCost(ARMY_BANK,placeOf(c.template),mountain);
             // The cash transfer precedes the item trip. Its recipient can use that staged cash for the meeting
             // fare, and must still retain the consumer's cash and return fare after the item arrives.
             const canMeet=toMeet!==null&&fromMeet!==null;
@@ -811,7 +849,7 @@ export function plan(inp: Inputs): Assignment[] {
             const lacks=kitLacks(a,c.template.needs,obtainable);
             if(!lacks||lacks.some(l=>!l.of.some(item=>obtainable(item,l.count))))return;
             const owned=canMeet&&lacks.some(l=>l.of.some(item=>!!itemSource(item,l.count)));
-            const detour=a.pos&&owned?Math.max(0,toMeet!+fromMeet!-(wayCost(a.pos,placeOf(c.template),mountain)??0)):0;
+            const detour=a.pos&&owned?Math.max(0,toMeet!+fromMeet!-(cachedWayCost(a.pos,placeOf(c.template),mountain)??0)):0;
             const coins=c.coins+detour;
             const from=cashSource(c.account,coins,far);
             if(!from)return;
@@ -927,14 +965,28 @@ export function plan(inp: Inputs): Assignment[] {
             }).filter(x => Number.isFinite(x.ticks))
             .sort((x, y) => x.ticks - y.ticks || Number(y.own) - Number(x.own) || keeps(y.c) - keeps(x.c) || x.c.account.localeCompare(y.c.account) || x.c.template.id.localeCompare(y.c.template.id));
         const chosen = options[0];
-        if (chosen && !chosen.own) { bridges.set(chosen.c.account.toLowerCase(), { recipient: owner.name, target: chosen.target }); bridged.add(recipient); }
+        if (chosen && !chosen.own) { bridges.set(chosen.c.account.toLowerCase(), { recipient: owner.name, target: chosen.target }); bridged.add(recipient); fundingEpoch++; }
     }
     // The supply tier, re-sorted after every assignment: each job reserves the useful output it can bring before
     // the next pass, and each resource holder lowers the worth of candidates that share its resource.
-    for (const rest = cands.filter(c => !c.goal); rest.length;) {
-        rest.sort(order);
+    let rest = cands.filter(c => !c.goal && !c.lacks && !done.has(c.account) && !gave.has(c.account) && !gaveItems.has(c.account) && !vacated.has(c.account));
+    let dirty = true;
+    const scores = new Map<Cand, number>();
+    while (rest.length) {
+        if (dirty) {
+            rest = rest.filter(c => !done.has(c.account) && !gave.has(c.account) && !gaveItems.has(c.account) && !vacated.has(c.account) && !c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1)));
+            if (!rest.length) break;
+            scores.clear();
+            for (const c of rest) scores.set(c, worth(c));
+            rest.sort((x, y) => scores.get(y)! - scores.get(x)! || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
+            dirty = false;
+        }
         const c = rest.shift()!;
-        take(c, worth(c));
+        const v = scores.get(c)!;
+        if (v <= 0) break;
+        const prevDone = done.size;
+        take(c, v);
+        if (done.size !== prevDone) dirty = true;
     }
     // A fully owned recipe or band may lack only its cash/fare. Keep local work and its donor arbitration first;
     // only a remaining idle slot asks remote cash through the same Funding order.
