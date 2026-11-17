@@ -308,6 +308,8 @@ button.op-kpi:hover{filter:brightness(1.15)}
 /* One type and one rhythm in every panel: the panel font, 12px text, 12px above the first part. */
 .client-plugin-body .info-row,.client-plugin-body .rival-row{font-family:inherit}
 .client-plugin-body .info-row{font-size:12px}
-.client-plugin-body>:is(.xp-panel,.ge-panel):first-child,.client-plugin-body>.xp-tracker:first-child>.xp-panel{padding-top:12px}
+.client-plugin-body>:is(.xp-panel,.ge-panel,.gear-panel):first-child,.client-plugin-body>.xp-tracker:first-child>.xp-panel{padding-top:12px}
 .client-plugin-body .hs-mode{margin-top:12px}
 .client-plugin-body :is(.ge-panel,.op-page)>.rl-search:first-child{margin-top:0}
+.op-badge.warn{color:var(--fin-gold);border-color:#e8a33a40;background:var(--fin-gold-soft)}
+.op-diag-meta{color:#9d9d9d;font-size:10px;margin-top:2px;overflow-wrap:anywhere}
