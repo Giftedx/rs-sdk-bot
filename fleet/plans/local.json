@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794871934831,
+ "at": 1794874067555,
  "jobs": [
   {
    "account": "Balls",
@@ -104,6 +104,33 @@
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "85",
+    "6000"
+   ],
+   "env": {
+    "MAX_SPEND": "500",
+    "COIN_RESERVE": "382483",
+    "MIN_ARROWS": "30",
+    "BUY_ARROWS": "0",
+    "AMMO": "100",
+    "FOOD": "3",
+    "FOOD_ID": "329",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-5c6fe56e-e683-42c7-9d7e-890ac425684e"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-shared-progression-nab85-exact-repair [task-5c6fe56e-e683-42c7-9d7e-890ac425684e]",
+   "role": "helper"
   }
  ],
  "army": [
