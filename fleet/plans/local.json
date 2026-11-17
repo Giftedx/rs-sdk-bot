@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794959940768,
+ "at": 1794959982092,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -241,6 +241,33 @@
   },
   {
    "account": "Moneyshot",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Defence to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-defence-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "OreElse",
    "script": "scripts/ranged-train.ts",
    "args": [
     "99",
@@ -267,29 +294,33 @@
    ]
   },
   {
-   "account": "OreElse",
-   "script": "scripts/gather-combat.ts",
+   "account": "PickpockDick",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "zaff",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ITEMS": "staff of fire",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "1100",
+    "STALL_TICKS": "0",
+    "FLOAT": "13000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "12000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-zaff",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "shop:zaff"
    ]
   },
   {
@@ -299,9 +330,7 @@
     "99",
     "5000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -341,9 +370,7 @@
     "99",
     "5000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -366,7 +393,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -392,7 +420,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
