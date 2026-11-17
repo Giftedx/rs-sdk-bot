@@ -59,6 +59,6 @@ test('finite actual sorting loop executes donor-selected order with exact native
  const r=await runFlatBankSort(d,{cap:100,maxMoves:20,policy:'donor'});expect(r.policy).toBe('donor');expect(current.map(i=>i.id)).toEqual([995,438,199,249,440]);expect(r.moves).toBe(moves);
 });
 test('native weapon, armour, tools, clue and cosmetic categories remain distinct',()=>{
- const expected:Record<number,string>={1289:'Weapon-Melee',861:'Weapon-Ranged',1381:'Weapon-Magic',1127:'Armour-Body',1079:'Armour-Legs',1201:'Armour-Shield',1725:'Armour-Amulet',1061:'Armour-Boots',1059:'Armour-Gloves',1635:'Armour-Ring',1007:'Armour-Cape',1038:'Cosmetic/Holiday',2677:'Clue-Scrolls',983:'Quest-Items',52:'Ammunition',313:'Tool-Fishing',3438:'Skilling-Resource-Log',735:'Skilling-Resource-Seed'};
+ const expected:Record<number,string>={1289:'Weapon-Melee',861:'Weapon-Ranged',1381:'Weapon-Magic',1127:'Armour-Body',1079:'Armour-Legs',1201:'Armour-Shield',1725:'Armour-Amulet',1704:'Armour-Amulet',1712:'Teleportation',2552:'Teleportation',3853:'Teleportation',3690:'Teleportation',2:'Ammunition',2714:'Clue-Scrolls',1061:'Armour-Boots',1059:'Armour-Gloves',1635:'Armour-Ring',1007:'Armour-Cape',1038:'Cosmetic/Holiday',2677:'Clue-Scrolls',983:'Quest-Items',52:'Ammunition',313:'Tool-Fishing',3438:'Skilling-Resource-Log',735:'Skilling-Resource-Seed'};
  for(const[id,category]of Object.entries(expected))expect(bankDonorKey(nativeRows([Number(id)])[0]!).category).toBe(category);
 });

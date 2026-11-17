@@ -29,9 +29,25 @@ export function parseConstants(files: string[]): Map<string, number> {
 }
 const value = (v: string, constants: Map<string, number>) => v.startsWith('^') ? constants.get(v.slice(1)) : Number(v);
 
-// The highest level that the scripts of one quest folder check for each skill.
-export function serverLevels(scripts: string[], constants = new Map<string, number>()): Map<string, number> {
+// Skill requirements stated explicitly in a quest journal's requirement text (not "advantage" / "might be useful").
+export function journalLevels(journals: string[]): Map<string, number> {
     const out = new Map<string, number>();
+    for (const t of journals) {
+        if (/advantage to have at least one/i.test(t)) continue;
+        for (const m of t.matchAll(/Level\s+(\d+)\s+([a-z]+)\b(?!\s+(?:or\s+higher\b|will\s+be\s+an\s+advantage\b|might\s+be\s+useful\b))/gi)) {
+            const raw = m[2]!.toLowerCase();
+            const skill = raw === 'ranging' ? 'Ranged' : cap(raw);
+            const n = Number(m[1]);
+            if (!SKILLS.includes(skill) || skill === 'Hitpoints' || !Number.isFinite(n)) continue;
+            out.set(skill, Math.max(out.get(skill) ?? 0, n));
+        }
+    }
+    return out;
+}
+
+// The highest level that the scripts of one quest folder (and optional journals) check for each skill.
+export function serverLevels(scripts: string[], constants = new Map<string, number>(), journals: string[] = []): Map<string, number> {
+    const out = journalLevels(journals);
     for (const t of scripts) for (const m of t.matchAll(/stat(?:_base)?\(([a-z]+)\)\s*(<|>=)\s*(\^[a-z0-9_]+|\d+)/g)) {
         const skill = cap(m[1]!), n = value(m[3]!, constants);
         if (!SKILLS.includes(skill) || skill === 'Hitpoints' || n == null || !Number.isFinite(n)) continue;
@@ -54,13 +70,14 @@ export function serverQuestPoints(scripts: string[], constants: Map<string, numb
 export function serverPrereqs(scripts: string[], varpFolder: Map<string, string>, self: string, journals: string[] = []): Set<string> {
     const out = new Set<string>(), add = (v: string) => { const f = varpFolder.get(v); if (f && f !== self) out.add(f); };
     for (const t of scripts) for (const m of t.matchAll(/%([a-z0-9_]+)\s*<\s*\^[a-z0-9_]+_complete\b/g)) add(m[1]!);
-    for (const t of journals) for (const m of t.matchAll(/%([a-z0-9_]+)\s*(?:=|>=|<|!)\s*\^[a-z0-9_]+_complete\b/g)) add(m[1]!);
+    for (const t of journals) for (const m of t.matchAll(/%([a-z0-9_]+)\s*(?:=|>=|<|!)\s*\^[a-z0-9_]+_complete(?:_[a-z0-9_]+)?\b/g)) add(m[1]!);
     return out;
 }
 
 // The requirement lines of a wiki quest page: skills, quest points and quest names (matched against the journal names).
+// Subheadings from ### Recommended onwards are advisory, never hard gates.
 export function wikiReqs(page: string, journal: string[]): { s: Map<string, number>; qp: number | null; q: string[] } {
-    const sec = page.split(/^## Requirements\s*$/m)[1]?.split(/^## /m)[0] ?? '';
+    const sec = (page.split(/^## Requirements\s*$/m)[1]?.split(/^## /m)[0] ?? '').split(/^###\s*Recommended\b/mi)[0] ?? '';
     const s = new Map<string, number>(), q: string[] = [];
     let qp: number | null = null;
     for (const raw of sec.split(/\r?\n/).filter(l => /^\s*-\s/.test(l))) {
@@ -122,10 +139,33 @@ export function dropCycles(out: Record<string, Reqs>) {
     for (const [a, r] of Object.entries(out)) if (!r.s.length && !r.q.length && !r.qp && !r.i) delete out[a];
 }
 
+// Quest prerequisites and skill checks in vendor/rs-sdk/server/content outside the quest's own folder:
+// areas/area_camelot/scripts/king_arthur.rs2:43 + black_knight_titan.rs2:30 (tier20.rs2:16);
+// areas/area_ardougne_east/scripts/elena.rs2:118; areas/area_karamja/scripts/trufitus.rs2:280;
+// quests/quest_death/scripts/death_ig_commander.rs2:7; areas/area_taverly/scripts/sanfew.rs2:102-103;
+// areas/area_karamja/scripts/tbwt_timfraku.rs2:51; quests/quest_grandtree/scripts/king_narnode.rs2:8-9;
+// skill_herblore/configs/brewing/brew_potion.struct:289 (Serum 207) + Mort Myre holy barrier.
+export const CROSS_FOLDER_REQS: Record<string, { q?: string[]; s?: [string, number][] }> = {
+    quest_grail: { q: ['quest_arthur'], s: [['Attack', 20]] },
+    quest_biohazard: { q: ['quest_elena'] },
+    quest_junglepotion: { q: ['quest_druid'] },
+    quest_troll: { q: ['quest_death'] },
+    quest_eadgar: { q: ['quest_druid', 'quest_death', 'quest_troll'], s: [['Herblore', 31]] },
+    quest_tbwt: { q: ['quest_junglepotion'] },
+    quest_mm: { q: ['quest_grandtree', 'quest_tree'] },
+    quest_mortton: { q: ['quest_priestperil'], s: [['Herblore', 15]] },
+};
+
+// Post-2004 OSRS wiki quest requirements absent from rev 289 (king_roald.rs2:47-55 never checks Rune Mysteries).
+export const NON_REV289_WIKI_QUEST_DROPS: Record<string, ReadonlySet<string>> = {
+    'Priest in Peril': new Set(['Rune Mysteries Quest']),
+};
+
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..');
     const scriptsDir = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts'), questDir = join(scriptsDir, 'quests');
-    const files = (d: string, ext: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? files(p, ext) : f.endsWith(ext) ? [readFileSync(p, 'utf8')] : []; });
+    const namedFiles = (d: string, ext: string): { path: string; text: string }[] => readdirSync(d).sort().flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? namedFiles(p, ext) : f.endsWith(ext) ? [{ path: p, text: readFileSync(p, 'utf8') }] : []; });
+    const files = (d: string, ext: string): string[] => namedFiles(d, ext).map(x => x.text);
     const constants = parseConstants(files(scriptsDir, '.constant'));
     const names = questJournalNames(root), journal = [...names.values()];
     const itemRows = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8')) as { name: string; debugname: string }[];
@@ -136,15 +176,23 @@ if (import.meta.main) {
     for (const r of rows) if (r.folder && r.varp) varpFolder.set(r.varp, r.folder);
     const serverQp = serverQuestPoints(files(scriptsDir, '.rs2'), constants);
     const wikiDir = join(root, 'vendor', 'rs-sdk', 'wiki', 'quests');
-    const wiki = new Map(readdirSync(wikiDir).filter(f => f.endsWith('.md')).map(f => { const t = readFileSync(join(wikiDir, f), 'utf8'); return [norm(t.match(/^# (.+)$/m)?.[1] ?? f), t] as [string, string]; }));
+    const wiki = new Map(readdirSync(wikiDir).sort().filter(f => f.endsWith('.md')).map(f => { const t = readFileSync(join(wikiDir, f), 'utf8'); return [norm(t.match(/^# (.+)$/m)?.[1] ?? f), t] as [string, string]; }));
     const out: Record<string, Reqs> = {}, report: string[] = [], mark = (s: number) => s === 0 ? '?' : s === 2 ? '*' : '';
     for (const [folder, name] of names) {
-        let scripts: string[] = [];
+        let scriptEntries: { path: string; text: string }[] = [];
         let journals: string[] = [];
-        try { scripts = files(join(questDir, folder), '.rs2'); journals = files(join(questDir, folder), '_journal.rs2'); } catch { /* no folder */ }
-        const quests = new Set([...serverPrereqs(scripts, varpFolder, folder, journals)].filter(f => names.has(f)).map(f => names.get(f)!));
+        try { scriptEntries = namedFiles(join(questDir, folder), '.rs2'); journals = files(join(questDir, folder), '_journal.rs2'); } catch { /* no folder */ }
+        const scripts = scriptEntries.map(e => e.text);
+        // Post-quest godbook preaching (horror_godbook.rs2:272, 50 Prayer) is not a Horror from the Deep gate.
+        const reqScripts = scriptEntries.filter(e => !/_godbook\.rs2$/.test(e.path)).map(e => e.text);
+        const cross = CROSS_FOLDER_REQS[folder];
+        const quests = new Set([...serverPrereqs(reqScripts, varpFolder, folder, journals), ...(cross?.q ?? [])].filter(f => names.has(f)).map(f => names.get(f)!));
         const page = wiki.get(norm(name)) ?? null, w = page ? wikiReqs(page, journal.filter(n => n !== name)) : null;
-        const levels = serverLevels(scripts, constants), r = joinReqs(levels, serverQp, quests, w, serverQuestPoints(scripts, constants));
+        const dropWikiQ = NON_REV289_WIKI_QUEST_DROPS[name];
+        if (w && dropWikiQ) w.q = w.q.filter(q => !dropWikiQ.has(q));
+        const levels = serverLevels(reqScripts, constants, journals);
+        for (const [sk, lv] of cross?.s ?? []) levels.set(sk, Math.max(levels.get(sk) ?? 0, lv));
+        const r = joinReqs(levels, serverQp, quests, w, serverQuestPoints(reqScripts, constants));
         // Items: src 1 when the quest's scripts name the item (its debugname as a word), 0 when only the wiki lists it.
         const text = scripts.join('\n'), its = page ? wikiItems(page, items) : [];
         if (its.length) r.i = its.map(([n, c, d]) => [n, c, new RegExp(`\\b${d}\\b`).test(text) ? 1 : 0]);
