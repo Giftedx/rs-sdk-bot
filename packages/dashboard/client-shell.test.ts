@@ -2100,4 +2100,5 @@ test('dashboard skills list matches the 19 skills of 2004 rev 225',()=>{
 
 test('wildLine in overlay shows multi-way vs single-way combat zone',()=>{
  expect(shell).toContain("(p.multi?' · multi-way':' · single-way')");
+ expect(shell).toContain("inMulti({x:l.wild.x,z:l.wild.z,level:l.wild.plane??0})?' · multi-way':' · single-way'");
 });

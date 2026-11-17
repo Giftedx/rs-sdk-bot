@@ -2483,3 +2483,10 @@ test('accounts trapped inside West Ardougne cannot reach outside targets, donors
     const out=plan(inputs([trapped],{templates:[dragon],army:new Set(['mightyrod']),pilots:new Set([dragon.id]),donors:[{name:'Rich',coins:500_000}]}))[0]!;
     expect(out.template).toBeUndefined();expect(out.fund).toBeUndefined();expect(out.send).toBeUndefined();
 });
+
+test('assess keeps a single preparation/acquire block as drain but retires RETIRE_FAILS consecutive blocks',()=>{
+    const prep='RESULT fail no Ranged progress: {"ok":false,"stop":"preparation","failure":"progression requires acquire"}';
+    expect(assess([prep])).toMatchObject({retire:false,drains:1});
+    expect(assess([prep,prep])).toMatchObject({retire:true,drains:2});
+    expect(assess([prep,'RESULT ok xpGain=50',prep])).toMatchObject({retire:false,drains:2});
+});

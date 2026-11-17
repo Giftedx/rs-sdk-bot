@@ -284,7 +284,7 @@ export async function hunt(s: Session, o: HuntOptions) {
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
                 // The overhead changes one tick before the target's next attack: 42 kills to 6 in mirror spars against 24 to 24.
                 kit: ownKit(kit), spec: defaultSpec(ownKit(kit)), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true, counterRead: true, adaptStyles: true,
-                escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, stop: over, log,
+                escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, escapeOutnumbered: 2, allies: [...ours], stop: over, log,
                 // A stand-up fight with bow and dagger only: a spell takes 5 ticks, the bow 3 and the dagger 4. Magic stays
                 // for the freeze. Random styles: an overhead that predicts cannot follow them.
                 rotation: o.rotation ?? (kit.ranged?.length && kit.melee?.length ? ['ranged', 'melee'] : undefined), mixStyles: true,

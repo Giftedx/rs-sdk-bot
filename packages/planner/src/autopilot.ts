@@ -1077,6 +1077,11 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
     if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail, drains };
     const tail = results.slice(-RETIRE_FAILS);
     if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail') && !progressed(l))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
+    // A single preparation/acquire block is a drain, but RETIRE_FAILS consecutive blocks with no progress is a fast-fail loop.
+    const allResults = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
+    const prepTail = allResults.slice(-RETIRE_FAILS);
+    if (prepTail.length === RETIRE_FAILS && prepTail.every(l => l.startsWith('RESULT fail') && /\b(?:stop[=:]"?preparation\b|progression requires acquire\b)/.test(l) && !progressed(l)))
+        return { retire: true, reason: `${RETIRE_FAILS} preparation/acquire RESULTs: ${prepTail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
     const at = clean.reduce((last, l, i) => l.startsWith('LEDGER ') ? i : last, -1);
     const ledger = clean[at]?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/), ended = clean.slice(at + 1).find(l => /^RESULT (ok|fail)\b/.test(l));
     if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT && !(ended?.startsWith('RESULT ok') && progressed(ended)))
