@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794945959890,
+ "at": 1794946378300,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -254,8 +254,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -265,34 +264,6 @@
    "template": "army-trooper-attack-99",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/ranged-train.ts",
-   "args": [
-    "99",
-    "1500"
-   ],
-   "env": {
-    "TARGET_LEVEL": "99",
-    "FOOD": "3",
-    "AMMO": "100",
-    "MAX_TRIPS": "50",
-    "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "local",
-   "resources": [
-    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
@@ -346,27 +317,28 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/ranged-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99",
+    "1500"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "FOOD": "3",
+    "AMMO": "100",
+    "MAX_TRIPS": "50",
+    "COIN_RESERVE": "0",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-ranged-99",
    "autopilot": "local",
    "resources": [
+    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
@@ -383,8 +355,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -452,7 +423,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -462,9 +433,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-trooper-attack-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
