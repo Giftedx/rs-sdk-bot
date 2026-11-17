@@ -179,8 +179,9 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 /* As the 2004 client draws them: every stack count is yellow, also K and M; a quest name is white under the pointer. */
 .game-hud .qty-k,.game-hud .qty-m,.game-bank .qty-k,.game-bank .qty-m{color:#ff0}
 .game-list button[data-quest]:hover{color:#fff!important}
-/* The side tabs as in the 2004 client: stats, quests, inventory and worn items above; friends, logout and options below. */
-.game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(4,34px)!important}
+/* The side tabs as in the 2004 client: five tabs on top (stats, quests, inventory, worn items, prayer) and four below (magic, friends, logout, options). */
+.game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.game-hud .game-tabs .tab-row:last-of-type{grid-template-columns:repeat(4,minmax(0,1fr))}
 /* The side panels in the 2004 client's colours: yellow text and titles, a cyan title on the options, white friend names. */
 .game-panel{color:#ff0}
 .game-panel h3{font:16px RSBold;color:#ff0}
@@ -257,3 +258,72 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .inventory-cell{position:relative}.item-id{position:absolute;left:1px;bottom:1px;font:bold 10px Arial;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;pointer-events:none;line-height:1}
 
 .ge-sort{display:flex;gap:4px;margin:4px 0}.ge-sort .xp-reset.on{color:#ff981f;border-color:#ff981f}
+
+/* Magic sprite sheet fallback (Fire Wave & Entangle from rev 289 magicon/magicon2) and active Prayer highlight. */
+.spell-sprite{display:block;width:20px;height:20px;background-repeat:no-repeat;image-rendering:pixelated}
+.prayer-icon.active{background:radial-gradient(circle,#e7c56a77 0%,#b88a2a3d 66%,transparent 78%)!important;box-shadow:inset 0 0 0 1px #e7c56a88;border-radius:4px}
+
+/* Titlebar Fleet Capacity and Fast-Fail Loop / Stale Lease diagnostic chips. */
+.title-diag{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;font:11px Arial,sans-serif;white-space:nowrap}
+.title-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:3px;border:1px solid #3c3c3c;background:#262626;color:#d6d6d6;font:11px/1.2 Arial,sans-serif;white-space:nowrap}
+.title-chip b{font-weight:600;color:#fff}
+button.title-chip{cursor:pointer}
+button.title-chip:hover{background:#343434;border-color:#5a5a5a}
+.title-chip.good b{color:#a9d78d}
+.title-chip.warn{border-color:#6b583e;background:#3a3125;color:#efc480}
+.title-chip.warn b{color:#efb277}
+.title-chip.bad{border-color:#78514d;background:#442d2b;color:#f3b5ae}
+.title-chip.bad b{color:#ed9689}
+@media(max-width:1180px){.title-diag .diag-hide-sm{display:none}}
+@media(max-width:920px){.title-diag{display:none}}
+
+/* Wilderness & PvP Combat HUD: 2004 stone-bevel overlay above tabs with skull, bracket, multiway swords, sa_energy bar, overhead prayer, and timers. */
+.game-pvp-hud{position:absolute;right:0;bottom:370px;width:232px;pointer-events:auto;background:#443b2de8 url('/client-assets/interface-bg.png');border:2px ridge #796d53;box-shadow:0 2px 10px #000c,inset 0 0 0 1px #29231a;padding:5px 7px;color:#ff981f;font:13px/1.2 RS,serif;text-shadow:1px 1px #000;display:flex;flex-direction:column;gap:4px;z-index:42}
+.game-panel-hidden .game-pvp-hud{bottom:78px}
+.pvp-top{display:flex;align-items:center;gap:6px;min-width:0}
+.pvp-skull{display:inline-flex;align-items:center;gap:4px;color:#ff0;font:14px RSBold,RS,serif;white-space:nowrap}
+.pvp-bracket{color:#ece2c6;font:12px RS,serif;white-space:nowrap}
+.pvp-threat{margin-left:auto;padding:0 4px;background:#681814;border:1px solid #a93226;color:#ffd0c8;font:12px RS,serif;white-space:nowrap}
+.pvp-multi{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#2e281f;border:1px ridge #807760;flex:none}
+.pvp-multi svg{width:18px;height:18px;display:block}
+.pvp-single{font:11px RS,serif;color:#b8af98;padding:1px 4px;border:1px solid #4d4536;background:#2c271e}
+.pvp-spec-bar{position:relative;height:17px;background:#5c110d;border:1px solid #1f1912;box-shadow:inset 0 1px 0 #0009;overflow:hidden}
+.pvp-spec-bar.active{border-color:#ffd700;box-shadow:0 0 4px #ffd70088}
+.pvp-spec-bar.unknown{background:#2d271e}
+.pvp-spec-fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(180deg,#40e040,#1c8c1c)}
+.pvp-spec-ticks{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 1px),#0009 calc(10% - 1px),#0009 10%);pointer-events:none}
+.pvp-spec-text{position:relative;z-index:1;display:block;text-align:center;line-height:17px;font:12px RS,serif;color:#ff0;text-shadow:1px 1px #000}
+.pvp-spec-bar.unknown .pvp-spec-text{color:#c5b89a}
+.pvp-status-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.pvp-prayer{display:inline-flex;align-items:center;gap:3px;padding:1px 4px;background:#2f291f;border:1px solid #6b5e47;color:#ece2c6;font:12px RS,serif}
+.pvp-prayer img{width:16px;height:16px;object-fit:contain;image-rendering:pixelated}
+.pvp-timers{display:flex;align-items:center;flex-wrap:wrap;gap:3px}
+.pvp-chip{padding:1px 4px;border:1px solid #4e4637;background:#2a251c;color:#c9be9f;font:11px RS,serif;white-space:nowrap}
+.pvp-chip.freeze{border-color:#4ba3d9;background:#163144;color:#a8e4ff}
+.pvp-chip.stun{border-color:#c94a38;background:#4a1a15;color:#ffc4bc}
+.pvp-chip.immune{border-color:#4b9e56;background:#1a3a1e;color:#b2f2bb}
+.pvp-chip.tb{border-color:#a05cd6;background:#321b47;color:#e6c4ff}
+@media(min-width:1600px){.game-pvp-hud{width:246px;bottom:388px}}
+@media(max-width:1000px){.game-pvp-hud{width:218px;bottom:353px}}
+@media(max-width:740px){.game-pvp-hud{width:208px;bottom:341px;font-size:12px;padding:4px 5px}}
+@media(max-width:479px){.game-hud:not(.chat-hidden) .game-pvp-hud{bottom:481px}.game-hud.game-panel-hidden:not(.chat-hidden) .game-pvp-hud{bottom:218px}}
+@media(max-height:620px){.game-pvp-hud{bottom:auto;top:178px;right:210px}}
+
+/* Gear & Upgrade Advisor sidebar plugin and Equipment tab advisor summary. */
+.equip-advisor{margin:5px 4px 2px;padding:4px 6px;background:#342d22;border:1px solid #6c604a;font:12px Arial,sans-serif;color:#eee5ce;text-shadow:none}
+.equip-advisor b{color:#ff981f}
+.equip-advisor .game-control{margin:4px 0 0;padding:4px 6px;font:600 11px Tahoma,Arial,sans-serif!important}
+.gear-panel{display:grid;gap:8px;padding:10px 0}
+.gear-bonuses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:6px}
+.gear-bonus{background:#181818;border:1px solid #353535;border-radius:2px;padding:4px 6px;font:11px Arial,sans-serif;color:#bdbdbd}
+.gear-bonus b{display:block;font-size:12px;color:#fff}
+.gear-list{display:grid;gap:4px;margin-top:6px}
+.gear-row{display:flex;align-items:center;gap:7px;background:#1d1d1d;border:1px solid #333;border-radius:2px;padding:5px 6px;font:11px Arial,sans-serif}
+.gear-row-main{flex:1;min-width:0}
+.gear-row-title{display:flex;align-items:center;justify-content:space-between;gap:5px;color:#eee;font-weight:600}
+.gear-row-sub{color:#a8a8a8;font-size:11px;margin-top:2px;overflow-wrap:anywhere}
+.gear-tag{font:600 9px Arial,sans-serif;text-transform:uppercase;padding:1px 5px;border-radius:2px;border:1px solid #444;flex:none}
+.gear-tag.owned{color:#a9d78d;border-color:#4d7042;background:#263423}
+.gear-tag.ready{color:#ffd275;border-color:#7c6334;background:#392f1e}
+.gear-tag.locked{color:#aaa;border-color:#444;background:#262626}
+.gear-tag.bis{color:#90cdf4;border-color:#3a5c73;background:#1d2e3a}

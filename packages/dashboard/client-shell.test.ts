@@ -2125,11 +2125,157 @@ test('Magic tab renders rev 289 spells, counts casts, and locks missing runes or
  const start=shell.indexOf("    if(selectedTab==='magic'){"),end=shell.indexOf("    const active=document.activeElement");
  const code=shell.slice(start,end);
  const runeCastsSrc=shell.slice(shell.indexOf('  function runeCasts('),shell.indexOf('  function bestSpell('));
- const spellbookData={spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']},combat:[['Wind Strike',1,2,[['Mind rune',1],['Air rune',1]],null,55]]};
- const bot={skills:[{name:'Magic',level:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:3},{name:'Law rune',count:2}]};
- const html=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>55,spellbookData,()=>'');
+ const spellbookData={spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']},combat:[['Wind Strike',1,2,[['Mind rune',1],["Air rune",1]],null,55],['Fire Wave',75,20,[['Blood rune',1],['Fire rune',7],['Air rune',5]],null,425],['Entangle',79,5,[['Nature rune',4],['Water rune',5],['Earth rune',5]],null,890]]};
+ const bot={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:5},{name:'Law rune',count:2},{name:'Blood rune',count:2}]};
+ const html=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>80,spellbookData,()=>'');
  expect(html).toContain('spell-icon" title="High Level Alchemy (Magic 55) · alch · ×10"');
  expect(html).toContain('spell-icon" title="Varrock teleport (Magic 25) · teleport · ×1"');
  expect(html).toContain('spell-locked" title="Wind Strike (Magic 1)');
+ expect(html).toContain("magicon.png');background-position:-240px -20px");
+ expect(html).toContain("magicoff2.png');background-position:-40px 0px");
+ expect(html).not.toContain('spell-fire-wave.png');
+ expect(html).not.toContain('spell-entangle.png');
  expect(html).not.toContain('Ice Barrage');
+});
+
+test('Prayer tab highlights active prayers from progressionContext without fabricating absent state',()=>{
+ const start=shell.indexOf("    if(selectedTab==='prayer'){"),end=shell.indexOf("    if(selectedTab==='magic'){");
+ const code=shell.slice(start,end);
+ const prayers=Array(15).fill(false);prayers[14]=true;prayers[8]=true;
+ const render=(bot:any)=>new Function('b','E','asset','level','wornBonuses','prayerLasts','dur','S',`const selectedTab='prayer';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>({level:45,currentLevel:45}),()=>[0,0,0,0,0,0,0,0,0,0,0,0,5],()=>100,()=>'1m',{world:{tickMs:600}});
+ const onHtml=render({name:'test',progressionContext:{prayers}});
+ expect(onHtml).toContain('prayer-icon active" title="Protect from Melee (level 43)');
+ expect(onHtml).toContain('prayer-icon active" title="Protect Item (level 25)');
+ expect(onHtml).toContain('Active: Protect Item, Protect from Melee');
+ const offHtml=render({name:'test'});
+ expect(offHtml).not.toContain('prayer-icon active');
+ expect(offHtml).not.toContain('Active:');
+});
+
+test('game tab CSS top row fits 5 tabs and weapon special costs match rev 289',()=>{
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('.game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(5,minmax(0,1fr))!important}');
+ expect(css).toContain('@media(max-width:479px){.game-hud:not(.chat-hidden) .game-pvp-hud{bottom:481px}');
+ const combatCode=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const harness=new Function('asset','fetch','E','window','weaponSpeedData',`${combatCode};return {equipStats,set:(i)=>{itemBonusData=i;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{},{'Magic shortbow':4,'Magic longbow':6,'Rune claws':4,'Rune thrownaxe':5});
+ harness.set({'Magic shortbow':[0,0,0,0,69,0,0,0,0,0,0,0,0],'Magic longbow':[0,0,0,0,69,0,0,0,0,0,0,0,0],'Rune claws':[26,39,0,0,0,0,19,0,0,0,39,0,0],'Rune thrownaxe':[0,0,0,0,32,0,0,0,0,0,0,0,0]});
+ const msb=harness.equipStats({skills:[{name:'Ranged',level:70,currentLevel:70}],equipment:[{slot:3,name:'Magic shortbow'}]});
+ expect(msb).toContain('Magic shortbow (35%)');
+ expect(msb).toContain('4 ticks (2.4s)');
+ expect(harness.equipStats({skills:[{name:'Ranged',level:70,currentLevel:70}],equipment:[{slot:3,name:'Magic longbow'}]})).toContain('Magic longbow (35%)');
+ expect(harness.equipStats({skills:[{name:'Strength',level:70,currentLevel:70}],equipment:[{slot:3,name:'Rune claws'}]})).toContain('Rune claws (25%)');
+ expect(harness.equipStats({skills:[{name:'Ranged',level:70,currentLevel:70}],equipment:[{slot:3,name:'Rune thrownaxe'}]})).toContain('Rune thrownaxe (10%)');
+});
+
+test('Gear Advisor handles rev 289 ID tiers, quests, tools, operator privacy and unobserved equipment',()=>{
+ const block=shell.slice(shell.indexOf('  // Gear & Upgrade Advisor:'),shell.indexOf('  new MutationObserver(followTitle)'));
+ const setup=(bot:any,owner=true)=>{
+  const els=new Map<string,any>([['#client-diag',{hidden:true,innerHTML:''}]]);
+  const win:any={atlasOperator:()=>owner};
+  const env={
+   account:()=>bot,S:{bots:[bot],roster:[],world:{tickMs:600},capacity:{fresh:true,active:15,cap:25,freeGB:6.8,headroomGB:2.8,queued:0},diagnostics:{failLoops:[],leases:[]}},
+   E:String,safeName:(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),icon:(i:any)=>`[${i?.id??i?.name}]`,asset:String,age:()=>'5s',
+   equipmentValue:(t:any,i:any)=>t?.[i?.id]??t?.[i?.name],itemBonusData:{1333:[7,45,-2,0,0,0,1,0,0,0,44,0,0],1135:[0,0,0,0,15,0,32,0,0,0,0,0,0]},weaponSpeedData:{1333:4},
+   wornBonuses:(b:any)=>b.equipmentObserved===false?null:[7,45,-2,0,15,0,33,0,0,0,44,0,0],curLevel:()=>70,maxHit:(lv:number,s:number,st:number)=>Math.floor(((lv+8+st)*(s+64)+320)/640),
+   bestSpell:()=>null,wildLevel:()=>0,inMulti:()=>false,pvpState:()=>null,hud:{querySelector:()=>null},$:(s:string)=>els.get(s),
+   window:win,fetch:undefined,plugin:{querySelector:()=>null},document:{},
+  };
+  return {els,win,...new Function(...Object.keys(env),`${block};return {gearAdvisorFor,gearAdvisorPanel,equipAdvisorHtml,titleDiag};`)(...Object.values(env))};
+ };
+ // Green d'hide body (1135) must recommend Black d'hide body (2503) at Ranged 70 / Def 40 on body-ranged without mixing melee plate, and melee Rune body/legs stay separated on body-melee / legs-melee.
+ const rangerBot={name:'Ranger1',combat:80,skills:[{name:'Attack',level:60},{name:'Strength',level:70},{name:'Defence',level:40},{name:'Ranged',level:70},{name:'Magic',level:50},{name:'Mining',level:41}],
+  equipment:[{slot:3,id:1333,name:'Rune scimitar'},{slot:4,id:1135,name:'Dragonhide body'}],
+  inventory:[{id:1269,name:'Steel pickaxe',count:1}],bank:[{id:1305,name:'Dragon longsword',count:1}],
+  quests:[{name:'Lost City',state:'not started'},{name:'Dragon Slayer',state:'complete'}]};
+ const ownerAdvice=setup(rangerBot,true).gearAdvisorFor(rangerBot);
+ expect(ownerAdvice.rows.find((r:any)=>r.id==='body-ranged')).toMatchObject({status:'ready',target:{id:2503,name:'Dragonhide body (Black)'}});
+ expect(ownerAdvice.rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'locked',target:{id:1231,name:'Dragon dagger(p)'},reason:'Needs Lost City'});
+ expect(ownerAdvice.rows.find((r:any)=>r.id==='pickaxe')).toMatchObject({status:'ready',target:{id:1275,name:'Rune pickaxe'}});
+ const meleeBot={name:'Melee1',combat:85,skills:[{name:'Attack',level:60},{name:'Strength',level:70},{name:'Defence',level:40},{name:'Ranged',level:50},{name:'Magic',level:1}],
+  equipment:[{slot:4,id:1127,name:'Rune platebody'},{slot:7,id:1079,name:'Rune platelegs'}],
+  inventory:[],bank:[],quests:[{name:'Dragon Slayer',state:'complete'}]};
+ const meleeAdvice=setup(meleeBot,true).gearAdvisorFor(meleeBot);
+ expect(meleeAdvice.rows.find((r:any)=>r.id==='body-melee')).toMatchObject({status:'locked',target:{id:3140,name:'Dragon chainbody'},reason:'Needs Defence 60'});
+ expect(meleeAdvice.rows.find((r:any)=>r.id==='legs-melee')).toMatchObject({status:'locked',target:{id:4087,name:'Dragon platelegs'},reason:'Needs Defence 60'});
+ const rangeBot={...meleeBot,equipment:[{slot:4,id:2499,name:'Dragonhide body'},{slot:7,id:1099,name:'Dragonhide chaps'}]};
+ const rangeAdvice=setup(rangeBot,true).gearAdvisorFor(rangeBot);
+ expect(rangeAdvice.rows.find((r:any)=>r.id==='body-ranged')).toMatchObject({status:'locked',target:{id:2501,name:'Dragonhide body (Red)'},reason:'Needs Ranged 60'});
+ expect(rangeAdvice.rows.find((r:any)=>r.id==='legs-ranged')).toMatchObject({status:'ready',target:{id:2493,name:'Dragonhide chaps (Blue)'}});
+ // Populated /api/gear-catalog with empty requires.skills:{} must NEVER wipe tier.skills; Dragon halberd keeps Strength 30.
+ const harness=setup(rangerBot,true);
+ harness.win.atlasGearCatalog([
+  {id:3751,requires:{skills:{},quest:null}},
+  {id:2417,requires:{skills:{},quest:null}},
+  {id:892,requires:{skills:{},quest:null}},
+  {id:1275,requires:{skills:{attack:40},quest:null}},
+  {id:3204,requires:{skills:{attack:60,strength:30},quest:'Regicide'}},
+ ]);
+ const lvl1={name:'Noob',skills:[{name:'Attack',level:1},{name:'Strength',level:1},{name:'Defence',level:1},{name:'Ranged',level:1},{name:'Magic',level:1},{name:'Mining',level:41}],equipment:[],inventory:[],quests:[]};
+ const lvl1Adv=harness.gearAdvisorFor(lvl1);
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='helm')).toMatchObject({status:'ready',target:{id:1153,name:'Iron full helm'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='magic-weapon')).toMatchObject({status:'ready',target:{id:1387,name:'Staff of fire'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='ammo')).toMatchObject({status:'ready',target:{id:884,name:'Iron arrow'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='pickaxe')).toMatchObject({status:'ready',target:{id:1275,name:'Rune pickaxe'},reason:'Mining 41'});
+ const mid={...lvl1,skills:[{name:'Attack',level:60},{name:'Strength',level:25},{name:'Defence',level:40},{name:'Ranged',level:35},{name:'Magic',level:55}],equipment:[{slot:0,id:1163,name:'Rune full helm'},{slot:3,id:1434,name:'Dragon mace'},{slot:3,id:1409,name:'Staff of iban'},{slot:13,id:890,name:'Adamant arrow'}],quests:[{name:'Lost City',state:'complete'},{name:"Heroes' Quest",state:'complete'},{name:'Regicide',state:'complete'},{name:'The Fremennik Trials',state:'complete'}]};
+ const midAdv=harness.gearAdvisorFor(mid);
+ expect(midAdv.rows.find((r:any)=>r.id==='helm')).toMatchObject({status:'locked',target:{id:3751,name:'Berserker helm'},reason:'Needs Defence 45'});
+ expect(midAdv.rows.find((r:any)=>r.id==='magic-weapon')).toMatchObject({status:'locked',target:{id:2417,name:'Staff of zamorak'},reason:'Needs Magic 60'});
+ expect(midAdv.rows.find((r:any)=>r.id==='ammo')).toMatchObject({status:'locked',target:{id:892,name:'Rune arrow'},reason:'Needs Ranged 40'});
+ expect(midAdv.rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'locked',target:{id:3204,name:'Dragon halberd'},reason:'Needs Strength 30'});
+ // Completing Lost City reveals banked Dragon longsword to operator as 'owned', but hides bank from public viewer.
+ const completed={...rangerBot,quests:[{name:'Lost City',state:'complete'},{name:'Dragon Slayer',state:'complete'}]};
+ expect(setup(completed,true).gearAdvisorFor(completed).rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'owned',target:{id:1305},reason:'Held in bank'});
+ expect(setup(completed,false).gearAdvisorFor(completed).rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'ready',target:{id:1305}});
+ // Unobserved equipment must never leak worn gear into Gear Advisor.
+ const hidden={...completed,equipmentObserved:false};
+ const panel=setup(hidden,true).gearAdvisorPanel();
+ expect(panel).toContain('Equipment is not reported for this account');
+});
+
+test('Wilderness & PvP HUD displays skull bracket, multiway crossed swords, sa_energy bar, overhead prayer, timers and title diagnostics',()=>{
+ const block=shell.slice(shell.indexOf('  // Gear & Upgrade Advisor:'),shell.indexOf('  new MutationObserver(followTitle)'));
+ const wildHelpers=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function pvpState('));
+ const multiLines=[[3064,3872,3064,3888,0],[3072,3872,3072,3888,0],[3064,3872,3072,3872,0],[3064,3888,3072,3888,0]];
+ const run=(bot:any,owner=true,diag={failLoops:[{name:'⟦MAIN⟧',goal:'pk',error:'no food',runs:4,medianSec:9,lastAt:1000}],leases:[{side:'cloud',host:'c1',pid:12,at:100,ageMs:1_200_000,stale:true}]})=>{
+  const pvpEl:any={hidden:true,innerHTML:'',_h:''},diagEl:any={hidden:true,innerHTML:'',_h:''};
+  const env={
+   account:()=>bot,S:{bots:[bot],roster:[['Enemy',3070,3880,0,100]],world:{tickMs:600},capacity:{fresh:true,active:14,cap:25,freeGB:6.8,headroomGB:2.8,queued:1},diagnostics:diag},
+   E:String,safeName:(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),icon:String,asset:String,age:(ms:number)=>Math.round(ms/60000)+'m',ago:(ms:number)=>Math.round(ms/60000)+'m',multiLines,
+   equipmentValue:()=>null,itemBonusData:{},weaponSpeedData:{},wornBonuses:()=>null,curLevel:()=>70,maxHit:()=>10,bestSpell:()=>null,
+   pvpState:(b:any)=>({wild:46,multi:true,threats:[{name:'Enemy',combat:100}]}),hud:{querySelector:(s:string)=>s==='.game-pvp-hud'?pvpEl:null},$:(s:string)=>s==='#client-diag'?diagEl:null,
+   window:{atlasOperator:()=>owner},fetch:undefined,
+  };
+  const fn=new Function(...Object.keys(env),`${wildHelpers}${block};pvpHud();titleDiag();return {pvpHudData};`)(...Object.values(env));
+  return {pvpHtml:pvpEl.innerHTML,pvpHidden:pvpEl.hidden,diagHtml:diagEl.innerHTML,diagHidden:diagEl.hidden,data:fn.pvpHudData(bot,Date.now())};
+ };
+ const prayers=Array(15).fill(false);prayers[14]=true;
+ const active=run({name:'Tribrid',inWorld:true,combat:90,pos:{x:3070,z:3880,level:0},saEnergy:550,specialActive:true,equipment:[{slot:3,name:'Dragon dagger(p)'}],progressionContext:{prayers},freezeTicks:10,teleblockTicks:100,antifireTicks:50,antipoisonTicks:30,action:'stun'});
+ expect(active.pvpHidden).toBe(false);
+ expect(active.pvpHtml).toContain('Level: 46');
+ expect(active.pvpHtml).toContain('Lvl 44-126');
+ expect(active.pvpHtml).toContain('class="pvp-multi"');
+ expect(active.pvpHtml).toContain('1 in range');
+ expect(active.pvpHtml).toContain('Special Attack: 55%');
+ expect(active.pvpHtml).toContain('width:55%');
+ expect(active.pvpHtml).toContain('prayer-protect-from-melee.png');
+ expect(active.pvpHtml).toContain('STUNNED');
+ expect(active.pvpHtml).toContain('FROZEN 6s');
+ expect(active.pvpHtml).toContain('TB 60s');
+ expect(active.pvpHtml).toContain('ANTIFIRE 30s');
+ expect(active.pvpHtml).toContain('ANTIPOISON 18s');
+ // Operator titlebar shows capacity + unused slots, RAM headroom, masked loop alerts, and stale leases.
+ expect(active.diagHidden).toBe(false);
+ expect(active.diagHtml).toContain('14/25');
+ expect(active.diagHtml).toContain('(11 free)');
+ expect(active.diagHtml).toContain('RAM <b>+2.8G</b>');
+ expect(active.diagHtml).toContain('<b>1</b> loop');
+ expect(active.diagHtml).toContain('Main · reserved');
+ expect(active.diagHtml).toContain('<b>1</b> stale lease');
+ // Unreported sa_energy and prayers stay n/r rather than fabricating values; outside multiway shows Single; spectator hides title diagnostics.
+ const minimal=run({name:'Tribrid',inWorld:true,combat:90,pos:{x:3090,z:3536,level:0},equipment:[{slot:3,name:'Magic shortbow'}]},false);
+ expect(minimal.pvpHtml).toContain('class="pvp-single"');
+ expect(minimal.pvpHtml).toContain('Magic shortbow (35% spec · n/r)');
+ expect(minimal.pvpHtml).toContain('Overhead: n/r');
+ expect(minimal.pvpHtml).toContain('Timers: stun obs · freeze n/r');
+ expect(minimal.diagHidden).toBe(true);
 });
