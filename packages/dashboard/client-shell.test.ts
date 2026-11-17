@@ -1746,8 +1746,9 @@ test('Inventory Tags: food, potions, teleports and runes get their group class; 
  const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Equipment Stats (the game's"));
  const hl:any={invTags:true};
  const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
- expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
-  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-rune','']);
+ expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Enchanted lyre','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
+  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-tele',' tag-rune','']);
+ expect(invTag({name:'Skills necklace',count:1})).toBe('');expect(invTag({name:'Combat bracelet',count:1})).toBe('');
  hl.invTags=false;expect(invTag({name:'Shark'})).toBe('');expect(invTag(null)).toBe('');
 });
 test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
@@ -2093,6 +2094,15 @@ test('wildernessWatchBox highlights rivals within attack range of our Wilderness
  expect(wpHtml).toContain('lvl 46 · multi');
  expect(wpHtml).toContain('Kept on death');
  expect(wpHtml).toContain('Rune scimitar, Shark');
+ const hsCode=shell.slice(shell.indexOf('  function wildernessHotspotsBox()'),shell.indexOf('  function wildernessWatchBox()'));
+ const hsHtml=new Function('S','E','safeName','window',`${hsCode};return wildernessHotspotsBox();`)(
+  {
+   wildernessOverlay:{bands:[{label:'Lvl 1–20 (Tele)',colour:'#86c862',note:'Tele'},{label:'Lvl 21–30 (Glory)',colour:'#e8a844',note:'Glory'},{label:'Lvl 31+ (Deep Wild)',colour:'#e05347',note:'Blocked'}],hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,note:'Ditch'},{label:"Rogue's Castle",x:3285,z:3930,wild:52,note:'Castle'}],resolveTarget:(b:any)=>b.target||null},
+   bots:[{name:'⟦MAIN⟧',inWorld:true,pos:{x:3094,z:3520,level:0},target:{x:3098,z:3955,label:'Mage Bank'}}],
+  },
+  String,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),{});
+ expect(hsHtml).toContain('Lvl 1–20 (Tele)');expect(hsHtml).toContain('Edgeville Ditch');expect(hsHtml).toContain("Rogue's Castle");
+ expect(hsHtml).toContain('Main · reserved');expect(hsHtml).toContain('Mage Bank (3098, 3955)');expect(hsHtml).not.toContain('Haggis');
 });
 
 test('dashboard skills list matches the 19 skills of 2004 rev 225',()=>{
@@ -2126,14 +2136,30 @@ test('Magic tab renders rev 289 spells, counts casts, and locks missing runes or
  const code=shell.slice(start,end);
  const runeCastsSrc=shell.slice(shell.indexOf('  function runeCasts('),shell.indexOf('  function bestSpell('));
  const spellbookData={spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']},combat:[['Wind Strike',1,2,[['Mind rune',1],["Air rune",1]],null,55],['Fire Wave',75,20,[['Blood rune',1],['Fire rune',7],['Air rune',5]],null,425],['Entangle',79,5,[['Nature rune',4],['Water rune',5],['Earth rune',5]],null,890]]};
- const bot={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:5},{name:'Law rune',count:2},{name:'Blood rune',count:2}]};
+ const bot={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:30},{name:'Cosmic rune',count:4},{name:'Unpowered orb',count:2},{name:'Water rune',count:15},{name:'Earth rune',count:15},{name:'Body rune',count:2},{name:'Soul rune',count:1},{name:'Law rune',count:1},{name:'Blood rune',count:2}]};
  const html=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>80,spellbookData,()=>'');
  expect(html).toContain('spell-icon" title="High Level Alchemy (Magic 55) · alch · ×10"');
  expect(html).toContain('spell-icon" title="Varrock teleport (Magic 25) · teleport · ×1"');
  expect(html).toContain('spell-locked" title="Wind Strike (Magic 1)');
+ expect(html).toContain('spell-icon" title="Confuse (Magic 3)');
+ expect(html).toContain('spell-icon" title="Bind (Magic 20)');
+ expect(html).toContain('spell-icon" title="Charge Air Orb (Magic 66) · charge orb · ×1"');
+ expect(html).toContain("magicon.png');background-position:-180px -20px");
+ expect(html).toContain('spell-enchant-level-1-jewellery.png');
+ expect(html).toContain('spell-enchant-level-5-jewellery.png');
+ expect(html).toContain("magicon.png');background-position:-440px -20px");
+ expect(html).toContain("magicon.png');background-position:-480px -20px");
+ expect(html).toContain('spell-crumble-undead.png');
  expect(html).toContain("magicon.png');background-position:-240px -20px");
- expect(html).toContain("magicoff2.png');background-position:-40px 0px");
+ expect(html).toContain("magicon2.png');background-position:-40px 0px");
+ const lockedHtml=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)({...bot,inventory:[]},String,(f:string)=>f,()=>75,spellbookData,()=>'');
+ expect(lockedHtml).toContain("magicoff2.png');background-position:-40px 0px");
+ expect(lockedHtml).toContain("magicoff.png');background-position:-180px -20px");
  expect(html).not.toContain('spell-fire-wave.png');
+ expect(html).not.toContain('spell-charge-air-orb.png');
+ expect(html).not.toContain('spell-vulnerability.png');
+ expect(html).not.toContain('spell-enfeeble.png');
+ expect(html).not.toContain('spell-stun.png');
  expect(html).not.toContain('spell-entangle.png');
  expect(html).not.toContain('Ice Barrage');
 });
@@ -2278,4 +2304,99 @@ test('Wilderness & PvP HUD displays skull bracket, multiway crossed swords, sa_e
  expect(minimal.pvpHtml).toContain('Overhead: n/r');
  expect(minimal.pvpHtml).toContain('Timers: stun obs · freeze n/r');
  expect(minimal.diagHidden).toBe(true);
+});
+
+test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall edge RAF cleans up on release',()=>{
+ const code=shell.slice(shell.indexOf('  function minimap(){'),shell.indexOf('  // A click on the minimap'));
+ const account={name:'Roamer',pos:{x:3094,z:3525,level:0},target:{x:3094,z:3532,label:'Edgeville bank gate'}};
+ const hits:any[]=[],strokes:string[]=[];
+ const g:any=new Proxy({stroke(){strokes.push(String(g.strokeStyle));}},{get:(o:any,k)=>k in o?o[k]:()=>{}});
+ const canvas={width:146,height:151,getContext:()=>g};
+ const wildOverlay={hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,band:'tele'},{label:'Mage Bank / Arena',x:3098,z:3955,wild:55,band:'deep'}],resolveTarget:(b:any)=>b.target||null};
+ const env:any={
+  S:{bots:[account],roster:[],map:{x0:2900,z0:3500,w:500,h:500,scale:1}},
+  hud:{querySelector:(q:string)=>q.endsWith('canvas')?canvas:null},account:()=>account,
+  mapWorld:()=>({bots:[account],roster:[]}),window:{atlasWildOverlay:wildOverlay},mode:'2d',st:()=>['on'],safeName:String,
+  hl:{wildOverlay:true},clipLine:(x0:number,z0:number,x1:number,z1:number)=>([x0,z0,x1,z1]),
+ };
+ const res=new Function(...Object.keys(env),`let miniView;${code};minimap();return minimap.hits;`)(...Object.values(env));
+ for(const h of res)hits.push(h[2]);
+ expect(hits).toContain('Edgeville Ditch (Wildy 1)');
+ expect(hits).toContain('Target: Edgeville bank gate');
+ expect(strokes).toContain('#86c862');
+ expect(strokes).toContain('#e8a844');
+ expect(strokes).toContain('#e05347');
+ expect(strokes).toContain('#58d5ff');
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('max-width:calc(50vw - 180px)');
+ expect(css).toContain('overflow-x:hidden');
+ expect(shell).toContain('cancelAnimationFrame(d.wait)');
+ const ovCode=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const liveBot={name:'LiveRoam',inWorld:true,live:{x:3094,z:3522,level:0},target:{x:3094,z:3540,label:'Ditch target'}};
+ const ov=new Function('S','account','asset','fetch','localStorage','window','wildLevel','pvpState','recap','respawnRows','VIEWER','$','nf','location',`${ovCode};return overlayMessage();`)(
+  {economy:{itemValues:{}},rivals:[]},()=>liveBot,(n:string)=>n,()=>new Promise(()=>{}),{getItem:()=>null,setItem:()=>{}},{atlasCam3d:{x:3094,z:3530,at:Date.now()},atlasWildOverlay:{resolveTarget:(b:any)=>b.target||null}},()=>1,()=>null,{state:'idle'},()=>[],{state:'loading'},()=>null,String,{origin:''});
+ expect(ov.lines).toContainEqual({x0:3094,z0:3522,x1:3094,z1:3540,l:0,colour:'#58d5ff',label:'Ditch target'});
+});
+
+test('HUD layering clears desktop opponent/XP globes and infoboxes track b.live with safeName masking',()=>{
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('@media(min-width:741px){.game-hud:has(.xp-globes:not(:empty)) .game-opponent{top:54px}}');
+ expect(css).toMatch(/\.game-places\{[^}]*z-index:44/);
+ expect(css).toMatch(/\.game-bank\{[^}]*z-index:46/);
+ expect(css).toContain('.xp-row:focus-visible');
+
+ const code=shell.slice(shell.indexOf('  function infoboxes(){'),shell.indexOf('  // Board progress'));
+ const el:any={innerHTML:''};
+ let curBot:any={name:'Scout',inWorld:true,live:{x:3100,z:3550,level:0,seen:Date.now()},skills:[],combat:80};
+ const threat={name:'⟦MAIN⟧',combat:81,dist:4};
+ const run=new Function('S','account','hud','E','asset','skillFile','dur','age','realSkill','safeName','wildLevel','pvpState',code+';return infoboxes;')(
+  {bots:[curBot,{name:'Buddy',inWorld:true}],roster:[['Scout',3100,3550,0,80],['Buddy',3104,3552,0,70],['Outsider',3110,3545,0,75]]},
+  ()=>curBot,
+  {querySelector:()=>el},
+  String,(n:string)=>n,(n:string)=>n.toLowerCase(),String,String,()=>true,
+  (n:string)=>n==='⟦MAIN⟧'?'Main · reserved':n,
+  ()=>3,
+  ()=>({wild:3,multi:false,threats:[threat]}),
+ );
+ run();
+ expect(el.innerHTML).toContain('2 players within 15 tiles · 1 ours');
+ curBot={...curBot,pos:{x:3100,z:3550,level:0}};
+ run();
+ expect(el.innerHTML).toContain('Main · reserved (81, 4 tiles)');
+ expect(el.innerHTML).not.toContain('⟦MAIN⟧');
+});
+
+test('XP Tracker archives positive session XP/EHP on reset across account keys and clears history on demand',()=>{
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ let now=1_000,stored='{}',bot:any={name:'MainActual',started:10,goalSkill:'Mining',goalLevel:99,xpPerHour:0,timeline:'x',skills:[{name:'Mining',xp:1000}]};
+ const nodes:any={},panel:any={querySelector:(s:string)=>nodes[s]??={innerHTML:'',textContent:''},contains:()=>false};
+ const xpCode=shell.slice(shell.indexOf("  const XP_STORE='atlas-xp-baselines';"),shell.indexOf('  // Hiscore plugin'));
+ const actions=shell.slice(shell.indexOf("if(e.target.closest('[data-xp-reset]'))"),shell.indexOf("if(e.target.closest('[data-xp-pause]'))"));
+ const env:any={
+  body:{querySelector:()=>panel},account:()=>bot,sel:'StaleSel',S:{bots:[],world:{tickMs:400}},
+  window:{atlasXp:X,atlasOperator:()=>true},Date:{now:()=>now},
+  localStorage:{getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v;}},
+  document:{activeElement:null},put:(el:any,h:string)=>{el.innerHTML=h;},
+  E:String,safeName:(n:string)=>n==='MainActual'?'Main':n,nf:String,dur:(ms:number)=>Math.round(ms/1000)+'s',
+  efficiencyBox:()=>'',calcBox:()=>'',asset:String,skillFile:String,
+ };
+ const api=new Function(...Object.keys(env),`let calcSkill=null,calcTarget=null,calcAccount=null,xpHideMaxed=false,xpSort='rate';${xpCode};return {refreshXp,click:(attr)=>((e)=>{${actions}})({target:{closest:(s)=>s==='['+attr+']'?{}:null}})};`)(...Object.values(env));
+
+ api.refreshXp();
+ now+=60_000;
+ bot={...bot,skills:[{name:'Mining',xp:1000+970}]};
+ api.refreshXp();
+ api.click('data-xp-reset');
+
+ expect(nodes['.xp-history'].innerHTML).toContain('Recent sessions');
+ expect(nodes['.xp-history'].innerHTML).toContain('+970 xp');
+ expect(nodes['.xp-history'].innerHTML).toContain('Mining +970');
+ const parsed=JSON.parse(stored);
+ expect(parsed.MainActual.at).toBe(61_000);
+ expect(parsed.__history.Main).toBeDefined();
+ expect(JSON.stringify(parsed.__history)).not.toContain('MainActual');
+
+ api.click('data-xp-clear-history');
+ expect(nodes['.xp-history'].innerHTML).toBe('');
+ expect(JSON.parse(stored).__history.Main).toBeUndefined();
 });

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView, valueBoardRows, wildernessInfo, wildernessView } from './world-view';
+import { botPathOverlays, contentionView, farmsView, hiscoreRows, lookupView, overtakeView, resolveBotDestination, rivalsView, rosterView, valueBoardRows, wildernessBandFor, wildernessInfo, wildernessOverlayData, wildernessView, WILDERNESS_BANDS, WILDERNESS_HOTSPOTS } from './world-view';
 
 const now = 1_000_000;
 const roster = new Map([
@@ -168,4 +168,37 @@ test('value boards: rank, name and exact value per row; only the first table (Ru
     expect(valueBoardRows('<table>' + outfit + '</table>')).toEqual([{ rank: 1, name: 'soko', value: 1366450, text: '1366K' }, { rank: 2, name: 'brotha', value: 1149713, text: '1149K' }]);
     const runite = row(1, 'xulvexi', '<td align="right" class="yellow">2,463</td>') + row(2, 'goo001', '<td align="right" class="yellow">1,948</td>') + row(1, 'ukwih8pbm', '<td align="right" class="yellow">338</td>');
     expect(valueBoardRows(runite).map(r => [r.rank, r.name, r.value])).toEqual([[1, 'xulvexi', 2463], [2, 'goo001', 1948]]);
+});
+
+test('wilderness danger bands, rev-289 hotspots and bot pathing overlays obey boundaries and main-account hiding', () => {
+    expect(WILDERNESS_BANDS.map(b => [b.id, b.minWild, b.maxWild, b.zMin, b.zMax])).toEqual([
+        ['tele', 1, 20, 3520, 3680],
+        ['glory', 21, 30, 3680, 3760],
+        ['deep', 31, 56, 3760, 3968],
+    ]);
+    expect(WILDERNESS_HOTSPOTS.map(h => h.id)).toEqual([
+        'edgeville-ditch', 'chaos-temple', 'green-dragons', 'lava-maze', 'rogues-castle', 'mage-bank',
+    ]);
+    for (const h of WILDERNESS_HOTSPOTS) expect(wildernessInfo(h).wild).toBe(h.wild);
+    expect(wildernessBandFor({ x: 3094, z: 3679, level: 0 })?.id).toBe('tele');
+    expect(wildernessBandFor({ x: 3094, z: 3680, level: 0 })?.id).toBe('glory');
+    expect(wildernessBandFor({ x: 3094, z: 3759, level: 0 })?.id).toBe('glory');
+    expect(wildernessBandFor({ x: 3094, z: 3760, level: 0 })?.id).toBe('deep');
+    expect(wildernessBandFor({ x: 3222, z: 3222, level: 0 })).toBeNull();
+
+    expect(resolveBotDestination({ target: { x: 3067, z: 3856, level: 0, label: 'Lava Maze' } })).toEqual({ x: 3067, z: 3856, level: 0, label: 'Lava Maze' });
+    expect(resolveBotDestination({ spot: 'shop:aubury' })).toEqual({ x: 3253, z: 3402, level: 0, label: 'shop:aubury' });
+    expect(resolveBotDestination({ goal: 'Green Dragons hunt', phase: 'patrol' })).toEqual({ x: 3092, z: 3810, level: 0, label: 'Green Dragons' });
+
+    const bots = [
+        { name: 'Haggis', pos: { x: 3094, z: 3490, level: 0 }, target: { x: 3236, z: 3610, label: 'Chaos Temple' } },
+        { name: 'Roamer1', pos: { x: 3094, z: 3530, level: 0 }, phase: 'heading to Mage Bank' },
+        { name: 'PracticeBot', practice: true, pos: { x: 3094, z: 3530, level: 0 }, target: { x: 3067, z: 3856 } },
+    ];
+    expect(botPathOverlays(bots).map(p => [p.name, p.band, p.wild, p.label])).toEqual([
+        ['main', 'tele', 12, 'Chaos Temple'],
+        ['Roamer1', 'deep', 55, 'Mage Bank / Arena'],
+    ]);
+    expect(botPathOverlays(bots, { publicView: true }).map(p => p.name)).toEqual(['Roamer1']);
+    expect(wildernessOverlayData().hotspots).toHaveLength(6);
 });

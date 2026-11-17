@@ -95,3 +95,85 @@ test('tick efficiency counts each kind of tick and names the biggest waste',()=>
  expect(xp.efficiency('')).toBeNull();expect(xp.efficiency(undefined)).toBeNull();
  expect(xp.efficiency('xxxx').waste).toBeNull();
 });
+
+test('rev 289 EHP rates and session/remaining calculations exclude post-2004 skills and adapt to server tickMs', () => {
+ expect(Object.keys(xp.EHP_XP_PER_TICK)).toHaveLength(19);
+ expect(xp.ehpRate('Slayer')).toBeNull();
+ expect(xp.ehpRate('Hunter')).toBeNull();
+ expect(xp.ehpRate('Overall')).toBeNull();
+ expect(xp.ehpRate('Mining', 400)).toBeCloseTo(97 * 9000, 2);
+ expect(xp.ehpRate('Mining', 600)).toBeCloseTo(97 * 6000, 2);
+ expect(xp.ehpHours('Agility', 196 * 9000, 400)).toBeCloseTo(1, 5);
+ const rem = xp.remainingEhp('Mining', 0, 99, 400);
+ expect(rem.xpLeft).toBe(xp.xpForLevel(99));
+ expect(rem.ehpHours).toBeCloseTo(xp.xpForLevel(99) / (97 * 9000), 5);
+ const sess = xp.sessionEhp([
+  { skill: 'Mining', gained: 97 * 4500, rate: 97 * 9000 },
+  { skill: 'Woodcutting', gained: 3759.6 * 2250, rate: 3759.6 * 4500 },
+ ], 400);
+ expect(sess.gainedEhp).toBeCloseTo(0.75, 4);
+ expect(sess.ehpPerHour).toBeCloseTo(1.5, 4);
+});
+
+test('supplyBillProgress tracks fleet stock fulfillment against route bills while hiding secret and unverified accounts', () => {
+ const supplies = [
+  { item: 'Dragon bones', itemId: 536, count: 100 },
+  { item: 'Shark', itemId: 385, count: 50 },
+ ];
+ const bots = [
+  { name: 'Haggis', bank: [{ id: 536, name: 'Dragon bones', count: 500 }], inventory: [] },
+  { name: 'HelperA', bank: [{ id: 537, baseId: 536, name: 'Dragon bones', count: 40 }, { id: 385, name: 'Shark', count: 50 }], inventory: [{ id: 536, name: 'Dragon bones', count: 10 }, { id: 385, name: 'Shark', count: 0 }] },
+  { name: 'HelperB', equipmentObserved: false, equipment: [{ id: 536, name: 'Dragon bones', count: 5 }], inventory: [{ id: 536, name: 'Dragon bones', count: 0 }, { id: 536, name: 'Dragon bones', count: -3 }], bank: [] },
+  { name: 'HelperC', bank: [], inventory: [], equipment: [{ id: 385, name: 'Shark' }] },
+  { name: 'TestLab', practice: true, bank: [{ id: 536, name: 'Dragon bones', count: 999 }], inventory: [] },
+ ];
+ const b1 = xp.supplyBillProgress(supplies, bots, { batches: 1, secretName: 'Haggis' });
+ expect(b1.batches).toBe(1);
+ expect(b1.fulfilledCount).toBe(1);
+ expect(b1.shortageCount).toBe(1);
+ expect(b1.items.map((x: any) => [x.item, x.need, x.have, x.short])).toEqual([
+  ['Dragon bones', 100, 50, 50],
+  ['Shark', 50, 51, 0],
+ ]);
+ const bill = xp.supplyBillProgress(supplies, bots, { batches: 2, secretName: 'Haggis' });
+ expect(bill.batches).toBe(2);
+ expect(bill.fulfilledCount).toBe(0);
+ expect(bill.shortageCount).toBe(2);
+ expect(bill.items.map((x: any) => [x.item, x.need, x.have, x.short])).toEqual([
+  ['Dragon bones', 200, 50, 150],
+  ['Shark', 100, 51, 49],
+ ]);
+ expect(bill.completionPct).toBeCloseTo((50 + 51) * 100 / 300, 3);
+ expect(JSON.stringify(bill)).not.toContain('Haggis');
+ expect(JSON.stringify(bill)).not.toContain('TestLab');
+});
+
+test('archiveSession and recordSessionHistory snapshot positive gains and cap deduplicated history entries', () => {
+ const bot = { name: 'MinerOne', started: 100, skills: [{ name: 'Mining', xp: 1000 }] };
+ const store: any = {};
+ xp.baseline(store, bot, 1_000);
+ expect(xp.archiveSession(store, bot, 61_000)).toBeNull();
+ const gainedBot = { ...bot, skills: [{ name: 'Mining', xp: 1000 + 97 * 900 }] };
+ const entry = xp.archiveSession(store, gainedBot, 1_801_000, { tickMs: 400 });
+ expect(entry).toMatchObject({
+  started: 100,
+  fromAt: 1_000,
+  at: 1_801_000,
+  elapsedMs: 1_800_000,
+  gainedXp: 87_300,
+  xpPerHour: 174_600,
+  skills: [{ skill: 'Mining', gained: 87_300 }],
+ });
+ expect(entry.gainedEhp).toBeCloseTo(0.1, 4);
+ const pausedStore: any = { MinerOne: { started: 100, at: 1_000, xp: { Mining: 1000 }, paused: { at: 901_000, xp: { Mining: 5000 } } } };
+ const pausedEntry = xp.archiveSession(pausedStore, gainedBot, 1_801_000, { tickMs: 400 });
+ expect(pausedEntry.gainedXp).toBe(4000);
+ expect(pausedEntry.elapsedMs).toBe(900_000);
+
+ let hist = xp.recordSessionHistory(null, 'MinerOne', entry, 2);
+ hist = xp.recordSessionHistory(hist, 'MinerOne', entry, 2);
+ expect(hist.MinerOne.length).toBe(1);
+ hist = xp.recordSessionHistory(hist, 'MinerOne', { ...entry, at: 1_900_000, gainedXp: 90_000 }, 2);
+ hist = xp.recordSessionHistory(hist, 'MinerOne', { ...entry, at: 2_000_000, gainedXp: 95_000 }, 2);
+ expect(hist.MinerOne.map((h: any) => h.gainedXp)).toEqual([95_000, 90_000]);
+});

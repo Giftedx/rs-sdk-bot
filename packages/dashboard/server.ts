@@ -24,7 +24,7 @@ import {dashboardStatuses,fleetSidesView,healthObservation,localDisplayNames,rem
 import {buildItemPrices,expectedLootPrices,itemPrice,priceItemKey,projectItemPrices,type ItemPrices,type PriceCatalogItem,type PriceIdentity} from './item-prices';
 import {buildItemExamine,catalogueIconAliases,projectItemExamine} from './item-examine';
 import {createVaultItems,type VaultItem} from './vault-items';
-import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,wildernessView,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,wildernessOverlayData,wildernessView,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import {folderScan} from './folder-scan';
@@ -1218,6 +1218,7 @@ function buildState() {
         })(),
         prs: prRows,
         scoreboard:currentScoreboard, fleetSides:fleetSides(now),
+        wildernessOverlay: wildernessOverlayData(),
         diagnostics:fleetDiagnostics(now),
         icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };

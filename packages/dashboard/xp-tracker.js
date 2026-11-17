@@ -73,5 +73,166 @@
         const waste = Object.entries(counts).filter(([k]) => k !== 'xp' && k !== 'inventory').sort((a, b) => b[1] - a[1])[0];
         return { ticks: ticks.length, counts, shares, idle: shares.idle, work: shares.xp + shares.inventory, waste: waste[1] ? { kind: waste[0], share: pct(waste[1]) } : null };
     }
-    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, goalBar, total, combat, efficiency, TICK_KINDS };
+    // Rev 289 EHP rates in XP per game tick, calibrated from the planner board benchmarks and
+    // research/cooking-board.md across the 19 skills of 2004 rev 289 (never Slayer/Hunter/Farming/Construction).
+    const EHP_XP_PER_TICK = {
+        Attack: 185.3, Defence: 162.9, Strength: 185.3, Hitpoints: 61.4, Ranged: 309.4,
+        Prayer: 10344.8, Magic: 7384.9, Cooking: 343011, Woodcutting: 3759.6, Fletching: 266008.8,
+        Fishing: 2321.8, Firemaking: 19541.9, Crafting: 66843.2, Smithing: 13139.5, Mining: 97,
+        Herblore: 52985.5, Agility: 196, Thieving: 2112.9, Runecraft: 4379.8,
+    };
+    const ehpKey = skill => Object.keys(EHP_XP_PER_TICK).find(k => k.toLowerCase() === String(skill || '').trim().toLowerCase()) || null;
+    function ehpRate(skill, tickMs = 400) {
+        const key = ehpKey(skill), ms = Number(tickMs);
+        if (!key || !Number.isFinite(ms) || ms <= 0) return null;
+        return EHP_XP_PER_TICK[key] * (3_600_000 / ms);
+    }
+    function ehpHours(skill, xp, tickMs = 400) {
+        const rate = ehpRate(skill, tickMs), n = Number(xp);
+        if (rate == null || !Number.isFinite(n) || n < 0) return null;
+        return n / rate;
+    }
+    function sessionEhp(rowList, tickMs = 400) {
+        let gainedEhp = 0, ehpPerHour = 0;
+        const breakdown = [];
+        for (const r of rowList || []) {
+            const rate = ehpRate(r?.skill, tickMs);
+            if (!rate) continue;
+            const gained = Number(r.gained) > 0 ? r.gained / rate : 0;
+            const rateRatio = Number(r.rate) > 0 ? r.rate / rate : 0;
+            gainedEhp += gained;
+            ehpPerHour += rateRatio;
+            breakdown.push({ skill: r.skill, ehp: gained, ehpPerHour: rateRatio, pctOfEhp: rateRatio * 100 });
+        }
+        return { gainedEhp, ehpPerHour, breakdown };
+    }
+    function remainingEhp(skill, currentXp, targetLevel = 99, tickMs = 400) {
+        const rate = ehpRate(skill, tickMs), xp = Number(currentXp);
+        if (rate == null || !Number.isFinite(xp) || xp < 0) return null;
+        const t = Math.max(1, Math.min(99, Math.trunc(Number(targetLevel) || 99)));
+        const xpLeft = Math.max(0, xpForLevel(t) - xp);
+        return { target: t, xpLeft, ehpRate: rate, ehpHours: xpLeft / rate };
+    }
+    function supplyBillProgress(supplies, bots, options = {}) {
+        const batches = Math.max(1, Math.floor(Number(options.batches) || 1));
+        const secret = String(options.secretName || '⟦MAIN⟧').toLowerCase();
+        const query = String(options.query || '').trim().toLowerCase();
+        const includePractice = options.includePractice === true;
+        const normName = s => String(s || '').replace(/\s*\(noted\)\s*$/i, '').trim().toLowerCase();
+        const merged = new Map();
+        for (const raw of supplies || []) {
+            const name = String(raw?.item || raw?.name || '').trim();
+            const baseCount = Math.max(0, Math.floor(Number(raw?.count ?? raw?.need ?? 0)));
+            if (!name || baseCount <= 0) continue;
+            const id = Number.isSafeInteger(raw?.itemId) && raw.itemId >= 0 ? raw.itemId : null;
+            const key = id != null ? 'id:' + id : 'name:' + normName(name);
+            const cur = merged.get(key) || { item: name, itemId: id, baseCount: 0, consumer: raw?.consumer || null };
+            cur.baseCount += baseCount;
+            if (!cur.consumer && raw?.consumer) cur.consumer = raw.consumer;
+            merged.set(key, cur);
+        }
+        const safeAccount = name => String(name || '').toLowerCase() === secret || name === '⟦MAIN⟧' ? 'Main · reserved' : String(name || '');
+        const eligible = (bots || []).filter(b => {
+            if (!b || typeof b !== 'object') return false;
+            if (!includePractice && b.practice) return false;
+            if (b.reserved) return false;
+            const low = String(b.name || '').toLowerCase();
+            if (options.includeSecret !== true && (low === secret || b.name === '⟦MAIN⟧')) return false;
+            return true;
+        });
+        const items = [];
+        for (const req of merged.values()) {
+            const need = req.baseCount * batches, wantName = normName(req.item);
+            let bankCount = 0, packCount = 0, wornCount = 0;
+            const owners = new Map();
+            const matches = item => {
+                if (!item || typeof item !== 'object') return false;
+                if (req.itemId != null) {
+                    const iid = Object.hasOwn(item, 'baseId') && Number.isSafeInteger(item.baseId) && item.baseId >= 0 ? item.baseId : item.id;
+                    if (Number.isSafeInteger(iid) && iid >= 0) return iid === req.itemId;
+                }
+                return normName(item.name) === wantName;
+            };
+            const addOwner = (b, count, place) => {
+                if (count <= 0) return;
+                const label = safeAccount(b.name);
+                const row = owners.get(label) || { name: b.name === '⟦MAIN⟧' || String(b.name || '').toLowerCase() === secret ? label : b.name, label, count: 0, bank: 0, pack: 0, worn: 0, bankAt: b.bankAt ?? null };
+                row.count += count;
+                row[place] += count;
+                owners.set(label, row);
+            };
+            const itemCount = it => {
+                if (it.count == null) return 1;
+                const n = Number(it.count);
+                return Number.isFinite(n) && n > 0 ? n : 0;
+            };
+            for (const b of eligible) {
+                for (const it of Array.isArray(b.bank) ? b.bank : []) if (matches(it)) { const c = itemCount(it); bankCount += c; addOwner(b, c, 'bank'); }
+                for (const it of Array.isArray(b.inventory) ? b.inventory : []) if (matches(it)) { const c = itemCount(it); packCount += c; addOwner(b, c, 'pack'); }
+                if (b.equipmentObserved !== false) {
+                    for (const it of Array.isArray(b.equipment) ? b.equipment : []) if (matches(it)) { const c = itemCount(it); wornCount += c; addOwner(b, c, 'worn'); }
+                }
+            }
+            const have = bankCount + packCount + wornCount;
+            const short = Math.max(0, need - have);
+            const pct = need > 0 ? Math.min(100, have * 100 / need) : 100;
+            items.push({
+                item: req.item, itemId: req.itemId, consumer: req.consumer, need, have, short, pct,
+                bankCount, packCount, wornCount,
+                owners: [...owners.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+            });
+        }
+        items.sort((a, b) => (b.short > 0 ? 1 : 0) - (a.short > 0 ? 1 : 0) || a.pct - b.pct || b.short - a.short || a.item.localeCompare(b.item));
+        const filtered = query ? items.filter(it => it.item.toLowerCase().includes(query) || String(it.consumer || '').toLowerCase().includes(query)) : items;
+        const totalNeed = filtered.reduce((n, r) => n + r.need, 0);
+        const totalCappedHave = filtered.reduce((n, r) => n + Math.min(r.need, r.have), 0);
+        const totalShort = filtered.reduce((n, r) => n + r.short, 0);
+        const fulfilledCount = filtered.filter(r => r.short === 0).length;
+        return {
+            batches,
+            items: filtered,
+            itemCount: filtered.length,
+            fulfilledCount,
+            shortageCount: filtered.length - fulfilledCount,
+            totalNeed,
+            totalHave: filtered.reduce((n, r) => n + r.have, 0),
+            totalShort,
+            completionPct: totalNeed > 0 ? totalCappedHave * 100 / totalNeed : 100,
+        };
+    }
+    // Archive a completed or reset XP session summary without keeping mutable baseline state.
+    function archiveSession(store, bot, now, options = {}) {
+        const base = store && bot && bot.name ? store[bot.name] : null;
+        if (!base || !base.xp) return null;
+        const at = base.paused && base.paused.at != null ? base.paused.at : now;
+        const seen = base.paused && base.paused.xp
+            ? { ...bot, skills: (bot.skills || []).map(k => ({ ...k, xp: base.paused.xp[k.name] ?? k.xp })) }
+            : bot;
+        const rowList = rows(seen, { ...base, xp: { ...base.xp } }, at, null);
+        const gainedXp = total(rowList);
+        if (gainedXp <= 0 && !options.includeZero) return null;
+        const elapsedMs = Math.max(0, at - base.at);
+        const xpPerHour = elapsedMs >= 1000 ? Math.round(gainedXp / (elapsedMs / 3.6e6)) : 0;
+        const ehp = sessionEhp(rowList, options.tickMs || 400);
+        return {
+            started: base.started ?? null,
+            fromAt: base.at,
+            at,
+            elapsedMs,
+            gainedXp,
+            xpPerHour,
+            gainedEhp: ehp.gainedEhp,
+            ehpPerHour: ehp.ehpPerHour,
+            skills: rowList.slice(0, 3).map(r => ({ skill: r.skill, gained: r.gained, level: r.level })),
+        };
+    }
+    function recordSessionHistory(historyMap, accountKey, entry, maxEntries = 6) {
+        const out = historyMap && typeof historyMap === 'object' && !Array.isArray(historyMap) ? { ...historyMap } : {};
+        if (!accountKey || !entry) return out;
+        const prev = Array.isArray(out[accountKey]) ? out[accountKey] : [];
+        const deduped = prev.filter(h => !(h && h.fromAt === entry.fromAt && h.at === entry.at && h.gainedXp === entry.gainedXp));
+        out[accountKey] = [entry, ...deduped].slice(0, Math.max(1, maxEntries));
+        return out;
+    }
+    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, goalBar, total, combat, efficiency, TICK_KINDS, EHP_XP_PER_TICK, ehpRate, ehpHours, sessionEhp, remainingEhp, supplyBillProgress, archiveSession, recordSessionHistory };
 })(globalThis);

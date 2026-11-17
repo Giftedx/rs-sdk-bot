@@ -188,3 +188,133 @@ export function overtakeView(tops: ReadonlyMap<string, { rows: BoardRow[] }>, ac
     }
     return out;
 }
+
+export const WILDERNESS_BOUNDS = { xMin: 2944, xMax: 3392, zMin: 3520, zMax: 3968 } as const;
+
+export type WildernessBandId = 'tele' | 'glory' | 'deep';
+export type WildernessBand = {
+    id: WildernessBandId;
+    label: string;
+    range: string;
+    minWild: number;
+    maxWild: number;
+    zMin: number;
+    zMax: number;
+    colour: string;
+    fill: string;
+    note: string;
+};
+
+export const WILDERNESS_BANDS: readonly WildernessBand[] = [
+    { id: 'tele', label: 'Lvl 1–20 (Tele)', range: 'Lvl 1-20', minWild: 1, maxWild: 20, zMin: 3520, zMax: 3680, colour: '#86c862', fill: 'rgba(134, 200, 98, 0.09)', note: 'Standard teleports & enchanted jewellery' },
+    { id: 'glory', label: 'Lvl 21–30 (Glory)', range: 'Lvl 21-30', minWild: 21, maxWild: 30, zMin: 3680, zMax: 3760, colour: '#e8a844', fill: 'rgba(232, 168, 68, 0.12)', note: 'Amulet of glory & Ring of life only' },
+    { id: 'deep', label: 'Lvl 31+ (Deep Wild)', range: 'Lvl 31+', minWild: 31, maxWild: 56, zMin: 3760, zMax: 3968, colour: '#e05347', fill: 'rgba(224, 83, 71, 0.14)', note: 'Teleports blocked — run south or lever' },
+];
+
+export type WildernessHotspot = {
+    id: string;
+    label: string;
+    x: number;
+    z: number;
+    level: number;
+    wild: number;
+    band: WildernessBandId;
+    note: string;
+};
+
+export const WILDERNESS_HOTSPOTS: readonly WildernessHotspot[] = [
+    { id: 'edgeville-ditch', label: 'Edgeville Ditch', x: 3094, z: 3520, level: 0, wild: 1, band: 'tele', note: 'Lvl 1 Wilderness ditch' },
+    { id: 'chaos-temple', label: 'Chaos Temple', x: 3236, z: 3610, level: 0, wild: 12, band: 'tele', note: 'Lvl 12 Chaos Temple altar' },
+    { id: 'green-dragons', label: 'Green Dragons', x: 3092, z: 3810, level: 0, wild: 37, band: 'deep', note: 'Lvl 37 Green Dragons' },
+    { id: 'lava-maze', label: 'Lava Maze', x: 3067, z: 3856, level: 0, wild: 43, band: 'deep', note: 'Lvl 43 Lava Maze & runite' },
+    { id: 'rogues-castle', label: "Rogue's Castle", x: 3285, z: 3930, level: 0, wild: 52, band: 'deep', note: "Lvl 52 Rogue's Castle" },
+    { id: 'mage-bank', label: 'Mage Bank / Arena', x: 3098, z: 3955, level: 0, wild: 55, band: 'deep', note: 'Lvl 55 Mage Arena & cellar bank' },
+];
+
+const PLACE_HINTS: readonly (readonly [RegExp, { readonly x: number; readonly z: number; readonly level: number; readonly label: string }])[] = [
+    ...WILDERNESS_HOTSPOTS.map(h => [new RegExp(h.label.replace(/['’/]/g, '.?').replace(/\s+/g, '\\s+'), 'i'), { x: h.x, z: h.z, level: h.level, label: h.label }] as const),
+    [/\bmage\s*(?:bank|arena)\b/i, { x: 3098, z: 3955, level: 0, label: 'Mage Bank / Arena' }],
+    [/\brogue'?s?\s*castle\b/i, { x: 3285, z: 3930, level: 0, label: "Rogue's Castle" }],
+    [/\brunite\b/i, { x: 3058, z: 3884, level: 0, label: 'Lava Maze runite' }],
+    [/\bedgeville\b/i, { x: 3094, z: 3494, level: 0, label: 'Edgeville' }],
+];
+
+export function wildernessBandFor(pos: { x: number; z: number; level?: number } | null | undefined) {
+    const { wild } = wildernessInfo(pos);
+    if (wild <= 0) return null;
+    const band = WILDERNESS_BANDS.find(b => wild >= b.minWild && wild <= b.maxWild) ?? WILDERNESS_BANDS[WILDERNESS_BANDS.length - 1]!;
+    return { ...band, wild };
+}
+
+function parseTile(raw: any): { x: number; z: number; level: number; label?: string } | null {
+    if (!raw || typeof raw !== 'object') return null;
+    if (Array.isArray(raw)) {
+        const [x, z, level = 0] = raw;
+        return Number.isFinite(x) && Number.isFinite(z) ? { x: Math.trunc(x), z: Math.trunc(z), level: Number.isFinite(level) ? Math.trunc(level) : 0 } : null;
+    }
+    if (Number.isFinite(raw.x) && Number.isFinite(raw.z)) {
+        return {
+            x: Math.trunc(raw.x),
+            z: Math.trunc(raw.z),
+            level: Number.isFinite(raw.level) ? Math.trunc(raw.level) : 0,
+            ...(typeof raw.label === 'string' && raw.label.trim() ? { label: raw.label.trim() } : {}),
+        };
+    }
+    return null;
+}
+
+export function resolveBotDestination(bot: any): { x: number; z: number; level: number; label: string } | null {
+    if (!bot || typeof bot !== 'object') return null;
+    for (const candidate of [bot.target, bot.dest, bot.destination, bot.progressionContext?.target]) {
+        const parsed = parseTile(candidate);
+        if (parsed) return { ...parsed, label: parsed.label ?? (typeof bot.targetLabel === 'string' ? bot.targetLabel : 'Target') };
+    }
+    const spotKey = typeof bot.spot === 'string' ? bot.spot.toLowerCase() : '';
+    const named = NAMED_SPOT_TILES[spotKey];
+    if (named) return { x: named.x, z: named.z, level: named.level ?? 0, label: spotKey };
+    const text = [bot.targetLabel, bot.phase, bot.goal].filter(x => typeof x === 'string').join(' ');
+    for (const [re, spot] of PLACE_HINTS) {
+        if (re.test(text)) return { ...spot };
+    }
+    return null;
+}
+
+export type BotPathOverlay = {
+    name: string;
+    from: { x: number; z: number; level: number };
+    to: { x: number; z: number; level: number };
+    label: string;
+    wild: number;
+    band: WildernessBandId | null;
+};
+
+export function botPathOverlays(bots: readonly any[], options: { secretName?: string; includePractice?: boolean; publicView?: boolean } = {}): BotPathOverlay[] {
+    const secret = (options.secretName ?? 'Haggis').toLowerCase();
+    const out: BotPathOverlay[] = [];
+    for (const b of bots || []) {
+        if (!b || typeof b !== 'object') continue;
+        if (!options.includePractice && b.practice) continue;
+        const rawName = String(b.name ?? '');
+        const isSecret = rawName === '⟦MAIN⟧' || rawName.toLowerCase() === secret;
+        if (options.publicView && isSecret) continue;
+        const pos = b.live || b.pos;
+        if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.z)) continue;
+        const to = resolveBotDestination(b);
+        if (!to) continue;
+        if (to.x === pos.x && to.z === pos.z && to.level === (pos.level ?? 0)) continue;
+        const band = wildernessBandFor(to);
+        out.push({
+            name: isSecret ? 'main' : rawName,
+            from: { x: Math.trunc(pos.x), z: Math.trunc(pos.z), level: Number.isFinite(pos.level) ? Math.trunc(pos.level) : 0 },
+            to,
+            label: to.label,
+            wild: band?.wild ?? 0,
+            band: band?.id ?? null,
+        });
+    }
+    return out;
+}
+
+export function wildernessOverlayData() {
+    return { bounds: WILDERNESS_BOUNDS, bands: WILDERNESS_BANDS, hotspots: WILDERNESS_HOTSPOTS };
+}
