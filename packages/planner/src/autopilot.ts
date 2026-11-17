@@ -1315,7 +1315,7 @@ const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['i
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
 // Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
 // does not hold back the market buy of the band's other lines: the shop job follows once those are held.
-export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'dusty key', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'body rune', 'dusty key', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 // ARROW_LOW rune arrows off the full shelf of the Ranging Guild shop: the base cost of 400 coins, and 1% of it more
@@ -1695,6 +1695,11 @@ export function catalogue(): Template[] {
         pilot: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [splash.id] },
     });
     const water = waterJob('army-water-aubury', "Aubury's in Varrock", 'aubury'), waterBetty = waterJob('army-water-betty', "Betty's in Port Sarim", 'betty');
+    const body: Template = {
+        ...supply('army-body-aubury', "buy body runes at Aubury's in Varrock for the curse band", 'aubury', [shopRun('aubury', 3000, 'body.rune', SPLASH_KIT['body rune'], 8000)],
+            { under: { Magic: SPLASH_TO }, items: { coins: 10000, 'earth rune': SPLASH_START['earth rune'] }, holdsUnder: { 'body rune': SPLASH_START['body rune'] } }),
+        pilot: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [splash.id] },
+    };
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: false, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
@@ -1986,6 +1991,7 @@ export function catalogue(): Template[] {
         splash,
         water,
         waterBetty,
+        body,
         staff,
         feathers,
         fireRunes,

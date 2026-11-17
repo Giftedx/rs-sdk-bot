@@ -1525,6 +1525,13 @@ test('Party: a card per PK account with hitpoints, prayer, run, food and a red e
  expect(html).toContain('party-card party-alert');
  expect(html).toContain('<span>30 / 99</span>');expect(html).toContain('<span>40 / 70</span>');
  expect(html).toContain('Run <b>55%</b>');expect(html).toContain('Food <b>2</b>');
+ // In multi-way Wilderness with zero observed food, the card alerts and marks both multi-way depth and Food 0.
+ const empty=new Function('S','E','safeName','itemStats','wildLevel','pvpState','Date',`${healthSource}${code};return {partyBox};`)(
+  {bots:[{name:'Multi0',inWorld:true,at:now,hpAt:now,combat:90,goal:'pk',pos:{x:3078,z:3632,level:0},hp:{now:95,max:99},runEnergy:90,skills:[{name:'Prayer',level:70,currentLevel:70}],inventory:[]}]},
+  String,(s:any)=>s,{Shark:'heals 20'},()=>14,()=>({threats:[],multi:true}),{now:()=>now}).partyBox();
+ expect(empty).toContain('party-card party-alert');
+ expect(empty).toContain('combat 90 · wildy 14 · multi');
+ expect(empty).toContain('<span class="xp-bad">Food <b>0</b></span>');
 });
 test('historical shared HP stays dated in the party and orb without becoming current danger or full health',()=>{
  const now=1_000_000,old=now-400_000,server='rs-sdk-demo.fly.dev';

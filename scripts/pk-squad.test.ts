@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { bankNear, leaveWilderness, openSquad, rescueDropped, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { bankNear, leaveWilderness, openSquad, rescueDropped, squadEscapeSpell, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { assertActionScope } from '../packages/core/src/action-scope';
 
@@ -168,6 +168,16 @@ describe('escapeCastable', () => {
     test('a staff of air stands in for the air runes, and the level counts', () => {
         expect(escapeCastable(1174, [{ id: 563, count: 1 }], [1381], 99)).toBe(true);
         expect(escapeCastable(1174, [{ id: 563, count: 1 }, { id: 556, count: 5 }], [], 40)).toBe(false);
+    });
+});
+
+describe('squadEscapeSpell', () => {
+    test('picks Camelot with worn Staff of air, falls back to Varrock below Magic 45, and skips deep Wilderness', () => {
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }], [1381], 45)).toBe(1174);
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }, { id: 556, count: 3 }, { id: 554, count: 1 }], [], 25)).toBe(1164);
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }, { id: 556, count: 3 }], [1387], 30)).toBe(1164);
+        expect(squadEscapeSpell(3715, [{ id: 563, count: 1 }], [1381], 99)).toBeNull();
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }], [], 99)).toBeNull();
     });
 });
 

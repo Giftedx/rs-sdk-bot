@@ -1629,6 +1629,12 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     const betty = run([soldier('Kilt', { ...stocked, 'water rune': 6 })], { pilots: new Set([...pilots, 'army-water-betty']), capacity: { ...CAPACITY, 'shop:aubury': 0 } })[0]!;
     expect(jobFor(betty, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:betty'] });
     expect(betty.template!.args![0]).toContain(`scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
+    // With earth and water runes held and body runes short (absent from market or buy retired): Aubury's body-rune shop run.
+    const noBody = run([soldier('Kilt', { 'earth rune': SPLASH_KIT['earth rune'], 'water rune': SPLASH_KIT['water rune'], 'body rune': 6 })],
+        { pilots: new Set([...pilots, 'army-body-aubury']), market: { 'earth rune': runes['earth rune']! } })[0]!;
+    expect(noBody.template!.id).toBe('army-body-aubury');
+    expect(jobFor(noBody, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:aubury'] });
+    expect(noBody.template!.args![0]).toContain(`scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=${SPLASH_KIT['body rune']} `);
     // With the whole kit: the band, to the Magic Guild's level, on the fence tile.
     const full = { ...stocked, 'water rune': SPLASH_KIT['water rune'] };
     const [cast] = run([soldier('Kilt', full)]);
