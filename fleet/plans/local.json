@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794943411320,
+ "at": 1794943633109,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -191,27 +191,28 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/ranged-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99",
+    "1500"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "FOOD": "3",
+    "AMMO": "100",
+    "MAX_TRIPS": "50",
+    "COIN_RESERVE": "0",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-ranged-99",
    "autopilot": "local",
    "resources": [
+    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
@@ -491,29 +492,28 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/ranged-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "1500"
+    "1500",
+    "trooper"
    ],
    "env": {
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "99",
-    "FOOD": "3",
-    "AMMO": "100",
-    "MAX_TRIPS": "50",
-    "COIN_RESERVE": "0",
-    "MAX_SPEND": "4000",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-strength-99",
    "autopilot": "local",
    "resources": [
-    "pen:3229,3298",
     "trooper:battlefield"
    ]
   },
