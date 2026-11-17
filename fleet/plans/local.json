@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794957758726,
+ "at": 1794957824430,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -198,8 +198,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
@@ -312,32 +311,28 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "zaff",
-    "3000"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ITEMS": "staff of fire",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "1100",
-    "STALL_TICKS": "0",
-    "FLOAT": "13000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "12000"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
-   "role": "supply",
-   "template": "army-staff-zaff",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
    "resources": [
-    "shop:zaff"
+    "trooper:battlefield"
    ]
   },
   {
@@ -402,8 +397,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
