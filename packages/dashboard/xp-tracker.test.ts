@@ -122,8 +122,9 @@ test('supplyBillProgress tracks fleet stock fulfillment against route bills whil
  ];
  const bots = [
   { name: 'Haggis', bank: [{ id: 536, name: 'Dragon bones', count: 500 }], inventory: [] },
-  { name: 'HelperA', bank: [{ id: 537, baseId: 536, name: 'Dragon bones', count: 40 }, { id: 385, name: 'Shark', count: 50 }], inventory: [{ id: 536, name: 'Dragon bones', count: 10 }] },
-  { name: 'HelperB', equipmentObserved: false, equipment: [{ id: 536, name: 'Dragon bones', count: 5 }], inventory: [], bank: [] },
+  { name: 'HelperA', bank: [{ id: 537, baseId: 536, name: 'Dragon bones', count: 40 }, { id: 385, name: 'Shark', count: 50 }], inventory: [{ id: 536, name: 'Dragon bones', count: 10 }, { id: 385, name: 'Shark', count: 0 }] },
+  { name: 'HelperB', equipmentObserved: false, equipment: [{ id: 536, name: 'Dragon bones', count: 5 }], inventory: [{ id: 536, name: 'Dragon bones', count: 0 }, { id: 536, name: 'Dragon bones', count: -3 }], bank: [] },
+  { name: 'HelperC', bank: [], inventory: [], equipment: [{ id: 385, name: 'Shark' }] },
   { name: 'TestLab', practice: true, bank: [{ id: 536, name: 'Dragon bones', count: 999 }], inventory: [] },
  ];
  const b1 = xp.supplyBillProgress(supplies, bots, { batches: 1, secretName: 'Haggis' });
@@ -132,7 +133,7 @@ test('supplyBillProgress tracks fleet stock fulfillment against route bills whil
  expect(b1.shortageCount).toBe(1);
  expect(b1.items.map((x: any) => [x.item, x.need, x.have, x.short])).toEqual([
   ['Dragon bones', 100, 50, 50],
-  ['Shark', 50, 50, 0],
+  ['Shark', 50, 51, 0],
  ]);
  const bill = xp.supplyBillProgress(supplies, bots, { batches: 2, secretName: 'Haggis' });
  expect(bill.batches).toBe(2);
@@ -140,9 +141,9 @@ test('supplyBillProgress tracks fleet stock fulfillment against route bills whil
  expect(bill.shortageCount).toBe(2);
  expect(bill.items.map((x: any) => [x.item, x.need, x.have, x.short])).toEqual([
   ['Dragon bones', 200, 50, 150],
-  ['Shark', 100, 50, 50],
+  ['Shark', 100, 51, 49],
  ]);
- expect(bill.completionPct).toBeCloseTo((50 + 50) * 100 / 300, 3);
+ expect(bill.completionPct).toBeCloseTo((50 + 51) * 100 / 300, 3);
  expect(JSON.stringify(bill)).not.toContain('Haggis');
  expect(JSON.stringify(bill)).not.toContain('TestLab');
 });

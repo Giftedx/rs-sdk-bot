@@ -2147,8 +2147,8 @@ test('Magic tab renders rev 289 spells, counts casts, and locks missing runes or
  expect(html).toContain("magicon.png');background-position:-180px -20px");
  expect(html).toContain('spell-enchant-level-1-jewellery.png');
  expect(html).toContain('spell-enchant-level-5-jewellery.png');
- expect(html).toContain("magicon.png');background-position:-320px -20px");
- expect(html).toContain("magicon.png');background-position:-360px -20px");
+ expect(html).toContain("magicon.png');background-position:-440px -20px");
+ expect(html).toContain("magicon.png');background-position:-480px -20px");
  expect(html).toContain('spell-crumble-undead.png');
  expect(html).toContain("magicon.png');background-position:-240px -20px");
  expect(html).toContain("magicon2.png');background-position:-40px 0px");
@@ -2331,4 +2331,9 @@ test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall 
  expect(css).toContain('max-width:calc(50vw - 180px)');
  expect(css).toContain('overflow-x:hidden');
  expect(shell).toContain('cancelAnimationFrame(d.wait)');
+ const ovCode=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const liveBot={name:'LiveRoam',inWorld:true,live:{x:3094,z:3522,level:0},target:{x:3094,z:3540,label:'Ditch target'}};
+ const ov=new Function('S','account','asset','fetch','localStorage','window','wildLevel','pvpState','recap','respawnRows','VIEWER','$','nf','location',`${ovCode};return overlayMessage();`)(
+  {economy:{itemValues:{}},rivals:[]},()=>liveBot,(n:string)=>n,()=>new Promise(()=>{}),{getItem:()=>null,setItem:()=>{}},{atlasCam3d:{x:3094,z:3530,at:Date.now()},atlasWildOverlay:{resolveTarget:(b:any)=>b.target||null}},()=>1,()=>null,{state:'idle'},()=>[],{state:'loading'},()=>null,String,{origin:''});
+ expect(ov.lines).toContainEqual({x0:3094,z0:3522,x1:3094,z1:3540,l:0,colour:'#58d5ff',label:'Ditch target'});
 });
