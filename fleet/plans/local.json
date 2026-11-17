@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794947094015,
+ "at": 1794947226004,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -172,24 +172,6 @@
    ]
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=48 EXPECTED_OWNED=2 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit8-561-2to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 48 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -202,8 +184,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -276,7 +257,8 @@
     "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -289,6 +271,26 @@
     "shop:lowe",
     "shop:aubury"
    ]
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Moneyshot",
@@ -329,8 +331,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -451,7 +452,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -461,9 +462,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-trooper-attack-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
@@ -526,7 +527,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -536,9 +537,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-trooper-attack-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
