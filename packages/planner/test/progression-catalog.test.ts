@@ -51,7 +51,7 @@ test('unknown scripts and missing finite goals remain explicit',()=>{
 
 test('coin courier binds both normalized participants to one exact finite transfer without wealth credit',()=>{
  const env={COORDINATOR_PARTICIPANTS:'["Donor","Receiver"]'},options=['--reserve=5000','--bank-x=3185','--bank-z=3436','--timeout-ms=60000'];
- const expected={kind:'service',objective:'finite owned coin transfer Donor -> Receiver: 45000 coins; donor bank reserve 5000'};
+ const expected={kind:'service' as const,objective:'finite owned coin transfer Donor -> Receiver: 45000 coins; donor bank reserve 5000'};
  for(const args of [['Receiver','45000',...options],['Donor','Receiver','45000',...options]]){
   expect(intentForEntry('scripts/coin-courier.ts',args,env)).toEqual(expected);
   expect(intentForEntry('scripts/coin-courier.ts',args,env,{bank:{995:45000}})).toEqual(expected);
@@ -63,7 +63,7 @@ test('coin courier binds both normalized participants to one exact finite transf
  for(const participants of ['bad','["Donor"]','["Donor","Donor"]','["Donor","Receiver","Other"]'])expect(intentForEntry('scripts/coin-courier.ts',['Receiver','45000'],{COORDINATOR_PARTICIPANTS:participants})).toBeNull();
  for(const amount of ['1','2147483647'])for(const flags of [[],['--reserve=2147483647'],['--bank-x=1','--bank-z=16383','--approach-ms=1800000','--request-ms=60000','--timeout-ms=600000','--grace-ms=1000']]){
   const parsed=parseCoins(['Donor','Receiver',amount,...flags]);
-  const expected={kind:'service',objective:`finite owned coin transfer Donor -> Receiver: ${parsed.amount} coins; donor bank reserve ${parsed.reserve}`};
+  const expected={kind:'service' as const,objective:`finite owned coin transfer Donor -> Receiver: ${parsed.amount} coins; donor bank reserve ${parsed.reserve}`};
   expect(intentForEntry('scripts/coin-courier.ts',['Donor','Receiver',amount,...flags],env)).toEqual(expected);
   expect(intentForEntry('scripts/coin-courier.ts',['Receiver',amount,...flags],env)).toEqual(expected);
  }
