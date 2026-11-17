@@ -644,6 +644,15 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "tribrid-combo-flick": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "tribrid-dlong": {
    "Attack": 99,
    "Strength": 99,
@@ -860,6 +869,15 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "tribrid-spear-dds": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "zerker": {
    "Attack": 60,
    "Strength": 99,
@@ -883,6 +901,19 @@
    ],
    "skills": [],
    "description": "Taverley black dragons from the corridor south of their cave: BLACK_KIT withdraw, dusty key gate, ranged camp that takes no melee, hides and bones banked"
+  },
+  {
+   "id": "boss:green-dragon",
+   "category": "boss",
+   "name": "green-dragon",
+   "script": "scripts/wild-dragons.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "acquire"
+   ],
+   "skills": [],
+   "description": "Wilderness Green Dragons (rev 289): Dragonfire shield preflight, bone/dhide loot, PKer threat retreat, and Edgeville bank"
   },
   {
    "id": "boss:kbd",
@@ -48638,6 +48669,7 @@
    "routeIds": [
     "boss:kbd",
     "boss:black-dragon",
+    "boss:green-dragon",
     "boss:trawler",
     "boss:trawler-at-site"
    ]
@@ -49095,6 +49127,7 @@
     "fighter:loot-trip",
     "boss:kbd",
     "boss:black-dragon",
+    "boss:green-dragon",
     "boss:trawler",
     "boss:trawler-at-site",
     "pvp:fight",
@@ -52720,6 +52753,16 @@
    ],
    "skills": [],
    "routeIds": []
+  },
+  {
+   "script": "scripts/wild-dragons.ts",
+   "intents": [
+    "acquire"
+   ],
+   "skills": [],
+   "routeIds": [
+    "boss:green-dragon"
+   ]
   }
  ],
  "unmapped": [

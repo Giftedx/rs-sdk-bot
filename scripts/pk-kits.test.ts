@@ -226,4 +226,10 @@ test('a kit gets the completion varp of each quest its items need (levelrequire.
     expect(combo.inventory).toHaveLength(27);
     expect(combo.inventory.filter(i => i.id === itemId('shark'))).toHaveLength(12);
     expect(combo.inventory.filter(i => i.id === itemId('tbwt_cooked_karambwan'))).toHaveLength(6);
+    const spearDds = kitItems('tribrid-spear-dds');
+    expect(spearDds.inventory).toHaveLength(27);
+    expect(kitSwitches('tribrid-spear-dds').melee).toContain(itemId('dragon_spear'));
+    expect(kitOptions('tribrid-combo-flick')).toMatchObject({
+        comboFood: true, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true, stepUnderFrozen: true,
+    });
 });

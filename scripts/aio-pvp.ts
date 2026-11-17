@@ -10,18 +10,22 @@ import {
  type FightOptions,type FightResult,type Kit,type SpecConfig,type Style,
 } from './pk';
 import {
- EDGEVILLE_BANK,HUNT_SPOTS,KIT_IDS,TRIBRID_KIT,TRIP as TRIBRID_TRIP,
- fleetNames,verdict,pickTarget,hitByPlayer,type Spot,
+ EDGEVILLE_BANK,HUNT_PRESETS,HUNT_SPOTS,KIT_IDS,TRIBRID_KIT,TRIP as TRIBRID_TRIP,
+ fleetNames,verdict,pickTarget,hitByPlayer,resolveHuntSpots,type Spot,
 } from './pk-hunt';
-import {itemCost} from './pk-roam';
+import {
+ WILDERNESS_ESCAPES,assessWildernessThreat,escapeStep,itemCost,multiPileThreat,
+ planWildernessEscape,restockPlan,restockPlanFromStock,wildernessCombatMargin,
+} from './pk-roam';
 
 export {
  PVP_ITEMS,PVP_SPELLS,PVP_PRAYER,
  attackable,bestFood,castableFreeze,defaultSpec,fightPlayer,nextTick,wildernessLevel,
  type FightOptions,type FightResult,type Kit,type SpecConfig,type Style,
- EDGEVILLE_BANK,HUNT_SPOTS,KIT_IDS,TRIBRID_KIT,TRIBRID_TRIP,
- fleetNames,verdict,pickTarget,hitByPlayer,type Spot,
- itemCost,
+ EDGEVILLE_BANK,HUNT_PRESETS,HUNT_SPOTS,KIT_IDS,TRIBRID_KIT,TRIBRID_TRIP,
+ fleetNames,verdict,pickTarget,hitByPlayer,resolveHuntSpots,type Spot,
+ WILDERNESS_ESCAPES,assessWildernessThreat,escapeStep,itemCost,multiPileThreat,
+ planWildernessEscape,restockPlan,restockPlanFromStock,wildernessCombatMargin,
 };
 
 export interface PvpModeSpec {
@@ -71,6 +75,8 @@ export function pvpCombatBracket(skills: {
   wildernessLevel: wild,
   minTargetCombat: Math.max(3, combatLevel - wild),
   maxTargetCombat: Math.min(126, combatLevel + wild),
+  gloryUsable: wild <= 30,
+  spellTeleportUsable: wild <= 20,
   dominantStyle: (mage >= melee && mage >= range ? 'magic' : range >= melee ? 'ranged' : 'melee') as Style,
  };
 }

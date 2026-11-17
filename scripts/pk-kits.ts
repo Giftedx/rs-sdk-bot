@@ -32,7 +32,7 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear' | 'comboFood' | 'comboAt'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear' | 'comboFood' | 'comboAt' | 'zeroDrainFlick' | 'offensiveFlick' | 'fakieSwitch' | 'stepUnderFrozen' | 'burstOnStun'>;
     // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
     // Dragon Slayer and full special energy.
     skills?: Record<string, number>;
@@ -89,6 +89,16 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, ...Array.from({ length: 6 }, () => 'tbwt_cooked_karambwan')], food: 12,
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] },
         options: { comboFood: true } },
+    // Zero-drain 5-tick prayer cycling + 1-tick offensive flicking + fakie switches + freeze step-under + KO combo-eating.
+    'tribrid-combo-flick': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, ...Array.from({ length: 6 }, () => 'tbwt_cooked_karambwan')], food: 12,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] },
+        options: { comboFood: true, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true, stepUnderFrozen: true } },
+    // Multi-way tribrid carrying both Dragon spear (4-tick stun-lock) and Dragon dagger(p) (burst finisher).
+    'tribrid-spear-dds': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_spear', 'mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS], food: 17,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield', 'dragon_spear'] },
+        options: { burstOnStun: true } },
     // The tribrid with another special weapon: the mace special is one hit of 150% damage at 125% accuracy against
     // crush defence, the longsword special one hit of 125% damage (pvp/specs/scripts).
     'tribrid-mace': { worn: { ...RUNE, weapon: 'dragon_mace', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
