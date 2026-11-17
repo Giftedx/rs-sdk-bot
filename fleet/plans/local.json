@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794952220245,
+ "at": 1794952243610,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -172,24 +172,6 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=378 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit4-557-0to378 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 378 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/alch-train.ts",
    "args": [
@@ -197,8 +179,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
@@ -318,8 +299,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -382,6 +362,27 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "local",
+   "resources": [
+    "splash:ardougne-cow-fence"
    ]
   },
   {
