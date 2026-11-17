@@ -86,6 +86,25 @@ export function escapeStep(level: number, has: { glory: boolean; teleport: boole
     return 'run';
 }
 
+const AIR_STAFF = /staff of air|air battlestaff|mystic air staff/i;
+const FIRE_STAFF = /staff of fire|fire battlestaff|mystic fire staff/i;
+
+// Magic 25 Varrock Teleport runes: 1 law rune, 3 air runes (or air staff), 1 fire rune (or fire staff).
+export function hasVarrockTeleport(magic: number, inventory: readonly { name: string; count?: number }[], equipment: readonly { name: string }[]): boolean {
+    if (magic < 25) return false;
+    const held = (re: RegExp) => inventory.filter(i => re.test(i.name)).reduce((n, i) => n + (i.count ?? 1), 0);
+    const worn = (re: RegExp) => equipment.some(i => re.test(i.name));
+    return held(/^law rune$/i) >= 1 && (held(/^air rune$/i) >= 3 || worn(AIR_STAFF)) && (held(/^fire rune$/i) >= 1 || worn(FIRE_STAFF));
+}
+
+// In multi-way combat, PILE_SIZE or more attackable strangers within 8 tiles can focus and stack out a solo roamer.
+export function multiPileThreat(me: { x: number; z: number; combat: number }, nearby: readonly { name: string; x?: number; z?: number; combatLevel: number; distance: number }[],
+    friends: ReadonlySet<string>, multiAt: (x: number, z: number) => boolean = isMulti, pileSize = PILE_SIZE): string | null {
+    if (wildLevel(me.x, me.z) === 0 || !multiAt(me.x, me.z)) return null;
+    const hostiles = nearby.filter(p => !friends.has(p.name.toLowerCase()) && p.distance <= 8 && canAttack(me, { x: p.x ?? me.x, z: p.z ?? me.z, combatLevel: p.combatLevel }));
+    return hostiles.length >= pileSize ? `multi pile: ${hostiles.length} attackable enemies (${hostiles.slice(0, 3).map(p => p.name).join(', ')}) within 8 tiles` : null;
+}
+
 // Where to run to meet a moving target: the first tick t at which we (2 tiles per tick running) can stand on its
 // predicted tile. A target running south at full speed from behind has no meeting point; then the hunter heads for
 // the tile 30 ticks along its line, which puts it between the target and the south edge.
@@ -368,9 +387,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         }
         seenHit = maxHit;
     };
-    const canTeleport = () => (sdk.getSkill('Magic')?.level ?? 1) >= 25 && sdk.getInventory().some(i => /^law rune$/i.test(i.name))
-        && sdk.getInventory().some(i => /^air rune$/i.test(i.name) && i.count >= 3)
-        && (sdk.getInventory().some(i => /^fire rune$/i.test(i.name)) || sdk.getEquipment().some(i => /staff of fire|fire battlestaff/i.test(i.name)));
+    const canTeleport = () => hasVarrockTeleport(sdk.getSkill('Magic')?.level ?? 1, sdk.getInventory(), sdk.getEquipment());
     // Leave the Wilderness: glory, else teleport, else run south (eating) until one works. Ends the hunt.
     const escape = async (why: string) => {
         stats.escapes++;
@@ -438,6 +455,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const threat = (sdk.getState()?.nearbyPlayers ?? []).find(p => !friends.has(p.name.toLowerCase()) && p.distance <= 12 && outclasses(
                 { combat: m.combat, weaponValue: myWeaponValue() }, { combatLevel: p.combatLevel, weapon: seen.get(p.name.toLowerCase())?.worn.rhand }));
             if (threat) { await escape(`threat: ${threat.name} (combat ${threat.combatLevel}) at ${threat.distance} tiles`); return 'flee'; }
+            const pile = multiPileThreat(m, sdk.getState()?.nearbyPlayers ?? [], friends);
+            if (pile) { await escape(pile); return 'flee'; }
             if (wildLevel(m.x, m.z) > cfg.maxWild) { await escape(`deeper than the limit (${wildLevel(m.x, m.z)} > ${cfg.maxWild})`); return 'flee'; }
         }
         return 'ok';

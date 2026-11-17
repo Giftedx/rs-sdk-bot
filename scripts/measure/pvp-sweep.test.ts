@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { benchCases } from './aio-bench-cases';
-import { packBatches, QUICK_CASES, quickPattern } from './pvp-sweep';
+import { DEFAULT_PATTERN, packBatches, parseSweepArgs, QUICK_CASES, quickPattern, shardBatches } from './pvp-sweep';
 
 test('packBatches keeps each engine of a batch within the budget, longest cases first', () => {
     const cases = [100, 90, 80, 70, 60, 50, 40, 30].map((ms, i) => ({ key: `c${i}`, ms }));
@@ -23,4 +23,33 @@ test('the quick set names only cases that exist, and takes every pvp: route case
     const quick = [...keys].filter(k => quickPattern().test(k));
     expect(quick.filter(k => k.startsWith('pvp:')).length).toBe([...keys].filter(k => k.startsWith('pvp:')).length);
     expect(quick.length).toBe([...keys].filter(k => k.startsWith('pvp:')).length + QUICK_CASES.length);
+});
+
+test('parseSweepArgs consumes flag values so --budget 3.5 or --shard 2/4 are never treated as patterns', () => {
+    const a = parseSweepArgs(['--parallel', '4', '--budget', '3.5', '--shard', '2/4', '--seed', 'alpha']);
+    expect(a.pattern.source).toBe(new RegExp(DEFAULT_PATTERN).source);
+    expect(a.engines).toBe(4);
+    expect(a.budgetMs).toBe(210_000);
+    expect(a.seed).toBe('alpha');
+    expect(a.shard).toEqual({ index: 2, total: 4 });
+    expect(a.shardError).toBeUndefined();
+
+    const b = parseSweepArgs(['extra:roam', '--budget=2.5', '--parallel=2', '--batch=3', '--shard=4/4']);
+    expect(b.pattern.source).toBe('extra:roam');
+    expect(b.engines).toBe(2);
+    expect(b.budgetMs).toBe(150_000);
+    expect(b.only).toBe(3);
+    expect(b.shard).toEqual({ index: 4, total: 4 });
+
+    expect(parseSweepArgs(['--quick']).pattern.source).toBe(quickPattern().source);
+    expect(parseSweepArgs(['--shard', '0/4']).shardError).toContain('--shard');
+    expect(parseSweepArgs(['--shard', '5/4']).shardError).toContain('--shard');
+    expect(parseSweepArgs(['--shard', 'bad']).shardError).toContain('--shard');
+});
+
+test('shardBatches partitions packed batches round-robin with full disjoint coverage', () => {
+    const batches = [['b0'], ['b1'], ['b2'], ['b3'], ['b4'], ['b5']];
+    const parts = [1, 2, 3, 4].map(index => shardBatches(batches, index, 4));
+    expect(parts).toEqual([[['b0'], ['b4']], [['b1'], ['b5']], [['b2']], [['b3']]]);
+    expect(parts.flat(2).sort()).toEqual(['b0', 'b1', 'b2', 'b3', 'b4', 'b5']);
 });
