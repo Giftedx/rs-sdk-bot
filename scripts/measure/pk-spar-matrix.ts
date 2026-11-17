@@ -1,7 +1,7 @@
 // Kit matrix: one batch case puts side A's kit against a different kit in each pair (scripts/pk-kits.ts, the case's
 // SPAR_KITS), so one run of about a minute covers every matchup once. This runs the case for each seed and prints,
 // for each matchup, side A's kills, deaths, mean net damage for each 100 ticks and the shop cost of each kit.
-// Usage: bun scripts/measure/pk-spar-matrix.ts [--case extra:spar-kits-x8[,<case>...]] [--parallel 1] [--seeds 1,2] [--a <profile>] [--b <profile>]
+// Usage: bun scripts/measure/pk-spar-matrix.ts [--case extra:spar-kits-x8[,<case>...]] [--parallel 1] [--seeds 1,2] [--a <profile>] [--b <profile>] [--a-opts <json>] [--b-opts <json>] [--kits a:b,c:d] [--wait 2]
 import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { benchCases } from './aio-bench-cases';
@@ -22,28 +22,48 @@ export function matrix(matchups: readonly string[], runs: readonly { nets: numbe
     });
 }
 
-if (import.meta.main) {
-    const argv = process.argv.slice(2);
-    const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
-    const keys = (value('--case') ?? 'extra:spar-kits-x8').split(','), seeds = (value('--seeds') ?? '1,2').split(',').map(Number), a = value('--a') ?? 'champion', b = value('--b') ?? 'champion';
-    // --parallel n: n cases at the same time, each on its own engine. The cases share no world.
+export function parseMatrixArgs(rawArgv: readonly string[]) {
+    const argv = [...rawArgv];
+    const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 && i + 1 < argv.length ? argv.splice(i, 2)[1] : undefined; };
+    const keys = (value('--case') ?? 'extra:spar-kits-x8').split(',').filter(Boolean);
+    const seeds = (value('--seeds') ?? '1,2').split(',').filter(Boolean).map(Number);
+    const a = value('--a') ?? 'champion';
+    const b = value('--b') ?? 'champion';
+    const aOpts = value('--a-opts');
+    const bOpts = value('--b-opts');
+    const kitsOverride = value('--kits');
+    const wait = value('--wait') ?? '2';
     const parallel = Math.max(1, Math.min(keys.length, Number(value('--parallel') ?? 1)));
+    return { keys, seeds, a, b, aOpts, bOpts, kitsOverride, wait, parallel };
+}
+
+if (import.meta.main) {
+    const { keys, seeds, a, b, aOpts, bOpts, kitsOverride, wait, parallel } = parseMatrixArgs(process.argv.slice(2));
     const root = resolve(import.meta.dir, '..', '..'), out = '.practice/pk-spar/matrix-run.json';
     mkdirSync(resolve(root, '.practice/pk-spar'), { recursive: true });
     const kits: string[] = [], size: number[] = [];
     for (const key of keys) {
         const args = benchCases().find(c => c.key === key)?.scriptArgs ?? [];
         const list = (name: string) => args.find(arg => arg.startsWith(`${name}=`))?.slice(name.length + 1).split(',');
-        const pairs = list('SPAR_KITS'), league = list('SPAR_B_PROFILES');
+        const pairs = kitsOverride ? kitsOverride.split(',') : list('SPAR_KITS');
+        const league = list('SPAR_B_PROFILES');
         if (!pairs) { console.log(`no matrix case ${key}`); process.exit(2); }
         // A league case names side B's profile after its kit: tribrid-pots:melee/base.
         kits.push(...pairs.map((pair, i) => (league ? `${pair}/${league[i % league.length]}` : pair)));
         size.push(pairs.length);
     }
+    const extraSets: string[] = [
+        '--set', `SPAR_A=${a}`,
+        '--set', `SPAR_B=${b}`,
+        ...(aOpts ? ['--set', `SPAR_A_OPTS=${aOpts}`] : []),
+        ...(bOpts ? ['--set', `SPAR_B_OPTS=${bOpts}`] : []),
+        ...(kitsOverride ? ['--set', `SPAR_KITS=${kitsOverride}`] : []),
+    ];
     const runs: { nets: number[]; scores: number[] }[] = [];
     for (const seed of seeds) {
         await waitForMemory(root, undefined, parallel);
-        Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^(${keys.join('|')})$`, '--parallel', String(parallel), '--no-keep', '--seed', String(seed), '--set', `SPAR_A=${a}`, '--set', `SPAR_B=${b}`],
+        const escapedPattern = `^(${keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`;
+        Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', escapedPattern, '--parallel', String(parallel), '--no-keep', '--wait', wait, '--seed', String(seed), ...extraSets],
             { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         let rows: { case: string; ok: boolean; result: string | null }[] = [];
         try { rows = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows; } catch { /* the bench wrote no row */ }

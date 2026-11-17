@@ -97,6 +97,29 @@ export function shardBatches<T>(batches: readonly T[], index: number, total: num
     return batches.filter((_, i) => i % total === index - 1);
 }
 
+// Cross-platform timeout wrapper replacing POSIX `timeout` so Windows, WSL, and Linux honor batch deadlines identically.
+export async function runWithTimeout(
+    cmd: readonly string[],
+    opts: { cwd: string; env: Record<string, string | undefined>; timeoutMs: number },
+): Promise<{ stdout: string; stderr: string; exitCode: number | null; timedOut: boolean }> {
+    const child = Bun.spawn([...cmd], { cwd: opts.cwd, env: opts.env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    let timedOut = false;
+    const timer = setTimeout(() => {
+        timedOut = true;
+        try { child.kill(); } catch { /* process already exited */ }
+    }, Math.max(100, opts.timeoutMs));
+    try {
+        const [stdout, stderr, exitCode] = await Promise.all([
+            new Response(child.stdout).text(),
+            new Response(child.stderr).text(),
+            child.exited,
+        ]);
+        return { stdout, stderr, exitCode, timedOut };
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 if (import.meta.main) {
     const { pattern, engines, budgetMs, seed, only, shard, shardError } = parseSweepArgs(process.argv.slice(2));
     if (shardError) { console.log(shardError); process.exit(2); }
@@ -126,10 +149,12 @@ if (import.meta.main) {
         const estimate = (() => { const load = Array.from({ length: engines }, () => 0); for (const c of todo.filter(c => batch!.includes(c.key)).sort((a, b) => b.ms - a.ms)) load[load.indexOf(Math.min(...load))]! += c.ms; return Math.max(...load); })();
         const re = `^(${batch!.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`;
         const t0 = Date.now();
-        const p = Bun.spawnSync(['timeout', String(Math.round((budgetMs + 90_000) / 1000)), 'bun', 'scripts/measure/aio-practice-bench.ts', re, '--parallel', String(engines), '--no-keep', ...(seed ? ['--seed', seed] : [])],
+        const p = await runWithTimeout(
+            ['bun', 'scripts/measure/aio-practice-bench.ts', re, '--parallel', String(engines), '--no-keep', '--wait', '2', ...(seed ? ['--seed', seed] : [])],
             // Bench accounts (aiob*) are the local side's (fleet/owners.json names no other), whatever this machine's side.
-            { cwd: root, env: { ...process.env, FLEET_SIDE: 'local' }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
-        for (const l of p.stdout.toString().split('\n')) {
+            { cwd: root, env: { ...process.env, FLEET_SIDE: 'local' }, timeoutMs: budgetMs + 90_000 },
+        );
+        for (const l of p.stdout.split('\n')) {
             if (!l.startsWith('AIO_BENCH_RESULT ')) continue;
             const r = JSON.parse(l.slice(17)) as { case: string; ok: boolean; elapsedMs: number; result?: string };
             results.set(r.case, r.ok); times[r.case] = r.elapsedMs;
@@ -142,7 +167,7 @@ if (import.meta.main) {
         // A case that a batch did not reach goes again; one that two batches missed is counted as failed.
         for (const k of missed) { if ((todo.find(c => c.key === k) as { tries?: number } | undefined)?.tries) results.set(k, false); }
         todo = todo.filter(c => !results.has(c.key)).map(c => missed.includes(c.key) ? { ...c, tries: 1, ms: Math.max(c.ms, budgetMs / 2) } : c);
-        console.log(`PVP_SWEEP_BATCH ${++n}: ${batch!.length} cases, ${Math.round((Date.now() - t0) / 1000)} s, ${batch!.length - missed.length} reported`);
+        console.log(`PVP_SWEEP_BATCH ${++n}: ${batch!.length} cases, ${Math.round((Date.now() - t0) / 1000)} s, ${batch!.length - missed.length} reported${p.timedOut ? ' (timeout)' : ''}`);
     }
     const failed = [...results].filter(([, ok]) => !ok).map(([k]) => k);
     console.log(`PVP_SWEEP ${JSON.stringify({ cases: targetCount, passed: targetCount - failed.length, failed, batches: n })}`);
