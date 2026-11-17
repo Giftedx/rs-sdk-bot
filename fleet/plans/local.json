@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794959824361,
+ "at": 1794959940768,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -446,6 +446,26 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-plague-mmsmk-funded-upstairs-entry-v3 [task-0a9186de-3f98-4796-94d5-7649cc57259a]",
+   "role": "helper"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BONE_ID": "536",
+    "MAX_BURY": "105",
+    "BONE_RESERVE": "6",
+    "CAP": "1500",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-3c0016c1-c253-465a-9390-4cb141b3c835"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-prayer-nab99-current-end [task-3c0016c1-c253-465a-9390-4cb141b3c835]",
    "role": "helper"
   }
  ],
