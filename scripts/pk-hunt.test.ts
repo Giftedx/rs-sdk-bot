@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from 'bun:test';
-import { BOW_TRIP, fleetNames, hitByPlayer, hunt, loot, pickTarget, pickTrip, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { BOW_TRIP, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 import * as pk from './pk';
 import * as walking from '../packages/core/src/walk';
 
@@ -263,4 +263,15 @@ test('kill loot proves one food debit and one exact pile credit after making roo
     expect(f.eaten()).toBe(1);
     expect(f.inventory.filter(i => i.id === 385)).toHaveLength(26);
     expect(f.inventory.filter(i => i.id === 1712)).toEqual([{ id: 1712, count: 1, slot: 27 }]);
+});
+
+test('HUNT_PRESETS and resolveHuntSpots cover rev 289 Wilderness hotspots and reject unknown presets', () => {
+    expect(resolveHuntSpots({})).toBeUndefined();
+    expect(resolveHuntSpots({ HUNT_SPOT: 'green-dragons' })).toEqual(HUNT_PRESETS['green-dragons']);
+    expect(resolveHuntSpots({ HUNT_SPOT: 'mage-bank', PK_SPOTS: '[{"x":3095,"z":3550}]' })).toEqual([{ x: 3095, z: 3550 }]);
+    expect(() => resolveHuntSpots({ HUNT_SPOT: 'revs' })).toThrow('unknown HUNT_SPOT');
+    for (const [name, spots] of Object.entries(HUNT_PRESETS)) {
+        expect(spots.length, name).toBeGreaterThanOrEqual(3);
+        for (const sp of spots) expect(pk.wildernessLevel(sp.z), `${name} ${sp.x},${sp.z}`).toBeGreaterThan(0);
+    }
 });
