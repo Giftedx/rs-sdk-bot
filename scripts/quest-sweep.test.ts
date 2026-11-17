@@ -2133,3 +2133,32 @@ test('a Magic Guild seller is entered by the nearest door at Magic 66 and refuse
   expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[1]!,walk)).toEqual({ok:false,reason:'transition',detail:'Magic Guild door unobserved at 2597,3087'});
  }finally{clearInterval(timer);}
 },30000);
+
+test('planTeleportRunes uses off-thread planning when available and skips routing without law runes', async () => {
+ const {planTeleportRunes}=await import('./quest-sweep');
+ const names=new Map([[563,'lawrune'],[554,'firerune'],[556,'airrune']]);
+ const ids=new Map([...names.entries()].map(([id,n])=>[n,id]));
+ const from={x:3200,z:3200,level:0},to={x:2960,z:3380,level:0};
+ const acct={items:[],counts:{},coins:0,skills:{},quests:{}} as any;
+ let syncCalls=0,offCalls=0;
+ const syncWorld={offThread:false,route:()=>{syncCalls++;return{ok:true,cost:10,legs:[{kind:'travel',travel:{kind:'spell',runes:[{item:'lawrune',count:1},{item:'airrune',count:3}]}}]};}} as any;
+ const offWorld={offThread:true,route:()=>{syncCalls++;return{ok:false};}} as any;
+
+ // No law runes in pack or bank exits before invoking any router.
+ expect(await planTeleportRunes(offWorld,from,to,acct,[{id:556,count:10}],id=>names.get(id),n=>ids.get(n),5000,async()=>{offCalls++;return null;})).toEqual([]);
+ expect([syncCalls,offCalls]).toEqual([0,0]);
+
+ // World with offThread=true plans off-thread rather than calling world.route synchronously.
+ const teleOff=await planTeleportRunes(offWorld,from,to,acct,[{id:563,count:2},{id:556,count:6}],id=>names.get(id),n=>ids.get(n),5000,async(_f,_t,a)=>{
+  offCalls++;
+  expect(a.counts?.lawrune).toBe(2);
+  return {cost:5,legs:[{kind:'travel',travel:{kind:'spell',name:'lumbridge',cost:5,from,to,coins:0,quests:[],skills:{},runes:[{item:'lawrune',count:1},{item:'airrune',count:3}]}}]} as any;
+ });
+ expect(teleOff).toEqual([{id:563,count:1},{id:556,count:3}]);
+ expect([syncCalls,offCalls]).toEqual([0,1]);
+
+ // World without offThread falls back cleanly to synchronous world.route.
+ const teleSync=await planTeleportRunes(syncWorld,from,to,acct,[{id:563,count:1},{id:556,count:3}],id=>names.get(id),n=>ids.get(n));
+ expect(teleSync).toEqual([{id:563,count:1},{id:556,count:3}]);
+ expect(syncCalls).toBe(1);
+});
