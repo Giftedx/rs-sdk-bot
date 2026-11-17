@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794956219067,
+ "at": 1794956286769,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -170,28 +170,6 @@
    "resources": []
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=75000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1163 QUANTITY=1 LIMIT_PRICE=45000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1163-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1201 QUANTITY=1 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1201-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune platelegs, 1 Rune full helm, 1 Rune kiteshield on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
@@ -300,6 +278,28 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1163 QUANTITY=1 LIMIT_PRICE=45000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1163-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1201 QUANTITY=1 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1201-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1201\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune full helm, 1 Rune kiteshield on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:armour"
    ]
   },
   {
@@ -427,8 +427,7 @@
     "NO_BUY_TICKS": "25",
     "FLOAT": "40000",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "39800",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1275\":1}}"
+    "MAX_SPEND": "39800"
    },
    "enabled": true,
    "standing": true,
