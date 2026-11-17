@@ -64,6 +64,8 @@ Use this for every new or changed part.
 | `quests` | `questlist` | adapt | The account's quest states, colour-coded, with a detail view, the snapshot age, a filter (done, started, to do) and search. | none |
 | `inventory` | game Inventory tab, `itemprices` | adapt | The 28 slots from the snapshot, with item options. Hover shows the server's item value (the vault's: 7-day market average after 3 trades, else the shop price), and the market's buy and sell for route supplies. | Reject the high alchemy value: no alchemy data is checked for this world. |
 | `equipment` | game Worn Equipment tab | adapt | The doll by slot. Cloud snapshots have no slot numbers, so those show as a list. | none |
+| `prayer` | game Prayer tab, `prayer` | adapt | The 15 rev 289 prayers (Thick Skin through Protect from Melee), dimmed below the account's Prayer level, with points, worn Prayer bonus and Protect duration. | Reject active-prayer highlights: active prayers are not reported. |
+| `magic` | game Magic tab | adapt | Standard rev 289 spells from `spellbook.json` and standard utility spells, dimmed when Magic level, required staff or carried runes are short, with cast counts on hover. | none |
 | `friends` | `friendlist` | adapt | The fleet as a friends list: online accounts show their side (RuneLite shows the world). Click to follow. | none |
 | `settings` | game Settings tab, `stretchedmode` | adapt | Display mode, render quality, chat and places buttons. | none |
 | `logout` | game Logout tab | adapt | Signs the owner out of the hosted page. It never logs a bot out. | none |
