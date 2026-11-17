@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794956514613,
+ "at": 1794956609352,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -188,41 +188,25 @@
    "resources": []
   },
   {
-   "account": "Swordinhand",
+   "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit6-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=849 QUANTITY=1 LIMIT_PRICE=2500 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-849-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1201 QUANTITY=1 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1201-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"849\":1}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1201\":1}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 1 Willow shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "goal": "buy 1 Rune kiteshield on the Grand Exchange to wear rune armour",
    "role": "supply",
-   "template": "kit-buy:army-arrows-catherby",
+   "template": "kit-buy:army-armour-rune",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "ge:armour"
+   ]
   },
   {
    "account": "Bigpackage",
@@ -281,27 +265,6 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1201 QUANTITY=1 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit1-1201-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1201\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune kiteshield on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -349,6 +312,44 @@
    "resources": [
     "shop:magic_guild"
    ]
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=853 QUANTITY=1 LIMIT_PRICE=5000 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-853-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"853\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Maple shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "kit-buy:army-arrows-catherby",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Wandwaver",
@@ -462,8 +463,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
