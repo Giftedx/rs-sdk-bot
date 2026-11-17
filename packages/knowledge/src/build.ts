@@ -8,7 +8,7 @@ import { buildItems } from './items';
 import { buildGear, paramDefaults, parsePvpSpecials, parseRequirements, parseStaffItems } from './gear';
 import { buildNpcs } from './npcs';
 import { buildShops } from './shops';
-import { buildTransports, parseTransportHandlers, monkLadderSpawn, type Handler } from './transports';
+import { buildTransports, parseTransportHandlers, monkLadderSpawn, NAMED_TRANSPORT_FILES, type Handler } from './transports';
 import { classifyDoor, parseTriggers, openedTeamDoor,type OpenDoorVariant,type DoorKind, type DoorNeed } from './doors';
 import { buildDbTables } from './dbtables';
 import { buildSkillActions } from './skills';
@@ -55,13 +55,7 @@ for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2'
 // ladder (domeladderdown) goes down to the cavern, and two cavern ladders go up to the observatory (loc_2189) and to the
 // reception (loc_2188). Each of the three moves with no condition. The reception ladder down (obs_dungeonladderdown) is
 // not here: before the quest ends it opens a dialogue first, and a transport leg cannot answer one.
-const namedLadders:Record<string,string[]>={
-    'scripts/areas/area_falador/scripts/mining_guild.rs2':['miningguildladder'],
-    'scripts/areas/monastery/scripts/prayer_guild.rs2':['monasteryladder'],
-    'scripts/minigames/game_ranging/scripts/ranging_guild_door.rs2':['ranging_guild_door'],
-    'scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2':['loc_2188','loc_2189','domeladderdown'],
-};
-for(const [file,names] of Object.entries(namedLadders)){
+for(const [file,names] of Object.entries(NAMED_TRANSPORT_FILES)){
     const r=parseTransportHandlers(read(file),file,{triggers});
     handlers.push(...r.handlers.filter(h=>names.includes(h.locName)));
 }

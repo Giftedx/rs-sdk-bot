@@ -12,10 +12,10 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - npcSpawns: 8142
 - shops: 206
 - shopStockLines: 1696
-- transportHandlers: 65
-- transportEdges: 957
-- transportPhysicalEdges: 955
-- transportInteractionGeometry: 955
+- transportHandlers: 86
+- transportEdges: 981
+- transportPhysicalEdges: 979
+- transportInteractionGeometry: 979
 - transportInteractionUnknown: 0
 - transportDynamic: 1
 - transportSuperseded: 2
@@ -31,15 +31,15 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - dropTables: 258
 - pickablePlants: 2080
 - doors: 2718
-- doors_open: 954
-- doors_conditional: 7
-- doors_locked: 1532
-- doors_unknown: 66
-- doors_quest: 75
+- doors_open: 984
 - doors_key: 49
-- doors_one_way: 19
-- doors_skill: 12
+- doors_locked: 1532
+- doors_quest: 77
 - doors_team: 4
+- doors_one_way: 23
+- doors_unknown: 34
+- doors_skill: 12
+- doors_conditional: 3
 
 ## Notes
 

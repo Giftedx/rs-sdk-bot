@@ -4,6 +4,7 @@ import {
     checkAllRev289Parity,
     checkDashboardAssetsParity,
     checkKnowledgeParity,
+    checkPlannerRouterPracticeParity,
     checkPrayersList,
     checkQuestReqs,
     checkScriptsParity,
@@ -40,8 +41,9 @@ test('packages/dashboard/client-assets/ passes strict Rev 289 parity', () => {
     expect(checkDashboardAssetsParity(repoRoot, baseline)).toEqual([]);
 }, 20_000);
 
-test('owned scripts/ pass strict Rev 289 parity and aggregated check succeeds', () => {
+test('owned scripts/, planner, router, and practice pass strict Rev 289 parity', () => {
     expect(checkScriptsParity(repoRoot, baseline, { includeCrossWorker: false })).toEqual([]);
+    expect(checkPlannerRouterPracticeParity(repoRoot, baseline)).toEqual([]);
     expect(checkAllRev289Parity(repoRoot, { includeCrossWorker: false })).toEqual([]);
 }, 20_000);
 
@@ -79,8 +81,11 @@ test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS ques
     const geText = `// Grand Exchange seller via MarketClient\nconst COINS = 995;\nconst SHARK = 385;\n`;
     expect(findScriptParityIssues('scripts/ge-ok.ts', geText, baseline)).toEqual([]);
 
-    const badScript = `const PURE_ESSENCE = 7936;\nconst skill = 'Slayer';\nconst spell = 'Teleblock';\nconst prayer = 'Smite';\n`;
-    expect(findScriptParityIssues('scripts/bad.ts', badScript, baseline).length).toBe(4);
+    const badScript = `const PURE_ESSENCE = 7936;\nconst skill = 'Slayer';\nconst spell = 'Teleblock';\nconst prayer = 'Smite';\nconst mine = 'Mine pure essence';\nconst protectSet = new Set([995, 13204]);\nconst hasPe = sum(before, 7936);\n`;
+    expect(findScriptParityIssues('scripts/bad.ts', badScript, baseline).length).toBe(7);
+
+    // Negative comments explaining rev-289 absences must remain allowed.
+    expect(findScriptParityIssues('scripts/ok.ts', `// No Pure essence (7936) or Teleblock in rev 289\n`, baseline)).toEqual([]);
 
     // Explicitly detects post-289 bank-sort keywords in microbot-bank-sort.ts.
     expect(findScriptParityIssues('scripts/microbot-bank-sort.ts', `const p = ['chestplate'];`, baseline).length).toBe(1);
