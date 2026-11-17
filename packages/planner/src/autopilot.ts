@@ -466,7 +466,7 @@ function armourItemsFor(a: Acct, inp: Inputs): { id: string; band: number; items
 }
 function toolUpgradeNeed(a: Acct, routeDemand: ReadonlySet<string>): string | null {
     const miningDemand = ['iron ore', 'mithril bar', 'adamantite bar', 'steel bar', 'rune essence', 'coal'].some(x => routeDemand.has(x));
-    const wcDemand = ['yew logs', 'maple logs', 'yew shortbow', 'arrow shaft'].some(x => routeDemand.has(x));
+    const wcDemand = ['yew log', 'maple log', 'yew shortbow', 'arrow shaft'].some(x => routeDemand.has(x));
     if (miningDemand) {
         const mining = a.skills.Mining ?? 1;
         for (const [lvl, item] of PICKAXE_LADDER) {
@@ -2037,7 +2037,7 @@ export function catalogue(): Template[] {
     };
     const ranged: Template = {
         id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/ranged-train.ts', args: ['99', '1500'],
-        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '4000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
+        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '55000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['pen:3229,3298',TROOPER_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
@@ -2095,7 +2095,7 @@ export function catalogue(): Template[] {
     const zekeShop = (tier: string, item: string, minAtt: number, maxAtt: number, coins: number, better: readonly string[]): Template => ({
         id: `army-weapon-zeke-${tier}`, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zeke', '1200'],
         env: { ITEMS: `^${item}$`, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(coins), COIN_RESERVE: '200', MAX_SPEND: String(Math.max(200, coins - 200)) },
-        role: 'supply', goal: `buy ${item} from Zeke in Al Kharid`, tier: 'goal', band: WEAPON_BAND, repeats: false,
+        role: 'supply', goal: `buy ${item} from Zeke in Al Kharid`, tier: 'goal', band: WEAPON_BAND, stock: { item, to: 1 }, repeats: false,
         resources: ['shop:zeke'], yields: () => [],
         needs: { ...(minAtt > 1 ? { skills: { Attack: minAtt } } : {}), under: { Attack: maxAtt }, items: { coins }, holdsUnder: holdsUnderKeys([item, ...better]) },
     });
@@ -2106,8 +2106,8 @@ export function catalogue(): Template[] {
         id: 'army-armour-scavvo', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['scavvo', '1500'],
         env: { ITEMS: 'rune platelegs|rune chainbody', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '120000', COIN_RESERVE: '5000', MAX_SPEND: '115000' },
         role: 'supply', goal: "buy rune platelegs and rune chainbody from Scavvo in the Champions' Guild",
-        tier: 'goal', band: ARMOUR_BAND, repeats: false, resources: ['shop:scavvo'], yields: () => [],
-        needs: { skills: { Defence: 40 }, questPoints: PEN_QUEST_POINTS['3197,3353'], items: { coins: 120_000 }, shortOf: { 'rune platelegs': 1, 'rune chainbody': 1 } },
+        tier: 'goal', band: ARMOUR_BAND, stock: { item: 'rune platelegs', to: 1 }, repeats: false, resources: ['shop:scavvo'], yields: () => [],
+        needs: { skills: { Defence: 40 }, questPoints: PEN_QUEST_POINTS['3197,3353'], items: { coins: 120_000 }, shortOf: { 'rune platelegs': 1, 'rune chainbody': 1 }, holdsUnder: { 'rune platebody': 1 } },
     };
     const nurmofPickaxes: Template[] = PICKAXE_LADDER.map(([lvl, item, coins], idx) => {
         const better = PICKAXE_LADDER.slice(0, idx + 1).map(([, p]) => p);
@@ -2308,8 +2308,8 @@ export function jobResources(job: ResourceJob): string[] {
         }
         if (file === 'scripts/ranged-train.ts') {
             const method=env.PROGRESSION_METHOD;
-            if(method==='ranged/chickens')out.push('pen:3229,3298');
-            else if(method==='ranged/troopers'||method==='ranged/guild-willow-mithril')out.push(TROOPER_FIELD);
+            if(method==='ranged/chickens'||method==='ranged/chickens-oak')out.push('pen:3229,3298');
+            else if(method==='ranged/troopers'||method==='ranged/troopers-oak'||method==='ranged/troopers-willow'||method==='ranged/troopers-maple'||method==='ranged/guild-willow-mithril')out.push(TROOPER_FIELD);
             else out.push('pen:3229,3298',TROOPER_FIELD);
         }
         if (file === 'scripts/shop-buyer.ts') out.push(`shop:${(args[0] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);

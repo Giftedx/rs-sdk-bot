@@ -2577,3 +2577,36 @@ test('Nurmof pickaxe shop tiers upgrade miners only up to their Mining level thr
     const none = plan(inputs([alreadyRune], { templates: all, army: new Set(['miner']), bill: [row('iron ore', 10)], prices: { 'iron ore': 100 } }))[0]!;
     expect(none.template).toBeUndefined();
 });
+
+test('autopilot sets ranged MAX_SPEND, excludes rune platebody holders from Scavvo, normalizes wc tool demand, and narrows ranged jobResources', () => {
+    const ranged = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
+    expect(ranged.env?.MAX_SPEND).toBe('55000');
+
+    const scavvo = catalogue().find(t => t.id === 'army-armour-scavvo')!;
+    const mkScavvo = (items: Record<string, number>) => ({ ...acct('Tank', { Defence: 40 }, { coin: 120_000, ...items }), questPoints: 32 });
+    const needScavvo = plan(inputs([mkScavvo({})], { templates: [scavvo], army: new Set(['tank']) }))[0]!;
+    expect(needScavvo.template?.id).toBe('army-armour-scavvo');
+    const skipScavvo = plan(inputs([mkScavvo({ 'rune platebody': 1, 'rune plateleg': 1 })], { templates: [scavvo], army: new Set(['tank']) }))[0]!;
+    expect(skipScavvo.template).toBeUndefined();
+
+    const zekeIron = catalogue().find(t => t.id === 'army-weapon-zeke-iron')!;
+    const freshBlade = acct('NewBlade', { Attack: 1 }, { coin: 500 });
+    expect(plan(inputs([freshBlade], { templates: [zekeIron], army: new Set(['newblade']) }))[0]?.template?.id).toBe('army-weapon-zeke-iron');
+
+    const goldfarm = catalogue().find(t => t.id === 'goldfarm@2652,3318')!;
+    const lumber = acct('Lumber', { Woodcutting: 60, Attack: 1 }, { 'bronze axe': 1 });
+    const thief = acct('Helper', { Thieving: 60 }, {});
+    const withDemand = plan(inputs([lumber, thief], {
+        templates: [goldfarm], army: new Set(['lumber']), bill: [row('yew log', 10)], prices: {},
+    }));
+    expect(withDemand.find(x => x.account === 'Helper')?.template?.id).toBe('goldfarm@2652,3318');
+    const noDemand = plan(inputs([lumber, thief], {
+        templates: [goldfarm], army: new Set(['lumber']), bill: [], prices: {},
+    }));
+    expect(noDemand.find(x => x.account === 'Helper')?.template).toBeUndefined();
+
+    expect(jobResources({ script: 'scripts/ranged-train.ts', env: { PROGRESSION_METHOD: 'ranged/chickens-oak' } })).toEqual(['pen:3229,3298']);
+    for (const m of ['ranged/troopers-oak', 'ranged/troopers-willow', 'ranged/troopers-maple']) {
+        expect(jobResources({ script: 'scripts/ranged-train.ts', env: { PROGRESSION_METHOD: m } })).toEqual(['trooper:battlefield']);
+    }
+});

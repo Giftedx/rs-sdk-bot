@@ -3,6 +3,7 @@
 // Env: MIN_ARROWS, BUY_ARROWS, BUY_ARROW_ID, MAX_SPEND, COIN_RESERVE, AMMO, FOOD, FOOD_ID, KILLS_PER_TRIP, MAX_TRIPS.
 // MAX_SPEND includes food, arrows and fares. COIN_RESERVE protects total owned coins.
 // Missing trout/salmon falls back to observed Wydin cheese stock; FOOD remains the per-trip meal target.
+import {existsSync,readFileSync} from 'node:fs';
 import {openBot,finish,accountOf,getWorld,sessionDied} from '../packages/core/src/bot';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import type {Session} from '../packages/core/src/inprocess';
@@ -398,7 +399,7 @@ async function executeRangedAcquireStep(s:Session,o:RangedTrainOptions,account:O
   const p=st()?.player,hicktonItems=[841,843,882,884];
   const useDargaud=method.startsWith('ranged/guild-');
   const useHickton=!useDargaud&&!!p&&p.worldX<2850&&hicktonItems.includes(spec.itemId);
-  const shop=useDargaud?{npc:/^dargaud$/i,spot:{x:2673,z:3434},bank:{x:2727,z:3492}}
+  const shop=useDargaud?{npc:/^bow and arrow salesman$/i,spot:{x:2673,z:3434},bank:{x:2727,z:3492}}
    :useHickton?{npc:/^hickton$/i,spot:{x:2821,z:3444},bank:{x:2809,z:3441}}
    :{npc:/^lowe$/i,spot:LOWE,bank:BANK};
   const packCoins=count(inv(),COINS),needWithdraw=Math.max(0,budget-packCoins);
@@ -414,11 +415,13 @@ async function executeRangedAcquireStep(s:Session,o:RangedTrainOptions,account:O
   }
   await s.bot.closeBank();await waitUntil(s,()=>!st()?.bank?.isOpen,{timeoutTicks:5});
   if(o.stop?.())return{ok:false,acquired:false,targetMet:false,stop:'stop-file',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,coinsSpent:0,coinDebit:0,arrowsSpent:0};
+  const beforeWalkOut=total(COINS);
   const walked=await walkRangedAcquirePoint(s,shop.spot,o.stop);
+  const fareOut=Math.max(0,beforeWalkOut-total(COINS));
   let bought=0,spent=0;
   if(walked&&!o.stop?.()){
    if(await openShopWithDoor(s.bot,shop.npc,()=>waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10}))){
-    const wallet=count(inv(),COINS),allowed=Math.min(budget,wallet);
+    const wallet=count(inv(),COINS),allowed=Math.min(Math.max(0,budget-fareOut),wallet);
     if(allowed>0){
      const res=await buyWithBudget(s.bot,s.sdk,spec.name,wanted,Math.max(0,wallet-allowed),allowed);
      bought=res.bought;spent=res.spent;
@@ -426,19 +429,21 @@ async function executeRangedAcquireStep(s:Session,o:RangedTrainOptions,account:O
     await s.bot.closeShop();await waitUntil(s,()=>!st()?.shop?.isOpen,{timeoutTicks:5});
    }
   }
+  const beforeWalkBack=total(COINS);
   await walkRangedAcquirePoint(s,shop.bank,o.stop);
+  const fareBack=Math.max(0,beforeWalkBack-total(COINS)),travelSpent=fareOut+fareBack;
   if((await s.bot.openBank()).success&&await waitUntil(s,()=>!!st()?.bank?.isOpen,{timeoutTicks:12})){
-   for(const id of [spec.itemId,...(withdrawn>0||spent>0?[COINS]:[])]){
+   for(const id of [spec.itemId,...(withdrawn>0||spent>0||travelSpent>0?[COINS]:[])]){
     for(const slot of inv().filter(i=>i.id===id))await s.bot.depositItem(slot as any,slot.count);
    }
    await waitTicks(s,1);
    await s.bot.closeBank();await waitUntil(s,()=>!st()?.bank?.isOpen,{timeoutTicks:5});
   }
   const coinsAfter=total(COINS),debit=Math.max(0,totalCoins-coinsAfter);
-  const reconciled=coinsAfter>=o.coinReserve&&debit<=o.maxSpend&&debit===spent;
+  const reconciled=coinsAfter>=o.coinReserve&&debit<=o.maxSpend&&debit===spent+travelSpent;
   const ok=bought>0&&reconciled&&!o.stop?.();
   return{ok,acquired:ok,targetMet:false,stop:ok?'acquire':'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,
-   coinsSpent:debit,coinDebit:debit,arrowsSpent:0,bow:BOW_IDS.includes(spec.itemId)?spec.itemId:0,arrow:ARROW_IDS.includes(spec.itemId)?spec.itemId:0,
+   coinsSpent:debit,coinDebit:debit,travelSpent,arrowsSpent:0,bow:BOW_IDS.includes(spec.itemId)?spec.itemId:0,arrow:ARROW_IDS.includes(spec.itemId)?spec.itemId:0,
    ...(ok?{}:{failure:bought===0?`ranged acquire unavailable or empty stock for ${spec.name}`:'ranged acquire coin reconciliation mismatch'})};
  }
  // GE acquire (willow shortbow, mithril arrows, maple shortbow).
@@ -451,8 +456,20 @@ async function executeRangedAcquireStep(s:Session,o:RangedTrainOptions,account:O
   return{ok:false,acquired:false,targetMet:false,stop:'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,coinsSpent:0,coinDebit:0,arrowsSpent:0,failure:`ranged GE acquire budget short for ${method}`};
  const server=s.lifecycle?.server??'local',now=Date.now();
  const expectedOwned=step?.env?.EXPECTED_OWNED!==undefined?Number(step.env.EXPECTED_OWNED):undefined;
- const req:ItemRequest={actor:s.name,server,goal:`ranged-acquire-${itemId}`,item:itemId,quantity:maxQty,...(expectedOwned!==undefined?{expectedOwned}:{}),limit:limitPrice,reserve:o.coinReserve,createdAt:now,reviewAt:now+60_000,deadline:now+300_000};
- const res=await runOwnedItem(s,req,orderPaths(server,s.name,req.goal).journal,()=>!!o.stop?.(),false,100);
+ let goal=`ranged-acquire-${itemId}`,journalPath=orderPaths(server,s.name,goal).journal,reused:ItemRequest|undefined;
+ for(let seq=0;seq<50&&existsSync(journalPath);seq++){
+  try{
+   const prev=JSON.parse(readFileSync(journalPath,'utf8'));
+   if(prev?.version===1&&['placing','open','cancelling','collecting'].includes(prev.phase)&&prev.request?.item===itemId&&prev.request?.actor?.toLowerCase()===s.name.toLowerCase()){
+    reused=prev.request as ItemRequest;
+    break;
+   }
+  }catch{}
+  goal=`ranged-acquire-${itemId}-${seq+1}`;
+  journalPath=orderPaths(server,s.name,goal).journal;
+ }
+ const req:ItemRequest=reused??{actor:s.name,server,goal,item:itemId,quantity:maxQty,...(expectedOwned!==undefined?{expectedOwned}:{}),limit:limitPrice,reserve:o.coinReserve,createdAt:now,reviewAt:now+60_000,deadline:now+300_000};
+ const res=await runOwnedItem(s,req,journalPath,()=>!!o.stop?.(),false,100);
  const coinsAfter=total(COINS),debit=Math.max(0,totalCoins-coinsAfter);
  const ok=res.acquired>0&&coinsAfter>=o.coinReserve&&debit<=o.maxSpend&&!o.stop?.();
  return{ok,acquired:ok,targetMet:false,stop:ok?'acquire':'preparation',targetLevel:o.target,finalLevel:level(),xpGain:0,ticks:s.tick()-start,method,decision,
