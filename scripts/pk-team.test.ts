@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { pickEnemy } from './pk-team';
+import { pickEnemy, shouldStopUnseen } from './pk-team';
 
 test('pickEnemy: pair takes its own enemy while in view, else the lowest bar; near the nearest', () => {
     const live = [{ f: 'a', p: { distance: 1 }, h: 0.9 }, { f: 'b', p: { distance: 3 }, h: 0.2 }, { f: 'c', p: { distance: 2 }, h: 0.5 }];
@@ -48,4 +48,10 @@ test('squadTarget leaves out a target the game will not let it attack', async ()
     const view = [{ name: 'Goondelf', index: 1, distance: 3, z: 3515, combatLevel: 126 }, { name: 'Ligma', index: 2, distance: 5, z: 3640, combatLevel: 125 }];
     const bar: Record<number, number> = { 1: 0.2, 2: 0.9 };
     expect(squadTarget(view, new Set(['goondelf', 'ligma']), p => bar[p.index]!, new Set(), { z: 3640, combatLevel: 126 })?.name).toBe('Ligma');
+});
+
+test('shouldStopUnseen keeps waiting when enemies are in view under refusal cooldown', () => {
+    expect(shouldStopUnseen(true, 101, 100)).toBe(false);
+    expect(shouldStopUnseen(false, 100, 100)).toBe(false);
+    expect(shouldStopUnseen(false, 101, 100)).toBe(true);
 });
