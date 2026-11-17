@@ -60,6 +60,17 @@ export function parseRangedEntry(raw:Uint8Array):{entry:RangedComparisonEntry;by
  return{entry,bytes,sha256:sha256(bytes)};
 }
 export function loadRangedComparisonEntry(path=process.env.RANGED_PROGRESSION_ENTRY){return parseRangedEntry(readFileSync(path?resolve(path):sourceStatus));}
+export function rangedPracticeTarget(fixed:number,entry:RangedComparisonEntry,env:Record<string,string|undefined>=process.env){
+ const requested=env.RANGED_PROGRESSION_TARGET;if(requested===undefined)return fixed;
+ const target=Number(requested),level=entry.skills[4]!.level;
+ if(!env.RANGED_PROGRESSION_ENTRY||!Number.isSafeInteger(target)||target<=level||target>Math.min(level+5,99))throw Error('captured Ranged target must be within the next finite five-level band');
+ return target;
+}
+export function rangedPracticeCoins(entry:RangedComparisonEntry){
+ const coins=[...entry.inventory,...entry.equipment,...entry.bank].filter(i=>i.id===995).reduce((sum,i)=>sum+i.count,0);
+ // Preserve the fixed fixture's protected stock. A poorer captured entry never receives invented coins.
+ return{spend:Math.min(500,coins),reserve:Math.max(coins>=382483?382483:0,coins-500)};
+}
 const entry=loadRangedComparisonEntry('').entry;
 export function rangedComparisonPreset(entry:RangedComparisonEntry):SaveConfig{return{
  position:entry.pos,skills:Object.fromEntries(entry.skills.filter(k=>!k.name.startsWith('Stat')).map(k=>[k.name,k.level])),
@@ -89,6 +100,7 @@ const sameItems=(actual:readonly {id:number;count:number}[],expected:readonly {i
 };
 export function rangedComparisonChecks(before:ReturnType<typeof readPracticeSave>,after:ReturnType<typeof readPracticeSave>,result:any,log:string,code:number,target=RANGED_COMPARISON_TARGET,effectiveEntry:RangedComparisonEntry=entry){
  const entry=effectiveEntry,id=result?.arrow??result?.ammoId;
+ const budget=rangedPracticeCoins(entry);
  const chicken=result?.method==='ranged/chickens';
  const allowed=new Set([995,id,...foodIds,...chicken?[526,2138,314]:[]]);
  const ids=new Set([...Object.values(before.inventories).flat(),...Object.values(after.inventories).flat()].map(i=>i.id));
@@ -103,7 +115,7 @@ export function rangedComparisonChecks(before:ReturnType<typeof readPracticeSave
   bank:after.position.level===0&&[[3253,3421],[2619,3332]].some(([x,z])=>Math.max(Math.abs(after.position.x-x!),Math.abs(after.position.z-z!))<=6),
   assets:[...ids].every(i=>allowed.has(i)||total(before,i)===total(after,i)),
   arrows:Number.isSafeInteger(arrowDebit)&&arrowDebit>=0&&arrowDebit===result?.arrowsSpent,
-  coins:Number.isSafeInteger(coinDebit)&&coinDebit>=0&&coinDebit<=500&&total(after,995)>=382483&&coinDebit===result?.coinsSpent,
+  coins:Number.isSafeInteger(coinDebit)&&coinDebit>=0&&coinDebit<=budget.spend&&total(after,995)>=budget.reserve&&coinDebit===result?.coinsSpent,
   accounting:result?.accounting===true&&result?.preserved===true,
   health:after.skills[3]!.level>0&&result?.died===false,
   logout:(log.match(/^LOGOUT logged-out$/gm)??[]).length===1&&!/^WARN .*?(logout|session close)/m.test(log),
@@ -130,12 +142,13 @@ export function verifyRangedComparison(folder:string){
 }
 async function run(template:string,mode:string,target=RANGED_COMPARISON_TARGET){
  if(!['adaptive','chickens','troopers'].includes(mode))throw Error('comparison method must be adaptive, chickens or troopers');
- if(![83,85].includes(target))throw Error('comparison target must be83 or85');
+ if(![83,85].includes(target))throw Error('fixed comparison target must be83 or85');
  const templateEnv=readFileSync(join(root,'vendor/rs-sdk/bots',template,'bot.env'),'utf8'),server=serverFromEnv(templateEnv);
  if(!isLocalServer(server)||process.env.DEMO_OK==='1')throw Error('Ranged comparison is local practice only');
  const override=process.env.RANGED_PROGRESSION_ENTRY;
  if(override&&process.env.BENCH_CACHE!=='0')throw Error('Ranged entry override requires uncached practice (--profile or --no-keep)');
  const loaded=loadRangedComparisonEntry(override),entry=loaded.entry;
+ target=rangedPracticeTarget(target,entry);
  if(entry.skills[4]!.level>=target)throw Error('Ranged entry must precede the finite target');
  const port=Number(server.slice(server.lastIndexOf(':')+1));if(!Number.isSafeInteger(port)||port<1)throw Error('comparison engine port unknown');
  const name=runBotName('aiobfl',1),botDir=join(root,'vendor/rs-sdk/bots',name),folder=resolve(root,process.env.BENCH_OUTPUT_DIR??'.practice/progression-ranged',`${mode}-${process.env.SIM_SEED??process.env.BENCH_SEED??'seed'}-${name}`);
@@ -147,9 +160,9 @@ async function run(template:string,mode:string,target=RANGED_COMPARISON_TARGET){
   const path=await applyPreset(name,rangedComparisonPreset(entry));
   setPracticeSkills(path,entry.skills.map(s=>({level:s.currentLevel,xp:s.xp})));
   copyFileSync(path,join(folder,'before.sav'));
-  const pin=capabilityRevision(['scripts/ranged-train.ts'],root),verifier=proofSource(),started=Date.now();
+  const pin=capabilityRevision(['scripts/ranged-train.ts'],root),verifier=proofSource(),started=Date.now(),budget=rangedPracticeCoins(entry);
   const proc=Bun.spawn(['bun',join(root,'scripts/ranged-train.ts'),name,String(target),'20000'],{
-   cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',MIN_ARROWS:'30',BUY_ARROWS:'0',MAX_SPEND:'500',COIN_RESERVE:'382483',AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'50',
+   cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',MIN_ARROWS:'30',BUY_ARROWS:'0',MAX_SPEND:String(budget.spend),COIN_RESERVE:String(budget.reserve),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'50',
     RANGED_COMPARE_METHOD:mode==='adaptive'?'':mode},stdout:'pipe',stderr:'pipe',windowsHide:true,
   });
   let timedOut=false;const timer=setTimeout(()=>{timedOut=true;void killTree(proc.pid);},540000);
