@@ -3,12 +3,13 @@
 // time counts as 90 s. Cases are packed longest first onto PARALLEL engines until a batch's estimate (the busiest
 // engine) reaches the budget; each batch runs with a hard limit of the budget plus 90 s, and a case it did not reach
 // goes into the next batch. Prints one line for each batch and one PVP_SWEEP total.
-// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 3.5] [--seed n] [--quick] [--batch k]
+// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 3.5] [--seed n] [--quick] [--batch k] [--shard i/n]
 // A batch's hard limit is the budget plus 90 s: with the default 3.5 minutes no batch runs past 5 minutes. --batch k
 // runs only the k-th batch of the packing (1-based), one bench of 5 minutes or less.
 // Default pattern: every pvp: case and every extra: spar, gang, kite, army, team and hunt-trip case (233 cases, about
 // 32 minutes in four batches on 4 cores; 10 engines at once are no faster than 6). --quick: every pvp: route case and
 // one case of each climb (QUICK_CASES), a few minutes, for the turns of a change; the full sweep before a merge.
+// --shard i/n takes positions i-1 modulo n from the selected cases: all n shards cover that selection exactly once.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { benchCases } from './aio-bench-cases';
@@ -23,9 +24,19 @@ export const QUICK_CASES = ['extra:spar-rivals-tribrid-snare-sara-x12', 'extra:s
 export const quickPattern = () => new RegExp(`^(pvp:.*|${QUICK_CASES.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`);
 export function sweepPattern(argv: readonly string[]): RegExp {
     if (argv.includes('--quick')) return quickPattern();
-    const valueFlags = new Set(['--parallel', '--budget', '--seed', '--batch']);
+    const valueFlags = new Set(['--parallel', '--budget', '--seed', '--batch', '--shard']);
     const pattern = argv.find((a, i) => !a.startsWith('--') && (i === 0 || !valueFlags.has(argv[i - 1]!)));
     return new RegExp(pattern ?? '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))');
+}
+
+export function shardKeys(keys: readonly string[], shard?: string): string[] {
+    if (shard === undefined) return [...keys];
+    const parts = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
+    const index = Number(parts?.[1]), count = Number(parts?.[2]);
+    if (!parts || !Number.isSafeInteger(index) || !Number.isSafeInteger(count) || index > count) {
+        throw Error('--shard needs i/n with safe positive integers and i <= n');
+    }
+    return keys.filter((_, position) => position % count === index - 1);
 }
 
 // Longest first onto the least loaded engine; a batch closes when its busiest engine would pass the budget.
@@ -48,8 +59,11 @@ if (import.meta.main) {
     const engines = Number(value('--parallel') ?? 6), budgetMs = Number(value('--budget') ?? 3.5) * 60_000, seed = value('--seed');
     mkdirSync(dir, { recursive: true });
     const times: Record<string, number> = existsSync(timesFile) ? JSON.parse(readFileSync(timesFile, 'utf8')) : {};
-    const keys = benchCases().filter(c => pattern.test(c.key) && !c.known).map(c => c.key);
-    if (!keys.length) { console.log(`PVP_SWEEP no runnable cases match ${pattern}`); process.exit(2); }
+    const selected = benchCases().filter(c => pattern.test(c.key) && !c.known).map(c => c.key);
+    const shard = argv.includes('--shard') ? value('--shard') ?? '' : undefined;
+    const keys = shardKeys(selected, shard);
+    if (!keys.length) { console.log(`PVP_SWEEP no runnable cases match ${pattern}${shard === undefined ? '' : ` in shard ${shard}`}`); process.exit(2); }
+    if (shard !== undefined) console.log(`PVP_SWEEP shard ${shard}: ${keys.length} of ${selected.length} selected cases`);
     // A case's own time leaves out its engine start and the load of the other engines: `_scale` (actual batch time over
     // its estimate, from the last batch; 1.4 at first) turns the case times into batch time.
     let scale = times._scale ?? 1.4;

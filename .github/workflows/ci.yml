@@ -32,6 +32,10 @@ jobs:
     if: inputs.pvp_practice
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,19 +55,19 @@ jobs:
           mkdir -p .practice/pvp-sweep
           git rev-parse HEAD > .practice/pvp-sweep/source.txt
           sha256sum scripts/pk.ts scripts/measure/pk-escape-proof.ts scripts/measure/aio-bench-cases.ts patches/rs-sdk-working.patch >> .practice/pvp-sweep/source.txt
-      - name: Run the complete PvP sweep in bounded batches
+      - name: Run this shard of the complete PvP sweep in bounded batches
         timeout-minutes: 45
         run: |
           set -o pipefail
-          bun scripts/measure/pvp-sweep.ts --parallel 4 --budget 3.5 | tee .practice/pvp-sweep/full.log
+          bun scripts/measure/pvp-sweep.ts --parallel 4 --budget 3.5 --shard ${{ matrix.shard }}/4 | tee .practice/pvp-sweep/full.log
       - name: Run the first AIO smoke group
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.shard == 1 }}
         timeout-minutes: 10
         run: |
           set -o pipefail
           bun run bench '^quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$' --smoke --parallel 1 --budget 10 | tee .practice/pvp-sweep/smoke-a.log
       - name: Run the second AIO smoke group
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.shard == 1 }}
         timeout-minutes: 10
         run: |
           set -o pipefail
@@ -72,7 +76,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pvp-practice-${{ github.sha }}
+          name: pvp-practice-shard-${{ matrix.shard }}-${{ github.sha }}
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7

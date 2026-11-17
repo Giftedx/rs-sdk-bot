@@ -24,6 +24,10 @@ The finite live consumer is a 900-tick hunter trip through `aio-pvp.ts hunt` aft
 the source and observes a complete owned kit. Existing account assignments, supply reservations and stops apply.
 Saved local stock does not establish a complete hunter kit. Credited live kills and Wilderness control remain unknown.
 
+The separate starter-kit stage has a fixed acquisition intent: two cheese, with its existing 1..2000 tick cap.
+The native `pvp:stage-kit` case buys and banks both cheese for 68 GP, keeps HP10, XP and protected stock, and logs out.
+Evidence: `.practice/pvp-escape/kit-stage-native.log`. This is starter supply, not a complete tribrid hunting kit.
+
 ## Shared trip items and loot
 
 Source -> consumer -> adapt -> check: [Inventory Setups explicit variant grouping](https://github.com/dillydill123/inventory-setups/tree/16f2c0a319672c2e19738276a17de63aea7216fa), the pinned potion `dose_count` and `nextstage` chain, and local teleport charge definitions -> `item-requirements.ts` and hunter trip selection/restocking -> adapt explicit families, reuse native metadata, reject modern item tables and fuzzy equipment substitutions -> `item-requirements.test.ts`, `pk-hunt.test.ts` and `microbot-potion-care.test.ts`. Inventory Setups uses BSD-2-Clause. No upstream code is copied.
