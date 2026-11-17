@@ -72,7 +72,13 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
 }
 
 // Follower escape choice at a Wilderness depth: rubbed glory up to 30, Varrock Teleport up to 20, else run south.
-export function armyEscapeMethod(magic: number, z: number, inventory: readonly { name: string; count?: number }[], equipment: readonly { name: string }[], removeTries: number) {
+export function armyEscapeMethod<I extends { name: string; count?: number }, E extends { name: string }>(
+    magic: number,
+    z: number,
+    inventory: readonly I[],
+    equipment: readonly E[],
+    removeTries: number,
+): { how: ReturnType<typeof escapeStep>; glory: I | undefined; worn: E | undefined } {
     const glory = inventory.find(i => GLORY.test(i.name));
     const worn = equipment.find(i => GLORY.test(i.name));
     const how = escapeStep(wildernessLevel(z), { glory: !!glory || (!!worn && removeTries < 3), teleport: hasVarrockTeleport(magic, inventory, equipment) });
