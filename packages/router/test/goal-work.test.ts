@@ -17,6 +17,16 @@ const run=(id:string,patch:Partial<CoordTask>={}):CoordTask=>({id,kind:'run',goa
 const status=(name:string,patch:Record<string,unknown>={})=>({name,at:NOW,server:'rs-sdk-demo.fly.dev',skills:[{name:'Fishing',level:1}],bank:[],bankAt:NOW,inventory:[],equipment:[],equipmentObserved:true,...patch});
 const evaluate=(tasks:CoordTask[],board=goals(),statuses:any[]=[status('Helper')])=>{const state=initialState();addTasks(state,tasks,NOW);return{state,values:goalWork(state,board,statuses,NOW)};};
 
+test('a bounded skills refresh supports its real finite army consumer without receiving its level credit',()=>{
+ const observe=run('observe',{capability:'observe',account:'Fighter',timeoutMs:120000,args:[],env:{REQUIRE_BANK:'0',LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:{skills:{Hitpoints:1}}});
+ const consumer=run('finite',{goal:'skills',account:'Fighter',accept:{skills:{Ranged:43}},dependsOn:['observe']});
+ const s=initialState();addTasks(s,[observe,consumer],NOW);
+ const value=(at:number)=>goalWork(s,goals(),[status('Fighter',{at,skills:[{name:'Ranged',level:1,xp:0},{name:'Hitpoints',level:10,xp:1000}]})],NOW,{entryOf:cap=>cap==='observe'?'scripts/fleet-inspect.ts':'scripts/ranged-train.ts'});
+ expect(value(NOW-400000).get('observe')?.value).toBe(.01);
+ expect(value(NOW).get('observe')?.value).toBe(0);
+ expect(value(NOW-400000).get('finite')?.value).toBe(42/98);
+});
+
 test('an unresolved quest has goal value and completed coverage does not',()=>{
  const {values}=evaluate([run('quest')]);
  expect(values.get('quest')!.value).toBeGreaterThan(0);

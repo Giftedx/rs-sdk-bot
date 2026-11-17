@@ -2,6 +2,26 @@ import { expect, test } from 'bun:test';
 import { readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { startStatus, noteStatusLine, resultCounters } from '../src/status';
+import {equipmentObserved,setEquipmentObserved} from '../src/container-observation';
+import {beginSessionAttempt,accountDir} from '../src/session-lifecycle';
+
+test.each(['confirmed','held','changed','invalidated','empty','unknown'])('saved equipment keeps only an actual matching observation after logout: %s',mode=>{
+ const name=`Eq${process.pid}${mode.slice(0,1)}`,server='localhost:8888',file=resolve(import.meta.dir,'../../../.practice/status',name+'.json');
+ const attempt=beginSessionAttempt({account:name,server}),client={ingame:true},callbacks:(()=>void)[]=[];
+ const state:any={equipment:mode==='empty'||mode==='unknown'?[]:[{slot:3,id:1277,name:'Bronze sword',count:1}],inventory:[],skills:[]};
+ setEquipmentObserved(client,mode!=='unknown');
+ const session:any={name,client,lifecycle:attempt,sdk:{getState:()=>state},tick:()=>1,onTick:(cb:()=>void)=>{callbacks.push(cb);return()=>{};}};
+ const status=startStatus(session,server),flush=()=>{for(let i=0;i<5;i++)callbacks.forEach(cb=>cb());};
+ try{
+  if(mode==='invalidated'){setEquipmentObserved(client,false);flush();}
+  if(mode==='changed')state.equipment[0].id=1291;
+  client.ingame=false;setEquipmentObserved(client,false);
+  if(mode!=='held'){attempt.record('ended','logged-out');attempt.record('logout','logged-out');}
+  status.stop();const saved=JSON.parse(readFileSync(file,'utf8'));
+  expect(saved.equipmentObserved).toBe(mode==='confirmed'||mode==='empty');
+  expect(equipmentObserved(client)).toBe(false);
+ }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});const path=accountDir(name,server);expect(path.startsWith(resolve(import.meta.dir,'../../../.practice/session-lifecycle'))).toBe(true);rmSync(path,{recursive:true,force:true});}
+});
 
 test('a bank visit between writes keeps an identified snapshot after close', async () => {
     const name = `StatusTest${process.pid}`;

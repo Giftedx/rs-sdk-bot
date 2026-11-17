@@ -30,6 +30,12 @@ test('AP refines its actual finite assignment through the shared measured select
  expect(r.assignments[0]?.template?.env?.PROGRESSION_METHOD).toBe('fast');expect(r.assignments[0]?.template?.env?.PROGRESSION_SOURCE).toBe('proof-fast');
  expect(calls).toHaveLength(1);expect(calls[0]?.accept).toEqual({skills:{Ranged:50}});
 });
+
+test('AP leaves a selected stale consumer as an executable coordinator request instead of logging it in',()=>{
+ const {planner}=setup([slow],{observed:()=>({...status,at:0})}),result=planner.refine([assignment()]);
+ expect(result.requests.find(r=>r.action==='observe')?.consumer).toEqual({work:{script:'scripts/slow.ts',args:['50'],env:{PROGRESSION_CONSUMER:JSON.stringify({skills:{Ranged:50}})}},accept:{skills:{Ranged:50}}});
+ expect(result.assignments[0]?.template).toBeUndefined();expect(result.assignments[0]?.resources).toEqual([]);
+});
 test('AP retains modeled or unqualified rivals as evidence work and honors build caps and holds',()=>{
  const modeled=method('fast',10,{rate:{unitsPerTick:10,basis:'model',evidence:'estimate'}});
  const {planner}=setup([slow,modeled],{builds:new Map([['archer',{Ranged:45}]])}),r=planner.refine([assignment()]);
@@ -102,6 +108,7 @@ test('AP keeps only the exact active finite mission after its admitted arrows ar
  const active={...status,bank:[{id:882,count:148}],started:now-1000,sessionAttemptId:'attempt',workEntry:job.script,workRevision:m.source,progression:{executing:m.id,boundMethod:m.id,source:m.source,consumer:{skills:{Ranged:50}}}};
  const p=setup([m],{observed:()=>active,jobs:[job]}).planner,kept=p.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
  expect(kept.env).toEqual(env);expect(kept.args).toEqual(job.args);expect(kept.resources).toEqual(['trooper:battlefield']);
+ expect(p.refine([assignment(t)]).assignments[0]?.template?.env).toEqual(env);
  const ended=setup([m],{observed:()=>({...active,result:'RESULT ok'}),jobs:[job]}).planner.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
  expect(ended.env).toEqual({...t.env,PROGRESSION_CONSUMER:JSON.stringify({skills:{Ranged:50}})});expect(ended.env?.PROGRESSION_METHOD).toBeUndefined();expect(ended.env?.PROGRESSION_SOURCE).toBeUndefined();
  const changed={...t,trains:{...t.trains!,to:51}},fresh=p.templateFor(changed,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});

@@ -5,6 +5,7 @@ import type { BankObservation } from './inprocess';
 import { questFlags, questDefinitions, type QuestFlag } from './quest-status';
 import {guildActorFacts} from './guild-observation';
 import {equipmentObserved} from './container-observation';
+import {readLogoutProof} from './session-lifecycle';
 import {observedDoorStates} from './door-policy';
 
 // Live status for the dashboard (packages/dashboard): every bot writes .practice/status/<name>.json every few ticks.
@@ -173,6 +174,20 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         }
     } catch { /* missing or invalid prior observation remains unknown */ }
     const inputs = recordInputs(s);
+    let observedEquipment: string | null = null;
+    const savedEquipmentReady = (raw: unknown) => {
+        const rows = equipmentStatus(raw), current = !!s.client && typeof s.client === 'object' && equipmentObserved(s.client);
+        const inGame = (s.client as {ingame?:unknown}|undefined)?.ingame;
+        if (inGame === true) {
+            observedEquipment = current && rows !== null ? JSON.stringify(rows) : null;
+            return current && rows !== null;
+        }
+        if (current) return rows !== null;
+        // Logout clears live container readiness. Retain only this session's actual matching saved kit.
+        if (inGame !== false || observedEquipment === null || rows === null || JSON.stringify(rows) !== observedEquipment) return false;
+        const proof = readLogoutProof(s.name, server);
+        return proof.state === 'confirmed' && proof.attemptId === (s as {lifecycle?:{attemptId?:unknown}}).lifecycle?.attemptId;
+    };
     let lastBankGeneration = 0;
     const observeBank = () => {
         const observed = s.bankObservation?.();
@@ -219,7 +234,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             // dashboard's 3D view draws them, because the world feed never sends a private obj.
             ground: groundStatus(st?.groundItems, p?.level),
             equipment: equipmentStatus(st?.equipment),
-            equipmentObserved: !!s.client&&typeof s.client==='object'&&equipmentObserved(s.client),
+            equipmentObserved: savedEquipmentReady(st?.equipment),
             // Passive journal observations only. Older running sessions remain untouched.
             quests, questsAt,
             bank, bankAt, ledger: ledgerCounts?.() ?? null,
@@ -244,7 +259,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     // A lockstep practice world runs ticks as fast as its bots answer, and no dashboard follows a bench account tick
     // by tick: there the file is written every 100 ticks, not every 5 (the write was 10% of a 16-account bench run).
     const every = process.env.SIM_LOCKSTEP === '1' ? 100 : 5;
-    const off = s.onTick(() => { observeBank(); observeQuests(); if (++n % every === 0) write(); });
+    const off = s.onTick(() => { observeBank(); observeQuests(); savedEquipmentReady(s.sdk.getState()?.equipment); if (++n % every === 0) write(); });
     // The row is also written on the clock, for the session's whole life: a session whose tick stream has frozen (a
     // hung quest script, a stalled client) otherwise stops refreshing `at`, and the release gate (worker-release.ts
     // assertCompatibleWorkers) then reads an unfinished row older than 30 s as an unknown peer and refuses every other

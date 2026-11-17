@@ -8,6 +8,16 @@ const account=(name:string):ObservedAccount=>({account:name,at:now,skills:{range
 const method=(id:string,rate=1,over:Partial<ProgressionMethod>={}):ProgressionMethod=>({id,step:{script:`scripts/${id}.ts`,args:['50'],env:{}},source:'source',effects:{xp:{ranged:1}},rate:{unitsPerTick:rate,basis:'measured',evidence:'matched native samples'},costs:{setupTicks:0,travelTicks:0,acquisitionTicks:0,unlockTicks:0},qualification:{source:'source',bands:[{}]},...over});
 const assignment=(name:string,resources:string[]=[]):Assignment=>({account:name,value:1,reason:'army',resources,template:{id:'baseline',script:'scripts/slow.ts',args:['50'],role:'combat',goal:'Ranged50',family:'combat-train',trains:{skill:'Ranged',to:50,unlocks:[]},yields:()=>[]}});
 const options=(over:Partial<FleetProgressionOptions>={}):FleetProgressionOptions=>({baseline:[assignment('A')],accounts:[account('A')],intents:new Map([['a',{kind:'train',skill:'ranged',targetLevel:50}]]),methods:()=>[method('slow'),method('fast',10)],currentMethods:new Map([['a','slow']]),now,...over});
+
+test('22 selected finite consumers request their stale observations with exact work, without changing assignments',()=>{
+ const names=Array.from({length:22},(_,i)=>'Helper'+i),baseline=names.map(n=>assignment(n));
+ const result=selectProgressionFleet(options({now:now+400000,baseline,accounts:names.map(account),intents:new Map(names.map(n=>[n.toLowerCase(),{kind:'train',skill:'ranged',targetLevel:50}])),currentMethods:new Map(names.map(n=>[n.toLowerCase(),'slow']))}));
+ const requests=result.requests.filter(r=>r.action==='observe');
+ expect(requests).toHaveLength(22);
+ expect(new Set(requests.map(r=>r.account)).size).toBe(22);
+ expect(requests[0]).toMatchObject({account:'Helper0',consumer:{work:{script:'scripts/slow.ts',args:['50'],env:{}},accept:{skills:{Ranged:50}}}});
+ expect(result.assignments).toEqual(baseline);expect(result.changes).toEqual([]);
+});
 test('a measured qualified improvement refines the existing assignment and finite consumer',()=>{
  const r=selectProgressionFleet(options());
  expect(r.changes[0]?.method).toBe('fast');expect(r.assignments[0]?.template?.id).toBe('baseline');
