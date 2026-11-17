@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794956743768,
+ "at": 1794956832956,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -170,25 +170,6 @@
    "resources": []
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=853 QUANTITY=1 LIMIT_PRICE=5000 CASH_RESERVE=26000 ORDER_KEY=pocketrocket-kit9-853-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"853\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Maple shortbow on the Grand Exchange to buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
-   "role": "supply",
-   "template": "kit-buy:army-arrows-catherby",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -220,24 +201,22 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
-    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+    "99",
+    "5000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy nature and air runes at the Magic Guild in Yanille for the alchemy band",
-   "role": "supply",
-   "template": "army-nature-guild",
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
    "autopilot": "local",
-   "resources": [
-    "shop:magic_guild"
-   ]
+   "resources": []
   },
   {
    "account": "Hocuspokeus",
