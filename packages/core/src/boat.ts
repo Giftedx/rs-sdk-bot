@@ -10,7 +10,7 @@ export interface BoatSession extends TickSource {
         getState(): any;
         getDialog(): { isOpen: boolean; isWaiting?: boolean; options: DialogOption[] } | null | undefined;
         sendClickDialog(index: number): Promise<unknown>;
-        findNearbyLoc(pattern: RegExp): unknown;
+        findNearbyLoc(pattern: RegExp, options?: { withOption?: string | RegExp; reachable?: boolean }): unknown;
     };
     bot: {
         talkTo(npc: RegExp): Promise<{ success: boolean; message?: string }>;
@@ -96,7 +96,7 @@ export async function disembark(s: BoatSession, o: DisembarkOptions = {}): Promi
         await o.before?.();
         const d = s.sdk.getDialog();
         if (d?.isOpen) { await s.sdk.sendClickDialog(0); await waitTicks(s, 1); continue; }
-        const plank = s.sdk.findNearbyLoc(/^gangplank$/i);
+        const plank = s.sdk.findNearbyLoc(/^gangplank$/i, { withOption: /^cross$/i, reachable: true });
         if (!plank) { const n = left(o.missTicks ?? 2); if (n > 0) await waitTicks(s, n); continue; }
         crossings++;
         await s.bot.interactLoc(plank, 'Cross');

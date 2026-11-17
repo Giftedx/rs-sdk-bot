@@ -488,4 +488,5 @@ test('selectOverheadPrayer switches to Smite when safe and target is low or flee
     expect(selectOverheadPrayer(PRAYER.melee, 99, 60, 50, true, true)).toBe(PRAYER.melee);
     expect(selectOverheadPrayer(PRAYER.magic, 51, 90, 50, true, true)).toBe(PRAYER.magic);
     expect(selectOverheadPrayer(PRAYER.missiles, 99, 90, 50, true, false)).toBe(PRAYER.missiles);
+    expect(selectOverheadPrayer(PRAYER.melee, 99, 90, 50, true, true, true)).toBe(PRAYER.melee);
 });

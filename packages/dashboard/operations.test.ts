@@ -304,4 +304,8 @@ test('fleet Wilderness filter counts and isolates playing accounts in the Wilder
  const wild=render('wildy');
  expect(wild).toContain('[ROW:WildOne]');
  expect(wild).not.toContain('[ROW:SafeOne]');
+ const rowCode=operations.slice(operations.indexOf(' function fleetRow(b){'),operations.indexOf(' function publicRow(b){'));
+ const rowHtml=new Function('window','issues','overallRank','totalLevel','st','resultSummary','safeName','skillIcon','compactRate','idleOf','button','E','nf',`${rowCode};return fleetRow({name:'WildOne',operation:'observed',inWorld:true,pos:{x:3060,z:3880,level:0}});`)(
+  {atlasOperator:()=>true},()=>[],()=>null,()=>0,()=>['','observed'],()=>'',String,()=>'',String,()=>null,()=>'',String,String) as string;
+ expect(rowHtml).toContain('Observed · wildy 46');
 });
