@@ -992,7 +992,11 @@ const ROUTE_CASES: BenchCase[] = [
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3700)}],
     pass: s => ok(s) && /PK_ESCAPE_PROOF \{"ok":true,/.test(s), timeoutMs: 90_000},
   {key: 'extra:spar-spear-protected', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-spear-proof.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}'], presetConfig: kitFixture('tribrid-snare-spear', 3150, 3560),
+    scriptArgs: ['{bot:b}'], presetConfig: (() => {
+      const fixture = kitFixture('tribrid-snare-spear', 3150, 3560);
+      // Isolate the non-damaging special: a cooldown boost would change the strict asset baseline.
+      return {...fixture, inventory: fixture.inventory!.filter(i => ![2436, 2440, 2444].includes(i.id))};
+    })(),
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {...sparFixture(3151, 3560), varps: {...sparFixture(3151, 3560).varps, 172: 1}}}],
     pass: s => ok(s) && /PK_SPEAR_PROOF \{"ok":true,/.test(s), timeoutMs: 90_000},
   // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.

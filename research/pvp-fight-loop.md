@@ -37,9 +37,12 @@ copied -> `pk-spear.test.ts` and `extra:spar-spear-protected`.
 
 The six unit cases cover a spear opening through Protect Melee, retained health and energy limits, a shared-hold
 wait, and the damaging special's quarter-health rule. The native case requires an observed Protect Melee overhead
-above quarter health, special energy 1000 to 750, a one-tile push, `stunned_shove` graphic 254, no target HP loss,
-retained assets, the same lives and confirmed logout. Gap: native execution is unverified. Dispatch counters do
-not establish a hold, a kill or a speed gain. The existing `extra:army-route-spear-x5` case is the army consumer.
+above quarter health, special energy 1000 to 750, the native east push (+1,+1) or its (+1,0) fallback,
+`stunned_shove` graphic 254, no target HP loss,
+retained assets, the same lives and confirmed logout. Seeds 7, 8 and 9 pass with energy 750, graphic 254 and offset
+(+1,+1). Evidence: `.practice/aio-bench/output-seed-7/extra_spar-spear-protected.log` and the corresponding seed 8
+and 9 logs. Gap: practice holds do not establish a live hold, a kill or a speed gain. The existing
+`extra:army-route-spear-x5` case is the army consumer.
 
 ## Shared trip items and loot
 

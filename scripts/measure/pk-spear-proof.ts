@@ -39,8 +39,8 @@ try {
     const targetBefore = before[1]!.player;
     if (!protectedTarget || targetBefore.hp <= targetBefore.maxHp / 4 || energy(runner) !== 1000
         || target.sdk.getState()?.autoRetaliateEnabled !== false || !runner.sdk.getEquipment().some(i => i.slot === 3 && i.id === SPEAR)
-        || Math.abs(before[0]!.player.worldX - targetBefore.worldX) + Math.abs(before[0]!.player.worldZ - targetBefore.worldZ) !== 1) {
-        throw Error('protected adjacent spear entry missing');
+        || targetBefore.worldX !== before[0]!.player.worldX + 1 || targetBefore.worldZ !== before[0]!.player.worldZ) {
+        throw Error('protected east-adjacent spear entry missing');
     }
     let graphicSeen = false, hpMin = targetBefore.hp;
     off = target.onTick(() => {
@@ -59,13 +59,15 @@ try {
     const p = after[1]!.player;
     graphicSeen ||= p.spotanimId === STUN;
     hpMin = Math.min(hpMin, p.hp);
-    const pushed = Math.abs(p.worldX - targetBefore.worldX) + Math.abs(p.worldZ - targetBefore.worldZ) === 1;
+    // dragon_spear_push tries east (+1,+1), then (+1,0) when the diagonal has no line of walk.
+    const dx = p.worldX - targetBefore.worldX, dz = p.worldZ - targetBefore.worldZ;
+    const pushed = p.level === targetBefore.level && dx === 1 && (dz === 1 || dz === 0);
     const assetsPreserved = before.every((b, i) => b.assets === after[i]!.assets);
     const livesPreserved = before.every((b, i) => Number.isSafeInteger(b.player.lifeId) && b.player.lifeId === after[i]!.player.lifeId && after[i]!.player.hp > 0);
     const hpPreserved = hpMin === targetBefore.hp && p.hp === targetBefore.hp;
     proof = {ok: protectedTarget && energy(runner) === 750 && pushed && graphicSeen && hpPreserved && assetsPreserved && livesPreserved,
         protectedTarget, energy: energy(runner), pushed, graphicSeen, hpPreserved, assetsPreserved, livesPreserved,
-        ticks: result.ticks, targetBefore: [targetBefore.worldX, targetBefore.worldZ], targetAfter: [p.worldX, p.worldZ]};
+        ticks: result.ticks, pushOffset: [dx, dz], targetBefore: [targetBefore.worldX, targetBefore.worldZ], targetAfter: [p.worldX, p.worldZ]};
 } catch (error) {proof = {ok: false, failure: String(error)};}
 finally {
     off(); done = true;
