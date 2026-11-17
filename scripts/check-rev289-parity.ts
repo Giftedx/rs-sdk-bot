@@ -269,10 +269,18 @@ export function checkKnowledgeParity(repoRoot: string, baseline: Rev289Baseline)
     return issues;
 }
 
-/** Validates quest-reqs.json for rev 289 skill names and absence of known OSRS wiki/godbook artifacts. */
-export function checkQuestReqs(reqs: Record<string, { s?: [string, number, number][]; q?: [string, number][] }>, baseline: Pick<Rev289Baseline, 'skills'>, file: string, scope: ParityIssue['scope']): ParityIssue[] {
+/** Validates quest-reqs.json for rev 289 skill names, quest names, and absence of known OSRS wiki/godbook artifacts. */
+export function checkQuestReqs(reqs: Record<string, { s?: [string, number, number][]; q?: [string, number][] }>, baseline: Pick<Rev289Baseline, 'skills' | 'questNames'>, file: string, scope: ParityIssue['scope']): ParityIssue[] {
     const issues: ParityIssue[] = [];
     for (const [qName, r] of Object.entries(reqs)) {
+        if (baseline.questNames.size > 0 && !baseline.questNames.has(qName.toLowerCase())) {
+            issues.push({ scope, file, detail: `unknown non-rev-289 quest "${qName}"` });
+        }
+        for (const [prereq] of r.q ?? []) {
+            if (baseline.questNames.size > 0 && !baseline.questNames.has(prereq.toLowerCase())) {
+                issues.push({ scope, file, detail: `quest "${qName}" references unknown non-rev-289 prerequisite "${prereq}"` });
+            }
+        }
         issues.push(...checkSkillsList((r.s ?? []).map(([sk]) => sk), baseline, file, scope));
     }
     if (reqs['Priest in Peril']?.q?.some(([n]) => n === 'Rune Mysteries Quest')) {

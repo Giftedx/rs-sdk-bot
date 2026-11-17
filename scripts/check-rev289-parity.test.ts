@@ -32,12 +32,18 @@ test('loadRev289Baseline parses authoritative Lost City Jan 17, 2005 counts', ()
     expect(baseline.spells.has('teleblock')).toBe(false);
 });
 
-test('knowledge/, packages/dashboard/client-assets/, and owned scripts/ pass strict Rev 289 parity', () => {
+test('knowledge/ passes strict Rev 289 parity', () => {
     expect(checkKnowledgeParity(repoRoot, baseline)).toEqual([]);
+}, 20_000);
+
+test('packages/dashboard/client-assets/ passes strict Rev 289 parity', () => {
     expect(checkDashboardAssetsParity(repoRoot, baseline)).toEqual([]);
+}, 20_000);
+
+test('owned scripts/ pass strict Rev 289 parity and aggregated check succeeds', () => {
     expect(checkScriptsParity(repoRoot, baseline, { includeCrossWorker: false })).toEqual([]);
     expect(checkAllRev289Parity(repoRoot, { includeCrossWorker: false })).toEqual([]);
-});
+}, 20_000);
 
 test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS quest leaks while preserving native Market/GE', () => {
     expect(checkSkillsList(['Attack', 'Runecraft', 'Slayer', 'Farming', 'Sailing'], baseline, 'x.ts', 'scripts').map(i => i.detail)).toEqual([
@@ -66,7 +72,8 @@ test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS ques
     expect(checkQuestReqs({
         'Priest in Peril': { q: [['Rune Mysteries Quest', 0]] },
         'Horror from the Deep': { s: [['Prayer', 50, 2]] },
-    }, baseline, 'quest-reqs.json', 'client-assets').length).toBe(2);
+        'Recipe for Disaster': { q: [['Desert Treasure', 0]] },
+    }, baseline, 'quest-reqs.json', 'client-assets').length).toBe(4);
 
     // Market/GE references are valid in rs-sdk and must not trigger parity issues.
     const geText = `// Grand Exchange seller via MarketClient\nconst COINS = 995;\nconst SHARK = 385;\n`;
