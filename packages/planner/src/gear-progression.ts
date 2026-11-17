@@ -1262,9 +1262,11 @@ export async function reconcileBankTool(
     }
 
     // Recompute deposits after equip (wielded tool may have swapped old weapon into inventory).
+    // Keep target tool in inventory if wield did not take place.
+    const wornAfterEquip = hooks.getEquipment().some(e => e.slot === 3 && e.id === params.targetId);
     plan = planBankToolSwap({
         targetId: params.targetId,
-        canWield: params.canWield,
+        canWield: wornAfterEquip,
         allowReplaceWeapon: params.allowReplaceWeapon,
         inventory: hooks.getInventory(),
         equipment: hooks.getEquipment(),
@@ -1306,10 +1308,63 @@ export interface ShopToolPurchaseHooks extends ReconcileBankToolHooks {
     getShopState: () => { isOpen: boolean; shopItems: readonly { id: number; name: string; count: number; buyPrice?: number; slot?: number }[] } | undefined;
 }
 
+export const SHOP_RESTOCK_COOLDOWN_TICKS = 700;
+
+export interface ShopRetryGate {
+    checkedTier?: number;
+    failedAt?: { tier: number; tick: number };
+}
+
+/**
+ * Per-tier and failed-shop cooldown guard for progressive tool/staff purchases.
+ * Skips already-bought tiers until a higher tier unlocks, and backs off failed
+ * shelf checks for `cooldownTicks` (default 700 ticks for slow restocks).
+ */
+export function shouldAttemptShopUpgrade(
+    gate: ShopRetryGate,
+    tier: number,
+    tick: number,
+    cooldownTicks: number = SHOP_RESTOCK_COOLDOWN_TICKS,
+): boolean {
+    if (gate.checkedTier !== undefined && gate.checkedTier >= tier) return false;
+    if (gate.failedAt && gate.failedAt.tier >= tier && tick - gate.failedAt.tick < cooldownTicks) return false;
+    return true;
+}
+
+/** Record whether a shop purchase check succeeded or failed for `tier` at `tick`. */
+export function recordShopAttempt(
+    gate: ShopRetryGate,
+    tier: number,
+    tick: number,
+    bought: boolean,
+): void {
+    if (bought) {
+        gate.checkedTier = Math.max(gate.checkedTier ?? -Infinity, tier);
+        if (gate.failedAt && gate.failedAt.tier <= tier) gate.failedAt = undefined;
+        return;
+    }
+    gate.failedAt = { tier, tick };
+}
+
+/** Return or allocate a per-session `ShopRetryGate` stored in `cache` unless `explicit` is supplied. */
+export function sessionShopGate(
+    cache: WeakMap<object, ShopRetryGate>,
+    session: object,
+    explicit?: ShopRetryGate,
+): ShopRetryGate {
+    if (explicit) return explicit;
+    let gate = cache.get(session);
+    if (!gate) {
+        gate = {};
+        cache.set(session, gate);
+    }
+    return gate;
+}
+
 /**
  * Buy a single tool/staff from a rev-289 shop with exact coin/item reconciliation:
  * withdraws only missing coin budget when needed, verifies stock/price, buys 1, closes shop,
- * and returns to `returnBankSpot` if supplied.
+ * returns to `returnBankSpot` if supplied, and re-deposits withdrawn coins if aborted.
  */
 export async function executeShopToolPurchase(
     hooks: ShopToolPurchaseHooks,
@@ -1329,6 +1384,50 @@ export async function executeShopToolPurchase(
     const COINS = 995;
     const reserve = Math.max(0, params.coinReserve ?? 0);
     const shopDef = TOOL_SHOP_LOCATIONS[params.shop];
+    let withdrewCoins = 0;
+    let walkedToShop = false;
+
+    const recoverToBank = async () => {
+        if (hooks.getShopState()?.isOpen) {
+            await hooks.closeShop().catch(() => undefined);
+            await hooks.waitUntil(() => !!hooks.stop?.() || !hooks.getShopState()?.isOpen, 6);
+            checkStop('shop tool purchase stopped closing shop');
+        }
+        if (walkedToShop && params.returnBankSpot) {
+            const back = await hooks.walkTo(params.returnBankSpot);
+            checkStop('shop tool purchase stopped walking back to bank');
+            if (!back) throw new Error('shop tool purchase return-to-bank walk failed');
+        }
+        if (withdrewCoins > 0) {
+            if (!hooks.getBankState()?.isOpen) {
+                await hooks.openBank();
+                const reopened = await hooks.waitUntil(() => !!hooks.stop?.() || !!hooks.getBankState()?.isOpen, 10);
+                checkStop('shop tool purchase stopped reopening bank');
+                if (!reopened || !hooks.getBankState()?.isOpen) {
+                    throw new Error('shop tool purchase bank reopen unobserved');
+                }
+            }
+            const coinRow = hooks.getInventory().find(i => i.id === COINS && i.count > 0);
+            if (coinRow) {
+                const depositAmt = Math.min(coinRow.count, withdrewCoins);
+                const invBefore = countIn(hooks.getInventory(), COINS);
+                const bankBefore = countIn(hooks.getBankState()!.items, COINS);
+                const gen0 = hooks.getBankGeneration?.();
+                await hooks.depositItem(coinRow, depositAmt === coinRow.count ? -1 : depositAmt);
+                const deposited = await hooks.waitUntil(() => {
+                    if (hooks.stop?.()) return true;
+                    const bst = hooks.getBankState();
+                    const gen = hooks.getBankGeneration?.();
+                    return !!bst?.isOpen
+                        && countIn(hooks.getInventory(), COINS) === invBefore - depositAmt
+                        && countIn(bst.items, COINS) === bankBefore + depositAmt
+                        && (gen0 === undefined || (gen ?? -1) > gen0);
+                }, 10);
+                checkStop('shop tool purchase stopped depositing withdrawn coins');
+                if (!deposited) throw new Error('shop coin return deposit unconfirmed');
+            }
+        }
+    };
 
     checkStop('shop tool purchase stopped');
     let invCoins = countIn(hooks.getInventory(), COINS);
@@ -1365,6 +1464,7 @@ export async function executeShopToolPurchase(
                     && countIn(bst.items, COINS) === bankCoins - need
                     && (gen0 === undefined || (gen ?? -1) > gen0);
             }, 10);
+            if (ok) withdrewCoins += need;
             checkStop('shop tool purchase stopped withdrawing coins');
             if (!ok) throw new Error('shop coin withdrawal unconfirmed');
             invCoins = countIn(hooks.getInventory(), COINS);
@@ -1378,21 +1478,27 @@ export async function executeShopToolPurchase(
     }
 
     if (hooks.getInventory().length >= 28) {
+        await recoverToBank();
         return { bought: false, id: params.targetId, coinsSpent: 0, reason: 'inventory full' };
     }
 
+    walkedToShop = true;
     const arrived = await hooks.walkTo(shopDef.spot);
     checkStop('shop tool purchase stopped walking to shop');
-    if (!arrived) return { bought: false, id: params.targetId, coinsSpent: 0, reason: `could not reach ${params.shop}` };
+    if (!arrived) {
+        await recoverToBank();
+        return { bought: false, id: params.targetId, coinsSpent: 0, reason: `could not reach ${params.shop}` };
+    }
 
     const openReply = await hooks.openShop(shopDef.npc);
     if (!openReply.success) {
+        await recoverToBank();
         return { bought: false, id: params.targetId, coinsSpent: 0, reason: openReply.message ?? 'shop open refused' };
     }
     const shopReady = await hooks.waitUntil(() => !!hooks.stop?.() || !!hooks.getShopState()?.isOpen, 10);
     checkStop('shop tool purchase stopped waiting for shop');
     if (!shopReady || !hooks.getShopState()?.isOpen) {
-        await hooks.closeShop().catch(() => undefined);
+        await recoverToBank();
         return { bought: false, id: params.targetId, coinsSpent: 0, reason: 'shop observation missing' };
     }
 
@@ -1401,7 +1507,7 @@ export async function executeShopToolPurchase(
     const cashBefore = countIn(hooks.getInventory(), COINS);
     const heldBefore = countIn(hooks.getInventory(), params.targetId);
     if (!row || row.count <= 0 || cashBefore < price + reserve || price > params.maxBudget - reserve) {
-        await hooks.closeShop().catch(() => undefined);
+        await recoverToBank();
         return { bought: false, id: params.targetId, coinsSpent: 0, reason: 'stock absent or price over budget' };
     }
 

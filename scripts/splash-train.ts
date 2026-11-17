@@ -228,12 +228,27 @@ export const QUIET_TICKS = 300, QUIET_STOP = `no cast in ${QUIET_TICKS} ticks`;
 // A stop that ends a batch and not the band, when the run gained a level before it.
 export const splashBatchDone = (stop: string, gained: number) => gained > 0 && (stop === 'supplies' || stop === 'cap' || stop === QUIET_STOP);
 
-export async function runSplash(s: Session, o: { target: number; cap: number; stop?: () => boolean; site?: SplashSite }) {
+export async function runSplash(
+    s: Session,
+    o: {
+        target: number;
+        cap: number;
+        stop?: () => boolean;
+        site?: SplashSite;
+        allowZaffShop?: boolean;
+        walkTo?: (spot: { x: number; z: number; level?: number }) => Promise<boolean>;
+    },
+) {
     const site = o.site ?? SPLASH_SITES.ardougne!, TILE = site.tile;
     const st = () => s.sdk.getState(), inv = () => s.sdk.getInventory();
     const level = () => s.sdk.getSkill('Magic')?.baseLevel ?? 0, xp = () => s.sdk.getSkillXp('Magic') ?? 0, hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     if (!await waitUntil(s, () => !!st()?.player && s.sdk.getSkillXp('Magic') !== null, { timeoutTicks: 15 })) throw Error('splash: position unknown');
     const start = s.tick(), level0 = level(), xp0 = xp(), hp0 = hp();
+    const startX = st()?.player?.worldX ?? 0;
+    const allowZaffFromStart = o.allowZaffShop ?? (startX >= 3040);
+    const VARROCK_WEST_BANK = { x: 3185, z: 3436, level: 0 };
+    const walkToSpot = o.walkTo ?? (async (spot: { x: number; z: number; level?: number }) =>
+        (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 })).ok);
     let ended = false; void s.ended.then(() => { ended = true; });
     let casts = 0, refused = 0, missed = 0, waited = 0, stop = '', hpMin = hp0, quietNote = '';
     // Out of runes, at the tick cap or with no cow to cast on, after a gained level, is a finished batch: the band
@@ -244,6 +259,11 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
     const toBank = async () => {
         if (!site.bank) return;
         if (atNorthBank(st()?.player)) return;
+        if (o.walkTo) {
+            const ok = await o.walkTo({ ...COW_NORTH_BANK, level: 0 });
+            if (!ok || !atNorthBank(st()?.player)) throw Error('splash: walk to the Ardougne north bank failed');
+            return;
+        }
         const there = await walkTargetPersist(s, { ...COW_NORTH_BANK, level: 0 });
         if (!there.ok || !atNorthBank(st()?.player)) throw Error(`splash: walk to the Ardougne north bank failed: ${there.reason ?? ''} ${there.detail ?? ''}`);
     };
@@ -273,8 +293,32 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
     const onTile = () => { const p = st()?.player; return !!p && p.worldX === TILE.x && p.worldZ === TILE.z; };
     const reach = (n: { tileX?: number; tileZ?: number; x: number; z: number }) => castReaches(TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z }, CAST_RANGE, site.size);
     const refusals = () => Math.max(-1, ...(st()?.gameMessages ?? []).filter(m => /already been (weakened|lowered)/i.test(m.text)).map(m => m.tick));
-    // Stage: bank the pack, equip any matching elemental staff, and take only the remaining runes needed.
+    // Stage: buy any Zaff staff upgrade on the east side before crossing to Ardougne, then bank, equip, and take remaining runes.
     if (site.bank) {
+        if (allowZaffFromStart && startX >= 3040) {
+            const nearVarrock = () => {
+                const p = st()?.player;
+                return !!p && Math.max(Math.abs(p.worldX - VARROCK_WEST_BANK.x), Math.abs(p.worldZ - VARROCK_WEST_BANK.z)) <= 4;
+            };
+            const alreadyCovered = bestElementalStaffForRunes([...inv(), ...eq().filter(e => e.slot === 3)], readSkillLevels(s.sdk), [], {
+                runeIds: selectSplashPriorityRunes(xp(), o.target),
+                members: true,
+                requireWieldable: true,
+            }).current;
+            if (!alreadyCovered && (nearVarrock() || await walkToSpot(VARROCK_WEST_BANK))) {
+                await openBank();
+                await depositAll(runeIds);
+                await prepareSplashStaffAtBank(s, {
+                    xp: xp(),
+                    target: o.target,
+                    bankSpot: VARROCK_WEST_BANK,
+                    allowZaffShop: true,
+                    walkTo: o.walkTo,
+                    stop: () => ended || !!o.stop?.() || s.tick() - start >= o.cap,
+                });
+                if (st()?.bank?.isOpen) await closeBank();
+            }
+        }
         await toBank();
         await openBank();
         await depositAll(runeIds);
@@ -282,7 +326,8 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
             xp: xp(),
             target: o.target,
             bankSpot: COW_NORTH_BANK,
-            allowZaffShop: (st()?.player?.worldX ?? 0) >= 3040,
+            allowZaffShop: allowZaffFromStart && startX < 3040,
+            walkTo: o.walkTo,
             stop: () => ended || !!o.stop?.() || s.tick() - start >= o.cap,
         });
         const plan = splashPlan(xp(), o.target, staffRes.freeRunes);

@@ -6,13 +6,18 @@ import { depositObserved } from '../packages/core/src/deposit';
 import { runShafts } from './fletch-shafts';
 import { runHeadless } from './fletch-arrows';
 import {
+    type ShopRetryGate,
     WOODCUTTING_AXES_DESC,
     bestWoodcuttingAxe,
     executeShopToolPurchase,
     planToolShopUpgrade,
     readSkillLevels,
     reconcileBankTool,
+    recordShopAttempt,
+    sessionShopGate,
     sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
 } from '../packages/planner/src/gear-progression';
 type Session=Awaited<ReturnType<typeof openBot>>;
 const BANK={x:3092,z:3243,level:0},KNIFE={x:3224,z:3202,level:0},TREES={x:3226,z:3237,level:0};
@@ -48,9 +53,10 @@ export function selectWoodSupplyAxe(
 ){
  return bestWoodcuttingAxe(stock,levels);
 }
+const woodSupplyShopGates=new WeakMap<object,ShopRetryGate>();
 export async function reconcileWoodSupplyAxe(
  s:Session,
- options:{bankSpot?:{x:number;z:number;level?:number};walkTo?:(spot:{x:number;z:number;level?:number})=>Promise<boolean>;check:()=>void;allowShop?:boolean},
+ options:{bankSpot?:{x:number;z:number;level?:number};walkTo?:(spot:{x:number;z:number;level?:number})=>Promise<boolean>;check:()=>void;allowShop?:boolean;shopGate?:ShopRetryGate},
 ){
  options.check();
  const bankItems=s.bankObservation?.()?.items??s.sdk.getState()?.bank?.items??[];
@@ -58,12 +64,15 @@ export async function reconcileWoodSupplyAxe(
  const levels=readSkillLevels(s.sdk);
  const stock=[...inv,...eq.filter(e=>e.slot===3),...bankItems];
  const coins=stock.filter(i=>i.id===995).reduce((n,i)=>n+i.count,0);
- if(options.allowShop!==false){
+ const axeTier=tierBoundaryOf(levels.woodcutting,[1,6,21,31,41]);
+ const shopGate=sessionShopGate(woodSupplyShopGates,s,options.shopGate);
+ if(options.allowShop!==false&&shouldAttemptShopUpgrade(shopGate,axeTier,s.tick?.()??0)){
   const shopPlan=planToolShopUpgrade('woodcutting-axe',stock,coins,levels,{allowedShops:['axeshop'],onlyWhenStarterOrMissing:true});
   if(shopPlan){
    options.check();
    const hooks=sessionToolHooks(s,{walkTo:options.walkTo,waitUntil:(pred,timeoutTicks)=>waitUntil(s,pred,{timeoutTicks}),stop:()=>{try{options.check();return false;}catch{return true;}}});
    const res=await executeShopToolPurchase(hooks,{targetId:shopPlan.target.id,shop:'axeshop',maxBudget:shopPlan.coinBudgetNeeded,returnBankSpot:options.bankSpot??BANK});
+   recordShopAttempt(shopGate,axeTier,s.tick?.()??0,res.bought);
    if(res.bought){
     console.log('WOOD_SUPPLY_SHOP_AXE '+JSON.stringify(res));
     options.check();

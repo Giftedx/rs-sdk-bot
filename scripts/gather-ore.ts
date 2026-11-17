@@ -11,13 +11,18 @@ import { leaveRuneStarter } from './rune-starter';
 import { approach, walkTargetPersist } from './walk-to';
 import {
     MINING_PICKAXES_DESC,
+    type ShopRetryGate,
     bestMiningPickaxe,
     crossedTierBoundary,
     executeShopToolPurchase,
     planToolShopUpgrade,
     readSkillLevels,
     reconcileBankTool,
+    recordShopAttempt,
+    sessionShopGate,
     sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
 } from '../packages/planner/src/gear-progression';
 
 import type { Session } from '../packages/core/src/inprocess';
@@ -86,6 +91,8 @@ export function selectActiveOrePickaxe(s: Session, extra: readonly { id: number;
     return bestMiningPickaxe([...s.sdk.getInventory(), ...eq, ...extra], { mining, attack });
 }
 
+const oreShopGates = new WeakMap<object, ShopRetryGate>();
+
 export async function reconcileOrePickaxeAtBank(
     s: Session,
     options: {
@@ -94,6 +101,7 @@ export async function reconcileOrePickaxeAtBank(
         allowShop?: boolean;
         refusedWields?: Set<number>;
         walkTo?: (spot: { x: number; z: number; level?: number }) => Promise<boolean>;
+        shopGate?: ShopRetryGate;
     },
 ): Promise<{ activeId: number | null; worn: boolean; bought?: number }> {
     const openBank = async () => {
@@ -116,8 +124,10 @@ export async function reconcileOrePickaxeAtBank(
         attack: s.sdk.getSkill('Attack')?.baseLevel ?? s.sdk.getSkill('Attack')?.level ?? 1,
     };
     let bought: number | undefined;
+    const miningTier = tierBoundaryOf(levels.mining, [1, 6, 21, 31, 41]);
+    const shopGate = sessionShopGate(oreShopGates, s, options.shopGate);
 
-    if (options.allowShop !== false) {
+    if (options.allowShop !== false && shouldAttemptShopUpgrade(shopGate, miningTier, s.tick?.() ?? 0)) {
         const stock = [...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3), ...bankItems];
         const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
         const shopPlan = planToolShopUpgrade('mining-pickaxe', stock, totalCoins, levels, {
@@ -131,6 +141,7 @@ export async function reconcileOrePickaxeAtBank(
                 maxBudget: shopPlan.coinBudgetNeeded,
                 returnBankSpot: options.bankSpot,
             });
+            recordShopAttempt(shopGate, miningTier, s.tick?.() ?? 0, res.bought);
             if (res.bought) {
                 bought = res.id;
                 console.log(`ORE_SHOP_PICKAXE ${JSON.stringify(res)}`);

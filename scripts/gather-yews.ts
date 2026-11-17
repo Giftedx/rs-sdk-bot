@@ -13,13 +13,18 @@ import {productionStopRequested} from './microbot-c-lifetime';
 import { approach, walkTargetPersist } from './walk-to';
 import {
     WOODCUTTING_AXES_DESC,
+    type ShopRetryGate,
     bestWoodcuttingAxe,
     crossedTierBoundary,
     executeShopToolPurchase,
     planToolShopUpgrade,
     readSkillLevels,
     reconcileBankTool,
+    recordShopAttempt,
+    sessionShopGate,
     sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
 } from '../packages/planner/src/gear-progression';
 
 // Native m42_54 willow and m42_53 magic placements, within the published loc radius.
@@ -85,6 +90,8 @@ export function westOakPathAllowed(from:{x:number;z:number},corners:readonly {x:
     return corners.length>0&&[from,...expandPath(from,[...corners])].every(p=>
         (p.x<=3094||access&&p.x<=3103&&p.z>=3250&&p.z<=3271)&&!(p.x<3090&&p.z<3250));
 }
+const axeShopGates = new WeakMap<object, ShopRetryGate>();
+
 export async function reconcileWoodcuttingAxeAtBank(
     s: Session,
     options: {
@@ -93,6 +100,7 @@ export async function reconcileWoodcuttingAxeAtBank(
         allowShop?: boolean;
         refusedWields?: Set<number>;
         walkTo?: (spot: { x: number; z: number; level?: number }) => Promise<boolean>;
+        shopGate?: ShopRetryGate;
     },
 ): Promise<{ activeId: number | null; worn: boolean; bought?: number }> {
     const openBank = async () => {
@@ -114,8 +122,10 @@ export async function reconcileWoodcuttingAxeAtBank(
     const bankItems = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
     const levels = readSkillLevels(s.sdk);
     let bought: number | undefined;
+    const axeTier = tierBoundaryOf(levels.woodcutting, [1, 6, 21, 31, 41]);
+    const shopGate = sessionShopGate(axeShopGates, s, options.shopGate);
 
-    if (options.allowShop) {
+    if (options.allowShop && shouldAttemptShopUpgrade(shopGate, axeTier, s.tick?.() ?? 0)) {
         const stock = [...s.sdk.getInventory(), ...s.sdk.getEquipment().filter(e => e.slot === 3), ...bankItems];
         const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
         const shopPlan = planToolShopUpgrade('woodcutting-axe', stock, totalCoins, levels, {
@@ -129,6 +139,7 @@ export async function reconcileWoodcuttingAxeAtBank(
                 maxBudget: shopPlan.coinBudgetNeeded,
                 returnBankSpot: options.bankSpot,
             });
+            recordShopAttempt(shopGate, axeTier, s.tick?.() ?? 0, res.bought);
             if (res.bought) {
                 bought = res.id;
                 console.log(`WOOD_SHOP_AXE ${JSON.stringify(res)}`);

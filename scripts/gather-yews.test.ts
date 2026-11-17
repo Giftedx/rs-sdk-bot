@@ -204,3 +204,82 @@ test('runDraynorOak withdraws best owned axe over lower-tier bank axes', async (
         f.dispose();
     }
 });
+
+test('reconcileWoodcuttingAxeAtBank recovers coins on empty Bob stock and cools down per tier for 700 ticks', async () => {
+    let tick = 50, bankOpen = true, shopOpen = false, gen = 1, wc = 15;
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 2);
+    const inv: any[] = [];
+    const eq: any[] = [{ id: 1351, name: 'Bronze axe', count: 1, slot: 3 }];
+    const bank: any[] = [{ id: 995, name: 'Coins', count: 400, slot: 0 }];
+    const shopItems = [{ id: 1353, name: 'Steel axe', count: 0, buyPrice: 200, slot: 0 }];
+    const walks: string[] = [];
+
+    const state: any = { inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } };
+    const s: any = {
+        tick: () => tick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
+        bankObservation: () => bankOpen ? { generation: gen, items: bank } : null,
+        sdk: {
+            getState: () => ({ ...state, inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: (n: string) => ({ level: n === 'Woodcutting' ? wc : 1, baseLevel: n === 'Woodcutting' ? wc : 1 }),
+        },
+        bot: {
+            openBank: async () => { bankOpen = true; gen++; return { success: true }; },
+            closeBank: async () => { bankOpen = false; return { success: true }; },
+            withdrawItem: async (item: any, n: number) => {
+                const row = bank.find(r => r.id === item.id);
+                row.count -= n;
+                if (row.count <= 0) bank.splice(bank.indexOf(row), 1);
+                inv.push({ id: item.id, name: item.name, count: n, slot: 0 });
+                gen++;
+                return { success: true };
+            },
+            depositItem: async (item: any, n: number) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const cur = inv[idx];
+                const amt = n === -1 ? cur.count : n;
+                cur.count -= amt;
+                if (cur.count <= 0) inv.splice(idx, 1);
+                const row = bank.find(r => r.id === item.id);
+                if (row) row.count += amt;
+                else bank.push({ id: item.id, name: item.name, count: amt, slot: 0 });
+                gen++;
+                return { success: true };
+            },
+            openShop: async () => { shopOpen = true; return { success: true }; },
+            buyFromShop: async (row: any, n: number) => {
+                row.count -= n;
+                inv.find(i => i.id === 995).count -= row.buyPrice * n;
+                inv.push({ id: row.id, name: row.name, count: n, slot: 1 });
+                return { success: true };
+            },
+            closeShop: async () => { shopOpen = false; return { success: true }; },
+        },
+    };
+    const walkTo = async (spot: { x: number; z: number }) => { walks.push(`${spot.x},${spot.z}`); return true; };
+
+    try {
+        const r1 = await reconcileWoodcuttingAxeAtBank(s, { bankSpot: { x: 3092, z: 3243 }, stop: () => false, allowShop: true, walkTo });
+        expect(r1).toEqual({ activeId: 1351, worn: true, bought: undefined });
+        expect(walks).toEqual(['3231,3203', '3092,3243']);
+        expect(bank.find(i => i.id === 995)?.count).toBe(400);
+        expect(inv.filter(i => i.id === 995)).toHaveLength(0);
+
+        // Next trip within 700 ticks skips Bob even after restock.
+        shopItems[0]!.count = 1;
+        tick += 40;
+        await reconcileWoodcuttingAxeAtBank(s, { bankSpot: { x: 3092, z: 3243 }, stop: () => false, allowShop: true, walkTo });
+        expect(walks).toHaveLength(2);
+
+        // Reaching 700-tick boundary retries Bob and acquires Steel axe.
+        tick += 700;
+        const r2 = await reconcileWoodcuttingAxeAtBank(s, { bankSpot: { x: 3092, z: 3243 }, stop: () => false, allowShop: true, walkTo });
+        expect(r2).toEqual({ activeId: 1353, worn: false, bought: 1353 });
+        expect(inv.map(i => i.id)).toEqual([1353]);
+    } finally {
+        clearInterval(timer);
+    }
+});

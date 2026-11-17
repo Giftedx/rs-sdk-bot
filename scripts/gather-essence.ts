@@ -11,11 +11,15 @@ import { depositObserved } from '../packages/core/src/deposit';
 import { approach, walkTargetPersist } from './walk-to';
 import {
     MINING_PICKAXES_DESC,
+    type ShopRetryGate,
     bestMiningPickaxe,
     executeShopToolPurchase,
     gearById,
     planToolShopUpgrade,
+    recordShopAttempt,
     sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
 } from '../packages/planner/src/gear-progression';
 
 const BANK_SPOT = { x: 3253, z: 3420 };
@@ -237,12 +241,11 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
 
     };
 
-    let shopCheckedMiningTier = -1;
+    const shopGate: ShopRetryGate = {};
     const maybeBuyShopPickaxe = async () => {
         if (!o.allowShopUpgrade || over()) return;
-        const tierNow = Math.max(1, ...[6, 21, 31, 41].filter(t => miningLevel() >= t));
-        if (shopCheckedMiningTier === tierNow) return;
-        shopCheckedMiningTier = tierNow;
+        const tierNow = tierBoundaryOf(miningLevel(), [1, 6, 21, 31, 41]);
+        if (!shouldAttemptShopUpgrade(shopGate, tierNow, s.tick())) return;
         if (!await walk(BANK_SPOT.x, BANK_SPOT.z, 2) || over()) return;
         await openBank();
         if (!await waitUntil(s, () => over() || !!s.bankObservation?.(), { timeoutTicks: 10 }) || over()) {
@@ -270,6 +273,7 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
                 maxBudget: plan.coinBudgetNeeded,
                 returnBankSpot: BANK_SPOT,
             });
+            recordShopAttempt(shopGate, tierNow, s.tick(), res.bought);
             if (res.bought) {
                 console.log(`ESSENCE_SHOP_PICKAXE ${JSON.stringify(res)}`);
                 await openBank();
@@ -277,6 +281,8 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
                 if (spareCoins && !over()) await depositObserved(s, spareCoins);
                 await upgradeOwnedEssencePick(s, { openBank, stop: over });
             }
+        } else {
+            recordShopAttempt(shopGate, tierNow, s.tick(), true);
         }
         await action('close-shop-bank', () => s.bot.closeBank());
         await waitUntil(s, () => over() || !st()?.bank.isOpen, { timeoutTicks: 5 });

@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { ownedBestLoadout } from './owned-loadout';
 import {
     ELEMENTAL_RUNES,
+    SHOP_RESTOCK_COOLDOWN_TICKS,
     WOODCUTTING_AXES_DESC,
     bestElementalStaffForRunes,
     bestGearForSlot,
@@ -15,8 +16,10 @@ import {
     planBankToolSwap,
     planToolShopUpgrade,
     reconcileBankTool,
+    recordShopAttempt,
     selectProgressiveLoadout,
     shopCatalog,
+    shouldAttemptShopUpgrade,
     weaponSupportsTrainSkill,
 } from './gear-progression';
 
@@ -500,4 +503,86 @@ test('executeShopToolPurchase withdraws coins, buys upgraded tool cleanly, and r
     expect(bank.find(i => i.id === 995)?.count).toBe(125);
     expect(inv.find(i => i.id === 995)?.count).toBe(375);
     expect(inv.find(i => i.id === 1385)?.count).toBe(1);
+});
+
+test('executeShopToolPurchase closes shop, walks back to bank, and re-deposits withdrawn coins when stock absent or shop fails', async () => {
+    for (const mode of ['empty-stock', 'shop-refused', 'walk-failed'] as const) {
+        let bankOpen = true;
+        let shopOpen = false;
+        let gen = 1;
+        const bank: { id: number; name: string; count: number; slot?: number }[] = [
+            { id: 995, name: 'Coins', count: 2000, slot: 0 },
+        ];
+        const inv: { id: number; name: string; count: number; slot?: number }[] = [];
+        const walks: string[] = [];
+
+        const hooks = {
+            openBank: async () => { bankOpen = true; gen++; },
+            closeBank: async () => { bankOpen = false; },
+            withdrawItem: async (item: { id: number; name: string; count: number }, count: number) => {
+                const b = bank.find(r => r.id === item.id)!;
+                b.count -= count;
+                inv.push({ id: item.id, name: item.name, count, slot: 0 });
+                gen++;
+            },
+            depositItem: async (item: { id: number; name: string; count: number }, count: number) => {
+                const amt = count === -1 ? item.count : count;
+                const idx = inv.findIndex(r => r.id === item.id);
+                if (idx >= 0) {
+                    inv[idx]!.count -= amt;
+                    if (inv[idx]!.count <= 0) inv.splice(idx, 1);
+                }
+                const b = bank.find(r => r.id === item.id);
+                if (b) b.count += amt;
+                else bank.push({ id: item.id, name: item.name, count: amt, slot: 0 });
+                gen++;
+            },
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getBankState: () => ({ isOpen: bankOpen, items: bank }),
+            getBankGeneration: () => bankOpen ? gen : undefined,
+            walkTo: async (spot: { x: number; z: number }) => {
+                walks.push(`${spot.x},${spot.z}`);
+                if (mode === 'walk-failed' && spot.x === 2998) return false;
+                return true;
+            },
+            openShop: async () => {
+                if (mode === 'shop-refused') return { success: false, message: 'busy' };
+                shopOpen = true;
+                return { success: true };
+            },
+            buyFromShop: async () => ({ success: false }),
+            closeShop: async () => { shopOpen = false; },
+            getShopState: () => ({ isOpen: shopOpen, shopItems: [{ id: 1275, name: 'Rune pickaxe', count: 0, buyPrice: 32000, slot: 0 }] }),
+            waitUntil: async (pred: () => boolean) => pred(),
+        };
+
+        const res = await executeShopToolPurchase(hooks, {
+            targetId: 1275,
+            shop: 'pickaxeshop',
+            maxBudget: 1500,
+            returnBankSpot: { x: 3013, z: 3355 },
+        });
+        expect(res.bought).toBe(false);
+        expect(res.coinsSpent).toBe(0);
+        expect(shopOpen).toBe(false);
+        expect(walks).toEqual(['2998,9844', '3013,3355']);
+        expect(bank.find(i => i.id === 995)?.count).toBe(2000);
+        expect(inv.filter(i => i.id === 995)).toHaveLength(0);
+    }
+});
+
+test('shouldAttemptShopUpgrade gates repeat checks per tier and cools down failed shelf walks for 700 ticks', () => {
+    const gate: { checkedTier?: number; failedAt?: { tier: number; tick: number } } = {};
+    expect(shouldAttemptShopUpgrade(gate, 21, 100)).toBe(true);
+
+    recordShopAttempt(gate, 21, 100, false);
+    expect(shouldAttemptShopUpgrade(gate, 21, 101)).toBe(false);
+    expect(shouldAttemptShopUpgrade(gate, 21, 100 + SHOP_RESTOCK_COOLDOWN_TICKS - 1)).toBe(false);
+    expect(shouldAttemptShopUpgrade(gate, 31, 150)).toBe(true);
+    expect(shouldAttemptShopUpgrade(gate, 21, 100 + SHOP_RESTOCK_COOLDOWN_TICKS)).toBe(true);
+
+    recordShopAttempt(gate, 31, 820, true);
+    expect(shouldAttemptShopUpgrade(gate, 31, 2000)).toBe(false);
+    expect(shouldAttemptShopUpgrade(gate, 41, 2000)).toBe(true);
 });
