@@ -2080,4 +2080,12 @@ test('wildernessWatchBox highlights rivals within attack range of our Wilderness
  const multiLines=[[3064,3872,3064,3888,0],[3072,3872,3072,3888,0],[3064,3872,3072,3872,0],[3064,3888,3072,3888,0]];
  const withMulti=new Function('S','E','nameButtons','placeOf','multiLines',`${wildHelpers}${code};return wildernessWatchBox();`)({wilderness:[{name:'ThreatPker',fleet:false,x:3070,z:3880,plane:0,combat:120,wild:46,minCombat:74,maxCombat:126}],bots},String,(ns:string[])=>ns.join(','),()=>'Lava Maze',multiLines);
  expect(withMulti).toContain('wildy 46 · multi');
+ // Attackable now shows kept-on-death items when equipment and inventory are both observed.
+ const wpCode=shell.slice(shell.indexOf('  function worldPanel(){'),shell.indexOf('  function wildernessWatchBox()'));
+ const wpHtml=new Function('S','E','safeName','nf','gp','ago','nameButtons','partyBox','wildernessWatchBox','respawnBox','highlightsBox','markersBox','finderBox','farmsBox','worldSpots','price','multiLines','window','document','mode','VIEWER',`${wildHelpers}${shell.slice(shell.indexOf('  function pvpState('),shell.indexOf('  // NPC aggression timer'))}${wpCode};return worldPanel();`)(
+  {bots:[{name:'Ours1',inWorld:true,combat:70,pos:{x:3066,z:3880,level:0},equipment:[{name:'Rune scimitar',count:1}],inventory:[{name:'Shark',count:1}]}],roster:[],world:{connected:true,tickAt:Date.now()},economy:{itemValues:{'Rune scimitar':15000,'Shark':800}}},
+  String,(s:any)=>s,String,(n:number)=>n+' gp',()=>'1s',(ns:string[])=>ns.join(','),()=>'',()=>'',()=>'',()=>'',()=>'',()=>'',()=>'',()=>[],pricing({economy:{itemValues:{'Rune scimitar':15000,'Shark':800}}}).price,multiLines,{atlasOperator:()=>true,atlasLiveRoster:()=>false},{activeElement:null},'2d',undefined);
+ expect(wpHtml).toContain('lvl 46 · multi');
+ expect(wpHtml).toContain('Kept on death');
+ expect(wpHtml).toContain('Rune scimitar, Shark');
 });

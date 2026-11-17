@@ -15,7 +15,7 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
 import { itemCost } from './pk-roam';
 import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../packages/core/src/item-requirements';
@@ -68,20 +68,21 @@ export function fleetNames(owners = loadOwners()): Set<string> {
 type Seen = { index: number; name: string; combatLevel: number; z: number; distance: number; inCombat?: boolean; combatTargetType?: string };
 // Why a seen player is or is not a target: a fleet account, outside the Wilderness combat range, already in a player
 // fight (single-way combat refuses a second attacker), or attackable.
-export function verdict(me: { z: number; combatLevel: number }, p: Seen, ours: Set<string>): 'fleet' | 'out of range' | 'busy' | 'attackable' {
+export function verdict(me: { z: number; combatLevel: number }, p: Seen, ours: Set<string>, multi = false): 'fleet' | 'out of range' | 'busy' | 'attackable' {
     if (ours.has(p.name.toLowerCase())) return 'fleet';
     if (!attackable(me, p)) return 'out of range';
-    if (p.inCombat && p.combatTargetType === 'player') return 'busy';
+    if (!multi && p.inCombat && p.combatTargetType === 'player') return 'busy';
     return 'attackable';
 }
-// The player to fight: whoever is hitting us first, else the nearest attackable stranger who is not fighting someone else.
+// The player to fight: whoever is hitting us first, else the nearest attackable stranger who is not fighting someone else
+// in single-way combat (or any attackable stranger in multi-way).
 // The hunt's choice (HUNT_PICK, default soft): of the attackable players, the one whose worn armour gives the least
 // melee defence (read from what the client shows it wearing), then the nearest; HUNT_PICK=near takes the nearest.
 export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null,
-    armour?: (p: P) => number): P | undefined {
+    armour?: (p: P) => number, multi = false): P | undefined {
     const attacker = attackerIndex === null ? undefined : players.find(p => p.index === attackerIndex);
     if (attacker) return attacker;
-    return [...players].filter(p => verdict(me, p, ours) === 'attackable').sort((a, b) => (armour ? armour(a) - armour(b) : 0) || a.distance - b.distance)[0];
+    return [...players].filter(p => verdict(me, p, ours, multi) === 'attackable').sort((a, b) => (armour ? armour(a) - armour(b) : 0) || a.distance - b.distance)[0];
 }
 
 // A hit we took from another player. The SDK also reports an NPC's damage from someone else as damage_taken, with
@@ -261,9 +262,9 @@ export async function hunt(s: Session, o: HuntOptions) {
                 const op = meal.optionsWithIndex.find(x => /^Eat$/i.test(x.text));
                 if (op) { void s.sdk.sendUseItem(meal.slot, op.opIndex); foodReady = s.tick() + 3; }
             }
-            const self = { z: me.worldZ, combatLevel: me.combatLevel };
+            const self = { z: me.worldZ, combatLevel: me.combatLevel }, multi = isMulti(me.worldX, me.worldZ);
             for (const p of state.nearbyPlayers) {
-                const v = verdict(self, p, ours);
+                const v = verdict(self, p, ours, multi);
                 if (sighted.get(p.name) === v) continue;
                 sighted.set(p.name, v);
                 log(`HUNT seen ${p.name} combat ${p.combatLevel} at ${p.x},${p.z} wild ${wildernessLevel(p.z)} ${v}${p.inCombat ? ` fighting ${p.combatTargetType}` : ''}`);
@@ -273,7 +274,7 @@ export async function hunt(s: Session, o: HuntOptions) {
             const foodLeft = state.inventory.filter(i => i.optionsWithIndex?.some(op => /^eat$/i.test(op.text))).reduce((n, i) => n + i.count, 0);
             if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20 || foodLeft < Number(process.env.HUNT_MIN_FOOD ?? 0))) continue;
             const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex, process.env.HUNT_PICK !== 'near'
-                ? p => { const o = observePlayer(s.client, p.index); return o ? armourDefence(o.worn.map(id => objNames().get(id) ?? '')).melee : 0; } : undefined);
+                ? p => { const o = observePlayer(s.client, p.index); return o ? armourDefence(o.worn.map(id => objNames().get(id) ?? '')).melee : 0; } : undefined, multi);
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;

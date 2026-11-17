@@ -28,6 +28,8 @@ test('every seen player gets a verdict: fleet, out of range, busy or attackable'
     expect(verdict(me, p(1, 'KnightRider', 126, 1), ours)).toBe('fleet');
     expect(verdict(me, p(2, 'Low', 100, 1), ours)).toBe('out of range');
     expect(verdict(me, p(3, 'Busy', 126, 1, { inCombat: true, combatTargetType: 'player' }), ours)).toBe('busy');
+    expect(verdict(me, p(3, 'Busy', 126, 1, { inCombat: true, combatTargetType: 'player' }), ours, true)).toBe('attackable');
+    expect(pickTarget(me, [p(3, 'Busy', 126, 1, { inCombat: true, combatTargetType: 'player' })], ours, null, undefined, true)?.name).toBe('Busy');
     expect(verdict(me, p(4, 'Fair', 122, 1), ours)).toBe('attackable');
 });
 
