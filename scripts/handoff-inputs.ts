@@ -326,8 +326,22 @@ async function approachBank(c:Handoff,sessions:Session[],check:()=>void,operatio
             if(!await waitUntil(s,st=>!!st.player&&st.player.worldX>0&&(s.sdk.getSkill('Hitpoints')?.level??0)>0,{timeoutTicks:15}))throw Error(`handoff approach entry unobserved: ${s.name}`);
             const p=s.sdk.getState()!.player!,from={x:p.worldX,z:p.worldZ,level:p.level};
             if(from.level===0&&Math.max(Math.abs(from.x-c.x),Math.abs(from.z-c.z))<=FAR_WALK_TILES)return;
-            const walked=await walkTarget(s,to,false,operations);
-            if(!walked.ok)throw Error(`handoff planned approach failed: ${s.name} ${JSON.stringify(walked)}`);
+            const sarim={x:3029,z:3217,level:0},atSarim=from.level===0&&Math.max(Math.abs(from.x-sarim.x),Math.abs(from.z-sarim.z))<=8;
+            const kandarin=from.level===0&&from.x>=2440&&from.x<2870&&from.z>=3040&&from.z<=3530;
+            // The ferry's final 15s search from Port Sarim to Varrock can exhaust its budget.
+            // Keep the planned ferries, then use gecourier's measured mainland corridor through Lumbridge.
+            const legs=c.x===3185&&c.z===3436&&(atSarim||kandarin)
+                ? [...(atSarim?[]:[{to:sarim,ground:false}]),...[ [3047,3237],[3060,3265],[3100,3285],[3180,3258],
+                    [3225,3240],[3235,3300],[3210,3380],[c.x,c.z] ].map(([x,z])=>({to:{x:x!,z:z!,level:0},ground:true}))]
+                : [{to,ground:false}];
+            for(const [index,leg] of legs.entries()){
+                if(index>0){guard();controller.signal.throwIfAborted();}
+                const walked=await walkTarget(s,leg.to,leg.ground,operations);
+                if(!walked.ok)throw Error(`handoff planned approach failed: ${s.name} ${JSON.stringify(walked)}`);
+                if(!await waitUntil(s,st=>!!st.player&&st.player.level===0&&Math.max(Math.abs(st.player.worldX-leg.to.x),Math.abs(st.player.worldZ-leg.to.z))<=(leg.ground?2:8),{timeoutTicks:10}))
+                    throw Error(`handoff approach arrival unobserved: ${s.name} ${JSON.stringify(leg.to)}`);
+            }
+            guard();controller.signal.throwIfAborted();
             console.log('HANDOFF_APPROACH '+JSON.stringify({account:s.name,from,to}));
         }))));
     }finally{clearInterval(timer);parent?.signal.removeEventListener('abort',parentAbort);controller.abort(Error('handoff approach ended'));}
