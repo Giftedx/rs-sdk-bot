@@ -46,7 +46,9 @@ export function createBurstPageRecorder(chatRoots: ReadonlySet<number>, onRecord
 }
 
 export function clickDialoguePage(sdk: DialogueClickSdk, option?: { text: string }): Promise<{ success: boolean; message?: string }> {
-    return option ? sdk.clickDialogByText(option.text) : sdk.sendClickDialog(0);
+    // Selection already matched the author's patterns. The SDK compiles strings as regex, so bind this click
+    // to the selected visible text literally while retaining its page and component guard.
+    return option ? sdk.clickDialogByText(new RegExp('^' + option.text.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&') + '$', 'i')) : sdk.sendClickDialog(0);
 }
 type DialogueOption = { text: string; componentId?: number; buttonType?: number };
 // One dialogue page: the SDK state, or the page that the live client holds.
