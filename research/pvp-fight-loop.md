@@ -2218,5 +2218,5 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the shared tables): dragon platelegs from a steel, iron or bronze dragon 1 in 256, 512 or 1,024 kills
     (`steel_dragon.rs2` and the others), the dragon chainbody from the Kalphite Queen 1 in 128 (`kalphite_queen.rs2`),
     the dragon med helm from the King Black Dragon 1 in 128 (`king_black_dragon.rs2`) and the shared rare table, the
-    left half of the dragon square shield (`dragonshield_a`) 4 in 128 rolls of the mega-rare table. Gap: the roam and
-    the army in dragon armour; the square shield's other half is not traced.
+    left half of the dragon square shield (`dragonshield_a`) 4 in 128 rolls of the mega-rare table. `selectOverheadPrayer` switches overheads to Smite (`smite?: boolean | number` on `FightOptions`) while Prayer is at least 52, Hitpoints is safely above `eatAt + 12`, and the opponent is fleeing or below the configured HP threshold. Gap: the roam and
+    the army in dragon armour; the square shield's other half is not traced; Smite switching is unit-tested in `scripts/pk.test.ts` and remains unbenched across live multi-seed fights.

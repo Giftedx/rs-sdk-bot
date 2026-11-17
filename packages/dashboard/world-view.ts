@@ -80,11 +80,21 @@ export const NAMED_SPOT_TILES: Readonly<Record<string, { x: number; z: number; l
 };
 
 export function wildernessInfo(pos: { x: number; z: number; level?: number } | null | undefined, combat?: number | null) {
-    if (!pos || !Number.isFinite(pos.z)) return { wild: 0, minCombat: null, maxCombat: null };
+    if (!pos || !Number.isFinite(pos.z) || (typeof pos.x === 'number' && (pos.x < 2944 || pos.x > 3391))) return { wild: 0, minCombat: null, maxCombat: null };
     const south = pos.z >= 3520 && pos.z < 4000 ? 3520 : pos.z >= 9920 && pos.z < 10400 ? 9920 : 0;
     const wild = south ? Math.floor((pos.z - south) / 8) + 1 : 0;
     if (!wild || typeof combat !== 'number' || !Number.isFinite(combat) || combat < 3) return { wild, minCombat: null, maxCombat: null };
     return { wild, minCombat: Math.max(3, combat - wild), maxCombat: Math.min(126, combat + wild) };
+}
+
+export function wildernessView(roster: ReadonlyMap<string, Seen & { name?: string }>, fleet: ReadonlySet<string>, now: number) {
+    return [...roster]
+        .filter(([n, p]) => now - p.seen < ONLINE_MS && NAME.test(p.name ?? n))
+        .flatMap(([n, p]) => {
+            const name = p.name ?? n, info = wildernessInfo({ x: p.x, z: p.z, level: p.level }, p.combat);
+            return info.wild > 0 ? [{ name, fleet: fleet.has(name.toLowerCase()), x: p.x, z: p.z, plane: p.level, combat: p.combat, wild: info.wild, minCombat: info.minCombat, maxCombat: info.maxCombat }] : [];
+        })
+        .sort((a, b) => Number(a.fleet) - Number(b.fleet) || b.wild - a.wild || a.name.localeCompare(b.name));
 }
 
 // Players near each claimed resource with a tile ("knight:2582,3297") or named spot ("shop:aubury"): ours and others,

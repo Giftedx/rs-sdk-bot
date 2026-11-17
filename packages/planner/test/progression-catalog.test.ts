@@ -270,3 +270,11 @@ test('native cannonball quantities and bounds match the actual smelting order co
   expect(intentForEntry('scripts/microbot-a-cannonballs.ts',[String(bars),String(cap)],{CANNON_XP_RATE:String(xpRate),CANNON_RESERVE:String(reserve)})).toBeNull();
  }
 });
+
+test('owned earth production retains its finite acquisition intent and bounds',()=>{
+ expect(intentForEntry('scripts/earth-production.ts',['talismans','20000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000',HUNT_KILLS_PER_TARGET:'1'})).toMatchObject({kind:'acquire',items:{557:103}});
+ expect(intentForEntry('scripts/earth-production.ts',['craft','20000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'})).toMatchObject({kind:'acquire',items:{557:103}});
+ expect(intentForEntry('scripts/aio-skiller.ts',['magic','earth-production','craft','1400','STOCK_TARGET=1','COIN_RESERVE=0'],{})).toMatchObject({kind:'acquire',items:{557:1}});
+ for(const [args,env]of [[['bad','20000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['talismans','0'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['craft','20001'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['craft','2000'],{STOCK_TARGET:'0',COIN_RESERVE:'30000'}],[['talismans','2000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000',HUNT_KILLS_PER_TARGET:'4'}]] as const)
+  expect(intentForEntry('scripts/earth-production.ts',args,env)).toBeNull();
+});
