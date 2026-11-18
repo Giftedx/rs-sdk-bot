@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794985998196-mmtha0205-pocketpython-airrune",
+ "account": "mmtha0205",
+ "partner": "Pocketpython",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 36,
+ "claim": "956c95b1-9ed5-456a-a496-5d028377d630",
+ "count": 0,
+ "ok": false,
+ "at": 1794986082943,
+ "detail": "trade claimed"
+}

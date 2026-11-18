@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794986067079,
+ "at": 1794986101097,
  "jobs": [
   {
    "account": "AFKnight",
@@ -208,14 +208,13 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
+   "account": "MineYourBiz",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit2-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit4-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
@@ -226,6 +225,33 @@
    "autopilot": "local",
    "resources": [
     "ge:weapon"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
@@ -248,13 +274,14 @@
    ]
   },
   {
-   "account": "MineYourBiz",
+   "account": "mmthv2350",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit4-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit11-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
    },
    "enabled": true,
    "standing": true,
@@ -269,22 +296,21 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/chain.ts",
+   "script": "scripts/splash-train.ts",
    "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=150 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=9000 COIN_RESERVE=500 MAX_SPEND=8000"
+    "66",
+    "6000"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy body runes at Aubury's in Varrock for the curse band",
-   "role": "supply",
-   "template": "army-body-aubury",
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
    "autopilot": "local",
    "resources": [
-    "shop:aubury"
+    "splash:ardougne-cow-fence"
    ]
   },
   {
@@ -423,8 +449,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
