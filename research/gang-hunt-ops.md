@@ -22,7 +22,7 @@ piece widened to its class. Each check is a fault of a live pilot.
 | Bow and arrows | a strung bow and 100 or more arrows that it fires (arrow tier at or under the bow's tier) | two accounts shot bronze arrows |
 | Escape | Camelot Teleport or Varrock Teleport castable at the post with the runes held (`squadEscapeSpell`) | an account clicked Camelot Teleport with no law runes |
 | Freeze | Bind castable with the runes held (`castableFreeze`, Magic capped at 49 by `SQUAD_OPTS`) | a gang account at low HP walked away |
-| Antipoison | one antipoison of any dose count | poison did 139 of 455 damage |
+| Antipoison | one antipoison of any dose count on each of the first two accounts of the list; the others need none and carry the extra food (2 lobsters or 1 shark a kill) | poison did 139 of 455 damage; the gang clone bench killed 9 of 9 with a potion on 5, 2, 1 and 0 of five accounts, none died (hosted run 44262314889) |
 | Food | a shark or a lobster for each free slot of the pack (20 with the bench pack) | - |
 | Bank read | the status file's bank read is 6 hours old or less (`--max-age`) | a plan from stock that is gone |
 | Place | not inside West Ardougne, not in the Wilderness | the walker has no route across the West Ardougne wall |
@@ -249,8 +249,8 @@ From "fixes merged, pause lifted" to "the squad repeats". Each step names its ch
    (`bun scripts/fleet-inspect.ts <account>` makes one). Check: `bun scripts/squad-ready.ts <a1> <a2> <a3> <a4>`
    prints no `bank read ... old` line.
 3. **Stage.** Run the transfer commands that the tool prints, then the shop trips and the Grand Exchange buys for
-   each `no owned spare` line. Antipoison first: the fleet holds 2, and one `jiminua` trip buys 10. Check: the tool
-   prints `READY` for all four.
+   each `no owned spare` line. Antipoison first for the first two accounts of the list: the fleet holds 2, and one
+   `jiminua` trip buys 10. Check: the tool prints `READY` for all accounts.
 4. **Kit.** Each account stands at its bank. `bun scripts/squad-ready.ts <a1> <a2> <a3> <a4> --loadouts <dir>`,
    then `bun scripts/aio-logistics.ts <account> loadout <dir>/<account>.json` for each. Check:
    `OWNED_LOADOUT_RESULT` has `"ok":true` for each, and the tool still prints `READY`.
