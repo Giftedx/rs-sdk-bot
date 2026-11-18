@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794998432758-swordinhand-woodpecker-bronzesword",
  "account": "Woodpecker",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Bronze sword",
  "requested": 1,
  "claim": "7ccb059a-81fe-4a34-b1d1-b86c12f332fa",
- "count": 0,
- "ok": false,
- "at": 1794998467067,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794998700983,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794998700221
+ },
+ "logout": {
+  "attemptId": "1794998467416-0000005388-0000000001",
+  "at": 1794998700940,
+  "sha256": "336cf6927d97f14242da787287590e8bdbd8c8fef0f64ed347511247dcc04c34"
+ },
+ "screen": true
 }
