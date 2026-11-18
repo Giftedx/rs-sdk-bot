@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795003564777-fingersmith-yewfirst-cake",
  "account": "Fingersmith",
  "partner": "YewFirst",
@@ -10,8 +10,18 @@
  "item": "Cake",
  "requested": 4,
  "claim": "b0a4f30a-ac31-477b-b8e3-8d04d85648b1",
- "count": 0,
- "ok": false,
- "at": 1795003634854,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795003804858,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 17,
+  "after": 13
+ },
+ "logout": {
+  "attemptId": "1795003634862-0000023860-0000000001",
+  "at": 1795003804843,
+  "sha256": "f40ae14315871a5b4f6aaf1ae66780f9b9d5ec6a7c53bd978ec417a451703436"
+ },
+ "screen": true
 }
