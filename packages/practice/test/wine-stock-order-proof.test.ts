@@ -1,5 +1,8 @@
 import {test,expect} from 'bun:test';
-import {wineStockSaveChecks,type WineStockSaves} from '../src/wine-stock-order-proof';
+import {turnHeldByDelivery,wineStockSaveChecks,type WineStockSaves} from '../src/wine-stock-order-proof';
+import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 
 type Save=ReturnType<typeof readPracticeSave>;
@@ -28,4 +31,23 @@ test('notes which disappear during relog and damaged equipment/health reject the
  const hold=valid();hold.makerHeld.inventories[93]!.find(i=>i.id===1996)!.count=11;expect(wineStockSaveChecks(hold).held).toBe(false);
  const gear=valid();gear.consumerAfter.inventories[94]=[];expect(wineStockSaveChecks(gear).equipment).toBe(false);
  const hurt=valid();hurt.makerAfter.skills[3]!.level=98;expect(wineStockSaveChecks(hurt).health).toBe(false);
+});
+
+test('the proof takes no second practice turn when its parent delivery holds the lock it would wait on',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'wine-turn-')),lock=join(dir,'delivery-native.lock'),other=join(dir,'other.lock');
+ try{
+  writeFileSync(lock,JSON.stringify({pid:4242,at:1}));
+  const env={DELIVERY_DIR:'/d'};
+  expect(turnHeldByDelivery(lock,lock,env,4242)).toBe(true);
+  // Not through a delivery, a lock of another process, another lock file, no lock file, a broken lock file: the proof takes its own turn.
+  expect(turnHeldByDelivery(lock,lock,{},4242)).toBe(false);
+  expect(turnHeldByDelivery(lock,lock,env,4243)).toBe(false);
+  writeFileSync(other,JSON.stringify({pid:4242,at:1}));
+  expect(turnHeldByDelivery(other,lock,env,4242)).toBe(false);
+  expect(turnHeldByDelivery(join(dir,'missing.lock'),join(dir,'missing.lock'),env,4242)).toBe(false);
+  writeFileSync(lock,'not json');
+  expect(turnHeldByDelivery(lock,lock,env,4242)).toBe(false);
+  writeFileSync(lock,JSON.stringify({pid:'4242'}));
+  expect(turnHeldByDelivery(lock,lock,env,4242)).toBe(false);
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });
