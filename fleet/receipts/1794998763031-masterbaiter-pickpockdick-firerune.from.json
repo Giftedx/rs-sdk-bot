@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794998763031-masterbaiter-pickpockdick-firerune",
  "account": "Masterbaiter",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 210,
  "claim": "b2c0e0a0-8214-4fff-ad46-8c54f670e194",
- "count": 0,
- "ok": false,
- "at": 1794998809044,
- "detail": "trade claimed"
+ "count": 210,
+ "ok": true,
+ "at": 1794998833816,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 210,
+  "after": 0
+ },
+ "bank": {
+  "count": 210,
+  "at": 1794998817435
+ },
+ "logout": {
+  "attemptId": "1794998809053-0000024104-0000000001",
+  "at": 1794998833732,
+  "sha256": "317e128b87f004cf8282df9881e3be05d9b661077dea68ea54a91fc4f091934c"
+ },
+ "screen": true
 }
