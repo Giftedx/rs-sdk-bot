@@ -473,7 +473,8 @@ test('an unreadable claim record maps to null while the other accounts are still
         acquireFleetTradeClaim(a, { ...input, account: 'Good', orderId: 'order-g' }, () => T0);
         // A claim ref whose record is not a claim: a commit with a body that is not JSON.
         const tree = execFileSync('git', ['hash-object', '-w', '-t', 'tree', '--stdin'], { cwd: a, input: '', encoding: 'utf8', windowsHide: true }).trim();
-        const bad = git(a, 'commit-tree', tree, '-m', 'not a claim record\n\nplain text').toString().trim();
+        // The committer is given here: a runner has no global git identity.
+        const bad = git(a, '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', 'commit-tree', tree, '-m', 'not a claim record\n\nplain text').toString().trim();
         git(a, 'push', 'origin', bad + ':refs/heads/fleet-trade-claim/broken');
         const read = counting(b), claims = readAllFleetAccountClaims(read.window);
         expect(claims.get('broken')).toBeNull();
