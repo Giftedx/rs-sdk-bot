@@ -75,23 +75,24 @@ test('a passed build, a timeout, no checks and an unreadable detail give no faul
 function memoryRefusals(): { file: string; message: string }[] {
  const dir = resolve(import.meta.dir, '../../practice/src'), out: { file: string; message: string }[] = [];
  for (const file of readdirSync(dir).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'))) {
-  for (const line of readFileSync(join(dir, file), 'utf8').split(/\r?\n/)) {
-   if (!/throw\s+(?:new\s+)?Error\(/.test(line) || !/freemem\(|freeGiB\(|startFreeGiB|\.free\(\)|lowMemory|waitFreeMemory|\bfree</.test(line)) continue;
-   const text = /Error\((`[^`]*`|'[^']*'|"[^"]*")/.exec(line)?.[1];
-   const message = text?.slice(1, -1).replace(/\$\{[^}]*\}/g, '4');
-   if (message && /memory|GiB|headroom|reserve|floor/i.test(message)) out.push({ file, message });
+  const text = readFileSync(join(dir, file), 'utf8');
+  // Each file that reads the free memory: every throw in it, on one line or over several, whose message names memory.
+  if (!/freemem\(|freeGiB|startFreeGiB|\.free\(\)|lowMemory|waitFreeMemory|freeGB|\bfree</.test(text)) continue;
+  for (const m of text.matchAll(/throw\s+(?:new\s+)?Error\(\s*(`[^`]*`|'[^']*'|"[^"]*")/g)) {
+   const message = m[1]!.slice(1, -1).replace(/\$\{[^}]*\}/g, '4');
+   if (/memory|GiB|headroom|startup (?:reserve|needs)|free floor/i.test(message)) out.push({ file, message });
   }
  }
  return out;
 }
 test('every memory refusal message of the native proofs is a host fault, never a build fault', () => {
  const found = memoryRefusals();
- // A guard against a scan that finds nothing: the proofs hold about 35 such messages.
+ // A guard against a scan that finds nothing: the proofs hold 60 such messages in 34 files.
  expect(found.length).toBeGreaterThan(25);
  expect(found.filter(f => !HOST_MEMORY_REFUSAL.test(f.message)), 'a memory refusal that the host-fault pattern misses').toEqual([]);
  for (const { message } of found) expect(faultOf('native', '', 'Error: ' + message), message).toBeNull();
  // The text of a real session recovery refusal, and a bench refusal, are host faults too.
- for (const error of ['native recovery needs6.5GiB startup reserve; observed 6.40', 'practice needs 4GiB floor plus 2.5GiB startup reserve',
+ for (const error of ['native recovery memory wait expired: 6.40GiB free, 6.5GiB needed, 240000ms budget used; no request submitted', 'insufficient practice free memory floor: cohort existing stopped', 'native recovery needs6.5GiB startup reserve; observed 6.40', 'practice needs 4GiB floor plus 2.5GiB startup reserve',
   'HOST_DEFERRED_NATIVE_HEADROOM: native startup headroom wait expired; no child started'])
   expect(faultOf('native', '', 'Error: ' + error), error).toBeNull();
  // A code fault that does not name memory stays a fault.

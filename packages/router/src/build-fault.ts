@@ -3,10 +3,10 @@
 import {existsSync,readFileSync} from 'node:fs';
 
 // The memory refusals of a proof or a tool: the host had too little free memory (or time for it) to start. The words
-// of every such message of packages/practice/src name the free memory, the memory floor, the practice memory, a startup
-// reserve, startup headroom or admission headroom, or the native memory boundary; packages/router/test/build-fault.test.ts reads those sources, so a
+// of every such message of packages/practice/src name the free memory, the memory floor or an expired memory wait, the
+// practice memory, a startup reserve, startup headroom or admission headroom, or the native memory boundary; packages/router/test/build-fault.test.ts reads those sources, so a
 // new refusal that this pattern misses fails there.
-export const HOST_MEMORY_REFUSAL=/HOST_DEFERRED_NATIVE_HEADROOM|free[ -]memory|memory floor|free floor|practice memory|startup (?:reserve|headroom|needs)|admission headroom|native memory boundary/i;
+export const HOST_MEMORY_REFUSAL=/HOST_DEFERRED_NATIVE_HEADROOM|free[ -]memory|memory (?:floor|wait expired)|free floor|practice memory|startup (?:reserve|headroom|needs)|admission headroom|native memory boundary/i;
 // These faults come from the host. They say nothing about the source under test.
 const HOST_FAULT=new RegExp('port \\d+ in use|'+HOST_MEMORY_REFUSAL.source,'i');
 export const PROOF_TIMING=/^[A-Z0-9_]+_PROOF_TIMING \{/;
