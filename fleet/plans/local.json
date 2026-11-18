@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795024734068,
+ "at": 1795024840400,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -255,25 +255,6 @@
    ]
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=1 EXPECTED_OWNED=4 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit16-385-4to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":5}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "supply",
-   "template": "kit-buy:aio-blood-chest",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -350,6 +331,25 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=1 EXPECTED_OWNED=4 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit17-385-4to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":5}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Moneyshot",

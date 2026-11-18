@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795024754437-sausagefest-masterbaiter-cookedmeat",
+ "account": "Masterbaiter",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "92ba36e6-cd3e-4604-a1d2-ce25c305deae",
+ "count": 0,
+ "ok": false,
+ "at": 1795024788507,
+ "detail": "trade claimed"
+}

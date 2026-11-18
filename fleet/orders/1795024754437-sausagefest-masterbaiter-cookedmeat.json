@@ -1,0 +1,22 @@
+{
+ "id": "1795024754437-sausagefest-masterbaiter-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Masterbaiter",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1795024754437,
+ "end": 1795027154437,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
