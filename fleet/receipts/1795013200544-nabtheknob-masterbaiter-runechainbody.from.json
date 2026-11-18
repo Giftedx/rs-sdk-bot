@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795013200544-nabtheknob-masterbaiter-runechainbody",
+ "account": "NabTheKnob",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "230413e0-1f39-41c5-a246-e96b587284cd",
+ "count": 1,
+ "ok": true,
+ "at": 1795013250792,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795013244452
+ },
+ "logout": {
+  "attemptId": "1795013235303-0000010024-0000000001",
+  "at": 1795013250780,
+  "sha256": "22019845c70deb82b532e9c4bbc56cceafb61bd3d745c27ff2b54b74c5dc3ff0"
+ },
+ "screen": true
+}
