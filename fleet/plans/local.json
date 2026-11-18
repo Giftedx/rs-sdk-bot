@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795044555091,
+ "at": 1795044617416,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -122,47 +122,6 @@
    "repeat": true,
    "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
    "role": "market"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=coincock-kit0-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=coincock-kit0-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":300}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=sporranbulge-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
   },
   {
    "account": "Woodenstaff",
@@ -332,6 +291,53 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
    ]
   }
  ],
