@@ -197,6 +197,10 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  }
  if(script==='scripts/ranged-starter.ts')return{kind:'train',skill:'ranged',targetLevel:5};
  if(script==='scripts/generated/rcair.ts')return{kind:'service',objective:'craft current carried rune essence into air runes once',units:1};
+ if(script==='scripts/pvp-kit-stage.ts'){
+  const cap=Number(args[0]??1800);
+  return whole(cap)&&cap>=1&&cap<=2000?{kind:'acquire',items:{1985:2},consumer}:null;
+ }
  if(script==='scripts/gather-spawn.ts'){
   const id=Number(args[0]),count=Number(args[1]??27),ticks=Number(env.TICKS??6000);
   return whole(id)&&id>0&&whole(count)&&count>0&&Number.isFinite(ticks)&&ticks>0?{kind:'acquire',items:{[id]:count},consumer}:null;

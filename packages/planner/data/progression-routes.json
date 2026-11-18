@@ -1961,7 +1961,7 @@
     "acquire"
    ],
    "skills": [],
-   "description": "Stage tribrid PvP equipment, food, potions, and runes at Edgeville/bank"
+   "description": "Stage an owned starter PvP kit and two paid cheese at Varrock East bank"
   },
   {
    "id": "pvp:standby",
@@ -91977,6 +91977,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/pk-escape-proof.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/pk-hunt-trip.ts",
    "intents": [
     "observe"
@@ -92041,6 +92050,15 @@
   },
   {
    "script": "scripts/measure/pk-spar-wait.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/pk-spear-proof.ts",
    "intents": [
     "observe"
    ],

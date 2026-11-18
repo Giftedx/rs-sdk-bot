@@ -1049,6 +1049,18 @@ const ROUTE_CASES: BenchCase[] = [
   sparCase('extra:spar-gap', sparFixture(3088), sparFixture(3100)),
   sparCase('extra:spar-trees', sparFixture(3099, 3536), sparFixture(3105, 3536)),
   sparCase('extra:spar-escape', sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
+  {key: 'extra:spar-escape-full-pack', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-escape-proof.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}'], presetConfig: sparFixture(3094, 3700, {food: 19}),
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3700)}],
+    pass: s => ok(s) && /PK_ESCAPE_PROOF \{"ok":true,/.test(s), timeoutMs: 90_000},
+  {key: 'extra:spar-spear-protected', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-spear-proof.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}'], presetConfig: (() => {
+      const fixture = kitFixture('tribrid-snare-spear', 3150, 3560);
+      // Isolate the non-damaging special: a cooldown boost would change the strict asset baseline.
+      return {...fixture, inventory: fixture.inventory!.filter(i => ![2436, 2440, 2444].includes(i.id))};
+    })(),
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {...sparFixture(3151, 3560), varps: {...sparFixture(3151, 3560).varps, 172: 1}}}],
+    pass: s => ok(s) && /PK_SPEAR_PROOF \{"ok":true,/.test(s), timeoutMs: 90_000},
   // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.
   sparBatch('extra:spar-escape-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   sparBatch('extra:spar-x8', 8, sparFixture(3094), sparFixture(3096)),

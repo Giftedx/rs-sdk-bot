@@ -20,6 +20,11 @@ on:
         type: boolean
         required: false
         default: false
+      pvp_practice:
+        description: Run the complete PvP practice sweep and AIO smoke set
+        type: boolean
+        required: false
+        default: false
       bench_pattern:
         description: Run the bench cases that match this pattern (empty runs none)
         type: string
@@ -28,6 +33,63 @@ on:
 permissions:
   contents: read
 jobs:
+  pvp-practice:
+    if: inputs.pvp_practice
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Prepare the pinned practice dependencies
+        run: bun scripts/worktree-setup.ts --bench
+      - name: Pack the public game assets
+        timeout-minutes: 10
+        working-directory: vendor/rs-sdk/server/engine
+        run: |
+          bun run build
+      - name: Bind the proof to its source
+        run: |
+          mkdir -p .practice/pvp-sweep
+          git rev-parse HEAD > .practice/pvp-sweep/source.txt
+          sha256sum scripts/pk.ts scripts/pk-spar.ts scripts/measure/pk-escape-proof.ts scripts/measure/pk-spear-proof.ts scripts/measure/aio-bench-cases.ts patches/rs-sdk-working.patch >> .practice/pvp-sweep/source.txt
+      - name: Run this shard of the complete PvP sweep in bounded batches
+        timeout-minutes: 45
+        run: |
+          set -o pipefail
+          bun scripts/measure/pvp-sweep.ts --parallel 4 --budget 3.5 --shard ${{ matrix.shard }}/4 | tee .practice/pvp-sweep/full.log
+      - name: Run the first AIO smoke group
+        if: ${{ !cancelled() && matrix.shard == 1 }}
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          bun run bench '^quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$' --smoke --parallel 1 --budget 10 | tee .practice/pvp-sweep/smoke-a.log
+      - name: Run the second AIO smoke group
+        if: ${{ !cancelled() && matrix.shard == 1 }}
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          bun run bench '^(?!quester:quest:(cook|imp|doric|gobdip|sheep|hetty|rj)$)' --smoke --parallel 1 --budget 10 | tee .practice/pvp-sweep/smoke-b.log
+      - name: Retain the source-bound PvP evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pvp-practice-shard-${{ matrix.shard }}-${{ github.sha }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            .practice/pvp-sweep/**
+            .practice/aio-bench/last.json
+            .practice/aio-bench/output/*.log
+            .practice/logs/engine-aiobench-*.log
   bench-cases:
     if: inputs.bench_pattern != ''
     runs-on: ubuntu-latest

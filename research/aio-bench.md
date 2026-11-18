@@ -16,6 +16,13 @@ Source -> consumer -> reuse -> check: the existing seed runner and profile path 
 |---|---|---|---|
 | Existing AIO bench import closure and case definitions | Kept `AIO_BENCH_RESULT` rows | Adapt the cache key to include materialized fixtures and acceptance dependencies. Keep the existing bench. | Input changes require a different key. An unchanged case retains its key. |
 
+## Concurrent timing records
+
+Source -> consumer -> reuse -> check: `status.ts` bounded Windows rename retry -> `bench-budget.ts` timing records ->
+reuse the retry with one temporary file per process -> the native four-process regression in `bench-budget.test.ts`.
+Each process can publish a complete JSON record without another seed renaming its temporary file. The timing cache
+keeps last-run estimates. It is not a receipt ledger for concurrent writes to different keys.
+
 ## Lockstep engine
 
 **Claim:** a lockstep engine with one seed and a new engine for each case gives the same tick count on each run. **Conditions:** `bun run bench --smoke --no-keep`, seed 7, six engines at a time, three runs. **Evidence:** 15 of 15 cases equal in the three runs (`.practice/aio-bench/smkw1.log` to `smkw3.log`); the per-tick world traces of `crest` and `dwarfcannon` are byte-identical between two runs (`trA/`, `trB/`). **Gap:** a case with a partner account is not in the three-run check.

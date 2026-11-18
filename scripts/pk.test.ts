@@ -422,7 +422,7 @@ test('a thrown weapon attacks one tick sooner than a shortbow, and Rapid takes o
 
 test('defaultSpec supports dragon halberd alongside dragon dagger, longsword, mace, claws and spear', () => {
     const names = new Map([[3204, 'dragon_halberd'], [3122, 'rune_claws'], [1249, 'dragon_spear']]);
-    expect(defaultSpec({ melee: [3204] }, names)).toEqual({ kit: [3204], bar: 'combat_halberd:specbar', cost: 300, below: 0.6, style: 'melee' });
+    expect(defaultSpec({ melee: [3204] }, names)).toEqual({ kit: [3204], bar: 'combat_polearm:specbar', cost: 300, below: 0.6, style: 'melee' });
     expect(defaultSpec({ melee: [3122] }, names)).toEqual({ kit: [3122], bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' });
     expect(defaultSpec({ melee: [1249] }, names)).toMatchObject({ bar: 'combat_spear:specbar', stun: 4 });
 });
@@ -954,4 +954,16 @@ test('battleaxeWarcryMath, Charge varp/rune gating, and Dragon Battleaxe warcry 
     expect(clicks).not.toContain(SPELLS.charge); // Charge already active via varp 272 -> zero wasted cast
     expect(uses).toContain(ITEMS.dragonBattleaxe); // equipped 1377 and triggered warcry specbar
     expect(clicks.length).toBeGreaterThanOrEqual(1);
+});
+
+test('each special bar that pk.ts names exists in the interface pack of the server', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const pack = readFileSync(resolve(import.meta.dir, '../vendor/rs-sdk/server/content/pack/interface.pack'), 'utf8');
+    const known = new Set(pack.split(/\r?\n/).map(line => line.slice(line.indexOf('=') + 1)).filter(name => name.endsWith(':specbar')));
+    const used = new Set([...readFileSync(resolve(import.meta.dir, 'pk.ts'), 'utf8').matchAll(/'(combat_[a-z0-9_]+:specbar)'/g)].map(match => match[1]!));
+    expect(known.size).toBeGreaterThan(10);
+    expect(used.size).toBeGreaterThan(5);
+    // A name that the pack does not hold throws "no interface component" at the first special of that weapon.
+    expect([...used].filter(bar => !known.has(bar))).toEqual([]);
 });

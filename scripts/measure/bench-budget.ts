@@ -4,8 +4,9 @@
 //   selection over the budget before its first engine, and starts no case after the deadline.
 // - Profile: the lockstep ack file of the bench bots (SIM_ACK_FILE, packages/core/src/inprocess.ts) and the engine's
 //   wait lines (SIM_STAT_FILE, engine World.ts) give where the wall time of one case went.
-import {existsSync, readFileSync, writeFileSync, renameSync, mkdirSync} from 'node:fs';
+import {existsSync, readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {dirname} from 'node:path';
+import {renameRetry} from '../../packages/core/src/status';
 
 export const BUDGET_MIN = 10, BUDGET_EXIT = 3;
 // A case with no recorded time: the median wall time of a case on this PC is under a minute.
@@ -20,8 +21,9 @@ export function recordElapsed(key: string, ms: number, file = ELAPSED_FILE): voi
     const all = readElapsed(file);
     all[key] = Math.round(ms);
     mkdirSync(dirname(file), {recursive: true});
-    writeFileSync(file + '.tmp', JSON.stringify(Object.fromEntries(Object.entries(all).sort()), null, 1));
-    renameSync(file + '.tmp', file);
+    const temporary = `${file}.${process.pid}.tmp`;
+    writeFileSync(temporary, JSON.stringify(Object.fromEntries(Object.entries(all).sort()), null, 1));
+    renameRetry(temporary, file);
 }
 
 // The wall time of a run: the cases to run (not kept) on `engines` engines, longest first, each to the engine that is

@@ -2,6 +2,48 @@
 
 The PK army's fight loop is `fightPlayer` in `scripts/pk.ts`; `scripts/measure/pk-duel.ts` measures it on practice.
 
+## Fight input and escape
+
+Source -> consumer -> reuse/adapt -> check: the pinned engine's `ClientGameProtCategory.USER_EVENT` limit and
+`NetworkPlayer.decodeIn`, native food consumption and glory teleport scripts, and `pk-roam.ts` food-for-space escape
+-> `fightPlayer` -> reuse the five-input limit and adapt the existing escape method; no upstream code copied ->
+`pk-food.test.ts`, `pk-escape.test.ts` and `extra:spar-escape-full-pack`.
+
+Food and movement debit the same tick's prayer and attack budget. A prayer flick starts only when the remaining
+inputs can switch every active prayer off and restore the overhead. The overhead returns first. Unit regressions
+cover food with a flick, a chase, a positioning step and a combat-style change.
+
+A fleeing fighter at Wilderness level 30 or below eats one food when its full pack prevents removal of its charged
+glory, including at full health. It reads the next inventory before removing the glory. With no food it retains the
+walking fallback. The native case starts at full health with 28 occupied pack slots and a worn glory(4), then checks
+one shark debit, one glory charge, retained kit, the same life and the Edgeville landing. Seeds 7, 8 and 9 pass.
+Evidence: `.practice/pvp-escape/escape-final-source.log` and the seed reports in
+`.practice/aio-bench/`. Gap: this proves the escape on practice without a player attacking the runner, not survival under a live attack.
+
+The finite live consumer is a 900-tick hunter trip through `aio-pvp.ts hunt` after the owning controller qualifies
+the source and observes a complete owned kit. Existing account assignments, supply reservations and stops apply.
+Saved local stock does not establish a complete hunter kit. Credited live kills and Wilderness control remain unknown.
+
+The separate starter-kit stage has a fixed acquisition intent: two cheese, with its existing 1..2000 tick cap.
+The native `pvp:stage-kit` case buys and banks both cheese for 68 GP, keeps HP10, XP and protected stock, and logs out.
+Evidence: `.practice/pvp-escape/kit-stage-native.log`. This is starter supply, not a complete tribrid hunting kit.
+
+## Spear holds and protection prayers
+
+Source -> consumer -> adapt -> check: the pinned `pvp_dragon_spear.rs2` push and `p_delay(4)`, which perform no
+damage or protection-prayer check -> `fightPlayer`'s existing `SpecConfig.stun` gate -> exempt the non-damaging
+hold from the protection-prayer veto; retain health, energy, range, freeze and shared-hold gates; no upstream code
+copied -> `pk-spear.test.ts` and `extra:spar-spear-protected`.
+
+The six unit cases cover a spear opening through Protect Melee, retained health and energy limits, a shared-hold
+wait, and the damaging special's quarter-health rule. The native case requires an observed Protect Melee overhead
+above quarter health, special energy 1000 to 750, the native east push (+1,+1) or its (+1,0) fallback,
+`stunned_shove` graphic 254, no target HP loss,
+retained assets, the same lives and confirmed logout. Seeds 7, 8 and 9 pass with energy 750, graphic 254 and offset
+(+1,+1). Evidence: `.practice/aio-bench/output-seed-7/extra_spar-spear-protected.log` and the corresponding seed 8
+and 9 logs. Gap: practice holds do not establish a live hold, a kill or a speed gain. The existing
+`extra:army-route-spear-x5` case is the army consumer.
+
 ## Shared trip items and loot
 
 Source -> consumer -> adapt -> check: [Inventory Setups explicit variant grouping](https://github.com/dillydill123/inventory-setups/tree/16f2c0a319672c2e19738276a17de63aea7216fa), the pinned potion `dose_count` and `nextstage` chain, and local teleport charge definitions -> `item-requirements.ts` and hunter trip selection/restocking -> adapt explicit families, reuse native metadata, reject modern item tables and fuzzy equipment substitutions -> `item-requirements.test.ts`, `pk-hunt.test.ts` and `microbot-potion-care.test.ts`. Inventory Setups uses BSD-2-Clause. No upstream code is copied.
@@ -16,6 +58,21 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 `Session.client`, which leaves the SDK state and the swarm's launch release unchanged -> `scripts/pk.test.ts` and the duels below.
 
 ## Spar and ladder
+
+**The pair teardown runs only after a fight that ends at the cap.** Source -> consumer -> reuse/adapt -> check: the
+pinned `auto_retaliate.rs2`, the retained player Attack action and the `logout.rs2` combat window -> `pk-spar.ts`
+`stopSparPair`, gated by `needsSparTeardown` -> reuse the native retaliation OFF control's action cancellation, then
+require a fresh target release before the ordinary confirmed logout -> `pk-spar-cleanup.test.ts`.
+
+- Claim: a pair that ends at the cap has both accounts alive with a native Attack action still running, and it cannot
+  log out with no teardown. Conditions: the hosted `pvp-practice` sweep, 4 engines, `--budget 3.5`,
+  `extra:spar-kit-mage-tank-x8` (8 draws at the cap). Evidence: runs `44226828174` and `44230504511` with no teardown:
+  the two accounts of one pair time out at logout in each run. The teardown has a 16-tick and 4.5-second bound, and an
+  unobserved retaliation OFF or target release fails the run.
+- Claim: the same teardown after a kill leaves the winner unable to log out. Conditions: the same sweep, 8 or 12 pairs
+  in a batch. Evidence: run `44217966751` with a teardown of every pair: 174 of 287 spar cases end with
+  `WARN logout did not complete`, each for one account whose opponent died, and each teardown printed `"ok":true`.
+  Run `44226828174` with no teardown: 2 of 287. Gap: the server-side cause is not traced.
 
 `scripts/pk-spar.ts` puts the fight loop on both sides: two own accounts fight each other, each with a named profile
 (a set of fight options; `PROFILES`). The bench case `pvp:spar` stages a mirror: both sides get the duel conditions
@@ -2092,7 +2149,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     kit, so the removal failed and the follower stood 120 ticks. Both now eat a food to free a slot when the pack is
     full, take the glory off (three tries), rub it, and else walk, stepping 10 tiles to the side when a walk moves
     them nowhere. `extra:army-route-defend-deep` seeds 1-6: the leader and both followers reach Edgeville at the end
-    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. `fightLoop` also drops a vial or eats a food item before taking off a worn glory when the pack holds 28 items (unit-tested in `scripts/pk.test.ts`; live practice full-pack glory escape remains to be run).
+    of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. The fight loop's full-pack glory
+    escape has the native case `extra:spar-escape-full-pack` (Fight input and escape). `fightLoop` also drops a vial or
+    eats a food item before taking off a worn glory when the pack holds 28 items (unit-tested in `scripts/pk.test.ts`).
+    Gap: live survival under an attack.
 67. **Spears on a melee tile at the opening kill the target that eats and leaves a crowd at level 34: 18 of 18.**
     The dragon spear's special has no hit roll: it pushes the target a tile and holds it with `p_delay(4)`, no
     move, no eat and no glory rub, for 25% energy (`pvp_dragon_spear.rs2`). `extra:army-route-defend-deep-x5` (the

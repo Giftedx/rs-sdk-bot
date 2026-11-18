@@ -63,7 +63,7 @@ export const PVP_MODES: readonly PvpModeSpec[] = [
  {mode:'roam',script:'scripts/pk-roam.ts',description:'Wilderness multi-zone roam and target scout'},
  {mode:'pilot',script:'scripts/pk-live/live-pilot.ts',defaultArgs:['10','20'],description:'Bounded live Wilderness PK pilot with GE/shop rune restock'},
  {mode:'standby',script:'scripts/pvp-standby.ts',description:'Staged Wilderness standby readiness'},
- {mode:'stage-kit',script:'scripts/pvp-kit-stage.ts',description:'Stage tribrid PvP equipment, food, potions, and runes at Edgeville/bank'},
+ {mode:'stage-kit',script:'scripts/pvp-kit-stage.ts',description:'Stage an owned starter PvP kit and two paid cheese at Varrock East bank'},
  {mode:'escort-ore',script:'scripts/lava-maze-escorted-ore.ts',description:'Escorted Wilderness Lava Maze runite mining trip'},
  {mode:'microbot-pvp',script:'scripts/microbot-pvp.ts',description:'Microbot-adapted PvP combat helper'},
  {mode:'special-swap',script:'scripts/microbot-special-swap.ts',description:'1-tick special-attack weapon swap and restore'},

@@ -274,6 +274,13 @@ test('a script-wide proof cannot qualify distinct native methods',()=>{
  expect(methods[0]?.qualification).toBeUndefined();
 });
 
+test('PvP kit staging retains its exact two-cheese consumer and bounded cap',()=>{
+ expect(intentForEntry('scripts/pvp-kit-stage.ts',[],{})).toEqual({kind:'acquire',items:{1985:2},consumer:'scripts/pvp-kit-stage.ts'});
+ expect(intentForEntry('scripts/pvp-kit-stage.ts',['2000'],{CONSUMER:'starter PvP kit'})).toEqual({kind:'acquire',items:{1985:2},consumer:'starter PvP kit'});
+ expect(intentForEntry('scripts/aio-pvp.ts',['stage-kit','2000','STALL_TICKS=6000'],{})).toEqual(intentForEntry('scripts/pvp-kit-stage.ts',['2000'],{}));
+ for(const cap of ['0','2001','1.5','NaN','Infinity']) expect(intentForEntry('scripts/pvp-kit-stage.ts',[cap],{})).toBeNull();
+});
+
 test('authored starter and inside-altar workers retain their actual finite defaults',()=>{
  expect(intentForEntry('scripts/ranged-starter.ts',[],{})).toEqual({kind:'train',skill:'ranged',targetLevel:5});
  expect(intentForEntry('scripts/ranged-starter.ts',['99'],{TARGET_LEVEL:'99'})).toEqual({kind:'train',skill:'ranged',targetLevel:5});
