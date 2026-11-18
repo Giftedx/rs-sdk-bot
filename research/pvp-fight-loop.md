@@ -1606,7 +1606,7 @@ The repair `kit-restored` (`applyKitRestored`) clears the script hold of a PvP d
 `aio-pvp.ts`, `pk-squad.ts`, `pk-hunt.ts`, `pk-roam.ts` or `pk-army.ts` with a `died` reason. The request must hold a passing receipt of
 `bun scripts/squad-ready.ts <account> --receipt <dir>`: newer than the death, at most 15 minutes old, and bound by its hash to the
 account's status file as it is now (the fresh bank and worn snapshot). The account must be inactive with a current logout proof. The hold
-stays in the history (`restored`) and no longer blocks. No other hold kind is cleared. Proof: `scripts/swarm.test.ts`, a five-member job with
+stays in the history (`restored`) and does not block. No other hold kind is cleared. Proof: `scripts/swarm.test.ts`, a five-member job with
 one death.
 
 ## Server rules the loop follows
