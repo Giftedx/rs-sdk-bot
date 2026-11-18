@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795004465028-oreelse-pocketrocket-shortbow",
+ "account": "OreElse",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shortbow",
+ "requested": 1,
+ "claim": "f2baae65-ba4e-4cc7-bd7f-64b69b0344e4",
+ "count": 0,
+ "ok": false,
+ "at": 1795004571064,
+ "detail": "trade claimed"
+}

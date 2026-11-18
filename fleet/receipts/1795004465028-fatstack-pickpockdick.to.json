@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795004465028-fatstack-pickpockdick",
+ "account": "PickpockDick",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 183326,
+ "claim": "688c7e70-697f-4da6-a717-527100441268",
+ "count": 0,
+ "ok": false,
+ "at": 1795004564995,
+ "detail": "trade claimed"
+}
