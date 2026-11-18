@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794986694198,
+ "at": 1794986770104,
  "jobs": [
   {
    "account": "AFKnight",
@@ -184,27 +184,6 @@
    "resources": []
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit4-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1331\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
@@ -245,6 +224,45 @@
    "resources": [
     "ge:armour"
    ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit3-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=4 LIMIT_PRICE=1200 CASH_RESERVE=1060 ORDER_KEY=mineyourbiz-kit4-385-0to4 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":4}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 4 Shark on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
+   "role": "supply",
+   "template": "kit-buy:army-trooper-ranged-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Moneyshot",
@@ -319,28 +337,22 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=shaftmaker-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "ge:weapon"
    ]
   },
   {
@@ -412,8 +424,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -424,26 +435,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit3-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
    ]
   }
  ],
