@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794986770104,
+ "at": 1794986831205,
  "jobs": [
   {
    "account": "AFKnight",
@@ -246,23 +246,51 @@
    ]
   },
   {
-   "account": "MineYourBiz",
+   "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=4 LIMIT_PRICE=1200 CASH_RESERVE=1060 ORDER_KEY=mineyourbiz-kit4-385-0to4 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=shaftmaker-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":4}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 4 Shark on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
    "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
+   "template": "kit-buy:army-weapon",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "ge:weapon"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Moneyshot",
@@ -336,26 +364,6 @@
    ]
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=shaftmaker-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
-  },
-  {
    "account": "Swordinhand",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -398,7 +406,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
    },
    "enabled": true,
    "standing": true,
