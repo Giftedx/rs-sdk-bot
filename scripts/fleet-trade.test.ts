@@ -863,3 +863,31 @@ test('a trade session ends its wait once its own release moves, checking at most
     expect(releaseWatch(read, undefined)()).toBe(false);
     expect(releaseWatch(() => { throw Error('missing'); }, 'a')()).toBe(false);
 });
+
+test('the live trade record maps each participant to the finite order, and the bare order id does not', async () => {
+    const { fleetTradeRecord } = await import('./fleet-trade');
+    const { botWork } = await import('../packages/core/src/bot');
+    const { intentForEntry, loadProgressionCatalog } = await import('../packages/planner/src/progression-catalog');
+    const { preflightProgressionWork } = await import('../packages/core/src/progression-session');
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-trade-record-'));
+    try {
+        const o = order({ id: '1794000000000-giver-taker' });
+        mkdirSync(join(dir, 'orders'), { recursive: true });
+        writeFileSync(join(dir, 'orders', o.id + '.json'), JSON.stringify(o));
+        for (const account of ['Giver', 'taker']) {
+            const argv = [account, o.id], record = fleetTradeRecord(dir, o, account, argv, {});
+            const work = botWork(account, record);
+            // The record keeps the command line of the fleet agent; the work argument is the order file.
+            expect(record.argv).toEqual(argv);
+            expect(work.args).toEqual([join(dir, 'orders', o.id + '.json')]);
+            expect(intentForEntry(work.script, work.args, work.env)).toMatchObject({ kind: 'service' });
+            // The check that a live login runs on this work.
+            expect(() => preflightProgressionWork(work, 'rs-sdk-demo.fly.dev', loadProgressionCatalog(), account)).not.toThrow();
+            expect(() => preflightProgressionWork({ ...work, args: [o.id] }, 'rs-sdk-demo.fly.dev', loadProgressionCatalog(), account)).toThrow('requires a finite goal');
+            // The command line alone names no order file: this form was refused at each live login.
+            expect(intentForEntry('scripts/fleet-trade.ts', botWork(account, { script: 'scripts/fleet-trade.ts', argv }).args, {})).toBeNull();
+        }
+        expect(() => fleetTradeRecord(dir, o, 'Stranger', ['Stranger', o.id], {})).toThrow('is not in order');
+        expect(() => fleetTradeRecord(dir, order({ id: 'no-such-order' }), 'Giver', ['Giver', 'no-such-order'], {})).toThrow('no order file');
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
