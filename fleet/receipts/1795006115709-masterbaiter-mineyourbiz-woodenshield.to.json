@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795006115709-masterbaiter-mineyourbiz-woodenshield",
  "account": "MineYourBiz",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Wooden shield",
  "requested": 1,
  "claim": "055c9401-cac5-4a1e-a9ca-7e3a1c02a08b",
- "count": 0,
- "ok": false,
- "at": 1795006198991,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795006524362,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795006523473
+ },
+ "logout": {
+  "attemptId": "1795006198999-0000024096-0000000001",
+  "at": 1795006524342,
+  "sha256": "9cbb13cc7812195320fd1f7cdd0d1a6b0720fae591ee3a24abec205f7b598681"
+ },
+ "screen": true
 }
