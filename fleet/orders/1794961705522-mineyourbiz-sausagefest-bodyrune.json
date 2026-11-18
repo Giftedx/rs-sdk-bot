@@ -1,0 +1,22 @@
+{
+ "id": "1794961705522-mineyourbiz-sausagefest-bodyrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Sausagefest",
+ "item": "Body rune",
+ "count": 1,
+ "start": 1794961705522,
+ "end": 1794964105522,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
