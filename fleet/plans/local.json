@@ -1,7 +1,21 @@
 {
  "side": "local",
- "at": 1794976239059,
+ "at": 1794977111792,
  "jobs": [
+  {
+   "account": "AFKnight",
+   "script": "scripts/gather-combat.ts",
+   "env": {
+    "TARGET": "cow",
+    "CAP": "1000",
+    "MAX_KILLS": "2",
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "10"
+   },
+   "enabled": false,
+   "goal": "Combat reserve; qualify Ardougne cow entry before activation",
+   "role": "combat"
+  },
   {
    "account": "FishAndChips",
    "script": "scripts/chain.ts",
