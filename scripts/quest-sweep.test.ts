@@ -2162,3 +2162,27 @@ test('planTeleportRunes uses off-thread planning when available and skips routin
  expect(teleSync).toEqual([{id:563,count:1},{id:556,count:3}]);
  expect(syncCalls).toBe(1);
 });
+
+test('a route worker fault while the sweep plans teleport runes is no plan, not a failed walk', async () => {
+ const {planTeleportRunes}=await import('./quest-sweep');
+ const names=new Map([[563,'lawrune'],[556,'airrune']]),ids=new Map([...names.entries()].map(([id,n])=>[n,id]));
+ const from={x:3200,z:3200,level:0},to={x:2960,z:3380,level:0},acct={items:[],counts:{},coins:0,skills:{},quests:{}} as any;
+ const offWorld={offThread:true,route:()=>{throw Error('the game thread must not search');}} as any;
+ const fault=async()=>{throw Error('route worker failed: out of memory');};
+ expect(await planTeleportRunes(offWorld,from,to,acct,[{id:563,count:2},{id:556,count:6}],id=>names.get(id),n=>ids.get(n),5000,fault)).toEqual([]);
+});
+test('the far walk takes a route worker fault as no plan and walks the ground; an aborted run still rejects', async () => {
+ const {sweepPlan}=await import('./quest-sweep');
+ const {executionContext}=await import('../vendor/rs-sdk/sdk/execution-context');
+ const from={x:3200,z:3200,level:0},to={x:2960,z:3380,level:0},acct={items:[],counts:{lawrune:1},coins:0,skills:{},quests:{}} as any;
+ const offWorld={offThread:true,route:()=>{throw Error('the game thread must not search');}} as any;
+ const legs=[{kind:'travel',travel:{kind:'spell',name:'falador',runes:[]}}] as any;
+ expect(await sweepPlan(offWorld,from,to,acct,5000,async()=>({cost:5,legs}))).toEqual({cost:5,legs});
+ expect(await sweepPlan(offWorld,from,to,acct,5000,async()=>null)).toBeNull();
+ expect(await sweepPlan(offWorld,from,to,acct,5000,async()=>{throw Error('route worker failed: out of memory');})).toBeNull();
+ const controller=new AbortController();controller.abort(Error('session stopped'));
+ await expect(executionContext.run({signal:controller.signal} as any,()=>sweepPlan(offWorld,from,to,acct,5000,async()=>{throw controller.signal.reason;}))).rejects.toThrow('session stopped');
+ // A world that searches on the game thread: not-ok is no plan.
+ expect(await sweepPlan({offThread:false,route:()=>({ok:false,reason:'budget'})} as any,from,to,acct)).toBeNull();
+ expect(await sweepPlan({offThread:false,route:()=>({ok:true,cost:7,legs})} as any,from,to,acct)).toEqual({cost:7,legs});
+});
