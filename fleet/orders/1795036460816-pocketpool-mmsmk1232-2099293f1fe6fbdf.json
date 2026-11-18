@@ -1,0 +1,33 @@
+{
+ "id": "1795036460816-pocketpool-mmsmk1232-2099293f1fe6fbdf",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PocketPool",
+ "to": "mmsmk1232",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1795036460816,
+ "end": 1795038860816,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 2
+  },
+  {
+   "item": "Shark",
+   "count": 10
+  }
+ ],
+ "takerWaits": true
+}
