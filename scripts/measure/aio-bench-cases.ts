@@ -87,6 +87,17 @@ export const lostCityKeepsBuild = (s: string) => {
   const line = s.match(/^RESULT ok\b.*$/m)?.[0];
   return !!line && / milestones=\S*,6\b/.test(line) && / died=false /.test(line) && !/\b(attack|defence|ranged|magic|prayer)=\d/.test(line.match(/ xp=(\S*)/)?.[1] ?? 'attack=1');
 };
+// The pass rule of the end step case (extra:trooper-end-under-attack). `endLeft=true` in the result line is also the
+// answer for an account that stands on a safe tile already, so the rule reads the step's own log line too: the step
+// found ground to leave (`squares` over 0) and chose a tile that is not the tile of the account. The result line must
+// show a fight before the step, the open logout window after it, a distance of 1 tile or more, and the logout that
+// the server confirmed.
+export const combatEndLeft = (s: string): boolean => {
+  const result = /^RESULT (?:ok|fail) mode=combat-end-case .*endUnderAttack=true endLeft=true endQuiet=true endTiles=(\d+) .*logout=confirmed/m.exec(s);
+  if (!result || Number(result[1]) < 1 || !/^LOGOUT logged-out$/m.test(s)) return false;
+  const leaves = [...s.matchAll(/^COMBAT_END leave (\{.*\})/gm)].map(m => { try { return JSON.parse(m[1]!) as {at?: {x: number; z: number}; squares?: number; to?: {x: number; z: number} | null}; } catch { return null; } });
+  return leaves.some(l => !!l && !!l.at && !!l.to && (l.squares ?? 0) > 0 && (l.to.x !== l.at.x || l.to.z !== l.at.z));
+};
 const questSlug = (script: string) => script.replace('scripts/generated/', '').replace(/^quest-/, '').replace(/\.ts$/, '');
 
 // Every route the AIO catalog can dispatch. Owned-account quest runners are quester modes, not quest keys.
@@ -267,6 +278,21 @@ const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: C
   const c = squadCase(key, kit, 'ganker-dds-skull', n, [`SPAR_B_OPTS=${JSON.stringify(pooledProfile(mode))}`, ...args], food, start);
   return {...c, companions: c.companions!.map((comp, i) => (i < n - 1 ? comp : {...comp, presetConfig: cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
 };
+// A change of the pack of the first `members` of ours in a clone squad case (all by default): lobsters for the sharks
+// (the fleet holds lobsters), or no bow and no arrows (an account with an unstrung bow).
+const SHARK = 385, LOBSTER = 379, MAGIC_SHORTBOW = 861, IRON_ARROW = 884;
+const withPack = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConfig, members = n): BenchCase => ({...c, presetConfig: change(c.presetConfig!),
+  companions: c.companions!.map((comp, i) => (i < Math.min(n, members) - 1 ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
+const lobsters = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === SHARK ? {...i, id: LOBSTER} : i))});
+const noBow = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === MAGIC_SHORTBOW ? {id: SHARK, count: 1} : i)), equipment: cfg.equipment?.filter(e => e.id !== IRON_ARROW)});
+// The same change for the members of ours from member `from` on (member 0 is the account of the run). In a clone squad
+// case gang account i hunts member i, so the first three members are the ones that the gang hits first.
+const ANTIPOISON_3 = 175;
+const withPackFrom = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConfig, from: number): BenchCase => ({...c, presetConfig: from <= 0 ? change(c.presetConfig!) : c.presetConfig,
+  companions: c.companions!.map((comp, i) => (i < n - 1 && i + 1 >= from ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
+const noAntipoison = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.filter(i => i.id !== ANTIPOISON_3)});
+// No antipoison, and sharks in the free slots of the pack: 4 more at the most.
+const foodForAntipoison = (cfg: SaveConfig): SaveConfig => { const inv = cfg.inventory!.filter(i => i.id !== ANTIPOISON_3); return {...cfg, inventory: [...inv, ...Array.from({length: Math.max(0, Math.min(4, 28 - inv.length))}, () => ({id: SHARK, count: 1}))]}; };
 // `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
   const group = size + sizeB, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * group - 1).split('');
@@ -585,6 +611,14 @@ const ROUTE_CASES: BenchCase[] = [
     pass: s => ok(s) && /stop=target-level/.test(s) && !/handoff/i.test(s),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 69, Strength: 61, Defence: 62, Hitpoints: 62, Ranged: 1, Prayer: 43},
       bank: [{id: 841, count: 1}, {id: 884, count: 600}, {id: 385, count: 30}]}},
+  // The end step of a combat worker (packages/core/src/combat-end.ts): a trooper run that ends on the battlefield while
+  // a trooper fights the account, because its walk back to the bank is refused (scripts/measure/combat-end-case.ts).
+  // Attack 1 and Strength 1 keep each fight going past the tick cap. The case passes when the end step took the account
+  // from its tile off the troopers' ground, the logout window opened and the server confirmed the logout (combatEndLeft).
+  {key: 'extra:trooper-end-under-attack', script: 'scripts/measure/combat-end-case.ts', preset: 'fresh_lumbridge', scriptArgs: ['260'],
+    pass: combatEndLeft,
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 1, Strength: 1, Defence: 60, Hitpoints: 60},
+      bank: [{id: 1277, count: 1}, {id: 1171, count: 1}, {id: 333, count: 30}]}},
   {key: 'fighter:chompy', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['chompy', '1', '1', '1500'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2614, z: 3093, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99}, varps: {293: 65},
       equipment: [{id: 1718, count: 1, slot: 2}, {id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}],
@@ -636,6 +670,15 @@ const ROUTE_CASES: BenchCase[] = [
   // The same with the mage kit (splitbark, mystic fire staff, freeze runes): a magic attack bonus above 0, where rune
   // armour leaves the freeze's attack roll near 0 (player_combat_stat.rs2: (Magic + 9) x (bonus + 64)).
   gangCase('extra:kite-chase-mage-x4', 'mage', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=champion', 'SPAR_CAP=1500', 'SPAR_WAIT=60'], 1),
+  // A death and the re-kit (scripts/pk-hunt.ts rekitAfterDeath, research/pvp-fight-loop.md "Death, skull and re-kit"): a hunter
+  // that wears a rune full helm and a bronze dagger and holds the same pieces and sharks in its bank meets a target in full rune
+  // armour that fights back with the champion profile. The hunter fights on to its death (no danger exit, no escape), respawns at
+  // Lumbridge with 1 Hitpoints, walks to the Edgeville bank, eats up and wears its starting pieces again, and goes on until its cap.
+  {key: 'extra:hunt-death-rekit', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'hunt', '900', 'PK_KIT={"melee":[1205]}', 'PK_TRIP=[{"id":385,"count":1}]', 'HUNT_FOOD=3', 'MIN_FOOD=1', 'ESCAPE_AT=0', 'HUNT_EXIT=0', 'HUNT_MAX_DEATHS=9', 'TARGET_PROFILE=champion'],
+    pass: s => ok(s) && /\bhunt cap kills \d+ deaths [1-9]\d* rekits [1-9]\d*/.test(s), output: /deaths (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), equipment: [{id: 1163, count: 1, slot: 0}, {id: 1205, count: 1, slot: 3}], inventory: [], bank: [{id: 385, count: 40}, {id: 1163, count: 1}, {id: 1205, count: 1}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540)}]},
   // The routes that need a player to fight, through scripts/measure/pvp-with-targets.ts: the target is a second account
   // of the run with no food that stands on its tile and hits back by auto-retaliate. Each passes on a kill.
   // fight: scripts/pk.ts with its own kit (staff, bow, dagger(p) and kiteshield: sparFixture) at Wilderness level 3.
@@ -1072,6 +1115,13 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:gang-live-check-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
   // The same with one group: half the accounts, for a PC with little memory free.
   gangCase('extra:gang-live-check-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The ring slot (research/pvp-fight-loop.md, "Rings"): the live-check meeting with a ring of recoil and with a ring of life, and
+  // the same meeting with no escape (escapeAt 0), where our account fights on to a death that a ring of life can prevent.
+  ...(['', '-recoil', '-life'] as const).flatMap(ring => [
+    ...(ring ? [gangCase(`extra:gang-live-check${ring}-x1`, `live-walker-iron${ring}`, 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK)] : []),
+    gangCase(`extra:gang-live-check-noescape${ring}-x1`, `live-walker-iron${ring}`, 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeAt":0}', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK)]),
+  // The live-check meeting with the two prayer potions of the live pilot (kit live-walker-iron-pray).
+  gangCase('extra:gang-live-check-pray-x1', 'live-walker-iron-pray', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
   // The clones of the dagger gang (research/gang-clones.md). The fidelity case: the live meeting of the kit
   // live-walker-iron with the three at the post, as extra:gang-live-check-x1 with each clone in place of ganker-live.
   cloneGang('extra:clone-live-check-x1', 'live-walker-iron', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 'seen', EDGE_BANK),
@@ -1094,6 +1144,33 @@ const ROUTE_CASES: BenchCase[] = [
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
   // the fewest sharks of the record's range (lean), the most (full).
   ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),
+  // One change at a time from four of ours in the kit that the accounts hold (extra:clone-squad-4-chainbind-x1).
+  // The pack: lobsters, no bow on two members, no bow on any.
+  ...([4, 5] as const).map(n => withPack(cloneSquad(`extra:clone-squad-${n}-chainbind-lobster-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), n, lobsters)),
+  withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow2-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow, 2),
+  withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow),
+  // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
+  // (extra:clone-squad-5-chainbind-x1 has one on each), and with sharks in the free slots of a pack with no potion.
+  ...([['anti2', noAntipoison, 2], ['anti1', noAntipoison, 1], ['anti0', noAntipoison, 0], ['anti2-food', foodForAntipoison, 2], ['anti0-food', foodForAntipoison, 0]] as const)
+    .map(([tag, change, from]) => withPackFrom(cloneSquad(`extra:clone-squad-5-chainbind-${tag}-x1`, 'live-walker-iron-rune-chain-bind', 5, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 5, change, from)),
+  // The approach: no march and no pull; the gang's own single-way post; the east multi-way post from Varrock.
+  cloneSquad('extra:clone-squad-4-chainbind-nomarch-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
+  // The first squad pilot again: its kit (no antipoison, no rune), no march and no pull, 10 game minutes. Live: 4
+  // kills, 249 Hitpoints lost a kill. The second line holds the squad on the gang's single-way post.
+  cloneSquad('extra:clone-pilot-4-chainbare-nomarch-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=10', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
+  cloneSquad('extra:clone-pilot-4-chainbare-single-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=10', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0', 'POST=3075,3640', 'ALLOW_SINGLE=1']),
+  cloneSquad('extra:clone-squad-4-chainbind-single-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3075,3640', 'ALLOW_SINGLE=1']),
+  cloneSquad('extra:clone-squad-4-chainbind-east-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3160,3540'], 'seen', {x: 3160, z: 3512}),
+  // The fight options, each one change of the squad's default set (scripts/pk-squad.ts SQUAD_OPTS).
+  ...([['nofreeze', {freeze: false}], ['freezelow', {freeze: 'low'}], ['spec1', {specBelow: 1}], ['eat50', {eatAt: 50}], ['eat70', {eatAt: 70}], ['melee', {rotation: ['melee']}], ['ranged', {rotation: ['ranged']}], ['nochase', {chaseBelow: 0}], ['focus7', {focusRunner: 0.7}]] as const)
+    .map(([tag, change]) => cloneSquad(`extra:clone-squad-4-chainbind-${tag}-x1`, 'live-walker-iron-rune-chain-bind', 4,
+      ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', `SQUAD_OPTS=${JSON.stringify({cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45, ...change})}`])),
+  // The rune throwing axe special (scripts/pk.ts defaultSpec): five of ours in the bind kit with the axe stack, whose
+  // special chains onto up to 4 more players in multi-way combat, against the same five with the dagger special. The
+  // squad's default holds the special for a target at 45% Hitpoints or less; `spec1` fires it from the first health bar.
+  ...([['', 'live-walker-iron-rune-chain-bind', {}], ['spec1-', 'live-walker-iron-rune-chain-bind', {specBelow: 1}], ['axe-', 'live-walker-iron-rune-chain-bind-axe', {}], ['axe-spec1-', 'live-walker-iron-rune-chain-bind-axe', {specBelow: 1}]] as const)
+    .map(([tag, kit, change]) => cloneSquad(`extra:clone-squad-5-chainbind-${tag}special-x1`, kit, 5,
+      ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', ...(kit.endsWith('-axe') ? ['PK_AXE=1'] : []), `SQUAD_OPTS=${JSON.stringify({cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45, ...change})}`])),
   // The repeat cycle of one account for 30 game minutes: kill, pick up, bank trip, return, next kill. A clone that
   // walks out comes back from the bank; a dead clone does not come back.
   atBank(cloneGang('extra:clone-cycle-solo-x1', 'live-walker-iron-snare-rune-nopot', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=3000', 'SPAR_TRIPS=6', 'SPAR_PICKUP=1', 'SPAR_B_TRIPS=4', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000', 'SPAR_B_OPTS={"protectItem":false}'], 'seen', EDGE_BANK_SNARE), GANKER_POST),
@@ -1490,6 +1567,12 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:shop-jiminua-restock', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'ITEMS=antipoison', 'STOCK_TARGET=12', 'STOP_AT_TARGET=1', 'MAX_ITEMS=12', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=400', 'STALL_TICKS=0', 'BLIND_BUY=1'],
     pass: s => ok(s) && /boughtTotal=12 bankedTotal=12 /.test(s), timeoutMs: 600_000,
     presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, bank: [{id: 995, count: 20000}]}},
+  // One gear shop trip as the planner's gear pass plans it (packages/planner/src/autopilot.ts, template gear-shop-zeke): the
+  // scripts/shop-buyer.ts env of that template (ITEMS, STOCK_TARGET=1, STOP_AT_TARGET, BANK_PACK, MAX_SPEND, FLOAT, COIN_RESERVE)
+  // for one iron scimitar from Zeke, the coins from the Al Kharid bank, the sword banked. The `gear-ge` buy has no case: it needs the Grand Exchange service (market:ge-buy).
+  {key: 'extra:gear-shop-zeke', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'zeke', '1200', 'ITEMS=Iron scimitar', 'STOCK_TARGET=1', 'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', 'FLOAT=1100', 'COIN_RESERVE=200', 'MAX_SPEND=900'],
+    pass: s => ok(s) && /boughtTotal=1 bankedTotal=1 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, bank: [{id: 995, count: 5000}]}},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
   // third sword, the ladder out, the rune scimitar it wore wielded again and the Al Kharid bank.

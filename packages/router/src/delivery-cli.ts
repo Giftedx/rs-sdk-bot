@@ -15,8 +15,30 @@ const root=resolve(import.meta.dir,'../../..');
 export const GROUP_START_GAP_MS=5000;
 // Source preparation needs SOURCE_STARTUP_GB free: the free-memory floor and a reserve (packages/core/src/memory.ts).
 // Native launch requires PRACTICE_STARTUP_GB; this is checked at the actual child boundary.
-import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB} from '../../core/src/memory';
+import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB,BENCH_FLEET_STOP_EXIT,BENCH_START_REFUSED_EXIT,HOST_DEFERRED_EXIT,benchStartGB} from '../../core/src/memory';
+import {fleet,floorGB,type Fleet} from '../../../scripts/heavy-admission';
 export {SOURCE_STARTUP_GB,NATIVE_STARTUP_GB};
+// A check that runs the AIO bench (`bun run bench ...` or the bench script) and the engines that it starts at one time.
+export function benchEngines(check:Pick<DeliveryCheck,'command'>):number|null{
+ const c=check.command,runs=c[0]==='bun'&&(c[1]==='run'&&c[2]==='bench'||/(^|[\\/])aio-practice-bench\.ts$/.test(c[1]??''));
+ if(!runs)return null;
+ const parallel=c.findIndex(a=>a==='--parallel'),value=parallel>=0?Number(c[parallel+1]):1;
+ return Number.isSafeInteger(value)&&value>=1?value:1;
+}
+// The free memory that the native start of a check needs. A check that runs the bench needs what the bench needs
+// (benchStartGB), so the admission does not pass a start that the bench then refuses. Any other check needs the
+// practice startup rule.
+export function nativeNeedGB(check:Pick<DeliveryCheck,'command'>,facts:{floorGB:number;fleet:Fleet|null}):number{
+ const engines=benchEngines(check);
+ return engines===null?NATIVE_STARTUP_GB:Math.max(NATIVE_STARTUP_GB,benchStartGB({floorGB:facts.floorGB,reserveGB:facts.fleet?.reserveGB,engines,fleet:!!facts.fleet}));
+}
+// The deferral of a check that ended because the host had no room: its exit code, or null. The report then carries
+// hostDeferred (nativeDeferralEvidence) and the coordinator resumes the prepared source in place of a new build.
+export function checkDeferral(check:Pick<DeliveryCheck,'id'|'command'>,exitCode:number):string|null{
+ if(exitCode===HOST_DEFERRED_EXIT)return `check ${check.id} ended with the host deferral exit ${exitCode}`;
+ if(benchEngines(check)!==null&&(exitCode===BENCH_START_REFUSED_EXIT||exitCode===BENCH_FLEET_STOP_EXIT))return `check ${check.id}: the bench ended with exit ${exitCode} (refused to start or stopped for the fleet's memory)`;
+ return null;
+}
 export function nativeDeferralEvidence(reason:string):{hostDeferred?:boolean}{
  const message=reason.replace(/^Error: /,'');
  return message.startsWith('HOST_DEFERRED_NATIVE_HEADROOM:')||message===PRACTICE_TURN_WAIT_EXPIRED?{hostDeferred:true}:{};
@@ -43,21 +65,33 @@ function savedProofVerifierAllowed(check:DeliveryCheck,policy:SavedProofPolicy):
 export function isSavedProofVerifier(check:DeliveryCheck):boolean{
  return savedProofVerifierAllowed(check,readSavedProofPolicy(root));
 }
-type NativeAdmissionDeps={now:()=>number;freeGB:()=>number;stopped:()=>boolean;sleep:(ms:number)=>Promise<void>;progress:(value:{state:string;at:number;freeGB:number;requiredGB:number;deadline:number})=>void};
-export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmissionDeps,waitMs=900000):Promise<T>{
- if(!Number.isSafeInteger(waitMs)||waitMs<1||waitMs>900000)throw Error('invalid native admission wait budget');
+// `requiredGB`: the free memory that this start needs, read again at each step (default NATIVE_STARTUP_GB).
+// The longest wait of a native admission, in ms. A task whose check runs another delivery sets a shorter budget in
+// this variable, so that the inner wait ends (as a host deferral) before the timeout of the outer check.
+export const ADMISSION_WAIT_ENV='DELIVERY_ADMISSION_WAIT_MS';
+export const ADMISSION_WAIT_MAX_MS=900000;
+export function admissionWaitMs(env:Record<string,string|undefined>=process.env):number{
+ const text=env[ADMISSION_WAIT_ENV];if(text===undefined||text==='')return ADMISSION_WAIT_MAX_MS;
+ const value=Number(text);
+ if(!Number.isSafeInteger(value)||value<1||value>ADMISSION_WAIT_MAX_MS)throw Error('invalid native admission wait budget: '+ADMISSION_WAIT_ENV);
+ return value;
+}
+type NativeAdmissionDeps={now:()=>number;freeGB:()=>number;stopped:()=>boolean;sleep:(ms:number)=>Promise<void>;requiredGB?:()=>number;progress:(value:{state:string;at:number;freeGB:number;requiredGB:number;deadline:number})=>void};
+export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmissionDeps,waitMs=ADMISSION_WAIT_MAX_MS):Promise<T>{
+ if(!Number.isSafeInteger(waitMs)||waitMs<1||waitMs>ADMISSION_WAIT_MAX_MS)throw Error('invalid native admission wait budget');
  const deadline=deps.now()+waitMs;let lastState='';
- const report=(state:string,at:number,freeGB:number)=>{if(state!==lastState){deps.progress({state,at,freeGB,requiredGB:NATIVE_STARTUP_GB,deadline});lastState=state;}};
+ const required=()=>{const v=deps.requiredGB?.()??NATIVE_STARTUP_GB;if(!Number.isFinite(v)||v<NATIVE_STARTUP_GB)throw Error('invalid native memory requirement; no child started');return v;};
+ const report=(state:string,at:number,freeGB:number)=>{if(state!==lastState){deps.progress({state,at,freeGB,requiredGB:required(),deadline});lastState=state;}};
  for(;;){
   if(deps.stopped())throw Error('native admission owner stopped; no child started');
   const at=deps.now();if(at>=deadline)throw Error('HOST_DEFERRED_NATIVE_HEADROOM: native startup headroom wait expired; no child started');
   const freeGB=deps.freeGB();
   if(!Number.isFinite(freeGB)||freeGB<0)throw Error('invalid native memory observation; no child started');
-  if(freeGB>=NATIVE_STARTUP_GB){
+  if(freeGB>=required()){
    report('native-ready',at,freeGB);
    if(deps.stopped())throw Error('native admission owner stopped; no child started');
    const launchFree=deps.freeGB();if(!Number.isFinite(launchFree)||launchFree<0)throw Error('invalid native memory observation; no child started');
-   if(launchFree>=NATIVE_STARTUP_GB&&deps.now()<deadline)return start();
+   if(launchFree>=required()&&deps.now()<deadline)return start();
    report('waiting-native-headroom',deps.now(),launchFree);
   }
   else report('waiting-native-headroom',at,freeGB);
@@ -163,6 +197,9 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
             const exitCode=await child.exited;clearTimeout(timer);
             await termination;
             recoverProofLock(join(root,'.practice/delivery-practice.lock'),directory,join(directory,'expired-practice-lock.json'));
+            // A command that had no room to start is a host deferral, not a failure of the code under test.
+            const deferral=timedOut?null:checkDeferral(check,exitCode);
+            if(deferral)throw Error('HOST_DEFERRED_NATIVE_HEADROOM: '+deferral);
             return{exitCode,timedOut,detail:JSON.stringify({stdout:out,stderr:err})};
             };
             if(check.phase==='regression')return start();
@@ -171,12 +208,12 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
                 return start();
             }
             const admit=(begin:()=>Promise<Awaited<ReturnType<typeof start>>>)=>withNativeStartup(begin,{now:Date.now,freeGB:()=>freemem()/2**30,
-                stopped,
+                stopped,requiredGB:()=>nativeNeedGB(check,{floorGB:floorGB(root),fleet:fleet(root)}),
                 sleep:ms=>Bun.sleep(ms),progress:admission=>{
                     writeFileSync(join(directory,'admission.json'),JSON.stringify({...admission,check:check.id},null,2));
                     appendFileSync(join(directory,'admission.jsonl'),JSON.stringify({...admission,check:check.id})+'\n');
                     console.log('DELIVERY_ADMISSION '+JSON.stringify({...admission,check:check.id}));
-                }});
+                }},admissionWaitMs());
             if(!grouped.has(check))return withPracticeTurn(join(root,'.practice/delivery-native.lock'),()=>admit(start),{stopped});
             // A check of a group: the group holds the practice turn (batch, below). The checks read the free memory one
             // after the other, each GROUP_START_GAP_MS after the child before it started, so two checks do not both

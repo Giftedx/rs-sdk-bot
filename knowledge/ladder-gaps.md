@@ -147,7 +147,7 @@ Each line is a rung that misses a method fact, and names the missing fact. A run
 ### Runecraft (0 of 11 rungs)
 
 
-## Rungs with no worker (519 of 600)
+## Rungs with no worker (513 of 600)
 
 Each line: unlock level, method, base XP per action, ticks per action, model XP per tick at the unlock level (25x, derived), source. A pending capability has a definition and no entry script.
 
@@ -266,9 +266,8 @@ Each line: unlock level, method, base XP per action, ticks per action, model XP 
 - L1 bury Marinated j' bones `prayer/bury-tbwt_jogre_bones_marinated_in_karambwanji`; 17 XP; 2 ticks; model 212.5 XP/tick; `knowledge/items.json` `scripts/skill_prayer/configs/bones.obj:237`
 - L1 bury Wolf bones `prayer/bury-wolf_bones`; 4.5 XP; 2 ticks; model 56.25 XP/tick; `knowledge/items.json` `scripts/skill_prayer/configs/bones.obj:90`
 
-### Magic (47 of 52 rungs have no worker)
+### Magic (46 of 52 rungs have no worker)
 
-- L1 magic spell wind strike `magic/magic_spell_wind_strike`; 5.5 XP; 5 ticks; model 27.5 XP/tick; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:1`
 - L3 magic spell confuse `magic/magic_spell_confuse`; 13 XP; 5 ticks; model 65 XP/tick; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:358`
 - L5 magic spell water strike `magic/magic_spell_water_strike`; 7.5 XP; 5 ticks; model 37.5 XP/tick; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:20`
 - L9 magic spell earth strike `magic/magic_spell_earth_strike`; 9.5 XP; 5 ticks; model 47.5 XP/tick; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:39`
@@ -635,7 +634,7 @@ Each line: unlock level, method, base XP per action, ticks per action, model XP 
 - L70 adamantite rock table `mining/adamantite_rock_table`; 95 XP; 42.67 ticks; model 55.66 XP/tick; `knowledge/skills.json` `scripts/skill_mining/configs/mine.dbrow:133`
 - L85 runite rock table `mining/runite_rock_table`; 125 XP; 48 ticks; model 65.1 XP/tick; `knowledge/skills.json` `scripts/skill_mining/configs/mine.dbrow:149`
 
-### Herblore (36 of 36 rungs have no worker)
+### Herblore (31 of 36 rungs have no worker)
 
 - L3 Guam leaf `herblore/identify-guam-leaf`; 2.5 XP; 0.2 ticks; model 312.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:201`
 - L3 Rogue's purse `herblore/identify-rogue-s-purse`; 2.5 XP; 0.2 ticks; model 312.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:202`
@@ -648,24 +647,19 @@ Each line: unlock level, method, base XP per action, ticks per action, model XP 
 - L20 Harralander `herblore/identify-harralander`; 6.3 XP; 0.2 ticks; model 787.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:206`
 - L22 Stat restore potion `herblore/potion-stat-restore-potion`; 62.5 XP; 0.2 ticks; model 7812.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:227`
 - L25 Ranarr weed `herblore/identify-ranarr-weed`; 7.5 XP; 0.2 ticks; model 937.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:207`
-- L26 Energy potion `herblore/potion-energy-potion`; 67.5 XP; 0.2 ticks; model 8437.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:228`
 - L30 Toadflax `herblore/identify-toadflax`; 8 XP; 0.2 ticks; model 1000 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:208`
 - L30 Defence potion `herblore/potion-defence-potion`; 75 XP; 0.2 ticks; model 9375 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:229`
 - L34 Agility potion `herblore/potion-agility-potion`; 80 XP; 0.2 ticks; model 10000 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:230`
-- L38 Prayer restore potion `herblore/potion-prayer-restore-potion`; 87.5 XP; 0.2 ticks; model 10937.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:231`
 - L40 Irit leaf `herblore/identify-irit-leaf`; 8.8 XP; 0.2 ticks; model 1100 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:209`
-- L45 Super Attack potion `herblore/potion-super-attack-potion`; 100 XP; 0.2 ticks; model 12500 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:233`
 - L48 Avantoe `herblore/identify-avantoe`; 10 XP; 0.2 ticks; model 1250 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:210`
 - L48 Super anti-poison potion `herblore/potion-super-anti-poison-potion`; 106.3 XP; 0.2 ticks; model 13287.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:234`
 - L50 Fishing potion `herblore/potion-fishing-potion`; 112.5 XP; 0.2 ticks; model 14062.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:235`
 - L52 Super energy potion `herblore/potion-super-energy-potion`; 117.5 XP; 0.2 ticks; model 14687.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:236`
 - L54 Kwuarm `herblore/identify-kwuarm`; 11.3 XP; 0.2 ticks; model 1412.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:211`
-- L55 Super Strength potion `herblore/potion-super-strength-potion`; 125 XP; 0.2 ticks; model 15625 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:238`
 - L59 Snapdragon `herblore/identify-snapdragon`; 11.8 XP; 0.2 ticks; model 1475 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:212`
 - L60 Weapon poison `herblore/potion-weapon-poison`; 137.5 XP; 0.2 ticks; model 17187.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:239`
 - L63 Super restore potion `herblore/potion-super-restore-potion`; 142.5 XP; 0.2 ticks; model 17812.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:240`
 - L65 Cadantine `herblore/identify-cadantine`; 12.5 XP; 0.2 ticks; model 1562.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:213`
-- L66 Super Defence potion `herblore/potion-super-defence-potion`; 150 XP; 0.2 ticks; model 18750 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:242`
 - L67 Lantadyme `herblore/identify-lantadyme`; 13.1 XP; 0.2 ticks; model 1637.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:214`
 - L69 Anti-firebreath potion `herblore/potion-anti-firebreath-potion`; 157.5 XP; 0.2 ticks; model 19687.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:243`
 - L70 Dwarf weed `herblore/identify-dwarf-weed`; 13.8 XP; 0.2 ticks; model 1725 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:215`

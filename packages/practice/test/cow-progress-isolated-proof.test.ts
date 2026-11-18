@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import {mkdtempSync,writeFileSync,readFileSync,unlinkSync,existsSync,rmSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
-import {SWORDINHAND,cases,cowFixture,cowEntry,cowResult,cowSaveChecks,cowChildChecks,cowChildConfiguration,cowSequenceChecks,claimCowStop,retainCowStop,
+import {SWORDINHAND,cases,cowFixture,cowEntry,cowResult,cowSaveChecks,refusedCow,cowChildChecks,cowChildConfiguration,cowSequenceChecks,claimCowStop,retainCowStop,
  MIGHTYROD,GIANT_HITPOINTS_XP,xpForLevel,giantFixture,giantEntry,giantSaveChecks,giantChildChecks,giantChildConfiguration,giantResult,
  NABTHEKNOB,trooperCases,trooperFixture,trooperEntry,trooperChildConfiguration,trooperSaveChecks,trooperChildChecks} from '../src/cow-progress-isolated-proof';
 import {giantTraining} from '../../../scripts/gather-combat';
@@ -315,4 +315,22 @@ test('Nab child requires observed owned-food staging, the total finite budget an
  expect(trooperChildChecks(0,true,log).exit).toBe(false);
  expect(trooperChildChecks(1,false,log).exit).toBe(false);
  expect(trooperChildChecks(0,false,log+'LOGOUT logged-out\n').logout).toBe(false);
+});
+
+test('the no-kit case holds no weapon that the worker could wield and expects its current refusal',()=>{
+ const f=cowFixture('nokit'),ids=[...f.inventory!,...f.equipment!,...f.bank!].map(i=>i.id);
+ for(const weapon of [1277,1205,1265,1351])expect(ids).not.toContain(weapon);
+ expect(Object.values(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing owned wearable melee weapon\n','nokit')).every(Boolean)).toBe(true);
+ expect(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing kit1277\n','nokit').result).toBe(false);
+});
+
+test('a refusal is no result, or a result of no cow work that names a prerequisite error',()=>{
+ const refusal={ok:false,creditedKills:0,selectedXp:0,attackXp:0,preserved:true,failure:'Error: cow prerequisite: missing owned wearable melee weapon'};
+ expect(refusedCow(null)).toBe(true);
+ expect(refusedCow(refusal)).toBe(true);
+ expect(refusedCow({...refusal,creditedKills:1})).toBe(false);
+ expect(refusedCow({...refusal,attackXp:10})).toBe(false);
+ expect(refusedCow({...refusal,failure:'Error: other'})).toBe(false);
+ expect(refusedCow({...refusal,ok:true})).toBe(false);
+ expect(refusedCow({...refusal,preserved:false})).toBe(false);
 });

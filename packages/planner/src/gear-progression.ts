@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import type { Bonus, Gear, Skill } from '../../knowledge/src/gear';
 import type { Shop } from '../../knowledge/src/shops';
 import { canWear, loadGear, sumBonuses } from '../../../scripts/gear';
+import { gearSources, sourceCost, valueOf, type GearSource, type MarketAsks } from './gear-sources';
 import { ownedBestLoadout, ownedLoadout, type GearCount, type GearSlot, type OptionalGearSlot, type OwnedLoadout } from './owned-loadout';
 
 export type CombatFocus = 'melee' | 'ranged' | 'magic';
@@ -23,8 +24,8 @@ export type QuestInput =
 export const GEAR_QUESTS = [
     'Dragon Slayer',
     'Lost City',
-    "Heroes' Quest",
-    "Legends' Quest",
+    "Hero's Quest",
+    "Legends Quest",
     'The Fremennik Trials',
     'Regicide',
 ] as const;
@@ -70,19 +71,19 @@ const QUEST_ALIASES: Readonly<Record<string, string>> = {
     'lost city': 'Lost City',
     zanaris: 'Lost City',
     quest_zanaris: 'Lost City',
-    "heroes' quest": "Heroes' Quest",
-    "hero's quest": "Heroes' Quest",
-    'heroes quest': "Heroes' Quest",
-    'hero quest': "Heroes' Quest",
-    hero: "Heroes' Quest",
-    heroquest: "Heroes' Quest",
-    quest_hero: "Heroes' Quest",
-    "legends' quest": "Legends' Quest",
-    'legends quest': "Legends' Quest",
-    'the legends quest': "Legends' Quest",
-    legends: "Legends' Quest",
-    legendsquest: "Legends' Quest",
-    quest_legends: "Legends' Quest",
+    "heroes' quest": "Hero's Quest",
+    "hero's quest": "Hero's Quest",
+    'heroes quest': "Hero's Quest",
+    'hero quest': "Hero's Quest",
+    hero: "Hero's Quest",
+    heroquest: "Hero's Quest",
+    quest_hero: "Hero's Quest",
+    "legends' quest": "Legends Quest",
+    'legends quest': "Legends Quest",
+    'the legends quest': "Legends Quest",
+    legends: "Legends Quest",
+    legendsquest: "Legends Quest",
+    quest_legends: "Legends Quest",
     'the fremennik trials': 'The Fremennik Trials',
     'fremennik trials': 'The Fremennik Trials',
     viking: 'The Fremennik Trials',
@@ -181,9 +182,9 @@ export interface ShopSource {
 const SHOP_GATES: Readonly<Record<string, Pick<ShopSource, 'requiresQuest' | 'requiresSkill' | 'requiresQuestPoints'>>> = {
     runeplateshop: { requiresQuest: 'Dragon Slayer' },
     dragonswordshop: { requiresQuest: 'Lost City' },
-    dragonaxeshop: { requiresQuest: "Heroes' Quest" },
-    legendsguildshop: { requiresQuest: "Legends' Quest" },
-    generallegends: { requiresQuest: "Legends' Quest" },
+    dragonaxeshop: { requiresQuest: "Hero's Quest" },
+    legendsguildshop: { requiresQuest: "Legends Quest" },
+    generallegends: { requiresQuest: "Legends Quest" },
     viking_weapons_shop: { requiresQuest: 'The Fremennik Trials' },
     viking_clothes_shop: { requiresQuest: 'The Fremennik Trials' },
     regicide_general_shop: { requiresQuest: 'Regicide' },
@@ -212,7 +213,7 @@ const REV289_REQUIREMENT_FIXES: Readonly<Record<number, { skills?: Partial<Recor
     3757: { skills: { attack: 30 }, quest: 'The Fremennik Trials' },
     3758: { skills: { defence: 30 }, quest: 'The Fremennik Trials' },
     3122: { skills: { defence: 50, strength: 50 } },
-    1052: { quest: "Legends' Quest" },
+    1052: { quest: "Legends Quest" },
 };
 
 const EXCLUDED_DEBUG_RE = /^macro_|^xmas_yoyoworn$|^ikov_bootsoflightnessworn$|^death_spikedboots$|^flowers_waterfall|^trollromance_rare_flower$/;
@@ -513,7 +514,10 @@ export interface SlotUpgrade {
     wearpos: number;
     current: Gear | null;
     bestWearable: Gear | null;
-    acquirableUpgrade: { item: Gear; shops: ShopSource[]; tradeable: boolean } | null;
+    /** The best item the account can obtain now, with all its usable sources and the first (the cheapest) of them. */
+    acquirableUpgrade: { item: Gear; shops: ShopSource[]; tradeable: boolean; sources: GearSource[]; source: GearSource } | null;
+    /** The best wearable item whatever its source: the long-term target. `sources` is empty when nothing supplies it now. */
+    goal: { item: Gear; sources: GearSource[] } | null;
     nextUnlock: {
         item: Gear;
         missingSkills: Partial<Record<Skill, number>>;
@@ -551,6 +555,10 @@ export interface ProgressiveLoadoutOptions {
     thrown?: boolean;
     /** The account's quest points, for shops behind a quest-point gate. Unknown counts as 0. */
     questPoints?: number;
+    /** Market asks (marketQuotes of .practice/market-all.json): the Grand Exchange is a source only for an item with one. */
+    market?: MarketAsks;
+    /** The account's tile: the nearest shop or NPC among the sources of an item. */
+    position?: { x: number; z: number } | null;
     godAlign?: 'saradomin' | 'guthix' | 'zamorak';
     /** When specified, overrides bow/arrow scoring with current Ranged bow+arrow pairing. */
     preferFastShortbow?: boolean;
@@ -747,17 +755,26 @@ export function selectProgressiveLoadout(
         const currentScore = current ? upgradeScore(current, false) : -Infinity;
         const bestScore = bestWearable ? upgradeScore(bestWearable, false) : -Infinity;
 
-        // The best wearable item that is better than the current one, not owned, and has a source in the content
-        // data: a shop the account can use sells it, or it is tradeable. An untradeable reward (a god cape, the
-        // Unholy book, the cooking gauntlets) with no shop is never named.
+        // The item the account can obtain now: wearable, better than the current one, not owned, and with a source
+        // (gearSources). Each is valued by its gain, halved for each GEAR_COST_SCALE coins of its cheapest source; the
+        // best value is the want. An item with no source (a god cape, the Unholy book, or a market ask over the limit)
+        // is never the want. `goal` is the best wearable item whatever its source.
         const openShops = (g: Gear) => (shops.get(g.id) ?? []).filter(sh => shopAccessible(sh, skillMap, done, undefined, options.questPoints));
-        const wanted = wearableList.find(g =>
-            g.id !== current?.id
-            && upgradeScore(g, false) > currentScore
-            && have(g) < (slot === 'ammo' ? arrowMin : 1)
-            && (g.tradeable || openShops(g).length > 0));
+        const sourcesOf = (g: Gear) => gearSources(g, { skills: skillMap, done, market: options.market, position: options.position, openShops: openShops(g) });
+        const gainOf = (g: Gear) => currentScore === -Infinity ? Math.max(upgradeScore(g, false), 1) : upgradeScore(g, false) - currentScore;
+        let wanted: Gear | undefined, wantedSources: GearSource[] = [], wantedValue = -Infinity;
+        for (const g of wearableList) {
+            if (g.id === current?.id || upgradeScore(g, false) <= currentScore || have(g) >= (slot === 'ammo' ? arrowMin : 1)) continue;
+            const found = sourcesOf(g);
+            if (!found.length) continue;
+            const value = valueOf(gainOf(g), sourceCost(g, found[0]!));
+            if (value > wantedValue) { wanted = g; wantedSources = found; wantedValue = value; }
+        }
         const acquirableUpgrade = wanted
-            ? { item: wanted, shops: openShops(wanted), tradeable: wanted.tradeable }
+            ? { item: wanted, shops: openShops(wanted), tradeable: wanted.tradeable, sources: wantedSources, source: wantedSources[0]! }
+            : null;
+        const goal = bestWearable && bestWearable.id !== current?.id && bestScore > currentScore && have(bestWearable) < (slot === 'ammo' ? arrowMin : 1)
+            ? { item: bestWearable, sources: sourcesOf(bestWearable) }
             : null;
 
         // Next unlock: items better than both current and bestWearable that fail at least one skill/quest req.
@@ -805,6 +822,7 @@ export function selectProgressiveLoadout(
             current,
             bestWearable,
             acquirableUpgrade,
+            goal,
             nextUnlock: next,
         };
     }

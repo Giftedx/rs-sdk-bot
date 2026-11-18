@@ -12,6 +12,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, serverFromEnv, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
+import { assertSideOwns } from '../packages/core/src/fleet';
+import { ensureCredential } from '../packages/core/src/fleet-vault';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { RosterFeed } from '../packages/core/src/roster-feed';
@@ -420,7 +422,10 @@ export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged 
     const melee = [wep?.id, shield?.id].filter((id): id is number => id !== undefined);
     if (melee.length) kit.melee = melee;
     const bow = [...worn, ...carried].find(i => ranged.test(i.name));
-    if (bow) kit.ranged = [bow.id];
+    // PK_AXE=1: a rune throwing axe stack among the items is part of the ranged kit, so `defaultSpec` (scripts/pk.ts) gives
+    // the account the axe special. Off by default: no live account changes its special.
+    const axe = process.env.PK_AXE === '1' ? [...worn, ...carried].find(i => /^rune thrownaxe$/i.test(i.name)) : undefined;
+    if (bow || axe) kit.ranged = [...(bow ? [bow.id] : []), ...(axe ? [axe.id] : [])];
     const staff = [...worn, ...carried].find(i => /staff/i.test(i.name));
     if (staff) kit.magic = [staff.id];
     return kit;
@@ -473,6 +478,14 @@ export function canCastCharge(magic: number, carried: readonly { id: number; cou
 // The account's server, from the SERVER line of its bot.env (the same file openBot reads).
 export function accountServer(name: string, root = resolve(import.meta.dir, '..')): string {
     return serverFromEnv(readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8'));
+}
+
+// The account's server for a check that runs before openBot (the death ledger). A bot.env that this machine lacks comes from the
+// fleet vault the way openBot restores it: after the side check, before the read. A bot.env that stays unreadable throws.
+export function accountServerBeforeLogin(name: string, deps: { assertOwn: (n: string) => void; restore: (n: string) => void; read: (n: string) => string } = { assertOwn: assertSideOwns, restore: ensureCredential, read: n => accountServer(n) }): string {
+    deps.assertOwn(name);
+    deps.restore(name);
+    return deps.read(name);
 }
 
 export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolean, emit: (e: object) => void, server = accountServer(session.name)) {

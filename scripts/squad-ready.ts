@@ -7,18 +7,22 @@
 // widened to its class, and the checks are the faults of the live pilots (research/pvp-fight-loop.md):
 //   body and leg armour (an account with no leg armour died), a melee weapon with a special attack or a rune blade,
 //   a bow with arrows that it can fire, the runes of an escape teleport that the account can cast (pk-squad.ts
-//   squadEscapeSpell: an account clicked Camelot Teleport with no law runes), the runes of Bind, an antipoison
-//   (poison did 139 of 455 damage), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
+//   squadEscapeSpell: an account clicked Camelot Teleport with no law runes), the runes of Bind, an antipoison on the
+//   first two accounts of the list (poison did 139 of 455 damage; Rule antipoisonHolders), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
 //   sharks first, then lobsters), a bank read of a stated age, and a place the walker leaves.
 // Usage: bun scripts/squad-ready.ts [<account> ...] [--root <checkout>] [--max-age <hours>] [--json]
-//          [--loadouts <dir>] [--orders <dir>]
+//          [--loadouts <dir>] [--orders <dir>] [--receipt <dir>]
 //   No account named: every account of this fleet side with 99 in the seven combat skills.
 //   --root      the checkout whose .practice/status, .practice/market-all.json and fleet owners the tool reads
 //               (default: the main checkout of this repository).
 //   --loadouts  writes <account>.json for each account that holds its kit: the input of the kit step,
 //               `bun scripts/aio-logistics.ts <account> loadout <file>` at the bank the file names.
+//   --receipt   writes <account>.json for each account that it checked: schema squad-ready/1, ok, the rule, the time, the faults, and the
+//               SHA-256 of the account's status file that it read (the fresh bank and worn snapshot). The swarm's kit-restored
+//               repair (scripts/swarm.ts applyKitRestored) clears the hold of a PvP death on a passing receipt.
 //   --orders    writes one fleet order file for each transfer of the plan into <dir>, for review. The tool refuses the
 //               fleet's own orders folder; `bun scripts/fleet-order.ts`, which the plan prints, places an order.
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { BANK_MEETS } from './coin-courier';
@@ -37,9 +41,12 @@ export type Account = { name: string; at: number; bankAt: number | null; pos: { 
     worn: Worn[]; pack: Item[]; bank: Item[]; side?: string; reservation?: string };
 export type Gear = { id: number; name: string; slot: string; tier?: number; special?: { pvp?: boolean }; requires?: { skills?: Record<string, number>; quest?: string };
     bonuses: Record<string, number>; tradeable?: boolean };
-export type Rule = { name: string; benchKit: string; maxBankAgeHours: number; maxDonorBankAgeHours: number; minArrows: number };
+// antipoisonHolders: the first accounts of the list that must hold an antipoison. The gang clone bench (five of ours,
+// seeds 1 to 3, hosted run 44262314889) killed 9 of 9 with no death with a potion on all five, on the first two, on the
+// first one and on none; the others carry the extra food (2 lobsters or 1 shark a kill).
+export type Rule = { name: string; benchKit: string; maxBankAgeHours: number; maxDonorBankAgeHours: number; minArrows: number; antipoisonHolders: number };
 export const RULES: Readonly<Record<string, Rule>> = {
-    'gang-chain-bind': { name: 'gang-chain-bind', benchKit: 'live-walker-iron-rune-chain-bind', maxBankAgeHours: 6, maxDonorBankAgeHours: 168, minArrows: 100 },
+    'gang-chain-bind': { name: 'gang-chain-bind', benchKit: 'live-walker-iron-rune-chain-bind', maxBankAgeHours: 6, maxDonorBankAgeHours: 168, minArrows: 100, antipoisonHolders: 2 },
 };
 
 const SLOT: Readonly<Record<string, number>> = { hat: 0, back: 1, front: 2, righthand: 3, torso: 4, lefthand: 5, legs: 7, hands: 9, feet: 10, ring: 12, quiver: 13 };
@@ -76,7 +83,7 @@ export type Pick = { account: string; ready: boolean; reasons: string[]; notes: 
 const SPELL_NAME: Readonly<Record<number, string>> = { 1174: 'Camelot Teleport', 1164: 'Varrock Teleport' };
 
 // The kit of one account under the rule, from its own stock, with the pieces that it lacks.
-export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST): Pick {
+export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST, antipoisonRequired = true): Pick {
     const own = holdings(a), needs: Need[] = [], reasons: string[] = [], notes: string[] = [];
     const benchPiece = (test: (g: Gear) => boolean) => [...kit.equipment, ...kit.inventory].map(i => gear.get(i.id)).find(g => !!g && test(g))?.id;
     const owned = [...own.values()].filter(i => i.count > 0), g = (i: Item) => gear.get(i.id);
@@ -141,7 +148,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const antipoisons = ITEMS.antipoison as readonly number[], isAntipoison = (i: Item) => antipoisons.includes(i.id);
     const antipoison = owned.filter(isAntipoison).sort((x, y) => antipoisons.indexOf(x.id) % 4 - antipoisons.indexOf(y.id) % 4)[0];
     if (antipoison) carried.push({ id: antipoison.id, name: antipoison.name, count: 1 });
-    else needs.push({ what: 'antipoison', count: 1, blocking: true, ...(kit.inventory.find(i => antipoisons.includes(i.id)) ? { id: kit.inventory.find(i => antipoisons.includes(i.id))!.id } : {}), accept: isAntipoison });
+    else needs.push({ what: 'antipoison', count: 1, blocking: antipoisonRequired, ...(kit.inventory.find(i => antipoisons.includes(i.id)) ? { id: kit.inventory.find(i => antipoisons.includes(i.id))!.id } : {}), accept: isAntipoison });
     const supplies = kit.inventory.filter(i => !isFood(i.id) && !antipoisons.includes(i.id) && !gear.has(i.id));
     const short = new Map<number, number>();
     for (const s of supplies) {
@@ -192,7 +199,7 @@ export type Plan = { picks: Pick[]; moves: Move[]; gaps: Gap[] };
 // goes to one account. A donor that covers the whole need comes first, then the nearest; a wanted supply that no one
 // donor covers stays a gap, so that the plan holds few trades.
 export function stagingPlan(candidates: readonly Account[], fleet: readonly Account[], gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined): Plan {
-    const picks = candidates.map(a => pickKit(a, gear, rule, now, kit, nameOf)), byName = new Map(picks.map(p => [p.account.toLowerCase(), p]));
+    const picks = candidates.map((a, i) => pickKit(a, gear, rule, now, kit, nameOf, SQUAD_POST, i < rule.antipoisonHolders)), byName = new Map(picks.map(p => [p.account.toLowerCase(), p]));
     const spare = new Map<string, Map<number, Item>>();
     for (const a of fleet) {
         // No donor with an old bank read, and none that cannot walk to a meeting.
@@ -274,6 +281,10 @@ export function loadoutOf(pick: Pick, bank: { x: number; z: number }): { bank: {
 }
 
 // A status file (packages/core/src/status.ts) as an account. A noted item counts as its plain item.
+// The receipt of one check (--receipt): it binds the verdict to the status file that the check read.
+export function receiptOf(p: Pick, a: { at: number; bankAt: number | null }, rule: string, now: number, statusBytes: Uint8Array): { schema: 'squad-ready/1'; account: string; ok: boolean; rule: string; at: number; statusAt: number; bankAt: number | null; statusSha256: string; reasons: string[] } {
+    return { schema: 'squad-ready/1', account: p.account, ok: p.ready, rule, at: now, statusAt: a.at, bankAt: a.bankAt, statusSha256: createHash('sha256').update(statusBytes).digest('hex'), reasons: p.reasons };
+}
 export function accountOf(status: any, owner?: { side?: string; reservation?: string }): Account | null {
     if (!status || typeof status.name !== 'string' || !status.pos || !Array.isArray(status.skills)) return null;
     const items = (rows: any): Item[] => (Array.isArray(rows) ? rows : []).filter((i: any) => Number.isSafeInteger(i?.id) && typeof i.name === 'string' && i.count > 0).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
@@ -303,7 +314,7 @@ export function report(plan: Plan, accounts: readonly Account[], rule: Rule, now
 
 if (import.meta.main) {
     const args = process.argv.slice(2), flag = (name: string) => { const i = args.indexOf(name); return i < 0 ? undefined : args[i + 1]; };
-    const valued = new Set(['--root', '--max-age', '--loadouts', '--orders', '--rule']);
+    const valued = new Set(['--root', '--max-age', '--loadouts', '--orders', '--rule', '--receipt']);
     const names = args.filter((a, i) => !a.startsWith('--') && !valued.has(args[i - 1] ?? ''));
     // The main checkout holds the status files: a worktree's git directory is <main>/.git/worktrees/<name>.
     const here = resolve(import.meta.dir, '..');
@@ -354,6 +365,16 @@ if (import.meta.main) {
             const a = fleet.find(x => x.name === p.account)!, bank = meetNear(a.pos);
             writeFileSync(join(loadouts, `${p.account}.json`), JSON.stringify(loadoutOf(p, bank), null, 1) + '\n');
             console.log(`LOADOUT ${join(loadouts, `${p.account}.json`)} at the ${bank.bank} bank (${cheb(bank, a.pos)} tiles from the account)`);
+        }
+    }
+    const receipts = flag('--receipt');
+    if (receipts) {
+        mkdirSync(receipts, { recursive: true });
+        for (const p of plan.picks) {
+            const a = fleet.find(x => x.name === p.account)!;
+            const body = receiptOf(p, a, rule.name, now, readFileSync(join(statusDir, `${p.account}.json`)));
+            writeFileSync(join(receipts, `${p.account}.json`), JSON.stringify(body, null, 1) + '\n');
+            console.log(`RECEIPT ${join(receipts, `${p.account}.json`)} ok=${body.ok}`);
         }
     }
     const orderDir = flag('--orders');

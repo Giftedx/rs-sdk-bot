@@ -22,12 +22,15 @@ export function herbloreSavedChecks(id:string,before:Save,after:Save,log:string,
  const a=stock(before),b=stock(after),made=(b[121]??0)-(a[121]??0),vials=buys.filter(x=>x?.id===227).reduce((n,x)=>n+x.count,0),eyes=buys.filter(x=>x?.id===221).reduce((n,x)=>n+x.count,0);
  const cost=buys.reduce((n,x)=>n+(x?.cost??NaN),0);
  const fares=travel.reduce((n,x)=>n+(x?.coins??NaN),0);
- const delta:Record<number,number>=success?{199:-made,121:made,227:vials-made,221:eyes-made,995:-cost+fares}:{};
+ // The worker stops at the target level, which can fall inside a trip: that trip's unfinished potions (91) stay banked.
+ // Each one used one herb and one vial, so they are counted with the finished potions. One trip holds 9 at most.
+ const unf=(b[91]??0)-(a[91]??0),unfOk=!success||unf>=0&&unf<=9;
+ const delta:Record<number,number>=success?{199:-(made+unf),121:made,91:unf,227:vials-made-unf,221:eyes-made,995:-cost+fares}:{};
  return {
   child:exit===(success?0:1),logout:(log.match(/^LOGOUT logged-out$/gm)??[]).length===1&&!/^WARN .*?(?:logout|session close)/m.test(log),
   result:success?result?.ok===true&&result?.assets===true&&result?.target===50:/^RESULT fail herblore Error: (?:herbs missing|vial budget)/m.test(log),
   xp:success?after.skills[15]!.rawExperience>before.skills[15]!.rawExperience&&after.skills[15]!.level>=50:after.skills[15]!.rawExperience===before.skills[15]!.rawExperience,
-  assets:travel.every(x=>x&&Number.isSafeInteger(x.coins)&&x.coins<=0)&&reconcile(a,b,delta),equipment:JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]),
+  assets:unfOk&&travel.every(x=>x&&Number.isSafeInteger(x.coins)&&x.coins<=0)&&reconcile(a,b,delta),equipment:JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]),
   banked:!success||(after.inventories[95]??[]).some(x=>x.id===121&&x.count>=made)&&!(after.inventories[93]??[]).some(x=>x.id===121),
   entry:before.skills[15]!.level===46&&(a[227]??0)===0&&(a[199]??0)===(id==='missing-herbs'?0:60),
   purchase:!success||vials>0&&vials<=60&&eyes>0&&eyes<=60&&buys.every(x=>x&&[227,221].includes(x.id)&&x.count===1&&Number.isSafeInteger(x.cost)&&x.cost>=0)

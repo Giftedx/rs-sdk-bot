@@ -1,5 +1,5 @@
-import { test, expect } from 'bun:test';
-import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,persistentEnd } from './swarm';
+import { test, expect, describe, afterEach } from 'bun:test';
+import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd } from './swarm';
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
@@ -49,7 +49,7 @@ import { join, relative, resolve } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
 import { enabledByAccount, foreignRun, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
-    applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
+    applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, applyKitRestored, endsOfRun, diedAccountsOf, openHold, type ScriptHold } from './swarm';
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
 import { liveLogoutRef } from '../packages/core/src/session-admission';
 import { createHash } from 'node:crypto';
@@ -960,6 +960,11 @@ test('an adopted run whose pid a later process holds is ended', () => {
     expect(adoptedRunAlive({ pid: 2856 } as { pid: number; started: number }, answers, new Map([[2856, 5_000_000]]))).toBe(true);
 });
 
+test('the swarm declares to each job process how many bots it holds', () => {
+    expect(botCountEnv(['Rod'])).toEqual({ SWARM_BOTS: '1' });
+    expect(botCountEnv(['Donor', 'Receiver', 'Third'])).toEqual({ SWARM_BOTS: '3' });
+});
+
 // A squad job is one orchestrated run: one supervisor for all its accounts (supervisorCommand, orchestrate). Its death end
 // (RESULT fail died, scripts/pk-squad.ts squadEnd) reaches every account of the job and holds all of them, repeat or not.
 test('a squad job that ends in a death holds every member and a repeating job does not start it again', () => {
@@ -984,4 +989,132 @@ test('a squad job that ends in a death holds every member and a repeating job do
     // A finished squad (done) with repeat starts again.
     const done = new Map(accounts.map(a => [a, { reason: 'done after 1 runs', at: 1000 }]));
     expect(startable(accounts, true, done, () => Infinity).start).toEqual(accounts);
+});
+
+// A squad job with one death holds the account that died. The other members end `released` and start again.
+test('a five-member squad job with one death holds one account, and the others are released with no hold', () => {
+    const accounts = ['Squad1', 'Squad2', 'Squad3', 'Squad4', 'Squad5'];
+    // The supervisor logs the RESULT line cut at 200 characters, so the names come early in it.
+    const line = 'SUPERVISE run 1 exit 1: RESULT fail died squad accounts=5 diedAccounts=Squad3 kills=3 killReceipts=3 receiptDomain=live feedMatched=3 gangDied=3 died=1 taken=500 trips=1 pic';
+    expect(diedAccountsOf(line)).toEqual(['Squad3']);
+    expect(diedAccountsOf('SUPERVISE run 1 exit 1: RESULT fail died squad accounts=5 kills=3 died=1')).toBeUndefined();
+    expect(diedAccountsOf('SUPERVISE run 1 exit 0: RESULT ok squad accounts=5 diedAccounts=Squad3')).toBeUndefined();
+    const ends = endsOfRun(accounts, 'died after 1 runs', diedAccountsOf(line));
+    expect([...ends]).toEqual([['Squad1', 'released after 1 runs'], ['Squad2', 'released after 1 runs'], ['Squad3', 'died after 1 runs'], ['Squad4', 'released after 1 runs'], ['Squad5', 'released after 1 runs']]);
+    expect(persistentEnd('released after 1 runs')).toBe(false);
+    const ended = new Map([...ends].map(([a, reason]) => [a, { reason, at: 1000, revision: rev('scripts/aio-pvp.ts') }]));
+    for (const repeat of [true, false]) {
+        const s = startable(accounts, repeat, ended, () => Infinity);
+        expect(s.start).toEqual(['Squad1', 'Squad2', 'Squad4', 'Squad5']);
+        expect(s.blocked).toEqual({ Squad3: 'ended: died after 1 runs' });
+    }
+    // Names in any case. A run that names no account of the job, or no account at all, gives every account the run's end. Other ends are not split.
+    expect(endsOfRun(accounts, 'died after 1 runs', ['squad3']).get('Squad3')).toBe('died after 1 runs');
+    expect([...endsOfRun(accounts, 'died after 1 runs', undefined).values()]).toEqual(Array(5).fill('died after 1 runs'));
+    expect([...endsOfRun(accounts, 'died after 1 runs', []).values()]).toEqual(Array(5).fill('died after 1 runs'));
+    expect([...endsOfRun(accounts, 'blocked after 1 runs', ['Squad3']).values()]).toEqual(Array(5).fill('blocked after 1 runs'));
+    // The named account is not in the job: nothing matches, so every member is held.
+    expect([...endsOfRun(accounts, 'died after 1 runs', ['Other']).values()]).toEqual(Array(5).fill('died after 1 runs'));
+    // Repairing a released member holds no script (only a death does); repairing the dead one does.
+    const holds: ScriptHold[] = [];
+    expect(applyEndRepair({ account: 'Squad1', endedAt: 1000, ...proofRef }, ended, [], confirmed, holds).changed).toBe(true);
+    expect(holds).toEqual([]);
+    expect(applyEndRepair({ account: 'Squad3', endedAt: 1000, ...proofRef }, ended, [], confirmed, holds).changed).toBe(true);
+    expect(holds.map(h => [h.account, h.script, h.reason])).toEqual([['Squad3', 'scripts/aio-pvp.ts', 'died after 1 runs']]);
+});
+
+test('a name with a space is one account: the line writes an underscore and the end compares both forms', () => {
+    const accounts = ['Sq 1', 'Sq 2', 'Sq 3'];
+    const line = 'SUPERVISE run 1 exit 1: RESULT fail died squad accounts=3 diedAccounts=Sq_3 kills=1 died=1 taken=0 trips=0 picked={}';
+    expect(diedAccountsOf(line)).toEqual(['Sq_3']);
+    expect([...endsOfRun(accounts, 'died after 1 runs', diedAccountsOf(line))]).toEqual([['Sq 1', 'released after 1 runs'], ['Sq 2', 'released after 1 runs'], ['Sq 3', 'died after 1 runs']]);
+});
+
+test('a name list that the 200-character cut ends is not read, so every member is held', () => {
+    const names = Array.from({ length: 14 }, (_, i) => `LongName${String(i).padStart(4, '0')}`);
+    const full = `SUPERVISE run 1 exit 1: RESULT fail died squad accounts=14 diedAccounts=${names.join(',')} kills=1 died=14 taken=0 trips=0 picked={}`;
+    const cut = full.slice(0, 200);
+    expect(cut.length).toBe(200);
+    expect(diedAccountsOf(cut)).toBeUndefined();
+    expect([...endsOfRun(names, 'died after 1 runs', diedAccountsOf(cut)).values()]).toEqual(Array(14).fill('died after 1 runs'));
+    // A cut inside a name before the end of the list is not read either, and the full line is.
+    expect(diedAccountsOf(full.slice(0, 150))).toBeUndefined();
+    expect(diedAccountsOf(full)).toEqual(names);
+});
+
+test('a squad is one orchestrate job: the released members do not start while the dead one is held', () => {
+    const accounts = ['Squad1', 'Squad2', 'Squad3'];
+    const job: Job = { accounts, orchestrate: true, host: false, script: 'scripts/pk-squad.ts', enabled: true, repeat: true };
+    const parsed = parseJob(job);
+    if ('error' in parsed) throw Error(parsed.error);
+    const ends = endsOfRun(accounts, 'died after 1 runs', ['Squad3']);
+    const ended = new Map([...ends].map(([a, reason]) => [a, { reason, at: 1000, revision: rev('scripts/pk-squad.ts') }]));
+    const selection = startable(accounts, true, ended, () => Infinity);
+    expect(selection.start).toEqual(['Squad1', 'Squad2']);
+    const gated = completeJobCandidates(parsed, selection);
+    expect(gated.start).toEqual([]);
+    expect(gated.blocked).toEqual({ Squad1: 'waiting: all orchestrator participants required', Squad2: 'waiting: all orchestrator participants required', Squad3: 'ended: died after 1 runs' });
+});
+
+// The kit-restored repair clears the died hold of a PvP script for the account that died, on a passing kit receipt.
+describe('kit-restored repair', () => {
+    const NOW = 1_800_000_000_000, STATUS = 'a'.repeat(64);
+    const dirs: string[] = [];
+    afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
+    const hold = (o: Partial<ScriptHold> = {}): ScriptHold => ({ account: 'Squad3', script: 'scripts/aio-pvp.ts', at: NOW - 3_600_000, reason: 'died after 1 runs', heldAt: NOW - 3_000_000, ...o });
+    function setup(receipt: Record<string, unknown> = {}, o: { at?: number; hash?: string } = {}) {
+        const dir = mkdtempSync(join(tmpdir(), 'kit-restored-')); dirs.push(dir);
+        const at = o.at ?? NOW - 60_000, body = { schema: 'squad-ready/1', account: 'Squad3', ok: true, rule: 'gang-chain-bind', at, statusAt: at - 1000, bankAt: at - 2000, statusSha256: STATUS, reasons: [], ...receipt };
+        const text = JSON.stringify(body), receiptPath = join(dir, 'Squad3.json');
+        writeFileSync(receiptPath, text);
+        const sha = o.hash ?? createHash('sha256').update(text).digest('hex');
+        const request = { kind: 'kit-restored', account: 'Squad3', script: 'scripts/aio-pvp.ts', holdAt: NOW - 3_600_000, ...proofRef, kit: { receiptPath, receiptSha256: sha, at: body.at as number } };
+        const proofs: RepairProofs = { ...confirmed, now: () => NOW, statusSha256: () => STATUS };
+        return { request, proofs, receiptPath };
+    }
+
+    test('a passing receipt of the fresh snapshot clears the hold of a PvP death, and only that hold', () => {
+        const { request, proofs } = setup();
+        const target = hold(), otherAccount = hold({ account: 'Squad4' }), otherScript = hold({ script: 'scripts/gather-fire-combat.ts' }), otherAt = hold({ at: NOW - 7_200_000 });
+        const holds = [target, otherAccount, otherScript, otherAt];
+        const result = applyKitRestored(request, holds, [], proofs);
+        expect(result.changed).toBe(true);
+        expect(target.restored).toMatchObject({ at: NOW - 60_000, receiptSha256: request.kit.receiptSha256, recordedAt: NOW });
+        // The other holds stay open, and the cleared one stays in the history but no longer blocks.
+        for (const h of [otherAccount, otherScript, otherAt]) expect(h.restored).toBeUndefined();
+        // An earlier death hold of the same account and script (another `at`) stays open: only the hold of the named death is cleared.
+        expect(openHold(holds, 'Squad3', 'scripts/aio-pvp.ts')).toBe(otherAt);
+        expect(openHold([target], 'Squad3', 'scripts/aio-pvp.ts')).toBeUndefined();
+        expect(openHold(holds, 'Squad4', 'scripts/aio-pvp.ts')).toBe(otherAccount);
+        expect(openHold(holds, 'Squad3', 'scripts/gather-fire-combat.ts')).toBe(otherScript);
+        expect(applyKitRestored(request, holds, [], proofs)).toEqual({ changed: false, reason: 'hold already restored' });
+    });
+
+    test('a hold that is not a PvP death, an active account, a failing or old or foreign receipt and a changed snapshot refuse', () => {
+        const run = (h: ScriptHold, o: Parameters<typeof setup>[0] = {}, opt: Parameters<typeof setup>[1] = {}, active: string[] = [], proofsPatch: Partial<RepairProofs> = {}) => {
+            const { request, proofs } = setup(o, opt);
+            return applyKitRestored(request, [h], active, { ...proofs, ...proofsPatch });
+        };
+        // Not a PvP death: a route script, or a hold of another end kind.
+        expect(run(hold({ script: 'scripts/gather-fire-combat.ts' })).reason).toBe('no matching open hold');
+        const route = setup(); route.request.script = 'scripts/gather-fire-combat.ts';
+        expect(applyKitRestored(route.request, [hold({ script: 'scripts/gather-fire-combat.ts' })], [], route.proofs).reason).toBe('not the hold of a PvP death');
+        expect(run(hold({ reason: 'blocked after 1 runs' })).reason).toBe('not the hold of a PvP death');
+        expect(run(hold({ account: 'Other' })).reason).toBe('no matching open hold');
+        expect(run(hold(), {}, {}, ['squad3']).reason).toBe('account still active');
+        // The receipt: fails the check, is for another account, is older than the death or than 15 minutes, has another hash or a changed snapshot.
+        expect(run(hold(), { ok: false }).reason).toBe('kit receipt is not a passing squad-ready check of this account');
+        expect(run(hold(), { account: 'Squad4' }).reason).toBe('kit receipt is not a passing squad-ready check of this account');
+        expect(run(hold(), { schema: 'other/1' }).reason).toBe('kit receipt is not a passing squad-ready check of this account');
+        expect(run(hold(), {}, { at: NOW - 4_000_000 }).reason).toBe('kit receipt is not newer than the death');
+        expect(run(hold(), {}, { at: NOW - 16 * 60_000 }).reason).toBe('kit receipt is stale');
+        expect(run(hold(), {}, { hash: 'b'.repeat(64) }).reason).toBe('kit receipt hash changed');
+        expect(run(hold(), {}, {}, [], { statusSha256: () => 'c'.repeat(64) }).reason).toBe('kit receipt does not match the current status snapshot');
+        expect(run(hold(), {}, {}, [], { statusSha256: () => undefined }).reason).toBe('kit receipt does not match the current status snapshot');
+        // No logout proof: refused like every repair.
+        expect(run(hold(), {}, {}, [], { readProof: () => ({ state: 'held', reason: 'no producer logout proof' } as any) }).changed).toBe(false);
+        const missing = setup(); rmSync(missing.receiptPath);
+        expect(applyKitRestored(missing.request, [hold()], [], missing.proofs).reason).toBe('kit receipt missing or malformed');
+        expect(applyKitRestored({ ...missing.request, kit: undefined }, [hold()], [], missing.proofs).reason).toBe('invalid kit-restored request');
+    });
 });

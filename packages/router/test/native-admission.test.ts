@@ -1,6 +1,9 @@
 import{test,expect}from'bun:test';
-import{deliveryTask,isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
-import{FREE_FLOOR_GB,PRACTICE_RESERVE_GB}from'../../core/src/memory';
+import{deliveryTask,isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,nativeNeedGB,checkDeferral,benchEngines,admissionWaitMs,ADMISSION_WAIT_ENV,ADMISSION_WAIT_MAX_MS,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
+import{FREE_FLOOR_GB,PRACTICE_RESERVE_GB,HOST_DEFERRED_EXIT,benchStartGB}from'../../core/src/memory';
+import{memoryProblems}from'../../../scripts/measure/bench-start-check';
+import{qualificationExit,INNER_ADMISSION_WAIT_MS}from'../src/bank-observer-qualification';
+import{readFileSync}from'node:fs';
 import{mkdtempSync,writeFileSync,readdirSync}from'node:fs';
 import{tmpdir}from'node:os';
 import{join}from'node:path';
@@ -103,4 +106,89 @@ test('declared saved consumers bypass only the practice turn',()=>{
  }
  const unreviewed=deliveryTask('rune-carrier-stage').checks.find(c=>c.phase==='consumer')!;
  expect(isSavedProofVerifier(unreviewed)).toBe(false);
+});
+
+// The admission of a check that runs the bench and the start check of the bench use one memory rule. Beside 16 live
+// bots with 2 GiB held for bot starts, that rule is 7.5 GiB, and the admission never passes a start that the bench
+// then refuses.
+const BENCH_CHECK={id:'bank-observation-native',command:['bun','run','bench','^extra:owned-bank-observation$','--profile','--budget','10']};
+const BEHIND_FLEET={floorGB:FREE_FLOOR_GB,fleet:{bots:16,reserveGB:2}};
+test('a check that runs the bench is admitted at the memory that the bench needs, from one rule',()=>{
+ // 16 live bots with 2 GiB held for bot starts: the floor, the reserve and one engine of 1.5 GiB.
+ expect(nativeNeedGB(BENCH_CHECK,BEHIND_FLEET)).toBe(7.5);
+ expect(nativeNeedGB(BENCH_CHECK,BEHIND_FLEET)).toBeGreaterThan(NATIVE_STARTUP_GB);
+ // The bench's own refusal and the admission agree at each value of the free memory.
+ for(const engines of [1,2,4]){
+  const check={...BENCH_CHECK,command:[...BENCH_CHECK.command,'--parallel',String(engines)]},need=nativeNeedGB(check,BEHIND_FLEET);
+  expect(need).toBe(benchStartGB({floorGB:FREE_FLOOR_GB,reserveGB:2,engines,fleet:true}));
+  const facts=(freeGB:number)=>({procs:null,selfPid:1,busyPorts:[],freeGB,floorGB:FREE_FLOOR_GB,engines,fleet:BEHIND_FLEET.fleet});
+  expect(memoryProblems(facts(need))).toEqual([]);
+  expect(memoryProblems(facts(need-0.05)).length).toBe(1);
+ }
+ // No swarm: the bench needs the tool floor and the engine, less than the practice startup rule, so that rule stays.
+ expect(nativeNeedGB(BENCH_CHECK,{floorGB:1,fleet:null})).toBe(NATIVE_STARTUP_GB);
+ // Any other command keeps the practice startup rule, beside a fleet too.
+ expect(nativeNeedGB({command:['bun','packages/practice/src/quest-sweep-proof.ts']},BEHIND_FLEET)).toBe(NATIVE_STARTUP_GB);
+ expect(nativeNeedGB({command:['bun','scripts/other.ts','bench']},BEHIND_FLEET)).toBe(NATIVE_STARTUP_GB);
+ expect(benchEngines({command:['bun','scripts/measure/aio-practice-bench.ts','^x$']})).toBe(1);
+ expect(benchEngines({command:['bun','run','bench','^x$','--parallel','3']})).toBe(3);
+ expect(benchEngines({command:['bun','run','test']})).toBeNull();
+});
+
+test('the native admission of a bench check waits for the memory that the bench needs, and never starts it under that',async()=>{
+ const f=fixture(),need=7.5;
+ let free=6.6;f.deps.freeGB=()=>free;
+ f.deps.sleep=async()=>{expect(f.starts()).toBe(0);free=need;};
+ expect(await withNativeStartup(f.start,{...f.deps,requiredGB:()=>need},2000)).toBe(1);
+ // The practice startup rule alone would have started at 6.6.
+ expect(f.observations.map(v=>v.state)).toEqual(['waiting-native-headroom','native-ready']);
+ expect(f.observations.every(v=>v.requiredGB===need)).toBe(true);
+ const low=fixture();low.deps.freeGB=()=>6.6;
+ await expect(withNativeStartup(low.start,{...low.deps,requiredGB:()=>need},2000)).rejects.toThrow('startup headroom');expect(low.starts()).toBe(0);
+ // A requirement under the practice startup rule, or one that is not a number, starts nothing.
+ for(const value of [NATIVE_STARTUP_GB-1,NaN]){const x=fixture();x.setFree(100);await expect(withNativeStartup(x.start,{...x.deps,requiredGB:()=>value},2000)).rejects.toThrow('memory requirement');expect(x.starts()).toBe(0);}
+});
+
+test('a bench that exits on its start refusal, or a script that passes on a deferral, is a host deferral and not a code failure',()=>{
+ for(const exit of [2,4]){
+  const reason=checkDeferral(BENCH_CHECK,exit);
+  expect(reason).not.toBeNull();
+  expect(nativeDeferralEvidence('Error: HOST_DEFERRED_NATIVE_HEADROOM: '+reason)).toEqual({hostDeferred:true});
+ }
+ expect(checkDeferral({id:'bank-observer',command:['bun','packages/router/src/bank-observer-qualification.ts']},HOST_DEFERRED_EXIT)).toContain('host deferral');
+ expect(checkDeferral(BENCH_CHECK,HOST_DEFERRED_EXIT)).not.toBeNull();
+ // A failed case (1), a pass (0) and any other command that exits with 2 or 4 are not deferrals.
+ expect(checkDeferral(BENCH_CHECK,1)).toBeNull();
+ expect(checkDeferral(BENCH_CHECK,0)).toBeNull();
+ expect(checkDeferral({id:'other',command:['bun','scripts/other.ts']},2)).toBeNull();
+ expect(checkDeferral({id:'other',command:['bun','scripts/other.ts']},4)).toBeNull();
+});
+
+test('the bank observer check exits with the host deferral code for a deferred inner delivery and throws for a failed one',()=>{
+ expect(qualificationExit({ok:true,reason:'native capability and named consumer verified'})).toBeNull();
+ const deferred=qualificationExit({ok:false,hostDeferred:true,reason:'Error: HOST_DEFERRED_NATIVE_HEADROOM: the bench ended with exit 2'});
+ expect(deferred?.exit).toBe(HOST_DEFERRED_EXIT);
+ expect(nativeDeferralEvidence(deferred!.message)).toEqual({hostDeferred:true});
+ expect(qualificationExit({ok:false,reason:'check failed'})).toBeNull();
+ expect(qualificationExit({ok:false,hostDeferred:false,reason:'check failed'})).toBeNull();
+});
+
+test('the admission wait of a delivery is the default, or the budget that a task sets, and nothing else',()=>{
+ expect(admissionWaitMs({})).toBe(ADMISSION_WAIT_MAX_MS);
+ expect(admissionWaitMs({[ADMISSION_WAIT_ENV]:''})).toBe(ADMISSION_WAIT_MAX_MS);
+ expect(admissionWaitMs({[ADMISSION_WAIT_ENV]:'300000'})).toBe(300000);
+ for(const bad of ['0','-5','1.5','abc',String(ADMISSION_WAIT_MAX_MS+1)])expect(()=>admissionWaitMs({[ADMISSION_WAIT_ENV]:bad}),bad).toThrow('invalid native admission wait budget');
+});
+
+test('the inner admission wait of the bank observer check ends well before the timeout of that check, as a host deferral',async()=>{
+ const outer=JSON.parse(readFileSync(new URL('../tasks/session-recovery-only.json',import.meta.url),'utf8')).checks.find((c:any)=>c.id==='bank-observer-qualification');
+ expect(outer.phase).toBe('regression');
+ // Under half of the outer timeout: the rest of the inner delivery (its tests and its bench case) has the other half.
+ expect(INNER_ADMISSION_WAIT_MS).toBeLessThanOrEqual(outer.timeoutMs/2);
+ expect(INNER_ADMISSION_WAIT_MS).toBeGreaterThanOrEqual(60000);
+ // At the budget the admission ends with the deferral text that the inner report and the exit 75 carry on.
+ const f=fixture();let reason='';
+ try{await withNativeStartup(f.start,f.deps,INNER_ADMISSION_WAIT_MS);}catch(error){reason=String(error);}
+ expect(nativeDeferralEvidence(reason)).toEqual({hostDeferred:true});expect(f.starts()).toBe(0);
+ expect(qualificationExit({ok:false,hostDeferred:true,reason})?.exit).toBe(HOST_DEFERRED_EXIT);
 });

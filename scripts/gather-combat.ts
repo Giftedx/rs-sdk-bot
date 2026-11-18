@@ -13,8 +13,10 @@
 // the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
 // (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
 import { openBot, finish, countItems, getWorld, accountOf, sessionDied } from '../packages/core/src/bot';
+import { RETALIATE_OFF, RETALIATE_ON, finishCombat } from '../packages/core/src/combat-end';
 import { questFlags } from '../packages/core/src/quest-status';
 import {startQuestSustain} from './quest-sustain';
+import {cowFoodIds,foodStages,questFoodDefinitions} from '../packages/core/src/sustain';
 import {
     selectProgressiveLoadout,
     readSkillLevels,
@@ -36,10 +38,11 @@ import {resolve} from 'node:path';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
 import { ferryWalk } from './walk-to';
+import { npcId, objId } from '../packages/core/src/content-facts';
 
 // Local bear spawn clusters from rev289 maps / cow-path-probe.json. Expand by7:
 // actual Bear105 wander4 + hunt1 + size2 footprint1 + one tile margin.
-const COW_BEAR_BOXES=[[2632,3274,2633,3280],[2691,3341,2694,3344],[2692,3331,2698,3333],
+export const COW_BEAR_BOXES=[[2632,3274,2633,3280],[2691,3341,2694,3344],[2692,3331,2698,3333],
     [2702,3344,2702,3344],[2706,3330,2708,3336],[2716,3330,2718,3336]] as const;
 const cowBearTile=(p:PathTile)=>COW_BEAR_BOXES.some(([x1,z1,x2,z2])=>Math.max(Math.max(x1-p.x,0,p.x-x2),Math.max(z1-p.z,0,p.z-z2))<=7);
 export function cowProfile(bankProfile='south',foodMode='held',maximum=5){
@@ -98,7 +101,7 @@ export async function bankCombatLoot(s:Session,drops:RegExp,extraIds:readonly nu
     if(s.sdk.getInventory().some(i=>matches.test(i.name)||extraIds.includes(i.id)))throw Error('combat outputs not banked');
 }
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
-    const id=target==='giant'?117:target==='druid'?181:target==='unicorn'?89:undefined;
+    const id=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):undefined;
     const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
         n.inCombat === true && n.targetIndex === 32768 + selfSlot;
     return npcs.filter(n => n.id === id && n.reachable === true &&
@@ -150,11 +153,11 @@ export async function equipCowKit(
 }
 // Held cow food in bites: trout heals once; a cake is eaten in three bites (cake, 2/3 cake, slice), chocolate cake likewise.
 // The knight farm steals cake at the Ardougne bakery, so a farmer arrives with cake pieces rather than trout.
-export const COW_FOOD_BITES:Readonly<Record<number,number>>={333:1,1891:3,1893:2,1895:1,1897:3,1899:2,1901:1};
+// Bites and HP of each piece come from the content (consume_normal.dbrow heal, cooking_inv next_obj_stage; core/sustain.ts).
+export const COW_FOOD_BITES:Readonly<Record<number,number>>=Object.fromEntries(cowFoodIds().map(id=>[id,foodStages(id).length]));
 export const cowFoodBites=(items:readonly {id:number;count:number}[])=>items.reduce((n,i)=>n+(COW_FOOD_BITES[i.id]??0)*i.count,0);
-// HP one bite heals: trout 7, a cake bite 4, a chocolate cake bite 5. The trout rule held two trout, 14 HP of food;
-// held food must cover the same HP whatever it is made of.
-const COW_BITE_HEAL:Readonly<Record<number,number>>={333:7,1891:4,1893:4,1895:4,1897:5,1899:5,1901:5};
+// HP one bite heals. The trout rule held two trout, 14 HP of food; held food must cover the same HP whatever it is made of.
+const COW_BITE_HEAL:Readonly<Record<number,number>>=Object.fromEntries(cowFoodIds().map(id=>[id,questFoodDefinitions().get(id)!.heal]));
 export const COW_FOOD_HP=14;
 // When cow mode gives a cow up and picks another. In a shared field another account can take the cow over after our
 // first swing (live claude-cloud: 190 idle ticks until the no-progress throw): release after COW_RELEASE ticks with the
@@ -306,8 +309,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             if(!(await s.bot.depositItem(item,-1)).success||held(id)>0||!await waitUntil(s,()=>bankCount(id)===before+amount,{timeoutTicks:20}))throw new Error('no cow progress: deposit failed');}}
         if(!profile.foodBanked)for(let tries=0;heal()<COW_FOOD_HP&&tries<6;tries++){
             // Trout first (one bite each); otherwise the smallest banked cake piece.
-            const items=state()?.bank.items??[],trout=items.find(i=>i.id===333),item=trout??cowFoodPick(items),want=heal()+(trout?7:0);
-            if(!item||!(await s.bot.withdrawItem(item,trout?Math.min(trout.count,Math.ceil((COW_FOOD_HP-heal())/7)):1,{asNote:false})).success)break;
+            const items=state()?.bank.items??[],trout=items.find(i=>i.id===333),item=trout??cowFoodPick(items),want=heal()+(trout?COW_BITE_HEAL[333]!:0);
+            if(!item||!(await s.bot.withdrawItem(item,trout?Math.min(trout.count,Math.ceil((COW_FOOD_HP-heal())/COW_BITE_HEAL[333]!)):1,{asNote:false})).success)break;
             await waitUntil(s,()=>heal()>=Math.min(COW_FOOD_HP,want),{timeoutTicks:5});
         }
         if(!profile.foodBanked&&heal()<COW_FOOD_HP)throw new Error('no cow progress: working food restock failed');
@@ -414,8 +417,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
 }
 
 // Surface Giant117 camp and its reachable Ardougne south bank.
-export const GIANT={npc:117,food:385,bigBones:532,limpwurt:225,bank:{x:2655,z:3283},spot:{x:2545,z:3144},room:[2537,3136,2556,3155]} as const;
-export const GIANT_HERBS:readonly number[]=[199,201,203,205,207,209,211,213,215,217,219];
+export const GIANT={npc:npcId('giant'),food:objId('shark'),bigBones:objId('big bones'),limpwurt:objId('limpwurt root'),bank:{x:2655,z:3283},spot:{x:2545,z:3144},room:[2537,3136,2556,3155]} as const;
+export const GIANT_HERBS:readonly number[]=['guam','marentill','tarromin','harralander','ranarr','irit','avantoe','kwuarm','cadantine','dwarf weed','torstol'].map(herb=>objId(`unidentified ${herb}`));
 const GIANT_DROPS:readonly number[]=[GIANT.bigBones,GIANT.limpwurt,...GIANT_HERBS];
 // A melee training site for runGiants: the NPCs, their room, the bank the trainer returns to, the one-bite foods it
 // carries (first owned in order), the drops it banks, and the drop that credits a kill. A site with no credit drop
@@ -428,8 +431,8 @@ export const GIANT_SITE:CombatSite={label:'giant',npcs:[GIANT.npc],foods:[GIANT.
 // 137 at band 70 in rune gear (research/combat-measure.md section 1), against 16 at the cows.
 // Trooper food in pick order: the four fish, cooked meat, then the Ardougne baker's stall food (bread, chocolate slice,
 // and cake by its smallest piece first, so a started cake is finished and its slot freed).
-export const TROOPER_FOODS:readonly number[]=[385,373,379,333,2142,2309,1901,1895,1893,1891];
-export const TROOPER_SITE:CombatSite={label:'trooper',npcs:[475,476],foods:TROOPER_FOODS,bank:{x:2619,z:3332},spot:{x:2525,z:3242},room:[2493,3223,2553,3264],drops:[]};
+export const TROOPER_FOODS:readonly number[]=['shark','swordfish','lobster','trout','cooked meat','bread','chocolate slice','cake slice','partial cake','cake'].map(objId);
+export const TROOPER_SITE:CombatSite={label:'trooper',npcs:[npcId('khazard troop'),npcId('khazard troop spearmen')],foods:TROOPER_FOODS,bank:{x:2619,z:3332},spot:{x:2525,z:3242},room:[2493,3223,2553,3264],drops:[]};
 const GIANT_ARMOUR_SLOT_ORDER = [2, 10, 0, 4, 7, 5, 1, 9] as const;
 
 // Reuse progressive rev-289 loadout selection with exact skill and quest gates.
@@ -639,7 +642,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     // It tries the walk up to three times while each try ends closer, then restores auto-retaliate.
     const retaliate=async(on:boolean)=>{
         if(state()?.autoRetaliateEnabled===on||state()?.autoRetaliateEnabled===undefined)return false;
-        await s.direct({type:'clickComponent',componentId:on?150:151,reason:`${label} retreat auto-retaliate ${on?'ON':'OFF'}`});
+        await s.direct({type:'clickComponent',componentId:on?RETALIATE_ON:RETALIATE_OFF,reason:`${label} retreat auto-retaliate ${on?'ON':'OFF'}`});
         return await waitUntil(s,()=>state()?.autoRetaliateEnabled===on,{timeoutTicks:5});
     };
     const leave=async()=>{
@@ -922,9 +925,9 @@ if(giantTrained){
     // TROOPER_COOK=1: cook banked raw beef into trooper food first, when the account owns too little (scripts/trooper-food.ts).
     if(TARGET_KEY==='trooper'&&process.env.TROOPER_COOK==='1')try{const {stageTrooperFood}=await import('./trooper-food'),{walkTargetPersist}=await import('./walk-to');
         const r=await stageTrooperFood(ownedSession,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(ownedSession,{x,z,level:0})).ok});console.log(`TROOPER_FOOD ${JSON.stringify(r)}`);}
-    catch(e){await finish([ownedSession],false,String(e));}
-    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),ammoPickup:process.env.GIANT_AMMO_PICKUP!=='0',bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
-    catch(e){await finish([ownedSession],false,String(e));}
+    catch(e){await finishCombat(ownedSession,false,String(e));}
+    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),ammoPickup:process.env.GIANT_AMMO_PICKUP!=='0',bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finishCombat(ownedSession,r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    catch(e){await finishCombat(ownedSession,false,String(e));}
 }
 const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdgevilleTravel(ownedSession):undefined;
 const cleanupScope=(potionPolicy||maximum!==undefined)&&TARGET_KEY!=='cow'?combatPotionSession(ownedSession,cowStop.stop,CAP):undefined;
@@ -932,9 +935,9 @@ const s=cleanupScope??ownedSession;
 if(TARGET_KEY==='cow'){
     if(process.env.COW_STAGE==='1')try{const {stageCows}=await import('./cow-stage'),{walkTargetPersist}=await import('./walk-to');
         const r=await stageCows(s,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(s,{x,z,level:0})).ok});console.log(`COW_STAGE ${JSON.stringify(r)}`);}
-        catch(e){await finish([s],false,String(e));}
-    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
-    catch(e){await finish([s],false,String(e));}
+        catch(e){await finishCombat(s,false,String(e));}
+    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finishCombat(s,r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    catch(e){await finishCombat(s,false,String(e));}
 }
 let combatRecovery:(()=>Promise<void>)|undefined;
 try {
@@ -1053,9 +1056,9 @@ try {
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
     const targetMet=maximum===undefined||kills===maximum&&!cowStop.stop();
-    await finish([ownedSession], total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}`);
+    await finishCombat(ownedSession, total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}`);
 } catch (e) {
     let detail=String(e);if(combatRecovery)try{await combatRecovery();}catch(recovery){detail+='; cleanup '+String(recovery);}
-    await finish([ownedSession], false, detail);
+    await finishCombat(ownedSession, false, detail);
 }
 }
