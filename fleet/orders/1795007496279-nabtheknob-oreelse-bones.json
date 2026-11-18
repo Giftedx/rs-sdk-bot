@@ -1,0 +1,22 @@
+{
+ "id": "1795007496279-nabtheknob-oreelse-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "OreElse",
+ "item": "Bones",
+ "count": 14,
+ "start": 1795007496279,
+ "end": 1795009896279,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
