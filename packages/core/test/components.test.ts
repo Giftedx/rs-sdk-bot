@@ -101,3 +101,22 @@ test('invalid label ids, duplicate zones and inconsistent area counts cannot aff
         expect(readLabels(file, 'src1')).toBeNull();
     }
 });
+
+test('the flat labels answer like a map of zones, for zones, gaps and tiles that no zone holds', () => {
+    // Zones at three levels and far apart, so the hash table has to place keys that share slots; one zone is all wall.
+    const origins: [number, number, number][] = [[0, 0, 0], [0, 8, 0], [1, 8, 8], [2, 3000, 3200], [3, 16384 - 8, 16384 - 8]];
+    const open = (l: number, x: number) => !(l === 1 && x < 12);
+    const g = labelAreas(origins, (l, x) => open(l, x), (l, x, _z, dx) => open(l, x + dx));
+    expect(g.zones.size).toBe(5);
+    expect([...g.zones.keys()].length).toBe(5);
+    expect(g.area(0, 3, 3)).toBeGreaterThanOrEqual(0);
+    expect(g.area(1, 9, 9)).toBe(-1);                 // in a zone, not walkable
+    expect(g.area(1, 13, 13)).toBeGreaterThanOrEqual(0);
+    expect(g.area(2, 3001, 3201)).toBeGreaterThanOrEqual(0);
+    for (const [l, x, z] of [[0, -1, -1], [0, 16, 0], [1, 0, 0], [3, 100, 100], [0, 5000, 5000], [2, -9, 3200]] as const) expect(g.area(l, x, z)).toBe(-2);
+    const file = join(directory, 'flat.bin');
+    writeLabels(file, 'flat', g);
+    const back = readLabels(file, 'flat')!;
+    expect(back.zones.size).toBe(5);
+    for (const [l, x, z] of [[0, 3, 3], [1, 9, 9], [1, 13, 13], [2, 3001, 3201], [0, -1, -1], [0, 16, 0], [3, 16380, 16380]] as const) expect(back.area(l, x, z)).toBe(g.area(l, x, z));
+});
