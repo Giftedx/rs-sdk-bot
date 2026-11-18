@@ -1,0 +1,22 @@
+{
+ "id": "1794998282705-billionaire-swordinhand-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "Swordinhand",
+ "item": "Air rune",
+ "count": 36,
+ "start": 1794998282705,
+ "end": 1795000682705,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
