@@ -1,5 +1,6 @@
 import {readFileSync,writeFileSync,copyFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {join,resolve,basename} from 'node:path';
+import {coordinatorStateFixture} from './coordinator-state-fixture';
 import {freemem} from 'node:os';
 import {startStack} from './stack';
 import {ISOLATED,ISOLATED_ENGINE_ENV,pointBotAt} from './rehearse';
@@ -108,8 +109,9 @@ async function run(dir:string){
  if(!existsSync(join(root,'.practice/delivery-native.lock')))throw Error('practice turn required: run through delivery');
  if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('HOST_DEFERRED_NATIVE_HEADROOM: no stack started');
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,task:'rune-carrier-stage',directory:dir}));closeSync(fd);
- let stack:Awaited<ReturnType<typeof startStack>>|undefined;
+ let stack:Awaited<ReturnType<typeof startStack>>|undefined,restoreState=()=>{};
  try{
+  restoreState=coordinatorStateFixture(root);
   stack=await startStack({tickMs:150,xpRate:25,ports:ISOLATED,instance:'rune-carrier-stage',readyTimeoutMs:60000,enginePreload:{module:join(root,'packages/practice/src/save-endpoint.ts'),env:{...ISOLATED_ENGINE_ENV,BUILD_LIVE_RELOAD:'false',BUILD_STARTUP:'false',NODE_INFINITE_RUN:'true'}}});
   const name=runBotName('flrs',0),names=[name,...['b','c','d','e'].map(s=>name+s)],paths=names.map(n=>join(root,'vendor/rs-sdk/server/engine/data/players/main',n+'.sav'));
   if(paths.some(existsSync))throw Error('staging names already have saved state');
@@ -138,7 +140,7 @@ async function run(dir:string){
   }
   if(meta.phases.length===3&&meta.phases.every(p=>p.code===0&&!p.timedOut&&!p.lowMemory))await runCohort(dir,name);
   return verify(dir);
- }finally{try{await stack?.stop();}finally{if(stack)for(const [service,path]of Object.entries(stack.logs))if(existsSync(path))copyFileSync(path,join(dir,service+'.log'));if(existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}}
+ }finally{restoreState();try{await stack?.stop();}finally{if(stack)for(const [service,path]of Object.entries(stack.logs))if(existsSync(path))copyFileSync(path,join(dir,service+'.log'));if(existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}}
 }
 if(import.meta.main){try{
  if(!process.env.DELIVERY_DIR)throw Error('run through delivery (DELIVERY_DIR)');
