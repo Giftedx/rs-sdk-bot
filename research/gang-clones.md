@@ -145,22 +145,48 @@ Goondelf, Ligma and Sugma in that order.
 | Part of a clone | Source in the record | Goondelf | Ligma | Sugma |
 |---|---|---|---|---|
 | Levels | `levels.skills` | Prayer 99, Magic 37 | Prayer 90, Magic 28 | Prayer 90, Magic 28 |
-| Sharks | `kit.foodCount` | 11 | 15: the middle of its range of 6 to 23 | 13 |
+| Sharks | `kit.foodCount` | 11 | 17: the middle of its range of 6 to 28 | 13 |
 | Eat level | the median of `eating.hpAtEat` | 66 | 64 | 71 |
 | Style | `kit.runes`: no cast and no shot | melee | melee | melee |
 | Special | the highest band of `attack.specialAtTargetHp` | at any Hitpoints | at any Hitpoints | at any Hitpoints |
 | Prayer wait, as weights of 0, 1, 2 and 3 extra ticks and of no change in the window | `prayer.ticksFromWeaponChangeToPrayer` | 7, 9, 1, 0 and 33 | 6, 1, 3, 0 and 5 | 28, 20, 5, 5 and 18 |
 | Flick | `prayer.ticksAProtectPrayerStaysOn`: under half of the holds are 2 ticks or less | no | no | no |
-| Walk out with the food gone | `retreat.at40HpOrLess` of the account itself | at 26 Hitpoints | 30: the middle of its range of 20 to 40 | no: it fought to its death |
+| Walk out with the food gone | `retreat.at40HpOrLess` of the account itself | at 26 Hitpoints | 33: the middle of its range of 26 to 40 | no: it fought to its death |
 
 A value of one account is never the sample of another account. An account with a sample keeps it in every mode.
-An account with no sample has a range in its record, and a mode takes one end:
+An account with no sample has a range in its record:
 
-- `retreat`: an account with no sample walks out at the high end of its range (Ligma at 40). `stand`: it does not walk out.
-- `lean`: an account with no measured pack has the low end of its range (Ligma 6 sharks). `full`: the high end (23).
+- The pack of Ligma: from its 6 eats in a fight in which its food did not run out, to the 28 slots of a pack.
+- The walk out of Ligma: from the lowest Hitpoints at the last attack of an account that walked out (26), to the 40
+  Hitpoints at which the measure starts.
+
+A mode takes one end of a range. Only Ligma has ranges, so a mode changes Ligma only:
+
+| Mode | Ligma walks out at | Ligma has sharks |
+|---|---|---|
+| `seen` (the base) | 33 | 17 |
+| `retreat` | 40 | 17 |
+| `stand` | never | 17 |
+| `lean` | 33 | 6 |
+| `full` | 33 | 28 |
 
 The profiles are `clone-goondelf`, `clone-ligma` and `clone-sugma`, each with `-retreat` and `-stand`.
 `scripts/pk-spar.ts` builds one on the first use of its name, so a script that names no clone reads no record.
+
+The squad script gives every gang account one set of options. So a squad case uses the pooled options of the three
+clones (`pooledProfile`): the prayer waits and the eat levels as one, and the highest walk out of the three. Each
+clone keeps its own levels and sharks. In a squad case the modes are these:
+
+| Mode | Each of the three clones walks out at | Ligma has sharks |
+|---|---|---|
+| `seen` (the base) | 33 | 17 |
+| `retreat` | 40 | 17 |
+| `stand` | never | 17 |
+| `lean` | 33 | 6 |
+| `full` | 33 | 28 |
+
+So in a squad case Goondelf and Sugma do not have their own walk out. A profile for each gang account in the squad
+script closes that.
 
 The bench cases:
 
@@ -169,27 +195,24 @@ The bench cases:
 | `extra:clone-live-check-x1`, `extra:clone-live-check-noanti-x1` | The live meeting again: one of ours against the three clones on the post |
 | `extra:clone-solo-<name>-x2` | One of ours in the kit of the squad pilots against one clone, 2 meetings |
 | `extra:clone-3v3-walkin-x1`, `extra:clone-4v3-walkin-x1` | The squad from the Edgeville bank to the multi-way post, the clones hunting it, each clone on its own one of ours |
-| `extra:clone-squad-<n>-<kit>-x1`, `extra:clone-squad-<n>-chainbind-<mode>-x1` | The same for 3 to 6 of ours in four kits, and against each mode |
 | `extra:clone-cycle-solo-x1` | 30 game minutes of one account: kill, pick up, bank trip, return |
-
-The squad script gives every gang account one set of options. So the squad cases use the pooled options of the three
-clones (`pooledProfile`), and each clone keeps its own levels and sharks.
 
 ## Fidelity
 
-The engine of a clone case serves the world feed (`WORLD_FEED=true`), and `scripts/pk-gang.ts` writes it beside
-the case output (`SPAR_FEED`). `scripts/measure/pk-gang-fidelity.ts` reads the bench feed and the live trace with
-one reader, so each measure has one definition on both sides.
+The engine of a clone case serves the world feed (`WORLD_FEED=true`). `scripts/pk-gang.ts` writes the feed beside
+the case output (`SPAR_FEED`) and prints the measures of each meeting into the case log (`FEED_MEETING`).
+`scripts/measure/pk-gang-fidelity.ts` reads the bench feed and the live trace with one reader, so each measure has
+one definition on both sides.
 
 ### The live meeting against the bench
 
 The live meeting is the one of the kit `live-walker-iron` with the three at the post
 (`.practice/rival-dds/trace-long-1.jsonl`). Bench: hosted runners, lockstep seeds 1, 2 and 3, one meeting each
-(run 44258251434). The error is the bench mean against the live value.
+(run 44265559154). The error is the bench mean against the live value.
 
 The reader: a meeting is the gang attacks on our account with no gap of 300 ticks. A trace gives its meeting with the
 most gang attacks, from the first gang attack to the last. Poison after the last attack and a later meeting are not
-counted. The live trace holds two short meetings before the long one. The columns "all" count every meeting
+counted. The live trace holds two short meetings before the long one. The rows "all meetings" count every meeting
 (`--all`).
 
 Both bench cases are stated. In the live meeting our account carried an antipoison and did not drink it.
@@ -197,22 +220,24 @@ Both bench cases are stated. In the live meeting our account carried an antipois
 | Measure | Live | No antipoison in the pack | Error | Antipoison in the pack | Error |
 |---|---|---|---|---|---|
 | Kills | 1 | 1.3 | +30% | 0.7 | -30% |
-| Ticks from the first gang attack to the last | 1,082 | 655 | -39% | 838 | -23% |
-| Hitpoints lost | 514 | 375 | -27% | 290 | -44% |
-| Sharks eaten by ours | 20 | 15.3 | -23% | 10.7 | -47% |
-| Hitpoints lost a gang attack | 3.2 | 3.8 | +19% | 2.5 | -22% |
-| Gang attacks in 100 ticks | 15.1 | 15.0 | -1% | 14.0 | -7% |
-| Gang specials in 100 attacks | 15.3 | 21.7 | +42% | 19.0 | +24% |
-| Damage on the gang an attack of ours | 6.2 | 7.0 | +13% | 7.1 | +15% |
-| Gang eats in 1,000 damage on it | 29.3 | 38.1 | +30% | 37.4 | +28% |
-| Our attacks on the right prayer in 100 | 23.6 | 8.8 | -63% | 6.2 | -74% |
-| Poison in 100 Hitpoints lost | 29.2 | 22.7 | -22% | 25.3 | -13% |
-| Hitpoints lost, all meetings | 539 | 429 | -20% | 336 | -38% |
-| Sharks eaten by ours, all meetings | 20 | 17.3 | -13% | 13.0 | -35% |
-| Kills, all meetings | 1 | 1.7 | +70% | 1.0 | 0% |
+| Ticks from the first gang attack to the last | 1,082 | 773 | -29% | 783 | -28% |
+| Hitpoints lost | 514 | 380 | -26% | 250 | -51% |
+| Sharks eaten by ours | 20 | 15.0 | -25% | 10.0 | -50% |
+| Hitpoints lost a gang attack | 3.2 | 3.9 | +22% | 2.1 | -34% |
+| Gang attacks in 100 ticks | 15.1 | 12.5 | -17% | 15.0 | -1% |
+| Gang specials in 100 attacks | 15.3 | 21.6 | +41% | 19.3 | +26% |
+| Damage on the gang an attack of ours | 6.2 | 6.5 | +5% | 6.9 | +11% |
+| Gang eats in 1,000 damage on it | 29.3 | 35.3 | +20% | 38.9 | +33% |
+| Our attacks on the right prayer in 100 | 23.6 | 11.5 | -51% | 6.9 | -71% |
+| Poison in 100 Hitpoints lost | 29.2 | 26.7 | -9% | 19.3 | -34% |
+| Hitpoints lost, all meetings | 539 | 425 | -21% | 404 | -25% |
+| Sharks eaten by ours, all meetings | 20 | 16.0 | -20% | 17.0 | -15% |
+| Kills, all meetings | 1 | 2.0 | +100% | 1.0 | 0% |
 
-The clone loses our account 20% to 44% fewer Hitpoints than the live gang did, by the case and the reader.
-Three bench meetings and one live meeting: a difference under about 20% is not separated.
+The clones take 21% to 51% fewer Hitpoints from our account than the live gang did, by the case and the reader. The
+live gang took 1.27 to 2.05 times the Hitpoints that the clones take: 1.35 times in the case with no antipoison.
+Our attacks do 1.05 to 1.11 times the live damage on the gang. Three bench meetings and one live meeting: a
+difference under about 20% is not separated.
 
 ### The squad pilots against the bench
 
@@ -223,24 +248,24 @@ The bench fight is one of ours in the pilots' kit against one clone (`extra:clon
 
 | Clone | Kills of 6 | Hitpoints lost | Poison in it | Ticks of the 6 fights |
 |---|---|---|---|---|
-| Goondelf | 3 | 623 | 251 | 150 to 206 |
-| Ligma | 0 (it walks out) | 601 | 177 | 192 to 250 |
-| Sugma | 6 | 447 | 130 | 194 to 221 |
-| All three | 9 of 18 | 1,671: 186 a kill | 558 | 150 to 250 |
+| Goondelf | 3 | 642 | 249 | 150 to 206 |
+| Ligma | 1 | 613 | 258 | 168 to 268 |
+| Sugma | 6 | 448 | 120 | 179 to 231 |
+| All three | 10 of 18 | 1,703: 170 a kill | 627 | 150 to 268 |
 
-The bench gives 186 Hitpoints a kill against 249 and 260 reported: -25% and -28%. Each bench fight is inside the
+The bench gives 170 Hitpoints a kill against 249 and 260 reported: -32% and -35%. Each bench fight is inside the
 reported range.
 
 ### What the bench does not copy
 
 | Gap | Numbers | Cause | What closes it |
 |---|---|---|---|
-| The right prayer of the gang meets fewer of our attacks | 6.2 to 8.8 in 100 on the bench, 23.6 live | Live, our attack comes a tick or more after our weapon change, so a late prayer is in time. On the bench our account changes its weapon and attacks in one tick. | A fight option that waits one tick between the weapon change and the attack (`scripts/pk.ts`) |
-| A clone eats more for the same damage | 38.1 eats in 1,000 damage, 29.3 live | A clone eats its whole pack and takes more at its bank. Live, Ligma ate 6 and left for another player. A clone also eats in the first tick at its eat level. Live, the eat comes 2 to 4 ticks later in 20 of 33 eats. The eat level itself did not move the measure: 38.3 with the highest level, 38.1 with the median. | A fight option for the wait before an eat (`scripts/pk.ts`), and a clone that leaves for another player |
+| The right prayer of the gang meets fewer of our attacks | 6.9 to 11.5 in 100 on the bench, 23.6 live | Live, our attack comes a tick or more after our weapon change, so a late prayer is in time. On the bench our account changes its weapon and attacks in one tick. | A fight option that waits one tick between the weapon change and the attack (`scripts/pk.ts`) |
+| A clone eats more for the same damage | 35.3 to 38.9 eats in 1,000 damage, 29.3 live | A clone eats its whole pack and takes more at its bank. Live, Ligma ate 6 and left for another player. A clone eats in the first tick at its eat level. Live, the eat comes 2 to 4 ticks later in 20 of 33 eats. | A fight option for the wait before an eat (`scripts/pk.ts`), and a clone that leaves for another player |
 | A hit of a clone always shows one tick after its animation | Bench: 113 of 113 attacks. Live: 1,334 in the tick of the animation and 1,501 one tick later | The engine takes the players in the order of their slots. On the bench our account logs in first. | A case in which the clones log in first |
-| Our antipoison | 150 Hitpoints of poison live. On the bench with the potion: none in three local runs, 73 a meeting in three hosted runs | The fight loop drinks only in a tick with 3 ticks to the next attack. Whether it finds one differs by run. | `cureNow` in the live options; the squad options have it |
+| Our antipoison | 150 Hitpoints of poison live. On the bench with the potion in the pack: 48 a meeting (run 44265559154) | The fight loop drinks only in a tick with 3 ticks to the next attack. | `cureNow` in the live options; the squad options have it |
 | A dead clone does not come back | Live: back on the post after 1,154 ticks | The harness ends a clone at its death | A return of a dead gang account in `scripts/pk-squad.ts` |
-| One set of options for the three clones in a squad case | The prayer wait differs: 33 of 50 changes with no prayer for Goondelf, 18 of 76 for Sugma | `scripts/pk-squad.ts` names one profile for the gang | A profile for each gang account in `scripts/pk-squad.ts` |
+| One set of options for the three clones in a squad case | The prayer wait differs: 33 of 50 changes with no prayer for Goondelf, 18 of 76 for Sugma. The walk out differs: 26, a range, never | `scripts/pk-squad.ts` names one profile for the gang | A profile for each gang account in `scripts/pk-squad.ts` |
 
 The offline simulator `scripts/pk-sim.ts` is not used for these numbers. It has no model of the walk out, of the
 prayer wait or of poison. Each of the three moves the cost of a kill.
@@ -366,10 +391,11 @@ Not measured:
 
 - `feed <trace ...>`: the measures of new collector files against the record. It prints a `DRIFT` line for a new worn
   item, a changed combat level or a higher hit. It prints one too for a higher eat level, a prayer that changes less
-  often or a new post.
-  A share with under 20 samples does not drift.
-- `squad <kills> <Hitpoints lost> <ticks> <bench output ...>`: one live squad run against the mean of the clone
-  runs. It prints `DRIFT` when the cost of a kill is more than 50% away from the prediction.
+  often or a new post. A share with under 20 samples does not drift. The levels come from the newest hiscore page
+  (`pk-gang-record.ts hiscores`).
+- `squad <kills> <Hitpoints lost> <case log ...>`: one live squad run against the runs of a clone squad case. It reads
+  the kills and the Hitpoints lost of each `RESULT` line of the case logs. It prints `DRIFT` when the Hitpoints of
+  a kill are more than 50% away from the prediction, and it fails when the logs hold no run.
 
 After a `DRIFT` line, build the record again, run the clone cases, and climb again from the new clones.
 

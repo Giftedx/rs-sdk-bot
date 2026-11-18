@@ -5,6 +5,8 @@ test('a run is the RESULT line of the squad script, with the ticks of the bench 
     const run = parseRun('START 3093 3501 0\nRESULT ok squad accounts=4 kills=3 gangDied=3 died=0 taken=72 trips=4 picked={"385":2,"884":33}\n', 2, 580);
     expect(run).toEqual({ seed: 2, accounts: 4, kills: 3, gangDied: 3, died: 0, taken: 72, trips: 4, ticks: 580 });
     expect(parseRun('no result here', 1, null)).toBeNull();
+    // A run with a death of ours is a run of the table too.
+    expect(parseRun('RESULT fail died squad accounts=3 kills=1 gangDied=1 died=1 taken=136 trips=3 picked={"385":1,"884":6}', 6, 766)).toMatchObject({ kills: 1, died: 1, taken: 136, ticks: 766 });
 });
 
 test('the bench table gives the ticks of a case at each seed', () => {
