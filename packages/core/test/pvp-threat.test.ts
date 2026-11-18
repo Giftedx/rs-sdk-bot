@@ -62,6 +62,10 @@ test('dangerous: can attack a member and either fights one, or is in range and c
 
 const classes = (sightings: Sighting[], tick = 1, b = book()) => b.observe(tick, squad, sightings).map(r => classifyThreat(r, squad, { canAttack }));
 const near = (name: string, o: Partial<Sighting> = {}) => rival({ name, x: 3074, z: 3643, ...o });
+// The four members of a live squad. A team of 3 does not outnumber them; 5 do.
+const squad4: Member[] = [...squad, { name: 'Ours3', x: 3071, z: 3641, combat: 126 }, { name: 'Ours4', x: 3073, z: 3641, combat: 126 }];
+const classes4 = (sightings: Sighting[], b = book()) => b.observe(1, squad4, sightings).map(r => classifyThreat(r, squad4, { canAttack }));
+const attackers = (n: number) => Array.from({ length: n }, (_, i) => near(`Att${i}`, { x: 3074 + (i % 3), z: 3643 + Math.floor(i / 3) }));
 
 test('a mage that closes in: protect from magic for each member that it can hit, and the armour swap for the member that has one', () => {
     const actions = decideAdapt(classes([near('Mage')]), squad, { outclasses, counterFor: (member, style) => member === 'Ours1' && style === 'magic' ? { wear: [1135, 1099], gain: 38 } : null });
@@ -86,33 +90,74 @@ test('a player that outclasses the strongest member is a retreat, before any pro
 });
 
 test('a team on a multi-way tile goes to a single-way tile when one is known, else retreats', () => {
-    const team = classes([near('A'), near('B', { x: 3075 }), near('C', { x: 3076 })]);
+    const team = classes4(attackers(3));
     const to = { x: 3040, z: 3600 };
-    expect(decideAdapt(team, squad, { outclasses, singleWayFrom: () => to })[0]).toMatchObject({ kind: 'single-way', to });
-    const retreat = decideAdapt(team, squad, { outclasses })[0]!;
+    expect(decideAdapt(team, squad4, { outclasses, singleWayFrom: () => to })[0]).toMatchObject({ kind: 'single-way', to });
+    const retreat = decideAdapt(team, squad4, { outclasses })[0]!;
     expect(retreat).toMatchObject({ kind: 'retreat' });
     expect((retreat as { reason: string }).reason).toContain('team of 3');
     // Two are not a team.
-    expect(decideAdapt(team.slice(0, 2), squad, { outclasses }).some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
+    expect(decideAdapt(team.slice(0, 2), squad4, { outclasses }).some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
 });
 
 test('a gang that the squad hunts on purpose is protected against but is not a reason to retreat', () => {
-    const gang = classes([near('A', { combat: 145 }), near('B', { x: 3075 }), near('C', { x: 3076 })]);
-    const actions = decideAdapt(gang, squad, { outclasses, expected: new Set(['a', 'b', 'c']) });
+    const gang = classes4([near('A', { combat: 145 }), near('B', { x: 3075 }), near('C', { x: 3076 })]);
+    const actions = decideAdapt(gang, squad4, { outclasses, expected: new Set(['a', 'b', 'c']) });
     expect(actions.some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
-    expect(actions.filter(a => a.kind === 'protect')).toHaveLength(2);
+    expect(actions.filter(a => a.kind === 'protect')).toHaveLength(4);
     // One stranger among them is still a stranger: it outclasses.
     const mixed = classes([near('A'), near('Boss', { combat: 145 })]);
     expect(decideAdapt(mixed, squad, { outclasses, expected: new Set(['a']) })[0]).toMatchObject({ kind: 'retreat' });
 });
 
 test('a team on a single-way tile is held there: no single-way move and no retreat, protect only', () => {
-    const team = classes([near('A'), near('B', { x: 3075 }), near('C', { x: 3076, z: 3643 })]);
-    const held = decideAdapt(team, squad, { outclasses, multiAt: () => false, singleWayFrom: () => ({ x: 1, z: 1 }) });
+    const team = classes4(attackers(3));
+    const held = decideAdapt(team, squad4, { outclasses, multiAt: () => false, singleWayFrom: () => ({ x: 1, z: 1 }) });
     expect(held.some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
     expect(held.some(a => a.kind === 'protect')).toBe(true);
-    const multi = decideAdapt(team, squad, { outclasses, multiAt: () => true, singleWayFrom: () => ({ x: 1, z: 1 }) });
+    const multi = decideAdapt(team, squad4, { outclasses, multiAt: () => true, singleWayFrom: () => ({ x: 1, z: 1 }) });
     expect(multi[0]).toMatchObject({ kind: 'single-way', to: { x: 1, z: 1 } });
+});
+
+// The policy of the attacker benches (research/gang-clones.md "The attackers"): a lone attacker is fought with the protect prayer, a team that
+// outnumbers the squad is left (single-way ground does not help), and a team with no prayer points in the squad is left at once.
+test('attackers at members + 1 or more are a retreat, also on single-way ground; one fewer is not', () => {
+    const single = { outclasses, multiAt: () => false, singleWayFrom: () => ({ x: 1, z: 1 }) };
+    const five = decideAdapt(classes4(attackers(5)), squad4, single)[0]!;
+    expect(five).toMatchObject({ kind: 'retreat' });
+    expect((five as { reason: string }).reason).toContain('outnumbered: 5 attackers against 4 members');
+    expect(decideAdapt(classes4(attackers(4)), squad4, single).some(a => a.kind === 'retreat')).toBe(false);
+    // On multi-way ground 5 is a retreat, not a single-way move: single-way ground does not help against 5.
+    expect(decideAdapt(classes4(attackers(5)), squad4, { outclasses, multiAt: () => true, singleWayFrom: () => ({ x: 1, z: 1 }) })[0]).toMatchObject({ kind: 'retreat' });
+    // A solo account meets three (a team), not two.
+    const solo: Member[] = [squad[0]!];
+    const closeBy = (n: number) => Array.from({ length: n }, (_, i) => near(`Solo${i}`, { x: 3071 + i, z: 3641 }));
+    const soloClasses = (n: number) => book().observe(1, solo, closeBy(n)).map(r => classifyThreat(r, solo, { canAttack }));
+    expect(decideAdapt(soloClasses(2), solo, { outclasses, multiAt: () => false }).some(a => a.kind === 'retreat')).toBe(false);
+    expect(decideAdapt(soloClasses(3), solo, { outclasses, multiAt: () => false })[0]).toMatchObject({ kind: 'retreat' });
+});
+
+test('a team of 3 and no prayer points in the squad is a retreat at once, on single-way ground too; with prayer points left it is not', () => {
+    const dry = squad4.map(m => ({ ...m, prayer: 0 }));
+    const team = classes4(attackers(3));
+    const single = { outclasses, multiAt: () => false };
+    const retreat = decideAdapt(team, dry, single)[0]!;
+    expect(retreat).toMatchObject({ kind: 'retreat' });
+    expect((retreat as { reason: string }).reason).toContain('team of 3 and no prayer points');
+    // One member has prayer points, or the points are not known: not dry.
+    expect(decideAdapt(team, [{ ...dry[0]!, prayer: 12 }, ...dry.slice(1)], single).some(a => a.kind === 'retreat')).toBe(false);
+    expect(decideAdapt(team, squad4, single).some(a => a.kind === 'retreat')).toBe(false);
+    // Two attackers are not a team, dry or not.
+    expect(decideAdapt(classes4(attackers(2)), dry, single).some(a => a.kind === 'retreat')).toBe(false);
+});
+
+test('a lone attacker of any style is met with the protect prayer and no retreat, dry or not', () => {
+    const dry = squad4.map(m => ({ ...m, prayer: 0 }));
+    for (const members of [squad4, dry]) {
+        const actions = decideAdapt(classes4([near('Mage')]), members, { outclasses, multiAt: () => false });
+        expect(actions.some(a => a.kind === 'retreat')).toBe(false);
+        expect(actions.filter(a => a.kind === 'protect')).toHaveLength(4);
+    }
 });
 
 test('no danger, no action; the log line holds the record', () => {

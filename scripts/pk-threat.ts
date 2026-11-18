@@ -83,7 +83,7 @@ export class ThreatWatch {
     // The members now in the Wilderness, from the sessions that are logged in.
     private members(): { sessions: Session[]; members: Member[] } {
         const sessions = this.o.sessions().filter(s => { const p = s.sdk.getState()?.player; return !!p && !p.isDead && wildLevel(p.worldX, p.worldZ) > 0; });
-        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel }; }) };
+        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: s.sdk.getState()!.prayers?.prayerPoints }; }) };
     }
 
     // The threats, their classes and the decisions of this tick. One reading for the squad each tick, whichever member asks.

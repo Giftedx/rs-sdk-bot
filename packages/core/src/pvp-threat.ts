@@ -16,7 +16,8 @@ export interface Sighting {
     // The member of ours that this player is fighting now, from the client's combat target, or null.
     targeting?: string | null;
 }
-export interface Member { name: string; x: number; z: number; combat: number }
+// `prayer`: the prayer points now (undefined when not known: counts as some left).
+export interface Member { name: string; x: number; z: number; combat: number; prayer?: number }
 
 export interface ThreatRecord {
     name: string; combat: number; tick: number; x: number; z: number; wild: number; multi: boolean; inView: boolean;
@@ -120,6 +121,8 @@ export type Adapt =
 export interface DecideOptions {
     // A threat of this many dangerous players at once is a team (default 3, as pk-roam PILE_SIZE).
     teamSize?: number;
+    // Attackers at once that outnumber the squad: at least `max(teamSize, members + outnumberedBy)` (default outnumberedBy 1: a squad of four meets five). Single-way ground does not help against them, so the squad leaves.
+    outnumberedBy?: number;
     outclasses: (me: Member, them: ThreatRecord) => boolean;
     // Whether a tile is multi-way. A team on a single-way tile is held there: one attacker at a time can hit each member (pvp_combat.rs2:103-133).
     multiAt?: (x: number, z: number) => boolean;
@@ -142,6 +145,8 @@ export const threatLine = (c: ThreatClass) => {
 // What the squad does about the threats now, in priority order: retreat, single-way, protect, kit. Each action names its
 // reason, which holds the record of the player that caused it.
 //  - A player that outclasses the strongest member: retreat.
+//  - Attackers at once that outnumber the squad (members + 1, at least a team): retreat, on single-way ground too.
+//  - A team and no prayer points in the squad: retreat at once, on single-way ground too.
 //  - Three or more unexpected dangerous players (a team): on a multi-way tile, go to the nearest single-way tile, or retreat when none is known;
 //    on a single-way tile, hold it (the game lets one attacker at a time on each member).
 //  - Each member that a dangerous player can hit: the protect prayer of its style, and the armour swap that counters it.
@@ -152,10 +157,14 @@ export function decideAdapt(classes: readonly ThreatClass[], members: readonly M
     const strongest = [...members].sort((a, b) => b.combat - a.combat)[0]!;
     const unexpected = danger.filter(c => !o.expected?.has(c.record.name.toLowerCase()));
     const outclassing = unexpected.find(c => o.outclasses(strongest, c.record));
+    const outnumbered = unexpected.length >= Math.max(team, members.length + (o.outnumberedBy ?? 1));
+    const noPrayer = members.every(m => m.prayer !== undefined && m.prayer <= 0);
     const centre = { x: Math.round(members.reduce((n, m) => n + m.x, 0) / members.length), z: Math.round(members.reduce((n, m) => n + m.z, 0) / members.length) };
     const squadMulti = o.multiAt ? members.some(m => o.multiAt!(m.x, m.z)) : true;
     const names = (cs: readonly ThreatClass[]) => cs.slice(0, 3).map(c => `${c.record.name}(${c.record.combat},${c.style})`).join(', ');
     if (outclassing) actions.push({ kind: 'retreat', reason: `outclassed by ${names([outclassing])} at ${outclassing.record.nearest.dist} tiles` });
+    else if (outnumbered) actions.push({ kind: 'retreat', reason: `outnumbered: ${unexpected.length} attackers against ${members.length} members: ${names(unexpected)}` });
+    else if (unexpected.length >= team && noPrayer) actions.push({ kind: 'retreat', reason: `team of ${unexpected.length} and no prayer points: ${names(unexpected)}` });
     else if (unexpected.length >= team && squadMulti) {
         const to = o.singleWayFrom?.(centre) ?? null;
         actions.push(to ? { kind: 'single-way', to, reason: `team of ${unexpected.length}: ${names(unexpected)}` } : { kind: 'retreat', reason: `team of ${unexpected.length}: ${names(unexpected)}, no single-way tile known` });
