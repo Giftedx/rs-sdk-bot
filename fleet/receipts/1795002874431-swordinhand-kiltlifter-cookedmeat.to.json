@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795002874431-swordinhand-kiltlifter-cookedmeat",
  "account": "Kiltlifter",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Cooked meat",
  "requested": 3,
  "claim": "9153b9e2-ebe8-4a95-8494-211535694672",
- "count": 0,
- "ok": false,
- "at": 1795002984722,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795003079619,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795003078807
+ },
+ "logout": {
+  "attemptId": "1795002984731-0000005628-0000000001",
+  "at": 1795003079570,
+  "sha256": "4f5a1b7c35e6f768cb44bf786691c78fcd535c313f1e05153c3edca6aaa9180c"
+ },
+ "screen": true
 }
