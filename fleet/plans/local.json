@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794975039379,
+ "at": 1794975640239,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -209,6 +209,32 @@
    ]
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "mmthv2350",
    "script": "scripts/chain.ts",
    "args": [
@@ -328,33 +354,6 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/ranged-train.ts",
-   "args": [
-    "99",
-    "1500"
-   ],
-   "env": {
-    "TARGET_LEVEL": "99",
-    "FOOD": "3",
-    "AMMO": "100",
-    "MAX_TRIPS": "50",
-    "COIN_RESERVE": "0",
-    "MAX_SPEND": "55000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "local",
-   "resources": [
-    "pen:3229,3298",
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Porksword",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -408,28 +407,29 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
+   "account": "Woodpecker",
+   "script": "scripts/ranged-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99",
+    "1500"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "TARGET_LEVEL": "99",
+    "FOOD": "3",
+    "AMMO": "100",
+    "MAX_TRIPS": "50",
+    "COIN_RESERVE": "0",
+    "MAX_SPEND": "55000"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "goal": "train Ranged to 99 with the fastest qualified current-kit route",
    "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "template": "army-trooper-ranged-99",
    "autopilot": "local",
    "resources": [
+    "pen:3229,3298",
     "trooper:battlefield"
    ]
   }
