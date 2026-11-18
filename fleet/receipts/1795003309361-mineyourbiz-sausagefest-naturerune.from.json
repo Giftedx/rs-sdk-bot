@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795003309361-mineyourbiz-sausagefest-naturerune",
+ "account": "MineYourBiz",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 44,
+ "claim": "ded080f0-4ec6-4de4-8c9c-948810075246",
+ "count": 0,
+ "ok": false,
+ "at": 1795003505685,
+ "detail": "trade claimed"
+}
