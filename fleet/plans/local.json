@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794968595985,
+ "at": 1794968763062,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -358,32 +358,6 @@
    "autopilot": "local",
    "resources": [
     "pen:3229,3298",
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
     "trooper:battlefield"
    ]
   },
