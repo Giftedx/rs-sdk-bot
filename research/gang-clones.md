@@ -419,6 +419,31 @@ The poison in the content:
   and a logout do not: the timer starts again at login (`poison.rs2:69-70`). A dose also gives 5 timer turns with
   no poison, 150 ticks.
 
+### The rune throwing axe special
+
+Five of ours in the bind kit, with the axe stack in place of one shark (`live-walker-iron-rune-chain-bind-axe`,
+`PK_AXE=1`), against the same five with the dagger special. Hosted runs 44401683105 (control) and 44403565131 (axe),
+seeds 1, 2 and 3. `spec1` fires the special from the first health bar; the squad default waits for a target at 45%
+Hitpoints or less. The axe special costs 10% energy and chains onto up to 4 more players on multi-way tiles
+(`pvp_rune_thrownaxe.rs2`).
+
+| Special | Kills | Deaths of ours | Hitpoints lost a kill | Times 1.35 | Ticks a run | Kills an hour | Hitpoints lost by seed |
+|---|---|---|---|---|---|---|---|
+| dagger, default | 9 of 9 | 0 | 17 | 23 | 477 | 16.6 | 38, 33, 79 |
+| dagger, `spec1` | 9 of 9 | 0 | 12 | 16 | 466 | 16.7 | 38, 27, 45 |
+| axe, default | 8 of 9 | 0 | 37 | 50 | 615 | 13.6 | 90, 79, 124 |
+| axe, `spec1` | 6 of 9 | 0 | 63 | 85 | 647 | 10.0 | 148, 120, 107 |
+
+In the axe runs the axe special went out 156 and 165 times, and the dagger special 82 and 86 times (the bow turns
+and a plain melee turn use the other weapons). In the first run of the axe cases the squad kit held no axe, and the
+special was the dagger's: `kitFrom` (`scripts/pk-roam.ts`) builds the squad kit from the items of the account, and
+takes the axe only with `PK_AXE=1`.
+
+The axe special does not beat the dagger special against the clones at the multi-way post: it kills fewer and loses
+more Hitpoints in each seed. A throw is a ranged roll that the clones meet with Protect from Missiles when they have
+seen a bow, and one dagger special is two hits. The chain adds hits only when a second gang account stands within 3
+tiles of the first target on a multi-way tile.
+
 ### The winner
 
 `scripts/pk-gang-record/squad-candidate.json`: five of ours in the kit rule `gang-chain-bind`, three strung bows or
