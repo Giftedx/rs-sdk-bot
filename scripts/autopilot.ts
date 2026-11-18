@@ -41,6 +41,7 @@ import { kitSkills, levelsBeforeRoute } from './pk-kits';
 import { createAutopilotProgression } from './autopilot-progression';
 import { accountFromStatus } from '../packages/planner/src/progression-catalog';
 import {boundAccounts,type AccountBindingState} from '../packages/core/src/coordinator-accounts';
+import { COORDINATOR_JOBS_FILE } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -493,8 +494,15 @@ export function jobRate(x: Pick<Assignment, 'template' | 'value'>): string {
     return t?.tier === 'goal' ? `band ${t.band ?? 0}` : t?.family === 'kit-buy' ? 'kit buy' : `${x.value.toFixed(2)}/tick`;
 }
 
-export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
+// The write step of a pass: `unchanged` is true while the files that the plan came from hold the text that the plan read.
+export interface PassWrite { unchanged(): boolean; write(): string[] }
+// With `defer`, a pass that has something to write does not write: it gives its write step to `defer` (lockedPass).
+export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, defer?: (step: PassWrite) => void): string[] {
     if (!dry && isPaused()) return [PAUSED];
+    // The files that other writers change under the plan lock, and this side's planner state, as text before the plan reads them.
+    const inputFiles = [planFile, join(root, COORDINATOR_JOBS_FILE), join(prac, 'autopilot', `${mySide()}.json`)];
+    const inputText = (f: string) => { try { return readFileSync(f, 'utf8'); } catch { return null; } };
+    const inputBefore = inputFiles.map(inputText);
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
     const stateFile = join(prac, 'autopilot', `${side}.json`), state = loadState(side);
@@ -682,27 +690,49 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         log.push(`AUTOPILOT ${fresh.includes(x.account) ? 'assign' : 'keep'} ${x.account} ${x.template.id} ${jobRate(x)} ${x.reason}`);
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
-    if (isPaused()) return [PAUSED];
-    writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
-    if (heldResources(swarm.jobs) !== heldResources(jobs)) log.push(CLAIM_CHANGED);
-    // The controller's own stop file goes once this pass hands the account work (a job, new or kept, or a coin order
-    // the fleet agent will log it in for) and the account is offline: a run still ending on that file must find it. A
-    // kept job counts: the pass that assigns a job may find the last run still ending, and every later pass keeps it
-    // (live: an account stood 40 minutes behind such a file, its job enabled and never started).
-    const handed = handedAccounts(out, funding.orders);
-    for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
-        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
-        if (!clearSwarmStop(join(prac, 'stop-'+n))) continue;
-        log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
-    }
-    mkdirSync(join(prac, 'autopilot'), { recursive: true });
-    writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
-    mkdirSync(join(prac,'progression-system'),{recursive:true});
-    writeAtomic(join(prac,'progression-system',`fleet-${side}.json`),JSON.stringify({version:1,side,at:now,decisions:progression.decisions(),requests:refined.requests,gaps:refined.gaps,reservations:refined.reservations,search:refined.search},null,1)+'\n');
-    if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
-    for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
+    const write = (): string[] => {
+        if (isPaused()) return [PAUSED];
+        writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
+        if (heldResources(swarm.jobs) !== heldResources(jobs)) log.push(CLAIM_CHANGED);
+        // The controller's own stop file goes once this pass hands the account work (a job, new or kept, or a coin order
+        // the fleet agent will log it in for) and the account is offline: a run still ending on that file must find it. A
+        // kept job counts: the pass that assigns a job may find the last run still ending, and every later pass keeps it
+        // (live: an account stood 40 minutes behind such a file, its job enabled and never started).
+        const handed = handedAccounts(out, funding.orders);
+        for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
+            const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
+            if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
+            if (!clearSwarmStop(join(prac, 'stop-'+n))) continue;
+            log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
+        }
+        mkdirSync(join(prac, 'autopilot'), { recursive: true });
+        writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
+        mkdirSync(join(prac,'progression-system'),{recursive:true});
+        writeAtomic(join(prac,'progression-system',`fleet-${side}.json`),JSON.stringify({version:1,side,at:now,decisions:progression.decisions(),requests:refined.requests,gaps:refined.gaps,reservations:refined.reservations,search:refined.search},null,1)+'\n');
+        if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
+        for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
+        return log;
+    };
+    if (!defer) return write();
+    defer({ unchanged: () => inputFiles.every((f, i) => inputText(f) === inputBefore[i]), write });
     return log;
+}
+
+// One planning pass. The plan is made with no lock. On the live state a plan takes longer than the 15 s that another
+// writer waits for the plan lock (packages/core/src/plan-lock.ts), and a coordinator start ended on that wait. The lock
+// is held only to compare the files that the plan read with the files on disk, and to write. A changed file means that
+// another writer got the lock after the plan read it, so the pass plans again from the new files.
+export const PLAN_ATTEMPTS = 3;
+export async function lockedPass(planFile: string, dry: boolean, lock: <T>(action: () => T) => Promise<T>, isPaused = swarmPaused): Promise<string[]> {
+    for (let attempt = 1; ; attempt++) {
+        let step: PassWrite | undefined;
+        const lines = pass(planFile, dry, isPaused, s => { step = s; });
+        if (!step) return lines;
+        const write = step;
+        const written = await lock(() => write.unchanged() ? write.write() : null);
+        if (written) return written;
+        if (attempt >= PLAN_ATTEMPTS) return [`AUTOPILOT hold: another writer changed the account plan during each of ${PLAN_ATTEMPTS} plans`];
+    }
 }
 
 // The assignments (account, template and log offset) whose trainer reached its target. A pass that re-plans the account
@@ -729,8 +759,9 @@ export function trainersDone(planFile: string): string[] {
 
 if (import.meta.main) {
     const args = process.argv.slice(2), planFile = resolve(args.find(a => !a.startsWith('--')) ?? join(root, 'swarm.json'));
-    // The whole pass runs under the account-plan lock: the coordinator installs jobs into its overlay under the same lock.
-    // The timer and the trainer check share one pass at a time: a second call joins the pass in flight.
+    // The write step of a pass runs under the account-plan lock (lockedPass): the coordinator installs jobs into its
+    // overlay under the same lock. The timer and the trainer check share one pass at a time: a second call joins the
+    // pass in flight.
     const dry = args.includes('--dry');
     let inFlight: Promise<'applied' | 'held' | 'failed'> | null = null;
     const hold = () => {
@@ -742,7 +773,7 @@ if (import.meta.main) {
         if (!dry && swarmPaused()) return Promise.resolve(hold());
         return inFlight ??= (async () => {
             try {
-                const lines = await withPlanWrite(() => pass(planFile, dry), join(prac, 'coordinator'));
+                const lines = await lockedPass(planFile, dry, action => withPlanWrite(action, join(prac, 'coordinator')));
                 if (lines[0] === PAUSED) return hold();
                 console.log(lines.join('\n'));
                 // Outside the plan lock: fleet-sync takes the fleet-data write lock, so it queues behind the agent's sync.

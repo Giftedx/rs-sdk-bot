@@ -57,10 +57,21 @@ export function currentRevision(now=Date.now(),compute=cachedLaunchRevision):str
  return revisionCache.value;
 }
 // The start step archives a dead writer's lock before it takes the lock: a crash can leave one, and the tick that
-// recovers locks runs only after this step.
-export async function migrateJobsAtStart(base=projectRoot){
- const directory=join(base,'.practice/coordinator');recoverPlanWrite(directory);
- return withPlanWrite(()=>migrateCoordinatorJobs(base),directory);
+// recovers locks runs only after this step. A live writer can hold the lock for longer than one wait. An exit then
+// leaves the fleet with no coordinator until the next watchdog pass, so the start step waits again, for
+// START_PLAN_WAIT_MS at most.
+export const START_PLAN_WAIT_MS=5*60_000;
+export async function migrateJobsAtStart(base=projectRoot,waitMs=START_PLAN_WAIT_MS,attemptMs=15000,
+ note:(line:string)=>void=line=>console.error(line)){
+ const directory=join(base,'.practice/coordinator'),deadline=Date.now()+waitMs;
+ for(;;){
+  recoverPlanWrite(directory);
+  try{return await withPlanWrite(()=>migrateCoordinatorJobs(base),directory,attemptMs);}
+  catch(error){
+   if(!String(error).includes('account plan writer waits for its existing owner')||Date.now()>=deadline)throw error;
+   note(`coordinator start: ${String(error)}; waits again for ${Math.max(0,Math.round((deadline-Date.now())/1000))} s at most`);
+  }
+ }
 }
 // Coordinator-owned jobs and settings written into swarm.json by an earlier coordinator move to the coordinator's
 // file; the owner's jobs keep their order. Returns what moved, or null when swarm.json holds none.
