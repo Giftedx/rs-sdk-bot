@@ -1,5 +1,5 @@
 import { beforeAll, expect, test } from 'bun:test';
-import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, freeRunesFromEquipment, packSpell, pickSplashTarget, prepareSplashStaffAtBank, runSplash, splashBatchDone, splashDebuffSpells, splashPlan, splashSite, splashSpell } from './splash-train';
+import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, bankedSplashSpells, castReaches, freeRunesFromEquipment, packSpell, pickSplashTarget, prepareSplashStaffAtBank, runSplash, splashBatchDone, splashDebuffSpells, splashPlan, splashSite, splashSpell } from './splash-train';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { SPLASH_KIT, SPLASH_TO } from '../packages/planner/src/autopilot';
 import { loadPathfinding } from '../packages/core/src/pathcache';
@@ -213,19 +213,15 @@ test('prepareSplashStaffAtBank equips best covering bank staff or buys Staff of 
     }
 });
 
-test('runSplash captures east-side start before walking to Ardougne, buys Zaff Staff of earth, equips it, and withdraws 0 Earth runes', async () => {
+// A fake session at a bank: it records the walks and the withdrawals, and it notes the pack and the bank when the
+// run closes the Ardougne bank. `closed()` then stops the run before its first cast.
+function bankedSplashFixture(magic: number, bank: any[], start = { worldX: 3185, worldZ: 3436 }) {
     let tick = 0, bankOpen = false, shopOpen = false, gen = 1, closedAtBankCount = 0;
     const listeners = new Set<() => void>();
     const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 2);
-    const player = { worldX: 3185, worldZ: 3436, level: 0 };
+    const player = { ...start, level: 0 };
     const inv: any[] = [];
     const eq: any[] = [];
-    const bank: any[] = [
-        { id: 995, name: 'Coins', count: 2500, slot: 0 },
-        { id: BODY, name: 'Body rune', count: 135, slot: 1 },
-        { id: WATER, name: 'Water rune', count: 270, slot: 2 },
-        { id: EARTH, name: 'Earth rune', count: 405, slot: 3 },
-    ];
     const shopItems = [{ id: 1385, name: 'Staff of earth', count: 2, buyPrice: 1500, slot: 0 }];
     const walks: string[] = [];
     const withdraws: { id: number; n: number; worldX: number }[] = [];
@@ -254,11 +250,11 @@ test('runSplash captures east-side start before walking to Ardougne, buys Zaff S
             getInventory: () => inv,
             getEquipment: () => eq,
             getSkill: (n: string) => {
-                if (n === 'Magic') return { level: 21, baseLevel: 21 };
+                if (n === 'Magic') return { level: magic, baseLevel: magic };
                 if (n === 'Hitpoints') return { level: 10, baseLevel: 10 };
                 return { level: 1, baseLevel: 1 };
             },
-            getSkillXp: (n: string) => (n === 'Magic' ? xpForLevel(21) : 0),
+            getSkillXp: (n: string) => (n === 'Magic' ? xpForLevel(magic) : 0),
         },
         bot: {
             openBank: async () => { bankOpen = true; gen++; return { success: true }; },
@@ -312,28 +308,48 @@ test('runSplash captures east-side start before walking to Ardougne, buys Zaff S
         },
     };
 
+    const walkTo = async (spot: { x: number; z: number }) => { walks.push(`${spot.x},${spot.z}`); player.worldX = spot.x; player.worldZ = spot.z; return true; };
+    return { s, eq, bank, walks, withdraws, walkTo, closed: () => closedAtBankCount > 0, atStart: () => ({ inv: invAtCombatStart, bank: bankAtCombatStart }), end: () => clearInterval(timer) };
+}
+
+test('runSplash captures east-side start before walking to Ardougne, buys Zaff Staff of earth, equips it, and withdraws 0 Earth runes', async () => {
+    const f = bankedSplashFixture(21, [
+        { id: 995, name: 'Coins', count: 2500, slot: 0 },
+        { id: BODY, name: 'Body rune', count: 135, slot: 1 },
+        { id: WATER, name: 'Water rune', count: 270, slot: 2 },
+        { id: EARTH, name: 'Earth rune', count: 405, slot: 3 },
+    ]);
     try {
-        const res = await runSplash(s, {
-            target: 66,
-            cap: 500,
-            stop: () => closedAtBankCount > 0,
-            walkTo: async spot => {
-                walks.push(`${spot.x},${spot.z}`);
-                player.worldX = spot.x;
-                player.worldZ = spot.z;
-                return true;
-            },
-        });
+        const res = await runSplash(f.s, { target: 66, cap: 500, stop: f.closed, walkTo: f.walkTo });
         expect(res.stop).toBe('stopped');
-        expect(walks).toEqual(['3203,3433', '3185,3436', '2619,3332']);
-        expect(eq[0]?.id).toBe(1385);
-        expect(invAtCombatStart.find(i => i.id === BODY)?.count).toBe(135);
-        expect(invAtCombatStart.find(i => i.id === WATER)?.count).toBe(270);
-        expect(invAtCombatStart.find(i => i.id === EARTH)).toBeUndefined();
-        expect(bankAtCombatStart.find(i => i.id === EARTH)?.count).toBe(405);
-        expect(withdraws.some(w => w.id === EARTH)).toBe(false);
-        expect(bank.find(i => i.id === 995)?.count).toBe(1000);
-    } finally {
-        clearInterval(timer);
-    }
+        expect(f.walks).toEqual(['3203,3433', '3185,3436', '2619,3332']);
+        expect(f.eq[0]?.id).toBe(1385);
+        expect(f.atStart().inv.find(i => i.id === BODY)?.count).toBe(135);
+        expect(f.atStart().inv.find(i => i.id === WATER)?.count).toBe(270);
+        expect(f.atStart().inv.find(i => i.id === EARTH)).toBeUndefined();
+        expect(f.atStart().bank.find(i => i.id === EARTH)?.count).toBe(405);
+        expect(f.withdraws.some(w => w.id === EARTH)).toBe(false);
+        expect(f.bank.find(i => i.id === 995)?.count).toBe(1000);
+    } finally { f.end(); }
+});
+
+test('a banked run under Magic 3 casts Wind Strike with its mind and air runes; with none it stops for supplies', async () => {
+    // The planner's kit for a new account (autopilot.ts army-splash-magic-66): two strikes, then the stat spells.
+    const kit = () => [{ id: MIND, name: 'Mind rune', count: 2, slot: 0 }, { id: AIR, name: 'Air rune', count: 2, slot: 1 },
+        { id: BODY, name: 'Body rune', count: 10, slot: 2 }, { id: WATER, name: 'Water rune', count: 30, slot: 3 }, { id: EARTH, name: 'Earth rune', count: 30, slot: 4 }];
+    const f = bankedSplashFixture(1, kit(), { worldX: 2619, worldZ: 3332 });
+    try {
+        const res = await runSplash(f.s, { target: 66, cap: 500, stop: f.closed, walkTo: f.walkTo });
+        expect(f.atStart().inv.find(i => i.id === MIND)?.count).toBe(2);
+        expect(f.atStart().inv.find(i => i.id === AIR)?.count).toBe(2);
+        expect(res.stop).toBe('stopped');
+    } finally { f.end(); }
+    const none = bankedSplashFixture(1, kit().filter(i => i.id !== MIND), { worldX: 2619, worldZ: 3332 });
+    try { expect((await runSplash(none.s, { target: 66, cap: 500, stop: none.closed, walkTo: none.walkTo })).stop).toBe('supplies'); } finally { none.end(); }
+    expect(bankedSplashSpells(1, [{ id: MIND, count: 2 }, { id: AIR, count: 2 }]).map(s => s.component)).toEqual(['magic:wind_strike']);
+    expect(bankedSplashSpells(2, [{ id: MIND, count: 1 }])).toEqual([]);
+    // From Magic 3 the banked run casts only the stat spells: leftover strike runes do not keep it at the fence.
+    expect(bankedSplashSpells(3, [{ id: MIND, count: 2 }, { id: AIR, count: 2 }])).toEqual([]);
+    expect(bankedSplashSpells(11, [{ id: BODY, count: 1 }, { id: WATER, count: 3 }, { id: EARTH, count: 3 }, { id: MIND, count: 2 }, { id: AIR, count: 2 }]).map(s => s.component))
+        .toEqual(['magic:weaken', 'magic:confuse']);
 });
