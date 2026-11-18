@@ -38,7 +38,7 @@
 // Usage: bun packages/router/src/live-update.ts [--dry]   Env: LIVE_UPDATE=0 turns it off. .practice/stop-live-update pauses it.
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { writeLiveUpdate, type LiveUpdateMark } from '../../core/src/live-reload';
 import { releaseEntries, runtimeTrees, standingAccounts, standingPeer, workerSourceRoots } from '../../core/src/worker-release';
@@ -53,7 +53,8 @@ export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean; m
 // `qualifications`: the running qualifications (`qualification <id> runs`); they hold only an update that changes a
 // file they can check (qualificationSource).
 export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[]; qualifications?: readonly string[]; liveRuns?: readonly LiveRun[]; vendorRelease?: readonly string[] };
-export type LiveRun = { name: string; files: readonly string[] };
+// `unknown`: the entry of the run gives no file here, so the files that the run loads are not known.
+export type LiveRun = { name: string; files: readonly string[]; unknown?: true };
 export type UpdatePlan = { action: 'none' | 'wait'; reason: string } | { action: 'update'; adopt: Dirty[] };
 
 const MANIFEST = /(?:^|\/)(?:package\.json|bun\.lock|bunfig\.toml|tsconfig\.json)$/;
@@ -72,6 +73,7 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
     const owned = i.heldFiles.filter(f => incoming.has(f));
     if (owned.length) return { action: 'wait', reason: `a running build owns ${few(owned)}` };
     for (const run of i.liveRuns ?? []) {
+        if (run.unknown) return { action: 'wait', reason: `the live run of ${run.name} has an entry that this checkout cannot read: its files are not known` };
         const loaded = run.files.filter(f => incoming.has(f));
         if (loaded.length) return { action: 'wait', reason: `the live run of ${run.name} loads ${few(loaded)}` };
     }
@@ -450,10 +452,19 @@ export function liveRuns(root: string, server: string, closure: (entries: string
         if (!file.endsWith('.json')) continue;
         let row: any; try { row = JSON.parse(readFileSync(join(dir, file), 'utf8')); } catch { continue; }
         if (row?.server !== server || row.result || !Number.isFinite(row.at) || now - row.at >= LIVE_ROW_MS || standingPeer(row, owners)) continue;
-        runs.push({ name: String(row.name), files: closure(releaseEntries(row.workEntry)) });
+        // An entry as a path from the checkout root with forward slashes, the form of the changed files. The fleet agent
+        // gives its trade workers the absolute path of scripts/fleet-trade.ts, and the closure of an absolute path was
+        // empty: an update moved the release under two trade sessions at the meet, and both ended with nothing traded.
+        const entries = releaseEntries(row.workEntry).map(entry => relative(resolve(root), resolve(root, entry)).replaceAll('\\', '/'));
+        // A trade session ends with its order window (40 minutes, scripts/autopilot.ts). One that still writes its
+        // status TRADE_HOLD_MS after its start is stuck, and it does not hold the update.
+        if (entries.includes(TRADE_ENTRY) && Number.isFinite(row.started) && now - row.started >= TRADE_HOLD_MS) continue;
+        const files = closure(entries);
+        runs.push({ name: String(row.name), files, ...(entries.length && !files.length ? { unknown: true as const } : {}) });
     }
     return runs;
 }
+export const TRADE_ENTRY = 'scripts/fleet-trade.ts', TRADE_HOLD_MS = 45 * 60_000;
 // A live session rewrites its status every few seconds, and the server drops a lost session after 200 s.
 export const LIVE_ROW_MS = 200_000, LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 
