@@ -17,6 +17,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
 import { defaultSpec, fightPlayer, nextTick, PRAYER, weaponStyle, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
+import { cloneProfileByName } from './pk-gang-clone';
 import { kitOptions, kitSwitches } from './pk-kits';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
@@ -103,7 +104,10 @@ export const SCENARIOS: Readonly<Record<string, { a?: Profile; b?: Profile }>> =
 };
 
 export function sparOptions(name: string, extraJson: string | undefined, kit: Kit, cap: number, scenario: Profile = {}): FightOptions {
-    const profile = PROFILES[name];
+    // A clone of a gang account (clone-goondelf, clone-ligma, clone-sugma, and each with -retreat or -stand) takes its
+    // options from its behaviour record (scripts/pk-gang-clone.ts, research/gang-clones.md). The record is read here,
+    // on the first use of such a name, and by no script that names no clone.
+    const profile = PROFILES[name] ?? (cloneProfileByName(name) as Profile | undefined);
     if (!profile) throw Error(`pk-spar: unknown profile "${name}"; known: ${Object.keys(PROFILES).join(', ')}`);
     const extra = extraJson ? JSON.parse(extraJson) as Profile : {};
     const { specBelow, ...options } = { ...scenario, ...profile, ...extra };

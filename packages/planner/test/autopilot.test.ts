@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
@@ -614,7 +615,7 @@ test('injured trooper entries acquire food while healthy thieves and owned food 
     const template = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
     const templates = [template], market = { trout: { id: 333, name: 'Trout', limit: 100 } }, army = new Set(['archer']);
     const archer = (currentHP: number | undefined, food = 0): Acct => ({
-        ...acct('Archer', { Hitpoints: 99, Ranged: 70, Thieving: 99 }, { shortbow: 1, 'bronze arrow': 100, coin: 100_000, trout: food }), currentHP,
+        ...acct('Archer', { Hitpoints: 99, Defence: 99, Ranged: 70, Thieving: 99 }, { shortbow: 1, 'bronze arrow': 100, coin: 100_000, trout: food }), currentHP,
     });
     const pick = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { templates, army, market, ...extra }))[0]!;
     for (const hp of [29, 50, undefined]) {
@@ -722,13 +723,14 @@ test('kit lines: what an account lacks, the smallest of several kits, and null w
     const band = catalogue().find(t => t.id === 'army-strike-magic-21')!, ranged = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
     expect(kitLacks(acct('A', {}, { 'mind rune': 15, 'air rune': 25 }), band.needs)).toEqual([{ of: ['mind rune'], count: 20 }, { of: ['air rune'], count: 10 }]);
     expect(kitLacks(acct('A', {}, { 'mind rune': 35, 'air rune': 35 }), band.needs)).toEqual([]);
-    // Hitpoints 40 is a level, not a kit line.
-    expect(kitLacks(acct('A', { Hitpoints: 39 }, {}), ranged.needs)).toBeNull();
+    // Hitpoints 40 and Defence 60 are levels, not kit lines.
+    expect(kitLacks(acct('A', { Hitpoints: 39, Defence: 60 }, {}), ranged.needs)).toBeNull();
+    expect(kitLacks(acct('A', { Hitpoints: 40, Defence: 59 }, { shortbow: 1, 'bronze arrow': 500, shark: 20 }), ranged.needs)).toBeNull();
     // A shortbow with 25 bronze arrows is the nearest ranged kit: 75 arrows short, and 10 pieces of food for an account
     // that cannot steal them.
     const stock = ['shark', 'swordfish', 'lobster', 'trout', 'cooked meat', 'bread', 'chocolate slice', 'slice of cake', '2/3 cake', 'cake', 'raw beef'];
-    expect(kitLacks(acct('A', { Hitpoints: 40 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }, { of: stock, count: 10 }]);
-    expect(kitLacks(acct('A', { Hitpoints: 40, Thieving: 5 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }]);
+    expect(kitLacks(acct('A', { Hitpoints: 40, Defence: 60 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }, { of: stock, count: 10 }]);
+    expect(kitLacks(acct('A', { Hitpoints: 40, Defence: 60, Thieving: 5 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }]);
     expect(kitReserve(catalogue())).toMatchObject({ 'mind rune': 35, 'air rune': 50, 'nature rune': 50, feather: 50, bone: 100 });
 });
 
@@ -2687,4 +2689,13 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     expect(reason(acct('Rookie'), [supply('crowded-job', { resources: ['pen:1,1'] })], { taken: { 'pen:1,1': 1 } })).toBe('vacant: crowded-job has no free place on pen:1,1');
     // No demand at all, with no bill.
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
+});
+
+test('a claim authority timeout is a drain, like an unavailable authority', () => {
+    for (const line of ['RESULT fail login: Error: fleet swarm claim authority timed out', 'RESULT fail fleet swarm claim authority timed out chain rounds=1 ok=0 failed=1',
+        'RESULT fail login: Error: fleet swarm claim authority unavailable or changed', 'RESULT fail fleet account claim held by swarm']) {
+        expect([line, DRAIN_RESULT.test(line)]).toEqual([line, true]);
+        expect(assess([line, line])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    }
+    expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
 });
