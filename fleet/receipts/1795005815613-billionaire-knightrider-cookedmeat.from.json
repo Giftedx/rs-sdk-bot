@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795005815613-billionaire-knightrider-cookedmeat",
  "account": "Billionaire",
  "partner": "KnightRider",
@@ -12,6 +12,12 @@
  "claim": "21d0e4ce-3bed-4bcc-bcac-b24dffa92227",
  "count": 0,
  "ok": false,
- "at": 1795005964829,
- "detail": "trade claimed"
+ "at": 1795006078651,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795005964837-0000018436-0000000001",
+  "at": 1795006078640,
+  "sha256": "e0d22b5523da94e94def5c41d8e832b10ddaa4f249c793758ea5a48e5e1d5417"
+ },
+ "screen": false
 }
