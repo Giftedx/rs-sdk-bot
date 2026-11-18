@@ -45,7 +45,8 @@ export function readLine(w: Watch, line: string, now: number, cfg: Pick<Config, 
     const tag = line.match(/^\[([A-Za-z0-9_ -]{1,12})\] (.*)$/), account = tag?.[1] ?? '-', text = tag?.[2] ?? line;
     let m: RegExpMatchArray | null;
     if (/^PK /.test(text) && (!tag || (cfg.accounts && !cfg.accounts.has(account.toLowerCase())))) return null;
-    if ((m = text.match(/^PK kill (\S+)/))) { w.kills++; w.lastKillAt = now; w.killsBy.set(m[1]!, (w.killsBy.get(m[1]!) ?? 0) + 1); return null; }
+    // `PK kill <name> after <n> ticks` is a kill; `PK kill receipt ...` and `PK kill feed ...` are its proof lines.
+    if ((m = text.match(/^PK kill (\S+) after \d+ ticks/))) { w.kills++; w.lastKillAt = now; w.killsBy.set(m[1]!, (w.killsBy.get(m[1]!) ?? 0) + 1); return null; }
     if (/^SQUAD coordinated fallback/.test(text)) { w.fallbacks++; return null; }
     if (/^SQUAD died\b/.test(text) || /^PK died to /.test(text)) { w.deaths++; return { kind: 'death', account, detail: text }; }
     if ((m = text.match(/^SQUAD bank trip: (.*)$/))) return { kind: 'bank-trip', account, detail: m[1]! };

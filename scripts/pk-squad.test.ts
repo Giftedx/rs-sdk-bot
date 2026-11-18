@@ -83,6 +83,16 @@ test('a tick-stalled squad waiter ends even if close hangs while another member 
     expect(stalled.listeners.size).toBe(0);
 });
 
+test('an idle-stalled squad member ends its own session and halts no one', async () => {
+    const idle = rescueSession('idle'), other = rescueSession('other'), halted: string[] = [];
+    const waiting = nextTick(squadWorkSession(idle.raw)), completing = nextTick(squadWorkSession(other.raw));
+    const stopping = stopSquadSession(idle.raw, 'no progress: 900 ticks without xp, items, dialog or a journey', reason => halted.push(reason), 5);
+    other.advance();
+    expect(await Promise.all([waiting, completing, stopping])).toEqual([false, true, undefined]);
+    expect(halted).toEqual([]);
+    expect(idle.listeners.size).toBe(0);
+});
+
 test('account and squad pause files each prevent rescue login and remain in place', async () => {
     for (const file of ['.practice/stop-rescue', '.practice/stop-pk-squad']) {
         const files = new Set([file]), sessions: any[] = [];

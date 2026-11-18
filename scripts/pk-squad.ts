@@ -104,6 +104,14 @@ const cancelSquadWork = (raw: Session, reason: string) => { squadWorkSession(raw
 
 export async function stopSquadSession(raw: Session, reason: string, halt: (reason: string) => void, closeMs = 1000): Promise<void> {
     if (reason === 'died') return;
+    // A member with no progress for the stall limit (no xp, items, dialog or journey: one whose bank trip failed stands
+    // idle at the bank) ends its own session only. The others go on, and the rescue at the end takes the member out
+    // like a dropped one. Live: one idle member halted a squad of four that was killing.
+    if (/^no progress:/.test(reason)) {
+        cancelSquadWork(raw, reason);
+        await closeWithin([raw], closeMs);
+        return;
+    }
     halt(reason);
     if (/^tick stream stalled:/.test(reason)) {
         cancelSquadWork(raw, reason);
@@ -337,7 +345,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     await s.sdk.sendUseItem(food.slot, op.opIndex);
                     for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
                 }
-                const fault = await trip(s);
+                // The first visit, before any fight, is at the pack that the account logged in with: nothing is banked, so
+                // no shark of the pack has to come back from the bank (`fresh`). A restock there asked for the whole pack
+                // again after one meal of the eat-up above.
+                const fault = await trip(s, stats.fights === 0 && stats.trips === 1);
                 const after = me();
                 if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { o.log(`[${s.name}] SQUAD died on a bank trip`); if (await recover()) continue; stats.died = true; break; }
                 if (fault) { o.log(`[${s.name}] SQUAD bank trip: ${fault}`); break; }
