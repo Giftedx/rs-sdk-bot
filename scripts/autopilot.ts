@@ -545,9 +545,19 @@ export function jobRate(x: Pick<Assignment, 'template' | 'value'>): string {
     return t?.tier === 'goal' ? `band ${t.band ?? 0}` : t?.family === 'kit-buy' ? 'kit buy' : `${x.value.toFixed(2)}/tick`;
 }
 
+// Whether this side's planner may give an account a job or take stock and coins from it: the side owns it, and it is no main or
+// specialist account (OFFLINE_GUARDED), no reserved account (the gang squad) and no account that died.
+export function plannerOwns(owners: ReturnType<typeof loadOwners>, side: string, lower: string, reserved: ReadonlySet<string>, died: ReadonlySet<string>): boolean {
+    return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !reserved.has(lower) && !died.has(lower);
+}
+
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
     if (!dry && isPaused()) return [PAUSED];
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
+    // The accounts that the owner reserves (fleet/owners.json `reservation`, the marking that scripts/squad-ready.ts reads too: the
+    // gang squad): no job, no coin or item donor, no roster by rule. A fleet order that gives TO one still runs (the fleet agent logs in
+    // an account with no enabled job), so reserved accounts stay recipients.
+    const reserved = new Set([...owners].filter(([, o]) => o.reservation && o.side === side).map(([n]) => n));
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
     const stateFile = join(prac, 'autopilot', `${side}.json`), state = loadState(side);
     const items: any[] = readJson(join(root, 'knowledge/items.json'), []), byId = new Map(items.map(i => [i.id, i.name]));
@@ -646,7 +656,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     };
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => {
         const lower = n.toLowerCase();
-        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower);
+        return plannerOwns(owners, side, lower, reserved, diedAccounts);
     }), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), now));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
@@ -670,12 +680,12 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const stranded = strandedAccounts(listed, n => readLogoutProof(n, owners.get(n.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev').state);
     const donors = listed.filter(n => {
         const lower = n.toLowerCase();
-        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower) && ![busy, keep, open, stranded].some(s => s.has(lower));
+        return plannerOwns(owners, side, lower, reserved, diedAccounts) && ![busy, keep, open, stranded].some(s => s.has(lower));
     }).map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     // Kit donors: this side's free accounts (the coin donors' rule), then each other side's, on the same server.
     const free = (n: string) => {
         const lower = n.toLowerCase();
-        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower) && ![busy, keep, open, stranded].some(s => s.has(lower));
+        return plannerOwns(owners, side, lower, reserved, diedAccounts) && ![busy, keep, open, stranded].some(s => s.has(lower));
     };
     const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server);return row?[row]:[];});
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
@@ -709,7 +719,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
     const externalLive = activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now);
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, new Set([...owners].filter(([, o]) => o.reservation).map(([n]) => n))), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
                 headroom: memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)) + HYSTERESIS_STARTS * Number(writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
@@ -724,6 +734,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
             lead(s.from,s.to)));
     const out = funding.assignments;
     log.push(...funding.log);
+    for (const n of listedNames.filter(n => reserved.has(n.toLowerCase())).sort()) if (!out.some(x => x.account.toLowerCase() === n.toLowerCase())) log.push(`AUTOPILOT vacant ${n}: reserved for the squad`);
 
     const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, keep);
     for (const x of out) {

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { admittedByLevels } from '../packages/core/src/army-roster';
 import { loadOwners } from '../packages/core/src/fleet';
-import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
@@ -10,7 +10,7 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
@@ -1287,4 +1287,34 @@ test('freeSlots is maxBots less the hand jobs, a host job counting each account'
     const owner = { maxBots: 25, jobs: [] };
     expect(freeSlots(mergedPlan(owner, { jobs: [], coordination: {}, expansion: { over: 25, maxBots: 30 } } as any), jobs, 'local', new Set(['paused']))).toBe(30 - 5);
     expect(freeSlots(mergedPlan(owner, { jobs: [], coordination: {}, expansion: { over: 20, maxBots: 30 } } as any), jobs, 'local', new Set(['paused']))).toBe(25 - 5);
+});
+
+test('plannerOwns refuses a reserved account as donor or job holder, and an unreserved one passes', () => {
+    const owners = new Map([['keeper', { side: 'local', server: 's' }], ['taker', { side: 'local', server: 's' }], ['other', { side: 'cloud', server: 's' }], ['haggis', { side: 'local', server: 's' }]]);
+    const reserved = new Set(['keeper']), died = new Set(['gone']);
+    expect(plannerOwns(owners as any, 'local', 'keeper', reserved, died)).toBe(false);
+    expect(plannerOwns(owners as any, 'local', 'taker', reserved, died)).toBe(true);
+    expect(plannerOwns(owners as any, 'local', 'other', reserved, died)).toBe(false);
+    expect(plannerOwns(owners as any, 'local', 'haggis', reserved, died)).toBe(false);
+    expect(plannerOwns(owners as any, 'local', 'gone', reserved, died)).toBe(false);
+});
+
+test('a reserved account is no donor and gets no job, and the dry pass names it reserved for the squad', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'autopilot-reserved-'));
+    const prevFleet = process.env.FLEET_DIR, prevSide = process.env.FLEET_SIDE;
+    try {
+        mkdirSync(join(dir, 'fleet'), { recursive: true });
+        writeFileSync(join(dir, 'fleet', 'owners.json'), JSON.stringify({ accounts: {
+            Keeper: { side: 'local', server: 'rs-sdk-demo.fly.dev', reservation: 'gang squad' }, Taker: { side: 'local', server: 'rs-sdk-demo.fly.dev' } } }));
+        process.env.FLEET_DIR = join(dir, 'fleet'); process.env.FLEET_SIDE = 'local';
+        const planFile = join(dir, 'swarm.json');
+        writeFileSync(planFile, JSON.stringify({ maxBots: 5, minFreeGB: 0, army: ['Taker'], jobs: [] }));
+        const lines = pass(planFile, true, () => false);
+        expect(lines).toContain('AUTOPILOT vacant Keeper: reserved for the squad');
+        expect(lines.filter(l => /Keeper/.test(l) && /(assign|keep|fund|send) /.test(l))).toEqual([]);
+    } finally {
+        if (prevFleet === undefined) delete process.env.FLEET_DIR; else process.env.FLEET_DIR = prevFleet;
+        if (prevSide === undefined) delete process.env.FLEET_SIDE; else process.env.FLEET_SIDE = prevSide;
+        rmSync(dir, { recursive: true });
+    }
 });
