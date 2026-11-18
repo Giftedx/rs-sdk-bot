@@ -1,10 +1,11 @@
 import {createHash} from 'node:crypto';
 import {readFileSync,readdirSync,existsSync,statSync,mkdirSync,writeFileSync,renameSync} from 'node:fs';
-import {join,resolve,dirname,relative} from 'node:path';
+import {join,resolve,dirname,relative,extname} from 'node:path';
 import type TS from 'typescript';
 import {isLocalServer} from './localserver';
 import {readLogoutProof,listAttempts,type LogoutProof} from './session-lifecycle';
 import {commandLine} from '../../practice/src/proc';
+import {RELEASE_DIGEST_VERSION,releaseFileDigest,runtimeImports} from './release-digest';
 
 const root=resolve(import.meta.dir,'../../..');
 // The TypeScript parser loads on its first use: about 100 MB of working set in each bot and supervisor process. A
@@ -144,7 +145,11 @@ function literalPaths(base:string,file:string,literal:string,memo:ReleaseMemo):{
 function fileLinks(base:string,file:string,memo:ReleaseMemo):{files:string[];dirs:string[]}{
     const key='l:'+file;if(memo.has(key))return memo.get(key) as {files:string[];dirs:string[]};
     const text=readFileSync(join(base,file),'utf8'),files:string[]=[],dirs:string[]=[];
+    // An import that the runtime erases (import type, export type, a type position) loads no file: the file it
+    // names is in the release only when some other file can load it (release-digest.ts runtimeImports).
+    const loaded=runtimeImports(file,text);
     for(const {fileName:spec} of ts.preProcessFile(text,true,true).importedFiles){
+        if(loaded&&!loaded.includes(spec))continue;
         if(spec.startsWith('.'))files.push(...resolveImport(base,file,spec));
         else if(spec.startsWith('@rsbot/'))throw Error('no worker progress: release workspace import unsupported: '+file+' -> '+spec);
     }
@@ -173,13 +178,29 @@ export function releaseFiles(entries:readonly string[],base=root,memo:ReleaseMem
     }
     return [...files].sort();
 }
+// The digest of each file is the digest of its program, not of its bytes (release-digest.ts): a comment, layout or
+// line-ending edit keeps a release, and a Windows and a Linux checkout of one commit give one release.
+// The digests are kept on disk under the hash of the file's bytes, so only a changed file is parsed again.
+const digestStore=(base:string)=>join(base,'.practice','cache','release','digests.json');
 function revisionOf(base:string,files:readonly string[],memo:ReleaseMemo):string{
     const hash=createHash('sha256');
+    let kept=memo.get('digests') as Record<string,string>|undefined,added=false;
+    if(!kept){
+        kept={};
+        try{const disk=JSON.parse(readFileSync(digestStore(base),'utf8'));if(disk?.version===RELEASE_DIGEST_VERSION&&disk.digests&&typeof disk.digests==='object')kept=disk.digests as Record<string,string>;}catch{/* no store yet */}
+        memo.set('digests',kept);
+    }
     for(const p of files){
         const key='d:'+p;let digest=memo.get(key) as string|undefined;
-        if(!digest){digest=createHash('sha256').update(readFileSync(join(base,p))).digest('hex');memo.set(key,digest);}
+        if(!digest){
+            const bytes=readFileSync(join(base,p)),raw=createHash('sha256').update(bytes).digest('hex')+extname(p);
+            digest=kept[raw];
+            if(!digest){digest=kept[raw]=releaseFileDigest(p,bytes,ts);added=true;}
+            memo.set(key,digest);
+        }
         hash.update(p+'\0'+digest+'\0');
     }
+    if(added)try{const file=digestStore(base);mkdirSync(dirname(file),{recursive:true});const tmp=file+'.'+process.pid+'.tmp';writeFileSync(tmp,JSON.stringify({version:RELEASE_DIGEST_VERSION,digests:kept}));renameSync(tmp,file);}catch{/* the store is optional */}
     return hash.digest('hex');
 }
 export function releaseRevision(entries:readonly string[],base=root,memo:ReleaseMemo=new Map()):string{
@@ -215,7 +236,7 @@ const releaseByEntries=new Map<string,{files:string[];stamp:string;value:string}
 export const forgetReleaseMemory=()=>releaseByEntries.clear();
 const releaseCacheFile=(base:string,key:string)=>join(base,'.practice','cache','release',createHash('sha256').update(key).digest('hex').slice(0,32)+'.json');
 export function cachedReleaseFor(entries:readonly string[],base=root):string{
-    const fullEntries=entries.length?[...entries,...workerLaunchers]:launchEntries,key=JSON.stringify([resolve(base),fullEntries]);
+    const fullEntries=entries.length?[...entries,...workerLaunchers]:launchEntries,key=JSON.stringify([resolve(base),fullEntries,RELEASE_DIGEST_VERSION]);
     const hit=releaseByEntries.get(key);
     if(hit)try{if(releaseStamp(base,hit.files)===hit.stamp)return hit.value;}catch{/* a missing file recomputes */}
     const file=releaseCacheFile(base,key);
