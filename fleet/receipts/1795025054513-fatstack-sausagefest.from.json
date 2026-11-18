@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795025054513-fatstack-sausagefest",
+ "account": "Fatstack",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 63029,
+ "claim": "568314f0-0220-4860-a097-27f09a77da60",
+ "count": 63029,
+ "ok": true,
+ "at": 1795025138303,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 63029,
+  "after": 0
+ },
+ "bank": {
+  "count": 63029,
+  "at": 1795025125135
+ },
+ "logout": {
+  "attemptId": "1795025117362-0000005252-0000000001",
+  "at": 1795025138295,
+  "sha256": "cb62adb0f36582af039e60a25d53f7699e726ea6c1b738b6d1fcc4358c915c27"
+ },
+ "screen": true
+}
