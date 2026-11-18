@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795008125130,
+ "at": 1795008279574,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -243,6 +243,24 @@
    ]
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=35 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit10-532-6to41 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 35 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -445,24 +463,6 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=35 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit10-532-6to41 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 35 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Sausagefest",
    "script": "scripts/chain.ts",
    "args": [
@@ -501,7 +501,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-6e963588-9b3d-4591-8941-609edf0210ee"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-bow-trooper-ranged80-cap-retry [task-6e963588-9b3d-4591-8941-609edf0210ee]",
    "role": "helper"
