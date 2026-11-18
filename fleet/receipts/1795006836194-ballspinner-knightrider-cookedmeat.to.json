@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795006836194-ballspinner-knightrider-cookedmeat",
+ "account": "KnightRider",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "12bddf4c-64ed-4d15-ae68-a2f5486bdb84",
+ "count": 0,
+ "ok": false,
+ "at": 1795007186191,
+ "detail": "fled at low hitpoints: flee_guard id=378 at=3024,3206 ticks=5",
+ "logout": {
+  "attemptId": "1795007178404-0000020596-0000000001",
+  "at": 1795007186178,
+  "sha256": "c9150c2b0611546d648bb501a0e3dbe8f86a2ec5442efc20dba663e338a51b1d"
+ },
+ "screen": false
+}

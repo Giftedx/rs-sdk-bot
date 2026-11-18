@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795007105950-wandwaver-sausagefest-naturerune",
+ "account": "Sausagefest",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 37,
+ "claim": "fab0dd45-f515-4e4e-be44-310f2be06013",
+ "count": 0,
+ "ok": false,
+ "at": 1795007182085,
+ "detail": "trade claimed"
+}

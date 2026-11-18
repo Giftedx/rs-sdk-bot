@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795006985927-fatstack-moneyshot-naturerune",
+ "account": "Fatstack",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 22,
+ "claim": "042c520a-967f-4b64-8e5b-49381e8e072d",
+ "count": 0,
+ "ok": false,
+ "at": 1795007170366,
+ "detail": "trade claimed"
+}
