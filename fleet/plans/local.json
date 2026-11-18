@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795006225640,
+ "at": 1795006342966,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -339,26 +339,26 @@
    "account": "Woodpecker",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
     "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Ranged to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-trooper-ranged-99",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   },
   {
