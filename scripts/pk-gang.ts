@@ -333,11 +333,14 @@ if (import.meta.main) {
     // The gang side may name one kit for each account of a group: <ours>:<kit>+<kit>+<kit> (the army: one spear).
     const [kitA, kitList] = (env.SPAR_KITS ?? '').split(',')[0]!.split(':');
     const gangKits = (kitList ?? '').split('+'), kitB = gangKits[0];
+    // SPAR_B_PROFILES names one profile for each account of a gang (a+b+c) in place of SPAR_B: the clones of the dagger
+    // gang (scripts/pk-gang-clone.ts) differ by account.
+    const gangProfiles = (env.SPAR_B_PROFILES ?? '').split('+').filter(Boolean);
     const options = (side: 0 | 1, group: number, member = 0): FightOptions => {
         const kit = side === 0 ? kitA : gangKits[member % gangKits.length] || undefined;
         // A random style choice (mixStyles) repeats with the bench seed, as in the spar.
         const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + group * 2 + side };
-        return { ...sparOptions(side === 0 ? nameA : nameB, side === 0 ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}), ...seed };
+        return { ...sparOptions(side === 0 ? nameA : gangProfiles[member % Math.max(1, gangProfiles.length)] ?? nameB, side === 0 ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}), ...seed };
     };
     // A death is an expected end here, so it must not end the run as openBot does by default; any other stop halts
     // every side and fails the run.
@@ -389,9 +392,21 @@ if (import.meta.main) {
     // SPAR_PICKUP=1: after each kill our account takes what lies within 3 tiles: its own ammo (read before the meeting)
     // and PICKUP_ITEMS. A drop lasts 200 ticks (lootdrop.constant), less than a meeting, so the end of one is too late.
     const pickupOf = groups.map(([a]) => { const ammo = (a!.sdk.getEquipment?.() ?? []).find(e => /arrow|bolt/i.test(e.name))?.id; return pickup ? new Set([...(ammo ? [ammo] : []), ...PICKUP_ITEMS]) : undefined; });
+    // SPAR_FEED=<name>: the world feed of the practice engine (a case with WORLD_FEED=true) goes to <name>.feed.jsonl in
+    // the output folder of the bench, with the names of each group in its first line. scripts/measure/pk-gang-fidelity.ts
+    // reads it as it reads a trace of the live gang.
+    const { serverFromEnv } = await import('../packages/core/src/bot');
+    const feedFile = env.SPAR_FEED ? resolve(import.meta.dir, '..', env.BENCH_OUTPUT_DIR ?? '.practice/aio-bench/output', `${env.SPAR_FEED}.feed.jsonl`) : undefined;
+    const stopFeed = feedFile ? (await import('./measure/pk-gang-collect')).tapFeed(`ws://${serverFromEnv(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor', 'rs-sdk', 'bots', bots[0]!, 'bot.env'), 'utf8'))}/worldfeed`, feedFile, { x: 2944, z: 3456, w: 384, h: 384 },
+        { t: 'names', groups: groups.map(([a, ...others]) => ({ ours: a!.name.toLowerCase(), gang: others.map(o => o.name.toLowerCase()) })) }) : undefined;
     const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), (member: number) => options(1, i, member), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 },
         { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1', pickup: pickupOf[i] })));
-    for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
+    for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: gangProfiles.length ? gangProfiles.join('+') : nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
+    stopFeed?.();
+    // The measures of each group's meeting from the bench feed go into the case log, which a hosted run keeps.
+    if (feedFile) try { const { contentNames, feedMeetings } = await import('./measure/pk-gang-fidelity'), names = contentNames(), text = readFileSync(feedFile, 'utf8');
+        for (const m of feedMeetings(text, names.obj, names.seq)) console.log(`FEED_MEETING ${JSON.stringify(m)}`);
+        for (const m of feedMeetings(text, names.obj, names.seq, true)) console.log(`FEED_MEETING_ALL ${JSON.stringify(m)}`); } catch (e) { console.log(`FEED_MEETING none: ${e instanceof Error ? e.message : e}`); }
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
         + `picked=${results.map(r => Object.values(r.picked ?? {}).reduce((n, c) => n + c, 0)).join(',')} valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
