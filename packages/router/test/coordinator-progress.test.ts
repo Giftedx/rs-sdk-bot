@@ -3,7 +3,7 @@ import {initialState,addTasks,replaceTasks,startTask,finishTask,chooseTask,refre
 import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts,repairModelTask} from '../src/coordinator-planner';
 import {buildBrief} from '../src/author';
 import {fleetExpansionDemand,nativeDispatchReady} from '../src/coordinator-cli';
-import {reviewHold} from '../src/coordinator-decisions';
+import {DEAD_TASK_MS,deadRoots,retireDeadTasks,reviewHold} from '../src/coordinator-decisions';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:5,estimatedMs:60000,why:'Finish useful quest',...extra});
 const run=(id:string,deps:string[]=[])=>task(id,{kind:'run',account:'Helper',dependsOn:deps,accept:{quests:["Cook's Assistant"]}});
@@ -535,4 +535,56 @@ test('failed timed-out session-recovery qualification and changed-source explici
  refreshQualifications(s,{'local-recovery':'rec-src-a','route-sapphire':'new-src-0123456789abcdef'});
  expect(recRefresh.status).toBe('failed');
  expect(recRefresh.attempts).toBe(1);
+});
+
+test('a session recovery whose refresh failed is a dead root, so the planner sees it and the recovery behind it starts after it retires',()=>{
+ const s=initialState();
+ const recovery=(id:string,account:string,deps:string[]):CoordTask=>({...run(id,deps),goal:'gear',capability:'local-recovery',account,repairs:[{account,endedAt:1}],sessionRecovery:{account,endedAt:1},accept:{counters:{sessionChecked:1}}});
+ addTasks(s,[task('qualify-local-recovery',{capability:'local-recovery',goal:'gear'}),recovery('recover-first','FishAndChips',['qualify-local-recovery']),recovery('recover-second','Woodpecker',['recover-first']),
+  {...run('ordinary',[]),capability:'route-order'}],0);
+ const timedOut={delivery:{ok:false,id:'local-recovery',source:'rec-src-a',reason:'check timed out',checks:[{timedOut:true}]}};
+ complete(s,'qualify-local-recovery',false,2,timedOut);
+ // The coordinator loop: fingerprints only for capabilities in demand.
+ const pass=(sources:Record<string,string>)=>refreshQualifications(s,Object.fromEntries(qualificationRefreshCapabilities(s,()=>[]).map(cap=>[cap,sources[cap]!])));
+ pass({'local-recovery':'rec-src-a','route-order':'route-src'});
+ const refresh=s.tasks.find(r=>r.spec.id==='refresh-local-recovery-rec-src-a')!,first=s.tasks.find(r=>r.spec.id==='recover-first')!;
+ expect(first.spec.dependsOn).toEqual([refresh.spec.id]);
+ expect(deadRoots(s).has('recover-first')).toBe(false);
+ complete(s,refresh.spec.id,false,5,timedOut);
+ pass({'local-recovery':'rec-src-a','route-order':'route-src'});
+ expect(deadRoots(s).get('recover-first')).toEqual({root:refresh.spec.id,at:5});
+ expect(deadRoots(s).get('recover-second')).toEqual({root:refresh.spec.id,at:5});
+ // An ordinary run behind a failed refresh waits for a new source and is no dead root.
+ complete(s,'refresh-route-order-route-src',false,6,{delivery:{ok:false,id:'route-order',source:'route-src'}});
+ expect(deadRoots(s).has('ordinary')).toBe(false);
+ expect(retireDeadTasks(s,5+DEAD_TASK_MS).map(r=>r.id)).toEqual(['recover-first','recover-second']);
+});
+test('a new source links a failed session recovery to a new refresh before it retires',()=>{
+ const s=initialState();
+ addTasks(s,[task('refresh-local-recovery-old',{capability:'local-recovery',goal:'gear'}),
+  {...run('recover',['refresh-local-recovery-old']),goal:'gear',capability:'local-recovery',account:'FishAndChips',repairs:[{account:'FishAndChips',endedAt:1}],sessionRecovery:{account:'FishAndChips',endedAt:1},accept:{counters:{sessionChecked:1}}}],0);
+ complete(s,'refresh-local-recovery-old',false,2,{delivery:{ok:false,id:'local-recovery',source:'old'}});
+ expect(deadRoots(s).has('recover')).toBe(true);
+ refreshQualifications(s,Object.fromEntries(qualificationRefreshCapabilities(s,()=>[]).map(cap=>[cap,'new-source'])));
+ expect(s.tasks.find(r=>r.spec.id==='recover')!.spec.dependsOn).toEqual(['refresh-local-recovery-new-source']);
+ expect(deadRoots(s).size).toBe(0);
+});
+test('a failed explicit qualification on an old source is replaced only when the loop reads the source of its capability',()=>{
+ const stale=(s:ReturnType<typeof initialState>)=>{
+  addTasks(s,[task('qualify-route-old',{capability:'route-order',goal:'skills'}),{...run('route-run',['qualify-route-old']),goal:'skills',capability:'route-order'}],0);
+  complete(s,'qualify-route-old',false,3,{delivery:{ok:false,id:'route-order',source:'old-src'}});
+ };
+ const pass=(s:ReturnType<typeof initialState>)=>refreshQualifications(s,Object.fromEntries(qualificationRefreshCapabilities(s,()=>[]).map(cap=>[cap,'new-src'])));
+ // A lone run behind the failed qualification is no demand: the loop reads no source, and the run is a dead root.
+ const lone=initialState();stale(lone);
+ expect(qualificationRefreshCapabilities(lone,()=>[])).toEqual([]);
+ pass(lone);
+ expect(lone.tasks.find(r=>r.spec.id==='route-run')!.spec.dependsOn).toEqual(['qualify-route-old']);
+ expect(deadRoots(lone).get('route-run')?.root).toBe('qualify-route-old');
+ // A second run of the capability is demand: the loop reads the source and both runs wait on the new refresh.
+ const pair=initialState();stale(pair);addTasks(pair,[{...run('route-second',[]),goal:'skills',capability:'route-order'}],4);
+ expect(qualificationRefreshCapabilities(pair,()=>[])).toEqual(['route-order']);
+ pass(pair);
+ for(const id of ['route-run','route-second'])expect(pair.tasks.find(r=>r.spec.id===id)!.spec.dependsOn).toEqual(['refresh-route-order-new-src']);
+ expect(deadRoots(pair).size).toBe(0);
 });
