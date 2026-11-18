@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PLAN_ATTEMPTS, lockedPass, pass, type PassWrite } from './autopilot';
+import { PLAN_ATTEMPTS, lockedPass, pass, passOutcome, type PassWrite } from './autopilot';
 
 // A plan file in a temporary folder. Each test ends its pass at the pause check of the write step, so no test writes
 // a plan, a planner state or an order. A plan takes about 2 s and a test makes up to four, so each test has a 60 s limit.
@@ -78,4 +78,20 @@ test('a pass with no write step keeps its one call: the write step compares the 
         expect(pass(f.planFile, true, () => false, s => { none = s; }).at(-1)).toBe('AUTOPILOT dry run: nothing written');
         expect(none).toBeUndefined();
     } finally { f.end(); }
+}, 60_000);
+
+test('a pass that wrote nothing is held, so the trainer poll keeps the finished trainers for the next pass', async () => {
+    // The hold after PLAN_ATTEMPTS changed plans, from a real pass.
+    const f = fixture();
+    try {
+        let n = 0;
+        const lines = await lockedPass(f.planFile, false, f.lock(() => writeFileSync(f.planFile, `{"jobs":[],"maxBots":${20 + ++n}}`)), f.isPaused);
+        expect(passOutcome(lines)).toEqual({ outcome: 'held', result: `RESULT fail autopilot held, nothing written: another writer changed the account plan during each of ${PLAN_ATTEMPTS} plans` });
+    } finally { f.end(); }
+    expect(passOutcome(['AUTOPILOT hold: owning coordinator queue is unavailable'])).toEqual({ outcome: 'held', result: 'RESULT fail autopilot held, nothing written: owning coordinator queue is unavailable' });
+    expect(passOutcome(['AUTOPILOT hold: swarm is paused'])).toEqual({ outcome: 'held', result: 'RESULT ok autopilot held: swarm is paused' });
+    // A pass that wrote its plan is applied. A hold of one account is a line of such a pass, not a hold of the pass.
+    expect(passOutcome(['AUTOPILOT hold Rod: coordinator owns the assignment', 'AUTOPILOT assign Cod fishing 1.0 x', 'AUTOPILOT keep Bob mining 1.0 y', 'AUTOPILOT retire Tim cooking: z']))
+        .toEqual({ outcome: 'applied', result: 'RESULT ok autopilot jobs=2 retired=1' });
+    expect(passOutcome(['AUTOPILOT dry run: nothing written']).outcome).toBe('applied');
 }, 60_000);

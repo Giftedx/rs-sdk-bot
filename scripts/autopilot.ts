@@ -757,6 +757,16 @@ export function trainersDone(planFile: string): string[] {
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
 }
 
+// What the lines of a pass mean for the daemon. A first line "AUTOPILOT hold: ..." is a hold of the whole pass: it
+// wrote nothing. Such a pass is "held", so the trainer poll passes again for the trainers that it found finished. Only
+// a pause is a hold that is in order.
+export function passOutcome(lines: readonly string[]): { outcome: 'applied' | 'held'; result: string } {
+    const whole = 'AUTOPILOT hold: ', first = lines[0] ?? '';
+    if (first === PAUSED) return { outcome: 'held', result: 'RESULT ok autopilot held: swarm is paused' };
+    if (first.startsWith(whole)) return { outcome: 'held', result: `RESULT fail autopilot held, nothing written: ${first.slice(whole.length)}` };
+    return { outcome: 'applied', result: `RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}` };
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2), planFile = resolve(args.find(a => !a.startsWith('--')) ?? join(root, 'swarm.json'));
     // The write step of a pass runs under the account-plan lock (lockedPass): the coordinator installs jobs into its
@@ -764,9 +774,9 @@ if (import.meta.main) {
     // pass in flight.
     const dry = args.includes('--dry');
     let inFlight: Promise<'applied' | 'held' | 'failed'> | null = null;
-    const hold = () => {
-        console.log(PAUSED);
-        console.log('RESULT ok autopilot held: swarm is paused');
+    const hold = (lines: readonly string[] = [PAUSED]) => {
+        console.log(lines[0]);
+        console.log(passOutcome(lines).result);
         return 'held' as const;
     };
     const once = () => {
@@ -774,14 +784,15 @@ if (import.meta.main) {
         return inFlight ??= (async () => {
             try {
                 const lines = await lockedPass(planFile, dry, action => withPlanWrite(action, join(prac, 'coordinator')));
-                if (lines[0] === PAUSED) return hold();
+                const { outcome, result } = passOutcome(lines);
+                if (outcome === 'held') return hold(lines);
                 console.log(lines.join('\n'));
                 // Outside the plan lock: fleet-sync takes the fleet-data write lock, so it queues behind the agent's sync.
                 // A sync that fails to start leaves the claim to the agent's next sync.
                 if (lines.includes(CLAIM_CHANGED)) try {
                     Bun.spawn([process.execPath, 'scripts/fleet-sync.ts'], { cwd: root, env: process.env, stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', windowsHide: true }).unref();
                 } catch { /* the fleet agent's next sync publishes it */ }
-                console.log(`RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}`);
+                console.log(result);
                 return 'applied';
             } catch (e) {
                 console.log(`RESULT fail autopilot ${String(e)}`);
