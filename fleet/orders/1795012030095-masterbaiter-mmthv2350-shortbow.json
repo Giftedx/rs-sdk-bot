@@ -1,0 +1,22 @@
+{
+ "id": "1795012030095-masterbaiter-mmthv2350-shortbow",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "mmthv2350",
+ "item": "Shortbow",
+ "count": 1,
+ "start": 1795012030095,
+ "end": 1795014430095,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
