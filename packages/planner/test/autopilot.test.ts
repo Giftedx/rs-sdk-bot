@@ -2670,7 +2670,7 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     // Not on the army roster: the band's levels are met, so only the roster stops it.
     expect(reason(acct('Rookie'), band)).toBe('vacant: not on the army roster (1 bands, nearest army-cow-strength-45)');
     // On the roster with no sword in any source: the missing kit line.
-    expect(reason(acct('Rookie'), band, { army: new Set(['rookie']) })).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword, 1 wooden shield.* and no source gives them$/);
+    expect(reason(acct('Rookie'), band, { army: new Set(['rookie']) })).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword, 2 trout and no source gives them$/);
     // A level the template asks and the account lacks.
     expect(reason(acct('Rookie'), [supply('deep-mine', { needs: { skills: { Mining: 41 } } })])).toBe('vacant: deep-mine needs Mining 41');
     // A holding the template asks and no purchase fixes: the coin line is named as coins.
@@ -2690,6 +2690,61 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     expect(reason(acct('Rookie'), [supply('crowded-job', { resources: ['pen:1,1'] })], { taken: { 'pen:1,1': 1 } })).toBe('vacant: crowded-job has no free place on pen:1,1');
     // No demand at all, with no bill.
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
+});
+
+test('a cow band needs one wearable melee weapon, not a bronze sword by name; a missing weapon is a weapon step', () => {
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45'), zeke = catalogue().filter(t => t.id.startsWith('army-weapon-zeke-'));
+    const base = { Strength: 10, Defence: 10, Hitpoints: 30 }, kit = { trout: 20 };
+    const run = (a: Acct, templates: Template[], extra: Partial<Inputs> = {}) => plan(inputs([a], { templates, army: new Set([a.name.toLowerCase()]), capacity: { 'cow:ardougne-north': 6, 'shop:zeke': 1 }, ...extra }))[0]!;
+    // A rune scimitar and no bronze sword (and no shield): the band runs.
+    expect(run(acct('Rune', { ...base, Attack: 40 }, { ...kit, 'rune scimitar': 1 }), cow).template?.id).toBe('army-cow-strength-45');
+    // A banked or worn weapon counts the same: the holdings are one map.
+    expect(run(acct('Dagger', { ...base, Attack: 1 }, { ...kit, 'bronze dagger': 1 }), cow).template?.id).toBe('army-cow-strength-45');
+    // A weapon the Attack level cannot wear is no weapon: Attack 1 with a rune scimitar gets none.
+    expect(run(acct('Weak', { ...base, Attack: 1 }, { ...kit, 'rune scimitar': 1 }), cow).reason).toBe('vacant: army-cow-strength-45 needs 1 bronze sword and no source gives them');
+    // No weapon: the Zeke scimitar step, not a dead end.
+    const bare = acct('Bare', { ...base, Attack: 10 }, { ...kit, coin: 5_000 });
+    expect(run(bare, [...cow, ...zeke]).template?.id).toBe('army-weapon-zeke-steel');
+    // Food stays a need: a weapon and no food is no band start.
+    expect(run(acct('Hungry', { ...base, Attack: 40 }, { 'rune scimitar': 1 }), cow).reason).toBe('vacant: army-cow-strength-45 needs 2 trout and no source gives them');
+    // A donor with a cheap weapon fills the line (one item order), and the vacant reason names the line when no source has it.
+    const sent = run(bare, cow, { stock: [{ name: 'Spare', side, items: { 'iron scimitar': 2 } }] });
+    expect(sent.send).toMatchObject({ from: 'Spare', to: 'Bare', item: 'iron scimitar', count: 1 });
+    expect(run(bare, cow).reason).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword and no source gives them$/);
+});
+
+test('an army donor keeps the one melee weapon its band needs, and gives only the spare', () => {
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const base = { Strength: 10, Defence: 10, Hitpoints: 30, Attack: 10 };
+    // The donor has no food, so it cannot start its own band and is free stock; the band still needs its one weapon.
+    const run = (donorSwords: number) => plan(inputs([acct('Needy', base, { trout: 20, coin: 100 }), acct('Donor', base, { 'bronze sword': donorSwords })], { templates: cow, army: new Set(['needy', 'donor']),
+        capacity: { 'cow:ardougne-north': 6 }, stock: [{ name: 'Donor', side, items: { 'bronze sword': donorSwords } }] }));
+    // One sword is the donor's own weapon: it stays, and the needy account gets no order for it.
+    expect(run(1).find(x => x.account === 'Needy')!.send).toBeUndefined();
+    // A second sword is spare.
+    expect(run(2).find(x => x.account === 'Needy')!.send).toMatchObject({ from: 'Donor', item: 'bronze sword', count: 1 });
+});
+
+import { canWearGear, gearById, gearIdByName } from '../src/gear-progression';
+import { COW_WEAPONS } from '../src/autopilot';
+test('COW_WEAPONS levels are the Attack levels that wear each weapon in the gear data', () => {
+    for (const [item, attack] of COW_WEAPONS) {
+        const gear = gearById(gearIdByName(item)!)!;
+        expect([item, canWearGear(gear, { attack })]).toEqual([item, true]);
+        if (attack > 1) expect([item, canWearGear(gear, { attack: attack - 1 })]).toEqual([item, false]);
+    }
+});
+
+test('a donor of another side or outside the roster keeps the one cheap weapon: only its spare is sent', () => {
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const base = { Strength: 10, Defence: 10, Hitpoints: 30, Attack: 10 };
+    const run = (donorSide: string, swords: number) => plan(inputs([acct('Needy', base, { trout: 20, coin: 100 })], { templates: cow, army: new Set(['needy']), capacity: { 'cow:ardougne-north': 6 },
+        stock: [{ name: 'Far', side: donorSide, items: { 'bronze sword': swords } }] }))[0]!;
+    // A cloud-side account with one sword keeps it; with two it sends one.
+    expect(run('cloud', 1).send).toBeUndefined();
+    expect(run('cloud', 2)).toMatchObject({ send: { from: 'Far', item: 'bronze sword', count: 1 } });
+    // Same for a local account outside the army roster.
+    expect(run(side, 1).send).toBeUndefined();
 });
 
 test('plan fills at most the free bot slots, best band first, and names the rest', () => {
