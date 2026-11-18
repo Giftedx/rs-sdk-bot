@@ -1,0 +1,22 @@
+{
+ "id": "1794969318008-knightrider-billionaire-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Billionaire",
+ "item": "Nature rune",
+ "count": 50,
+ "start": 1794969318008,
+ "end": 1794971718008,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
