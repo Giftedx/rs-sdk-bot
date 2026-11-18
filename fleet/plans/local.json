@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794960287121,
+ "at": 1794960319872,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -297,30 +297,6 @@
    "autopilot": "local",
    "resources": [
     "shop:zaff"
-   ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "STOCK_TARGET": "500",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":500}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
    ]
   },
   {

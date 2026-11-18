@@ -1,0 +1,22 @@
+{
+ "id": "1794960302838-mmsmk1232-yewfirst-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "YewFirst",
+ "item": "Air rune",
+ "count": 35,
+ "start": 1794960302838,
+ "end": 1794962702838,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
