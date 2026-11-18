@@ -337,3 +337,16 @@ test('the squad end line counts the re-kits and stays ok when every death was re
     expect(maxDeathsOf('x', 1)).toBe(1);
     expect(maxDeathsOf('0', 1)).toBe(0);
 });
+
+test('a rescue account that dies during its rescue is stranded, so a run cannot end ok with a dead account', async () => {
+    const sessions: any[] = [];
+    let retreated = false;
+    const stranded = await rescueDropped(['dead', 'safe'], sessions, async (name, onStop) => {
+        const s = { name } as any;
+        // The default openBot ends a death through onStop (the rescue opens its account without continueAfterDeath).
+        if (name === 'dead') await onStop(s, 'died');
+        return s;
+    }, () => {}, async s => { if (s.name === 'dead') retreated = true; return s; });
+    expect(stranded).toEqual(['dead']);
+    expect(retreated).toBe(false);
+});
