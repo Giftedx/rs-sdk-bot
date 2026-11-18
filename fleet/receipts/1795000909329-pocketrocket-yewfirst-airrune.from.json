@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795000909329-pocketrocket-yewfirst-airrune",
+ "account": "Pocketrocket",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "c2e18d9b-635a-458f-b01b-20185b9c2c6b",
+ "count": 50,
+ "ok": true,
+ "at": 1795000996449,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795000953674
+ },
+ "logout": {
+  "attemptId": "1795000944842-0000007460-0000000001",
+  "at": 1795000996438,
+  "sha256": "972142cdce5dcc3577528995c36a6d932371c0e0cd9ab83037eae38d3ee07f88"
+ },
+ "screen": true
+}
