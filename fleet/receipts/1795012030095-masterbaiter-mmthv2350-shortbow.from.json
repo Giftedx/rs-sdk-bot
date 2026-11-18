@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795012030095-masterbaiter-mmthv2350-shortbow",
  "account": "Masterbaiter",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "Shortbow",
  "requested": 1,
  "claim": "03a779d6-119a-4e6e-a15b-1a8103e23ab8",
- "count": 0,
- "ok": false,
- "at": 1795012104636,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795012311618,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795012295683
+ },
+ "logout": {
+  "attemptId": "1795012104776-0000010364-0000000001",
+  "at": 1795012311604,
+  "sha256": "0de355a29189b8dccc69675df70be7fba06638d8c309b1e0cfd1dca35763975a"
+ },
+ "screen": true
 }
