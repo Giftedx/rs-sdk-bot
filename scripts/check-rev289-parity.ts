@@ -131,11 +131,8 @@ const BANNED_ITEM_IDS_COMBINED_RE = new RegExp(`\\b(?:${[...BANNED_OSRS_ITEM_IDS
 const COORD_OR_PORT_RE = /\b(?:x|z|worldX|worldZ|port|tick|cap|budget)\b\s*[:=]/;
 const NEGATIVE_COMMENT_RE = /^\s*\/\/.*\b(no|absent|off|not in|never|neither|without)\b/i;
 
-// Open holes in files owned by other Wave 2/3 workers; excluded in default mode and enforced with --strict.
-export const KNOWN_CROSS_WORKER_FILES = new Set([
-    'scripts/gather-essence.ts',
-    'scripts/pk-live/live-pilot.ts',
-]);
+// Cross-worker exclusion set (empty once all Wave 2/3 fixes landed on master); non-empty in tests/local overrides enforces --strict failure.
+export const KNOWN_CROSS_WORKER_FILES = new Set<string>();
 
 function walkExt(dir: string, ext: string, out: string[] = []): string[] {
     if (!existsSync(dir)) return out;

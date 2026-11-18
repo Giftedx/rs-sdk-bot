@@ -52,13 +52,13 @@ test('owned scripts/, core, knowledge code, planner, router, and practice pass s
     expect(checkAllRev289Parity(repoRoot, { includeCrossWorker: false })).toEqual([]);
 }, 20_000);
 
-test('--strict mode fails on cross-worker holes and passes with zero errors and zero warnings once cleared', () => {
-    const strictWithOpen = runRev289Parity({ repoRoot, strict: true });
-    expect(strictWithOpen.ownedIssues).toEqual([]);
-    expect(strictWithOpen.crossIssues.length).toBeGreaterThan(0);
-    expect(strictWithOpen.passed).toBe(false);
+test('--strict mode passes with zero errors and zero warnings on the repo and fails when cross-worker holes exist', () => {
+    const strictLive = runRev289Parity({ repoRoot, strict: true });
+    expect(strictLive.ownedIssues).toEqual([]);
+    expect(strictLive.crossIssues).toEqual([]);
+    expect(strictLive.passed).toBe(true);
 
-    // Simulate post-merge repo state with no cross-worker exclusions on a clean temp root sharing content/knowledge.
+    // Simulate both open cross-worker warnings failing --strict and cleared strict parity passing on a temp fixture.
     const tmp = mkdtempSync(join(tmpdir(), 'rev289-strict-'));
     try {
         mkdirSync(join(tmp, 'scripts'), { recursive: true });
@@ -67,6 +67,12 @@ test('--strict mode fails on cross-worker holes and passes with zero errors and 
         expect(ownedOnly).toEqual([]);
 
         writeFileSync(join(tmp, 'scripts', 'gather-essence.ts'), `const PURE_ESSENCE = 7936;\n`);
+        const crossOnly = checkScriptsParity(tmp, baseline, { includeCrossWorker: false, crossWorkerFiles: new Set(['scripts/gather-essence.ts']) });
+        expect(crossOnly).toEqual([]);
+        const strictCrossIssues = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set(['scripts/gather-essence.ts']) })
+            .filter(i => i.scope === 'cross-worker');
+        expect(strictCrossIssues.length).toBeGreaterThan(0);
+
         const flaggedWhenCleared = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
         expect(flaggedWhenCleared.map(i => i.scope)).toEqual(['scripts']);
 
