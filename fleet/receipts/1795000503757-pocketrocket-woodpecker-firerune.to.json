@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795000503757-pocketrocket-woodpecker-firerune",
+ "account": "Woodpecker",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 168,
+ "claim": "8eb59b15-8cbb-4655-85ba-f2b89d36ed70",
+ "count": 0,
+ "ok": false,
+ "at": 1795000619053,
+ "detail": "trade claimed"
+}

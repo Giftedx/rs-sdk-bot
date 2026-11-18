@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795000503757-dipstick-swordinhand-airrune",
+ "account": "Dipstick",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "31831ee7-068e-47da-bdef-b5cb5b47cf21",
+ "count": 0,
+ "ok": false,
+ "at": 1795000610180,
+ "detail": "trade claimed"
+}
