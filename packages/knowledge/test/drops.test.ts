@@ -204,3 +204,10 @@ if ($random < 127) {
     ]);
     expect(spears[0]!.src).toBe('s.rs2:51');
 });
+
+test('local $variable item references are skipped instead of emitted as literal items', () => {
+    const d = parseDrops(`[label,poison_sheep]
+obj_add(npc_coord, $npc_bones, 1, ^lootdrop_duration);
+`, 'sheep.rs2');
+    expect(d).toEqual([]);
+});

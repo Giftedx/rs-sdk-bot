@@ -8,6 +8,7 @@ import {agilityFixturePreset} from '../../packages/practice/src/agility-order-pr
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
+import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -528,6 +529,10 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'boss:black-dragon', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['black-dragon', '1500', 'STAGED=1', 'KILLS=1'], pass: s => ok(s) && /kills=1 hides=1 bones=1/.test(s), timeoutMs: 900_000,
     presetConfig: {position: {x: 2835, z: 9820, level: 0}, skills: {Ranged: 99, Hitpoints: 99, Defence: 99, Prayer: 60},
       equipment: [{id: 861, count: 1, slot: 3}, {id: 888, count: 400, slot: 13}], inventory: [{id: 385, count: 1}, {id: 385, count: 1}, {id: 385, count: 1}]}},
+  {key: 'boss:green-dragon', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['green-dragon', '400', 'STAGED=1'], pass: ok, timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3810, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99},
+      equipment: [{id: 1333, count: 1, slot: 3}, {id: 1127, count: 1, slot: 4}, {id: 1540, count: 1, slot: 5}, {id: 1079, count: 1, slot: 7}],
+      inventory: Array.from({length: 10}, () => ({id: 385, count: 1}))}},
   {key: 'boss:trawler', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['trawler', '2200'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2675, z: 3170, level: 0}, skills: {Fishing: 99, Crafting: 99, Hitpoints: 50}, inventory: [{id: 1941, count: 200}, {id: 583, count: 1}, ...Array.from({length: 10}, () => ({id: 954, count: 1}))]}},
   {key: 'boss:trawler-at-site', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['trawler-at-site', 'trip', '2200'], pass: ok, timeoutMs: 900_000,
@@ -1158,6 +1163,10 @@ const ROUTE_CASES: BenchCase[] = [
     ({key: `extra:sweep-elena-draynor-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,
       presetConfig: {...PRESETS.quest_elena!, position: {x: 3092, z: 3243, level: 0}, inventory: [], skills: {...PRESETS.quest_elena!.skills, Magic: 59},
         bank: [...(PRESETS.quest_elena!.inventory ?? []), ...runes]}} as BenchCase)),
+  {key:'extra:sweep-elena-upstairs-funded',script:'scripts/aio-quester.ts',preset:'quest_elena',scriptArgs:['sweep','elena'],
+    presetConfig:questSweepElenaPreset(),timeoutMs:600_000,
+    pass:s=>ok(s)&&/^QUEST_SWEEP_BANK .*?"to":\{"x":2947,"z":3368,"level":0/m.test(s)
+      &&/^QUEST_SWEEP_SPELL .*?"spell":"Falador teleport"/m.test(s)&&/^LOGOUT logged-out$/m.test(s)},
   // The same with the three items no fleet account and no GE seller held (dwellberries 2126, chocolate dust 1975, snape
   // grass 231) left out of the bank, and 5,000 coins: what the sweep's own shop and gather plans cost.
   {key: 'extra:sweep-elena-draynor-partial', script: 'scripts/aio-quester.ts', preset: 'quest_elena', scriptArgs: ['sweep', 'elena'], pass: ok, timeoutMs: 600_000,

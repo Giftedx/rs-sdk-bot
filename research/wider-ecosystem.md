@@ -2,7 +2,7 @@
 
 Survey of outside projects. For reuse decisions, use the [project use map](project-use-map.md). Our target is pinned rev289; coordinates, mechanics and permissions require validation. The RuneLite XP table is **not reusable as-is** here (`planner/src/curve.ts` uses exponent L/10, not L/7). Use `vendor/rs-sdk/server/content`, not the standalone rev274 clone. Abortable actions and bounded walking already exist. The fit ratings below are not work orders.
 
-Scope: projects outside rs-sdk / runebench (covered elsewhere) that can give a TypeScript, 2004-era (LostCity build 274, Nov 2004) agent harness ideas, algorithms, data, or code. Antiban and humanization are out of scope.
+Scope: projects outside rs-sdk / runebench (covered elsewhere) that can give a TypeScript, rev-289 (LostCity Jan 2005) agent harness ideas, algorithms, data, or code. Antiban and humanization are out of scope.
 
 Method: `gh api repos/<x>` for stars, license, and last push. Raw-file reads of READMEs and sample data files. WebSearch and Exa for research projects. Nothing was cloned.
 
@@ -20,10 +20,10 @@ License key for code reuse into our (presumably MIT-compatible) harness:
 
 ## 0. Key facts that frame everything
 
-1. **Coordinates transfer, IDs do not.** OSRS and RS2-2004 share the same world tile coordinate system (for example, Lumbridge castle stairs at 3222,3218 in Microbot's route table match the RS2 layout). Object, NPC, and item IDs come from different caches (OSRS build 1+ vs RS2 build 274), so every OSRS ID needs remapping, usually by name plus location. [seen: coords in Microbot/Shortest Path files; ID divergence is general knowledge, unverified per-ID]
-2. **The OSRS world is a superset with gaps.** It has many post-2004 additions: Grand Exchange (2007), fairy rings, spirit trees, gnome gliders (most), POH, Zeah, Varlamore, minigames. It also has OSRS-only rebalances (drop tables, XP rates, shops). Any OSRS data must be filtered to what existed in Nov 2004.
-3. **The best 2004-accurate data is already vendored.** `vendor/lostcity-content/scripts/` holds `doors/`, `ladders+stairs/`, `drop tables/`, `shop/`, `quests/`, `areas/`, `skill_*`, and more, as RuneScript (MIT) [seen: directory listing]. External OSRS projects give us **schemas, algorithms, and API shapes**. The data itself should be regenerated from LostCity Content.
-4. **OpenRS2 archive has genuine 2004 caches.** The earliest RS2 build is 243 (June 2004). **Build 274 is cache id 922 (Nov 2004)**, which matches LostCity's `-b 274` branch. Others: 244, 245, 252, 254, 270, 289 [seen: `archive.openrs2.org/caches.json`]. Use these to cross-check maps and collision against LostCity.
+1. **Coordinates transfer, IDs do not.** OSRS and RS2 rev 289 share the same world tile coordinate system (for example, Lumbridge castle stairs at 3222,3218 in Microbot's route table match the RS2 layout). Object, NPC, and item IDs come from different caches (OSRS build 1+ vs RS2 rev 289), so every OSRS ID needs remapping, usually by name plus location. [seen: coords in Microbot/Shortest Path files; ID divergence is general knowledge, unverified per-ID]
+2. **The OSRS world is a superset with gaps.** It has many post-rev-289 additions: Varrock Grand Exchange (2007; rs-sdk provides its own built-in engine Market/GE), fairy rings, charter ships, magic carpets, canoes, POH, Slayer, Zeah, Varlamore, minigames. It also has OSRS-only rebalances (drop tables, XP rates, shops). Spirit trees and the seven gnome glider routes exist in rev 289 (`vendor/rs-sdk/server/content`). Filter external OSRS data to pinned rev 289.
+3. **The best rev-289 data is already vendored.** `vendor/rs-sdk/server/content/scripts/` holds `doors/`, `ladders+stairs/`, `drop tables/`, `shop/`, `quests/`, `areas/`, `skill_*`, and more, as RuneScript (MIT) [seen: directory listing]. External OSRS projects give us **schemas, algorithms, and API shapes**. The data itself should be regenerated from the vendored content.
+4. **OpenRS2 archive has genuine 2004 caches.** The earliest RS2 build is 243 (June 2004). **Build 274 is cache id 922 (Nov 2004)**, which matches LostCity's `-b 274` branch. Others: 244, 245, 252, 254, 270, 289 [seen: `archive.openrs2.org/caches.json`]. Use these to cross-check maps and collision against LostCity; our pinned target is rev 289 (Jan 2005).
 
 ## 1. Bot frameworks and script APIs
 
@@ -35,7 +35,7 @@ License key for code reuse into our (presumably MIT-compatible) harness:
   - **StateMachineScript<S extends Enum>**: guarded transitions built as `Transition.from(S).when(supplier,"expr").because("reason").goTo(S)`. Transitions are evaluated top-down each tick, and the first match fires. Guards must be pure. Every transition logs its reason and is exposed at `GET /statemachine/{script}`. Their doc states the rationale: "agent-generated scripts: a structured schema is easier for LLMs than ad-hoc loops." **Port this pattern directly to TS.**
   - **Condition-wait helpers** (`util/Global.java`): `sleepUntil(cond, timeout)`, `sleepUntil(cond, action, timeout, poll)` (retry action until cond), `sleepUntilTrue(cond, resetCond, poll, timeout)` (extends the timeout while resetCond holds, for example while still animating), `sleepUntilNotNull(callable)`, `sleepUntilNextTick()`. The tick-aware variants and the "reset condition" variant are worth copying.
   - **Agentic testing loop**: JVM flags `microbot.test.mode/script/timeout/output` produce `result.json` plus screenshots plus logs. The agent then builds, launches, reads, fixes, and repeats.
-  - **Web-walker regression harness**: fixed route table F2P-01..F2P-17 (from/to tile, coverage note: stairs/plane change, bridge, Draynor Manor door, sewers). Run fail-fast, rerun only the failed leg. **Most routes are valid in 2004.** F2P-10/11 use the Grand Exchange, which did not exist yet, so replace them.
+  - **Web-walker regression harness**: fixed route table F2P-01..F2P-17 (from/to tile, coverage note: stairs/plane change, bridge, Draynor Manor door, sewers). Run fail-fast, rerun only the failed leg. **Most routes are valid in rev 289.** F2P-10/11 target OSRS's Varrock Grand Exchange location, which does not exist on the rev-289 map (rs-sdk serves Market/GE through its engine), so replace those map endpoints.
   - `util/` package list (bank, depositbox, dialogues, equipment, grounditem, inventory, magic, npc, combat, walker...) is a good checklist of the "verbs" a high-level API needs. Also see `api/QUERYABLE_API.md` (queryable entity caches).
 - Fit: **High** (design and ideas; Java code not directly portable).
 
@@ -78,7 +78,7 @@ All below are **BSD-2-Clause (OK)** unless noted.
 ### 3.1 Skretzo Shortest Path: transport table schema (recommended to copy)
 - [seen] `src/main/resources/transports/*.tsv`: `transports.tsv` (6190 lines: doors, gates, stairs, ladders), `ships.tsv`, `charter_ships.tsv`, `boats.tsv`, `canoes.tsv`, `minecarts.tsv`, `agility_shortcuts.tsv`, `teleportation_spells.tsv`, `teleportation_items.tsv`, `teleportation_levers.tsv`, `wilderness_obelisks.tsv`, `magic_carpets.tsv`, `gnome_gliders.tsv`, `spirit_trees.tsv`, `fairy_rings.tsv`, plus `teleport_restrictions.tsv`, `collision-map.zip`, `routing-cuts.bin`.
 - Row schema (transports.tsv): `Origin(x y plane) | Destination | "menuOption menuTarget objectID" | Skills | Items | Quests | Varbits | VarPlayers | Duration(ticks) | Display info`. Example: `3097 3107 0  3098 3107 0  Open Door 9398 ... 1`. Ships: `3029 3217 0 → 2956 3146 0 "Musa Point Captain Tobias 14979" COINS=30 dur 10`. Spells: `3213 3424 0  AIR_RUNE=3&&FIRE_RUNE=1&&LAW_RUNE=1  25 Magic  dur 4  wildy-level 20`.
-- 2004 fit: **schema high, data medium**. Coordinates for doors, stairs, ships (Port Sarim–Karamja, Musa Point), levers, obelisks, and spell destinations mostly hold. Object IDs, varbits, and many transports do not exist (fairy rings, spirit trees, quetzals, POH). **Plan:** adopt the TSV schema, then generate rows from `lostcity-content/scripts/ladders+stairs/` and `doors/`, using Skretzo's coordinates only as a cross-check.
+- 2004/2005 fit: **schema high, data medium**. Coordinates for doors, stairs, ships (Port Sarim–Karamja, Musa Point), levers, obelisks, gliders, spirit trees, and spell destinations mostly hold. Object IDs, varbits, and post-rev-289 transports do not exist (fairy rings, charter ships, magic carpets, canoes, quetzals, POH). **Plan:** adopt the TSV schema, then generate rows from `vendor/rs-sdk/server/content/scripts/ladders+stairs/` and `doors/`, using Skretzo's coordinates only as a cross-check.
 - Microbot vendors a modified copy under `plugins/microbot/shortestpath/` (adds `Restriction`, `PurchasableItemCatalog`, ETA overlays) [seen paths].
 
 ### 3.2 rsmod pathfinder: already vendored
@@ -104,7 +104,7 @@ All below are **BSD-2-Clause (OK)** unless noted.
 
 | Engine | Meta | Era / build | 2004-accurate data? | Fit |
 |---|---|---|---|---|
-| **LostCityRS Engine-TS / Content / Server** | Server 316 stars MIT; Engine-TS 38 stars MIT; Content 33 stars MIT | build 274 branch (Nov 2004) | **Yes, the reference.** RuneScript for doors, ladders, drop tables, shops, quests | Already vendored |
+| **LostCityRS Engine-TS / Content / Server** | Server 316 stars MIT; Engine-TS 38 stars MIT; Content 33 stars MIT | rev 289 (Jan 2005) vendored in `vendor/rs-sdk` | **Yes, the reference.** RuneScript for doors, ladders, drop tables, shops, quests | Already vendored |
 | 2004scape/Server (old org) | 387 stars, MIT, **archived**, "Moving to LostCityRS/Server" [meta] | 2004 | Covered by LostCity | None |
 | 2006-Scape/2006Scape | 245 stars, **GPL-3.0** | 2006 (Java 8, PI-style) | Partly 2006. Quests and skills close to 2004 but not exact. Bundles Parabot bot support for local play [seen README] | Low-Medium (cross-check facts) |
 | RuneJS/server | 300 stars, **GPL-3.0** | **build 435 (Oct 2006)** [seen] | No. TypeScript, though, so its plugin/action-hook architecture is worth a read | Low-Medium (TS architecture ideas only) |
@@ -127,8 +127,8 @@ All below are **BSD-2-Clause (OK)** unless noted.
 | osrs-wiki/cache-mediawiki | 2 stars, GPL-3.0 | Cache → wiki content converters | OSRS | Low |
 | RuneScape Classic / RS3 wikis | CC BY-NC-SA | `classic.runescape.wiki` (RSC), `runescape.wiki` (RS3, with some history pages) | Neither is RS2-2004 | Low |
 | 2004-era fan sites (Tip.it, RuneHQ, Zybez) | copyright | Only through the Wayback Machine. No structured dump found | 2004-true but unstructured | Low (spot-check only) |
-| XP table | formula (public) | `Experience.java` in RuneLite (BSD-2) | **Same in 2004** | High, trivial |
-| LostCity Content `drop tables/`, `shop/` | MIT | Authoritative 2004 drops and shops | **2004-true** | **High**, parse into JSON |
+| XP table | `server/engine/src/engine/entity/Player.ts` | Custom exponent `2^(L/10)` (not RuneLite's `2^(L/7)`) | **Pinned rev-289 engine** | Use `packages/planner/src/curve.ts` |
+| LostCity Content `drop tables/`, `shop/` | MIT | Authoritative rev-289 drops and shops | **rev-289-true** | **High**, parse into JSON |
 
 No dedicated 2004scape/LostCity wiki was found by search (two queries). LostCity's own Discord or site may host one. Unverified.
 
@@ -170,7 +170,7 @@ Synthesis: every successful RS RL result targets a **narrow combat sub-task insi
 | 5 | jrr97 JSON routine graph format | github.com/jrr97/runescape-ai (`agent/routines`, `agent/components`) | MIT | Routine/component schema with retry, refs, `expectedRevision`, `method` metadata | Schema copy | High |
 | 6 | Microbot web-walker regression harness plus route table | Microbot `docs/F2P_WEBWALKER_HARNESS.md` | BSD-2 | Route list (minus GE), fail-fast runner, single-leg rerun, `result.json` | Ideas + data | High |
 | 7 | Quest Helper step/requirement model | github.com/Zoinkwiz/quest-helper | BSD-2 | NpcStep/ObjectStep/ItemStep/ConditionalStep, ItemRequirement (alternates, obtainable-during-quest), ZoneRequirement, DialogRequirement | Schema; F2P quest step data as a cross-check | High (schema) |
-| 8 | OpenRS2 build-274 cache (id 922) and builds 243–289 | archive.openrs2.org | archive terms; Jagex data | Validate LostCity collision/maps; render with rs-map-viewer | Data | High |
+| 8 | OpenRS2 rev-289 and builds 243–289 caches | archive.openrs2.org | archive terms; Jagex data | Validate LostCity rev-289 collision/maps; render with rs-map-viewer | Data | High |
 | 9 | Microbot Agent Server / CLI surface | Microbot `docs/AGENT_SERVER.md`, `AGENT_SCRIPT_TOOLS.md` | BSD-2 | Observe/act tool split, heartbeat/stall detection, dynamic script deploy, screenshot-on-fail | Design | Medium-High |
 | 10 | DaxWalker algorithm notes plus Naton1 gym-socket design | github.com/itsdax/Runescape-Web-Walker-Engine ; github.com/Naton1/osrs-pvp-reinforcement-learning | Apache-2.0 ; NONE | Hierarchical Dijkstra+A* with requirement-filtered transport edges; step/reset socket plus JSON action/obs contracts for any later RL on sub-tasks | Ideas | Medium |
 

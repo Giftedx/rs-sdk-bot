@@ -1,6 +1,7 @@
 import type {Assignment} from './autopilot';
 import {chooseProgression,type ObservedAccount,type ProgressionMethod,type ProgressionDecision,type SelectionContext,type WorkIntent} from './progression';
 import type {Step} from '../../core/src/chain-step';
+import type {CatalogAccept} from './progression-catalog';
 
 export interface FleetProgressionStock{holder:string;at:number;items:Record<number,number>;reservations?:Record<number,number>;delivery?:{ticks:number|null;basis:'measured'|'model';source:string;evidence:string}}
 export interface FleetProgressionSupport{helper:string;opportunityTicks:number|null;deliveryTicks:number|null;resources?:string[]}
@@ -18,7 +19,7 @@ export interface FleetProgressionOptions{
  stepFor?:(method:ProgressionMethod,units:number,intent:WorkIntent,account:ObservedAccount)=>Step;
  context?:Omit<SelectionContext,'now'|'requireQualification'>;maxCombinations?:number;maxCandidates?:number;
 }
-export interface FleetProgressionRequest{account:string;method:string;action:string;reason:string;holder?:string;item?:number;count?:number}
+export interface FleetProgressionRequest{account:string;method:string;action:string;reason:string;holder?:string;item?:number;count?:number;consumer?:{work:Step;accept:CatalogAccept}}
 export interface FleetProgressionResult{assignments:Assignment[];changes:FleetProgressionChange[];reservations:FleetProgressionReservation[];requests:FleetProgressionRequest[];gaps:string[];search:{visited:number;bound:number;exhausted:boolean}}
 const key=(s:string)=>s.toLowerCase();
 const valid=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&n>=0;
@@ -37,7 +38,7 @@ function initialNeeds(decision:ProgressionDecision,methods:readonly ProgressionM
 }
 /** Refine an existing allocation only when matched measured finite routes justify the complete change. */
 export function selectProgressionFleet(o:FleetProgressionOptions):FleetProgressionResult{
- const bound=Math.max(1,Math.min(10000,Math.floor(o.maxCombinations??256))),requests:FleetProgressionRequest[]=[],gaps=['Fleet comparison is bounded and covers supplied finite intents and measured candidates only.'];
+ const bound=Math.max(1,Math.min(10000,Math.floor(o.maxCombinations??256))),requests:FleetProgressionRequest[]=[],requestedConsumers=new Set<string>(),gaps=['Fleet comparison is bounded and covers supplied finite intents and measured candidates only.'];
  const held=(name:string)=>has(o.busy,name)||has(o.paused,name)||has(o.protected,name);
  const accounts=new Map(o.accounts.map(a=>[key(a.account),a]));
  const fresh=(at:number)=>at>0&&at<=o.now&&o.now-at<=(o.context?.maxAgeMs??300000);
@@ -55,11 +56,17 @@ export function selectProgressionFleet(o:FleetProgressionOptions):FleetProgressi
   if(!a||!intent||!assignment.template||assignment.fund||assignment.send||a.clock?.protected||held(a.account))continue;
   const methods=o.methods(intent,a);baseline.methods=methods;
   const current=methods.find(m=>m.id===baseline.method)??methods.find(m=>m.step.script===assignment.template!.script&&JSON.stringify(m.step.args)===JSON.stringify(assignment.template!.args??[])&&Object.entries(m.step.env).every(([name,value])=>assignment.template!.env?.[name]===value));
-  if(!current){requests.push({account:a.account,method:baseline.method||assignment.template.id,action:'measure',reason:'The existing finite assignment has no source/state-matched measured route for comparison.'});continue;}
+  if(!current){requestedConsumers.add(key(a.account));requests.push({account:a.account,method:baseline.method||assignment.template.id,action:'measure',reason:'The existing finite assignment has no source/state-matched measured route for comparison.'});continue;}
   baseline.method=current.id;
   const context={...o.context,now:o.now,requireQualification:true};
   const currentDecision=chooseProgression(intent,a,[current],context);
+  if(currentDecision.state==='observe'&&currentDecision.reason==='Fresh valid account skill observations are required.'){
+   const accept:CatalogAccept|undefined=intent.kind==='train'?{skills:{[assignment.template.trains?.skill??intent.skill[0]!.toUpperCase()+intent.skill.slice(1)]:intent.targetLevel}}:intent.kind==='quest'?{quests:[intent.quest]}:intent.kind==='produce'||intent.kind==='acquire'?{bank:intent.items}:undefined;
+   if(accept)requests.push({account:a.account,method:current.id,action:'observe',reason:currentDecision.reason,consumer:{work:{script:assignment.template.script,args:[...(assignment.template.args??[])],env:{...assignment.template.env}},accept}});
+   continue;
+  }
   if(currentDecision.state!=='execute'||currentDecision.basis!=='measured'||currentDecision.expectedTicks===null){
+   requestedConsumers.add(key(a.account));
    requests.push({account:a.account,method:current.id,action:'measure',reason:'Baseline full finish time is not measured and qualified for this account state.'});
    for(const f of currentDecision.followUps)requests.push({account:a.account,method:f.method,action:f.state,reason:f.reason.join('; ')});continue;
   }
@@ -129,6 +136,12 @@ export function selectProgressionFleet(o:FleetProgressionOptions):FleetProgressi
   else{assignments.push(c.assignment);for(const r of external)requests.push({account:c.assignment.account,method:c.method,action:'transfer',holder:r.holder,item:r.item,count:r.count,reason:'Use the existing owned order path; training changes only after recipient stock is freshly observed.'});}
  }
  if(exhausted)gaps.push('Fleet allocation search bound reached; the retained feasible result is not an exhaustive optimum.');
+ for(const request of requests)if(requestedConsumers.has(key(request.account))&&!request.consumer&&['observe','qualify','measure','acquire'].includes(request.action)){
+  const assignment=o.baseline.find(a=>key(a.account)===key(request.account)),intent=get(o.intents,request.account),t=assignment?.template;
+  if(!t||!intent||assignment?.fund||assignment?.send)continue;
+  const accept:CatalogAccept|undefined=intent.kind==='train'?{skills:{[t.trains?.skill??intent.skill[0]!.toUpperCase()+intent.skill.slice(1)]:intent.targetLevel}}:intent.kind==='quest'?{quests:[intent.quest]}:intent.kind==='produce'||intent.kind==='acquire'?{bank:intent.items}:undefined;
+  if(accept)request.consumer={work:{script:t.script,args:[...(t.args??[])],env:{...t.env}},accept};
+ }
  const unique=new Map(requests.map(r=>[JSON.stringify(r),r]));
  return {assignments,changes,reservations,requests:[...unique.values()],gaps,search:{visited,bound,exhausted}};
 }

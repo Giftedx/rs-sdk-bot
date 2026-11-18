@@ -7,6 +7,31 @@ import {clickDialoguePage} from './generated/quest-lib';
 import {catchScorpion} from './generated/quest-scorpion';
 import {questScriptId} from './quest-sweep';
 import {resolve} from 'node:path';
+import type {Account} from '../packages/core/src/world';
+import {loadTravel} from '../packages/core/src/travel';
+
+test('bank candidates include a permitted spell landing before maze-bound nearby banks',async()=>{
+ const {nearestBanks}=await import('./quest-sweep');
+ const entry={x:2525,z:3162,level:0},actor:Account={skills:{attack:99,strength:99,defence:99,hitpoints:99,ranged:99,prayer:99,magic:99,agility:1},
+  coins:82904,varps:{treequest:0},items:['coins','lawrune','airrune','waterrune'],counts:{coins:82904,lawrune:1,airrune:4,waterrune:2}};
+ expect(nearestBanks(entry,actor,loadTravel())[0]).toMatchObject({x:2947,z:3368,level:0});
+ expect(nearestBanks(entry)[0]).toMatchObject({x:2655,z:3283,level:0});
+ for(const unavailable of [
+  {...actor,skills:{...actor.skills,magic:1}},
+  {...actor,counts:{...actor.counts,lawrune:0}},
+  {...actor,counts:{...actor.counts,airrune:2}},
+ ])expect(nearestBanks(entry,unavailable,loadTravel())[0]).toEqual(nearestBanks(entry)[0]);
+ // An explicit empty graph provides no spell route, even when the carried kit could cast one elsewhere.
+ expect(nearestBanks(entry,actor,[])[0]).toEqual(nearestBanks(entry)[0]);
+});
+
+test('bank candidate ranking does not treat a fixed-source transport as a global spell',async()=>{
+ const {nearestBanks}=await import('./quest-sweep');
+ const entry={x:2525,z:3162,level:0},actor:Account={skills:{magic:99},varps:{},items:['lawrune','airrune','waterrune'],counts:{lawrune:1,airrune:4,waterrune:2}};
+ const falador=loadTravel().find(t=>t.kind==='spell'&&t.name==='Falador teleport')!;
+ expect(falador).toBeDefined();
+ expect(nearestBanks(entry,actor,[{...falador,from:{x:3000,z:3000,level:0}}])[0]).toEqual(nearestBanks(entry)[0]);
+});
 
 test('the Barcrawl script starts under the name the sweep gives it',()=>{
  const file=resolve(import.meta.dir,'generated','quest-barcrawl.ts');
@@ -1819,22 +1844,70 @@ test('Heckel adapter uses the pinned Grand Tree ladder and its direct down optio
  expect(map).toMatch(/^0 34 39: 1747 10\r?$/m);expect(map).toMatch(/^1 34 39: 1748 10\r?$/m);
 });
 
+test('Heckel travel accepts adjacent ground arrival while the southern gate approach stays exact',async()=>{
+ const {fakeGame}=await import('../packages/core/test/fakegame');
+ const ground={x:2493,z:3488,level:0},south={x:2461,z:3382,level:0};
+ const g=fakeGame({x:2493,z:3478,level:0});
+ g.state.nearbyNpcs=[];g.quirks.walkOffBy=-1;
+ const world={blockedDoors:()=>[],route:(_from:Tile,to:Tile)=>({ok:true as const,cost:1,
+  legs:[{kind:'walk' as const,to,tolerance:2}]})};
+ try{
+  const io=heckelIO(g as unknown as Session,world);
+  expect(await io.travel(ground)).toEqual({ok:true});
+  expect(g.state.player).toMatchObject({worldX:2492,worldZ:3488,level:0});
+  expect(g.calls).toEqual([`walk ${ground.x},${ground.z}`]);
+  Object.assign(g.state.player,{worldX:south.x-1,worldZ:south.z});
+  g.quirks.walkOffBy=-1;
+  expect(await io.travel(south)).toEqual({ok:true});
+  expect(g.state.player).toMatchObject({worldX:south.x,worldZ:south.z,level:0});
+  expect(g.calls.slice(1)).toEqual([`walk ${south.x},${south.z}`,`walk ${south.x},${south.z}`]);
+ }finally{g.stop();}
+},10000);
+
+test('Heckel travel descends from the failed Bolkoy upstairs entry before the Stronghold south approach',async()=>{
+ const {fakeGame}=await import('../packages/core/test/fakegame');
+ const entry={x:2529,z:3162,level:1},down={x:2525,z:3162,level:0},south={x:2461,z:3382,level:0};
+ const g=fakeGame({...entry,hp:69,maxHp:99,nearbyLocs:[{id:1746,x:2525,z:3162,level:1}]});
+ g.state.nearbyNpcs=[];g.quirks.climbTo=down;g.quirks.climbDelayTicks=3;
+ const planned:Tile[]=[],transport={locName:'laddertop',option:'op1',from:{...down,level:1},to:down,exact:false,src:'',toSrc:'',handler:''};
+ const world={navigationGraph:()=>({transports:[transport],travel:[]}),blockedDoors:()=>[],route:(from:Tile,to:Tile)=>{
+  planned.push({...to});
+  if(from.level===1&&to.x===down.x&&to.z===down.z&&to.level===0)return{ok:true as const,cost:3,legs:[{kind:'transport' as const,loc:transport.locName,option:transport.option,at:transport.from,to:down,exact:false}]};
+  return{ok:false as const,reason:'no_route' as const};
+ }};
+ try{
+  const r=await heckelIO(g as unknown as Session,world).travel(south);
+  expect(r).toEqual({ok:true});
+  expect(planned[0]).toEqual(down);
+  expect(g.calls).toContain('interact 2525,3162 op1');
+  expect(g.state.player.level).toBe(0);
+  expect(Math.max(Math.abs(g.state.player.worldX-south.x),Math.abs(g.state.player.worldZ-south.z))).toBeLessThanOrEqual(1);
+ }finally{g.stop();}
+},10000);
+
 test('Elena saved proof requires bought dust, exact coins/assets, completion, XP and logout',()=>{
  const before:Parameters<typeof questSweepChecks>[1]={version:10,position:{x:2615,z:3332,level:0},vars:{165:0,101:0},
-  inventories:{93:[2126,1929,1929,1929,1929,952,954,1927,231].map((id,slot)=>({id,slot,count:1})),95:[{id:995,slot:0,count:106}]},
+  inventories:{93:[2126,952,954,1927,231].map((id,slot)=>({id,slot,count:1})),95:[{id:995,slot:0,count:230}]},
   skills:Array.from({length:21},(_,index)=>({index,rawExperience:0,xp:0,level:index===3?40:1}))};
  const after=structuredClone(before);after.vars[165]=29;after.vars[101]=1;after.skills[14]!.rawExperience=606250;
- after.inventories={93:[{id:995,slot:0,count:104},{id:952,slot:1,count:1},{id:1925,slot:2,count:4},{id:1505,slot:6,count:1}],94:[{id:1506,slot:0,count:1}],95:[]};
- const log='START 2615 3332 0\nQUEST_SWEEP_HECKEL {"item":1975,"before":0,"after":1,"coinsBefore":106,"coins":104,"observed":true}\nQUEST_SWEEP_TREE_EXIT {"ok":true,"at":{"x":2466,"z":3491,"level":0}}\nQUEST_SWEEP_GATE {"ok":true}\nMILESTONE quest-sweep elena staged at {}\nQUEST_SWEEP_FLAG {"name":"Plague City","state":"complete"}\nRESULT ok qp=1\nLOGOUT logged-out\n';
+ after.inventories={93:[{id:995,slot:0,count:220},{id:952,slot:1,count:1},{id:1925,slot:2,count:4},{id:1505,slot:6,count:1}],94:[{id:1506,slot:0,count:1}],95:[]};
+ const log='START 2615 3332 0\nQUEST_SWEEP_BUY {"item":1925,"npc":"Shop keeper","before":0,"after":3,"coinsBefore":230,"coins":224}\nQUEST_SWEEP_BUY {"item":1925,"npc":"Bolkoy","before":3,"after":4,"coinsBefore":224,"coins":222}\nQUEST_SWEEP_DOWN {"from":{"x":2529,"z":3162,"level":1},"to":{"x":2525,"z":3162,"level":0}}\nQUEST_SWEEP_HECKEL_APPROACH {"from":{"x":2529,"z":3162,"level":1},"to":{"x":2461,"z":3382,"level":0},"at":{"x":2461,"z":3382,"level":0},"observed":true}\nQUEST_SWEEP_HECKEL {"item":1975,"before":0,"after":1,"coinsBefore":222,"coins":220,"observed":true}\nQUEST_SWEEP_TREE_EXIT {"ok":true,"at":{"x":2466,"z":3491,"level":0}}\nQUEST_SWEEP_GATE {"ok":true}\nMILESTONE quest-sweep elena staged at {}\nQUEST_SWEEP_FLAG {"name":"Plague City","state":"complete"}\nRESULT ok qp=1\nLOGOUT logged-out\n';
  const verify=(text=log)=>questSweepChecks('elena-heckel-dust',before,after,text,{id:'elena-heckel-dust',exit:0,timedOut:false,saveMatched:true,seconds:1});
  expect(Object.values(verify()).every(Boolean)).toBe(true);
  after.inventories[93]![0]!.count--;expect(verify().assets).toBe(false);after.inventories[93]![0]!.count++;
  after.vars[165]=28;expect(verify()).toMatchObject({quest:false});after.vars[165]=29;
  after.skills[14]!.rawExperience--;expect(verify()).toMatchObject({reward:false});after.skills[14]!.rawExperience++;
  expect(verify(log.replace('LOGOUT logged-out','')).logout).toBe(false);
- expect(verify(log.replace('"observed":true','"observed":false'))).toMatchObject({bought:false});
+ expect(verify(log.replaceAll('"observed":true','"observed":false'))).toMatchObject({bought:false});
  expect(verify(log.replace('QUEST_SWEEP_TREE_EXIT','OMITTED_TREE_EXIT'))).toMatchObject({treeExit:false});
  expect(verify(log.replace('"z":3491','"z":3494'))).toMatchObject({treeExit:false});
+ expect(verify(log.replace('QUEST_SWEEP_DOWN','OMITTED_DOWN'))).toMatchObject({descent:false});
+ expect(verify(log.replace('QUEST_SWEEP_HECKEL_APPROACH','OMITTED_APPROACH'))).toMatchObject({approach:false});
+ expect(verify(log.replaceAll('"x":2529','"x":2528'))).toMatchObject({approach:false,descent:false});
+ expect(verify(log.replace('"x":2461,"z":3382,"level":0},"observed":true','"x":2464,"z":3382,"level":0},"observed":true'))).toMatchObject({approach:false});
+ expect(verify(log.replace('"npc":"Bolkoy"','"npc":"Other keeper"'))).toMatchObject({budget:false});
+ expect(verify(log.replace('"coins":222','"coins":221'))).toMatchObject({budget:false});
+ expect(verify(log+log.split('\n').find(l=>l.startsWith('QUEST_SWEEP_HECKEL '))+'\n')).toMatchObject({bought:false});
 });
 
 test('a far walk whose quest guard has already aborted takes no leg and reports stopped',async()=>{
@@ -2060,3 +2133,32 @@ test('a Magic Guild seller is entered by the nearest door at Magic 66 and refuse
   expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[1]!,walk)).toEqual({ok:false,reason:'transition',detail:'Magic Guild door unobserved at 2597,3087'});
  }finally{clearInterval(timer);}
 },30000);
+
+test('planTeleportRunes uses off-thread planning when available and skips routing without law runes', async () => {
+ const {planTeleportRunes}=await import('./quest-sweep');
+ const names=new Map([[563,'lawrune'],[554,'firerune'],[556,'airrune']]);
+ const ids=new Map([...names.entries()].map(([id,n])=>[n,id]));
+ const from={x:3200,z:3200,level:0},to={x:2960,z:3380,level:0};
+ const acct={items:[],counts:{},coins:0,skills:{},quests:{}} as any;
+ let syncCalls=0,offCalls=0;
+ const syncWorld={offThread:false,route:()=>{syncCalls++;return{ok:true,cost:10,legs:[{kind:'travel',travel:{kind:'spell',runes:[{item:'lawrune',count:1},{item:'airrune',count:3}]}}]};}} as any;
+ const offWorld={offThread:true,route:()=>{syncCalls++;return{ok:false};}} as any;
+
+ // No law runes in pack or bank exits before invoking any router.
+ expect(await planTeleportRunes(offWorld,from,to,acct,[{id:556,count:10}],id=>names.get(id),n=>ids.get(n),5000,async()=>{offCalls++;return null;})).toEqual([]);
+ expect([syncCalls,offCalls]).toEqual([0,0]);
+
+ // World with offThread=true plans off-thread rather than calling world.route synchronously.
+ const teleOff=await planTeleportRunes(offWorld,from,to,acct,[{id:563,count:2},{id:556,count:6}],id=>names.get(id),n=>ids.get(n),5000,async(_f,_t,a)=>{
+  offCalls++;
+  expect(a.counts?.lawrune).toBe(2);
+  return {cost:5,legs:[{kind:'travel',travel:{kind:'spell',name:'lumbridge',cost:5,from,to,coins:0,quests:[],skills:{},runes:[{item:'lawrune',count:1},{item:'airrune',count:3}]}}]} as any;
+ });
+ expect(teleOff).toEqual([{id:563,count:1},{id:556,count:3}]);
+ expect([syncCalls,offCalls]).toEqual([0,1]);
+
+ // World without offThread falls back cleanly to synchronous world.route.
+ const teleSync=await planTeleportRunes(syncWorld,from,to,acct,[{id:563,count:1},{id:556,count:3}],id=>names.get(id),n=>ids.get(n));
+ expect(teleSync).toEqual([{id:563,count:1},{id:556,count:3}]);
+ expect(syncCalls).toBe(1);
+});

@@ -1,5 +1,30 @@
 import {test,expect} from 'bun:test';
-import {ammoOrderChecks,headlessOrderChecks,plannedEntryChecks,selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from '../src/ammo-order-proof';
+import {ammoOrderChecks,headlessOrderChecks,plannedEntryChecks,PLANNED_ENTRY,PLANNED_BANK,selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from '../src/ammo-order-proof';
+import type {openBot} from '../../core/src/bot';
+import {evaluateProgressionWork} from '../../core/src/progression-session';
+
+test('generated registration supplies supported session-check metadata only after both owned endpoints match',async()=>{
+ const name='fixture',p=selectAmmoProofEndpoints(()=>true,()=>0),session={name};
+ const registration=ammoRegistrationArgs(name,p);
+ // Run the generated body with local dependencies. No client or account is opened.
+ const execute=new Function('readFileSync','openBot','waitTicks','finish',`return (async()=>{${registration[1]!.replace(/^import .*;\r?$/gm,'')}})();`);
+ const opened:{name:string;options:Parameters<typeof openBot>[1]}[]=[],waits:unknown[]=[],finishes:unknown[]=[];
+ const run=(profile:string)=>execute(()=>profile,async(account:string,options:Parameters<typeof openBot>[1])=>{
+  opened.push({name:account,options});return session;
+ },async(s:unknown,ticks:number)=>{waits.push([s,ticks]);},async(...args:unknown[])=>{finishes.push(args);});
+ const profile=`SERVER=${p.server}\r\nGATEWAY_URL=${p.gateway}\r\n`;
+ await run(profile);
+ expect(opened).toHaveLength(1);expect(opened[0]!.name).toBe(name);
+ const record=opened[0]!.options?.record;
+ expect(record).toMatchObject({script:'scripts/session-check.ts',argv:[name]});
+ const evaluation=evaluateProgressionWork({script:record!.script,args:record!.argv.slice(1),env:record!.env??{}},{name,at:Date.now()},{requireQualification:true});
+ expect(evaluation.intent).toEqual({kind:'observe',objective:'scripts/session-check.ts'});
+ expect(evaluation.supported).toBe(true);
+ expect(waits).toEqual([[session,3]]);expect(finishes).toEqual([[[session],true,'practice ownership registered']]);
+ for(const invalid of [profile.replace(p.server,'localhost:8888'),profile.replace(p.gateway,'ws://localhost:7780')])
+  await expect(run(invalid)).rejects.toThrow('owned practice account required');
+ expect(opened).toHaveLength(1);expect(waits).toHaveLength(1);expect(finishes).toHaveLength(1);
+});
 
 test('owned ammo endpoints reach the stack, new profiles, registration and every worker child',async()=>{
  const checked:number[]=[],samples=[0,0.01];
@@ -77,22 +102,27 @@ test('owned headless saved-state gate rejects asset loss, old output, no XP and 
  expect(headlessOrderChecks(before,final,final,production,{...refusal,log:refusal.log+'\nSHAFT_BANK {}'}).refusal).toBe(false);
 });
 
-test('planned entry gate rejects missing approach, lost assets, wrong fares, unclear refusal and no logout',()=>{
- const save=(pack:{id:number;count:number}[],bank:{id:number;count:number}[],x=2615,z=3332)=>({inventories:{93:pack.map((item,slot)=>({...item,slot})),94:[],95:bank.map((item,slot)=>({...item,slot}))},skills:[],position:{x,z,level:0},version:9,vars:{}}) as any;
+test('planned eastbound entry gate rejects wrong entry, missing approach, lost assets, fares, unclear duplicate and no logout',()=>{
+ expect(PLANNED_ENTRY).toEqual({x:3029,z:3217,level:0});
+ expect(PLANNED_BANK).toEqual({x:3185,z:3436,level:0});
+ const save=(pack:{id:number;count:number}[],bank:{id:number;count:number}[],x=PLANNED_BANK.x,z=PLANNED_BANK.z)=>({inventories:{93:pack.map((item,slot)=>({...item,slot})),94:[],95:bank.map((item,slot)=>({...item,slot}))},skills:[],position:{x,z,level:0},version:9,vars:{}}) as any;
  const donorPack=[{id:379,count:1},{id:379,count:1},{id:231,count:1}];
- const before=[save([...donorPack,{id:995,count:100}],[{id:379,count:173},{id:995,count:19885}],3028,3221),save([{id:1891,count:3}],[{id:995,count:175}],2662,3305)];
- const final=[save([...donorPack,{id:995,count:40}],[{id:379,count:73},{id:995,count:19885}]),save([{id:1891,count:3}],[{id:995,count:175},{id:379,count:100}])];
- const input={before,refused:before,final,names:['pdon','prec'],receipt:{state:'settled',expected:[{id:379,count:100}]},
+ const before=[save([...donorPack,{id:995,count:100}],[{id:379,count:173},{id:995,count:19885}],PLANNED_ENTRY.x,PLANNED_ENTRY.z),save([{id:1891,count:3}],[{id:995,count:175}],PLANNED_ENTRY.x,PLANNED_ENTRY.z)];
+ const final=[save([...donorPack,{id:995,count:100}],[{id:379,count:73},{id:995,count:19885}]),save([{id:1891,count:3}],[{id:995,count:175},{id:379,count:100}])];
+ const input={before,final,names:['pdon','prec'],receipt:{state:'settled',expected:[{id:379,count:100}]},
   planned:{code:0,log:'HANDOFF_APPROACH {"account":"pdon"\nHANDOFF_APPROACH {"account":"prec"\nHANDOFF_RESULT {"ok":true\nLOGOUT logged-out\nLOGOUT logged-out'},
-  refusal:{code:1,log:'handoff approach deadline\nLOGOUT logged-out\nLOGOUT logged-out'},repeat:{code:1,log:'already settled'}};
+  repeat:{code:1,log:'already settled'}};
  expect(Object.values(plannedEntryChecks(input)).every(Boolean)).toBe(true);
+ for(const i of [0,1])for(const position of [{x:3028,z:3221,level:0},{x:2662,z:3305,level:0},{...PLANNED_ENTRY,level:1}])
+  expect(plannedEntryChecks({...input,before:before.map((s,j)=>i===j?{...s,position}:s)}).plannedEntry).toBe(false);
  expect(plannedEntryChecks({...input,planned:{...input.planned,log:input.planned.log.replace('"prec"','"other"')}}).plannedTransfer).toBe(false);
- const overpaid=save([...donorPack,{id:995,count:39}],[{id:379,count:73},{id:995,count:19885}]);
+ const overpaid=save([...donorPack,{id:995,count:99}],[{id:379,count:73},{id:995,count:19885}]);
  expect(plannedEntryChecks({...input,final:[overpaid,final[1]!]}).plannedAssets).toBe(false);
- const spentFood=save([{id:231,count:1},{id:995,count:40}],[{id:379,count:75},{id:995,count:19885}]);
+ const spentFood=save([{id:231,count:1},{id:995,count:100}],[{id:379,count:75},{id:995,count:19885}]);
  expect(plannedEntryChecks({...input,final:[spentFood,final[1]!]}).plannedPreHeld).toBe(false);
- expect(plannedEntryChecks({...input,final:[final[0]!,save([{id:1891,count:3}],[{id:995,count:175},{id:379,count:100}],2662,3305)]}).plannedPosition).toBe(false);
- expect(plannedEntryChecks({...input,refusal:{code:1,log:input.refusal.log+'\nHANDOFF_RECEIPT {}'}}).plannedRefusal).toBe(false);
- expect(plannedEntryChecks({...input,refused:[final[0]!,before[1]!]}).plannedRefusal).toBe(false);
- expect(plannedEntryChecks({...input,refusal:{code:1,log:'handoff approach deadline\nLOGOUT logged-out'}}).plannedLogout).toBe(false);
+ expect(plannedEntryChecks({...input,final:[final[0]!,save([{id:1891,count:3}],[{id:995,count:175},{id:379,count:100}],2615,3332)]}).plannedPosition).toBe(false);
+ expect(plannedEntryChecks({...input,final:[final[0]!,save([{id:1891,count:2}],[{id:995,count:175},{id:379,count:100}])]}).plannedAssets).toBe(false);
+ expect(plannedEntryChecks({...input,repeat:{code:1,log:'already settled\nSTART 3029 3217 0'}}).plannedRepeat).toBe(false);
+ expect(plannedEntryChecks({...input,repeat:{code:1,log:'handoff failed'}}).plannedRepeat).toBe(false);
+ expect(plannedEntryChecks({...input,planned:{code:0,log:input.planned.log.replace('LOGOUT logged-out\n','')}}).plannedLogout).toBe(false);
 });

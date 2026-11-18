@@ -1,7 +1,6 @@
 // One command runs a cloud fleet side: the setup a fresh container needs, the side's credentials, its plan, and its
-// three daemons (the swarm, the fleet agent and the planner), then a quiet watch that restarts a daemon that died.
-// It is the whole job of a cloud session the PC starts (scripts/cloud-launch.ts), so a session spends almost no model
-// tokens: it runs this command and diagnoses a failed bootstrap before another attempt.
+// coordinator-owned swarm, fleet agent and autopilot, then a watch of their exact owners and children.
+// It is the entry of a cloud session the PC starts (scripts/cloud-launch.ts), including planning and checked bootstrap repair.
 // Everything goes to .practice/cloud-side/<side>/run.log; stdout gets one RESULT line when the watch ends.
 // Usage: bun scripts/cloud-side.ts [--side <side>] [--watch-minutes <n>] [--capacity <n>] [--stop-at-end] [--setup-only]
 //   --side          the fleet side (default FLEET_SIDE); never `local`
@@ -15,7 +14,7 @@
 //   --inspect <file> same selected accounts, confirmed/released only; finite bank inspectors, no planner or trades
 //                   Both bounded modes require explicit --watch-minutes and --stop-at-end; FLEET_ADOPT is forced 0.
 import { spawn, spawnSync } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, unlinkSync, appendFileSync, writeFileSync, renameSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, unlinkSync, appendFileSync, writeFileSync, renameSync,readdirSync,readlinkSync,realpathSync } from 'node:fs';
 import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, SIDE_NAME } from '../packages/core/src/fleet';
@@ -28,12 +27,15 @@ import {prepareBoundedRecovery,releaseForBoundedInspection,clearSwarmStops} from
 import type {RecoveryTarget} from '../packages/core/src/bounded-recovery';
 import {withPlanWrite} from '../packages/core/src/plan-lock';
 import {randomUUID} from 'node:crypto';
-import {observeBoundedOwners,boundedProcessAlive,type BoundedOwnerBinding} from '../packages/core/src/bounded-owners';
+import {observeBoundedOwners,boundedProcessAlive,boundedGroupMembers,type BoundedOwnerBinding} from '../packages/core/src/bounded-owners';
+import {commandLine} from '../packages/practice/src/proc';
+import {workspaceRoot} from '../packages/core/src/build-workspace-root';
+import {isDeepStrictEqual} from 'node:util';
 
 const root = resolve(import.meta.dir, '..');
 export const DEFAULT_WATCH_MINUTES = 110;
-export const DAEMONS = ['swarm', 'fleet-agent', 'autopilot'] as const;
-export type Daemon = typeof DAEMONS[number];
+export const DAEMONS = ['coordinator', 'fleet-agent', 'autopilot'] as const;
+export type Daemon = typeof DAEMONS[number] | 'swarm';
 // A daemon that dies more often than this in an hour is left down: something needs a person, not a loop.
 export const MAX_RESTARTS_PER_HOUR = 6;
 
@@ -98,6 +100,7 @@ export function worktreeSetupResult(result: { status: number | null; stdout?: st
 
 export type DaemonRecord = { pid: number; started: number; restarts: number[]; nonce?: string };
 export function daemonCommand(name: Daemon, plan: string): string[] {
+    if(name==='coordinator')return ['packages/router/src/coordinator-cli.ts','--run'];
     if (name === 'swarm') return ['scripts/swarm.ts', plan];
     if (name === 'fleet-agent') return ['scripts/fleet-agent.ts'];
     return ['scripts/autopilot.ts', plan, '--daemon'];
@@ -114,13 +117,103 @@ export function mayRestart(restarts: readonly number[], now: number): boolean {
 export const ownerStop = (text: string | undefined) => text !== undefined && !swarmWroteStop(text);
 // Whether the end of a --stop-at-end watch writes the swarm's stop text: never over an owner's file.
 export const endStopWrites = (existing: string | undefined) => !ownerStop(existing);
+export function watchResult(v:{inspectionStartupError?:boolean;boundedOwnershipError?:boolean;normalOwnershipError?:string|null;ownerStopped?:boolean}){
+    return v.inspectionStartupError||v.boundedOwnershipError||v.normalOwnershipError?'fail':v.ownerStopped?'stop':'ok';
+}
 // A new side plan: the repository's admission limits, no jobs (the planner writes one per account).
 export function newPlan(capacity: number) {
     return { maxBots: 4, minFreeGB: 4, fleetCapacity: capacity, jobs: [] as unknown[] };
 }
 
+export async function prepareNormalPlan(base:string,plan:string,capacity:number,side='cloud'){
+    await withPlanWrite(()=>{
+        const stop=join(base,'.practice/stop-swarm');
+        if(existsSync(join(base,'.practice/stop-coordinator'))||existsSync(stop)&&ownerStop(readFileSync(stop,'utf8')))throw Error('normal coordinator is owner-paused');
+        const next=existsSync(plan)?JSON.parse(readFileSync(plan,'utf8')):newPlan(capacity),coordination=next.coordination??{};
+        if(coordination.enabled===false)throw Error('normal coordinator is owner-paused in the selected plan');
+        if(coordination.boundedRecovery||coordination.boundedInspection)throw Error('normal coordinator refuses a bounded plan');
+        next.coordination={maxActive:1,maxLive:next.maxBots,plannerIntervalMs:30000,agents:[side.startsWith('claude')?'claude':'codex'],bootstrap:[],...coordination,enabled:true};
+        mkdirSync(resolve(plan,'..'),{recursive:true});const temporary=plan+'.'+process.pid+'.tmp';
+        writeFileSync(temporary,JSON.stringify(next,null,2)+'\n');renameSync(temporary,plan);
+    },join(base,'.practice/coordinator'));
+}
+
+export async function prepareNormalStop(base:string){
+    return withPlanWrite(()=>{
+        const file=join(base,'.practice/stop-swarm');
+        if(existsSync(file)&&ownerStop(readFileSync(file,'utf8')))return false;
+        writeFileSync(file,SWARM_STOP.all);return true;
+    },join(base,'.practice/coordinator'));
+}
+
+function normalSwarmProcesses(base:string){
+    if(process.platform!=='linux')return [];
+    const directory=realpathSync(base),found:number[]=[];
+    for(const row of readdirSync('/proc').filter(n=>/^\d+$/.test(n))){
+        try{const pid=Number(row),line=commandLine(pid);if(!line?.includes('scripts/swarm.ts'))continue;
+            if(line.includes(join(base,'scripts/swarm.ts'))||readlinkSync('/proc/'+row+'/cwd')===directory)found.push(pid);
+        }catch{/* The process may exit during the read. */}
+    }return found;
+}
+
+// Normal ownership includes planner work; bounded recovery's observer deliberately refuses it.
+export function observeNormalOwners(base:string,plan:string,side:string,records:Record<string,DaemonRecord>,deps:{alive?:(pid:number)=>boolean;command?:(pid:number)=>string|null;groups?:(roots:readonly number[])=>number[]|null;processes?:()=>number[]}={},priorRoots:readonly number[]=[]){
+    const alive=deps.alive??boundedProcessAlive,command=deps.command??commandLine,roots=new Set(priorRoots),active=new Set<number>(),observed=new Map<string,string>();
+    let coordinator:{pid:number;nonce:string}|null=null,swarm:number|null=null;
+    const read=(file:string)=>{if(!existsSync(file))return;const raw=readFileSync(file,'utf8');observed.set(file,raw);return JSON.parse(raw);};
+    const match=(owner:any,role:'coordinator'|'swarm'|'worker'|'planner',sourceRoot=base)=>{
+        if(!Number.isSafeInteger(owner?.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce)throw Error('normal owner identity unreadable');
+        roots.add(owner.pid);if(!alive(owner.pid))return false;
+        const line=command(owner.pid),script=join(sourceRoot,role==='swarm'?'scripts/swarm.ts':'packages/router/src/coordinator-cli.ts'),flag=role==='swarm'?'--coordinator=':role==='coordinator'?'--run':'--'+role;
+        if(!line?.includes(script)||!line.includes(owner.nonce)||!line.includes(flag))throw Error('normal live owner command unknown');
+        if(sourceRoot!==base&&!line.split(/[\s"']+/).includes(owner.nonce))throw Error('normal build run command changed');
+        active.add(owner.pid);return true;
+    };
+    try{
+        const directory=join(base,'.practice/coordinator'),owner=read(join(directory,'owner.json'));
+        if(owner){
+            if(alive(owner.pid)||owner.successor&&alive(owner.successor.pid))if(owner.plan!==resolve(plan)||owner.side!==side)throw Error('normal coordinator plan or side changed');
+            if(match(owner,'coordinator'))coordinator={pid:owner.pid,nonce:owner.nonce};
+            if(owner.successor&&match(owner.successor,'coordinator'))coordinator={pid:owner.successor.pid,nonce:owner.successor.nonce};
+        }
+        const launched=records.coordinator;
+        if(launched&&alive(launched.pid)&&!active.has(launched.pid)){if(match(launched,'coordinator')&&!coordinator)coordinator={pid:launched.pid,nonce:launched.nonce!};}
+        const controller=read(join(directory,'swarm-owner.json'));
+        if(controller){
+            if(alive(controller.pid)&&(controller.plan!==resolve(plan)||controller.side!==side))throw Error('normal swarm plan or side changed');
+            if(match(controller,'swarm'))swarm=controller.pid;
+        }
+        const state=read(join(base,'.practice/swarm-state.json'));
+        const candidates=new Set([...(deps.processes??(()=>normalSwarmProcesses(base)))(),records.swarm?.pid,state?.controllerPid].filter((p):p is number=>Number.isSafeInteger(p)));
+        for(const pid of candidates)if(alive(pid)&&pid!==swarm)throw Error('normal migration waits for unowned swarm to settle');
+        const queue=read(join(directory,'state.json'));
+        for(const task of [...(queue?.tasks??[]).filter((r:any)=>r.status==='running'),...(queue?.planner?[queue.planner]:[])]){
+            const child=read(join(directory,'runs',task.runId,'owner.json'))??{pid:task.pid,runId:task.runId};
+            if(task.pid&&child.pid!==task.pid||child.runId!==task.runId)throw Error('normal child owner changed');
+            let sourceRoot=base;
+            if(task.spec?.kind==='build'&&alive(child.pid)){
+                if(owner?.plan!==resolve(plan)||owner.side!==side)throw Error('normal build authority changed');
+                const input=read(join(directory,'runs',task.runId,'input.json'));
+                if(input?.runId!==task.runId||input.startedAt!==task.startedAt||!isDeepStrictEqual(input.task,task.spec))throw Error('normal build input changed');
+                sourceRoot=workspaceRoot(base,task.spec.capability);
+                const marker=read(join(sourceRoot,'.workspace.json'));
+                if(marker?.capability!==task.spec.capability||!Number.isFinite(task.startedAt)||!Number.isFinite(marker.created)||marker.created<task.startedAt||!marker.base||Array.isArray(marker.base)||typeof marker.base!=='object')throw Error('normal build workspace identity changed');
+                if(realpathSync(join(sourceRoot,'.practice'))!==realpathSync(join(base,'.practice')))throw Error('normal build state is not shared');
+            }
+            match({pid:child.pid,nonce:task.runId},task===queue.planner?'planner':'worker',sourceRoot);
+        }
+        for(const row of read(join(base,'.practice/swarm-runs.json'))??[]){if(!Number.isSafeInteger(row.pid)||row.pid<1)throw Error('normal supervisor identity unreadable');roots.add(row.pid);if(alive(row.pid))active.add(row.pid);}
+        for(const name of ['fleet-agent','autopilot'])if(records[name]){const pid=records[name]!.pid;roots.add(pid);
+            if(alive(pid)){if(!command(pid)?.replaceAll('\\','/').includes('scripts/'+name+'.ts'))throw Error('normal daemon command unknown');active.add(pid);}}
+        const members=(deps.groups??boundedGroupMembers)([...roots]);if(members===null)throw Error('normal child groups unavailable');for(const pid of members)active.add(pid);
+        if(!active.size&&['build-lock.json','../swarm-repair.json.lease'].some(file=>existsSync(join(directory,file))))throw Error('normal authority fence remains unresolved');
+        for(const [file,raw]of observed)if(readFileSync(file,'utf8')!==raw)throw Error('normal owners changed during observation');
+        return {known:true,settled:active.size===0,active:[...active],coordinator,swarm,roots:[...roots],reason:null};
+    }catch(error){return {known:false,settled:false,active:[...active],coordinator:null,swarm:null,roots:[...roots],reason:String(error)};}
+}
+
 function alive(pid: number, script: string): boolean {
-    try { process.kill(pid, 0); } catch { return false; }
+    if(!boundedProcessAlive(pid))return false;
     try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8').includes(script); } catch { return true; }
 }
 
@@ -176,7 +269,9 @@ if (import.meta.main) {
     if (!run(['bun', 'scripts/fleet-sync.ts', '--no-push'])) fail('fleet sync failed');
     run(['git', '-C', FLEET_WORKTREE, 'config', 'rebase.autoStash', 'true']);
     let plan = join(root, '.practice', 'cloud-handoff', 'swarm.json');
-    if (!existsSync(plan)) writeFileSync(plan, JSON.stringify(newPlan(o.capacity), null, 2) + '\n');
+    if(bounded||o.setupOnly){if(!existsSync(plan))writeFileSync(plan,JSON.stringify(newPlan(o.capacity),null,2)+'\n');}
+    else try{await prepareNormalPlan(root,plan,o.capacity,o.side);}catch(error){
+        if(String(error).includes('paused')){console.log(`RESULT stop cloud-side side=${o.side} ${String(error)}`);process.exit(0);}fail('normal plan setup: '+String(error));}
     env.SWARM_PLAN = plan;
 
     // Credentials of every account this side owns: the vault first; an account the side made itself from FLEET_SEED
@@ -239,27 +334,34 @@ if (import.meta.main) {
     const commands=managedCommands(!!o.recover,plan,!!o.inspect);
     let inspectionStartupError=false;
     const binding:BoundedOwnerBinding={watchId:randomUUID(),plan,side:o.side};
-    if(o.recover)env.CLOUD_WATCH_ID=binding.watchId;
+    if(!o.inspect)env.CLOUD_WATCH_ID=binding.watchId;
     const launched:{pid:number;nonce:string}[]=[];
     let recoveryLaunched=false,boundedOwnershipError=false;
     const start = (name: string) => {
         const out = openSync(join(dir, `${name}.log`), 'a');
-        const nonce=o.recover?randomUUID():undefined,args=o.recover?[join(root,commands[name]![0]!),...commands[name]!.slice(1),nonce!]:commands[name]!;
+        const nonce=name==='coordinator'?randomUUID():undefined,args=nonce?[join(root,commands[name]![0]!),...commands[name]!.slice(1),nonce]:commands[name]!;
         const child = spawn(process.execPath, args, { cwd: root, env, detached: true, windowsHide: true, stdio: ['ignore', out, out] });
         closeSync(out); child.unref();
         const prior = records[name]?.restarts ?? [];
         records[name] = { pid: child.pid!, started: Date.now(), restarts: [...prior.filter(t => Date.now() - t < 60 * 60_000), Date.now()],...(nonce?{nonce}:{}) };
-        if(nonce){launched.push({pid:child.pid!,nonce});recoveryLaunched=true;}
+        if(nonce){launched.push({pid:child.pid!,nonce});if(o.recover)recoveryLaunched=true;}
         writeFileSync(pidsFile, JSON.stringify(records));
         log(`started ${name} pid ${child.pid}`);
     };
+    const normalRoots=new Set<number>();let normalOwnershipError:string|null=null;
+    const normalOwners=()=>{const view=observeNormalOwners(root,plan,o.side,records,{},[...normalRoots]);normalOwnershipError=view.known?null:view.reason;for(const pid of view.roots)normalRoots.add(pid);return view;};
     const tend = () => {
+        if(!o.inspect&&existsSync(join(root,'.practice/stop-coordinator')))return;
         if(o.recover&&recoveryLaunched){
             const current=observeBoundedOwners(root,binding,launched);
             if(!current.known){boundedOwnershipError=true;log('bounded coordinator ownership unknown; no duplicate start');}
             else if(current.coordinator&&boundedProcessAlive(current.coordinator))records.coordinator={...records.coordinator!,pid:current.coordinator};
             else if(!current.active.length){boundedOwnershipError=true;log('bounded coordinator exited; no automatic retry');}
             return;
+        }
+        if(!bounded){const view=normalOwners();
+            if(!view.known){log('normal ownership held: '+view.reason);return;}
+            if(view.coordinator)records.coordinator={pid:view.coordinator.pid,nonce:view.coordinator.nonce,started:records.coordinator?.started??Date.now(),restarts:records.coordinator?.restarts??[]};
         }
         for (const name of Object.keys(commands)) {
             const r = records[name];
@@ -269,6 +371,7 @@ if (import.meta.main) {
         }
     };
     tend();
+    if(!bounded&&normalOwnershipError)fail('normal ownership unavailable; owners preserved: '+normalOwnershipError);
     if(o.inspect){
         // Let the owning swarm observe disabled jobs, then use its existing enable-edge resume contract.
         const until=Date.now()+15000;let observed=false;
@@ -292,11 +395,13 @@ if (import.meta.main) {
     let ownerStopped = false;
     while (Date.now() < end) {
         await Bun.sleep(Math.min(60_000, Math.max(0, end - Date.now())));
-        if (ownerStop(readStop())) { ownerStopped = true; log('owner stop file: watch ends'); break; }
+        if (ownerStop(readStop())||!o.inspect&&existsSync(join(root,'.practice/stop-coordinator'))) { ownerStopped = true; log('owner stop file: watch ends'); break; }
         tend();
         if(boundedOwnershipError)break;
     }
     if (o.stopAtEnd) {
+        if(!bounded){const view=normalOwners();if(!view.known)fail('normal stop ownership unavailable; owners preserved: '+view.reason);
+            if(view.swarm)records.swarm={pid:view.swarm,started:Date.now(),restarts:[]};}
         if(o.recover){
             // Only the coordinator's saved owner can supply this watch's swarm identity.
             try{const owner=JSON.parse(readFileSync(join(root,'.practice/coordinator/swarm-owner.json'),'utf8'));
@@ -306,22 +411,24 @@ if (import.meta.main) {
         // other side reads the file as an owner's pause. An owner's file is never replaced or removed; this run removes
         // only the file it wrote, and only while its text is unchanged. A Codex task's default 50-minute watch plus this
         // wait ends within the hour.
-        const wrote = endStopWrites(readStop());
-        if (wrote) writeFileSync(stopSwarm, SWARM_STOP.all);
+        const wrote = !bounded?await prepareNormalStop(root):endStopWrites(readStop());
+        if (bounded&&wrote) writeFileSync(stopSwarm, SWARM_STOP.all);
+        if(!bounded)for(const name of ['fleet-agent','autopilot']){const r=records[name];if(r&&alive(r.pid,commands[name]![0]!))try{process.kill(r.pid,'SIGTERM');}catch{/* The daemon exited. */}}
         const stopBy = Date.now() + 6 * 60_000;
         while (Date.now() < stopBy && !o.recover && records.swarm && alive(records.swarm.pid, 'scripts/swarm.ts')) await Bun.sleep(5_000);
-        let ownersSettled=!o.recover;
+        let ownersSettled=!!o.inspect;
         if(o.recover){
             while(Date.now()<stopBy){const current=observeBoundedOwners(root,binding,launched);ownersSettled=current.known&&current.settled;if(ownersSettled)break;await Bun.sleep(1000);}
         }
+        if(!bounded){while(Date.now()<stopBy){const current=normalOwners();ownersSettled=current.known&&current.settled;if(ownersSettled)break;await Bun.sleep(1000);}}
         const settled=boundedStopSettled(!!records.swarm&&alive(records.swarm.pid,'scripts/swarm.ts'),!!records.coordinator&&alive(records.coordinator.pid,'coordinator-cli.ts'));
-        if(bounded&&(!settled||!ownersSettled)){log('bounded stop incomplete; stop fence and live owners preserved');console.log(`RESULT fail cloud-side side=${o.side} bounded stop incomplete; stop fence preserved`);process.exit(1);}
-        if(!bounded)for (const name of Object.keys(commands)) { const r = records[name]; if (r && alive(r.pid, commands[name]![0]!)) try { process.kill(r.pid, 'SIGTERM'); } catch { /* gone */ } }
+        if(!settled||!ownersSettled){log('stop incomplete; stop fence and live owners preserved');console.log(`RESULT fail cloud-side side=${o.side} ${bounded?'bounded':'normal'} stop incomplete; stop fence preserved`);process.exit(1);}
         if (wrote && readStop() === SWARM_STOP.all) try { unlinkSync(stopSwarm); } catch { /* gone */ }
         log('stopped at end');
     }
     const up = Object.keys(commands).map(n => `${n}=${records[n] && alive(records[n]!.pid, commands[n]![0]!) ? 'up' : 'down'}`).join(' ');
     const starts = Object.keys(commands).reduce((s, n) => s + (records[n]?.restarts.filter(t => t >= began).length ?? 0), 0);
-    console.log(`RESULT ${inspectionStartupError||boundedOwnershipError?'fail':ownerStopped ? 'stop' : 'ok'} cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${ownerStopped ? ' owner stop file' : ''}${o.stopAtEnd ? ' stopped' : ''}`);
-    if(inspectionStartupError||boundedOwnershipError)process.exitCode=1;
+    const result=watchResult({inspectionStartupError,boundedOwnershipError,normalOwnershipError,ownerStopped});
+    console.log(`RESULT ${result} cloud-side side=${o.side} minutes=${o.watchMinutes} accounts=${mine.length} ${up} starts=${starts}${ownerStopped ? ' owner stop file' : ''}${o.stopAtEnd ? ' stopped' : ''}${normalOwnershipError?' normal ownership unknown; owners preserved':''}`);
+    if(result==='fail')process.exitCode=1;
 }

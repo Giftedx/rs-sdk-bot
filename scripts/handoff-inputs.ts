@@ -20,6 +20,7 @@ import {runHeadless} from './fletch-arrows';
 import {walkTarget} from './walk-to';
 import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
 import {readMergedPlan} from '../packages/core/src/coordinator-jobs';
+import {finiteProgressionAccept} from '../packages/core/src/progression-session';
 
 // The coordinator installs its assignments only in its overlay, so ownership reads the merged plan.
 // A missing swarm.json leaves the jobs unknown, and assertAccountOwnership refuses.
@@ -94,7 +95,7 @@ async function headlessMain(io:{root?:string;openBot?:typeof openBot;settle?:typ
     try{
         check();release=acquireAccountLeases([c.account],runId,join(dir,'account-leases'));check();
         process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
-        sessions.push(await (io.openBot??openBot)(c.account,{onStop:async()=>cancel(),onSessionEnd:async()=>cancel()}));
+        sessions.push(await (io.openBot??openBot)(c.account,{record:ammoOrderRecord(c.account,process.argv.slice(2),process.env,root),onStop:async()=>cancel(),onSessionEnd:async()=>cancel()}));
         out=await runOwnedHeadless(sessions[0]!,c,check);
     }catch(e){out.reason=String(e);}
     finally{
@@ -140,6 +141,33 @@ export function parseHandoff(args: string[]): Handoff {
         || !Number.isSafeInteger(cfg.graceMs) || cfg.graceMs < 1000 || cfg.graceMs > 60_000) throw new Error('invalid handoff bounds/items');
     if (cfg.keep && cfg.items.some(i => new RegExp(cfg.keep!, 'i').test(i.name))) throw new Error('requested item overlaps protected KEEP');
     return cfg;
+}
+
+// Record the complete CLI once. Both progression descriptors retain its participants,
+// and bind the parent's bank target only to its acceptIndex.
+export function ammoOrderRecord(account:string,args:string[],env:Record<string,string|undefined>=process.env,base=resolve(import.meta.dir,'..')) {
+    const workEnv={...env},script='scripts/handoff-inputs.ts';
+    if(args[1]==='--headless-order')return{script,argv:[...args],env:workEnv};
+    const c=parseHandoff(args);
+    if(![c.donor,c.receiver].some(n=>n.toLowerCase()===account.toLowerCase()))throw Error('handoff descriptor account mismatch');
+    // A receiver target cannot become a donor acquisition goal, including on standalone CLI calls.
+    if(account.toLowerCase()===c.donor.toLowerCase())delete workEnv.PROGRESSION_CONSUMER;
+    const runId=env.COORDINATOR_RUN_ID??(env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1];
+    const file=join(base,'.practice/coordinator/state.json');
+    if(runId&&existsSync(file)){
+        const state=JSON.parse(readFileSync(file,'utf8')),tasks=Array.isArray(state?.tasks)?state.tasks:[];
+        const spec=tasks.find((r:any)=>r.runId===runId)?.spec;
+        if(Array.isArray(spec?.participants)){
+            delete workEnv.PROGRESSION_CONSUMER;
+            const names=spec.participants.map((n:string)=>n.startsWith('@')?tasks.find((r:any)=>r.spec?.id===n.slice(1))?.receipt?.output?.account:n);
+            if(names.length===2&&names.every((n:unknown,i:number)=>typeof n==='string'&&n.toLowerCase()===[c.donor,c.receiver][i]!.toLowerCase())
+                &&names[spec.acceptIndex??0]?.toLowerCase()===account.toLowerCase()){
+                const accept=finiteProgressionAccept(spec.accept);
+                if(accept)workEnv.PROGRESSION_CONSUMER=JSON.stringify(accept);
+            }
+        }
+    }
+    return{script,argv:[...args],workArgs:[...args],env:workEnv};
 }
 
 export type HandoffChild = { code(): number | null; output(): string; goal?: string };
@@ -298,8 +326,22 @@ async function approachBank(c:Handoff,sessions:Session[],check:()=>void,operatio
             if(!await waitUntil(s,st=>!!st.player&&st.player.worldX>0&&(s.sdk.getSkill('Hitpoints')?.level??0)>0,{timeoutTicks:15}))throw Error(`handoff approach entry unobserved: ${s.name}`);
             const p=s.sdk.getState()!.player!,from={x:p.worldX,z:p.worldZ,level:p.level};
             if(from.level===0&&Math.max(Math.abs(from.x-c.x),Math.abs(from.z-c.z))<=FAR_WALK_TILES)return;
-            const walked=await walkTarget(s,to,false,operations);
-            if(!walked.ok)throw Error(`handoff planned approach failed: ${s.name} ${JSON.stringify(walked)}`);
+            const sarim={x:3029,z:3217,level:0},atSarim=from.level===0&&Math.max(Math.abs(from.x-sarim.x),Math.abs(from.z-sarim.z))<=8;
+            const kandarin=from.level===0&&from.x>=2440&&from.x<2870&&from.z>=3040&&from.z<=3530;
+            // The ferry's final 15s search from Port Sarim to Varrock can exhaust its budget.
+            // Keep the planned ferries, then use gecourier's measured mainland corridor through Lumbridge.
+            const legs=c.x===3185&&c.z===3436&&(atSarim||kandarin)
+                ? [...(atSarim?[]:[{to:sarim,ground:false}]),...[ [3047,3237],[3060,3265],[3100,3285],[3180,3258],
+                    [3225,3240],[3235,3300],[3210,3380],[c.x,c.z] ].map(([x,z])=>({to:{x:x!,z:z!,level:0},ground:true}))]
+                : [{to,ground:false}];
+            for(const [index,leg] of legs.entries()){
+                if(index>0){guard();controller.signal.throwIfAborted();}
+                const walked=await walkTarget(s,leg.to,leg.ground,operations);
+                if(!walked.ok)throw Error(`handoff planned approach failed: ${s.name} ${JSON.stringify(walked)}`);
+                if(!await waitUntil(s,st=>!!st.player&&st.player.level===0&&Math.max(Math.abs(st.player.worldX-leg.to.x),Math.abs(st.player.worldZ-leg.to.z))<=(leg.ground?2:8),{timeoutTicks:10}))
+                    throw Error(`handoff approach arrival unobserved: ${s.name} ${JSON.stringify(leg.to)}`);
+            }
+            guard();controller.signal.throwIfAborted();
             console.log('HANDOFF_APPROACH '+JSON.stringify({account:s.name,from,to}));
         }))));
     }finally{clearInterval(timer);parent?.signal.removeEventListener('abort',parentAbort);controller.abort(Error('handoff approach ended'));}
@@ -435,8 +477,8 @@ export async function main(io:{root?:string;openBot?:typeof openBot;settle?:type
         check();release=acquireAccountLeases([c.donor,c.receiver],runId,join(dir,'account-leases'));
         check();order.claim(); // Durable owner/recoveryOwner precede the first login.
         process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
-        check();sessions.push(await (io.openBot??openBot)(c.donor,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
-        check();sessions.push(await (io.openBot??openBot)(c.receiver,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
+        check();sessions.push(await (io.openBot??openBot)(c.donor,{record:ammoOrderRecord(c.donor,process.argv.slice(2),process.env,root),onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
+        check();sessions.push(await (io.openBot??openBot)(c.receiver,{record:ammoOrderRecord(c.receiver,process.argv.slice(2),process.env,root),onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
         out=await runExactHandoff(c,sessions[0]!,sessions[1]!,order,check,io.approach);
     }catch(e){out={ok:false,phase:'transfer',reason:String(e)};}
     finally{

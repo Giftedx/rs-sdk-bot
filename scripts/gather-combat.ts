@@ -11,8 +11,17 @@
 // the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
 // (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
 import { openBot, finish, countItems, getWorld, accountOf, sessionDied } from '../packages/core/src/bot';
+import { questFlags } from '../packages/core/src/quest-status';
 import {startQuestSustain} from './quest-sustain';
-import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
+import {
+    selectProgressiveLoadout,
+    crossedTierBoundary,
+    readSkillLevels,
+    gearById,
+    TIER_BOUNDARIES,
+    type GearSkillLevels,
+    type QuestInput,
+} from '../packages/planner/src/gear-progression';
 import{combatPotionPolicy,createCombatPotions,combatPotionSession,combatPotionRecovery,type CombatPotionPolicy}from'./microbot-combat-potions';
 import{combatAlchPolicy}from'./microbot-combat-alch';
 import {depositObserved} from '../packages/core/src/deposit';
@@ -99,15 +108,34 @@ export function cowGroundCounts(items:readonly {id:number;x:number;z:number;coun
     const counts=new Map<string,number>();for(const i of items){const key=`${i.id}:${i.x}:${i.z}`;counts.set(key,(counts.get(key)??0)+i.count);}return counts;
 }
 export function cowTraining(skill='Attack',targetLevel?:number){
-    // Bronze sword is weapon_stab: combat.dbrow102–111, 0 accurate,
-    // 1 aggressive, 3 defensive. Never use controlled XP as single-skill credit.
     const styles:Record<string,number>={Attack:0,Strength:1,Defence:3};
     if(!Object.hasOwn(styles,skill))throw new Error('TRAIN_SKILL must be Attack, Strength or Defence');
     if(targetLevel!==undefined&&(!Number.isSafeInteger(targetLevel)||targetLevel<1||targetLevel>99))throw new Error('TARGET_LEVEL must be1..99');
     return {skill,style:styles[skill]!,targetLevel};
 }
-export async function equipCowKit(s:Session, stop:()=>boolean=()=>false) {
-    for(const id of [1277,1171]){
+type StyleTab={known:boolean;weaponName:string;currentStyle:number;styles:readonly {index:number;name?:string;trainsSkills:readonly string[]}[]};
+function matchCombatStyle(tab:StyleTab|undefined,skill:string){
+    if(!tab?.known)return undefined;
+    const only=tab.styles.filter(s=>s.trainsSkills.length===1&&s.trainsSkills[0]===skill);
+    // A bow's rapid style fires a tick sooner than accurate and trains only Ranged.
+    const style=skill==='Hitpoints'?(tab.styles.find(s=>s.index===tab.currentStyle)??tab.styles[0]):only.find(s=>s.name&&/rapid/i.test(s.name))??only[0];
+    if(!style)return undefined;
+    return {index:style.index,name:style.name??skill,weapon:tab.weaponName};
+}
+export async function equipCowKit(
+    s:Session,
+    stop:()=>boolean=()=>false,
+    options:{kit?:readonly number[];trainSkill?:string;levels?:GearSkillLevels;quests?:QuestInput}={},
+){
+    const kit=options.kit?[...options.kit]:(()=>{
+        const stock=[...s.sdk.getInventory(),...s.sdk.getEquipment()];
+        const levels=options.levels??readSkillLevels(n=>s.sdk.getSkill(n));
+        const quests=options.quests??(s.client?questFlags(s.client):null);
+        const loadout=selectProgressiveLoadout('melee',stock,levels,quests,{trainSkill:options.trainSkill??'all-melee'});
+        if(!loadout.worn.weapon)throw new Error('cow prerequisite: missing owned wearable melee weapon');
+        return loadout.items.map(entry=>entry.item.id);
+    })();
+    for(const id of kit){
         // Swapping identical held/worn copies need not change either observed ID.
         const equipped=()=>s.sdk.getEquipment().some(item=>item.id===id);
         if(equipped())continue;
@@ -117,6 +145,7 @@ export async function equipCowKit(s:Session, stop:()=>boolean=()=>false) {
         if(!await waitUntil(s,()=>equipped()||stop(),{timeoutTicks:10})||!equipped())
             throw new Error(`cow kit equip failed ${id}: ${result.message??'no SDK message'}; equipped item not observed`);
     }
+    return kit;
 }
 // Held cow food in bites: trout heals once; a cake is eaten in three bites (cake, 2/3 cake, slice), chocolate cake likewise.
 // The knight farm steals cake at the Ardougne bakery, so a farmer arrives with cake pieces rather than trout.
@@ -151,8 +180,9 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     if(profile.foodBanked&&(hp()<60||(s.sdk.getSkill('Hitpoints')?.baseLevel??0)<60||(s.sdk.getSkill('Defence')?.level??0)<70))throw new Error('cow prerequisite: banked-food profile requires HPbase/current60 and Defence70');
     if(ids.some(id=>held(id)>0)) throw new Error('cow prerequisite: empty carried cow outputs');
     const allKit=()=>[...inv(),...(state()?.equipment??[])];
-    for(const id of [1277,1171]) if(count(allKit(),id)<1) throw new Error(`cow prerequisite: missing kit${id}`);
     const kit=new Map<number,number>();for(const i of allKit())if(!ids.includes(i.id)&&!COW_FOOD_BITES[i.id])kit.set(i.id,(kit.get(i.id)??0)+i.count);
+    let lastKnownBank:{id:number;count:number}[]=[],lastBankKnown=false;
+    let prevLevels=readSkillLevels(n=>s.sdk.getSkill(n));
     let ended=false,died=false,healthCutoff=false,retreating=false,hpMin=hp(),creditedKills=0,damageXp=0,eaten=0,bankTrips=0,failure='',stop='cap',lastProgress=start,crowded=false;
     const diagnostics:Record<string,unknown>[]=[];
     let diagnosticKey='',diagnosticTick=-Infinity,activeIndex:number|undefined,attackStarted:number|undefined;
@@ -218,14 +248,96 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
         }
         return r.ok;
     });
-    const open=async()=>{if(state()?.bank?.isOpen&&s.bankObservation?.())return;const gen=s.bankObservation?.()?.generation??0;
-        if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>gen,{timeoutTicks:20}))throw new Error('no cow progress: bank readiness unknown');bankTrips++;};
+    const syncBankObs=()=>{
+        const obs=s.bankObservation?.()?.items;
+        if(obs){lastKnownBank=obs.map(i=>({id:i.id,count:i.count}));lastBankKnown=true;}
+    };
+    const open=async()=>{
+        if(!(state()?.bank?.isOpen&&s.bankObservation?.())){
+            const gen=s.bankObservation?.()?.generation??0;
+            if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>gen,{timeoutTicks:20}))throw new Error('no cow progress: bank readiness unknown');
+            bankTrips++;
+        }
+        syncBankObs();
+    };
     const bankCount=(id:number)=>count(s.bankObservation?.()?.items??[],id);
     const baseline:Record<number,number>={};
     const assetTotals=()=>{const m=new Map<number,number>();for(const i of [...(s.bankObservation?.()?.items??[]),...allKit()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
     let initialAssets:Map<number,number>|undefined,initialFood:number|undefined;
     const ownedFood=()=>s.bankObservation?.()?bites()+cowFoodBites(s.bankObservation?.()?.items??[]):undefined;
-    const bank=async()=>{
+    const currentLevels=()=>readSkillLevels(n=>s.sdk.getSkill(n));
+    const currentQuests=()=>s.client?questFlags(s.client):null;
+    const desiredCowLoadout=(stock:readonly {id:number;count:number}[])=>
+        selectProgressiveLoadout('melee',stock,currentLevels(),currentQuests(),{trainSkill:training.skill});
+    const loadoutDiffersFromWorn=(loadout:ReturnType<typeof selectProgressiveLoadout>)=>{
+        const worn=new Map((state()?.equipment??[]).map(i=>[i.slot,i.id]));
+        return loadout.items.some(({wearpos,item})=>worn.get(wearpos)!==item.id);
+    };
+    const selectCowStyle=async()=>{
+        const wornName=()=>state()?.equipment?.find(i=>i.slot===3)?.name;
+        const ready=await waitUntil(s,()=>{
+            const c=state()?.combatStyle,name=wornName();
+            return !!c?.known&&(!name||c.weaponName===name);
+        },{timeoutTicks:10});
+        const tab=state()?.combatStyle,matched=ready?matchCombatStyle(tab,training.skill):undefined;
+        if(!matched){
+            throw new Error(tab?.known
+                ?`no cow progress: selected combat style unobserved (${tab.weaponName||'weapon'} lacks ${training.skill})`
+                :'no cow progress: selected combat style unobserved');
+        }
+        if(!(await s.sdk.sendSetCombatStyle(matched.index)).success||!await waitUntil(s,()=>{
+            const c=state()?.combatStyle,name=wornName();
+            return !!c?.known&&c.currentStyle===matched.index&&(!name||c.weaponName===name)
+                &&c.styles.some(st=>st.index===matched.index&&st.trainsSkills.length===1&&st.trainsSkills[0]===training.skill);
+        },{timeoutTicks:10}))throw new Error('no cow progress: selected combat style unobserved');
+    };
+    const prepareCowKitFromOpenBank=async()=>{
+        for(let pass=0;pass<3&&!over();pass++){
+            const stock=[...(s.bankObservation?.()?.items??lastKnownBank),...allKit()];
+            const loadout=desiredCowLoadout(stock);
+            if(!loadout.worn.weapon){await s.bot.closeBank();throw new Error('cow prerequisite: missing owned wearable melee weapon');}
+            const targetIds=loadout.items.map(entry=>entry.item.id);
+            const needIds=targetIds.filter(id=>!allKit().some(i=>i.id===id));
+            let pendingMore=false;
+            for(const id of needIds){
+                if(inv().length>=28){pendingMore=true;break;}
+                const row=state()?.bank?.items.find(i=>i.id===id),before=held(id);
+                if(!row||!(await s.bot.withdrawItem(row,1,{asNote:false})).success||!await waitUntil(s,()=>held(id)===before+1,{timeoutTicks:10})){
+                    await s.bot.closeBank();
+                    throw new Error(`cow kit withdraw failed ${id}`);
+                }
+            }
+            const prevEqIds=(state()?.equipment??[]).map(i=>i.id);
+            await s.bot.closeBank();
+            if(over())return;
+            const passIds=pendingMore?targetIds.filter(id=>allKit().some(i=>i.id===id)):targetIds;
+            await equipCowKit(s,over,{kit:passIds,trainSkill:training.skill});
+            const unequippedIds=prevEqIds.filter(id=>!state()?.equipment?.some(e=>e.id===id));
+            if(unequippedIds.length>0||profile.foodBanked||pendingMore){
+                await open();
+                for(const id of unequippedIds){
+                    const item=inv().find(i=>i.id===id);
+                    if(!item)continue;
+                    const before=bankCount(id);
+                    if(!(await s.bot.depositItem(item,1)).success||!await waitUntil(s,()=>bankCount(id)>=before+1,{timeoutTicks:10})){
+                        await s.bot.closeBank();
+                        throw new Error(`no cow progress: replaced gear deposit failed (${id})`);
+                    }
+                }
+                if(!pendingMore){
+                    if(profile.foodBanked){
+                        const food=inv().find(i=>i.id===333);
+                        if(food){const before=bankCount(333),amount=held(333);if(!(await s.bot.depositItem(food,-1)).success||!await waitUntil(s,()=>held(333)===0&&bankCount(333)===before+amount,{timeoutTicks:10}))throw new Error('no cow progress: working food secure bank failed');}
+                    }
+                    await s.bot.closeBank();
+                    return;
+                }
+                continue;
+            }
+            return;
+        }
+    };
+    const bank=async(reEquip=false)=>{
         retreating=true;
         const p=state()?.player;if(p)bankDistances.push(Math.max(Math.abs(p.worldX-profile.bank.x),Math.abs(p.worldZ-profile.bank.z)));
         if(!await walk(profile.bank.x,profile.bank.z,profile.north?1:2))throw new Error('no cow progress: bank retreat failed');await open();
@@ -238,21 +350,22 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             await waitUntil(s,()=>heal()>=Math.min(COW_FOOD_HP,want),{timeoutTicks:5});
         }
         if(!profile.foodBanked&&heal()<COW_FOOD_HP)throw new Error('no cow progress: working food restock failed');
+        syncBankObs();
+        if(reEquip&&!goalReached()&&creditedKills<o.maximum&&!over()){
+            await prepareCowKitFromOpenBank();
+            if(!over())await selectCowStyle();
+        }
     };
     try {
-        await open();for(const id of ids)baseline[id]=bankCount(id);initialAssets=assetTotals();initialFood=ownedFood();await s.bot.closeBank();
+        await open();for(const id of ids)baseline[id]=bankCount(id);initialAssets=assetTotals();initialFood=ownedFood();
         if(!goalReached()&&!over()){
-        await equipCowKit(s,over);
-        if(profile.foodBanked){
-            await open();const food=inv().find(i=>i.id===333);if(food){const before=bankCount(333),amount=held(333);if(!(await s.bot.depositItem(food,-1)).success||!await waitUntil(s,()=>held(333)===0&&bankCount(333)===before+amount,{timeoutTicks:10}))throw new Error('no cow progress: working food secure bank failed');}
-            await s.bot.closeBank();if(inv().some(i=>!potions?.depositIds.includes(i.id)))throw new Error('cow prerequisite: banked-food fullpack requires empty inventory after worn kit prep');
+        await prepareCowKitFromOpenBank();
+        if(profile.foodBanked&&inv().some(i=>!potions?.depositIds.includes(i.id)))throw new Error('cow prerequisite: banked-food fullpack requires empty inventory after worn kit prep');
+        if(!over()){
+            await selectCowStyle();
+            if(!await walk(2664,3344,4))throw new Error('no cow progress: pen route failed');
         }
-        if(!(await s.sdk.sendSetCombatStyle(training.style)).success||!await waitUntil(s,()=>{
-            const c=state()?.combatStyle;return !!c?.known&&c.currentStyle===training.style
-                &&c.weaponName==='Bronze sword'&&c.styles.some(style=>style.index===training.style&&style.trainsSkills.length===1&&style.trainsSkills[0]===training.skill);
-        },{timeoutTicks:10}))throw new Error('no cow progress: selected combat style unobserved');
-        if(!await walk(2664,3344,4))throw new Error('no cow progress: pen route failed');
-        }
+        }else{await s.bot.closeBank();}
         lastProgress=s.tick(); // Transit is bounded by CAP, not the target-wait window.
         while(creditedKills<o.maximum&&!goalReached()&&!over()){
             if(healthCutoff)throw new Error('no cow progress: banked-food HP40 cutoff; retreat');
@@ -311,13 +424,33 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             for(const id of ids){const item=state()?.groundItems.find(i=>i.id===id&&i.x===x&&i.z===z);const before=held(id);
                 if(!item||!(await s.bot.pickupItem(item)).success||held(id)!==before+1)throw new Error('no cow progress: credited loot pickup mismatch');}
             creditedKills++;damageXp+=selectedXp()-beforeXp;lastProgress=s.tick();console.log(`MILESTONE cow credited=${creditedKills} trainSkill=${training.skill} selectedXp=${selectedXp()-initialSelectedXp} level=${level()} attackXp=${xp()-initialXp} HP=${hp()} heldHide=${held(1739)}`);
+            const nextLevels=currentLevels();
+            const boundaryCrossed=crossedTierBoundary(prevLevels,nextLevels,['Attack','Strength','Defence'],TIER_BOUNDARIES);
+            prevLevels=nextLevels;
+            if(boundaryCrossed&&creditedKills<o.maximum&&!goalReached()&&!over()){
+                const invLoadout=desiredCowLoadout(allKit());
+                if(loadoutDiffersFromWorn(invLoadout)){
+                    const prevWeaponId=state()?.equipment?.find(i=>i.slot===3)?.id;
+                    await equipCowKit(s,over,{kit:invLoadout.items.map(e=>e.item.id),trainSkill:training.skill});
+                    if(!over()&&state()?.equipment?.find(i=>i.slot===3)?.id!==prevWeaponId)await selectCowStyle();
+                }
+                if(lastBankKnown&&!over()&&!healthCutoff){
+                    const bankLoadout=desiredCowLoadout([...lastKnownBank,...allKit()]);
+                    if(loadoutDiffersFromWorn(bankLoadout)){
+                        await bank(true);
+                        retreating=false;
+                        if(!over()&&!await walk(2664,3344,4))throw new Error('no cow progress: pen route failed');
+                        lastProgress=s.tick();
+                    }
+                }
+            }
         }
         stop=goalReached()?'target-level':creditedKills===o.maximum?'max-kills':died?'died':o.stop?.()?'stop-file':crowded?'crowded':'cap';
     } catch(e){failure=String(e);if(stop==='cap'&&o.stop?.())stop='stop-file';capture('failure');console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);}
-    finally {if(!died&&!ended)try{if(potionScope)await potionScope.withCombatPotionCleanup(bank);else await bank();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();offMetrics();}
+    finally {if(!died&&!ended)try{if(potionScope)await potionScope.withCombatPotionCleanup(()=>bank(false));else await bank(false);}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();offMetrics();}
     const banked={hide:bankCount(1739)-(baseline[1739]??bankCount(1739)),bones:bankCount(526)-(baseline[526]??bankCount(526)),beef:bankCount(2132)-(baseline[2132]??bankCount(2132))};
-    const finalAssets=profile.foodBanked||potions?assetTotals():undefined;
-    const preserved=potions?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)+(potions.delta[id]??0)-(id===333?eaten:0)):profile.foodBanked?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):[...kit].every(([id,n])=>count(allKit(),id)===n)&&heal()>=COW_FOOD_HP;
+    const finalAssets=(profile.foodBanked||potions||initialAssets&&s.bankObservation?.())?assetTotals():undefined;
+    const preserved=potions?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)+(potions.delta[id]??0)-(id===333?eaten:0)):profile.foodBanked?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):(initialAssets&&finalAssets?[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||COW_FOOD_BITES[id]!==undefined||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):[...kit].every(([id,n])=>count(allKit(),id)===n))&&heal()>=COW_FOOD_HP;
     // Owned food (in bites) in pack and bank changes only by observed eating.
     const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
     const targetMet=(training.targetLevel!==undefined?goalReached():creditedKills===o.maximum)&&Object.values(banked).every(n=>n===creditedKills);
@@ -344,20 +477,48 @@ export const GIANT_SITE:CombatSite={label:'giant',npcs:[GIANT.npc],foods:[GIANT.
 // and cake by its smallest piece first, so a started cake is finished and its slot freed).
 export const TROOPER_FOODS:readonly number[]=[385,373,379,333,2142,2309,1901,1895,1893,1891];
 export const TROOPER_SITE:CombatSite={label:'trooper',npcs:[475,476],foods:TROOPER_FOODS,bank:{x:2619,z:3332},spot:{x:2525,z:3242},room:[2493,3223,2553,3264],drops:[]};
-// Reuse counted owned-loadout selection with level-gated metal blades.
-// Preference follows tier then the shared scimitar/sword/longsword order.
-// An observed wield still decides access for special swords.
-export function selectGiantWeapon(stock:readonly {id:number;count:number}[],attack:number|null){
-    const slot=fireWeaponSlot(attack);
-    const known=attack!==null&&Number.isSafeInteger(attack)&&attack>=1&&attack<=99;
-    const metals=[{level:40,ids:[1333,1289,1303]},{level:30,ids:[1331,1287,1301]},
-        {level:20,ids:[1329,1285,1299]},{level:10,ids:[1327,1283,1297]},
-        {level:5,ids:[1325,1281,1295]},{level:1,ids:[1323,1279,1293,1321,1277,1291]}];
-    const options=metals.flatMap((tier,index)=>tier.ids.map((id,offset)=>({id,count:1,preference:index*10+offset,equippable:known?attack!>=tier.level:null})));
-    slot.options=[...options,{id:35,count:1,preference:31,equippable:known?true:null},
-        {id:2402,count:1,preference:43,equippable:known?true:null}];
-    const choice=ownedLoadout([slot],stock);
-    return choice.state==='ready'?choice.selected[0]!.id:0;
+const GIANT_ARMOUR_SLOT_ORDER = [2, 10, 0, 4, 7, 5, 1, 9] as const;
+
+// Reuse progressive rev-289 loadout selection with exact skill and quest gates.
+export function selectGiantWeapon(
+    stock: readonly { id: number; count: number }[],
+    attack: number | null,
+    completedQuests: QuestInput = null,
+    strength?: number,
+    trainSkill?: string,
+) {
+    if (attack === null || !Number.isSafeInteger(attack) || attack < 1 || attack > 99) return 0;
+    const loadout = selectProgressiveLoadout(
+        'melee',
+        stock,
+        { Attack: attack, Strength: strength ?? attack },
+        completedQuests,
+        { trainSkill: trainSkill ?? 'all-melee' },
+    );
+    return loadout.worn.weapon?.id ?? 0;
+}
+
+export function selectGiantArmour(
+    stock: readonly { id: number; count: number }[],
+    defence: number,
+    completedQuests: QuestInput = null,
+    levels?: GearSkillLevels,
+) {
+    if (!Number.isSafeInteger(defence) || defence < 1 || defence > 99) return [];
+    const armourStock = stock.filter(row => gearById(row.id)?.slot !== 'righthand');
+    const skillMap: Record<string, number> = { Attack: 1, Strength: 1, Defence: defence };
+    if (levels) {
+        for (const [key, val] of Object.entries(levels)) {
+            const level = typeof val === 'number' ? val : val?.baseLevel ?? val?.level;
+            if (typeof level === 'number' && Number.isSafeInteger(level) && level >= 1) skillMap[key] = level;
+        }
+    }
+    const loadout = selectProgressiveLoadout('melee', armourStock, skillMap, completedQuests);
+    const order = new Map<number, number>(GIANT_ARMOUR_SLOT_ORDER.map((slot, idx) => [slot, idx]));
+    return loadout.items
+        .filter(entry => entry.slot !== 'weapon')
+        .map(entry => ({ slot: entry.wearpos, id: entry.item.id }))
+        .sort((a, b) => (order.get(a.slot) ?? 99) - (order.get(b.slot) ?? 99));
 }
 // Ranged (TRAIN_SKILL=Ranged): the best owned bow for the Ranged level, a shortbow before a longbow in a tier (a longbow's
 // attackrate is 6, ranged/bows.obj), and the best owned arrows it fires: an arrow's levelrequire may not exceed the
@@ -407,15 +568,12 @@ export function giantTraining(skill?:string,targetLevel?:number){
     if(targetLevel===undefined||!Number.isSafeInteger(targetLevel)||targetLevel<2||targetLevel>99)throw new Error('giant TARGET_LEVEL must be2..99');
     return {skill,targetLevel};
 }
-type StyleTab={known:boolean;weaponName:string;currentStyle:number;styles:readonly {index:number;name:string;trainsSkills:readonly string[]}[]};
 // The wielded weapon's own tab decides the index: Strength is1 on a sword, scimitar or 2h; controlled never counts.
 export function giantStyle(tab:StyleTab|undefined,skill:string){
     if(!tab?.known)throw new Error('giant prerequisite: wielded weapon combat styles unknown');
-    const only=tab.styles.filter(s=>s.trainsSkills.length===1&&s.trainsSkills[0]===skill);
-    // A bow's rapid style fires a tick sooner than accurate and trains only Ranged.
-    const style=skill==='Hitpoints'?(tab.styles.find(s=>s.index===tab.currentStyle)??tab.styles[0]):only.find(s=>/rapid/i.test(s.name))??only[0];
+    const style=matchCombatStyle(tab,skill);
     if(!style)throw new Error(`giant prerequisite: ${tab.weaponName} has no style that trains only ${skill}`);
-    return {index:style.index,name:style.name,weapon:tab.weaponName};
+    return style;
 }
 export const giantCredit=(gone:boolean,selectedXp:number,newBigBones:number)=>gone&&selectedXp>0&&newBigBones>=1;
 export function giantKillLimit(value?:string|number){
@@ -595,25 +753,68 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         ammoStart=bankCount(ammoId)+count(allKit(),ammoId);
         return bow.id;
     };
-    const trip=async()=>{if(ranged)await gatherAmmo(true);await leave();await open();await deposit();await restock();if(ranged)await withdrawAmmo();await s.bot.closeBank();if(ranged)await equipAmmo();if(over())return;await enter();lastProgress=s.tick();};
+    const equipMeleeUpgrades=async(skipWeaponId?:number)=>{
+        if(ranged)return;
+        const stock=[...(s.bankObservation?.()?.items??[]),...allKit()];
+        const levels=readSkillLevels(n=>s.sdk.getSkill(n));
+        const doneQuests=s.client?questFlags(s.client):null;
+        const loadout=selectProgressiveLoadout('melee',stock,levels,doneQuests,{trainSkill:training.skill});
+        const toEquip:number[]=[];
+        for(const entry of loadout.items){
+            const id=entry.item.id;
+            if(skipWeaponId!==undefined&&entry.slot==='weapon'&&id===skipWeaponId)continue;
+            if(state()?.equipment?.some(i=>i.slot===entry.wearpos&&i.id===id))continue;
+            if(inv().length>=28&&!inv().some(i=>i.id===id))break;
+            if(!allKit().some(i=>i.id===id)){
+                const row=state()?.bank?.items.find(i=>i.id===id);
+                if(row&&(await s.bot.withdrawItem(row,1,{asNote:false})).success)await waitUntil(s,()=>held(id)>=1,{timeoutTicks:10});
+            }
+            if(inv().some(i=>i.id===id))toEquip.push(id);
+        }
+        return toEquip;
+    };
+    const wearMeleeUpgrades=async(ids:readonly number[]|undefined,reselectStyle=true)=>{
+        if(!ids?.length)return;
+        const prevWeaponId=state()?.equipment?.find(i=>i.slot===3)?.id;
+        for(const id of ids){
+            const item=inv().find(i=>i.id===id);if(!item)continue;
+            if((await s.bot.equipItem(item)).success)await waitUntil(s,()=>!!state()?.equipment?.some(i=>i.id===id),{timeoutTicks:8});
+        }
+        if(reselectStyle){
+            const weaponName=state()?.equipment?.find(i=>i.slot===3)?.name;
+            if(state()?.equipment?.find(i=>i.slot===3)?.id!==prevWeaponId){
+                await waitUntil(s,()=>!!state()?.combatStyle?.known&&(!weaponName||state()?.combatStyle?.weaponName===weaponName),{timeoutTicks:8});
+            }
+            if(state()?.combatStyle?.known){
+                const nextStyle=giantStyle(state()?.combatStyle,training.skill);style=nextStyle;
+                if(state()?.combatStyle?.currentStyle!==nextStyle.index)await s.sdk.sendSetCombatStyle(nextStyle.index);
+            }
+        }
+    };
+    const trip=async()=>{if(ranged)await gatherAmmo(true);await leave();await open();await deposit();await restock();const upgrades=await equipMeleeUpgrades();if(ranged)await withdrawAmmo();await s.bot.closeBank();await wearMeleeUpgrades(upgrades,true);if(ranged)await equipAmmo();if(over())return;await enter();lastProgress=s.tick();};
     try{
         if(!near(site.bank.x,site.bank.z,6))await leave();
         await open();initialAssets=assetTotals();for(const id of site.drops){baseline[id]=bankCount(id)+held(id);picked[id]=0;}initialFood=ownedFood();if(initialFood!==undefined)initialFood+=eaten;
         await deposit();
         if(!goalReached()&&!over()){
             await restock();
-            const weapon=ranged?rangedKit():selectGiantWeapon([...(s.bankObservation?.()?.items??[]),...allKit()],s.sdk.getSkill('Attack')?.baseLevel??null);
+            const stock=[...(s.bankObservation?.()?.items??[]),...allKit()];
+            const levels=readSkillLevels(n=>s.sdk.getSkill(n));
+            const doneQuests=s.client?questFlags(s.client):null;
+            const weapon=ranged?rangedKit():(selectProgressiveLoadout('melee',stock,levels,doneQuests,{trainSkill:training.skill}).worn.weapon?.id??0);
             if(!weapon)throw new Error('giant prerequisite: no owned equippable melee weapon');
             if(!allKit().some(i=>i.id===weapon)){
                 const row=state()?.bank?.items.find(i=>i.id===weapon),before=bankCount(weapon);
                 if(!row||!(await s.bot.withdrawItem(row,1,{asNote:false})).success||!await waitUntil(s,()=>held(weapon)===1&&bankCount(weapon)===before-1,{timeoutTicks:20}))throw new Error('giant prerequisite: weapon withdrawal unobserved');
             }
             if(ranged)await withdrawAmmo();
+            const armourUpgrades=ranged?undefined:await equipMeleeUpgrades(weapon);
             await s.bot.closeBank();
             if(!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon)){
                 const item=inv().find(i=>i.id===weapon);
                 if(!item||!(await s.bot.equipItem(item)).success||!await waitUntil(s,()=>!!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon),{timeoutTicks:10}))throw new Error('giant prerequisite: melee weapon equip unobserved');
             }
+            await wearMeleeUpgrades(armourUpgrades,false);
             if(ranged){await equipAmmo();if(quiver()<1)throw new Error('giant prerequisite: no arrows in the quiver');}
             if(!await waitUntil(s,()=>!!state()?.combatStyle?.known&&state()?.combatStyle?.weaponName===state()?.equipment?.find(i=>i.slot===3)?.name,{timeoutTicks:10}))throw new Error('giant prerequisite: equipped combat styles unknown');
             const selectedStyle=giantStyle(state()?.combatStyle,training.skill);style=selectedStyle;

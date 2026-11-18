@@ -110,12 +110,14 @@ try {
     let bankTrips = 0;
     let walkTicks = 0;
 
+    let cachedWalker: ReturnType<typeof sessionWalker> | undefined;
     const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
         const a = s.tick();
+        const walker = await (cachedWalker ??= sessionWalker(s));
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
-            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
+            const r = await walkPath(walker, [{ x, z, tol }], { stop: over });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 await waitTicks(s, 1);
@@ -163,18 +165,21 @@ try {
         if (bowstringsCount() > 0) {
             const before=bowstringsCount();
             await s.bot.depositItem(/^bow string$/i, -1);
+            await waitUntil(s, () => bowstringsCount() === 0 || over(), { timeoutTicks: 4 });
             spunTotal += Math.max(0,before-bowstringsCount());
         }
 
-        await waitTicks(s,1);
-        if(!cleaning&&!over())await bankCargo(s,[/^bow string$/i],0,{stopped:over});
+        if(!cleaning&&!over()&&s.sdk.getInventory().some(i=>i.id!==1779&&i.id!==1777))await bankCargo(s,[/^bow string$/i],0,{stopped:over});
         if(!withdraw){const raw=s.sdk.getInventory().find(i=>i.id===1779);if(raw)await depositObserved(s,raw);}
 
         const stock=s.sdk.getState()?.bank?.items.find(i=>/^flax$/i.test(i.name))?.count??0;
         const held=s.sdk.getInventory().length,free=28-held;
         const take=withdraw?Math.min(free,MAX_MAKE-made,Math.max(0,stock-RAW_RESERVE)):0;
-        if(take>0){const r=await s.bot.withdrawItem(/^flax$/i,take);if(!r.success)throw new Error(`withdraw flax: ${r.message}`);}
-        await waitTicks(s, 1);
+        if(take>0){
+            const have0=flaxCount();
+            const r=await s.bot.withdrawItem(/^flax$/i,take);if(!r.success)throw new Error(`withdraw flax: ${r.message}`);
+            await waitUntil(s, () => flaxCount() >= have0 + take || over(), { timeoutTicks: 4 });
+        }
         await s.bot.closeInterface();
         bankTrips++;
         console.log(`MILESTONE bank t=${used()} spunTotal=${spunTotal} bankTrips=${bankTrips} flax=${flaxCount()}`);

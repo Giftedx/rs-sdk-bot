@@ -24,7 +24,7 @@ import {dashboardStatuses,fleetSidesView,healthObservation,localDisplayNames,rem
 import {buildItemPrices,expectedLootPrices,itemPrice,priceItemKey,projectItemPrices,type ItemPrices,type PriceCatalogItem,type PriceIdentity} from './item-prices';
 import {buildItemExamine,catalogueIconAliases,projectItemExamine} from './item-examine';
 import {createVaultItems,type VaultItem} from './vault-items';
-import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,wildernessOverlayData,wildernessView,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import {folderScan} from './folder-scan';
@@ -34,6 +34,8 @@ import { RosterFeed } from '../core/src/roster-feed';
 import { gameDialAddress } from '../core/src/websocket-proxy';
 import { reloadDue, respawnDaemon } from '../core/src/live-reload';
 import { canonicalSnapshots, ownerOfIn } from '../core/src/fleet-snapshots';
+import { LEASE_MAX_AGE_MS, SIDE_NAME } from '../core/src/fleet';
+import { failLoops, LOOP_WINDOW_MS } from '../../scripts/fail-loops';
 import { marketRows, writeMarketCache, type MarketItem } from '../../scripts/market-cache';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
@@ -291,6 +293,8 @@ function trackResult(s: Status) {
     if (!text || (last?.text === text.slice(0, 240) && (last.started === undefined || started === undefined || last.started === started))) return;
     const r: Res = { started, at: s.at, name: s.name, goal: String(s.goal ?? '').replace(/\.ts$/, ''), ok: /^ok\b/.test(text), text: text.slice(0, 240) };
     noteRes(r);
+    allResults.push(r);
+    if (allResults.length > 5000) allResults.splice(0, allResults.length - 5000);
     results.unshift(r);
     results.length = Math.min(results.length, 300);
     append(FILES.results, r);
@@ -1209,11 +1213,13 @@ function buildState() {
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
             lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).map(x => x.name)), ...contention.flatMap(s => s.others)])];
-            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase().replace(SECRET_RE, SECRET_MARK), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
-            return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
+            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase().replace(SECRET_RE, SECRET_MARK), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt, world.connected ? world.tickAt : null)]));
+            return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), wilderness: wildernessView(roster, fleet, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
         scoreboard:currentScoreboard, fleetSides:fleetSides(now),
+        wildernessOverlay: wildernessOverlayData(),
+        diagnostics:fleetDiagnostics(now),
         icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
 }
@@ -1227,6 +1233,69 @@ function snapshotFiles() { return canonicalSnapshots(fleetList(join(FILES.fleet,
 function remoteNames(): string[] { return snapshotFiles().flatMap(s => (s?.accounts ?? []).map((a: any) => String(a?.name ?? ''))).filter(n => /^[A-Za-z0-9]{1,12}$/.test(n)); }
 function fleetSides(now: number) {
     return fleetSidesView(snapshotFiles(), fleetList(join(FILES.fleet, 'orders')), now, fleetList(join(FILES.fleet, 'receipts')));
+}
+type LeaseDiagnostic = { side: string; host: string | null; pid: number | null; at: number | null; ageMs: number | null; stale: boolean | null };
+function readLeaseDiagnostics(dir: string, now: number): LeaseDiagnostic[] {
+    if (!existsSync(dir)) return [];
+    try {
+        return readdirSync(dir)
+            .filter(f => f.endsWith('.json') && SIDE_NAME.test(f.slice(0, -5)))
+            .sort()
+            .map(file => {
+                const side = file.slice(0, -5);
+                try {
+                    const row = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+                    if (row?.side !== side) return { side, host: null, pid: null, at: null, ageMs: null, stale: null };
+                    const pid = Number.isSafeInteger(row.pid) && row.pid > 0 ? row.pid : null;
+                    const at = Number.isSafeInteger(row.at) && row.at > 0 && row.at <= now ? row.at : null;
+                    const host = typeof row.host === 'string' && row.host.trim() ? row.host.trim() : null;
+                    const ageMs = at !== null ? now - at : null;
+                    return { side, host, pid, at, ageMs, stale: ageMs !== null ? ageMs >= LEASE_MAX_AGE_MS : null };
+                } catch {
+                    return { side, host: null, pid: null, at: null, ageMs: null, stale: null };
+                }
+            });
+    } catch { return []; }
+}
+function fleetDiagnostics(now: number) {
+    const syncedLeases = join(FILES.fleet, 'leases'), localLeases = join(root, 'fleet', 'leases');
+    const leaseDir = existsSync(syncedLeases) ? syncedLeases : localLeases;
+    const leases = readLeaseDiagnostics(leaseDir, now);
+    const loops = failLoops(allResults.filter(r => r.name.toLowerCase() !== MAIN.toLowerCase()), now);
+    return {
+        at: now,
+        windowMs: LOOP_WINDOW_MS,
+        leaseMaxAgeMs: LEASE_MAX_AGE_MS,
+        failLoops: loops,
+        leases,
+    };
+}
+let gearCatalogCache: { body: string; tag: string } | null = null;
+function gearCatalogResponse(): { body: string; tag: string } {
+    if (gearCatalogCache) return gearCatalogCache;
+    let body = '[]';
+    try {
+        const file = join(sourceRoot, 'knowledge', 'gear.json');
+        if (existsSync(file)) {
+            const raw = JSON.parse(readFileSync(file, 'utf8')) as any[];
+            const compact = (Array.isArray(raw) ? raw : [])
+                .filter(g => g && Number.isSafeInteger(g.id) && g.id >= 0 && typeof g.name === 'string' && g.name && typeof g.slot === 'string')
+                .map(g => ({
+                    id: g.id,
+                    name: g.name,
+                    slot: g.slot,
+                    ...(Number.isFinite(g.attackRate) && g.attackRate > 0 ? { attackRate: g.attackRate } : {}),
+                    ...(g.bonuses ? { bonuses: g.bonuses } : {}),
+                    ...(g.requires ? { requires: { ...(g.requires.skills ? { skills: g.requires.skills } : {}), ...(g.requires.quest ? { quest: g.requires.quest } : {}) } } : {}),
+                    ...(g.special ? { special: g.special } : {}),
+                    ...(g.staffOnly ? { staffOnly: true } : {}),
+                }));
+            body = JSON.stringify(compact);
+        }
+    } catch { body = '[]'; }
+    const tag = `"${createHash('sha1').update(body).digest('hex').slice(0, 16)}"`;
+    gearCatalogCache = { body, tag };
+    return gearCatalogCache;
 }
 
 const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number; holdFrames: number }[] = [];
@@ -1338,7 +1407,7 @@ const dashboardServer = Bun.serve({
             const name = url.searchParams.get('name') ?? '';
             if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return Response.json({ error: 'a player name is 1-12 letters, digits, spaces, - or _' }, { status: 400 });
             if (name.replace(/[ _-]/g, '').toLowerCase().includes(MAIN.toLowerCase())) return Response.json({ error: 'not available' }, { status: 404 });
-            return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
+            return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt, world.connected ? world.tickAt : null)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
         }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/?live='+encodeURIComponent(gameDialAddress(DEMO.replace(/^http/,'ws')+'/worldfeed')),reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
@@ -1379,6 +1448,11 @@ const dashboardServer = Bun.serve({
         // The server may listen on every address (DASH_HOST); only this PC may read the main account's name.
 
         if (url.pathname === '/api/reveal') return new Response(MAIN, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
+        if (url.pathname === '/api/gear-catalog') {
+            const { body, tag } = gearCatalogResponse();
+            if (req.headers.get('if-none-match') === tag) return new Response(null, { status: 304, headers: { etag: tag, 'cache-control': 'no-cache' } });
+            return new Response(body, { headers: { 'content-type': 'application/json', etag: tag, 'cache-control': 'no-cache' } });
+        }
         if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
         if (url.pathname === '/events') {
             let me: ReadableStreamDefaultController;

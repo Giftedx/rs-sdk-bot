@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'bun:test';
-import {RECIPES,selectRecipe,supplyPlan,supplyPurchases,reconcile,options,reachSeller,observeHerbloreStep,boundedHerbloreMove,tracedWalker,workingBatch} from './brew-potions';
+import {RECIPES,brewTripPlan,selectRecipe,supplyPlan,supplyPurchases,reconcile,options,reachSeller,observeHerbloreStep,boundedHerbloreMove,tracedWalker,workingBatch} from './brew-potions';
 import {executionContext,throwIfExecutionAborted} from '../vendor/rs-sdk/sdk/execution-context';
 import type {Session} from '../packages/core/src/inprocess';
 import {sellersByDistance} from '../packages/core/src/shop-index';
@@ -111,4 +111,12 @@ it('the owned secondaries limit the working batch',()=>{
  expect(workingBatch(5,0,27)).toBe(5);
  expect(workingBatch(30,0,40)).toBe(27);
  expect(workingBatch(3,0,0)).toBe(0);
+});
+
+it('batches 14 unfinished/secondary pairs, 14 herb/vial pairs, or 9 full herb-to-potion triples per bank trip',()=>{
+ const atk=RECIPES.attack!;
+ expect(brewTripPlan(atk,{[atk.unf]:30,[atk.sec]:20},'auto')).toEqual({input:atk.unf,count:14,needsVial:false,needsSec:true});
+ expect(brewTripPlan(atk,{[atk.dirty]:30,227:25,[atk.sec]:20},'auto')).toEqual({input:atk.dirty,count:9,needsVial:true,needsSec:true});
+ expect(brewTripPlan(atk,{[atk.clean]:5,[atk.dirty]:20,227:20,[atk.sec]:20},'auto')).toEqual({input:atk.clean,count:5,needsVial:true,needsSec:true});
+ expect(brewTripPlan(atk,{[atk.clean]:20,227:20,[atk.sec]:20},'unf')).toEqual({input:atk.clean,count:14,needsVial:true,needsSec:false});
 });

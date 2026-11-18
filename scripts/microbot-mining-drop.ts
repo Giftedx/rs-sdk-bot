@@ -1,7 +1,8 @@
 import {existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
-import {eligiblePickaxe,miningProfiles,runAtSiteMining,type MiningDriver,type MiningProfile} from './microbot-b-mining';
+import {eligiblePickaxe,equipUsablePickaxeInPack,miningProfiles,runAtSiteMining,type MiningDriver,type MiningProfile} from './microbot-b-mining';
+import {MINING_PICKAXES_DESC} from '../packages/planner/src/gear-progression';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 
 export interface MiningDropJob {maximum:number;cap:number;idleTicks:number;keep:readonly number[]}
@@ -41,5 +42,7 @@ export async function runDropMining(d:MiningDropDriver,p:MiningProfile,o:MiningD
 if(import.meta.main){
  const name=process.argv[2],p=miningProfiles().find(p=>p.name===process.argv[3]);if(!name||!p)throw Error('usage: microbot-mining-drop.ts account native-profile maximum cap keep-ids');
  const s=await openBot(name);let ended=false;void s.ended.then(()=>{ended=true;});
- try{const r=await runDropMining({state:()=>s.sdk.getState(),tick:()=>s.tick(),stop:()=>ended||existsSync('.practice/stop-all')||existsSync(`.practice/stop-${name}`),mine:async l=>(await s.sdk.sendInteractLoc(l.x,l.z,l.id,1)).success,drop:async slot=>(await s.sdk.sendDropItem(slot)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),clearModal:async()=>{await s.sdk.sendCloseModal();}},p,{maximum:Number(process.argv[4]),cap:Number(process.argv[5]??2000),idleTicks:Number(process.env.IDLE_TICKS??300),keep:(process.argv[6]??'').split(',').filter(Boolean).map(Number)});await finish([s],true,JSON.stringify(r));}catch(error){await finish([s],false,String(error));}
+ await equipUsablePickaxeInPack(s);
+ const keepIds=process.argv[6]?process.argv[6].split(',').filter(Boolean).map(Number):[...MINING_PICKAXES_DESC];
+ try{const r=await runDropMining({state:()=>s.sdk.getState(),tick:()=>s.tick(),stop:()=>ended||existsSync('.practice/stop-all')||existsSync(`.practice/stop-${name}`),mine:async l=>(await s.sdk.sendInteractLoc(l.x,l.z,l.id,1)).success,drop:async slot=>(await s.sdk.sendDropItem(slot)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),clearModal:async()=>{await s.sdk.sendCloseModal();}},p,{maximum:Number(process.argv[4]),cap:Number(process.argv[5]??2000),idleTicks:Number(process.env.IDLE_TICKS??300),keep:keepIds});await finish([s],true,JSON.stringify(r));}catch(error){await finish([s],false,String(error));}
 }

@@ -37,16 +37,16 @@ These are candidates, not a fixed route order. Compare quest time, travel and un
    multiplied by 25 in the recorded configuration. [Quest XP](quest-xp.md) contains extracted totals, not a proved route or complete reward model.
 2. **Tick manipulation for gathering.** Knife on a log + "Make 1" + a click on the resource in one tick sets a
    2-tick delay without using the log. **Proven: woodcutting +29%.** Same code path for fishing (5-6 -> 3 ticks)
-   and mining below a rune pickaxe. Herb tar did not exist in 2004; knife-on-log does the same job.
+   and mining below a rune pickaxe. Herb tar mixing did not exist in rev 289; knife-on-log does the same job.
 3. **Zero-delay production.** Herblore, bow stringing, arrows and darts (15 per action), gem cutting have no
    delay here; up to 5 actions run per tick. Supply, not time, limits them.
 4. **Exact inputs on exact ticks.** The SDK runs actions one at a time (`packages/core/src/inprocess.ts` pump);
    `s.direct` sends several in one tick. Loc clicks run in the arrival tick only if the bot took no steps
    (`Player.ts:1348`), so stand still before clicking.
 5. **Travel.** Check run energy and server configuration. `Player.updateEnergy` bypasses depletion only with `NODE_INFINITE_RUN`. Historical teleport candidates: Varrock 25, Lumbridge 31, Falador 37, Camelot 45,
-   Ardougne 51 (Plague City), Watchtower 58; amulet of glory (Edgeville, Karamja, Draynor, Al Kharid); ring of
-   dueling; spirit trees (Tree Gnome Village); gnome gliders (The Grand Tree); Karamja and Brimhaven boats. Not yet
-   in the game: charter ships, fairy rings, carpets, canoes, games necklace, home teleport.
+   Ardougne 51 (Plague City), Watchtower 58, Trollheim 61; amulet of glory (Edgeville, Karamja, Draynor, Al Kharid); ring of
+   dueling; games necklace (Burthorpe, Barbarian Outpost); spirit trees (Tree Gnome Village); gnome gliders (The Grand Tree); Karamja and Brimhaven boats. Absent in
+   rev 289: charter ships, fairy rings, magic carpets, canoes, home teleport.
 6. **Danger.** NPCs hunt players whose combat level is at most 2x theirs outside the Wilderness (`Npc.ts:1011`);
    they stop after about 1,000 ticks in one area (`Player.ts:2189-2217`). Melee NPCs path naively, so safespots work.
    Never walk White Wolf Mountain at low level. Check routes with `research/route-danger.ts`.

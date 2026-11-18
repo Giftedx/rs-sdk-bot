@@ -2,9 +2,23 @@ import {existsSync} from 'node:fs';
 import {openBot, getWorld, accountOf, countItems} from '../packages/core/src/bot';
 import {goTo} from '../packages/core/src/walk';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
-import {depositObserved} from '../packages/core/src/deposit';
-import {runShafts} from './fletch-shafts';
-import {runHeadless} from './fletch-arrows';
+import { depositObserved } from '../packages/core/src/deposit';
+import { runShafts } from './fletch-shafts';
+import { runHeadless } from './fletch-arrows';
+import {
+    type ShopRetryGate,
+    WOODCUTTING_AXES_DESC,
+    bestWoodcuttingAxe,
+    executeShopToolPurchase,
+    planToolShopUpgrade,
+    readSkillLevels,
+    reconcileBankTool,
+    recordShopAttempt,
+    sessionShopGate,
+    sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
+} from '../packages/planner/src/gear-progression';
 type Session=Awaited<ReturnType<typeof openBot>>;
 const BANK={x:3092,z:3243,level:0},KNIFE={x:3224,z:3202,level:0},TREES={x:3226,z:3237,level:0};
 const CORRIDOR=[{x:3092,z:3266,level:0},{x:3140,z:3270,level:0},{x:3180,z:3258,level:0},{x:3218,z:3256,level:0}];
@@ -33,6 +47,53 @@ export async function takeOwnedSupplyKnife(s:Session,check:()=>void):Promise<'he
  console.log('WOOD_SUPPLY_KNIFE_RECEIPT '+JSON.stringify({account:s.name,itemId:946,amount:1,bankBefore,bankAfter:bankBefore-1,packBefore,packAfter:held(),generationBefore,generationAfter:s.bankObservation!()!.generation,tick:s.tick()}));
  return'withdrawn';
 }
+export function selectWoodSupplyAxe(
+ stock:readonly {id:number;count:number}[],
+ levels:ReturnType<typeof readSkillLevels>,
+){
+ return bestWoodcuttingAxe(stock,levels);
+}
+const woodSupplyShopGates=new WeakMap<object,ShopRetryGate>();
+export async function reconcileWoodSupplyAxe(
+ s:Session,
+ options:{bankSpot?:{x:number;z:number;level?:number};walkTo?:(spot:{x:number;z:number;level?:number})=>Promise<boolean>;check:()=>void;allowShop?:boolean;shopGate?:ShopRetryGate},
+){
+ options.check();
+ const bankItems=s.bankObservation?.()?.items??s.sdk.getState()?.bank?.items??[];
+ const inv=s.sdk.getInventory(),eq=s.sdk.getEquipment?.()??[];
+ const levels=readSkillLevels(s.sdk);
+ const stock=[...inv,...eq.filter(e=>e.slot===3),...bankItems];
+ const coins=stock.filter(i=>i.id===995).reduce((n,i)=>n+i.count,0);
+ const axeTier=tierBoundaryOf(levels.woodcutting,[1,6,21,31,41]);
+ const shopGate=sessionShopGate(woodSupplyShopGates,s,options.shopGate);
+ if(options.allowShop!==false&&shouldAttemptShopUpgrade(shopGate,axeTier,s.tick?.()??0)){
+  const shopPlan=planToolShopUpgrade('woodcutting-axe',stock,coins,levels,{allowedShops:['axeshop'],onlyWhenStarterOrMissing:true});
+  if(shopPlan){
+   options.check();
+   const hooks=sessionToolHooks(s,{walkTo:options.walkTo,waitUntil:(pred,timeoutTicks)=>waitUntil(s,pred,{timeoutTicks}),stop:()=>{try{options.check();return false;}catch{return true;}}});
+   const res=await executeShopToolPurchase(hooks,{targetId:shopPlan.target.id,shop:'axeshop',maxBudget:shopPlan.coinBudgetNeeded,returnBankSpot:options.bankSpot??BANK});
+   recordShopAttempt(shopGate,axeTier,s.tick?.()??0,res.bought);
+   if(res.bought){
+    console.log('WOOD_SUPPLY_SHOP_AXE '+JSON.stringify(res));
+    options.check();
+    if(!(await s.bot.openBank()).success)throw Error('supply bank unavailable after axe purchase');
+    options.check();
+    const spareCoins=s.sdk.getInventory().find(i=>i.id===995);
+    if(spareCoins)await depositObserved(s,spareCoins);
+   }
+  }
+ }
+ options.check();
+ const latestBank=s.bankObservation?.()?.items??s.sdk.getState()?.bank?.items??[];
+ const rec=bestWoodcuttingAxe([...s.sdk.getInventory(),...(s.sdk.getEquipment?.()??[]).filter(e=>e.slot===3),...latestBank],levels).current;
+ if(!rec)return null;
+ await reconcileBankTool(sessionToolHooks(s,{waitUntil:(pred,timeoutTicks)=>waitUntil(s,pred,{timeoutTicks}),stop:()=>{try{options.check();return false;}catch{return true;}}}),{
+  targetId:rec.item.id,
+  canWield:rec.canWield,
+  toolGroupIds:WOODCUTTING_AXES_DESC,
+ });
+ return rec.item.id;
+}
 export async function runWoodSupply(s:Session,logs:number,headless:number,cap:number){
  const plan=supplyPlan(logs,headless,cap),start=s.tick(),hp=s.sdk.getSkill('Hitpoints')?.level??0;
  let hpMin=hp,last=hp;const damage:any[]=[];const off=s.onTick(()=>{const now=s.sdk.getSkill('Hitpoints')?.level??0;const hit=now<last;last=now;if(hit){const p=s.sdk.getState()?.player;damage.push({tick:s.tick()-start,hp:now,pos:p&&{x:p.worldX,z:p.worldZ,level:p.level},combat:p?.combat,npcs:s.sdk.getState()?.nearbyNpcs.map(n=>({name:n.name,x:n.x,z:n.z,distance:n.distance}))});console.log('WOOD_SUPPLY_DAMAGE '+JSON.stringify(damage.at(-1)));}hpMin=Math.min(hpMin,now);});
@@ -47,17 +108,22 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
  const travel=async(t:typeof BANK)=>{
   check();const p=s.sdk.getState()?.player;if(p&&p.level===t.level&&Math.max(Math.abs(p.worldX-t.x),Math.abs(p.worldZ-t.z))<=2)return;
   // The courier's north-bank lane avoids the jail/road approach. Keep the supply route north of the Lumbridge spiders.
-  if(t===BANK)for(const step of [...CORRIDOR].reverse())await walk(step);
-  else if(t===TREES||t===KNIFE)for(const step of CORRIDOR)await walk(step);
+  if(t.x===BANK.x&&t.z===BANK.z)for(const step of [...CORRIDOR].reverse())await walk(step);
+  else if(t===TREES||t===KNIFE||t.x>3150)for(const step of CORRIDOR)await walk(step);
   await walk(t);
  };
  // An owner stop can land while the bank opens, so recheck before every bank mutation.
  const bank=async()=>{await travel(BANK);check();if(!(await s.bot.openBank()).success)throw Error('supply bank unavailable');check();};
  const deposit=async()=>{for(const id of [1511,946]){check();const item=s.sdk.getInventory().find(i=>i.id===id);if(item)await depositObserved(s,item);}await s.bot.closeBank();};
+ const activeAxeId=()=>{const levels=readSkillLevels(s.sdk);const eq=s.sdk.getEquipment?.()??[];return bestWoodcuttingAxe([...s.sdk.getInventory(),...eq.filter(e=>e.slot===3)],levels).current?.item.id??null;};
+ const walkToSpot=async(spot:{x:number;z:number;level?:number})=>{await travel({x:spot.x,z:spot.z,level:spot.level??0});return true;};
  let gathered=0,shafts:any,arrows:any;
  try{
-  if(!s.sdk.getInventory().some(i=>/^bronze axe$/i.test(i.name))){
-   await bank();const axe=s.sdk.getState()?.bank.items.find(i=>i.id===1351);check();if(!axe||!(await s.bot.withdrawItem(axe,1,{asNote:false})).success||!await waitUntil(s,()=>held(1351)===1,{timeoutTicks:5}))throw Error('supply owned bronze axe required');await s.bot.closeBank();
+  if(!activeAxeId()||activeAxeId()===1351){
+   await bank();
+   const picked=await reconcileWoodSupplyAxe(s,{bankSpot:BANK,walkTo:walkToSpot,check});
+   if(!picked)throw Error('supply owned or shop axe required');
+   await s.bot.closeBank();
   }
   // Feather holders can carry a full starter kit. Only logs and the knife move into the bank; trees stay inside the existing Lumbridge safe box.
   if(!held(946)){
@@ -82,7 +148,7 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
     const gain=held(1511)-old;if(gain>0){gathered+=gain;lastGain=s.tick();}
     if(s.tick()-lastGain>80)throw Error('supply no log progress');
    }
-   await bank();await deposit();
+   await bank();await reconcileWoodSupplyAxe(s,{bankSpot:BANK,walkTo:walkToSpot,check});await deposit();
   }
   check();shafts=await runShafts(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:logs,reserve:0,bankKnife:true,stop:halt,pause:stop});check();
   if(!shafts.ok)throw Error('supply shafts '+JSON.stringify(shafts));

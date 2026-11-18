@@ -81,6 +81,36 @@ function trainingIntent(targets:Record<string,number>):WorkIntent|null{
 }
 const sameTargets=(a:WorkIntent,b:WorkIntent)=>JSON.stringify(Object.entries(trainingTargets(a)??{}).sort())===JSON.stringify(Object.entries(trainingTargets(b)??{}).sort());
 
+// openBot removes a leading actor name: the donor retains [receiver, amount],
+// while the receiver retains [donor, receiver, amount]. The worker supplies the
+// same exact participant pair for both; ownership and bank reserves stay its guards.
+function coinTransferIntent(args:readonly string[],env:Readonly<Record<string,string|undefined>>):WorkIntent|null{
+ const account=(s:unknown):s is string=>typeof s==='string'&&s.trim()===s&&/^[A-Za-z0-9_ -]{1,12}$/.test(s)&&!/^(main|haggis)$/i.test(s);
+ const pair=(v:unknown):v is [string,string]=>Array.isArray(v)&&v.length===2&&v.every(account)&&key(v[0])!==key(v[1]);
+ let participants:[string,string]|undefined;
+ if(env.COORDINATOR_PARTICIPANTS!==undefined){try{const parsed:unknown=JSON.parse(env.COORDINATOR_PARTICIPANTS);if(!pair(parsed))return null;participants=parsed;}catch{return null;}}
+ let from:string,to:string,amountText:string,options:readonly string[];
+ if(account(args[0])&&account(args[1])&&/^\d+$/.test(args[2]??'')){
+  from=args[0]!;to=args[1]!;amountText=args[2]!;options=args.slice(3);
+  if(!pair([from,to])||participants&&(key(from)!==key(participants[0])||key(to)!==key(participants[1])))return null;
+ }else if(participants&&key(args[0]??'')===key(participants[1])&&/^\d+$/.test(args[1]??'')){
+  [from,to]=participants;amountText=args[1]!;options=args.slice(2);
+ }else return null;
+ const amount=Number(amountText);
+ if(!whole(amount)||amount<1||amount>2147483647)return null;
+ const values:Record<string,number>={reserve:0,'bank-x':3185,'bank-z':3436,'request-ms':30000,'timeout-ms':240000,'grace-ms':45000},seen=new Set<string>();
+ for(const option of options){
+  const match=/^--(reserve|bank-x|bank-z|approach-ms|request-ms|timeout-ms|grace-ms)=(\d+)$/.exec(option);
+  if(!match||seen.has(match[1]!))return null;
+  const value=Number(match[2]);if(!whole(value))return null;seen.add(match[1]!);values[match[1]!]=value;
+ }
+ if(values.reserve!>2147483647||!['bank-x','bank-z'].every(k=>values[k]!>0&&values[k]!<16384)
+  ||values['approach-ms']!==undefined&&(values['approach-ms']!<1000||values['approach-ms']!>1800000)
+  ||values['request-ms']!<1000||values['request-ms']!>60000||values['timeout-ms']!<values['request-ms']!||values['timeout-ms']!>600000
+  ||values['grace-ms']!<1000||values['grace-ms']!>60000)return null;
+ return{kind:'service',objective:`finite owned coin transfer ${from} -> ${to}: ${amount} coins; donor bank reserve ${values.reserve}`};
+}
+
 export function matchingProgressionRoutes(script:string,args:readonly string[]=[],env:Readonly<Record<string,string|undefined>>={},catalog:ProgressionCatalog=loadProgressionCatalog()):CatalogRoute[]{
  script=scriptPath(script);
  if(script==='scripts/aio.ts'){
@@ -102,8 +132,17 @@ export function matchingProgressionRoutes(script:string,args:readonly string[]=[
 // Declared finite output owns the intent. Side XP never changes a quest or item order into a trainer.
 export function intentForEntry(script:string,args:readonly string[]=[],env:Readonly<Record<string,string|undefined>>={},accept?:CatalogAccept,catalog?:ProgressionCatalog):WorkIntent|null{
  script=scriptPath(script);
+ if(script==='scripts/coin-courier.ts')return coinTransferIntent(args,env);
  const consumer=setting(env,args,'CONSUMER')??setting(env,args,'GOAL')??script;
  const requestedItems=positiveItems(accept?.bank);
+ if(script==='scripts/train-prayer.ts'&&requestedItems&&accept?.skills){
+  const skills=Object.entries(accept.skills),target=Number(args[0]??env.TARGET_LEVEL??43),bone=Number(env.BONE_ID??526),reserve=Number(env.BONE_RESERVE??6),cap=Number(env.CAP??1500),maximum=Number(env.MAX_BURY??175);
+  // Matching Prayer work owns the intent; retained bank stock stays a coordinator postcondition.
+  if(args.length<=1&&skills.length===1&&key(skills[0]![0])==='prayer'&&skills[0]![1]===target&&finiteLevel(target)&&target>=43
+   &&[526,532,536].includes(bone)&&whole(reserve)&&reserve>=6&&requestedItems[bone]!==undefined&&requestedItems[bone]!>=reserve
+   &&whole(cap)&&cap>=1&&cap<=1000000&&whole(maximum)&&maximum>=1&&maximum<=1000000
+   &&(env.BURY_HELD===undefined||env.BURY_HELD==='0')&&accept.quests===undefined&&accept.counters===undefined)return{kind:'train',skill:'prayer',targetLevel:target};
+ }
  if(requestedItems)return{kind:'acquire',items:{...requestedItems},consumer};
  if(accept?.quests?.length===1&&accept.quests[0]?.trim())return{kind:'quest',quest:accept.quests[0]};
  const acceptedSkills=Object.entries(accept?.skills??{});
@@ -123,6 +162,28 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   return actual;
  }
  if(acceptedSkills.length)return trainingIntent(accept!.skills!);
+ // Native GE counterparties have finite fixture work, admitted only on local practice.
+ if(script==='packages/practice/src/ge-bulk-order-proof.ts'){
+  const actor=args[1];if(!actor||!/^[A-Za-z0-9]{1,12}$/.test(actor))return null;
+  if(args[0]==='--snapshot')return args.length===2?{kind:'observe',objective:`observe the owned native GE bank of ${actor} once`,units:1}:null;
+  if(args[0]!=='--sell'||args.length!==5)return null;
+  const item=Number(args[2]),quantity=Number(args[3]),price=Number(args[4]);
+  return [item,quantity,price].every(n=>whole(n)&&n>0)&&item!==995&&item<=2147483647&&Number.isSafeInteger(quantity*price)&&quantity*price<=2147483647
+   ?{kind:'service',objective:`post one owned native GE sell offer: ${quantity} of item ${item} at ${price} each; confirm escrow debit and logout`,units:1}:null;
+ }
+ if(script==='scripts/handoff-inputs.ts'){
+  // These are new-output/delta orders. Existing stock cannot satisfy them before
+  // the worker reconciles the exact debit, bank credit and logout. Explicit parent targets still win above.
+  if(args[0]==='--headless-order'){
+   const maximum=Number(args[1]),logs=Number(args[2]),cap=Number(env.CAP??1600);
+   return args.length===3&&[maximum,logs,cap].every(whole)&&maximum>=15&&maximum%15===0&&logs>=1&&logs<=25&&cap>0
+    ?{kind:'service',objective:`bank ${maximum} new headless arrows (53) from ${logs} plain logs (1511), owned shafts (52) and feathers (314); retain knife (946) and input reserves; CAP ${cap}`,units:1}:null;
+  }
+  const [donor,receiver,...rest]=args,order=env.HANDOFF_ORDER,items=rest.filter(a=>!a.startsWith('--'));
+  if(!donor||!receiver||donor.toLowerCase()===receiver.toLowerCase()||![donor,receiver].every(n=>/^[A-Za-z0-9_ -]{1,12}$/.test(n)&&n.trim()===n&&!/^(main|haggis)$/i.test(n))
+   ||!order||!/^[a-zA-Z0-9-]{1,64}$/.test(order)||!items.length||items.some(item=>{const m=item.match(/^([1-9]\d*):([^\r\n\0]+)$/);return!m||!whole(Number(m[1]))||!m[2]!.trim();}))return null;
+  return{kind:'service',objective:`settle exact owned handoff ${order} ${JSON.stringify(args)}${env.HANDOFF_ITEM_ID?' plain item ID '+env.HANDOFF_ITEM_ID:''}; reconcile donor debit and receiver bank credit`,units:1};
+ }
  if(script==='scripts/aio.ts'){
   const category=args[0],entry=category&&['skiller','fighter','boss','pvp','quester','market','logistics'].includes(category)?category:args[1];
   if(entry)return intentForEntry('scripts/aio-'+entry+'.ts',args.slice(entry===category?1:2),env,accept,catalog);
@@ -154,7 +215,8 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  const data=catalog??(existsSync(resolve(root,'packages/planner/data/progression-routes.json'))?loadProgressionCatalog():undefined);
  if(script==='scripts/microbot-jewellery-trip.ts'){
   try{
-   const order=args[0]?JSON.parse(readFileSync(args[0],'utf8')):{recipe:env.RECIPE,target:Number(env.TARGET),stringAmulet:env.STRING_AMULET==='1'};
+   const raw=args[0];if(raw&&raw.endsWith('.json')&&!existsSync(raw))return{kind:'service',objective:'jewellery-trip:'+raw,units:1};
+   const order=raw?JSON.parse(readFileSync(raw,'utf8')):{recipe:env.RECIPE,target:Number(env.TARGET),stringAmulet:env.STRING_AMULET==='1'};
    if(typeof order.recipe!=='string'||!whole(order.target)||order.target<1||order.target>10000)return null;
    const native=data?.methods.find(m=>{const job=m.execution?.bankJob;return!!job&&job.family==='jewellery'&&job.recipe===order.recipe;});
    let products=native&&Object.keys(native.effects.items??{});if(products?.length!==1)return null;
@@ -176,8 +238,18 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   const item=Number(setting(env,args,'ITEM_ID')),quantity=Number(setting(env,args,'QUANTITY')),owned=Number(setting(env,args,'EXPECTED_OWNED')??0);
   if(whole(item)&&item>0&&whole(quantity)&&quantity>0&&whole(owned)&&whole(owned+quantity))return{kind:'acquire',items:{[item]:owned+quantity},consumer};
  }
+ if(script==='scripts/earth-shop.ts'){
+  const profile=args[0],cap=Number(args[1]),target=Number(setting(env,args,'STOCK_TARGET')),maximum=Number(setting(env,args,'MAX_ITEMS')),spend=Number(setting(env,args,'MAX_SPEND')),reserve=Number(setting(env,args,'COIN_RESERVE')),seedUsed=Number(setting(env,args,'EARTH_SEED_USED')??0);
+  return(profile==='aubury'||profile==='betty')&&[cap,target,maximum,spend,reserve].every(whole)&&[0,1].includes(seedUsed)&&cap>=1&&cap<=16000&&target>=1&&maximum>=1&&maximum<=target
+   ?{kind:'acquire',items:{557:target},consumer}:null;
+ }
+ if(script==='scripts/earth-production.ts'){
+  const mode=args[0],cap=Number(args[1]),target=Number(setting(env,args,'STOCK_TARGET')),reserve=Number(setting(env,args,'COIN_RESERVE')),kills=Number(setting(env,args,'HUNT_KILLS_PER_TARGET')??0);
+  return(mode==='talismans'||mode==='craft')&&[cap,target,reserve,kills].every(whole)&&cap>=1&&cap<=20000&&target>=1&&kills>=0&&kills<=3
+   ?{kind:'acquire',items:{557:target},consumer}:null;
+ }
  if(script==='scripts/shop-buyer.ts'){
-  const count=Number(setting(env,args,'STOCK_TARGET')??setting(env,args,'MAX_ITEMS')),pattern=setting(env,args,'ITEMS');
+  const count=Number(setting(env,args,'STOCK_TARGET')??setting(env,args,'MAX_ITEMS')),pattern=setting(env,args,'ITEMS')??(args[0]==='jukat'?'^dragon longsword$':undefined);
   if(!whole(count)||count<1||!pattern)return null;
   let matches:CatalogMethod[]=[];
   try{const re=new RegExp(pattern,'i');matches=(data?.methods??[]).filter(m=>m.step.script===script&&m.step.args[0]===args[0]&&m.step.env.ITEMS&&re.test(m.step.env.ITEMS.replace(/^\^|\$$/g,'').replace(/\\(.)/g,'$1')));}catch{return null;}
@@ -185,8 +257,26 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   if(ids.length===1)return{kind:'acquire',items:{[Number(ids[0])]:count},consumer};
   return{kind:'service',objective:`finite shop order ${args[0]??'unknown'} ${pattern} stock ${count} for ${consumer}`};
  }
+ if(script==='scripts/chain.ts'){
+  const steps=args.map(a=>parseStep(a));if(!steps.length)return null;
+  const resolved=steps.map(st=>intentForEntry(st.script,st.args,{...env,...st.env},accept,data));
+  if(resolved.some(r=>!r))return null;
+  const last=resolved.at(-1)!;
+  return last.kind==='service'||last.kind==='observe'?{kind:'service',objective:`chain:${steps.map(s=>s.script).join('+')}`,units:steps.length}:last;
+ }
  if(['scripts/fleet-trade.ts','scripts/courier-handoff.ts'].includes(script)){
   const file=args.find(a=>a.endsWith('.json')&&!a.includes('='));return file?{kind:'service',objective:'finite owned order '+file}:null;
+ }
+ if(script==='scripts/smelt-bars.ts'){
+  if(setting(env,args,'ORDER_ACTION')==='smith'||setting(env,args,'PRODUCT_ID')!==undefined){
+   const product=Number(setting(env,args,'PRODUCT_ID')),maximum=Number(setting(env,args,'MAX_MAKE'));
+   if(whole(product)&&product>0&&whole(maximum)&&maximum>0)return{kind:'service',objective:`smith-anvil:${product}:${maximum}`,units:1};
+   return null;
+  }
+  const bar=setting(env,args,'BAR_TYPE')??args.find(a=>!/^\d+$/.test(a)&&!a.includes('='))??'bronze';
+  const capText=setting(env,args,'CAP')??args.find(a=>/^\d+$/.test(a));
+  const cap=capText===undefined?15000:Number(capText);
+  if(whole(cap)&&cap>0)return{kind:'service',objective:`smelt:${bar}`,units:1};
  }
  if(['scripts/microbot-production.ts','scripts/smelt-bars.ts'].includes(script)){
   const recipe=script==='scripts/microbot-production.ts'?args.find(a=>!a.includes('=')&&!/^\d+$/.test(a)):setting(env,args,'BAR_TYPE')??args[1];
@@ -196,10 +286,13 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   if(whole(maximum)&&maximum>0&&positiveItems(items))return{kind:'produce',items:items!,consumer};
  }
  if(script==='scripts/aio-skiller.ts'&&args[0]==='bank-job'){
-  try{const raw=args[1]??'',job=JSON.parse(raw.startsWith('--job=')?decodeURIComponent(raw.slice(6)):readFileSync(raw,'utf8'));
+  try{const raw=args[1]??'';
+   if(raw.endsWith('.json')&&!raw.startsWith('--job=')&&!existsSync(raw))return{kind:'service',objective:'bank-job:'+raw,units:1};
+   const job=JSON.parse(raw.startsWith('--job=')?decodeURIComponent(raw.slice(6)):readFileSync(raw,'utf8'));
    const method=data?.methods.find(m=>{const profile=m.execution?.bankJob;return!!profile&&profile.family===job.family&&profile.recipe===job.recipe;}),skill=method&&Object.keys(method.effects.xp??{})[0];
    if(skill&&finiteLevel(job.targetLevel))return{kind:'train',skill,targetLevel:job.targetLevel};
    const product=method&&Object.keys(method.effects.items??{})[0];if(product&&whole(job.target)&&job.target>0)return{kind:'produce',items:{[Number(product)]:job.target},consumer};
+   if(typeof job.family==='string'&&typeof job.recipe==='string')return{kind:'service',objective:`bank-job:${job.family}:${job.recipe}`,units:1};
   }catch{return null;}
  }
  if(script==='scripts/aio-skiller.ts'&&args[0]&&finiteLevel(target))return PROGRESSION_SKILLS.includes(key(args[0]) as typeof PROGRESSION_SKILLS[number])?{kind:'train',skill:key(args[0]),targetLevel:target}:null;
@@ -208,8 +301,57 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  const singleSkill=matching?.skills.length===1?matching.skills[0]:undefined;
  if(singleSkill&&matching?.intents.includes('train')){
   const positional=routes.find(r=>r.skills.includes(singleSkill))?.name;
-  target=Number(setting(env,args,'TARGET_LEVEL')??setting(env,args,'TARGET')??(/agility|runecraft|prayer|alch/.test(positional??'')?args.find(a=>/^\d+$/.test(a)):undefined));
+  target=Number(setting(env,args,'TARGET_LEVEL')??setting(env,args,'TARGET')??(/agility|runecraft|prayer|alch|splash/.test(positional??'')?args.find(a=>/^\d+$/.test(a)):undefined));
   if(finiteLevel(target))return{kind:'train',skill:singleSkill,targetLevel:target};
+ }
+ const entryName=(script.startsWith('scripts/')||/^packages\/[^/]+\/src\//.test(script))&&script.endsWith('.ts')
+  ?script.replace(/^(?:scripts|packages\/[^/]+\/src)\/|\.ts$/g,''):'';
+ if(entryName==='edgeville-woodcut-order'){
+  const stall=env.STALL_TICKS===undefined?0:Number(env.STALL_TICKS);
+  return whole(stall)?{kind:'train',skill:'woodcutting',targetLevel:36}:null;
+ }
+ if(entryName==='microbot-magic-items'){
+  const mode=args[0]??'',count=Number(args[2]??1),cap=Number(args[3]??200);
+  return /^(?:low-alch|high-alch|enchant:\w+|superheat:(?:bronze|iron|silver|steel|gold|mithril|adamantite|runite))$/.test(mode)&&whole(count)&&count>=1&&count<=10000&&whole(cap)&&cap>=1&&cap<=100000
+   ?{kind:'service',objective:`magic-items:${mode}:${count}`,units:1}:null;
+ }
+ if(entryName==='dusty-key')return{kind:'acquire',items:{1590:1},consumer};
+ if(entryName==='quest-chain'){const quests=(args[0]||'').split(',').filter(Boolean);if(quests.length)return{kind:'service',objective:'quest-chain:'+quests.join(','),units:quests.length};}
+ if(entryName==='goldfarm'){const ticks=Number(env.TICKS??9000);if(whole(ticks)&&ticks>0)return{kind:'service',objective:`goldfarm:${env.KNIGHT_SPOT??'2653,3302'}`,units:1};}
+ if(entryName==='gather-feathers'){const feathers=Number(env.TARGET??2000),ticks=Number(env.TICKS??3000);if(whole(feathers)&&feathers>0&&whole(ticks)&&ticks>0)return{kind:'acquire',items:{314:feathers},consumer};}
+ if(entryName==='black-dragon-camp'){const kills=Number(setting(env,args,'KILLS')??9);if(whole(kills)&&kills>0)return{kind:'service',objective:'black-dragon-camp',units:kills};}
+ if(entryName==='black-dhide-sets')return{kind:'service',objective:'black-dhide-sets',units:1};
+ if(entryName==='gather-combat'&&setting(env,args,'GIANT_BURY')==='1'){const kills=Number(setting(env,args,'GIANT_KILLS'));if(whole(kills)&&kills>0)return{kind:'service',objective:'trooper-bury',units:kills};}
+ if(entryName==='gather-combat'){
+  const combatTarget=setting(env,args,'TARGET')??args[1];
+  const capText=setting(env,args,'CAP')??args[0];
+  const cap=capText===undefined?6000:Number(capText);
+  if(combatTarget&&combatTarget!=='trooper'&&whole(cap)&&cap>0)return{kind:'service',objective:'gather-combat:'+combatTarget,units:1};
+  return null;
+ }
+ if(['microbot-village-fishing','microbot-mining-progressive','microbot-production-progressive','microbot-magic-trip','microbot-pickpocket-trip','microbot-rune-trip','microbot-shade-trip','microbot-loot-trip','microbot-shop-trip','fletch-worker'].includes(entryName)){
+  const jobFile=args.find(a=>a.endsWith('.json'));
+  if(jobFile||entryName==='microbot-rune-trip')return{kind:'service',objective:`${scriptPath(script)}:${jobFile??'default'}`,units:1};
+ }
+ if(entryName==='rune-bank-craft'&&args.some(a=>a.startsWith('--staged=')))return{kind:'service',objective:'rune-carriers',units:1};
+ const boundedServiceEntries=new Set([
+  'gather-flax','spin-bowstrings','fletch-arrows','gather-fish','cook-food','gather-yews','gather-ore','gather-essence','blood-chest',
+  'craft-jewelry','shark-supply','cook-stock','cook-wine','microbot-b-cooking','microbot-glass','druid-meats','goldfarm-stable','microbot-c-stalls',
+  'collect-wool','fishcook','microbot-b-fishing','microbot-wine','microbot-b-mining','microbot-mining-drop','microbot-b-mining-loot','microbot-b-jewellery',
+  'microbot-c-tanner','soften-clay','microbot-magic-npc','microbot-magic-teleport','microbot-c-orbs','microbot-bones','microbot-a-pickpocket',
+  'microbot-b-nature-chest','microbot-c-care','microbot-misc-coffer','microbot-c-qol','grapes','agility-order','magic-order','alch-train','splash-train',
+  'train-prayer','microbot-prayer-flick','firemaking-order','firemaking-line','rune-bank-craft','rune-supply',
+  'cannon-fight','gather-fire-combat','gather-fire-giants','gather-imps','gather-ranged','microbot-a-ranged-camp','microbot-chompy-trip','microbot-a-chompy',
+  'microbot-b-kbd','microbot-trawler-trip','microbot-b-trawler','pvp-kit-stage','buy-owned-sword','sell-owned-ge-item','foodcourier','supply-bootstrap',
+  'microbot-c-clues','microbot-c-clue-guardian','microbot-c-clue-puzzle','quest-cook-job','quest-order','quest-items-order','quest-sweep',
+  'generated/quest-hero-owned','generated/quest-legends-owned','generated/quest-tbwt-owned','generated/quest-itwatchtower-owned',
+  'owned-logistics-entry','ranged-progression-case',
+ ]);
+ if(boundedServiceEntries.has(entryName)){
+  const capText=setting(env,args,'CAP')??setting(env,args,'TICKS');
+  if(capText!==undefined&&(!whole(Number(capText))||Number(capText)<=0))return null;
+  const label=args.find(a=>!/^\d+$/.test(a)&&!a.includes('=')&&!a.startsWith('-'))??routes[0]?.id??script;
+  return{kind:'service',objective:`${entryName}:${label}`,units:1};
  }
  if(matching?.intents.includes('pvp'))return{kind:'pvp',objective:routes[0]?.id??script};
  if(matching?.intents.length===1&&matching.intents[0]==='observe')return{kind:'observe',objective:routes[0]?.id??script};

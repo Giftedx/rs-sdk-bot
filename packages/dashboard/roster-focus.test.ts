@@ -64,7 +64,9 @@ test('hosted lookup receipts retain supplied or legacy snapshot dates instead of
   expect(card(value,state({now:now-40_000}))).toContain('presence not loaded');
  }
  const legacy=await lookupResponse(cached,state({now:now+60_000,hostedAge:40_000,clockOffset:60_000}),true);
- expect(legacy.presenceObservedAt).toBe(now-40_000);
+ expect(legacy.presenceObservedAt).toBeNull(); // Collector time cannot date an absent feed observation.
+ const dated=await lookupResponse(cached,state({now:now+60_000,hostedAge:1000,clockOffset:60_000,world:{connected:true,tickAt:now+59_000}}),true);
+ expect(dated.presenceObservedAt).toBe(now-1000);expect(dated.at).toBe(1);
  const fresh=await lookupResponse({...cached,presenceObservedAt:now-1000},state({now:now-60_000}),true);
  expect(card(fresh,state({now:now-60_000}))).toContain('Watch in 3D');
 });

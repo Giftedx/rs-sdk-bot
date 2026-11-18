@@ -2,13 +2,23 @@ import { beforeAll, test, expect } from 'bun:test';
 import { readFileSync,mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,lstatSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot, BANK_MEETS } from './coin-courier';
+import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot, courierRecord, BANK_MEETS } from './coin-courier';
+import { botWork } from '../packages/core/src/bot';
+import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadPathfinding } from '../packages/core/src/pathcache';
 
 // initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts). The snapshot loader makes
 // the same grid first, so the call in the test returns at once.
 beforeAll(async () => { await loadPathfinding(); }, 120_000);
+
+test('the session record of each courier account maps to the finite transfer intent', () => {
+    const argv = ['Donor', 'Receiver', '45000', '--reserve=5001'], record = courierRecord({ donor: 'Donor', receiver: 'Receiver' }, argv, {});
+    for (const name of ['Donor', 'Receiver']) {
+        const work = botWork(name, record);
+        expect(intentForEntry(work.script, work.args, work.env)).toEqual({ kind: 'service', objective: 'finite owned coin transfer Donor -> Receiver: 45000 coins; donor bank reserve 5001' });
+    }
+});
 
 test('full donor banks an unrelated item before exact 45000-coin withdrawal', async () => {
     let pack = [{ id: 1446, name: 'Body talisman', count: 1, slot: 0 },
@@ -172,10 +182,10 @@ test('owned coin endpoints reach the stack, new profiles, registration and every
  expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
  const registration=coinRegistrationArgs('fixture',p);
  expect(registration[0]).toBe('--eval');
- expect(registration[1]).toContain(JSON.stringify(`SERVER=${p.server}`));
- expect(registration[1]).toContain(JSON.stringify(`GATEWAY_URL=${p.gateway}`));
- expect(registration[1]).toContain('openBot(');
- expect(registration[1]).toContain('finish([session]');
+ expect(registration[1]).toContain(JSON.stringify(p.server));
+ expect(registration[1]).toContain(JSON.stringify(p.gateway));
+ expect(registration[1]).toContain('registerCoinProofAccount(');
+ expect(registration[1]).not.toContain('openBot(');
  for(const args of [registration,['scripts/coin-courier.ts','donor','receiver','12345']]){
   const child=coinChildConfiguration(args,{CAP:'1600'},p,{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',ENGINE_MANAGEMENT_URL:'http://localhost:8898',NODE_PORT:'43594',GE_DATABASE:'data/market.sqlite'});
   expect(child.cmd).toEqual(['bun',...args]);

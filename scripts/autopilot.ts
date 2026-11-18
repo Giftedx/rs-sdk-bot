@@ -27,7 +27,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
+import { ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -38,10 +38,12 @@ import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
 import { createAutopilotProgression } from './autopilot-progression';
 import { accountFromStatus } from '../packages/planner/src/progression-catalog';
+import {boundAccounts,type AccountBindingState} from '../packages/core/src/coordinator-accounts';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
 const PAUSED = 'AUTOPILOT hold: swarm is paused';
+export const OFFLINE_GUARDED = new Set(['haggis', 'shaftshooter', 'polevaulter']);
 // A pass that changes the resources this plan's enabled jobs hold publishes the side's claim at once. Other sides plan
 // against origin's claims (newestClaims), and a claim that waits for the fleet agent's next sync (up to 10 minutes)
 // lets two sides give the same knight place in that window.
@@ -155,7 +157,7 @@ export function sideStock(side: string, snapshot: any, plan: any, open: Readonly
         if (typeof r?.name !== 'string' || !/^[A-Za-z0-9]{1,12}$/.test(r.name) || typeof r.server !== 'string' || r.server.toLowerCase() !== server || r.practice) return false;
         const name = r.name.toLowerCase(), owner = context.owners.get(name);
         return owner?.side === side && owner.server.toLowerCase() === server && !publishedSideHold(context.card, side, name)
-            && !busy.has(name) && !open.has(name) && name !== 'haggis';
+            && !busy.has(name) && !open.has(name) && !OFFLINE_GUARDED.has(name);
     })
         .flatMap((r:any)=>{const stock=donorStock(r.name,side,r,now,maxAgeMs,itemName,server);return stock?[stock]:[];});
 }
@@ -195,6 +197,7 @@ export function kitMarket(items: readonly { id: number; name?: string; debugname
     const market: Record<string, { id: number; name: string; limit: number }> = {};
     for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
         && (!(norm(i.name) in BOW_IDS) || BOW_IDS[norm(i.name)] === i.id)
+        && (!(norm(i.name) in ARMOUR_IDS) || ARMOUR_IDS[norm(i.name)] === i.id)
         && !(now - (unsold[i.id] ?? -Infinity) < UNSOLD_RETRY_MS))
         market[norm(i.name)] = { id: i.id, name: i.name, limit: KIT_PRICE_CAPS[norm(i.name)]! };
     return market;
@@ -208,14 +211,45 @@ export function unfilledItems(lines: readonly string[]): number[] {
     }
     return [...out];
 }
+export type EndedRecord = { at?: number; reason?: string };
+export type JobRunStatus = { active?: boolean; ended?: EndedRecord };
+export function readSwarmActiveAccounts(file: string): Set<string> {
+    const runs = readJson(file, null);
+    if (!Array.isArray(runs)) return new Set();
+    const out = new Set<string>();
+    for (const r of runs) {
+        if (Array.isArray(r?.accounts)) for (const a of r.accounts) if (typeof a === 'string') out.add(a.toLowerCase());
+        if (typeof r?.account === 'string') out.add(r.account.toLowerCase());
+    }
+    return out;
+}
+export function readSwarmEnded(file: string): Map<string, EndedRecord> {
+    const raw = readJson(file, null);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return new Map();
+    const out = new Map<string, EndedRecord>();
+    for (const [name, val] of Object.entries(raw)) {
+        if (val && typeof val === 'object') out.set(name.toLowerCase(), val as EndedRecord);
+    }
+    return out;
+}
+export function isJobEnded(assigned: { at?: number } | undefined, status?: JobRunStatus): boolean {
+    if (!status || status.active || !status.ended) return false;
+    const reason = status.ended.reason ?? '';
+    const terminal = /^(?:exit (?:4|unknown|orphaned\b)|died\b|blocked\b|gave-up\b|done\b|stopped\b)/.test(reason);
+    const afterAssign = typeof assigned?.at === 'number' && typeof status.ended.at === 'number' ? status.ended.at >= assigned.at : true;
+    return terminal && afterAssign;
+}
 // A kit buy that has started and printed no RESULT yet holds an open Grand Exchange offer: its coins are in the
 // exchange, so the account's live status shows them gone. A declared finite maker also keeps its exact pending
-// quantity and observed-stock fingerprint until its terminal result. The pass leaves these jobs as they are.
-export function kitBuyRunning(job: any, assigned: { template: string; offset: number } | undefined, linesSince: (offset: number) => readonly string[],finiteMaker=false): boolean {
-    if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY)&&!finiteMaker) || !assigned || assigned.template !== job.template) return false;
+// quantity and observed-stock fingerprint until its terminal result. If the supervisor ended the attempt (e.g.
+// orphaned or fatal exit without printing RESULT), release the job so the account and resource lock are freed.
+export function kitBuyRunning(job: any, assigned: { template: string; offset: number; at?: number } | undefined, linesSince: (offset: number) => readonly string[], finiteMaker = false,
+    ctx?: JobRunStatus): boolean {
+    if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY) && !finiteMaker) || !assigned || assigned.template !== job.template) return false;
     const lines=linesSince(assigned.offset);
     const r = assess(finiteMaker?lines.filter(l=>l.startsWith('RESULT ')):lines);
-    return r.ok + r.fail + r.drains === 0;
+    if (r.ok + r.fail + r.drains > 0) return false;
+    return !isJobEnded(assigned, ctx);
 }
 
 export function completedHeldOrderSeq(jobs:readonly any[],side:string,assigned:Readonly<Record<string,{template:string;offset:number}>>,templates:readonly Template[],
@@ -341,9 +375,10 @@ export function mountainWalk(hunters: readonly Hunter[] = loadHunters()): (a: Ac
     };
 }
 
-export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>) {
+export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>,queue?:AccountBindingState) {
     // A parked coordinator job still shadows its owner job until the coordinator releases it.
     const held = new Set(coordinatorJobs.flatMap(jobAccounts).map(account => account.toLowerCase()));
+    for(const record of queue?.tasks??[])if(record.status==='pending'||record.status==='running')for(const account of boundAccounts(record.spec,queue!)??[])held.add(account.toLowerCase());
     const keep = new Set([...paused, ...held]);
     const busy = enabledAccounts(withCoordinatorJobs(ownerJobs, coordinatorJobs));
     for (const account of held) busy.add(account);
@@ -422,11 +457,22 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     // An owner's stop file pauses its account. One the controller wrote itself (a job that left the plan, stop-swarm)
     // does not: that account is planned again, and the file goes with the job that replaces it (below).
     const stopText = (n: string): string | undefined => { try { return readFileSync(join(prac, `stop-${n}`), 'utf8'); } catch { return undefined; } };
+    const fleetDir = FLEET_DIR(), now = Date.now();
+    const activeAccounts = readSwarmActiveAccounts(join(prac, 'swarm-runs.json'));
+    const endedAccounts = readSwarmEnded(join(prac, 'swarm-deaths.json'));
+    const ctxFor = (acct: string): JobRunStatus => ({ active: activeAccounts.has(acct.toLowerCase()), ended: endedAccounts.get(acct.toLowerCase()) });
+    const diedAccounts = new Set<string>();
+    for (const [acctLower, rec] of endedAccounts) {
+        if (!activeAccounts.has(acctLower) && /^died\b/.test(rec.reason ?? '')) diedAccounts.add(acctLower);
+    }
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
-    const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused);
+    const queue=readJson(join(prac,'coordinator/state.json'),null);
+    if(swarm.coordination?.enabled&&(!queue||queue.version!==1||!Array.isArray(queue.tasks)))return['AUTOPILOT hold: owning coordinator queue is unavailable'];
+    const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused,queue?.version===1&&Array.isArray(queue.tasks)?queue:undefined);
     const templates=catalogue(),finiteMakers=new Set(templates.filter(t=>t.production).map(t=>t.id));
     for (const j of swarm.jobs.filter(mineMarked)) if (typeof j.account === 'string'
-        && kitBuyRunning(j, state.assigned[j.account], offset => readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), offset, j),finiteMakers.has(j.template))) keep.add(j.account.toLowerCase());
+        && !diedAccounts.has(j.account.toLowerCase())
+        && kitBuyRunning(j, state.assigned[j.account], offset => readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), offset, j), finiteMakers.has(j.template), ctxFor(j.account))) keep.add(j.account.toLowerCase());
 
     // Retire planner jobs whose own log lines show no progress.
     const log: string[] = [];
@@ -453,14 +499,37 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
             log.push(`AUTOPILOT unsold ${j.account} ${j.template}: no seller under the cap for ${none.map(id => byId.get(id) ?? id).join(', ')}`);
             continue;
         }
-        if (r.retire) { const script = scriptOf(j.template); state.retired[pairKey(j.account, j.template)] = script === undefined ? r.reason : { reason: r.reason, script }; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
+        if (r.retire) { const script = scriptOf(j.template); state.retired[pairKey(j.account, j.template)] = script === undefined ? r.reason : { reason: r.reason, script }; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); continue; }
+        const ctx = ctxFor(j.account);
+        if (isJobEnded(a, ctx)) {
+            const endedReason = ctx.ended?.reason ?? '';
+            if (/^died\b/.test(endedReason)) {
+                state.retired[pairKey(j.account, j.template)] = `death: ${endedReason}`;
+                log.push(`AUTOPILOT retire ${j.account} ${j.template}: death: ${endedReason}`);
+            } else if (/^exit 4\b/.test(endedReason)) {
+                const script = scriptOf(j.template);
+                const reason = `script-error: ${endedReason}`;
+                state.retired[pairKey(j.account, j.template)] = script === undefined ? reason : { reason, script };
+                log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${reason}`);
+            } else if (String(j.template).startsWith(KIT_BUY) && /^exit orphaned\b/.test(endedReason)) {
+                (state.kitSeq ??= {})[j.account.toLowerCase()] = (state.kitSeq?.[j.account.toLowerCase()] ?? 0) + 1;
+            }
+        }
     }
 
+    const leaseAt = (sideName: string): number | undefined => {
+        const lease = readJson(join(fleetDir, 'leases', `${sideName}.json`), null);
+        return Number.isFinite(lease?.at) ? lease.at : undefined;
+    };
+    const leaseStale = (sideName: string): boolean => {
+        const at = leaseAt(sideName);
+        return at !== undefined && !(now - at < CLAIM_MAX_AGE_MS);
+    };
     const taken = reservedResources(swarm.jobs, side, keep);
-    const claimDir = join(FLEET_DIR(), 'claims');
+    const claimDir = join(fleetDir, 'claims');
     const synced = existsSync(claimDir) ? readdirSync(claimDir).filter(f => f.endsWith('.json')).map(f => readJson(join(claimDir, f), null)) : [];
-    for (const c of newestClaims(synced, originClaims(FLEET_DIR()))) {
-        if (c.side === side || !Array.isArray(c.resources) || !(Date.now() - c.at < CLAIM_MAX_AGE_MS)) continue;
+    for (const c of newestClaims(synced, originClaims(fleetDir))) {
+        if (c.side === side || leaseStale(c.side) || !Array.isArray(c.resources) || !(now - c.at < CLAIM_MAX_AGE_MS)) continue;
         for (const r of c.resources) if (typeof r === 'string') taken[r] = (taken[r] ?? 0) + 1;
     }
 
@@ -469,15 +538,17 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     // container has no status files, an account adopted from another side has its last row there, and a Thieving 99
     // account must not plan as a level-1 start).
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
-    const published = readSnapshotFiles(join(FLEET_DIR(), 'snapshots'));
+    const published = readSnapshotFiles(join(fleetDir, 'snapshots'));
     const observed = (n: string) => {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return observedAccount(n, f ? readJson(join(statusDir, f), null) : null, published, owners, side);
     };
-    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), Date.now()));
+    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => {
+        const lower = n.toLowerCase();
+        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower);
+    }), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), now));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
-    const fleetDir = FLEET_DIR(), now = Date.now();
     const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(validOrder) : [];
     const receipts: Receipt[] = existsSync(join(fleetDir, 'receipts')) ? readdirSync(join(fleetDir, 'receipts')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'receipts', f), null)).filter(Boolean) : [];
     // The shared intent precedes the local journal. A crashed host may never publish that journal.
@@ -496,15 +567,20 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     // trade claim ("fleet account claim held by swarm"), so its partner waits for nothing and the order fails. It gives
     // nothing until a recovery confirms its logout.
     const stranded = strandedAccounts(listed, n => readLogoutProof(n, owners.get(n.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev').state);
-    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open, stranded].some(s => s.has(n.toLowerCase())))
-        .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
+    const donors = listed.filter(n => {
+        const lower = n.toLowerCase();
+        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower) && ![busy, keep, open, stranded].some(s => s.has(lower));
+    }).map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     // Kit donors: this side's free accounts (the coin donors' rule), then each other side's, on the same server.
-    const free = (n: string) => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open, stranded].some(s => s.has(n.toLowerCase()));
+    const free = (n: string) => {
+        const lower = n.toLowerCase();
+        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower) && ![busy, keep, open, stranded].some(s => s.has(lower));
+    };
     const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server);return row?[row]:[];});
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
         const other = f.slice(0, -'.json'.length);
-        if (other !== side && !silent.has(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id),
+        if (other !== side && !silent.has(other) && !leaseStale(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id),
             { owners, server: 'rs-sdk-demo.fly.dev', card: readJson(join(fleetDir, 'sides', f), null) }));
     }
     const market = kitMarket(items, state.unsold, now);
@@ -528,7 +604,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const sourceAllowed=new Set(stock.map(s=>s.name.toLowerCase())),newlyWorking=new Set<string>();
     const progression=createAutopilotProgression({now,observed,itemId,itemName:id=>byId.get(id),builds:buildCaps(swarm),jobs:swarm.jobs,
         assignedAt:new Map(Object.entries(state.assigned).map(([name,s])=>[name.toLowerCase(),s.at])),taken,capacity:CAPACITY,
-        busy:new Set([...keep,...open,...stranded,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map((n:string)=>n.toLowerCase())]),paused,protected:new Set(['haggis']),
+        busy:new Set([...keep,...open,...stranded,...diedAccounts,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map((n:string)=>n.toLowerCase())]),paused,protected:new Set(OFFLINE_GUARDED),
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
     const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
@@ -589,10 +665,15 @@ export function trainersDone(planFile: string): string[] {
     try { effectiveJobs = withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs); }
     catch { return []; } // An unreadable overlay cannot establish which trainer owns the account.
     const since = (a: string, offset: number, job: any) => readJobResultLines(join(prac, 'swarm-logs', `${a}.log`), offset, job);
-    // A kit buy with a RESULT, ok or fail, also wants its next pass now: the band waits for the kit, and a failed buy
-    // must not be restarted by the controller until the 10-minute timer.
+    const activeAccounts = readSwarmActiveAccounts(join(prac, 'swarm-runs.json'));
+    const endedAccounts = readSwarmEnded(join(prac, 'swarm-deaths.json'));
+    // A kit buy with a RESULT, ok or fail, or an ended/orphaned run, also wants its next pass now: the band waits for
+    // the kit, and a failed buy must not be restarted by the controller until the 10-minute timer.
     const buys = effectiveJobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && typeof j.template === 'string' && j.template.startsWith(KIT_BUY)
-        && j.enabled && state.assigned[j.account]?.template === j.template && !kitBuyRunning(j, state.assigned[j.account], offset => since(j.account, offset, j))).map(j => j.account as string);
+        && j.enabled && state.assigned[j.account]?.template === j.template && !kitBuyRunning(j, state.assigned[j.account], offset => since(j.account, offset, j), false, {
+            active: activeAccounts.has(j.account.toLowerCase()),
+            ended: endedAccounts.get(j.account.toLowerCase()),
+        })).map(j => j.account as string);
     return [...finishedTrainers(effectiveJobs, side, state.assigned, catalogue(), since), ...buys]
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
 }

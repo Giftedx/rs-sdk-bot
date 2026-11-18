@@ -287,4 +287,149 @@ test('the account HP KPI dates recorded health and labels it current only while 
  expect(html({...bot,hpAt:now-1})).toContain('<b>2 / 20</b><span>current hitpoints</span><small>1 old</small>');
  for(const b of [{...bot,hpAt:null},{...bot,hp:{now:NaN,max:20}},{...bot,hpAt:now+1}])expect(html(b)).toContain('<b>—</b><span>recorded hitpoints</span><small>Not reported</small>');
  expect(html(bot,false)).toContain('<b>—</b><span>recorded hitpoints</span>');
+ expect(html({...bot,pos:{x:3060,z:3880,level:0}})).toContain('3060, 3880 · floor 0 · Wilderness 46');
+ expect(html({...bot,pos:{x:3185,z:3436,level:0}})).not.toContain('Wilderness');
+});
+
+test('fleet Wilderness filter counts and isolates playing accounts in the Wilderness',()=>{
+ const code=operations.slice(operations.indexOf(' function fleet(){'),operations.indexOf(' function account(){'));
+ const list=[
+  {name:'WildOne',operation:'observed',inWorld:true,pos:{x:3060,z:3880,level:0}},
+  {name:'SafeOne',operation:'observed',inWorld:true,pos:{x:3185,z:3436,level:0}},
+ ];
+ const render=(fleetFilter:string)=>new Function('S','window','bots','fleetQuery','fleetFilter','issues','idleOf','isOwner','fleetDeck','fleetRow','publicRow','safeName','page','title','E',`${code};return fleet();`)(
+  {fleetSides:{sides:[],orders:[]}},{atlasOperator:()=>false},()=>list,'',fleetFilter,()=>[],()=>null,()=>false,()=>'',()=>'',(b:any)=>`[ROW:${b.name}]`,String,(s:string)=>s,()=>'',String) as string;
+ const all=render('all');
+ expect(all).toContain('Wilderness<span class="op-count">1</span>');
+ const wild=render('wildy');
+ expect(wild).toContain('[ROW:WildOne]');
+ expect(wild).not.toContain('[ROW:SafeOne]');
+ const rowCode=operations.slice(operations.indexOf(' function fleetRow(b){'),operations.indexOf(' function publicRow(b){'));
+ const rowHtml=new Function('window','issues','overallRank','totalLevel','st','resultSummary','safeName','skillIcon','compactRate','idleOf','button','E','nf',`${rowCode};return fleetRow({name:'WildOne',operation:'observed',inWorld:true,pos:{x:3060,z:3880,level:0}});`)(
+  {atlasOperator:()=>true},()=>[],()=>null,()=>0,()=>['','observed'],()=>'',String,()=>'',String,()=>null,()=>'',String,String) as string;
+ expect(rowHtml).toContain('Observed · wildy 46');
+});
+
+test('Command centre shows unused bot slots, RAM headroom, fast-fail loops and stale controller leases',()=>{
+ const code=operations.slice(operations.indexOf(' function operations(){'),operations.indexOf(' // Why a new bot cannot start now'));
+ const S={
+  coordination:{counts:{running:2,pending:1},fresh:true,available:true,agents:[]},
+  wilderness:[],
+  capacity:{fresh:true,active:14,cap:25,queued:1,freeGB:6.8,floorGB:4.0,headroomGB:2.8},
+  scoreboard:{available:false},
+  fleetSides:{sides:[]},
+  diagnostics:{
+   failLoops:[{name:'⟦MAIN⟧',goal:'thieving',error:'stall timeout',runs:5,medianSec:11,lastAt:1000}],
+   leases:[{side:'local',host:'pc',pid:10,at:1000,ageMs:60_000,stale:false},{side:'cloud',host:'c1',pid:20,at:100,ageMs:1_200_000,stale:true}],
+  },
+ };
+ const safeName=(s:string)=>String(s).replaceAll('⟦MAIN⟧','Main · reserved');
+ const env={S,meta:{controllers:[]},bots:()=>[{name:'Bot1',operation:'observed',inWorld:true}],issues:()=>[],incidentCards:()=>'',startBlock:()=>'',page:String,title:String,button:()=>'',badge:(_s:string,l:string)=>`[${l}]`,E:String,safeName,age:(at:number)=>at<1e9?'BAD_EPOCH_ARG':'0m',ago:(ms:number)=>Math.round(ms/60_000)+'m',metaError:'',message:''};
+ const html=new Function(...Object.keys(env),`${code};return operations();`)(...Object.values(env)) as string;
+ expect(html).toContain('14 / 25');
+ expect(html).toContain('11 unused · 1 queued');
+ expect(html).toContain('GiB RAM headroom');
+ expect(html).toContain('Fast-fail loops (2 h)');
+ expect(html).toContain('Main · reserved');
+ expect(html).toContain('5× · 11s');
+ expect(html).toContain('Controller leases');
+ expect(html).toContain('STALE 20m');
+ expect(html).not.toContain('Haggis');
+});
+
+test('Command centre lists the jobs that ended orphaned, blocked or gave-up, and never the reserved account',()=>{
+ const code=operations.slice(operations.indexOf(' function operations(){'),operations.indexOf(' // Why a new bot cannot start now'));
+ const list=[
+  {name:'Stuck',job:{state:'ended: blocked after 3 runs'}},
+  {name:'Gone',job:{state:'ended: exit orphaned: attempt 1794962132674-0000026264-0000000001 owner 26264 gone'}},
+  {name:'Quit',planJob:{state:'gave-up after 1 run'}},
+  {name:'Held',job:{state:'waiting: memory'}},
+  {name:'Off',job:{state:'blocked after 9 runs',enabled:false}},
+  {name:'Reserved',reserved:true,job:{state:'exit orphaned'}},
+  {name:'Fine',job:{state:'running'}},
+ ];
+ const S={coordination:{counts:{},fresh:true,available:true,agents:[]},wilderness:[],capacity:{},scoreboard:{available:false},fleetSides:{sides:[]},diagnostics:{failLoops:[],leases:[]}};
+ const env={S,meta:{controllers:[]},bots:()=>list,issues:()=>[],incidentCards:()=>'',startBlock:()=>'',page:String,title:String,button:()=>'',badge:(_s:string,l:string)=>`[${l}]`,E:String,safeName:String,age:()=>'0m',ago:()=>'0m',metaError:'',message:''};
+ const t=new Function(...Object.keys(env),`${code};return {rows:recoveryRows(),html:operations()};`)(...Object.values(env)) as {rows:{name:string;kind:string;runs:number|null}[];html:string};
+ // Order: orphaned, blocked, gave-up, waiting. A disabled job and the reserved account are not listed.
+ expect(t.rows.map(r=>[r.name,r.kind,r.runs])).toEqual([['Gone','orphaned',null],['Stuck','blocked',3],['Quit','gave-up',1],['Held','waiting',null]]);
+ expect(t.html).toContain('jobs need recovery');
+ expect(t.html).toContain('1 worker gone · 1 blocked · 1 gave up · 1 waiting');
+ expect(t.html).toContain('Job recovery');
+ expect(t.html).toContain('[4 to review]');
+ expect(t.html).toContain('The worker process 26264 is gone.');
+ expect(t.html).toContain('Ended blocked after 3 runs.');
+ expect(t.html).toContain('Ended as gave-up after 1 run.');
+ expect(t.html).not.toContain('Reserved');
+ expect(t.html).not.toContain('data-value="Off"');
+ // No such job: the card says so and the count is 0.
+ const none=new Function(...Object.keys(env),`${code};return operations();`)(...Object.values({...env,bots:()=>[{name:'Fine',job:{state:'running'}}]})) as string;
+ expect(none).toContain('[Clear]');
+ expect(none).toContain('No orphaned, blocked or waiting job.');
+});
+
+test('server diagnostics mark stale leases cleanly and exclude protected main account loops',async()=>{
+ const {mkdtempSync,rmSync,writeFileSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const {failLoops,LOOP_WINDOW_MS}=await import('../../scripts/fail-loops');
+ const {LEASE_MAX_AGE_MS,SIDE_NAME}=await import('../core/src/fleet');
+ const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('function readLeaseDiagnostics('),server.indexOf('let gearCatalogCache:')));
+ const dir=mkdtempSync(join(tmpdir(),'dash-leases-'));
+ try{
+  const now=10_000_000;
+  writeFileSync(join(dir,'cloud.json'),JSON.stringify({side:'cloud',host:'cloud-box',pid:101,at:now-LEASE_MAX_AGE_MS}));
+  writeFileSync(join(dir,'local.json'),JSON.stringify({side:'local',host:'pc-box',pid:202,at:now-60_000}));
+  writeFileSync(join(dir,'bad.json'),'{corrupt');
+  writeFileSync(join(dir,'mismatch.json'),JSON.stringify({side:'other',host:'x',pid:1,at:now}));
+  const fn=new Function('existsSync','readdirSync','readFileSync','join','SIDE_NAME','LEASE_MAX_AGE_MS','FILES','root','allResults','MAIN','failLoops','LOOP_WINDOW_MS',`${code};return {readLeaseDiagnostics,fleetDiagnostics};`)(
+   (await import('node:fs')).existsSync,(await import('node:fs')).readdirSync,readFileSync,join,SIDE_NAME,LEASE_MAX_AGE_MS,{fleet:dir},dir,
+   [
+    {started:now-5000,at:now-1000,name:'Haggis',goal:'thieving',ok:false,text:'fail no food'},
+    {started:now-5000,at:now-1000,name:'Haggis',goal:'thieving',ok:false,text:'fail no food'},
+    {started:now-5000,at:now-1000,name:'Haggis',goal:'thieving',ok:false,text:'fail no food'},
+    {started:now-5000,at:now-1000,name:'WorkerA',goal:'woodcutting',ok:false,text:'fail stall'},
+    {started:now-5000,at:now-1000,name:'WorkerA',goal:'woodcutting',ok:false,text:'fail stall'},
+    {started:now-5000,at:now-1000,name:'WorkerA',goal:'woodcutting',ok:false,text:'fail stall'},
+   ],
+   'Haggis',failLoops,LOOP_WINDOW_MS);
+  const leases=fn.readLeaseDiagnostics(dir,now);
+  expect(leases.map((l:any)=>[l.side,l.stale])).toEqual([['bad',null],['cloud',true],['local',false],['mismatch',null]]);
+  const diag=fn.fleetDiagnostics(now);
+  expect(diag.failLoops.map((l:any)=>l.name)).toEqual(['WorkerA']);
+ }finally{
+  rmSync(dir,{recursive:true,force:true});
+ }
+});
+
+test('Supply bill tab calculates route fulfillment for operators only and stays redacted for spectators',()=>{
+ require('./xp-tracker.js');
+ const atlasXp=(globalThis as any).atlasXp;
+ const stockFn=operations.slice(operations.indexOf(' const stockTabs='),operations.indexOf(' function refreshStock('));
+ const make=(owner:boolean,stockView='bill',billBatches=1,billQuery='')=>{
+  const env:any={
+   stockView,billQuery,billBatches,stockAccount:'',stockQuery:'',stockSort:'quantity',stockLimit:80,
+   isOwner:()=>owner,
+   S:{race:{supplies:[{item:'Dragon bones',itemId:536,count:100},{item:'Shark',itemId:385,count:40}]},scoreboard:{goals:{collection:{missing:[{item:'Super restore(4)',need:10,consumer:'pk'}]}}},economy:{}},
+   window:{atlasXp},
+   bots:()=>[{name:'⟦MAIN⟧',bank:[{id:536,name:'Dragon bones',count:500}]},{name:'Supply1',bank:[{id:536,name:'Dragon bones',count:25},{id:385,name:'Shark',count:40}],inventory:[{id:536,name:'Dragon bones',count:5}]}],
+   page:(s:string)=>s,title:()=>'',E:String,nf:String,gp:String,safeName:(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),age:String,button:()=>'',icon:()=>'',bestInSlot:()=>'',collectionLog:()=>'',transfers:()=>'',
+   moneyKey:()=>'',moneyPrice:()=>null,
+  };
+  return new Function(...Object.keys(env),`${stockFn};return {tabs:stockTabs(),html:stock()};`)(...Object.values(env));
+ };
+ const op=make(true,'bill',2);
+ expect(op.tabs).toContain('data-value="bill"');
+ expect(op.html).toContain('Supply bill');
+ expect(op.html).toContain('bill fulfilled (2× route)');
+ expect(op.html).toContain('30 / 200');
+ expect(op.html).toContain('40 / 80');
+ expect(op.html).toContain('Supply1');
+ expect(op.html).not.toContain('Main · reserved');
+ expect(op.html).not.toContain('Haggis');
+ const pub=make(false,'bill');
+ expect(pub.tabs).not.toContain('data-value="bill"');
+ expect(pub.html).toContain('operator view only');
+ expect(pub.html).not.toContain('Dragon bones');
 });

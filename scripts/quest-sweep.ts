@@ -12,9 +12,10 @@ import {openBot,finish,getWorld,accountOf,finishHooks,sessionDied} from '../pack
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
-import {rsPathLength,type World,type Transport,type Account,type PathLength} from '../packages/core/src/world';
+import {rsPathLength,type World,type Transport,type Account,type PathLength,type Leg} from '../packages/core/src/world';
+import {planTripOffThread} from '../packages/core/src/route-plan';
 import {deadlyTo,loadHunters} from '../packages/core/src/danger';
-import {loadTravel} from '../packages/core/src/travel';
+import {loadTravel,travelAllowed,type Travel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance,locsByDistance} from '../packages/core/src/spawn-index';
 import {gatherPlan,gatherItems,rangedKit,magicKit,arrowsFor,castsFor,ARROWS,BOWS,NPC_SOURCES,PICK_SOURCES} from '../packages/core/src/gather';
@@ -403,9 +404,12 @@ export async function reserveInputSlots(s:Session,inputs:readonly Item[],keep:Re
  console.log(`QUEST_SWEEP_CAPACITY ${JSON.stringify({required,free})}`);
  return free>=required?null:`input capacity short: free ${free}, required ${required}`;
 }
-export function nearestBanks(at:Tile):Tile[]{
+export function nearestBanks(at:Tile,actor?:Account,edges?:readonly Travel[]):Tile[]{
  const a=surfaceOf(at);
- return BANKS.filter(b=>b.level===a.level).sort((x,y)=>Math.max(Math.abs(x.x-a.x),Math.abs(x.z-a.z))-Math.max(Math.abs(y.x-a.x),Math.abs(y.z-a.z)));
+ const landings=actor?(edges??loadTravel()).filter(t=>t.from===null&&t.to.level===a.level&&travelAllowed(t,actor)):[];
+ // Rank candidates only. The router still owns access, cost and execution from the observed entry.
+ const score=(bank:Tile)=>Math.min(cheb(a,bank),...landings.map(t=>t.cost+cheb(t.to,bank)));
+ return BANKS.filter(b=>b.level===a.level).sort((x,y)=>score(x)-score(y));
 }
 // The sweep eats on its own walks (the quest script brings its own eater at the handover): anything that heals, from
 // 60 percent of the account's hitpoints down. A quest that failed leaves the account where it stood, and the next
@@ -609,6 +613,7 @@ export async function fetchHeckelDust(io:HeckelIO):Promise<{ok:boolean;detail?:s
  if(!(p.level===0&&p.x>=2369&&p.x<=2505&&p.z>=3385&&p.z<=3524)){
   const south={...STRONGHOLD_GATE.south,level:0};
   const approach=await io.travel(south);
+  console.log(`QUEST_SWEEP_HECKEL_APPROACH ${JSON.stringify({from:p,to:south,at:io.pos(),observed:approach.ok&&at(south,1)})}`);
   if(!approach.ok||!at(south,1))return fail(`Stronghold south leg to 2461,3382,0 failed: ${approach.detail??'arrival unobserved'}`);
   try{await io.gate();}catch(error){return fail(`Stronghold gate leg 2461,3382,0 -> 2461,3385,0 failed: ${String(error)}`);}
   if(!at({...STRONGHOLD_GATE.north,level:0},0))return fail('Stronghold gate leg to 2461,3385,0 failed: north arrival unobserved');
@@ -644,6 +649,7 @@ export async function fetchHeckelDust(io:HeckelIO):Promise<{ok:boolean;detail?:s
 }
 export function heckelIO(s:Session,world:World):HeckelIO{
  const st=()=>s.sdk.getState(),held=(id:number)=>count(st()?.inventory??[],id);
+ const walk=async(to:Tile)=>walkPath(await sessionWalker(s),[{x:to.x,z:to.z,tol:0}],{maxTicks:150});
  const gate=async()=>{
   const initial=st()?.player;
   const live=()=>{if(!st()?.inGame)throw Error('session interrupted');if(sessionDied(initial,st()?.player)||(s.sdk.getSkill('Hitpoints')?.level??0)<=0)throw Error('died');};
@@ -654,8 +660,14 @@ export function heckelIO(s:Session,world:World):HeckelIO{
  return{
   gate,
   pos:()=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:undefined;},held:()=>held(1975),coins:()=>held(COINS),
-  travel:async to=>{const r=await goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,maxRetriesPerLeg:1});return r.ok?{ok:true}:{ok:false,detail:`${r.reason} ${r.detail}`};},
-  walk:async to=>walkPath(await sessionWalker(s),[{x:to.x,z:to.z,tol:0}],{maxTicks:150}),
+  travel:async to=>{
+   const r=await walkFar(s,world,to,150);if(!r.ok)return{ok:false,detail:`${r.reason} ${r.detail}`};
+   const ground=HECKEL_DUST.ground,p=st()?.player;
+   // Match fetchHeckelDust's ground arrival; the gate entry still needs the exact approach.
+   if(to.x===ground.x&&to.z===ground.z&&to.level===ground.level&&p?.level===ground.level&&Math.max(Math.abs(p.worldX-ground.x),Math.abs(p.worldZ-ground.z))<=2)return{ok:true};
+   const last=await walk(to);return last.ok?{ok:true}:{ok:false,detail:`final approach ${last.detail??'arrival unobserved'}`};
+  },
+  walk,
   climb:async up=>s.direct({type:'interactLoc',...HECKEL_DUST.ladder,locId:up?1747:1748,optionIndex:up?1:3,reason:'SDK'}),
   open:async()=>{const npc=st()?.nearbyNpcs.find(n=>n.id===603);if(!npc)return false;await s.bot.openShop(npc);return waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});},
   row:()=>st()?.shop?.shopItems.find(i=>i.id===1975&&i.count>0),
@@ -744,9 +756,11 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
  // walk). goTo plans again on foot when the cast fails.
  const acct=accountOf(s);
  if(at(s).level===0&&to.level===0&&cheb(at(s),to)>30&&(acct.counts?.lawrune??0)>0){
-  const plan=world.route(at(s),to,acct,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS});
-  const spell=plan.ok?plan.legs.find(l=>l.kind==='travel'&&l.travel.kind==='spell'):undefined;
-  console.log(`QUEST_SWEEP_SPELL ${JSON.stringify({from:at(s),to,planned:plan.ok,spell:spell?.kind==='travel'?(spell.travel as {name?:string}).name??true:false})}`);
+  const plan=world.offThread
+   ?await planTripOffThread(at(s),to,acct,undefined,SWEEP_PLAN_BUDGET_MS)
+   :(()=>{const d=world.route(at(s),to,acct,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS});return d.ok?{legs:d.legs}:null;})();
+  const spell=plan?.legs.find(l=>l.kind==='travel'&&l.travel.kind==='spell');
+  console.log(`QUEST_SWEEP_SPELL ${JSON.stringify({from:at(s),to,planned:!!plan,spell:spell?.kind==='travel'?(spell.travel as {name?:string}).name??true:false})}`);
   if(spell)return router(to);
  }
  const ground=async(t:Tile):Promise<Walked>=>{
@@ -762,7 +776,7 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
   console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
   const r=await router(down);if(!r.ok)return r;
  }
- if(eastOfArdougne(at(s),to,accountOf(s))){const r=await crossEast(s,world,to,signal);if(!r.ok)return r;}
+ if(eastOfArdougne(at(s),to,acct)){const r=await crossEast(s,world,to,signal);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the foot of its way up;
  // only the last leg, with its stairs, is the world router's.
  const beneath=wayUp(world.navigationGraph?.().transports??[],to);
@@ -996,24 +1010,47 @@ export function pickInstead(buys:readonly Buy[],from:Tile,end:Tile,fields:(id:nu
 // the bank or the pack holds a law rune: the world router plans with the bank's runes added (Account.counts by debugname),
 // and a spell leg names its runes (packages/core/src/travel.ts Travel.runes). The far walk then casts it (walkFarLegs).
 // Bench extra:sweep-doric-draynor: 170 ticks walking, 72 with a Falador Teleport.
-export function teleportRunes(route:(acct:Account)=>ReturnType<World['route']>,acct:Account,bank:readonly Item[],
- nameOf:(id:number)=>string|undefined,idOf:(name:string)=>number|undefined):Item[]{
+export function runeInventoryAccount(acct:Account,bank:readonly Item[],nameOf:(id:number)=>string|undefined):Account|null{
  const counts:Record<string,number>={...(acct.counts??{})},items=new Set(acct.items);
  for(const b of bank){const n=nameOf(b.id);if(!n||!/rune$/.test(n)||b.count<=0)continue;counts[n]=(counts[n]??0)+b.count;items.add(n);}
- if(!((counts.lawrune??0)>0))return[];
- const plan=route({...acct,items:[...items],counts});
- if(!plan.ok)return[];
+ return (counts.lawrune??0)>0?{...acct,items:[...items],counts}:null;
+}
+export function extractSpellRunes(legs:readonly Leg[],idOf:(name:string)=>number|undefined):Item[]{
  const out:Item[]=[];
- for(const l of plan.legs)if(l.kind==='travel'&&l.travel.kind==='spell')for(const r of l.travel.runes){
+ for(const l of legs)if(l.kind==='travel'&&l.travel.kind==='spell')for(const r of l.travel.runes){
   const id=idOf(r.item);if(id===undefined)continue;
   const o=out.find(x=>x.id===id);if(o)o.count+=r.count;else out.push({id,count:r.count});
  }
  return out;
 }
-let itemIds:Map<string,number>|undefined;
-const itemIdOf=(debugname:string)=>(itemIds??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string}[]).map(i=>[i.debugname,i.id]))).get(debugname);
-let itemCatalog:Map<number,{debugname:string;name:string;cost:number}>|undefined;
-const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string;name:string;cost:number}[]).map(i=>[i.id,i])) ).get(id);
+export function teleportRunes(route:(acct:Account)=>ReturnType<World['route']>,acct:Account,bank:readonly Item[],
+ nameOf:(id:number)=>string|undefined,idOf:(name:string)=>number|undefined):Item[]{
+ const withRunes=runeInventoryAccount(acct,bank,nameOf);
+ if(!withRunes)return[];
+ const plan=route(withRunes);
+ return plan.ok?extractSpellRunes(plan.legs,idOf):[];
+}
+export async function planTeleportRunes(world:World,from:Tile,to:Tile,acct:Account,bank:readonly Item[],
+ nameOf:(id:number)=>string|undefined,idOf:(name:string)=>number|undefined,budgetMs=SWEEP_PLAN_BUDGET_MS,
+ offThreadPlan=planTripOffThread):Promise<Item[]>{
+ const withRunes=runeInventoryAccount(acct,bank,nameOf);
+ if(!withRunes)return[];
+ const plan=world.offThread
+  ?await offThreadPlan(from,to,withRunes,undefined,budgetMs)
+  :(()=>{const d=world.route(from,to,withRunes,{deadline:performance.now()+budgetMs});return d.ok?{cost:d.cost,legs:d.legs}:null;})();
+ return plan?extractSpellRunes(plan.legs,idOf):[];
+}
+type CatalogItem={id:number;debugname:string;name:string;cost:number;tradeable?:boolean};
+let itemsCache:{byDebug:Map<string,number>;byId:Map<number,CatalogItem>}|undefined;
+function loadItems(){
+ if(itemsCache)return itemsCache;
+ const rows=JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as CatalogItem[];
+ const byDebug=new Map<string,number>(),byId=new Map<number,CatalogItem>();
+ for(const i of rows){byDebug.set(i.debugname,i.id);byId.set(i.id,i);}
+ return itemsCache={byDebug,byId};
+}
+const itemIdOf=(debugname:string)=>loadItems().byDebug.get(debugname);
+const catalogItem=(id:number)=>loadItems().byId.get(id);
 
 type GatherArgs=Parameters<typeof gatherPlan>;
 export function questGatherPlan(quest:string,missing:readonly Item[],at:Tile,seller:(id:number)=>number,...rest:[GatherArgs[4]?,GatherArgs[5]?,GatherArgs[6]?,GatherArgs[7]?,GatherArgs[8]?,GatherArgs[9]?]){
@@ -1396,20 +1433,23 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||foodShort(food,pack(),need)||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
-  // The nearest bank may be out of reach: try the next three.
-  let walked:Walked={ok:false,reason:'precondition',detail:'no bank tried',ticks:0};
-  for(const bank of nearestBanks(here()).slice(0,4)){
-   console.log(`QUEST_SWEEP_BANK ${JSON.stringify({from:here(),to:bank})}`);
-   walked=await walkFar(s,world,bank,100);
-   console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
-   if(walked.ok)break;
-  }
+  const bankTravel=world.navigationGraph?.().travel??loadTravel();
+  const findBank=async()=>{
+   let result:Walked={ok:false,reason:'precondition',detail:'no bank tried',ticks:0};
+   const tried=new Set<string>();
+   for(let attempt=0;attempt<4;attempt++){
+    const bank=nearestBanks(here(),accountOf(s),bankTravel).find(b=>!tried.has(`${b.x},${b.z},${b.level}`));
+    if(!bank)break;tried.add(`${bank.x},${bank.z},${bank.level}`);
+    console.log(`QUEST_SWEEP_BANK ${JSON.stringify({from:here(),to:bank})}`);
+    result=await walkFar(s,world,bank,100);
+    console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:result})}`);
+    if(result.ok)break;
+   }
+   return result;
+  };
+  let walked=await findBank();
   // No bank in reach with few coins: the exit may be a fare. Raise it at a general store and try again.
-  if(!walked.ok&&count(pack(),COINS)<200&&await raiseFare(s,world))for(const bank of nearestBanks(here()).slice(0,4)){
-   walked=await walkFar(s,world,bank,100);
-   console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
-   if(walked.ok)break;
-  }
+  if(!walked.ok&&count(pack(),COINS)<200&&await raiseFare(s,world))walked=await findBank();
   if(!walked.ok)return fail(`bank walk failed at ${JSON.stringify(here())}: ${walked.reason} ${walked.detail}`);
   const opened=await s.bot.openBank();
   if(!opened.success)return fail('bank did not open');
@@ -1503,17 +1543,17 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
   // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
   // coins, and crossEast refuses the crossing below 60.
-  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s),quest==='scorpion'?shop.buys:[])
-   +(quest==='itgronigen'&&eastOfPass(here(),accountOf(s))?BOAT_FARES:0);
+  const sweepAcct=accountOf(s);
+  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],sweepAcct,quest==='scorpion'?shop.buys:[])
+   +(quest==='itgronigen'&&eastOfPass(here(),sweepAcct)?BOAT_FARES:0);
   if(shop.coins){
    const take=shopCoinTake(shop.coins,count(pack(),COINS),p.withdraw.find(w=>w.id===COINS)?.count??0,need.get(COINS)??0);
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${[...shop.buys.map(b=>b.id),...(heckelDust?[1975]:[])].join(',')}`+(shop.buys.some(b=>wornKit.wear.some(i=>i.required&&i.id===b.id))?' (required worn kit unavailable)':''));}
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
   }
-  // Teleport runes for the walk to the quest start (teleportRunes), when the bank holds them.
-  const tele=teleportRunes(a=>world.route(here(),preset.position as Tile,a,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS}),
-   accountOf(s),rows(),id=>catalogItem(id)?.debugname,itemIdOf);
+  // Teleport runes for the walk to the quest start (planTeleportRunes), when the bank holds them.
+  const tele=await planTeleportRunes(world,here(),preset.position as Tile,sweepAcct,rows(),id=>catalogItem(id)?.debugname,itemIdOf);
   for(const r of tele){
    const have=count(pack(),r.id)+(p.withdraw.find(w=>w.id===r.id)?.count??0),want=r.count-have;
    if(want<=0||count(rows(),r.id)<want)continue;

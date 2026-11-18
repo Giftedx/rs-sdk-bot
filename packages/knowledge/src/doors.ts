@@ -39,8 +39,8 @@ export function parseTriggers(files: { text: string; file: string }[]): Triggers
     return out;
 }
 
-const REFUSAL = /(mes|mesbox|chatnpc\w*)\(.*(locked|won't|can't|cannot|not experienced|need|isn't)/i;
-const OPEN_PROC = /~(open_door|open_door_reversed|open_and_close_door\w*|open_and_close_double\w*|doubledoor\w*|open_double\w*|open_gate|open_outer_gate)\b/i;
+const REFUSAL = /(mes|mesbox|chatnpc\w*)\(.*(locked|won't|can't|cannot|not experienced|need|isn't|only .+ may pass)/i;
+const OPEN_PROC = /~(open_door|open_door_reversed|open_and_close_door\w*|open_and_close_double\w*|doubledoor\w*|open_double\w*|open_reverse_double\w*|open_gate|open_outer_gate)\b/i;
 
 // Follows one `@label` or `~proc` call that the trigger body makes, so checks inside it count.
 function expand(body: string, t: Triggers): string {
@@ -70,6 +70,10 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     if(/^herodoor_[lr]$/.test(loc)&&/%heroquest\s*>=\s*\^hero_complete/.test(body))return {kind:'quest',need:{varp:'heroquest',minimum:15},trigger:src};
     if(/^legendsguilddoor[lr]$/.test(loc)&&/%legendsquest\s*>=\s*\^legends_returned_to_radimus/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:50},trigger:src};
     if(/^legendsguildgate[lr]$/.test(loc)&&/%legendsquest\s*>\s*\^legends_not_started/.test(body)&&/if\s*\(\$entering = false\)/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:1,whenAxis:true},trigger:src};
+    // Varrock SE gate (east_gate.rs2) only searches during Biohazard and still opens for every members player.
+    if (/^guidorgate[lr]closed$/.test(loc) && /@open_varrockgate\b/.test(body)) return { kind: 'open', trigger: src };
+    if (/^barbariangate[lr]$/.test(loc) && /%barcrawl\s*!\s*\^barcrawl_complete/.test(body)) return { kind: 'quest', need: { varp: 'barcrawl', minimum: 2 }, trigger: src };
+    if (/^viking_fencegate_[lr]$/.test(loc) && /%viking\s*<\s*\^viking_complete/.test(body)) return { kind: 'quest', need: { varp: 'viking', minimum: 10 }, trigger: src };
     // The goblin keep gate under the Observatory refuses only a player north of it, and only while its lock varp is 0
     // (quest_itgronigen.rs2, _observatory_dungeon_gate). The gate is a wall on the north edge of its tile (shape 0,
     // angle 1), so the refused player is not on the gate's own tile: whenAxis is false. The way out to the north stays open.
@@ -99,6 +103,10 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     if (varp && REFUSAL.test(body)) return { kind: 'quest', need: { varp: varp[1], ...(/if\s*\(\s*~check_axis\([^)]*\)\s*=\s*true\s*\)/.test(body) ? { whenAxis: true } : {}) }, trigger: src };
     const side = body.match(/coord([xz])\(coord\)\s*([<>]=?)\s*coord[xz]\(loc_coord\)/);
     if (side && REFUSAL.test(body)) return { kind: 'one_way', need: { side: `refuses when player ${side[1]} ${side[2]} door ${side[1]}` }, trigger: src };
+    if (!useTrig && !/%|\bstat\(/.test(body) && OPEN_PROC.test(body) && REFUSAL.test(body)) {
+        const axisDirect = body.match(/if\s*\(\s*~check_axis_locactive\s*\(\s*coord\s*\)\s*=\s*(true|false)\s*\)\s*\{[^}]*\breturn\s*;/);
+        if (axisDirect) return { kind: 'one_way', need: { side: `refuses when check_axis_locactive is ${axisDirect[1]}`, whenAxis: axisDirect[1] === 'true' }, trigger: src };
+    }
     // Open and refusal branches are not an unconditional Open operation. The thieving-door
     // handler takes an axis-derived entering flag, aliases it to locked, and may invert it via DB.
     // Do not guess a cardinal permitted side without the DB row and loc angle.
@@ -110,7 +118,7 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
         if (axis && enteringLock) return { kind: 'one_way', need: { side: 'Open depends on entering side; locked_door.lock_inversed determines orientation' }, trigger: src };
         return { kind: 'conditional', trigger: src };
     }
-    if (OPEN_PROC.test(body)) return { kind: 'open', trigger: src };
+    if (OPEN_PROC.test(body) || (!REFUSAL.test(body) && !/(?:\bif\s*\(|switch_|%|\bstat\(|\breturn\s*;)/.test(body) && /\bloc_change\s*\(/.test(body))) return { kind: 'open', trigger: src };
     if (REFUSAL.test(body)) return { kind: 'locked', trigger: src };
     return { kind: 'unknown', trigger: src };
 }

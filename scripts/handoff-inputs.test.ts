@@ -4,13 +4,43 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
-import {parseHeadlessOrder,runOwnedHeadless} from './handoff-inputs';
+import {parseHeadlessOrder,runOwnedHeadless,ammoOrderRecord} from './handoff-inputs';
+import {loadProgressionCatalog} from '../packages/planner/src/progression-catalog';
+import {evaluateProgressionWork,preflightProgressionWork,parentProgressionAccept} from '../packages/core/src/progression-session';
+import {ammoChildConfiguration,selectAmmoProofEndpoints} from '../packages/practice/src/ammo-order-proof';
+import {tickRecorder} from '../packages/core/src/tick-record';
+import {botWork} from '../packages/core/src/bot';
 
 test('headless CLI validates exact arguments before login and preserves two-account parsing',()=>{
  expect(parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'1600')).toEqual({account:'Bigchopper',maximum:135,logsToCut:14,cap:1600});
  for(const args of [['Haggis','--headless-order','135','14'],['Bigchopper','--headless-order','129','14'],['Bigchopper','--headless-order','135','26'],['Bigchopper','--headless-order','135','14','extra'],['Bigchopper','--headless-order','NaN','14']])expect(()=>parseHeadlessOrder(args)).toThrow();
  expect(()=>parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'0')).toThrow();
  expect(parseHandoff(['Donor','Receiver','90:Iron arrowtips']).items).toEqual([{name:'Iron arrowtips',count:90}]);
+});
+
+test('both handoff roles record the complete CLI once while retaining their progression arguments',()=>{
+ const args=['Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421'];
+ for(const account of ['Donor','Receiver']){
+  const descriptor=ammoOrderRecord(account,args,{HANDOFF_ORDER:'record-cli-order'},'.');
+  const lines:any[]=[];
+  const recorder=tickRecorder({account,server:'localhost:8888',script:descriptor.script,argv:descriptor.argv,startedAt:1},
+   {write:line=>lines.push(JSON.parse(line)),close:()=>{}});
+  recorder.end(0,'logged-out');
+  expect(lines[0].argv).toEqual(args);
+  expect(parseHandoff(lines[0].argv)).toEqual(parseHandoff(args));
+  expect(botWork(account,descriptor).args).toEqual(args);
+  expect(descriptor.argv).not.toBe(args);
+ }
+});
+
+test('a headless CLI record retains its single account while progression receives only its arguments',()=>{
+ const args=['Bigchopper','--headless-order','135','14'],descriptor=ammoOrderRecord('Bigchopper',args,{CAP:'1600'},'.');
+ const lines:any[]=[];
+ tickRecorder({account:'Bigchopper',server:'localhost:8888',script:descriptor.script,argv:descriptor.argv,startedAt:1},
+  {write:line=>lines.push(JSON.parse(line)),close:()=>{}}).end(0,'logged-out');
+ expect(lines[0].argv).toEqual(args);
+ expect(parseHeadlessOrder(lines[0].argv,'1600')).toMatchObject({account:'Bigchopper',maximum:135,logsToCut:14});
+ expect(botWork('Bigchopper',descriptor).args).toEqual(['--headless-order','135','14']);
 });
 
 function headlessFixture(feathers=5705){
@@ -69,8 +99,11 @@ const entryFixture=String.raw`
 import {main} from ENTRY;
 import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
+import {evaluateProgressionWork,preflightProgressionWork} from CORE_PROGRESSION;
+import {botWork} from CORE_BOT;
 const root=process.env.FIXTURE_ROOT,stage=process.env.FIXTURE_STAGE;
-process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421',...(process.env.FIXTURE_ARGS??'').split(' ').filter(Boolean)];
+const [bankX,bankZ]=(process.env.FIXTURE_BANK??'3253,3421').split(',').map(Number);
+process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x='+bankX,'--bank-z='+bankZ,...(process.env.FIXTURE_ARGS??'').split(' ').filter(Boolean)];
 const file=join(root,'holdings.json');
 const load=()=>JSON.parse(readFileSync(file,'utf8'));
 const save=x=>writeFileSync(file,JSON.stringify(x));
@@ -78,14 +111,25 @@ const hold=async point=>{if(stage===point){console.log('HOLD '+point);await new 
 // Keep a blocked login alive until the parent kills it, with a hard deadline.
 const deadline=setTimeout(()=>process.exit(9),8000);
 await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
- approach:{ground:async()=>{throw Error('ground approach used');},planned:async(s,to)=>{
+ approach:{ground:async(s,to)=>{
+  if(stage!=='mainland')throw Error('ground approach used');
+  console.log('GROUND '+s.name+' '+to.x+','+to.z+','+to.level);s.at=to.x;s.az=to.z;return {ok:true};
+ },planned:async(s,to)=>{
   console.log('PLANNED '+s.name+' '+to.x+','+to.z+','+to.level);
+  if(stage==='mainland'&&to.x===3185&&to.z===3436)return {ok:false,reason:'precondition',detail:'no route to 3185,3436,0'};
   if(stage==='approach-refused')return {ok:false,reason:'precondition',detail:'no route'};
   await hold('approach');
   if(stage==='approach-slow'){await new Promise(yes=>setTimeout(yes,1500));console.log('IDLE RESET '+s.name+' '+(s.client.idleTimer>0));}
-  s.at=to.x;return {ok:true};
+  s.at=to.x;s.az=to.z;return {ok:true};
  }},
- openBot:async name=>{
+ openBot:async (name,options)=>{
+  if(process.env.FIXTURE_PROGRESSION==='1'){
+   const work=botWork(name,options?.record);
+   preflightProgressionWork(work,'rs-sdk-demo.fly.dev',undefined,name);
+   const evaluation=evaluateProgressionWork(work,{name,at:Date.now()},{base:root,requireQualification:true});
+   if(!evaluation.supported)throw Error('finite entry refused: '+evaluation.reason);
+   console.log('WORK '+JSON.stringify({name,script:work.script,args:work.args,intent:evaluation.intent}));
+  }
   console.log('LOGIN '+name);
   const status=join(root,'.practice/status',name+'.json');
   writeFileSync(status,JSON.stringify({name,goal:process.env.BOT_GOAL,at:Date.now()}));
@@ -94,9 +138,10 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
   const role=name==='Donor'?'donor':'receiver';
   const items=(n,noted=0)=>[...(n?[{id:40,name:'Iron arrowtips',count:n,slot:0}]:[]),...(noted?[{id:41,name:'Iron arrowtips',count:noted,slot:1}]:[])];
   const pack=()=>items(load()[role].pack,load()[role].noted);
-  const s={name,client:{idleTimer:0},at:(process.env.FIXTURE_FAR??'').split(',').includes(name)?3092:3253,tick:()=>0,onTick:()=>()=>{},
+  const start=name==='Receiver'&&process.env.FIXTURE_RECEIVER_START?process.env.FIXTURE_RECEIVER_START.split(',').map(Number):[(process.env.FIXTURE_FAR??'').split(',').includes(name)?3092:bankX,bankZ];
+  const s={name,client:{idleTimer:0},at:start[0],az:start[1],tick:()=>0,onTick:()=>()=>{},
    bankObservation:()=>opened?{generation,at:Date.now(),items:items(load()[role].bank)}:null,
-   sdk:{getInventory:pack,getSkill:()=>({level:10}),getState:()=>({player:{worldX:s.at,worldZ:3421,level:0},bank:{isOpen:opened},inventory:pack()})},
+   sdk:{getInventory:pack,getSkill:()=>({level:10}),getState:()=>({player:{worldX:s.at,worldZ:s.az,level:0},bank:{isOpen:opened},inventory:pack()})},
    bot:{walkTo:async x=>{console.log('LOCAL '+name);await hold('bank-entry');s.at=x;return {success:true};},
     openBank:async()=>{opened=true;generation++;return {success:true};},closeBank:async()=>{opened=false;return {success:true};},
     withdrawItem:async(_,count,options)=>{const x=load();x[role].bank-=count;if(options?.asNote)x[role].noted=(x[role].noted??0)+count;else x[role].pack+=count;save(x);generation++;return {success:true};},
@@ -110,7 +155,9 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
  },settle:async(sessions,ok)=>{for(const s of sessions){writeFileSync(join(root,'.practice/status',s.name+'.json'),JSON.stringify({name:s.name,result:'ended'}));console.log('LOGOUT '+s.name);}return ok;}
 });
 clearTimeout(deadline);
-`.replace('ENTRY',JSON.stringify(resolve(import.meta.dir,'handoff-inputs.ts')));
+`.replace('ENTRY',JSON.stringify(resolve(import.meta.dir,'handoff-inputs.ts')))
+ .replace('CORE_PROGRESSION',JSON.stringify(resolve(import.meta.dir,'../packages/core/src/progression-session.ts')))
+ .replace('CORE_BOT',JSON.stringify(resolve(import.meta.dir,'../packages/core/src/bot.ts')));
 
 function cliFixture(){
  const root=mkdtempSync(join(tmpdir(),'handoff-main-'));
@@ -133,6 +180,54 @@ function cliFixture(){
  };
  return {root,start,async cleanup(){for(const {p} of children)if(p.exitCode===null&&p.signalCode===null)p.kill('SIGKILL');await Promise.all(children.map(c=>c.done));rmSync(root,{recursive:true,force:true});}};
 }
+
+test('productive catalog admits finite composed participants and standalone CLI orders without claiming old output',async()=>{
+ const catalog=loadProgressionCatalog();
+ expect(catalog.entries.find(e=>e.script==='scripts/handoff-inputs.ts')?.intents).toEqual(['acquire','produce','service']);
+ const f=cliFixture(),args=['Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421'];
+ const workFor=(name:string,argv:string[],env:Record<string,string>)=>{
+  const record=ammoOrderRecord(name,argv,env,f.root);
+  return botWork(name,record);
+ };
+ try{
+  const runId='task-ammo-finite',accept={bank:{40:90}};
+  writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[{status:'running',runId,spec:{id:'ammo',participants:['Donor','Receiver'],acceptIndex:1,accept}}]}));
+  const env={COORDINATOR_RUN_ID:runId,HANDOFF_ORDER:'cli-order',PROGRESSION_CONSUMER:JSON.stringify({bank:{40:1}})};
+  const donor=workFor('Donor',args,env),receiver=workFor('Receiver',args,env);
+  expect(donor.args).toEqual(args);expect(receiver.args).toEqual(args);
+  expect(parentProgressionAccept(donor,'Donor',f.root)).toBeUndefined();
+  expect(parentProgressionAccept(receiver,'Receiver',f.root)).toEqual(accept);
+  expect(env.PROGRESSION_CONSUMER).toBe(JSON.stringify({bank:{40:1}}));
+  for(const [name,work]of [['Donor',donor],['Receiver',receiver]] as const){
+   expect(()=>preflightProgressionWork(work,'rs-sdk-demo.fly.dev',catalog,name)).not.toThrow();
+   const result=evaluateProgressionWork(work,{name,at:Date.now()},{base:f.root,catalog,requireQualification:true});
+   expect(result.supported).toBe(true);
+   if(name==='Receiver')expect(result.intent).toMatchObject({kind:'acquire',items:{40:90}});
+   else{expect(result.intent).toMatchObject({kind:'service',units:1});expect(JSON.stringify(result.intent)).toContain('cli-order');}
+  }
+  const composed=f.start('',{...env,FIXTURE_PROGRESSION:'1'});
+  expect(await composed.done).toBe(0);
+  const works=composed.output().split(/\r?\n/).filter(l=>l.startsWith('WORK ')).map(l=>JSON.parse(l.slice(5)));
+  expect(works.map(w=>[w.name,w.intent.kind])).toEqual([['Donor','service'],['Receiver','acquire']]);
+  expect(composed.output().match(/LOGOUT /g)).toHaveLength(2);
+  writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
+  writeFileSync(join(f.root,'holdings.json'),JSON.stringify({donor:{bank:90,pack:0},receiver:{bank:0,pack:0},sends:0}));
+  const standalone=f.start('',{COORDINATOR_RUN_ID:'',HANDOFF_ORDER:'standalone-order',PROGRESSION_CONSUMER:'',FIXTURE_PROGRESSION:'1'});
+  expect(await standalone.done).toBe(0);
+  expect(standalone.output().split(/\r?\n/).filter(l=>l.startsWith('WORK ')).map(l=>JSON.parse(l.slice(5)).intent.kind)).toEqual(['service','service']);
+  expect(standalone.output().match(/LOGOUT /g)).toHaveLength(2);
+  const headless=workFor('Bigchopper',['Bigchopper','--headless-order','135','14'],{CAP:'1600'});
+  const at=Date.now(),stocked={name:'Bigchopper',at,bankAt:at,inventory:[],equipment:[],bank:[{id:53,count:435}]};
+  const production=evaluateProgressionWork(headless,stocked,{base:f.root,catalog,requireQualification:true});
+  expect(()=>preflightProgressionWork(headless,'rs-sdk-demo.fly.dev',catalog,'Bigchopper')).not.toThrow();
+  expect(production.supported).toBe(true);expect(production.intent).toMatchObject({kind:'service',units:1});
+  expect(JSON.stringify(production.intent)).toContain('135');expect(JSON.stringify(production.intent)).toContain('53');
+  const p=selectAmmoProofEndpoints(()=>true,()=>0),craft=ammoChildConfiguration(['scripts/fletch-arrows.ts','Receiver','400','iron'],{MAX_MAKE:'90',PROGRESSION_CONSUMER:JSON.stringify({bank:{884:90}})},p,{PROGRESSION_CONSUMER:'{"skills":{"Prayer":99}}'});
+  const craftWork={script:craft.cmd[1]!,args:craft.cmd.slice(3),env:craft.env};
+  expect(evaluateProgressionWork(craftWork,{name:'Receiver',at:Date.now()},{base:f.root,catalog,requireQualification:true}).intent).toMatchObject({kind:'acquire',items:{884:90}});
+  expect(ammoChildConfiguration(['scripts/handoff-inputs.ts','Bigchopper','--headless-order','135','14'],{CAP:'1600'},p,{PROGRESSION_CONSUMER:'{"bank":{"53":435}}'}).env.PROGRESSION_CONSUMER).toBeUndefined();
+ }finally{await f.cleanup();}
+},15000);
 
 for(const prior of ['fresh','dead-owner'])test('main concurrent '+prior+' starts elect one login owner and refuse the loser before login',async()=>{
  const f=cliFixture();try{
@@ -222,6 +317,22 @@ test('planned distant entry transfers exactly after travel; refusal, deadline an
   expect(p.output()).toContain('LOCAL Donor');expect(p.output()).not.toContain('PLANNED ');
  }finally{await h.cleanup();}
 },20000);
+
+test('Varrock West approach decomposes the failed Port Sarim final leg before the exact transfer',async()=>{
+ for(const start of ['3029,3217','2727,3493']){
+  const f=cliFixture();try{
+   const p=f.start('mainland',{FIXTURE_BANK:'3185,3436',FIXTURE_RECEIVER_START:start,FIXTURE_ARGS:'--approach-ms=5000'});
+   expect(await p.done).toBe(0);
+   expect(p.output()).not.toContain('PLANNED Receiver 3185,3436,0');
+   expect(p.output().includes('PLANNED Receiver 3029,3217,0')).toBe(start==='2727,3493');
+   expect(p.output().split(/\r?\n/).filter(l=>l.startsWith('GROUND '))).toEqual(
+    ['3047,3237','3060,3265','3100,3285','3180,3258','3225,3240','3235,3300','3210,3380','3185,3436'].map(tile=>'GROUND Receiver '+tile+',0'));
+   expect(p.output().indexOf('LOCAL Donor')).toBeGreaterThan(p.output().indexOf('GROUND Receiver 3185,3436,0'));
+   expect(JSON.parse(readFileSync(join(f.root,'holdings.json'),'utf8'))).toEqual({donor:{bank:0,pack:0},receiver:{bank:90,pack:0},sends:1});
+   expect(p.output().match(/LOGOUT /g)).toHaveLength(2);
+  }finally{await f.cleanup();}
+ }
+},15000);
 
 test('noted transfer leaves the donor pre-held plain stack in its pack',async()=>{
  const f=cliFixture();try{

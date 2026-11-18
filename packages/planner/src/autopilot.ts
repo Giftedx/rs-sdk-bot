@@ -167,9 +167,27 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 // planner only has to put one in the bank: an army account with Attack 30 and no blade of WEAPON_HELD buys one adamant
 // scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: before its Ranged band, so every account gets one now
 // (owner: all of them, until rune blades arrive), WEAPON_BUYERS accounts away for it at a time.
+// Progressive weapon, armour, and skilling-tool tiers (rev-289 equipment requirements and shop/GE sources).
 export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
-export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword'] as const;
+export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword', 'dragon dagger'] as const;
 export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
+export const ARMOUR_BAND = 3.55, RANGED_ARMOUR_BAND = 3.95, ARMOUR_MARKET = 'ge:armour', ARMOUR_BUYERS = 2;
+type WeaponStage = { id: string; item: string; fallbacks?: readonly string[]; attack: number; quest?: string; goal: string; held: readonly string[] };
+const RUNE_WEAPONS = ['rune scimitar', 'rune longsword', 'rune sword', 'dragon longsword', 'dragon dagger'] as const;
+const DRAGON_WEAPONS = ['dragon longsword', 'dragon dagger'] as const;
+const WEAPON_STAGES: readonly WeaponStage[] = [
+    { id: 'army-weapon-dragon', item: 'dragon dagger', attack: 60, quest: 'Lost City', goal: 'fight with a dragon dagger', held: DRAGON_WEAPONS },
+    { id: 'army-weapon-rune', item: 'rune scimitar', fallbacks: ['rune longsword'], attack: 40, goal: 'fight with a rune blade', held: RUNE_WEAPONS },
+    { id: WEAPON.id, item: WEAPON.item, attack: WEAPON.attack, goal: WEAPON.goal, held: WEAPON_HELD },
+];
+const RUNE_ARMOUR_BAND = 'army-armour-rune';
+const DHIDE_ARMOUR_BAND = 'army-armour-dhide';
+const PICKAXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
+    [41, 'rune pickaxe', 40_000], [31, 'adamant pickaxe', 5_000], [21, 'mithril pickaxe', 2_500], [6, 'steel pickaxe', 1_000], [1, 'iron pickaxe', 300],
+];
+const AXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
+    [41, 'rune axe', 25_000], [31, 'adamant axe', 10_000], [21, 'mithril axe', 4_000], [6, 'steel axe', 1_500], [1, 'iron axe', 200],
+];
 // The quest band of the army: after the blade, before Ranged, so an account does its quests once and goes back to
 // training. One account at a time does Lost City: its tree spirit serves one fighter (practice: of three accounts at
 // the dramen tree together one finished and two ended "Someone else is fighting that"). LOST_CITY_MEALS is the food
@@ -231,6 +249,15 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
     // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
     'adamant scimitar': 80_000,
+    'rune scimitar': 50_000, 'rune longsword': 45_000, 'dragon dagger': 50_000, 'dragon longsword': 120_000,
+    shortbow: 500, 'oak shortbow': 800, 'willow shortbow': 2_500, 'maple shortbow': 5_000,
+    coif: 1_000, 'studded body': 2_500, 'studded chap': 2_000,
+    'dragonhide body': 15_000, 'dragonhide chap': 8_000, 'dragon vambrace': 6_000,
+    'adamant full helm': 8_000, 'adamant plateleg': 15_000, 'adamant platebody': 25_000,
+    'rune full helm': 45_000, 'rune kiteshield': 65_000, 'rune plateleg': 75_000, 'rune plateskirt': 75_000, 'rune chainbody': 60_000, 'rune platebody': 80_000,
+    // Lumber & mining skilling tools (Bob's Axes in Lumbridge lacks mithril+ axes and has no shop profile).
+    'steel axe': 1_500, 'mithril axe': 4_000, 'adamant axe': 10_000, 'rune axe': 25_000,
+    'adamant pickaxe': 6_000, 'rune pickaxe': 40_000,
     // The hunters' kit (army-hunt-black-dragons). Live claude-cloud: 5 law runes for 5,260 coins and 7 sharks for 7,189;
     // magic shortbows 108 listed from 51,000.
     'law rune': 1_600, 'magic shortbow': 60_000,
@@ -395,11 +422,76 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
     return (gross - cost * work / VALUE_TICKS) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
 }
 
+const hasMarket = (inp: Inputs, item: string) => !!inp.market?.[item];
+const hasStock = (inp: Inputs, item: string) => !!(inp.stock ?? []).some(s => (s.items[item] ?? 0) > 0);
+const hasSupply = (inp: Inputs, item: string) => hasMarket(inp, item) || hasStock(inp, item);
+function weaponStageFor(a: Acct, inp: Inputs): { id: string; item: string; goal: string } | null {
+    const att = a.skills.Attack ?? 1;
+    for (const s of WEAPON_STAGES) {
+        if (att < s.attack || (s.quest && !questDone(a, s.quest))) continue;
+        if (s.held.some(w => (a.items[w] ?? 0) > 0)) return null;
+        const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + s.id));
+        const choices = [s.item, ...(s.fallbacks ?? [])];
+        const available = choices.find(c => hasStock(inp, c) || (!buyRetired && hasMarket(inp, c)));
+        if (available) return { id: s.id, item: available, goal: s.goal };
+        if (s.id === WEAPON.id && !buyRetired) return { id: s.id, item: s.item, goal: s.goal };
+    }
+    return null;
+}
+function armourItemsFor(a: Acct, inp: Inputs): { id: string; band: number; items: string[]; goal: string }[] {
+    const out: { id: string; band: number; items: string[]; goal: string }[] = [];
+    if ((a.skills.Defence ?? 1) >= 40) {
+        const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + RUNE_ARMOUR_BAND));
+        const torso = questDone(a, 'Dragon Slayer') ? 'rune platebody' : 'rune chainbody';
+        const heldTorso = (a.items['rune platebody'] ?? 0) > 0 || (!questDone(a, 'Dragon Slayer') && (a.items['rune chainbody'] ?? 0) > 0);
+        const need = [
+            ...(heldTorso ? [] : [torso]),
+            ...((a.items['rune plateleg'] ?? 0) > 0 || (a.items['rune plateskirt'] ?? 0) > 0 ? [] : ['rune plateleg']),
+            ...((a.items['rune full helm'] ?? 0) > 0 ? [] : ['rune full helm']),
+            ...((a.items['rune kiteshield'] ?? 0) > 0 ? [] : ['rune kiteshield']),
+        ].filter(item => hasStock(inp, item) || (!buyRetired && hasMarket(inp, item)));
+        if (need.length) out.push({ id: RUNE_ARMOUR_BAND, band: ARMOUR_BAND, items: need, goal: 'wear rune armour' });
+    }
+    if ((a.skills.Ranged ?? 1) >= 40) {
+        const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + DHIDE_ARMOUR_BAND));
+        const bodyReady = (a.skills.Defence ?? 1) >= 40 && questDone(a, 'Dragon Slayer');
+        const need = [
+            ...(bodyReady && !(a.items['dragonhide body'] ?? 0) ? ['dragonhide body'] : []),
+            ...((a.items['dragonhide chap'] ?? 0) > 0 ? [] : ['dragonhide chap']),
+            ...((a.items['dragon vambrace'] ?? 0) > 0 ? [] : ['dragon vambrace']),
+        ].filter(item => hasStock(inp, item) || (!buyRetired && hasMarket(inp, item)));
+        if (need.length) out.push({ id: DHIDE_ARMOUR_BAND, band: RANGED_ARMOUR_BAND, items: need, goal: "wear green dragonhide armour" });
+    }
+    return out;
+}
+function toolUpgradeNeed(a: Acct, routeDemand: ReadonlySet<string>): string | null {
+    const miningDemand = ['iron ore', 'mithril bar', 'adamantite bar', 'steel bar', 'rune essence', 'coal'].some(x => routeDemand.has(x));
+    const wcDemand = ['yew log', 'maple log', 'yew shortbow', 'arrow shaft'].some(x => routeDemand.has(x));
+    if (miningDemand) {
+        const mining = a.skills.Mining ?? 1;
+        for (const [lvl, item] of PICKAXE_LADDER) {
+            if (mining < lvl) continue;
+            if (PICKAXE_LADDER.filter(([l]) => l >= lvl).some(([, p]) => (a.items[p] ?? 0) > 0)) break;
+            return item;
+        }
+    }
+    if (wcDemand && (a.skills.Woodcutting ?? 1) >= 60) {
+        const wc = a.skills.Woodcutting ?? 1;
+        for (const [lvl, item] of AXE_LADDER) {
+            if (wc < lvl) continue;
+            if (AXE_LADDER.filter(([l]) => l >= lvl).some(([, x]) => (a.items[x] ?? 0) > 0)) break;
+            return item;
+        }
+    }
+    return null;
+}
+
 type GoalNeed = { names: string[]; short: number; consumer: string; account?: string; bought?: number; budget?: () => number };
 // Route shortages and the missing kits of eligible army bands are the consumers. Army purchase budgets retain
 // their recipient, so wealth that account cannot spend or receive cannot hide its funding gap.
 function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
     const route: GoalNeed[] = inp.bill.filter(r => r.short > 0).map(r => ({ names: [r.item, ...(r.aliases ?? [])].map(norm), short: r.short, consumer: `Overall route: ${r.item}` }));
+    const routeDemand = new Set(route.flatMap(r => r.names));
     const needs = [...route];
     const budget = (consumer: string, cost: () => number, account?: string) => {
         const coins = cost();
@@ -428,8 +520,11 @@ function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
                 entry.count = Math.max(entry.count, count); entry.bands.add(t.id); kit.set(item, entry);
             }
         }
-        if ((a.skills.Attack ?? 1) >= WEAPON.attack && !WEAPON_HELD.some(item => (a.items[item] ?? 0) > 0)
-            && !inp.retired?.has(pairKey(a.name, KIT_BUY + WEAPON.id))) kit.set(WEAPON.item, { count: 1, bands: new Set([WEAPON.id]) });
+        const wStage = weaponStageFor(a, inp);
+        if (wStage) kit.set(wStage.item, { count: 1, bands: new Set([wStage.id]) });
+        for (const arm of armourItemsFor(a, inp)) for (const item of arm.items) if (!kit.has(item)) kit.set(item, { count: 1, bands: new Set([arm.id]) });
+        const toolItem = toolUpgradeNeed(a, routeDemand);
+        if (toolItem && !kit.has(toolItem)) kit.set(toolItem, { count: 1, bands: new Set(['tool-upgrade']) });
         const lines = [...kit].map(([item, entry]) => {
             const need: GoalNeed = { names: [item], short: entry.count, consumer: `army kit ${a.name}: ${[...entry.bands].join(', ')}`, account: lower };
             needs.push(need);
@@ -520,17 +615,38 @@ export function plan(inp: Inputs): Assignment[] {
     const bridges = new Map<string, { recipient: string; target: number }>(), bridged = new Set<string>();
     const fundingDonors = (inp.donors ?? []).filter(d => !inp.unfundable?.has(d.name.toLowerCase()) && !inp.running?.has(d.name.toLowerCase())
         && (inp.owners.get(d.name.toLowerCase())?.side ?? inp.side) === inp.side);
+    const fareCache = new Map<string, number | null>();
+    const cachedWayCost = (from: Parameters<typeof wayCost>[0], to: Parameters<typeof wayCost>[1], mountain: boolean): number | null => {
+        if (!to) return 0;
+        if (!from) return wayCost(from, to, mountain);
+        const k = `${from.x},${from.z},${from.level ?? 0}>${to.x},${to.z},${to.level ?? 0}:${mountain ? 1 : 0}`;
+        if (fareCache.has(k)) return fareCache.get(k)!;
+        const c = wayCost(from, to, mountain);
+        fareCache.set(k, c);
+        return c;
+    };
+    const canGiveCache = new Map<string, boolean>();
     const canGiveCoins = (name: string, recipient: string) => {
-        const lower = recipient.toLowerCase(), to = localByName.get(lower), from = localByName.get(name.toLowerCase());
-        if (!to || name.toLowerCase() === lower || inp.unfundable?.has(lower)) return false;
-        const meet = meetFor(to.pos);
-        if (meet === null) return false;
-        const fare = wayCost(from?.pos, meet === 'ardougne' ? ARMY_BANK : PLACES['shop:zaff'], from ? inp.mountain?.(from) ?? true : true);
-        return fare !== null && (fare === 0 || (from?.items.coin ?? 0) >= fare);
+        const lower = recipient.toLowerCase(), fromKey = name.toLowerCase(), cacheKey = `${fromKey}>${lower}`;
+        if (canGiveCache.has(cacheKey)) return canGiveCache.get(cacheKey)!;
+        const to = localByName.get(lower), from = localByName.get(fromKey);
+        let ok = false;
+        if (to && fromKey !== lower && !inp.unfundable?.has(lower)) {
+            const meet = meetFor(to.pos);
+            if (meet !== null) {
+                const fare = cachedWayCost(from?.pos, meet === 'ardougne' ? ARMY_BANK : PLACES['shop:zaff'], from ? inp.mountain?.(from) ?? true : true);
+                ok = fare !== null && (fare === 0 || (from?.items.coin ?? 0) >= fare);
+            }
+        }
+        canGiveCache.set(cacheKey, ok);
+        return ok;
     };
     // Own kit cash stays with its recipient. A free donor contributes only transferable surplus, once across all
     // recipients. One donor must be able to give each credited share: several small, unusable trades are no funding.
+    let fundingEpoch = 0;
+    let cachedFunding: { epoch: number; value: { army: Map<string, number>; kits: Map<string, number>; route: number } } | undefined;
     const funding = () => {
+        if (cachedFunding?.epoch === fundingEpoch) return cachedFunding.value;
         const army = new Map<string, number>();
         let route = 0;
         for (const d of demand) if (d.budget) {
@@ -552,23 +668,39 @@ export function plan(inp: Inputs): Assignment[] {
         }
         let available = [...cash].reduce((n, [name, coins]) => n + Math.max(0, coins - Math.max(army.get(name) ?? 0, bridges.get(name)?.target ?? 0) - (given.get(name) ?? 0)), 0);
         for (const [name, coins] of pool) if (!cash.has(name.toLowerCase()) && mine.some(a => canGiveCoins(name, a.name))) available += coins;
-        return { army: lacks, kits: army, route: Math.max(0, route - available) };
+        const value = { army: lacks, kits: army, route: Math.max(0, route - available) };
+        cachedFunding = { epoch: fundingEpoch, value };
+        return value;
     };
     // Banked inputs already cover their downstream need. Reserve direct bill stock and army kits before treating
     // an input as spare; producing it again would count the same route requirement twice.
     const inputStock = new Map<string, number>();
+    const armyKits = mine.filter(a => inp.army?.has(a.name.toLowerCase())).map(a => [a, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a)] as const);
     for (const item of Object.keys(FEEDS)) {
         const holders = new Map<string, number>();
         for (const a of inp.accounts) holders.set(a.name.toLowerCase(), a.items[item] ?? 0);
         for (const s of inp.stock ?? []) holders.set(s.name.toLowerCase(), Math.max(holders.get(s.name.toLowerCase()) ?? 0, s.items[item] ?? 0));
         const rows = inp.bill.filter(r => [r.item, ...(r.aliases ?? [])].some(name => norm(name) === item));
         const held = Math.max([...holders.values()].reduce((n, count) => n + count, 0), rows.reduce((n, r) => n + r.owned, 0));
-        const army = mine.filter(a => inp.army?.has(a.name.toLowerCase())).reduce((n, a) => n + Math.min(a.items[item] ?? 0,
-            kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a)[item] ?? 0), 0);
+        const army = armyKits.reduce((n, [a, kit]) => n + Math.min(a.items[item] ?? 0, kit[item] ?? 0), 0);
         inputStock.set(item, Math.max(0, held - rows.reduce((n, r) => n + r.need, 0) - army));
     }
-    const direct = (item: string) => demand.reduce((n, d) => n + (!d.budget && d.names.includes(item) ? d.short : 0), 0);
-    const downstream = (item: string) => demand.reduce((n, d) => n + (d.names.includes(item) ? 0 : d.short * Math.max(0, ...d.names.map(name => feedUnits(item, name)))), 0);
+    let demandCacheEpoch = -1, directCache = new Map<string, number>(), downstreamCache = new Map<string, number>();
+    const ensureDemandCaches = () => {
+        if (demandCacheEpoch === fundingEpoch) return;
+        demandCacheEpoch = fundingEpoch;
+        directCache = new Map<string, number>();
+        downstreamCache = new Map<string, number>();
+        for (const d of demand) if (!d.budget && d.short > 0) for (const name of d.names) directCache.set(name, (directCache.get(name) ?? 0) + d.short);
+    };
+    const direct = (item: string) => { ensureDemandCaches(); return directCache.get(item) ?? 0; };
+    const downstream = (item: string) => {
+        ensureDemandCaches();
+        if (downstreamCache.has(item)) return downstreamCache.get(item)!;
+        const val = demand.reduce((n, d) => n + (d.names.includes(item) ? 0 : d.short * Math.max(0, ...d.names.map(name => feedUnits(item, name)))), 0);
+        downstreamCache.set(item, val);
+        return val;
+    };
     const needed = (item: string, account?: string) => {
         if (item !== 'coin') return direct(item) + Math.max(0, downstream(item) - (inputStock.get(item) ?? 0) - (fed.get(item) ?? 0));
         const cash = funding();
@@ -594,6 +726,7 @@ export function plan(inp: Inputs): Assignment[] {
         for (const d of demand) if (count > 0 && !d.budget && d.names.includes(item) && (account === undefined || d.account === account.toLowerCase())) {
             const used = Math.min(d.short, count); d.short -= used; count -= used;
             if (bought) d.bought = (d.bought ?? 0) + used;
+            if (used > 0) fundingEpoch++;
         }
         return count;
     };
@@ -604,7 +737,7 @@ export function plan(inp: Inputs): Assignment[] {
         for (const f of t.yields(a)) {
             const item = norm(f.item), count = Math.min(t.production&&item===norm(t.production.output)?t.production.maximum*t.production.outputPerUnit:Math.max(0, f.perTick) * VALUE_TICKS, needed(item, a.name));
             const rest = consume(item, count);
-            if (item === 'coin') earnedCoins.set(a.name.toLowerCase(), (earnedCoins.get(a.name.toLowerCase()) ?? 0) + rest);
+            if (item === 'coin') { earnedCoins.set(a.name.toLowerCase(), (earnedCoins.get(a.name.toLowerCase()) ?? 0) + rest); if (rest > 0) fundingEpoch++; }
             else if (rest > 0) fed.set(item, (fed.get(item) ?? 0) + rest);
         }
     };
@@ -632,7 +765,7 @@ export function plan(inp: Inputs): Assignment[] {
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
         const finite=finiteOrder(band,a);if(!finite)continue;
         const selected=inp.templateFor?.(finite,a)??finite;
-        const fare = wayCost(a.pos, placeOf(selected), inp.mountain?.(a) ?? true);
+        const fare = cachedWayCost(a.pos, placeOf(selected), inp.mountain?.(a) ?? true);
         if (fare === null) continue;
         const t = fare ? withFare(selected, fare) : selected;
         if (t.quest && t.tier !== 'goal') {
@@ -703,13 +836,20 @@ export function plan(inp: Inputs): Assignment[] {
                 supply:{template:t,account:a,share:1}});
         }
     }
-    // The weapon kit comes before the melee bands. Owned stock can supply it without a market quote.
-    // The buy script refuses a second scimitar through its owned baseline.
+    // Progressive weapon & armour kit buys precede combat bands. Owned stock can supply them without a market quote.
     for (const a of mine) {
         const lower = a.name.toLowerCase();
-        if (!inp.army?.has(lower) || (a.skills.Attack ?? 1) < WEAPON.attack || WEAPON_HELD.some(w => (a.items[w] ?? 0) > 0)) continue;
-        const template:Template={...WEAPON,family:'kit-buy',script:KIT_BUY_SCRIPT,role:'supply',yields:()=>[],kitFirst:true,needs:{items:{[WEAPON.item]:1}}};
-        cands.push({account:a.name,template,value:0,resources:[WEAPON_MARKET],reason:`army band ${WEAPON_BAND}: stages 1 ${WEAPON.item}`,goal:{band:WEAPON_BAND,left:0},lacks:[{of:[WEAPON.item],count:1}]});
+        if (!inp.army?.has(lower)) continue;
+        const wStage = weaponStageFor(a, inp);
+        if (wStage) {
+            const template: Template = { id: wStage.id, item: wStage.item, attack: 30, goal: wStage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: { [wStage.item]: 1 } } } as Template & { item: string; attack: number };
+            cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: stages 1 ${wStage.item}`, goal: { band: WEAPON_BAND, left: 0 }, lacks: [{ of: [wStage.item], count: 1 }] });
+        }
+        for (const arm of armourItemsFor(a, inp)) {
+            const needsItems = Object.fromEntries(arm.items.map(i => [i, 1]));
+            const template: Template = { id: arm.id, goal: arm.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: needsItems } };
+            cands.push({ account: a.name, template, value: 0, resources: [ARMOUR_MARKET], reason: `army band ${arm.band}: stages ${arm.items.join(', ')}`, goal: { band: arm.band, left: 0 }, lacks: arm.items.map(i => ({ of: [i], count: 1 })) });
+        }
     }
     // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
@@ -795,14 +935,14 @@ export function plan(inp: Inputs): Assignment[] {
         if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
-        const reachesMeet = (name: string) => { const p = byName.get(name), cost = wayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
+        const reachesMeet = (name: string) => { const p = byName.get(name), cost = cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
         const donorFor = (item: string, count: number, remote=far) => stock.find(s => (s.side !== inp.side) === remote && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= count
             && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()) && reachesMeet(s.name));
         // Fund the worker's own cash prerequisite first, then reobserve before acquiring its missing items.
         // fundOrders parks the intended worker until this one owned transfer settles.
         if(c.coins){
             if(busy)return;
-            const mountain=inp.mountain?.(a)??true,toMeet=wayCost(a.pos,ARMY_BANK,mountain),fromMeet=wayCost(ARMY_BANK,placeOf(c.template),mountain);
+            const mountain=inp.mountain?.(a)??true,toMeet=cachedWayCost(a.pos,ARMY_BANK,mountain),fromMeet=cachedWayCost(ARMY_BANK,placeOf(c.template),mountain);
             // The cash transfer precedes the item trip. Its recipient can use that staged cash for the meeting
             // fare, and must still retain the consumer's cash and return fare after the item arrives.
             const canMeet=toMeet!==null&&fromMeet!==null;
@@ -811,7 +951,7 @@ export function plan(inp: Inputs): Assignment[] {
             const lacks=kitLacks(a,c.template.needs,obtainable);
             if(!lacks||lacks.some(l=>!l.of.some(item=>obtainable(item,l.count))))return;
             const owned=canMeet&&lacks.some(l=>l.of.some(item=>!!itemSource(item,l.count)));
-            const detour=a.pos&&owned?Math.max(0,toMeet!+fromMeet!-(wayCost(a.pos,placeOf(c.template),mountain)??0)):0;
+            const detour=a.pos&&owned?Math.max(0,toMeet!+fromMeet!-(cachedWayCost(a.pos,placeOf(c.template),mountain)??0)):0;
             const coins=c.coins+detour;
             const from=cashSource(c.account,coins,far);
             if(!from)return;
@@ -820,7 +960,7 @@ export function plan(inp: Inputs): Assignment[] {
                 fund:{from,to:c.account,coins,template:c.template.id,...(meetOf.get(c.account)?{meet:'ardougne' as const}:{})}});
             return;
         }
-        if (step === 'buy' && c.template.shopKit) return;
+        if (step === 'buy' && (c.template.shopKit || cachedWayCost(a.pos, PLACES['shop:zaff'], inp.mountain?.(a) ?? true) === null)) return;
         const own = (l: Lack) => l.of.some(i => !!c.template.ownSupply?.includes(i));
         const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
@@ -837,7 +977,7 @@ export function plan(inp: Inputs): Assignment[] {
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
-            const purchaseResources=c.template.id===WEAPON.id||frailFood?c.resources:[];
+            const purchaseResources=c.template.id===WEAPON.id||c.template.id.startsWith('army-weapon-')||c.template.id.startsWith('army-armour-')||frailFood?c.resources:[];
             const reservePurchase=()=>{for(const r of purchaseResources)used.set(r,(used.get(r)??0)+1);reserveKit(c.account,lines);if(c.supply)reserveOutput(c.supply.template,c.supply.account);};
             const buyReason=`${c.goal&&c.template.kitFirst?`army band ${c.goal.band}: `:''}buys ${what} for ${c.template.id}, at most ${cost} coins`;
             if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason:buyReason, resources:purchaseResources });reservePurchase();return; }
@@ -927,14 +1067,28 @@ export function plan(inp: Inputs): Assignment[] {
             }).filter(x => Number.isFinite(x.ticks))
             .sort((x, y) => x.ticks - y.ticks || Number(y.own) - Number(x.own) || keeps(y.c) - keeps(x.c) || x.c.account.localeCompare(y.c.account) || x.c.template.id.localeCompare(y.c.template.id));
         const chosen = options[0];
-        if (chosen && !chosen.own) { bridges.set(chosen.c.account.toLowerCase(), { recipient: owner.name, target: chosen.target }); bridged.add(recipient); }
+        if (chosen && !chosen.own) { bridges.set(chosen.c.account.toLowerCase(), { recipient: owner.name, target: chosen.target }); bridged.add(recipient); fundingEpoch++; }
     }
     // The supply tier, re-sorted after every assignment: each job reserves the useful output it can bring before
     // the next pass, and each resource holder lowers the worth of candidates that share its resource.
-    for (const rest = cands.filter(c => !c.goal); rest.length;) {
-        rest.sort(order);
+    let rest = cands.filter(c => !c.goal && !c.lacks && !done.has(c.account) && !gave.has(c.account) && !gaveItems.has(c.account) && !vacated.has(c.account));
+    let dirty = true;
+    const scores = new Map<Cand, number>();
+    while (rest.length) {
+        if (dirty) {
+            rest = rest.filter(c => !done.has(c.account) && !gave.has(c.account) && !gaveItems.has(c.account) && !vacated.has(c.account) && !c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1)));
+            if (!rest.length) break;
+            scores.clear();
+            for (const c of rest) scores.set(c, worth(c));
+            rest.sort((x, y) => scores.get(y)! - scores.get(x)! || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
+            dirty = false;
+        }
         const c = rest.shift()!;
-        take(c, worth(c));
+        const v = scores.get(c)!;
+        if (v <= 0) break;
+        const prevDone = done.size;
+        take(c, v);
+        if (done.size !== prevDone) dirty = true;
     }
     // A fully owned recipe or band may lack only its cash/fare. Keep local work and its donor arbitration first;
     // only a remaining idle slot asks remote cash through the same Funding order.
@@ -1013,7 +1167,7 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // logged two such fails, and the account's Lost City band was retired).
 // An offline login server or an unavailable swarm claim authority refuses the session before the worker runs.
 // Supervisor retry bounds and claim recovery still apply; neither refusal establishes a broken worker.
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority unavailable or changed\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|stop file\b|.*\bworker finished: stop file\b)/;
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority unavailable or changed\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -1025,6 +1179,11 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
     if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail, drains };
     const tail = results.slice(-RETIRE_FAILS);
     if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail') && !progressed(l))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
+    // A single preparation/acquire block is a drain, but RETIRE_FAILS consecutive blocks with no progress is a fast-fail loop.
+    const allResults = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
+    const prepTail = allResults.slice(-RETIRE_FAILS);
+    if (prepTail.length === RETIRE_FAILS && prepTail.every(l => l.startsWith('RESULT fail') && /\b(?:stop[=:]"?preparation\b|progression requires acquire\b)/.test(l) && !progressed(l)))
+        return { retire: true, reason: `${RETIRE_FAILS} preparation/acquire RESULTs: ${prepTail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
     const at = clean.reduce((last, l, i) => l.startsWith('LEDGER ') ? i : last, -1);
     const ledger = clean[at]?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/), ended = clean.slice(at + 1).find(l => /^RESULT (ok|fail)\b/.test(l));
     if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT && !(ended?.startsWith('RESULT ok') && progressed(ended)))
@@ -1109,7 +1268,7 @@ export function splashKit(magic: number): Record<string, number> {
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
 // side and Kandarin runs for more than 30 s (research/walking.md, Planner reach rule), so the planner asks none. It
@@ -1133,6 +1292,8 @@ const onTutorialIsland = (p: Spot) => p.x >= 3050 && p.x <= 3160 && p.z >= 3050 
 export const onKaramja = (p: Spot) => p.x >= 2704 && p.z >= 2939 && p.x <= (p.z <= 3149 ? 2959 : p.z <= 3193 ? 2948 : p.z <= 3247 ? 2812 : 0);
 const inEast = (p: Spot) => !onKaramja(p) && p.x >= 2870 && p.x <= 3280 && p.z >= 3150 && p.z <= 3510;
 const inKandarin = (p: Spot) => !onKaramja(p) && p.x >= 2440 && p.x < 2870 && p.z >= 3040 && p.z <= 3530;
+// Walled West Ardougne compound: city doors stay shut until Biohazard completes and world.route finds no exit across the wall.
+export const inWestArdougne = (p: Spot) => p.x >= 2496 && p.x <= 2557 && p.z >= 3264 && p.z <= 3335;
 const ardougneTarget = (p: Spot) => p.x >= 2600 && p.x <= 2690 && p.z >= 3260 && p.z <= 3360;
 // The tile a job's worker walks to first, by resource: the Ardougne north bank for the cow field, its two Magic tiles
 // and the troopers; the bank of each shop (scripts/shop-buyer.ts PROFILES bankSpot; scripts/autopilot.test.ts keeps
@@ -1148,6 +1309,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
@@ -1164,6 +1326,7 @@ export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
 export function wayCost(pos: Spot | undefined, place: Spot | undefined, mountain: boolean): number | null {
     if (!pos || !place) return 0;
     const at = onTutorialIsland(pos) ? LUMBRIDGE : pos;
+    if (inWestArdougne(at) !== inWestArdougne(place)) return null;
     if (onKaramja(at)) return onKaramja(place) ? 0 : FERRY_FARE;
     if (inEast(at) && ardougneTarget(place)) return 2 * FERRY_FARE + (at.x >= 3250 && at.z <= 3230 ? TOLL : 0);
     if (inEast(at) && inKandarin(place)) return mountain ? 0 : null;
@@ -1171,9 +1334,9 @@ export function wayCost(pos: Spot | undefined, place: Spot | undefined, mountain
     return 0;
 }
 // Where a coin order meets an account that stands at `pos`: the Ardougne north bank for a start in Kandarin, which
-// has no way east without the fare; null on Karamja, where no order can reach the account; else Varrock West (undefined).
+// has no way east without the fare; null on Karamja or inside West Ardougne, where no order can reach the account; else Varrock West (undefined).
 export function meetFor(pos: Spot | undefined): 'ardougne' | null | undefined {
-    return !pos ? undefined : onKaramja(pos) ? null : inKandarin(pos) ? 'ardougne' : undefined;
+    return !pos ? undefined : onKaramja(pos) || inWestArdougne(pos) ? null : inKandarin(pos) ? 'ardougne' : undefined;
 }
 // The template with `fare` more coins in its coin need.
 function withFare(t: Template, fare: number): Template {
@@ -1254,13 +1417,14 @@ const BOW_IDENTITIES: Readonly<Record<string, readonly [strung: number, unstrung
     'yew shortbow': [857, 68], 'yew longbow': [855, 66], 'magic shortbow': [861, 72], 'magic longbow': [859, 70],
 };
 export const BOW_IDS: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(BOW_IDENTITIES).map(([name, [id]]) => [name, id]));
+export const ARMOUR_IDS: Readonly<Record<string, number>> = { 'dragonhide body': 1135, 'dragonhide chap': 1099, 'dragon vambrace': 1065 };
 const bowStockNames = new Map(Object.entries(BOW_IDENTITIES).flatMap(([name, [strung, unstrung]]) => [[strung, name], [unstrung, `unstrung ${name}`]] as [number, string][]));
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
 // A staff that stands for the fire runes of a cast.
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
 // Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
 // does not hold back the market buy of the band's other lines: the shop job follows once those are held.
-export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'dusty key', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'body rune', 'dusty key', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 // ARROW_LOW rune arrows off the full shelf of the Ranging Guild shop: the base cost of 400 coins, and 1% of it more
@@ -1533,7 +1697,7 @@ export function catalogue(): Template[] {
     }));
     const cows = COW_BANDS.map(({ skill, band, to }): Template => ({
         id: `army-cow-${skill.toLowerCase()}-${to}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
-        env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1', LOOT_WATCH: '0' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
+        env: { TRAIN_SKILL: skill, TARGET_LEVEL: String(to), COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1', LOOT_WATCH: '0' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
         needs: { food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
         // One trip to the Grand Exchange brings food for many runs, not the two trout one start needs.
@@ -1640,6 +1804,11 @@ export function catalogue(): Template[] {
         pilot: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [splash.id] },
     });
     const water = waterJob('army-water-aubury', "Aubury's in Varrock", 'aubury'), waterBetty = waterJob('army-water-betty', "Betty's in Port Sarim", 'betty');
+    const body: Template = {
+        ...supply('army-body-aubury', "buy body runes at Aubury's in Varrock for the curse band", 'aubury', [shopRun('aubury', 3000, 'body.rune', SPLASH_KIT['body rune'], 8000)],
+            { under: { Magic: SPLASH_TO }, items: { coins: 10000, 'earth rune': SPLASH_START['earth rune'] }, holdsUnder: { 'body rune': SPLASH_START['body rune'] } }),
+        pilot: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [splash.id] },
+    };
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: false, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
@@ -1868,7 +2037,7 @@ export function catalogue(): Template[] {
     };
     const ranged: Template = {
         id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/ranged-train.ts', args: ['99', '1500'],
-        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '4000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
+        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '55000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['pen:3229,3298',TROOPER_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
@@ -1922,6 +2091,42 @@ export function catalogue(): Template[] {
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:lowe'], yields: () => [],
         needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
+    const holdsUnderKeys = (items: readonly string[]) => Object.fromEntries(items.map(i => [i, 1]));
+    const zekeShop = (tier: string, item: string, minAtt: number, maxAtt: number, coins: number, better: readonly string[]): Template => ({
+        id: `army-weapon-zeke-${tier}`, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zeke', '1200'],
+        env: { ITEMS: `^${item}$`, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(coins), COIN_RESERVE: '200', MAX_SPEND: String(Math.max(200, coins - 200)) },
+        role: 'supply', goal: `buy ${item} from Zeke in Al Kharid`, tier: 'goal', band: WEAPON_BAND, stock: { item, to: 1 }, repeats: false,
+        resources: ['shop:zeke'], yields: () => [],
+        needs: { ...(minAtt > 1 ? { skills: { Attack: minAtt } } : {}), under: { Attack: maxAtt }, items: { coins }, holdsUnder: holdsUnderKeys([item, ...better]) },
+    });
+    const zekeIron = zekeShop('iron', 'iron scimitar', 1, 5, 400, ['steel scimitar', 'mithril scimitar', ...WEAPON_HELD]);
+    const zekeSteel = zekeShop('steel', 'steel scimitar', 5, 20, 800, ['mithril scimitar', ...WEAPON_HELD]);
+    const zekeMithril = zekeShop('mithril', 'mithril scimitar', 20, 30, 2000, [...WEAPON_HELD]);
+    const scavvoArmour: Template = {
+        id: 'army-armour-scavvo', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['scavvo', '1500'],
+        env: { ITEMS: 'rune platelegs|rune chainbody', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '120000', COIN_RESERVE: '5000', MAX_SPEND: '115000' },
+        role: 'supply', goal: "buy rune platelegs and rune chainbody from Scavvo in the Champions' Guild",
+        tier: 'goal', band: ARMOUR_BAND, stock: { item: 'rune platelegs', to: 1 }, repeats: false, resources: ['shop:scavvo'], yields: () => [],
+        needs: { skills: { Defence: 40 }, questPoints: PEN_QUEST_POINTS['3197,3353'], items: { coins: 120_000 }, shortOf: { 'rune platelegs': 1, 'rune chainbody': 1 }, holdsUnder: { 'rune platebody': 1 } },
+    };
+    const nurmofPickaxes: Template[] = PICKAXE_LADDER.map(([lvl, item, coins], idx) => {
+        const better = PICKAXE_LADDER.slice(0, idx + 1).map(([, p]) => p);
+        const tier = item.split(' ')[0]!;
+        return {
+            id: `tool-pickaxe-${tier}`, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['nurmof', '1200'],
+            env: { ITEMS: `^${item}$`, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(coins), COIN_RESERVE: '200', MAX_SPEND: String(Math.max(200, coins - 200)) },
+            role: 'mining', goal: `buy ${item} from Nurmof in the Dwarven Mine`, repeats: false,
+            resources: ['shop:nurmof'], yields: () => [{ item, perTick: 0.01 }],
+            needs: { ...(lvl > 1 ? { skills: { Mining: lvl } } : {}), items: { coins }, holdsUnder: holdsUnderKeys(better) },
+        };
+    });
+    const ardyIronAxe: Template = {
+        id: 'tool-axe-iron', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '1200'],
+        env: { ITEMS: '^iron axe$', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
+        role: 'woodcutting', goal: "buy iron axe from Aemad in East Ardougne (Bob's Axes has no profile)", repeats: false,
+        resources: ['shop:ardy'], yields: () => [{ item: 'iron axe', perTick: 0.01 }],
+        needs: { items: { coins: 300 }, holdsUnder: holdsUnderKeys(['iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe']) },
+    };
     return [
         ...goldfarm,
         ...cows,
@@ -1931,6 +2136,7 @@ export function catalogue(): Template[] {
         splash,
         water,
         waterBetty,
+        body,
         staff,
         feathers,
         fireRunes,
@@ -1958,6 +2164,12 @@ export function catalogue(): Template[] {
         huntBronze,
         huntSupply,
         jakut,
+        zekeIron,
+        zekeSteel,
+        zekeMithril,
+        scavvoArmour,
+        ...nurmofPickaxes,
+        ardyIronAxe,
         dhideSets,
         leatherFlax,
         leatherSpin,
@@ -1973,13 +2185,13 @@ export function catalogue(): Template[] {
         { id: 'lobster-chain', family: 'gather-fish', script: 'scripts/chain.ts', args: ['scripts/gather-fish.ts cage 3000', 'scripts/cook-food.ts 3000 lobster'], role: 'fishing',
             goal: 'Catherby lobsters, caught and cooked', needs: { skills: { Fishing: 40, Cooking: 40 }, items: { 'lobster pot': 1 } }, resources: ['catherby:lobster'],
             yields: a => [{ item: 'lobster', perTick: 0.04 + 0.001 * Math.min(59, (a.skills.Fishing ?? 1) - 40) }] },
-        { id: 'shop-runes', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['betty'], env: { ITEMS: 'fire rune|air rune|earth rune', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
+        { id: 'shop-runes', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['betty'], env: { ITEMS: 'fire rune|air rune|earth rune', STOCK_TARGET: String(SHOP_STOCK), BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
             goal: 'buy elemental runes at Betty', needs: { items: { coins: 3000 }, shortOf: { 'fire rune': SHOP_STOCK, 'air rune': SHOP_STOCK, 'earth rune': SHOP_STOCK } }, resources: ['shop:betty'],
             yields: () => [{ item: 'fire rune', perTick: 0.7 }, { item: 'air rune', perTick: 0.7 }, { item: 'earth rune', perTick: 0.7 }], spends: () => [{ item: 'coins', perTick: 2.1 * 5 }] },
-        { id: 'shop-feathers', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['sarim'], env: { ITEMS: 'feather', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
+        { id: 'shop-feathers', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['sarim'], env: { ITEMS: 'feather', STOCK_TARGET: String(SHOP_STOCK), BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
             goal: 'buy feathers at Gerrant', needs: { items: { coins: 2000 }, shortOf: { feather: SHOP_STOCK } }, resources: ['shop:sarim'],
             yields: () => [{ item: 'feather', perTick: 3 }], spends: () => [{ item: 'coins', perTick: 3 * 3 }] },
-        { id: 'shop-arrowtips', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['catherby'], env: { ITEMS: 'rune arrowtips|adamant arrowtips', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
+        { id: 'shop-arrowtips', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['catherby'], env: { ITEMS: 'rune arrowtips|adamant arrowtips', STOCK_TARGET: String(SHOP_STOCK), BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
             goal: 'buy rune and adamant arrowtips at Catherby', needs: { items: { coins: 20000 }, shortOf: { 'rune arrowtips': SHOP_STOCK, 'adamant arrowtips': SHOP_STOCK } }, resources: ['shop:catherby'],
             yields: () => [{ item: 'rune arrowtips', perTick: 0.05 }, { item: 'adamant arrowtips', perTick: 0.05 }], spends: () => [{ item: 'coins', perTick: 0.05 * 260 + 0.05 * 104 }] },
         { id: 'fletch-headless', family: 'fletch', script: 'scripts/fletch-arrows.ts', args: ['15000', 'headless'], env: { BANK_PACK: '1', MAX_MAKE: '390' }, role: 'fletching',
@@ -2096,8 +2308,8 @@ export function jobResources(job: ResourceJob): string[] {
         }
         if (file === 'scripts/ranged-train.ts') {
             const method=env.PROGRESSION_METHOD;
-            if(method==='ranged/chickens')out.push('pen:3229,3298');
-            else if(method==='ranged/troopers'||method==='ranged/guild-willow-mithril')out.push(TROOPER_FIELD);
+            if(method==='ranged/chickens'||method==='ranged/chickens-oak')out.push('pen:3229,3298');
+            else if(method==='ranged/troopers'||method==='ranged/troopers-oak'||method==='ranged/troopers-willow'||method==='ranged/troopers-maple'||method==='ranged/guild-willow-mithril')out.push(TROOPER_FIELD);
             else out.push('pen:3229,3298',TROOPER_FIELD);
         }
         if (file === 'scripts/shop-buyer.ts') out.push(`shop:${(args[0] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);

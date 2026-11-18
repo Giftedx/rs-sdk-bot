@@ -301,7 +301,7 @@ try {
         { name: 'NE', x: 2796, z: 4460, cast: [[2796, 4457], [2794, 4457], [2794, 4455]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
         { name: 'N', x: 2788, z: 4463, cast: [[NORTH.x, NORTH.z]], route: (mx, mz) => mz >= 4459 ? [] : [[2781, 4457], [2781, 4461]] },
         { name: 'NW', x: 2780, z: 4460, cast: [[2780, 4459], [2779, 4458], [2780, 4460]], route: () => [] },
-        { name: 'W', x: 2780, z: 4454, cast: [[2786, 4454], [2782, 4454]], route: () => [] },
+        { name: 'W', x: 2780, z: 4454, cast: [[2782, 4454], [2786, 4454]], route: () => [] },
         { name: 'S', x: 2787, z: 4444, cast: [[2786, 4446], [2786, 4448]], route: (mx) => mx === 2786 ? [] : [[2786, 4454], [2786, 4450]] },
     ];
     const hitFrom = new Set<string>();   // tile>spot pairs that hit in this fight
@@ -361,7 +361,15 @@ try {
                 castAt = '';
             }
             const b = boss();
-            if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
+            const hasWaveRunes = q.cnt(565) >= 1 && q.cnt(556) >= 5;
+            // Space low-HP finishing casts by 7 ticks when the prior cast spent XP so its fade/death settles first.
+            const castCooldown = b && (b.hp ?? 0) > 0 && (b.hp ?? 0) <= 22 && q.xp('Magic') > mxp ? 7 : 5;
+            if (b && !q.dialogOpen() && !hasWaveRunes) {
+                if (q.T() - lastCast >= 4 && q.pos()?.combat?.targetIndex !== b.index) {
+                    lastCast = q.T();
+                    await q.s.direct({ type: 'interactNpc', npcIndex: b.index, optionIndex: q.opIndex(b, /attack/i), reason: 'SDK' });
+                }
+            } else if (b && !q.dialogOpen() && q.T() - lastCast >= castCooldown) {
                 const gx = b.tileX ?? b.x, gz = b.tileZ ?? b.z;
                 // The ghost's spot (nearest of the 6, :308-342) gives the cast tiles: the tiles that hit in the
                 // proof runs (BOSS hit lines). The SDK collision has no projectile blockers in this room, so its

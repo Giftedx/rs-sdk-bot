@@ -55,7 +55,7 @@ test('the fleet search shortcut focuses the visible search control',()=>{
 test('Free camera clears the selected account and asks the 3D viewer to stop following',()=>{
  const code=shell.slice(shell.indexOf('  const focusFree='),shell.indexOf('  function focusStep('));
  const messages:any[]=[],window:any={atlasFollowOther:'Worker'};let renders=0;
- const selected=new Function('$','window','location','render',`let sel='Worker',picked=false,rswFor='Worker';${code};return()=>{focusFree();return sel;};`)(()=>({contentWindow:{postMessage:(m:any)=>messages.push(m)}}),window,{origin:'http://localhost'},()=>renders++);
+ const selected=new Function('$','window','location','render',`let sel='Worker',picked=false,rswFor='Worker',linkRead=true;${code};return()=>{focusFree();return sel;};`)(()=>({contentWindow:{postMessage:(m:any)=>messages.push(m)}}),window,{origin:'http://localhost'},()=>renders++);
  expect(selected()).toBeNull();expect(window.atlasFollowOther).toBeNull();expect(window.atlasFreeCamera).toBe(true);
  expect(messages).toEqual([{atlasFreeCamera:true}]);expect(renders).toBe(1);
 });
@@ -101,7 +101,7 @@ test('the tour steps through the switcher only while the 3D view is ready and sh
 });
 
 test('a choice made in the 3D view ends the tour',()=>{
- expect(shell).toContain('window.atlasClient={follow:name=>{wallEnd(false);tourSet(false);previousPick(name);},');
+ expect(shell).toContain('window.atlasClient={follow:name=>{if(name)linkRead=true;wallEnd(false);tourSet(false);previousPick(name);},');
  const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
  const ended:boolean[]=[],steps:number[]=[];(globalThis as any).atlasFollowOther='Someone';
  try{new Function('mode','VIEWER','document','focusStep','tourSet','let touring=false;'+code+';tourStep();')('3d',{state:'ready'},{hidden:false},(n:number)=>steps.push(n),(on:boolean)=>ended.push(on));}finally{delete (globalThis as any).atlasFollowOther;}
@@ -341,7 +341,7 @@ function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:strin
  const hud=dom.createElement('div'),wallButton=dom.createElement('button');
  const api=new Function('S','VIEWER','window','MARK','st','$','focusSay','focusOpen','focus','focusNote','log','safeName','phoneWidth','document','hud','wallButton','localStorage','writeLink','requestAnimationFrame',`
   let keysOpened=0;window.atlasWallKeys=()=>{keysOpened++;};
-  let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0,depletedNow={list:[]};
+  let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,linkRead=true,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0,depletedNow={list:[]};
   const TOUR_MS=45000,tourStep=()=>{},focusPaint=()=>{paints++;},render=()=>{renders++;};
   let pick=name=>{wallEnd(false);log.push({pick:name});sel=name;window.atlasFreeCamera=false;},setMode=m=>{mode=m;};
   ${live}${state}${code}
@@ -1483,6 +1483,12 @@ test('PvP Tools: risk, the 3 kept items, and only the players the server lets at
  // Far is 38 tiles away, Strong is 25 levels apart, Mate is ours, Outside is not in the Wilderness, Upstairs is on another floor.
  expect(p.threats.map((t:any)=>t.name)).toEqual(['Near']);
  expect(pvpState({name:'Ours1',inWorld:false})).toBeNull();
+ // Multi-way zone detection uses the loaded multiLines half-open edge parity.
+ const multiLines=[[3064,3624,3064,3632,0],[3072,3624,3072,3632,0],[3064,3624,3072,3624,0],[3064,3632,3072,3632,0]];
+ const withMulti=new Function('S','price','multiLines',`${code};return {pvpState};`)(S,pricing(S).price,multiLines).pvpState;
+ expect(withMulti({name:'Ours1',inWorld:true,combat:70,pos:{x:3064,z:3624,level:0},equipment:[],inventory:[]}).multi).toBe(true);
+ expect(withMulti({name:'Ours1',inWorld:true,combat:70,pos:{x:3072,z:3624,level:0},equipment:[],inventory:[]}).multi).toBe(false);
+ expect(withMulti({name:'Ours1',inWorld:true,combat:70,pos:{x:3068,z:3632,level:0},equipment:[],inventory:[]}).multi).toBe(false);
 });
 test('the death recap card shows the tile, the last hit, hitsplats and what the death took',()=>{
  const code=shell.slice(shell.indexOf('  let recap={name:null'),shell.indexOf('  // Quest Journal, Fleet view'));
@@ -1525,6 +1531,13 @@ test('Party: a card per PK account with hitpoints, prayer, run, food and a red e
  expect(html).toContain('party-card party-alert');
  expect(html).toContain('<span>30 / 99</span>');expect(html).toContain('<span>40 / 70</span>');
  expect(html).toContain('Run <b>55%</b>');expect(html).toContain('Food <b>2</b>');
+ // In multi-way Wilderness with zero observed food, the card alerts and marks both multi-way depth and Food 0.
+ const empty=new Function('S','E','safeName','itemStats','wildLevel','pvpState','Date',`${healthSource}${code};return {partyBox};`)(
+  {bots:[{name:'Multi0',inWorld:true,at:now,hpAt:now,combat:90,goal:'pk',pos:{x:3078,z:3632,level:0},hp:{now:95,max:99},runEnergy:90,skills:[{name:'Prayer',level:70,currentLevel:70}],inventory:[]}]},
+  String,(s:any)=>s,{Shark:'heals 20'},()=>14,()=>({threats:[],multi:true}),{now:()=>now}).partyBox();
+ expect(empty).toContain('party-card party-alert');
+ expect(empty).toContain('combat 90 · wildy 14 · multi');
+ expect(empty).toContain('<span class="xp-bad">Food <b>0</b></span>');
 });
 test('historical shared HP stays dated in the party and orb without becoming current danger or full health',()=>{
  const now=1_000_000,old=now-400_000,server='rs-sdk-demo.fly.dev';
@@ -1733,8 +1746,9 @@ test('Inventory Tags: food, potions, teleports and runes get their group class; 
  const code=shell.slice(shell.indexOf('  // Inventory Tags (RuneLite'),shell.indexOf("  // Equipment Stats (the game's"));
  const hl:any={invTags:true};
  const invTag=new Function('hl','itemStats',`${code};return invTag;`)(hl,{Shark:'heals 20','Jug of wine':'Attack -2 · heals 11','Strength potion(3)':'Strength +3 + 10%'});
- expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
-  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-rune','']);
+ expect(['Shark','Jug of wine','Strength potion(3)','Amulet of glory(4)','Enchanted lyre','Varrock teleport','Fire rune','Coins'].map(n=>invTag({name:n,count:1})))
+  .toEqual([' tag-food',' tag-food',' tag-potion',' tag-tele',' tag-tele',' tag-tele',' tag-rune','']);
+ expect(invTag({name:'Skills necklace',count:1})).toBe('');expect(invTag({name:'Combat bracelet',count:1})).toBe('');
  hl.invTags=false;expect(invTag({name:'Shark'})).toBe('');expect(invTag(null)).toBe('');
 });
 test('GE item sources: a row opens its sources, and a source with places has Show on map',()=>{
@@ -1856,6 +1870,27 @@ test('best training spot: the best rock the account can mine now, and the neares
  expect(t.bestSpot(b,'Fishing',35)).toBe(null);
  expect(t.bestSpotLine(b,20)).toContain('Best now: <b>Iron rock</b> (level 15) · nearest 10 tiles');
 });
+test('Combat preview: the max hit now, from the attack style and the Strength prayer that is on',()=>{
+ const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const t=new Function('asset','fetch','E','window',`${code};return {combatPreviewLines,equipStats,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{});
+ t.set({'Rune scimitar':[7,45,-2,0,0,0,1,0,0,0,44,0,0],'Amulet of strength':[0,0,0,0,0,0,0,0,0,0,10,0,0]},{spells:[],staffs:{}});
+ const styles=[{index:0,type:'Accurate'},{index:1,type:'Aggressive'},{index:2,type:'Controlled'}];
+ const prayers=(on:number[])=>Array.from({length:15},(_,i)=>on.includes(i));
+ const account=(context:any)=>({skills:[{name:'Strength',level:99,currentLevel:99}],equipment:[{slot:3,name:'Rune scimitar'},{slot:2,name:'Amulet of strength'}],progressionContext:context});
+ // Strength 99, bonus 54. Aggressive +3 with Ultimate Strength (115%): floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
+ expect(t.combatPreviewLines(account({style:{currentStyle:1,styles},prayers:prayers([10])}))[0]).toStartWith('Melee 23 · aggressive +3 · Ultimate Strength 115%');
+ // The first Strength prayer that is on counts: Burst of Strength (105%) before Ultimate Strength.
+ expect(t.combatPreviewLines(account({style:{currentStyle:1,styles},prayers:prayers([1,10])}))[0]).toContain('Burst of Strength 105%');
+ // Controlled +1, no prayer on: floor(((99 + 8 + 1) × 118 + 320) / 640) = 20.
+ expect(t.combatPreviewLines(account({style:{currentStyle:2,styles},prayers:prayers([])}))[0]).toStartWith('Melee 20 · controlled +1');
+ // A missing prayer list is said, not guessed.
+ expect(t.combatPreviewLines(account({style:{currentStyle:0,styles}}))[0]).toStartWith('Melee 20 · accurate · prayers not reported');
+ // No reported style: no melee line. Unobserved equipment: no lines.
+ expect(t.combatPreviewLines(account({}))).toEqual([]);
+ expect(t.combatPreviewLines({equipment:[],equipmentObserved:false})).toEqual([]);
+ expect(t.equipStats(account({style:{currentStyle:1,styles},prayers:prayers([10])}))).toContain('Melee 23 · aggressive +3');
+});
+
 test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from the pack',()=>{
  const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
  const t=new Function('asset','fetch','E','window',`${code};return {wornBonuses,maxHit,equipStats,teleCasts,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{});
@@ -1880,12 +1915,17 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  t2.set({'Staff of fire':[0,0,0,10,0,0,0,0,10,0,0,0,0]},{spells:[],staffs:{'Fire rune':['Staff of fire']},combat:[['Fire Strike',13,8,[['Mind rune',1],['Fire rune',3],['Air rune',2]],null],['Fire Bolt',35,12,[['Chaos rune',1],['Fire rune',4],['Air rune',3]],null],['Iban Blast',50,25,[['Death rune',1],['Fire rune',5]],"Iban's staff"],['Fire Blast',59,16,[['Death rune',1],['Fire rune',5],['Air rune',4]],null]]});
  const mage:any={skills:[{name:'Magic',level:55,currentLevel:55}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Air rune',count:30},{name:'Chaos rune',count:6},{name:'Mind rune',count:50},{name:'Death rune',count:20}]};
  // Fire Blast needs 59; Iban Blast needs Iban's staff; Fire Bolt: 6 chaos, 30/3 air, fire from the staff = 6.
- expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6,xp:0});
+ expect(t2.bestSpell(mage)).toEqual({name:'Fire Bolt',max:12,casts:6,charge:false,xp:0});
  expect(t2.equipStats(mage)).toContain('Magic Fire Bolt 12 ×6');
  // Against the shipped spellbook: the pure-iban loadout (Magic 50, Staff of iban, death and fire runes, no air) casts Iban Blast.
  const book=JSON.parse(readFileSync(new URL('./client-assets/spellbook.json',import.meta.url),'utf8'));
  t2.set({},book);
- expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20,xp:750});
+ expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[{slot:3,name:'Staff of iban'}],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toEqual({name:'Iban Blast',max:25,casts:20,charge:false,xp:750});
+ // God Spell with Magic >= 80 and Charge runes reports charged max hit 30.
+ t2.set({'Staff of zamorak':[0,0,0,10,0,0,0,0,10,0,0,0,0]},book);
+ const god={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of zamorak'}],inventory:[{name:'Blood rune',count:10},{name:'Fire rune',count:20},{name:'Air rune',count:10}]};
+ expect(t2.bestSpell(god)).toMatchObject({name:'Flames of Zamorak',max:20,casts:5,charge:true});
+ expect(t2.equipStats(god)).toContain('Magic Flames of Zamorak 20 (30 charged) ×5');
  // Without the staff, no spell: Fire Blast needs 59 and the elemental spells need air runes.
  expect(t2.bestSpell({skills:[{name:'Magic',level:50}],equipment:[],inventory:[{name:'Death rune',count:30},{name:'Fire rune',count:100}]})).toBe(null);
 });
@@ -2048,4 +2088,336 @@ test('Screenshot: a level-up, a death or valuable loot of the watched account as
  t.shotReply({id:'unknown',url:'data:image/jpeg;base64,BBBB'});expect(t.list().length).toBe(1);
  t.lootShots();b.flow={loot:[{name:'Rune scimitar',count:2},{name:'Dragon chainbody',count:1}]};t.lootShots();
  expect(posted.length).toBe(2);
+});
+test('wildernessWatchBox highlights rivals within attack range of our Wilderness accounts and counts overflow',()=>{
+ const code=shell.slice(shell.indexOf('  function wildernessWatchBox()'),shell.indexOf('  // A new snapshot rewrites the panel'));
+ const wildHelpers=shell.slice(shell.indexOf('  const wildLevel='),shell.indexOf('  function pvpState('));
+ const make=(wilderness:any[],bots:any[])=>new Function('S','E','nameButtons','placeOf',`${wildHelpers}${code};return wildernessWatchBox();`)({wilderness,bots},String,(ns:string[])=>ns.join(','),()=>'Lava Maze');
+ const bots=[{name:'OurRoamer',inWorld:true,pos:{x:3060,z:3880,level:0},combat:100}];
+ const html=make([
+  {name:'ThreatPker',fleet:false,x:3070,z:3880,plane:0,combat:120,wild:46,minCombat:74,maxCombat:126},
+  {name:'SafeScout',fleet:false,x:3094,z:3536,plane:0,combat:30,wild:3,minCombat:27,maxCombat:33},
+  {name:'OurRoamer',fleet:true,x:3060,z:3880,plane:0,combat:100,wild:46,minCombat:54,maxCombat:126},
+ ],bots);
+ expect(html).toContain('ThreatPker');expect(html).toContain('can attack ours');
+ expect(html.split('can attack ours').length-1).toBe(1);
+ expect(html).not.toContain('more in Wilderness');
+ const overflow=Array.from({length:14},(_,i)=>({name:`Scout${i}`,fleet:false,x:3094,z:3536,plane:0,combat:10,wild:3,minCombat:7,maxCombat:13}));
+ expect(make(overflow,bots)).toContain('+2 more in Wilderness');
+ const multiLines=[[3064,3872,3064,3888,0],[3072,3872,3072,3888,0],[3064,3872,3072,3872,0],[3064,3888,3072,3888,0]];
+ const withMulti=new Function('S','E','nameButtons','placeOf','multiLines',`${wildHelpers}${code};return wildernessWatchBox();`)({wilderness:[{name:'ThreatPker',fleet:false,x:3070,z:3880,plane:0,combat:120,wild:46,minCombat:74,maxCombat:126}],bots},String,(ns:string[])=>ns.join(','),()=>'Lava Maze',multiLines);
+ expect(withMulti).toContain('wildy 46 · multi');
+ // Attackable now shows kept-on-death items when equipment and inventory are both observed.
+ const wpCode=shell.slice(shell.indexOf('  function worldPanel(){'),shell.indexOf('  function wildernessWatchBox()'));
+ const wpHtml=new Function('S','E','safeName','nf','gp','ago','nameButtons','partyBox','wildernessWatchBox','respawnBox','highlightsBox','markersBox','finderBox','farmsBox','worldSpots','price','multiLines','window','document','mode','VIEWER',`${wildHelpers}${shell.slice(shell.indexOf('  function pvpState('),shell.indexOf('  // NPC aggression timer'))}${wpCode};return worldPanel();`)(
+  {bots:[{name:'Ours1',inWorld:true,combat:70,pos:{x:3066,z:3880,level:0},equipment:[{name:'Rune scimitar',count:1}],inventory:[{name:'Shark',count:1}]}],roster:[],world:{connected:true,tickAt:Date.now()},economy:{itemValues:{'Rune scimitar':15000,'Shark':800}}},
+  String,(s:any)=>s,String,(n:number)=>n+' gp',()=>'1s',(ns:string[])=>ns.join(','),()=>'',()=>'',()=>'',()=>'',()=>'',()=>'',()=>'',()=>[],pricing({economy:{itemValues:{'Rune scimitar':15000,'Shark':800}}}).price,multiLines,{atlasOperator:()=>true,atlasLiveRoster:()=>false},{activeElement:null},'2d',undefined);
+ expect(wpHtml).toContain('lvl 46 · multi');
+ expect(wpHtml).toContain('Kept on death');
+ expect(wpHtml).toContain('Rune scimitar, Shark');
+ const hsCode=shell.slice(shell.indexOf('  function wildernessHotspotsBox()'),shell.indexOf('  function wildernessWatchBox()'));
+ const hsHtml=new Function('S','E','safeName','window',`${hsCode};return wildernessHotspotsBox();`)(
+  {
+   wildernessOverlay:{bands:[{label:'Lvl 1–20 (Tele)',colour:'#86c862',note:'Tele'},{label:'Lvl 21–30 (Glory)',colour:'#e8a844',note:'Glory'},{label:'Lvl 31+ (Deep Wild)',colour:'#e05347',note:'Blocked'}],hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,note:'Ditch'},{label:"Rogue's Castle",x:3285,z:3930,wild:52,note:'Castle'}],resolveTarget:(b:any)=>b.target||null},
+   bots:[{name:'⟦MAIN⟧',inWorld:true,pos:{x:3094,z:3520,level:0},target:{x:3098,z:3955,label:'Mage Bank'}}],
+  },
+  String,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),{});
+ expect(hsHtml).toContain('Lvl 1–20 (Tele)');expect(hsHtml).toContain('Edgeville Ditch');expect(hsHtml).toContain("Rogue's Castle");
+ expect(hsHtml).toContain('Main · reserved');expect(hsHtml).toContain('Mage Bank (3098, 3955)');expect(hsHtml).not.toContain('Haggis');
+});
+
+test('dashboard skills list matches the 19 skills of 2004 rev 225',()=>{
+ const match=shell.match(/^const skills=\[([^\]]+)\];/m);
+ expect(match).not.toBeNull();
+ const list=JSON.parse(`[${match![1].replace(/'/g,'"')}]`);
+ expect(list).toHaveLength(19);
+ for(const post2004 of ['Slayer','Farming','Construction','Hunter','Sailing'])expect(list).not.toContain(post2004);
+});
+
+test('wildLine in overlay shows multi-way vs single-way combat zone',()=>{
+ expect(shell).toContain("(p.multi?' · multi-way':' · single-way')");
+ expect(shell).toContain("inMulti({x:l.wild.x,z:l.wild.z,level:l.wild.plane??0})?' · multi-way':' · single-way'");
+});
+
+test('Prayer tab renders the 15 rev 289 prayers and locks prayers above Prayer level',()=>{
+ const start=shell.indexOf("    if(selectedTab==='prayer'){"),end=shell.indexOf("    if(selectedTab==='magic'){");
+ const code=shell.slice(start,end);
+ const render=(lv:number,cur=lv)=>new Function('b','E','asset','level','wornBonuses','prayerLasts','dur',`const selectedTab='prayer';let html='';${code};return html;`)({name:'test'},String,(f:string)=>f,()=>({level:lv,currentLevel:cur}),()=>[0,0,0,0,0,0,0,0,0,0,0,0,5],()=>100,()=>'1m');
+ const h25=render(25);
+ expect(h25).toContain('Thick Skin (level 1)');
+ expect(h25).toContain('Protect Item (level 25)');
+ expect(h25).toContain('prayer-locked" title="Steel Skin');
+ expect(h25).not.toContain('Piety');
+ expect(h25).not.toContain('Smite');
+ expect(h25).toContain('Prayer: 25 / 25 · Bonus +5');
+});
+
+test('Magic tab renders rev 289 spells, counts casts, and locks missing runes or levels',()=>{
+ const start=shell.indexOf("    if(selectedTab==='magic'){"),end=shell.indexOf("    const active=document.activeElement");
+ const code=shell.slice(start,end);
+ const runeCastsSrc=shell.slice(shell.indexOf('  function runeCasts('),shell.indexOf('  function bestSpell('));
+ const spellbookData={spells:[['Varrock teleport',25,[['Fire rune',1],['Air rune',3],['Law rune',1]]]],staffs:{'Fire rune':['Staff of fire']},combat:[['Wind Strike',1,2,[['Mind rune',1],["Air rune",1]],null,55],['Fire Wave',75,20,[['Blood rune',1],['Fire rune',7],['Air rune',5]],null,425],['Entangle',79,5,[['Nature rune',4],['Water rune',5],['Earth rune',5]],null,890]]};
+ const bot={skills:[{name:'Magic',level:80}],equipment:[{slot:3,name:'Staff of fire'}],inventory:[{name:'Nature rune',count:10},{name:'Air rune',count:30},{name:'Cosmic rune',count:4},{name:'Unpowered orb',count:2},{name:'Water rune',count:15},{name:'Earth rune',count:15},{name:'Body rune',count:2},{name:'Soul rune',count:1},{name:'Law rune',count:1},{name:'Blood rune',count:2}]};
+ const html=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>80,spellbookData,()=>'');
+ expect(html).toContain('spell-icon" title="High Level Alchemy (Magic 55) · alch · ×10"');
+ expect(html).toContain('spell-icon" title="Varrock teleport (Magic 25) · teleport · ×1"');
+ expect(html).toContain('spell-locked" title="Wind Strike (Magic 1)');
+ expect(html).toContain('spell-icon" title="Confuse (Magic 3)');
+ expect(html).toContain('spell-icon" title="Bind (Magic 20)');
+ expect(html).toContain('spell-icon" title="Charge Air Orb (Magic 66) · charge orb · ×1"');
+ expect(html).toContain("magicon.png');background-position:-180px -20px");
+ expect(html).toContain('spell-enchant-level-1-jewellery.png');
+ expect(html).toContain('spell-enchant-level-5-jewellery.png');
+ expect(html).toContain("magicon.png');background-position:-440px -20px");
+ expect(html).toContain("magicon.png');background-position:-480px -20px");
+ expect(html).toContain('spell-crumble-undead.png');
+ expect(html).toContain("magicon.png');background-position:-240px -20px");
+ expect(html).toContain("magicon2.png');background-position:-40px 0px");
+ const lockedHtml=new Function('b','E','asset','curLevel','spellbookData','teleLine',`${runeCastsSrc}const selectedTab='magic';let html='';${code};return html;`)({...bot,inventory:[]},String,(f:string)=>f,()=>75,spellbookData,()=>'');
+ expect(lockedHtml).toContain("magicoff2.png');background-position:-40px 0px");
+ expect(lockedHtml).toContain("magicoff.png');background-position:-180px -20px");
+ expect(html).not.toContain('spell-fire-wave.png');
+ expect(html).not.toContain('spell-charge-air-orb.png');
+ expect(html).not.toContain('spell-vulnerability.png');
+ expect(html).not.toContain('spell-enfeeble.png');
+ expect(html).not.toContain('spell-stun.png');
+ expect(html).not.toContain('spell-entangle.png');
+ expect(html).not.toContain('Ice Barrage');
+});
+
+test('Prayer tab highlights active prayers from progressionContext without fabricating absent state',()=>{
+ const start=shell.indexOf("    if(selectedTab==='prayer'){"),end=shell.indexOf("    if(selectedTab==='magic'){");
+ const code=shell.slice(start,end);
+ const prayers=Array(15).fill(false);prayers[14]=true;prayers[8]=true;
+ const render=(bot:any)=>new Function('b','E','asset','level','wornBonuses','prayerLasts','dur','S',`const selectedTab='prayer';let html='';${code};return html;`)(bot,String,(f:string)=>f,()=>({level:45,currentLevel:45}),()=>[0,0,0,0,0,0,0,0,0,0,0,0,5],()=>100,()=>'1m',{world:{tickMs:600}});
+ const onHtml=render({name:'test',progressionContext:{prayers}});
+ expect(onHtml).toContain('prayer-icon active" title="Protect from Melee (level 43)');
+ expect(onHtml).toContain('prayer-icon active" title="Protect Item (level 25)');
+ expect(onHtml).toContain('Active: Protect Item, Protect from Melee');
+ const offHtml=render({name:'test'});
+ expect(offHtml).not.toContain('prayer-icon active');
+ expect(offHtml).not.toContain('Active:');
+});
+
+test('game tab CSS top row fits 5 tabs and weapon special costs match rev 289',()=>{
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('.game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(5,minmax(0,1fr))!important}');
+ expect(css).toContain('@media(max-width:479px){.game-hud:not(.chat-hidden) .game-pvp-hud{bottom:481px}');
+ const combatCode=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const harness=new Function('asset','fetch','E','window','weaponSpeedData',`${combatCode};return {equipStats,set:(i)=>{itemBonusData=i;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{},{'Magic shortbow':4,'Magic longbow':6,'Rune claws':4,'Rune thrownaxe':5});
+ harness.set({'Magic shortbow':[0,0,0,0,69,0,0,0,0,0,0,0,0],'Magic longbow':[0,0,0,0,69,0,0,0,0,0,0,0,0],'Rune claws':[26,39,0,0,0,0,19,0,0,0,39,0,0],'Rune thrownaxe':[0,0,0,0,32,0,0,0,0,0,0,0,0]});
+ const msb=harness.equipStats({skills:[{name:'Ranged',level:70,currentLevel:70}],equipment:[{slot:3,name:'Magic shortbow'}]});
+ expect(msb).toContain('Magic shortbow (35%)');
+ expect(msb).toContain('4 ticks (2.4s)');
+ expect(harness.equipStats({skills:[{name:'Ranged',level:70,currentLevel:70}],equipment:[{slot:3,name:'Magic longbow'}]})).toContain('Magic longbow (35%)');
+ expect(harness.equipStats({skills:[{name:'Strength',level:70,currentLevel:70}],equipment:[{slot:3,name:'Rune claws'}]})).toContain('Rune claws (25%)');
+ expect(harness.equipStats({skills:[{name:'Ranged',level:70,currentLevel:70}],equipment:[{slot:3,name:'Rune thrownaxe'}]})).toContain('Rune thrownaxe (10%)');
+});
+
+test('Gear Advisor handles rev 289 ID tiers, quests, tools, operator privacy and unobserved equipment',()=>{
+ const block=shell.slice(shell.indexOf('  // Gear & Upgrade Advisor:'),shell.indexOf('  new MutationObserver(followTitle)'));
+ const setup=(bot:any,owner=true)=>{
+  const els=new Map<string,any>([['#client-diag',{hidden:true,innerHTML:''}]]);
+  const win:any={atlasOperator:()=>owner};
+  const env={
+   account:()=>bot,S:{bots:[bot],roster:[],world:{tickMs:600},capacity:{fresh:true,active:15,cap:25,freeGB:6.8,headroomGB:2.8,queued:0},diagnostics:{failLoops:[],leases:[]}},
+   E:String,safeName:(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),icon:(i:any)=>`[${i?.id??i?.name}]`,asset:String,age:()=>'5s',
+   equipmentValue:(t:any,i:any)=>t?.[i?.id]??t?.[i?.name],itemBonusData:{1333:[7,45,-2,0,0,0,1,0,0,0,44,0,0],1135:[0,0,0,0,15,0,32,0,0,0,0,0,0]},weaponSpeedData:{1333:4},
+   wornBonuses:(b:any)=>b.equipmentObserved===false?null:[7,45,-2,0,15,0,33,0,0,0,44,0,0],curLevel:()=>70,maxHit:(lv:number,s:number,st:number)=>Math.floor(((lv+8+st)*(s+64)+320)/640),
+   bestSpell:()=>null,wildLevel:()=>0,inMulti:()=>false,pvpState:()=>null,hud:{querySelector:()=>null},$:(s:string)=>els.get(s),
+   window:win,fetch:undefined,plugin:{querySelector:()=>null},document:{},
+  };
+  return {els,win,...new Function(...Object.keys(env),`${block};return {gearAdvisorFor,gearAdvisorPanel,equipAdvisorHtml,titleDiag};`)(...Object.values(env))};
+ };
+ // Green d'hide body (1135) must recommend Black d'hide body (2503) at Ranged 70 / Def 40 on body-ranged without mixing melee plate, and melee Rune body/legs stay separated on body-melee / legs-melee.
+ const rangerBot={name:'Ranger1',combat:80,skills:[{name:'Attack',level:60},{name:'Strength',level:70},{name:'Defence',level:40},{name:'Ranged',level:70},{name:'Magic',level:50},{name:'Mining',level:41}],
+  equipment:[{slot:3,id:1333,name:'Rune scimitar'},{slot:4,id:1135,name:'Dragonhide body'}],
+  inventory:[{id:1269,name:'Steel pickaxe',count:1}],bank:[{id:1305,name:'Dragon longsword',count:1}],
+  quests:[{name:'Lost City',state:'not started'},{name:'Dragon Slayer',state:'complete'}]};
+ const ownerAdvice=setup(rangerBot,true).gearAdvisorFor(rangerBot);
+ expect(ownerAdvice.rows.find((r:any)=>r.id==='body-ranged')).toMatchObject({status:'ready',target:{id:2503,name:'Dragonhide body (Black)'}});
+ expect(ownerAdvice.rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'locked',target:{id:1231,name:'Dragon dagger(p)'},reason:'Needs Lost City'});
+ expect(ownerAdvice.rows.find((r:any)=>r.id==='pickaxe')).toMatchObject({status:'ready',target:{id:1275,name:'Rune pickaxe'}});
+ const meleeBot={name:'Melee1',combat:85,skills:[{name:'Attack',level:60},{name:'Strength',level:70},{name:'Defence',level:40},{name:'Ranged',level:50},{name:'Magic',level:1}],
+  equipment:[{slot:4,id:1127,name:'Rune platebody'},{slot:7,id:1079,name:'Rune platelegs'}],
+  inventory:[],bank:[],quests:[{name:'Dragon Slayer',state:'complete'}]};
+ const meleeAdvice=setup(meleeBot,true).gearAdvisorFor(meleeBot);
+ expect(meleeAdvice.rows.find((r:any)=>r.id==='body-melee')).toMatchObject({status:'locked',target:{id:3140,name:'Dragon chainbody'},reason:'Needs Defence 60'});
+ expect(meleeAdvice.rows.find((r:any)=>r.id==='legs-melee')).toMatchObject({status:'locked',target:{id:4087,name:'Dragon platelegs'},reason:'Needs Defence 60'});
+ const rangeBot={...meleeBot,equipment:[{slot:4,id:2499,name:'Dragonhide body'},{slot:7,id:1099,name:'Dragonhide chaps'}]};
+ const rangeAdvice=setup(rangeBot,true).gearAdvisorFor(rangeBot);
+ expect(rangeAdvice.rows.find((r:any)=>r.id==='body-ranged')).toMatchObject({status:'locked',target:{id:2501,name:'Dragonhide body (Red)'},reason:'Needs Ranged 60'});
+ expect(rangeAdvice.rows.find((r:any)=>r.id==='legs-ranged')).toMatchObject({status:'ready',target:{id:2493,name:'Dragonhide chaps (Blue)'}});
+ // Populated /api/gear-catalog with empty requires.skills:{} must NEVER wipe tier.skills; Dragon halberd keeps Strength 30.
+ const harness=setup(rangerBot,true);
+ harness.win.atlasGearCatalog([
+  {id:3751,requires:{skills:{},quest:null}},
+  {id:2417,requires:{skills:{},quest:null}},
+  {id:892,requires:{skills:{},quest:null}},
+  {id:1275,requires:{skills:{attack:40},quest:null}},
+  {id:3204,requires:{skills:{attack:60,strength:30},quest:'Regicide'}},
+ ]);
+ const lvl1={name:'Noob',skills:[{name:'Attack',level:1},{name:'Strength',level:1},{name:'Defence',level:1},{name:'Ranged',level:1},{name:'Magic',level:1},{name:'Mining',level:41}],equipment:[],inventory:[],quests:[]};
+ const lvl1Adv=harness.gearAdvisorFor(lvl1);
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='helm')).toMatchObject({status:'ready',target:{id:1153,name:'Iron full helm'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='magic-weapon')).toMatchObject({status:'ready',target:{id:1387,name:'Staff of fire'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='ammo')).toMatchObject({status:'ready',target:{id:884,name:'Iron arrow'}});
+ expect(lvl1Adv.rows.find((r:any)=>r.id==='pickaxe')).toMatchObject({status:'ready',target:{id:1275,name:'Rune pickaxe'},reason:'Mining 41'});
+ const mid={...lvl1,skills:[{name:'Attack',level:60},{name:'Strength',level:25},{name:'Defence',level:40},{name:'Ranged',level:35},{name:'Magic',level:55}],equipment:[{slot:0,id:1163,name:'Rune full helm'},{slot:3,id:1434,name:'Dragon mace'},{slot:3,id:1409,name:'Staff of iban'},{slot:13,id:890,name:'Adamant arrow'}],quests:[{name:'Lost City',state:'complete'},{name:"Heroes' Quest",state:'complete'},{name:'Regicide',state:'complete'},{name:'The Fremennik Trials',state:'complete'}]};
+ const midAdv=harness.gearAdvisorFor(mid);
+ expect(midAdv.rows.find((r:any)=>r.id==='helm')).toMatchObject({status:'locked',target:{id:3751,name:'Berserker helm'},reason:'Needs Defence 45'});
+ expect(midAdv.rows.find((r:any)=>r.id==='magic-weapon')).toMatchObject({status:'locked',target:{id:2417,name:'Staff of zamorak'},reason:'Needs Magic 60'});
+ expect(midAdv.rows.find((r:any)=>r.id==='ammo')).toMatchObject({status:'locked',target:{id:892,name:'Rune arrow'},reason:'Needs Ranged 40'});
+ expect(midAdv.rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'locked',target:{id:3204,name:'Dragon halberd'},reason:'Needs Strength 30'});
+ // Completing Lost City reveals banked Dragon longsword to operator as 'owned', but hides bank from public viewer.
+ const completed={...rangerBot,quests:[{name:'Lost City',state:'complete'},{name:'Dragon Slayer',state:'complete'}]};
+ expect(setup(completed,true).gearAdvisorFor(completed).rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'owned',target:{id:1305},reason:'Held in bank'});
+ expect(setup(completed,false).gearAdvisorFor(completed).rows.find((r:any)=>r.id==='melee-weapon')).toMatchObject({status:'ready',target:{id:1305}});
+ // Unobserved equipment must never leak worn gear into Gear Advisor.
+ const hidden={...completed,equipmentObserved:false};
+ const panel=setup(hidden,true).gearAdvisorPanel();
+ expect(panel).toContain('Equipment is not reported for this account');
+});
+
+test('Wilderness & PvP HUD displays skull bracket, multiway crossed swords, sa_energy bar, overhead prayer, timers and title diagnostics',()=>{
+ const block=shell.slice(shell.indexOf('  // Gear & Upgrade Advisor:'),shell.indexOf('  new MutationObserver(followTitle)'));
+ const wildHelpers=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function pvpState('));
+ const multiLines=[[3064,3872,3064,3888,0],[3072,3872,3072,3888,0],[3064,3872,3072,3872,0],[3064,3888,3072,3888,0]];
+ const run=(bot:any,owner=true,diag={failLoops:[{name:'⟦MAIN⟧',goal:'pk',error:'no food',runs:4,medianSec:9,lastAt:1000}],leases:[{side:'cloud',host:'c1',pid:12,at:100,ageMs:1_200_000,stale:true}]})=>{
+  const pvpEl:any={hidden:true,innerHTML:'',_h:''},diagEl:any={hidden:true,innerHTML:'',_h:''};
+  const env={
+   account:()=>bot,S:{bots:[bot],roster:[['Enemy',3070,3880,0,100]],world:{tickMs:600},capacity:{fresh:true,active:14,cap:25,freeGB:6.8,headroomGB:2.8,queued:1},diagnostics:diag},
+   E:String,safeName:(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),icon:String,asset:String,age:(ms:number)=>Math.round(ms/60000)+'m',ago:(ms:number)=>Math.round(ms/60000)+'m',multiLines,
+   equipmentValue:()=>null,itemBonusData:{},weaponSpeedData:{},wornBonuses:()=>null,curLevel:()=>70,maxHit:()=>10,bestSpell:()=>null,
+   pvpState:(b:any)=>({wild:46,multi:true,threats:[{name:'Enemy',combat:100}]}),hud:{querySelector:(s:string)=>s==='.game-pvp-hud'?pvpEl:null},$:(s:string)=>s==='#client-diag'?diagEl:null,
+   window:{atlasOperator:()=>owner},fetch:undefined,
+  };
+  const fn=new Function(...Object.keys(env),`${wildHelpers}${block};pvpHud();titleDiag();return {pvpHudData};`)(...Object.values(env));
+  return {pvpHtml:pvpEl.innerHTML,pvpHidden:pvpEl.hidden,diagHtml:diagEl.innerHTML,diagHidden:diagEl.hidden,data:fn.pvpHudData(bot,Date.now())};
+ };
+ const prayers=Array(15).fill(false);prayers[14]=true;
+ const active=run({name:'Tribrid',inWorld:true,combat:90,pos:{x:3070,z:3880,level:0},saEnergy:550,specialActive:true,equipment:[{slot:3,name:'Dragon dagger(p)'}],progressionContext:{prayers},freezeTicks:10,teleblockTicks:100,antifireTicks:50,antipoisonTicks:30,action:'stun'});
+ expect(active.pvpHidden).toBe(false);
+ expect(active.pvpHtml).toContain('Level: 46');
+ expect(active.pvpHtml).toContain('Lvl 44-126');
+ expect(active.pvpHtml).toContain('class="pvp-multi"');
+ expect(active.pvpHtml).toContain('1 in range');
+ expect(active.pvpHtml).toContain('Special Attack: 55%');
+ expect(active.pvpHtml).toContain('width:55%');
+ expect(active.pvpHtml).toContain('prayer-protect-from-melee.png');
+ expect(active.pvpHtml).toContain('STUNNED');
+ expect(active.pvpHtml).toContain('FROZEN 6s');
+ expect(active.pvpHtml).toContain('TB 60s');
+ expect(active.pvpHtml).toContain('ANTIFIRE 30s');
+ expect(active.pvpHtml).toContain('ANTIPOISON 18s');
+ // Operator titlebar shows capacity + unused slots, RAM headroom, masked loop alerts, and stale leases.
+ expect(active.diagHidden).toBe(false);
+ expect(active.diagHtml).toContain('14/25');
+ expect(active.diagHtml).toContain('(11 free)');
+ expect(active.diagHtml).toContain('RAM <b>+2.8G</b>');
+ expect(active.diagHtml).toContain('<b>1</b> loop');
+ expect(active.diagHtml).toContain('Main · reserved');
+ expect(active.diagHtml).toContain('<b>1</b> stale lease');
+ // Unreported sa_energy and prayers stay n/r rather than fabricating values; outside multiway shows Single; spectator hides title diagnostics.
+ const minimal=run({name:'Tribrid',inWorld:true,combat:90,pos:{x:3090,z:3536,level:0},equipment:[{slot:3,name:'Magic shortbow'}]},false);
+ expect(minimal.pvpHtml).toContain('class="pvp-single"');
+ expect(minimal.pvpHtml).toContain('Magic shortbow (35% spec · n/r)');
+ expect(minimal.pvpHtml).toContain('Overhead: n/r');
+ expect(minimal.pvpHtml).toContain('Timers: stun obs · freeze n/r');
+ expect(minimal.diagHidden).toBe(true);
+});
+
+test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall edge RAF cleans up on release',()=>{
+ const code=shell.slice(shell.indexOf('  function minimap(){'),shell.indexOf('  // A click on the minimap'));
+ const account={name:'Roamer',pos:{x:3094,z:3525,level:0},target:{x:3094,z:3532,label:'Edgeville bank gate'}};
+ const hits:any[]=[],strokes:string[]=[];
+ const g:any=new Proxy({stroke(){strokes.push(String(g.strokeStyle));}},{get:(o:any,k)=>k in o?o[k]:()=>{}});
+ const canvas={width:146,height:151,getContext:()=>g};
+ const wildOverlay={hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,band:'tele'},{label:'Mage Bank / Arena',x:3098,z:3955,wild:55,band:'deep'}],resolveTarget:(b:any)=>b.target||null};
+ const env:any={
+  S:{bots:[account],roster:[],map:{x0:2900,z0:3500,w:500,h:500,scale:1}},
+  hud:{querySelector:(q:string)=>q.endsWith('canvas')?canvas:null},account:()=>account,
+  mapWorld:()=>({bots:[account],roster:[]}),window:{atlasWildOverlay:wildOverlay},mode:'2d',st:()=>['on'],safeName:String,
+  hl:{wildOverlay:true},clipLine:(x0:number,z0:number,x1:number,z1:number)=>([x0,z0,x1,z1]),
+ };
+ const res=new Function(...Object.keys(env),`let miniView;${code};minimap();return minimap.hits;`)(...Object.values(env));
+ for(const h of res)hits.push(h[2]);
+ expect(hits).toContain('Edgeville Ditch (Wildy 1)');
+ expect(hits).toContain('Target: Edgeville bank gate');
+ expect(strokes).toContain('#86c862');
+ expect(strokes).toContain('#e8a844');
+ expect(strokes).toContain('#e05347');
+ expect(strokes).toContain('#58d5ff');
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('max-width:calc(50vw - 180px)');
+ expect(css).toContain('overflow-x:hidden');
+ expect(shell).toContain('cancelAnimationFrame(d.wait)');
+ const ovCode=shell.slice(shell.indexOf('  // Highlights in the 3D view'),shell.indexOf("  // Respawn timers (RuneLite's Mining"));
+ const liveBot={name:'LiveRoam',inWorld:true,live:{x:3094,z:3522,level:0},target:{x:3094,z:3540,label:'Ditch target'}};
+ const ov=new Function('S','account','asset','fetch','localStorage','window','wildLevel','pvpState','recap','respawnRows','VIEWER','$','nf','location',`${ovCode};return overlayMessage();`)(
+  {economy:{itemValues:{}},rivals:[]},()=>liveBot,(n:string)=>n,()=>new Promise(()=>{}),{getItem:()=>null,setItem:()=>{}},{atlasCam3d:{x:3094,z:3530,at:Date.now()},atlasWildOverlay:{resolveTarget:(b:any)=>b.target||null}},()=>1,()=>null,{state:'idle'},()=>[],{state:'loading'},()=>null,String,{origin:''});
+ expect(ov.lines).toContainEqual({x0:3094,z0:3522,x1:3094,z1:3540,l:0,colour:'#58d5ff',label:'Ditch target'});
+});
+
+test('HUD layering clears desktop opponent/XP globes and infoboxes track b.live with safeName masking',()=>{
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('@media(min-width:741px){.game-hud:has(.xp-globes:not(:empty)) .game-opponent{top:54px}}');
+ expect(css).toMatch(/\.game-places\{[^}]*z-index:44/);
+ expect(css).toMatch(/\.game-bank\{[^}]*z-index:46/);
+ expect(css).toContain('.xp-row:focus-visible');
+
+ const code=shell.slice(shell.indexOf('  function infoboxes(){'),shell.indexOf('  // Board progress'));
+ const el:any={innerHTML:''};
+ let curBot:any={name:'Scout',inWorld:true,live:{x:3100,z:3550,level:0,seen:Date.now()},skills:[],combat:80};
+ const threat={name:'⟦MAIN⟧',combat:81,dist:4};
+ const run=new Function('S','account','hud','E','asset','skillFile','dur','age','realSkill','safeName','wildLevel','pvpState',code+';return infoboxes;')(
+  {bots:[curBot,{name:'Buddy',inWorld:true}],roster:[['Scout',3100,3550,0,80],['Buddy',3104,3552,0,70],['Outsider',3110,3545,0,75]]},
+  ()=>curBot,
+  {querySelector:()=>el},
+  String,(n:string)=>n,(n:string)=>n.toLowerCase(),String,String,()=>true,
+  (n:string)=>n==='⟦MAIN⟧'?'Main · reserved':n,
+  ()=>3,
+  ()=>({wild:3,multi:false,threats:[threat]}),
+ );
+ run();
+ expect(el.innerHTML).toContain('2 players within 15 tiles · 1 ours');
+ curBot={...curBot,pos:{x:3100,z:3550,level:0}};
+ run();
+ expect(el.innerHTML).toContain('Main · reserved (81, 4 tiles)');
+ expect(el.innerHTML).not.toContain('⟦MAIN⟧');
+});
+
+test('XP Tracker archives positive session XP/EHP on reset across account keys and clears history on demand',()=>{
+ require('./xp-tracker.js');const X=(globalThis as any).atlasXp;
+ let now=1_000,stored='{}',bot:any={name:'MainActual',started:10,goalSkill:'Mining',goalLevel:99,xpPerHour:0,timeline:'x',skills:[{name:'Mining',xp:1000}]};
+ const nodes:any={},panel:any={querySelector:(s:string)=>nodes[s]??={innerHTML:'',textContent:''},contains:()=>false};
+ const xpCode=shell.slice(shell.indexOf("  const XP_STORE='atlas-xp-baselines';"),shell.indexOf('  // Hiscore plugin'));
+ const actions=shell.slice(shell.indexOf("if(e.target.closest('[data-xp-reset]'))"),shell.indexOf("if(e.target.closest('[data-xp-pause]'))"));
+ const env:any={
+  body:{querySelector:()=>panel},account:()=>bot,sel:'StaleSel',S:{bots:[],world:{tickMs:400}},
+  window:{atlasXp:X,atlasOperator:()=>true},Date:{now:()=>now},
+  localStorage:{getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v;}},
+  document:{activeElement:null},put:(el:any,h:string)=>{el.innerHTML=h;},
+  E:String,safeName:(n:string)=>n==='MainActual'?'Main':n,nf:String,dur:(ms:number)=>Math.round(ms/1000)+'s',
+  efficiencyBox:()=>'',calcBox:()=>'',asset:String,skillFile:String,
+ };
+ const api=new Function(...Object.keys(env),`let calcSkill=null,calcTarget=null,calcAccount=null,xpHideMaxed=false,xpSort='rate';${xpCode};return {refreshXp,click:(attr)=>((e)=>{${actions}})({target:{closest:(s)=>s==='['+attr+']'?{}:null}})};`)(...Object.values(env));
+
+ api.refreshXp();
+ now+=60_000;
+ bot={...bot,skills:[{name:'Mining',xp:1000+970}]};
+ api.refreshXp();
+ api.click('data-xp-reset');
+
+ expect(nodes['.xp-history'].innerHTML).toContain('Recent sessions');
+ expect(nodes['.xp-history'].innerHTML).toContain('+970 xp');
+ expect(nodes['.xp-history'].innerHTML).toContain('Mining +970');
+ const parsed=JSON.parse(stored);
+ expect(parsed.MainActual.at).toBe(61_000);
+ expect(parsed.__history.Main).toBeDefined();
+ expect(JSON.stringify(parsed.__history)).not.toContain('MainActual');
+
+ api.click('data-xp-clear-history');
+ expect(nodes['.xp-history'].innerHTML).toBe('');
+ expect(JSON.parse(stored).__history.Main).toBeUndefined();
 });

@@ -8,6 +8,97 @@ import {attachProgressionSession,evaluateProgressionWork,preflightProgressionWor
 import {accountFromStatus,loadProgressionCatalog} from '../../planner/src/progression-catalog';
 import {chooseProgression} from '../../planner/src/progression';
 import {progressionMethods} from '../../planner/src/progression-catalog';
+import {xpForLevel} from '../../planner/src/curve';
+
+test('a compound cannon consumer cannot complete when only its first target is met',()=>{
+ const now=Date.now(),work={script:'scripts/cannon-fight.ts',args:[],env:{STOP:'Ranged=99,Defence=99,Hitpoints=99'}};
+ const status={name:'Fixture',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Ranged',level:99,xp:xpForLevel(99)},{name:'Defence',level:90,xp:xpForLevel(90)},{name:'Hitpoints',level:99,xp:xpForLevel(99)}],inventory:[],equipment:[],bank:[],quests:[]};
+ const pending=evaluateProgressionWork(work,status,{now});
+ expect(pending.intent).toEqual({kind:'train-all',targets:{ranged:99,defence:99,hitpoints:99}});
+ expect(pending.decision?.state).not.toBe('complete');
+ const complete=evaluateProgressionWork(work,{...status,skills:status.skills.map(row=>({...row,level:99,xp:xpForLevel(99)}))},{now});
+ expect(complete.decision?.state).toBe('complete');expect(complete.supported).toBe(false);
+ const capped=evaluateProgressionWork(work,{...status,build:{maxLevels:{Defence:90}}},{now});
+ expect(capped.supported).toBe(false);expect(capped.reason).toContain('build');
+});
+
+test('unknown protected side XP cannot retain an authored compound worker as a safe comparison gap',()=>{
+ const now=Date.now(),work={script:'scripts/cannon-fight.ts',args:[],env:{STOP:'Ranged=41,Defence=41'}};
+ const status={name:'Fixture',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Ranged',level:40,xp:xpForLevel(40)},{name:'Defence',level:40,xp:xpForLevel(40)}],inventory:[],equipment:[],bank:[],quests:[],build:{maxLevels:{Strength:50}}};
+ const catalog:any={version:1,generatedBy:'fixture',skills:['ranged','defence','strength'],routes:[],quests:[],entries:[],methods:[{id:'compound',routeId:'fixture',ladderIds:[],step:{script:work.script,args:[],env:work.env},effects:{xp:{ranged:1,defence:1,strength:1}},rate:{unitsPerTick:100,basis:'model',evidence:'fixture'},costs:{setupTicks:0,travelTicks:0,acquisitionTicks:0,unlockTicks:0},source:'fixture'}]};
+ const result=evaluateProgressionWork(work,status,{now,catalog});
+ expect(result.decision?.state).toBe('observe');expect(result.supported).toBe(false);expect(result.reason).toContain('build');
+});
+
+test('an unsafe unobserved rival cannot stop an authored compound worker with supported side effects',()=>{
+ const now=Date.now(),work={script:'scripts/cannon-fight.ts',args:[],env:{STOP:'Ranged=41,Defence=41'}};
+ const status={name:'Fixture',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Ranged',level:40,xp:xpForLevel(40)},{name:'Defence',level:40,xp:xpForLevel(40)}],inventory:[],equipment:[],bank:[],quests:[],build:{maxLevels:{Strength:50}}};
+ const current={id:'current',routeId:'fixture',ladderIds:[],step:{script:work.script,args:[],env:work.env},effects:{xp:{ranged:1,defence:1}},rate:{unitsPerTick:null,basis:'unknown',evidence:'whole route needs timing'},costs:{setupTicks:0,travelTicks:0,acquisitionTicks:0,unlockTicks:0},source:'fixture'};
+ const rival={...current,id:'rival',step:{...current.step,script:'scripts/rival.ts'},effects:{xp:{ranged:1,defence:1,strength:1}},rate:{unitsPerTick:100,basis:'model',evidence:'fixture'}};
+ const catalog:any={version:1,generatedBy:'fixture',skills:['ranged','defence','strength'],routes:[],quests:[],entries:[],methods:[current,rival]};
+ const result=evaluateProgressionWork(work,status,{now,catalog});
+ expect(result.supported).toBe(true);expect(result.decision?.followUps).toContainEqual(expect.objectContaining({method:'rival',state:'observe'}));
+});
+
+test('compound path steps obey their finite bands while the whole consumer stays intact',()=>{
+ const now=Date.now(),work={script:'scripts/cannon-fight.ts',args:[],env:{STOP:'Ranged=50,Defence=50',SPOT:'battlefield'}};
+ const status={name:'Fixture',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Ranged',level:40,xp:xpForLevel(40)},{name:'Defence',level:40,xp:xpForLevel(40)}],inventory:[],equipment:[],bank:[],quests:[]};
+ const first={id:'first',routeId:'fixture',ladderIds:[],step:{script:work.script,args:[],env:work.env},effects:{xp:{ranged:1,defence:1}},rate:{unitsPerTick:100,basis:'model',evidence:'fixture',conditions:{levels:{ranged:{min:40,max:44},defence:{min:40,max:44}}}},costs:{setupTicks:0,travelTicks:0,acquisitionTicks:0,unlockTicks:0},source:'fixture'};
+ const later={...first,id:'later',step:{...first.step,env:{...first.step.env,SPOT:'spiders'}},requirements:{levels:{ranged:45,defence:45}},rate:{unitsPerTick:1,basis:'model',evidence:'fixture'}};
+ const catalog:any={version:1,generatedBy:'fixture',skills:['ranged','defence'],routes:[],quests:[],entries:[],methods:[first,later]};
+ const result=evaluateProgressionWork(work,status,{now,catalog});
+ expect(result.intent).toEqual({kind:'train-all',targets:{ranged:50,defence:50}});
+ expect(result.decision?.path.map(step=>step.method)).toEqual(['first','later']);
+ expect(result.decision?.path[0]?.step.env.STOP).toBe('ranged=45,defence=45');
+ expect(result.decision?.path[1]?.step.env.STOP).toBe('ranged=50,defence=50');
+ expect(result.supported).toBe(false);
+});
+
+test('compound workers wait for valid observations of every required training skill',()=>{
+ const now=Date.now(),work={script:'scripts/cannon-fight.ts',args:[],env:{STOP:'Ranged=99,Defence=99'}};
+ const status={name:'Fixture',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Ranged',level:99,xp:xpForLevel(99)}],inventory:[],equipment:[],bank:[],quests:[]};
+ const result=evaluateProgressionWork(work,status,{now});
+ expect(result.decision?.state).toBe('observe');expect(result.supported).toBe(false);expect(result.reason).toContain('observations');
+});
+
+test('a held cannon worker recovers only its observed fresh placement without permitting more combat',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-cannon-cleanup-')),ticks:(()=>void)[]=[];let tick=1,held=false;
+ const state:any={inGame:true,player:{worldX:100,worldZ:200,level:0,combat:{inCombat:false}},skills:[{name:'Hitpoints',baseLevel:99,level:99,experience:xpForLevel(99)}],inventory:[{id:6,slot:0,count:1,optionsWithIndex:[{opIndex:1,text:'Set-up'}]}],equipment:[],nearbyLocs:[]};
+ const s:any={name:'Fixture',sdk:{getState:()=>state},tick:()=>tick,onTick:(cb:()=>void)=>(ticks.push(cb),()=>{}),bankObservation:()=>null,ended:new Promise(()=>{})};
+ const evaluation=()=>({supported:!held,intent:{kind:'train-all',targets:{ranged:99,defence:99}} as any,decision:{state:held?'qualify':'execute',selected:null,step:null,path:[],expectedTicks:null,basis:'unknown',alternatives:[],followUps:[],stateFingerprint:'fixture',reason:'qualified band ended',gaps:[],search:{nodes:0,bound:1,depth:1,exhausted:false}},reason:held?'qualified band ended':undefined} as any);
+ try{
+  const p=attachProgressionSession(s,{script:'scripts/cannon-fight.ts',args:[],env:{STOP:'Ranged=99,Defence=99'}},'localhost:8888',{base,log:()=>{},evaluate:evaluation});
+  expect(p.refusal({type:'useInventoryItem',slot:0,optionIndex:1})).toBeNull();
+  state.inventory=[];state.nearbyLocs=[{id:7,x:99,z:199,name:'Cannon base',optionsWithIndex:[{opIndex:1,text:'Pick-up'}]}];state.gameMessages=[{tick:2,text:'You place the cannon base on the ground.'}];tick++;ticks[0]!();
+  state.nearbyLocs=[{id:6,x:99,z:199,name:'Dwarf MultiCannon',optionsWithIndex:[{opIndex:1,text:'Fire'},{opIndex:2,text:'Pick-up'}]},{id:6,x:101,z:199,name:'Dwarf MultiCannon',optionsWithIndex:[{opIndex:1,text:'Fire'},{opIndex:2,text:'Pick-up'}]}];
+  held=true;tick++;p.refresh();
+  expect(p.refusal({type:'interactLoc',locId:6,x:99,z:199,optionIndex:2})).toBeNull();
+  expect(p.refusal({type:'interactLoc',locId:6,x:101,z:199,optionIndex:2,progressionCannonCleanup:true})).toContain('progression');
+  expect(p.refusal({type:'interactLoc',locId:6,x:99,z:199,optionIndex:1})).toContain('progression');
+  expect(p.refusal({type:'useItemOnLoc',locId:6,x:99,z:199,itemSlot:0})).toContain('progression');
+  expect(p.refusal({type:'interactNpc',option:'Attack'})).toContain('progression');
+  expect(p.decision()?.state).toBe('qualify');
+  state.inventory=[{id:6,count:1,slot:0}];state.nearbyLocs=[];tick++;ticks[0]!();
+  state.nearbyLocs=[{id:6,x:99,z:199,name:'Dwarf MultiCannon',optionsWithIndex:[{opIndex:2,text:'Pick-up'}]}];
+  expect(p.refusal({type:'interactLoc',locId:6,x:99,z:199,optionIndex:2})).toContain('progression');
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
+test('an existing cannon or an unobserved Set-up effect cannot grant cleanup ownership',()=>{
+ for(const existing of [true,false]){
+  const base=mkdtempSync(join(tmpdir(),'progression-cannon-unowned-'));let tick=1,held=false;
+  const cannon={id:6,x:99,z:199,name:'Dwarf MultiCannon',optionsWithIndex:[{opIndex:2,text:'Pick-up'}]};
+  const state:any={inGame:true,player:{worldX:100,worldZ:200,level:0,combat:{inCombat:false}},skills:[{name:'Hitpoints',baseLevel:99,level:99,experience:xpForLevel(99)}],inventory:[{id:6,slot:0,count:1,optionsWithIndex:[{opIndex:1,text:'Set-up'}]}],equipment:[],nearbyLocs:existing?[cannon]:[]};
+  const s:any={name:'Fixture',sdk:{getState:()=>state},tick:()=>tick,onTick:()=>()=>{},bankObservation:()=>null,ended:new Promise(()=>{})};
+  try{
+   const p=attachProgressionSession(s,{script:'scripts/cannon-fight.ts',args:[],env:{STOP:'Ranged=99,Defence=99'}},'localhost:8888',{base,log:()=>{},evaluate:()=>({supported:!held,intent:null,decision:null,reason:'route held'})});
+   p.refusal({type:'useInventoryItem',slot:0,optionIndex:1});state.nearbyLocs=[cannon];
+   if(existing)state.inventory=[];
+   tick++;held=true;p.refresh();
+   expect(p.refusal({type:'interactLoc',locId:6,x:99,z:199,optionIndex:2})).toContain('progression');
+  }finally{rmSync(base,{recursive:true,force:true});}
+ }
+});
 
 test('fleet preparation preserves its finite consumer and coordinator acceptance wins',()=>{
  const base=mkdtempSync(join(tmpdir(),'progression-consumer-'));
@@ -23,12 +114,40 @@ test('fleet preparation preserves its finite consumer and coordinator acceptance
  }finally{rmSync(base,{recursive:true,force:true});}
 });
 
+test('Prayer99 with a six-bone reserve is not complete at the actual Prayer96 entry',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-prayer-reserve-')),now=Date.now();
+ const work={script:'scripts/train-prayer.ts',args:['99'],env:{BONE_ID:'536',MAX_BURY:'105',BONE_RESERVE:'6',CAP:'1500',COORDINATOR_RUN_ID:'prayer-run'}};
+ const status={name:'Fixture',server:'rs-sdk-demo.fly.dev',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Prayer',level:96,xp:811012},{name:'Hitpoints',level:99,xp:1115790}],inventory:[],equipment:[],bank:[{id:536,count:111}],quests:[]};
+ try{
+  mkdirSync(join(base,'.practice/coordinator'),{recursive:true});
+  writeFileSync(join(base,'.practice/coordinator/state.json'),JSON.stringify({tasks:[{runId:'prayer-run',spec:{account:'Fixture',accept:{skills:{Prayer:99},bank:{536:6}}}}]}));
+  const live=evaluateProgressionWork(work,status,{base,now,requireQualification:true});
+  expect(live.intent).toEqual({kind:'train',skill:'prayer',targetLevel:99});expect(live.decision?.state).not.toBe('complete');expect(live.supported).toBe(true);
+  const done=evaluateProgressionWork(work,{...status,skills:[{name:'Prayer',level:99,xp:1000012},{name:'Hitpoints',level:99,xp:1115790}],bank:[{id:536,count:6}]},{base,now,requireQualification:true});
+  expect(done.decision?.state).toBe('complete');
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
 test('learned rates separate boosts, combat levels, active prayers and attack style',()=>{
  const status={server:'server',skills:[{name:'Ranged',level:80,currentLevel:80},{name:'Hitpoints',level:99,currentLevel:99}],equipment:[{slot:3,id:841}],progressionCrowding:0,progressionContext:{style:'rapid',prayers:[false]}};
  const key=progressionRateConditions(status);
  expect(progressionRateConditions({...status,skills:[{...status.skills[0],currentLevel:90},status.skills[1]]})).not.toBe(key);
  expect(progressionRateConditions({...status,progressionContext:{style:'rapid',prayers:[true]}})).not.toBe(key);
  expect(progressionRateConditions({...status,progressionContext:{style:'accurate',prayers:[false]}})).not.toBe(key);
+});
+
+test('Prayer99 with a six-bone reserve is not complete at the actual Prayer96 entry',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-prayer-reserve-')),now=Date.now();
+ const work={script:'scripts/train-prayer.ts',args:['99'],env:{BONE_ID:'536',MAX_BURY:'105',BONE_RESERVE:'6',CAP:'1500',COORDINATOR_RUN_ID:'prayer-run'}};
+ const status={name:'Fixture',server:'rs-sdk-demo.fly.dev',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Prayer',level:96,xp:811012},{name:'Hitpoints',level:99,xp:1115790}],inventory:[],equipment:[],bank:[{id:536,count:111}],quests:[]};
+ try{
+  mkdirSync(join(base,'.practice/coordinator'),{recursive:true});
+  writeFileSync(join(base,'.practice/coordinator/state.json'),JSON.stringify({tasks:[{runId:'prayer-run',spec:{account:'Fixture',accept:{skills:{Prayer:99},bank:{536:6}}}}]}));
+  const live=evaluateProgressionWork(work,status,{base,now,requireQualification:true});
+  expect(live.intent).toEqual({kind:'train',skill:'prayer',targetLevel:99});expect(live.decision?.state).not.toBe('complete');expect(live.supported).toBe(true);
+  const done=evaluateProgressionWork(work,{...status,skills:[{name:'Prayer',level:99,xp:1000012},{name:'Hitpoints',level:99,xp:1115790}],bank:[{id:536,count:6}]},{base,now,requireQualification:true});
+  expect(done.decision?.state).toBe('complete');
+ }finally{rmSync(base,{recursive:true,force:true});}
 });
 
 test('source-qualified admission survives a spent arrow but stays bound to its finite intent',()=>{

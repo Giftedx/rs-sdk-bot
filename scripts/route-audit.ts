@@ -4,6 +4,7 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import ts from 'typescript';
 import {PRESETS} from '../packages/practice/src/presets';
+import {HUNT_PRESETS} from './pk-hunt';
 import {objSpawns} from '../packages/core/src/spawn-index';
 import {shopSellers} from '../packages/core/src/shop-index';
 import {loadPathfinding} from '../packages/core/src/pathcache';
@@ -57,6 +58,7 @@ export function auditStarts(base=root):Record<string,Tile>{
  for(const [name,t]of Object.entries(banks)){if(!valid(t))throw Error('invalid bank '+name);out[name]={x:t.x,z:t.z,level:t.level};}
  return out;
 }
+const WORLD_SITE_KINDS=new Set(['bank','shop','agility-course','rc-ruins','rc-altar','anvil','furnace','spinning-wheel','tanner','range']);
 export function auditTargets(base=root):AuditTarget[]{
  const targets=new Map<string,AuditTarget>();
  const add=(t:Tile,source:string)=>{
@@ -68,7 +70,14 @@ export function auditTargets(base=root):AuditTarget[]{
  for(const [id,spawns]of objSpawns())for(const t of spawns)add(t,'object-spawn:'+id);
  const npcs=JSON.parse(readFileSync(join(base,'knowledge/npcs.json'),'utf8')) as {id:number;name:string;spawns?:Tile[]}[];
  for(const n of npcs)for(const t of n.spawns??[])add(t,`npc-spawn:${n.id}:${n.name}`);
- for(const file of ['goldfarm.ts','smelt-batch.ts','shop-buyer.ts','gather-fish.ts','cook-food.ts','gather-feathers.ts'])
+ const worldJson=JSON.parse(readFileSync(join(base,'knowledge/ubermouse/world.json'),'utf8')) as {sites?:{id:string;kind:string;stand?:Tile}[]};
+ for(const site of worldJson.sites??[])if(WORLD_SITE_KINDS.has(site.kind)&&site.id!=='bank:tutorial-island-bank:0'&&site.stand)add({x:site.stand.x,z:site.stand.z,level:site.stand.level??0},'world-site:'+site.id);
+ const boards=JSON.parse(readFileSync(join(base,'packages/planner/src/haggis-boards.json'),'utf8')) as {places?:Record<string,{x?:number;z?:number;level?:number}>};
+ for(const [name,p]of Object.entries(boards.places??{}))if(typeof p.x==='number'&&typeof p.z==='number')add({x:p.x,z:p.z,level:p.level??0},'board-place:'+name);
+ for(const [name,spots]of Object.entries(HUNT_PRESETS))for(const sp of spots)add({x:sp.x,z:sp.z,level:0},'hunt-preset:'+name);
+ add({x:3094,z:3520,level:0},'wilderness:edgeville-ditch');
+ add({x:3286,z:3936,level:0},'wilderness:rogues-castle');
+ for(const file of ['goldfarm.ts','smelt-batch.ts','shop-buyer.ts','gather-fish.ts','cook-food.ts','gather-feathers.ts','gather-ore.ts','gather-ranged.ts','train-chickens.ts','train-prayer.ts','agility-order.ts','rune-bank-craft.ts','firemaking-order.ts','fishcook.ts','lava-maze-escorted-ore.ts','pk-hunt.ts'])
   for(const t of fixedTiles(readFileSync(join(base,'scripts',file),'utf8'),'scripts/'+file))for(const s of t.sources)add(t,s);
  return [...targets.values()].sort((a,b)=>a.level-b.level||a.x-b.x||a.z-b.z);
 }

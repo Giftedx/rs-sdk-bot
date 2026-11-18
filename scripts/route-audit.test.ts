@@ -1,5 +1,7 @@
 import {expect,test} from 'bun:test';
-import {AUDIT_PROFILES,auditOne,fixedTiles,unreachableFirst,type AuditRow} from './route-audit';
+import {AUDIT_PROFILES,auditOne,auditStarts,auditTargets,fixedTiles,unreachableFirst,type AuditRow} from './route-audit';
+import {HUNT_PRESETS} from './pk-hunt';
+import {QUEST_NAMES} from './aio-quester';
 import type {World} from '../packages/core/src/world';
 test('audit profiles retain their separate combat and fare budgets',()=>{
  expect(AUDIT_PROFILES.weak!.skills).toEqual({attack:1,strength:1,defence:1,hitpoints:10});expect(AUDIT_PROFILES.weak!.coins).toBe(30);
@@ -21,4 +23,28 @@ test('indirect smelting corridors retain each fixed tuple and its source line',(
  const rows=fixedTiles('const route = [[3272,3227],[3275,3212],[3273,3194],[3269,3167]];\nfor(const [x,z] of route) walk(x!,z!);','smelt-batch.ts');
  expect(rows.map(({x,z,level})=>[x,z,level])).toEqual([[3272,3227,0],[3275,3212,0],[3273,3194,0],[3269,3167,0]]);
  expect(rows.every(r=>r.sources[0]==='smelt-batch.ts:1')).toBe(true);
+});
+
+test('auditTargets and auditStarts cover quest starts, banks, shops, training spots, and Wilderness hotspots',()=>{
+ const starts=auditStarts();
+ expect(starts.lumbridge).toEqual({x:3222,z:3218,level:0});
+ expect(Object.keys(starts).length).toBeGreaterThan(10);
+ const targets=auditTargets();
+ const sources=new Set(targets.flatMap(t=>t.sources));
+ for(const q of [...Object.keys(QUEST_NAMES),'waterfall','dwarfcannon','barcrawl']){
+  expect(sources.has('preset:quest_'+q)||sources.has('preset:'+q)).toBe(true);
+ }
+ expect(sources.has('world-site:bank:al-kharid-bank:0')).toBe(true);
+ expect(sources.has('world-site:rc-altar:air-altar:0')).toBe(true);
+ expect(sources.has('world-site:bank:tutorial-island-bank:0')).toBe(false);
+ expect(sources.has('board-place:lava-maze-runite')).toBe(true);
+ expect(sources.has('board-place:mage-arena-lever')).toBe(true);
+ expect(sources.has('board-place:gnome-course')).toBe(true);
+ for(const name of Object.keys(HUNT_PRESETS)){
+  expect(sources.has('hunt-preset:'+name)).toBe(true);
+ }
+ expect(sources.has('wilderness:edgeville-ditch')).toBe(true);
+ expect(sources.has('wilderness:rogues-castle')).toBe(true);
+ expect([...sources].some(s=>s.startsWith('scripts/pk-hunt.ts:'))).toBe(true);
+ expect([...sources].some(s=>s.startsWith('scripts/lava-maze-escorted-ore.ts:'))).toBe(true);
 });
