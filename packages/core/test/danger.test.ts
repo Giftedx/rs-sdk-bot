@@ -123,18 +123,26 @@ test('Protect from Melee opens the ground of melee-only hunters, not of ranged o
     try { expect(deadlyTo(dog, runner, styles)).toBe(true); } finally { if (saved === undefined) delete process.env.PRAYER_GUARD; else process.env.PRAYER_GUARD = saved; }
 });
 
-test('a walk does not dodge a live melee-only hunter when Protect from Melee guards the account', () => {
-    const seen = [{ id: 107, name: 'Scorpion', x: 2869, z: 3175, tileX: 2868, tileZ: 3174, size: 2, hp: 17 }];
+import { protectedFromMelee } from '../src/danger';
+test('Protect from Melee counts only when it is on now and has points', () => {
+    const on = (points: number, index = 14) => ({ prayers: { activePrayers: Array.from({ length: 15 }, (_, i) => i === index), prayerPoints: points } });
+    expect(protectedFromMelee(on(30))).toBe(true);
+    expect(protectedFromMelee(on(0))).toBe(false);          // no points left
+    expect(protectedFromMelee(on(30, 13))).toBe(false);     // Protect from Missiles, not Melee
+    expect(protectedFromMelee({ prayers: { activePrayers: Array(15).fill(false), prayerPoints: 30 } })).toBe(false); // switched off, as in a script that sends its own togglePrayer
+    expect(protectedFromMelee({ prayers: { prayerPoints: 30 } })).toBe(false);
+    expect(protectedFromMelee(null)).toBe(false);
+});
+
+test('a live melee-only hunter has no square only while the account is protected from melee', () => {
     const dog = parseHunter({ id: 99001, name: 'Guard dog', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=cowardly')!;
     const archer = parseHunter({ id: 99002, name: 'Archer', combat: 44, spawns: [{ x: 100, z: 100, level: 0 }] }, 'huntmode=ranged')!;
     const styles = new Map<number, readonly string[]>([[99002, ['ranged']]]);
-    const both = [{ id: 99001, name: 'Guard dog', x: 100, z: 100 }, { id: 99002, name: 'Archer', x: 110, z: 100 }];
-    const runner = { skills: { hitpoints: 10, prayer: 99 } }, low = { skills: { hitpoints: 10, prayer: PROTECT_MELEE_LEVEL - 1 } };
-    expect(liveHunters(seen, runner)).toEqual([]);
-    expect(liveHunters(seen, low).map(h => h.name)).toEqual(['Scorpion']);
-    expect(liveHunters(both, runner, 2, [dog, archer], styles).map(h => h.name)).toEqual(['Archer']);
-    expect(liveHunters(both, low, 2, [dog, archer], styles).map(h => h.name)).toEqual(['Guard dog', 'Archer']);
-    const saved = process.env.PRAYER_GUARD;
-    process.env.PRAYER_GUARD = '0';
-    try { expect(liveHunters(seen, runner).map(h => h.name)).toEqual(['Scorpion']); } finally { if (saved === undefined) delete process.env.PRAYER_GUARD; else process.env.PRAYER_GUARD = saved; }
+    const seen = [{ id: 99001, name: 'Guard dog', x: 100, z: 100 }, { id: 99002, name: 'Archer', x: 110, z: 100 }];
+    const prayer99 = { skills: { hitpoints: 10, prayer: 99 } };
+    // Prayer 99 alone changes nothing: both hunters keep their square (the prayer may be off, or out of points).
+    expect(liveHunters(seen, prayer99, 2, [dog, archer], styles).map(h => h.name)).toEqual(['Guard dog', 'Archer']);
+    expect(liveHunters(seen, prayer99, 2, [dog, archer], styles, false).map(h => h.name)).toEqual(['Guard dog', 'Archer']);
+    // Protected now: the melee-only dog is dropped, the ranged archer stays.
+    expect(liveHunters(seen, prayer99, 2, [dog, archer], styles, true).map(h => h.name)).toEqual(['Archer']);
 });

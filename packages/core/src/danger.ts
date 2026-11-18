@@ -72,20 +72,22 @@ export const deadlyTo = (h: Hunter, skills: Record<string, number>, styles?: Rea
 
 // Visible monsters that hunt this account, deadly or not, each with the square a walk keeps out of: its huntrange
 // from the tile it stands on now, plus its size and `margin` tiles. A Karamja scorpion (combat 14, huntrange 2) is
-// not deadly to an HP 10 account, yet a run past 2 tiles from it took 2 damage (pvp:stage-kit seed 6). A melee-only
-// hunter has no square for an account that the prayer guard protects (the rule of deadlyTo): its hits do 0 damage, and
-// a dodge of the bats in the one corridor of the Grand Tree roots held a Prayer 99 account for 540 ticks
-// (bench case extra:grandtree-roots).
+// not deadly to an HP 10 account, yet a run past 2 tiles from it took 2 damage (pvp:stage-kit seed 6).
+// `meleeProtected` (see protectedFromMelee, read from the live state at each call): Protect from Melee is on and has
+// points, so a melee-only hunter does 0 damage and gets no square. A dodge of the bats in the one corridor of the Grand
+// Tree roots held a Prayer 99 account for 540 ticks (bench case extra:grandtree-roots).
+// Protect from Melee (prayer index 14) is active in this state and the player has prayer points to drain.
+export const protectedFromMelee = (state: { prayers?: { activePrayers?: readonly boolean[]; prayerPoints?: number } } | null | undefined): boolean =>
+    state?.prayers?.activePrayers?.[14] === true && (state.prayers.prayerPoints ?? 0) > 0;
 export type LiveHunter = { x: number; z: number; r: number; name: string };
 type SeenNpc = { id: number; name: string; x: number; z: number; tileX?: number; tileZ?: number; size?: number; hp?: number | null };
 let huntersById: Map<number, Hunter> | undefined;
-export function liveHunters(npcs: readonly SeenNpc[], acct: Pick<Account, 'skills'>, margin = 2, list?: Hunter[], styles?: ReadonlyMap<number, readonly string[]>): LiveHunter[] {
+export function liveHunters(npcs: readonly SeenNpc[], acct: Pick<Account, 'skills'>, margin = 2, list?: Hunter[], styles?: ReadonlyMap<number, readonly string[]>, meleeProtected = false): LiveHunter[] {
     const byId = list ? new Map(list.flatMap(h => h.id === undefined ? [] : [[h.id, h] as const])) : (huntersById ??= new Map(loadHunters().flatMap(h => h.id === undefined ? [] : [[h.id, h] as const])));
     const combat = combatLevel(acct.skills), out: LiveHunter[] = [];
-    const meleeGuarded = (acct.skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && guardProtects();
     for (const n of npcs) {
         const h = byId.get(n.id);
-        if (!h || n.hp === 0 || !hunts(h, combat) || (meleeGuarded && meleeOnly(h, styles))) continue;
+        if (!h || n.hp === 0 || !hunts(h, combat) || (meleeProtected && meleeOnly(h, styles))) continue;
         out.push({ x: n.tileX ?? n.x, z: n.tileZ ?? n.z, r: (h.hunt ?? 0) + margin + Math.max(0, (n.size ?? 1) - 1), name: n.name });
     }
     return out;

@@ -442,6 +442,8 @@ try {
     for (const [x, rz] of ROOTS) {
         if (q.has(ITEM.rock)) break;
         await q.guard('roots');
+        await keepPrayer();
+        await setPfm(true);
         searched++;
         await walk(`to root ${x},${rz}`, [{ x, z: rz, tol: 2 }]);
         const ROOT_MSG = /search the root|anything interesting|turns out to be nothing/i;
