@@ -1,0 +1,22 @@
+{
+ "id": "1795001464045-fatstack-sausagefest-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Sausagefest",
+ "item": "Air rune",
+ "count": 26,
+ "start": 1795001464045,
+ "end": 1795003864045,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
