@@ -1,36 +1,46 @@
 {
  "what": "The squad that the climb against the gang clones ranks first, as arguments of scripts/pk-squad.ts",
  "status": "winner of the bench climb; not run live",
- "evidence": "research/gang-clones.md \"The climb\": hosted bench runs 44258391927 (seeds 1, 2, 3, 40 conditions) and 44259940425 (seeds 4, 5, 6): five of ours kill 90 of 90 gang clones over six seeds and five clone modes with no death of ours",
+ "evidence": "research/gang-clones.md \"The climb\": hosted bench runs 44265865486 (seeds 1, 2, 3, every condition) and 44265870254 (seeds 4, 5, 6, the squads of three, four and five in each clone mode). Five of ours kill 90 of 90 gang clones over six seeds and five clone modes with no death of ours.",
  "members": {
   "count": 5,
   "kitRule": "gang-chain-bind (scripts/squad-ready.ts): the bench kit live-walker-iron-rune-chain-bind",
-  "note": "Four of ours kill 89 of 90. Five end a run in fewer ticks than four on 5 of 6 seeds (480 against 516). A squad with no bow kills 4 of 9: each member needs a strung bow, or at most two members have none (9 of 9 at 36 Hitpoints a kill)."
+  "note": "Four of ours kill 87 of 90 with no death of ours. Three of ours kill 14 of 18 and one account of ours died: do not send three. No bow on any member of four: 7 of 9 kills at 91 Hitpoints a kill; two members with no bow: 9 of 9 at 35. So three strung bows or more."
  },
  "arguments": [
   "TARGETS=goondelf,ligma,sugma",
   "POST=3067,3640"
  ],
- "options": "the default SQUAD_OPTS of scripts/pk-squad.ts: no change of one option beat it by more than the spread of the base (29 to 104 Hitpoints a run across six seeds)",
+ "options": "the default SQUAD_OPTS of scripts/pk-squad.ts: no change of one option beat it beyond the spread of one condition",
  "post": {
   "tile": [
    3067,
    3640
   ],
   "kind": "multi-way",
-  "reason": "the gang's own single-way post: 7 of 9 kills at 95 Hitpoints a kill, against 9 of 9 at 20 on the same seeds"
+  "reason": "the gang's own single-way post: 7 of 9 kills at 100 Hitpoints a kill, against 9 of 9 at 18 on the multi-way post on the same seeds"
  },
  "cycle": {
-  "ticksOfARun": 480,
+  "ticksOfARun": 483,
   "waitForADeadGangAccount": 1154,
   "killsAnHour": 16.5,
-  "killsAnHourWithTheBenchBias": 15.9,
-  "note": "the wait for a dead gang account (one sample) bounds the kills of an hour of each squad that kills all three"
+  "killsAnHourWithTicksTimes1_1": 16,
+  "note": "the wait for a dead gang account (one sample) bounds the kills of an hour of each squad that kills all three; our bench attacks do about 1.1 times the live damage on the gang"
  },
  "cost": {
-  "hitpointsLostAKill": 16,
-  "withTheBenchBias": 18,
-  "foodCoinsAKill": 240,
+  "hitpointsLostAKill": [
+   16,
+   21
+  ],
+  "times1_35": [
+   22,
+   28
+  ],
+  "note": "the live gang took 1.35 times the Hitpoints from our account that the clones take (range 1.27 to 2.05)",
+  "foodCoinsAKill": [
+   240,
+   315
+  ],
   "deathsOfOurs": 0
  },
  "notMeasured": [
@@ -41,5 +51,7 @@
   "the squad on a live run"
  ],
  "provisional": "a clone has no wait before an eat, our bench account attacks in the tick of its weapon change, and our bench account logs in first; each would move these numbers",
- "argumentsNote": "The bench cases pass no other argument of scripts/pk-squad.ts, so each ran at its default in scripts/pk-squad.ts: MARCH=1, PULL=1, PICKUP=1, RESCUE=1, FOLLOW=0, and TRIPS at its default. TARGETS and POST are the defaults of the script too; a bench case names its clone accounts as the targets."
+ "argumentsNote": "The bench cases pass no other argument of scripts/pk-squad.ts, so each ran at its default in scripts/pk-squad.ts: MARCH=1, PULL=1, PICKUP=1, RESCUE=1, FOLLOW=0, and TRIPS at its default. TARGETS and POST are the defaults of the script too; a bench case names its clone accounts as the targets.",
+ "cloneModes": "base: each clone walks out at 33 Hitpoints, Ligma has 17 sharks; retreat: walks out at 40; stand: never walks out; lean: Ligma has 6 sharks; full: Ligma has 28. A squad case gives the three clones one option set.",
+ "antipoison": "five of ours with a potion on the first two members, on one or on none: 9 of 9 kills and no death in each row (seeds 1, 2, 3), at 16 to 30 Hitpoints a kill"
 }

@@ -273,97 +273,143 @@ prayer wait or of poison. Each of the three moves the cost of a kill.
 ## The climb
 
 The squad (`scripts/pk-squad.ts`) walks from the Edgeville bank to the multi-way post (3067, 3640). The three clones
-hunt it, each clone on its own one of ours (`extra:clone-squad-*`). `scripts/measure/pk-gang-climb.ts` makes the table
-from the case logs.
+hunt it, each clone on its own one of ours (`extra:clone-squad-*`). Each case passes the squad script no argument
+of the fight, so the post, the march, the pull and the options are the defaults of the script.
+`scripts/measure/pk-gang-climb.ts` makes the tables from the case logs.
 
-Conditions: hosted runners, lockstep, each condition on seeds 1, 2 and 3 (run 44258391927). The three squads in the
-kit `chainbind` and each mode of the clones also ran on seeds 4, 5 and 6 (run 44259940425). A run has three gang
-accounts, so three seeds are 9 possible kills. No account of ours died in any of the 153 runs.
+Conditions: hosted runners, lockstep. Every condition ran on seeds 1, 2 and 3 (run 44265865486). The squads of
+three, four and five in each mode also ran on seeds 4, 5 and 6 (run 44265870254). A run has three gang accounts, so
+three seeds are 9 possible kills.
 
-Two columns need care:
+How to read the columns:
 
 - **Kills an hour.** A dead gang account is back on its post after 1,154 ticks (`group.returnToPost`, one sample).
   The kills of an hour are 9,000 ticks times the kills of a run, over the ticks of a run plus that wait. The wait
   bounds each squad that kills all three.
-- **With the bias.** On the bench an attack of ours does 1.13 times the live damage on the gang (the fidelity table).
-  The column gives the Hitpoints of a kill and the kills of an hour with the ticks of a run and the Hitpoints lost
-  times 1.13. Read this column as the live estimate, not the bench value.
+- **Times 1.35.** The live gang took 1.35 times the Hitpoints from our account that the clones take (the fidelity
+  table, the case with no antipoison; the range is 1.27 to 2.05). The column is the live estimate of the Hitpoints
+  of a kill.
+- **With ticks times 1.1.** Our bench attacks do about 1.1 times the live damage on the gang (1.05 to 1.11). The
+  column is the kills of an hour with the ticks of a run times 1.1.
+- **The spread of one condition.** The same squad on the same seed gives another result after a change of the case
+  list. The base (four of ours) lost 20, 27 and 113 Hitpoints on seeds 1, 2 and 3 in this run, and 38, 37 and 104
+  in the run before it. A difference between two rows of under about 20 Hitpoints a kill, or of one kill in nine, is
+  inside that spread.
 
 Each number is provisional where a fight option that the clones do not have yet would change it: the wait before an
 eat, the tick between our weapon change and our attack, and the login order of the players.
 
-| Condition (seeds) | Kills | Hitpoints lost a kill | With the bias | Ticks a run | Kills an hour | With the bias | Account ticks a kill |
-|---|---|---|---|---|---|---|---|
-| 3 of ours, `chainbind` (1 to 6) | 18 of 18 | 28 | 32 | 585 | 15.5 | 14.9 | 585 |
-| 4 of ours, `chainbind` (1 to 6) | 18 of 18 | 17 | 19 | 516 | 16.2 | 15.5 | 688 |
-| 5 of ours, `chainbind` (1 to 6) | 18 of 18 | 16 | 18 | 480 | 16.5 | 15.9 | 800 |
-| 6 of ours, `chainbind` (1 to 3) | 9 of 9 | 13 | 15 | 481 | 16.5 | 15.9 | 961 |
-| 4 of ours against the four other modes (1 to 6) | 71 of 72 | 19 | 21 | 533 | 15.8 | 15.2 | 721 |
-| 5 of ours against the four other modes (1 to 6) | 72 of 72 | 16 | 18 | 472 | 16.6 | 16.0 | 787 |
-| 3 of ours, no rune and no antipoison (`chainbare`) (1 to 3) | 6 of 9 | 58 | 66 | 685 | 9.8 | 9.3 | 1,028 |
-| 4 of ours, `chainbare` (1 to 3) | 9 of 9 | 22 | 25 | 546 | 15.9 | 15.2 | 728 |
-| 4 of ours, full rune (1 to 3) | 9 of 9 | 19 | 21 | 498 | 16.3 | 15.7 | 664 |
-| 4 of ours, dragonhide (1 to 3) | 9 of 9 | 35 | 40 | 487 | 16.5 | 15.8 | 650 |
-| 4 of ours, two members with no bow (1 to 3) | 9 of 9 | 36 | 41 | 578 | 15.6 | 14.9 | 770 |
-| 4 of ours, no member with a bow (1 to 3) | 4 of 9 | 173 | 195 | 755 | 6.3 | 6.0 | 2,264 |
-| 4 of ours, melee only (1 to 3) | 7 of 9 | 120 | 136 | 721 | 11.2 | 10.7 | 1,236 |
-| 4 of ours, ranged only (1 to 3) | 9 of 9 | 27 | 31 | 622 | 15.2 | 14.5 | 829 |
-| 4 of ours, the gang's single-way post (1 to 3) | 7 of 9 | 95 | 107 | 695 | 11.4 | 10.8 | 1,192 |
-| 4 of ours, the east multi-way post (1 to 3) | 8 of 9 | 38 | 43 | 684 | 13.1 | 12.5 | 1,026 |
-| 4 of ours, no freeze (1 to 3) | 9 of 9 | 18 | 20 | 522 | 16.1 | 15.5 | 696 |
-| 4 of ours, the freeze on a low health bar (1 to 3) | 9 of 9 | 20 | 23 | 548 | 15.9 | 15.2 | 731 |
-| 4 of ours, the special from the first health bar (1 to 3) | 9 of 9 | 12 | 14 | 511 | 16.2 | 15.6 | 682 |
-| 4 of ours, eat at 50 (1 to 3) | 8 of 9 | 20 | 23 | 601 | 13.7 | 13.1 | 902 |
-| 4 of ours, eat at 70 (1 to 3) | 9 of 9 | 16 | 18 | 539 | 15.9 | 15.3 | 719 |
-| 4 of ours, no chase (1 to 3) | 9 of 9 | 15 | 17 | 519 | 16.1 | 15.5 | 692 |
-| 4 of ours, a runner in focus at 0.7 (1 to 3) | 9 of 9 | 15 | 17 | 519 | 16.1 | 15.5 | 692 |
-| 4 of ours in the pilots' kit, no march and no pull (1 to 3) | 9 of 9 | 23 | 26 | 550 | 15.8 | 15.2 | 734 |
-| 4 of ours in the pilots' kit on the single-way post (1 to 3) | 3 of 9 | 297 | 336 | 711 | 4.8 | 4.6 | 2,845 |
+### Squad size and clone mode, seeds 1 to 6
 
-Raw values by seed (kills, Hitpoints lost, ticks) are the last column of
-`bun scripts/measure/pk-gang-climb.ts --bias 1.13 .practice/hosted-bench/<run id>`. For the base, four of ours in
-`chainbind`: 3, 38, 519; 3, 37, 507; 3, 104, 550; 3, 29, 495; 3, 42, 509; 3, 62, 513. For five of ours: 3, 45, 469;
-3, 101, 489; 3, 33, 495; 3, 40, 500; 3, 36, 448; 3, 26, 476.
+| Squad, kit `chainbind` | Clone mode | Kills | Deaths of ours | Hitpoints lost a kill | Times 1.35 | Ticks a run | Kills an hour | With ticks times 1.1 |
+|---|---|---|---|---|---|---|---|---|
+| 3 of ours | base | 14 of 18 | 1 | 41 | 55 | 677 | 11.5 | 11.1 |
+| 4 of ours | base | 18 of 18 | 0 | 18 | 24 | 556 | 15.8 | 15.3 |
+| 4 of ours | `retreat` | 18 of 18 | 0 | 26 | 35 | 563 | 15.7 | 15.2 |
+| 4 of ours | `stand` | 18 of 18 | 0 | 19 | 26 | 540 | 15.9 | 15.4 |
+| 4 of ours | `lean` | 17 of 18 | 0 | 23 | 31 | 556 | 14.9 | 14.5 |
+| 4 of ours | `full` | 16 of 18 | 0 | 31 | 42 | 548 | 14.1 | 13.7 |
+| 5 of ours | base | 18 of 18 | 0 | 16 | 22 | 483 | 16.5 | 16.0 |
+| 5 of ours | `retreat` | 18 of 18 | 0 | 21 | 28 | 480 | 16.5 | 16.1 |
+| 5 of ours | `stand` | 18 of 18 | 0 | 18 | 24 | 464 | 16.7 | 16.2 |
+| 5 of ours | `lean` | 18 of 18 | 0 | 17 | 23 | 475 | 16.6 | 16.1 |
+| 5 of ours | `full` | 18 of 18 | 0 | 18 | 24 | 468 | 16.6 | 16.2 |
 
-What the table shows, each from three matched seeds or more:
+- **Five of ours kill 90 of 90 gang clones with no death of ours**, over six seeds and the five modes.
+- **Four of ours kill 87 of 90 with no death of ours.** The lost kills are against Ligma with 28 sharks (2) and with
+  6 sharks (1).
+- **Three of ours are not safe.** They kill 14 of 18, and one account of ours died (seed 6: 1 kill, 1 death). It
+  died at Wilderness level 2 on its way out, at 1 Hitpoint.
 
-- **A squad needs its bows.** With no bow on any member the squad kills 4 of 9 and loses 173 Hitpoints a kill. The
-  base kills 9 of 9 and loses 20 on the same seeds. The kills by seed are 3, 1 and 0 against 3, 3 and 3. Two members
-  with no bow still kill 9 of 9.
-- **Bow and dagger in turns beats melee only.** Melee only kills 7 of 9 at 120 Hitpoints a kill.
-- **The multi-way post beats the gang's own post.** On the single-way post four of ours kill 7 of 9 at 95 Hitpoints a
-  kill. In the pilots' kit there they kill 3 of 9 at 297, which is near the 249 and 260 of the live pilots.
-- **Five of ours kill every clone in every mode: 90 of 90 over six seeds.** Four kill 89 of 90. Five end a run in
-  fewer ticks than four on 5 of the 6 seeds (480 against 516 on the mean).
-- **Three of ours in the full kit also kill 18 of 18, at 28 Hitpoints a kill.** Three with no rune and no antipoison
-  kill 6 of 9.
-- **No fight option beats the default set by more than the spread of the base.** The base loses 29 to 104 Hitpoints
-  a run across its six seeds. No freeze, the early special, eat at 70, no chase and the wider focus all lie inside it.
+### Every condition, seeds 1 to 3
 
-The winner is `scripts/pk-gang-record/squad-candidate.json`: five of ours in the kit rule `gang-chain-bind`, each
-with a strung bow where the fleet has one, the multi-way post, the default options of the squad script. Its kills of
-an hour are 16.5 on the bench and 15.9 with the bias. Its food is 0.8 sharks a kill (16 Hitpoints).
+The last column is the Hitpoints lost of each seed.
+
+| Condition | Kills | Deaths of ours | Hitpoints lost a kill | Times 1.35 | Ticks a run | Kills an hour | With ticks times 1.1 | Account ticks a kill | Hitpoints lost by seed |
+|---|---|---|---|---|---|---|---|---|---|
+| `pilot-4-chainbare-nomarch` | 9 of 9 | 0 | 17 | 23 | 558 | 15.8 | 15.3 | 744 | 37, 51, 61 |
+| `pilot-4-chainbare-single` | 1 of 9 | 0 | 1460 | 1971 | 810 | 1.5 | 1.4 | 9724 | 525, 113, 822 |
+| `squad-3-chainbare` | 6 of 9 | 0 | 115 | 155 | 759 | 9.4 | 9 | 1139 | 278, 178, 236 |
+| `squad-3-chainbind` | 7 of 9 | 0 | 49 | 66 | 717 | 11.2 | 10.8 | 922 | 70, 155, 116 |
+| `squad-3-dhide` | 9 of 9 | 0 | 32 | 43 | 487 | 16.5 | 16 | 487 | 71, 93, 123 |
+| `squad-3-rune` | 7 of 9 | 0 | 50 | 68 | 742 | 11.1 | 10.7 | 954 | 80, 138, 130 |
+| `squad-4-chainbare` | 7 of 9 | 0 | 29 | 39 | 568 | 12.2 | 11.8 | 974 | 51, 93, 61 |
+| `squad-4-chainbind-east` | 8 of 9 | 0 | 29 | 39 | 717 | 12.8 | 12.3 | 1076 | 53, 72, 108 |
+| `squad-4-chainbind-eat50` | 9 of 9 | 0 | 17 | 23 | 524 | 16.1 | 15.6 | 699 | 33, 34, 83 |
+| `squad-4-chainbind-eat70` | 8 of 9 | 0 | 23 | 31 | 542 | 14.2 | 13.8 | 813 | 38, 48, 94 |
+| `squad-4-chainbind-focus7` | 9 of 9 | 0 | 19 | 26 | 546 | 15.9 | 15.4 | 728 | 53, 27, 94 |
+| `squad-4-chainbind-freezelow` | 9 of 9 | 0 | 16 | 22 | 535 | 16 | 15.5 | 713 | 60, 31, 55 |
+| `squad-4-chainbind-full` | 7 of 9 | 0 | 42 | 57 | 567 | 12.2 | 11.8 | 972 | 155, 44, 94 |
+| `squad-4-chainbind-lean` | 8 of 9 | 0 | 17 | 23 | 563 | 14 | 13.6 | 845 | 45, 51, 42 |
+| `squad-4-chainbind-melee` | 8 of 9 | 0 | 80 | 108 | 701 | 12.9 | 12.4 | 1052 | 157, 136, 348 |
+| `squad-4-chainbind-nobow` | 7 of 9 | 0 | 91 | 123 | 707 | 11.3 | 10.9 | 1213 | 240, 220, 175 |
+| `squad-4-chainbind-nobow2` | 9 of 9 | 0 | 35 | 47 | 580 | 15.6 | 15.1 | 773 | 99, 102, 111 |
+| `squad-4-chainbind-nochase` | 7 of 9 | 0 | 41 | 55 | 574 | 12.2 | 11.8 | 983 | 53, 28, 203 |
+| `squad-4-chainbind-nofreeze` | 8 of 9 | 0 | 27 | 36 | 597 | 13.7 | 13.2 | 896 | 47, 64, 107 |
+| `squad-4-chainbind-nomarch` | 9 of 9 | 0 | 18 | 24 | 528 | 16.1 | 15.6 | 704 | 38, 28, 94 |
+| `squad-4-chainbind-ranged` | 9 of 9 | 0 | 25 | 34 | 643 | 15 | 14.5 | 857 | 44, 79, 106 |
+| `squad-4-chainbind-retreat` | 9 of 9 | 0 | 15 | 20 | 548 | 15.9 | 15.4 | 731 | 45, 35, 58 |
+| `squad-4-chainbind-single` | 7 of 9 | 0 | 100 | 135 | 689 | 11.4 | 11 | 1181 | 283, 270, 147 |
+| `squad-4-chainbind-spec1` | 7 of 9 | 0 | 15 | 20 | 537 | 12.4 | 12 | 920 | 33, 44, 26 |
+| `squad-4-chainbind-stand` | 9 of 9 | 0 | 15 | 20 | 539 | 15.9 | 15.4 | 719 | 42, 46, 51 |
+| `squad-4-chainbind` | 9 of 9 | 0 | 18 | 24 | 572 | 15.6 | 15.1 | 762 | 20, 27, 113 |
+| `squad-4-dhide` | 9 of 9 | 0 | 31 | 42 | 469 | 16.6 | 16.1 | 625 | 104, 41, 130 |
+| `squad-4-rune` | 9 of 9 | 0 | 24 | 32 | 552 | 15.8 | 15.3 | 736 | 38, 72, 102 |
+| `squad-5-chainbare` | 9 of 9 | 0 | 24 | 32 | 509 | 16.2 | 15.7 | 849 | 56, 82, 82 |
+| `squad-5-chainbind-anti0-food` | 9 of 9 | 0 | 16 | 22 | 506 | 16.3 | 15.8 | 843 | 41, 34, 72 |
+| `squad-5-chainbind-anti0` | 9 of 9 | 0 | 30 | 41 | 464 | 16.7 | 16.2 | 773 | 94, 49, 124 |
+| `squad-5-chainbind-anti1` | 9 of 9 | 0 | 26 | 35 | 493 | 16.4 | 15.9 | 822 | 75, 79, 79 |
+| `squad-5-chainbind-anti2-food` | 9 of 9 | 0 | 28 | 38 | 480 | 16.5 | 16 | 799 | 93, 79, 80 |
+| `squad-5-chainbind-anti2` | 9 of 9 | 0 | 19 | 26 | 488 | 16.4 | 15.9 | 813 | 78, 30, 62 |
+| `squad-5-chainbind-full` | 9 of 9 | 0 | 17 | 23 | 469 | 16.6 | 16.1 | 782 | 32, 45, 77 |
+| `squad-5-chainbind-lean` | 9 of 9 | 0 | 12 | 16 | 494 | 16.4 | 15.9 | 823 | 11, 52, 41 |
+| `squad-5-chainbind-retreat` | 9 of 9 | 0 | 22 | 30 | 483 | 16.5 | 16 | 806 | 88, 47, 65 |
+| `squad-5-chainbind-stand` | 9 of 9 | 0 | 17 | 23 | 460 | 16.7 | 16.2 | 767 | 45, 52, 56 |
+| `squad-5-chainbind` | 9 of 9 | 0 | 16 | 22 | 490 | 16.4 | 15.9 | 817 | 45, 45, 58 |
+| `squad-5-dhide` | 9 of 9 | 0 | 39 | 53 | 541 | 15.9 | 15.4 | 901 | 270, 33, 45 |
+| `squad-5-rune` | 9 of 9 | 0 | 18 | 24 | 480 | 16.5 | 16 | 799 | 42, 48, 73 |
+| `squad-6-chainbare` | 9 of 9 | 0 | 22 | 30 | 490 | 16.4 | 15.9 | 981 | 55, 71, 68 |
+| `squad-6-chainbind` | 9 of 9 | 0 | 16 | 22 | 471 | 16.6 | 16.1 | 941 | 46, 44, 53 |
+| `squad-6-dhide` | 8 of 9 | 0 | 24 | 32 | 435 | 15.1 | 14.7 | 980 | 68, 62, 64 |
+| `squad-6-rune` | 9 of 9 | 0 | 16 | 22 | 445 | 16.9 | 16.4 | 891 | 35, 56, 54 |
+
+The names: `squad-<n>-<kit>` is n of ours in a kit. `chainbind` is the kit that the accounts hold (rune helm,
+chainbody and legs, dragon dagger, magic shortbow, Bind runes, antipoison). `chainbare` has no rune and no
+antipoison. `rune` is full rune with snare runes. `dhide` is dragonhide. `nobow` and `nobow2`: no bow on any
+member, or on two. `single`: the gang's own single-way post. `east`: the east multi-way post. `anti2`, `anti1`
+and `anti0`: an antipoison on the first two members, the first one, none. `-food`: sharks in the free slots of a
+pack with no potion (22 against 20). `pilot-4-chainbare-*`: four of ours in the kit of the squad pilots, with no
+march and no pull.
+
+What these rows show, beyond the spread of one condition:
+
+- **The gang's single-way post costs more.** Four of ours kill 7 of 9 there at 100 Hitpoints a kill, against 9 of 9
+  at 18 on the multi-way post. In the pilots' kit on the single-way post four of ours kill 1 of 9.
+- **A squad needs its bows, and melee alone is worse.** No bow on any member: 7 of 9 at 91 Hitpoints a kill. Melee
+  only: 8 of 9 at 80. Two members with no bow: 9 of 9 at 35.
+- **Three of ours kill fewer in every kit but dragonhide**: 7, 6 and 7 of 9 in `chainbind`, `chainbare` and `rune`.
+- **No single fight option beats the default set.** No freeze, the early special, the eat level, no chase and the
+  wider focus lie inside the spread of the base, or kill fewer.
 
 ### The antipoison
 
-Five of ours in `chainbind` with fewer potions (`extra:clone-squad-5-chainbind-anti*-x1`, hosted run 44262314889,
-seeds 1, 2 and 3). A gang account hunts member i, so the first members are the ones that the gang hits first.
-"Food" puts sharks in the free slots of a pack with no potion: 22 sharks against 20.
+Five of ours in `chainbind` with fewer potions (`squad-5-chainbind-anti*`, seeds 1, 2 and 3). A gang account hunts
+member i, so the first members are the ones that the gang hits first.
 
-| Antipoison on | Kills | Deaths | Hitpoints lost a kill | With the bias | Ticks a run | Raw: Hitpoints lost by seed |
-|---|---|---|---|---|---|---|
-| each of the 5 members | 9 of 9 | 0 | 14 | 16 | 476 | 11, 33, 80 |
-| the first 2 members | 9 of 9 | 0 | 31 | 35 | 481 | 91, 127, 61 |
-| the first 2 members, food | 9 of 9 | 0 | 25 | 28 | 541 | 67, 58, 103 |
-| the first member | 9 of 9 | 0 | 24 | 27 | 480 | 77, 61, 80 |
-| no member | 9 of 9 | 0 | 30 | 34 | 500 | 94, 82, 93 |
-| no member, food | 9 of 9 | 0 | 15 | 17 | 486 | 65, 17, 51 |
+| Antipoison on | Kills | Deaths of ours | Hitpoints lost a kill | Times 1.35 | Hitpoints lost by seed |
+|---|---|---|---|---|---|
+| each of the 5 members | 9 of 9 | 0 | 16 | 22 | 45, 45, 58 |
+| the first 2 members | 9 of 9 | 0 | 19 | 26 | 78, 30, 62 |
+| the first 2 members, food | 9 of 9 | 0 | 28 | 38 | 93, 79, 80 |
+| the first member | 9 of 9 | 0 | 26 | 35 | 75, 79, 79 |
+| no member | 9 of 9 | 0 | 30 | 41 | 94, 49, 124 |
+| no member, food | 9 of 9 | 0 | 16 | 22 | 41, 34, 72 |
 
 - **A squad of five with two potions, one or none kills all three clones with no death: 45 of 45.**
-- **Fewer potions cost about 10 to 17 Hitpoints a kill more**, under one shark. The five rows with fewer potions lie
-  inside each other's spread, so the table does not separate two potions from none.
+- The rows with fewer potions lose up to 14 Hitpoints a kill more than the row with five. That is inside the spread
+  of one condition, so the table does not separate two potions from none.
 - The squad RESULT line holds no count of food and no source of damage. The food of a kill is its Hitpoints lost
-  over 20. In the one-against-three meeting with no cure, poison is 23 of 100 Hitpoints lost on the bench and 29 live.
+  over 20. In the one-against-three meeting with no cure, poison is 27 of 100 Hitpoints lost on the bench and 29 live.
 
 The poison in the content:
 
@@ -375,15 +421,23 @@ The poison in the content:
   and a logout do not: the timer starts again at login (`poison.rs2:69-70`). A dose also gives 5 timer turns with
   no poison, 150 ticks.
 
+### The winner
+
+`scripts/pk-gang-record/squad-candidate.json`: five of ours in the kit rule `gang-chain-bind`, three strung bows or
+more, the multi-way post, every argument of the squad script at its default. On the bench it kills 90 of 90 with no
+death of ours, at 16 to 21 Hitpoints a kill (22 to 28 times 1.35) and 16.5 kills an hour (16.0 with the ticks times
+1.1). It has not run live.
+
 Not measured:
 
-- Lobsters: the two cases end with no fight. The bank trip of the squad takes sharks only.
+- Lobsters: `squad-<n>-chainbind-lobster` ends with no fight. The bank trip of the squad takes sharks only.
 - A style rule for each gang account, and a kill order. The squad script has one option set and takes the lowest health bar.
 - Arrows and runes a kill: the RESULT line of the squad does not hold them.
 - The repeat cycle of 30 minutes: a dead clone does not come back.
 - A hold on the Monastery side of the gang's walk: the clones make no walk to the Monastery.
-- The squad pilots at squad size: the squad script of the pilots had no rule that leaves a refused fight. The first
-  live squad run is the check of the clones at squad size (`scripts/measure/pk-gang-drift.ts squad`).
+- The squad pilots at squad size. Four of ours in the pilots' kit lose 17 Hitpoints a kill on the bench with the
+  march and 1 kill of 9 on the single-way post. The pilots lost 249 and 260. The first live squad run is the check of
+  the clones at squad size (`scripts/measure/pk-gang-drift.ts squad`).
 
 ## Keep it true
 
