@@ -1,7 +1,7 @@
 // Master All-In-One Bot Suite ("Vortex / Sythe Premium Plugin Taxonomy"):
 // Single unified entry point and catalog across all 7 reusable bot categories:
 //   1. skiller   ("Vortex All In One" — 15 skills, gathering, artisan, runecraft, thieving, agility)
-//   2. fighter   ("Auto Fighter"      — general monster combat, melee/ranged training, slayer/drop farming)
+//   2. fighter   ("Auto Fighter"      — general monster combat, melee/ranged training, combat/drop farming)
 //   3. boss      ("PvM Helper"        — King Black Dragon, Taverley Blue Dragons, Fishing Trawler)
 //   4. pvp       ("PK Fighter"        — 1v1 tribrid switches, Wilderness hunt/roam, kit staging, Lava Maze escort)
 //   5. quester   ("Quest Helper"      — all 68 quests, bank-staged quest sweep, quest chains, clue scrolls)

@@ -1,9 +1,13 @@
 import { expect, test } from 'bun:test';
-import { resolve } from 'node:path';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import {
     checkAllRev289Parity,
+    checkCoreAndKnowledgeCodeParity,
     checkDashboardAssetsParity,
     checkKnowledgeParity,
+    checkPlannerRouterPracticeParity,
     checkPrayersList,
     checkQuestReqs,
     checkScriptsParity,
@@ -11,6 +15,7 @@ import {
     checkSpellsList,
     findScriptParityIssues,
     loadRev289Baseline,
+    runRev289Parity,
     validateItemIds,
 } from './check-rev289-parity';
 
@@ -40,9 +45,43 @@ test('packages/dashboard/client-assets/ passes strict Rev 289 parity', () => {
     expect(checkDashboardAssetsParity(repoRoot, baseline)).toEqual([]);
 }, 20_000);
 
-test('owned scripts/ pass strict Rev 289 parity and aggregated check succeeds', () => {
+test('owned scripts/, core, knowledge code, planner, router, and practice pass strict Rev 289 parity', () => {
     expect(checkScriptsParity(repoRoot, baseline, { includeCrossWorker: false })).toEqual([]);
+    expect(checkCoreAndKnowledgeCodeParity(repoRoot, baseline)).toEqual([]);
+    expect(checkPlannerRouterPracticeParity(repoRoot, baseline)).toEqual([]);
     expect(checkAllRev289Parity(repoRoot, { includeCrossWorker: false })).toEqual([]);
+}, 20_000);
+
+test('--strict mode passes with zero errors and zero warnings on the repo and fails when cross-worker holes exist', () => {
+    const strictLive = runRev289Parity({ repoRoot, strict: true });
+    expect(strictLive.ownedIssues).toEqual([]);
+    expect(strictLive.crossIssues).toEqual([]);
+    expect(strictLive.passed).toBe(true);
+
+    // Simulate both open cross-worker warnings failing --strict and cleared strict parity passing on a temp fixture.
+    const tmp = mkdtempSync(join(tmpdir(), 'rev289-strict-'));
+    try {
+        mkdirSync(join(tmp, 'scripts'), { recursive: true });
+        writeFileSync(join(tmp, 'scripts', 'clean.ts'), `const SHARK = { id: 385, count: 1 };\nexport const XP = Math.pow(2, 10 / 10);\n`);
+        const ownedOnly = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
+        expect(ownedOnly).toEqual([]);
+
+        writeFileSync(join(tmp, 'scripts', 'gather-essence.ts'), `const PURE_ESSENCE = 7936;\n`);
+        const crossOnly = checkScriptsParity(tmp, baseline, { includeCrossWorker: false, crossWorkerFiles: new Set(['scripts/gather-essence.ts']) });
+        expect(crossOnly).toEqual([]);
+        const strictCrossIssues = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set(['scripts/gather-essence.ts']) })
+            .filter(i => i.scope === 'cross-worker');
+        expect(strictCrossIssues.length).toBeGreaterThan(0);
+
+        const flaggedWhenCleared = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
+        expect(flaggedWhenCleared.map(i => i.scope)).toEqual(['scripts']);
+
+        writeFileSync(join(tmp, 'scripts', 'gather-essence.ts'), `const RUNE_ESSENCE = { id: 1436, count: 28 };\n`);
+        const cleanAfterFix = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
+        expect(cleanAfterFix).toEqual([]);
+    } finally {
+        rmSync(tmp, { recursive: true, force: true });
+    }
 }, 20_000);
 
 test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS quest leaks while preserving native Market/GE', () => {
@@ -79,9 +118,16 @@ test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS ques
     const geText = `// Grand Exchange seller via MarketClient\nconst COINS = 995;\nconst SHARK = 385;\n`;
     expect(findScriptParityIssues('scripts/ge-ok.ts', geText, baseline)).toEqual([]);
 
-    const badScript = `const PURE_ESSENCE = 7936;\nconst skill = 'Slayer';\nconst spell = 'Teleblock';\nconst prayer = 'Smite';\n`;
-    expect(findScriptParityIssues('scripts/bad.ts', badScript, baseline).length).toBe(4);
+    const badScript = `const PURE_ESSENCE = 7936;\nconst skill = 'Slayer';\nconst spell = 'Teleblock';\nconst prayer = 'Smite';\nconst mine = 'Mine pure essence';\nconst protectSet = new Set([995, 13204]);\nconst hasPe = sum(before, 7936);\n`;
+    expect(findScriptParityIssues('scripts/bad.ts', badScript, baseline).length).toBe(7);
+
+    // Negative comments explaining rev-289 absences must remain allowed.
+    expect(findScriptParityIssues('scripts/ok.ts', `// No Pure essence (7936) or Teleblock in rev 289\n`, baseline)).toEqual([]);
 
     // Explicitly detects post-289 bank-sort keywords in microbot-bank-sort.ts.
     expect(findScriptParityIssues('scripts/microbot-bank-sort.ts', `const p = ['chestplate'];`, baseline).length).toBe(1);
+
+    // Catches structured item/npc/loc IDs, OSRS 2^(L/7) XP curves, and Wave 3B banned phrases (e.g. 75-Def dragonfire shield, salve (e)).
+    expect(findScriptParityIssues('scripts/bad-dfs.ts', `const shield = [/^dragonfire shield$/i, 75];\nconst ammy = 'salve amulet (e)';\nconst x = { id: 11283, count: 1 };\nconst npc = { npcId: 9999 };\nconst loc = { locId: 9999 };\nconst xp = Math.pow(2, level / 7);\n`, baseline).length).toBe(6);
+    expect(findScriptParityIssues('packages/core/src/ok.ts', `const anti = { id: 1540, count: 1, name: 'dragonfire shield' };\nconst salve = { id: 4081, count: 1, name: 'salve amulet' };\nconst fl = 2 ** (level / 10);\nconst absent = ['Lunar Isle', 'Port Phasmatys'];\n`, baseline, 'core')).toEqual([]);
 });

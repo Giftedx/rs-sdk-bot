@@ -45,6 +45,29 @@ const metaOf=(m:TransportMeta):TransportMeta=>({...m.requires?{requires:m.requir
 // ServerOps.MOVECOORD -> CoordGrid.packCoord masks the three packed fields.
 const moved=(from:Coord,o:Offset):Coord=>({x:(from.x+o.dx)&0x3fff,z:(from.z+o.dz)&0x3fff,level:(from.level+o.dlevel)&3});
 
+// Area and quest transports defined outside scripts/ladders+stairs/scripts/.
+export const NAMED_TRANSPORT_FILES: Record<string, string[]> = {
+    'scripts/areas/area_falador/scripts/mining_guild.rs2': ['miningguildladder'],
+    'scripts/areas/monastery/scripts/prayer_guild.rs2': ['monasteryladder'],
+    'scripts/minigames/game_ranging/scripts/ranging_guild_door.rs2': ['ranging_guild_door'],
+    'scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2': ['loc_2188', 'loc_2189', 'domeladderdown'],
+    'scripts/areas/area_mage_arena/scripts/mage_arena.rs2': ['magearena_ladder_to_cellar', 'magearena_ladder_from_cellar'],
+    'scripts/areas/area_wilderness/scripts/lava_maze.rs2': ['loc_1766', 'wildymirrorladdertop2', 'loc_1768'],
+    'scripts/areas/area_gnome/scripts/brimstail_cave.rs2': ['gnome_caveentrance', 'gnome_caveladder'],
+    'scripts/areas/area_karamja/scripts/misc_locs.rs2': ['volcano_entrance', 'climbing_rope2'],
+    'scripts/areas/area_karamja/scripts/karam_dungeon.rs2': [
+        'karam_dungeon_exit',
+        'karam_dungeon_cavestairs',
+        'karam_dungeon_cavestairs_lev2_down',
+        'karam_dungeon_cavestairs2',
+        'karam_dungeon_cavestairs_lev2_down2',
+    ],
+    'scripts/quests/quest_death/scripts/quest_death.rs2': ['death_hermitcave_entrance', 'death_hermitcave_exit'],
+    'scripts/quests/quest_horror/scripts/quest_horror.rs2': ['horror_lighthouse_spiralstairs_base', 'horror_ladder_top2', 'horror_ladder_base2'],
+    'scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2': ['baxtorian_door_waterfall_quest'],
+    'scripts/quests/quest_dragon/scripts/melzars_maze.rs2': ['funladdertop'],
+};
+
 // Small adapters for the pinned dynamic handlers. Every adapter validates the
 // defining source shape; unknown helpers/conditions remain unsupported.
 function special(base:{locName:string;option:string;handler:string;file:string},body:{text:string;line:number}[],text:string,ctx?:TransportContext):{handler?:Handler;classification?:ClassifiedHandler}|null{

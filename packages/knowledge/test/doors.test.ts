@@ -114,3 +114,27 @@ if($leaving = false & $key_used = false) {
 ` }]);
     expect(classifyDoor('hideout', undefined, t)).toEqual({ kind: 'key', need: { whenAxis: false }, trigger: 'phoenix.rs2:1' });
 });
+
+test('real rev-289 door fixes classify Varrock SE gate, Rellekka doors, curtains, reverse double doors, Melzar exit, and gated entrances cleanly', () => {
+    const contentRoot = resolve(import.meta.dir, '../../../vendor/rs-sdk/server/content');
+    const files = [
+        'scripts/doors/scripts/door_procs.rs2',
+        'scripts/doors/scripts/doubledoors.rs2',
+        'scripts/areas/area_varrock/scripts/east_gate.rs2',
+        'scripts/areas/area_vt/scripts/viking_door.rs2',
+        'scripts/areas/area_alkharid/scripts/misc_locs.rs2',
+        'scripts/quests/quest_dragon/scripts/melzars_maze.rs2',
+        'scripts/quests/quest_viking/scripts/quest_viking.rs2',
+        'scripts/areas/area_barbarian_outpost/scripts/outpost_gate.rs2',
+    ];
+    const t = parseTriggers(files.map(file => ({ file, text: readFileSync(resolve(contentRoot, file), 'utf8') })));
+    expect(classifyDoor('guidorgatelclosed', 'varrock_gate', t).kind).toBe('open');
+    expect(classifyDoor('guidorgaterclosed', 'varrock_gate', t).kind).toBe('open');
+    expect(classifyDoor('viking_fur_door', undefined, t).kind).toBe('open');
+    expect(classifyDoor('loc_1528', undefined, t).kind).toBe('open');
+    expect(classifyDoor('posh_doubledoor_reverse_l', 'reverse_door_left_closed', t).kind).toBe('open');
+    expect(classifyDoor('posh_doubledoor_reverse_r', 'reverse_door_right_closed', t).kind).toBe('open');
+    expect(classifyDoor('funexit', undefined, t)).toMatchObject({ kind: 'one_way', need: { whenAxis: false } });
+    expect(classifyDoor('viking_fencegate_l', undefined, t)).toMatchObject({ kind: 'quest', need: { varp: 'viking', minimum: 10 } });
+    expect(classifyDoor('barbariangatel', 'outpost_gate', t)).toMatchObject({ kind: 'quest', need: { varp: 'barcrawl', minimum: 2 } });
+});

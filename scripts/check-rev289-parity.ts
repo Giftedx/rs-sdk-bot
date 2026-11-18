@@ -1,5 +1,5 @@
-// Audits knowledge/, packages/dashboard/client-assets/, and scripts/ for strict RS2 Rev 289
-// (Lost City, January 17, 2005) parity against vendor/rs-sdk/server/content and PlayerStat.ts,
+// Audits knowledge/, packages/dashboard/client-assets/, packages/planner/, packages/router/, packages/practice/, and scripts/
+// for strict RS2 Rev 289 (Lost City, January 17, 2005) parity against vendor/rs-sdk/server/content and PlayerStat.ts,
 // while preserving rs-sdk's built-in engine Market / Grand Exchange.
 // Usage: bun scripts/check-rev289-parity.ts [--strict]
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -24,7 +24,7 @@ export interface Rev289Baseline {
 }
 
 export interface ParityIssue {
-    scope: 'knowledge' | 'client-assets' | 'scripts' | 'cross-worker';
+    scope: 'knowledge' | 'client-assets' | 'scripts' | 'core' | 'planner' | 'router' | 'practice' | 'cross-worker';
     file: string;
     detail: string;
 }
@@ -49,12 +49,90 @@ export const BANNED_OSRS_BANK_TERMS = [
     'chestplate', 'hauberk', 'tassets', 'defender', 'bracers', 'circlet', 'sallet', 'reward casket', "d'hide vamb",
 ] as const;
 
-// Open holes in files owned by other Wave 1 workers; excluded in default mode and enforced with --strict.
-export const KNOWN_CROSS_WORKER_FILES = new Set([
-    'scripts/gather-essence.ts',
-    'scripts/microbot-bank-seller.ts',
-    'scripts/aio.ts',
+export const BANNED_OSRS_ITEM_IDS = new Map<number, string>([
+    [7936, 'Pure essence'],
+    [13204, 'Platinum token'],
+    [4151, 'Abyssal whip'],
+    [4153, 'Granite maul'],
+    [6570, 'Fire cape'],
+    [6585, 'Amulet of fury'],
+    [6685, 'Saradomin brew(4)'],
+    [6731, 'Seers ring'],
+    [6733, 'Archers ring'],
+    [6735, 'Warrior ring'],
+    [6737, 'Berserker ring'],
+    [7462, 'Barrows gloves'],
+    [8850, 'Rune defender'],
+    [10551, 'Fighter torso'],
+    [10828, 'Helm of neitiznot'],
+    [11283, 'Dragonfire shield (OSRS)'],
+    [11284, 'Dragonfire shield (uncharged OSRS)'],
+    [11802, 'Armadyl godsword'],
+    [11804, 'Bandos godsword'],
+    [11806, 'Saradomin godsword'],
+    [11808, 'Zamorak godsword'],
+    [11840, 'Dragon boots'],
+    [12625, 'Stamina potion(4)'],
+    [12695, 'Super combat potion(4)'],
+    [12954, 'Dragon defender'],
 ]);
+
+export const BANNED_OSRS_ITEM_PHRASES = [
+    'pure essence', 'platinum token', 'saradomin brew', 'stamina potion', 'super combat',
+    'abyssal whip', 'granite maul', 'amulet of fury', 'berserker ring', 'seers ring',
+    'archers ring', 'warrior ring', 'fighter torso', 'dragon defender', 'rune defender',
+    'dragon boots', 'barrows gloves', 'helm of neitiznot', 'fire cape', 'void knight', 'godsword',
+    'onyx', 'berserker necklace', 'regen bracelet', 'combat bracelet',
+    'skills necklace', 'ring of stone', 'master wand', 'mages book', "mage's book",
+    'infinity boots', 'infinity robe', 'guthix rest', 'sanfew serum', 'antipoison++',
+    'saradomin sword', 'dark bow', 'zamorakian spear', 'dharok', 'ahrim', 'karil', 'torag',
+    'verac', 'guthan', 'rune crossbow', 'broad bolt', 'diamond bolt', 'dragonstone bolt',
+    'ruby bolt', 'darklight', 'keris', 'salve amulet (e)', 'salve amulet(e)',
+    'salve amulet (i)', 'salve amulet(i)', 'salve amulet(ei)', 'salve amulet (ei)',
+    'void melee', 'void ranger', 'void mage',
+    'proselyte', 'smoke devil', 'kraken', 'cerberus', 'zulrah', 'vorkath', 'god wars',
+    'corporeal beast', 'dagannoth king', 'giant mole', 'marks of grace', 'motherlode',
+    'wintertodt', 'tempoross', 'guardians of the rift', 'kourend', 'zeah', 'varlamore',
+    'prifddinas', 'fossil island', 'port phasmatys', 'piscatoris', 'ectofuntus', 'neitiznot',
+    'jatizso', 'dorgesh-kaan', 'rune pouch', 'looting bag', 'herb sack', 'seed box',
+    'desert treasure', 'recipe for disaster', 'lunar diplomacy', 'dream mentor',
+    "king's ransom", 'ghosts ahoy', 'swan song', 'fairy tale', 'animal magnetism',
+    'slug menace', 'recruitment drive', 'between a rock', 'hand in the sand', "mourning's end",
+] as const;
+
+const BANNED_SKILL_MATCHERS = BANNED_SKILLS.map(sk => ({
+    sk,
+    re: new RegExp(`['"\`]${sk}['"\`]|\\b${sk}_(?:lvl|level|xp)\\b`, 'i'),
+}));
+const BANNED_PRAYER_MATCHERS = BANNED_PRAYERS.map(pr => ({
+    pr,
+    re: pr === 'preserve' ? /['"`]Preserve['"`]/ : new RegExp(`['"\`]${pr.replace(/\s+/g, '\\s+')}['"\`]`, 'i'),
+}));
+const BANNED_SPELL_MATCHERS = BANNED_SPELLS.map(sp => ({
+    sp,
+    re: sp === 'lunar' ? /['"`]Lunar/i : new RegExp(`['"\`]${sp.replace(/\s+/g, '\\s+')}['"\`]`, 'i'),
+}));
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const phraseBody = (p: string) => escapeRegex(p).replace(/\\ /g, '\\s+');
+const BANNED_ITEM_PHRASE_MATCHERS = BANNED_OSRS_ITEM_PHRASES.map(phrase => ({
+    phrase,
+    re: new RegExp(`(?<![a-z0-9])${phraseBody(phrase)}(?![a-z0-9+])`, 'i'),
+}));
+const BANNED_ITEM_PHRASES_COMBINED_RE = new RegExp(
+    `(?<![a-z0-9])(?:${BANNED_OSRS_ITEM_PHRASES.map(phraseBody).join('|')})(?![a-z0-9+])`,
+    'i',
+);
+const BANNED_ITEM_ID_MATCHERS = [...BANNED_OSRS_ITEM_IDS.entries()].map(([id, label]) => ({
+    id,
+    label,
+    re: new RegExp(`\\b${id}\\b`),
+}));
+const BANNED_ITEM_IDS_COMBINED_RE = new RegExp(`\\b(?:${[...BANNED_OSRS_ITEM_IDS.keys()].join('|')})\\b`);
+const COORD_OR_PORT_RE = /\b(?:x|z|worldX|worldZ|port|tick|cap|budget)\b\s*[:=]/;
+const NEGATIVE_COMMENT_RE = /^\s*\/\/.*\b(no|absent|off|not in|never|neither|without)\b/i;
+
+// Cross-worker exclusion set (empty once all Wave 2/3 fixes landed on master); non-empty in tests/local overrides enforces --strict failure.
+export const KNOWN_CROSS_WORKER_FILES = new Set<string>();
 
 function walkExt(dir: string, ext: string, out: string[] = []): string[] {
     if (!existsSync(dir)) return out;
@@ -260,8 +338,50 @@ export function checkKnowledgeParity(repoRoot: string, baseline: Rev289Baseline)
     const rates = readJson('rates.json') as { skill: string }[];
     issues.push(...checkSkillsList([...new Set(rates.map(r => r.skill))], baseline, 'knowledge/rates.json', 'knowledge'));
 
-    const quests = readJson('quests.json') as { xp?: { skill: string }[] }[];
+    const quests = readJson('quests.json') as { varp: string; questPoints?: number; xp?: { skill: string }[] }[];
+    if (quests.length !== 68) {
+        issues.push({ scope: 'knowledge', file: 'knowledge/quests.json', detail: `expected 68 rev-289 quests, found ${quests.length}` });
+    }
+    const totalQp = quests.reduce((sum, q) => sum + (q.questPoints ?? 0), 0);
+    if (totalQp !== 145) {
+        issues.push({ scope: 'knowledge', file: 'knowledge/quests.json', detail: `expected 145 rev-289 quest points, found ${totalQp}` });
+    }
     issues.push(...checkSkillsList([...new Set(quests.flatMap(q => (q.xp ?? []).map(x => x.skill)))], baseline, 'knowledge/quests.json', 'knowledge'));
+
+    const drops = readJson('drops.json') as { trigger: string; always?: { item?: string }[]; rolls?: { item?: string; items?: { item?: string }[] }[] }[];
+    for (const d of drops) {
+        for (const a of d.always ?? []) {
+            if (a.item && a.item !== 'death_drop' && !baseline.objIdsByDebug.has(a.item)) {
+                issues.push({ scope: 'knowledge', file: 'knowledge/drops.json', detail: `${d.trigger}: non-rev-289 or invalid always item "${a.item}"` });
+            }
+        }
+        for (const r of d.rolls ?? []) {
+            if (r.item && r.item !== 'death_drop' && !baseline.objIdsByDebug.has(r.item)) {
+                issues.push({ scope: 'knowledge', file: 'knowledge/drops.json', detail: `${d.trigger}: non-rev-289 or invalid roll item "${r.item}"` });
+            }
+            for (const sub of r.items ?? []) {
+                if (sub.item && sub.item !== 'death_drop' && !baseline.objIdsByDebug.has(sub.item)) {
+                    issues.push({ scope: 'knowledge', file: 'knowledge/drops.json', detail: `${d.trigger}: non-rev-289 or invalid proc item "${sub.item}"` });
+                }
+            }
+        }
+    }
+
+    const shops = readJson('shops.json') as { inv: string; stock?: { item: string }[] }[];
+    for (const sh of shops) {
+        if (/^(?:skill_guide|smithing_|crafting_make_)/i.test(sh.inv)) {
+            issues.push({ scope: 'knowledge', file: 'knowledge/shops.json', detail: `non-shop UI interface inventory "${sh.inv}" leaked into shops.json` });
+        }
+        for (const st of sh.stock ?? []) {
+            if (!baseline.objIdsByDebug.has(st.item)) {
+                issues.push({ scope: 'knowledge', file: 'knowledge/shops.json', detail: `${sh.inv}: stock item "${st.item}" missing in obj.pack` });
+            }
+        }
+    }
+
+    const actions = readJson('actions.json') as { domain: string }[];
+    const actionSkills = [...new Set(actions.filter(a => a.domain.startsWith('skill/')).map(a => a.domain.slice('skill/'.length)).filter(s => s !== 'combat'))];
+    issues.push(...checkSkillsList(actionSkills, baseline, 'knowledge/actions.json', 'knowledge'));
 
     const teleports = readJson('teleports.json') as { teleports: { kind: string; name: string }[] };
     issues.push(...checkSpellsList(teleports.teleports.filter(t => t.kind === 'spell').map(t => t.name), baseline, 'knowledge/teleports.json', 'knowledge'));
@@ -412,59 +532,111 @@ export function checkDashboardAssetsParity(repoRoot: string, baseline: Rev289Bas
     return issues;
 }
 
-/** Audits one script's text for non-rev-289 item IDs, post-289 skills/prayers/spells, or OSRS bank terms. */
-export function findScriptParityIssues(relPath: string, text: string, baseline: Pick<Rev289Baseline, 'maxObjId'>, scope: ParityIssue['scope'] = 'scripts'): ParityIssue[] {
+/** Audits one script's text for non-rev-289 item/NPC/loc IDs, OSRS XP curves, post-289 skills/prayers/spells, or OSRS item/bank terms. */
+export function findScriptParityIssues(
+    relPath: string,
+    text: string,
+    baseline: Pick<Rev289Baseline, 'maxObjId'> & Partial<Pick<Rev289Baseline, 'maxNpcId' | 'maxLocId'>>,
+    scope: ParityIssue['scope'] = 'scripts',
+): ParityIssue[] {
     const issues: ParityIssue[] = [];
     const lines = text.split(/\r?\n/);
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i]!;
         const trimmed = line.trim();
-        const isNegativeComment = /^\s*\/\//.test(line) && /\b(no|absent|off|not in|never|neither)\b/i.test(line);
+        const isComment = trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*');
+        const isNegativeComment = NEGATIVE_COMMENT_RE.test(line) || /^\s*(?:const|let)\s+absent\s*=/.test(line);
+        const caughtIdsOnLine = new Set<number>();
+
+        if (!isComment && (/\bMath\.pow\s*\(\s*2\s*,[^)]*\/\s*7\b/.test(line) || /\b2\s*\*\*\s*\([^)]*\/\s*7\b/.test(line))) {
+            issues.push({ scope, file: `${relPath}:${i + 1}`, detail: 'post-rev-289 OSRS 2^(L/7) XP curve formula' });
+        }
 
         // Flag explicit item-ID declarations above obj.pack max (4088), excluding coords/ticks/ports/interface IDs.
-        const itemIdDecl = /\b(?:PURE_ESSENCE|ITEM_ID|itemId|objId)\s*=\s*(\d{4,6})\b/i.exec(line);
-        if (itemIdDecl && Number(itemIdDecl[1]) > baseline.maxObjId) {
-            issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 item ID ${itemIdDecl[1]} (max obj.pack=${baseline.maxObjId})` });
+        for (const m of line.matchAll(/\b(?:PURE_ESSENCE|ITEM_ID|itemId|objId)\s*[:=]\s*(\d{4,6})\b/gi)) {
+            const id = Number(m[1]);
+            if (id > baseline.maxObjId && !caughtIdsOnLine.has(id)) {
+                caughtIdsOnLine.add(id);
+                issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 item ID ${id} (max obj.pack=${baseline.maxObjId})` });
+            }
+        }
+        for (const m of line.matchAll(/\{\s*id:\s*(\d{4,6})\s*,\s*(?:count|qty|amount)\s*:/gi)) {
+            const id = Number(m[1]);
+            if (id > baseline.maxObjId && !caughtIdsOnLine.has(id)) {
+                caughtIdsOnLine.add(id);
+                issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 structured item ID ${id} (max obj.pack=${baseline.maxObjId})` });
+            }
+        }
+        if (baseline.maxNpcId !== undefined) {
+            for (const m of line.matchAll(/\bnpcId\s*[:=]\s*(\d{4,6})\b/gi)) {
+                const id = Number(m[1]);
+                if (id > baseline.maxNpcId) {
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 npc ID ${id} (max npc.pack=${baseline.maxNpcId})` });
+                }
+            }
+        }
+        if (baseline.maxLocId !== undefined) {
+            for (const m of line.matchAll(/\blocId\s*[:=]\s*(\d{4,6})\b/gi)) {
+                const id = Number(m[1]);
+                if (id > baseline.maxLocId) {
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 loc ID ${id} (max loc.pack=${baseline.maxLocId})` });
+                }
+            }
         }
         const protectSet = /\bprotectedSet\s*=\s*new Set\(\[([^\]]+)\]/i.exec(line);
         if (protectSet) {
             for (const m of protectSet[1]!.matchAll(/\b(\d{4,6})\b/g)) {
-                if (Number(m[1]) > baseline.maxObjId) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 protected item ID ${m[1]} (max obj.pack=${baseline.maxObjId})` });
+                const id = Number(m[1]);
+                if (id > baseline.maxObjId) {
+                    caughtIdsOnLine.add(id);
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 protected item ID ${id} (max obj.pack=${baseline.maxObjId})` });
+                }
+            }
+        }
+        // Flag known post-289 OSRS item IDs in item-helper calls or non-coord ID references.
+        if (BANNED_ITEM_IDS_COMBINED_RE.test(line)) {
+            for (const m of line.matchAll(/\b(?:sum|has|hasItem|invCount|bankCount|itemCount)\s*\([^)]*\b(\d{4,5})\b/g)) {
+                const id = Number(m[1]);
+                if (id > baseline.maxObjId && !caughtIdsOnLine.has(id) && BANNED_OSRS_ITEM_IDS.has(id)) {
+                    caughtIdsOnLine.add(id);
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 item ID ${id} (${BANNED_OSRS_ITEM_IDS.get(id)})` });
+                }
+            }
+            if (!isNegativeComment && !COORD_OR_PORT_RE.test(line)) {
+                for (const { id, label, re } of BANNED_ITEM_ID_MATCHERS) {
+                    if (!caughtIdsOnLine.has(id) && re.test(line)) {
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 item ID ${id} (${label})` });
+                    }
                 }
             }
         }
 
-        // Flag post-289 skills in quoted skill strings, skill_* keys, or taxonomy comments.
+        // Flag post-289 skills, item phrases, prayers, and spells in runtime literals or non-negated lines.
         if (!isNegativeComment) {
-            for (const sk of BANNED_SKILLS) {
-                const isQuoted = new RegExp(`['"\`]${sk}['"\`]|\\b${sk}_(?:lvl|level|xp)\\b`, 'i').test(line);
-                const isTaxonomy = sk === 'slayer' && /\bslayer\/drop\b/i.test(line);
-                if (isQuoted || isTaxonomy) {
+            for (const { sk, re } of BANNED_SKILL_MATCHERS) {
+                if (re.test(line) || (sk === 'slayer' && /\bslayer\/drop\b/i.test(line))) {
                     issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 skill "${sk}" in ${trimmed.slice(0, 80)}` });
                 }
             }
-        }
-
-        // Flag post-289 prayers and spells in runtime literals or non-negated lines.
-        if (!isNegativeComment) {
-            for (const pr of BANNED_PRAYERS) {
-                if (pr === 'preserve') {
-                    if (/['"`]Preserve['"`]/.test(line)) issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 prayer literal "Preserve"` });
-                    continue;
-                }
-                if (new RegExp(`['"\`]${pr.replace(/\s+/g, '\\s+')}['"\`]`, 'i').test(line)) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 prayer "${pr}"` });
+            if (BANNED_ITEM_PHRASES_COMBINED_RE.test(line)) {
+                for (const { phrase, re } of BANNED_ITEM_PHRASE_MATCHERS) {
+                    if (re.test(line)) {
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 item phrase "${phrase}" in ${trimmed.slice(0, 80)}` });
+                    }
                 }
             }
-            for (const sp of BANNED_SPELLS) {
-                if (sp === 'lunar') {
-                    if (/['"`]Lunar/i.test(line)) issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 spellbook "${sp}"` });
-                    continue;
+            if (/\bdragonfire\s+shield\b[^\n]*\b75\b/i.test(line)) {
+                issues.push({ scope, file: `${relPath}:${i + 1}`, detail: 'post-rev-289 75-Defence Dragonfire shield reference (Rev 289 Dragonfire shield is 1-Def antidragonbreathshield)' });
+            }
+            for (const { pr, re } of BANNED_PRAYER_MATCHERS) {
+                if (re.test(line)) {
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: pr === 'preserve' ? 'post-rev-289 prayer literal "Preserve"' : `post-rev-289 prayer "${pr}"` });
                 }
-                if (new RegExp(`['"\`]${sp.replace(/\s+/g, '\\s+')}['"\`]`, 'i').test(line)) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 spell "${sp}"` });
+            }
+            for (const { sp, re } of BANNED_SPELL_MATCHERS) {
+                if (re.test(line)) {
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: sp === 'lunar' ? 'post-rev-289 spellbook "lunar"' : `post-rev-289 spell "${sp}"` });
                 }
             }
         }
@@ -482,9 +654,15 @@ export function findScriptParityIssues(relPath: string, text: string, baseline: 
 }
 
 /** Audits non-test script files under scripts/ against the Rev 289 baseline. */
-export function checkScriptsParity(repoRoot: string, baseline: Rev289Baseline, opts: { includeCrossWorker?: boolean } = {}): ParityIssue[] {
+export function checkScriptsParity(
+    repoRoot: string,
+    baseline: Rev289Baseline,
+    opts: { includeCrossWorker?: boolean; crossWorkerFiles?: ReadonlySet<string> } = {},
+): ParityIssue[] {
     const issues: ParityIssue[] = [];
+    const crossFiles = opts.crossWorkerFiles ?? KNOWN_CROSS_WORKER_FILES;
     const scriptsRoot = join(repoRoot, 'scripts');
+    if (!existsSync(scriptsRoot)) return issues;
     const walk = (dir: string) => {
         for (const f of readdirSync(dir).sort()) {
             const p = join(dir, f);
@@ -492,7 +670,7 @@ export function checkScriptsParity(repoRoot: string, baseline: Rev289Baseline, o
             if (!f.endsWith('.ts') || f.endsWith('.test.ts')) continue;
             const rel = relative(repoRoot, p).replace(/\\/g, '/');
             if (rel === 'scripts/check-rev289-parity.ts') continue;
-            const isCross = KNOWN_CROSS_WORKER_FILES.has(rel);
+            const isCross = crossFiles.has(rel);
             if (isCross && !opts.includeCrossWorker) continue;
             issues.push(...findScriptParityIssues(rel, readFileSync(p, 'utf8'), baseline, isCross ? 'cross-worker' : 'scripts'));
         }
@@ -501,26 +679,147 @@ export function checkScriptsParity(repoRoot: string, baseline: Rev289Baseline, o
     return issues;
 }
 
-/** Runs all Rev 289 parity checks across knowledge/, packages/dashboard/client-assets/, and scripts/. */
-export function checkAllRev289Parity(repoRoot = resolve(import.meta.dir, '..'), opts: { includeCrossWorker?: boolean } = {}): ParityIssue[] {
+/** Audits packages/core/src/, packages/knowledge/src/, and packages/dashboard/gen-*.ts against Rev 289 parity. */
+export function checkCoreAndKnowledgeCodeParity(repoRoot: string, baseline: Rev289Baseline): ParityIssue[] {
+    const issues: ParityIssue[] = [];
+    for (const [sub, scope] of [['core/src', 'core'], ['knowledge/src', 'knowledge']] as const) {
+        const dir = join(repoRoot, 'packages', sub);
+        if (!existsSync(dir)) continue;
+        for (const p of walkExt(dir, '.ts')) {
+            if (p.endsWith('.test.ts') || p.endsWith('.d.ts')) continue;
+            const rel = relative(repoRoot, p).replace(/\\/g, '/');
+            issues.push(...findScriptParityIssues(rel, readFileSync(p, 'utf8'), baseline, scope));
+        }
+    }
+    const dashDir = join(repoRoot, 'packages', 'dashboard');
+    if (existsSync(dashDir)) {
+        for (const f of readdirSync(dashDir).sort()) {
+            if (!/^gen-.*\.ts$/.test(f) || f.endsWith('.test.ts')) continue;
+            const rel = `packages/dashboard/${f}`;
+            issues.push(...findScriptParityIssues(rel, readFileSync(join(dashDir, f), 'utf8'), baseline, 'client-assets'));
+        }
+    }
+    return issues;
+}
+
+/** Audits packages/planner/, packages/router/, and packages/practice/src/ (.ts and .json) against Rev 289 parity. */
+export function checkPlannerRouterPracticeParity(repoRoot: string, baseline: Rev289Baseline): ParityIssue[] {
+    const issues: ParityIssue[] = [];
+    const targets: { dir: string; scope: 'planner' | 'router' | 'practice' }[] = [
+        { dir: join(repoRoot, 'packages', 'planner'), scope: 'planner' },
+        { dir: join(repoRoot, 'packages', 'router'), scope: 'router' },
+        { dir: join(repoRoot, 'packages', 'practice', 'src'), scope: 'practice' },
+    ];
+    for (const { dir, scope } of targets) {
+        if (!existsSync(dir)) continue;
+        for (const p of walkExt(dir, '.ts')) {
+            if (p.endsWith('.test.ts')) continue;
+            const rel = relative(repoRoot, p).replace(/\\/g, '/');
+            issues.push(...findScriptParityIssues(rel, readFileSync(p, 'utf8'), baseline, scope));
+        }
+        for (const p of walkExt(dir, '.json')) {
+            const rel = relative(repoRoot, p).replace(/\\/g, '/');
+            let data: unknown;
+            try { data = JSON.parse(readFileSync(p, 'utf8')); } catch { continue; }
+            const scanJson = (v: unknown, jsonPath: string) => {
+                if (Array.isArray(v)) {
+                    v.forEach((x, idx) => {
+                        if (typeof x === 'number' && /(?:^|\.)items$/i.test(jsonPath) && !baseline.objById.has(x)) {
+                            issues.push({ scope, file: `${rel}:${jsonPath}[${idx}]`, detail: `non-rev-289 item ID ${x}` });
+                        } else {
+                            scanJson(x, `${jsonPath}[${idx}]`);
+                        }
+                    });
+                    return;
+                }
+                if (v && typeof v === 'object') {
+                    const o = v as Record<string, unknown>;
+                    if (typeof o.skill === 'string' && !baseline.skills.has(o.skill.toLowerCase())) {
+                        issues.push({ scope, file: `${rel}:${jsonPath}.skill`, detail: `non-rev-289 skill "${o.skill}"` });
+                    }
+                    if (o.skills && typeof o.skills === 'object' && !Array.isArray(o.skills)) {
+                        for (const sk of Object.keys(o.skills)) {
+                            if (!baseline.skills.has(sk.toLowerCase())) {
+                                issues.push({ scope, file: `${rel}:${jsonPath}.skills`, detail: `non-rev-289 skill "${sk}"` });
+                            }
+                        }
+                    }
+                    for (const key of ['itemId', 'objId'] as const) {
+                        if (typeof o[key] === 'number' && !baseline.objById.has(o[key] as number)) {
+                            issues.push({ scope, file: `${rel}:${jsonPath}.${key}`, detail: `non-rev-289 item ID ${o[key]}` });
+                        }
+                    }
+                    if (typeof o.npcId === 'number' && !baseline.npcById.has(o.npcId)) {
+                        issues.push({ scope, file: `${rel}:${jsonPath}.npcId`, detail: `non-rev-289 npc ID ${o.npcId}` });
+                    }
+                    if (typeof o.locId === 'number' && !baseline.locById.has(o.locId)) {
+                        issues.push({ scope, file: `${rel}:${jsonPath}.locId`, detail: `non-rev-289 loc ID ${o.locId}` });
+                    }
+                    for (const [k, val] of Object.entries(o)) scanJson(val, jsonPath ? `${jsonPath}.${k}` : k);
+                } else if (typeof v === 'string' && BANNED_ITEM_PHRASES_COMBINED_RE.test(v)) {
+                    for (const { phrase, re } of BANNED_ITEM_PHRASE_MATCHERS) {
+                        if (re.test(v)) {
+                            issues.push({ scope, file: `${rel}:${jsonPath}`, detail: `post-rev-289 item phrase "${phrase}"` });
+                        }
+                    }
+                }
+            };
+            scanJson(data, '');
+        }
+    }
+    return issues;
+}
+
+/** Runs all Rev 289 parity checks across knowledge/, client-assets/, packages/{core,knowledge,dashboard,planner,router,practice}/, and scripts/. */
+export function checkAllRev289Parity(
+    repoRoot = resolve(import.meta.dir, '..'),
+    opts: { includeCrossWorker?: boolean; crossWorkerFiles?: ReadonlySet<string> } = {},
+): ParityIssue[] {
     const baseline = loadRev289Baseline(repoRoot);
     return [
         ...checkKnowledgeParity(repoRoot, baseline),
         ...checkDashboardAssetsParity(repoRoot, baseline),
+        ...checkCoreAndKnowledgeCodeParity(repoRoot, baseline),
+        ...checkPlannerRouterPracticeParity(repoRoot, baseline),
         ...checkScriptsParity(repoRoot, baseline, opts),
     ];
 }
 
+/** Runs Rev 289 parity and computes strict/default pass status across owned errors and cross-worker warnings. */
+export function runRev289Parity(opts: {
+    repoRoot?: string;
+    strict?: boolean;
+    crossWorkerFiles?: ReadonlySet<string>;
+} = {}): {
+    baseline: Rev289Baseline;
+    ownedIssues: ParityIssue[];
+    crossIssues: ParityIssue[];
+    passed: boolean;
+} {
+    const repoRoot = opts.repoRoot ?? resolve(import.meta.dir, '..');
+    const baseline = loadRev289Baseline(repoRoot);
+    const ownedIssues = [
+        ...checkKnowledgeParity(repoRoot, baseline),
+        ...checkDashboardAssetsParity(repoRoot, baseline),
+        ...checkCoreAndKnowledgeCodeParity(repoRoot, baseline),
+        ...checkPlannerRouterPracticeParity(repoRoot, baseline),
+        ...checkScriptsParity(repoRoot, baseline, { includeCrossWorker: false, crossWorkerFiles: opts.crossWorkerFiles }),
+    ];
+    const crossIssues = checkScriptsParity(repoRoot, baseline, {
+        includeCrossWorker: true,
+        crossWorkerFiles: opts.crossWorkerFiles,
+    }).filter(i => i.scope === 'cross-worker');
+    const passed = ownedIssues.length === 0 && (!opts.strict || crossIssues.length === 0);
+    return { baseline, ownedIssues, crossIssues, passed };
+}
+
 if (import.meta.main) {
     const strict = process.argv.includes('--strict');
-    const baseline = loadRev289Baseline();
-    const ownedIssues = checkAllRev289Parity(undefined, { includeCrossWorker: false });
-    const crossIssues = checkScriptsParity(resolve(import.meta.dir, '..'), baseline, { includeCrossWorker: true })
-        .filter(i => i.scope === 'cross-worker');
+    const { baseline, ownedIssues, crossIssues, passed } = runRev289Parity({ strict });
 
     console.log(`rev289-parity baseline: obj=${baseline.objById.size} (max ${baseline.maxObjId}), npc=${baseline.npcById.size} (max ${baseline.maxNpcId}), loc=${baseline.locById.size} (max ${baseline.maxLocId}), skills=${baseline.skills.size}, prayers=${baseline.prayers.size}, spells=${baseline.spells.size}`);
     for (const issue of ownedIssues) console.error(`[FAIL:${issue.scope}] ${issue.file}: ${issue.detail}`);
     for (const issue of crossIssues) console.warn(`[CROSS-WORKER] ${issue.file}: ${issue.detail}`);
-    console.log(`rev289-parity: ${ownedIssues.length} owned error(s), ${crossIssues.length} cross-worker warning(s)`);
-    if (ownedIssues.length > 0 || (strict && crossIssues.length > 0)) process.exit(1);
+    console.log(`rev289-parity: ${ownedIssues.length} owned error(s), ${crossIssues.length} cross-worker warning(s)${strict ? ' [strict]' : ''}`);
+    if (!passed) process.exit(1);
 }

@@ -14555,7 +14555,10 @@
    },
    "source": "scripts/generated/quest-arena.ts",
    "effects": {
-    "xp": {},
+    "xp": {
+     "attack": 304375,
+     "thieving": 54375
+    },
     "quests": [
      "Fight Arena"
     ]
@@ -15469,7 +15472,10 @@
    },
    "source": "scripts/generated/quest-elemental.ts",
    "effects": {
-    "xp": {},
+    "xp": {
+     "crafting": 125000,
+     "smithing": 125000
+    },
     "quests": [
      "Elemental Workshop"
     ]
@@ -15520,7 +15526,9 @@
    },
    "source": "scripts/generated/quest-elena.ts",
    "effects": {
-    "xp": {},
+    "xp": {
+     "mining": 60625
+    },
     "quests": [
      "Plague City"
     ]
@@ -15614,7 +15622,9 @@
    },
    "source": "scripts/generated/quest-fluffs.ts",
    "effects": {
-    "xp": {},
+    "xp": {
+     "cooking": 38125
+    },
     "quests": [
      "Gertrude's Cat"
     ]
@@ -15657,7 +15667,9 @@
    },
    "source": "scripts/generated/quest-gobdip.ts",
    "effects": {
-    "xp": {},
+    "xp": {
+     "crafting": 5000
+    },
     "quests": [
      "Goblin Diplomacy"
     ]
@@ -16032,7 +16044,11 @@
    },
    "source": "scripts/generated/quest-horror.ts",
    "effects": {
-    "xp": {},
+    "xp": {
+     "magic": 116550,
+     "strength": 116550,
+     "ranged": 116550
+    },
     "quests": [
      "Horror from the Deep"
     ]
@@ -16677,7 +16693,9 @@
    },
    "source": "scripts/generated/quest-priestperil.ts",
    "effects": {
-    "xp": {},
+    "xp": {
+     "prayer": 35150
+    },
     "quests": [
      "Priest in Peril"
     ]
@@ -87829,8 +87847,10 @@
    "id": "gobdip",
    "name": "Goblin Diplomacy",
    "script": "scripts/generated/quest-gobdip.ts",
-   "xp": {},
-   "source": "scripts/generated/quest-gobdip.ts",
+   "xp": {
+    "crafting": 5000
+   },
+   "source": "scripts/general/scripts/quests.rs2:128",
    "requirements": {
     "levels": {},
     "items": {
@@ -87867,7 +87887,9 @@
    "id": "fluffs",
    "name": "Gertrude's Cat",
    "script": "scripts/generated/quest-fluffs.ts",
-   "xp": {},
+   "xp": {
+    "cooking": 38125
+   },
    "source": "scripts/general/scripts/quests.rs2:134",
    "requirements": {
     "levels": {},
@@ -88108,8 +88130,11 @@
    "id": "elemental",
    "name": "Elemental Workshop",
    "script": "scripts/generated/quest-elemental.ts",
-   "xp": {},
-   "source": "scripts/generated/quest-elemental.ts",
+   "xp": {
+    "crafting": 125000,
+    "smithing": 125000
+   },
+   "source": "scripts/general/scripts/quests.rs2:257",
    "requirements": {
     "levels": {
      "mining": 20,
@@ -88359,7 +88384,10 @@
    "id": "arena",
    "name": "Fight Arena",
    "script": "scripts/generated/quest-arena.ts",
-   "xp": {},
+   "xp": {
+    "attack": 304375,
+    "thieving": 54375
+   },
    "source": "scripts/general/scripts/quests.rs2:209",
    "requirements": {
     "levels": {},
@@ -88448,7 +88476,7 @@
    "name": "Clock Tower",
    "script": "scripts/generated/quest-cog.ts",
    "xp": {},
-   "source": "scripts/generated/quest-cog.ts",
+   "source": "scripts/general/scripts/quests.rs2:227",
    "requirements": {
     "levels": {},
     "items": {
@@ -88576,8 +88604,10 @@
    "id": "elena",
    "name": "Plague City",
    "script": "scripts/generated/quest-elena.ts",
-   "xp": {},
-   "source": "scripts/generated/quest-elena.ts",
+   "xp": {
+    "mining": 60625
+   },
+   "source": "scripts/general/scripts/quests.rs2:173",
    "requirements": {
     "levels": {},
     "items": {
@@ -88679,8 +88709,12 @@
    "id": "horror",
    "name": "Horror from the Deep",
    "script": "scripts/generated/quest-horror.ts",
-   "xp": {},
-   "source": "scripts/generated/quest-horror.ts",
+   "xp": {
+    "magic": 116550,
+    "strength": 116550,
+    "ranged": 116550
+   },
+   "source": "scripts/general/scripts/quests.rs2:287",
    "requirements": {
     "levels": {},
     "items": {
@@ -88835,7 +88869,7 @@
    "name": "Monkey Madness",
    "script": "scripts/generated/quest-mm.ts",
    "xp": {},
-   "source": "scripts/generated/quest-mm.ts",
+   "source": "scripts/general/scripts/quests.rs2:293",
    "requirements": {
     "levels": {},
     "items": {
@@ -88881,7 +88915,9 @@
    "id": "priestperil",
    "name": "Priest in Peril",
    "script": "scripts/generated/quest-priestperil.ts",
-   "xp": {},
+   "xp": {
+    "prayer": 35150
+   },
    "source": "scripts/general/scripts/quests.rs2:260",
    "requirements": {
     "levels": {},
@@ -89169,7 +89205,7 @@
     "attack": 343750,
     "strength": 343750
    },
-   "source": "scripts/generated/waterfall.ts",
+   "source": "scripts/general/scripts/quests.rs2:188",
    "requirements": {
     "levels": {},
     "items": {
