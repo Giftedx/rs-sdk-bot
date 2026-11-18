@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794986551831-mmthv2350-woodpecker-earthrune",
+ "account": "mmthv2350",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 252,
+ "claim": "38922bf2-8676-4237-aa6d-4822276be2f7",
+ "count": 0,
+ "ok": false,
+ "at": 1794986789454,
+ "detail": "trade claimed"
+}
