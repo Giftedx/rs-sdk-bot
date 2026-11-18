@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005875630-nabtheknob-pickpockdick-runechainbody",
+ "account": "NabTheKnob",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "f3960fa1-ddf1-4794-b056-6f674ae19322",
+ "count": 0,
+ "ok": false,
+ "at": 1795005954569,
+ "detail": "trade claimed"
+}

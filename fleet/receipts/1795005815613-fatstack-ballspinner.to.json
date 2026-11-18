@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005815613-fatstack-ballspinner",
+ "account": "Ballspinner",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 38358,
+ "claim": "d7472f29-aa00-458f-872e-91d6fc5b5311",
+ "count": 0,
+ "ok": false,
+ "at": 1795005959958,
+ "detail": "trade claimed"
+}

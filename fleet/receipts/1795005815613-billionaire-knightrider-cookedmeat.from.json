@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005815613-billionaire-knightrider-cookedmeat",
+ "account": "Billionaire",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "21d0e4ce-3bed-4bcc-bcac-b24dffa92227",
+ "count": 0,
+ "ok": false,
+ "at": 1795005964829,
+ "detail": "trade claimed"
+}
