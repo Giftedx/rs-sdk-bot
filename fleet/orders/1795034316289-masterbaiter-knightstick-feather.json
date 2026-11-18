@@ -1,0 +1,22 @@
+{
+ "id": "1795034316289-masterbaiter-knightstick-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Knightstick",
+ "item": "Feather",
+ "count": 50,
+ "start": 1795034316289,
+ "end": 1795036716289,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
