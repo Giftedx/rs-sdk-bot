@@ -1352,3 +1352,34 @@ test('the ring mould shop step selects the Dommik mould line with the real selec
     const t = catalogue().find(x => x.id === 'shop-ring-mould')!;
     expect(selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^ring mould$']);
 });
+
+import { QUEST_DEMAND_ROWS, questDemand } from '../packages/planner/src/autopilot';
+test('each quest demand row dispatches to the sweep, has a bench case that can pass, and asks what the journal and the practice pack ask', () => {
+    const cases = new Map(benchCases().map(c => [c.key, c]));
+    const items: { id: number; name: string; debugname?: string }[] = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    const name = (id: number) => norm(items.find(i => i.id === id && !/^cert_/.test(i.debugname ?? ''))!.name);
+    const reqs: Record<string, { s?: [string, number][]; q?: [string][]; qp?: number[] }> = JSON.parse(readFileSync(resolve(import.meta.dir, '../packages/dashboard/client-assets/quest-reqs.json'), 'utf8'));
+    const templates = new Map(questDemand().map(t => [t.id, t]));
+    expect(templates.size).toBe(QUEST_DEMAND_ROWS.length);
+    // Hitpoints 90 stands only where the saved practice run fell under 70 Hitpoints with 99 in every skill.
+    expect(QUEST_DEMAND_ROWS.filter(r => r.skills.Hitpoints).map(r => r.slug).sort()).toEqual(['crest', 'hero', 'itwatchtower', 'legends', 'regicide', 'upass', 'viking', 'zombiequeen']);
+    for (const row of QUEST_DEMAND_ROWS) {
+        const t = templates.get(`quest-${row.slug}`)!, step = resolveAioStep('quester', t.args!.slice(1));
+        expect(`${row.slug} ${step.script} ${step.args}`).toBe(`${row.slug} scripts/quest-sweep.ts ${row.slug}`);
+        expect(existsSync(resolve(import.meta.dir, '..', t.worker!))).toBe(true);
+        expect(`${row.slug} ${cases.has(t.aio!)}`).toBe(`${row.slug} true`);
+        expect(cases.get(t.aio!)!.known).toBeUndefined();
+        // The journal's own asks: its skills (and Hitpoints 90 where the practice run fell low), its quests and quest points.
+        const journal = reqs[row.name]!, skills: Record<string, number> = Object.fromEntries((journal?.s ?? []).map(([s, l]) => [s, l]));
+        expect(`${row.slug} ${JSON.stringify(Object.entries(row.skills).filter(([s]) => s !== 'Hitpoints' || skills.Hitpoints !== undefined).sort())}`)
+            .toBe(`${row.slug} ${JSON.stringify(Object.entries(skills).sort())}`);
+        expect(row.quests).toEqual((journal?.q ?? []).map(q => q[0]));
+        expect(row.questPoints).toBe(journal?.qp?.[0]);
+        // The practice pack: every item of the run's inventory and bank, with its food as meals.
+        const pack: Record<string, number> = {}; let meals = 0;
+        const preset = presetFor(row.slug);
+        for (const i of [...(preset.inventory ?? []), ...(preset.bank ?? [])]) { if (MEALS.includes(i.id) || (row.slug === 'regicide' && name(i.id) === 'shark')) meals += i.count; else pack[name(i.id)] = (pack[name(i.id)] ?? 0) + i.count; }
+        expect(`${row.slug} ${JSON.stringify(Object.entries(row.items).map(([i, n]) => [norm(i), n]).sort())}`).toBe(`${row.slug} ${JSON.stringify(Object.entries(pack).sort())}`);
+        expect(`${row.slug} ${row.meals}`).toBe(`${row.slug} ${meals}`);
+    }
+});
