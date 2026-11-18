@@ -1,0 +1,22 @@
+{
+ "id": "1795006115709-masterbaiter-mineyourbiz-woodenshield",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "MineYourBiz",
+ "item": "Wooden shield",
+ "count": 1,
+ "start": 1795006115709,
+ "end": 1795008515709,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
