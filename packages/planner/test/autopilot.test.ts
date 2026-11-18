@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
@@ -3044,7 +3046,7 @@ test('a claim authority timeout is a drain, like an unavailable authority', () =
     expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
 });
 
-import { goalNeeds, QUEST_DEMAND, QUEST_DEMAND_BAND, QUEST_DEMAND_PLACES, QUEST_DEMAND_ROWS, questDemand, questResource, questsDoneIn } from '../src/autopilot';
+import { QUEST_CAP_FACTOR, QUEST_CAP_MIN, questKitCaps, goalNeeds, QUEST_DEMAND, QUEST_DEMAND_BAND, QUEST_DEMAND_PLACES, QUEST_DEMAND_ROWS, questDemand, questResource, questsDoneIn } from '../src/autopilot';
 describe('quest demand: the quests no owned account has done', () => {
     const MAXED = { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99, Thieving: 99, Agility: 99, Cooking: 99, Fletching: 99, Crafting: 99, Mining: 99, Smithing: 99 };
     const row = (slug: string) => QUEST_DEMAND_ROWS.find(q => q.slug === slug)!;
@@ -3118,6 +3120,41 @@ describe('quest demand: the quests no owned account has done', () => {
         expect(rows(1).length).toBe(1);
         expect(rows(5).length).toBe(1);
         expect(rows(5)[0]).toMatchObject({ names: ['law rune'], short: 1, account: 'soldier0' });
+    });
+
+    test('the pack items that the exchange can sell have a price cap of four times their base value, and no cap changes', () => {
+        const content = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../../../knowledge/items.json'), 'utf8')) as { name: string; debugname?: string; cost: number; tradeable?: boolean }[])
+            .filter(i => !/^cert_/.test(i.debugname ?? '')).map(i => [norm(i.name), i] as const).reverse());
+        // Existing caps stand.
+        expect([KIT_PRICE_CAPS['nature rune'], KIT_PRICE_CAPS.feather, KIT_PRICE_CAPS['fire rune']]).toEqual([800, 20, 160]);
+        const items = new Set(QUEST_DEMAND_ROWS.flatMap(q => Object.keys(q.items).map(norm)));
+        for (const item of items) {
+            const found = content.get(item);
+            if (item === 'coin' || !found?.tradeable || found.cost <= 0) { expect([item, KIT_PRICE_CAPS[item]]).toEqual([item, KIT_PRICE_CAPS[item]]); continue; }
+            // Either a cap of the rule or one that was set by hand before.
+            expect([item, KIT_PRICE_CAPS[item]! >= Math.min(QUEST_CAP_MIN, KIT_PRICE_CAPS[item]!)]).toEqual([item, true]);
+        }
+        expect(KIT_PRICE_CAPS.knife).toBe(Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get('knife')!.cost));
+        expect(KIT_PRICE_CAPS.rope).toBe(Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get('rope')!.cost));
+        // A second call adds nothing: every item already has its cap.
+        expect(questKitCaps()).toEqual({});
+    });
+
+    test('an account without a quest pack buys it within the caps, one account for a quest and at most QUEST_DEMAND_PLACES quests at a time', () => {
+        const market: Market = Object.fromEntries([...new Set(QUEST_DEMAND_ROWS.flatMap(q => Object.keys(q.items).map(norm)).concat(['shark', 'lobster']))]
+            .filter(item => item in KIT_PRICE_CAPS).map((item, i) => [item, { id: 1000 + i, name: item, limit: KIT_PRICE_CAPS[item]! }]));
+        const bare = (name: string): Acct => ({ ...acct(name, { ...MAXED }, { coin: 5_000_000 }), quests: new Set(['lost city']) });
+        const out = run(['A', 'B', 'C', 'D'].map(bare), { market });
+        const buys = out.map(x => x.template?.id).filter((t): t is string => !!t && t.startsWith(KIT_BUY + 'quest-'));
+        // Elemental Workshop first (the shortest practice run): its whole pack is on the market.
+        expect(buys[0]).toBe(KIT_BUY + 'quest-elemental');
+        expect(new Set(buys).size).toBe(buys.length);
+        expect(buys.length).toBeLessThanOrEqual(QUEST_DEMAND_PLACES);
+        const first = out.find(x => x.template?.id === KIT_BUY + 'quest-elemental')!;
+        const ids = first.template!.args!.map(a => Number(a.match(/ITEM_ID=(\d+)/)![1]));
+        // One line for each pack item, the food as one line; every line is under its cap.
+        expect(ids.length).toBeGreaterThanOrEqual(Object.keys(QUEST_DEMAND_ROWS.find(q => q.slug === 'elemental')!.items).length);
+        for (const a of first.template!.args!) expect(Number(a.match(/LIMIT_PRICE=(\d+)/)![1])).toBeLessThanOrEqual(Math.max(...Object.values(KIT_PRICE_CAPS)));
     });
 
     test('the table gives each quest one template with the AIO route of its bench case, in order of practice ticks', () => {
