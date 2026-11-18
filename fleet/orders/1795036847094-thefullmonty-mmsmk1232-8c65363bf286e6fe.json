@@ -1,0 +1,23 @@
+{
+ "id": "1795036847094-thefullmonty-mmsmk1232-8c65363bf286e6fe",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "mmsmk1232",
+ "item": "Shark",
+ "count": 11,
+ "start": 1795036847094,
+ "end": 1795039247094,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
