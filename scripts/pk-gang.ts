@@ -20,6 +20,7 @@ import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT } from
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
+import { tapFeed } from './measure/pk-gang-collect';
 
 // The attack animations of a dragon dagger (content pack/seq.pack): the lunge, the hack and the special.
 const DAGGER_ATTACKS = ['human_ddagger_lunge', 'human_ddagger_hack', 'puncture'];
@@ -387,9 +388,17 @@ if (import.meta.main) {
     // SPAR_PICKUP=1: after each kill our account takes what lies within 3 tiles: its own ammo (read before the meeting)
     // and PICKUP_ITEMS. A drop lasts 200 ticks (lootdrop.constant), less than a meeting, so the end of one is too late.
     const pickupOf = groups.map(([a]) => { const ammo = (a!.sdk.getEquipment?.() ?? []).find(e => /arrow|bolt/i.test(e.name))?.id; return pickup ? new Set([...(ammo ? [ammo] : []), ...PICKUP_ITEMS]) : undefined; });
+    // SPAR_FEED=<name>: the world feed of the practice engine (a case with WORLD_FEED=true) goes to <name>.feed.jsonl in
+    // the output folder of the bench, with the names of each group in its first line. scripts/measure/pk-gang-fidelity.ts
+    // reads it as it reads a trace of the live gang.
+    const { serverFromEnv } = await import('../packages/core/src/bot');
+    const feedFile = env.SPAR_FEED ? resolve(import.meta.dir, '..', env.BENCH_OUTPUT_DIR ?? '.practice/aio-bench/output', `${env.SPAR_FEED}.feed.jsonl`) : undefined;
+    const stopFeed = feedFile ? tapFeed(`ws://${serverFromEnv(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor', 'rs-sdk', 'bots', bots[0]!, 'bot.env'), 'utf8'))}/worldfeed`, feedFile, { x: 2944, z: 3456, w: 384, h: 384 },
+        { t: 'names', groups: groups.map(([a, ...others]) => ({ ours: a!.name.toLowerCase(), gang: others.map(o => o.name.toLowerCase()) })) }) : undefined;
     const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), (member: number) => options(1, i, member), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 },
         { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1', pickup: pickupOf[i] })));
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: gangProfiles.length ? gangProfiles.join('+') : nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
+    stopFeed?.();
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
         + `picked=${results.map(r => Object.values(r.picked ?? {}).reduce((n, c) => n + c, 0)).join(',')} valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `

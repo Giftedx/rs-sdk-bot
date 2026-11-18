@@ -248,7 +248,8 @@ const cloneFixture = (name: CloneName, mode: CloneMode, x: number, z: number): S
 // One of ours against the clones `names` on the gang's post (scripts/pk-gang.ts): each clone has its own profile.
 const cloneGang = (key: string, kit: string, names: readonly CloneName[], groups: number, args: string[], mode: CloneMode = 'seen', bank?: {id: number; count: number}[]): BenchCase => {
   const size = names.length, c = gangCase(key, kit, 'ganker-dds-skull', groups, GANKER_POST, [`SPAR_B_PROFILES=${names.map(n => cloneProfileName(n, mode)).join('+')}`, ...args], size, undefined, bank);
-  return {...c, companions: c.companions!.map((comp, i) => ((i + 1) % (size + 1) === 0 ? comp : {...comp, presetConfig: cloneFixture(names[(i + 1) % (size + 1) - 1]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
+  // The engine serves the world feed, and the driver writes it beside the output: the instrument of the live record.
+  return {...c, engineEnv: {...c.engineEnv, WORLD_FEED: 'true'}, scriptArgs: [...c.scriptArgs!, `SPAR_FEED=${key.replace(/[^a-z0-9-]/gi, '_')}`], companions: c.companions!.map((comp, i) => ((i + 1) % (size + 1) === 0 ? comp : {...comp, presetConfig: cloneFixture(names[(i + 1) % (size + 1) - 1]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
 };
 // The squad (scripts/pk-squad.ts) against the three clones. The squad script gives every gang account one set of
 // options, so the clones fight with the pooled options of the record; each has its own levels and sharks.
@@ -1009,6 +1010,9 @@ const ROUTE_CASES: BenchCase[] = [
   // The clones of the dagger gang (research/gang-clones.md). The fidelity case: the live meeting of the kit
   // live-walker-iron with the three at the post, as extra:gang-live-check-x1 with each clone in place of ganker-live.
   cloneGang('extra:clone-live-check-x1', 'live-walker-iron', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 'seen', EDGE_BANK),
+  // The same with no antipoison in the pack: in the live meeting our account did not drink its antipoison, and 150
+  // of the 514 Hitpoints that it lost were poison.
+  cloneGang('extra:clone-live-check-noanti-x1', 'live-walker-iron-snare-noanti', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 'seen', EDGE_BANK_SNARE),
   // One of ours in the kit of the squad pilots (rune chainbody, no antipoison) against one clone: the fight that the
   // live split on the walk in gave each of ours.
   ...CLONE_NAMES.map(name => atBank(cloneGang(`extra:clone-solo-${name}-x2`, 'live-walker-iron-rune-chain-bare', [name], 2, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 'seen', [...EDGE_BANK_SNARE, {id: 884, count: 2000}]), GANKER_POST)),
@@ -1016,6 +1020,15 @@ const ROUTE_CASES: BenchCase[] = [
   // clone on its own one of ours: single-way tiles first, then multi-way.
   cloneSquad('extra:clone-3v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
   cloneSquad('extra:clone-4v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
+  // The climb against the clones (research/gang-clones.md, "The climb"): `n` of ours from the Edgeville bank, the
+  // clones hunting them, each clone on its own one of ours. The kits are the ones the accounts hold: rune helm,
+  // chainbody and legs with Bind runes (chainbind) or with no rune and no antipoison (chainbare), full rune with
+  // snare runes (rune), dragonhide (dhide).
+  ...([3, 4, 5, 6] as const).flatMap(n => ([['chainbind', 'live-walker-iron-rune-chain-bind'], ['chainbare', 'live-walker-iron-rune-chain-bare'], ['rune', 'live-walker-iron-snare-rune-nopot'], ['dhide', 'tribrid-snare-dhide']] as const)
+    .map(([tag, kit]) => cloneSquad(`extra:clone-squad-${n}-${tag}-x1`, kit, n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']))),
+  // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
+  // the fewest sharks of the record's range (lean), the most (full).
+  ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),
   // The repeat cycle of one account for 30 game minutes: kill, pick up, bank trip, return, next kill. A clone that
   // walks out comes back from the bank; a dead clone does not come back.
   atBank(cloneGang('extra:clone-cycle-solo-x1', 'live-walker-iron-snare-rune-nopot', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=3000', 'SPAR_TRIPS=6', 'SPAR_PICKUP=1', 'SPAR_B_TRIPS=4', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000', 'SPAR_B_OPTS={"protectItem":false}'], 'seen', EDGE_BANK_SNARE), GANKER_POST),
