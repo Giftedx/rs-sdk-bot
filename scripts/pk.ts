@@ -353,6 +353,9 @@ export type PrayerPlanInput = {
     defencePrayer: boolean;
     protectItem: boolean;
     budget: number;
+    // Packets for prayer set-up when no flick is due. Unset: `budget`. A caller lowers it to keep packets of the same
+    // tick for a step or a style setting; a due flick still uses `budget`.
+    setupBudget?: number;
 };
 export type PrayerPlanResult = { toggles: number[]; didFlick: boolean; nextDrainAt: number; nextFlickAt: number };
 
@@ -411,15 +414,15 @@ export function planPrayerTick(input: PrayerPlanInput): PrayerPlanResult {
         }
     }
 
-    const toggles: number[] = [];
-    if (budget > 0) {
+    const toggles: number[] = [], setupBudget = Math.min(budget, input.setupBudget ?? budget);
+    if (setupBudget > 0) {
         const nextIsMelee = now === nextAttack - 1 && (upcomingStyle === 'melee' || specMeleeLikely);
         const { want, off } = combatPrayers(prayerBase, overhead, nextIsMelee, defencePrayer, protectItem);
         const dropOffensive = offensiveFlick && now < nextAttack - 1 && (now === lastAttackAt + 1 || !nextIsMelee);
         const dropSet = dropOffensive ? new Set([...off, ...OFFENSIVE_MELEE_PRAYERS]) : new Set(off);
         // Priority order on activation: keep overhead active first, then non-overhead boosts.
         const prioritizedWant = [...want].sort((a, b) => keepPrayerPriority(b, overhead) - keepPrayerPriority(a, overhead));
-        let rem = budget;
+        let rem = setupBudget;
         for (const p of prioritizedWant) {
             if (!sim[p] && rem > 0) { toggles.push(p); apply(p); rem--; }
         }
@@ -428,6 +431,24 @@ export function planPrayerTick(input: PrayerPlanInput): PrayerPlanResult {
         }
     }
     return { toggles, didFlick: false, nextDrainAt: drainAt, nextFlickAt: flickAt };
+}
+
+// Ticks to cover `tiles` steps of a melee approach. A running tick covers two tiles and costs at most 134 energy units
+// (the clamped weight limit); under 100 units the account walks, and a walked tick gives back 8 units at Agility 1.
+// `runEnergy` is the reported percent, so its 100 units are the lower bound. A last single tile is a walked tick.
+// Unknown energy counts as none: the walking time is the bound that is never too short.
+export function meleeApproachTicks(tiles: number, runEnergy: number | undefined): number {
+    let left = Math.max(0, tiles), ticks = 0;
+    let units = typeof runEnergy === 'number' && Number.isFinite(runEnergy) ? Math.max(0, Math.min(100, runEnergy)) * 100 : 0;
+    let running = units >= 100;
+    while (left > 0) {
+        const steps = Math.min(left, running ? 2 : 1);
+        left -= steps;
+        ticks++;
+        units = steps === 2 ? Math.max(0, units - 134) : Math.min(10000, units + 8);
+        if (units < 100) running = false;
+    }
+    return ticks;
 }
 
 export function shouldComboEat(opts: {
@@ -1343,8 +1364,29 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
             const flickEvery = o.flickEvery ?? (lastStyle === 'ranged' || upcomingTurn?.style === 'ranged' ? 3 : 4);
             let didFlick = false;
+            const kiteStep = (heldMelee && (o.stepUnderFrozen || o.diagonalFrozen || kiteTiles)) || o.standOff
+                ? pickFrozenKiteTile({
+                    at, target,
+                    stepUnder: heldMelee && !!o.stepUnderFrozen,
+                    diagonal: heldMelee && !o.stepUnderFrozen && !!o.diagonalFrozen,
+                    standOff: o.standOff,
+                    kiteFrozen: heldMelee ? kiteTiles : undefined,
+                    frozen: now < frozenUntil,
+                    canWalkTo: kitePaths ? (wx, wz) => {
+                        const path = kitePaths!.findLongPath(me.level ?? 0, at.x, at.z, wx, wz, 16);
+                        const end = path[path.length - 1];
+                        return !!end && end.x === wx && end.z === wz;
+                    } : undefined,
+                })
+                : null;
+            const skipStandOffMelee = !!o.standOff && !heldMelee && upcomingTurn?.style === 'melee';
+            // The tick holds five packets. A due flick uses them first. Prayer set-up keeps one packet for a due
+            // stand-off step and one for the one-time style setting; the prayers it leaves go out on the next tick.
+            const stepDue = !!kiteStep && !walkingToMelee && !skipStandOffMelee && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2;
+            const styleDue = !walkingToMelee && !rapidSet && !!state.combatStyle && state.combatStyle.styles.length > 1 && state.combatStyle.currentStyle !== 1;
             if (prayers.prayerPoints > 0) {
                 const plan = planPrayerTick({
+                    setupBudget: Math.max(0, budget - Number(stepDue) - Number(styleDue)),
                     now, nextAttack, lastAttackAt, walkingToMelee, prayerBase, overhead,
                     activePrayers: prayers.activePrayers, prayerDrainAt, flickAt, flickEvery,
                     zeroDrainFlick: o.zeroDrainFlick === true,
@@ -1364,26 +1406,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     result.flicks = (result.flicks ?? 0) + 1;
                 }
             }
-            const kiteStep = (heldMelee && (o.stepUnderFrozen || o.diagonalFrozen || kiteTiles)) || o.standOff
-                ? pickFrozenKiteTile({
-                    at, target,
-                    stepUnder: heldMelee && !!o.stepUnderFrozen,
-                    diagonal: heldMelee && !o.stepUnderFrozen && !!o.diagonalFrozen,
-                    standOff: o.standOff,
-                    kiteFrozen: heldMelee ? kiteTiles : undefined,
-                    frozen: now < frozenUntil,
-                    canWalkTo: kitePaths ? (wx, wz) => {
-                        const path = kitePaths!.findLongPath(me.level ?? 0, at.x, at.z, wx, wz, 16);
-                        const end = path[path.length - 1];
-                        return !!end && end.x === wx && end.z === wz;
-                    } : undefined,
-                })
-                : null;
-            const skipStandOffMelee = !!o.standOff && !heldMelee && upcomingTurn?.style === 'melee';
-            if (kiteStep && !walkingToMelee && !skipStandOffMelee && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2) {
-                if (walk(kiteStep.x, kiteStep.z)) { budget--; stepAt = now; }
-            }
-            if (!walkingToMelee && !rapidSet && state.combatStyle && state.combatStyle.styles.length > 1 && state.combatStyle.currentStyle !== 1 && budget > 0) {
+            if (stepDue && budget > 0 && walk(kiteStep!.x, kiteStep!.z)) { budget--; stepAt = now; }
+            if (styleDue && budget > 0) {
                 void sdk.sendSetCombatStyle?.(1);
                 rapidSet = true;
                 budget--;
@@ -1514,7 +1538,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;
             if (vs) vs.done.add(myKey);
-            const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
+            const walkTicks = specStyle === 'melee' ? meleeApproachTicks(cheb(at, target) - 1, me.runEnergy) : 0;
             if (spec.stun) {
                 targetStunnedUntil = Math.max(targetStunnedUntil, now + walkTicks + spec.stun + 1);
                 if (o.stunShare) {
@@ -1629,7 +1653,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         lastStyle = turn.style;
         lastArm = shownStyle !== undefined && turn.style === shownStyle ? 'into' : 'avoid';
         last = turn.index;
-        const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
+        const walkTicks = turn.style === 'melee' ? meleeApproachTicks(cheb(at, target) - 1, me.runEnergy) : 0;
         const delay = turn.style === 'ranged' ? rangedWeaponDelay(o.kit.ranged, rapidSet, names) : turn.style === 'melee' ? meleeWeaponDelay(meleeIds, names) : TURN[turn.style];
         lastAttackAt = now; lastWalkTicks = walkTicks;
         nextAttack = now + walkTicks + delay;
