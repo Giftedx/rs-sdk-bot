@@ -92055,6 +92055,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/bench-stop.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/catalog-integration-proof.ts",
    "intents": [
     "observe"
@@ -92740,6 +92749,15 @@
   },
   {
    "script": "scripts/measure/restore-prayer-entry.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/route-key-parity.ts",
    "intents": [
     "observe"
    ],
