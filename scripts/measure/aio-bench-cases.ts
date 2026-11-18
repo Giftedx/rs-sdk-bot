@@ -1198,6 +1198,10 @@ const ROUTE_CASES: BenchCase[] = [
   ...([['mage', 'mage', 1], ['iban', 'pure-iban', 1], ['god', 'pure-god', 1], ['ranger', 'ranger', 1], ['pureranger', 'pure-ranger', 1], ['pure', 'pure-dds', 1], ['tribrid', 'tribrid-snare', 1],
     ['team3', 'mage+ranger+tribrid-snare', 3], ['team3pure', 'pure-iban+pure-ranger+pure-dds', 3]] as const)
     .map(([tag, kit, n]) => attackerSquad(`extra:attack-${tag}-x1`, kit, n)),
+  // The team against the squad in the state of live run 1 (no prayer points), and a team of 5.
+  attackerSquad('extra:attack-team3-noprayer-x1', 'mage+ranger+tribrid-snare', 3, {prayer: false}),
+  attackerSquad('extra:attack-team5-x1', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5),
+  attackerSquad('extra:attack-team5-noprayer-x1', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5, {prayer: false}),
   run1Squad('extra:clone-run1-noeat-x1', {prayer: false, prey: '0,1,0', gang: {eatAt: 0}}),
   run1Squad('extra:clone-run1-nopray-x1', {prayer: false, prey: '0,1,0', gang: {prayerLag: [0, 0, 0, 0, 0, 0, 0, 0, 1]}}),
   // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
