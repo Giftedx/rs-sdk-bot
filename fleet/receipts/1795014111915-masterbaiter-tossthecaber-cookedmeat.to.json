@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795014111915-masterbaiter-tossthecaber-cookedmeat",
+ "account": "TossTheCaber",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "c1874125-e738-4ca9-b0de-9baba3bf9f9b",
+ "count": 3,
+ "ok": true,
+ "at": 1795014253970,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795014253251
+ },
+ "logout": {
+  "attemptId": "1795014209506-0000017368-0000000001",
+  "at": 1795014253932,
+  "sha256": "609cb489181f15c211650bf7525f7783162ef82d40926dddfd4400f7bade758f"
+ },
+ "screen": true
+}
