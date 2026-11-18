@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794987433311,
+ "at": 1794987468806,
  "jobs": [
   {
    "account": "AFKnight",
@@ -299,20 +299,21 @@
    "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=hocuspokeus-kit4-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "repeat": true,
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
    "role": "supply",
-   "template": "kit-buy:army-armour-rune",
+   "template": "army-arrows-guild",
    "autopilot": "local",
    "resources": [
-    "ge:armour"
+    "shop:dargaud"
    ]
   },
   {
@@ -389,28 +390,23 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit11-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit11-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "repeat": false,
+   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "ge:armour"
    ]
   },
   {
