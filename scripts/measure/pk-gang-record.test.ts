@@ -73,5 +73,5 @@ test('a death: the first tile after it and the ticks to the post, and a low that
     ]);
     const g = rec.acc.ligma!;
     expect(g.deaths).toEqual([{ k: 120, trace: 'test.jsonl', x: 3078, z: 3640, respawn: [3222, 3218], backOnPost: 1080 }]);
-    expect(g.lows).toEqual([{ k: 105, hp: 36, minHp: 0, eatsAfter: 0, died: 15, trace: 'test.jsonl' }]);
+    expect(g.lows).toEqual([{ k: 105, hp: 36, minHp: 0, eatsAfter: 0, wild: 16, died: 15, trace: 'test.jsonl' }]);
 });
