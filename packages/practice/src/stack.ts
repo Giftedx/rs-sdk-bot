@@ -38,7 +38,7 @@ export interface StackOptions {
 }
 
 // The engine command line keeps MARKERS.engine, so safeKill still identifies the server.
-export function engineCommand(opts: StackOptions, port: number, platform: string = process.platform): { cmd: string[]; env: Record<string, string> } {
+export function engineCommand(opts: StackOptions, port: number, platform: string = process.platform, fine: string | undefined = process.env.SIM_FINE_TIMERS): { cmd: string[]; env: Record<string, string> } {
     const env: Record<string, string> = {
         NODE_TICKRATE: String(opts.tickMs ?? PROOF_TICK_MS),
         NODE_XPRATE: String(opts.xpRate ?? 25),
@@ -57,9 +57,9 @@ export function engineCommand(opts: StackOptions, port: number, platform: string
         if (key in env) throw new Error(`engineEnv cannot replace ${key}`);
         env[key] = value;
     }
-    // A lockstep engine on Windows polls with 1 ms timers that take 15 ms each by default: the preload sets 1 ms
-    // timers for the engine process (packages/core/src/timer-resolution.ts).
-    const timers = opts.lockstep && platform === 'win32' && process.env.SIM_FINE_TIMERS !== '0' ? ['--preload', FINE_TIMERS] : [];
+    // SIM_FINE_TIMERS=1: a lockstep engine on Windows polls with 1 ms timers that take 15 ms each by default; the
+    // preload sets 1 ms timers for the engine process (packages/core/src/timer-resolution.ts).
+    const timers = opts.lockstep && platform === 'win32' && fine === '1' ? ['--preload', FINE_TIMERS] : [];
     const pre = opts.enginePreload;
     if (!pre) return { cmd: ['bun', ...timers, MARKERS.engine], env };
     if (!isAbsolute(pre.module) || !existsSync(pre.module)) throw new Error(`engine preload not found: ${pre.module}`);
