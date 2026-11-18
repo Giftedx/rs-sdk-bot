@@ -35,6 +35,34 @@ export type BenchCase = {
 };
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
+const loggedOutOnce = (s: string) => {
+  const lines = s.match(/^LOGOUT .*$/gm) ?? [];
+  return lines.length === 1 && lines[0]!.trim() === 'LOGOUT logged-out';
+};
+const cannonPostDragonPass = (s: string) => {
+  const line = s.match(/^RESULT ok cannon-fight\b.*$/m)?.[0];
+  if (!line || !loggedOutOnce(s)) return false;
+  const levels = new Map((line.match(/\blevels=(\S+)/)?.[1] ?? '').split(',').map(value => value.split(':') as [string, string]));
+  return ['Ranged', 'Defence', 'Hitpoints'].every(skill => levels.get(skill) === '99')
+    && /\bdied=false\b/.test(line) && /\bpicked=true\b/.test(line) && /\bclear=true\b/.test(line) && /\bstop=-(?:\s|$)/.test(line);
+};
+const earlyDragonPass = (s: string) => {
+  const line = s.match(/^RESULT ok\b.*$/m)?.[0];
+  if (!line || !loggedOutOnce(s) || !/\bquestMsg=true\b/.test(line) || !/\bdied=false\b/.test(line)) return false;
+  const gains = new Map((line.match(/\bxp=(\S+)/)?.[1] ?? '').split(',').map(value => value.split('=') as [string, string]));
+  return ['strength', 'defence'].every(skill => Number(gains.get(skill)) >= 466250);
+};
+const earlyDragonReturnPass = (s: string) => {
+  if (!earlyDragonPass(s)) return false;
+  const nearVarrock = (x: number, z: number, level: number) => level === 0 && Math.max(Math.abs(x - 3212), Math.abs(z - 3424)) <= 6;
+  const final = s.match(/^RESULT ok\b.*\bat=(\d+),(\d+),(\d+)\b/m);
+  if (!final || !nearVarrock(Number(final[1]), Number(final[2]), Number(final[3]))) return false;
+  try {
+    const returns = [...s.matchAll(/^QUEST_TELEPORT (.*)$/gm)].map(match => JSON.parse(match[1]!)).filter(row => row.label === 'dragon return varrock');
+    return returns.length === 1 && returns[0].comp === 'magic:varrock_teleport' && returns[0].magicXp === 875
+      && nearVarrock(returns[0].at?.x, returns[0].at?.z, returns[0].at?.level);
+  } catch { return false; }
+};
 export const VIKING_BUILDS = ['zerker', 'range-tank', 'tank-range'] as const;
 // The iron arrows a bench case gives a build that fights a quest with the bow.
 export const RANGED_PACK = 600;
@@ -245,6 +273,17 @@ const carrierCase = (altar: CarrierAltarName, from: number, to: number, carriers
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
 
+// Early Dragon Slayer uses the route's combat level floors after Monkey Madness. These twelve native quest
+// varps supply exactly 32 QP; the rune chainbody is wearable before Dragon Slayer, unlike the rune platebody.
+const EARLY_DRAGON_CASE: BenchCase = {
+  key: 'extra:dragon-post-mm', script: 'scripts/aio-quester.ts', preset: 'quest_dragon', scriptArgs: ['dragon'],
+  pass: earlyDragonPass, timeoutMs: 600_000,
+  presetConfig: {...PRESETS.quest_dragon!,
+    skills: {...PRESETS.quest_dragon!.skills!, Attack: 99, Strength: 97, Defence: 89, Hitpoints: 97, Prayer: 99, Magic: 80, Ranged: 1},
+    varps: {29: 2, 80: 4, 62: 6, 144: 100, 111: 9, 150: 160, 17: 14, 365: 10, 0: 11, 159: 12, 131: 9, 31: 100},
+    equipment: PRESETS.quest_dragon!.equipment!.map(item => item.id === 1127 ? {...item, id: 1113} : item)},
+};
+
 const ROUTE_CASES: BenchCase[] = [
   skiller('fishing', 'cage', 'gather_fish_catherby', ['cage', '1500'], {output: /totalCaught=(\d+)/}),
   skiller('smithing', 'smelt', 'smelt_bars_alkharid'),
@@ -450,6 +489,10 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:food-courier', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['food-courier', 'OUTBOUND_ONLY=1', 'FEATHERS=0', 'CAP=1200'], pass: s => ok(s) && s.includes('outboundOnly=true'),
     presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 40}, coins: 20380, inventory: [{id: 315, count: 1}, {id: 2309, count: 1}]}},
   {key: 'logistics:bank-sort', script: 'scripts/aio-logistics.ts', preset: 'bank_gems', scriptArgs: ['bank-sort', '200', '20', 'name'], pass: ok, presetConfig: {...PRESETS.bank_gems!, position: {x: 3092, z: 3242, level: 0}, bank: [{id: 1631, count: 270}, {id: 995, count: 50}, {id: 1511, count: 5}, {id: 314, count: 40}, {id: 2349, count: 3}]}},
+  {key: 'logistics:wine-stock', script: 'scripts/make-wine-order.ts', preset: 'fresh_lumbridge', scriptArgs: ['2', '300', '2'],
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Cooking: 82}, inventory: [{id: 995, count: 777}], bank: [{id: 1987, count: 4}, {id: 1937, count: 4}, {id: 2347, count: 1}]},
+    pass: s => /^RESULT ok preservedWine=2 grapesUsed=2 waterUsed=2 assets=1\b/m.test(s) && /WINE_STOCK_RESULT .*"ok":true,"made":2,"noted":2/.test(s) && /^LOGOUT logged-out$/m.test(s),
+    output: /preservedWine=(\d+)/},
   {key: 'logistics:relocate-bank', script: 'scripts/aio-logistics.ts', preset: 'bank_gems', scriptArgs: ['relocate-bank', 'CAP=1500'], pass: ok},
   {key: 'logistics:arrive-draynor', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['arrive-draynor', 'CAP=1250'], pass: ok},
   {key: 'logistics:walk-edge', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-edge'],
@@ -690,6 +733,20 @@ const ROUTE_CASES: BenchCase[] = [
     pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
     presetConfig: {...PRESETS.cannon_spiders_h!, skills: {Attack: 99, Strength: 99, Defence: 98, Hitpoints: 97, Prayer: 99, Ranged: 55},
       inventory: PRESETS.cannon_spiders_h!.inventory!.map((item, i, all) => i === all.findIndex(x => x.id === 385) ? {id: 1333, count: 1} : item)}})),
+  EARLY_DRAGON_CASE,
+  {...EARLY_DRAGON_CASE, key: 'extra:dragon-post-mm-return', scriptArgs: ['dragon', 'DS_RETURN=varrock'],
+    pass: earlyDragonReturnPass,
+    presetConfig: {...EARLY_DRAGON_CASE.presetConfig!, inventory: [...EARLY_DRAGON_CASE.presetConfig!.inventory!, {id: 554, count: 1}]}},
+  // Ranged has no early training row in the Overall model. Start it at 1 after Dragon Slayer, keep the scimitar
+  // until Defence 99 and Ranged 55, then wield the rapid bow. Leather needs Ranged 1; the coif and
+  // green dragonhide need higher levels. Save presets use the level floors, below the route's carried XP.
+  {key: 'extra:cannon-post-dragon-r1', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h_sci',
+    scriptArgs: ['cannon', 'SPOT=spiders', 'STOP=Ranged=99,Defence=99,Hitpoints=99', 'PHASES=1333:3:Defence=99,Ranged=55;861:1', 'CAP=3200'],
+    pass: cannonPostDragonPass, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
+    presetConfig: {...PRESETS.cannon_spiders_h_sci!, skills: {Attack: 99, Strength: 99, Defence: 98, Hitpoints: 97, Prayer: 99, Magic: 80, Ranged: 1},
+      varps: {...PRESETS.cannon_spiders_h_sci!.varps!, 176: 10},
+      equipment: [[1731, 2], [1333, 3], [1129, 4], [1095, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({id: id!, count: 1, slot: slot!})).concat([{id: 892, count: 700, slot: 13}]),
+      inventory: PRESETS.cannon_spiders_h_sci!.inventory!.map((item, i, all) => i === all.findIndex(x => x.id === 385) ? {id: 861, count: 1} : item)}},
   // Recovery: %ownedmcannon (varp 4) holds 3286,3809 (packed (x << 14) | z) and %dropcannon (varp 2) = 4 (full cannon,
   // cannon.constant) with no cannon loc there, as after a decay. The worker talks to Nulodion beside him, who replaces a
   // cannon whose loc is gone (nulodion.rs2:91-143).
