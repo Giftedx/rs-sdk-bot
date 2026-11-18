@@ -424,6 +424,12 @@ test('the army roster is the plan\'s explicit list, lower-cased, never Haggis', 
     expect(armyRoster(null).size).toBe(0);
 });
 
+test('the planner food heals are the content heals over all bites', () => {
+    expect({ ...FOOD_HEAL }).toEqual({
+        trout: 7, cake: 12, '2/3 cake': 8, 'slice of cake': 4, 'chocolate cake': 15, '2/3 chocolate cake': 10, 'chocolate slice': 5,
+    });
+});
+
 test('the planner heals food by the same table as cow mode, and the cow bands need its HP', () => {
     const names = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8')) as { id: number; name: string }[]).map(i => [i.id, i.name]));
     const ids = Object.keys(COW_FOOD_BITES).map(Number);

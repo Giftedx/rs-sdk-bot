@@ -23,6 +23,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { KITS, type KitSpec } from './pk-kits';
+import { objIdByDebugName, questFoodDefinitions } from '../packages/core/src/sustain';
 import { seededRandom, SPELLS, styleOfName, type Style } from './pk';
 
 type Bonus = { stab: number; slash: number; crush: number; magic: number; ranged: number; dStab: number; dSlash: number; dCrush: number; dMagic: number; dRanged: number; str: number; rangeStr: number; rate: number; prayer: number };
@@ -70,7 +71,12 @@ type Fighter = {
     lv: Record<string, number>; maxHp: number; heal: number; boostMax: { attack: number; strength: number; ranged: number };
 };
 const MAXED = { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99 };
-const HEAL: Record<string, number> = { shark: 20, tbwt_cooked_karambwan: 18, swordfish: 14, lobster: 12 };
+// HP one piece of a kit's food heals, by content debug name (consume_normal.dbrow, read by core/sustain.ts).
+export const foodHeal = (debugName: string): number => {
+    const id = objIdByDebugName(debugName), heal = id === undefined ? undefined : questFoodDefinitions().get(id)?.heal;
+    if (heal === undefined) throw Error(`pk-sim: ${debugName} is not a food in the content`);
+    return heal;
+};
 // The 5%, 10% and 15% prayers of a skill, by the Prayer level that opens each (scripts/pk.ts combatPrayers).
 const tier = (prayer: number, levels: [number, number, number]) => (prayer >= levels[2] ? 1.15 : prayer >= levels[1] ? 1.1 : prayer >= levels[0] ? 1.05 : 1);
 const PROTECT_LEVEL: Record<Style, number> = { magic: 37, ranged: 40, melee: 43 };
@@ -86,7 +92,7 @@ function fighter(kit: KitSpec, o: SimOptions): Fighter {
     // A super potion gives 5 + 15% of the level, a ranging potion 4 + 10%.
     const boostMax = { attack: carries(kit, '4dose2attack') ? 5 + Math.floor(lv.Attack! * 0.15) : 0, strength: carries(kit, '4dose2strength') ? 5 + Math.floor(lv.Strength! * 0.15) : 0, ranged: carries(kit, '4doserangerspotion') ? 4 + Math.floor(lv.Ranged! / 10) : 0 };
     const god = kit.options?.damageSpell === SPELLS.flamesOfZamorak && kit.options.charge, iban = kit.options?.damageSpell === SPELLS.ibanBlast;
-    return { kit, o, lv, maxHp: lv.Hitpoints!, heal: HEAL[kit.foodItem ?? 'shark'] ?? 20, boostMax, hp: lv.Hitpoints!, food: kit.food, eatReady: 0, actionAt: 1, energy: 1000, regenAt: 0, worn, torso: worn.torso, shield: worn.shield, shown: styleOf(worn.weapon), seenOrder: [], last: -1,
+    return { kit, o, lv, maxHp: lv.Hitpoints!, heal: foodHeal(kit.foodItem ?? 'shark'), boostMax, hp: lv.Hitpoints!, food: kit.food, eatReady: 0, actionAt: 1, energy: 1000, regenAt: 0, worn, torso: worn.torso, shield: worn.shield, shown: styleOf(worn.weapon), seenOrder: [], last: -1,
         prayer: lv.Prayer!, doses: 4 * kit.carried.filter(c => (typeof c === 'string' ? c : c[0]) === '4doseprayerrestore').length, drain: 0,
         boost: { ...boostMax }, taken: 0,
         spellMax: god ? 30 : iban ? 25 : carries(kit, 'bloodrune') && lv.Magic! >= 75 ? 20 : carries(kit, 'deathrune') && lv.Magic! >= 59 ? 16 : carries(kit, 'chaosrune') && lv.Magic! >= 35 ? 12 : 8,

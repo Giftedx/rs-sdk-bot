@@ -14,12 +14,36 @@ export type FoodPolicy={food:readonly number[];eatAt:number|((maxHp:number)=>num
 export const defaultEatAt=(maxHp:number)=>Math.min(40,Math.max(10,Math.floor(maxHp*0.6)));
 
 let definitions:Map<number,FoodDefinition>|undefined;
+let objIds:ReadonlyMap<string,number>|undefined;
 const chainCache=new Map<string,ReadonlySet<number>>();
+const contentDir=()=>resolve(import.meta.dir,'../../../vendor/rs-sdk/server/content');
+
+// Item id of a content debug name (pack/obj.pack), e.g. 'shark' 385.
+export function objIdByDebugName(name:string):number|undefined{
+ objIds??=new Map(readFileSync(resolve(contentDir(),'pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
+ return objIds.get(name);
+}
+
+// The ids of a food from this stage to its last bite: a cake is cake, partial cake, cake slice.
+export function foodStages(id:number):number[]{
+ const defs=questFoodDefinitions(),out:number[]=[];
+ for(let c:number|undefined=id;c!==undefined&&defs.has(c)&&!out.includes(c);c=defs.get(c)!.next)out.push(c);
+ return out;
+}
+// Hitpoints a food heals over all its bites from this stage on; undefined when the content has no such food.
+export function foodTotalHeal(id:number):number|undefined{
+ const defs=questFoodDefinitions();
+ return defs.has(id)?foodStages(id).reduce((n,s)=>n+defs.get(s)!.heal,0):undefined;
+}
+// The cow farm's food: trout and the two cakes of the Ardougne bakery, each with its later stages.
+export const COW_FOOD_ROOTS=['trout','cake','chocolate_cake'] as const;
+export const cowFoodIds=():number[]=>COW_FOOD_ROOTS.flatMap(n=>foodStages(objIdByDebugName(n)!));
 
 export function questFoodDefinitions():ReadonlyMap<number,FoodDefinition>{
  if(definitions)return definitions;
- const content=resolve(import.meta.dir,'../../../vendor/rs-sdk/server/content');
- const ids=new Map(readFileSync(resolve(content,'pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
+ const content=contentDir();
+ objIdByDebugName('');
+ const ids=objIds!;
  const foods=new Map<number,FoodDefinition>();
  const file='scripts/player/configs/consumption/consume_normal.dbrow';
  for(const block of parseConfigs(readFileSync(resolve(content,file),'utf8'),file)){

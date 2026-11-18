@@ -1,5 +1,11 @@
 import { expect, test } from 'bun:test';
-import { nextMeal } from './eat-to-full';
+import { MEALS_BY_HEAL, nextMeal } from './eat-to-full';
+
+test('the meal heals come from the content (consume_normal.dbrow heal_7, 9, 10, 12, 14, 20)', () => {
+    expect(MEALS_BY_HEAL).toEqual([
+        { id: 333, heal: 7 }, { id: 329, heal: 9 }, { id: 361, heal: 10 }, { id: 379, heal: 12 }, { id: 373, heal: 14 }, { id: 385, heal: 20 },
+    ]);
+});
 
 test('the next meal is the cheapest that does not waste half its heal, else the cheapest held', () => {
     const pack = [{ id: 385 }, { id: 333 }];
