@@ -2,7 +2,7 @@ import {expect, test} from 'bun:test';
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {deliveryFolder, pickRun} from './adopt-proofs';
+import {deliveryFolder, pickRun} from '../src/adopt-proofs';
 
 test('pickRun takes the newest successful finished run of the commit only', () => {
     const a = 'a'.repeat(40), b = 'b'.repeat(40);

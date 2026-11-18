@@ -15,7 +15,6 @@ const repo = resolve(import.meta.dir, '..');
 // Scripts that are not game work a route can start. Each entry gives the cause. A new game script gets a route in
 // its aio-<category>.ts file and not an entry here.
 export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
- 'scripts/adopt-proofs.ts': 'developer tool: adopts the method proofs a hosted runner made for this commit',
  'scripts/autopilot.ts': 'fleet control: writes the planner jobs into swarm.json',
  'scripts/autopilot-progression.ts': 'fleet control helper: compares finite assignments through the shared progression selector',
  'scripts/check-no-diary.ts': 'developer tool: checks the docs for history wording',

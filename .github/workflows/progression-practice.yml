@@ -9,7 +9,7 @@ on:
         default: ''
   workflow_call:
   # Each merge makes the method proofs of its commit on a clean runner. The PC adopts them with
-  # `bun scripts/adopt-proofs.ts` and runs no practice engine for them.
+  # `bun packages/router/src/adopt-proofs.ts` and runs no practice engine for them.
   push:
     branches: [master]
 permissions:

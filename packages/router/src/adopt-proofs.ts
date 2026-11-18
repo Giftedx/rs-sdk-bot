@@ -1,6 +1,6 @@
 // Adopts the method proofs that a hosted runner made for this commit (.github/workflows/progression-practice.yml,
 // job `qualification`), so the PC runs no practice engine for them.
-// Usage: bun scripts/adopt-proofs.ts [--run <run id>] [--commit <sha>] [--check]
+// Usage: bun packages/router/src/adopt-proofs.ts [--run <run id>] [--commit <sha>] [--check]
 // Without --run it takes the newest successful `Progression practice` run of the commit (default: HEAD).
 // The artifact is evidence, not authority. The registrar (packages/router/src/progression-qualification.ts) checks it
 // against this checkout before it writes one byte of the index:
@@ -9,6 +9,7 @@
 //   - each declared file has the artifact's SHA-256 here, each check passed, and each check log is the artifact's;
 //   - the raw saves, the worker log and the frozen entry give the proof's own result again (verifyProof).
 // A proof of another commit, of edited source or with changed files is refused and the index keeps its bytes.
+// This file is controller tooling, as the registrar is: no worker imports it.
 // The command never starts a worker and never touches a stop file. `--check` prints the run it would take.
 import {existsSync, mkdirSync, readdirSync, rmSync} from 'node:fs';
 import {join, resolve} from 'node:path';
@@ -28,7 +29,7 @@ export function deliveryFolder(practiceRoot: string): string | null {
 }
 
 if (import.meta.main) {
-    const root = resolve(import.meta.dir, '..'), argv = process.argv.slice(2);
+    const root = resolve(import.meta.dir, '../../..'), argv = process.argv.slice(2);
     const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
     const check = argv.includes('--check');
     const sh = (cmd: string[]) => { const r = Bun.spawnSync(cmd, {cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true}); return {ok: r.exitCode === 0, out: r.stdout.toString().trim(), err: r.stderr.toString().trim()}; };
@@ -49,7 +50,7 @@ if (import.meta.main) {
     if (!got.ok) { console.error(`adopt-proofs: the artifact progression-qualification-${sha} of run ${run} was not read: ${got.err.split('\n').at(-1)}`); process.exit(2); }
     const directory = deliveryFolder(practiceRoot);
     if (!directory) { console.error(`adopt-proofs: run ${run} holds no one complete Ranged delivery`); process.exit(2); }
-    const {registerProgressionArtifact} = await import('../packages/router/src/progression-qualification-cli');
+    const {registerProgressionArtifact} = await import('./progression-qualification-cli');
     try {
         const result = await registerProgressionArtifact(directory, practiceRoot);
         console.log(`adopt-proofs: ${result.registered ? 'registered' : 'already in the index'}: ${JSON.stringify({methods: (result as any).methods, source: (result as any).source, index: result.index})}`);
