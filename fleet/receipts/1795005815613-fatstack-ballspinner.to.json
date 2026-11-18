@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795005815613-fatstack-ballspinner",
  "account": "Ballspinner",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 38358,
  "claim": "d7472f29-aa00-458f-872e-91d6fc5b5311",
- "count": 0,
- "ok": false,
- "at": 1795005959958,
- "detail": "trade claimed"
+ "count": 38358,
+ "ok": true,
+ "at": 1795005981882,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 38358
+ },
+ "bank": {
+  "count": 38358,
+  "at": 1795005981107
+ },
+ "logout": {
+  "attemptId": "1795005959966-0000014300-0000000001",
+  "at": 1795005981853,
+  "sha256": "f84bf9d542b589099d551188a9a89aca8252e2bdc31f759da988976367455f36"
+ },
+ "screen": true
 }
