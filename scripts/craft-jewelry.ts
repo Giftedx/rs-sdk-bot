@@ -114,15 +114,16 @@ try {
                 }
             }
 
-            if (Math.max(Math.abs(pos()?.worldX ?? 0 - FURNACE_SPOT.x), Math.abs(pos()?.worldZ ?? 0 - FURNACE_SPOT.z)) > 3) {
+            if (Math.max(Math.abs((pos()?.worldX ?? 0) - FURNACE_SPOT.x), Math.abs((pos()?.worldZ ?? 0) - FURNACE_SPOT.z)) > 3) {
                 await walk(FURNACE_SPOT.x, FURNACE_SPOT.z, 2);
                 continue;
             }
 
             const before = countRe(/ring|amulet/i);
-            const r = await s.bot.craftJewelry({ product: 'ring', gem: TIER });
-            if (r.success) {
-                crafted += 1;
+            await s.bot.craftJewelry({ product: 'ring', gem: TIER });
+            const made = countRe(/ring|amulet/i) - before;
+            if (made > 0) {
+                crafted += made;
             } else {
                 await waitTicks(s, 2);
             }
