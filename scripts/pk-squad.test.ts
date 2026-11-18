@@ -422,3 +422,49 @@ test('with a threat that can hit it and no target, a member holds the protect pr
 test('with act off the threat watch changes nothing in the hold loop', async () => {
     expect(await holdWithThreats(false)).toEqual([]);
 });
+
+// The armour swap and the single-way hold of the threat radar in the hold loop.
+async function holdRadar(actions: (tick: number) => any[], until = 120) {
+    const w = squadWorld(), lines: string[] = [], walks: { x: number; z: number }[] = [], seen: number[][] = [];
+    let t = 0, slot = 20;
+    w.s.tick = () => t;
+    w.equipment.push({ id: 1127, count: 1, slot: 4, name: 'Rune platebody', optionsWithIndex: [] });
+    w.inventory.push({ id: 1135, count: 1, slot: ++slot, name: 'Dragonhide body', optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] });
+    // Wearing swaps the body: the worn one goes to the pack.
+    const body: Record<number, number> = { 1135: 1127, 1127: 1135 };
+    w.s.sdk.sendUseItem = async (s: number, op: number) => {
+        const at = w.inventory.findIndex(i => i.slot === s), item = w.inventory[at];
+        if (!item || op !== 2) return;
+        w.inventory.splice(at, 1);
+        const old = w.equipment.findIndex(e => e.id === body[item.id]);
+        if (old >= 0) { const [gone] = w.equipment.splice(old, 1); w.inventory.push({ ...gone, slot: ++slot, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }); }
+        w.equipment.push(item);
+    };
+    const threats: any = { act: true, step: (tick: number) => ({ classes: [], actions: actions(tick) }) };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => { walks.push({ x: path[0]!.x, z: path[0]!.z }); w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any; }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; seen.push(w.equipment.map(e => e.id)); return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= until, killsLeft: () => true, log: l => lines.push(l), threats });
+        return { w, lines, walks, seen };
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('a kit action wears the pack armour from the pack once, and wears the worn armour again 60 ticks after the threat is gone', async () => {
+    const { w, lines, seen } = await holdRadar(tick => tick < 30 ? [{ kind: 'kit', member: 'Soldier', style: 'magic', wear: [1135], gain: 26, reason: 'Mage magic: wear 1135 (+26)' }] : []);
+    expect(lines.filter(l => l.includes('SQUAD threat kit swap'))).toHaveLength(1);
+    expect(seen.some(ids => ids.includes(1135) && !ids.includes(1127))).toBe(true);
+    expect(lines.some(l => l.includes('SQUAD threat kit restore: wear 1127'))).toBe(true);
+    expect(w.equipment.map(e => e.id)).toContain(1127);
+    expect(w.equipment.map(e => e.id)).not.toContain(1135);
+});
+
+test('a single-way action walks to the tile once, and the squad stays there: no walk back to the multi-way post', async () => {
+    const to = { x: 3040, z: 3600 };
+    const { lines, walks } = await holdRadar(() => [{ kind: 'single-way', to, reason: 'team of 3: A(126,melee)' }], 40);
+    expect(walks).toEqual([to]);
+    expect(lines.filter(l => l.includes('SQUAD threat single-way: team of 3'))).toHaveLength(1);
+});

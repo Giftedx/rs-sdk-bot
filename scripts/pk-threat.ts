@@ -12,6 +12,7 @@ import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Adapt, type D
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
 import { PRAYER } from './pk';
+import { nearestSingleWay, planCounterSwap } from './pk-threat-kit';
 import { canAttack, isMulti, outclasses, wildLevel, type Radar } from './pk-roam';
 
 // The style of an attack animation, from the name of the sequence (content pack/seq.pack): a cast is magic, a bow or a throw is ranged,
@@ -91,7 +92,20 @@ export class ThreatWatch {
         if (this.o.radar?.fresh()) for (const t of this.o.radar.tracks.values()) if (!sightings.has(t.name.toLowerCase())) sightings.set(t.name.toLowerCase(), { name: t.name, combat: t.combatLevel, x: t.x, z: t.z, inView: false });
         const records = this.book.observe(tick, members, [...sightings.values()].filter(x => members.some(m => Math.max(Math.abs(m.x - x.x), Math.abs(m.z - x.z)) <= 40)));
         const classes = records.map(r => classifyThreat(r, members, { canAttack: (m, t) => canAttack(m, t) }));
-        const actions = decideAdapt(classes, members, { outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }), ...this.o.decide });
+        const levelOf = (s: Session, skill: string) => s.sdk.getSkill(skill)?.level ?? 1;
+        const actions = decideAdapt(classes, members, {
+            outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }),
+            multiAt: isMulti,
+            // The nearest single-way tile, away from the dangerous players.
+            singleWayFrom: at => nearestSingleWay(at, { multiAt: isMulti, wildAt: wildLevel, avoid: classes.filter(c => c.dangerous).map(c => ({ x: c.record.x, z: c.record.z })) }),
+            // The armour of the pack that defends better against the threat's style (scripts/pk-threat-kit.ts).
+            counterFor: (member, style) => {
+                const s = sessions.find(x => x.name === member);
+                return s ? planCounterSwap({ worn: s.sdk.getEquipment().map(e => e.id), pack: s.sdk.getInventory().map(i => i.id), style,
+                    levels: { attack: levelOf(s, 'Attack'), strength: levelOf(s, 'Strength'), defence: levelOf(s, 'Defence'), ranged: levelOf(s, 'Ranged'), magic: levelOf(s, 'Magic') } }) : null;
+            },
+            ...this.o.decide,
+        });
         this.cache = { tick, classes, actions };
         this.report(tick, classes, actions);
         return this.cache;
@@ -110,7 +124,7 @@ export class ThreatWatch {
         for (const a of actions) {
             // The reason holds distances that change each tick: a decision is logged again only when its kind, member, style, kit or tile changes.
             const key = `adapt:${a.kind}:${'member' in a ? a.member : ''}`, sig = JSON.stringify({ ...a, reason: undefined });
-            if (this.logged.get(key) !== sig) { this.logged.set(key, sig); this.o.log(`ADAPT ${a.kind}${'member' in a ? ` ${a.member}` : ''}${'style' in a ? ` ${a.style}` : ''}${'kit' in a ? ` ${a.kit}` : ''}: ${a.reason}`); }
+            if (this.logged.get(key) !== sig) { this.logged.set(key, sig); this.o.log(`ADAPT ${a.kind}${'member' in a ? ` ${a.member}` : ''}${'style' in a ? ` ${a.style}` : ''}: ${a.reason}`); }
         }
         // A decision that no longer holds is forgotten, so that its next time is logged again.
         for (const key of [...this.logged.keys()]) if (key.startsWith('adapt:') && !actions.some(a => `adapt:${a.kind}:${'member' in a ? a.member : ''}` === key)) this.logged.delete(key);

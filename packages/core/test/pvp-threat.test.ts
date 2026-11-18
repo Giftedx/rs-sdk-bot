@@ -63,13 +63,13 @@ test('dangerous: can attack a member and either fights one, or is in range and c
 const classes = (sightings: Sighting[], tick = 1, b = book()) => b.observe(tick, squad, sightings).map(r => classifyThreat(r, squad, { canAttack }));
 const near = (name: string, o: Partial<Sighting> = {}) => rival({ name, x: 3074, z: 3643, ...o });
 
-test('a mage that closes in: protect from magic for each member that it can hit, and the counter kit when the member does not wear it', () => {
-    const actions = decideAdapt(classes([near('Mage')]), squad, { outclasses, counterKit: { magic: 'rune-ranged' }, kitOf: name => name === 'Ours2' ? 'rune-ranged' : 'rune' });
+test('a mage that closes in: protect from magic for each member that it can hit, and the armour swap for the member that has one', () => {
+    const actions = decideAdapt(classes([near('Mage')]), squad, { outclasses, counterFor: (member, style) => member === 'Ours1' && style === 'magic' ? { wear: [1135, 1099], gain: 38 } : null });
     expect(actions.filter(a => a.kind === 'protect')).toEqual([
         { kind: 'protect', member: 'Ours1', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' },
         { kind: 'protect', member: 'Ours2', style: 'magic', reason: 'Mage magic by weapon, 3 tiles' },
     ]);
-    expect(actions.filter(a => a.kind === 'kit')).toEqual([{ kind: 'kit', member: 'Ours1', kit: 'rune-ranged', reason: 'Mage magic' }]);
+    expect(actions.filter(a => a.kind === 'kit')).toEqual([{ kind: 'kit', member: 'Ours1', style: 'magic', wear: [1135, 1099], gain: 38, reason: 'Mage magic: wear 1135+1099 (+38)' }]);
     expect(actions.some(a => a.kind === 'retreat')).toBe(false);
 });
 
@@ -104,6 +104,15 @@ test('a gang that the squad hunts on purpose is protected against but is not a r
     // One stranger among them is still a stranger: it outclasses.
     const mixed = classes([near('A'), near('Boss', { combat: 145 })]);
     expect(decideAdapt(mixed, squad, { outclasses, expected: new Set(['a']) })[0]).toMatchObject({ kind: 'retreat' });
+});
+
+test('a team on a single-way tile is held there: no single-way move and no retreat, protect only', () => {
+    const team = classes([near('A'), near('B', { x: 3075 }), near('C', { x: 3076, z: 3643 })]);
+    const held = decideAdapt(team, squad, { outclasses, multiAt: () => false, singleWayFrom: () => ({ x: 1, z: 1 }) });
+    expect(held.some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
+    expect(held.some(a => a.kind === 'protect')).toBe(true);
+    const multi = decideAdapt(team, squad, { outclasses, multiAt: () => true, singleWayFrom: () => ({ x: 1, z: 1 }) });
+    expect(multi[0]).toMatchObject({ kind: 'single-way', to: { x: 1, z: 1 } });
 });
 
 test('no danger, no action; the log line holds the record', () => {
