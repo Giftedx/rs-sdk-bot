@@ -48,12 +48,25 @@ const SKILLS: readonly Skill[] = ['attack', 'strength', 'defence', 'ranged', 'ma
 export function parseRequirements(files: readonly { text: string; file: string }[]): Map<string, Gear['requires']> {
     const out = new Map<string, Gear['requires']>();
     for (const { text, file } of files) {
-        text.split(/\r?\n/).forEach((line, i) => {
-            const m = /^\[opheld2,(\w+)\]\s*@levelrequire_(\w+)\(([^)]*)\)/.exec(line);
-            if (!m) return;
+        const lines = text.split(/\r?\n/);
+        lines.forEach((line, i) => {
+            let m = /^\[opheld2,(\w+)\]\s*@levelrequire_(\w+)\(([^)]*)\)/.exec(line);
+            let quest: string | undefined, at = i;
+            if (!m) {
+                // The block form: `[opheld2,<item>]`, then `if (%<varp> < ^<quest>_complete) { ... return; }`, then the call on its own line.
+                const head = /^\[opheld2,(\w+)\]\s*$/.exec(line);
+                if (!head) return;
+                for (let j = i + 1; j < lines.length && !lines[j]!.startsWith('['); j++) {
+                    const gate = /^\s*if\s*\(%(\w+)\s*<\s*\^\w+_complete\)/.exec(lines[j]!);
+                    if (gate) quest = QUESTS[gate[1]!];
+                    const call = /^\s*@levelrequire_(\w+)\(([^)]*)\)/.exec(lines[j]!);
+                    if (call) { m = [lines[j]!, head[1]!, call[1]!, call[2]!] as unknown as RegExpExecArray; at = j; break; }
+                }
+                if (!m) return;
+            }
             const [, item, label, argText] = m;
             const args = argText!.split(',').map(a => a.trim()).filter(a => a !== 'last_slot').map(Number);
-            const src = `${file}:${i + 1}`;
+            const src = `${file}:${at + 1}`;
             if (label === 'iban_staff') { out.set(item!, { skills: { magic: 50, attack: 50 }, note: 'Iban staff', src }); return; }
             const questKey = Object.keys(QUESTS).find(k => label!.startsWith(`${k}_quest`) || (k === 'viking' && label!.startsWith('viking_quest')));
             const parsedSkills = label!.split('_').filter((t): t is Skill => (SKILLS as readonly string[]).includes(t));
@@ -62,6 +75,7 @@ export function parseRequirements(files: readonly { text: string; file: string }
             const req: Gear['requires'] = { skills: {}, src };
             skills.forEach((s, j) => { const n = args.length === 1 ? args[0] : args[j]; if (Number.isFinite(n)) req.skills[s] = n!; });
             if (questKey) req.quest = QUESTS[questKey];
+            else if (quest) req.quest = quest;
             out.set(item!, req);
         });
     }
