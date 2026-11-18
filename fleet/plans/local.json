@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794990170424,
+ "at": 1794990255155,
  "jobs": [
   {
    "account": "AFKnight",
@@ -269,8 +269,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
