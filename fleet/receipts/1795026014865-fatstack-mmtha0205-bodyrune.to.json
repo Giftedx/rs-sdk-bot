@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795026014865-fatstack-mmtha0205-bodyrune",
+ "account": "mmtha0205",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Body rune",
+ "requested": 9,
+ "claim": "b54fdffd-fff9-472a-b7ad-a67d2ff3a82e",
+ "count": 0,
+ "ok": false,
+ "at": 1795026055145,
+ "detail": "trade claimed"
+}
