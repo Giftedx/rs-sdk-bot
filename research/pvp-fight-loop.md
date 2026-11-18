@@ -1779,6 +1779,34 @@ file, and it does not check `rule`, `bankAt` or `statusAt`: `squad-ready.ts --ma
 Proof: `scripts/swarm.test.ts` (a five-member job with one death, a name with a space, a cut name list, a squad as an orchestrate job) and
 `scripts/pk-squad.test.ts` (the end line).
 
+## Threat radar
+
+Source -> local consumer -> check: `pvp_combat.rs2:35-43` (who can attack whom), the client player fields (`appearance`, `primaryAnim`,
+`headicons`; `packages/core/src/opponent.ts`), content `pack/seq.pack` (the cast, bow and melee sequences) and the world feed roster
+(`scripts/pk-roam.ts` `Radar`) -> `packages/core/src/pvp-threat.ts` (the model and the rules) and `scripts/pk-threat.ts` (the live reading,
+the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-threat.test.ts`, the hold-loop tests in
+`scripts/pk-squad.test.ts` and the bench case `extra:clone-3v3-walkin-threat-x1`.
+
+- **Record.** Each tick `ThreatWatch.step` makes one record for each player that is not ours: name, combat level, worn weapon, body, legs,
+  cape and hat, Wilderness level, multi or single tile, the nearest member and its distance, whether it closes in and at what speed, the attack
+  styles that it showed in the last 50 ticks, the member that it fights, its overhead prayer and skull. A player on the world feed only has no
+  worn items and no style. One reading serves the whole squad each tick.
+- **Class.** The style is the last attack seen (an animation whose sequence name is a cast, a bow or a melee attack), else the style of the
+  worn weapon. Two styles in 50 ticks make a hybrid, whose cover is the last attack. A player is dangerous when it can attack a member
+  (the combat-level rule of its tile) and either fights one, or is within 10 tiles and closing, or within 4 tiles.
+- **Adapt** (`SQUAD_THREAT=1`, off by default; `SQUAD_THREAT_ACT=0` logs and records only). A member that a dangerous player can hit holds
+  the protect prayer of its style: in a fight through the `threatPrayer` option of `fightPlayer` (after the opponent's own hits, before the
+  prediction), and while it waits through `holdProtect`. A dangerous player that outclasses the strongest member, or three or more
+  unexpected dangerous players (the squad's targets are expected), end the member's part in the Wilderness with the rescue, and the bank trip
+  brings it back. Each decision is logged as `ADAPT <kind> ...` with the record of the player (`THREAT ...`).
+- **Attackers.** Each dangerous player or attacker is appended to `.practice/threat-records/<server>/<name>.jsonl` (schema
+  `threat-sighting/1`, at most one line each 25 ticks, and one at each attack seen), for the behaviour record of the rivals.
+
+Gap: practice and unit proof only, and the bench gang is the only attacker that the bench has. The squad is the only consumer: the
+hunt and the roam keep their own threat checks. The kit decision (a counter kit for a mage or a melee pure) and the move to a single-way
+tile are rules in the model with their tests, but no kit swap, no counter kit and no single-way tile are wired, so a team ends in a retreat.
+The record file is not yet read by `scripts/measure/pk-gang-record.ts`.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).
