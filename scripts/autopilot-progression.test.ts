@@ -101,7 +101,9 @@ test('AP resolves qualified adaptive resources before cohort capacity allocation
   templateFor:(listed,account)=>({...listed,resources:bound.resources,env:bound.env})});
  expect(result.filter(x=>x.template)).toHaveLength(3);
  const shipped=catalogue().find(t=>t.id==='army-trooper-ranged-99')!;
- expect(shipped.script).toBe('scripts/ranged-train.ts');expect(shipped.args).toEqual(['99','1500']);expect(shipped.trains?.to).toBe(99);expect(shipped.repeats).toBe(true);
+ // The army band runs the trooper trainer itself: the adaptive worker starts only with a proof for the exact account state.
+ expect(shipped.script).toBe('scripts/gather-combat.ts');expect(shipped.resources).toEqual(['trooper:battlefield']);expect(shipped.trains?.to).toBe(99);expect(shipped.repeats).toBe(true);
+ expect(planner.templateFor(shipped,{name:'Archer',side:'local',skills:{Ranged:1},items:{}})).toBe(shipped);
 });
 test('adaptive claims use a bound method and unmatched execution telemetry cannot shrink a provisional claim',()=>{
  const j={account:'Archer',script:'scripts/ranged-train.ts',args:['50','1500'],env:{PROGRESSION_SOURCE:'range-source'},enabled:true};

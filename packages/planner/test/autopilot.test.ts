@@ -702,7 +702,10 @@ test('army accounts train Ranged to 99 on the troopers with a bow they wield and
     expect(pick({}, { shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 99 }, { ...fish, shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-strength-99');
     const job = jobFor(plan(inputs([acct('Archer', base, { ...fish, shortbow: 1, 'iron arrow': 500 })], { army, capacity: CAPACITY }))[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/ranged-train.ts', args: ['99','1500'], env: { TARGET_LEVEL: '99', FOOD:'3', AMMO:'100' }, repeat: true, resources: ['pen:3229,3298','trooper:battlefield'] });
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
+    // The band holds a place on the trooper field only, so every kitted account trains at once.
+    const archers = ['Archer', 'Bowman', 'Fletcher'].map(n => acct(n, base, { ...fish, shortbow: 1, 'iron arrow': 500 }));
+    expect(Object.values(ids(plan(inputs(archers, { army: new Set(['archer', 'bowman', 'fletcher']), capacity: CAPACITY }))))).toEqual(Array(3).fill('army-trooper-ranged-99'));
 });
 
 import { xpForLevel } from '../src/curve';
@@ -1930,10 +1933,10 @@ test('an account with a PK build trains to the levels of the build and no furthe
     expect(buildBand(byId('army-trooper-strength-99'), fresh, dragon)!.env!.TARGET_LEVEL).toBe('99');
     // No band buries bones: bones give Prayer XP. The Prayer band of the trooper field counts kills and keeps the
     // style of the account, so it is refused even for a build with Prayer above the account's level.
-    expect(byId('army-trooper-ranged-99').script).toBe('scripts/ranged-train.ts');
-    expect(byId('army-trooper-ranged-99').env!.GIANT_BURY).toBeUndefined();
+    expect(byId('army-trooper-ranged-99').env!.GIANT_BURY).toBe('1');
+    expect(buildBand(byId('army-trooper-ranged-99'), fresh, pure)!.env!.GIANT_BURY).toBe('0');
     const ranged45=buildBand(byId('army-trooper-ranged-99'),acct('Build',{Ranged:40}),{...pure,Ranged:45})!;
-    expect(ranged45.args).toEqual(['45','1500']);expect(ranged45.env!.TARGET_LEVEL).toBe('45');expect(ranged45.trains!.to).toBe(45);
+    expect(ranged45.args).toEqual(['1500','trooper']);expect(ranged45.env!.TARGET_LEVEL).toBe('45');expect(ranged45.trains!.to).toBe(45);
     expect(trooper.env!.GIANT_BURY).toBe('0');
     expect(buildBand(byId('army-trooper-prayer-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
     // Prayer comes from held normal bones only, to the level of the build: the worker's target argument.
@@ -2603,9 +2606,10 @@ test('Nurmof pickaxe shop tiers upgrade miners only up to their Mining level thr
     expect(none.template).toBeUndefined();
 });
 
-test('autopilot sets ranged MAX_SPEND, excludes rune platebody holders from Scavvo, normalizes wc tool demand, and narrows ranged jobResources', () => {
+test('autopilot runs the Ranged band on the trooper trainer, excludes rune platebody holders from Scavvo, normalizes wc tool demand, and narrows ranged jobResources', () => {
     const ranged = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
-    expect(ranged.env?.MAX_SPEND).toBe('55000');
+    expect(ranged.script).toBe('scripts/gather-combat.ts');
+    expect(ranged.resources).toEqual(['trooper:battlefield']);
 
     const scavvo = catalogue().find(t => t.id === 'army-armour-scavvo')!;
     const mkScavvo = (items: Record<string, number>) => ({ ...acct('Tank', { Defence: 40 }, { coin: 120_000, ...items }), questPoints: 32 });
