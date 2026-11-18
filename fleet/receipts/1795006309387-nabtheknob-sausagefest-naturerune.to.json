@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795006309387-nabtheknob-sausagefest-naturerune",
+ "account": "Sausagefest",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "f4253c7d-2599-48a0-ba14-160b3983680a",
+ "count": 0,
+ "ok": false,
+ "at": 1795006378755,
+ "detail": "trade claimed"
+}
