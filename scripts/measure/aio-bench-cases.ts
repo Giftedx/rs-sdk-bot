@@ -288,12 +288,14 @@ const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: C
 type Run1 = {members: {name: string; wear: {id: number; count: number; slot: number}[]; pack: {id: number; count: number}[]}[]};
 // An attacker case: the four members of run 1 with full prayer points against `n` attackers of the kits `kit` (a + list gives each
 // attacker its own kit), no clones. The attackers hunt the nearest member and fight with the champion's options.
-const attackerSquad = (key: string, kit: string, n: number, o: {prayer?: boolean; profile?: string; args?: string[]} = {}): BenchCase => {
-  const c = run1Squad(key, {prayer: o.prayer ?? true, args: ['SQUAD_GANG=' + n, `SQUAD_GANG_KIT=${kit}`, `SQUAD_GANG_PROFILE=${o.profile ?? 'champion'}`, ...(o.args ?? [])]});
+// `opts` is the fight options of the attackers over their profile and kit (SPAR_B_OPTS), `prey` the member index that each attacker
+// hunts (SQUAD_GANG_PREY; default the nearest). The replay's own SPAR_B_OPTS is the clones' (a melee rotation): it is dropped.
+const attackerSquad = (key: string, kit: string, n: number, o: {prayer?: boolean; profile?: string; opts?: Record<string, unknown>; prey?: string; args?: string[]} = {}): BenchCase => {
+  const c = run1Squad(key, {prayer: o.prayer ?? true, args: ['SQUAD_GANG=' + n, `SQUAD_GANG_KIT=${kit}`, `SQUAD_GANG_PROFILE=${o.profile ?? 'champion'}`, ...(o.prey ? [`SQUAD_GANG_PREY=${o.prey}`] : []), ...(o.args ?? [])]});
   // The members of ours are the first companions of the replay (all but the 3 clones); each attacker is a new companion.
   const kits = kit.split('+'), members = c.companions!.length - 3, letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, members + n).split('');
   const companions = letters.map((suffix, i) => (i < members ? {...c.companions![i]!, suffix} : {suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(kits[(i - members) % kits.length]!, GANKER_POST.x, GANKER_POST.z)}));
-  const rest = c.scriptArgs!.filter(x => !/^{bot:/.test(x) && x !== 'squad' && !/^SQUAD_GANG=/.test(x));
+  const rest = [...c.scriptArgs!.filter(x => !/^{bot:/.test(x) && x !== 'squad' && !/^SQUAD_GANG=/.test(x) && !/^SPAR_B_OPTS=/.test(x)), `SPAR_B_OPTS=${JSON.stringify(o.opts ?? {})}`];
   return {...c, pass: (s: string) => /^RESULT (ok|fail)( died)? squad/m.test(s), scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), `SQUAD_GANG=${n}`, ...rest], companions};
 };
 const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>; order?: number[]}): BenchCase => {
@@ -1195,13 +1197,9 @@ const ROUTE_CASES: BenchCase[] = [
   // The attacker library (research/gang-clones.md, "The attackers"): the squad of run 1 in its best state (full prayer points)
   // against one attacker or a team in place of the clones, each attacker with the kit of its kind and the champion's fight
   // options (SQUAD_GANG_KIT, SQUAD_GANG_PROFILE). The cell is what the squad run prints: kills, deaths, Hitpoints lost.
-  ...([['mage', 'mage', 1], ['iban', 'pure-iban', 1], ['god', 'pure-god', 1], ['ranger', 'ranger', 1], ['pureranger', 'pure-ranger', 1], ['pure', 'pure-dds', 1], ['tribrid', 'tribrid-snare', 1],
-    ['team3', 'mage+ranger+tribrid-snare', 3], ['team3pure', 'pure-iban+pure-ranger+pure-dds', 3]] as const)
-    .map(([tag, kit, n]) => attackerSquad(`extra:attack-${tag}-x1`, kit, n)),
-  // The team against the squad in the state of live run 1 (no prayer points), and a team of 5.
-  attackerSquad('extra:attack-team3-noprayer-x1', 'mage+ranger+tribrid-snare', 3, {prayer: false}),
-  attackerSquad('extra:attack-team5-x1', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5),
-  attackerSquad('extra:attack-team5-noprayer-x1', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5, {prayer: false}),
+  ...([['mage', 'mage', 1], ['ranger', 'ranger', 1], ['tribrid', 'tribrid-snare', 1], ['spear', 'tribrid-spear-dds', 1], ['team3', 'mage+ranger+tribrid-snare', 3], ['team5', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5]] as const)
+    .flatMap(([tag, kit, n]) => ([['', true, {}, undefined], ['fight-', true, {escapeOutnumbered: null}, undefined], ['pile-', true, {escapeOutnumbered: null}, '1'], ['pile-noprayer-', false, {escapeOutnumbered: null}, '1']] as const)
+      .map(([v, prayer, opts, prey]) => attackerSquad(`extra:attack-${tag}-${v}x1`.replace('--', '-'), kit, n, {prayer, opts, prey}))),
   run1Squad('extra:clone-run1-noeat-x1', {prayer: false, prey: '0,1,0', gang: {eatAt: 0}}),
   run1Squad('extra:clone-run1-nopray-x1', {prayer: false, prey: '0,1,0', gang: {prayerLag: [0, 0, 0, 0, 0, 0, 0, 0, 1]}}),
   // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
