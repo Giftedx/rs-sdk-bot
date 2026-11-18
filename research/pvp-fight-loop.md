@@ -1262,8 +1262,15 @@ mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched
   the limit ends the member's part, and the run ends as `RESULT fail died squad ...`. A run with only recovered deaths ends ok with
   `died=0 rekits=N`. The squad opens its accounts with `continueAfterDeath`.
 
-Gap: the hunt and the squad re-kit a death to a player in the Wilderness. The roam and the gang end their run at a death. No bound
-spans two runs yet.
+- **The death ledger.** `packages/core/src/pvp-deaths.ts` keeps `.practice/pvp-deaths.json`: the hunt and the squad record each
+  death on a live server (account, server, time, script, tile). A local server records nothing and is never refused. At its start a
+  run refuses with `RESULT fail died death ledger: ...` when an account in it has `PVP_MAX_DEATHS_PER_ACCOUNT` (default 2) deaths, or
+  its accounts together have `PVP_MAX_DEATHS_SQUAD` (default 3), in the last 24 hours. The supervisor reads that line as a death, so
+  the swarm holds the job and a person clears the ledger (edit the file). A ledger that cannot be read refuses the run.
+
+Gap: the hunt and the squad re-kit a death to a player in the Wilderness. The roam and the gang end their run at a death. The
+refusal at the start of the squad and hunt mains is not run by a test (the mains read the account's bot.env); the ledger
+functions and the death hooks are.
 
 ### Rings, prayer and poison in the gang meeting
 

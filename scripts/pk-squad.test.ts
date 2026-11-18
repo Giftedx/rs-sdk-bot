@@ -290,7 +290,7 @@ function squadWorld() {
     return { s, player, equipment, inventory, walks, next, eaten: () => eaten, tick: () => tick };
 }
 
-async function runSquadDeath(maxDeaths: number | undefined) {
+async function runSquadDeath(maxDeaths: number | undefined, onDeath?: (near: { x: number; z: number } | null) => void) {
     const w = squadWorld(), lines: string[] = [];
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
@@ -300,7 +300,7 @@ async function runSquadDeath(maxDeaths: number | undefined) {
     ];
     try {
         const stats = await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400,
-            stopped: () => w.tick() >= 120, killsLeft: () => true, log: l => lines.push(l), ...(maxDeaths === undefined ? {} : { maxDeaths }) });
+            stopped: () => w.tick() >= 120, killsLeft: () => true, log: l => lines.push(l), ...(maxDeaths === undefined ? {} : { maxDeaths }), ...(onDeath ? { onDeath } : {}) });
         return { stats, w, lines };
     } finally { for (const mock of mocks) mock.mockRestore(); }
 }
@@ -349,4 +349,17 @@ test('a rescue account that dies during its rescue is stranded, so a run cannot 
     }, () => {}, async s => { if (s.name === 'dead') retreated = true; return s; });
     expect(stranded).toEqual(['dead']);
     expect(retreated).toBe(false);
+||||||| parent of 40267d6e4e (Death ledger: a squad or hunt account that died too often in 24 h on a live server does not start)
+
+test('a squad member calls the death ledger hook for each death, also over the limit, and a failing hook does not stop the re-kit', async () => {
+    const seen: ({ x: number; z: number } | null)[] = [];
+    const a = await runSquadDeath(1, near => { seen.push(near); });
+    expect(a.stats).toMatchObject({ deaths: 1, rekits: 1 });
+    expect(seen).toEqual([{ x: 3066, z: 3641 }]);
+    const over = await runSquadDeath(0, near => { seen.push(near); });
+    expect(over.stats.died).toBe(true);
+    expect(seen).toHaveLength(2);
+    const failing = await runSquadDeath(1, () => { throw new Error('disk full'); });
+    expect(failing.stats).toMatchObject({ rekits: 1, died: false });
+    expect(failing.lines.some(l => l.includes('SQUAD death ledger write failed: Error: disk full'))).toBe(true);
 });

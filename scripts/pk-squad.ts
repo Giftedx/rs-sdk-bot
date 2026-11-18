@@ -30,6 +30,7 @@ import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, 
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
+import { pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
@@ -278,7 +279,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     stunShareFor?: (target: string) => FightOptions['stunShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
     trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void;
     // Deaths that the account recovers from in the run (default 0: a death ends the account's part).
-    maxDeaths?: number }): Promise<SquadStats> {
+    // `onDeath` is called for each death of the account, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
+    maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void }): Promise<SquadStats> {
     const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0, receipts: [], deaths: 0, rekits: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player;
     let life0 = st?.player?.lifeId, lastTile: { x: number; z: number } | null = null;
@@ -293,6 +295,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // (rekitAfterDeath), restocks its pack and walks back to the post. It returns false when it is over the limit or the re-kit stopped.
     const recover = async (): Promise<boolean> => {
         stats.deaths++;
+        try { o.onDeath?.(lastTile); } catch (error) { o.log(`[${s.name}] SQUAD death ledger write failed: ${String(error)}`); }
         if (stats.deaths > (o.maxDeaths ?? 0)) { o.log(`[${s.name}] SQUAD death ${stats.deaths}: over the limit of ${o.maxDeaths ?? 0}`); return false; }
         const rec = await rekitAfterDeath(s, { lifeBefore: life0, diedNear: lastTile, wornAtStart, stop: () => !going(), log: l => o.log(`[${s.name}] ${l}`), bank: bankNear(o.post.x) });
         if (rec.rekit !== 'ok') { o.log(`[${s.name}] SQUAD no re-kit: ${rec.rekit}`); return false; }
@@ -459,6 +462,12 @@ if (import.meta.main) {
     const targets = new Set((gangSize ? gangNames : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
     // A pause holds before any login: a stop file present at the start logs no account in (openBot checks stop files
     // only after its login, and a login puts an account parked in the Wilderness back in the world).
+    // The death ledger: a squad whose account or members died too often in the last 24 h on a live server does not start. The
+    // supervisor reads `RESULT fail died` as a death, so the swarm holds it until a person clears the ledger.
+    const { accountServer: serverOf } = await import('./pk-roam');
+    const squadServer = serverOf(ours[0]!);
+    const ledgerRefusal = pvpDeathRefusal({ accounts: ours, server: squadServer });
+    if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }
     const paused = ours.filter(n => existsSync(`.practice/stop-${n}`));
     if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
@@ -584,7 +593,8 @@ if (import.meta.main) {
             targets, post,
             options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
-            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), deadline,
+            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1),
+            onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
             stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); },
         });
     }));

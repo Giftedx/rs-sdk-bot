@@ -646,9 +646,11 @@ test('hunt goes on after a re-kit that worked in its first retreat, and does not
         spyOn(pk, 'fightPlayer').mockImplementation(async () => ({ outcome: 'lost', ticks: 1 }) as any),
     ];
     try {
-        const result: any = await hunt(w.s, { cap: 300, food: 2, minFood: 1, escapeAt: 35, stop: () => false, log: l => lines.push(l), kit: {}, trip: [{ id: 385, count: 1 }], spots: [{ x: 3094, z: 3540, dwell: 3 }] });
+        const deaths: unknown[] = [];
+        const result: any = await hunt(w.s, { cap: 300, food: 2, minFood: 1, escapeAt: 35, stop: () => false, log: l => lines.push(l), kit: {}, trip: [{ id: 385, count: 1 }], spots: [{ x: 3094, z: 3540, dwell: 3 }], onDeath: near => deaths.push(near) });
         expect(result.deaths).toBe(1);
         expect(result.rekits).toBe(1);
+        expect(deaths).toHaveLength(1);
         expect(result.end).toBe('cap');
         expect(lines.filter(l => l.startsWith('HUNT death {') && l.includes('"rekit":"ok"'))).toHaveLength(1);
         expect(w.player.hp).toBeGreaterThanOrEqual(89);

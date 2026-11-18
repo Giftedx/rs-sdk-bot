@@ -15,6 +15,7 @@
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
+import { pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
@@ -325,7 +326,8 @@ export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt
     kit?: Kit; trip?: readonly TripItem[]; damageSpell?: number; rotation?: Style[]; teleSpell?: number;
     spots?: readonly Spot[]; observe?: boolean;
     // Deaths that the hunt re-kits after (default 2). The death after that ends the run with its record.
-    maxDeaths?: number };
+    // `onDeath` is called for each death, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
+    maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void };
 export async function hunt(s: Session, o: HuntOptions) {
     const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
     const tally = { kills: 0, deaths: 0, rekits: 0, retreatsFailed: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
@@ -351,6 +353,7 @@ export async function hunt(s: Session, o: HuntOptions) {
     const died = () => { const p = s.sdk.getState()?.player; return !!p && life !== undefined && p.lifeId !== undefined && p.lifeId !== life; };
     const afterDeath = async (near: { x: number; z: number } | null | undefined): Promise<{ end: string; death: DeathRecord } | null> => {
         tally.deaths++;
+        try { o.onDeath?.(near ?? lastTile); } catch (error) { log(`HUNT death ledger write failed: ${String(error)}`); }
         const record = await rekitAfterDeath(s, { lifeBefore: life, diedNear: near ?? lastTile, wornAtStart, stop: over, log, recordOnly: tally.deaths > (o.maxDeaths ?? DEFAULT_MAX_DEATHS) });
         life = record.lifeAfter ?? life;
         if (record.rekit !== 'ok') return { end: record.rekit === 'death limit' ? 'died' : 'died: ' + record.rekit, death: record };
@@ -600,6 +603,10 @@ if (import.meta.main) {
     const [bot, capArg] = process.argv.slice(2);
     if (!bot) { console.log('usage: bun scripts/pk-hunt.ts <bot> [CAP ticks]'); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
+    // The death ledger: an account that died too often in the last 24 h on a live server does not start (RESULT fail died).
+    const { accountServer } = await import('./pk-roam');
+    const server = accountServer(bot), ledgerRefusal = pvpDeathRefusal({ accounts: [bot], server });
+    if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }
     const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
     // A death ends a bot session by default (packages/core/src/bot.ts: the DEATH line, then finish). The hunt handles its own death
     // (rekitAfterDeath): continueAfterDeath prints the DEATH line and goes on, and the stop file, the lease and the stall checks stay live.
@@ -608,7 +615,8 @@ if (import.meta.main) {
     const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
         kit: env.PK_KIT === 'snare' ? SNARE_KIT : env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : env.PK_KIT === 'snare' ? SNARE_TRIP : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
-        spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1', maxDeaths: maxDeathsOf(env.HUNT_MAX_DEATHS) });
+        spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1', maxDeaths: maxDeathsOf(env.HUNT_MAX_DEATHS),
+        onDeath: near => { recordPvpDeath({ account: bot, server, at: Date.now(), script: 'scripts/pk-hunt.ts', near }); } });
     console.log('HUNT ' + JSON.stringify(r));
     // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
     if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');
