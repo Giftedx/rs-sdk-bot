@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795005545543-fatstack-hocuspokeus",
  "account": "Fatstack",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 136757,
  "claim": "fa367657-17d1-458b-ae77-ed3fd516395c",
- "count": 0,
- "ok": false,
- "at": 1795005664751,
- "detail": "trade claimed"
+ "count": 136757,
+ "ok": true,
+ "at": 1795005698322,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 136757,
+  "after": 0
+ },
+ "bank": {
+  "count": 136757,
+  "at": 1795005672348
+ },
+ "logout": {
+  "attemptId": "1795005664778-0000018300-0000000001",
+  "at": 1795005698313,
+  "sha256": "d024107ee7d686dd2d977275eb81274b8aea1291932de22d504917c66ea92565"
+ },
+ "screen": true
 }
