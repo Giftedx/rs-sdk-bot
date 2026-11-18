@@ -448,8 +448,8 @@ async function holdRadar(actions: (tick: number) => any[], until = 120) {
         spyOn(pk, 'observePlayer').mockReturnValue(null),
     ];
     try {
-        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= until, killsLeft: () => true, log: l => lines.push(l), threats });
-        return { w, lines, walks, seen };
+        const stats = await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= until, killsLeft: () => true, log: l => lines.push(l), threats });
+        return { w, lines, walks, seen, stats };
     } finally { for (const mock of mocks) mock.mockRestore(); }
 }
 
@@ -467,4 +467,15 @@ test('a single-way action walks to the tile once, and the squad stays there: no 
     const { lines, walks } = await holdRadar(() => [{ kind: 'single-way', to, reason: 'team of 3: A(126,melee)' }], 40);
     expect(walks).toEqual([to]);
     expect(lines.filter(l => l.includes('SQUAD threat single-way: team of 3'))).toHaveLength(1);
+});
+
+test('a retreat action ends a member part in the Wilderness with the rescue: a walk to the bank, then back to the post by the bank trip', async () => {
+    const reason = 'outclassed by Boss(145,magic) at 3 tiles';
+    const { lines, walks, stats } = await holdRadar(tick => tick < 10 ? [{ kind: 'retreat', reason }] : [], 200);
+    expect(lines.filter(l => l.includes(`SQUAD threat retreat: ${reason}`))).toHaveLength(1);
+    expect(lines.some(l => l.includes('SQUAD rescue at 3066,3641'))).toBe(true);
+    expect(lines.some(l => l.includes('SQUAD rescue ends at') && l.includes('wild 0'))).toBe(true);
+    expect(walks.some(t => t.z < 3520)).toBe(true);
+    expect(stats).toMatchObject({ died: false });
+    expect(stats.trips).toBeGreaterThanOrEqual(1);
 });

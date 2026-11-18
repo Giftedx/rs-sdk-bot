@@ -4,7 +4,7 @@
 // does about it. Each decision is logged with the record that caused it. Each attacker is appended to
 // `.practice/threat-records/<server>/<name>.jsonl`, for the behaviour record of the rivals (research/pvp-fight-loop.md).
 //   Options: SQUAD_THREAT=1 (squad main) turns the watch on; SQUAD_THREAT_ACT=0 only logs and records; default 1 with the watch.
-import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { decodeHeadicons, decodeWorn, wornWeaponStyle, type CombatStyle } from '../packages/core/src/opponent';
@@ -51,17 +51,29 @@ export interface WatchOptions {
     log: (line: string) => void;
     // The root of the record tree (default the working directory), and false for no record.
     recordRoot?: string | false;
+    // A record file at this size (default MAX_RECORD_BYTES) moves to `<name>.jsonl.1` (the older one of that name goes), so a name keeps at most
+    // twice that. A server directory with this many record files (default MAX_RECORD_FILES) takes no new name.
+    recordMaxBytes?: number; recordMaxFiles?: number;
+    // Ticks after a retreat or a single-way move for which the same players cannot cause another one (default 600). A player that was not
+    // there at the first one causes one at once. A decision stays for 30 ticks, so that each member of the squad acts on it.
+    cooldown?: number;
     decide?: Partial<DecideOptions>;
     // false: the watch logs and records, and the squad does not act on it (default true).
     act?: boolean;
     now?: () => number;
 }
 
+// A record file moves aside at 5 MB, and a server directory takes at most 500 names.
+export const MAX_RECORD_BYTES = 5_000_000, MAX_RECORD_FILES = 500;
+
 export class ThreatWatch {
     private book: ThreatBook;
     private cache: { tick: number; classes: ThreatClass[]; actions: Adapt[] } | null = null;
     private logged = new Map<string, string>();
     private recorded = new Map<string, number>();
+    private cooling = new Map<string, number>();
+    private held: { until: number; moves: Adapt[] } | null = null;
+    private full = false;
     readonly act: boolean;
     constructor(private o: WatchOptions) {
         this.act = o.act !== false;
@@ -93,7 +105,7 @@ export class ThreatWatch {
         const records = this.book.observe(tick, members, [...sightings.values()].filter(x => members.some(m => Math.max(Math.abs(m.x - x.x), Math.abs(m.z - x.z)) <= 40)));
         const classes = records.map(r => classifyThreat(r, members, { canAttack: (m, t) => canAttack(m, t) }));
         const levelOf = (s: Session, skill: string) => s.sdk.getSkill(skill)?.level ?? 1;
-        const actions = decideAdapt(classes, members, {
+        const decided = decideAdapt(classes, members, {
             outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }),
             multiAt: isMulti,
             // The nearest single-way tile, away from the dangerous players.
@@ -106,9 +118,29 @@ export class ThreatWatch {
             },
             ...this.o.decide,
         });
+        const actions = this.cooldown(tick, classes, decided);
         this.cache = { tick, classes, actions };
         this.report(tick, classes, actions);
         return this.cache;
+    }
+
+    // A retreat or a single-way move for the players that caused one in the last `cooldown` ticks is dropped (the protect prayer and the swap stay):
+    // a stranger at the post would cause retreat, return, retreat until the trips run out.
+    private cooldown(tick: number, classes: readonly ThreatClass[], actions: Adapt[]): Adapt[] {
+        const move = (a: Adapt) => a.kind === 'retreat' || a.kind === 'single-way';
+        const rest = actions.filter(a => !move(a)), moves = actions.filter(move);
+        if (this.held && tick <= this.held.until) return [...this.held.moves, ...rest];
+        if (!moves.length) return actions;
+        const expected = this.o.decide?.expected;
+        const culprits = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name.toLowerCase());
+        if (culprits.length && culprits.every(n => (this.cooling.get(n) ?? -1) > tick)) {
+            if (this.logged.get('cooldown') !== culprits.join('+')) { this.logged.set('cooldown', culprits.join('+')); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
+            return rest;
+        }
+        for (const n of culprits) this.cooling.set(n, tick + (this.o.cooldown ?? 600));
+        this.logged.delete('cooldown');
+        this.held = { until: tick + 30, moves };
+        return actions;
     }
 
     actionsFor(member: string): Adapt[] { return (this.cache?.actions ?? []).filter(a => 'member' in a ? a.member === member : true); }
@@ -138,8 +170,17 @@ export class ThreatWatch {
         const dir = join(this.o.recordRoot ?? '.', '.practice', 'threat-records', this.o.server.replace(/[^A-Za-z0-9._-]/g, '_'));
         const line = { schema: 'threat-sighting/1', tick, at: (this.o.now ?? Date.now)(), server: this.o.server, name: r.name, combat: r.combat, worn: r.worn, wild: r.wild, multi: r.multi, x: r.x, z: r.z,
             nearest: r.nearest, closing: r.closing, speed: r.speed, style: c.style, by: c.by, cover: c.cover, lastAttack: r.lastAttack, targeting: r.targeting, protect: r.protect, skulled: r.skulled, canHit: c.canHit };
-        try { mkdirSync(dir, { recursive: true }); appendFileSync(join(dir, `${r.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.jsonl`), JSON.stringify(line) + '\n'); }
-        catch (error) { this.o.log(`THREAT record write failed: ${String(error)}`); }
+        const file = join(dir, `${r.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.jsonl`);
+        try {
+            mkdirSync(dir, { recursive: true });
+            if (existsSync(file)) {
+                if (statSync(file).size >= (this.o.recordMaxBytes ?? MAX_RECORD_BYTES)) { rmSync(`${file}.1`, { force: true }); renameSync(file, `${file}.1`); }
+            } else if (readdirSync(dir).filter(n => n.endsWith('.jsonl')).length >= (this.o.recordMaxFiles ?? MAX_RECORD_FILES)) {
+                if (!this.full) { this.full = true; this.o.log(`THREAT record directory is full (${this.o.recordMaxFiles ?? MAX_RECORD_FILES} files): no new name is recorded`); }
+                return;
+            }
+            appendFileSync(file, JSON.stringify(line) + '\n');
+        } catch (error) { this.o.log(`THREAT record write failed: ${String(error)}`); }
     }
 }
 

@@ -633,7 +633,7 @@ if (import.meta.main) {
     if (get('SQUAD_THREAT', '0') === '1') {
         const radar = new Radar();
         if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
-        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', decide: { expected: targets } });
+        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', cooldown: Number(get('SQUAD_THREAT_COOLDOWN', '600')), decide: { expected: targets } });
     }
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
