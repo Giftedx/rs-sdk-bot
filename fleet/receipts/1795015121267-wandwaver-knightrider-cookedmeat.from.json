@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795015121267-wandwaver-knightrider-cookedmeat",
  "account": "Wandwaver",
  "partner": "KnightRider",
@@ -12,6 +12,16 @@
  "claim": "3a59c3e8-f0ce-4c27-be2c-04250dfa25f2",
  "count": 0,
  "ok": false,
- "at": 1795015170618,
- "detail": "trade claimed"
+ "at": 1795015213073,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795015181932
+ },
+ "logout": {
+  "attemptId": "1795015170628-0000021776-0000000001",
+  "at": 1795015213063,
+  "sha256": "fc9f48b490880e5d9132b1757f105b4dadbb3ac5819e6f0a33b77699fd64799e"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795015121267-wandwaver-knightrider-cookedmeat",
  "account": "KnightRider",
  "partner": "Wandwaver",
@@ -12,6 +12,12 @@
  "claim": "27ed506d-5382-4bf3-96b7-b266724036b4",
  "count": 0,
  "ok": false,
- "at": 1795015165790,
- "detail": "trade claimed"
+ "at": 1795015207886,
+ "detail": "fled at low hitpoints: flee_guard id=377 at=3027,3212 ticks=12",
+ "logout": {
+  "attemptId": "1795015165798-0000002360-0000000001",
+  "at": 1795015207873,
+  "sha256": "89cde639cdf74db6d1c138ad4278c5afcf204e55ba0357b18a25b84f62571d06"
+ },
+ "screen": false
 }
