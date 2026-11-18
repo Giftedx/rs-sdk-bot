@@ -499,6 +499,133 @@ The fights of the run in the feed: 11 fights of 0 to 104 ticks, and the gang acc
 level 15 and 16 (the post and the tiles beside it). A clone run of four of ours takes 539 ticks
 for its three kills.
 
+## Fidelity of the first live squad run
+
+The replay: `extra:clone-run1-*` (`scripts/pk-gang-record/run-1.json`). The four members start in the loadouts that the
+run started with (the wear and pack of the loadout files of the run), at the Edgeville bank, and march to the post as
+the squad script does. The three clones are the base clones. `SQUAD_GANG_PREY=0,1,0` sends the gang to the first two
+members, as the feed shows it in the live run. The members had Prayer level 99 and current level 0 (status files of the
+four, and `PRAYER_GUARD` points [0,0]): the replay gives them Prayer level 1, the nearest state the bench has to no
+points. That state changes the combat level of a member from 126 to 113.
+
+Hosted runners, seeds 1, 2 and 3 (run 44411582416). Live: 5 kills, 279 Hitpoints lost, kills 22 to 54 ticks after the
+first attack (mean 34), 2 members lost Hitpoints, no death.
+
+| Measure | Live | Replay | Error |
+|---|---|---|---|
+| Kills a run (the clones do not come back) | 5 | 3 | not comparable |
+| Hitpoints lost a kill | 56 | 72 | +29% |
+| Ticks of a fight to its kill | 34 | 62 | +82% |
+| Members that lost Hitpoints | 2 | 2.3 | +15% |
+| Deaths of ours | 0 | 0 | none |
+
+The raw values by seed (kills, Hitpoints lost by member in the order UnderMyKilt, mmsmk1232, TrouserSnake, TheFullMonty):
+3 kills, 74, 117, 0, 0; 3 kills, 79, 104, 0, 0; 3 kills, 94, 178, 1, 0. The replay on six more seeds (run 44415206897)
+lost 206, 385 (1 kill), 150, 257, 215 and 204 Hitpoints; the pooled value of those 16 kills is 89 a kill.
+
+What the replay shows:
+
+- **With the live state the bench is as hard as the live run, not softer.** 72 to 89 Hitpoints a kill against 56, with one
+  live run of 5 kills. The earlier clone numbers (16 to 21 Hitpoints a kill) came from members with full prayer points
+  and one kit.
+- **Prayer points halve the Hitpoints lost a kill.** The same replay with full prayer points lost 51, 22 and 37 Hitpoints a
+  kill (mean 37, 9 kills; `extra:clone-run1-prayer-x1`).
+- **The target pick decides who takes the damage.** With the gang on the nearest member (`extra:clone-run1-nearest-x1`),
+  one member took 108 to 225 Hitpoints and the others none: 57 Hitpoints a kill, 1.3 members hit. With the gang on the
+  first two members, 2.3 members lost Hitpoints, as live. The live rule that picks among members at the same distance is
+  `unknown`: the live gang attacked the two members in dragonhide, in 6 fights, with all four within 1 to 3 tiles in 4
+  of them.
+- **Two clone behaviours do not explain the length of a fight.** A gang that never eats and a gang with no protect prayer
+  have kill times of 57 and 51 ticks against 62 for the base. The live fights are 22 to 54 ticks. The cause is open.
+
+### The fidelity case
+
+`extra:clone-run1-fidelity-x1` passes only when the run has 1 kill or more, 1 to 4 members lose Hitpoints, and a run with 2
+kills or more loses 28 to 112 Hitpoints a kill (half to twice the live 56). The band stops a bench that goes soft by
+half again, or hard by twice. It is wide because one condition has a spread of 50 to 385 Hitpoints a kill from seed to
+seed. A band of 15% is not a test that one seed can pass: the live value is one run of 5 kills, and the replay of the
+same condition on two runs of the same seeds also differs.
+
+### The climb on the live state
+
+Seeds 1, 2 and 3, hosted runs 44411582416 and 44413797291. "Rune" is the loadout of TrouserSnake and TheFullMonty
+for all four members. "Rune first" puts the two rune loadouts in the members that the gang attacks first, and the
+two dragonhide loadouts last.
+
+| Condition | Kills | Deaths of ours | Hitpoints lost a kill | Ticks of a fight | Hitpoints lost by seed |
+|---|---|---|---|---|---|
+| live loadouts, no prayer points | 9 of 9 | 0 | 72 | 62 | 191, 183, 273 |
+| live loadouts, full prayer points | 9 of 9 | 0 | 37 | 52 | 153, 65, 112 |
+| rune first, no prayer points | 7 of 9 | 0 | 51 | 82 | 120, 157, 82 |
+| rune first, full prayer points | 9 of 9 | 0 | 32 | 56 | 81, 119, 84 |
+| all rune, no prayer points | 9 of 9 | 0 | 74 | 71 | 163, 384, 121 |
+| all rune, full prayer points | 9 of 9 | 0 | 26 | 47 | 67, 69, 100 |
+
+- **Prayer points are the one lever outside the spread.** Each pair of rows with the same loadouts loses 2 to 3 times the Hitpoints
+  without them.
+- **The loadouts and the member order are not separated** by three seeds: 37, 32 and 26 Hitpoints a kill with prayer,
+  72, 51 and 74 without, with a spread of 2 to 3 times inside a row.
+||||||| 4b839d5e98
+
+## The attackers
+
+Other teams run bots on this server. The attacker library puts attackers of a given kind on the post in place of the
+clones (`extra:attack-*`). `SQUAD_GANG_KIT=<kit>+<kit>` gives gang account i the kit `list[i]` of `scripts/pk-kits.ts`,
+`SQUAD_GANG_PROFILE` its fight profile (here `champion`, the profile of the hill climb) and `SPAR_B_OPTS` its options.
+`SQUAD_GANG_PREY=<member index>` sends each attacker to one member. The squad is the four members of live run 1 in their
+own loadouts, with full prayer points unless the case says no prayer. A cell is what the squad run prints: attackers
+killed, deaths of ours, Hitpoints lost.
+
+The variants of an attacker, the climb of its own rules:
+
+- **plain**: the champion's options. The attacker leaves when it is outnumbered (`escapeOutnumbered`).
+- **fight**: `escapeOutnumbered: null`, the attacker fights to its death.
+- **pile**: fight, and every attacker hunts member 1 (`SQUAD_GANG_PREY=1`). A real team does this.
+
+### The matrix: our squad of four on the multi-way post
+
+Hosted run 44418140982, seeds 1, 2 and 3. Raw Hitpoints lost by seed. "D1" is a death of ours in that seed.
+
+| Attacker | plain | fight | pile | pile, squad with no prayer points |
+|---|---|---|---|---|
+| mage | 0 killed; 0, 1, 28 | 3 killed; 8, 5, 34 | 3 killed; 13, 5, 11 | 3 killed; 35, 13, 10 |
+| ranger | 0 killed; 89, 33, 64 | 3 killed; 185, 90, 78 | 3 killed; 173, 130, 111 | 3 killed; 259, 210, 285 |
+| tribrid | 2 killed; 8, 18, 16 | 3 killed; 8, 63, 56 | 3 killed; 8, 63, 60 | 3 killed; 101, 98, 208 |
+| tribrid with the dragon spear | 0 killed; 0, 11, 53 | 3 killed; 10, 75, 61 | 3 killed; 74, 30, 184 | 3 killed; 142, 252, 143 |
+| team of 3 (mage, ranger, tribrid) | 2 of 9 killed; 850, 490, 161 | 6 of 9; 419, 793, 968 | 6 of 9; 780, 689, 891 | 3 of 9; 1014 D1, 976 D1, 916 D1 |
+| team of 5 (2 mages, ranger, 2 tribrids) | 1 of 15; 1055, 513, 1255 | 0 of 15; 283, 921, 490 | 1 of 15; 535, 486, 704 | 0 of 15; 158 D1, 1, 257 |
+
+### Our setups against the two teams (pile variant, full prayer points)
+
+Hosted run 44419714637 (seeds 1, 2, 3), compared with the pile column above.
+
+| Our setup | Team of 3: killed of 9; Hitpoints lost | Team of 5: killed of 15; Hitpoints lost |
+|---|---|---|
+| four members, multi-way post (the base) | 6; 780, 689, 891 | 1; 535, 486, 704 |
+| four members, the gang's single-way post | 5; 557, 538, 426 | 3; 542, 759, 938 |
+| six members (the four loadouts and two more rune) | 9; 417, 357, 381 | 10; 1113, 1030 D1, 944 |
+
+### The policy table
+
+What the cells support. Each row is evidence from three seeds, not a rule that has run live.
+
+| Threat seen | Setup | Move |
+|---|---|---|
+| one mage, ranger, tribrid or spear tribrid | the squad of four | Stay and fight. The attacker dies when it fights on (3 of 3 in every variant), at 5 to 34 Hitpoints lost for a mage, 78 to 285 for a ranger, 8 to 208 for a tribrid and 10 to 252 for a spear tribrid. A lone attacker that is outnumbered leaves. |
+| a team of 3 piling one member | full prayer points | Fight. 689 to 891 Hitpoints lost, 6 of 9 attackers killed. With six members all 9 are killed at 357 to 417. |
+| a team of 3 and the squad has no prayer points | the squad of four | Do not stay. One of ours died in each of the 3 seeds (916 to 1,014 Hitpoints lost). |
+| a team of 5 | the squad of four | Do not fight it: 1 of 15 killed at 486 to 704 Hitpoints lost, and with no prayer points 1 death in 3 seeds. |
+| a team of 5 | the squad of six | It kills 10 of 15 at 944 to 1,113 Hitpoints lost and 1 of ours died in 3 seeds. |
+| any team | the gang's single-way post | No gain on the team of 5 (3 of 15 killed, 542 to 938). The team of 3 costs fewer Hitpoints there (426 to 557) and 5 of 9 die. |
+
+Prayer points are the first rule of every row: a squad with none lost accounts to a team of 3 and 5.
+
+Not done: the third party that arrives in the middle of the gang fight, a retreat rule (walk out) against a team, the
+kit of each member against a mage (rune against dragonhide), and the climb of an attacker's own choice of target. The four
+pure kits (`pure-iban`, `pure-god`, `pure-ranger`, `pure-dds`) had no fight in 3 seeds in the first run of these cases; the
+first cells of that run also gave the attackers the clones' melee rotation, and are not kept. The attackers do not
+yet choose a member by armour or by Hitpoints.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
