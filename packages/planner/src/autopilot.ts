@@ -15,7 +15,7 @@ import { xpForLevel } from './curve';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
-import { squadKeeps, squadRows, type SquadInput } from './squad';
+import { SQUAD_FOOD_HEAL, squadKeeps, squadRows, type SquadInput } from './squad';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
@@ -166,8 +166,6 @@ export type Inputs = {
 export const FUND_RESERVE = 50_000;
 // The pseudo template of an item order that restocks a gang squad member (the order is the whole job).
 export const SQUAD_RESTOCK: Template = { id: 'squad-restock', family: 'kit-buy', script: 'scripts/buy-owned-ge-item.ts', role: 'supply', goal: 'restock the gang squad', yields: () => [] };
-// Units of a food item for one shark unit of demand: a lobster heals 12 against the shark's 20.
-const SQUAD_UNITS: Readonly<Record<string, number>> = { shark: 1, swordfish: 20 / 14, lobster: 20 / 12 };
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
 export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
@@ -654,7 +652,7 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
 export function plan(inp: Inputs): Assignment[] {
     // An active squad's members never give their kit or supplies to another account's order: they leave the donor stock
     // and the coin donors, and only the squad's own restock (below) reads their stock, above their squad reserve.
-    const squadNames = new Set(inp.squad?.active ? inp.squad.members.map(m => m.name.toLowerCase()) : []);
+    const squadNames = new Set(inp.squad?.active ? (inp.squad.all ?? inp.squad.members.map(m => m.name)).map(n => n.toLowerCase()) : []);
     const memberStock = (inp.stock ?? []).filter(s => squadNames.has(s.name.toLowerCase()));
     if (squadNames.size) inp = { ...inp, stock: (inp.stock ?? []).filter(s => !squadNames.has(s.name.toLowerCase())), donors: (inp.donors ?? []).filter(d => !squadNames.has(d.name.toLowerCase())) };
     const byId = new Map(inp.templates.map(t => [t.id, t]));
@@ -973,7 +971,7 @@ export function plan(inp: Inputs): Assignment[] {
     // bones, 1,900 nature runes and 29,000 feathers while others waited for a donor of another side). The levels of
     // another side's account are not read here: it keeps the reserve of every band.
     const ownReserve = new Map<string, Record<string, number>>();
-    const squadKeep = inp.squad?.active ? squadKeeps(inp.squad.hours) : undefined, squadMember = new Set((inp.squad?.members ?? []).map(m => m.name.toLowerCase()));
+    const squadKeep = inp.squad?.active ? squadKeeps(inp.squad.hours) : undefined, squadMember = new Set((inp.squad?.all ?? inp.squad?.members.map(m => m.name) ?? []).map(n => n.toLowerCase()));
     const keepsOf = (s: Stock) => {
         if (squadKeep && squadMember.has(s.name.toLowerCase())) return { ...reserve, ...Object.fromEntries(Object.entries(squadKeep).map(([i, n]) => [i, Math.max(n, reserve[i] ?? 0)])) };
         const a = s.side === inp.side ? byName.get(s.name) : undefined;
@@ -1131,7 +1129,8 @@ export function plan(inp: Inputs): Assignment[] {
             const from = [...stock, ...memberStock].find(s => s.side === inp.side && s.name.toLowerCase() !== row.account && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= 1
                 && !inp.noSend?.has(`${s.name}>${member.name}`.toLowerCase()) && (cost(byName.get(s.name)) ?? -1) >= 0 && (cost(member) ?? -1) >= 0);
             if (!from) continue;
-            const count = Math.min(spare(from, item), item === 'lobster' || item === 'shark' || item === 'swordfish' ? Math.ceil(row.short * SQUAD_UNITS[item]!) : row.short);
+            // A food row is in lobsters (squad.ts): a donor's item is counted by the HP it heals against the lobster's.
+            const count = Math.min(spare(from, item), item in SQUAD_FOOD_HEAL ? Math.ceil(row.short * SQUAD_FOOD_HEAL.lobster! / SQUAD_FOOD_HEAL[item]!) : row.short);
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(member.name);
             done.set(member.name, { account: member.name, template: SQUAD_RESTOCK, value: 0, reason: `restocks ${count} ${item} for the gang squad, sent by ${from.name}`, resources: [],
                 send: { from: from.name, to: member.name, item, count, template: SQUAD_RESTOCK.id } });
@@ -1814,9 +1813,8 @@ export function aioTemplates(): Template[] {
 // supplier's holding plus that demand, STOP_AT_TARGET ends the run there) and spends at most twice the shop cost of it
 // (MAX_SPEND, with FLOAT and COIN_RESERVE). A template is `squadOnly`: it is a candidate only while the plan's squad is
 // active, so a plan with no squad block never values it. Lines that already have a template: earth and air runes
-// (shop-runes), lobsters (lobster-chain). No template: sharks, since no script fishes them. Antipoison(3): a nearly empty
-// Jiminua shelf cannot feed the squad, so this run is a fallback with a small cap, and a maker (Herblore) takes the line
-// by yielding `antipoison(3)`.
+// (shop-runes), lobsters (lobster-chain). No template: sharks, since no script fishes them. Antipoison(3): the shop run is a
+// fallback with a small cap, and a maker (Herblore) takes the line by yielding `antipoison(3)`.
 export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'iron arrow': 2000, 'water rune': 1500, 'nature rune': 1000, 'law rune': 200, 'antipoison(3)': 12 };
 // The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
 // price table (`prices`, from priceTable) when it holds the item.

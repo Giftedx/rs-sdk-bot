@@ -1071,10 +1071,11 @@ test('the fare of the reach rule is the fare the shared walker asks for', async 
     expect(fare('npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226')).toBe(TOLL);
 });
 
-test('the place of each shop job is the bank of its shop profile, and the reach rule covers 70 of the 128 templates', () => {
+test('the place of each shop job is the bank of its shop profile, and the reach rule covers each template with a place resource', () => {
     for (const [resource, spot] of Object.entries(PLACES)) if (resource.startsWith('shop:')) expect([resource, spot]).toEqual([resource, PROFILES[resource.slice(5)]!.bankSpot]);
-    // The templates the reach rule covers, of the whole catalogue.
-    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([70, 128]);
+    // A template has a place when one of its resources is a knight spot, a chicken pen or a place of PLACES: the count follows the data.
+    const hasPlace = (t: { resources?: string[] }) => (t.resources ?? []).some(r => r.startsWith('knight:') || /^pen:\d+,\d+$/.test(r) || r in PLACES);
+    expect(catalogue().filter(t => placeOf(t)).map(t => t.id)).toEqual(catalogue().filter(hasPlace).map(t => t.id));
     // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
     const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
     expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
@@ -1215,6 +1216,8 @@ test('squadInput holds a member that runs outside the swarm or has no observatio
     const items = (n: string) => n === 'C' ? undefined : { shark: 1 };
     const got = squadInput(plan, 'local', owners as any, items, n => n === 'B');
     expect(got?.members.map(m => m.name)).toEqual(['A']);
+    // Every member this side owns drives the hold-out, held or not; only the observed, free ones are restocked.
+    expect(got?.all).toEqual(['A', 'B', 'C']);
     expect(got?.maxCoins).toBe(5000);
     expect(squadInput({ squad: { active: false, members: ['A'] } }, 'local', owners as any, items)).toBeUndefined();
     expect(squadInput({}, 'local', owners as any, items)).toBeUndefined();

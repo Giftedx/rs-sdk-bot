@@ -2850,3 +2850,26 @@ test('the squad rows are priced from the plan and capped by maxCoins, first line
     expect(lines).not.toContain('iron arrow');
     expect(lines).not.toContain('food');
 });
+
+test('a held squad member (live hunt) is still held out of jobs and donor stock: every block member drives the hold-out', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const base = { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 };
+    const hunter = acct('Hunter', base, { 'bronze sword': 1, trout: 100, coin: 50_000 }), needy = acct('Needy', base, { 'bronze sword': 1, coin: 100 });
+    const stock = [{ name: 'Hunter', side, items: { trout: 100, 'bronze sword': 1 } }];
+    const run = (squad?: SquadInput) => plan(inputs([hunter, needy], { templates: band, army: new Set(['hunter', 'needy']), capacity: { 'cow:ardougne-north': 6 }, stock, donors: [{ name: 'Hunter', coins: 900_000 }], ...(squad ? { squad } : {}) }));
+    // Control: with no squad Hunter is an ordinary free donor: it sends its trout to Needy.
+    expect(run().find(x => x.account === 'Needy')!.send).toMatchObject({ from: 'Hunter', item: 'trout' });
+    // Held: it is in `all` but not in `members` (a live session, a stop file): no band, no kit buy, no donation.
+    const held = run({ active: true, hours: 4, all: ['Hunter'], members: [] });
+    expect(held.find(x => x.account === 'Hunter')!.template).toBeUndefined();
+    expect(held.flatMap(x => [x.send?.from, x.fund?.from]).filter(Boolean)).toEqual([]);
+});
+
+test('a food restock counts the donor item by heal: a lobster donor sends the lobsters short, a shark donor 12/20 of them', () => {
+    const squad: SquadInput = { active: true, hours: 4, all: ['Hunter'], members: [{ name: 'Hunter', items: {} }] };
+    const run = (item: string) => plan(inputs([acct('Hunter', {}, { coin: 100 }), acct('Donor', {}, { [item]: 5000 })], { templates: [], bill: [], squad, stock: [{ name: 'Donor', side, items: { [item]: 5000 } }] }))
+        .find(x => x.account === 'Hunter')!.send;
+    const lobsters = Math.ceil(squadTarget('food', 4) * 20 / 12);
+    expect(run('lobster')).toMatchObject({ item: 'lobster', count: lobsters });
+    expect(run('shark')).toMatchObject({ item: 'shark', count: Math.ceil(lobsters * 12 / 20) });
+});

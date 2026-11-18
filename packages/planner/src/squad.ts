@@ -17,9 +17,13 @@ export const SQUAD_FOOD_HEAL: Readonly<Record<string, number>> = { shark: 20, sw
 export const SQUAD_FOOD = Object.keys(SQUAD_FOOD_HEAL);
 
 export type SquadBlock = { active?: unknown; members?: unknown; hours?: unknown };
-// `maxCoins`: the most the rows ask in coins at the shop price; the rows that would pass it are left out, the first lines first.
+// `maxCoins`: the most the rows ask in coins at the shop price in ONE PASS (a budget of outstanding demand, not a total: as stock
+// arrives and hunts use it up, the shortage and its budget come back). The rows that would pass it are left out, the first lines first.
+// An item with no price counts 0 and is never cut. Each supply run is capped on its own by MAX_SPEND.
+// `all`: every member of the block this side owns, whether it is restocked now or held; it drives the hold-out and the donor
+// reserve, while `members` (observed, not held) drives the restock rows.
 export const SQUAD_MAX_COINS = 320_000;
-export type SquadInput = { active: boolean; hours: number; maxCoins?: number; members: readonly { name: string; items: Readonly<Record<string, number>> }[] };
+export type SquadInput = { active: boolean; hours: number; maxCoins?: number; all?: readonly string[]; members: readonly { name: string; items: Readonly<Record<string, number>> }[] };
 export type SquadRow = { account: string; names: string[]; short: number; target: number; consumer: string };
 
 // The squad block of a swarm plan, or an inactive squad: the members are names of the account list, the hours a whole

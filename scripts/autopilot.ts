@@ -504,7 +504,7 @@ export function squadInput(plan: any, side: string, owners: ReturnType<typeof lo
     const block = squadBlock(plan);
     if (!block.active) return undefined;
     const members = block.members.filter(n => owners.get(n.toLowerCase())?.side === side && !held(n)).flatMap(name => { const items = holdings(name); return items ? [{ name, items }] : []; });
-    return { active: true, hours: block.hours, maxCoins: block.maxCoins, members };
+    return { active: true, hours: block.hours, maxCoins: block.maxCoins, all: block.members.filter(n => owners.get(n.toLowerCase())?.side === side), members };
 }
 
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
