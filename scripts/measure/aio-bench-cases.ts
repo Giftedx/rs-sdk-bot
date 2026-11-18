@@ -36,6 +36,9 @@ export type BenchCase = {
 };
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
+// The two result lines of scripts/measure/host-memory.ts and its ok result.
+const HOST_MEMORY_COMPANIONS = ['b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const hostMemoryPass = (s: string) => ok(s) && /^HOSTMEM .* mode=host /m.test(s) && /^HOSTMEM .* mode=separate /m.test(s);
 // True when the worker's result line lists every id in its worn gear (`worn=[...]`, scripts/gather-combat.ts).
 const wears = (s: string, ids: number[]) => { const worn = /worn=\[([^\]]*)\]/.exec(s)?.[1]?.split(',').map(Number) ?? []; return ids.every(id => worn.includes(id)); };
 const loggedOutOnce = (s: string) => {
@@ -1573,6 +1576,16 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:gear-shop-zeke', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'zeke', '1200', 'ITEMS=Iron scimitar', 'STOCK_TARGET=1', 'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', 'FLOAT=1100', 'COIN_RESERVE=200', 'MAX_SPEND=900'],
     pass: s => ok(s) && /boughtTotal=1 bankedTotal=1 /.test(s), timeoutMs: 600_000,
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, bank: [{id: 995, count: 5000}]}},
+  // The resident memory of 4 bots of one worker in one host process against 4 separate processes (scripts/measure/host-memory.ts,
+  // linux only). The accounts <bot>b to <bot>h take the preset of the main account: <bot>, b, c and d run in the host, e to h apart.
+  {key: 'extra:host-memory-gather', script: 'scripts/measure/host-memory.ts', preset: 'gather_combat_druid',
+    scriptArgs: ['scripts/gather-combat.ts', '--env', 'TARGET=druid', '--env', 'CAP=6000', '--max-s', '200', '--', '250', 'druid'],
+    pass: hostMemoryPass, timeoutMs: 600_000, companions: HOST_MEMORY_COMPANIONS.map(suffix => ({suffix, preset: 'gather_combat_druid'}))},
+  {key: 'extra:host-memory-shop', script: 'scripts/measure/host-memory.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['scripts/shop-buyer.ts', '--env', 'ITEMS=Iron scimitar', '--env', 'STOCK_TARGET=1', '--env', 'STOP_AT_TARGET=1', '--env', 'BANK_PACK=1', '--env', 'BANK_AT=0', '--env', 'NO_BUY_TICKS=25',
+      '--env', 'FLOAT=1100', '--env', 'COIN_RESERVE=200', '--env', 'MAX_SPEND=900', '--max-s', '120', '--', 'zeke', '1200'],
+    pass: hostMemoryPass, timeoutMs: 480_000, presetConfig: {position: {x: 3269, z: 3167, level: 0}, bank: [{id: 995, count: 5000}]},
+    companions: HOST_MEMORY_COMPANIONS.map(suffix => ({suffix, preset: 'fresh_lumbridge', presetConfig: {position: {x: 3269, z: 3167, level: 0}, bank: [{id: 995, count: 5000}]}}))},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
   // third sword, the ladder out, the rune scimitar it wore wielded again and the Al Kharid bank.
