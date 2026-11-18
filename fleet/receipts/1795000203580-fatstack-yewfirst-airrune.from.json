@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795000203580-fatstack-yewfirst-airrune",
+ "account": "Fatstack",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 35,
+ "claim": "bc96a66d-7335-4e9b-b0c6-757aa925d720",
+ "count": 35,
+ "ok": true,
+ "at": 1795000300486,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 35,
+  "after": 0
+ },
+ "bank": {
+  "count": 35,
+  "at": 1795000288148
+ },
+ "logout": {
+  "attemptId": "1795000275599-0000016044-0000000001",
+  "at": 1795000300474,
+  "sha256": "f4815fe4ce82c122eb2784757865459dfba963d413a5d6c7144496b6cfe1f030"
+ },
+ "screen": true
+}
