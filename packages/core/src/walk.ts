@@ -249,7 +249,9 @@ function farWalk(s: Walker, to: Tile): boolean {
 async function walkFar(s: Walker, to: Tile, opts: WalkOptions, tolerance: number): Promise<Outcome> {
     const start = s.tick(), p = s.sdk.getState()?.player, budget = Math.max(opts.legTimeoutTicks ?? 0, p ? cheb(to, p) * 3 + 60 : 600);
     const deps = await sessionWalker(s as unknown as Parameters<typeof sessionWalker>[0]);
-    const r = await walkPath(deps, [{ x: to.x, z: to.z, tol: tolerance }], { maxTicks: budget, signal: opts.signal });
+    const began = Date.now(), r = await walkPath(deps, [{ x: to.x, z: to.z, tol: tolerance }], { maxTicks: budget, signal: opts.signal });
+    // One line for each far walk that ends short: where it started, what it was given, and what it cost in time and ticks.
+    if (!r.ok) console.log('WALK_FAR_SHORT ' + JSON.stringify({ to, from: p ? { x: p.worldX, z: p.worldZ } : null, budget, ticks: s.tick() - start, ms: Date.now() - began, detail: r.detail }));
     return r.ok ? { ok: true, ticks: s.tick() - start }
         : { ok: false, reason: opts.signal?.aborted ? 'aborted' : 'timeout', detail: `far walk to ${to.x},${to.z},${to.level}: ${r.detail ?? 'not arrived'}`, ticks: s.tick() - start };
 }
