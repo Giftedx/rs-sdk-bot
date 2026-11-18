@@ -127,3 +127,12 @@ test('meeting the goal holds another batch while the authored worker owns succes
  expect(monitor.refusal({type:'interactNpc',option:'Attack'})).toContain('progression');
  expect(monitor.refusal({type:'interactLoc',progressionOption:'Bank'})).toBeNull();
 });
+
+test('a finished goal still lets the player leave an altar through its portal, and holds the next craft',()=>{
+ const monitor=createProgressionMonitor({evaluate:()=>({...decision(false),decision:{...decision(false).decision,state:'complete',selected:null,step:null}}),onHandoff:()=>{}});
+ monitor.observe({tick:1,inCombat:false,bankGeneration:1,stateKey:'complete'});
+ // The session marks a use of a loc named Portal as an exit (progression-session.ts).
+ expect(monitor.refusal({type:'interactLoc',progressionOption:'Use',progressionPortalExit:true})).toBeNull();
+ expect(monitor.refusal({type:'interactLoc',progressionOption:'Use'})).toContain('progression');
+ expect(monitor.refusal({type:'useItemOnLoc'})).toContain('progression');
+});

@@ -245,15 +245,16 @@ export function attachProgressionSession(s:Session,work:WorkDescriptor,server:st
  void s.ended.then(()=>{stopped=true;off();});
  const result:ProgressionSession={decision:()=>monitor.current()?.decision??null,evaluation:()=>monitor.current(),refresh:()=>{observe(true);return monitor.current();},
   refusal(action){observe();const a=action as any,state=s.sdk.getState();
-   let option:string|undefined,bankCleanup=false,cannonCleanup=false;
+   let option:string|undefined,bankCleanup=false,cannonCleanup=false,portalExit=false;
    if(a?.type==='interactNpc')option=state?.nearbyNpcs?.find((n:any)=>n.index===a.npcIndex)?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;
    if(a?.type==='useInventoryItem')option=state?.inventory?.find((i:any)=>i.slot===a.slot)?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;
    if(a?.type==='interactLoc'){
     const loc=state?.nearbyLocs?.find((l:any)=>l.id===a.locId&&l.x===a.x&&l.z===a.z);option=loc?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;
     bankCleanup=!!loc&&/bank booth|bank chest/i.test(loc.name)&&!/^closed/i.test(loc.name)&&/^(bank|use-quickly|use quickly|use)$/i.test(option??'');
+    portalExit=!!loc&&/^portal$/i.test(loc.name??'')&&/^use$/i.test(option??'');
     cannonCleanup=!!ownedCannon&&cannonLoc(loc)&&a.x===ownedCannon.x&&a.z===ownedCannon.z&&state?.player?.level===ownedCannon.level&&/^pick-up$/i.test(option??'');
    }
-   const refusal=monitor.refusal({...a,...option?{progressionOption:option}:{},progressionBankCleanup:bankCleanup,progressionCannonCleanup:cannonCleanup});
+   const refusal=monitor.refusal({...a,...option?{progressionOption:option}:{},progressionBankCleanup:bankCleanup,progressionCannonCleanup:cannonCleanup,progressionPortalExit:portalExit});
    if(!refusal&&cannonWorker&&!ownedCannon&&a?.type==='useInventoryItem'&&/^set-up$/i.test(option??'')){
     const item=state?.inventory?.find((i:any)=>i.slot===a.slot),p=state?.player;
     if(item?.id===6&&[p?.worldX,p?.worldZ,p?.level].every(Number.isSafeInteger)&&baseCount(state)>0){
