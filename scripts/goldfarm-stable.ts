@@ -9,6 +9,7 @@ import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
 import { depositObserved } from '../packages/core/src/deposit';
 import { receiveHandoff } from './courier-handoff';
+import { questFoodDefinitions } from '../packages/core/src/sustain';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { courierFoodReady, receiveFoodAtBank } from './goldfarm';
 import {pendingCourierFunding,serviceCourierFunding} from './courier-funding';
@@ -145,34 +146,28 @@ export async function farmSettlePicks(d: {
     return { ...previous, exact: false };
 }
 
-export interface FoodDef {
-    pattern: RegExp;
-    heal: number;
-}
-
-export const FOOD_DEFS: FoodDef[] = [
-    { pattern: /^chocolate slice$/i, heal: 2 },
-    { pattern: /^cooked (meat|chicken)$/i, heal: 3 },
-    { pattern: /^(slice of cake|2\/3 cake|cake)$/i, heal: 4 },
-    { pattern: /^bread$/i, heal: 5 },
-    { pattern: /^trout$/i, heal: 7 },
-    { pattern: /^salmon$/i, heal: 9 },
-    { pattern: /^lobster$/i, heal: 12 },
-    // consume_normal.dbrow: consumable,shark -> stat_heal,hitpoints,20.
-    { pattern: /^shark$/i, heal: 20 },
+// The names of the food that the thief eats. The HP of a bite comes from the content
+// (player/configs/consumption/consume_normal.dbrow, read by questFoodDefinitions): this file holds no heal number.
+export const FOOD_NAMES: readonly RegExp[] = [
+    /^chocolate slice$/i,
+    /^cooked (meat|chicken)$/i,
+    /^(slice of cake|2\/3 cake|cake)$/i,
+    /^bread$/i,
+    /^trout$/i,
+    /^salmon$/i,
+    /^lobster$/i,
+    /^shark$/i,
 ];
 
 // Owned low-tier fish first; premium sharks only after cheaper stock is gone.
 export const WITHDRAW_FOOD = [/^trout$/i, /^salmon$/i, /^lobster$/i, /^bread$/i, /^(slice of cake|2\/3 cake|cake)$/i, /^shark$/i];
 
 export const isFoodItem = (i: any) =>
-    FOOD_DEFS.some(d => d.pattern.test(i.name)) &&
+    FOOD_NAMES.some(re => re.test(i.name)) &&
     (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text));
 
-export const healOf = (item: any): number => {
-    const def = FOOD_DEFS.find(d => d.pattern.test(item.name));
-    return def?.heal ?? 3;
-};
+// An item with no heal row in the content sorts after every food: it is eaten only when nothing else is held.
+export const healOf = (item: any): number => questFoodDefinitions().get(item.id)?.heal ?? Infinity;
 
 // Select the food item that best matches the current HP deficit (loss) to avoid overheal waste
 export function selectFoodToEat(items: readonly any[], loss: number): any | undefined {
@@ -269,7 +264,7 @@ if (import.meta.main) {
 
         const foodItems = () => inv().filter(isFoodItem);
         const foodCount = () => foodItems().reduce((n, i) => n + i.count, 0);
-        const notes = () => inv().filter(i => FOOD_DEFS.some(d => d.pattern.test(i.name)) && !isFoodItem(i));
+        const notes = () => inv().filter(i => FOOD_NAMES.some(re => re.test(i.name)) && !isFoodItem(i));
         const coins = () => inv().filter(i => COINS.test(i.name)).reduce((n, i) => n + i.count, 0);
 
         const cheb = (a: Tile, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));

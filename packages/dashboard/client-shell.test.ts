@@ -2435,3 +2435,21 @@ test('XP Tracker archives positive session XP/EHP on reset across account keys a
  expect(nodes['.xp-history'].innerHTML).toBe('');
  expect(JSON.parse(stored).__history.Main).toBeUndefined();
 });
+
+test('Prayer tab names, levels and drains are the values of the content prayer tables',()=>{
+ const content=new URL('../../vendor/rs-sdk/server/content/scripts/skill_prayer/configs/',import.meta.url);
+ const rows=readFileSync(new URL('prayers.dbrow',content),'utf8'),enums=readFileSync(new URL('prayers.enum',content),'utf8');
+ const drainBlock=enums.split(/^\[/m).find(b=>b.startsWith('prayer_drain_effects]'))!;
+ const drain=new Map([...drainBlock.matchAll(/^val=\^(\w+),(\d+)\s*$/gm)].map(m=>[m[1]!,Number(m[2])]));
+ // One row of prayers.dbrow per prayer, in the order of the prayer buttons: name, level, and the drain of its constant.
+ const want=rows.split(/^\[/m).flatMap(b=>{
+  const p=b.match(/^data=prayer,\^(\w+)\s*$/m),n=b.match(/^data=name,(.+?)\s*$/m),l=b.match(/^data=level,(\d+)\s*$/m);
+  return p&&n&&l?[[n[1]!,Number(l[1]),drain.get(p[1]!)]]:[];
+ });
+ const line=shell.split('\n').find(l=>l.trimStart().startsWith('const prayers=[['))!;
+ const table=new Function(`${line};return prayers;`)() as [string,number,string,number,string][];
+ expect(want.length).toBe(15);expect(drain.size).toBe(15);
+ expect<unknown>(table.map(([name,level,,d])=>[name,level,d])).toEqual(want);
+ // prayers.enum:4-6: Thick Skin, Burst of Strength and Clarity of Thought drain 3.
+ expect(table.slice(0,3).map(x=>x[3])).toEqual([3,3,3]);
+});
