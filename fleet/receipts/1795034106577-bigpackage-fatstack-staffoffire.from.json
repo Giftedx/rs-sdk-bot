@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795034106577-bigpackage-fatstack-staffoffire",
+ "account": "Bigpackage",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "4a59729e-af99-4faa-9a64-6a2407ad138b",
+ "count": 0,
+ "ok": false,
+ "at": 1795034890202,
+ "detail": "trade claimed"
+}
