@@ -634,14 +634,23 @@ export function connectFailedDetail(error: unknown, rows: FetchRow[], max = 300)
     return text();
 }
 
+// Bots of this process that log in or are logged in. A host job (packages/core/src/host.ts) and a squad job hold
+// several. Each Git call of a login claim is synchronous, so a claim that waits stalls each bot of its process.
+let botsInProcess = 0;
+export const botsInThisProcess = () => botsInProcess;
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean; work?:WorkDescriptor },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission} }): Promise<Session> {
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission}; claimSwarm?: typeof acquireFleetSwarmClaim }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
+    // This bot counts from here until its login fails or its session ends.
+    botsInProcess++;
+    let counted = true;
+    const leave = () => { if (counted) { counted = false; botsInProcess--; } };
+    void ended.then(leave);
     let shim: Shim | null = null;
     const host = opts.server ?? 'localhost:8888'; // host:port, same as SERVER in bot.env
     let sharedClaim: ReturnType<typeof acquireFleetSwarmClaim> | undefined;
@@ -653,8 +662,9 @@ export async function startInProcessSession(opts: { name: string; password: stri
             const { root, side, recover, admission, trade } = deps.sharedAccount;
             const target = { account: opts.name, server: host, side };
             if (trade) tradeClaim = acquireFleetTradeClaim(root, {...target, orderId: trade.orderId, role: trade.role});
-            // A login outside the plan lock waits for a slow Git authority. One under the lock keeps its short window.
-            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover,admission, patient: !deps.planLock });
+            // The one bot of a process, outside the plan lock, waits for a slow Git authority (about 110 s at most).
+            // A bot beside other bots and a login under the lock keep the short window: the wait would stall them.
+            else sharedClaim = (deps.claimSwarm ?? acquireFleetSwarmClaim)(root, target, { recover,admission, patient: !deps.planLock && botsInProcess === 1 });
             deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
             if (trade && tradeClaim) trade.prepare(tradeClaim);
         }
@@ -672,6 +682,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     try { attempt = deps.planLock ? await withPlanWrite(admit, deps.planLock) : admit(); }
     catch (error) {
         // No call to startSession has run. A failed release leaves the shared hold in place.
+        leave();
         try {
             tradeClaim?.release();
             sharedClaim?.abortBeforeNetwork();
@@ -716,6 +727,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     } catch (e) {
         attempt.record('connect-failed', connectFailedDetail(e, http.rows));
         releaseConfirmed();
+        leave();
         throw e;
     } finally { http.restore(); }
     // The bootstrap callback runs before startSession returns.
@@ -723,6 +735,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     if (!sh) {
         attempt.record('connect-failed', 'no packet observer');
         releaseConfirmed();
+        leave();
         throw new Error('Session did not install its packet observer');
     }
     attempt.record('connected');
