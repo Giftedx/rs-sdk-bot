@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour,COW_FOOD_BITES} from './gather-combat';
 import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
@@ -290,6 +290,13 @@ test('cow food counts cake pieces in bites and eats the smallest piece first', (
     expect(cowFoodPick([{id:1891},{id:1893},{id:1895},{id:995}])?.id).toBe(1895);
     expect(cowFoodPick([{id:1897},{id:1899}])?.id).toBe(1899);
     expect(cowFoodPick([{id:995}])).toBeUndefined();
+});
+
+test('cow food bites and heals come from the content (cake 4 a bite in 3 bites, chocolate cake 5, trout 7)', () => {
+    expect(cowFoodHeal([{id:333,count:1}])).toBe(7);
+    expect(cowFoodHeal([{id:1891,count:1}])).toBe(12);
+    expect(cowFoodHeal([{id:1897,count:1}])).toBe(15);
+    expect(Object.keys(COW_FOOD_BITES).map(Number).sort((a,b)=>a-b)).toEqual([333,1891,1893,1895,1897,1899,1901]);
 });
 
 test('held cow food must cover the trout rule in HP, not in pieces', () => {

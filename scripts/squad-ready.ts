@@ -11,14 +11,18 @@
 //   (poison did 139 of 455 damage), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
 //   sharks first, then lobsters), a bank read of a stated age, and a place the walker leaves.
 // Usage: bun scripts/squad-ready.ts [<account> ...] [--root <checkout>] [--max-age <hours>] [--json]
-//          [--loadouts <dir>] [--orders <dir>]
+//          [--loadouts <dir>] [--orders <dir>] [--receipt <dir>]
 //   No account named: every account of this fleet side with 99 in the seven combat skills.
 //   --root      the checkout whose .practice/status, .practice/market-all.json and fleet owners the tool reads
 //               (default: the main checkout of this repository).
 //   --loadouts  writes <account>.json for each account that holds its kit: the input of the kit step,
 //               `bun scripts/aio-logistics.ts <account> loadout <file>` at the bank the file names.
+//   --receipt   writes <account>.json for each account that it checked: schema squad-ready/1, ok, the rule, the time, the faults, and the
+//               SHA-256 of the account's status file that it read (the fresh bank and worn snapshot). The swarm's kit-restored
+//               repair (scripts/swarm.ts applyKitRestored) clears the hold of a PvP death on a passing receipt.
 //   --orders    writes one fleet order file for each transfer of the plan into <dir>, for review. The tool refuses the
 //               fleet's own orders folder; `bun scripts/fleet-order.ts`, which the plan prints, places an order.
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { BANK_MEETS } from './coin-courier';
@@ -274,6 +278,10 @@ export function loadoutOf(pick: Pick, bank: { x: number; z: number }): { bank: {
 }
 
 // A status file (packages/core/src/status.ts) as an account. A noted item counts as its plain item.
+// The receipt of one check (--receipt): it binds the verdict to the status file that the check read.
+export function receiptOf(p: Pick, a: { at: number; bankAt: number | null }, rule: string, now: number, statusBytes: Uint8Array): { schema: 'squad-ready/1'; account: string; ok: boolean; rule: string; at: number; statusAt: number; bankAt: number | null; statusSha256: string; reasons: string[] } {
+    return { schema: 'squad-ready/1', account: p.account, ok: p.ready, rule, at: now, statusAt: a.at, bankAt: a.bankAt, statusSha256: createHash('sha256').update(statusBytes).digest('hex'), reasons: p.reasons };
+}
 export function accountOf(status: any, owner?: { side?: string; reservation?: string }): Account | null {
     if (!status || typeof status.name !== 'string' || !status.pos || !Array.isArray(status.skills)) return null;
     const items = (rows: any): Item[] => (Array.isArray(rows) ? rows : []).filter((i: any) => Number.isSafeInteger(i?.id) && typeof i.name === 'string' && i.count > 0).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
@@ -303,7 +311,7 @@ export function report(plan: Plan, accounts: readonly Account[], rule: Rule, now
 
 if (import.meta.main) {
     const args = process.argv.slice(2), flag = (name: string) => { const i = args.indexOf(name); return i < 0 ? undefined : args[i + 1]; };
-    const valued = new Set(['--root', '--max-age', '--loadouts', '--orders', '--rule']);
+    const valued = new Set(['--root', '--max-age', '--loadouts', '--orders', '--rule', '--receipt']);
     const names = args.filter((a, i) => !a.startsWith('--') && !valued.has(args[i - 1] ?? ''));
     // The main checkout holds the status files: a worktree's git directory is <main>/.git/worktrees/<name>.
     const here = resolve(import.meta.dir, '..');
@@ -354,6 +362,16 @@ if (import.meta.main) {
             const a = fleet.find(x => x.name === p.account)!, bank = meetNear(a.pos);
             writeFileSync(join(loadouts, `${p.account}.json`), JSON.stringify(loadoutOf(p, bank), null, 1) + '\n');
             console.log(`LOADOUT ${join(loadouts, `${p.account}.json`)} at the ${bank.bank} bank (${cheb(bank, a.pos)} tiles from the account)`);
+        }
+    }
+    const receipts = flag('--receipt');
+    if (receipts) {
+        mkdirSync(receipts, { recursive: true });
+        for (const p of plan.picks) {
+            const a = fleet.find(x => x.name === p.account)!;
+            const body = receiptOf(p, a, rule.name, now, readFileSync(join(statusDir, `${p.account}.json`)));
+            writeFileSync(join(receipts, `${p.account}.json`), JSON.stringify(body, null, 1) + '\n');
+            console.log(`RECEIPT ${join(receipts, `${p.account}.json`)} ok=${body.ok}`);
         }
     }
     const orderDir = flag('--orders');
