@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795008936820-shaftsinker-pocketrocket-woodenshield",
  "account": "Shaftsinker",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Wooden shield",
  "requested": 1,
  "claim": "e155213e-c1aa-4e16-9588-955929c1a7a0",
- "count": 0,
- "ok": false,
- "at": 1795009007568,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795009070935,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795009018170
+ },
+ "logout": {
+  "attemptId": "1795009007576-0000020356-0000000001",
+  "at": 1795009070924,
+  "sha256": "92e894c3253f4790d703b665820076e070977eddbe8ba106b775d7a5ad211052"
+ },
+ "screen": true
 }
