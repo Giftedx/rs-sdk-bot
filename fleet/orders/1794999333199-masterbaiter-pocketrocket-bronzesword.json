@@ -1,0 +1,22 @@
+{
+ "id": "1794999333199-masterbaiter-pocketrocket-bronzesword",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Pocketrocket",
+ "item": "Bronze sword",
+ "count": 1,
+ "start": 1794999333199,
+ "end": 1795001733199,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
