@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795029045736-fatstack-mmtha0205-willowshortbow",
+ "account": "Fatstack",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Willow shortbow",
+ "requested": 1,
+ "claim": "8de48bcc-a299-4841-a5ff-856bd76382a3",
+ "count": 1,
+ "ok": true,
+ "at": 1795029156223,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795029141764
+ },
+ "logout": {
+  "attemptId": "1795029129776-0000018384-0000000001",
+  "at": 1795029156212,
+  "sha256": "c796d36b3917573ea2d52938f4be02cf835d1d1f680e61c62a6cd6dbf160bb8b"
+ },
+ "screen": true
+}
