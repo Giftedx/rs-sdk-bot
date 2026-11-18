@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794960125207,
+ "at": 1794960146797,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -507,7 +507,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-3c0016c1-c253-465a-9390-4cb141b3c835"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-prayer-nab99-current-end [task-3c0016c1-c253-465a-9390-4cb141b3c835]",
    "role": "helper"
