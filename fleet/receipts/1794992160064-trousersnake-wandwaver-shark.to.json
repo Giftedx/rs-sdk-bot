@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794992160064-trousersnake-wandwaver-shark",
+ "account": "Wandwaver",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 1,
+ "claim": "832efde1-b04e-4f33-832b-31031848d825",
+ "count": 0,
+ "ok": false,
+ "at": 1794992431769,
+ "detail": "trade claimed"
+}
