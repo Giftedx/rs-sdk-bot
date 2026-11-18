@@ -22,7 +22,9 @@ import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
-import { activeExternalLive, clearSwarmStop, swarmWroteStop } from './swarm';
+import { START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, swarmWroteStop } from './swarm';
+import { freemem } from 'node:os';
+import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
@@ -478,8 +480,18 @@ export function handBots(jobs: readonly any[], side: string, keep: ReadonlySet<s
 // the limit of the merged plan (mergedPlan: the coordinator's expansion replaces `maxBots` when it grants one), less the
 // hand jobs and the live bots that no swarm run owns (`external`: manual or other-controller sessions that
 // activeExternalLive counts). Undefined when the plan names no usable limit.
-export function freeSlots(merged: any, jobs: readonly any[], side: string, keep: ReadonlySet<string>, external = 0): number | undefined {
-    return Number.isSafeInteger(merged?.maxBots) && merged.maxBots > 0 ? Math.max(0, merged.maxBots - handBots(jobs, side, keep) - external) : undefined;
+// Memory is the tighter limit in practice: the swarm admits a bot only while the projected free RAM keeps
+// max(FREE_FLOOR_GB, minFreeGB) (admissionDecision), and each start reserves START_BUDGET_GB. `memory` caps the planner's
+// jobs at the bots that already run plus the starts that headroom allows, so the plan adds no bot that admission would refuse
+// ("waiting: memory"); the swarm still enforces the floor at each start.
+export function memoryHeadroom(freeGB: number, minFreeGB: number, pending: number): number {
+    const floor = Math.max(FREE_FLOOR_GB, Number.isFinite(minFreeGB) ? minFreeGB : 0);
+    return Math.max(0, Math.floor((freeGB - floor - START_BUDGET_GB * pending) / START_BUDGET_GB));
+}
+export function freeSlots(merged: any, jobs: readonly any[], side: string, keep: ReadonlySet<string>, external = 0, memory?: { running: number; headroom: number }): number | undefined {
+    if (!(Number.isSafeInteger(merged?.maxBots) && merged.maxBots > 0)) return undefined;
+    const bySlots = Math.max(0, merged.maxBots - handBots(jobs, side, keep) - external);
+    return memory ? Math.min(bySlots, memory.running + memory.headroom) : bySlots;
 }
 
 // The PK builds of the side's army accounts: the plan's `builds` object, account name -> kit name of
@@ -681,7 +693,9 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
     const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
-            activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now).length), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+            activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now).length,
+            { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
+                headroom: memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);
