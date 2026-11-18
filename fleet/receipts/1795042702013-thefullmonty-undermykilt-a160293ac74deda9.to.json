@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795042702013-thefullmonty-undermykilt-a160293ac74deda9",
+ "account": "UnderMyKilt",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 4,
+ "claim": "22e35e01-1202-40c1-aae1-253e1395f2c8",
+ "count": 0,
+ "ok": false,
+ "at": 1795043138004,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795043125844-0000026568-0000000001",
+  "at": 1795043137995,
+  "sha256": "0ac8ee934af6df1238445257b48e7c22004d7af89c69c5aded283a82f83a5886"
+ },
+ "screen": false
+}
