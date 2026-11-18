@@ -3,6 +3,7 @@
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {aioCatalog} from '../aio';
+import {run1Fidelity} from './pk-gang-run1';
 import {planProgressiveSkiller} from '../aio-skiller';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
@@ -1170,6 +1171,8 @@ const ROUTE_CASES: BenchCase[] = [
   // The first live squad run replayed (research/gang-clones.md "Fidelity of the first live squad run"): its four loadouts,
   // no prayer points, the gang on the first two members; then each difference from the live run put back one at a time.
   run1Squad('extra:clone-run1-x1', {prayer: false, prey: '0,1,0'}),
+  // The fidelity case of the replay: it passes only inside the band of run-1.json, so the clones cannot go soft unseen.
+  {...run1Squad('extra:clone-run1-fidelity-x1', {prayer: false, prey: '0,1,0'}), pass: (s: string) => ok(s) && killReceiptsMatch(s) && run1Fidelity(s) === null},
   run1Squad('extra:clone-run1-prayer-x1', {prayer: true, prey: '0,1,0'}),
   run1Squad('extra:clone-run1-nearest-x1', {prayer: false}),
   // Which behaviour of the clones sets the length of a fight: a gang that never eats (eatAt 0), and a gang whose protect prayer

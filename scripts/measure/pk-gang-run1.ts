@@ -14,6 +14,16 @@ export function parseSquadLog(text: string): Run {
     const kills = num('kills'), taken = num('taken'), takenBy = members.map(m => m.taken);
     return { kills, taken, hpAKill: kills ? Math.round(taken / kills) : null, killTicks, meanKillTicks: killTicks.length ? Math.round(killTicks.reduce((a, b) => a + b, 0) / killTicks.length) : null, takenBy, membersHit: takenBy.filter(t => t > 0).length, deaths: num('died') };
 }
+// The fidelity band of the replay (scripts/pk-gang-record/run-1.json "fidelity"): a run of the replay lands in it, or the clones
+// have drifted from the live run. The band is wide on purpose: one live run is 5 kills, and the replay on one seed
+// has a spread of 36 to 91 Hitpoints a kill. It stops a bench that goes soft by half again, or hard by twice.
+export function run1Fidelity(text: string, band = { hpAKill: [28, 112], kills: 2, membersHit: [1, 3] } as { hpAKill: [number, number]; kills: number; membersHit: [number, number] }): string | null {
+    const r = parseSquadLog(text);
+    if (r.kills < band.kills) return `kills ${r.kills} under ${band.kills}`;
+    if (r.hpAKill === null || r.hpAKill < band.hpAKill[0] || r.hpAKill > band.hpAKill[1]) return `Hitpoints a kill ${r.hpAKill} outside ${band.hpAKill.join(' to ')}`;
+    if (r.membersHit < band.membersHit[0] || r.membersHit > band.membersHit[1]) return `members hit ${r.membersHit} outside ${band.membersHit.join(' to ')}`;
+    return null;
+}
 const pct = (bench: number | null, live: number | null) => (bench === null || !live ? '-' : `${bench >= live ? '+' : ''}${Math.round((100 * (bench - live)) / live)}%`);
 // One row for each measure: the live value, the bench mean over the runs and the error of the bench.
 export function runTable(live: Run, runs: Run[]): string[] {
