@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795005109359-masterbaiter-oreelse-dragonbones",
  "account": "OreElse",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 10,
  "claim": "1a294de6-0d1c-4c1e-84dc-59ae42c4083b",
- "count": 0,
- "ok": false,
- "at": 1795005184404,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795005218277,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795005217548
+ },
+ "logout": {
+  "attemptId": "1795005184412-0000023212-0000000001",
+  "at": 1795005218263,
+  "sha256": "8ae6ca45c80eb8b8330ecabaaa2fb4a6f741e1b9140901fc23f6cefc089c8060"
+ },
+ "screen": true
 }

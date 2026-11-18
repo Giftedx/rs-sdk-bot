@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795005109359-knightrider-yewfirst-shark",
  "account": "KnightRider",
  "partner": "YewFirst",
@@ -12,6 +12,12 @@
  "claim": "17f5769f-814f-4a76-b423-9632b22cf1b7",
  "count": 0,
  "ok": false,
- "at": 1795005192370,
- "detail": "trade claimed"
+ "at": 1795005225142,
+ "detail": "fled at low hitpoints: flee_guard id=377 at=3026,3209 ticks=5",
+ "logout": {
+  "attemptId": "1795005192379-0000020416-0000000001",
+  "at": 1795005225087,
+  "sha256": "bb9c2053e3d5d7c6081adc0eda0b857ccf1d535f016e3c2ced8d8ceebea5bbda"
+ },
+ "screen": false
 }

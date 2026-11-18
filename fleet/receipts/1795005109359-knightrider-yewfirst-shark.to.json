@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005109359-knightrider-yewfirst-shark",
+ "account": "YewFirst",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "ce59a619-5ce9-4060-9347-06a61d8ce7b2",
+ "count": 0,
+ "ok": false,
+ "at": 1795005218308,
+ "detail": "trade claimed"
+}

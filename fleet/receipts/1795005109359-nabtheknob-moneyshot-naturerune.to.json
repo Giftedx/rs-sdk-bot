@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795005109359-nabtheknob-moneyshot-naturerune",
  "account": "Moneyshot",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "93e60b71-d41a-4040-85ea-16bdd0fab358",
- "count": 0,
- "ok": false,
- "at": 1795005201562,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795005222685,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795005221936
+ },
+ "logout": {
+  "attemptId": "1795005201614-0000025468-0000000001",
+  "at": 1795005222673,
+  "sha256": "8c5981b5212f786e0d2fae833036f73ae17692f15d967bc20cf053a7b48baad0"
+ },
+ "screen": true
 }
