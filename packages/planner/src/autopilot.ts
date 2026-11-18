@@ -15,6 +15,7 @@ import { xpForLevel } from './curve';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
+import { squadKeeps, squadRows, type SquadInput } from './squad';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
@@ -127,6 +128,9 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // The gang squad's supply demand (packages/planner/src/squad.ts): an active squad adds a stock target of its members'
+    // consumption as demand rows, and a donor's spare stock moves to a member that is short. Absent or inactive: none.
+    squad?: SquadInput;
     // Lower-case account name -> the levels of its PK build (scripts/pk-kits.ts kitSkills): an army account that
     // trains to those levels and no further (buildBand). An account with no entry trains every band to its end.
     builds?: ReadonlyMap<string, Readonly<Record<string, number>>>;
@@ -158,6 +162,10 @@ export type Inputs = {
     mountain?: (a: Acct) => boolean;
 };
 export const FUND_RESERVE = 50_000;
+// The pseudo template of an item order that restocks a gang squad member (the order is the whole job).
+export const SQUAD_RESTOCK: Template = { id: 'squad-restock', family: 'kit-buy', script: 'scripts/buy-owned-ge-item.ts', role: 'supply', goal: 'restock the gang squad', yields: () => [] };
+// Units of a food item for one shark unit of demand: a lobster heals 12 against the shark's 20.
+const SQUAD_UNITS: Readonly<Record<string, number>> = { shark: 1, swordfish: 20 / 14, lobster: 20 / 12 };
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
 export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
@@ -572,6 +580,9 @@ function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         const cost = Math.max(0, ...need.names.map(item => inp.market?.[item]?.limit ?? inp.prices[item] ?? 0));
         if (cost > 0) budget(need.consumer, () => (need.short + (need.bought ?? 0)) * cost);
     }
+    // The gang squad's stock targets, after every kit line: a row has no coin budget, so it never takes coins that a
+    // member's own kit buy or a route purchase needs, and it never counts toward their funding.
+    for (const row of squadRows(inp.squad)) needs.push({ names: row.names, short: row.short, consumer: row.consumer, account: row.account });
     return needs;
 }
 
@@ -951,7 +962,9 @@ export function plan(inp: Inputs): Assignment[] {
     // bones, 1,900 nature runes and 29,000 feathers while others waited for a donor of another side). The levels of
     // another side's account are not read here: it keeps the reserve of every band.
     const ownReserve = new Map<string, Record<string, number>>();
+    const squadKeep = inp.squad?.active ? squadKeeps(inp.squad.hours) : undefined, squadMember = new Set((inp.squad?.members ?? []).map(m => m.name.toLowerCase()));
     const keepsOf = (s: Stock) => {
+        if (squadKeep && squadMember.has(s.name.toLowerCase())) return { ...reserve, ...Object.fromEntries(Object.entries(squadKeep).map(([i, n]) => [i, Math.max(n, reserve[i] ?? 0)])) };
         const a = s.side === inp.side ? byName.get(s.name) : undefined;
         if (!a || !inp.army?.has(a.name.toLowerCase())) return reserve;
         if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a));
@@ -1096,6 +1109,24 @@ export function plan(inp: Inputs): Assignment[] {
     for (const c of kits) acquire(c, 'send', false);
     for (const c of kits) acquire(c, 'buy', false);
     for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, true);
+    // The gang squad's restock, after every kit order: a free donor of this side sends a member that is short a line it
+    // holds above its own reserve, one order for a member in a pass. The member must be a plannable, offline account
+    // that no kit order or job took; a member that runs a hand job is restocked when it is free.
+    if (inp.squad?.active) for (const row of squadRows(inp.squad)) {
+        const member = byName.get([...byName.keys()].find(n => n.toLowerCase() === row.account) ?? '');
+        if (!member || done.has(member.name) || gave.has(member.name) || gaveItems.has(member.name) || vacated.has(member.name) || inp.unfundable?.has(row.account)) continue;
+        const cost = (p: Acct | undefined) => cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true);
+        for (const item of row.names) {
+            const from = stock.find(s => s.side === inp.side && s.name.toLowerCase() !== row.account && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= 1
+                && !inp.noSend?.has(`${s.name}>${member.name}`.toLowerCase()) && (cost(byName.get(s.name)) ?? -1) >= 0 && (cost(member) ?? -1) >= 0);
+            if (!from) continue;
+            const count = Math.min(spare(from, item), item === 'lobster' || item === 'shark' || item === 'swordfish' ? Math.ceil(row.short * SQUAD_UNITS[item]!) : row.short);
+            gaveItems.add(from.name); pool.delete(from.name); pool.delete(member.name);
+            done.set(member.name, { account: member.name, template: SQUAD_RESTOCK, value: 0, reason: `restocks ${count} ${item} for the gang squad, sent by ${from.name}`, resources: [],
+                send: { from: from.name, to: member.name, item, count, template: SQUAD_RESTOCK.id } });
+            break;
+        }
+    }
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // A recipient that cannot earn its kit may need a helper to become a donor. Reserve one helper for one finite
@@ -1406,7 +1437,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
-    'shop:zeke': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
@@ -1767,6 +1798,24 @@ export function aioTemplates(): Template[] {
 //   the potato goes in first, then the meat. One run makes up to STEW_BATCH useful stews, bounded by complete owned
 //   recipes; both steps receive that count. The rate is half that of one recipe, as a stew takes two. Gaps: no
 //   practice run makes this chain, and no template finishes an incomplete stew left by a failed second step.
+// Supply jobs for the gang squad's lines that no template filled (packages/planner/src/squad.ts). Each is a shop run of
+// scripts/shop-buyer.ts that banks the item, valued only while a squad row (or a route line) is short of it. The coin
+// spend per tick is an estimate from the shop price. Lines that already have a template: earth and air runes (shop-runes),
+// lobsters (lobster-chain). No template: sharks, since no script fishes them.
+export const SQUAD_STOCK = 1500;
+export function squadSupplies(): Template[] {
+    const shop = (id: string, profile: string, items: string, item: string[], perTick: number, coinsPerItem: number, goal: string, needs: Needs): Template => ({
+        id, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: [profile, '1200'], env: { ITEMS: items, STOCK_TARGET: String(SQUAD_STOCK), BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
+        goal, resources: [`shop:${profile}`], needs, yields: () => item.map(i => ({ item: i, perTick })), spends: () => [{ item: 'coins', perTick: perTick * item.length * coinsPerItem }],
+    });
+    return [
+        shop('squad-arrows-lowe', 'lowe', 'iron arrow', ['iron arrow'], 0.5, 3, "buy iron arrows at Lowe's in Varrock for the gang squad", { items: { coins: 6000 }, shortOf: { 'iron arrow': SQUAD_STOCK } }),
+        shop('squad-water-betty', 'betty', 'water rune', ['water rune'], 0.7, 4, "buy water runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 }, shortOf: { 'water rune': SQUAD_STOCK } }),
+        shop('squad-guild-runes', 'magic_guild', 'nature rune|law rune', ['nature rune', 'law rune'], 0.4, 30, 'buy nature and law runes at the Magic Guild for the gang squad',
+            { skills: { Magic: 66 }, items: { coins: 60_000 }, shortOf: { 'nature rune': SQUAD_STOCK, 'law rune': SQUAD_STOCK } }),
+        shop('squad-antipoison-jiminua', 'jiminua', '^antipoison\\(3\\)$', ['antipoison(3)'], 0.02, 288, "buy antipoison(3) at Jiminua's in Karamja for the gang squad", { items: { coins: 3000 }, shortOf: { 'antipoison(3)': 40 } }),
+    ];
+}
 export function makerChains(): Template[] {
     const step = (recipe: string, max: number, cap = 1500) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${max} CAP=${cap} MEMBERS=1 ORDER_MODE=best-effort`;
     const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'|'production'>): Template =>
@@ -2316,6 +2365,7 @@ export function catalogue(): Template[] {
             yields: () => [{ item: 'rune arrow', perTick: ARROW_LOW / 800 }], spends: () => [{ item: 'coins', perTick: RUNE_ARROW_COST / 800 }] },
         ...aioTemplates(),
         ...makerChains(),
+        ...squadSupplies(),
     ];
 }
 

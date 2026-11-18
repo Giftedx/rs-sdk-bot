@@ -27,6 +27,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
+import { squadBlock, type SquadInput } from '../packages/planner/src/squad';
 import { ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -493,6 +494,14 @@ export function jobRate(x: Pick<Assignment, 'template' | 'value'>): string {
     return t?.tier === 'goal' ? `band ${t.band ?? 0}` : t?.family === 'kit-buy' ? 'kit buy' : `${x.value.toFixed(2)}/tick`;
 }
 
+// The gang squad's input to plan(): the plan's `squad` block (`active`, `members`, `hours`), with the holdings of each
+// member that this side owns. A member of another side is that side's to restock. Undefined for an inactive squad.
+export function squadInput(plan: any, side: string, owners: ReturnType<typeof loadOwners>, holdings: (name: string) => Record<string, number>): SquadInput | undefined {
+    const block = squadBlock(plan);
+    if (!block.active) return undefined;
+    return { active: true, hours: block.hours, members: block.members.filter(n => owners.get(n.toLowerCase())?.side === side).map(name => ({ name, items: holdings(name) })) };
+}
+
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
     if (!dry && isPaused()) return [PAUSED];
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
@@ -656,7 +665,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         busy:new Set([...keep,...open,...stranded,...diedAccounts,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map((n:string)=>n.toLowerCase())]),paused,protected:new Set(OFFLINE_GUARDED),
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), squad: squadInput(swarm, side, owners, n => accountFrom(n, side, observed(n), id => byId.get(id)).items), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);
