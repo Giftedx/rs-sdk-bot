@@ -74,12 +74,17 @@ function readIndex(base: string): Index {
     try { const v = JSON.parse(readFileSync(indexFile(base), 'utf8')); if (v?.version === 1 && v.capabilities && typeof v.capabilities === 'object') return v; } catch { /* no index yet */ }
     return {version: 1, capabilities: {}};
 }
-// The one folder of an artifact that holds a delivery: a report and a task file.
-export function deliveryFolderOf(artifactRoot: string): string | null {
+// The one folder of an artifact that holds the delivery of `capability`: a report that names it and a task file.
+// A delivery can run another delivery inside one of its checks (session-recovery-only runs the observer
+// qualification), so an artifact can hold more than one; the report names its own capability.
+export function deliveryFolderOf(artifactRoot: string, capability: string): string | null {
     const found: string[] = [];
     const walk = (dir: string, depth: number) => {
         if (!existsSync(dir) || depth > 3) return;
-        if (existsSync(join(dir, 'report.json')) && existsSync(join(dir, 'task.json'))) { found.push(dir); return; }
+        if (existsSync(join(dir, 'report.json')) && existsSync(join(dir, 'task.json'))) {
+            try { if (JSON.parse(readFileSync(join(dir, 'report.json'), 'utf8'))?.id === capability) found.push(dir); } catch { /* not a report */ }
+            return;
+        }
         for (const e of readdirSync(dir, {withFileTypes: true})) if (e.isDirectory()) walk(join(dir, e.name), depth + 1);
     };
     walk(artifactRoot, 0);
@@ -128,7 +133,7 @@ if (import.meta.main) {
         const target = join(root, ...STORE, run, id);
         rmSync(target, {recursive: true, force: true}); mkdirSync(target, {recursive: true});
         if (!sh(['gh', 'run', 'download', run, '-n', `capability-${id}-${sha}`, '-D', target]).ok) { refuse('its artifact was not read'); continue; }
-        const folder = deliveryFolderOf(target);
+        const folder = deliveryFolderOf(target, id);
         if (!folder) { refuse('its artifact holds no one delivery'); continue; }
         const name = folder.slice(target.length + 1).split(sep).join('/');
         if (!safeFolder(name)) { refuse('its delivery folder has an unexpected name'); continue; }

@@ -65,20 +65,25 @@ test('a folder name of an artifact cannot leave its artifact', () => {
     for (const bad of ['', '..', '.', 'a/..', '../a', 'a//b', '/a', 'a/', 'C:', 'a\\b', 'a b', 7, null]) expect(safeFolder(bad)).toBe(false);
 });
 
-test('deliveryFolderOf needs exactly one folder with a report and a task', () => {
+test('deliveryFolderOf needs exactly one delivery whose report names the capability', () => {
     const root = mkdtempSync(join(tmpdir(), 'adopt-delivery-'));
+    const put = (dir: string, id: string) => { mkdirSync(dir, {recursive: true}); writeFileSync(join(dir, 'report.json'), JSON.stringify({id})); writeFileSync(join(dir, 'task.json'), '{}'); };
     try {
-        expect(deliveryFolderOf(root)).toBeNull();
+        expect(deliveryFolderOf(root, 'ammo-order')).toBeNull();
         const one = join(root, 'ammo-order-1');
         mkdirSync(one);
-        writeFileSync(join(one, 'report.json'), '{}');
-        expect(deliveryFolderOf(root)).toBeNull();
+        writeFileSync(join(one, 'report.json'), JSON.stringify({id: 'ammo-order'}));
+        expect(deliveryFolderOf(root, 'ammo-order')).toBeNull(); // no task file
         writeFileSync(join(one, 'task.json'), '{}');
-        expect(deliveryFolderOf(root)).toBe(one);
-        const two = join(root, 'deliveries', 'ammo-order-2');
-        mkdirSync(two, {recursive: true});
-        writeFileSync(join(two, 'report.json'), '{}');
-        writeFileSync(join(two, 'task.json'), '{}');
-        expect(deliveryFolderOf(root)).toBeNull();
+        expect(deliveryFolderOf(root, 'ammo-order')).toBe(one);
+        // A nested delivery of another capability beside it (session-recovery-only runs the observer qualification).
+        put(join(root, 'owned-bank-observation-1'), 'owned-bank-observation');
+        expect(deliveryFolderOf(root, 'ammo-order')).toBe(one);
+        expect(deliveryFolderOf(root, 'owned-bank-observation')).toBe(join(root, 'owned-bank-observation-1'));
+        expect(deliveryFolderOf(root, 'magic-order')).toBeNull();
+        // Two deliveries of the same capability are ambiguous.
+        put(join(root, 'deliveries', 'ammo-order-2'), 'ammo-order');
+        expect(deliveryFolderOf(root, 'ammo-order')).toBeNull();
+        writeFileSync(join(root, 'bad.txt'), 'x');
     } finally { rmSync(root, {recursive: true, force: true}); }
 });
