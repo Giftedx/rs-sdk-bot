@@ -22,7 +22,6 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/check-pin.ts': 'developer tool: checks the commit of vendor/rs-sdk',
  'scripts/check-rev289-names.ts': 'CI check tool: holds every game-call name and hand id in scripts and packages against the names of the revision-289 content',
  'scripts/check-rev289-parity.ts': 'developer tool: validates rev 289 parity across knowledge, dashboard assets and scripts',
- 'scripts/gear.ts': 'developer tool: looks up each wearable item and its bonuses in knowledge/gear.json',
  'scripts/ci-gate.ts': 'developer tool: runs the CI checks on this PC',
  'scripts/claim-account.ts': 'fleet control: registers a new account name',
  'scripts/cloud-recover.ts': 'fleet control: recovers held live sessions',

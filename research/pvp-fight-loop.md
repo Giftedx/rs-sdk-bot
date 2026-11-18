@@ -1796,16 +1796,25 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   (the combat-level rule of its tile) and either fights one, or is within 10 tiles and closing, or within 4 tiles.
 - **Adapt** (`SQUAD_THREAT=1`, off by default; `SQUAD_THREAT_ACT=0` logs and records only). A member that a dangerous player can hit holds
   the protect prayer of its style: in a fight through the `threatPrayer` option of `fightPlayer` (after the opponent's own hits, before the
-  prediction), and while it waits through `holdProtect`. A dangerous player that outclasses the strongest member, or three or more
-  unexpected dangerous players (the squad's targets are expected), end the member's part in the Wilderness with the rescue, and the bank trip
-  brings it back. Each decision is logged as `ADAPT <kind> ...` with the record of the player (`THREAT ...`).
+  prediction), and while it waits through `holdProtect`. A dangerous player that outclasses the strongest member ends the member's part in
+  the Wilderness with the rescue, and the bank trip brings it back. Three or more unexpected dangerous players (the squad's targets are
+  expected) are a team: on a multi-way tile the squad walks to the nearest single-way tile, away from them (`nearestSingleWay`), and holds it
+  for 120 ticks after the last team decision (no pull, no walk back to the post); a walk that fails is the rescue. On a single-way tile the team
+  is held there, because one attacker at a time can hit each member (`pvp_combat.rs2:103-133`). Each decision is logged as
+  `ADAPT <kind> ...` with the record of the player (`THREAT ...`), once while only its distances change.
+- **Armour swap.** For each member that a dangerous player can hit, `planCounterSwap` (`scripts/pk-threat-kit.ts`) takes, in each of the
+  slots hat, torso, legs, back, feet and hands, the item of the pack with a better defence bonus than the worn one against the threat's style
+  (magic defence against a mage, ranged defence against an archer, the three melee defences against a melee player; `knowledge/gear.json`),
+  within the account's levels, when the gain over all slots is 6 or more. Rune platebody and platelegs against dragonhide body and chaps is
+  +38 magic defence. The hold loop wears them before the next fight (the Wear option, one input and one tick each) and wears the worn ones
+  again 60 ticks after no threat needs the swap. A swap needs spare armour in the pack, and no kit in `scripts/pk-kits.ts` carries any.
 - **Attackers.** Each dangerous player or attacker is appended to `.practice/threat-records/<server>/<name>.jsonl` (schema
   `threat-sighting/1`, at most one line each 25 ticks, and one at each attack seen), for the behaviour record of the rivals.
 
 Gap: practice and unit proof only, and the bench gang is the only attacker that the bench has. The squad is the only consumer: the
-hunt and the roam keep their own threat checks. The kit decision (a counter kit for a mage or a melee pure) and the move to a single-way
-tile are rules in the model with their tests, but no kit swap, no counter kit and no single-way tile are wired, so a team ends in a retreat.
-The record file is not yet read by `scripts/measure/pk-gang-record.ts`.
+hunt and the roam keep their own threat checks. No kit carries spare armour, so the swap does not fire in a run. A single-way tile is
+the nearest tile that is not multi-way, and the walker decides whether a path reaches it: a failed walk is a retreat. The swap does not
+change the weapon, and it waits for the end of a fight. `scripts/measure/pk-gang-record.ts` does not read the record file.
 
 ## Server rules the loop follows
 

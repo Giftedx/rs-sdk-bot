@@ -34,6 +34,7 @@ import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { holdProtect, protectOf, retreatOf, ThreatWatch } from './pk-threat';
+import { restoreFor, wearIds } from './pk-threat-kit';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
@@ -339,6 +340,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         return true;
     };
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
+    // The threat radar's armour swap (the worn items that it took off, to wear again) and its single-way hold (no pull and no walk back to the
+    // multi-way post until this tick).
+    let swapped: { restore: number[]; lastNeeded: number } | null = null, singleUntil = -1;
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
         const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
@@ -395,6 +399,36 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 if (!retreated) { stats.died = true; break; }
                 continue;
             }
+            if (threat && o.threats!.act) {
+                // A team on a multi-way tile: to the nearest single-way tile (a walk that fails is the retreat), and stay there while it lasts.
+                const single = threat.actions.find(a => a.kind === 'single-way') as Extract<typeof threat.actions[number], { kind: 'single-way' }> | undefined;
+                if (single) {
+                    singleUntil = now + 120;
+                    if (Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z)) > 2) {
+                        o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
+                        const walked = await walkPath(walker, [{ ...single.to, tol: 2 }], { maxTicks: 40, idleMs: 9000, stop: () => !going() });
+                        if (!walked.ok) { o.log(`[${s.name}] SQUAD threat single-way walk failed, retreat`); if (!await rescue(s, o.log, o.stopped)) { stats.died = true; break; } }
+                        continue;
+                    }
+                }
+                // The armour that defends better against the threat's style, from the pack: worn before the next fight, and put back after the threat has been gone for 60 ticks.
+                const kit = threat.actions.find(a => a.kind === 'kit' && a.member === s.name) as Extract<typeof threat.actions[number], { kind: 'kit' }> | undefined;
+                if (kit && !swapped) {
+                    const worn = s.sdk.getEquipment().map(e => e.id);
+                    swapped = { restore: restoreFor(worn, kit.wear), lastNeeded: now };
+                    o.log(`[${s.name}] SQUAD threat kit swap: ${kit.reason}`);
+                    const failed = await wearIds(s, kit.wear, () => nextTick(s));
+                    if (failed.length) o.log(`[${s.name}] SQUAD threat kit swap could not wear ${failed.join('+')}`);
+                    continue;
+                }
+                if (kit && swapped) swapped.lastNeeded = now;
+                if (!kit && swapped && now - swapped.lastNeeded >= 60) {
+                    o.log(`[${s.name}] SQUAD threat kit restore: wear ${swapped.restore.join('+')}`);
+                    const back = swapped.restore; swapped = null;
+                    await wearIds(s, back, () => nextTick(s));
+                    continue;
+                }
+            }
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
             const stunned = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
@@ -425,7 +459,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 else if (s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
                 // Back to the post between fights.
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
-                if (Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
+                if (now >= singleUntil && Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
                 if (!await nextTick(s)) break;
                 continue;
             }
@@ -437,7 +471,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             // At most 20 ticks of pull at a stretch: an account that cannot get into multi-way (stood on, blocked) fights
             // where it is; one stuck pulling took hits without an answer for hundreds of ticks.
             if (isMulti(p.worldX, p.worldZ)) pullSince = -1;
-            if (o.pull && !isMulti(p.worldX, p.worldZ) && isMulti(aim.x, aim.z) && Math.max(Math.abs(p.worldX - aim.x), Math.abs(p.worldZ - aim.z)) <= 40
+            if (o.pull && now >= singleUntil && !isMulti(p.worldX, p.worldZ) && isMulti(aim.x, aim.z) && Math.max(Math.abs(p.worldX - aim.x), Math.abs(p.worldZ - aim.z)) <= 40
                 && (pullSince < 0 || s.tick() - pullSince < 20)) {
                 if (pullSince < 0) pullSince = s.tick();
                 const low = () => { const q = me(); return !!q && q.hp < q.maxHp * 0.6; };
