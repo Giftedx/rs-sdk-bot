@@ -1,0 +1,22 @@
+{
+ "id": "1794988013343-fatstack-wandwaver",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Wandwaver",
+ "item": "coins",
+ "count": 92980,
+ "start": 1794988013343,
+ "end": 1794990413343,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
