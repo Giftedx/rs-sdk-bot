@@ -58,10 +58,13 @@ export const cases:{id:string;kind:Kind;thieving:number;from?:string;preset?:Sav
 // house with 8900 carried coins. TICKS=0 earns nothing: the CLI must only leave, bank the carried cash and log out.
 // This gate is diagnostic only. It never replaces the full earning proof above.
 export const DOOR_DIR='door-repro';
-export const DOOR_ENV={...WORKER_ENV,TICKS:'0'};
 export const DOOR_CARRIED=8900;
+// TICKS=0 is no finite goal to the progression session (an entry with a zero bound is refused as unmapped). The goal of
+// this gate is the bank: the carried cash joins the 1000 coins already banked, which the parent states as its consumer.
+export const DOOR_BANKED=1000;
+export const DOOR_ENV={...WORKER_ENV,TICKS:'0',PROGRESSION_CONSUMER:JSON.stringify({bank:{995:DOOR_BANKED+DOOR_CARRIED}})};
 const doorFixture=(x:number,z:number):SaveConfig=>({inventory:[{id:1265,count:1},{id:590,count:1},{id:COINS,count:DOOR_CARRIED},{id:TROUT,count:5}],
- equipment:kit.equipment,position:{x,z,level:0},skills:{Thieving:99,Hitpoints:10},bank:[{id:COINS,count:1000},{id:440,count:5},{id:TROUT,count:10}]});
+ equipment:kit.equipment,position:{x,z,level:0},skills:{Thieving:99,Hitpoints:10},bank:[{id:COINS,count:DOOR_BANKED},{id:440,count:5},{id:TROUT,count:10}]});
 export const doorCases:{id:string;start:{x:number;z:number};preset:SaveConfig}[]=[
  {id:'house-2651',start:{x:2651,z:3304},preset:doorFixture(2651,3304)},
  {id:'house-2650',start:{x:2650,z:3304},preset:doorFixture(2650,3304)},

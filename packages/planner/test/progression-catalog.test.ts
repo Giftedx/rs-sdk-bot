@@ -394,3 +394,12 @@ test('a smelt order with a bar count keeps its produce intent; a smelt order wit
  expect(intentForEntry('scripts/smelt-bars.ts',['600','steel'],{},undefined,c)).toEqual({kind:'service',objective:'smelt:steel',units:1});
  expect(intentForEntry('scripts/smelt-bars.ts',['0','steel'],{},undefined,c)).toBeNull();
 });
+
+test('a time limit in a flag is a stated bound: quest-order with --timeout-ms has a finite goal, without it or with a bad value it has none',()=>{
+ const c=loadProgressionCatalog(),order=(...rest:string[])=>intentForEntry('scripts/quest-order.ts',['cook',...rest],{},undefined,c);
+ expect(order('--save=out.sav','--timeout-ms=300000')).toEqual({kind:'service',objective:'quest-order:cook',units:1});
+ for(const bad of [[],['--save=out.sav'],['--timeout-ms=0'],['--timeout-ms=-5'],['--timeout-ms=1.5'],['--timeout-ms='],['--timeout-ms=abc']])expect(order(...bad),bad.join(' ')).toBeNull();
+ // The flag states a bound for the entries that need one and changes none that did not.
+ expect(intentForEntry('scripts/goldfarm-stable.ts',[],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/goldfarm-stable.ts',['--timeout-ms=1000'],{},undefined,c)).toMatchObject({kind:'service'});
+});
