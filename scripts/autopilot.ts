@@ -482,17 +482,36 @@ export function newestClaims(synced: readonly any[], origin: readonly any[]): an
     }
     return [...bySide.values()];
 }
-// The claims on origin's fleet-data branch, or none when the fetch or a read fails (the synced claims then stand).
+// The text of each object that `git cat-file --batch` printed, in request order: null for a missing or unreadable one. Each object is a
+// header line `<oid> blob <size>` (or `<name> missing`), then `size` bytes and a newline.
+export function parseCatFileBatch(out: Uint8Array, count: number): (string | null)[] {
+    const buffer = Buffer.from(out), result: (string | null)[] = [];
+    let at = 0;
+    for (let i = 0; i < count; i++) {
+        const end = buffer.indexOf(10, at);
+        if (end < 0) { result.push(null); continue; }
+        const header = buffer.subarray(at, end).toString('utf8').match(/^[0-9a-f]+ blob (\d+)$/);
+        at = end + 1;
+        if (!header) { result.push(null); continue; }
+        const size = Number(header[1]);
+        result.push(buffer.subarray(at, at + size).toString('utf8'));
+        at += size + 1;
+    }
+    return result;
+}
+// The claims on origin's fleet-data branch, or none when the fetch or a read fails (the synced claims then stand). One `git cat-file
+// --batch` reads every claim file (a process for each file took 2 s of a 14 s pass).
 function originClaims(fleetDir: string): any[] {
     if (!existsSync(fleetDir)) return [];
-    const git = (...args: string[]) => Bun.spawnSync(['git', '-C', fleetDir, ...args], { stdout: 'pipe', stderr: 'ignore', timeout: 30_000, windowsHide: true });
-    if (git('fetch', '-q', 'origin', 'fleet-data').exitCode !== 0) return [];
-    const files = git('ls-tree', '--full-tree', '--name-only', 'origin/fleet-data', 'fleet/claims/');
+    const git = (args: string[], input?: string) => Bun.spawnSync(['git', '-C', fleetDir, ...args], { stdout: 'pipe', stderr: 'ignore', ...(input === undefined ? {} : { stdin: Buffer.from(input) }), timeout: 30_000, windowsHide: true });
+    if (git(['fetch', '-q', 'origin', 'fleet-data']).exitCode !== 0) return [];
+    const files = git(['ls-tree', '--full-tree', '--name-only', 'origin/fleet-data', 'fleet/claims/']);
     if (files.exitCode !== 0) return [];
-    return files.stdout.toString().split(/\r?\n/).filter(f => f.endsWith('.json')).flatMap(f => {
-        const shown = git('show', `origin/fleet-data:${f}`);
-        try { return shown.exitCode === 0 ? [JSON.parse(shown.stdout.toString())] : []; } catch { return []; }
-    });
+    const names = files.stdout.toString().split(/\r?\n/).filter(f => f.endsWith('.json'));
+    if (!names.length) return [];
+    const shown = git(['cat-file', '--batch'], names.map(f => `origin/fleet-data:${f}`).join('\n') + '\n');
+    if (shown.exitCode !== 0) return [];
+    return parseCatFileBatch(shown.stdout, names.length).flatMap(text => { try { return text === null ? [] : [JSON.parse(text)]; } catch { return []; } });
 }
 
 // The side's army roster. Only these accounts take the planner's goal bands (combat training toward the PK army);
@@ -737,9 +756,15 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     // account must not plan as a level-1 start).
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
     const published = readSnapshotFiles(join(fleetDir, 'snapshots'));
+    // One read of each status file for the whole pass: the account list, the donors, the stock and the notes ask for it about 8 times each.
+    const statusByName = new Map(statusFiles.map(f => [f.toLowerCase(), f] as const)), observedCache = new Map<string, ReturnType<typeof observedAccount>>();
     const observed = (n: string) => {
-        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        return observedAccount(n, f ? readJson(join(statusDir, f), null) : null, published, owners, side);
+        const lower = n.toLowerCase();
+        if (!observedCache.has(lower)) {
+            const f = statusByName.get(`${lower}.json`);
+            observedCache.set(lower, observedAccount(n, f ? readJson(join(statusDir, f), null) : null, published, owners, side));
+        }
+        return observedCache.get(lower)!;
     };
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => {
         const lower = n.toLowerCase();

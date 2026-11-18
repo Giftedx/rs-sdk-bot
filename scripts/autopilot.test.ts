@@ -1462,3 +1462,13 @@ test('each quest demand row dispatches to the sweep, has a bench case that can p
         expect(`${row.slug} ${row.meals}`).toBe(`${row.slug} ${meals}`);
     }
 });
+
+import { parseCatFileBatch } from './autopilot';
+test('the batch output of git cat-file is read object by object, with a missing object as null', () => {
+    const out = Buffer.from(['abc123 blob 7', '{"a":1}', 'origin/fleet-data:fleet/claims/x.json missing', 'def456 blob 2', '{}', ''].join(String.fromCharCode(10)));
+    expect(parseCatFileBatch(out, 3)).toEqual(['{"a":1}', null, '{}']);
+    // A multibyte character counts its bytes (the size of the header), and a short output leaves the rest null.
+    const nl = String.fromCharCode(10), wide = Buffer.from('abc blob 3' + nl + 'é"' + nl + 'def blob 1' + nl + 'x' + nl);
+    expect(parseCatFileBatch(wide, 3)).toEqual(['é"', 'x', null]);
+    expect(parseCatFileBatch(Buffer.from(''), 2)).toEqual([null, null]);
+});
