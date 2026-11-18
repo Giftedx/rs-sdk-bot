@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795035456170-swordinhand-knightstick-feather",
+ "account": "Swordinhand",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "ad78e240-adf3-45a0-8da8-d664930e1c86",
+ "count": 0,
+ "ok": false,
+ "at": 1795035501667,
+ "detail": "trade claimed"
+}
