@@ -197,8 +197,9 @@
    "home": "cloud"
   },
   "Crownjewels": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
   },
   "Kiltlifter": {
    "side": "claude-cloud",
