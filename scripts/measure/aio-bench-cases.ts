@@ -239,7 +239,7 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
 // Each kill of a run has one kill receipt on the disk, and a practice engine gives practice receipts only
 // (packages/core/src/kill-receipt.ts killReceiptProof): `kills=N` and `killReceipts=N` of the RESULT line agree.
 export const killReceiptsMatch = (s: string) => {
-  const m = s.match(/^RESULT .*kills=(d+) killReceipts=(d+) receiptDomain=(w+)/m);
+  const m = s.match(/^RESULT .*\bkills=(\d+) killReceipts=(\d+) receiptDomain=(\w+)/m);
   return !!m && m[1] === m[2] && m[3] === (m[1] === '0' ? 'none' : 'practice');
 };
 const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = [], food?: number, start = {x: 3066, z: 3641}, foodId = 385): BenchCase => {

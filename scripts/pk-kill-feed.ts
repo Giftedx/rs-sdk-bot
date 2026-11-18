@@ -4,6 +4,7 @@
 import { isLocalServer } from '../packages/core/src/localserver';
 import { gameDialAddress } from '../packages/core/src/websocket-proxy';
 import type { KillFeedMatch } from '../packages/core/src/kill-receipt';
+import { shutdownTasks } from '../packages/core/src/shutdown';
 import { decodeAppearance, digest, SEQ } from './measure/pk-rival-feed';
 
 const feedName = (name: string) => name.trim().toLowerCase().replace(/_/g, ' ');
@@ -101,6 +102,8 @@ export function killFeed(server: string | undefined, env: Record<string, string 
     if (!server || env.KILL_FEED === '0' || (env.KILL_FEED !== '1' && isLocalServer(server))) return null;
     let feed = feeds.get(server);
     if (!feed || feed.state === 'closed') { feed = new KillFeed(server); feeds.set(server, feed); }
+    // An open socket keeps the process alive: the end of the run (packages/core/src/bot.ts settle) closes it.
+    shutdownTasks.add(settleKillFeed);
     return feed;
 }
 
@@ -115,8 +118,13 @@ export function checkKillFeed(feed: KillFeed, victim: string, atMs: number, done
     pending.add(job);
     void job.finally(() => pending.delete(job));
 }
-// A run calls this before it ends, so that each open feed check writes its result.
-export const settleKillFeed = async (): Promise<void> => { await Promise.all([...pending]); };
+// Waits for each open feed check to write its result, then closes every open feed socket. The end of a run calls it through
+// packages/core/src/shutdown.ts, and a main may call it too.
+export async function settleKillFeed(): Promise<void> {
+    await Promise.all([...pending]);
+    for (const feed of feeds.values()) feed.close();
+    feeds.clear();
+}
 
 // bun scripts/pk-kill-feed.ts <receipt.json> <trace.jsonl> [<trace.jsonl> ...]
 //   adds the feed match from recorded traces (bun scripts/measure/pk-rival-feed.ts record) to one kill receipt.

@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fightPlayer, packGain, recordKillLoot } from './pk';
 import { checkKillFeed, feedDeath, killFeed, KillFeed, settleKillFeed } from './pk-kill-feed';
 
@@ -104,4 +104,42 @@ test('the fight loop writes one receipt at the kill and the pickup adds its loot
 test('the pack gain counts only what the pack got', () => {
     expect(packGain([{ id: 385, count: 1 }, { id: 385, count: 1 }, { id: 560, count: 100 }], [{ id: 385, count: 1 }, { id: 560, count: 140 }, { id: 4151, count: 1 }])).toEqual({ 560: 40, 4151: 1 });
     expect(packGain([], [])).toEqual({});
+});
+
+// A process that opened a feed ends by itself once settleKillFeed has closed the socket, and stays alive while the socket is open.
+// The server is in this test process, so it stays up while the child ends or does not.
+async function feedProcess(settle: boolean): Promise<{ exited: boolean; ms: number }> {
+    const server = Bun.serve({ port: 0, fetch(req, s) { return s.upgrade(req) ? undefined : new Response('no'); }, websocket: { message() {}, open() {} } });
+    const code = `
+        import { killFeed, settleKillFeed } from ${JSON.stringify(resolve(import.meta.dir, 'pk-kill-feed.ts'))};
+        const feed = killFeed('127.0.0.1:' + ${server.port}, { KILL_FEED: '1' })!;
+        for (let i = 0; i < 100 && feed.state !== 'open'; i++) await new Promise(r => setTimeout(r, 50));
+        if (feed.state !== 'open') { console.log('NOT_OPEN'); process.exit(3); }
+        ${settle ? 'await settleKillFeed();' : ''}
+        console.log('MAIN_DONE');
+    `;
+    const start = Date.now(), child = Bun.spawn(['bun', '-e', code], { stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    try {
+        const exited = await Promise.race([child.exited.then(() => true), new Promise<boolean>(r => setTimeout(() => r(false), 6000))]);
+        if (!exited) child.kill();
+        return { exited, ms: Date.now() - start };
+    } finally { server.stop(true); }
+}
+
+test('a process with an open kill feed exits after the run settles, and stays alive without it', async () => {
+    expect((await feedProcess(true)).exited).toBe(true);
+    expect((await feedProcess(false)).exited).toBe(false);
+}, 30_000);
+
+test('a settle of the bot framework runs the shutdown tasks that the feed registers', async () => {
+    const { shutdownTasks, runShutdownTasks } = await import('../packages/core/src/shutdown');
+    let ran = 0;
+    const task = async () => { ran++; };
+    shutdownTasks.add(task);
+    await runShutdownTasks();
+    expect(ran).toBe(1);
+    shutdownTasks.delete(task);
+    shutdownTasks.add(async () => { throw new Error('one task fails'); });
+    await runShutdownTasks();
+    shutdownTasks.clear();
 });
