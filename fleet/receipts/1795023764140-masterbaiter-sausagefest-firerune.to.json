@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795023764140-masterbaiter-sausagefest-firerune",
  "account": "Sausagefest",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 1,
  "claim": "fe9ca8d9-af6a-499f-8c88-def859dcf7e7",
- "count": 0,
- "ok": false,
- "at": 1795024213930,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795024391918,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795024390766
+ },
+ "logout": {
+  "attemptId": "1795024213939-0000025908-0000000001",
+  "at": 1795024391900,
+  "sha256": "cdfcd15d0328387661d8b73f108035c10e46936cdf848b59f12bf7d97194edcf"
+ },
+ "screen": true
 }
