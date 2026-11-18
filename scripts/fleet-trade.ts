@@ -87,10 +87,11 @@ export function assertTradeAdmission(order: Order, account: string, server: stri
     const plan = readTradePlan(planFile), overlay = readCoordinatorJobs(base);
     if (overlay.paused?.some(n => n.toLowerCase() === name)) throw Error('fleet trade: account is paused for controller rollout');
     const includesAccount = (job: any) => jobAccounts(job).some(n => n.toLowerCase() === name);
-    // The gang squad's reservation row (role pvp, disabled, goal "reserved: gang squad") holds the account against the
-    // planner. It does not hold a trade: staging gives the members their kit through fleet orders.
-    const squadReserve = (job: any) => job?.role === 'pvp' && job.enabled === false && /^reserved: gang squad/.test(job.goal ?? '');
-    if (plan.jobs.some((job: any) => includesAccount(job) && !squadReserve(job) && (!job.script || /fresh.clock|24 boards|main simultaneous/i.test(job.goal ?? '')))) {
+    // A reservation row (no script) holds the account against the planner. A row with `"trades": true` does not hold a
+    // trade: the gang squad's members take their kit through fleet orders. A fresh-clock, 24 boards or main row stays
+    // refused, with or without the field.
+    const reservation = (job: any) => (!job.script && job.trades !== true) || /fresh.clock|24 boards|main simultaneous/i.test(job.goal ?? '');
+    if (plan.jobs.some((job: any) => includesAccount(job) && reservation(job))) {
         throw Error('fleet trade: reserved account');
     }
     if (swarmBusy(mergedPlan(plan, overlay).jobs).has(name)) throw Error('fleet trade: account has an enabled swarm job');
