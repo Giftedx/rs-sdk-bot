@@ -18,9 +18,9 @@ export function returnTicks(file = join(import.meta.dir, '..', 'pk-gang-record',
 export type Run = { seed: number; accounts: number; kills: number; gangDied: number; died: number; taken: number; trips: number; ticks: number | null };
 export type Row = { batch: string; condition: string; runs: Run[]; kills: number; gang: number; deaths: number; hpAKill: number | null; ticksARun: number | null; killsAnHour: number | null; accountTicksAKill: number | null; coinsAKill: number | null };
 
-// The RESULT line of the squad script in a case log.
+// The RESULT line of the squad script in a case log. A run with a death of ours reads `RESULT fail died squad ...`.
 export function parseRun(text: string, seed: number, ticks: number | null): Run | null {
-    const line = text.split(/\r?\n/).reverse().find(l => /RESULT (ok|fail) squad/.test(l));
+    const line = text.split(/\r?\n/).reverse().find(l => /RESULT (ok|fail)( died)? squad/.test(l));
     if (!line) return null;
     const n = (key: string) => Number(line.match(new RegExp(`${key}=(\\d+)`))?.[1] ?? 0);
     return { seed, accounts: n('accounts'), kills: n('kills'), gangDied: n('gangDied'), died: n('died'), taken: n('taken'), trips: n('trips'), ticks };
