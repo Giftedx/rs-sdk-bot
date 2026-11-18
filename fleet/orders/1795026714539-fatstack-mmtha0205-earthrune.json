@@ -1,0 +1,22 @@
+{
+ "id": "1795026714539-fatstack-mmtha0205-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "mmtha0205",
+ "item": "Earth rune",
+ "count": 3,
+ "start": 1795026714539,
+ "end": 1795029114539,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
