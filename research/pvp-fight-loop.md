@@ -1808,11 +1808,15 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   within the account's levels, when the gain over all slots is 6 or more. Rune platebody and platelegs against dragonhide body and chaps is
   +38 magic defence. The hold loop wears them before the next fight (the Wear option, one input and one tick each) and wears the worn ones
   again 60 ticks after no threat needs the swap. A swap needs spare armour in the pack, and no kit in `scripts/pk-kits.ts` carries any.
+- **Hunt and roam.** The hunt (`HUNT_THREAT=1`, `HUNT_THREAT_ACT=0`) and the roam (`THREAT=1`, `THREAT_ACT=0`) run the same `ThreatWatch` and
+  `KitSwapper` for their one account: the protect prayer through `threatPrayer`, the armour swap, and the retreat (the hunt's threat retreat, the
+  roam's escape) when the radar decides one. Each keeps its own threat check. They have no single-way move, and the hunt turns the world feed
+  off on a local server.
 - **Attackers.** Each dangerous player or attacker is appended to `.practice/threat-records/<server>/<name>.jsonl` (schema
   `threat-sighting/1`, at most one line each 25 ticks, and one at each attack seen), for the behaviour record of the rivals.
 
-Gap: practice and unit proof only, and the bench gang is the only attacker that the bench has. The squad is the only consumer: the
-hunt and the roam keep their own threat checks. No kit carries spare armour, so the swap does not fire in a run. A single-way tile is
+Gap: practice and unit proof only, and the bench gang is the only attacker that the bench has. The roam has the bench case
+`extra:roam-pick-threat` and the hunt has a unit test; neither has an attacker that casts or shoots. No kit carries spare armour, so the swap does not fire in a run. A single-way tile is
 the nearest tile that is not multi-way, and the walker decides whether a path reaches it: a failed walk is a retreat. The swap does not
 change the weapon, and it waits for the end of a fight. `scripts/measure/pk-gang-record.ts` does not read the record file.
 

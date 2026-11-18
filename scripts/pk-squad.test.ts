@@ -491,9 +491,9 @@ async function holdRadar(actions: (tick: number) => any[], until = 120) {
 
 test('a kit action wears the pack armour from the pack once, and wears the worn armour again 60 ticks after the threat is gone', async () => {
     const { w, lines, seen } = await holdRadar(tick => tick < 30 ? [{ kind: 'kit', member: 'Soldier', style: 'magic', wear: [1135], gain: 26, reason: 'Mage magic: wear 1135 (+26)' }] : []);
-    expect(lines.filter(l => l.includes('SQUAD threat kit swap'))).toHaveLength(1);
+    expect(lines.filter(l => l.includes('threat kit swap'))).toHaveLength(1);
     expect(seen.some(ids => ids.includes(1135) && !ids.includes(1127))).toBe(true);
-    expect(lines.some(l => l.includes('SQUAD threat kit restore: wear 1127'))).toBe(true);
+    expect(lines.some(l => l.includes('threat kit restore: wear 1127'))).toBe(true);
     expect(w.equipment.map(e => e.id)).toContain(1127);
     expect(w.equipment.map(e => e.id)).not.toContain(1135);
 });

@@ -33,8 +33,7 @@ import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
-import { holdProtect, protectOf, retreatOf, ThreatWatch } from './pk-threat';
-import { restoreFor, wearIds } from './pk-threat-kit';
+import { holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
@@ -342,7 +341,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
     // The threat radar's armour swap (the worn items that it took off, to wear again) and its single-way hold (no pull and no walk back to the
     // multi-way post until this tick).
-    let swapped: { restore: number[]; lastNeeded: number } | null = null, singleUntil = -1;
+    const swapper = new KitSwapper(), tickOf = () => nextTick(s);
+    let singleUntil = -1;
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
         const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
@@ -412,22 +412,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     }
                 }
                 // The armour that defends better against the threat's style, from the pack: worn before the next fight, and put back after the threat has been gone for 60 ticks.
-                const kit = threat.actions.find(a => a.kind === 'kit' && a.member === s.name) as Extract<typeof threat.actions[number], { kind: 'kit' }> | undefined;
-                if (kit && !swapped) {
-                    const worn = s.sdk.getEquipment().map(e => e.id);
-                    swapped = { restore: restoreFor(worn, kit.wear), lastNeeded: now };
-                    o.log(`[${s.name}] SQUAD threat kit swap: ${kit.reason}`);
-                    const failed = await wearIds(s, kit.wear, () => nextTick(s));
-                    if (failed.length) o.log(`[${s.name}] SQUAD threat kit swap could not wear ${failed.join('+')}`);
-                    continue;
-                }
-                if (kit && swapped) swapped.lastNeeded = now;
-                if (!kit && swapped && now - swapped.lastNeeded >= 60) {
-                    o.log(`[${s.name}] SQUAD threat kit restore: wear ${swapped.restore.join('+')}`);
-                    const back = swapped.restore; swapped = null;
-                    await wearIds(s, back, () => nextTick(s));
-                    continue;
-                }
+                if (await swapper.step(s, threat.actions, now, tickOf, o.log)) continue;
             }
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };

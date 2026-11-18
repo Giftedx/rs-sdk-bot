@@ -12,7 +12,7 @@ import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Adapt, type D
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
 import { PRAYER } from './pk';
-import { nearestSingleWay, planCounterSwap } from './pk-threat-kit';
+import { nearestSingleWay, planCounterSwap, restoreFor, wearIds } from './pk-threat-kit';
 import { canAttack, isMulti, outclasses, wildLevel, type Radar } from './pk-roam';
 
 // The style of an attack animation, from the name of the sequence (content pack/seq.pack): a cast is magic, a bow or a throw is ranged,
@@ -156,4 +156,32 @@ export function holdProtect(s: Session, style: CombatStyle, tick: number): void 
     const active = s.sdk.getState()?.prayers.activePrayers ?? [], want = PROTECT_PRAYER[style];
     for (const i of Object.values(PROTECT_PRAYER)) if (i !== want && active[i]) { void s.sdk.sendTogglePrayer(i); return; }
     if (!active[want] && (s.sdk.getSkill('Prayer')?.level ?? 0) >= PROTECT_LEVEL[style]) void s.sdk.sendTogglePrayer(want);
+}
+
+// The armour swap of one account, for the squad's hold loop and the hunt: wears what the radar decides (the `kit` action of the account) from the
+// pack once, and wears the worn armour again after the threat has been gone for `holdTicks` ticks. It returns true when it used the tick
+// (an input and a tick each), so that the caller goes on with a new pass.
+export class KitSwapper {
+    private swapped: { restore: number[]; lastNeeded: number } | null = null;
+    constructor(private holdTicks = 60) {}
+    get active() { return this.swapped !== null; }
+    async step(s: Session, actions: readonly Adapt[], now: number, tick: () => Promise<boolean>, log: (line: string) => void): Promise<boolean> {
+        const kit = actions.find(a => a.kind === 'kit' && a.member === s.name) as Extract<Adapt, { kind: 'kit' }> | undefined;
+        if (kit && !this.swapped) {
+            this.swapped = { restore: restoreFor(s.sdk.getEquipment().map(e => e.id), kit.wear), lastNeeded: now };
+            log(`[${s.name}] threat kit swap: ${kit.reason}`);
+            const failed = await wearIds(s, kit.wear, tick);
+            if (failed.length) log(`[${s.name}] threat kit swap could not wear ${failed.join('+')}`);
+            return true;
+        }
+        if (kit && this.swapped) this.swapped.lastNeeded = now;
+        if (!kit && this.swapped && now - this.swapped.lastNeeded >= this.holdTicks) {
+            const back = this.swapped.restore;
+            this.swapped = null;
+            log(`[${s.name}] threat kit restore: wear ${back.join('+')}`);
+            await wearIds(s, back, tick);
+            return true;
+        }
+        return false;
+    }
 }
