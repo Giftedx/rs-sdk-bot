@@ -316,3 +316,10 @@ test('Nab child requires observed owned-food staging, the total finite budget an
  expect(trooperChildChecks(1,false,log).exit).toBe(false);
  expect(trooperChildChecks(0,false,log+'LOGOUT logged-out\n').logout).toBe(false);
 });
+
+test('the no-kit case holds no weapon that the worker could wield and expects its current refusal',()=>{
+ const f=cowFixture('nokit'),ids=[...f.inventory!,...f.equipment!,...f.bank!].map(i=>i.id);
+ for(const weapon of [1277,1205,1265,1351])expect(ids).not.toContain(weapon);
+ expect(Object.values(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing owned wearable melee weapon\n','nokit')).every(Boolean)).toBe(true);
+ expect(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing kit1277\n','nokit').result).toBe(false);
+});
