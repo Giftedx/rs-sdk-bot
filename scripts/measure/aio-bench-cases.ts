@@ -1215,6 +1215,12 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {...PRESETS.quest_grandtree!, position: {x: 2484, z: 3437, level: 0}, equipment: [{id: 1387, count: 1, slot: 3}],
       skills: {...PRESETS.quest_grandtree!.skills, Attack: 80, Hitpoints: 29, Prayer: 99, Magic: 59, Agility: 25},
       inventory: [{id: 562, count: 127}, {id: 556, count: 401}, {id: 563, count: 2}, ...Array.from({length: 8}, () => ({id: 385, count: 1}))]}},
+  // The Grand Tree at the state that the planner order gives (row `grandtree` of packages/planner/src/haggis-boards.json):
+  // Prayer 99 from the bones of the woodcutting row, Magic 45, Attack 91 after Tree Gnome Village and Fight Arena, and no
+  // prayer potion. The row holds the ticks of this case; `quester:quest:grandtree` is the same quest at Prayer 43.
+  {key: 'extra:grandtree-route-state', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['grandtree'], pass: ok, timeoutMs: 900_000,
+    presetConfig: {...PRESETS.quest_grandtree!, skills: {...PRESETS.quest_grandtree!.skills, Attack: 91, Magic: 45, Prayer: 99},
+      inventory: (PRESETS.quest_grandtree!.inventory ?? []).filter(i => i.id !== 2434)}},
   // Blocks 8 and 9 as the live run stages them: both quests' packs held from the start, plus death runes for Fire Blast
   // (Magic 59; max 16 against Fire Bolt's 12). `-blast` against the cases above measures the spell alone.
   {key: 'extra:sweep-tree-kit-blast', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,

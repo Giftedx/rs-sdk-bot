@@ -30,6 +30,28 @@ test('a step price adds the walk into each row and flags late, unplaced and miss
     expect(p!.missingScripts).toEqual(['scripts/no-such-worker.ts']);
 });
 
+test('a step priced with another step has no rows, and names a step that has rows', () => {
+    const byId = new Map(CAIRN_ROUTE.steps.map(s => [s.id, s]));
+    const joined = CAIRN_ROUTE.steps.filter(s => s.pricedWith);
+    expect(joined.map(s => s.id)).toEqual(['air-altar']);
+    for (const s of joined) {
+        expect(s.ours).toEqual([]);
+        expect(byId.get(s.pricedWith!)?.ours.length).toBeGreaterThan(0);
+        expect(byId.get(s.pricedWith!)?.pricedWith).toBeUndefined();
+    }
+});
+
+test('every step has rows of ours or is priced with a step that has them', () => {
+    expect(CAIRN_ROUTE.steps.filter(s => !s.ours.length && !s.pricedWith).map(s => s.id)).toEqual([]);
+});
+
+test('the plan of a step holds the plan of each step priced with it', () => {
+    const steps: CairnStep[] = [{ ...step([]), id: 'early', plan: 40, took: 45, pricedWith: 'late' }, { ...step(['a']), id: 'late', plan: 100, took: 110 }];
+    const [early, late] = priceSteps([place('a', 150, 200, 10)], 300, steps, '.');
+    expect(early).toMatchObject({ ours: null, plan: 40, took: 45, joined: [] });
+    expect(late).toMatchObject({ ours: 160, plan: 140, took: 155, joined: ['early'] });
+});
+
 test('a step with no placed rows has no price', () => {
     const [p] = priceSteps([], 100, [step([])], '.');
     expect(p!.ours).toBeNull();
