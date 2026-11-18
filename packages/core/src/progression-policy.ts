@@ -54,7 +54,9 @@ export function createProgressionMonitor(options:{evaluate:()=>PolicyEvaluation;
   if(a.type==='interactNpc')return a.progressionOption==='Attack'||/attack|pickpocket/i.test(String(a.option??''))
    ||a.option===undefined&&a.progressionOption===undefined&&(a.optionIndex===undefined||a.optionIndex===1);
   if(a.type==='useInventoryItem')return !!a.progressionOption&&!/^(eat|drink|drop|wear|wield|rub|teleport|empty)$/i.test(a.progressionOption);
-  if(a.type==='interactLoc')return !a.progressionBankCleanup&&!a.progressionCannonCleanup&&!!a.progressionOption&&!/^(bank|open|close|climb(?:-up|-down)?|enter|exit|pass|travel|search)$/i.test(a.progressionOption);
+  // A bank use, a cannon pick-up and a portal exit end a stay and start no new work: a finished goal must not trap a
+  // player inside an altar with the runes that it just crafted.
+  if(a.type==='interactLoc')return !a.progressionBankCleanup&&!a.progressionCannonCleanup&&!a.progressionPortalExit&&!!a.progressionOption&&!/^(bank|open|close|climb(?:-up|-down)?|enter|exit|pass|travel|search)$/i.test(a.progressionOption);
   return ['useItemOnLoc','useItemOnNpc','useItemOnItem','spellOnNpc','spellOnPlayer','spellOnItem','spellOnGroundItem','spellOnLoc','castSpellOnNpc','castSpellOnLoc','castSpellOnItem'].includes(a.type);
  };
  return{
