@@ -91,3 +91,8 @@ test('runItemMagic equips a matching wearable elemental staff from inventory to 
   clearInterval(timer);
  }
 });
+import {spellDelay} from './microbot-magic-items';
+test('the gap after a cast is the p_delay of the native spell script',()=>{
+ expect(spellDelay('high-alch')).toBe(3);expect(spellDelay('low-alch')).toBe(1);expect(spellDelay('superheat:iron')).toBe(1);expect(spellDelay('enchant:sapphire_ring')).toBe(1);
+ expect(()=>spellDelay('teleport')).toThrow();
+});
