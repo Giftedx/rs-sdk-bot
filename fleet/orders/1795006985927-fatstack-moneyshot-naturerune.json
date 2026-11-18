@@ -1,0 +1,22 @@
+{
+ "id": "1795006985927-fatstack-moneyshot-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Moneyshot",
+ "item": "Nature rune",
+ "count": 22,
+ "start": 1795006985927,
+ "end": 1795009385927,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
