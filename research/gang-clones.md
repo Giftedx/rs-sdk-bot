@@ -273,7 +273,7 @@ eat, the tick between our weapon change and our attack, and the login order of t
 | 4 of ours, `chainbind` (1 to 6) | 18 of 18 | 17 | 19 | 516 | 16.2 | 15.5 | 688 |
 | 5 of ours, `chainbind` (1 to 6) | 18 of 18 | 16 | 18 | 480 | 16.5 | 15.9 | 800 |
 | 6 of ours, `chainbind` (1 to 3) | 9 of 9 | 13 | 15 | 481 | 16.5 | 15.9 | 961 |
-| 4 of ours against the four other modes (1 to 6) | 71 of 72 | 19 | 21 | 523 | 16.1 | 15.4 | 707 |
+| 4 of ours against the four other modes (1 to 6) | 71 of 72 | 19 | 21 | 533 | 15.8 | 15.2 | 721 |
 | 5 of ours against the four other modes (1 to 6) | 72 of 72 | 16 | 18 | 472 | 16.6 | 16.0 | 787 |
 | 3 of ours, no rune and no antipoison (`chainbare`) (1 to 3) | 6 of 9 | 58 | 66 | 685 | 9.8 | 9.3 | 1,028 |
 | 4 of ours, `chainbare` (1 to 3) | 9 of 9 | 22 | 25 | 546 | 15.9 | 15.2 | 728 |
@@ -312,8 +312,8 @@ What the table shows, each from three matched seeds or more:
   fewer ticks than four on 5 of the 6 seeds (480 against 516 on the mean).
 - **Three of ours in the full kit also kill 18 of 18, at 28 Hitpoints a kill.** Three with no rune and no antipoison
   kill 6 of 9.
-- **No fight option beats the default set by more than the spread of the base.** The base loses 37 to 104 Hitpoints
-  a run across its seeds. No freeze, the early special, eat at 70, no chase and the wider focus all lie inside it.
+- **No fight option beats the default set by more than the spread of the base.** The base loses 29 to 104 Hitpoints
+  a run across its six seeds. No freeze, the early special, eat at 70, no chase and the wider focus all lie inside it.
 
 The winner is `scripts/pk-gang-record/squad-candidate.json`: five of ours in the kit rule `gang-chain-bind`, each
 with a strung bow where the fleet has one, the multi-way post, the default options of the squad script. Its kills of

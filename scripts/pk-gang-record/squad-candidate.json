@@ -14,7 +14,7 @@
   "RESCUE=1",
   "PICKUP=1"
  ],
- "options": "the default SQUAD_OPTS of scripts/pk-squad.ts: no change of one option beat it by more than the spread of the base (37 to 104 Hitpoints a run across seeds)",
+ "options": "the default SQUAD_OPTS of scripts/pk-squad.ts: no change of one option beat it by more than the spread of the base (29 to 104 Hitpoints a run across six seeds)",
  "post": {
   "tile": [
    3067,
