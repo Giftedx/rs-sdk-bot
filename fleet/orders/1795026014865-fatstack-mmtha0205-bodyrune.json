@@ -1,0 +1,22 @@
+{
+ "id": "1795026014865-fatstack-mmtha0205-bodyrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "mmtha0205",
+ "item": "Body rune",
+ "count": 9,
+ "start": 1795026014865,
+ "end": 1795028414865,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
