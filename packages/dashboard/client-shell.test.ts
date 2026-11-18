@@ -1870,6 +1870,41 @@ test('best training spot: the best rock the account can mine now, and the neares
  expect(t.bestSpot(b,'Fishing',35)).toBe(null);
  expect(t.bestSpotLine(b,20)).toContain('Best now: <b>Iron rock</b> (level 15) · nearest 10 tiles');
 });
+test('Combat preview: the max hit now, from the attack style and the Strength prayer that is on',()=>{
+ const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
+ const t=new Function('asset','fetch','E','window',`${code};return {combatPreviewLines,equipStats,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{});
+ t.set({'Rune scimitar':[7,45,-2,0,0,0,1,0,0,0,44,0,0],'Amulet of strength':[0,0,0,0,0,0,0,0,0,0,10,0,0]},{spells:[],staffs:{}});
+ const styles=[{index:0,type:'Accurate'},{index:1,type:'Aggressive'},{index:2,type:'Controlled'}];
+ const prayers=(on:number[])=>Array.from({length:15},(_,i)=>on.includes(i));
+ const account=(context:any)=>({skills:[{name:'Strength',level:99,currentLevel:99}],equipment:[{slot:3,name:'Rune scimitar'},{slot:2,name:'Amulet of strength'}],progressionContext:context});
+ // Strength 99, bonus 54. Aggressive +3 with Ultimate Strength (115%): floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
+ expect(t.combatPreviewLines(account({style:{currentStyle:1,styles},prayers:prayers([10])}))[0]).toStartWith('Melee 23 · aggressive +3 · Ultimate Strength 115%');
+ // The first Strength prayer that is on counts: Burst of Strength (105%) before Ultimate Strength.
+ expect(t.combatPreviewLines(account({style:{currentStyle:1,styles},prayers:prayers([1,10])}))[0]).toContain('Burst of Strength 105%');
+ // Controlled +1, no prayer on: floor(((99 + 8 + 1) × 118 + 320) / 640) = 20.
+ expect(t.combatPreviewLines(account({style:{currentStyle:2,styles},prayers:prayers([])}))[0]).toStartWith('Melee 20 · controlled +1');
+ // A missing prayer list is said, not guessed.
+ expect(t.combatPreviewLines(account({style:{currentStyle:0,styles}}))[0]).toStartWith('Melee 20 · accurate · prayers not reported');
+ // No reported style: no melee line. Unobserved equipment: no lines.
+ expect(t.combatPreviewLines(account({}))).toEqual([]);
+ expect(t.combatPreviewLines({equipment:[],equipmentObserved:false})).toEqual([]);
+ expect(t.equipStats(account({style:{currentStyle:1,styles},prayers:prayers([10])}))).toContain('Melee 23 · aggressive +3');
+});
+
+test('inMulti is false until the multi-way lines load, then counts the lines east of the point',()=>{
+ const line=shell.split('\n').find(l=>l.trimStart().startsWith('const inMulti='))!;
+ const make=(multiLines:unknown)=>new Function('multiLines',`${line};return inMulti;`)(multiLines) as (p:unknown)=>boolean;
+ const at={x:3100,z:3600,level:0};
+ // The page starts with `multiLines=null`; the HUD asks before the data file arrives.
+ expect(make(null)(at)).toBe(false);
+ expect(make([])(at)).toBe(false);
+ expect(make([[3200,3500,3200,3700,0]])(null)).toBe(false);
+ // One vertical line east of the point, on its level and across its z: an odd count is inside.
+ expect(make([[3200,3500,3200,3700,0]])(at)).toBe(true);
+ expect(make([[3200,3500,3200,3700,0]])({...at,x:3300})).toBe(false);
+ expect(make([[3200,3500,3200,3700,1]])(at)).toBe(false);
+});
+
 test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from the pack',()=>{
  const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
  const t=new Function('asset','fetch','E','window',`${code};return {wornBonuses,maxHit,equipStats,teleCasts,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{});

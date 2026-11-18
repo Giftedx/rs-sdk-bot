@@ -16,6 +16,23 @@ import { benchCases } from './measure/aio-bench-cases';
 import { MEALS, presetFor } from './quest-sweep';
 import { BANK_FOOD } from './blood-chest';
 import { smeltRecipe } from './smelt-batch';
+import {addTasks,initialState} from '../packages/router/src/coordinator';
+test('pending dynamic participant ownership follows the shared binding without inventing unresolved names',()=>{
+ const queue=initialState(),task={goal:'skills' as const,dependsOn:[],priority:1,estimatedMs:1,why:'Finite participant reservation'};
+ addTasks(queue,[{...task,id:'new-account',kind:'provision',role:'combat'},{...task,id:'paired',kind:'run',capability:'handoff',dependsOn:['new-account'],participants:['Donor','@new-account'],acceptIndex:1,accept:{bank:{554:250}}}],1);
+ expect(planningOwnership([],[],new Set(),queue).held.size).toBe(0);
+ const created=queue.tasks[0]!;created.status='succeeded';created.receipt={taskId:created.spec.id,runId:'provision-run',ok:true,at:2,output:{account:'Helper 1'}};
+ const bound=planningOwnership([],[],new Set(),queue);expect([...bound.held].sort()).toEqual(['donor','helper 1']);expect([...bound.busy].sort()).toEqual(['donor','helper 1']);
+ queue.tasks[1]!.status='succeeded';expect(planningOwnership([],[],new Set(),queue).held.size).toBe(0);
+});
+
+test('pending observation consumers and native state qualifications reserve their account until settlement',()=>{
+ const queue=initialState();addTasks(queue,[{id:'observe',kind:'run',capability:'owned-bank-observation',goal:'skills',account:'Fighter',accept:{skills:{Hitpoints:1}},dependsOn:[],priority:1,estimatedMs:1,why:'Read actual entry'},
+  {id:'state-native',kind:'qualify',capability:'ranged-train',goal:'skills',account:'Fighter',dependsOn:['observe'],priority:1,estimatedMs:1,why:'Qualify actual entry'}],1);
+ const held=planningOwnership([],[],new Set(),queue);expect(held.held.has('fighter')).toBe(true);expect(held.busy.has('fighter')).toBe(true);
+ expect(plannableAccounts([],side,['Fighter','Free'],held.keep)).toEqual(['Free']);
+ queue.tasks.forEach(r=>r.status='succeeded');expect(planningOwnership([],[],new Set(),queue).held.size).toBe(0);
+});
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, UNF_POTIONS, makerChains, priceTable } from '../packages/planner/src/autopilot';
 import { supplyBill } from '../packages/planner/src/supply-bill';
 import { inventoryRecipes } from './microbot-production';

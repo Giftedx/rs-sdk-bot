@@ -337,6 +337,37 @@ test('Command centre shows unused bot slots, RAM headroom, fast-fail loops and s
  expect(html).not.toContain('Haggis');
 });
 
+test('Command centre lists the jobs that ended orphaned, blocked or gave-up, and never the reserved account',()=>{
+ const code=operations.slice(operations.indexOf(' function operations(){'),operations.indexOf(' // Why a new bot cannot start now'));
+ const list=[
+  {name:'Stuck',job:{state:'ended: blocked after 3 runs'}},
+  {name:'Gone',job:{state:'ended: exit orphaned: attempt 1794962132674-0000026264-0000000001 owner 26264 gone'}},
+  {name:'Quit',planJob:{state:'gave-up after 1 run'}},
+  {name:'Held',job:{state:'waiting: memory'}},
+  {name:'Off',job:{state:'blocked after 9 runs',enabled:false}},
+  {name:'Reserved',reserved:true,job:{state:'exit orphaned'}},
+  {name:'Fine',job:{state:'running'}},
+ ];
+ const S={coordination:{counts:{},fresh:true,available:true,agents:[]},wilderness:[],capacity:{},scoreboard:{available:false},fleetSides:{sides:[]},diagnostics:{failLoops:[],leases:[]}};
+ const env={S,meta:{controllers:[]},bots:()=>list,issues:()=>[],incidentCards:()=>'',startBlock:()=>'',page:String,title:String,button:()=>'',badge:(_s:string,l:string)=>`[${l}]`,E:String,safeName:String,age:()=>'0m',ago:()=>'0m',metaError:'',message:''};
+ const t=new Function(...Object.keys(env),`${code};return {rows:recoveryRows(),html:operations()};`)(...Object.values(env)) as {rows:{name:string;kind:string;runs:number|null}[];html:string};
+ // Order: orphaned, blocked, gave-up, waiting. A disabled job and the reserved account are not listed.
+ expect(t.rows.map(r=>[r.name,r.kind,r.runs])).toEqual([['Gone','orphaned',null],['Stuck','blocked',3],['Quit','gave-up',1],['Held','waiting',null]]);
+ expect(t.html).toContain('jobs need recovery');
+ expect(t.html).toContain('1 worker gone · 1 blocked · 1 gave up · 1 waiting');
+ expect(t.html).toContain('Job recovery');
+ expect(t.html).toContain('[4 to review]');
+ expect(t.html).toContain('The worker process 26264 is gone.');
+ expect(t.html).toContain('Ended blocked after 3 runs.');
+ expect(t.html).toContain('Ended as gave-up after 1 run.');
+ expect(t.html).not.toContain('Reserved');
+ expect(t.html).not.toContain('data-value="Off"');
+ // No such job: the card says so and the count is 0.
+ const none=new Function(...Object.keys(env),`${code};return operations();`)(...Object.values({...env,bots:()=>[{name:'Fine',job:{state:'running'}}]})) as string;
+ expect(none).toContain('[Clear]');
+ expect(none).toContain('No orphaned, blocked or waiting job.');
+});
+
 test('server diagnostics mark stale leases cleanly and exclude protected main account loops',async()=>{
  const {mkdtempSync,rmSync,writeFileSync}=await import('node:fs');
  const {tmpdir}=await import('node:os');

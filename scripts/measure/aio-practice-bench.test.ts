@@ -1,12 +1,123 @@
 import {describe, expect, test} from 'bun:test';
 import {benchCases, BENCH_JOB_FILES, type BenchCase} from './aio-bench-cases';
 import {computeCaseHash} from './aio-practice-bench';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
 
 const byKey = (key: string): BenchCase => {
   const found = benchCases().find(c => c.key === key);
   if (!found) throw Error(`missing bench case ${key}`);
   return found;
 };
+
+describe('post-Dragon Slayer cannon route', () => {
+  const completed = 'LOGOUT logged-out\nRESULT ok cannon-fight spot=spiders ticks=2100 levels=Ranged:99,Defence:99,Hitpoints:99 done=Ranged:2100,Defence:400,Hitpoints:2050 died=false picked=true clear=true stop=-';
+
+  test('accepts all three target levels with the cannon recovered and logout confirmed', () => {
+    expect(byKey('extra:cannon-post-dragon-r1').pass(completed)).toBe(true);
+  });
+
+  test.each(['Ranged', 'Defence', 'Hitpoints'])('rejects a capped run short of %s 99', skill => {
+    expect(byKey('extra:cannon-post-dragon-r1').pass(completed.replace(`${skill}:99`, `${skill}:98`))).toBe(false);
+  });
+
+  test.each([
+    ['died=false', 'died=true'],
+    ['picked=true', 'picked=false'],
+    ['clear=true', 'clear=false'],
+    ['LOGOUT logged-out', 'LOGOUT failed'],
+    ['LOGOUT logged-out\n', ''],
+    ['stop=-', 'stop=owner'],
+  ])('rejects incomplete recovery or settlement: %s', (before, after) => {
+    expect(byKey('extra:cannon-post-dragon-r1').pass(completed.replace(before, after))).toBe(false);
+  });
+
+  test('starts at the route combat level floors with Ranged 1 and a usable first weapon', () => {
+    const fixture = byKey('extra:cannon-post-dragon-r1').presetConfig!;
+    expect(fixture.skills).toEqual({Attack: 99, Strength: 99, Defence: 98, Hitpoints: 97, Prayer: 99, Magic: 80, Ranged: 1});
+    expect(fixture.equipment!.find(i => i.slot === 3)?.id).toBe(1333);
+    // The Ranged 55 fixture's coif and green dragonhide cannot be worn at Ranged 1.
+    expect(fixture.equipment!.map(i => i.id)).not.toContain(1169);
+    expect(fixture.equipment!.map(i => i.id)).not.toContain(1135);
+    expect(fixture.equipment!.map(i => i.id)).not.toContain(1099);
+    expect(fixture.equipment!.map(i => i.id)).not.toContain(1065);
+    expect(fixture.inventory).toContainEqual({id: 861, count: 1});
+    expect(byKey('extra:cannon-post-dragon-r1').scriptArgs).toContain('PHASES=1333:3:Defence=99,Ranged=55;861:1');
+  });
+});
+
+describe('Dragon Slayer before the combat top-ups', () => {
+  const completed = 'LOGOUT logged-out\nRESULT ok questMsg=true xp=strength=466250,defence=466250 at=2857,9638,0 ticks=1400 died=false milestones=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16';
+
+  test('accepts quest completion, both reward deltas and confirmed logout', () => {
+    expect(byKey('extra:dragon-post-mm').pass(completed)).toBe(true);
+  });
+
+  test.each([
+    ['questMsg=true', 'questMsg=false'],
+    ['strength=466250', 'strength=0'],
+    ['defence=466250', 'defence=0'],
+    ['died=false', 'died=true'],
+    ['LOGOUT logged-out', 'LOGOUT failed'],
+    ['LOGOUT logged-out\n', ''],
+  ])('rejects incomplete early Dragon Slayer: %s', (before, after) => {
+    expect(byKey('extra:dragon-post-mm').pass(completed.replace(before, after))).toBe(false);
+  });
+
+  test('prices only the route\'s 32 QP and uses gear wearable before Dragon Slayer', () => {
+    const fixture = byKey('extra:dragon-post-mm').presetConfig!;
+    expect(fixture.skills).toMatchObject({Attack: 99, Strength: 97, Defence: 89, Hitpoints: 97, Prayer: 99, Magic: 80, Ranged: 1});
+    expect(fixture.varps![176] ?? 0).toBe(0);
+    expect(fixture.equipment!.map(i => i.id)).not.toContain(1127);
+    expect(fixture.equipment!.find(i => i.slot === 4)?.id).toBe(1113);
+    const varpIds = new Map(readFileSync(join(import.meta.dir, '../../vendor/rs-sdk/server/content/pack/varp.pack'), 'utf8').trim().split(/\r?\n/).map(line => {
+      const [id, name] = line.split('=');
+      return [name!, Number(id)];
+    }));
+    const quests = JSON.parse(readFileSync(join(import.meta.dir, '../../knowledge/quests.json'), 'utf8')) as {varp: string; complete: number; questPoints: number}[];
+    let qp = quests.filter(q => {
+      const progress = fixture.varps![varpIds.get(q.varp)!] ?? 0;
+      return ['arenaquest', 'mm_main'].includes(q.varp) ? progress >= q.complete : progress === q.complete;
+    }).reduce((sum, q) => sum + q.questPoints, 0);
+    // The generated quest catalog omits MM's completion constant, which is in the quest's own config.
+    if (!quests.some(q => q.varp === 'mm_main')) {
+      const constants = readFileSync(join(import.meta.dir, '../../vendor/rs-sdk/server/content/scripts/general/configs/quest.constant'), 'utf8');
+      const mm = readFileSync(join(import.meta.dir, '../../vendor/rs-sdk/server/content/scripts/quests/quest_mm/configs/quest_mm.constant'), 'utf8');
+      const complete = Number(mm.match(/^\^mm_complete = (\d+)$/m)![1]);
+      if (fixture.varps![varpIds.get('mm_main')!]! >= complete) qp += Number(constants.match(/^\^mm_questpoints = (\d+)$/m)![1]);
+    }
+    expect(qp).toBe(32);
+  });
+});
+
+describe('early Dragon Slayer with an explicit Varrock return', () => {
+  const result = 'LOGOUT logged-out\nRESULT ok questMsg=true xp=strength=466250,defence=466250,magic=3100 at=3212,3424,0 ticks=2200 died=false';
+  const teleport = 'QUEST_TELEPORT {"label":"dragon return varrock","comp":"magic:varrock_teleport","to":{"x":3212,"z":3424},"at":{"x":3212,"z":3424,"level":0},"magicXp":875}';
+  const completed = teleport + '\n' + result;
+
+  test('requires the observed return spell and final Varrock landing', () => {
+    expect(byKey('extra:dragon-post-mm-return').pass(completed)).toBe(true);
+  });
+
+  test.each([
+    [teleport + '\n', ''],
+    ['magic:varrock_teleport', 'magic:lumbridge_teleport'],
+    ['"magicXp":875', '"magicXp":0'],
+    ['"x":3212,"z":3424,"level":0', '"x":2846,"z":9636,"level":0'],
+    ['at=3212,3424,0', 'at=2846,9636,0'],
+    ['defence=466250', 'defence=0'],
+    ['died=false', 'died=true'],
+    ['LOGOUT logged-out', 'LOGOUT failed'],
+  ])('rejects incomplete quest return: %s', (before, after) => {
+    expect(byKey('extra:dragon-post-mm-return').pass(completed.replace(before, after))).toBe(false);
+  });
+
+  test('adds only the missing fire rune to the early quest fixture', () => {
+    const base = byKey('extra:dragon-post-mm'), returned = byKey('extra:dragon-post-mm-return');
+    expect(returned.scriptArgs).toEqual(['dragon', 'DS_RETURN=varrock']);
+    expect(returned.presetConfig).toEqual({...base.presetConfig, inventory: [...base.presetConfig!.inventory!, {id: 554, count: 1}]});
+  });
+});
 
 describe('kept bench results', () => {
   test('reuse an unchanged case', () => {

@@ -2,8 +2,10 @@ import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {validateSmeltOrder} from '../../../scripts/smelt-batch';
+import {parseCoins} from '../../../scripts/coin-courier';
 import {accountFromStatus,catalogCoverage,intentForEntry,loadProgressionCatalog,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
 import {preflightProgressionWork} from '../../core/src/progression-session';
+import {xpForLevel} from '../src/curve';
 
 const now=10_000;
 const status={name:'Example',at:now,server:'rs-sdk-demo.fly.dev',bankAt:9000,equipmentObserved:true,
@@ -44,9 +46,45 @@ test('an explicit item or quest consumer outranks incidental training targets',(
  expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{TRAIN_SKILL:'Ranged',TARGET_LEVEL:'90'})).toEqual({kind:'train',skill:'ranged',targetLevel:90});
 });
 
+test('the finite Prayer trainer keeps its matching skill goal above retained bone postconditions',()=>{
+ const env={BONE_ID:'536',MAX_BURY:'105',BONE_RESERVE:'6',CAP:'1500'};
+ const accept={skills:{Prayer:99},bank:{536:6}};
+ expect(intentForEntry('scripts/train-prayer.ts',['99'],env,accept)).toEqual({kind:'train',skill:'prayer',targetLevel:99});
+ expect(intentForEntry('scripts/train-prayer.ts',['96'],{...env,BONE_ID:'526',MAX_BURY:'469'},{skills:{Prayer:96},bank:{526:44,536:6}})).toEqual({kind:'train',skill:'prayer',targetLevel:96});
+ expect(intentForEntry('scripts/train-prayer.ts',[],{TARGET_LEVEL:'60',BONE_RESERVE:'384'},{skills:{prayer:60},bank:{526:384}})).toEqual({kind:'train',skill:'prayer',targetLevel:60});
+ for(const [args,changed,goal] of [
+  [['98'],{},accept], [['99'],{BONE_ID:'999'},accept], [['99'],{BONE_RESERVE:'5'},accept],
+  [['99'],{BONE_RESERVE:'7'},accept], [['99'],{BURY_HELD:'1'},accept], [['99'],{CAP:'0'},accept],
+  [['99'],{MAX_BURY:'0'},accept], [['99','extra'],{},accept], [['99'],{},{skills:{Ranged:99},bank:{536:6}}],
+  [['99'],{},{skills:{Prayer:99,prayer:99},bank:{536:6}}], [['99'],{},{skills:{Prayer:99},bank:{526:6}}],
+ ] as const)expect(intentForEntry('scripts/train-prayer.ts',args,{...env,...changed},goal)).toMatchObject({kind:'acquire'});
+ expect(intentForEntry('scripts/train-prayer.ts',['99'],env,{bank:{536:6}})).toMatchObject({kind:'acquire'});
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','giant'],{TRAIN_SKILL:'Prayer',TARGET_LEVEL:'99'},accept)).toMatchObject({kind:'acquire',items:{536:6}});
+});
+
 test('unknown scripts and missing finite goals remain explicit',()=>{
  expect(intentForEntry('scripts/not-a-route.ts',[],{})).toBeNull();
  expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{})).toBeNull();
+});
+
+test('coin courier binds both normalized participants to one exact finite transfer without wealth credit',()=>{
+ const env={COORDINATOR_PARTICIPANTS:'["Donor","Receiver"]'},options=['--reserve=5000','--bank-x=3185','--bank-z=3436','--timeout-ms=60000'];
+ const expected={kind:'service' as const,objective:'finite owned coin transfer Donor -> Receiver: 45000 coins; donor bank reserve 5000'};
+ for(const args of [['Receiver','45000',...options],['Donor','Receiver','45000',...options]]){
+  expect(intentForEntry('scripts/coin-courier.ts',args,env)).toEqual(expected);
+  expect(intentForEntry('scripts/coin-courier.ts',args,env,{bank:{995:45000}})).toEqual(expected);
+ }
+ expect(intentForEntry('scripts/coin-courier.ts',['Donor','Receiver','1'],{})).toEqual({kind:'service',objective:'finite owned coin transfer Donor -> Receiver: 1 coins; donor bank reserve 0'});
+ for(const args of [[],['Receiver','45000'],['Other','Receiver','45000'],['Donor','Other','45000'],['Donor','Donor','1'],['Haggis','Receiver','1'],['Donor','Receiver','0'],['Donor','Receiver','2147483648'],['Donor','Receiver','1.5'],['Donor','Receiver','NaN'],['Donor','Receiver','1','--reserve=-1'],['Donor','Receiver','1','--reserve=2147483648'],['Donor','Receiver','1','--reserve=1','--reserve=2'],['Donor','Receiver','1','--unknown=1'],['Donor','Receiver','1','--notes'],['Donor','Receiver','1','--keep=Coins'],['Donor','Receiver','1','--bank-x=16384'],['Donor','Receiver','1','--request-ms=60001'],['Donor','Receiver','1','--request-ms=60000','--timeout-ms=59999'],['Donor','Receiver','1','--timeout-ms=600001'],['Donor','Receiver','1','--grace-ms=0'],['Donor','Receiver','1','--approach-ms=999']]){
+  expect(intentForEntry('scripts/coin-courier.ts',args,args.length===2?{}:env,{bank:{995:1}})).toBeNull();
+ }
+ for(const participants of ['bad','["Donor"]','["Donor","Donor"]','["Donor","Receiver","Other"]'])expect(intentForEntry('scripts/coin-courier.ts',['Receiver','45000'],{COORDINATOR_PARTICIPANTS:participants})).toBeNull();
+ for(const amount of ['1','2147483647'])for(const flags of [[],['--reserve=2147483647'],['--bank-x=1','--bank-z=16383','--approach-ms=1800000','--request-ms=60000','--timeout-ms=600000','--grace-ms=1000']]){
+  const parsed=parseCoins(['Donor','Receiver',amount,...flags]);
+  const expected={kind:'service' as const,objective:`finite owned coin transfer Donor -> Receiver: ${parsed.amount} coins; donor bank reserve ${parsed.reserve}`};
+  expect(intentForEntry('scripts/coin-courier.ts',['Donor','Receiver',amount,...flags],env)).toEqual(expected);
+  expect(intentForEntry('scripts/coin-courier.ts',['Receiver',amount,...flags],env)).toEqual(expected);
+ }
 });
 
 test('the finite Prayer trainer keeps its matching skill goal above retained bone postconditions',()=>{
@@ -96,6 +134,35 @@ test('malformed or unbounded seller and snapshot arguments stay unsupported',()=
   ['--sell','flgesell1','2357','2','4900','extra'],['--sell','bad/name','2357','2','4900'],
   ['--snapshot'],['--snapshot','flgebuy1','extra'],['--snapshot','bad/name'],['--unknown','flgebuy1']])
   expect(intentForEntry(geFixtureEntry,args)).toBeNull();
+});
+
+test('compound cannon stops retain every finite training target',()=>{
+ const expected={kind:'train-all' as const,targets:{ranged:99,defence:99,hitpoints:99}};
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99'})).toEqual(expected);
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99',TRAIN_SKILL:'Ranged',TARGET_LEVEL:'99'})).toEqual(expected);
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99'},{skills:{Ranged:99,Defence:99,Hitpoints:99}})).toEqual(expected);
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP_SKILL:'Defence',STOP_LEVEL:'85'})).toEqual({kind:'train',skill:'defence',targetLevel:85});
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{})).toEqual({kind:'train',skill:'ranged',targetLevel:99});
+ expect(intentForEntry('scripts/gather-combat.ts',[],{TRAIN_SKILL:'Ranged',TARGET_LEVEL:'99'},{skills:{Ranged:99,Hitpoints:99}})).toEqual({kind:'train-all',targets:{ranged:99,hitpoints:99}});
+});
+
+test('compound cannon stop parsing refuses unknown, duplicate and conflicting targets',()=>{
+ for(const STOP of ['', 'Ranged=100,Defence=99','Ranged=99,ranged=99','Nonsense=99','Ranged=99,Defence=0','Ranged=99,Defence=1.5','Ranged=99,'])
+  expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP})).toBeNull();
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99'},{skills:{Ranged:99}})).toBeNull();
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99'},{skills:{Ranged:99,Defence:85}})).toBeNull();
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99'},{skills:{Ranged:99,Nonsense:99}})).toBeNull();
+});
+
+test('compound cannon steps keep the full stop map and recovery modes retain exact item goals',()=>{
+ const goal=intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99'})!;
+ const a=accountFromStatus('Example',{...status,skills:[...status.skills,{name:'Defence',level:40,xp:xpForLevel(40)},{name:'Hitpoints',level:40,xp:xpForLevel(40)}]},now);
+ const method={...progressionMethods(goal,a).methods.find(method=>method.id==='ranged/cannon')!,effects:{xp:{ranged:1,defence:1,hitpoints:1}}};
+ const step=progressionStep(method,xpForLevel(99)-xpForLevel(40),goal,a);
+ expect(step.env.STOP).toBe('ranged=99,defence=99,hitpoints=99');
+ expect(step.env.STOP_LEVEL).toBeUndefined();expect(step.env.STOP_SKILL).toBeUndefined();
+ for(const MODE of ['buy','reclaim'])expect(intentForEntry('scripts/cannon-fight.ts',[],{MODE})).toEqual({kind:'acquire',items:{6:1,8:1,10:1,12:1},consumer:'scripts/cannon-fight.ts'});
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{MODE:'unknown'})).toBeNull();
 });
 
 test('catalog coverage counts executable mapping separately from rate and qualification',()=>{

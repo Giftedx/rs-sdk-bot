@@ -1619,6 +1619,23 @@
    "description": "Walk account to any world coordinate (x, z, level) using doors/transports"
   },
   {
+   "id": "logistics:wine-stock",
+   "category": "logistics",
+   "name": "wine-stock",
+   "script": "scripts/make-wine-order.ts",
+   "args": [
+    "12",
+    "1000",
+    "0"
+   ],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "description": "Preserve an exact new wine-note order from staged grapes and jugs of water"
+  },
+  {
    "id": "market:bank-seller",
    "category": "market",
    "name": "bank-seller",
@@ -89238,6 +89255,15 @@
    "practiceOnly": true
   },
   {
+   "script": "packages/practice/src/wine-stock-order-proof.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/agility-order.ts",
    "intents": [
     "train",
@@ -89316,6 +89342,7 @@
     "logistics:take-from-banker",
     "logistics:supply-chain",
     "logistics:supply-holder",
+    "logistics:wine-stock",
     "logistics:supply-bootstrap",
     "logistics:fleet-trade",
     "logistics:loadout",
@@ -89772,6 +89799,7 @@
     "logistics:take-from-banker",
     "logistics:supply-chain",
     "logistics:supply-holder",
+    "logistics:wine-stock",
     "logistics:supply-bootstrap",
     "logistics:fleet-trade",
     "logistics:loadout",
@@ -91360,6 +91388,16 @@
    ],
    "routeIds": [
     "skiller:magic:order"
+   ]
+  },
+  {
+   "script": "scripts/make-wine-order.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [
+    "logistics:wine-stock"
    ]
   },
   {

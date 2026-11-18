@@ -336,6 +336,16 @@ export function fleetTradeOutcome(prepared: TradeReceipt, progress: Progress, ok
         ...(progress.screen === undefined ? {} : { screen: progress.screen }), ...(lines ? { lines } : {}) };
 }
 
+// The session record of a live trade. The progression gate maps `scripts/fleet-trade.ts` only with its finite order,
+// a `.json` argument. The fleet agent starts this script with the order id, which names no file, so the record gives
+// the order file as the work argument and keeps the command line as it was.
+export function fleetTradeRecord(dir: string, order: Order, account: string, argv: string[] = process.argv.slice(2), env: Record<string, string | undefined> = process.env) {
+    if (![order.from, order.to].some(n => n.toLowerCase() === account.toLowerCase())) throw Error(`fleet trade record: ${account} is not in order ${order.id}`);
+    const file = join(dir, 'orders', order.id + '.json');
+    if (!existsSync(file)) throw Error('fleet trade record: no order file ' + file);
+    return { script: 'scripts/fleet-trade.ts', argv, workArgs: [file], env: { ...env, COORDINATOR_PARTICIPANTS: JSON.stringify([order.from, order.to]) } };
+}
+
 if (import.meta.main) {
     const [account, onlyId] = process.argv.slice(2);
     if (!account) { console.log('RESULT fail usage: fleet-trade.ts <account> [order id]'); process.exit(2); }
@@ -368,6 +378,7 @@ if (import.meta.main) {
         console.log(`FLEET_TAKER_WAIT ${order.id} ${waited}`);
     }
     const s = await openBot(account, {
+        record: fleetTradeRecord(dir, order, account),
         trade: {
             orderId: order.id, role,
             check: server => assertTradeAdmission(order, account, server, { receipts }),

@@ -25,6 +25,11 @@ on:
         type: boolean
         required: false
         default: false
+      bench_pattern:
+        description: Run the bench cases that match this pattern (empty runs none)
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -85,6 +90,45 @@ jobs:
             .practice/aio-bench/last.json
             .practice/aio-bench/output/*.log
             .practice/logs/engine-aiobench-*.log
+  bench-cases:
+    if: inputs.bench_pattern != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Prepare the pinned practice dependencies
+        run: bun scripts/worktree-setup.ts --bench
+      - name: Pack the public game assets
+        timeout-minutes: 10
+        working-directory: vendor/rs-sdk/server/engine
+        run: |
+          bun run build
+      - name: Run the named bench cases
+        timeout-minutes: 25
+        run: |
+          set -o pipefail
+          mkdir -p .practice/bench-cases
+          bun run bench "$BENCH_PATTERN" --parallel 4 --budget 10 | tee .practice/bench-cases/bench.log
+        env:
+          BENCH_PATTERN: ${{ inputs.bench_pattern }}
+          BENCH_OUT: .practice/bench-cases/cases.json
+      - name: Retain the bench evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-cases-${{ github.sha }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            .practice/bench-cases/**
+            .practice/aio-bench/last.json
+            .practice/aio-bench/output/*.log
   progression-practice:
     if: inputs.preparation_practice
     uses: ./.github/workflows/progression-practice.yml
@@ -246,6 +290,7 @@ jobs:
             .practice/fleet-trade-capacity-*/native.json
             .practice/fleet-trade-capacity-*/failure.json
             .practice/fleet-trade-capacity-*/transfer-observed.json
+            .practice/fleet-trade-capacity-*/order.json
             .practice/fleet-trade-capacity-*/transfer-result.json
             .practice/fleet-trade-capacity-*/before-*.sav
             .practice/fleet-trade-capacity-*/after-*.sav

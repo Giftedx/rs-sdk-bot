@@ -169,8 +169,37 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const speed=typeof weaponSpeedData!=='undefined'&&weapon?equipmentValue(weaponSpeedData,weapon):null;
     const tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000;
     const specCost=/\bdragon dagger\b/i.test(weapon?.name||'')?25:/\bmagic (shortbow|longbow)\b/i.test(weapon?.name||'')?35:/\bdragon (longsword|mace|spear)\b/i.test(weapon?.name||'')?25:/\bdragon halberd\b/i.test(weapon?.name||'')?30:/\brune claws\b/i.test(weapon?.name||'')?25:/\brune thrownaxe\b/i.test(weapon?.name||'')?10:/\b(dragon battleaxe|excalibur)\b/i.test(weapon?.name||'')?100:null;
-    const adv=typeof equipAdvisorHtml==='function'?equipAdvisorHtml(b):'';
-    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(speed!=null?'<div class="es-hit"><span>Speed</span><b>'+speed+' ticks ('+(speed*tickSec).toFixed(1)+'s)</b></div>':'')+(specCost!=null?'<div class="es-hit"><span>Special</span><b>'+E(weapon.name)+' ('+specCost+'%)</b></div>':'')+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join('<br>')+'</b></div>':'')+'</div>'+adv;
+    const adv=typeof equipAdvisorHtml==='function'?equipAdvisorHtml(b):'',live=typeof combatPreviewLines==='function'?combatPreviewLines(b):[];
+    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(speed!=null?'<div class="es-hit"><span>Speed</span><b>'+speed+' ticks ('+(speed*tickSec).toFixed(1)+'s)</b></div>':'')+(specCost!=null?'<div class="es-hit"><span>Special</span><b>'+E(weapon.name)+' ('+specCost+'%)</b></div>':'')+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join('<br>')+'</b></div>':'')+(live.length?'<div class="es-hit es-live" title="Max hit and attack speed now: current levels, worn bonuses, the prayers on and the attack style (rev 289 server formulas)"><span>Hit now</span><b>'+live.map(l=>E(l)).join('<br>')+'</b></div>':'')+'</div>'+adv;
+  }
+  // Combat preview (Equipment Stats and Gear Advisor): the server's own max hit and attack speed for the account now, from
+  // its current levels, the worn bonuses, the prayers on and the attack style. Strength prayers are %prayer1 (105), %prayer4
+  // (110) and %prayer10 (115), the first one on counts (check_strength_prayer); a style adds to the effective level
+  // (combat_get_damagestyle_bonuses): aggressive +3 Strength, controlled +1, accurate and defensive 0 for melee; accurate +3
+  // Ranged, rapid and longrange 0 for ranged. Rapid is one tick faster (player_ranged.rs2). A spell has no prayer or style
+  // bonus: its max hit is fixed and a cast takes 5 ticks (player_magic.rs2). There are no ranged or magic prayers in this
+  // world. The style and the prayers come from progressionContext; a melee or ranged line needs the style, and a missing
+  // prayer list is said so, not guessed.
+  const STRENGTH_PRAYERS=[[1,105,'Burst of Strength'],[4,110,'Superhuman Strength'],[10,115,'Ultimate Strength']];
+  function combatPreviewLines(b){
+    const t=typeof wornBonuses==='function'?wornBonuses(b):null;if(!t)return [];
+    const ctx=b?.progressionContext||{},cs=ctx.style,prayers=Array.isArray(ctx.prayers)?ctx.prayers:null;
+    const active=cs&&cs.known!==false&&Array.isArray(cs.styles)?cs.styles.find(s=>s&&s.index===cs.currentStyle)||null:null;
+    const tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000,when=n=>n+'t ('+(n*tickSec).toFixed(1)+'s)';
+    const weapon=(b.equipment||[]).find(e=>e?.slot===3),wb=weapon?equipmentValue(itemBonusData,weapon):null,ranged=(wb?.[4]||0)>0;
+    const base=weapon?(typeof weaponSpeedData!=='undefined'?equipmentValue(weaponSpeedData,weapon):null):4,out=[];
+    if(active){
+      const type=String(active.type||''),label=(type||'style '+active.index).toLowerCase();
+      if(ranged){
+        const lvl=curLevel(b,'Ranged');
+        if(Number.isFinite(lvl)){const bonus=type==='Accurate'?3:0,speed=Number.isFinite(base)&&base>0?base-(type==='Rapid'?1:0):null;out.push('Ranged '+maxHit(lvl,t[11],bonus)+' · '+label+(bonus?' +'+bonus:'')+(speed>0?' · '+when(speed):''));}
+      }else{
+        const lvl=curLevel(b,'Strength');
+        if(Number.isFinite(lvl)){const bonus=type==='Aggressive'?3:type==='Controlled'?1:0,on=prayers?STRENGTH_PRAYERS.find(p=>prayers[p[0]]):null,pct=on?on[1]:100;out.push('Melee '+maxHit(lvl,t[10],bonus,pct)+' · '+label+(bonus?' +'+bonus:'')+(on?' · '+on[2]+' '+pct+'%':prayers?'':' · prayers not reported')+(Number.isFinite(base)&&base>0?' · '+when(base):''));}
+      }
+    }
+    const sp=typeof bestSpell==='function'?bestSpell(b):null;if(sp)out.push(sp.name+' '+sp.max+(sp.charge?' (30 charged)':'')+' · '+when(5));
+    return out;
   }
   // Teleport casts: how many casts of each teleport spell the pack's runes give (a wielded staff gives its rune without
   // limit; client-assets/spellbook.json); a spell above the account's current Magic level is dim.
@@ -584,7 +613,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function xpHistoryBox(store,b){
     const list=b&&store.__history?.[safeName(b.name)];
     if(!Array.isArray(list)||!list.length)return '';
-    return `<div class="xp-box xp-history"><div class="xp-head"><span>Recent sessions</span><button class="xp-reset" data-xp-clear-history title="Clear saved session history for this account">Clear</button></div>${list.map(h=>{const top=(h.skills||[]).map(s=>`${E(s.skill)} +${nf(s.gained)}`).join(', ');return `<div class="xp-hist-row" title="${E(top?top+' · ':'')}${dur(h.elapsedMs||0)}"><span class="xp-hist-main"><b>+${nf(h.gainedXp)} xp</b>${h.gainedEhp>0?` · ${h.gainedEhp.toFixed(2)} EHP`:''}</span><span class="xp-meta"><span>${h.xpPerHour?nf(h.xpPerHour)+'/hr':'—'}</span><span>${dur(h.elapsedMs||0)}</span></span>${top?`<span class="xp-hist-skills">${top}</span>`:''}</div>`;}).join('')}</div>`;
+    return `<div class="xp-box xp-hist-box"><div class="xp-head"><span>Recent sessions</span><button class="xp-reset" data-xp-clear-history title="Clear saved session history for this account">Clear</button></div>${list.map(h=>{const top=(h.skills||[]).map(s=>`${E(s.skill)} +${nf(s.gained)}`).join(', ');return `<div class="xp-hist-row" title="${E(top?top+' · ':'')}${dur(h.elapsedMs||0)}"><span class="xp-hist-main"><b>+${nf(h.gainedXp)} xp</b>${h.gainedEhp>0?` · ${h.gainedEhp.toFixed(2)} EHP`:''}</span><span class="xp-meta"><span>${h.xpPerHour?nf(h.xpPerHour)+'/hr':'—'}</span><span>${dur(h.elapsedMs||0)}</span></span>${top?`<span class="xp-hist-skills">${top}</span>`:''}</div>`;}).join('')}</div>`;
   }
   function refreshXp(forceCalc=false,focusSkill=null){
     const panel=body.querySelector('.xp-tracker');
@@ -1238,7 +1267,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // server's (pvp_combat.rs2): both in the Wilderness, combat levels apart by at most the lower Wilderness level.
   // Roster rows are [name, x, z, level, combat]. Players up to 30 tiles away count.
   const canAttack=(a,b)=>{const w=Math.min(wildLevel(a.pos),wildLevel(b.pos));return w>=1&&Number.isFinite(a.combat)&&Number.isFinite(b.combat)&&Math.abs(a.combat-b.combat)<=w;};
-  const inMulti=p=>!p||typeof multiLines==='undefined'||!multiLines.length?false:multiLines.reduce((n,[x0,z0,x1,z1,l])=>(l===(p.level||0)&&x0===x1&&x0>p.x&&p.z>=z0&&p.z<z1?n+1:n),0)%2===1;
+  const inMulti=p=>!p||typeof multiLines==='undefined'||!multiLines?.length?false:multiLines.reduce((n,[x0,z0,x1,z1,l])=>(l===(p.level||0)&&x0===x1&&x0>p.x&&p.z>=z0&&p.z<z1?n+1:n),0)%2===1;
   function pvpState(b){
     if(!b?.inWorld||!b.pos)return null;
     const gearKnown=Array.isArray(b.equipment)&&b.equipmentObserved!==false,packKnown=Array.isArray(b.inventory),unobserved=[!gearKnown?'equipment':'',!packKnown?'inventory':''].filter(Boolean).join(' and ');
@@ -1685,12 +1714,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       const sp=bestSpell(b);if(sp)hits.push(sp.name+' '+sp.max+(sp.charge?' (30)':''));
     }
     const specCost=weapon?(/\bdragon dagger\b/i.test(weapon.name)?25:/\bmagic (shortbow|longbow)\b/i.test(weapon.name)?35:/\bdragon (longsword|mace|spear)\b/i.test(weapon.name)?25:/\bdragon halberd\b/i.test(weapon.name)?30:/\brune claws\b/i.test(weapon.name)?25:/\brune thrownaxe\b/i.test(weapon.name)?10:/\b(dragon battleaxe|excalibur)\b/i.test(weapon.name)?100:null):null;
-    const sg=v=>(v>0?'+':'')+v;
+    const sg=v=>(v>0?'+':'')+v,live=t&&typeof combatPreviewLines==='function'?combatPreviewLines(b):[];
     const head='<div class="xp-box"><div class="xp-head"><span>'+E(safeName(b.name))+'</span><span class="xp-gain">'+(b.combat?'Combat '+b.combat:'Gear')+'</span></div>'+
       (adv.gearKnown
         ?'<div class="xp-meta"><span>Worn <b>'+b.equipment.length+'</b> slots</span><span>'+(weapon?E(weapon.name)+(speed?' · '+speed+'t ('+(speed*tickMs/1000).toFixed(1)+'s)':''):'Unarmed')+'</span></div>'+(specCost!=null||hits.length?'<div class="xp-meta"><span>'+(hits.length?E(hits.join(' · ')):'—')+'</span><span>'+(specCost!=null?'Spec '+specCost+'%':'')+'</span></div>':'')
         :'<p class="xp-muted" style="margin-top:4px">Equipment is not reported for this account; only observed pack/skills/quests are checked.</p>')+
       (t?'<div class="gear-bonuses"><div class="gear-bonus"><span>Attack</span><b>'+sg(t[0])+' / '+sg(t[1])+' / '+sg(t[2])+'</b><small>Stab/Sl/Cr</small></div><div class="gear-bonus"><span>Mag / Rng</span><b>'+sg(t[3])+' / '+sg(t[4])+'</b><small>Accuracy</small></div><div class="gear-bonus"><span>Str / Pray</span><b>'+sg(t[10])+' / '+sg(t[12])+'</b><small>Rng '+sg(t[11])+'</small></div></div>':'')+
+      (live.length?'<div class="gear-live" title="Max hit and attack speed now: current levels, worn bonuses, the prayers on and the attack style (rev 289 server formulas)">'+live.map(l=>'<div class="xp-meta"><span>'+E(l)+'</span></div>').join('')+'</div>':'')+
       '</div>';
     const order={owned:0,ready:1,locked:2,bis:3};
     const list=[...adv.rows].sort((x,y)=>(order[x.status]??9)-(order[y.status]??9));
@@ -1764,6 +1794,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(headroom!=null)chips.push(`<button class="title-chip ${headroom<0?'bad':headroom<1?'warn':'good'}" data-open-plugin="machine" title="RAM headroom above host floor and startup reserves (free ${Number.isFinite(cap.freeGB)?cap.freeGB.toFixed(1):'?'} GiB)">RAM <b>${headroom>=0?'+':''}${headroom.toFixed(1)}G</b></button>`);
     if(loops.length)chips.push(`<button class="title-chip bad" data-open-plugin="operations" title="${E(loops.slice(0,4).map(l=>safeName(l.name)+' '+l.runs+'×: '+l.error).join('\n'))}"><b>${loops.length}</b> loop${loops.length===1?'':'s'}</button>`);
     if(staleLeases.length)chips.push(`<button class="title-chip warn" data-open-plugin="operations" title="Stale controller leases: ${E(staleLeases.map(l=>l.side+' ('+ago(l.ageMs)+')').join(', '))}"><b>${staleLeases.length}</b> stale lease${staleLeases.length===1?'':'s'}</button>`);
+    const recovery=typeof window.atlasRecoveryRows==='function'?window.atlasRecoveryRows().filter(r=>r.kind!=='waiting'):[];
+    if(recovery.length)chips.push(`<button class="title-chip bad" data-open-plugin="operations" title="${E(recovery.slice(0,6).map(r=>safeName(r.name)+': '+(r.kind==='orphaned'?'worker gone':'ended '+r.kind+' after '+r.runs+' run'+(r.runs===1?'':'s'))).join('\n'))}"><b>${recovery.length}</b> job${recovery.length===1?'':'s'} to recover</button>`);
     const html=chips.join('');
     el.hidden=!html;
     if(el._h!==html){el._h=html;el.innerHTML=html;}

@@ -118,16 +118,37 @@ export function coinChildConfiguration(args:string[],env:Record<string,string>,p
         env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',
             FLEET_SIDE:'local',FLEET_DIR:join(workerRoot,'fleet'),SWARM_PLAN:join(workerRoot,'swarm.json'),CLOUD_WATCH_ID:'',FLEET_VAULT_KEY:'',FLEET_SEED:'',COORDINATOR_RUN_ID:'',STANDING:'0',SWARM_LEASE_HOLDER:'',WORKER_RELEASE:'',BOT_GOAL:'practice coin courier'}};
 }
-// The shared registration CLI admits only default ports. Keep its session owner
-// and tick wait, with the exact generated profile bound to this proof's endpoints.
+type RegistrationDeps={
+    readEnv?:(path:string)=>string;
+    connect?:typeof import('../../core/src/inprocess').connectInProcess;
+    ready?:typeof import('../../core/src/bot').awaitBotReady;
+    wait?:typeof import('../../core/src/ticks').waitTicks;
+    settle?:typeof import('../../core/src/bot').settle;
+};
+// Registration only authenticates a seeded profile. It has no productive worker
+// intent; connectInProcess retains login, ownership and lifecycle enforcement.
+export async function registerCoinProofAccount(name:string,p:ProofEndpoints,deps:RegistrationDeps={}){
+    if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
+    const owned=coinProofEndpoints(p.ports,p.instance);
+    if(p.server!==owned.server||p.gateway!==owned.gateway)throw Error('owned practice endpoints required');
+    const text=(deps.readEnv??(file=>readFileSync(file,'utf8')))(join(rsSdkRoot(),'bots',name,'bot.env'));
+    const lines=text.split(/\r?\n/),values=(key:string)=>lines.filter(line=>line.startsWith(key+'='));
+    if(values('SERVER').length!==1||values('SERVER')[0]!=='SERVER='+p.server||values('GATEWAY_URL').length!==1||values('GATEWAY_URL')[0]!=='GATEWAY_URL='+p.gateway)throw Error('owned practice account required');
+    const password=values('PASSWORD').length===1?values('PASSWORD')[0]!.slice('PASSWORD='.length).trim():'';
+    if(!password)throw Error('practice profile password required');
+    const connect=deps.connect??(await import('../../core/src/inprocess')).connectInProcess;
+    const ready=deps.ready??(await import('../../core/src/bot')).awaitBotReady;
+    const wait=deps.wait??(await import('../../core/src/ticks')).waitTicks;
+    const settle=deps.settle??(await import('../../core/src/bot')).settle;
+    const session=await connect({name,password,server:p.server});
+    try{await ready(session,console.log);await wait(session,3);}
+    catch(error){await settle([session],false,'practice registration failed');throw error;}
+    if(!await settle([session],true,'practice ownership registered'))throw Error('practice registration logout failed');
+}
 export function coinRegistrationArgs(name:string,p:ProofEndpoints){
     if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
-    return['--eval',`import {readFileSync} from 'node:fs';
-import {openBot,finish} from './packages/core/src/bot';
-import {waitTicks} from './packages/core/src/ticks';
-const lines=readFileSync(${JSON.stringify('vendor/rs-sdk/bots/'+name+'/bot.env')},'utf8').split(/\\r?\\n/);
-if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
-const session=await openBot(${JSON.stringify(name)});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
+    return['--eval',`import {registerCoinProofAccount} from './packages/practice/src/coin-courier-proof';
+await registerCoinProofAccount(${JSON.stringify(name)},${JSON.stringify(p)});process.exit(0);`];
 }
 
 export function verify(directory: string) {

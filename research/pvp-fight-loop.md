@@ -59,16 +59,13 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 
 ## Spar and ladder
 
-Source -> consumer -> reuse/adapt -> check: the pinned `auto_retaliate.rs2`, retained player Attack action and
-`logout.rs2` combat window -> `pk-spar.ts` pair teardown -> reuse the native retaliation OFF control's action
-cancellation, then require fresh target release before ordinary confirmed logout -> `pk-spar-cleanup.test.ts`
-and `extra:spar-kit-mage-tank-x8`.
-
-Each finished pair stops its native attacks before the other pairs finish. Scoring uses only the completed fight.
-The teardown has a 16-tick and 4.5-second bound. An unobserved retaliation OFF or target release fails the run.
-The last-hit combat window can remain active while the normal logout retry waits for it to end.
-Native evidence: `.practice/pvp-escape/mage-tank-repair.log` and the case log in `.practice/aio-bench/output/`.
-All eight pairs confirm target release in two or three ticks and all sixteen sessions confirm logout.
+**A pair teardown before logout makes spar batches fail.** Claim: a teardown of each finished pair (the retaliation
+OFF control, then a walk to the own tile until the target is released) leaves one fight winner whose logout times out.
+Conditions: the hosted `pvp-practice` sweep, 4 engines, `--budget 3.5`, 8 or 12 pairs in a batch. Evidence: run
+`44217966751` with the teardown: 174 of 287 spar cases end with `WARN logout did not complete`, each for one account
+whose opponent died, and each teardown printed `"ok":true`. Run `44222638380` on the same sweep code with no teardown,
+shards 1 and 2 of 4: 0 of 199 reported cases have that warning. Gap: the server-side cause is not traced.
+`scripts/pk-spar.ts` has no pair teardown.
 
 `scripts/pk-spar.ts` puts the fight loop on both sides: two own accounts fight each other, each with a named profile
 (a set of fight options; `PROFILES`). The bench case `pvp:spar` stages a mirror: both sides get the duel conditions

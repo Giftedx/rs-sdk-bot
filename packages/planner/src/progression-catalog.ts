@@ -1,11 +1,12 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import type {ObservedAccount,ProgressionMethod,WorkIntent} from './progression';
+import {TRAINING_SKILLS,trainingTargets} from './progression';
 import {parseStep,type Step} from '../../core/src/chain-step';
-import {xpForLevel} from './curve';
+import {levelForXp,xpForLevel} from './curve';
 import {rangedProgressionMethods} from './progression-ranged';
 
-export const PROGRESSION_SKILLS=['attack','defence','strength','hitpoints','ranged','prayer','magic','cooking','woodcutting','fletching','fishing','firemaking','crafting','smithing','mining','herblore','agility','thieving','runecraft'] as const;
+export const PROGRESSION_SKILLS=TRAINING_SKILLS;
 export type CatalogIntent=WorkIntent['kind'];
 export interface CatalogRoute{id:string;category:string;name:string;script:string;args:string[];env:Record<string,string>;intents:CatalogIntent[];skills:string[];description:string;discriminator?:{env?:Record<string,string>;args?:Record<number,string>}}
 export type CatalogMethod=ProgressionMethod&{routeId:string;ladderIds:string[];sourceEntry?:string;members?:boolean|null;execution?:{bankJob?:Record<string,unknown>;outputPerUnit?:number;targetEnv?:string[];unitEnv?:string[];stockEnv?:string[];targetArg?:number;unitArg?:number;spendPerUnit?:number};maxBatch?:number;modelRates?:{skill:string;perLevel:(number|null)[]}};
@@ -73,6 +74,42 @@ export function accountFromStatus(account:string,status:any,now=Date.now()):Obse
 
 function setting(env:Readonly<Record<string,string|undefined>>,args:readonly string[],name:string){return env[name]??args.find(a=>a.startsWith(name+'='))?.slice(name.length+1);}
 function positiveItems(value:Record<number,number>|undefined){return value&&Object.keys(value).length&&Object.entries(value).every(([id,n])=>whole(Number(id))&&Number(id)>0&&whole(n)&&n>0)?value:null;}
+function trainingIntent(targets:Record<string,number>):WorkIntent|null{
+ const normalized=trainingTargets({kind:'train-all',targets});if(!normalized)return null;
+ const entries=Object.entries(normalized);
+ return entries.length===1?{kind:'train',skill:entries[0]![0],targetLevel:entries[0]![1]}:{kind:'train-all',targets:normalized};
+}
+const sameTargets=(a:WorkIntent,b:WorkIntent)=>JSON.stringify(Object.entries(trainingTargets(a)??{}).sort())===JSON.stringify(Object.entries(trainingTargets(b)??{}).sort());
+
+// openBot removes a leading actor name: the donor retains [receiver, amount],
+// while the receiver retains [donor, receiver, amount]. The worker supplies the
+// same exact participant pair for both; ownership and bank reserves stay its guards.
+function coinTransferIntent(args:readonly string[],env:Readonly<Record<string,string|undefined>>):WorkIntent|null{
+ const account=(s:unknown):s is string=>typeof s==='string'&&s.trim()===s&&/^[A-Za-z0-9_ -]{1,12}$/.test(s)&&!/^(main|haggis)$/i.test(s);
+ const pair=(v:unknown):v is [string,string]=>Array.isArray(v)&&v.length===2&&v.every(account)&&key(v[0])!==key(v[1]);
+ let participants:[string,string]|undefined;
+ if(env.COORDINATOR_PARTICIPANTS!==undefined){try{const parsed:unknown=JSON.parse(env.COORDINATOR_PARTICIPANTS);if(!pair(parsed))return null;participants=parsed;}catch{return null;}}
+ let from:string,to:string,amountText:string,options:readonly string[];
+ if(account(args[0])&&account(args[1])&&/^\d+$/.test(args[2]??'')){
+  from=args[0]!;to=args[1]!;amountText=args[2]!;options=args.slice(3);
+  if(!pair([from,to])||participants&&(key(from)!==key(participants[0])||key(to)!==key(participants[1])))return null;
+ }else if(participants&&key(args[0]??'')===key(participants[1])&&/^\d+$/.test(args[1]??'')){
+  [from,to]=participants;amountText=args[1]!;options=args.slice(2);
+ }else return null;
+ const amount=Number(amountText);
+ if(!whole(amount)||amount<1||amount>2147483647)return null;
+ const values:Record<string,number>={reserve:0,'bank-x':3185,'bank-z':3436,'request-ms':30000,'timeout-ms':240000,'grace-ms':45000},seen=new Set<string>();
+ for(const option of options){
+  const match=/^--(reserve|bank-x|bank-z|approach-ms|request-ms|timeout-ms|grace-ms)=(\d+)$/.exec(option);
+  if(!match||seen.has(match[1]!))return null;
+  const value=Number(match[2]);if(!whole(value))return null;seen.add(match[1]!);values[match[1]!]=value;
+ }
+ if(values.reserve!>2147483647||!['bank-x','bank-z'].every(k=>values[k]!>0&&values[k]!<16384)
+  ||values['approach-ms']!==undefined&&(values['approach-ms']!<1000||values['approach-ms']!>1800000)
+  ||values['request-ms']!<1000||values['request-ms']!>60000||values['timeout-ms']!<values['request-ms']!||values['timeout-ms']!>600000
+  ||values['grace-ms']!<1000||values['grace-ms']!>60000)return null;
+ return{kind:'service',objective:`finite owned coin transfer ${from} -> ${to}: ${amount} coins; donor bank reserve ${values.reserve}`};
+}
 
 export function matchingProgressionRoutes(script:string,args:readonly string[]=[],env:Readonly<Record<string,string|undefined>>={},catalog:ProgressionCatalog=loadProgressionCatalog()):CatalogRoute[]{
  script=scriptPath(script);
@@ -95,7 +132,15 @@ export function matchingProgressionRoutes(script:string,args:readonly string[]=[
 // Declared finite output owns the intent. Side XP never changes a quest or item order into a trainer.
 export function intentForEntry(script:string,args:readonly string[]=[],env:Readonly<Record<string,string|undefined>>={},accept?:CatalogAccept,catalog?:ProgressionCatalog):WorkIntent|null{
  script=scriptPath(script);
+ if(script==='scripts/coin-courier.ts')return coinTransferIntent(args,env);
  const consumer=setting(env,args,'CONSUMER')??setting(env,args,'GOAL')??script;
+ if(script==='scripts/make-wine-order.ts'){
+  const maximum=Number(args[0]),cap=Number(args[1]??1000),reserve=Number(args[2]??0);
+  if(args.length<1||args.length>3||![maximum,cap,reserve].every(whole)||maximum<1||cap<1)return null;
+  // This is a new-notes delta, not an existing bank balance or incidental Cooking XP.
+  if(accept&&(Object.keys(accept).length!==1||Object.keys(accept.counters??{}).length!==1||accept.counters?.preservedWine!==maximum))return null;
+  return{kind:'service',objective:`preserve ${maximum} new unfermented wine notes (1996) from owned grapes (1987) and jugs of water (1937); reconcile assets; input reserve ${reserve}; CAP ${cap}`,units:1};
+ }
  const requestedItems=positiveItems(accept?.bank);
  if(script==='scripts/train-prayer.ts'&&requestedItems&&accept?.skills){
   const skills=Object.entries(accept.skills),target=Number(args[0]??env.TARGET_LEVEL??43),bone=Number(env.BONE_ID??526),reserve=Number(env.BONE_RESERVE??6),cap=Number(env.CAP??1500),maximum=Number(env.MAX_BURY??175);
@@ -108,7 +153,22 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  if(requestedItems)return{kind:'acquire',items:{...requestedItems},consumer};
  if(accept?.quests?.length===1&&accept.quests[0]?.trim())return{kind:'quest',quest:accept.quests[0]};
  const acceptedSkills=Object.entries(accept?.skills??{});
- if(acceptedSkills.length===1&&finiteLevel(acceptedSkills[0]![1]))return{kind:'train',skill:key(acceptedSkills[0]![0]),targetLevel:acceptedSkills[0]![1]};
+ if(script==='scripts/cannon-fight.ts'){
+  const mode=setting(env,args,'MODE');
+  if(mode==='buy'||mode==='reclaim')return{kind:'acquire',items:{6:1,8:1,10:1,12:1},consumer};
+  if(mode!==undefined)return null;
+  const text=setting(env,args,'STOP'),targets:Record<string,number>={};
+  if(text!==undefined){
+   for(const part of text.split(',')){
+    const match=part.trim().match(/^([A-Za-z]+)=(\d+)$/);if(!match||Object.hasOwn(targets,key(match[1]!)))return null;
+    targets[key(match[1]!)]=Number(match[2]);
+   }
+  }else targets[setting(env,args,'STOP_SKILL')??'Ranged']=Number(setting(env,args,'STOP_LEVEL')??99);
+  const actual=trainingIntent(targets);if(!actual)return null;
+  if(acceptedSkills.length){const declared=trainingIntent(accept!.skills!);return declared&&sameTargets(actual,declared)?declared:null;}
+  return actual;
+ }
+ if(acceptedSkills.length)return trainingIntent(accept!.skills!);
  // Native GE counterparties have finite fixture work, admitted only on local practice.
  if(script==='packages/practice/src/ge-bulk-order-proof.ts'){
   const actor=args[1];if(!actor||!/^[A-Za-z0-9]{1,12}$/.test(actor))return null;
@@ -311,25 +371,46 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
 }
 
 function desiredUnits(intent:WorkIntent,account:ObservedAccount,method:ProgressionMethod):number{
- if(intent.kind==='train'){
-  const effect=Object.entries(method.effects.xp??{}).find(([skill])=>key(skill)===key(intent.skill))?.[1]??0;
-  const have=Object.entries(account.skills).find(([skill])=>key(skill)===key(intent.skill))?.[1].xp??0;
-  return effect>0?Math.max(1,Math.ceil((xpForLevel(intent.targetLevel)-have)/effect)):1;
+ const targets=trainingTargets(intent);
+ if(targets){
+  return Math.max(1,...Object.entries(targets).map(([skill,target])=>{
+   const effect=Object.entries(method.effects.xp??{}).find(([name])=>key(name)===skill)?.[1]??0;
+   const have=Object.entries(account.skills).find(([name])=>key(name)===skill)?.[1].xp??0;
+   return effect>0?Math.ceil((xpForLevel(target)-have)/effect):1;
+  }));
  }
  if(intent.kind==='produce'||intent.kind==='acquire')return Math.max(1,...Object.entries(intent.items).flatMap(([id,n])=>method.effects.items?.[Number(id)]?[Math.ceil(n/method.effects.items[Number(id)]!)]:[]));
  return 1;
 }
 export function progressionStep(method:ProgressionMethod,units:number,intent:WorkIntent,account:ObservedAccount,catalog:ProgressionCatalog=loadProgressionCatalog()):Step{
- const declaration=(method as CatalogMethod).execution?method as CatalogMethod:undefined;if(!declaration?.execution)return method.step;
+ if(intent.kind==='train-all'){
+  const targets=trainingTargets(intent);if(!targets||!whole(units)||units<1)throw Error('compound progression step needs finite observed targets and units');
+  const boundary:Record<string,number>={};
+  for(const [skill,target]of Object.entries(targets)){
+   const own=Object.entries(account.skills).find(([name])=>key(name)===skill)?.[1];
+   if(!own||!Number.isFinite(own.xp)||own.xp<0)throw Error('compound progression step needs an observed '+skill+' state');
+   const gain=Object.entries(method.effects.xp??{}).find(([name])=>key(name)===skill)?.[1]??0;
+   boundary[skill]=Math.min(target,levelForXp(own.xp+gain*units));
+  }
+  intent={kind:'train-all',targets:boundary};
+ }
+ const declaration=(method as CatalogMethod).execution?method as CatalogMethod:undefined;if(!declaration?.execution)return trainingStop(method.step,intent);
  const unitSized=!!(declaration.execution.bankJob||declaration.execution.unitEnv?.length||declaration.execution.stockEnv?.length||declaration.execution.unitArg!==undefined);
  const cap=Math.min(declaration.maxUnits??Infinity,declaration.maxBatch??(unitSized?1000:Infinity));
  if(!whole(units)||units<1||units>cap)throw Error('selected progression units exceed the executable batch');
  return materialize(declaration,intent,account,units).step;
 }
+function trainingStop(step:Step,intent:WorkIntent):Step{
+ const targets=trainingTargets(intent);
+ if(scriptPath(step.script)!=='scripts/cannon-fight.ts'||intent.kind!=='train-all'||!targets)return step;
+ const {STOP_LEVEL:_level,STOP_SKILL:_skill,...env}=step.env;
+ return{...step,env:{...env,STOP:Object.entries(targets).map(([skill,target])=>`${skill}=${target}`).join(',')}};
+}
 function materialize(method:CatalogMethod,intent:WorkIntent,account:ObservedAccount,requestedUnits?:number):ProgressionMethod{
  const unitSized=!!(method.execution?.bankJob||method.execution?.unitEnv?.length||method.execution?.stockEnv?.length||method.execution?.unitArg!==undefined);
  const cap=method.maxBatch??(unitSized?1000:Infinity);
- const units=Math.min(cap,requestedUnits??desiredUnits(intent,account,method)),target=intent.kind==='train'&&Object.keys(method.effects.xp??{}).some(s=>key(s)===key(intent.skill))?intent.targetLevel:undefined;
+ const targets=trainingTargets(intent),skill=Object.keys(method.effects.xp??{}).find(skill=>targets?.[key(skill)]!==undefined);
+ const units=Math.min(cap,requestedUnits??desiredUnits(intent,account,method)),target=skill?targets?.[key(skill)]:undefined;
  const step:Step={script:method.step.script,args:[...method.step.args],env:{...method.step.env}};
  if(method.execution?.bankJob){const job={...method.execution.bankJob,target:units*(method.execution.outputPerUnit??1),batch:Math.min(Number(method.execution.bankJob.batch??13),units),...(target&&method.execution.bankJob.family==='cooking'?{targetLevel:target}:{})};
   step.args=['bank-job','--job='+encodeURIComponent(JSON.stringify(job))];
@@ -342,14 +423,15 @@ function materialize(method:CatalogMethod,intent:WorkIntent,account:ObservedAcco
  if(method.execution?.spendPerUnit){step.env.MAX_SPEND=String(Math.ceil(units*method.execution.spendPerUnit));step.env.FLOAT=String(Math.ceil(units*method.execution.spendPerUnit)+1000);}
  const level=method.modelRates&&Object.entries(account.skills).find(([skill])=>key(skill)===key(method.modelRates!.skill))?.[1].level;
  const rate=level&&method.modelRates?{...method.rate,unitsPerTick:method.modelRates.perLevel[level-1]??null}:method.rate;
- return{...method,step,rate,...unitSized?{maxUnits:Math.min(method.maxUnits??Infinity,cap)}:{}};
+ return{...method,step:trainingStop(step,intent),rate,...unitSized?{maxUnits:Math.min(method.maxUnits??Infinity,cap)}:{}};
 }
 export function progressionMethods(intent:WorkIntent,account:ObservedAccount,catalog:ProgressionCatalog=loadProgressionCatalog(),options:CatalogOptions={}):{methods:ProgressionMethod[];gaps:CatalogGap[]}{
  const all=new Map<string,ProgressionMethod>(catalog.methods.map(m=>[m.id,materialize(m,intent,account)]));
- if(intent.kind==='train'&&key(intent.skill)==='ranged')for(const method of rangedProgressionMethods(account,intent.targetLevel))all.set(method.id,method);
+ const targets=trainingTargets(intent);
+ if(targets?.ranged!==undefined)for(const method of rangedProgressionMethods(account,targets.ranged))all.set(method.id,materialize(method as CatalogMethod,intent,account));
  if((intent.kind==='acquire'||intent.kind==='produce')&&[849,888].some(id=>intent.items[id]))for(const method of rangedProgressionMethods(account,99,intent.items))if(Object.keys(method.effects.items??{}).some(id=>intent.items[Number(id)]))all.set(method.id,method);
  for(const method of options.extraMethods??[])all.set(method.id,method);
- const skills=new Set(intent.kind==='train'?[key(intent.skill)]:[]),items=new Set(intent.kind==='produce'||intent.kind==='acquire'?Object.keys(intent.items).map(Number):[]),quests=new Set(intent.kind==='quest'?[key(intent.quest)]:[]);
+ const skills=new Set(Object.keys(targets??{})),items=new Set(intent.kind==='produce'||intent.kind==='acquire'?Object.keys(intent.items).map(Number):[]),quests=new Set(intent.kind==='quest'?[key(intent.quest)]:[]);
  const chosen=new Set<string>();
  for(let pass=0;pass<6;pass++){
   let grew=false;
@@ -364,7 +446,7 @@ export function progressionMethods(intent:WorkIntent,account:ObservedAccount,cat
   if(!grew)break;
  }
  const gaps:CatalogGap[]=[],methods:ProgressionMethod[]=[];
- const consumer=intent.kind==='train'?`${intent.skill} ${intent.targetLevel}`:intent.kind==='quest'?intent.quest:'consumer' in intent?intent.consumer:intent.objective;
+ const consumer=intent.kind==='train'?`${intent.skill} ${intent.targetLevel}`:intent.kind==='train-all'?Object.entries(intent.targets).map(([skill,target])=>`${skill} ${target}`).join(', '):intent.kind==='quest'?intent.quest:'consumer' in intent?intent.consumer:intent.objective;
  for(const id of chosen){const original=all.get(id)!,source=options.sources?.[id]??options.sources?.[original.step.script]??original.source;
   const qualification=options.qualifications?.[id];
   const method={...original,source,...(qualification?.source===source?{qualification}: {})};

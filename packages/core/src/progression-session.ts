@@ -6,7 +6,7 @@ import {isLocalServer} from './localserver';
 import {equipmentObserved} from './container-observation';
 import {questFlags} from './quest-status';
 import {createProgressionMonitor,methodSupportsWork,snapshotForProgression,type WorkDescriptor,type PolicyEvaluation} from './progression-policy';
-import {chooseProgression,type ObservedAccount,type ProgressionAdmission,type ProgressionDecision,type ProgressionMethod,type WorkIntent} from '../../planner/src/progression';
+import {chooseProgression,trainingTargets,type ObservedAccount,type ProgressionAdmission,type ProgressionDecision,type ProgressionMethod,type WorkIntent} from '../../planner/src/progression';
 import {accountFromStatus,intentForEntry,loadProgressionCatalog,progressionMethods,progressionStep,type CatalogAccept,type ProgressionCatalog} from '../../planner/src/progression-catalog';
 import {assessProgressionPerformance,type PerformanceWindow} from '../../planner/src/progression-performance';
 import {cachedReleaseFor} from './worker-release';
@@ -111,11 +111,17 @@ export function evaluateProgressionWork(work:WorkDescriptor,status:any,options:{
  // dependency scans over the same unresolved catalog rows on every boundary.
  const timed=methods.filter(m=>m.rate.unitsPerTick!==null&&Object.values(m.costs).every(v=>v!==null));
  const decision=chooseProgression(intent,account,timed,{now,currentMethod:current?.id,continuing:options.continuing,admitted:options.admitted,requireQualification:options.requireQualification??false,crowding:status.progressionCrowding,maxSearchNodes:256,maxDepth:6});
+ let projected=account;
  for(const path of decision.path){const method=methods.find(m=>m.id===path.method);if(method){
   const gain=intent.kind==='train'?Object.entries(method.effects.xp??{}).find(([name])=>name.toLowerCase()===intent.skill.toLowerCase())?.[1]??0:0;
-  const from=intent.kind==='train'?Object.entries(account.skills).find(([name])=>name.toLowerCase()===intent.skill.toLowerCase())?.[1].xp??0:0;
+  const from=intent.kind==='train'?Object.entries(projected.skills).find(([name])=>name.toLowerCase()===intent.skill.toLowerCase())?.[1].xp??0:0;
   const boundary=intent.kind==='train'&&gain>0?{...intent,targetLevel:Math.min(intent.targetLevel,levelForXp(from+path.units*gain))}:intent;
-  path.step=progressionStep(method,path.units,boundary,account,c);
+  path.step=progressionStep(method,path.units,boundary,projected,c);
+  const skills={...projected.skills};for(const [skill,xpGain]of Object.entries(method.effects.xp??{})){
+   const name=Object.keys(skills).find(name=>name.toLowerCase()===skill.toLowerCase())??skill,xp=(skills[name]?.xp??0)+xpGain*path.units;
+   skills[name]={xp,level:levelForXp(xp)};
+  }
+  projected={...projected,skills};
  }}
  if(decision.path[0])decision.step=decision.path[0].step;
  decision.gaps=[...new Set([...decision.gaps,...listed.gaps.map(g=>g.method+': '+g.reason)])];
@@ -123,8 +129,11 @@ export function evaluateProgressionWork(work:WorkDescriptor,status:any,options:{
  // Unknown comparisons request evidence. They do not turn an already admitted,
  // finite authored job into either a measured winner or an unbounded idle loop.
  const expired=!!options.currentMethod&&!!qualifications[options.currentMethod]&&decision.alternatives.some(a=>a.method===options.currentMethod&&a.state==='qualify');
- const cap=intent.kind==='train'?Object.entries(account.build?.maxLevels??{}).find(([name])=>name.toLowerCase()===intent.skill.toLowerCase())?.[1]:undefined;
- const constraint=cap!==undefined&&intent.kind==='train'&&intent.targetLevel>cap?'finite goal exceeds the account build ceiling':account.clock?.protected&&!account.clock.authorized?'protected account clock needs its authorized launch':decision.state==='blocked'&&decision.followUps.some(f=>f.reason.some(r=>r.includes('account build')))?'side XP exceeds the account build ceiling':undefined;
+ const targets=trainingTargets(intent),aboveBuild=targets&&Object.entries(account.build?.maxLevels??{}).some(([skill,cap])=>targets[skill.toLowerCase()]!==undefined&&targets[skill.toLowerCase()]!>cap);
+ const missingTargets=intent.kind==='train-all'&&(!targets||account.at<=0||account.at>now||now-account.at>300000||Object.keys(targets).some(skill=>!Object.hasOwn(account.skills,skill)));
+ const unknownBuild=!!current&&Object.keys(account.build?.maxLevels??{}).some(skill=>Object.entries(current.effects.xp??{}).some(([name,gain])=>name.toLowerCase()===skill.toLowerCase()&&gain>0)&&!Object.keys(account.skills).some(name=>name.toLowerCase()===skill.toLowerCase()));
+ const constraint=aboveBuild?'finite goal exceeds the account build ceiling':missingTargets?'finite training goal needs valid observations for every target':unknownBuild?'side XP requires observations for the account build':account.clock?.protected&&!account.clock.authorized?'protected account clock needs its authorized launch':decision.state==='blocked'&&decision.followUps.some(f=>f.reason.some(r=>r.includes('account build')))?'side XP exceeds the account build ceiling':undefined;
+ if(intent.kind==='train-all')decision.gaps.push('Compound training has no scalar live-rate sample; compare source/state-matched per-skill effects before claiming a measured finish time.');
  const claimed=work.env.PROGRESSION_METHOD,claimMismatch=!!claimed&&decision.state==='execute'&&claimed!==decision.selected;
  const supported=decision.state==='complete'||expired||constraint||claimMismatch?false:decision.state!=='execute'||!selected?true:methodSupportsWork(selected,work);
  const reason=supported?undefined:constraint??(claimMismatch?'progression resource claim '+claimed+' does not cover selected method '+decision.selected:decision.state==='complete'?'finite progression goal complete':expired?'current method left its qualified state band':selected?'selected method '+decision.selected+' requires '+selected.script:'progression needs an observed supported route');
@@ -155,6 +164,26 @@ export function attachProgressionSession(s:Session,work:WorkDescriptor,server:st
  let prior=previous?.name?.toLowerCase()===s.name.toLowerCase()&&previous.server===server?previous:{name:s.name,server};
  let handler:((detail:string)=>void)|undefined,stopped=false,lastWritten='',lastCheck=-100,dirty='',lastGeneration=-1,wasInCombat=false;
  let current:PolicyEvaluation|null=null,executing:string|undefined,admitted:ProgressionAdmission|undefined;
+ type CannonPlacement={x:number;z:number;level:number;baseCount:number;tick:number;messages:Set<string>};
+ let pendingCannon:CannonPlacement|undefined,ownedCannon:CannonPlacement|undefined;
+ const cannonWorker=entry(work.script)==='scripts/cannon-fight.ts';
+ const cannonLoc=(loc:any)=>Number.isSafeInteger(loc?.id)&&loc.id>=6&&loc.id<=9;
+ const baseCount=(state:any)=>(state?.inventory??[]).filter((i:any)=>i.id===6&&Number.isSafeInteger(i.count)&&i.count>0).reduce((n:number,i:any)=>n+i.count,0);
+ const messageKey=(message:any)=>`${message.observationId??''}:${message.tick}:${message.text}`;
+ // cannon_setup.rs2 binds ownedmcannon to the centre's south-west tile when it consumes one base and adds loc7.
+ // Remember only this session's observed placement. The server also checks ownership before native Pick-up.
+ const observeCannon=()=>{
+  if(!cannonWorker)return;
+  const state=s.sdk.getState(),count=baseCount(state),locs=state?.nearbyLocs??[];
+  if(ownedCannon&&count>=ownedCannon.baseCount&&!locs.some((loc:any)=>cannonLoc(loc)&&loc.x===ownedCannon!.x&&loc.z===ownedCannon!.z))ownedCannon=undefined;
+  if(!pendingCannon)return;
+  if(s.tick()-pendingCannon.tick>10||s.tick()<pendingCannon.tick){pendingCannon=undefined;return;}
+  if(s.tick()>pendingCannon.tick&&count===pendingCannon.baseCount-1&&state?.player?.level===pendingCannon.level
+   &&(state?.gameMessages??[]).some((message:any)=>message.text==='You place the cannon base on the ground.'&&!pendingCannon!.messages.has(messageKey(message)))
+   &&locs.some((loc:any)=>loc.id===7&&loc.x===pendingCannon!.x&&loc.z===pendingCannon!.z)){
+   ownedCannon=pendingCannon;pendingCannon=undefined;
+  }
+ };
  const windows:PerformanceWindow[]=[];
  let window:{tick:number;xp:number;setup:number;started:boolean;lastTick:number;conditions:string}|null=null;
  const evaluate=()=>{
@@ -173,6 +202,7 @@ export function attachProgressionSession(s:Session,work:WorkDescriptor,server:st
  }});
  const observe=(force=false)=>{
   if(stopped)return;
+  observeCannon();
   const state=s.sdk.getState();if(!state?.inGame||!state.player||!state.skills?.some((k:any)=>k.name==='Hitpoints'&&k.baseLevel>0))return;
   const bank=s.bankObservation?.(),inCombat=state.player.combat?.inCombat===true;
   if(!force&&s.tick()-lastCheck<25&&(bank?.generation??0)===lastGeneration&&inCombat===wasInCombat)return;
@@ -215,11 +245,23 @@ export function attachProgressionSession(s:Session,work:WorkDescriptor,server:st
  void s.ended.then(()=>{stopped=true;off();});
  const result:ProgressionSession={decision:()=>monitor.current()?.decision??null,evaluation:()=>monitor.current(),refresh:()=>{observe(true);return monitor.current();},
   refusal(action){observe();const a=action as any,state=s.sdk.getState();
-   let option:string|undefined,bankCleanup=false;
+   let option:string|undefined,bankCleanup=false,cannonCleanup=false;
    if(a?.type==='interactNpc')option=state?.nearbyNpcs?.find((n:any)=>n.index===a.npcIndex)?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;
    if(a?.type==='useInventoryItem')option=state?.inventory?.find((i:any)=>i.slot===a.slot)?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;
-   if(a?.type==='interactLoc'){const loc=state?.nearbyLocs?.find((l:any)=>l.id===a.locId&&l.x===a.x&&l.z===a.z);option=loc?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;bankCleanup=!!loc&&/bank booth|bank chest/i.test(loc.name)&&!/^closed/i.test(loc.name)&&/^(bank|use-quickly|use quickly|use)$/i.test(option??'');}
-   return monitor.refusal({...a,...option?{progressionOption:option}:{},progressionBankCleanup:bankCleanup});
+   if(a?.type==='interactLoc'){
+    const loc=state?.nearbyLocs?.find((l:any)=>l.id===a.locId&&l.x===a.x&&l.z===a.z);option=loc?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;
+    bankCleanup=!!loc&&/bank booth|bank chest/i.test(loc.name)&&!/^closed/i.test(loc.name)&&/^(bank|use-quickly|use quickly|use)$/i.test(option??'');
+    cannonCleanup=!!ownedCannon&&cannonLoc(loc)&&a.x===ownedCannon.x&&a.z===ownedCannon.z&&state?.player?.level===ownedCannon.level&&/^pick-up$/i.test(option??'');
+   }
+   const refusal=monitor.refusal({...a,...option?{progressionOption:option}:{},progressionBankCleanup:bankCleanup,progressionCannonCleanup:cannonCleanup});
+   if(!refusal&&cannonWorker&&!ownedCannon&&a?.type==='useInventoryItem'&&/^set-up$/i.test(option??'')){
+    const item=state?.inventory?.find((i:any)=>i.slot===a.slot),p=state?.player;
+    if(item?.id===6&&[p?.worldX,p?.worldZ,p?.level].every(Number.isSafeInteger)&&baseCount(state)>0){
+     const placement={x:p!.worldX-1,z:p!.worldZ-1,level:p!.level,baseCount:baseCount(state),tick:s.tick(),messages:new Set((state?.gameMessages??[]).map(messageKey))};
+     if(!state?.nearbyLocs?.some((loc:any)=>cannonLoc(loc)&&loc.x===placement.x&&loc.z===placement.z))pendingCannon=placement;
+    }
+   }
+   return refusal;
   },onHandoff(next){handler=next;const e=monitor.current();if(e&&!e.supported&&e.decision?.state!=='complete'&&s.sdk.getState()?.player?.combat?.inCombat!==true)handler('progression handoff: '+(e.reason??e.decision?.reason??'unmapped worker'));},
   executing(method){
    const status=observedStatus(s,prior,Date.now()),account=accountFromStatus(s.name,status,Date.now()),intent=intentForEntry(work.script,work.args,work.env,consumer);

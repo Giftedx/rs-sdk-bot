@@ -6,12 +6,28 @@ import {createHash} from 'node:crypto';
 import {xpForLevel} from '../../planner/src/curve';
 import fixture from './ranged-progression-entry.json';
 import {parseRangedEntry,rangedComparisonPreset,rangedComparisonChecks,rangedEntryProofChecks,rangedSupportedMethods,RANGED_COMPARISON_PRESET} from './ranged-progression-case';
+import * as rangedCase from './ranged-progression-case';
+import type {RangedComparisonEntry} from './ranged-progression-case';
 
 const bytes=(value:unknown)=>Buffer.from(JSON.stringify(value));
-const fresh=()=>{const entry=structuredClone(fixture);entry.skills[5]={...entry.skills[5]!,level:96,currentLevel:53,xp:xpForLevel(96)};return entry;};
+const fresh=():RangedComparisonEntry=>{const entry=structuredClone(fixture);entry.skills[5]={...entry.skills[5]!,level:96,currentLevel:53,xp:xpForLevel(96)};return entry;};
 const save=(entry:ReturnType<typeof parseRangedEntry>['entry'])=>({version:10,position:entry.pos,vars:{},
  skills:entry.skills.map((s,index)=>({index,xp:s.xp,level:s.currentLevel,rawExperience:s.xp*10})),
  inventories:{93:entry.inventory.map((i,slot)=>({...i,slot})),94:entry.equipment,95:entry.bank.map((i,slot)=>({...i,slot}))}});
+
+test('a captured native band accepts the next finite target without changing fixed comparisons',()=>{
+ const input=fresh();input.skills[4]={...input.skills[4]!,level:85,currentLevel:85,xp:xpForLevel(85)};
+ expect(rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:'90'})).toBe(90);
+ expect(rangedCase.rangedPracticeTarget(83,fresh(),{})).toBe(83);
+ expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_TARGET:'90'})).toThrow();
+ for(const target of ['85','91','99','NaN','90.5'])expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:target})).toThrow();
+});
+
+test('captured practice protects its actual coin stock with the same bounded spend',()=>{
+ const input=fresh();expect(rangedCase.rangedPracticeCoins(input)).toEqual({spend:500,reserve:382483});
+ input.bank=input.bank.filter(i=>i.id!==995);input.inventory=[{id:995,count:200}];
+ expect(rangedCase.rangedPracticeCoins(input)).toEqual({spend:200,reserve:0});
+});
 
 test('an override freezes its own exact bytes and presets and checks its observed Prayer96 state',()=>{
  const input=bytes(fresh()),loaded=parseRangedEntry(input),before=save(loaded.entry);

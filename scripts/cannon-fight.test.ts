@@ -1,9 +1,30 @@
 import {expect, test} from 'bun:test';
-import {CANNON_LIFE, CANNON_REFRESH, CANNON_SPOTS, MSB, bandTicks, levelsMet, loadedBalls, parseLevels, parsePhases, pickTarget, reloadDue, specialDue, type TargetNpc} from './cannon-fight';
+import {CANNON_LIFE, CANNON_REFRESH, CANNON_SPOTS, MSB, bandTicks, cannonWalker, levelsMet, loadedBalls, parseLevels, parsePhases, pickTarget, reloadDue, setupCannon, specialDue, type TargetNpc} from './cannon-fight';
 import {FIGHTER_PROFILES, resolveFighterStep} from './aio-fighter';
+import type {Session} from '../packages/core/src/inprocess';
 
 const npc = (index: number, x: number, z: number, more: Partial<TargetNpc> = {}): TargetNpc => ({
   index, name: 'Poison spider', x, z, hp: 64, distance: 0, targetIndex: -1, reachable: true, optionsWithIndex: [{text: 'Attack', opIndex: 2}], ...more,
+});
+
+test('a rejected cannon setup dispatch reports the refusal instead of waiting for a server message', async () => {
+  let tick = 0;
+  const listeners = new Set<() => void>();
+  const names = ['Cannon base', 'Cannon stand', 'Cannon barrels', 'Cannon furnace', 'Cannonball'];
+  const inventory = [6, 8, 10, 12, 2].map((id, slot) => ({id, slot, count: 1, name: names[slot], optionsWithIndex: [{text: 'Set-up', opIndex: 1}]}));
+  const session = {
+    tick: () => tick,
+    sdk: {getState: () => ({player: {worldX: 3287, worldZ: 3810}, nearbyLocs: [], gameMessages: []}), getInventory: () => inventory},
+    onTick: (listener: () => void) => {listeners.add(listener); return () => listeners.delete(listener);},
+    direct: async () => ({success: false, reason: 'client_rejected', message: 'Failed to use inventory item'}),
+  } as unknown as Session;
+  const outcome = setupCannon(session).then(() => null, error => error as Error);
+  for (let i = 0; i < 20; i++) {
+    tick++;
+    for (const listener of [...listeners]) listener();
+    await Promise.resolve();
+  }
+  expect((await outcome)?.message).toContain('cannon set-up dispatch rejected: Failed to use inventory item (slot=0 option=1)');
 });
 
 test('load message gives the loaded count', () => {
@@ -71,4 +92,18 @@ test('the spider spot walks out of the spiders\' map square before logout', () =
   // Map square 51_59 is z 3776-3839; the spiders wander 10 tiles from their spawns.
   expect(c.z).toBeLessThan(3776 - 10);
   expect(CANNON_SPOTS.battlefield!.clear).toBeUndefined();
+});
+
+test.each([undefined, {worldX: 3287, worldZ: 3810, level: 1}])('a known ground clear route rejects an unknown or different start plane', async player => {
+  const calls: unknown[] = [];
+  const session = {sdk: {getState: () => ({player})}, bot: {walkTo: async (...args: unknown[]) => {calls.push(args); return {success: true};}}} as unknown as Session;
+  await expect(cannonWalker(session, CANNON_SPOTS.spiders!)(CANNON_SPOTS.spiders!.clear!)).rejects.toThrow('ground walk requires a known start on the same plane');
+  expect(calls).toEqual([]);
+});
+
+test('an injected cannon walker still owns its clear route and failure result', async () => {
+  const destination = CANNON_SPOTS.spiders!.clear!, calls: unknown[] = [];
+  const walked = await cannonWalker({} as Session, CANNON_SPOTS.spiders!, async to => {calls.push(to); return false;})(destination);
+  expect(walked).toBe(false);
+  expect(calls).toEqual([destination]);
 });

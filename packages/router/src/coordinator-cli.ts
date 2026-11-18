@@ -14,20 +14,36 @@ import {cachedLaunchRevision,cachedReleaseFor} from '../../core/src/worker-relea
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,ownerPlanPath,jobAccounts,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {validateBoundedRecovery,assertBoundedRecoveryQueue} from '../../core/src/bounded-recovery';
 import {boundedOwnerBinding} from '../../core/src/bounded-owners';
-import {assignedWorker} from './model-worker';
+import {assignedWorker,type ModelWorker} from './model-worker';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
+import {SWARM_STOP,writeSwarmStop,swarmWroteStop} from '../../../scripts/swarm';
 import {prepareWorkspace,sharedWorkspacePlan} from './build-workspace';
-import {applyRules,skillUnlocks,currentQualification,reviewApproved} from './coordinator-rules';
-import {evaluateCoordinatorProgression} from './coordinator-progression';
+import {applyRules,skillUnlocks,currentQualification,reviewApproved,retarget} from './coordinator-rules';
+import {evaluateCoordinatorProgression,type CoordinatorProgressionResult} from './coordinator-progression';
+import {applyObservationRequests,observationConsumerHeld,observationBudget,prepareObservationBand} from './coordinator-observations';
+import {loadOwners,mySide} from '../../core/src/fleet';
+import {readLogoutProof} from '../../core/src/session-lifecycle';
+import {prayerBank} from '../../../scripts/train-prayer';
+import {rangedEntry} from '../../../scripts/ranged-train';
 import {evaluateProgressionWork,progressionProofs} from '../../core/src/progression-session';
 import {processDeliveryPrs} from './delivery-pr';
 import {freshScoreboard} from './coverage';
 import {goalWork,ruleGoalValue} from './goal-work';
 import {liveHelperStatuses} from '../../planner/src/supply-bill';
 import {recoverConcurrentPlanWrite} from '../../core/src/plan-lock';
+import {createProgressionProofReconciler} from './progression-proof-reconcile';
 
 const cli='packages/router/src/coordinator-cli.ts';
+// Only the installing controller clears a reusable system stop. Unknown text and
+// unreadable files remain owner pauses, including lowercase paths on Linux.
+export function coordinatorAccountPaused(account:string,base=projectRoot):boolean{
+ for(const name of new Set([account,account.toLowerCase()])){
+  try{if(!swarmWroteStop(readFileSync(join(base,'.practice','stop-'+name),'utf8')))return true;}
+  catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')return true;}
+ }
+ return false;
+}
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
 // The owner's swarm.json with the coordinator's own jobs and settings merged in (packages/core/src/coordinator-jobs.ts).
 const readPlan=()=>readMergedPlan(projectRoot);
@@ -226,8 +242,9 @@ function runRules(state:CoordinatorState,liveLimit:number){
   const goalStatuses=liveHelperStatuses(projectRoot),entryOf=(capability:string)=>{try{return deliveryTask(capability).entry;}catch{return undefined;}};
   const definitions=readdirSync(join(projectRoot,'packages/router/tasks')).filter(name=>name.endsWith('.json')).flatMap(name=>{try{return[deliveryTask(name.slice(0,-5))];}catch(error){event('progression-definition-unavailable',{file:name,reason:String(error)});return[];}});
   const proofs=progressionProofs(projectRoot),progressionRows:unknown[]=[];
-  const added=applyRules(state,{fingerprint:cap=>deliveryFingerprint(deliveryTask(cap)),unlocks:unlocks??=skillUnlocks(projectRoot),maxOpen:liveLimit,
-   progression:(task,account)=>{
+  const observedSources=new Map<string,string>();
+  const observedSource=(id:string)=>{let source=observedSources.get(id);if(!source){source=deliveryFingerprint(deliveryTask(id));observedSources.set(id,source);}return source;};
+  const progression=(task:CoordTask,account:string):CoordinatorProgressionResult=>{
     const entry=entryOf(task.capability!);if(!entry)return{action:'measure',intent:null,step:null,capability:null,decision:null,stepAccept:null,consumer:task.accept??null,requests:[],reason:'Existing capability entry is unavailable.'};
     const status=goalStatuses.find((row:any)=>row.name?.toLowerCase()===account.toLowerCase())??null;
     const work={script:entry,args:task.args??[],env:task.env??{}};
@@ -238,21 +255,53 @@ function runRules(state:CoordinatorState,liveLimit:number){
       let source:string;try{source=cachedReleaseFor([method.step.script],projectRoot);}catch{return null;}
       if(proof.source!==source||method.source!==source)return null;
       const matches=definitions.filter(d=>d.entry===method.step.script).sort((a,b)=>Number(b.id===task.capability)-Number(a.id===task.capability)||a.id.localeCompare(b.id));
-      for(const definition of matches){const fingerprint=deliveryFingerprint(definition);if(reviewApproved(state,definition.id)&&currentQualification(state,definition.id,fingerprint))return{capability:definition.id,methodId:method.id,source,qualification:{source,bands:proof.bands},reviewed:true};}
+      for(const definition of matches){const fingerprint=observedSource(definition.id);if(reviewApproved(state,definition.id)&&currentQualification(state,definition.id,fingerprint))return{capability:definition.id,methodId:method.id,source,qualification:{source,bands:proof.bands},reviewed:true};}
       return null;
      }});
     progressionRows.push({account,task:task.id,statusAt:status?.at??null,bankAt:status?.bankAt??null,consumer:result.consumer,action:result.action,reason:result.reason,
      method:result.decision?.selected??null,stateFingerprint:result.decision?.stateFingerprint??null,requests:result.requests});
     return result;
+   };
+  const side=board?.fleet?.side??mySide(),owners=loadOwners();
+  const workStatus=(account:string)=>goalStatuses.find((s:any)=>s.name?.toLowerCase()===account.toLowerCase());
+  const budget=(task:CoordTask)=>observationBudget(task,entryOf(task.capability!)!);
+  const finiteBand=(task:CoordTask,account:string)=>prepareObservationBand(task,workStatus(account),entryOf(task.capability!)!,trial=>progression(trial,account),()=>cachedReleaseFor([entryOf(task.capability!)!],projectRoot));
+  let observationRequests:any[]=[];
+  try{const saved=json(join(projectRoot,'.practice/progression-system',`fleet-${side}.json`));if(saved.version===1&&saved.side===side&&Number.isFinite(saved.at)&&saved.at>0&&saved.at<=now&&now-saved.at<=900000&&Array.isArray(saved.requests))observationRequests=saved.requests;}catch{/* No request is authority to invent a finite consumer. */}
+  const observations=board?.goals?applyObservationRequests(state,observationRequests,{now,side,goals:board.goals,statuses:goalStatuses,
+   allowed:account=>owners.get(account.toLowerCase())?.side===side&&owners.get(account.toLowerCase())?.server==='rs-sdk-demo.fly.dev'&&['confirmed','none'].includes(readLogoutProof(account,'rs-sdk-demo.fly.dev',{root:join(projectRoot,'.practice/session-lifecycle')}).state),
+   paused:account=>coordinatorAccountPaused(account),
+   definition:id=>{const def=deliveryTask(id);return{id:def.id,entry:def.entry,source:observedSource(id)};},
+   capabilityFor:entry=>entry==='scripts/ranged-train.ts'?definitions.filter(d=>d.entry===entry&&reviewApproved(state,d.id)).sort((a,b)=>Number(!!currentQualification(state,b.id,observedSource(b.id)))-Number(!!currentQualification(state,a.id,observedSource(a.id)))||a.id.localeCompare(b.id))[0]?.id??null:null,
+   prepare:finiteBand,
+   needsEntryObservation:(task,_account,status)=>{
+    if(entryOf(task.capability!)!=='scripts/ranged-train.ts'||!status?.pos||status.pos.level!==0)return false;
+    let nearby=false;for(const locate of [prayerBank,rangedEntry])try{const bank=locate({worldX:status.pos.x,worldZ:status.pos.z,level:status.pos.level});if(bank&&Math.max(Math.abs(bank.x-status.pos.x),Math.abs(bank.z-status.pos.z))<=3)nearby=true;}catch{/* Unsupported entry never implies a bank journey. */}
+    if(!nearby)return false;
+    return status.equipmentObserved!==true||!Number.isFinite(status.bankAt)||status.bankAt<status.started||now-status.bankAt>=300000;
    },
+   qualificationFor:(task,account,status)=>{
+    if(entryOf(task.capability!)!=='scripts/ranged-train.ts')return null;
+    let bytes:Buffer,raw:any;try{bytes=readFileSync(join(projectRoot,'.practice/status',account+'.json'));raw=JSON.parse(bytes.toString());}catch{return null;}
+    const proof=readLogoutProof(account,'rs-sdk-demo.fly.dev',{root:join(projectRoot,'.practice/session-lifecycle')});
+    if(raw.at!==status.at||raw.name?.toLowerCase()!==account.toLowerCase()||raw.equipmentObserved!==true||!Number.isFinite(raw.bankAt)||raw.bankAt<raw.started||now-raw.bankAt>=300000||proof.state!=='confirmed'||proof.attemptId!==raw.sessionAttemptId)return null;
+    const [skill,target]=Object.entries(task.accept?.skills??{})[0]??[],level=raw.skills?.find((s:any)=>s.name?.toLowerCase()===skill?.toLowerCase())?.level;if(!skill||!Number.isSafeInteger(level)||!Number.isSafeInteger(target)||target!<=level)return null;
+    let next=level+1;
+    for(let candidate=Math.min(target!,level+5);candidate>level;candidate--){const moved=retarget(task,skill,target!,candidate);if(!moved)continue;const priced=evaluateProgressionWork({script:entryOf(task.capability!)!,args:moved.args??[],env:moved.env??{}},raw,{accept:moved.accept,now,base:projectRoot,requireQualification:false}).decision?.expectedTicks;if(priced!=null&&priced<=budget(task)){next=candidate;break;}}
+    const source=observedSource(task.capability!),hash=createHash('sha256').update(bytes).digest('hex');
+    return{id:'qualify-progression-'+task.capability+'-'+createHash('sha256').update(JSON.stringify([source,account,hash,next])).digest('hex').slice(0,20),kind:'qualify',goal:task.goal,capability:task.capability,account,dependsOn:[...task.dependsOn],priority:Math.min(100,task.priority+1),estimatedMs:600000,timeoutMs:1200000,
+     env:{PROGRESSION_ACCOUNT:account,PROGRESSION_TARGET_LEVEL:String(next),PROGRESSION_ENTRY_AT:String(raw.at),PROGRESSION_ENTRY_SHA256:hash,PROGRESSION_CONSUMER:JSON.stringify(task.accept)},
+     why:'Qualify the next bounded owned state band before '+task.id+'. Preserve its original finite consumer and all source, actual equipment, bank and logout checks.'};
+   }}):{added:[],linked:[],prepared:[],invalidated:[]};
+  const added=applyRules(state,{fingerprint:cap=>deliveryFingerprint(deliveryTask(cap)),unlocks:unlocks??=skillUnlocks(projectRoot),maxOpen:liveLimit,progression,
    goalValue:board?.goals?(task,prerequisites=[])=>ruleGoalValue({...state,tasks:[...state.tasks,...prerequisites.map(spec=>({spec,status:'pending' as const,createdAt:now,attempts:0}))]},board.goals,goalStatuses,now,{entryOf})(task):()=>({value:null,reason:'Owner goal observations unavailable'}),
    side:board?.fleet?.side??process.env.FLEET_SIDE??'local',
    fleetBest:skill=>fleetSkills?.find(r=>String(r.skill).toLowerCase()===skill.toLowerCase()),
    skipped:skip=>{const key=JSON.stringify(skip);if(!ruleSkips.has(key)){ruleSkips.add(key);event('rule-skipped',{rule:'next-band',...skip});}},
-   paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
+   paused:account=>coordinatorAccountPaused(account),
    level:(account,skill)=>goalStatuses.find((row:any)=>row.name?.toLowerCase()===account.toLowerCase())?.skills?.find((v:any)=>v.name?.toLowerCase()===skill.toLowerCase())?.level},now);
   atomicJson(join(coordinationDir,'progression-requests.json'),{at:now,rows:progressionRows});
-  if(added.length){saveState(state);event('rule-tasks-added',{tasks:added.map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept}))});}
+  if(added.length||observations.added.length||observations.linked.length||observations.prepared.length||observations.invalidated.length){saveState(state);event('rule-tasks-added',{tasks:[...added,...observations.added].map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept})),observations:{linked:observations.linked,prepared:observations.prepared,invalidated:observations.invalidated}});}
  }catch(error){event('rule-pass-failed',String(error));}
 }
 // Opens staged delivery PRs (delivery-pr.ts) beside the loop: git and gh never hold dispatch or live delivery.
@@ -364,6 +413,8 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
 // the coordinator's file the pass reads one receipt, and one logout proof for each account of the job.
 const RELEASE_EVERY_MS=60_000;
 let releasedAt=0;
+const reconcileProgressionProofs=createProgressionProofReconciler(projectRoot);
+let proofPublicationPass={at:0,receiptSequence:-1};
 // A run task with a repair is a recovery: it parks owner jobs and needs them until its install.
 export const recoveryRuns=(state:Pick<CoordinatorState,'tasks'>)=>state.tasks.some(r=>r.status==='running'&&r.spec.kind==='run'&&(!!r.spec.repairs?.length||!!r.spec.sessionRecovery));
 async function tick(state:CoordinatorState,config:any){
@@ -386,6 +437,14 @@ async function tick(state:CoordinatorState,config:any){
   event('fleet-focus-adopted',{capability:config.focusCapability,since:config.focusSince});
  });
  reconcile(state);
+ const proofSequence=state.latestReceiptSequence??0,proofAt=Date.now();
+ if(proofPublicationPass.receiptSequence!==proofSequence||proofAt-proofPublicationPass.at>=60_000){
+  proofPublicationPass={at:proofAt,receiptSequence:proofSequence};
+  for(const publication of await reconcileProgressionProofs(state)){
+   const key='progression-proof:'+(publication.runId??publication.directory??'discovery'),seen=publication.status+':'+publication.reason;
+   if(sourceErrors.get(key)!==seen){sourceErrors.set(key,seen);if(publication.status!=='unchanged')event('progression-proof-'+publication.status,publication);}
+  }
+ }
  intakeRequests(state);
  if(bounded)assertBoundedRecoveryQueue(bounded,state);
  // Reuse current evidence; refresh only capabilities with waiting live consumers.
@@ -444,7 +503,7 @@ async function tick(state:CoordinatorState,config:any){
  const sources=new Map<string,string|null>();
  const sourceOf=(cap:string)=>{if(!sources.has(cap)){let s:string|null=null;try{s=deliveryFingerprint(deliveryTask(cap));}catch{/* no source now: hold */}sources.set(cap,s);}return sources.get(cap)!;};
  const staleRun=(task:CoordTask)=>task.kind==='run'&&!!task.capability&&needsFreshQualification(task,new Map(state.tasks.map(r=>[r.spec.id,r])),sourceOf(task.capability));
- const liveRunHeld=(task:CoordTask)=>runHeld(task)||recoveryWaitsForMemory(task,capacity)||staleRun(task)||recoverySlotBusy(task,state.tasks)
+ const liveRunHeld=(task:CoordTask)=>runHeld(task)||observationConsumerHeld(task)||recoveryWaitsForMemory(task,capacity)||staleRun(task)||recoverySlotBusy(task,state.tasks)
   ||liveAccountWait(task,boundAccounts(task,state)??[])!==null||ordinaryRunWaitsForMemory(task,state,capacity,freemem()/2**30);
  let goalValues:ReturnType<typeof goalWork>=new Map();
  try{
@@ -466,9 +525,9 @@ async function tick(state:CoordinatorState,config:any){
   launchTask(state,task.id);
  }
  const planReason=diskLow||bounded?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
- if(planReason){
+ const agent=plannerAgent(config.agents,state.tasks);
+ if(planReason&&agent){
   if(existsSync(planRequest))unlinkSync(planRequest);
-  const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
   const runId='plan-'+randomUUID(),dir=runDirectory(runId);atomicJson(join(dir,'input.json'),{statePath:join(coordinationDir,'state.json'),agent,timeoutMs:config.modelTimeoutMs??600000});
   // Snapshot the receipts available when the planner starts. Receipts settled during its call trigger the next pass.
   state.plannerReceiptSequence=state.latestReceiptSequence??0;
@@ -476,6 +535,11 @@ async function tick(state:CoordinatorState,config:any){
  }
  const archived=archiveFinishedTasks(state);if(archived)event('tasks-archived',{count:archived,remaining:state.tasks.length});
  saveState(state);
+}
+export function plannerAgent(configured:readonly ModelWorker[]|undefined,records:readonly {status:string;agent?:ModelWorker;spec:{kind:string}}[]):ModelWorker|null{
+ const allowed=(['codex','claude'] as const).filter(agent=>configured===undefined||configured.includes(agent));
+ const preferred=assignedWorker('build',records.filter(r=>r.status==='running'&&r.spec.kind==='build'));
+ return allowed.includes(preferred)?preferred:allowed[0]??null;
 }
 // One recursive watch is one OS handle on Windows: 16 ms CPU per 10 s over 2,447 run folders, against 63 ms for a
 // watch per open folder. The folder count does not make it dearer.
@@ -512,9 +576,11 @@ export async function claimCoordinatorState(nonce:string,directory=coordinationD
 }
 export async function pauseCoordinator(state:CoordinatorState,base=projectRoot,stopWorker=safeKill){
  const practice=join(base,'.practice'),directory=join(practice,'coordinator');
+ const swarmStop=join(practice,'stop-swarm');
+ const systemDrain=!existsSync(join(practice,'stop-coordinator'))&&existsSync(swarmStop)&&readFileSync(swarmStop,'utf8').trim()===SWARM_STOP.all;
  for(const job of readCoordinatorJobs(base).jobs.filter((j:any)=>j.coordinatorOwner==='coordinator'&&j.enabled!==false)){
   await disableOwnJob(job.env?.COORDINATOR_RUN_ID,base);
-  for(const account of job.accounts??[job.account])if(account){const file=join(practice,'stop-'+account);if(!existsSync(file))writeFileSync(file,'coordinator owner pause');}
+  for(const account of job.accounts??[job.account])if(account)writeSwarmStop(join(practice,'stop-'+account),systemDrain?SWARM_STOP.all:'coordinator owner pause');
  }
  const running=state.tasks.filter(r=>r.status==='running');
  // Live task watchers check for the pause once a second, then disable their job before writing the receipt.
@@ -528,7 +594,7 @@ export async function pauseCoordinator(state:CoordinatorState,base=projectRoot,s
  reconcile(state,undefined,directory,undefined,0);
  saveState(state,directory);
  const unsettledRuns=running.filter(r=>r.status==='running').map(r=>r.runId);
- event('coordinator-paused',{reason:'owner stop file',unsettledRuns},directory);
+ event('coordinator-paused',{reason:systemDrain?'cloud watch drain':'owner stop file',unsettledRuns},directory);
 }
 async function main(){
  const mode=process.argv[2]??'--status',arg=process.argv[3];
