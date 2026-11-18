@@ -1,0 +1,22 @@
+{
+ "id": "1794986551831-mmthv2350-woodpecker-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "Woodpecker",
+ "item": "Earth rune",
+ "count": 252,
+ "start": 1794986551831,
+ "end": 1794988951831,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

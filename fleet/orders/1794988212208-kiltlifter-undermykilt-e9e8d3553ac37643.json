@@ -1,0 +1,29 @@
+{
+ "id": "1794988212208-kiltlifter-undermykilt-e9e8d3553ac37643",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Kiltlifter",
+ "to": "UnderMyKilt",
+ "item": "Earth rune",
+ "count": 30,
+ "start": 1794988212208,
+ "end": 1794990612208,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Water rune",
+   "count": 30
+  }
+ ],
+ "takerWaits": true
+}

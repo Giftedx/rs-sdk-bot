@@ -1,0 +1,23 @@
+{
+ "id": "1794987491704-knightstick-undermykilt-18d677f85731e554",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Knightstick",
+ "to": "UnderMyKilt",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1794987491704,
+ "end": 1794989891704,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
