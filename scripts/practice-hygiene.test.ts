@@ -102,8 +102,13 @@ test('a read-back that misses a name deletes nothing, and a missing archive driv
   expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
   // The root check runs through an injected exists, so it does not depend on the system's drive letters.
   const seen:string[]=[];
-  expect(()=>archiveThenDelete(root,entries,join(root,'no-such-drive','x'),'d',real,p=>{seen.push(p);return false;})).toThrow('archive drive is missing');
+  expect(()=>archiveThenDelete(root,entries,join(root,'no-such-drive','x'),'d',real,p=>{seen.push(p);return false;})).toThrow('archive parent is missing');
   expect(seen).toHaveLength(1);
+  // A real path whose parent is a file, and a Windows-style path (its parent does not exist on Linux, and no drive Q: exists here).
+  writeFileSync(join(root,'a-file'),'x');
+  expect(()=>archiveThenDelete(root,entries,join(root,'a-file','x'),'p')).toThrow('archive parent is not a directory');
+  expect(()=>archiveThenDelete(root,entries,join(root,'no-parent','deeper','x'),'q')).toThrow('archive parent is missing');
+  expect(existsSync(join(root,'no-parent'))).toBe(false);
   expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
  }finally{rmSync(root,{recursive:true,force:true});}
 });

@@ -13,7 +13,7 @@
 // Usage: bun scripts/practice-hygiene.ts [--root DIR] [--apply --archive-dir D:/rs-sdk-bot-archive]
 //        bun scripts/practice-hygiene.ts --fleet-orders [--keep-days 7] [--apply]
 import {existsSync,lstatSync,mkdirSync,readdirSync,readFileSync,renameSync,rmSync,statSync,writeFileSync} from 'node:fs';
-import {join,parse,resolve} from 'node:path';
+import {dirname,join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 
 export const GRACE_MS=3600_000;
@@ -73,8 +73,12 @@ export function counts(entries:Entry[]){
 }
 
 export function archiveThenDelete(root:string,entries:Entry[],archiveDir:string,stamp=new Date().toISOString().replace(/[:.]/g,'-'),run:typeof spawnSync=spawnSync,exists:(path:string)=>boolean=existsSync){
- if(!exists(parse(resolve(archiveDir)).root))throw Error('archive drive is missing: '+archiveDir);
- mkdirSync(archiveDir,{recursive:true});
+ // The parent of the archive folder must exist and be a folder; only the archive folder itself is made, never its parents.
+ // A Windows drive path on Linux is a relative path whose parent does not exist, so it stops here on both systems.
+ const parent=dirname(resolve(archiveDir));
+ if(!exists(parent))throw Error('archive parent is missing: '+archiveDir);
+ if(!statSync(parent).isDirectory())throw Error('archive parent is not a directory: '+archiveDir);
+ try{mkdirSync(archiveDir);}catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
 
  const prac=join(root,'.practice'),archive=join(archiveDir,`practice-hygiene-${stamp}.tar.gz`),list=join(archiveDir,`practice-hygiene-${stamp}.list`);
  writeFileSync(list,entries.map(e=>e.name).join('\n')+'\n');
