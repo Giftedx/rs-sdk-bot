@@ -1,0 +1,22 @@
+{
+ "id": "1795012150117-fatstack-swordinhand",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Swordinhand",
+ "item": "coins",
+ "count": 68697,
+ "start": 1795012150117,
+ "end": 1795014550117,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
