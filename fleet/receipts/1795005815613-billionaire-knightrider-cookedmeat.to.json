@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795005815613-billionaire-knightrider-cookedmeat",
+ "account": "KnightRider",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "ce6b4f26-0bdd-4ac0-9e4b-9d0737ce2916",
+ "count": 0,
+ "ok": false,
+ "at": 1795006065515,
+ "detail": "fled at low hitpoints: flee_guard id=378 at=3024,3206 ticks=5",
+ "logout": {
+  "attemptId": "1795006051061-0000014332-0000000001",
+  "at": 1795006065493,
+  "sha256": "67aa96a7368fd8f98c557d24f2a4b29e8d1c043f438c9f1a3639a3f515b63ccb"
+ },
+ "screen": false
+}

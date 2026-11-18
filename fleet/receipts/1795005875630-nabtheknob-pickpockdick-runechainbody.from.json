@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795005875630-nabtheknob-pickpockdick-runechainbody",
  "account": "NabTheKnob",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "f3960fa1-ddf1-4794-b056-6f674ae19322",
- "count": 0,
- "ok": false,
- "at": 1795005954569,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795006066725,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795005963950
+ },
+ "logout": {
+  "attemptId": "1795005954577-0000005080-0000000001",
+  "at": 1795006066712,
+  "sha256": "9b879fde7760ea5d1f43fe91ef314114e8d09683f6835ca7f2e0ab4cdeccde37"
+ },
+ "screen": true
 }
