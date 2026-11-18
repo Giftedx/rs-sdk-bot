@@ -528,9 +528,9 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     expect(real.blocked).toEqual([]);
     expect(floor.qp).toBe(145);
     expect(real.qp).toBe(145);
-    // Ceilings above the measured model: floor 33,829 and realistic 35,703 (the Grand Tree row holds its Prayer 99 bench ticks).
-    expect(floor.overallFinish!).toBeLessThanOrEqual(33900);
-    expect(real.overallFinish!).toBeLessThanOrEqual(35800);
+    // Ceilings above the measured model: floor 33,302 and realistic 35,092.
+    expect(floor.overallFinish!).toBeLessThanOrEqual(33400);
+    expect(real.overallFinish!).toBeLessThanOrEqual(35200);
     expect(real.route['agility-route']).toBe('grandtree');
     // Superheat inside thieve unlocks Magic 80 so charge absorbs inside the same thieve host without blocking.
     expect(real.order.find(p => p.id === 'superheat-stun')!.ticks).toBe(0);

@@ -2243,10 +2243,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 2153,
-    "realistic": 2357,
+    "floor": 1626,
+    "realistic": 1746,
     "evidence": "MEASURED",
-    "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, lockstep bench case extra:grandtree-route-state at seeds 7, 8 and 9: 2,357, 2,153, 2,235 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); the start is the planner state at the row: beside King Narnode with Attack 91, Magic 45, Prayer 99, Agility 25, Tree Gnome Village done, no prayer potion, staff of fire, Fire Bolt runes, 2 law runes, 4 lobsters (quester:quest:grandtree, the same quest at Attack 60, Prayer 43 and 3 prayer potions: 2,246, 2,317, 2,137); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (38 casts at seed 7), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival live leg 1,811 (research/rival-atlas-2026-10-16.md:28) is UNVERIFIED"
+    "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, lockstep bench case extra:grandtree-route-state at seeds 7, 8 and 9: 1,746, 1,659, 1,626 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); the start is the planner state at the row: beside King Narnode with Attack 91, Magic 45, Prayer 99, Agility 25, Tree Gnome Village done, no prayer potion, staff of fire, Fire Bolt runes, 2 law runes, 4 lobsters (quester:quest:grandtree, the same quest at Attack 60, Prayer 43 and 3 prayer potions: 1,673, 1,669, 1,757); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (38 casts at seed 7), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival live leg 1,811 (research/rival-atlas-2026-10-16.md:28) is UNVERIFIED"
    },
    "lump": true,
    "xp": {
@@ -2283,10 +2283,10 @@
        "questpoints"
       ],
       "ticks": {
-       "floor": 2153,
-       "realistic": 2357,
+       "floor": 1626,
+       "realistic": 1746,
        "evidence": "MEASURED",
-       "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, lockstep bench case extra:grandtree-route-state at seeds 7, 8 and 9: 2,357, 2,153, 2,235 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); the start is the planner state at the row: beside King Narnode with Attack 91, Magic 45, Prayer 99, Agility 25, Tree Gnome Village done, no prayer potion, staff of fire, Fire Bolt runes, 2 law runes, 4 lobsters (quester:quest:grandtree, the same quest at Attack 60, Prayer 43 and 3 prayer potions: 2,246, 2,317, 2,137); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (38 casts at seed 7), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b) is not measured by us"
+       "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, lockstep bench case extra:grandtree-route-state at seeds 7, 8 and 9: 1,746, 1,659, 1,626 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); the start is the planner state at the row: beside King Narnode with Attack 91, Magic 45, Prayer 99, Agility 25, Tree Gnome Village done, no prayer potion, staff of fire, Fire Bolt runes, 2 law runes, 4 lobsters (quester:quest:grandtree, the same quest at Attack 60, Prayer 43 and 3 prayer potions: 1,673, 1,669, 1,757); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (38 casts at seed 7), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b) is not measured by us"
       }
      }
     }
