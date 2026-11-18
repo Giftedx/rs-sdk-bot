@@ -21,6 +21,11 @@ function fakeStart(fail = false) {
 }
 
 test('a login claim waits for a slow Git authority only in a process that is declared to hold one bot, with no plan lock', async () => {
+    // The count of the bots of a process is shared by each test file that runs in it (bun runs many files in one
+    // process, and a session that another file left open stays counted). The claim reads the bots that this test
+    // started: the count above the count at its start.
+    let baseline = 0;
+    let leaked: Session | undefined;
     const base = mkdtempSync(join(tmpdir(), 'claim-patience-')), asked: { account: string; patient: boolean | undefined }[] = [];
     const claimSwarm = ((_root: string, input: { account: string }, options: { patient?: boolean } = {}) => {
         asked.push({ account: input.account, patient: options.patient });
@@ -28,7 +33,7 @@ test('a login claim waits for a slow Git authority only in a process that is dec
     }) as any;
     const open = (name: string, extra: Record<string, unknown> = {}, fail = false): Promise<Session> => startInProcessSession({ name, password: SECRET, server: 'localhost:8888' }, {
         startSession: fakeStart(fail), sdk: new BotSDK({ botUsername: name, password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any), Actions: FakeActions as any,
-        cacheDir: base, lifecycle: { root: join(base, 'lifecycle') }, recordOwned: () => {}, sharedAccount: { root: base, side: 'local' }, claimSwarm, ...extra });
+        cacheDir: base, lifecycle: { root: join(base, 'lifecycle') }, recordOwned: () => {}, sharedAccount: { root: base, side: 'local' }, claimSwarm, countBots: () => botsInThisProcess() - baseline, ...extra });
     // The count of the bots of the process falls when the session end is handled: wait for that, not for a time.
     const end = async (s: Session) => {
         const was = botsInThisProcess();
@@ -38,7 +43,10 @@ test('a login claim waits for a slow Git authority only in a process that is dec
     };
     const last = () => asked.at(-1);
     try {
-        const before = botsInThisProcess();
+        // A bot that stays open and counted, as a session that another test file left: the count of the process is not 0.
+        leaked = await open('Leak', { soloProcess: false, countBots: undefined });
+        const before = baseline = botsInThisProcess();
+        expect(before).toBeGreaterThan(0);
         // The declaration of the swarm: SWARM_BOTS is the count of bots of the job.
         expect([soloProcess({ SWARM_BOTS: '1' }), soloProcess({ SWARM_BOTS: '3' }), soloProcess({ SWARM_BOTS: '' }), soloProcess({})]).toEqual([true, false, false, false]);
         // A host job of three bots: its first bot logs in before the second has started. No bot of it waits.
@@ -73,5 +81,5 @@ test('a login claim waits for a slow Git authority only in a process that is dec
         expect(last()).toEqual({ account: 'Hal', patient: false });
         await end(locked);
         expect(botsInThisProcess()).toBe(before);
-    } finally { rmSync(base, { recursive: true, force: true, maxRetries: 5 }); }
+    } finally { if (leaked) await end(leaked); rmSync(base, { recursive: true, force: true, maxRetries: 5 }); }
 }, 30_000);
