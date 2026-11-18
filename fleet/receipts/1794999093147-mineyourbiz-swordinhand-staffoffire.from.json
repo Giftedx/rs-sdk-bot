@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794999093147-mineyourbiz-swordinhand-staffoffire",
+ "account": "MineYourBiz",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "a624bf69-ef12-4c09-86ea-090e28b04b63",
+ "count": 1,
+ "ok": true,
+ "at": 1794999180624,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794999173345
+ },
+ "logout": {
+  "attemptId": "1794999161273-0000022076-0000000001",
+  "at": 1794999180512,
+  "sha256": "4ba07dced3da6e54b42b71b1037d8622ea61e769ab35870bd625455f3ad14ec0"
+ },
+ "screen": true
+}
