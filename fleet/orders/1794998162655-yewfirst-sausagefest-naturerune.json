@@ -1,0 +1,22 @@
+{
+ "id": "1794998162655-yewfirst-sausagefest-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Sausagefest",
+ "item": "Nature rune",
+ "count": 50,
+ "start": 1794998162655,
+ "end": 1795000562655,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
