@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795007496279-nabtheknob-oreelse-bones",
  "account": "NabTheKnob",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 14,
  "claim": "c718e508-30f9-423b-8c22-64fd4b01cde2",
- "count": 0,
- "ok": false,
- "at": 1795007578042,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1795007829769,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 14,
+  "after": 0
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795007812196
+ },
+ "logout": {
+  "attemptId": "1795007578051-0000015324-0000000001",
+  "at": 1795007829759,
+  "sha256": "3972c3ca5212a268e69db6c980b4b9740cd731554a5a4e46c0e4f4478cc11568"
+ },
+ "screen": true
 }
