@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794994530073,
+ "at": 1794994629552,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -226,25 +226,6 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=16060 ORDER_KEY=woodpecker-kit9-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":50}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Nature rune on the Grand Exchange to buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
-   "role": "supply",
-   "template": "kit-buy:army-staff-zaff",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -398,6 +379,36 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "zaff",
+    "3000"
+   ],
+   "env": {
+    "ITEMS": "staff of fire",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "1100",
+    "STALL_TICKS": "0",
+    "FLOAT": "13000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "12000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-zaff",
+   "autopilot": "local",
+   "resources": [
+    "shop:zaff"
    ]
   },
   {
