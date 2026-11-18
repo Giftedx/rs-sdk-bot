@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795040833399-fatstack-woodpecker-naturerune",
  "account": "Fatstack",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "618d1c42-8069-4d70-86b1-a53f98b447b6",
- "count": 0,
- "ok": false,
- "at": 1795040932920,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795041013650,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795040991291
+ },
+ "logout": {
+  "attemptId": "1795040932945-0000015488-0000000001",
+  "at": 1795041013640,
+  "sha256": "ab7d326ad78dc57c344a3170f18e958d468a3999bbe0b98a702a7ad7b70c293e"
+ },
+ "screen": true
 }

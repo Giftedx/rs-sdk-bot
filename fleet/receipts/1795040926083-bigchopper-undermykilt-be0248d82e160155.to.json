@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795040926083-bigchopper-undermykilt-be0248d82e160155",
  "account": "UnderMyKilt",
  "partner": "Bigchopper",
@@ -10,15 +10,37 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "721c814b-7399-4086-9bf0-e606fa98d72d",
- "count": 0,
- "ok": false,
- "at": 1795041000668,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795041022027,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Rune platelegs",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795041021291
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795041020868
+ },
+ "logout": {
+  "attemptId": "1795041000677-0000013800-0000000001",
+  "at": 1795041022012,
+  "sha256": "4ff8459a657bf8b377babfd42667e8b32d7817c83dd8f24876e506ceae885e25"
+ },
+ "screen": true
 }
