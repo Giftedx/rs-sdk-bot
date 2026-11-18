@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795035246244-hocuspokeus-fatstack-staffoffire",
+ "account": "Fatstack",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "8569fbcc-028b-4298-afb2-26a41879e680",
+ "count": 0,
+ "ok": false,
+ "at": 1795035289082,
+ "detail": "trade claimed"
+}
