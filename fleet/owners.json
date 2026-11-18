@@ -187,8 +187,9 @@
    "home": "cloud"
   },
   "Stirmypot": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
   },
   "BoneToPick": {
    "side": "cloud",
