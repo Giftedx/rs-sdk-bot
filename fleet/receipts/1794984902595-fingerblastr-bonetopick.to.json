@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794984902595-fingerblastr-bonetopick",
+ "account": "BoneToPick",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 39919,
+ "claim": "62f914bc-3442-4198-956a-6cdb653950eb",
+ "count": 0,
+ "ok": false,
+ "at": 1794985730982,
+ "detail": "trade claimed"
+}
