@@ -62,6 +62,13 @@ test('missing recipe discriminators cannot authorize a different default worker'
  expect(methodSupportsWork(step,{script:step.script,args:[],env:{}})).toBe(false);
 });
 
+test('compound cannon target maps must match the selected finite executable boundary',()=>{
+ const step={script:'scripts/cannon-fight.ts',args:[],env:{STOP:'ranged=45,defence=45'}};
+ expect(methodSupportsWork(step,{...step,env:{STOP:'Ranged=99,Defence=99'}})).toBe(false);
+ expect(methodSupportsWork(step,{...step,env:{STOP:'Defence=45,Ranged=45'}})).toBe(true);
+ expect(methodSupportsWork(step,{...step,env:{STOP:'Ranged=45'}})).toBe(false);
+});
+
 test('shared shop profiles and encoded bank recipes keep their exact output identity',()=>{
  const shop={script:'scripts/shop-buyer.ts',args:['dargaud','1600'],env:{ITEMS:'mithril arrow'}};
  expect(methodSupportsWork(shop,{script:shop.script,args:shop.args,env:{ITEMS:'willow shortbow'}})).toBe(false);

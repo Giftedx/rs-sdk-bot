@@ -5,6 +5,7 @@ import {validateSmeltOrder} from '../../../scripts/smelt-batch';
 import {parseCoins} from '../../../scripts/coin-courier';
 import {accountFromStatus,catalogCoverage,intentForEntry,loadProgressionCatalog,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
 import {preflightProgressionWork} from '../../core/src/progression-session';
+import {xpForLevel} from '../src/curve';
 
 const now=10_000;
 const status={name:'Example',at:now,server:'rs-sdk-demo.fly.dev',bankAt:9000,equipmentObserved:true,
@@ -133,6 +134,35 @@ test('malformed or unbounded seller and snapshot arguments stay unsupported',()=
   ['--sell','flgesell1','2357','2','4900','extra'],['--sell','bad/name','2357','2','4900'],
   ['--snapshot'],['--snapshot','flgebuy1','extra'],['--snapshot','bad/name'],['--unknown','flgebuy1']])
   expect(intentForEntry(geFixtureEntry,args)).toBeNull();
+});
+
+test('compound cannon stops retain every finite training target',()=>{
+ const expected={kind:'train-all' as const,targets:{ranged:99,defence:99,hitpoints:99}};
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99'})).toEqual(expected);
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99',TRAIN_SKILL:'Ranged',TARGET_LEVEL:'99'})).toEqual(expected);
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99'},{skills:{Ranged:99,Defence:99,Hitpoints:99}})).toEqual(expected);
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP_SKILL:'Defence',STOP_LEVEL:'85'})).toEqual({kind:'train',skill:'defence',targetLevel:85});
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{})).toEqual({kind:'train',skill:'ranged',targetLevel:99});
+ expect(intentForEntry('scripts/gather-combat.ts',[],{TRAIN_SKILL:'Ranged',TARGET_LEVEL:'99'},{skills:{Ranged:99,Hitpoints:99}})).toEqual({kind:'train-all',targets:{ranged:99,hitpoints:99}});
+});
+
+test('compound cannon stop parsing refuses unknown, duplicate and conflicting targets',()=>{
+ for(const STOP of ['', 'Ranged=100,Defence=99','Ranged=99,ranged=99','Nonsense=99','Ranged=99,Defence=0','Ranged=99,Defence=1.5','Ranged=99,'])
+  expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP})).toBeNull();
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99'},{skills:{Ranged:99}})).toBeNull();
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99'},{skills:{Ranged:99,Defence:85}})).toBeNull();
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99'},{skills:{Ranged:99,Nonsense:99}})).toBeNull();
+});
+
+test('compound cannon steps keep the full stop map and recovery modes retain exact item goals',()=>{
+ const goal=intentForEntry('scripts/cannon-fight.ts',[],{STOP:'Ranged=99,Defence=99,Hitpoints=99'})!;
+ const a=accountFromStatus('Example',{...status,skills:[...status.skills,{name:'Defence',level:40,xp:xpForLevel(40)},{name:'Hitpoints',level:40,xp:xpForLevel(40)}]},now);
+ const method={...progressionMethods(goal,a).methods.find(method=>method.id==='ranged/cannon')!,effects:{xp:{ranged:1,defence:1,hitpoints:1}}};
+ const step=progressionStep(method,xpForLevel(99)-xpForLevel(40),goal,a);
+ expect(step.env.STOP).toBe('ranged=99,defence=99,hitpoints=99');
+ expect(step.env.STOP_LEVEL).toBeUndefined();expect(step.env.STOP_SKILL).toBeUndefined();
+ for(const MODE of ['buy','reclaim'])expect(intentForEntry('scripts/cannon-fight.ts',[],{MODE})).toEqual({kind:'acquire',items:{6:1,8:1,10:1,12:1},consumer:'scripts/cannon-fight.ts'});
+ expect(intentForEntry('scripts/cannon-fight.ts',[],{MODE:'unknown'})).toBeNull();
 });
 
 test('catalog coverage counts executable mapping separately from rate and qualification',()=>{

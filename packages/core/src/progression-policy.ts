@@ -2,6 +2,8 @@ import type {Step} from './chain-step';
 import {readFileSync} from 'node:fs';
 import type {BankObservation} from './inprocess';
 import type {WorkIntent,ProgressionDecision,ProgressionMethod,ObservedAccount} from '../../planner/src/progression';
+import {trainingTargets} from '../../planner/src/progression';
+import {intentForEntry} from '../../planner/src/progression-catalog';
 
 export interface WorkDescriptor{script:string;args:string[];env:Record<string,string|undefined>}
 export interface PolicyEvaluation{supported:boolean;intent:WorkIntent|null;decision:ProgressionDecision|null;reason?:string;methods?:ProgressionMethod[];account?:ObservedAccount}
@@ -19,6 +21,14 @@ function bankJobIdentity(args:readonly string[]):string|null{
 }
 export function methodSupportsWork(step:Step,work:WorkDescriptor):boolean{
  if(entry(step.script)!==entry(work.script))return false;
+ if(entry(step.script)==='scripts/cannon-fight.ts'){
+  const expected=intentForEntry(step.script,step.args,step.env),actual=intentForEntry(work.script,work.args,work.env);
+  if(expected?.kind==='train-all'||actual?.kind==='train-all'){
+   if(expected?.kind!=='train-all'||actual?.kind!=='train-all')return false;
+   const targets=(intent:WorkIntent)=>JSON.stringify(Object.entries(trainingTargets(intent)??{}).sort());
+   if(targets(expected)!==targets(actual))return false;
+  }
+ }
  for(const [key,value]of Object.entries(step.env))if(discriminator.test(key)&&setting(work,key)!==value)return false;
  if(entry(step.script)==='scripts/aio-skiller.ts'&&(step.args[0]==='bank-job'||work.args[0]==='bank-job')){const expected=bankJobIdentity(step.args);if(expected===null||expected==='invalid'||expected!==bankJobIdentity(work.args))return false;}
  // Numeric positional arguments are targets and budgets. Named positional
@@ -44,7 +54,7 @@ export function createProgressionMonitor(options:{evaluate:()=>PolicyEvaluation;
   if(a.type==='interactNpc')return a.progressionOption==='Attack'||/attack|pickpocket/i.test(String(a.option??''))
    ||a.option===undefined&&a.progressionOption===undefined&&(a.optionIndex===undefined||a.optionIndex===1);
   if(a.type==='useInventoryItem')return !!a.progressionOption&&!/^(eat|drink|drop|wear|wield|rub|teleport|empty)$/i.test(a.progressionOption);
-  if(a.type==='interactLoc')return !a.progressionBankCleanup&&!!a.progressionOption&&!/^(bank|open|close|climb(?:-up|-down)?|enter|exit|pass|travel|search)$/i.test(a.progressionOption);
+  if(a.type==='interactLoc')return !a.progressionBankCleanup&&!a.progressionCannonCleanup&&!!a.progressionOption&&!/^(bank|open|close|climb(?:-up|-down)?|enter|exit|pass|travel|search)$/i.test(a.progressionOption);
   return ['useItemOnLoc','useItemOnNpc','useItemOnItem','spellOnNpc','spellOnPlayer','spellOnItem','spellOnGroundItem','spellOnLoc','castSpellOnNpc','castSpellOnLoc','castSpellOnItem'].includes(a.type);
  };
  return{

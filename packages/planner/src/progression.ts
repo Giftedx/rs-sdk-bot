@@ -5,10 +5,25 @@ import {levelForXp,xpForLevel} from './curve';
 
 export type WorkIntent =
  | {kind:'train';skill:string;targetLevel:number}
+ | {kind:'train-all';targets:Record<string,number>}
  | {kind:'produce';items:Record<number,number>;consumer:string}
  | {kind:'acquire';items:Record<number,number>;consumer:string}
  | {kind:'quest';quest:string}
  | {kind:'pvp'|'observe'|'service';objective:string;units?:number};
+export const TRAINING_SKILLS=['attack','defence','strength','hitpoints','ranged','prayer','magic','cooking','woodcutting','fletching','fishing','firemaking','crafting','smithing','mining','herblore','agility','thieving','runecraft'] as const;
+/** Read all training targets without changing the serialized single-skill intent. Invalid targets stay unknown. */
+export function trainingTargets(intent:WorkIntent):Record<string,number>|null{
+ if(intent.kind!=='train'&&intent.kind!=='train-all')return null;
+ const raw=intent.kind==='train'?{[intent.skill]:intent.targetLevel}:intent.targets;
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||!Object.keys(raw).length)return null;
+ const targets:Record<string,number>={};
+ for(const [name,target]of Object.entries(raw)){
+  const skill=name.trim().toLowerCase();
+  if(!TRAINING_SKILLS.includes(skill as typeof TRAINING_SKILLS[number])||Object.hasOwn(targets,skill)||!Number.isSafeInteger(target)||target<1||target>99)return null;
+  targets[skill]=target;
+ }
+ return targets;
+}
 export interface Observation<T>{at:number;value:T;source?:string;generation?:number}
 export interface ObservedAccount{
  account:string;at:number;server?:string;role?:string;source?:string;
@@ -59,15 +74,19 @@ export function progressionFingerprint(intent:WorkIntent,account:ObservedAccount
 type SearchState={xp:Record<string,number>;items:Record<number,number>;quests:Record<string,Truth>;outcomes:Record<string,number>;used:string[];ticks:number;path:ProgressionPathStep[];model:boolean};
 function skillXp(s:SearchState,name:string){return s.xp[key(name)];}
 function goalDone(intent:WorkIntent,s:SearchState):boolean{
- if(intent.kind==='train')return (skillXp(s,intent.skill)??-1)>=xpForLevel(intent.targetLevel);
+ if(intent.kind==='train'||intent.kind==='train-all'){
+  const targets=trainingTargets(intent);return !!targets&&entries(targets).every(([skill,target])=>(skillXp(s,skill)??-1)>=xpForLevel(target));
+ }
  if(intent.kind==='produce'||intent.kind==='acquire')return entries(intent.items).every(([id,n])=>(s.items[Number(id)]??0)>=n);
  if(intent.kind==='quest')return s.quests[key(intent.quest)]===true;
  return (s.outcomes[intent.objective]??0)>=(intent.units??1);
 }
 function primaryUnits(intent:WorkIntent,m:ProgressionMethod,s:SearchState):number{
- if(intent.kind==='train'){
-  const gain=entries(m.effects.xp).find(([name])=>key(name)===key(intent.skill))?.[1]??0;
-  return gain>0?Math.ceil(Math.max(0,xpForLevel(intent.targetLevel)-(skillXp(s,intent.skill)??0))/gain):0;
+ if(intent.kind==='train'||intent.kind==='train-all'){
+  return Math.max(0,...entries(trainingTargets(intent)??{}).map(([skill,target])=>{
+   const gain=entries(m.effects.xp).find(([name])=>key(name)===key(skill))?.[1]??0;
+   return gain>0?Math.ceil(Math.max(0,xpForLevel(target)-(skillXp(s,skill)??0))/gain):0;
+  }));
  }
  if(intent.kind==='produce'||intent.kind==='acquire'){
   const needs=entries(intent.items).filter(([id,n])=>(s.items[Number(id)]??0)<n);
@@ -100,6 +119,10 @@ function bandUnits(b:StateBand,m:ProgressionMethod,s:SearchState):number{
 function unitsFor(intent:WorkIntent,m:ProgressionMethod,s:SearchState,methods:readonly ProgressionMethod[],account:ObservedAccount,context:SelectionContext):number[]{
  const choices=new Set<number>(),add=(n:number)=>{if(positive(n))choices.add(Math.ceil(n));};
  add(primaryUnits(intent,m,s));
+ if(intent.kind==='train-all')for(const [skill,target]of entries(trainingTargets(intent)??{})){
+  const gain=entries(m.effects.xp).find(([name])=>key(name)===skill)?.[1]??0;
+  if(gain>0)add((xpForLevel(target)-(skillXp(s,skill)??0))/gain);
+ }
  for(const target of methods){
   for(const [skill,level]of entries(target.requirements?.levels)){
    const gain=entries(m.effects.xp).find(([name])=>key(name)===key(skill))?.[1]??0;
@@ -150,6 +173,7 @@ function inspect(m:ProgressionMethod,s:SearchState,a:ObservedAccount,c:Selection
   const xp=skillXp(s,skill);if(xp===undefined)hold('observe','level unknown: '+skill);
   else if(levelForXp(xp)<n)hold('acquire','unlock level: '+skill+' '+n);
  }
+ for(const [skill]of entries(a.build?.maxLevels))if(entries(m.effects.xp).some(([name,gain])=>key(name)===key(skill)&&gain>0)&&skillXp(s,skill)===undefined)hold('observe','build skill unknown: '+skill);
  for(const q of req?.quests??[])if(s.quests[key(q)]!==true)hold(s.quests[key(q)]===false?'acquire':'observe','quest prerequisite: '+q);
  for(const [id,n]of entries(req?.items))if((s.items[Number(id)]??0)<n)hold(unknownStock?'observe':'acquire','required stock: '+id+' '+n);
  if(req?.facts){const result=requirements({...c.requirementGraph,__progression:req.facts},a.facts??{},['__progression']).__progression!;if(result.state!==true)hold(result.state===null?'observe':'acquire',result.blockers.join(', '));}
@@ -168,8 +192,10 @@ function inspect(m:ProgressionMethod,s:SearchState,a:ObservedAccount,c:Selection
 export function chooseProgression(intent:WorkIntent,account:ObservedAccount,methods:readonly ProgressionMethod[],context:SelectionContext):ProgressionDecision{
  const bound=Math.max(1,Math.min(10000,Math.floor(context.maxSearchNodes??512))),depth=Math.max(1,Math.min(20,Math.floor(context.maxDepth??6)));
  const base:ProgressionDecision={state:'blocked',selected:null,step:null,path:[],expectedTicks:null,basis:'unknown',alternatives:[],followUps:[],stateFingerprint:progressionFingerprint(intent,account,methods,context),reason:'No supported finite route reaches this goal.',gaps:['Comparison covers supplied candidates only.'],search:{nodes:0,bound,depth,exhausted:false}};
- if(!fresh(account,context)||!positive(context.now)||intent.kind==='train'&&(!Number.isSafeInteger(intent.targetLevel)||intent.targetLevel<1||intent.targetLevel>99||!account.skills||!Object.entries(account.skills).some(([name,v])=>key(name)===key(intent.skill)&&Number.isSafeInteger(v.level)&&v.level>=1&&v.level<=99&&nonnegative(v.xp))))return {...base,state:'observe',reason:'Fresh valid account skill observations are required.'};
+ const targets=trainingTargets(intent),training=intent.kind==='train'||intent.kind==='train-all';
+ if(!fresh(account,context)||!positive(context.now)||training&&(!targets||!account.skills||!Object.keys(targets).every(skill=>Object.entries(account.skills).some(([name,v])=>key(name)===skill&&Number.isSafeInteger(v.level)&&v.level>=1&&v.level<=99&&nonnegative(v.xp)))))return {...base,state:'observe',reason:'Fresh valid account skill observations are required.'};
  if(account.clock?.protected&&!account.clock.authorized&&intent.kind!=='observe')return {...base,reason:'Protected account clock requires its authorized launch.'};
+ if(targets&&Object.entries(account.build?.maxLevels??{}).some(([skill,maximum])=>targets[key(skill)]!==undefined&&targets[key(skill)]!>maximum))return {...base,reason:'Finite training goal exceeds the account build ceiling.'};
  const items:Record<number,number>={},containers=[account.inventory,account.equipment,account.bank];
  for(const o of containers)if(fresh(o,context))for(const [id,n]of entries(o!.value))if(nonnegative(n))items[Number(id)]=(items[Number(id)]??0)+n;
  for(const [id,n]of entries(account.reservations))items[Number(id)]=Math.max(0,(items[Number(id)]??0)-Math.max(0,n));
