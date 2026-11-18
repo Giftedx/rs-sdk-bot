@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795001133921-mineyourbiz-yewfirst-firerune",
+ "account": "YewFirst",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "1e1f8424-4900-4639-a272-446ffe4654b1",
+ "count": 0,
+ "ok": false,
+ "at": 1795001344670,
+ "detail": "trade claimed"
+}
