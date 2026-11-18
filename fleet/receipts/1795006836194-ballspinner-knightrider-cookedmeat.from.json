@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795006836194-ballspinner-knightrider-cookedmeat",
+ "account": "Ballspinner",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "86bd3a26-32e5-40c8-befd-9913f310e2f5",
+ "count": 0,
+ "ok": false,
+ "at": 1795007642177,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795007634413-0000000448-0000000001",
+  "at": 1795007642169,
+  "sha256": "f36cd23410b1eeac8d994f3eff9db925d46fb99df0691eeb30ecdd18c5aa84b4"
+ },
+ "screen": false
+}
