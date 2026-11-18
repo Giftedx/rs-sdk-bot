@@ -2689,3 +2689,22 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     // No demand at all, with no bill.
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
 });
+
+test('plan fills at most the free bot slots, best band first, and names the rest', () => {
+    const band = catalogue().filter(t => t.family === 'combat-train' && t.tier === 'goal' && t.id.startsWith('army-cow-'));
+    const kit = { 'bronze sword': 1, 'wooden shield': 1, trout: 20 };
+    const crew = ['A', 'B', 'C', 'D'].map(n => acct(n, { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, kit));
+    const army = new Set(crew.map(a => a.name.toLowerCase()));
+    const run = (slots?: number) => plan(inputs(crew, { templates: band, army, capacity: { 'cow:ardougne-north': 6 }, ...(slots === undefined ? {} : { slots }) }));
+    const open = run();
+    expect(open.filter(x => x.template).length).toBe(4);
+    const two = run(2);
+    expect(two.filter(x => x.template).map(x => x.account)).toEqual(open.filter(x => x.template).slice(0, 2).map(x => x.account));
+    const waiting = two.filter(x => !x.template);
+    expect(waiting.length).toBe(2);
+    for (const x of waiting) expect(x.reason).toMatch(/^vacant: waits for a bot slot \(2 free\): army-cow-\w+-45 ranks below/);
+    expect(run(0).every(x => !x.template && /waits for a bot slot \(0 free\)/.test(x.reason))).toBe(true);
+    // A job that runs now keeps its slot over a better new band.
+    const running = plan(inputs(crew, { templates: band, army, capacity: { 'cow:ardougne-north': 6 }, slots: 1, running: new Set(['d']), current: new Map([['d', open.find(x => x.account === 'D')!.template!.id]]) }));
+    expect(running.filter(x => x.template).map(x => x.account)).toEqual(['D']);
+});

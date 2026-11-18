@@ -8,7 +8,7 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -1197,5 +1197,35 @@ test('every shop template of the catalogue selects at least one line of its prof
         for (const s of steps) if (PROFILES[s.profile] && s.items && selectItems(PROFILES[s.profile]!.items, s.items).length === 0) empty.push(`${t.id} ${s.profile} ITEMS=${s.items}`);
     }
     expect(empty).toEqual([]);
+});
     expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
+
+test('the army roster adds each plannable account with Attack, Strength and Defence 90, never a guarded or specialist account', () => {
+    const melee = (name: string, level: number) => ({ name, skills: { Attack: level, Strength: level, Defence: level } });
+    const accounts = [melee('Maxed', 99), melee('NinetyOne', 91), melee('Edge', 90), melee('Low', 89), { name: 'Nine', skills: { Attack: 99, Strength: 99, Defence: 89 } },
+        melee('Shaftshooter', 99), melee('Polevaulter', 99), melee('Haggis', 99), melee('Fresh', 1)];
+    expect([...armyRoster({ army: ['Fresh'] }, accounts)].sort()).toEqual(['edge', 'fresh', 'maxed', 'ninetyone']);
+    // An account that a guard set names never joins by rule.
+    expect([...armyRoster({}, accounts, new Set(['maxed']))].sort()).toEqual(['edge', 'ninetyone']);
+    // The hand list keeps its own: a listed account stays on the roster at any level.
+    expect(armyRoster({ army: ['Low'] }, [melee('Low', 1)]).has('low')).toBe(true);
+});
+
+test('armyBatch admits that many accounts under the rule, best melee first, and defaults to none', () => {
+    const melee = (name: string, level: number) => ({ name, skills: { Attack: level, Strength: level, Defence: level } });
+    const accounts = [melee('A', 80), melee('B', 70), melee('C', 60), melee('D', 50), melee('Maxed', 95), melee('Shaftshooter', 89)];
+    expect([...armyRoster({}, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: 2 }, accounts)].sort()).toEqual(['a', 'b', 'maxed']);
+    expect([...armyRoster({ armyBatch: 0 }, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: -1 }, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: 1.5 }, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: 99 }, accounts)].sort()).toEqual(['a', 'b', 'c', 'd', 'maxed']);
+});
+
+test('freeSlots is maxBots less the hand jobs, a host job counting each account', () => {
+    const jobs = [{ account: 'Hand', enabled: true }, { account: 'Off', enabled: false }, { accounts: ['H1', 'H2', 'H3'], host: true, enabled: true },
+        { account: 'Mine', autopilot: 'local', enabled: true }, { account: 'Paused', autopilot: 'local', enabled: true }];
+    expect(freeSlots({ maxBots: 25 }, jobs, 'local', new Set(['paused']))).toBe(25 - 1 - 3 - 1);
+    expect(freeSlots({ maxBots: 3 }, jobs, 'local', new Set())).toBe(0);
+    expect(freeSlots({}, jobs, 'local', new Set())).toBeUndefined();
 });

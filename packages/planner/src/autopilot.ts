@@ -127,6 +127,9 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // The bot slots left for planner jobs (the swarm's maxBots less the hand jobs). plan() gives a job to at most this many
+    // accounts, best first, and names the rest "waits for a bot slot". Absent: no limit.
+    slots?: number;
     // Lower-case account name -> the levels of its PK build (scripts/pk-kits.ts kitSkills): an army account that
     // trains to those levels and no further (buildBand). An account with no entry trains every band to its end.
     builds?: ReadonlyMap<string, Readonly<Record<string, number>>>;
@@ -1151,6 +1154,27 @@ export function plan(inp: Inputs): Assignment[] {
     // A vacant slot names its constraint: the fare it lacks for a job whose place is still free, when that is all it lacks.
     const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
         return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
+    // More jobs than free bot slots: the best keep theirs. A job that runs now comes first, then a goal band by band and
+    // by the levels it has left, then a supply job by worth. The rest wait for a slot (the swarm admits no more).
+    const waits = new Map<string, string>();
+    if (inp.slots !== undefined) {
+        const jobs = [...done.values()].filter(x => x.template);
+        if (jobs.length > inp.slots) {
+            const rank = (x: Assignment): number[] => {
+                const lower = x.account.toLowerCase(), id = x.template!.id;
+                const c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
+                const running = inp.running?.has(lower) && inp.current?.get(lower) === id ? 0 : 1;
+                return c?.goal ? [running, 0, c.goal.band, c.goal.left] : c ? [running, 1, -worth(c), 0] : [running, 2, 0, 0];
+            };
+            const ordered = jobs.map(x => ({ x, r: rank(x) })).sort((p, q) => { for (let i = 0; i < 4; i++) if (p.r[i] !== q.r[i]) return p.r[i]! - q.r[i]!; return p.x.account.localeCompare(q.x.account); });
+            for (const { x } of ordered.slice(inp.slots)) {
+                done.delete(x.account);
+                if (x.fund) gave.delete(x.fund.from);
+                if (x.send) gaveItems.delete(x.send.from);
+                waits.set(x.account, `vacant: waits for a bot slot (${inp.slots} free): ${x.template!.id} ranks below the jobs that hold them`);
+            }
+        }
+    }
     // The first gate that stopped the account's nearest template (see `misses`), or what its candidates met.
     const full = (c: Cand) => c.resources.find(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1));
     const vacancy = (a: Acct): string => {
@@ -1188,7 +1212,7 @@ export function plan(inp: Inputs): Assignment[] {
         return `vacant: ${other ?? 'no template meets its skills and holdings'}`;
     };
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass'
-        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? vacancy(a) });
+        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : waits.get(a.name) ?? vacated.get(a.name) ?? noFare(a) ?? vacancy(a) });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.

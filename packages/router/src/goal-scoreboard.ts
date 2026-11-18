@@ -9,6 +9,7 @@ import {boardsFromSnapshot,haggisActivities,haggisTravel,scheduleOverall,overall
 import {loadTravel} from '../../planner/src/travel';
 import {supplyBill,type BillRow} from '../../planner/src/supply-bill';
 import {kitItems} from '../../../scripts/pk-kits';
+import {admittedByLevels} from '../../core/src/army-roster';
 
 export const COMBAT_SKILLS=['Attack','Strength','Defence','Ranged','Magic','Prayer','Hitpoints'] as const;
 export type CombatSkill=typeof COMBAT_SKILLS[number];
@@ -157,6 +158,14 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
    roster.add(account);const build=typeof entry==='object'?entry.build:p.builds?.[name]??p.builds?.[account];
    if(typeof build==='string')builds.set(account,build);
   }
+ }
+ // The roster rule of packages/core/src/army-roster.ts: an observed account with Attack, Strength and Defence at 90 or
+ // more is on the roster whether a plan names it or not, so a maxed account that no hand list names still counts.
+ for(const s of rows){
+  const account=key(s.name),owner=owners.get(account);
+  if(!owner||owner.server!==SERVER||roster.has(account))continue;
+  const observed=Object.fromEntries((Array.isArray(s.skills)?s.skills:[]).filter((k:any)=>typeof k?.name==='string'&&positive(k.level)&&k.level<=99).map((k:any)=>[k.name,k.level]));
+  if(admittedByLevels(account,observed))roster.add(account);
  }
  const accounts:ArmyAccount[]=[...roster].sort().map(account=>{
   const s=byName.get(account),levels=Object.fromEntries(COMBAT_SKILLS.map(name=>{

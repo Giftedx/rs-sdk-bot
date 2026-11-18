@@ -27,6 +27,8 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
+import { admittedByLevels, armyBatchOf, meleeTotal } from '../packages/core/src/army-roster';
+import { exempt } from '../packages/core/src/fleet-assign';
 import { ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -451,11 +453,31 @@ function originClaims(fleetDir: string): any[] {
     });
 }
 
-// The side's army roster: the plan's `army` array of account names (README "Claude Code cloud fleet side"). Only these
-// accounts take the planner's goal bands (combat training toward the PK army); Haggis never does.
-export function armyRoster(plan: any): Set<string> {
+// The side's army roster. Only these accounts take the planner's goal bands (combat training toward the PK army);
+// Haggis never does. It is the plan's `army` array of account names (README "Claude Code cloud fleet side"), plus the
+// plannable accounts that the rule of packages/core/src/army-roster.ts admits: Attack, Strength and Defence all 90 or
+// more, then the plan's `armyBatch` count of the best accounts below that. `accounts` holds only accounts that this
+// side runs and that no hand job, owner pause or coordinator job holds (plannableAccounts), so a hand job or a
+// specialist plan keeps its account; `guarded` accounts never join by rule.
+export function armyRoster(plan: any, accounts: readonly Pick<Acct, 'name' | 'skills'>[] = [], guarded: ReadonlySet<string> = OFFLINE_GUARDED): Set<string> {
     const names = Array.isArray(plan?.army) ? plan.army.filter((n: unknown): n is string => typeof n === 'string') : [];
-    return new Set(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
+    const roster = new Set<string>(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
+    const open = accounts.filter(a => !guarded.has(a.name.toLowerCase()) && !exempt(a.name) && !roster.has(a.name.toLowerCase()));
+    for (const a of open) if (admittedByLevels(a.name, a.skills)) roster.add(a.name.toLowerCase());
+    const batch = open.filter(a => !roster.has(a.name.toLowerCase())).sort((x, y) => meleeTotal(y.skills) - meleeTotal(x.skills) || x.name.localeCompare(y.name));
+    for (const a of batch.slice(0, armyBatchOf(plan))) roster.add(a.name.toLowerCase());
+    return roster;
+}
+// The bots that jobs outside this side's planner hold on the swarm: every enabled job of the merged plan that is not a
+// planner job of this side, and every planner job that an owner pause keeps as it is. A host job counts its accounts.
+export function handBots(jobs: readonly any[], side: string, keep: ReadonlySet<string>): number {
+    return jobs.filter(j => j?.enabled !== false && (j?.autopilot !== side || jobAccounts(j).some(a => keep.has(a.toLowerCase()))))
+        .reduce((n, j) => n + Math.max(1, jobAccounts(j).length), 0);
+}
+// The bot slots left for planner jobs: the swarm's `maxBots` less the hand jobs (scripts/swarm.ts admits jobs in plan
+// order, the owner's first). Undefined when the plan names no usable `maxBots`.
+export function freeSlots(plan: any, jobs: readonly any[], side: string, keep: ReadonlySet<string>): number | undefined {
+    return Number.isSafeInteger(plan?.maxBots) && plan.maxBots > 0 ? Math.max(0, plan.maxBots - handBots(jobs, side, keep)) : undefined;
 }
 
 // The PK builds of the side's army accounts: the plan's `builds` object, account name -> kit name of
@@ -656,7 +678,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         busy:new Set([...keep,...open,...stranded,...diedAccounts,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map((n:string)=>n.toLowerCase())]),paused,protected:new Set(OFFLINE_GUARDED),
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts), slots: freeSlots(swarm, withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);
