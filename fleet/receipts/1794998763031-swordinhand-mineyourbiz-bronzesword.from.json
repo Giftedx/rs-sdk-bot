@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794998763031-swordinhand-mineyourbiz-bronzesword",
+ "account": "Swordinhand",
+ "partner": "MineYourBiz",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze sword",
+ "requested": 1,
+ "claim": "7b9d6fb3-1872-4712-aef2-dab0e6d69670",
+ "count": 1,
+ "ok": true,
+ "at": 1794998819721,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794998811773
+ },
+ "logout": {
+  "attemptId": "1794998804532-0000008320-0000000001",
+  "at": 1794998819711,
+  "sha256": "8a631d5842006d2272b0c0969cf9e6458ec0c6314e8b172b47be41f99717c773"
+ },
+ "screen": true
+}

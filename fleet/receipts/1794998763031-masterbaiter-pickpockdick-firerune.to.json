@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794998763031-masterbaiter-pickpockdick-firerune",
+ "account": "PickpockDick",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 210,
+ "claim": "2f01d932-428e-4f58-8c1e-2acc7dd69afa",
+ "count": 0,
+ "ok": false,
+ "at": 1794998795027,
+ "detail": "trade claimed"
+}
