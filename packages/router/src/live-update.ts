@@ -453,8 +453,8 @@ export function liveRuns(root: string, server: string, closure: (entries: string
         let row: any; try { row = JSON.parse(readFileSync(join(dir, file), 'utf8')); } catch { continue; }
         if (row?.server !== server || row.result || !Number.isFinite(row.at) || now - row.at >= LIVE_ROW_MS || standingPeer(row, owners)) continue;
         // An entry as a path from the checkout root with forward slashes, the form of the changed files. The fleet agent
-        // gives its trade workers the absolute path of scripts/fleet-trade.ts, and the closure of an absolute path was
-        // empty: an update moved the release under two trade sessions at the meet, and both ended with nothing traded.
+        // gives its trade workers the absolute path of scripts/fleet-trade.ts, and the closure of an absolute path is
+        // empty: with that path a trade session at its meet holds no update, and the update ends its trade.
         const entries = releaseEntries(row.workEntry).map(entry => relative(resolve(root), resolve(root, entry)).replaceAll('\\', '/'));
         // A trade session ends with its order window (40 minutes, scripts/autopilot.ts). One that still writes its
         // status TRADE_HOLD_MS after its start is stuck, and it does not hold the update.
