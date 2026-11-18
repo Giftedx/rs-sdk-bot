@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795034886127-mineyourbiz-woodpecker-naturerune",
  "account": "Woodpecker",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 37,
  "claim": "10f2aabf-fccc-48df-87e2-1288ea8db648",
- "count": 0,
- "ok": false,
- "at": 1795035109349,
- "detail": "trade claimed"
+ "count": 37,
+ "ok": true,
+ "at": 1795035139902,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 37
+ },
+ "bank": {
+  "count": 37,
+  "at": 1795035139198
+ },
+ "logout": {
+  "attemptId": "1795035109360-0000007372-0000000001",
+  "at": 1795035139883,
+  "sha256": "bebe91d6434bed4e27dbfa360e3f2b6d4cdd8b8183c15fd0ea6b22f88535413f"
+ },
+ "screen": true
 }
