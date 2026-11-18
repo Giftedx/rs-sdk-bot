@@ -239,7 +239,15 @@ export const PROFILES: Record<string, {
         npc: /^jiminua$/i,
         npcSpot: { x: 2767, z: 3122 },
         bankSpot: { x: 2654, z: 3283 },
-        items: [{ re: /^antipoison\(3\)$/i, buyPerTick: 1, shelf: 10 }],
+        // The antipoison first, then each tool and food of the shelf that the progression catalog gives this profile
+        // a method for (scripts/progression-catalog.ts, `shop:jiminua:<item>`): a run names its item with ITEMS.
+        items: [
+            { re: /^antipoison\(3\)$/i, buyPerTick: 1, shelf: 10 },
+            { re: /^tinderbox$/i, buyPerTick: 1 }, { re: /^cooked meat$/i, buyPerTick: 1 }, { re: /^bread$/i, buyPerTick: 1 },
+            { re: /^pestle and mortar$/i, buyPerTick: 1 }, { re: /^knife$/i, buyPerTick: 1 }, { re: /^hammer$/i, buyPerTick: 1 },
+            { re: /^chisel$/i, buyPerTick: 1 }, { re: /^bronze axe$/i, buyPerTick: 1 }, { re: /^bronze pickaxe$/i, buyPerTick: 1 },
+            { re: /^bronze bar$/i, buyPerTick: 1 },
+        ],
         fare: 60,
     },
     zaff: {
