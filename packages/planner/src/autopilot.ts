@@ -127,9 +127,12 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
-    // The bot slots left for planner jobs (the swarm's maxBots less the hand jobs). plan() gives a job to at most this many
-    // accounts, best first, and names the rest "waits for a bot slot". Absent: no limit.
+    // The bot slots left for planner jobs (the swarm's limit less the hand jobs and the live bots that the swarm counts but
+    // does not run). plan() gives a job to at most this many accounts, best first, and names the rest "waits for a bot
+    // slot"; a running job always keeps its slot. Absent: no limit.
     slots?: number;
+    // Lower-case accounts whose bot holds a slot now: a run in the swarm's run list, a start inside its window included.
+    holding?: ReadonlySet<string>;
     // Lower-case account name -> the levels of its PK build (scripts/pk-kits.ts kitSkills): an army account that
     // trains to those levels and no further (buildBand). An account with no entry trains every band to its end.
     builds?: ReadonlyMap<string, Readonly<Record<string, number>>>;
@@ -1154,24 +1157,27 @@ export function plan(inp: Inputs): Assignment[] {
     // A vacant slot names its constraint: the fare it lacks for a job whose place is still free, when that is all it lacks.
     const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
         return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
-    // More jobs than free bot slots: the best keep theirs. A job that runs now comes first, then a goal band by band and
-    // by the levels it has left, then a supply job by worth. The rest wait for a slot (the swarm admits no more).
+    // More jobs than free bot slots: the best keep theirs. An account whose bot holds a slot now (a confirmed live session,
+    // or a run that the swarm lists, a start inside its window included) keeps a job whatever the count, so a hand job that
+    // the owner enables never stops a running planner job, and a kit buy that replaces a running band keeps its account's
+    // slot. The rest rank by goal band and the levels left, then supply jobs by worth, and fill the slots that remain. The
+    // others wait for a slot (the swarm admits no more).
     const waits = new Map<string, string>();
     if (inp.slots !== undefined) {
         const jobs = [...done.values()].filter(x => x.template);
         if (jobs.length > inp.slots) {
+            const holds = (x: Assignment) => !!inp.running?.has(x.account.toLowerCase()) || !!inp.holding?.has(x.account.toLowerCase());
             const rank = (x: Assignment): number[] => {
-                const lower = x.account.toLowerCase(), id = x.template!.id;
-                const c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
-                const running = inp.running?.has(lower) && inp.current?.get(lower) === id ? 0 : 1;
-                return c?.goal ? [running, 0, c.goal.band, c.goal.left] : c ? [running, 1, -worth(c), 0] : [running, 2, 0, 0];
+                const id = x.template!.id, c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
+                return c?.goal ? [0, c.goal.band, c.goal.left] : c ? [1, -worth(c), 0] : [2, 0, 0];
             };
-            const ordered = jobs.map(x => ({ x, r: rank(x) })).sort((p, q) => { for (let i = 0; i < 4; i++) if (p.r[i] !== q.r[i]) return p.r[i]! - q.r[i]!; return p.x.account.localeCompare(q.x.account); });
-            for (const { x } of ordered.slice(inp.slots)) {
+            const holders = jobs.filter(holds), room = Math.max(0, inp.slots - holders.length);
+            const others = jobs.filter(x => !holds(x)).map(x => ({ x, r: rank(x) })).sort((p, q) => { for (let i = 0; i < 3; i++) if (p.r[i] !== q.r[i]) return p.r[i]! - q.r[i]!; return p.x.account.localeCompare(q.x.account); });
+            for (const { x } of others.slice(room)) {
                 done.delete(x.account);
                 if (x.fund) gave.delete(x.fund.from);
                 if (x.send) gaveItems.delete(x.send.from);
-                waits.set(x.account, `vacant: waits for a bot slot (${inp.slots} free): ${x.template!.id} ranks below the jobs that hold them`);
+                waits.set(x.account, `vacant: waits for a bot slot (${inp.slots} free, ${holders.length} held by running bots): ${x.template!.id} ranks below the jobs that hold them`);
             }
         }
     }

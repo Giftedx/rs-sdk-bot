@@ -9,6 +9,7 @@ import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
 import { freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -1228,4 +1229,10 @@ test('freeSlots is maxBots less the hand jobs, a host job counting each account'
     expect(freeSlots({ maxBots: 25 }, jobs, 'local', new Set(['paused']))).toBe(25 - 1 - 3 - 1);
     expect(freeSlots({ maxBots: 3 }, jobs, 'local', new Set())).toBe(0);
     expect(freeSlots({}, jobs, 'local', new Set())).toBeUndefined();
+    // Live bots that no swarm run owns count against the limit, as in admissionDecision.
+    expect(freeSlots({ maxBots: 25 }, jobs, 'local', new Set(['paused']), 4)).toBe(25 - 1 - 3 - 1 - 4);
+    // The coordinator's expansion replaces maxBots only when it was granted over the owner plan's value.
+    const owner = { maxBots: 25, jobs: [] };
+    expect(freeSlots(mergedPlan(owner, { jobs: [], coordination: {}, expansion: { over: 25, maxBots: 30 } } as any), jobs, 'local', new Set(['paused']))).toBe(30 - 5);
+    expect(freeSlots(mergedPlan(owner, { jobs: [], coordination: {}, expansion: { over: 20, maxBots: 30 } } as any), jobs, 'local', new Set(['paused']))).toBe(25 - 5);
 });

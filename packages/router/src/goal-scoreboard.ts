@@ -9,7 +9,7 @@ import {boardsFromSnapshot,haggisActivities,haggisTravel,scheduleOverall,overall
 import {loadTravel} from '../../planner/src/travel';
 import {supplyBill,type BillRow} from '../../planner/src/supply-bill';
 import {kitItems} from '../../../scripts/pk-kits';
-import {admittedByLevels} from '../../core/src/army-roster';
+import {handNamed,ruleRoster} from '../../core/src/army-roster';
 
 export const COMBAT_SKILLS=['Attack','Strength','Defence','Ranged','Magic','Prayer','Hitpoints'] as const;
 export type CombatSkill=typeof COMBAT_SKILLS[number];
@@ -159,14 +159,11 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
    if(typeof build==='string')builds.set(account,build);
   }
  }
- // The roster rule of packages/core/src/army-roster.ts: an observed account with Attack, Strength and Defence at 90 or
- // more is on the roster whether a plan names it or not, so a maxed account that no hand list names still counts.
- for(const s of rows){
-  const account=key(s.name),owner=owners.get(account);
-  if(!owner||owner.server!==SERVER||roster.has(account))continue;
-  const observed=Object.fromEntries((Array.isArray(s.skills)?s.skills:[]).filter((k:any)=>typeof k?.name==='string'&&positive(k.level)&&k.level<=99).map((k:any)=>[k.name,k.level]));
-  if(admittedByLevels(account,observed))roster.add(account);
- }
+ // The roster rule of packages/core/src/army-roster.ts for this side's own accounts: Attack, Strength and Defence at 90 or
+ // more, not held by an enabled hand job of this side's plan, never the main account or a specialist. Another side's rule
+ // accounts count when that side publishes them in its plan's `army` (scripts/fleet-sync.ts planView).
+ const handJobs=handNamed(Array.isArray(plans[0]?.value?.jobs)?plans[0]!.value.jobs:[],side);
+ for(const account of ruleRoster(rows.filter((s:any)=>owners.get(key(s.name))?.server===SERVER),n=>owners.get(key(n))?.side===side,handJobs))roster.add(account);
  const accounts:ArmyAccount[]=[...roster].sort().map(account=>{
   const s=byName.get(account),levels=Object.fromEntries(COMBAT_SKILLS.map(name=>{
    const observations=(Array.isArray(s?.skills)?s.skills:[]).filter((k:any)=>key(String(k?.name))===key(name));

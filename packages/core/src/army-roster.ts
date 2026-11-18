@@ -22,3 +22,22 @@ export const armyBatchOf = (plan: unknown): number => {
     const n = (plan as { armyBatch?: unknown } | null | undefined)?.armyBatch;
     return typeof n === 'number' && Number.isSafeInteger(n) && n > 0 ? n : 0;
 };
+
+// The accounts of `rows` (statuses or snapshot rows with a `skills` array) that the rule admits: owned by the side that
+// asks (`owned`), not held by a hand job (`held`, lower case), and Attack, Strength and Defence at ARMY_MELEE_MIN or more.
+// A side publishes these with its plan (scripts/fleet-sync.ts planView), and the scoreboard counts its own side's the same way.
+export function ruleRoster(rows: readonly any[], owned: (name: string) => boolean, held: ReadonlySet<string> = new Set()): string[] {
+    const out = new Set<string>();
+    for (const r of rows) {
+        const name = typeof r?.name === 'string' ? r.name : '';
+        if (!name || !owned(name) || held.has(name.toLowerCase())) continue;
+        const levels = Object.fromEntries((Array.isArray(r.skills) ? r.skills : []).filter((k: any) => typeof k?.name === 'string' && Number.isFinite(k.level)).map((k: any) => [k.name, k.level]));
+        if (admittedByLevels(name, levels)) out.add(name.toLowerCase());
+    }
+    return [...out].sort();
+}
+// The accounts that an enabled hand job names: a job of the plan that is no planner job of `side`. Such an account is not
+// plannable, so it is not on the roster by rule.
+export function handNamed(jobs: readonly any[], side: string): Set<string> {
+    return new Set(jobs.filter(j => j?.enabled !== false && j?.autopilot !== side).flatMap(j => [j?.account, ...(j?.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+}

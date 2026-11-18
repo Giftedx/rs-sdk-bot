@@ -470,3 +470,12 @@ test.skipIf(process.platform !== 'win32')('a Windows long-path configuration fai
         expect(readFileSync(join(base, '.git', 'config.lock'), 'utf8')).toBe('owned lock\n');
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
+
+test('planView publishes the accounts that the army roster rule admits beside the listed army, never a held or foreign one', () => {
+    const owners = new Map([['maxed', { side: 'local', server: 's' }], ['held', { side: 'local', server: 's' }], ['low', { side: 'local', server: 's' }], ['theirs', { side: 'cloud', server: 's' }], ['listed', { side: 'local', server: 's' }]]);
+    const row = (name: string, level: number) => ({ name, skills: ['Attack', 'Strength', 'Defence'].map(n => ({ name: n, level })) });
+    const jobs = [{ account: 'Held', script: 'scripts/goldfarm.ts', enabled: true }];
+    const view = planView(jobs, 'local', owners as any, 7, { army: ['Listed'], observed: [row('Maxed', 99), row('Held', 99), row('Low', 89), row('Theirs', 99), row('Listed', 99)] });
+    expect(view.army).toEqual(['Listed', 'maxed']);
+    expect(planView(jobs, 'local', owners as any, 7, { observed: [row('Low', 89)] }).army).toBeUndefined();
+});

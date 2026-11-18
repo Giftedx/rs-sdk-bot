@@ -2702,9 +2702,32 @@ test('plan fills at most the free bot slots, best band first, and names the rest
     expect(two.filter(x => x.template).map(x => x.account)).toEqual(open.filter(x => x.template).slice(0, 2).map(x => x.account));
     const waiting = two.filter(x => !x.template);
     expect(waiting.length).toBe(2);
-    for (const x of waiting) expect(x.reason).toMatch(/^vacant: waits for a bot slot \(2 free\): army-cow-\w+-45 ranks below/);
-    expect(run(0).every(x => !x.template && /waits for a bot slot \(0 free\)/.test(x.reason))).toBe(true);
+    for (const x of waiting) expect(x.reason).toMatch(/^vacant: waits for a bot slot \(2 free, 0 held by running bots\): army-cow-\w+-45 ranks below/);
+    expect(run(0).every(x => !x.template && /waits for a bot slot \(0 free, 0 held/.test(x.reason))).toBe(true);
     // A job that runs now keeps its slot over a better new band.
     const running = plan(inputs(crew, { templates: band, army, capacity: { 'cow:ardougne-north': 6 }, slots: 1, running: new Set(['d']), current: new Map([['d', open.find(x => x.account === 'D')!.template!.id]]) }));
     expect(running.filter(x => x.template).map(x => x.account)).toEqual(['D']);
+});
+
+test('a running bot keeps its slot whatever the count, including a kit buy that replaces its band', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const kit = { 'bronze sword': 1, 'wooden shield': 1, trout: 20 };
+    const crew = ['A', 'B', 'C'].map(n => acct(n, { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, kit));
+    const army = new Set(['a', 'b', 'c', 'd']);
+    // D lost its sword: a market buy replaces its running band (template kit-buy:army-cow-strength-45).
+    const d = acct('D', { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, { 'wooden shield': 1, trout: 20, coin: 50_000 });
+    const market = { 'bronze sword': { id: 1277, name: 'Bronze sword', limit: 100 } };
+    const base = { templates: band, army, market, capacity: { 'cow:ardougne-north': 6 }, current: new Map([['d', 'army-cow-strength-45']]) };
+    const open = plan(inputs([...crew, d], base));
+    expect(open.find(x => x.account === 'D')!.template?.id).toBe('kit-buy:army-cow-strength-45');
+    // Fewer slots than jobs: the running account D keeps its buy, by the account, not by the template it ran.
+    const two = plan(inputs([...crew, d], { ...base, slots: 2, running: new Set(['d']) }));
+    expect(two.filter(x => x.template).map(x => x.account)).toContain('D');
+    expect(two.filter(x => x.template)).toHaveLength(2);
+    // A run in the swarm's list holds its slot as a confirmed session does (a start inside its window included).
+    expect(plan(inputs([...crew, d], { ...base, slots: 2, holding: new Set(['d']) })).find(x => x.account === 'D')!.template).toBeDefined();
+    // Zero slots, or fewer than the running bots: every running job stays and nothing else starts.
+    const none = plan(inputs([...crew, d], { ...base, slots: 0, running: new Set(['a', 'd']) }));
+    expect(none.filter(x => x.template).map(x => x.account).sort()).toEqual(['A', 'D']);
+    expect(none.filter(x => !x.template && /waits for a bot slot \(0 free, 2 held by running bots\)/.test(x.reason))).toHaveLength(2);
 });
