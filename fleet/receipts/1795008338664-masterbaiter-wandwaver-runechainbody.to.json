@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795008338664-masterbaiter-wandwaver-runechainbody",
+ "account": "Wandwaver",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "e8331ddc-7fc9-47f2-b32c-0c27f9f8b34c",
+ "count": 0,
+ "ok": false,
+ "at": 1795008535096,
+ "detail": "trade claimed"
+}
