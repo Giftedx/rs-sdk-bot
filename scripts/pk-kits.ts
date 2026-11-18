@@ -521,7 +521,7 @@ export const kitSkills = (name: string): Record<string, number> => ({ ...(kitOf(
 // back on after a two-handed bow is checked, so a kit whose quest was not set fought with no dragon mace or square
 // shield after its first bow turn (finding 72).
 export const QUEST_VARP: Readonly<Record<string, readonly [number, number]>> = {
-    'Lost City': [147, 6], 'Dragon Slayer': [176, 10], "Heroes' Quest": [188, 15], "Legends' Quest": [139, 75], Regicide: [328, 15],
+    'Lost City': [147, 6], 'Dragon Slayer': [176, 10], "Hero's Quest": [188, 15], "Legends Quest": [139, 75], Regicide: [328, 15],
     'The Fremennik Trials': [347, 10], 'Underground Pass': [161, 10],
 };
 export const kitVarps = (name: string): Record<number, number> => {
@@ -535,12 +535,12 @@ const carried = (k: KitSpec) => k.carried.map(c => (typeof c === 'string' ? { id
 // The quest that an item of a kit needs to be worn (levelrequire/scripts/tier*.rs2) and the quest that a varp of a
 // kit stands for.
 const ITEM_QUEST: Readonly<Record<string, string>> = {
-    dragon_dagger: 'Lost City', dragon_dagger_p: 'Lost City', dragon_longsword: 'Lost City', dragon_mace: "Heroes' Quest", dragon_battleaxe: "Heroes' Quest",
-    dragon_halberd: 'Regicide', dragon_sq_shield: "Legends' Quest", rune_platebody: 'Dragon Slayer', dragonhide_body: 'Dragon Slayer',
+    dragon_dagger: 'Lost City', dragon_dagger_p: 'Lost City', dragon_longsword: 'Lost City', dragon_mace: "Hero's Quest", dragon_battleaxe: "Hero's Quest",
+    dragon_halberd: 'Regicide', dragon_sq_shield: "Legends Quest", rune_platebody: 'Dragon Slayer', dragonhide_body: 'Dragon Slayer',
     viking_helmet_crush: 'The Fremennik Trials', viking_helmet_range: 'The Fremennik Trials', viking_helmet_slash: 'The Fremennik Trials', viking_helmet_magic: 'The Fremennik Trials',
     ibanstaff: 'Underground Pass', zamorak_staff: 'Mage Arena', zamorak_cape: 'Mage Arena',
 };
-const VARP_QUEST: Readonly<Record<number, string>> = { 139: "Legends' Quest", 267: 'Mage Arena', 288: 'Underground Pass', 328: 'Regicide', 347: 'The Fremennik Trials' };
+const VARP_QUEST: Readonly<Record<number, string>> = { 139: "Legends Quest", 267: 'Mage Arena', 288: 'Underground Pass', 328: 'Regicide', 347: 'The Fremennik Trials' };
 // Each quest with the quests that it needs, as content folders (vendor/rs-sdk/server/content/scripts/quests). Lost
 // City stands with the two quests of the planner's chain, which give its Woodcutting and Crafting. The Mage Arena is
 // a minigame with no XP reward: its folder is under areas. Sources: quest_hero.rs2:2-4, legends_guard.rs2:50-53.
@@ -548,8 +548,8 @@ const LOST_CITY = ['quest_drunkmonk', 'quest_murder', 'quest_zanaris'], UPASS = 
 const HEROES = [...LOST_CITY, 'quest_dragon', 'quest_arthur', 'quest_blackarmgang', 'quest_hero'];
 export const QUEST_CHAIN: Readonly<Record<string, readonly string[]>> = {
     'Lost City': LOST_CITY, 'Dragon Slayer': ['quest_dragon'], 'The Fremennik Trials': ['quest_viking'], 'Mage Arena': ['area_mage_arena'], 'Underground Pass': UPASS,
-    Regicide: [...UPASS, 'quest_regicide'], "Heroes' Quest": HEROES,
-    "Legends' Quest": [...HEROES, 'quest_crest', 'quest_junglepotion', 'quest_zombiequeen', ...UPASS, 'quest_waterfall', 'quest_legends'],
+    Regicide: [...UPASS, 'quest_regicide'], "Hero's Quest": HEROES,
+    "Legends Quest": [...HEROES, 'quest_crest', 'quest_junglepotion', 'quest_zombiequeen', ...UPASS, 'quest_waterfall', 'quest_legends'],
 };
 // The server's XP rate (WorldConfig.ts xpRate), and the rewards that knowledge/quests.json does not hold, in whole XP
 // (quest_waterfall.rs2:491-492).
