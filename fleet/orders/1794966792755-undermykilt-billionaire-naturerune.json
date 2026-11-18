@@ -1,0 +1,22 @@
+{
+ "id": "1794966792755-undermykilt-billionaire-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Billionaire",
+ "item": "Nature rune",
+ "count": 50,
+ "start": 1794966792755,
+ "end": 1794969192755,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
