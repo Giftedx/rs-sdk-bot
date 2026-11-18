@@ -2007,6 +2007,17 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     for(const k of b.skills||[]){const before=dropsXp[k.name];dropsXp[k.name]=k.xp;if(before==null||k.xp<=before||k.name==='Overall')continue;
       xpGlobe(k.name,k.xp);const el=document.createElement('div');el.className='xp-drop';el.style.animationDelay=(n++*260)+'ms';el.innerHTML=`<img src="${asset('skill-'+skillFile(k.name)+'.png')}" alt="">+${nf(k.xp-before)}`;box.append(el);setTimeout(()=>el.remove(),3200+n*260);}
   }
+  // The Follow in 3D panel reads the followed player's lookup from /api/player when the panel opens, then again after a minute.
+  // The state carries no lookups. Hosted, the shim answers from the roster alone, so the rank and worn lines stay empty there.
+  const followLookups=new Map();
+  function followLookup(name){
+    const key=name.toLowerCase(),hit=followLookups.get(key),now=Date.now();
+    if(hit&&(hit.pending||now-hit.at<60000))return hit.data;
+    const entry={at:now,pending:true,data:hit?.data??null};followLookups.set(key,entry);
+    fetch('/api/player?name='+encodeURIComponent(name)).then(r=>r.ok?r.json():null).then(j=>{if(j&&!j.error)entry.data=j;}).catch(()=>{}).finally(()=>{entry.pending=false;entry.at=Date.now();if(window.atlasFollowOther===name)overlay();});
+    return entry.data;
+  }
+  window.atlasFollowLookup=followLookup;
   // The overlay panel (RuneLite): the watched account's goal, phase and pace, or the fleet in free camera.
   function overlay(){
     const b=account(),el=hud.querySelector('.game-overlay');
@@ -2021,7 +2032,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const race=goals?.version===1?'<h4 class="race">Project goals</h4>'+line('Main Overall',mainRank)+line('Specialist #1s',held+' observed')+line('Quests',(goals.quests?.complete??'—')+' / '+(goals.quests?.total??'—'))+line('Maxed tribrids',(goals.army?.maxed??'—')+' / '+(goals.army?.roster?.length??'—')):ranked.length?'<h4 class="race">Hiscores</h4>'+line('Boards at #1',ranked.filter(x=>x.best.rank===1).length)+(near?line('Closest',near.board+' '+Math.round((near.gap.close||0)*100)+'%'):''):'';
     // The 3D camera on another player (a lookup's Follow in 3D): what the page knows of them, from the lookup.
     const other=window.atlasFollowOther;
-    if(other){const l=S.lookups?.[other.toLowerCase()],ov=l?.rows?.find(r=>r.board==='Overall'),seen=S.roster?.find(r=>String(r[0]).toLowerCase()===other.toLowerCase());
+    if(other){const l=followLookup(other),ov=l?.rows?.find(r=>r.board==='Overall'),seen=S.roster?.find(r=>String(r[0]).toLowerCase()===other.toLowerCase());
       set('<h4>'+E(other)+'</h4>'+line('Status',seen?'online':'not in the roster')+line('Combat',String(l?.combat??seen?.[4]??'—'))+(l?.wild?.wild?line('Wilderness','Level '+l.wild.wild+(l.wild.minCombat?' · '+l.wild.minCombat+'-'+l.wild.maxCombat:'')+(l.wild.x!=null&&l.wild.z!=null?(inMulti({x:l.wild.x,z:l.wild.z,level:l.wild.plane??0})?' · multi-way':' · single-way'):'')):'')+(ov?line('Overall','#'+nf(ov.rank)+' · '+ov.level):'')+(l?.worn?.length?line('Wears',l.worn.map(w=>w.name).join(', ').slice(0,60)):'')+line('Account','not ours')+race);return;}
     if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;set('<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&(S.vault?.coins||S.vault?.countsComplete===false)?line(S.vault.countsComplete===false?'Known vault coins':'Vault coins',gp(S.vault.coins)+(S.vault.countsComplete===false?' · partial':'')):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):'')+race);return;}
     const [,state]=st(b);

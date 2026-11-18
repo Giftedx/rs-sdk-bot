@@ -13,6 +13,7 @@
 import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
+import {expandQuests} from './quest-pack';
 import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocks} from './publish-relay';
 import {expectedLootPrices} from './item-prices';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
@@ -268,6 +269,11 @@ export function verifyStaticBundle(
  return {ok:missing.length===0&&leaks.length===0,checkedFiles,checkedAssets:assets.size,missing:[...new Set(missing)],leaks:[...new Set(leaks)]};
 }
 
+// True when the hosted page's index.html holds the expandQuests function of the packed quest state (quest-pack.ts).
+export function hostedPageExpandsQuests(main:string):boolean{
+ try{return readFileSync(join(main,'site','index.html'),'utf8').includes('function expandQuests(');}catch{return false;}
+}
+
 async function cycle(){
  const now=Date.now();
  let {state,meta,map}=await collect();
@@ -278,6 +284,9 @@ async function cycle(){
   const applied=await pollCommands(now,meta?.nonce??null);
   if(applied){({state,meta}=await collect());note+=` commands=${applied}`;}
  }
+ // The hosted page lives in the dashboard repository (main/site), deployed apart from this publisher. Packed quests go out
+ // only when that page can expand them; otherwise the data keeps the old quest shape, so an old page never shows empty quests.
+ if(!(REPO&&hostedPageExpandsQuests(join(DIR,'repo'))))state=expandQuests(state),delete state.questList;
  // The public view refuses a state that still names the main account. The owner's control view must still go out.
  const control=JSON.stringify(controlView(state,meta));let pub:string|null=null,pubError:unknown=null;
  try{pub=JSON.stringify(publicView(state,MAIN_ACCOUNT,expectedDrops));}catch(e){pubError=e;}

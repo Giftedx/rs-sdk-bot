@@ -22,7 +22,10 @@ export async function depositObserved(s: Session, item: { id: number; name: stri
     const generation = before.generation;
     // Coin diagnostics compare the dispatched slot with both transmitted pack views.
     // These observations never substitute for the paired debit/credit predicate.
-    let samples = 0, dispatchResult: unknown;
+    // The observations print when the deposit fails, or at once with DEPOSIT_TRACE=1. An accepted deposit prints its
+    // receipt only: the observations of each coin deposit were 4,298 log lines of full containers.
+    let samples = 0, dispatchResult: unknown, accepted = false;
+    const lines: string[] = [], live = process.env.DEPOSIT_TRACE === '1';
     const trace = (phase: string) => {
         if (item.id !== 995) return;
         if (phase === 'tick' && samples++ >= 40) return;
@@ -32,9 +35,10 @@ export async function depositObserved(s: Session, item: { id: number; name: stri
             return { componentId: id, items: c?.linkObjType && c.linkObjNumber ? Array.from(c.linkObjType, (raw, slot) =>
                 ({ slot, id: raw - 1, count: c.linkObjNumber![slot] })).filter(i => i.id >= 0) : null };
         });
-        console.log('DEPOSIT_OBSERVATION ' + JSON.stringify({ account: s.name, phase, tick: s.tick(),
+        const line = 'DEPOSIT_OBSERVATION ' + JSON.stringify({ account: s.name, phase, tick: s.tick(),
             target: { id: target.id, name: target.name, slot: target.slot }, amount, bankBefore, generationBefore: generation,
-            dispatchResult, pack: s.sdk.getState()?.inventory, sdkBank: s.sdk.getState()?.bank, bank: s.bankObservation?.(), containers }));
+            dispatchResult, pack: s.sdk.getState()?.inventory, sdkBank: s.sdk.getState()?.bank, bank: s.bankObservation?.(), containers });
+        if (live) console.log(line); else lines.push(line);
     };
     trace('dispatch');
     const off = item.id === 995 ? s.onTick(() => trace('tick')) : () => {};
@@ -53,8 +57,9 @@ export async function depositObserved(s: Session, item: { id: number; name: stri
     console.log('DEPOSIT_RECEIPT ' + JSON.stringify({ account: s.name, itemId: item.id, name: item.name,
         amount, packBefore: amount, packAfter: 0, bankBefore, bankAfter: stored(after.items),
         generationBefore: generation, generationAfter: after.generation, at: after.at, tick: s.tick(), sdkSuccess }));
+    accepted = true;
     return amount;
-    } finally { off(); trace('exit'); }
+    } finally { off(); trace('exit'); if (!accepted) for (const line of lines) console.log(line); }
 }
 
 // Banks the whole pack except what `keep` names, one deposit per item id, with the bank already open. A pack left
