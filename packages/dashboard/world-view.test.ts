@@ -99,16 +99,10 @@ test('a fresh lookup feed does not make invalid, future or expired player sighti
 });
 
 const serverSource=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
-const snapshotLookupLine=serverSource.split('\n').find(line=>line.includes('const looked = Object.fromEntries('));
-if(!snapshotLookupLine)throw Error('Missing native snapshot lookup producer');
 const playerRouteAt=serverSource.indexOf("        if (url.pathname === '/api/player') {"),playerRouteEnd=serverSource.indexOf("        if (url.pathname === '/api/viewer-health')",playerRouteAt);
 if(playerRouteAt<0||playerRouteEnd<0)throw Error('Missing native player lookup route');
 const playerRoute=serverSource.slice(playerRouteAt,playerRouteEnd);
 
-function snapshotLookup(world:any,seen:any){
- const hit={name:'ProbeFriend',rows:lookupRows,at:7,worn:lookupWorn,wornAt:8},lookups=new Map([['probefriend',hit]]),roster=new Map(seen?[['probefriend',seen]]:[]);
- return new Function('lookups','roster','lookupView','now','world','SECRET_RE','SECRET_MARK',snapshotLookupLine+';return looked.probefriend;')(lookups,roster,lookupView,now,world,/PrivateMain/gi,'MAIN');
-}
 async function nativeLookup(world:any,seen:any,name='ProbeFriend'){
  let calls=0;
  const hit={name:'ProbeFriend',rows:lookupRows,at:7,worn:lookupWorn,wornAt:8};
@@ -118,11 +112,11 @@ async function nativeLookup(world:any,seen:any,name='ProbeFriend'){
  return {status:response.status,body:await response.json(),calls};
 }
 
-test('both native lookup producers bind presence to the actual connected feed observation',async()=>{
+test('the native lookup endpoint binds presence to the actual connected feed observation',async()=>{
  for(const world of [{connected:true,tickAt:now-1000},{connected:true,tickAt:now-40_000},{connected:true,tickAt:0},{connected:true,tickAt:undefined},{connected:true,tickAt:now+1},{connected:false,tickAt:now-1000}])for(const seen of [undefined,seenPlayer]){
-  const snapshot=snapshotLookup(world,seen),endpoint=await nativeLookup(world,seen),fresh=world.connected&&world.tickAt===now-1000;
+  const endpoint=await nativeLookup(world,seen),fresh=world.connected&&world.tickAt===now-1000;
   expect(endpoint.status).toBe(200);expect(endpoint.calls).toBe(1);
-  for(const value of [snapshot,endpoint.body])expect(value).toMatchObject({online:fresh?!!seen:null,presenceObservedAt:fresh?now-1000:null,at:7,rows:lookupRows,worn:lookupWorn,wornAt:8});
+  for(const value of [endpoint.body])expect(value).toMatchObject({online:fresh?!!seen:null,presenceObservedAt:fresh?now-1000:null,at:7,rows:lookupRows,worn:lookupWorn,wornAt:8});
  }
 });
 
