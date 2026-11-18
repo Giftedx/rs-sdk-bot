@@ -22,15 +22,15 @@ export const lastUnitPrice = (cost: number, rule: Pick<ShopRule, 'sell' | 'delta
 
 const SELL_DEFAULT = 100, DELTA_DEFAULT = 10, KEEPER_RADIUS = 20;
 type NpcRow = { name: string; debugname: string; src: string; spawns: { x: number; z: number; level?: number }[] };
-type Data = { npcs: NpcRow[]; stock: Map<string, Map<string, number>>; items: Map<string, { debugname: string; cost: number }>; scripts: () => { file: string; text: string }[] };
+type Data = { npcs: NpcRow[]; stock: Map<string, Map<string, number>>; items: Map<string, { debugname: string; cost: number }[]>; scripts: () => { file: string; text: string }[] };
 const cache = new Map<string, Data>();
 function load(root: string): Data {
     const hit = cache.get(root);
     if (hit) return hit;
     const read = (file: string) => JSON.parse(readFileSync(join(root, 'knowledge', file), 'utf8'));
-    const items = new Map<string, { debugname: string; cost: number }>();
-    // A note has the name of its item: the first row of a name is the item itself.
-    for (const i of read('items.json') as { name?: string; debugname: string; cost?: number }[]) if (typeof i.name === 'string' && !items.has(i.name.toLowerCase())) items.set(i.name.toLowerCase(), { debugname: i.debugname, cost: i.cost ?? 0 });
+    // Several items can have one name (a strung and an unstrung bow, a lit and an unlit torch), so a name keeps each row.
+    const items = new Map<string, { debugname: string; cost: number }[]>();
+    for (const i of read('items.json') as { name?: string; debugname: string; cost?: number }[]) if (typeof i.name === 'string' && (i.cost ?? 0) > 0) items.set(i.name.toLowerCase(), [...(items.get(i.name.toLowerCase()) ?? []), { debugname: i.debugname, cost: i.cost! }]);
     const stock = new Map((read('shops.json') as { inv: string; stock: { item: string; count: number }[] }[]).map(s => [s.inv, new Map(s.stock.map(row => [row.item, row.count]))]));
     // The scripts that open a shop from a dialogue, read once and only when a keeper has no `owned_shop` param.
     let opened: { file: string; text: string }[] | undefined;
@@ -70,9 +70,13 @@ export function shopRules(name: RegExp, spot: { x: number; z: number; level?: nu
 }
 
 // The most that one unit of the named item can cost in the shop of `rules` (the highest of a keeper's shops), or null
-// when no rule is given or the content does not know the item.
+// when no rule is given or the content does not know the item. Of the items with that name, the ones that the shop
+// stocks count; when it stocks none of them, the highest bound over all of them counts.
 export function contentUnitBound(rules: readonly ShopRule[], itemName: string, root = resolve(import.meta.dir, '..')): number | null {
-    const item = load(root).items.get(itemName.toLowerCase());
-    if (!rules.length || !item || !(item.cost > 0)) return null;
-    return Math.max(...rules.map(rule => lastUnitPrice(item.cost, rule, rule.stock.get(item.debugname) ?? -1)));
+    const rows = load(root).items.get(itemName.toLowerCase()) ?? [];
+    if (!rules.length || !rows.length) return null;
+    return Math.max(...rules.map(rule => {
+        const stocked = rows.filter(row => rule.stock.has(row.debugname));
+        return Math.max(...(stocked.length ? stocked : rows).map(row => lastUnitPrice(row.cost, rule, rule.stock.get(row.debugname) ?? -1)));
+    }));
 }

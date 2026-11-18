@@ -21,6 +21,7 @@ describe('the content price of one shop unit', () => {
     });
 });
 
+const WILLOW_STOCK = 20;
 describe('the rule of each shop profile', () => {
     test('Jiminua and Scavvo have the step 20 that the client state does not show', () => {
         const jiminua = shopRules(PROFILES.jiminua!.npc, PROFILES.jiminua!.npcSpot), scavvo = shopRules(PROFILES.scavvo!.npc, PROFILES.scavvo!.npcSpot);
@@ -38,6 +39,21 @@ describe('the rule of each shop profile', () => {
         expect(lowe.map(r => [r.inv, r.sell, r.delta, r.stock.get('iron_arrow')])).toEqual([['archeryshop', 1000, 10, 1500]]);
         // 1,499 units under the normal stock would add 14,990: the price stops at 5,000 over the multiplier.
         expect(contentUnitBound(lowe, 'Iron arrow')).toBe(18);
+    });
+    test('a name that two items have takes the item that the shop stocks', () => {
+        // "Willow shortbow" is unstrung_willow_shortbow (cost 100) and willow_shortbow (cost 200); Dargaud stocks the strung one.
+        const dargaud = shopRules(PROFILES.dargaud!.npc, PROFILES.dargaud!.npcSpot), lowe = shopRules(PROFILES.lowe!.npc, PROFILES.lowe!.npcSpot);
+        expect(dargaud.map(r => [r.inv, r.sell, r.delta, r.stock.get('willow_shortbow'), r.stock.has('unstrung_willow_shortbow')])).toEqual([['ranging_guild_bowshop', 1000, 10, WILLOW_STOCK, false]]);
+        expect(contentUnitBound(dargaud, 'Willow shortbow')).toBe(shopUnitPrice(200, 1000, 10, 1, WILLOW_STOCK));
+        expect(contentUnitBound(dargaud, 'Willow shortbow')!).toBeGreaterThanOrEqual(238);
+        // "Shortbow" is unstrung_shortbow (cost 23) and shortbow (cost 50); Lowe stocks 4 strung ones.
+        expect(lowe[0]!.stock.get('shortbow')).toBe(4);
+        expect(contentUnitBound(lowe, 'Shortbow')).toBe(51);
+        // A name of two items that the shop stocks neither of: the highest bound of the two.
+        expect(contentUnitBound(lowe, 'Magic shortbow')).toBe(shopUnitPrice(1600, 1000, 10, 1, -1));
+        // Jiminua stocks the unlit torch of the two torches.
+        const jiminua = shopRules(PROFILES.jiminua!.npc, PROFILES.jiminua!.npcSpot);
+        expect(contentUnitBound(jiminua, 'Torch')).toBe(shopUnitPrice(4, 1500, 20, 1, jiminua[0]!.stock.get('torch_unlit')!));
     });
     test('Zaff opens his shops from a dialogue: both shops give a rule', () => {
         const zaff = shopRules(PROFILES.zaff!.npc, PROFILES.zaff!.npcSpot);
