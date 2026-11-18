@@ -93,7 +93,7 @@ for (const name of PICKABLES) {
 }
 // Phase 1b: skill actions from dbtables, quests, and drop tables.
 const dbTables = buildDbTables(blocksOf('.dbtable'), blocksOf('.dbrow'));
-const skillActions = buildSkillActions(dbTables);
+const skillActions = buildSkillActions(dbTables, { objs: blocksOf('.obj'), structs: blocksOf('.struct') });
 const questVarpFolders = new Map<string, string>();
 for (const f of listConfigFiles('.varp').filter(f => f.startsWith('scripts/quests/'))) {
     for (const b of parseConfigs(read(f), f)) questVarpFolders.set(b.name, f.split('/')[2]!);
@@ -181,7 +181,7 @@ writeFileSync(join(out, 'BUILD.md'), [
     '- Dynamic transports require a current own-client exact loc observation. Spawn timer/geometry provenance does not establish current availability.',
     '- `doors.json`: wall-layer locs with an Open option, classified from their trigger. About 1459 of the `locked` doors are `macro_maze_wallhigh` walls in the sealed random-event maze (random events are off on this server). `unknown` means the trigger shape was not understood; the router treats those as blocked.',
     '',
-    '- `skills.json`: one row per skill action from the skill dbtables; `xp` is whole XP (content stores tenths). Smithing XP lives in structs and is `null` for now.',
+    '- `skills.json`: one row per skill action from the skill dbtables; `xp` is whole XP (content stores tenths). Firemaking rows come from the log objects, herblore rows from `brew_potion.struct`, smelting rows from `smelting.struct`; an anvil row takes `bar_amount` x `xpperbar` of its bar struct. `xp` is `null` where the content holds none (a herblore unfinished potion).',
     '- `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete across all 68 quests.',
     '- `drops.json`: ai_queue3 tables and shared `label:` tables. Chances are per kill out of the roll die. Tables with two rolls are known to sum over 1.',
     '',

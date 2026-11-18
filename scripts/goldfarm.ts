@@ -24,6 +24,7 @@ import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
 import { receiveHandoff } from './courier-handoff';
+import { questFoodDefinitions } from '../packages/core/src/sustain';
 import { stallRecipes, stallSight, stallWatched, type StallRecipe, type StallSight } from './microbot-c-stalls';
 
 const COOKED_IDS=new Set([329,333,379,330,334,380,385,386]),NOTED_COOKED_IDS=new Set([330,334,380,386]);
@@ -86,9 +87,16 @@ const STALL = /^baker'?s stall$/i;
 const GUARD = /^guard$/i;
 const BAKER = /^baker$/i;
 const GUARD_SAFE = 6;
-// Food types and HP per bite (cake pieces 4, chocolate slice 2, bread 5, trout 7, salmon 9, lobster 12).
+// Food types of the thief. The HP of a bite comes from the content (player/configs/consumption/consume_normal.dbrow,
+// read by questFoodDefinitions): this file holds no heal number.
 export const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
-const HEAL = [4, 4, 4, 2, 5, 7, 9, 12, 20];
+const foodRank = (i: { name: string }) => FOOD_ORDER.findIndex(re => re.test(i.name));
+export const foodBiteHeal = (i: { id: number }): number | undefined => questFoodDefinitions().get(i.id)?.heal;
+// The biggest food that the HP loss uses in full (no heal wasted), else the smallest food.
+export function pickFoodForLoss<T extends { id: number; name: string }>(foods: readonly T[], loss: number): T | undefined {
+    const sorted = [...foods].sort((a, b) => (foodBiteHeal(a) ?? Infinity) - (foodBiteHeal(b) ?? Infinity) || foodRank(a) - foodRank(b));
+    return [...sorted].reverse().find(i => (foodBiteHeal(i) ?? Infinity) <= loss) ?? sorted[0];
+}
 const DMG = 3;
 // A thief with fewer than FRAIL_HP Hitpoints cannot take a guard's attack or a run of failed picks. Each goldfarm death
 // in the run logs is an account with 10 or 11 Hitpoints that had no food at a stall or shop trip. Such a thief
@@ -204,12 +212,7 @@ try {
 
     const eat = async (): Promise<boolean> => {
         const e0 = s.tick();
-        // The biggest food that the HP loss uses in full (no heal wasted), else the smallest food.
-        const items = inv().filter(isFood);
-        const rank = (i: any) => FOOD_ORDER.findIndex(re => re.test(i.name));
-        items.sort((a, b) => rank(a) - rank(b));
-        const loss = maxHp() - hp();
-        const pick = [...items].reverse().find(i => (HEAL[rank(i)] ?? 99) <= loss) ?? items[0];
+        const pick = pickFoodForLoss(inv().filter(isFood), maxHp() - hp());
         // Every failure waits a tick: callers loop on "HP low and food() > 0", and an instant false return spun the
         // event loop forever (practice proof hung at t=1003 and grew to 2.6 GB).
         if (!pick) { lastFail = 'eat: no edible item'; await waitTicks(s, 1); return false; }

@@ -14,6 +14,8 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
 import {rsPathLength,type World,type Transport,type Account,type PathLength,type Leg} from '../packages/core/src/world';
 import {planTripOffThread} from '../packages/core/src/route-plan';
+import type {TripPlan} from '../packages/core/src/trip';
+import {executionContext} from '../vendor/rs-sdk/sdk/execution-context';
 import {deadlyTo,loadHunters} from '../packages/core/src/danger';
 import {loadTravel,travelAllowed,type Travel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
@@ -748,6 +750,18 @@ export const sameArea=async(a:Tile,b:Tile,load=()=>rsPathLength())=>{
  const x=area(a),y=area(b);return x<0||y<0||x===y;
 };
 const STOPPED:Walked={ok:false,reason:'stopped',detail:'quest guard'};
+// The plan that tells the sweep which teleport a walk casts, or null. This plan is optional: with none the sweep walks
+// the ground and takes no runes. So a fault of the route worker is no plan, as a failed search on the game thread is.
+// An aborted run still rejects.
+export async function sweepPlan(world:World,from:Tile,to:Tile,acct:Account,budgetMs=SWEEP_PLAN_BUDGET_MS,offThreadPlan=planTripOffThread):Promise<Pick<TripPlan,'cost'|'legs'>|null>{
+ if(!world.offThread){const d=world.route(from,to,acct,{deadline:performance.now()+budgetMs});return d.ok?{cost:d.cost,legs:d.legs}:null;}
+ try{return await offThreadPlan(from,to,acct,undefined,budgetMs);}
+ catch(error){
+  if(executionContext.getStore()?.signal?.aborted)throw error;
+  console.log(`QUEST_SWEEP_PLAN_FAULT ${JSON.stringify({from,to,error:String(error).slice(0,160)})}`);
+  return null;
+ }
+}
 async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,signal?:AbortSignal):Promise<Walked>{
  const stopped=()=>signal?.aborted===true;
  const router=async(t:Tile):Promise<Walked>=>stopped()?STOPPED:goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS,signal});
@@ -756,9 +770,7 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
  // walk). goTo plans again on foot when the cast fails.
  const acct=accountOf(s);
  if(at(s).level===0&&to.level===0&&cheb(at(s),to)>30&&(acct.counts?.lawrune??0)>0){
-  const plan=world.offThread
-   ?await planTripOffThread(at(s),to,acct,undefined,SWEEP_PLAN_BUDGET_MS)
-   :(()=>{const d=world.route(at(s),to,acct,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS});return d.ok?{legs:d.legs}:null;})();
+  const plan=await sweepPlan(world,at(s),to,acct);
   const spell=plan?.legs.find(l=>l.kind==='travel'&&l.travel.kind==='spell');
   console.log(`QUEST_SWEEP_SPELL ${JSON.stringify({from:at(s),to,planned:!!plan,spell:spell?.kind==='travel'?(spell.travel as {name?:string}).name??true:false})}`);
   if(spell)return router(to);
@@ -1035,9 +1047,7 @@ export async function planTeleportRunes(world:World,from:Tile,to:Tile,acct:Accou
  offThreadPlan=planTripOffThread):Promise<Item[]>{
  const withRunes=runeInventoryAccount(acct,bank,nameOf);
  if(!withRunes)return[];
- const plan=world.offThread
-  ?await offThreadPlan(from,to,withRunes,undefined,budgetMs)
-  :(()=>{const d=world.route(from,to,withRunes,{deadline:performance.now()+budgetMs});return d.ok?{cost:d.cost,legs:d.legs}:null;})();
+ const plan=await sweepPlan(world,from,to,withRunes,budgetMs,offThreadPlan);
  return plan?extractSpellRunes(plan.legs,idOf):[];
 }
 type CatalogItem={id:number;debugname:string;name:string;cost:number;tradeable?:boolean};

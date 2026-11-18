@@ -4,6 +4,8 @@ import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
 import { wildernessLevel, type FightResult } from './pk';
+import { tripRequirements } from './pk-hunt';
+import { nativeRequirementMetadata, resolveItemRequirements } from '../packages/core/src/item-requirements';
 
 const fight = (outcome: FightResult['outcome'], attacks = 10): FightResult =>
     ({ outcome, ticks: 200, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: attacks }, freezes: 0, specs: 0 });
@@ -158,7 +160,16 @@ test('a bank trip takes the pack again: each item that is no food and no boost, 
         { id: 2442, count: 1, optionsWithIndex: drink }, { id: 2448, count: 1, optionsWithIndex: drink }, { id: 385, count: 1, optionsWithIndex: eat }, { id: 385, count: 1, optionsWithIndex: eat },
     ], [{ id: 886, count: 150, slot: 13 }, { id: 1231, count: 1, slot: 3 }]);
     // Bow, super defence, antipoison and the arrows are named; the three boosts and the two sharks are five slots.
-    expect(pack).toEqual({ food: 5, items: [{ id: 861, count: 1 }, { id: 2442, count: 1 }, { id: 2448, count: 1 }, { id: 886, count: 150 }] });
+    expect(pack).toEqual({ food: 5, items: [{ id: 861, count: 1 }, { id: 2442, count: 1, minDoses: 1, maxSlots: 1 }, { id: 2448, count: 1, minDoses: 1, maxSlots: 1 }, { id: 886, count: 150 }] });
+});
+
+test('a bank trip takes an antipoison with 3 doses, the fullest in the bank, for the one that the pack held', () => {
+    const pack = packOf([{ id: 177, count: 1, optionsWithIndex: [{ text: 'Drink' }] }, { id: 563, count: 2, optionsWithIndex: [] }], []);
+    expect(pack.items).toEqual([{ id: 563, count: 2 }, { id: 2446, count: 1, minDoses: 1, maxSlots: 1 }]);
+    const resolve = (bank: { id: number; count: number }[]) => resolveItemRequirements(tripRequirements(pack.items), bank, nativeRequirementMetadata);
+    const full = resolve([{ id: 563, count: 9 }, { id: 179, count: 1 }, { id: 175, count: 8 }]);
+    expect([full.ok, [...full.items].sort((x, y) => x.id - y.id)]).toEqual([true, [{ id: 175, count: 1 }, { id: 563, count: 2 }]]);
+    expect(resolve([{ id: 563, count: 9 }]).shortages).toEqual([{ id: 2446, unit: 'doses', required: 1, available: 0, reason: 'units' }]);
 });
 
 test('the walk-in kit has no glory: an amulet of power, the runes of Camelot Teleport, and cases that go to the bank first', () => {

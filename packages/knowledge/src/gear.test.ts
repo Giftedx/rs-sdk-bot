@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { parseConfigs } from './config';
 import { buildGear, paramDefaults, parsePvpSpecials, parseRequirements, parseStaffItems } from './gear';
 
@@ -38,4 +39,40 @@ test('buildGear takes every bonus param, the param defaults, the special and the
     expect(gear[2]!.attackRate).toBeUndefined();
     expect(gear[3]!.staffOnly).toBe(true);
     expect(gear[4]).toMatchObject({ tier: 40, bonuses: { rangeStrength: 49 } });
+});
+
+test('parseRequirements reads the block form: a quest gate, then the levelrequire call on its own line', () => {
+    const req = parseRequirements([{ file: 'tier30.rs2', text: [
+        '[opheld2,adamant_halberd] @levelrequire_attack_and_strength(30, 15, last_slot);',
+        '[opheld2,viking_sword]',
+        'if (%viking < ^viking_complete) {',
+        '    mes("You need to complete The Fremennik Trials first.");',
+        '    return;',
+        '}',
+        '@levelrequire_attack(30, last_slot);',
+        '',
+        '[opheld2,viking_helmet]',
+        'if (%viking < ^viking_complete) {',
+        '    return;',
+        '}',
+        '@levelrequire_defence(30, last_slot); // quest requirement missing',
+        '[opheld2,plain_block]',
+        '@levelrequire_defence(40, last_slot);',
+        '[opheld2,no_call]',
+        'mes("nothing");',
+    ].join('\n') }]);
+    expect(req.get('viking_sword')).toEqual({ skills: { attack: 30 }, quest: 'The Fremennik Trials', src: 'tier30.rs2:7' });
+    expect(req.get('viking_helmet')).toEqual({ skills: { defence: 30 }, quest: 'The Fremennik Trials', src: 'tier30.rs2:13' });
+    expect(req.get('plain_block')).toEqual({ skills: { defence: 40 }, src: 'tier30.rs2:15' });
+    expect(req.get('adamant_halberd')).toEqual({ skills: { attack: 30, strength: 15 }, src: 'tier30.rs2:1' });
+    expect(req.has('no_call')).toBe(false);
+});
+
+test('the built gear holds the Fremennik blade, helm and shield wear rules of tier30.rs2', () => {
+    const gear = JSON.parse(readFileSync(new URL('../../../knowledge/gear.json', import.meta.url), 'utf8')) as { id: number; requires: { skills: Record<string, number>; quest?: string; src?: string } }[];
+    const rule = (id: number) => gear.find(g => g.id === id)!.requires;
+    // levelrequire/scripts/tier30.rs2: the blade needs Attack 30, the helm and the shield Defence 30, each after the quest.
+    expect(rule(3757)).toMatchObject({ skills: { attack: 30 }, quest: 'The Fremennik Trials', src: 'scripts/levelrequire/scripts/tier30.rs2:24' });
+    expect(rule(3748)).toMatchObject({ skills: { defence: 30 }, quest: 'The Fremennik Trials', src: 'scripts/levelrequire/scripts/tier30.rs2:40' });
+    expect(rule(3758)).toMatchObject({ skills: { defence: 30 }, quest: 'The Fremennik Trials', src: 'scripts/levelrequire/scripts/tier30.rs2:47' });
 });

@@ -2132,11 +2132,11 @@ test('wildernessWatchBox highlights rivals within attack range of our Wilderness
  const hsCode=shell.slice(shell.indexOf('  function wildernessHotspotsBox()'),shell.indexOf('  function wildernessWatchBox()'));
  const hsHtml=new Function('S','E','safeName','window',`${hsCode};return wildernessHotspotsBox();`)(
   {
-   wildernessOverlay:{bands:[{label:'Lvl 1–20 (Tele)',colour:'#86c862',note:'Tele'},{label:'Lvl 21–30 (Glory)',colour:'#e8a844',note:'Glory'},{label:'Lvl 31+ (Deep Wild)',colour:'#e05347',note:'Blocked'}],hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,note:'Ditch'},{label:"Rogue's Castle",x:3285,z:3930,wild:52,note:'Castle'}],resolveTarget:(b:any)=>b.target||null},
+   wildernessOverlay:{bands:[{label:'Lvl 1–20 (Tele)',colour:'#86c862',note:'Tele'},{label:'Lvl 21–30 (Glory)',colour:'#e8a844',note:'Glory'},{label:'Lvl 31+ (Deep Wild)',colour:'#e05347',note:'Blocked'}],hotspots:[{label:'Wilderness Edge',x:3094,z:3520,wild:1,note:'Ditch'},{label:"Rogue's Castle",x:3285,z:3930,wild:52,note:'Castle'}],resolveTarget:(b:any)=>b.target||null},
    bots:[{name:'⟦MAIN⟧',inWorld:true,pos:{x:3094,z:3520,level:0},target:{x:3098,z:3955,label:'Mage Bank'}}],
   },
   String,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),{});
- expect(hsHtml).toContain('Lvl 1–20 (Tele)');expect(hsHtml).toContain('Edgeville Ditch');expect(hsHtml).toContain("Rogue's Castle");
+ expect(hsHtml).toContain('Lvl 1–20 (Tele)');expect(hsHtml).toContain('Wilderness Edge');expect(hsHtml).toContain("Rogue's Castle");
  expect(hsHtml).toContain('Main · reserved');expect(hsHtml).toContain('Mage Bank (3098, 3955)');expect(hsHtml).not.toContain('Haggis');
 });
 
@@ -2347,7 +2347,7 @@ test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall 
  const hits:any[]=[],strokes:string[]=[];
  const g:any=new Proxy({stroke(){strokes.push(String(g.strokeStyle));}},{get:(o:any,k)=>k in o?o[k]:()=>{}});
  const canvas={width:146,height:151,getContext:()=>g};
- const wildOverlay={hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,band:'tele'},{label:'Mage Bank / Arena',x:3098,z:3955,wild:55,band:'deep'}],resolveTarget:(b:any)=>b.target||null};
+ const wildOverlay={hotspots:[{label:'Wilderness Edge',x:3094,z:3520,wild:1,band:'tele'},{label:'Mage Bank / Arena',x:3098,z:3955,wild:55,band:'deep'}],resolveTarget:(b:any)=>b.target||null};
  const env:any={
   S:{bots:[account],roster:[],map:{x0:2900,z0:3500,w:500,h:500,scale:1}},
   hud:{querySelector:(q:string)=>q.endsWith('canvas')?canvas:null},account:()=>account,
@@ -2356,7 +2356,7 @@ test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall 
  };
  const res=new Function(...Object.keys(env),`let miniView;${code};minimap();return minimap.hits;`)(...Object.values(env));
  for(const h of res)hits.push(h[2]);
- expect(hits).toContain('Edgeville Ditch (Wildy 1)');
+ expect(hits).toContain('Wilderness Edge (Wildy 1)');
  expect(hits).toContain('Target: Edgeville bank gate');
  expect(strokes).toContain('#86c862');
  expect(strokes).toContain('#e8a844');
@@ -2434,4 +2434,22 @@ test('XP Tracker archives positive session XP/EHP on reset across account keys a
  api.click('data-xp-clear-history');
  expect(nodes['.xp-history'].innerHTML).toBe('');
  expect(JSON.parse(stored).__history.Main).toBeUndefined();
+});
+
+test('Prayer tab names, levels and drains are the values of the content prayer tables',()=>{
+ const content=new URL('../../vendor/rs-sdk/server/content/scripts/skill_prayer/configs/',import.meta.url);
+ const rows=readFileSync(new URL('prayers.dbrow',content),'utf8'),enums=readFileSync(new URL('prayers.enum',content),'utf8');
+ const drainBlock=enums.split(/^\[/m).find(b=>b.startsWith('prayer_drain_effects]'))!;
+ const drain=new Map([...drainBlock.matchAll(/^val=\^(\w+),(\d+)\s*$/gm)].map(m=>[m[1]!,Number(m[2])]));
+ // One row of prayers.dbrow per prayer, in the order of the prayer buttons: name, level, and the drain of its constant.
+ const want=rows.split(/^\[/m).flatMap(b=>{
+  const p=b.match(/^data=prayer,\^(\w+)\s*$/m),n=b.match(/^data=name,(.+?)\s*$/m),l=b.match(/^data=level,(\d+)\s*$/m);
+  return p&&n&&l?[[n[1]!,Number(l[1]),drain.get(p[1]!)]]:[];
+ });
+ const line=shell.split('\n').find(l=>l.trimStart().startsWith('const prayers=[['))!;
+ const table=new Function(`${line};return prayers;`)() as [string,number,string,number,string][];
+ expect(want.length).toBe(15);expect(drain.size).toBe(15);
+ expect<unknown>(table.map(([name,level,,d])=>[name,level,d])).toEqual(want);
+ // prayers.enum:4-6: Thick Skin, Burst of Strength and Clarity of Thought drain 3.
+ expect(table.slice(0,3).map(x=>x[3])).toEqual([3,3,3]);
 });

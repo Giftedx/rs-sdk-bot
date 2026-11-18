@@ -1443,14 +1443,14 @@ QP, and the QP deadline (921,761) is far away.
 |---|---|---|---|---|---|---|
 | 1 | Waterfall Quest | none | 2 ropes, 6 air + 6 earth + 6 water runes, 18 lobsters | 343,750 Attack, 343,750 Strength, 1 QP | 1,030-1,037 MEASURED practice, 3 runs (preset start at Almera; travel from Lumbridge not counted); rival live 979 UNVERIFIED | south falls room: shadow spiders, skeletons (chip damage); fire giants (max 11) if no spider shield; Glarial's tomb skeletons (one run died at the tomb ladder) |
 | 2 | Tree Gnome Village | Prayer 43 + Magic 35 (combat gate, section 1e) | 6 normal logs (Commander Montai), Fire Bolt runes, staff of fire, 2 prayer potions | 286,250 Attack, 2 QP | 782-829 MEASURED practice, 3 runs (section 1f) | Khazard warlord (level 112) fight for the orb; Khazard troopers in the fortress |
-| 3 | Fight Arena | none (OSRS) | Khazard armour is in the quest; food, a weapon | 304,375 Attack, 54,375 Thieving, 2 QP | 1,300 ESTIMATE | four arena fights: Khazard ogre (63), scorpion (44), Bouncer (137), General Khazard (112); needs HP above 10 or a safespot |
+| 3 | Fight Arena | none | Khazard armour is in the quest; food, a weapon | 304,375 Attack, 54,375 Thieving, 2 QP | 1,300 ESTIMATE | four arena fights: Khazard ogre (63), scorpion (44), Bouncer (137), General Khazard (112); needs HP above 10 or a safespot |
 | 4 | Vampire Slayer | none | garlic, hammer, beer (Dr Harlow), food | 120,625 Attack, 3 QP | 500 ESTIMATE | Count Draynor (34) |
 | 5 | Witch's House | none | cheese, leather gloves, food | 158,125 Hitpoints, 4 QP | 600 ESTIMATE | the experiment (4 forms) |
 | 6 | 8 short quests to 32 QP: Romeo & Juliet 5, Goblin Diplomacy 5, Druidic Ritual 4, Sheep Herder 4, Black Knights' Fortress 3, Prince Ali Rescue 3, Ernest the Chicken 4, plus 4 from the quests above | none | quest items (dyes, rat meat and others), coins | 32 QP total | 300-900 each ESTIMATE (`haggis-boards.json` row) | Black Knights' Fortress guards; Ernest: none |
 | 7 | Dragon Slayer | 32 QP (`%qp < 32`, CODE-READ) | anti-dragon shield (Duke Horacio), 3 map pieces, 3 planks, 90 steel nails, hammer, unfired bowl, wizard's mind bomb, lobster pot, silk, 10,000 coins for the boat | 466,250 Strength, 466,250 Defence, 2 QP | 4,000 ESTIMATE | Elvarg (83) dragonfire, Melzar's maze (lesser demon 82, zombies, ghosts), Crandor skeletons |
-| 8 | Scorpion Catcher | Prayer 31 (OSRS) | scorpion cage, food | 165,625 Strength, 1 QP | 1,500 ESTIMATE | Taverley dungeon: poison spiders, black knights |
+| 8 | Scorpion Catcher | Prayer 31 (`scorpcatcher_journal.rs2:9`) | scorpion cage, food | 165,625 Strength, 1 QP | 1,500 ESTIMATE | Taverley dungeon: poison spiders, black knights |
 | 9 | The Grand Tree | Agility 25 (`stat(agility) < 25` gate, CODE-READ) | food | 460,000 Attack, 197,500 Agility, 53,750 Magic, 5 QP | 2,500 ESTIMATE | Black demon (172) in the mine: needs protect from melee (Prayer 43) or a safespot |
-| 10 | Merlin's Crystal, Holy Grail | Holy Grail: Merlin's Crystal, Attack 20 (OSRS) | bat bones, black candle, insect repellent, bread | 382,500 Defence, 275,000 Prayer, 8 QP | 2,319-2,376 MEASURED practice together (868-897 + 1,451-1,479, sections 1j and 1k) | Sir Mordred (39), Black Knight Titan (120, needs Excalibur) |
+| 10 | Merlin's Crystal, Holy Grail | Holy Grail: Merlin's Crystal (`king_arthur.rs2:43`), Attack 20 (`tier20.rs2:16`, the Excalibur wear level) | bat bones, black candle, insect repellent, bread | 382,500 Defence, 275,000 Prayer, 8 QP | 2,319-2,376 MEASURED practice together (868-897 + 1,451-1,479, sections 1j and 1k) | Sir Mordred (39), Black Knight Titan (120, needs Excalibur) |
 | 11 | Dwarf Cannon | none | 2 law, 8 air, 1 water rune for two teleports | 18,750 Crafting, 1 QP; unlocks the cannon for Ranged | 888-925 MEASURED practice, 3 runs (section 1b) | goblins (low) |
 | 12 | The rest, about 50 quests | see `research/quest-route.md` | per quest | to 145 QP | about 60,000 ESTIMATE | per quest |
 
@@ -1498,9 +1498,9 @@ Dragon Slayer (932,500 at about 4,000 ticks = 233 per tick) is the next after th
 - Quest ticks other than Waterfall and Dwarf Cannon are not measured (ESTIMATE). The 8 short quests and Witch's House have no script yet.
 - Waterfall ticks are from a preset at Almera. The walk from Lumbridge to Almera and the helper trade are not in
   the count.
-- OSRS requirements (Prayer 31 for Scorpion Catcher, Attack 20 for Holy Grail, Crafting 35 for Haunted Mine) are
-  not checked in the rev 289 scripts; the gate grep found only the Grand Tree, Watchtower, Viking and Dragon
-  Slayer gates.
+- Prayer 31 for Scorpion Catcher (`scorpcatcher_journal.rs2:9`), Attack 20 for Holy Grail (`tier20.rs2:16`) and
+  Crafting 35 for Haunted Mine (`hauntedmine_journal.rs2:13`) are checked by the rev 289 scripts. The full list of
+  checked requirements is [quest-route](quest-route.md).
 - `research/quest-route.md` says the Grand Tree needs Tree Gnome Village. The rev 289 Grand Tree script gates only
   Agility 25 (CODE-READ grep). Not verified in a run.
 

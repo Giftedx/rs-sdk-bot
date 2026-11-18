@@ -97,6 +97,12 @@ export const packSpell = (level: number, pack: readonly Item[], freeRunes?: Read
 // Stat-lowering debuff spells available at this level with held runes, best XP first.
 export const splashDebuffSpells = (level: number, pack: readonly Item[], freeRunes?: ReadonlySet<number>) =>
     SPLASH_SPELLS.filter(s => s.component !== 'magic:wind_strike' && level >= s.level && hasSpellRunes(s, pack, freeRunes));
+// The spells a banked run casts with the held runes, best XP first: the stat spells, or Wind Strike under Confuse's
+// level, where no stat spell exists.
+export const bankedSplashSpells = (level: number, pack: readonly Item[], freeRunes?: ReadonlySet<number>) => {
+    const debuffs = splashDebuffSpells(level, pack, freeRunes), strike = splashSpell(level);
+    return debuffs.length || !hasSpellRunes(strike, pack, freeRunes) ? debuffs : [strike];
+};
 // Picks the nearest in-reach target for the highest-XP spell not on cooldown for that target.
 export function pickSplashTarget<T extends { index: number; distance: number }>(
     targets: readonly T[],
@@ -288,7 +294,7 @@ export async function runSplash(
     // A site with no bank casts the best spell that the pack pays for: the starter pack has runes for 2 Confuse casts
     // and 15 Wind Strikes.
     const spellNow = () => site.bank ? splashSpell(level()) : packSpell(level(), inv(), activeFreeRunes());
-    const affordable = () => site.bank ? splashDebuffSpells(level(), inv(), activeFreeRunes()).length > 0 : hasSpellRunes(spellNow(), inv(), activeFreeRunes());
+    const affordable = () => site.bank ? bankedSplashSpells(level(), inv(), activeFreeRunes()).length > 0 : hasSpellRunes(spellNow(), inv(), activeFreeRunes());
     const runesHeld = () => SPLASH_RUNES.reduce((n, id) => n + count(inv(), id), 0);
     const onTile = () => { const p = st()?.player; return !!p && p.worldX === TILE.x && p.worldZ === TILE.z; };
     const reach = (n: { tileX?: number; tileZ?: number; x: number; z: number }) => castReaches(TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z }, CAST_RANGE, site.size);
@@ -379,7 +385,7 @@ export async function runSplash(
             // A cast the server cannot make from here walks the account along the fence: back to the tile first.
             if (!onTile() && (!(await walkPath(walker, [{ ...TILE, tol: 0 }], { maxTicks: 200, stop: () => ended })).ok || !onTile())) throw Error(`splash: fence tile ${TILE.x},${TILE.z} not reached`);
             const inReach = (st()?.nearbyNpcs ?? []).filter(n => site.target(n) && n.hp !== 0 && reach(n));
-            const spells = site.bank ? splashDebuffSpells(level(), inv(), activeFreeRunes()) : [spellNow()];
+            const spells = site.bank ? bankedSplashSpells(level(), inv(), activeFreeRunes()) : [spellNow()];
             const pick = pickSplashTarget(inReach, spells, rest, s.tick());
             if (!pick) { waited++; await waitTicks(s, 1); continue; }
             const { target: cow, spell } = pick;

@@ -1,6 +1,6 @@
 {
  "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward. Travel: `at` is the activity's place (a key of `places`, 'anywhere' for inventory work or trades, 'bank' for the nearest bank), `endAt` where it ends, `via` places it visits in order, `bankTrips` round trips to the nearest bank; legs come from haggis-travel.json (bun packages/planner/src/travel-gen.ts). All gameplay techniques and supply-dependent routes are eligible. `supplyResearch` records dated acquisition leads, not caps or exclusions. Required stock must be acquired before execution. `leadTime` on a row is the helper staging work for its supplies (ESTIMATE unless it says otherwise).",
- "updated": "2026-11-12",
+ "updated": "2026-11-18",
  "places": {
   "lumbridge-spawn": {
    "x": 3222,
@@ -11,6 +11,11 @@
    "x": 3211,
    "z": 3306,
    "note": "start of the 157-tile Firemaking line, 4 west rows joined by turns of at most 4 steps (scripts/measure/fm-line-search.ts --safe --from 3222,3218 --radius 100 --turns 6, LINE 1); helpers drop logs here, no bank"
+  },
+  "fm-line-lumbridge-north-end": {
+   "x": 3071,
+   "z": 3312,
+   "note": "west end of the 157-tile Firemaking line (last row z3312 x3103-3071); the firemaker stands here when the row fm-burn ends"
   },
   "lumbridge-kitchen": {
    "x": 3211,
@@ -959,6 +964,7 @@
     "margin": 1
    },
    "at": "fm-line-lumbridge-north",
+   "endAt": "fm-line-lumbridge-north-end",
    "bankTrips": 0,
    "bankTripsSource": "helpers drop the logs on the line (research/supply-floors.md, Firemaking on a line)"
   },
@@ -1749,10 +1755,10 @@
        }
       ],
       "ticks": {
-       "floor": 1196,
-       "realistic": 1330,
+       "floor": 2543,
+       "realistic": 2660,
        "evidence": "ESTIMATE",
-       "source": "rival: air 1-44 in 60 + nature/body 44-99 in 1,136 = 1,196 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06, S21, lab 7-tick cycle, 22 givers); realistic adds their legs T05-06 64 + T20-21 160 = 1,554 (docs/speedrun/skills/runecraft.md section 1: about 1,330 from 1); realistic 1,330 = 1,554 - 224 legs, because the travel model prices the air -> nature leg"
+       "source": "our measured pack cycle times the packs, plus the rival air leg: body altar 44 -> 99 needs 194 packs of 27 essence (977,286 XP at 5,062.5 XP a pack); bench case extra:rune-carriers-body-44-56 (7 carriers, 6 packs from Runecraft 44, seeds 7, 8, 9) takes 12.8, 13.4, 13.2 ticks a pack after the first, which takes 9 or 10 (research/runecraft-ladder.md); floor 194 x 12.8, realistic 194 x 13.4, each plus 60 for air 1-44 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06); the model adds the walks and bank trips (via). Not measured: a run with banking and 22 carriers"
       },
       "via": [
        "nature-ruins"
@@ -1978,10 +1984,10 @@
      "lever": "rival-sea-slug",
      "set": {
       "ticks": {
-       "floor": 2305,
-       "realistic": 2346,
+       "floor": 2282,
+       "realistic": 2309,
        "evidence": "MEASURED",
-       "source": "MEASURED practice (scripts/measure/floor-fish.ts fly, preset floor_fish_fly74, research/skill-rows-measured.md): Fishing 74 (Sea Slug lands 179,375 XP) -> 99 by fly 3-tick with one fish dropped in the knife tick, 2,356 / 2,305 / 2,377 ticks (346-357 XP/tick, about 560 feathers). Floor = best run, realistic = mean. Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
+       "source": "MEASURED lockstep practice (bench case extra:fishing-lumbridge-fly-74-99, scripts/measure/fishing-bench-cases.ts; research/gathering-tricks.md): Fishing 74 (176,037 XP; Sea Slug lands 179,375 XP) -> 99 by the knife reset with one fish dropped in each cycle, 2,282 / 2,309 / 2,286 ticks at seeds 7, 8, 9 (562-565 catches, 358-362 XP/tick, 8-14 stands beside a moved spot). Floor = best seed, realistic = worst seed. The 150 ms wall-clock engine of scripts/measure/floor-fish.ts gives 2,356 / 2,305 / 2,377 (research/skill-rows-measured.md). Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
       },
       "label": "3-tick fly fishing 74 -> 99 after Sea Slug (drop one fish in the knife tick)",
       "via": []
@@ -2237,10 +2243,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1715,
-    "realistic": 1739,
+    "floor": 1626,
+    "realistic": 1746,
     "evidence": "MEASURED",
-    "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), lockstep bench case quester:quest:grandtree at seeds 7, 8 and 9: 1,739, 1,720, 1,715 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival live leg 1,811 (research/rival-atlas-2026-10-16.md:28) is UNVERIFIED"
+    "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, lockstep bench case extra:grandtree-route-state at seeds 7, 8 and 9: 1,746, 1,659, 1,626 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); the start is the planner state at the row: beside King Narnode with Attack 91, Magic 45, Prayer 99, Agility 25, Tree Gnome Village done, no prayer potion, staff of fire, Fire Bolt runes, 2 law runes, 4 lobsters (quester:quest:grandtree, the same quest at Attack 60, Prayer 43 and 3 prayer potions: 1,770, 1,663, 1,761); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (38 casts at seed 7), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival live leg 1,811 (research/rival-atlas-2026-10-16.md:28) is UNVERIFIED"
    },
    "lump": true,
    "xp": {
@@ -2277,10 +2283,10 @@
        "questpoints"
       ],
       "ticks": {
-       "floor": 1715,
-       "realistic": 1739,
+       "floor": 1626,
+       "realistic": 1746,
        "evidence": "MEASURED",
-       "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), lockstep bench case quester:quest:grandtree at seeds 7, 8 and 9: 1,739, 1,720, 1,715 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b) is not measured by us"
+       "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, lockstep bench case extra:grandtree-route-state at seeds 7, 8 and 9: 1,746, 1,659, 1,626 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); the start is the planner state at the row: beside King Narnode with Attack 91, Magic 45, Prayer 99, Agility 25, Tree Gnome Village done, no prayer potion, staff of fire, Fire Bolt runes, 2 law runes, 4 lobsters (quester:quest:grandtree, the same quest at Attack 60, Prayer 43 and 3 prayer potions: 1,770, 1,663, 1,761); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (38 casts at seed 7), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b) is not measured by us"
       }
      }
     }
@@ -2479,10 +2485,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 30,
-    "realistic": 30,
+    "floor": 18,
+    "realistic": 18,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Short rest quests\": quest-doric.ts 30/30/30 on practice from preset quest_doric (start inside Doric's house; the walk to it not counted)"
+    "source": "research/aio-bench.md \"Planner quest rows\": scripts/generated/quest-doric.ts, preset quest_doric (inside Doric's house; the walk to it not counted), lockstep bench case quester:quest:doric at seeds 7, 8 and 9: 18, 18, 18 ticks"
    },
    "xp": {
     "mining": 32500
@@ -2493,7 +2499,7 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "quest_doric.rs2:97-101 (1,300 Mining XP x25 = 32,500, 1 QP); research/leader-forensics.md:202; ticks MEASURED practice 30/30/30",
+   "source": "quest_doric.rs2:97-101 (1,300 Mining XP x25 = 32,500, 1 QP); research/leader-forensics.md:202; ticks MEASURED 18/18/18 (seeds 7/8/9, lockstep)",
    "supplies": [
     {
      "item": "clay",
@@ -2577,10 +2583,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 749,
-    "realistic": 784,
+    "floor": 423,
+    "realistic": 453,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Medium rest quests\": quest-elena.ts 780/784/749 on practice (floor = best run, realistic = worst run; the walk to start not counted)"
+    "source": "research/aio-bench.md \"Planner quest rows\": scripts/generated/quest-elena.ts, preset quest_elena (in Edmond's house, East Ardougne; every skill 99; the walk to it not counted), lockstep bench case quester:quest:elena at seeds 7, 8 and 9: 430, 423, 453 ticks (floor = best seed, realistic = worst seed)"
    },
    "xp": {
     "mining": 60625
@@ -2595,7 +2601,7 @@
     "role": "add"
    },
    "evidence": "MEASURED",
-   "source": "quest_elena.rs2:12 stat_advance(mining, 24250) = 60,625 XP at 25x (CODE-READ); unlocks Ardougne Teleport (teleport.rs2:22,35); ticks MEASURED 780/784/749",
+   "source": "quest_elena.rs2:12 stat_advance(mining, 24250) = 60,625 XP at 25x (CODE-READ); unlocks Ardougne Teleport (teleport.rs2:22,35); ticks MEASURED 430/423/453 (seeds 7/8/9, lockstep)",
    "supplies": [
     {
      "item": "dwellberries",
@@ -4077,7 +4083,7 @@
     "floor": 2575,
     "realistic": 2634,
     "evidence": "MEASURED",
-    "source": "quests-short without Doric's Quest (30/30/30, 1 QP on row doric): research/quest-points-board.md \"Short rest quests\": Sheep Shearer 70/70/70 (1 QP); Imp Catcher 38/38/38 (1 QP); Witch's Potion 80/78/79 (1 QP); Rune Mysteries 449/432/441 (1 QP); The Restless Ghost 519/516/519 (1 QP); Vampire Slayer 338/330/331 (3 QP); Gertrude's Cat 369/385/397 (1 QP); Monk's Friend 327/328/327 (1 QP); Fishing Contest 415/415/415 (1 QP)"
+    "source": "quests-short without Doric's Quest (18/18/18, 1 QP on row doric): research/quest-points-board.md \"Short rest quests\": Sheep Shearer 70/70/70 (1 QP); Imp Catcher 38/38/38 (1 QP); Witch's Potion 80/78/79 (1 QP); Rune Mysteries 449/432/441 (1 QP); The Restless Ghost 519/516/519 (1 QP); Vampire Slayer 338/330/331 (3 QP); Gertrude's Cat 369/385/397 (1 QP); Monk's Friend 327/328/327 (1 QP); Fishing Contest 415/415/415 (1 QP)"
    },
    "lump": true,
    "qp": 11,
@@ -4101,7 +4107,7 @@
        "floor": 2537,
        "realistic": 2596,
        "evidence": "MEASURED",
-       "source": "quests-short without Doric's Quest (30/30) and Imp Catcher (38/38, row imp-catcher)"
+       "source": "quests-short without Doric's Quest (18/18) and Imp Catcher (38/38, row imp-catcher)"
       }
      }
     }
@@ -4115,10 +4121,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 14722,
-    "realistic": 15841,
+    "floor": 14396,
+    "realistic": 15510,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 780/784/749 (quest-elena.ts, 1 QP); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)"
+    "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 430/423/453 (quest-elena.ts, 1 QP; lockstep bench seeds 7/8/9); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)"
    },
    "lump": true,
    "qp": 33,
@@ -4132,7 +4138,7 @@
     "waterfall"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 780/784/749 (quest-elena.ts, 1 QP); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)",
+   "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 430/423/453 (quest-elena.ts, 1 QP; lockstep bench seeds 7/8/9); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)",
    "patches": [
     {
      "lever": "spiders-combat",
@@ -4142,7 +4148,7 @@
        "floor": 13973,
        "realistic": 15057,
        "evidence": "MEASURED",
-       "source": "quests-medium without Plague City (749/784, 1 QP on row plague-city)"
+       "source": "quests-medium without Plague City (423/453, 1 QP on row plague-city)"
       }
      }
     }

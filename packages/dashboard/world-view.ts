@@ -223,7 +223,7 @@ export type WildernessHotspot = {
 };
 
 export const WILDERNESS_HOTSPOTS: readonly WildernessHotspot[] = [
-    { id: 'edgeville-ditch', label: 'Edgeville Ditch', x: 3094, z: 3520, level: 0, wild: 1, band: 'tele', note: 'Lvl 1 Wilderness ditch' },
+    { id: 'edgeville-ditch', label: 'Wilderness Edge', x: 3094, z: 3520, level: 0, wild: 1, band: 'tele', note: 'Lvl 1 Wilderness edge' },
     { id: 'chaos-temple', label: 'Chaos Temple', x: 3236, z: 3610, level: 0, wild: 12, band: 'tele', note: 'Lvl 12 Chaos Temple altar' },
     { id: 'green-dragons', label: 'Green Dragons', x: 3092, z: 3810, level: 0, wild: 37, band: 'deep', note: 'Lvl 37 Green Dragons' },
     { id: 'lava-maze', label: 'Lava Maze', x: 3067, z: 3856, level: 0, wild: 43, band: 'deep', note: 'Lvl 43 Lava Maze & runite' },

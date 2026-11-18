@@ -200,7 +200,7 @@ Source -> local consumer -> adapt -> check: the same deadline and prerequisite s
 
 Counts come from the tier tables in `haggis.ts` (greedy best item per level, `planSkill` from `plan.ts`), scenario
 (a); Herblore is a fixed drop mix in the row. Every row is stageable: no active row needs an item of the
-`unsourceable` list in `haggis-boards.json` (`research/supply-logistics.md`). Item names for potion secondaries and enchant runes are the OSRS recipes (ESTIMATE); levels and XP are from
+`unsourceable` list in `haggis-boards.json` (`research/supply-logistics.md`). Item names for potion secondaries and enchant runes are not yet checked against this server's content (ESTIMATE); levels and XP are from
 this server's config files.
 
 | Board | Method | Helper supplies |
