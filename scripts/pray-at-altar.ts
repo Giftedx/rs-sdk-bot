@@ -2,11 +2,13 @@
 // (skill_prayer/scripts/altar.rs2 pray_at_altar). The planner treats Protect from Melee as usable only at 43 points or
 // more (danger.ts deadlyTo, from the current level), so a drained account first needs this before a walk onto ground
 // where melee hunters live.
-// Usage: bun scripts/pray-at-altar.ts <account> [ALTAR=x,z]   (default: the altar in PRAYER_ALTARS nearest the account)
+// Usage: bun scripts/pray-at-altar.ts <account> [ALTAR=x,z]   (an argument or the ALTAR environment variable; default: the altar of
+// SAFE_ALTARS nearest the account, never one in the Wilderness)
 import { openBot, finish } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
 import { walkTarget } from './walk-to';
+import { wildernessLevel } from '../packages/core/src/prayer-guard';
 
 export type Altar = { id: number; x: number; z: number; level: number; label: string };
 // Loc placements from the map files (vendor/rs-sdk/server/content/maps/m*.jm2, LOC section) of the locs with
@@ -21,9 +23,17 @@ export const PRAYER_ALTARS: readonly Altar[] = [
     { id: 409, x: 3243, z: 3205, level: 0, label: 'Lumbridge church' },
     { id: 409, x: 2991, z: 3177, level: 0, label: 'Port Sarim church' },
 ];
-export const nearestAltar = (at: { x: number; z: number; level: number }, list: readonly Altar[] = PRAYER_ALTARS): Altar =>
+// An altar in the Wilderness (the zone test of packages/core/src/prayer-guard.ts, the Wilderness zone data, no hand list).
+export const inWilderness = (a: Pick<Altar, 'x' | 'z'>): boolean => wildernessLevel(a.x, a.z) > 0;
+// The default list holds no altar in the Wilderness: an account that needs prayer must never be sent there by a default
+// (live: three accounts at Edgeville prayed at the Wilderness chaos temple, the nearest altar). An altar there is taken
+// only when ALTAR names it.
+export const SAFE_ALTARS: readonly Altar[] = PRAYER_ALTARS.filter(a => !inWilderness(a));
+export const nearestAltar = (at: { x: number; z: number; level: number }, list: readonly Altar[] = SAFE_ALTARS): Altar =>
     [...list].sort((a, b) => Math.max(Math.abs(a.x - at.x), Math.abs(a.z - at.z)) + (a.level === at.level ? 0 : 50)
         - (Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z)) + (b.level === at.level ? 0 : 50)))[0]!;
+// The altar that the caller names: the `ALTAR=x,z` argument (as the usage line says), else the ALTAR environment variable.
+export const altarText = (args: readonly string[], env: string | undefined): string | undefined => args.find(a => /^ALTAR=/.test(a))?.slice(6) ?? (env || undefined);
 export function parseAltar(text: string | undefined, list: readonly Altar[] = PRAYER_ALTARS): Altar | undefined {
     if (!text) return undefined;
     const m = text.match(/^(\d+),(\d+)$/);
@@ -56,7 +66,7 @@ if (import.meta.main) {
     const s = await openBot(account);
     try {
         const p = s.sdk.getState()?.player;
-        const altar = parseAltar(process.env.ALTAR) ?? nearestAltar({ x: p?.worldX ?? 0, z: p?.worldZ ?? 0, level: p?.level ?? 0 });
+        const altar = parseAltar(altarText(process.argv.slice(3), process.env.ALTAR)) ?? nearestAltar({ x: p?.worldX ?? 0, z: p?.worldZ ?? 0, level: p?.level ?? 0 });
         const r = await prayAtAltar(s, altar);
         await finish([s], r.ok, `pray-at-altar ${r.detail}`);
     } catch (e) { await finish([s], false, String(e)); }

@@ -108,6 +108,25 @@ describe('pickKit', () => {
         expect(accountOf(status(12))!.prayerPoints).toBe(12);
         expect(accountOf(status())!.prayerPoints).toBeUndefined();
     });
+    test('the carry check reads what the account wears and carries now, not the bank and the pack together', () => {
+        const check = (a: Account) => pickKit(a, gear, rule, NOW, undefined, name, undefined, true, true);
+        const packed = [...KIT_PACK, it(385, 20)];
+        // Worn kit, the pack with its supplies and 20 sharks: ready.
+        expect(check(full('A', { pack: packed })).reasons).toEqual([]);
+        // The same holdings with the pack in the bank (a failed trip deposited it): the bank-and-pack check says ready, the carry check names each fault.
+        const deposited = full('A', { pack: [], bank: [...KIT_PACK, it(385, 20)] });
+        expect(pickKit(deposited, gear, rule, NOW).ready).toBe(true);
+        const faults = check(deposited).reasons;
+        expect(faults).toContain('pack lacks 1 Magic shortbow: the kit step takes it');
+        expect(faults).toContain('pack lacks 2 Law rune (0 of 2): the kit step takes it');
+        expect(faults.some(f => /^pack holds 0 food, under the floor of 10 of 20/.test(f))).toBe(true);
+        // A piece in the bank that the kit wears: named as not worn.
+        expect(check(full('A', { pack: packed, worn: KIT_WORN.filter(w => w.slot !== 0), bank: [it(385, 60), it(1163)] })).reasons.some(r => /^not worn: .*helm/i.test(r))).toBe(true);
+        // A quiver under the least arrows while the bank holds more of them.
+        expect(check(full('A', { pack: packed, worn: [...KIT_WORN.filter(w => w.slot !== 13), worn(884, 13, 40)], bank: [it(385, 60), it(884, 300)] })).reasons.some(r => /^not worn: 40 Iron arrow in the quiver \(needs 100\)/.test(r))).toBe(true);
+        // Food at the floor is carried enough.
+        expect(check(full('A', { pack: [...KIT_PACK, it(385, 10)] })).reasons).toEqual([]);
+    });
     test('lobsters fill the food slots that the sharks leave, as the bank trip takes them', () => {
         const lobsters = pickKit(full('A', { bank: [it(379, 500)] }), gear, rule, NOW);
         expect([lobsters.ready, lobsters.food, lobsters.foodHeld, lobsters.foodRows]).toEqual([true, 20, 500, [{ id: 379, name: 'Lobster', count: 20 }]]);
