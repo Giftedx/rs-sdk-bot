@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,supervisorEndLine,persistentEnd,startable,applyResume } from './swarm';
+import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,persistentEnd } from './swarm';
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
