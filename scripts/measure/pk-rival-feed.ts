@@ -37,7 +37,7 @@ export function decodeAppearance(b64: string): { name: string; combat: number; w
 }
 const DEFAULT_NAMES = 'goondelf,ligma,sugma';
 // Animations (content pack/seq.pack): the dagger's lunge and hack, its special, an eat, a death.
-const SEQ = { lunge: 376, hack: 377, puncture: 1062, eat: 829, death: 836 } as const;
+export const SEQ = { lunge: 376, hack: 377, puncture: 1062, eat: 829, death: 836 } as const;
 // Head icon bits (player/configs/headicon.constant).
 const HEAD = { skull: 1, melee: 8, ranged: 16, magic: 32 } as const;
 const DX = [-1, 0, 1, -1, 1, -1, 0, 1], DZ = [1, 1, 1, 0, 0, -1, -1, -1];
@@ -165,7 +165,7 @@ if (import.meta.main) {
             ws.onmessage = e => {
                 const m = feed.expand(JSON.parse(String(e.data)));
                 // A new socket sends every player again, so the reader starts its slots again at each hello.
-                if (m.t === 'hello') line({ t: 'hello', r, at: Date.now(), tick: m.tick });
+                if (m.t === 'hello') line({ t: 'hello', r, at: Date.now(), tick: m.tick, tickMs: m.tickMs });
                 else if (m.t === 'roster') line({ t: 'roster', k: m.k, p: (m.p ?? []).filter((p: any) => watch.has(String(p[1]).toLowerCase()) || wild(p[3]) > 0) });
                 else if (m.t === 'tick') { if (r === 0) ticks++; if (m.p?.length || m.rp?.length) line({ t: 'tick', r, k: m.k, p: m.p, rp: m.rp }); }
             };

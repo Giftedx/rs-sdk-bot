@@ -45,6 +45,7 @@ import { kitSkills, levelsBeforeRoute } from './pk-kits';
 import { createAutopilotProgression } from './autopilot-progression';
 import { accountFromStatus } from '../packages/planner/src/progression-catalog';
 import {boundAccounts,type AccountBindingState} from '../packages/core/src/coordinator-accounts';
+import { COORDINATOR_JOBS_FILE } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -562,8 +563,27 @@ export function plannerOwns(owners: ReturnType<typeof loadOwners>, side: string,
     return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !reserved.has(lower) && !died.has(lower);
 }
 
-export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
+// The write step of a pass: `unchanged` is true while the files that the plan came from hold the text that the plan
+// read, and the coordinator queue binds the same accounts.
+export interface PassWrite { unchanged(): boolean; write(): string[] }
+// The files of a plan that another writer changes: the plan file and the coordinator jobs file (under the plan lock),
+// the owner list of the fleet (fleet-sync moves an account to another side) and the planner state of this side.
+export const passInputFiles = (planFile: string): string[] =>
+    [planFile, join(root, COORDINATOR_JOBS_FILE), join(FLEET_DIR(), 'owners.json'), join(prac, 'autopilot', `${mySide()}.json`)];
+// The accounts that the open tasks of the coordinator queue bind, as one text. The coordinator saves its state with no
+// plan lock and for many reasons, so the write step compares this answer and not the text of the state file.
+export function queueBoundAccounts(queue: any): string {
+    if (queue?.version !== 1 || !Array.isArray(queue.tasks)) return 'unavailable';
+    const open = queue.tasks.filter((r: any) => r?.status === 'pending' || r?.status === 'running');
+    return JSON.stringify([...new Set<string>(open.flatMap((r: any) => boundAccounts(r.spec, queue) ?? []).map((a: string) => a.toLowerCase()))].sort());
+}
+// With `defer`, a pass that has something to write does not write: it gives its write step to `defer` (lockedPass).
+export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, defer?: (step: PassWrite) => void): string[] {
     if (!dry && isPaused()) return [PAUSED];
+    // The text of each input file before the plan reads it.
+    const inputFiles = passInputFiles(planFile);
+    const inputText = (f: string) => { try { return readFileSync(f, 'utf8'); } catch { return null; } };
+    const inputBefore = inputFiles.map(inputText);
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
     // The accounts that a swarm.json reservation holds (a job with no script: the main and specialist accounts, the gang squad) and the
@@ -761,27 +781,50 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         log.push(`AUTOPILOT ${fresh.includes(x.account) ? 'assign' : 'keep'} ${x.account} ${x.template.id} ${jobRate(x)} ${x.reason}`);
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
-    if (isPaused()) return [PAUSED];
-    writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
-    if (heldResources(swarm.jobs) !== heldResources(jobs)) log.push(CLAIM_CHANGED);
-    // The controller's own stop file goes once this pass hands the account work (a job, new or kept, or a coin order
-    // the fleet agent will log it in for) and the account is offline: a run still ending on that file must find it. A
-    // kept job counts: the pass that assigns a job may find the last run still ending, and every later pass keeps it
-    // (live: an account stood 40 minutes behind such a file, its job enabled and never started).
-    const handed = handedAccounts(out, funding.orders);
-    for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
-        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
-        if (!clearSwarmStop(join(prac, 'stop-'+n))) continue;
-        log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
-    }
-    mkdirSync(join(prac, 'autopilot'), { recursive: true });
-    writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
-    mkdirSync(join(prac,'progression-system'),{recursive:true});
-    writeAtomic(join(prac,'progression-system',`fleet-${side}.json`),JSON.stringify({version:1,side,at:now,decisions:progression.decisions(),requests:refined.requests,gaps:refined.gaps,reservations:refined.reservations,search:refined.search},null,1)+'\n');
-    if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
-    for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
+    const write = (): string[] => {
+        if (isPaused()) return [PAUSED];
+        writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
+        if (heldResources(swarm.jobs) !== heldResources(jobs)) log.push(CLAIM_CHANGED);
+        // The controller's own stop file goes once this pass hands the account work (a job, new or kept, or a coin order
+        // the fleet agent will log it in for) and the account is offline: a run still ending on that file must find it. A
+        // kept job counts: the pass that assigns a job may find the last run still ending, and every later pass keeps it
+        // (live: an account stood 40 minutes behind such a file, its job enabled and never started).
+        const handed = handedAccounts(out, funding.orders);
+        for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
+            const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
+            if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
+            if (!clearSwarmStop(join(prac, 'stop-'+n))) continue;
+            log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
+        }
+        mkdirSync(join(prac, 'autopilot'), { recursive: true });
+        writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
+        mkdirSync(join(prac,'progression-system'),{recursive:true});
+        writeAtomic(join(prac,'progression-system',`fleet-${side}.json`),JSON.stringify({version:1,side,at:now,decisions:progression.decisions(),requests:refined.requests,gaps:refined.gaps,reservations:refined.reservations,search:refined.search},null,1)+'\n');
+        if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
+        for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
+        return log;
+    };
+    if (!defer) return write();
+    const queueBefore = queueBoundAccounts(queue);
+    defer({ unchanged: () => inputFiles.every((f, i) => inputText(f) === inputBefore[i]) && queueBoundAccounts(readJson(join(prac, 'coordinator/state.json'), null)) === queueBefore, write });
     return log;
+}
+
+// One planning pass. The plan is made with no lock. On the live state a plan takes longer than the 15 s that another
+// writer waits for the plan lock (packages/core/src/plan-lock.ts), and a coordinator start ended on that wait. The lock
+// is held only to compare the files that the plan read with the files on disk, and to write. A changed file means that
+// another writer got the lock after the plan read it, so the pass plans again from the new files.
+export const PLAN_ATTEMPTS = 3;
+export async function lockedPass(planFile: string, dry: boolean, lock: <T>(action: () => T) => Promise<T>, isPaused = swarmPaused): Promise<string[]> {
+    for (let attempt = 1; ; attempt++) {
+        let step: PassWrite | undefined;
+        const lines = pass(planFile, dry, isPaused, s => { step = s; });
+        if (!step) return lines;
+        const write = step;
+        const written = await lock(() => write.unchanged() ? write.write() : null);
+        if (written) return written;
+        if (attempt >= PLAN_ATTEMPTS) return [`AUTOPILOT hold: another writer changed the account plan during each of ${PLAN_ATTEMPTS} plans`];
+    }
 }
 
 // The assignments (account, template and log offset) whose trainer reached its target. A pass that re-plans the account
@@ -806,30 +849,42 @@ export function trainersDone(planFile: string): string[] {
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
 }
 
+// What the lines of a pass mean for the daemon. A first line "AUTOPILOT hold: ..." is a hold of the whole pass: it
+// wrote nothing. Such a pass is "held", so the trainer poll passes again for the trainers that it found finished. Only
+// a pause is a hold that is in order.
+export function passOutcome(lines: readonly string[]): { outcome: 'applied' | 'held'; result: string } {
+    const whole = 'AUTOPILOT hold: ', first = lines[0] ?? '';
+    if (first === PAUSED) return { outcome: 'held', result: 'RESULT ok autopilot held: swarm is paused' };
+    if (first.startsWith(whole)) return { outcome: 'held', result: `RESULT fail autopilot held, nothing written: ${first.slice(whole.length)}` };
+    return { outcome: 'applied', result: `RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}` };
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2), planFile = resolve(args.find(a => !a.startsWith('--')) ?? join(root, 'swarm.json'));
-    // The whole pass runs under the account-plan lock: the coordinator installs jobs into its overlay under the same lock.
-    // The timer and the trainer check share one pass at a time: a second call joins the pass in flight.
+    // The write step of a pass runs under the account-plan lock (lockedPass): the coordinator installs jobs into its
+    // overlay under the same lock. The timer and the trainer check share one pass at a time: a second call joins the
+    // pass in flight.
     const dry = args.includes('--dry');
     let inFlight: Promise<'applied' | 'held' | 'failed'> | null = null;
-    const hold = () => {
-        console.log(PAUSED);
-        console.log('RESULT ok autopilot held: swarm is paused');
+    const hold = (lines: readonly string[] = [PAUSED]) => {
+        console.log(lines[0]);
+        console.log(passOutcome(lines).result);
         return 'held' as const;
     };
     const once = () => {
         if (!dry && swarmPaused()) return Promise.resolve(hold());
         return inFlight ??= (async () => {
             try {
-                const lines = await withPlanWrite(() => pass(planFile, dry), join(prac, 'coordinator'));
-                if (lines[0] === PAUSED) return hold();
+                const lines = await lockedPass(planFile, dry, action => withPlanWrite(action, join(prac, 'coordinator')));
+                const { outcome, result } = passOutcome(lines);
+                if (outcome === 'held') return hold(lines);
                 console.log(lines.join('\n'));
                 // Outside the plan lock: fleet-sync takes the fleet-data write lock, so it queues behind the agent's sync.
                 // A sync that fails to start leaves the claim to the agent's next sync.
                 if (lines.includes(CLAIM_CHANGED)) try {
                     Bun.spawn([process.execPath, 'scripts/fleet-sync.ts'], { cwd: root, env: process.env, stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', windowsHide: true }).unref();
                 } catch { /* the fleet agent's next sync publishes it */ }
-                console.log(`RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}`);
+                console.log(result);
                 return 'applied';
             } catch (e) {
                 console.log(`RESULT fail autopilot ${String(e)}`);

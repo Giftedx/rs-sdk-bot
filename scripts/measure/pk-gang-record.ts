@@ -35,12 +35,12 @@ const total = (h: Hist) => Object.values(h).reduce((a, b) => a + b, 0);
 
 type Entity = { slot: number; name: string; x: number; z: number; combat: number; worn: string[]; weapon: string; cls?: Style; head: number; fe?: number; hp?: number; hpAt?: number; hpStale?: boolean; region?: number; anim?: { k: number; name: string }; gone?: boolean };
 type Trip = { k: number; tiles: number; cands: { name: string; d: number }[]; maxD: number; far: Tile; firstAttack?: number; lastAttack?: number; target?: string; targetD?: number };
-type Low = { k: number; hp: number; minHp: number; eatsAfter: number; died?: number; lastAttack?: number; out?: number; post?: number };
+type Low = { k: number; hp: number; minHp: number; eatsAfter: number; lastAttackHp?: number; wild: number; died?: number; lastAttack?: number; out?: number; post?: number };
 // What one gang account did, over every trace.
 export type Acc = {
     frames: number; place: Hist; stand: Hist; steps: { run: number; walk: number }; maxDist: number; hours: Hist; worn: Hist; wornAfterDeath: string[];
     attacks: number; specials: number; intervals: Hist; intervalsWithEat: Hist; attackDist: Hist; targetStep: Hist; damage: Record<string, Hist>; poisonOnTarget: Hist;
-    specTargetHp: Hist; specOwnHp: Hist; eats: number; otherConsumes: { k: number; trace: string; hp?: number; hpAge?: number; ticksSinceAttack?: number; wilderness: number }[]; eatHp: Hist; eatLag: Hist; heal: Hist; comboEats: number;
+    specTargetHp: Hist; specOwnHp: Hist; anims: Hist; eats: number; otherConsumes: { k: number; trace: string; hp?: number; hpAge?: number; ticksSinceAttack?: number; wilderness: number }[]; eatHp: Hist; eatLag: Hist; heal: Hist; comboEats: number;
     prayerOn: Hist; lag: Record<'attacked' | 'waiting', Hist>; lagMiss: Record<'attacked' | 'waiting', number>; holds: { off: number[]; changed: number[] }; splats: Record<string, Hist>; splatsAmbiguous: number; poisonSplats: number; skullOnAfterAttack: Hist; skullHolds: number[];
     switches: Hist; choiceRank: Hist; hitters: Hist; prayedAgainst: Record<string, { attacks: number; prayed: number; players: Set<string> }>; freezes: { k: number; spot: string; trace: string; protect: string; ticksToFirstStep?: number; ticksToNextAttack?: number }[];
     trips: { withAttack: number; noAttack: number; response: number[]; back: number[]; pathOverLine: number[]; duration: number[]; maxDist: number[]; targetDist: number[]; noAttackPlace: Hist; leftWith: Hist };
@@ -59,7 +59,7 @@ export type Sighting = { record: string; ourCombat: number; ticks: number; from:
 const newAcc = (): Acc => ({
     frames: 0, place: {}, stand: {}, steps: { run: 0, walk: 0 }, maxDist: 0, hours: {}, worn: {}, wornAfterDeath: [],
     attacks: 0, specials: 0, intervals: {}, intervalsWithEat: {}, attackDist: {}, targetStep: {}, damage: {}, poisonOnTarget: {},
-    specTargetHp: {}, specOwnHp: {}, eats: 0, otherConsumes: [], eatHp: {}, eatLag: {}, heal: {}, comboEats: 0,
+    specTargetHp: {}, specOwnHp: {}, anims: {}, eats: 0, otherConsumes: [], eatHp: {}, eatLag: {}, heal: {}, comboEats: 0,
     prayerOn: {}, lag: { attacked: {}, waiting: {} }, lagMiss: { attacked: 0, waiting: 0 }, holds: { off: [], changed: [] }, splats: {}, splatsAmbiguous: 0, poisonSplats: 0, skullOnAfterAttack: {}, skullHolds: [],
     switches: {}, choiceRank: {}, hitters: {}, prayedAgainst: {}, freezes: [],
     trips: { withAttack: 0, noAttack: 0, response: [], back: [], pathOverLine: [], duration: [], maxDist: [], targetDist: [], noAttackPlace: {}, leftWith: {} },
@@ -101,6 +101,7 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
     const st = Object.fromEntries(GANG.map(n => [n, {} as { lastAttack?: number; lastEat?: number; lowSince?: number; heal?: { k: number; hp: number }; prayAt?: number; skullAt?: number; pend?: { k: number; cls: Style; role: 'attacked' | 'waiting' };
         atPost?: boolean; trip?: Trip; low?: Low; dead?: { i: number }; altarAt?: number; monAt?: number; lastT?: { name: string; x: number; z: number; k: number }; lastTile?: Tile; frozen?: Acc['freezes'][number] }]));
     const gangEntity = (n: string) => [...bySlot.values()].find(e => e.name === n && !e.gone);
+    const windows: { k: number; g: Acc; target: Entity; left: number; key: string }[] = [];
     const hits: { k: number; by: string; target: string; multi: boolean }[] = [], attacked = new Set<string>(), near = new Map<string, { frames: number; combat: number; minD: number }>();
     let anchor: { at: number; tick: number } | undefined, k0 = 0, k1 = 0, frames = 0;
     const wall = (k: number) => (anchor ? anchor.at + (k - anchor.tick) * TICK_MS : undefined);
@@ -190,6 +191,7 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
             if (s.pend && k - s.pend.k > 8) { g.lagMiss[s.pend.role]++; s.pend = undefined; }
             if (r.sp && FREEZE_SPOT[r.sp[0]]) { s.frozen = { k, spot: FREEZE_SPOT[r.sp[0]]!, trace: path, protect: protect(e.head) }; g.freezes.push(s.frozen); }
             const an: number | undefined = r.an?.[0];
+            if (an !== undefined && an >= 0) bump(g.anims, seq(an));
             if (an === SEQ.eat) {
                 // A reading is fresh for 20 ticks. An eat at 90 or more, or with an old reading, is not an eat for Hitpoints: a drink plays the same animation (anti_poison.rs2).
                 const fresh = e.hp !== undefined && !e.hpStale && e.hpAt !== undefined && k - e.hpAt <= 20;
@@ -201,7 +203,7 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
             } else if (an !== undefined && (an === SEQ.special || (SEQ.attack as readonly number[]).includes(an))) attack: {
                 const spec = an === SEQ.special, target = e.fe !== undefined && e.fe >= 32768 ? bySlot.get(e.fe - 32768) : undefined;
                 if (s.lastAttack !== undefined && k - s.lastAttack <= 12) { bump(g.intervals, k - s.lastAttack); if (s.lastEat !== undefined && s.lastEat > s.lastAttack) bump(g.intervalsWithEat, k - s.lastAttack); }
-                s.lastAttack = k; if (s.frozen && s.frozen.ticksToNextAttack === undefined && k - s.frozen.k <= 60) s.frozen.ticksToNextAttack = k - s.frozen.k; if (s.low) s.low.lastAttack = k - s.low.k;
+                s.lastAttack = k; if (s.frozen && s.frozen.ticksToNextAttack === undefined && k - s.frozen.k <= 60) s.frozen.ticksToNextAttack = k - s.frozen.k; if (s.low) { s.low.lastAttack = k - s.low.k; s.low.lastAttackHp = e.hp; }
                 if (!target) break attack;
                 g.attacks++; if (spec) g.specials++; attacked.add(target.name);
                 bump(g.attackDist, cheb(e, target));
@@ -211,10 +213,9 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
                 if (s.lastT && s.lastT.name === target.name && k - s.lastT.k <= 8) bump(g.targetStep, Math.min(10, cheb(s.lastT, target)));
                 else if (s.lastT && s.lastT.name !== target.name && k - s.lastT.k <= 40) { const old = [...bySlot.values()].find(o => o.name === s.lastT!.name); bump(g.switches, old && !old.gone ? 'the old player was in view' : 'the old player was gone'); }
                 s.lastT = { name: target.name, x: target.x, z: target.z, k };
-                const same = seen.filter(o => o.e !== e && isGang(o.e.name) && o.e.fe === e.fe && (o.r.an?.[0] === SEQ.special || (SEQ.attack as readonly number[]).includes(o.r.an?.[0]))).length;
-                const trec = seen.find(o => o.e === target)?.r;
-                if (trec?.hm) { const own = (trec.hm as number[][]).filter(h => h[1] !== 2); for (const h of trec.hm as number[][]) if (h[1] === 2) bump(g.poisonOnTarget, h[0]!);
-                    if (own.length && !same && own.length <= (spec ? 2 : 1)) for (const h of own) bump((g.damage[`${spec ? 'special' : 'attack'} on a player ${target.head & 8 ? 'with' : 'without'} Protect from Melee`] ??= {}), h[0]!); else if (own.length) g.splatsAmbiguous++; }
+                // The splats of an attack show in the tick of its animation or in the next one, by the order in which the
+                // engine takes the two players; a special has a second hit one tick later (pvp_dragon_dagger.rs2 p_delay).
+                windows.push({ k, g, target, left: spec ? 2 : 1, key: `${spec ? 'special' : 'attack'} on a player ${target.head & 8 ? 'with' : 'without'} Protect from Melee` });
                 hits.push({ k, by: e.name, target: target.name, multi: multi(target) });
                 bump(multi(target) ? group.pile.multi : group.pile.single, 1 + new Set(hits.filter(h => h.target === target.name && h.by !== e.name && k - h.k <= 4).map(h => h.by)).size);
                 const tr = s.trip; if (tr) { tr.lastAttack = k; if (tr.firstAttack === undefined) { tr.firstAttack = k; tr.target = target.name; tr.targetD = cheb(target, POST); if (cheb(e, POST) >= 20) g.trips.pathOverLine.push(Math.round((100 * tr.tiles) / cheb(e, POST)) / 100);
@@ -227,11 +228,16 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
                     if (s.heal && k - s.heal.k <= 12) { const heal = hp + dmg - s.heal.hp; if (heal > 0 && heal <= 30) bump(g.heal, heal); }
                     s.heal = undefined; e.hp = hp; e.hpAt = k; e.hpStale = false;
                     if (hp > 74) s.lowSince = undefined; else s.lowSince ??= k;
-                    if (hp <= 40 && hp > 0 && !s.low && !s.dead) s.low = { k, hp, minHp: hp, eatsAfter: 0 };
+                    if (hp <= 40 && hp > 0 && !s.low && !s.dead) s.low = { k, hp, minHp: hp, eatsAfter: 0, wild: wild(e) };
                     if (s.low) s.low.minHp = Math.min(s.low.minHp, hp);
                 }
             }
         }
+        // A window lasts 2 ticks. A target with windows of two gang accounts is left out: its splats have no one owner.
+        for (const { e, r } of seen) { if (!r.hm) continue; const open = windows.filter(w => w.target === e && w.left > 0 && k - w.k <= 2); if (!open.length) continue;
+            const owners = new Set(open.map(w => w.g));
+            for (const hit of r.hm as number[][]) { if (hit[1] === 2) { bump(open[0]!.g.poisonOnTarget, hit[0]!); continue; } if (owners.size > 1) { open[0]!.g.splatsAmbiguous++; continue; } const w = open.find(x => x.left > 0); if (w) { bump((w.g.damage[w.key] ??= {}), hit[0]!); w.left--; } } }
+        for (let i = windows.length - 1; i >= 0; i--) if (k - windows[i]!.k >= 2 || windows[i]!.left <= 0) windows.splice(i, 1);
     }
     for (const n of GANG) { const s = st[n]!; if (s.low) acc[n]!.lows.push({ ...s.low, trace: path }); }
     for (const [name, n] of near) if (n.frames >= 5 && !attacked.has(name)) { bump(group.ignored, n.combat); if (group.ignoredExamples.length < 12) group.ignoredExamples.push(`${name} combat ${n.combat}, ${n.frames} frames, ${n.minD} tiles at the least`); }
@@ -242,6 +248,22 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
     group.sources.push({ path, ticks: k1 - k0, from: iso(k0), to: iso(k1), frames });
 }
 
+// The hiscore row of a name: the newest page of the `hiscores` mode, else the page saved by .practice/rival-dds/hs.ts.
+export function hiscoreLevels(data: string, name: string): { rows?: Record<string, string>; file: string } {
+    const dir = join(data, '.practice', 'gang-record'), newer = existsSync(dir) ? readdirSync(dir).filter(x => x.startsWith(`hs-${name}-`)).sort().pop() : undefined;
+    const file = newer ? join(dir, newer) : join(data, '.practice', 'rival-dds', `hs-${name}.html`);
+    if (!existsSync(file)) return { file };
+    const t = readFileSync(file, 'utf8').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, '\n').split('\n').map(s => s.trim()).filter(Boolean), i = t.indexOf('Time'), rows: Record<string, string> = {};
+    for (let k = i + 1; k + 3 < t.length; k += 4) rows[t[k]!] = t[k + 2]!;
+    return { rows, file };
+}
+// The range of the Hitpoints at which an account with no sample walks out: from the lowest Hitpoints at the last
+// attack of an account that walked out, to the 40 Hitpoints at which the measure `at40HpOrLess` starts.
+export const LOW_HP = 40;
+export function walkRange(rec: ReturnType<typeof newRecord>): [number, number] {
+    const left = GANG.flatMap(n => rec.acc[n]!.lows).filter(l => l.out !== undefined && l.lastAttackHp !== undefined).map(l => l.lastAttackHp!);
+    return [left.length ? Math.min(...left) : 1, LOW_HP];
+}
 type Finding = { value?: unknown; status: 'measured' | 'reported' | 'unknown'; n?: number; evidence?: string; closes?: string; cloneRange?: unknown; note?: string };
 const M = (value: unknown, n: number, evidence: string, note?: string): Finding => ({ value, status: 'measured', n, evidence, ...(note ? { note } : {}) });
 const R = (value: unknown, n: number, evidence: string, note?: string): Finding => ({ value, status: 'reported', n, evidence, ...(note ? { note } : {}) });
@@ -250,9 +272,11 @@ const FEED = 'a longer run of scripts/measure/pk-gang-collect.ts', TICKS = 'the 
 const PILOTS = 'research/pvp-fight-loop.md "The cost of a kill" (two squad pilots of side claude-cloud; their logs are not on this PC)';
 
 // The data file of one gang account. `levels` is its hiscore row.
-export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record<string, string> | undefined, levelSource: string) {
+export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record<string, string> | undefined, levelSource: string, walkOutAtHp: [number, number] = [1, LOW_HP]) {
     const src = 'the traces of `sources`', fights = group.fights.filter(f => f.by === name), noEat = (f: Fight) => f.order.replace(/E/g, '');
     const specs = fights.map(f => (f.order.match(/S/g) ?? []).length), firstSpec = fights.map(f => noEat(f).indexOf('S')).filter(i => i >= 0);
+    const eatsBy: Hist = {}; for (const x of fights) { const e = (x.order.match(/E/g) ?? []).length; if (e) bump(eatsBy, x.target, e); }
+    const mostEats = Math.max(0, ...Object.values(eatsBy)), ranDry = g.lows.some(l => l.eatsAfter === 0);
     const hist = (a: number[]) => { const h: Hist = {}; for (const v of a) bump(h, v); return h; };
     const share = (h: Hist) => { const t = total(h); return Object.fromEntries(Object.entries(h).map(([key, v]) => [key, Math.round((1000 * v) / (t || 1)) / 10])); };
     const online = Object.fromEntries(Object.keys(group.hours).sort((a, b) => Number(a) - Number(b)).map(h => [h, Math.round((100 * (g.hours[h] ?? 0)) / group.hours[h]!)]));
@@ -261,25 +285,27 @@ export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record
         levels: { skills: levels ? M(levels, 1, levelSource) : U('the hiscore page of the name'), combat: M(name === 'goondelf' ? 126 : 125, g.frames, `${src}: the roster rows`) },
         kit: {
             worn: M(g.worn, total(g.worn), `${src}: each appearance block, by its worn objects`),
-            weaponPoison: M(Object.keys(g.poisonOnTarget).length ? { poisonSplatsOnPlayers: g.poisonOnTarget } : 'no poison splat on a player', total(g.poisonOnTarget), `${src}: type 2 splats on a player in a tick of an attack`, 'the worn name says which dagger; the splat sizes say how strong the poison is'),
+            weaponPoison: M(Object.keys(g.poisonOnTarget).length ? { poisonSplatsOnPlayers: g.poisonOnTarget } : 'no poison splat on a player', total(g.poisonOnTarget), `${src}: type 2 splats on a player in the tick of an attack or the 2 ticks after it`, 'the worn name says which dagger; the splat sizes say how strong the poison is'),
             food: M({ eats: g.eats, healOfOneEat: g.heal }, g.eats, `${src}: animation 829 (human_eat), and the Hitpoints of the splats before and after it`, 'a heal of 20 is a shark (consume_normal.dbrow)'),
-            foodCount: U(`${TICKS} against the name, to its retreat: the eats of one fight are its pack`, { sharks: [6, 23] }, 'the most eats seen in one meeting: Goondelf 11, Ligma 6, Sugma 13 (research/pvp-fight-loop.md "The gang in a long fight")'),
+            foodCount: ranDry ? M({ sharks: mostEats, eatsByOpponent: eatsBy }, 1, `${src}: the eat animations in the fights against one opponent, in a meeting that the name ended at 40 Hitpoints or less with no eat after it`, 'the food ran out in that meeting, so its eats are the pack; a refill at the bank between two fights would add to the count')
+                : U(`${TICKS} against the name, to its retreat: the eats of one fight are its pack`, { sharks: [Math.max(1, mostEats), 28] }, `the low end is the most eats of the name against one opponent (${mostEats}), in a fight in which its food did not run out; the high end is the 28 slots of a pack`),
             consumesNotForHitpoints: M(g.otherConsumes, g.otherConsumes.length, `${src}: animation 829 at 90 Hitpoints or more, or with no splat in the 20 ticks before`, 'a drink and an eat play the same animation (anti_poison.rs2:3); which item it was is not known'),
             potions: U('a splat over 22 with no Protect from Melee (a Strength boost), or a drink that restores no Hitpoints, in ' + FEED, { boosts: [false, true], prayerPotions: [0, 2] }, 'Herblore has no level on any of the three; a drink and an eat share animation 829'),
-            runes: U(`a cast animation of the name in ${FEED}`, { casts: false }, 'no cast animation of a gang account is in any trace'),
+            runes: (() => { const casts = Object.entries(g.anims).filter(([n]) => /cast|spell|bow|crossbow|thrown/.test(n)); return casts.length ? M(Object.fromEntries(casts), casts.reduce((a, [, c]) => a + c, 0), `${src}: the animations of the name with a cast or a shot in their name`) : M('no cast and no shot', total(g.anims), `${src}: the names of all animations of the name`, 'the name attacks with melee only'); })(),
         },
         attack: {
+            animations: M(Object.fromEntries(Object.entries(g.anims).sort((a, b) => b[1] - a[1]).slice(0, 12)), total(g.anims), `${src}: each animation of the name, by its name in the content`),
             ticksBetweenAttacks: M(g.intervals, total(g.intervals), `${src}: animations 376, 377 and 1062`),
             ticksBetweenAttacksWithAnEat: M(g.intervalsWithEat, total(g.intervalsWithEat), `${src}: the same, with an eat between the two attacks`),
             tilesToTarget: M(g.attackDist, total(g.attackDist), `${src}: the tiles of both at each attack`),
-            damage: M(g.damage, Object.values(g.damage).reduce((a, h) => a + total(h), 0), `${src}: the splats on the player in the tick of the attack, when no second gang account attacked it in that tick`, `each splat alone; ${g.splatsAmbiguous} ticks with a splat of a second attacker are left out`),
+            damage: M(g.damage, Object.values(g.damage).reduce((a, h) => a + total(h), 0), `${src}: the first splat on the player in the tick of the attack or the 2 ticks after it (two splats for a special), when no second gang account attacked it then`, `${g.splatsAmbiguous} splats with two gang accounts on the player are left out`),
             specials: M({ attacks: g.attacks, specials: g.specials, perFight: hist(specs), attacksBeforeTheFirst: hist(firstSpec) }, fights.length, `${src}: the order of each fight (pk-rival-feed.ts digest)`),
             specialAtTargetHp: M(g.specTargetHp, g.specials, `${src}: the Hitpoints of the player before the splats of the tick of the special`),
             specialAtOwnHp: M(g.specOwnHp, g.specials, `${src}: the last Hitpoints of the name that a splat showed`),
         },
         prayer: {
             protectOn: M(g.prayerOn, total(g.prayerOn), `${src}: each change of the head icon, with the weapon class and the last animation of the player in the fight`),
-            ticksFromWeaponChangeToPrayer: M({ whenTheOpponentFacesIt: g.lag.attacked, whenItWaits: g.lag.waiting, noChangeIn8Ticks: { whenTheOpponentFacesIt: g.lagMiss.attacked, whenItWaits: g.lagMiss.waiting } }, total(g.lag.attacked) + total(g.lag.waiting), `${src}: the appearance block of the opponent, then that of the name`),
+            ticksFromWeaponChangeToPrayer: M({ windowTicks: 8, whenTheOpponentFacesIt: g.lag.attacked, whenItWaits: g.lag.waiting, noChangeIn8Ticks: { whenTheOpponentFacesIt: g.lagMiss.attacked, whenItWaits: g.lagMiss.waiting } }, total(g.lag.attacked) + total(g.lag.waiting), `${src}: the appearance block of the opponent, then that of the name`),
             ticksAProtectPrayerStaysOn: M({ toOff: spread(g.holds.off), toAnotherProtectPrayer: spread(g.holds.changed), twoTicksOrLess: [...g.holds.off, ...g.holds.changed].filter(h => h <= 2).length }, g.holds.off.length + g.holds.changed.length, `${src}: head icon on to head icon off or changed`, 'a flick would show as many holds of 1 or 2 ticks'),
             splatsTaken: M({ byHeadIcon: Object.fromEntries(Object.entries(g.splats).map(([p, h]) => [p, { splats: total(h), damage: Object.entries(h).reduce((a, [d, c]) => a + Number(d) * c, 0), highest: Math.max(0, ...Object.keys(h).map(Number)) }])), poison: g.poisonSplats }, Object.values(g.splats).reduce((a, h) => a + total(h), 0), `${src}: splats on the name, by its protect prayer in that tick`),
             prayerPoints: U(`${TICKS}: no feed field holds prayer points; the tick at which the head icon goes off for good under attack is the sign`, { protectFor: ['the whole fight', '400 ticks'] }),
@@ -308,7 +334,7 @@ export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record
             frozen: g.freezes.length ? M(g.freezes.map(f => ({ spot: f.spot, protect: f.protect, ticksToFirstStep: f.ticksToFirstStep ?? 'none in 60', ticksToNextAttack: f.ticksToNextAttack ?? 'none in 60', trace: f.trace, tick: f.k })), g.freezes.length, `${src}: spot animations 179 to 181 (the impact of Entangle, Snare, Bind) on the name`) : U(`a Bind, Snare or Entangle on the name in ${FEED}, or ${TICKS} with Bind runes`, { whenFrozen: ['attacks a player beside it', 'stands'] }),
         },
         retreat: {
-            at40HpOrLess: g.lows.length ? M(g.lows.map(l => ({ hp: l.hp, lowestHp: l.minHp, eatsAfter: l.eatsAfter, ticksToLastAttack: l.lastAttack, ticksToOutOfTheWilderness: l.out, ticksToBackOnPost: l.post, ticksToDeath: l.died, trace: l.trace })), g.lows.length, `${src}: from the first splat that left 40 or less`) : U(`${TICKS} that takes the name to 40 Hitpoints or less`, { walkOutAtHp: [20, 40] }),
+            at40HpOrLess: g.lows.length ? M(g.lows.map(l => ({ hp: l.hp, lowestHp: l.minHp, eatsAfter: l.eatsAfter, ticksToLastAttack: l.lastAttack, hpAtTheLastAttack: l.lastAttackHp, wildernessLevel: l.wild, ticksToOutOfTheWilderness: l.out, ticksToBackOnPost: l.post, ticksToDeath: l.died, trace: l.trace })), g.lows.length, `${src}: from the first splat that left 40 or less`) : U(`${TICKS} that takes the name to 40 Hitpoints or less`, { walkOutAtHp, walkOutFromWildernessLevelAtMost: [wild(POST), wild(POST)] }, 'the low end is the lowest Hitpoints at the last attack of an account that walked out, the high end the 40 Hitpoints at which this measure starts; the level is that of the post'),
             prayedAgainst: M(Object.fromEntries(Object.entries(g.prayedAgainst).sort((a, b) => b[1].attacks - a[1].attacks).slice(0, 14).map(([w, r]) => [w, { attackAnimations: r.attacks, withTheProtectPrayerForItOn: r.prayed, players: r.players.size }])), Object.values(g.prayedAgainst).reduce((a, r) => a + r.attacks, 0), `${src}: attack animations of players that face the name, by the weapon of the player`, 'the rule that turns a protect prayer on is not known; this table is its evidence'),
             hitBy: M({ players: Object.keys(g.hitters).length, attackAnimations: total(g.hitters) }, total(g.hitters), `${src}: attack animations of players that face the name`),
         },
@@ -328,6 +354,8 @@ export function groupFile(rec: ReturnType<typeof newRecord>) {
         post: M({ tile: [POST.x, POST.z], wilderness: wild(POST), percentOfFramesOnIt: Object.fromEntries(GANG.map(n => [n, Math.round((1000 * (acc[n]!.place.post ?? 0)) / (acc[n]!.frames || 1)) / 10])) }, Math.min(...GANG.map(n => acc[n]!.frames)), `${src}: roster frames within 1 tile of the post`),
         accountsOffThePostInOneFrame: M(group.offPost, total(group.offPost), `${src}: roster frames with all three online`),
         accountsOnOneTarget: M(group.perTarget, group.fights.length, `${src}: for each fight, the gang accounts with a fight on that player within 40 ticks`),
+        returnToPost: (() => { const death = GANG.flatMap(n => acc[n]!.deaths.flatMap(d => (d.backOnPost === undefined ? [] : [d.backOnPost]))), walk = GANG.flatMap(n => acc[n]!.lows.flatMap(l => (l.post === undefined ? [] : [l.post])));
+            return death.length + walk.length ? M({ ticksAfterADeath: death, ticksAfterAWalkOut: walk }, death.length + walk.length, `${src}: from the death, or from the first splat that left 40 Hitpoints or less, to the next roster frame on the post`) : U(`a death or a walk out of a gang account in ${FEED}`, { ticks: [1000, 1500] }); })(),
         fights: M({ count: group.fights.length, ticks: spread(len), ended: ends }, group.fights.length, `${src}: pk-rival-feed.ts digest`),
         targets: {
             combatOfAttacked: M(group.attackedCombat, total(group.attackedCombat), `${src}: the first attack of each fight`),
@@ -386,13 +414,8 @@ if (import.meta.main) {
     }
     for (const t of traces) addTrace(rec, relative(data, t).replace(/\\/g, '/'), readFileSync(t, 'utf8').split('\n'), multi, id => seqs.get(id) ?? `seq${id}`, id => objs.get(id) ?? (id < 0 ? '' : `obj${id}`));
     if (existsSync(listFile)) for (const p of readFileSync(listFile, 'utf8').split(/\r?\n/).filter(Boolean)) if (existsSync(join(data, p))) addTickRecord(rec, p, inflate(join(data, p)), multi);
-    // The hiscore row of a name: the newest page of the `hiscores` mode, else the page saved by .practice/rival-dds/hs.ts.
-    const levelFile = (name: string) => { const newer = existsSync(feedDir) ? readdirSync(feedDir).filter(x => x.startsWith(`hs-${name}-`)).sort().pop() : undefined; return newer ? join(feedDir, newer) : join(data, '.practice', 'rival-dds', `hs-${name}.html`); };
-    const levels = (name: string) => { const file = levelFile(name); if (!existsSync(file)) return undefined;
-        const t = readFileSync(file, 'utf8').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, '\n').split('\n').map(s => s.trim()).filter(Boolean), i = t.indexOf('Time'), rows: Record<string, string> = {};
-        for (let k = i + 1; k + 3 < t.length; k += 4) rows[t[k]!] = t[k + 2]!; return rows; };
     mkdirSync(out, { recursive: true });
-    for (const n of GANG) writeFileSync(join(out, `${n}.json`), JSON.stringify(targetFile(n, rec.acc[n]!, rec.group, levels(n), relative(data, levelFile(n)).replace(/\\/g, '/')), null, 1) + '\n');
+    for (const n of GANG) writeFileSync(join(out, `${n}.json`), JSON.stringify(targetFile(n, rec.acc[n]!, rec.group, hiscoreLevels(data, n).rows, relative(data, hiscoreLevels(data, n).file).replace(/\\/g, '/'), walkRange(rec)), null, 1) + '\n');
     writeFileSync(join(out, 'group.json'), JSON.stringify(groupFile(rec), null, 1) + '\n');
     console.log(`RESULT ok gang record traces=${traces.length} fights=${rec.group.fights.length} attacks=${GANG.map(n => rec.acc[n]!.attacks).join('/')} eats=${GANG.map(n => rec.acc[n]!.eats).join('/')} deaths=${GANG.map(n => rec.acc[n]!.deaths.length).join('/')} tickRecords=${rec.group.sightings.length} out=${relative(root, out).replace(/\\/g, '/')}`);
 }
