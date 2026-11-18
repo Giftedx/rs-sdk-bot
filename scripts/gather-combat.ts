@@ -624,9 +624,15 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         const cancel=new AbortController(),offTick=outbound?s.onTick(()=>{if(over())cancel.abort('stop requested');}):undefined;
         const signal=outbound?AbortSignal.any([sustain.aborted,cancel.signal]):sustain.aborted;
         try{
-            const ok=o.walk?await o.walk(x,z,tol,signal):
+            let ok:boolean;
+            if(o.walk)ok=await o.walk(x,z,tol,signal);
+            else{
                 // From the Varrock side the planner has no route to Ardougne: ferryWalk takes the ferries then.
-                (await ferryWalk(s,{x,z,level:0},async(tile,planBudgetMs)=>goTo(s,await getWorld(),tile,accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal,planBudgetMs}))).ok;
+                const walked=await ferryWalk(s,{x,z,level:0},async(tile,planBudgetMs)=>goTo(s,await getWorld(),tile,accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal,planBudgetMs}));
+                ok=walked.ok;
+                // A walk that ends short names its reason here: the retreat log shows only the distance that is left.
+                if(!ok)console.log('COMBAT_WALK_FAILED '+JSON.stringify({label,to:{x,z},outbound,tick:s.tick(),reason:(walked as any).reason,detail:String((walked as any).detail??'').slice(0,300),ticks:(walked as any).ticks}));
+            }
             await sustain.settle();
             if(sustain.failure())throw new Error(sustain.failure()!);
             return ok&&near(x,z,tol);
