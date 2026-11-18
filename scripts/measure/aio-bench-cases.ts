@@ -285,14 +285,14 @@ const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: C
 // state has no prayer points field, so `prayer: false` gives them Prayer level 1 (no prayer can be turned on).
 // `prey` is SQUAD_GANG_PREY (scripts/pk-squad.ts): the live gang attacked only the first two members.
 type Run1 = {members: {name: string; wear: {id: number; count: number; slot: number}[]; pack: {id: number; count: number}[]}[]};
-const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]}): BenchCase => {
+const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>}): BenchCase => {
   const run1 = JSON.parse(readFileSync(join(import.meta.dir, '..', 'pk-gang-record', 'run-1.json'), 'utf8')) as Run1, start = {x: 3093, z: 3501}, base = 'live-walker-iron-rune-chain-bind';
   // A stack of food is one slot with one count in a preset: a shark each (the loop eats one and the stack would go).
   const member = (i: number): SaveConfig => { const m = run1.members[i]!, c = kitFixture(base, start.x + (i % 3), start.z);
     return {...c, skills: {...c.skills, ...(o.prayer ? {} : {Prayer: 1})}, equipment: m.wear, inventory: m.pack.flatMap(p => (p.id === 385 || p.id === 379 ? Array.from({length: p.count}, () => ({id: p.id, count: 1})) : [p]))}; };
   const mode = o.mode ?? 'seen', n = run1.members.length, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: s => ok(s) && killReceiptsMatch(s), presetConfig: member(0), output: /kills=(\d+)/,
-    scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=8', 'STALL_TICKS=3000', 'SQUAD_GANG_HUNT=1', `SPAR_B_OPTS=${JSON.stringify(pooledProfile(mode))}`, ...(o.prey ? [`SQUAD_GANG_PREY=${o.prey}`] : []), ...(o.args ?? [])],
+    scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=8', 'STALL_TICKS=3000', 'SQUAD_GANG_HUNT=1', `SPAR_B_OPTS=${JSON.stringify({...pooledProfile(mode), ...(o.gang ?? {})})}`, ...(o.prey ? [`SQUAD_GANG_PREY=${o.prey}`] : []), ...(o.args ?? [])],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? member(i + 1) : cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
 };
 // A change of the pack of the first `members` of ours in a clone squad case (all by default): lobsters for the sharks
@@ -1171,6 +1171,10 @@ const ROUTE_CASES: BenchCase[] = [
   run1Squad('extra:clone-run1-x1', {prayer: false, prey: '0,1,0'}),
   run1Squad('extra:clone-run1-prayer-x1', {prayer: true, prey: '0,1,0'}),
   run1Squad('extra:clone-run1-nearest-x1', {prayer: false}),
+  // Which behaviour of the clones sets the length of a fight: a gang that never eats (eatAt 0), and a gang whose protect prayer
+  // never comes on (every weapon change waits the whole window).
+  run1Squad('extra:clone-run1-noeat-x1', {prayer: false, prey: '0,1,0', gang: {eatAt: 0}}),
+  run1Squad('extra:clone-run1-nopray-x1', {prayer: false, prey: '0,1,0', gang: {prayerLag: [0, 0, 0, 0, 0, 0, 0, 0, 1]}}),
   // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
   // (extra:clone-squad-5-chainbind-x1 has one on each), and with sharks in the free slots of a pack with no potion.
   ...([['anti2', noAntipoison, 2], ['anti1', noAntipoison, 1], ['anti0', noAntipoison, 0], ['anti2-food', foodForAntipoison, 2], ['anti0-food', foodForAntipoison, 0]] as const)
