@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795001464045-fatstack-sausagefest-airrune",
  "account": "Sausagefest",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 26,
  "claim": "4bbafa58-bad1-43cd-b9ad-1e78fd6049d6",
- "count": 0,
- "ok": false,
- "at": 1795001651012,
- "detail": "trade claimed"
+ "count": 26,
+ "ok": true,
+ "at": 1795001668506,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 26
+ },
+ "bank": {
+  "count": 26,
+  "at": 1795001667669
+ },
+ "logout": {
+  "attemptId": "1795001651021-0000022384-0000000001",
+  "at": 1795001668411,
+  "sha256": "f52283135eae9c011765c6d5e487dcdaea24af7a8325d450b9848d49842d586b"
+ },
+ "screen": true
 }
