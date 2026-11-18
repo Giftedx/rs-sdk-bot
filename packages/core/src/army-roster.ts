@@ -39,8 +39,9 @@ export function ruleRoster(rows: readonly any[], owned: (name: string) => boolea
     }
     return [...out].sort();
 }
-// The accounts that an enabled hand job names: a job of the plan that is no planner job of `side`. Such an account is not
-// plannable, so it is not on the roster by rule.
+// The accounts that a hand job holds: a job of the plan that is no planner job of `side` and is enabled, or has no script (a
+// reservation: `enabled: false` and no script, as the squad accounts and the main and specialist accounts are held). Such an
+// account is not plannable (plannableAccounts), so it is not on the roster by rule.
 export function handNamed(jobs: readonly any[], side: string): Set<string> {
-    return new Set(jobs.filter(j => j?.enabled !== false && j?.autopilot !== side).flatMap(j => [j?.account, ...(j?.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+    return new Set(jobs.filter(j => (j?.enabled !== false || !j?.script) && j?.autopilot !== side).flatMap(j => [j?.account, ...(j?.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
 }

@@ -2515,6 +2515,12 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
 // script) keeps its account, and an owner pause (a stop file) keeps its account. An unmarked job that is off holds an
 // account only when no marked job names it: a finished coordinator run does not block a handover, but by itself it
 // frees nothing, since the coordinator may plan that account next.
+// The accounts that a swarm.json reservation holds: a job that is no planner job of `side` and has no script (the main and
+// specialist accounts, the gang squad). A reservation gives no job to its account (plannableAccounts) and no stock or coins to
+// another account (the donor filters of scripts/autopilot.ts); an order that gives TO it still runs.
+export function reservedAccounts(jobs: readonly any[], side: string): Set<string> {
+    return new Set(jobs.filter(j => j?.autopilot !== side && !j?.script).flatMap(j => [j?.account, ...(j?.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+}
 export function plannableAccounts(jobs: readonly any[], side: string, listed: readonly string[], paused: ReadonlySet<string>): string[] {
     const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean).map((a: string) => a.toLowerCase());
     const mine = (j: any) => j?.autopilot === side;

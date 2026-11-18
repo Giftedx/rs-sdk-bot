@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { admittedByLevels } from '../packages/core/src/army-roster';
+import { admittedByLevels, handNamed } from '../packages/core/src/army-roster';
+import { reservedAccounts } from '../packages/planner/src/autopilot';
 import { loadOwners } from '../packages/core/src/fleet';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,7 +11,8 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { planView } from './fleet-sync';
+import { headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
@@ -1225,25 +1227,34 @@ test('an active squad keeps its members off the roster by rule, and open trade p
     expect(memoryHeadroom(8.6, 0, 2 + tradeStarts(new Set(['x', 'y']), [], new Set()))).toBe(0);
 });
 
-test('an account with a reservation, the protected AFKnight, or a party of an open order gets no roster by rule and no job', () => {
+test('a swarm.json reservation holds its account: no roster by rule, no job, no donor; the protected AFKnight stays off the rule', () => {
     const melee = (name: string) => ({ name, skills: { Attack: 99, Strength: 99, Defence: 99 } });
     const accounts = [melee('Held'), melee('AFKnight'), melee('Free')];
-    // The owner reservation of an account (fleet/owners.json) keeps it off the rule, with no squad block in the plan at all.
-    expect([...armyRoster({}, accounts, OFFLINE_GUARDED, new Set(['held']))]).toEqual(['free']);
+    const jobs = [{ account: 'Held', role: 'pvp', enabled: false, goal: 'reserved: gang squad' }, { account: 'Mine', autopilot: 'local', script: 'scripts/goldfarm.ts' }, { account: 'Hand', script: 'scripts/goldfarm.ts', enabled: false }];
+    // A job with no script that is no planner job is a reservation, enabled or not; a hand job with a script, off, is not.
+    expect([...reservedAccounts(jobs, 'local')]).toEqual(['held']);
+    expect([...armyRoster({}, accounts, OFFLINE_GUARDED, reservedAccounts(jobs, 'local'))]).toEqual(['free']);
     expect(admittedByLevels('AFKnight', { Attack: 99, Strength: 99, Defence: 99 })).toBe(false);
-    expect(admittedByLevels('Free', { Attack: 99, Strength: 99, Defence: 99 })).toBe(true);
-    // loadOwners carries the reservation.
-    const dir = mkdtempSync(join(tmpdir(), 'owners-res-'));
-    try {
-        writeFileSync(join(dir, 'owners.json'), JSON.stringify({ accounts: { Held: { side: 'local', server: 's', reservation: 'gang squad' }, Free: { side: 'local', server: 's' } } }));
-        const owners = loadOwners(join(dir, 'owners.json'));
-        expect([owners.get('held')?.reservation, owners.get('free')?.reservation]).toEqual(['gang squad', undefined]);
-    } finally { rmSync(dir, { recursive: true }); }
+    // The scoreboard and planView count held accounts the same way: handNamed holds the reservation and an enabled hand job, not an off scripted one.
+    expect([...handNamed(jobs, 'local')].sort()).toEqual(['held']);
+    expect([...handNamed([...jobs, { account: 'Busy', script: 'scripts/goldfarm.ts', enabled: true }], 'local')].sort()).toEqual(['busy', 'held']);
+    const owners = new Map([['held', { side: 'local', server: 's' }], ['free', { side: 'local', server: 's' }]]);
+    const row = (name: string) => ({ name, skills: ['Attack', 'Strength', 'Defence'].map(n => ({ name: n, level: 99 })) });
+    const view = planView(jobs, 'local', owners as any, 7, { observed: [row('Held'), row('Free')] });
+    expect(view.army).toEqual(['free']);
     // A party of an open fleet order keeps no band: fundOrders replaces its assignment while the order is open.
     const band = { id: 'army-cow-strength-45', tier: 'goal' } as any;
     const r = fundOrders([{ account: 'Giver', template: band, value: 0, resources: ['cow:ardougne-north'], reason: 'army band 0' }, { account: 'Other', template: band, value: 0, resources: [], reason: 'army band 0' }], new Set(['giver']), make);
     expect(r.assignments.map(x => x.template?.id ?? x.reason)).toEqual(['vacant: in an open fleet order', 'army-cow-strength-45']);
     expect(r.assignments[0]!.resources).toEqual([]);
+});
+
+test('the memory headroom carries the margin of one start while a planner job is written and not running', () => {
+    expect(headroomWithMargin(0, true)).toBe(1);
+    expect(headroomWithMargin(3, true)).toBe(4);
+    expect(headroomWithMargin(3, false)).toBe(3);
+    // A running planner job's slot is kept at headroom 0 plus the margin: the plan holds the running bots and one more start.
+    expect(freeSlots({ maxBots: 25 }, [], 'local', new Set(), 0, { running: 10, headroom: headroomWithMargin(0, true) })).toBe(11);
 });
 
 test('a planner job that is written and not running keeps one start of margin', () => {
@@ -1299,18 +1310,17 @@ test('plannerOwns refuses a reserved account as donor or job holder, and an unre
     expect(plannerOwns(owners as any, 'local', 'gone', reserved, died)).toBe(false);
 });
 
-test('a reserved account is no donor and gets no job, and the dry pass names it reserved for the squad', () => {
+test('the dry pass names a swarm.json reservation by its goal and gives its account no job', () => {
     const dir = mkdtempSync(join(tmpdir(), 'autopilot-reserved-'));
     const prevFleet = process.env.FLEET_DIR, prevSide = process.env.FLEET_SIDE;
     try {
         mkdirSync(join(dir, 'fleet'), { recursive: true });
-        writeFileSync(join(dir, 'fleet', 'owners.json'), JSON.stringify({ accounts: {
-            Keeper: { side: 'local', server: 'rs-sdk-demo.fly.dev', reservation: 'gang squad' }, Taker: { side: 'local', server: 'rs-sdk-demo.fly.dev' } } }));
+        writeFileSync(join(dir, 'fleet', 'owners.json'), JSON.stringify({ accounts: { Keeper: { side: 'local', server: 'rs-sdk-demo.fly.dev' }, Taker: { side: 'local', server: 'rs-sdk-demo.fly.dev' } } }));
         process.env.FLEET_DIR = join(dir, 'fleet'); process.env.FLEET_SIDE = 'local';
         const planFile = join(dir, 'swarm.json');
-        writeFileSync(planFile, JSON.stringify({ maxBots: 5, minFreeGB: 0, army: ['Taker'], jobs: [] }));
+        writeFileSync(planFile, JSON.stringify({ maxBots: 5, minFreeGB: 0, army: ['Taker'], jobs: [{ account: 'Keeper', role: 'pvp', enabled: false, goal: 'reserved: gang squad' }] }));
         const lines = pass(planFile, true, () => false);
-        expect(lines).toContain('AUTOPILOT vacant Keeper: reserved for the squad');
+        expect(lines).toContain('AUTOPILOT vacant Keeper: reserved: gang squad');
         expect(lines.filter(l => /Keeper/.test(l) && /(assign|keep|fund|send) /.test(l))).toEqual([]);
     } finally {
         if (prevFleet === undefined) delete process.env.FLEET_DIR; else process.env.FLEET_DIR = prevFleet;

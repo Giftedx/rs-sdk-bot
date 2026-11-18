@@ -142,7 +142,7 @@ export function planView(jobs: readonly any[], side = mySide(), owners = loadOwn
         return typeof account==='string' && account.toLowerCase()!=='haggis' && owners.get(account.toLowerCase())?.side===side;
     }) : undefined;
     const have = new Set((listed ?? []).map(entry => String(typeof entry==='string'?entry:entry.account).toLowerCase()));
-    const byRule = ruleRoster(goals?.observed ?? [], n => owners.get(n.toLowerCase())?.side === side && !owners.get(n.toLowerCase())?.reservation, handNamed(jobs, side)).filter(n => !have.has(n));
+    const byRule = ruleRoster(goals?.observed ?? [], n => owners.get(n.toLowerCase())?.side === side, handNamed(jobs, side)).filter(n => !have.has(n));
     const army = listed || byRule.length ? [...(listed ?? []), ...byRule] : undefined;
     const roster=new Set((army??[]).map(entry=>String(typeof entry==='string'?entry:entry.account).toLowerCase()));
     const builds=goals?.builds&&typeof goals.builds==='object'&&!Array.isArray(goals.builds)
