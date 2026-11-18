@@ -13,7 +13,7 @@ import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, st
 import { supervise } from '../packages/practice/src/supervise';
 import { assess } from '../packages/planner/src/autopilot';
 import { planView } from './fleet-sync';
-import { unplacedPrecondition, unplacedHeld, UNPLACED_RETRY_MS, SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { squadInput, unplacedPrecondition, unplacedHeld, UNPLACED_RETRY_MS, SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
@@ -1214,6 +1214,28 @@ test('every shop template of the catalogue selects at least one line of its prof
     expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
 });
 
+test('the squad shop templates select their profile line with the real selectItems', () => {
+    for (const t of catalogue().filter(x => x.squadOnly)) {
+        const lines = selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source);
+        expect([t.id, lines.length]).toEqual([t.id, 1]);
+    }
+    const potion = catalogue().find(t => t.id === 'squad-antipoison-jiminua')!;
+    expect(selectItems(PROFILES.jiminua!.items, potion.env!.ITEMS).map(i => i.re.source)).toEqual([/^antipoison\(3\)$/i.source]);
+});
+
+test('squadInput holds a member that runs outside the swarm or has no observation, and reads maxCoins', () => {
+    const owners = new Map([['a', { side: 'local', server: 's' }], ['b', { side: 'local', server: 's' }], ['c', { side: 'local', server: 's' }], ['d', { side: 'cloud', server: 's' }]]);
+    const plan = { squad: { active: true, members: ['A', 'B', 'C', 'D'], hours: 4, maxCoins: 5000 } };
+    const items = (n: string) => n === 'C' ? undefined : { shark: 1 };
+    const got = squadInput(plan, 'local', owners as any, items, n => n === 'B');
+    expect(got?.members.map(m => m.name)).toEqual(['A']);
+    // Every member this side owns drives the hold-out, held or not; only the observed, free ones are restocked.
+    expect(got?.all).toEqual(['A', 'B', 'C']);
+    expect(got?.maxCoins).toBe(5000);
+    expect(squadInput({ squad: { active: false, members: ['A'] } }, 'local', owners as any, items)).toBeUndefined();
+    expect(squadInput({}, 'local', owners as any, items)).toBeUndefined();
+});
+
 const unplacedResult = (failure: string, extra = '') => `RESULT fail {"ok":false,"phase":"unplaced","pending":false,"quantity":16,"acquired":0${extra},"escrow":0,"refund":0,"spent":0,"ticks":3,"failure":"Error: ${failure}"}`;
 const COINS_REFUSAL = 'coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short', PACK_REFUSAL = 'pack holds 27 items, over 26: two collection slots unavailable';
 
@@ -1244,7 +1266,7 @@ test('a pass writes state.unplaced for a refusal on the coins, and a death in th
         writeFileSync(files[0]!, JSON.stringify({ assigned: { [account.toLowerCase()]: { template, offset: 0, at: 1 }, [account]: { template, offset: 0, at: 1 } }, retired: {} }));
         writeFileSync(files[2]!, jobLogStart(job) + lines.join('\n') + '\n');
         writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ maxBots: 5, minFreeGB: 0, jobs: [job] }));
-        pass(join(dir, 'swarm.json'), false, () => false);
+        pass(join(dir, 'swarm.json'), false, () => false, undefined, () => []);
         return JSON.parse(readFileSync(files[0]!, 'utf8'));
     };
     try {
@@ -1405,4 +1427,38 @@ test('unobservedAccounts reads the observation time alone', () => {
 test('the ring mould shop step selects the Dommik mould line with the real selectItems', () => {
     const t = catalogue().find(x => x.id === 'shop-ring-mould')!;
     expect(selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^ring mould$']);
+});
+
+import { QUEST_DEMAND_ROWS, questDemand } from '../packages/planner/src/autopilot';
+test('each quest demand row dispatches to the sweep, has a bench case that can pass, and asks what the journal and the practice pack ask', () => {
+    const cases = new Map(benchCases().map(c => [c.key, c]));
+    const items: { id: number; name: string; debugname?: string }[] = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    const name = (id: number) => norm(items.find(i => i.id === id && !/^cert_/.test(i.debugname ?? ''))!.name);
+    const reqs: Record<string, { s?: [string, number][]; q?: [string][]; qp?: number[] }> = JSON.parse(readFileSync(resolve(import.meta.dir, '../packages/dashboard/client-assets/quest-reqs.json'), 'utf8'));
+    const templates = new Map(questDemand().map(t => [t.id, t]));
+    expect(templates.size).toBe(QUEST_DEMAND_ROWS.length);
+    // Hitpoints 90 stands only where the saved practice run fell under 70 Hitpoints with 99 in every skill.
+    expect(QUEST_DEMAND_ROWS.filter(r => r.skills.Hitpoints).map(r => r.slug).sort()).toEqual(['crest', 'itwatchtower', 'regicide', 'upass', 'viking', 'zombiequeen']);
+    for (const row of QUEST_DEMAND_ROWS) {
+        const t = templates.get(`quest-${row.slug}`)!, step = resolveAioStep('quester', t.args!.slice(1));
+        expect(`${row.slug} ${step.script} ${step.args}`).toBe(`${row.slug} scripts/quest-sweep.ts ${row.slug}`);
+        expect(existsSync(resolve(import.meta.dir, '..', t.worker!))).toBe(true);
+        // A one-account sweep: the generated script takes no helper account (Arrav, Hero's Quest and Legends Quest do), and the sweep does not refuse the quest.
+        expect(`${row.slug} ${readFileSync(resolve(import.meta.dir, `generated/quest-${row.slug}.ts`), 'utf8').includes('process.argv[3]')}`).toBe(`${row.slug} false`);
+        expect(`${row.slug} ${['hero', 'arrav', 'legends', 'misc'].includes(row.slug)}`).toBe(`${row.slug} false`);
+        expect(`${row.slug} ${cases.has(t.aio!)}`).toBe(`${row.slug} true`);
+        expect(cases.get(t.aio!)!.known).toBeUndefined();
+        // The journal's own asks: its skills (and Hitpoints 90 where the practice run fell low), its quests and quest points.
+        const journal = reqs[row.name]!, skills: Record<string, number> = Object.fromEntries((journal?.s ?? []).map(([s, l]) => [s, l]));
+        expect(`${row.slug} ${JSON.stringify(Object.entries(row.skills).filter(([s]) => s !== 'Hitpoints' || skills.Hitpoints !== undefined).sort())}`)
+            .toBe(`${row.slug} ${JSON.stringify(Object.entries(skills).sort())}`);
+        expect(row.quests).toEqual((journal?.q ?? []).map(q => q[0]));
+        expect(row.questPoints).toBe(journal?.qp?.[0]);
+        // The practice pack: every item of the run's inventory and bank, with its food as meals.
+        const pack: Record<string, number> = {}; let meals = 0;
+        const preset = presetFor(row.slug);
+        for (const i of [...(preset.inventory ?? []), ...(preset.bank ?? [])]) { if (MEALS.includes(i.id) || (row.slug === 'regicide' && name(i.id) === 'shark')) meals += i.count; else pack[name(i.id)] = (pack[name(i.id)] ?? 0) + i.count; }
+        expect(`${row.slug} ${JSON.stringify(Object.entries(row.items).map(([i, n]) => [norm(i), n]).sort())}`).toBe(`${row.slug} ${JSON.stringify(Object.entries(pack).sort())}`);
+        expect(`${row.slug} ${row.meals}`).toBe(`${row.slug} ${meals}`);
+    }
 });

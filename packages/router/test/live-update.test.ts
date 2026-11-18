@@ -2,8 +2,10 @@ import { expect, test } from 'bun:test';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { TRADE_HOLD_MS, applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
+import { TRADE_HOLD_MS, releaseClosure, applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
 import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
+import { releaseFiles, workerLaunchers } from '../../core/src/worker-release';
+import { importClosure } from '../src/delivery-cli';
 
 const base: UpdateInput = { branch: 'master', ahead: 0, behind: 2, incoming: ['scripts/swarm.ts', 'docs/a.md'], dirty: [], holds: [], heldFiles: [] };
 
@@ -501,6 +503,30 @@ test('a fleet trade session holds an update that changes a file it loads: its en
         expect(liveRuns(dir, 'live', entries => entries.map(e => e + '+imports'), now)).toEqual([{ name: 'Giver', files: ['scripts/a.ts+imports'] }]);
     });
 });
+
+test('a live trade holds an update that changes a data or task file of its release: the hold reads the files that make the release id', () => {
+    scratch('rsbot-live-release-', dir => {
+        const repo = resolve(import.meta.dir, '../../..'), now = 10_000_000, status = join(dir, '.practice', 'status');
+        mkdirSync(status, { recursive: true });
+        writeFileSync(join(status, 'Giver.json'), JSON.stringify({ name: 'Giver', server: 'live', at: now - 1000, started: now - 60_000, workEntry: join(dir, 'scripts', 'fleet-trade.ts') }));
+        const runs = liveRuns(dir, 'live', releaseClosure(repo), now);
+        expect(runs).toHaveLength(1);
+        // The same list as the release id of the worker (worker-release.ts capabilityRevision): the entry and the launchers.
+        expect(runs[0]!.files).toEqual(releaseFiles(['scripts/fleet-trade.ts', ...workerLaunchers], repo));
+        // A data file that the trade release holds and no import reaches: the import closure of the entry lacks it.
+        const data = 'packages/planner/data/progression-routes.json';
+        expect(importClosure(['scripts/fleet-trade.ts'], repo)).not.toContain(data);
+        for (const file of [data, 'packages/router/tasks/owned-bank-observation.json', 'scripts/fleet-trade.ts']) {
+            expect(runs[0]!.files, file).toContain(file);
+            expect(planUpdate({ ...base, incoming: [file], liveRuns: runs }).action, file).toBe('wait');
+        }
+        // A file that is not in the release does not hold.
+        expect(planUpdate({ ...base, incoming: ['docs/a.md'], liveRuns: runs }).action).toBe('update');
+        // A run with no entry has no release files to name here (the launch release): it holds nothing by this list.
+        writeFileSync(join(status, 'Giver.json'), JSON.stringify({ name: 'Giver', server: 'live', at: now - 1000, started: now - 60_000 }));
+        expect(liveRuns(dir, 'live', releaseClosure(repo), now)).toEqual([{ name: 'Giver', files: [] }]);
+    });
+}, 60_000);
 
 test('a live run whose entry gives no file holds each update: the files it loads are not known', () => {
     scratch('rsbot-live-unknown-', dir => {

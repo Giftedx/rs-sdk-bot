@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
@@ -2692,6 +2692,190 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
 });
 
+import { SQUAD_ESCAPE, SQUAD_HOURLY, squadBlock, squadHeld, squadKeeps, squadRows, squadTarget, type SquadInput } from '../src/squad';
+import { squadSupplies, SQUAD_RESTOCK } from '../src/autopilot';
+
+test('the squad block reads members and hours; only an active block with members is active', () => {
+    expect(squadBlock({ squad: { active: true, members: ['A', 'B', 'bad name'], hours: 6 } })).toEqual({ active: true, hours: 6, members: ['A', 'B'], maxCoins: 320_000 });
+    expect(squadBlock({ squad: { active: true, members: ['A'], maxCoins: 5000 } }).maxCoins).toBe(5000);
+    expect(squadBlock({ squad: { active: true, members: ['A'], maxCoins: -1 } }).maxCoins).toBe(320_000);
+    expect(squadBlock({ squad: { active: true, members: ['A'], hours: 99 } }).hours).toBe(4);
+    expect(squadBlock({ squad: { active: false, members: ['A'] } }).active).toBe(false);
+    expect(squadBlock({ squad: { active: true, members: [] } }).active).toBe(false);
+    expect(squadBlock({ squad: { active: 'yes', members: ['A'] } }).active).toBe(false);
+    expect(squadBlock({}).active).toBe(false);
+    expect(squadBlock(null).active).toBe(false);
+});
+
+test('the squad rows are a stock target of the member minus what it holds, food by heal, and none while inactive', () => {
+    // Four hours, per member: the middle of each hourly range over four members.
+    expect(squadTarget('iron arrow', 4)).toBe(Math.ceil(((SQUAD_HOURLY['iron arrow']![0] + SQUAD_HOURLY['iron arrow']![1]) / 2) / 4 * 4));
+    expect(squadTarget('food', 4)).toBe(355);
+    const squad = (items: Record<string, number>, active = true): SquadInput => ({ active, hours: 4, members: [{ name: 'Hunter', items }] });
+    const rows = squadRows(squad({}));
+    expect(rows.map(r => r.consumer)).toEqual(['food', 'iron arrow', 'earth rune', 'water rune', 'nature rune', 'antipoison(3)', 'law rune', 'air rune'].map(i => `gang squad Hunter: ${i}`));
+    expect(rows.every(r => r.account === 'hunter')).toBe(true);
+    expect(rows.find(r => /iron arrow/.test(r.consumer))!.short).toBe(squadTarget('iron arrow', 4));
+    // Held stock counts first; a line at its target gives no row. Lobsters count 12/20 of a shark.
+    const full = Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i, squadTarget(i, 4)]));
+    expect(squadRows(squad({ ...full, ...SQUAD_ESCAPE, shark: 355 }))).toEqual([]);
+    expect(squadRows(squad({ ...full, ...SQUAD_ESCAPE, lobster: 592 }))).toEqual([]);
+    expect(squadRows(squad({ ...full, ...SQUAD_ESCAPE, lobster: 296 }))[0]).toMatchObject({ names: ['shark', 'swordfish', 'lobster'], short: 297 });
+    expect(squadHeld('food', { shark: 10, lobster: 20 })).toBe(22);
+    expect(squadRows(squad({}, false))).toEqual([]);
+    expect(squadRows(undefined)).toEqual([]);
+    expect(squadKeeps(4)['iron arrow']).toBe(squadTarget('iron arrow', 4));
+    expect(squadKeeps(4).lobster).toBe(Math.ceil(355 * 20 / 12));
+});
+
+test('every squad line has a template that fills it today, or is named as a gap; the antipoison filter matches its item', () => {
+    const all = catalogue(), a = acct('X', { Magic: 99, Hitpoints: 99 });
+    const fills = (item: string) => all.filter(t => t.yields(a).some(f => norm(f.item) === norm(item) && f.perTick > 0)).map(t => t.id);
+    for (const item of ['iron arrow', 'water rune', 'nature rune', 'law rune', 'antipoison(3)', 'earth rune', 'air rune', 'lobster']) expect([item, fills(item).length > 0]).toEqual([item, true]);
+    expect(fills('shark')).toEqual([]); // no script fishes sharks: lobsters fill the food line by heal
+    for (const t of squadSupplies()) expect(placeOf(t)).toBeDefined();
+});
+
+test('an active squad gives free accounts supply jobs with no hand edit and stops when inactive', () => {
+    const squad = (active: boolean, items: Record<string, number> = {}): SquadInput => ({ active, hours: 4, members: [{ name: 'Hunter', items }] });
+    const supply = catalogue().filter(t => t.id === 'squad-arrows-lowe' || t.id === 'squad-water-betty' || t.id === 'shop-runes');
+    const free = acct('Supplier', {}, { coin: 100_000 });
+    const run = (s?: SquadInput, extra: Partial<Inputs> = {}) => plan(inputs([free], { templates: supply, bill: [], capacity: CAPACITY, squad: s, prices: { 'iron arrow': 3, 'water rune': 4, 'earth rune': 4, 'air rune': 4 }, ...extra }))[0]!;
+    expect(run(squad(true)).template?.id).toMatch(/^(squad-arrows-lowe|squad-water-betty|shop-runes)$/);
+    // Inactive or absent: no demand, no job.
+    expect(run(squad(false)).template).toBeUndefined();
+    expect(run(undefined).template).toBeUndefined();
+    // The member holdings count first: a member that holds every target and escape item needs nothing.
+    const stocked = { ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i, squadTarget(i, 4)])), ...SQUAD_ESCAPE, shark: 400 };
+    expect(run(squad(true, stocked)).template).toBeUndefined();
+});
+
+test('a free donor sends a squad member its spare stock once, only while the squad is active, and a donor member keeps its own target', () => {
+    const member = acct('Hunter', {}, { coin: 1000 }), donor = acct('Spare', {}, { 'iron arrow': 5000, 'earth rune': 100 });
+    const stock = [{ name: 'Spare', side, items: { 'iron arrow': 5000, 'earth rune': 100 } }];
+    const squad = (active: boolean): SquadInput => ({ active, hours: 4, members: [{ name: 'Hunter', items: {} }] });
+    const run = (active: boolean, extra: Partial<Inputs> = {}) => plan(inputs([member, donor], { templates: [], bill: [], stock, squad: squad(active), ...extra }));
+    const out = run(true), sent = out.find(x => x.account === 'Hunter')!;
+    expect(sent.send).toMatchObject({ from: 'Spare', to: 'Hunter', item: 'iron arrow', count: squadTarget('iron arrow', 4), template: SQUAD_RESTOCK.id });
+    expect(out.find(x => x.account === 'Spare')!.reason).toBe('vacant: gives a kit item this pass');
+    expect(run(false).find(x => x.account === 'Hunter')!.send).toBeUndefined();
+    // A donor that is itself a squad member keeps its own target: its 100 earth runes are under it, so none moves.
+    const both = plan(inputs([acct('Hunter', {}, { coin: 1000 }), acct('Mate', {}, { 'earth rune': 100 })], { templates: [], bill: [],
+        stock: [{ name: 'Mate', side, items: { 'earth rune': 100 } }], squad: { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }, { name: 'Mate', items: { 'earth rune': 100 } }] } }));
+    expect(both.find(x => x.account === 'Hunter')!.send).toBeUndefined();
+    // A member that is busy (an enabled job) is not interrupted for a trade.
+    expect(run(true, { unfundable: new Set(['hunter']) }).find(x => x.account === 'Hunter')!.send).toBeUndefined();
+});
+
+test('an active squad member takes no band, kit buy or supply job, only the restock', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const hunter = acct('Hunter', { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, { 'wooden shield': 1, trout: 20, coin: 50_000 });
+    const market = { 'bronze sword': { id: 1277, name: 'Bronze sword', limit: 100 } };
+    const run = (active: boolean) => plan(inputs([hunter, acct('Spare', {}, { 'iron arrow': 5000 })], { templates: band, army: new Set(['hunter']), market, stock: [{ name: 'Spare', side, items: { 'iron arrow': 5000 } }],
+        capacity: { 'cow:ardougne-north': 6 }, squad: { active, hours: 4, members: [{ name: 'Hunter', items: {} }] } })).find(x => x.account === 'Hunter')!;
+    // Inactive: an ordinary army account with a kit buy. Active: no band and no kit buy; the restock is its only order.
+    expect(run(false).template?.id).toBe('kit-buy:army-cow-strength-45');
+    const held = run(true);
+    expect(held.template?.id).toBe('squad-restock');
+    expect(held.send).toMatchObject({ from: 'Spare', to: 'Hunter', item: 'iron arrow' });
+});
+
+test('a squad supply template is a candidate only while the squad is active: the full catalogue with no squad plans as without them', () => {
+    const all = catalogue(), without = all.filter(t => !t.squadOnly);
+    expect(all.length - without.length).toBe(squadSupplies().length);
+    // A route bill that asks the squad items would value the new templates if they were ungated.
+    const bill = [row('iron arrow', 900), row('water rune', 900), row('nature rune', 900), row('law rune', 100), row('antipoison(3)', 10), row('feathers', 800)];
+    const accounts = ['A', 'B', 'C', 'D'].map(n => acct(n, { Magic: 70 }, { coin: 500_000 }));
+    const show = (templates: Template[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { templates, bill, capacity: CAPACITY, prices: { 'iron arrow': 3, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288, feather: 2 }, ...extra }))
+        .map(x => [x.account, x.template?.id, x.reason]);
+    expect(show(all)).toEqual(show(without));
+    expect(show(all, { squad: { active: false, hours: 4, members: [{ name: 'Hunter', items: {} }] } })).toEqual(show(without));
+    expect(show(all).some(([, id]) => String(id).startsWith('squad-'))).toBe(false);
+});
+
+test('a squad run is sized by the squad demand: the stock target is the holding plus the demand and the spend is capped', () => {
+    const squad: SquadInput = { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }] };
+    const supplier = acct('Supplier', {}, { coin: 100_000, 'iron arrow': 40 });
+    const arrows = catalogue().filter(t => t.id === 'squad-arrows-lowe');
+    const out = plan(inputs([supplier], { templates: arrows, bill: [], capacity: CAPACITY, squad, prices: { 'iron arrow': 3 } }))[0]!;
+    expect(out.template?.id).toBe('squad-arrows-lowe');
+    const want = Math.min(squadTarget('iron arrow', 4), 2000), env = out.template!.env!;
+    expect(env.STOCK_TARGET).toBe(String(40 + want));
+    expect(env.STOP_AT_TARGET).toBe('1');
+    expect(env.MAX_SPEND).toBe(String(Math.ceil(want * 3 * 2)));
+    expect(Number(env.FLOAT)).toBe(Number(env.MAX_SPEND) + 200);
+    // Antipoison: a small target and a small cap (the Jiminua shelf is nearly empty).
+    const potion = plan(inputs([acct('S', {}, { coin: 100_000 })], { templates: catalogue().filter(t => t.id === 'squad-antipoison-jiminua'), bill: [], capacity: CAPACITY, squad,
+        prices: { 'antipoison(3)': 288 } }))[0]!;
+    expect(Number(potion.template!.env!.STOCK_TARGET)).toBeLessThanOrEqual(12);
+    expect(Number(potion.template!.env!.MAX_SPEND)).toBeLessThan(8000);
+});
+
+test('an active squad member never gives its kit or supplies to another account, and never vacates for an order', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45' || t.id === 'army-alch-magic-99');
+    // The member holds sharks, runes, an antipoison, cooked food and a spare sword; the other account lacks them all.
+    const held = { shark: 500, 'iron arrow': 4000, 'earth rune': 900, 'water rune': 900, 'nature rune': 600, 'antipoison(3)': 12, 'law rune': 20, 'air rune': 60, 'bronze sword': 3, 'wooden shield': 3, trout: 80, 'cooked meat': 50, coin: 9000 };
+    const member = acct('Member', { Strength: 99, Attack: 99, Defence: 99, Magic: 99 }, held), needy = acct('Needy', { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, { 'wooden shield': 1, coin: 100 });
+    const stock = [{ name: 'Member', side, items: held }];
+    const run = (squadActive: boolean) => plan(inputs([member, needy], { templates: band, army: new Set(['needy']), stock, donors: [{ name: 'Member', coins: 900_000 }], capacity: { 'cow:ardougne-north': 6 },
+        squad: { active: squadActive, hours: 4, members: [{ name: 'Member', items: held }] } }));
+    // Control: with the squad inactive the member is an ordinary donor and gives the sword.
+    expect(run(false).find(x => x.account === 'Needy')!.send?.from ?? run(false).find(x => x.account === 'Needy')!.fund?.from).toBe('Member');
+    const out = run(true);
+    expect(out.flatMap(x => [x.send?.from, x.fund?.from]).filter(Boolean)).toEqual([]);
+    expect(out.find(x => x.account === 'Member')!.reason).not.toMatch(/^vacant: gives/);
+});
+
+test('the squad spare of a member is what it holds above the squad reserve, never negative', () => {
+    // A member short of its own target gives nothing; a member above it gives only the excess, to another member.
+    const squad: SquadInput = { active: true, hours: 4, members: [{ name: 'Rich', items: { 'iron arrow': 5000 } }, { name: 'Poor', items: {} }] };
+    const target = squadTarget('iron arrow', 4);
+    const run = (richArrows: number) => plan(inputs([acct('Rich', {}, { 'iron arrow': richArrows }), acct('Poor', {}, { coin: 100 })], { templates: [], bill: [],
+        stock: [{ name: 'Rich', side, items: { 'iron arrow': richArrows } }], squad: { ...squad, members: [{ name: 'Rich', items: { 'iron arrow': richArrows } }, { name: 'Poor', items: {} }] } }));
+    expect(run(target - 1).find(x => x.account === 'Poor')!.send?.item).not.toBe('iron arrow');
+    expect(run(target).find(x => x.account === 'Poor')!.send?.item).not.toBe('iron arrow');
+    const give = run(target + 700).find(x => x.account === 'Poor')!.send;
+    expect(give).toMatchObject({ from: 'Rich', item: 'iron arrow', count: Math.min(700, target) });
+});
+
+test('the squad rows are priced from the plan and capped by maxCoins, first lines first', () => {
+    const squad = (maxCoins?: number): SquadInput => ({ active: true, hours: 4, ...(maxCoins === undefined ? {} : { maxCoins }), members: [{ name: 'Hunter', items: {} }] });
+    const all = squadRows(squad(), item => ({ 'iron arrow': 3 } as Record<string, number | undefined>)[item]);
+    expect(all.length).toBe(8);
+    // Food first: 355 shark units are 592 lobsters at 150 coins, 88,800. A cap of 90,000 leaves 1,200: the arrows (1,965) and runes that do
+    // not fit are dropped, and the antipoison (1,152) and the air runes (40) that fit stay.
+    const prices = { 'iron arrow': 3, 'earth rune': 4, 'water rune': 4, 'nature rune': 20, 'antipoison(3)': 288, 'law rune': 40, 'air rune': 4 } as Record<string, number>;
+    expect(squadRows(squad(90_000), item => prices[item]).map(r => r.consumer.split(': ')[1])).toEqual(['food', 'antipoison(3)', 'air rune']);
+    expect(squadRows(squad(0), () => 1).length).toBe(0);
+    // The fallback table prices a line the plan has no price for: 1,965 coins of arrows do not fit a cap of 1,000.
+    const lines = squadRows(squad(1000), () => undefined, { 'iron arrow': 3 }).map(r => r.consumer.split(': ')[1]);
+    expect(lines).not.toContain('iron arrow');
+    expect(lines).not.toContain('food');
+});
+
+test('a held squad member (live hunt) is still held out of jobs and donor stock: every block member drives the hold-out', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const base = { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 };
+    const hunter = acct('Hunter', base, { 'bronze sword': 1, trout: 100, coin: 50_000 }), needy = acct('Needy', base, { 'bronze sword': 1, coin: 100 });
+    const stock = [{ name: 'Hunter', side, items: { trout: 100, 'bronze sword': 1 } }];
+    const run = (squad?: SquadInput, army = ['hunter', 'needy']) => plan(inputs([hunter, needy], { templates: band, army: new Set(army), capacity: { 'cow:ardougne-north': 6 }, stock, donors: [{ name: 'Hunter', coins: 900_000 }], ...(squad ? { squad } : {}) }));
+    // Control: with no squad Hunter is an ordinary free donor (off the roster, it takes no band itself): it sends its trout to Needy.
+    expect(run(undefined, ['needy']).find(x => x.account === 'Needy')!.send).toMatchObject({ from: 'Hunter', item: 'trout' });
+    // Held: it is in `all` but not in `members` (a live session, a stop file): no band, no kit buy, no donation.
+    const held = run({ active: true, hours: 4, all: ['Hunter'], members: [] });
+    expect(held.find(x => x.account === 'Hunter')!.template).toBeUndefined();
+    expect(held.flatMap(x => [x.send?.from, x.fund?.from]).filter(Boolean)).toEqual([]);
+});
+
+test('a food restock counts the donor item by heal: a lobster donor sends the lobsters short, a shark donor 12/20 of them', () => {
+    const squad: SquadInput = { active: true, hours: 4, all: ['Hunter'], members: [{ name: 'Hunter', items: {} }] };
+    const run = (item: string) => plan(inputs([acct('Hunter', {}, { coin: 100 }), acct('Donor', {}, { [item]: 5000 })], { templates: [], bill: [], squad, stock: [{ name: 'Donor', side, items: { [item]: 5000 } }] }))
+        .find(x => x.account === 'Hunter')!.send;
+    const lobsters = Math.ceil(squadTarget('food', 4) * 20 / 12);
+    expect(run('lobster')).toMatchObject({ item: 'lobster', count: lobsters });
+    expect(run('shark')).toMatchObject({ item: 'shark', count: Math.ceil(lobsters * 12 / 20) });
+});
+
 test('a cow band needs one wearable melee weapon, not a bronze sword by name; a missing weapon is a weapon step', () => {
     const cow = catalogue().filter(t => t.id === 'army-cow-strength-45'), zeke = catalogue().filter(t => t.id.startsWith('army-weapon-zeke-'));
     const base = { Strength: 10, Defence: 10, Hitpoints: 30 }, kit = { trout: 20 };
@@ -2858,6 +3042,120 @@ test('a claim authority timeout is a drain, like an unavailable authority', () =
         expect(assess([line, line])).toMatchObject({ retire: false, drains: 2, fail: 0 });
     }
     expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
+});
+
+import { goalNeeds, QUEST_DEMAND, QUEST_DEMAND_BAND, QUEST_DEMAND_PLACES, QUEST_DEMAND_ROWS, questDemand, questResource, questsDoneIn } from '../src/autopilot';
+describe('quest demand: the quests no owned account has done', () => {
+    const MAXED = { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99, Thieving: 99, Agility: 99, Cooking: 99, Fletching: 99, Crafting: 99, Mining: 99, Smithing: 99 };
+    const row = (slug: string) => QUEST_DEMAND_ROWS.find(q => q.slug === slug)!;
+    // The pack of one quest: its items and its meals as sharks.
+    const packOf = (...slugs: string[]) => { const pack: Record<string, number> = {}; for (const s of slugs) { for (const [i, n] of Object.entries(row(s).items)) pack[norm(i)] = Math.max(pack[norm(i)] ?? 0, n); pack.shark = Math.max(pack.shark ?? 0, row(s).meals); } return pack; };
+    const soldier = (name: string, slugs: string[], done: string[] = ['lost city'], items: Record<string, number> = {}): Acct =>
+        ({ ...acct(name, { ...MAXED, Ranged: 99 }, { ...packOf(...slugs), coin: 100_000, ...items }), quests: new Set(done) });
+    const names = (slugs: string[]) => new Set(slugs.map(s => `quest-${s}`));
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY,
+        pilots: names(QUEST_DEMAND_ROWS.map(q => q.slug)), questsDone: new Set(), templateFor: qualifiedTrooperTemplate, ...extra }));
+    const quest = (x: { template?: Template }) => x.template?.id.startsWith('quest-') ? x.template.id : undefined;
+    const id = (accounts: Acct[], extra: Partial<Inputs> = {}) => quest(run(accounts, extra)[0]!);
+
+    test('an army account that holds the pack of a quest nobody has done takes it as a pilot, behind its own place', () => {
+        const [x] = run([soldier('Kilt', ['elemental'])]);
+        expect(x!.template!.id).toBe('quest-elemental');
+        expect(x!.reason).toBe(`army band ${QUEST_DEMAND_BAND}: Elemental Workshop`);
+        expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'sweep', 'elemental'], repeat: false, resources: [questResource('elemental'), QUEST_DEMAND] });
+        // The cheapest quest of the practice runs first.
+        expect(id([soldier('Kilt', ['elemental', 'chompybird'])])).toBe('quest-elemental');
+        expect(id([soldier('Kilt', ['chompybird'])])).toBe('quest-chompybird');
+    });
+
+    test('there is no job without the proof, the list, the roster, the pack or a quest left to do', () => {
+        const kilt = soldier('Kilt', ['elemental']);
+        // Not a pilot the plan names; no list of done quests; a quest that an observed account has done; one this account has done.
+        expect(id([kilt], { pilots: new Set() })).toBeUndefined();
+        expect(id([kilt], { questsDone: undefined })).toBeUndefined();
+        expect(id([kilt], { questsDone: new Set(['elemental workshop']) })).toBeUndefined();
+        expect(id([soldier('Kilt', ['elemental'], ['lost city', 'elemental workshop'])])).toBeUndefined();
+        // An account whose status lists no quests, a pack short of one knife, no roster seat.
+        expect(id([{ ...kilt, quests: undefined }])).toBeUndefined();
+        expect(id([{ ...kilt, items: { ...kilt.items, knife: 0 } }])).toBeUndefined();
+        expect(id([kilt], { army: new Set() })).toBeUndefined();
+        // Skills the journal asks for: Ikov wants Thieving 42 and Ranged 40.
+        const ikov = soldier('Kilt', ['ikov']);
+        expect(id([ikov])).toBe('quest-ikov');
+        expect(id([{ ...ikov, skills: { ...ikov.skills, Thieving: 41 } }])).toBeUndefined();
+        // A quest that wants another quest first: Biohazard wants Plague City.
+        expect(id([soldier('Kilt', ['biohazard'])])).toBeUndefined();
+        expect(id([soldier('Kilt', ['biohazard'], ['lost city', 'plague city'])])).toBe('quest-biohazard');
+    });
+
+    test('one account does a quest once and at most QUEST_DEMAND_PLACES quest jobs run at a time', () => {
+        const slugs = ['elemental', 'chompybird', 'horror', 'ikov'];
+        const four = ['A', 'B', 'C', 'D'].map(n => soldier(n, slugs));
+        const out = run(four).map(quest);
+        expect(out.filter(Boolean).length).toBe(QUEST_DEMAND_PLACES);
+        expect(new Set(out.filter(Boolean)).size).toBe(QUEST_DEMAND_PLACES);
+        // The Fremennik Trials and the Underground Pass use the place of their build templates.
+        expect(questResource('viking')).toBe(catalogue().find(t => t.id === 'army-quest-fremennik')!.resources![0]);
+        expect(questResource('upass')).toBe(catalogue().find(t => t.id === 'army-quest-upass')!.resources![0]);
+        expect(questResource('regicide')).toBe(questResource('upass'));
+    });
+
+    test('a kit buy for a quest goes to one account for each quest, and never for more quests than the shared place holds', () => {
+        const market: Market = { 'law rune': { id: 563, name: 'Law rune', limit: KIT_PRICE_CAPS['law rune'] ?? 400 } };
+        const lacking = (name: string) => { const a = soldier(name, ['ikov', 'dig']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
+        const out = run(['A', 'B', 'C', 'D', 'E'].map(lacking), { market });
+        const buys = out.map(x => x.template?.id).filter((t): t is string => !!t && t.startsWith(KIT_BUY + 'quest-'));
+        expect(buys.length).toBeGreaterThan(0);
+        expect(new Set(buys).size).toBe(buys.length);
+        expect(buys.length).toBeLessThanOrEqual(QUEST_DEMAND_PLACES);
+    });
+
+    test('the bill asks for the pack of a quest once, however many accounts could run it', () => {
+        const market: Market = { 'law rune': { id: 563, name: 'Law rune', limit: KIT_PRICE_CAPS['law rune'] ?? 400 } };
+        const lacking = (name: string) => { const a = soldier(name, ['ikov']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
+        const rows = (n: number) => goalNeeds(inputs(Array.from({ length: n }, (_, i) => lacking(`Soldier${i}`)), { army: new Set(Array.from({ length: n }, (_, i) => `soldier${i}`)), market,
+            pilots: names(['ikov']), questsDone: new Set() }), Array.from({ length: n }, (_, i) => lacking(`Soldier${i}`))).filter(r => /quest-ikov/.test(r.consumer));
+        expect(rows(1).length).toBe(1);
+        expect(rows(5).length).toBe(1);
+        expect(rows(5)[0]).toMatchObject({ names: ['law rune'], short: 1, account: 'soldier0' });
+    });
+
+    test('the table gives each quest one template with the AIO route of its bench case, in order of practice ticks', () => {
+        const ts = questDemand();
+        expect(ts.map(t => t.id)).toEqual(QUEST_DEMAND_ROWS.map(q => `quest-${q.slug}`));
+        expect(new Set(QUEST_DEMAND_ROWS.map(q => q.slug)).size).toBe(QUEST_DEMAND_ROWS.length);
+        expect(QUEST_DEMAND_ROWS.map(q => q.ticks)).toEqual([...QUEST_DEMAND_ROWS.map(q => q.ticks)].sort((a, b) => a - b));
+        for (const t of ts) expect([t.id, t.pilot, t.once, t.tier, t.worker, t.aio, t.args!.slice(0, 2)]).toEqual([t.id, true, true, 'goal', 'scripts/quest-sweep.ts', `quester:quest:${t.id.slice(6)}`, ['quester', 'sweep']]);
+        expect(ts.map(t => t.band)).toEqual([...ts.map(t => t.band)].sort((a, b) => a! - b!));
+        expect(CAPACITY[QUEST_DEMAND]).toBe(QUEST_DEMAND_PLACES);
+        for (const t of ts) expect([t.id, CAPACITY[t.resources![0]!]]).toEqual([t.id, 1]);
+        // A donor keeps nothing for a quest pack.
+        expect(kitReserve(ts)).toEqual({});
+        // The ids are in the catalogue.
+        const all = new Set(catalogue().map(t => t.id));
+        for (const t of ts) expect(all.has(t.id)).toBe(true);
+    });
+
+    test('questsDoneIn reads the complete quests of the rows, in the two journal forms, and no other', () => {
+        const done = questsDoneIn([
+            { quests: ['Cook\'s Assistant', { name: 'Biohazard', state: 'complete' }, { name: 'Plague City', state: 'started' }] },
+            { questJournal: [{ name: 'Lost City', state: 'complete' }, 'Shield of Arrav'] }, null, {}, { quests: 'x' },
+        ]);
+        expect([...done].sort()).toEqual(["biohazard", "cook's assistant", 'lost city', 'shield of arrav']);
+    });
+});
+
+test('a held squad member is no restock donor: only free members send each other stock', () => {
+    // A is on a live hunt (held: in `all`, not in `members`) with 4,000 arrows above its keep; B is free and short.
+    const squad: SquadInput = { active: true, hours: 4, all: ['A', 'B'], members: [{ name: 'B', items: {} }] };
+    const stock = [{ name: 'A', side, items: { 'iron arrow': 4000 } }];
+    const run = (sq: SquadInput) => plan(inputs([acct('A', {}, { 'iron arrow': 4000 }), acct('B', {}, { coin: 100 })], { templates: [], bill: [], stock, squad: sq }));
+    const held = run(squad);
+    expect(held.find(x => x.account === 'B')!.send).toBeUndefined();
+    expect(held.find(x => x.account === 'A')!.reason).not.toBe('vacant: gives a kit item this pass');
+    // Control: with A free (a member that is observed and not held) it may send B its surplus.
+    const free = run({ ...squad, members: [{ name: 'A', items: { 'iron arrow': 4000 } }, { name: 'B', items: {} }] });
+    expect(free.find(x => x.account === 'B')!.send).toMatchObject({ from: 'A', item: 'iron arrow' });
 });
 
 test('the game facts of the planner read from the revision-289 content', async () => {

@@ -52,10 +52,12 @@ export function isPrerequisiteFailure(result: string): boolean {
     // do not change between two logins, so a restart fails the same way.
     // The walker names a missing fare at the dock (`in the pack`) and at the bank that does not hold the coins.
     if (/\bprecondition (?:no route to \d+,\d+,\d+|(?:(?:westbound|eastbound) )?ferry needs \d+ coins (?:in the pack|and the bank holds \d+))/.test(result)) return true;
-    // A Grand Exchange buy that ended before it placed an offer (packages/core/src/order-refusal.ts): the coins, the pack and the count
-    // of what the account holds do not change between two logins, so the same order fails the same way. The next planner pass sizes a
-    // new order from the fresh status that this run leaves.
-    if (unplacedCause(result) !== undefined) return true;
+    // A Grand Exchange buy that ended before it placed an offer (packages/core/src/order-refusal.ts): the coins, the pack, the count
+    // of what the account holds and the order deadline do not change between two logins of the same job, so the same order fails the
+    // same way. A stop (the session ended, died or was told to stop) can differ at the next login. The next planner pass sizes a new
+    // order from the fresh status that this run leaves.
+    const cause = unplacedCause(result);
+    if (cause !== undefined && cause !== 'stop') return true;
     // A finite combat pilot that retreats or refuses a target needs review;
     // twenty fresh logins do not change its route, food, gear or attribution.
     return result.startsWith('RESULT fail Fire-pilot ')

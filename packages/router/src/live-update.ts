@@ -41,7 +41,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { writeLiveUpdate, type LiveUpdateMark } from '../../core/src/live-reload';
-import { releaseEntries, runtimeTrees, standingAccounts, standingPeer, workerSourceRoots } from '../../core/src/worker-release';
+import { releaseEntries, releaseFiles, runtimeTrees, standingAccounts, standingPeer, workerLaunchers, workerSourceRoots } from '../../core/src/worker-release';
 import { patchNewFiles, patchState, type PatchState } from '../../../scripts/worktree-setup';
 
 // `mergedDelivery`: the local bytes are the snapshot of a coordinator delivery whose pull request merged (or had nothing
@@ -464,6 +464,15 @@ export function liveRuns(root: string, server: string, closure: (entries: string
     }
     return runs;
 }
+// The files of a live run, from its entries: the files that make its release id (worker-release.ts capabilityRevision),
+// not only the files that its entry imports. A data file or a task file of the release (the progression catalog, a
+// router task) moves the release under the run as well. A run with no entry has no list here.
+// One memo for the closure that this call returns: the first list costs seconds (it reads the runtime trees), and the
+// live runs of one update check share it.
+export function releaseClosure(root: string): (entries: string[]) => string[] {
+    const memo: NonNullable<Parameters<typeof releaseFiles>[2]> = new Map();
+    return entries => entries.length ? releaseFiles([...entries, ...workerLaunchers], root, memo) : [];
+}
 export const TRADE_ENTRY = 'scripts/fleet-trade.ts', TRADE_HOLD_MS = 45 * 60_000;
 // A live session rewrites its status every few seconds, and the server drops a lost session after 200 s.
 export const LIVE_ROW_MS = 200_000, LIVE_SERVER = 'rs-sdk-demo.fly.dev';
@@ -521,7 +530,7 @@ if (import.meta.main) {
         const inTheWay = shown ? patchCollisions(root, oldPatch, nextPatch) : [];
         const resets = shown !== null && !inTheWay.length;
         const vendorRelease = resets ? vendorReleaseFiles(oldPatch, nextPatch) : [];
-        const runs = () => liveRuns(root, LIVE_SERVER, entries => importClosure(entries, root));
+        const runs = () => liveRuns(root, LIVE_SERVER, releaseClosure(root));
         const plan = planUpdate({ ...checkout, vendorRelease, ...(checkout.behind ? { ...holds(), liveRuns: runs() } : { holds: [], heldFiles: [] }) });
         if (plan.action === 'none' && plan.reason === 'current') {
             // A current checkout. An SDK folder with no patch gets it: an apply discards nothing. It waits for the

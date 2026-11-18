@@ -304,7 +304,7 @@ export function modelRung(c: Content, r: ModelInput): Facts {
             if (!d || !roll) return done({}, `jungle roll not found in [label,chop_jungle] of ${FILES.jungle}`);
             const rollTicks = Number(d.m[1]) + 1;
             return done({ outputs: items('product', 1) }, {
-                basis: 'roll', ticksPerTry: rollTicks, note: `a roll every ${rollTicks} ticks with any usable axe. Needs the Legends' Quest Kharazi map ([label,start_chop_jungle]); a cut moves the player one tile.`,
+                basis: 'roll', ticksPerTry: rollTicks, note: `a roll every ${rollTicks} ticks with any usable axe. Needs the Legends Quest Kharazi map ([label,start_chop_jungle]); a cut moves the player one tile.`,
                 src: [d.src, roll.src], rolls: [{ tool: null, toolLevel: 1, rollTicks, failTicks: 0, low: Number(roll.m[1]), high: Number(roll.m[2]), fixedChance: null, src: roll.src }],
             });
         }
