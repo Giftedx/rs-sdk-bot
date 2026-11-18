@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795033971814-sausagefest-deeppockets-staffoffire",
+ "account": "Sausagefest",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "2e62cda9-2b55-4781-880d-fbe74cacae16",
+ "count": 0,
+ "ok": false,
+ "at": 1795034115732,
+ "detail": "trade claimed"
+}
