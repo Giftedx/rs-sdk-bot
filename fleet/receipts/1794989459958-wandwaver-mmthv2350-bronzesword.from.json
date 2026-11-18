@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794989459958-wandwaver-mmthv2350-bronzesword",
  "account": "Wandwaver",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "Bronze sword",
  "requested": 1,
  "claim": "9dde45bc-8101-4019-8364-60a22b19e956",
- "count": 0,
- "ok": false,
- "at": 1794989820932,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794990075969,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794990054676
+ },
+ "logout": {
+  "attemptId": "1794989821060-0000005160-0000000001",
+  "at": 1794990075859,
+  "sha256": "35863245763a2f1e5c7cf445b3e650f0a5a3eb20dc0a20fff8aebc01ad3902b1"
+ },
+ "screen": true
 }
