@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795002874431-swordinhand-kiltlifter-cookedmeat",
+ "account": "Kiltlifter",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "9153b9e2-ebe8-4a95-8494-211535694672",
+ "count": 0,
+ "ok": false,
+ "at": 1795002984722,
+ "detail": "trade claimed"
+}

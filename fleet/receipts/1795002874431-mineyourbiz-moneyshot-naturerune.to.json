@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795002874431-mineyourbiz-moneyshot-naturerune",
+ "account": "Moneyshot",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "435e863a-2728-415d-b5ef-b25cdf0d515b",
+ "count": 0,
+ "ok": false,
+ "at": 1795002969974,
+ "detail": "trade claimed"
+}

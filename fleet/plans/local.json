@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795002920497,
+ "at": 1795002985885,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -226,21 +226,21 @@
    ]
   },
   {
-   "account": "YewFirst",
+   "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=220 LIMIT_PRICE=10000 CASH_RESERVE=101000 ORDER_KEY=yewfirst-kit10-536-0to220 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=17 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit11-532-0to17 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":220}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"532\":17}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 220 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "goal": "buy 17 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
    "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
+   "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
    "resources": []
   },
@@ -297,25 +297,6 @@
    ]
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=17 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit11-532-0to17 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"532\":17}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 17 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -340,6 +321,29 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "10",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "NabTheKnob",

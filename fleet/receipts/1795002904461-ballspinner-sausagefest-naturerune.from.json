@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795002904461-ballspinner-sausagefest-naturerune",
+ "account": "Ballspinner",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "05c98ff3-caa6-4858-bcbb-2de2997eeac7",
+ "count": 0,
+ "ok": false,
+ "at": 1795002979067,
+ "detail": "trade claimed"
+}
