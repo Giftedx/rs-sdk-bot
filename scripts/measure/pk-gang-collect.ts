@@ -6,8 +6,8 @@
 //   samples.jsonl          one line a roster frame (each 10 ticks): {k, at, on:{name:[x,z,level,combat]}, players}
 //   feed-<startMs>.jsonl   hello, roster and tick lines in the format of pk-rival-feed.ts `record`, one file an hour;
 //                          `pk-rival-feed.ts digest` and `pk-gang-record.ts` read them.
-import { appendFileSync, mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { RosterFeed, type RosterRow } from '../../packages/core/src/roster-feed';
 import { gameDialAddress } from '../../packages/core/src/websocket-proxy';
 
@@ -26,9 +26,27 @@ export function followRect(tiles: { x: number; z: number }[], current?: Rect): R
     return { x: Math.max(0, Math.floor((x0 + x1 + 1) / 2 - w / 2)), z: Math.max(0, Math.floor((z0 + z1 + 1) / 2 - h / 2)), w, h };
 }
 const wild = (z: number) => z >= 3520 && z < 3968;
+// The world feed of one server into `file`: the hello, roster and tick lines of the tiles of `rect`, as the recorder
+// of pk-rival-feed.ts writes them. `first` is a line written before them (the names of a bench meeting). The engine of
+// a bench case serves the feed with WORLD_FEED=true, so a bench fight and a live fight have one instrument. Returns
+// the function that closes the socket.
+export function tapFeed(url: string, file: string, rect: Rect, first?: unknown): () => void {
+    // A fault of the tap must not end the run that it measures.
+    try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, first === undefined ? '' : JSON.stringify(first) + '\n'); } catch { return () => {}; }
+    const feed = new RosterFeed(), ws = new WebSocket(url), line = (o: unknown) => { try { appendFileSync(file, JSON.stringify(o) + '\n'); } catch { /* the folder went away */ } };
+    ws.onopen = () => { ws.send(JSON.stringify({ t: 'roster', on: true })); ws.send(JSON.stringify({ t: 'sub', ...rect })); };
+    ws.onmessage = e => { try { const m = feed.expand(JSON.parse(String(e.data)));
+        if (m.t === 'hello') line({ t: 'hello', r: 0, at: Date.now(), tick: m.tick });
+        else if (m.t === 'roster') line({ t: 'roster', k: m.k, p: m.p });
+        else if (m.t === 'tick' && (m.p?.length || m.rp?.length)) line({ t: 'tick', r: 0, k: m.k, p: m.p, rp: m.rp }); } catch { /* a frame that is no JSON is left out */ } };
+    ws.onerror = () => { /* a bench with no feed writes the first line only */ };
+    return () => { try { ws.close(); } catch { /* closed */ } };
+}
 
 if (import.meta.main) {
-    const hours = Number(process.argv[2] ?? 1), dir = resolve(process.argv[3] ?? join(import.meta.dir, '..', '..', '.practice', 'gang-record'));
+    const hours = Number(process.argv[2] ?? 1);
+    if (!Number.isFinite(hours) || hours <= 0 || hours > 24 * 14) { console.log('usage: bun scripts/measure/pk-gang-collect.ts <hours, over 0 and at most 336> [outDir] [name,name,...]'); process.exit(2); }
+    const dir = resolve(process.argv[3] ?? join(import.meta.dir, '..', '..', '.practice', 'gang-record'));
     const names = new Set((process.argv[4] ?? 'goondelf,ligma,sugma').toLowerCase().split(','));
     mkdirSync(dir, { recursive: true });
     const samples = join(dir, 'samples.jsonl');

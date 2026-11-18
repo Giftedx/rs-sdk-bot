@@ -308,3 +308,46 @@ test('the older fleet-data heartbeat counts as the dead side\'s lease, and a hel
         expect(() => acquireFleetSwarmClaim(b, { account: 'Trader2', server, side: 'claude-cloud' }, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('fleet trade claim held');
     });
 }, 30_000);
+
+test('the owning checkout takes back its own trade claim of the same order role when that claim never reached the network', async () => {
+    await withRepos(async (a, b) => {
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const dead = (code: string) => Bun.spawn([process.execPath, '-e', `import { acquireFleetTradeClaim } from ${modulePath}; ${code}`],
+            { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true }).exited;
+        // A trade worker pushed its claim and ended before its session started: live, its push timed out for the client.
+        expect(await dead(`acquireFleetTradeClaim(process.cwd(), ${JSON.stringify(input)})`)).toBe(0);
+        const stale = readFleetAccountClaim(a, input)!;
+        expect(stale.phase).toBe('held');
+        // Another checkout cannot take it.
+        expect(() => acquireFleetTradeClaim(b, input)).toThrow('held');
+        // The next try of the same order role on the owning checkout takes it back.
+        const again = acquireFleetTradeClaim(a, input);
+        expect(again.nonce).not.toBe(stale.nonce);
+        expect(readFleetAccountClaim(b, input)).toMatchObject({ nonce: again.nonce, phase: 'held', orderId: input.orderId, role: 'from' });
+        // While that owner lives, the role is claimed: no second claim.
+        expect(() => acquireFleetTradeClaim(a, input)).toThrow('held');
+        again.release();
+        // A released attempt is a used attempt: the order role is never claimed again.
+        expect(() => acquireFleetTradeClaim(a, input)).toThrow('already claimed');
+    });
+}, 60_000);
+
+test('a trade claim that reached the network is never taken back, and the claim of another order role is no excuse', async () => {
+    await withRepos(async (a) => {
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const dead = (code: string) => Bun.spawn([process.execPath, '-e', `import { acquireFleetTradeClaim } from ${modulePath}; ${code}`],
+            { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true }).exited;
+        // Armed: the session intent was written and the marker is gone. The session can have traded.
+        expect(await dead(`acquireFleetTradeClaim(process.cwd(), ${JSON.stringify(input)}).armNetwork()`)).toBe(0);
+        expect(() => acquireFleetTradeClaim(a, input)).toThrow('held');
+    });
+    await withRepos(async (a) => {
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const dead = (code: string) => Bun.spawn([process.execPath, '-e', `import { acquireFleetTradeClaim } from ${modulePath}; ${code}`],
+            { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true }).exited;
+        // A used attempt of this order role, then an abandoned claim of another order at the head.
+        acquireFleetTradeClaim(a, input).release();
+        expect(await dead(`acquireFleetTradeClaim(process.cwd(), ${JSON.stringify({ ...input, orderId: 'order-two' })})`)).toBe(0);
+        expect(() => acquireFleetTradeClaim(a, input)).toThrow('already claimed');
+    });
+}, 60_000);
