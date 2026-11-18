@@ -531,13 +531,16 @@ test('a confirmed-offline account keeps its observed stock for a day, unless a s
     const hour = 3_600_000, seen = 10 * hour, now = seen + 5 * hour;
     const status = { name: 'Donor', server: 'rs-sdk-demo.fly.dev', at: seen, bankAt: seen, inventory: [], bank: [{ id: 556, name: 'Air rune', count: 400 }] };
     const stockOf = (offline?: Parameters<typeof offlineStockFresh>[1], at = now) => donorStock('Donor', 'local', status, at, 30 * 60_000, () => undefined, 'rs-sdk-demo.fly.dev', offline)?.items['air rune'];
-    const proof = { confirmed: true, loggedOutAt: seen + 5_000 };
+    const proof = { confirmed: true, loggedOutAt: seen + 5_000, startedAt: seen - hour };
     // Past the 30-minute window, no proof: no stock. With a confirmed logout after the observation: the stock stands.
     expect(stockOf()).toBeUndefined();
     expect(stockOf(proof)).toBe(400);
     // Not confirmed, a logout before the observation, an order that ended after it, or an observation over a day old.
     expect(stockOf({ confirmed: false })).toBeUndefined();
-    expect(stockOf({ confirmed: true, loggedOutAt: seen - 61_000 })).toBeUndefined();
+    expect(stockOf({ confirmed: true, loggedOutAt: seen - 61_000, startedAt: seen - 2 * hour })).toBeUndefined();
+    // A later session (it started after the observation, so it may have changed the bank before it wrote a status).
+    expect(stockOf({ ...proof, startedAt: seen + 1 })).toBeUndefined();
+    expect(stockOf({ ...proof, startedAt: undefined })).toBeUndefined();
     expect(stockOf({ ...proof, ordersEnd: seen + 1 })).toBeUndefined();
     expect(stockOf({ ...proof, ordersEnd: seen })).toBe(400);
     expect(stockOf(proof, seen + OFFLINE_STOCK_MAX_AGE_MS)).toBeUndefined();

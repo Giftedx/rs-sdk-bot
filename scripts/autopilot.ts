@@ -163,13 +163,16 @@ export const SIDE_STOCK_MAX_AGE_MS = OBSERVATION_FRESH_MS;
 // units before a withdrawal, so the two observations contribute their maximum rather than their sum.
 // An account that is confirmed offline holds what its last observation showed: its bank cannot change until a session or a trade
 // touches it. So its observation stays good for OFFLINE_STOCK_MAX_AGE_MS when the logout proof (packages/core/src/session-lifecycle.ts)
-// is confirmed and dated no earlier than the observation, and no fleet order that names the account ended after it.
+// is confirmed, the session that it closes started no later than the observation (the attempt id begins with its start time, so a
+// later session that never wrote a status cannot pass) and ended no earlier than the observation, and no fleet order that names
+// the account ended after it.
 export const OFFLINE_STOCK_MAX_AGE_MS = 24 * 3_600_000;
-export type OfflineProof = { confirmed: boolean; loggedOutAt?: number; ordersEnd?: number };
+export type OfflineProof = { confirmed: boolean; loggedOutAt?: number; startedAt?: number; ordersEnd?: number };
 const LOGOUT_SKEW_MS = 60_000;
 export function offlineStockFresh(at: unknown, proof: OfflineProof | undefined, now: number): boolean {
     return typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OFFLINE_STOCK_MAX_AGE_MS && !!proof?.confirmed
-        && typeof proof.loggedOutAt === 'number' && proof.loggedOutAt >= at - LOGOUT_SKEW_MS && !(typeof proof.ordersEnd === 'number' && proof.ordersEnd > at);
+        && typeof proof.loggedOutAt === 'number' && proof.loggedOutAt >= at - LOGOUT_SKEW_MS
+        && typeof proof.startedAt === 'number' && proof.startedAt <= at && !(typeof proof.ordersEnd === 'number' && proof.ordersEnd > at);
 }
 export function donorStock(name:string,side:string,status:any,now:number,maxAgeMs:number,itemName:(id:number)=>string|undefined,server='rs-sdk-demo.fly.dev',offline?:OfflineProof):Stock|undefined {
     const recent=(at:unknown)=>(typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=now&&now-at<maxAgeMs)||offlineStockFresh(at,offline,now);
@@ -794,7 +797,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
             else {
                 const proof = readLogoutProof(n, owners.get(lower)?.server ?? 'rs-sdk-demo.fly.dev');
                 const ends = orders.filter(o => o.from.toLowerCase() === lower || o.to.toLowerCase() === lower).map(o => o.end);
-                offlineProofs.set(lower, { confirmed: proof.state === 'confirmed', loggedOutAt: proof.state === 'confirmed' ? proof.loggedOutAt : undefined, ordersEnd: ends.length ? Math.max(...ends) : undefined });
+                offlineProofs.set(lower, { confirmed: proof.state === 'confirmed', loggedOutAt: proof.state === 'confirmed' ? proof.loggedOutAt : undefined, startedAt: proof.state === 'confirmed' ? Number(proof.attemptId.split('-')[0]) : undefined, ordersEnd: ends.length ? Math.max(...ends) : undefined });
             }
         }
         return offlineProofs.get(lower);
