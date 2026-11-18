@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794997172246-masterbaiter-yewfirst-firerune",
+ "account": "YewFirst",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "c1b1807e-c4e3-49bd-a9aa-5436f10ce656",
+ "count": 0,
+ "ok": false,
+ "at": 1794997527669,
+ "detail": "trade claimed"
+}
