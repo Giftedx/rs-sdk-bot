@@ -13,7 +13,7 @@
 // the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
 // (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
 import { openBot, finish, countItems, getWorld, accountOf, sessionDied } from '../packages/core/src/bot';
-import { finishCombat } from '../packages/core/src/combat-end';
+import { RETALIATE_OFF, RETALIATE_ON, finishCombat } from '../packages/core/src/combat-end';
 import { questFlags } from '../packages/core/src/quest-status';
 import {startQuestSustain} from './quest-sustain';
 import {
@@ -640,7 +640,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     // It tries the walk up to three times while each try ends closer, then restores auto-retaliate.
     const retaliate=async(on:boolean)=>{
         if(state()?.autoRetaliateEnabled===on||state()?.autoRetaliateEnabled===undefined)return false;
-        await s.direct({type:'clickComponent',componentId:on?150:151,reason:`${label} retreat auto-retaliate ${on?'ON':'OFF'}`});
+        await s.direct({type:'clickComponent',componentId:on?RETALIATE_ON:RETALIATE_OFF,reason:`${label} retreat auto-retaliate ${on?'ON':'OFF'}`});
         return await waitUntil(s,()=>state()?.autoRetaliateEnabled===on,{timeoutTicks:5});
     };
     const leave=async()=>{

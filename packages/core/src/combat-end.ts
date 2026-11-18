@@ -8,16 +8,18 @@ import type { Session } from './inprocess';
 import type { PathLength, Tile } from './world';
 import { rsPathLength } from './world';
 import { combatLevel, hunts, loadHunters, loadRoamers, type Hunter, type Roamer } from './danger';
-import { componentId, logout } from './logout';
+import { logout } from './logout';
+import { defaultEatAt, holdSessionEater, questFoodDefinitions, selectQuestFood, type FoodItem } from './sustain';
 import { waitTicks, waitUntil, type TickSource } from './ticks';
 import { sessionWalker, walkPath } from './walk';
-import { finish } from './bot';
+import { deathRecoveryOf, finish, logoutAdapter } from './bot';
 
 // logout.rs2:27 combat_preventlogout: each hit on the player (auto_retaliate.rs2:2) blocks logout for 16 ticks.
 export const LOGOUT_QUIET_TICKS = 17;
 export function logoutQuiet(now: number, lastHit: number, inCombat: boolean) { return !inCombat && now - lastHit >= LOGOUT_QUIET_TICKS; }
 // Before logout: the retreat walk ends the player's own attack, then the wait runs until no hit lands for the
-// logout window. `between` eats while waiting. The result is observed, never assumed.
+// logout window. `between` runs before each tick of the wait (scripts/magic-order.ts eats there). The result is
+// observed, never assumed.
 export async function awaitLogoutQuiet(s: TickSource, o: { lastHit: () => number; retreat: () => Promise<void>; between: () => Promise<unknown>; timeoutTicks: number }) {
     let ended = false; void s.ended?.then(() => { ended = true; });
     const start = s.tick(), quiet = () => logoutQuiet(s.tick(), o.lastHit(), !!s.sdk.getState()?.player?.combat?.inCombat);
@@ -79,8 +81,15 @@ export function nearestSafeTile(at: Tile, squares: readonly Square[], length: (f
     return best;
 }
 
-export type CombatLeave = { underAttack: boolean; left: boolean; quiet: boolean; ticks: number; from?: Tile; to?: Tile; moves: number; detail?: string };
-type LeaveDeps = {
+// `tiles`: the distance from the start tile to the end tile. `eats`: the eat inputs of the step.
+export type CombatLeave = { underAttack: boolean; left: boolean; quiet: boolean; ticks: number; from?: Tile; to?: Tile; moves: number; tiles: number; eats: number; detail?: string };
+type EatPolicy = {
+    // Item ids the step can eat. Default: each food of the content (sustain.ts questFoodDefinitions).
+    food?: readonly number[];
+    // Eat at this Hitpoints level or below. Default: sustain.ts defaultEatAt.
+    eatAt?: number | ((maxHp: number) => number);
+};
+type LeaveDeps = EatPolicy & {
     // Walks to the tile and says if the account stands within 2 tiles of it. The default is the session walker.
     walk?: (to: Tile) => Promise<boolean>;
     pathLength?: (from: Tile, to: Tile) => number | null;
@@ -90,7 +99,29 @@ type LeaveDeps = {
 };
 // The interface buttons of auto-retaliate (combat tab): 150 on, 151 off. A monster that still fights holds an account
 // with auto-retaliate on in place to hit back (scripts/gather-combat.ts leave), so the walk out turns it off.
-const RETALIATE_ON = 150, RETALIATE_OFF = 151;
+export const RETALIATE_ON = 150, RETALIATE_OFF = 151;
+
+// The eater of the end step. The eat guard of the session stops for the rest of the session after the worker ate by
+// its own input (eat-guard.ts `yielded`), and a combat worker eats by its own input. So the step eats by itself, on
+// each tick of its walk and of its wait: when the Hitpoints are at or below the eat level, the pack holds a food with
+// an Eat option, and the food delay of the last eat (3 ticks) is over. It holds the eat guard while it runs, so one
+// tick never gets two eats.
+const EAT_TICKS = 3;
+export function startEndEater(s: Pick<Session, 'sdk' | 'tick' | 'onTick' | 'direct'>, o: EatPolicy = {}) {
+    const food = o.food ?? [...questFoodDefinitions().keys()], held = holdSessionEater(s.sdk);
+    const eatOption = (i: FoodItem) => i.optionsWithIndex?.find(v => /^eat$/i.test(v.text));
+    let stopped = false, sentAt = held.ateAt, eats = 0;
+    const off = s.onTick(() => {
+        if (stopped || s.tick() - sentAt < EAT_TICKS) return;
+        const st = s.sdk.getState();
+        if (!st?.player || st.player.isDead) return;
+        const choice = selectQuestFood({ ...st, inventory: ((st.inventory ?? []) as FoodItem[]).filter(i => eatOption(i)) }, { food, eatAt: o.eatAt ?? defaultEatAt });
+        if (!choice) return;
+        sentAt = s.tick(); eats++;
+        try { void Promise.resolve(s.direct({ type: 'useInventoryItem', slot: choice.item.slot, optionIndex: eatOption(choice.item)!.opIndex, reason: 'SDK' })).catch(() => {}); } catch { /* the session ended */ }
+    });
+    return { eats: () => eats, stop() { if (stopped) return; stopped = true; off(); held.release(); } };
+}
 
 // Takes an account that is under attack off the monsters' ground and waits until the logout window is open. An account
 // that is not under attack is left where it stands. The state of auto-retaliate is put back as it was.
@@ -109,7 +140,7 @@ export async function leaveCombat(s: Session, deps: LeaveDeps = {}): Promise<Com
     });
     const quiet = () => logoutQuiet(s.tick(), lastHit, !!st()?.player?.combat?.inCombat);
     try {
-        if (quiet() || !me()) return { underAttack: false, left: false, quiet: quiet(), ticks: 0, moves: 0 };
+        if (quiet() || !me()) return { underAttack: false, left: false, quiet: quiet(), ticks: 0, moves: 0, tiles: 0, eats: 0 };
         const from = me()!, retaliated = st()?.autoRetaliateEnabled;
         const retaliate = async (on: boolean) => {
             if (st()?.autoRetaliateEnabled === on || st()?.autoRetaliateEnabled === undefined) return;
@@ -123,32 +154,34 @@ export async function leaveCombat(s: Session, deps: LeaveDeps = {}): Promise<Com
             const p = me(); return !!p && cheb(p, to) <= 2;
         });
         let to: Tile | undefined, left = false, moves = 0, detail: string | undefined;
-        await retaliate(false);
+        // A tile that a walk of this step did not reach is not chosen again.
+        const failed: Tile[] = [], untried = (a: Tile, b: Tile) => failed.some(f => f.x === b.x && f.z === b.z) ? null : length(a, b);
+        const eater = startEndEater(s, deps);
         try {
+            await retaliate(false);
             // A second walk if a hit lands after the first: a different kind of monster was in reach of the first tile.
             for (; moves < (deps.moves ?? 2) && !ended && !quiet(); moves++) {
                 const at = me(); if (!at) break;
                 const squares = combatSquares(at, st()?.nearbyNpcs ?? [], Object.fromEntries((st()?.skills ?? []).map((k: { name: string; baseLevel?: number; level: number }) => [k.name.toLowerCase(), k.baseLevel ?? k.level])), deps.data);
-                const target = nearestSafeTile(at, squares, length);
+                const target = nearestSafeTile(at, squares, untried);
                 log(`COMBAT_END leave ${JSON.stringify({ tick: s.tick(), at, squares: squares.length, to: target })}`);
                 if (!target) { detail = 'no safe tile in reach'; break; }
                 to = target;
-                if (cheb(at, target) > 0 && !await walk(target)) { detail = 'walk to the safe tile did not arrive'; continue; }
+                if (cheb(at, target) > 0 && !await walk(target)) { failed.push(target); detail = 'walk to the safe tile did not arrive'; continue; }
                 left = true; detail = undefined;
+                // The eater of the step runs on each tick, so the wait has nothing more to do between two ticks.
                 const waited = await awaitLogoutQuiet(s, { lastHit: () => lastHit, retreat: async () => {}, between: async () => {}, timeoutTicks: deps.quietTicks ?? 60 });
                 if (waited.quiet) break;
             }
-        } finally { if (retaliated !== undefined) await retaliate(retaliated).catch(() => {}); }
-        return { underAttack: true, left, quiet: quiet(), ticks: s.tick() - start, from, ...(to ? { to } : {}), moves, ...(detail ? { detail } : {}) };
+        } finally { eater.stop(); if (retaliated !== undefined) await retaliate(retaliated).catch(() => {}); }
+        return { underAttack: true, left, quiet: quiet(), ticks: s.tick() - start, from, ...(to ? { to } : {}), moves, tiles: cheb(from, me() ?? from), eats: eater.eats(), ...(detail ? { detail } : {}) };
     } finally { off(); }
 }
 
 // Presses logout until the server confirms it: `tries` windows of `windowMs` each. A window that ends with no answer
 // is a logout that the server did not take, so the next window waits for the logout window first.
 export async function confirmedLogout(s: Session, o: { tries?: number; windowMs?: number; press?: typeof logout; quietTicks?: number } = {}): Promise<{ out: string; tries: number }> {
-    const press = o.press ?? logout, max = o.tries ?? 3;
-    const adapter = { sdk: { sendClickComponent: (id: number) => s.direct({ type: 'clickComponent', componentId: id, reason: 'SDK' }) }, ended: s.ended };
-    void componentId; // the logout button id is read by logout() itself
+    const press = o.press ?? logout, max = o.tries ?? 3, adapter = logoutAdapter(s);
     let out = 'timeout', tries = 0;
     while (tries < max) {
         tries++;
@@ -162,14 +195,19 @@ export async function confirmedLogout(s: Session, o: { tries?: number; windowMs?
 
 // finish() for a combat worker: the end step first, then the settlement with a logout that is pressed until it is
 // confirmed. The RESULT line ends with the ticks of the end step and the result of the logout.
+// The step has a limit and no stop: at most 2 walks of 120 ticks and 2 waits of 60 ticks, then 3 logout windows of
+// 15 s. A stop file or a lost lease that comes in that time does not end it sooner.
 export async function finishCombat(s: Session, ok: boolean, detail: string | ((ok: boolean) => string),
-    deps: { leave?: typeof leaveCombat; logout?: typeof confirmedLogout; finish?: typeof finish } = {}): Promise<never> {
+    deps: EatPolicy & { leave?: typeof leaveCombat; logout?: typeof confirmedLogout; finish?: typeof finish; recovery?: typeof deathRecoveryOf } = {}): Promise<never> {
     let end: CombatLeave;
-    try { end = await (deps.leave ?? leaveCombat)(s); }
-    catch (error) { end = { underAttack: true, left: false, quiet: false, ticks: 0, moves: 0, detail: String(error).slice(0, 120) }; }
+    try {
+        // A death recovery walks the account by itself (bot.ts): the end step starts after it.
+        await (deps.recovery ?? deathRecoveryOf)(s);
+        end = await (deps.leave ?? leaveCombat)(s, { food: deps.food, eatAt: deps.eatAt });
+    } catch (error) { end = { underAttack: true, left: false, quiet: false, ticks: 0, moves: 0, tiles: 0, eats: 0, detail: String(error).slice(0, 120) }; }
     let logged = { out: 'none', tries: 0 };
     return (deps.finish ?? finish)([s], ok, okNow => `${typeof detail === 'function' ? detail(okNow) : detail} ${combatEndText(end, logged)}`,
         { logout: async session => (logged = await (deps.logout ?? confirmedLogout)(session)).out });
 }
 export const combatEndText = (end: CombatLeave, logged: { out: string; tries: number }) =>
-    `endTicks=${end.ticks} endUnderAttack=${end.underAttack} endLeft=${end.left} endQuiet=${end.quiet}${end.detail ? ` endDetail=${JSON.stringify(end.detail)}` : ''} logout=${logged.out === 'logged-out' ? 'confirmed' : logged.out} logoutTries=${logged.tries}`;
+    `endTicks=${end.ticks} endUnderAttack=${end.underAttack} endLeft=${end.left} endQuiet=${end.quiet} endTiles=${end.tiles} endEats=${end.eats}${end.detail ? ` endDetail=${JSON.stringify(end.detail)}` : ''} logout=${logged.out === 'logged-out' ? 'confirmed' : logged.out} logoutTries=${logged.tries}`;

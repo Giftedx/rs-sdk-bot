@@ -1,7 +1,8 @@
 // Bench worker for the end step of a combat worker (packages/core/src/combat-end.ts): a trooper run that ends on the
 // Gnome battlefield while a trooper still fights the account. The run is the real trooper trainer (runGiants with
-// TROOPER_SITE, scripts/gather-combat.ts). Its walk back to the bank is refused here, which is how a live run ended
-// when its food guard failed. The end step must then take the account off the troopers' ground and confirm the logout.
+// TROOPER_SITE, scripts/gather-combat.ts). The walk back to the bank is refused here, so the run ends on the field
+// with a trooper on the account. The end step must then take the account off the troopers' ground and confirm the
+// logout.
 // Usage: bun scripts/measure/combat-end-case.ts <bot> [CAP ticks, default 260]
 import { finish, openBot } from '../../packages/core/src/bot';
 import { finishCombat } from '../../packages/core/src/combat-end';

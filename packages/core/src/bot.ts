@@ -250,9 +250,13 @@ export function accountOf(s: Session): Account {
 // Logs one session out in game. The click skips the action queue, and is retried through the combat window.
 // The result goes to this session's own lifecycle attempt; only its server end reason confirms logout.
 export function logoutSession(s: Session): Promise<string> {
-    const adapter = { sdk: { sendClickComponent: (id: number) => s.direct({ type: 'clickComponent', componentId: id, reason: 'SDK' }) }, ended: s.ended };
-    return logout(adapter, 15_000).catch(e => `error ${String(e)}`).then(out => { s.lifecycle?.record('logout', out); return out; });
+    return logout(logoutAdapter(s), 15_000).catch(e => `error ${String(e)}`).then(out => { s.lifecycle?.record('logout', out); return out; });
 }
+// The session as logout() takes it (logout.ts): the logout click and the session's end.
+export const logoutAdapter = (s: Pick<Session, 'direct' | 'ended'>) =>
+    ({ sdk: { sendClickComponent: (id: number) => s.direct({ type: 'clickComponent', componentId: id, reason: 'SDK' }) }, ended: s.ended });
+// The death recovery of a session that runs now, or undefined. An end step that walks waits for it first.
+export const deathRecoveryOf = (s: Session): Promise<unknown> | undefined => deathRecoveries.get(s);
 
 // A session close can hang (seen: one proving run printed RESULT ok, then sat until the 300 s
 // kill). Each close gets `ms`; the caller exits either way, and the engine saves on socket close.
