@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795044718558-abracadickra-sporrandip-airrune",
+ "account": "SporranDip",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "1bdd209a-62ca-47d8-9e3e-3b31603332be",
+ "count": 0,
+ "ok": false,
+ "at": 1795044857364,
+ "detail": "trade claimed"
+}
