@@ -1,0 +1,22 @@
+{
+ "id": "1795031296468-fatstack-mmtha0205-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "mmtha0205",
+ "item": "Nature rune",
+ "count": 41,
+ "start": 1795031296468,
+ "end": 1795033696468,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
