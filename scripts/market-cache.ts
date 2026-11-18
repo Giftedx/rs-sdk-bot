@@ -21,7 +21,7 @@ const DEMO = 'https://rs-sdk-demo.fly.dev';
 
 // `base`: the item's base (shop) price; `want`: the units the open bids want; `sell`: the units offered for sale.
 export type MarketItem = { name: string; price: number | null; bid: number | null; ask: number | null; trades: number; base?: number; want?: number; sell?: number };
-export type MarketQuote = { at: number; ask: number | null; bid: number | null; sell: number };
+export type MarketQuote = { at: number; ask: number | null; bid: number | null; sell: number; trades?: number };
 // A dashboard and a fleet refresh can finish together. Each publishes a complete file through its own temporary path.
 export function writeMarketCache(base: string, items: Readonly<Record<number, MarketItem>>, at = Date.now()): void {
     if (!Number.isSafeInteger(at) || at <= 0) throw Error('invalid market observation time');
@@ -42,7 +42,7 @@ export function marketQuotes(raw: unknown, now = Date.now()): Record<number, Mar
         const id = Number(key);
         if (!/^\d+$/.test(key) || !Number.isSafeInteger(id) || !row || !price(row.ask) || !price(row.bid)
             || !Number.isSafeInteger(row.sell) || row.sell < 0) continue;
-        out[id] = { at: cache.at, ask: row.ask, bid: row.bid, sell: row.sell };
+        out[id] = { at: cache.at, ask: row.ask, bid: row.bid, sell: row.sell, ...(Number.isSafeInteger(row.trades) && row.trades >= 0 ? { trades: row.trades } : {}) };
     }
     return out;
 }

@@ -17,6 +17,8 @@ const ROOT = resolve(import.meta.dir, '..', '..', '..');
 
 /** The highest market ask, in multiples of the item's content value, that counts as obtainable (scripts/autopilot.ts gearLimit). */
 export const GEAR_ASK_LIMIT = 5;
+/** The lowest market ask, in multiples of the item's content value, that is a real seller: an ask of 1 coin never fills. */
+export const GEAR_ASK_FLOOR = 0.2;
 /** Coins of cost that halve the value of a gain: a free or shop item beats a market item of a slightly higher gain. */
 export const GEAR_COST_SCALE = 25_000;
 
@@ -32,7 +34,17 @@ export type GearSource =
 export type GearSourceKind = GearSource['kind'];
 export const GEAR_SOURCE_KINDS: readonly GearSourceKind[] = ['shop', 'npc', 'quest', 'craft', 'drop', 'clue', 'ge'];
 
-export type MarketAsks = Readonly<Record<number, { ask: number | null; sell: number } | undefined>>;
+export type MarketAsks = Readonly<Record<number, { ask: number | null; sell: number; trades?: number } | undefined>>;
+
+/**
+ * The market ask of the item when the market can supply it, else null: a seller, an ask from GEAR_ASK_FLOOR to
+ * GEAR_ASK_LIMIT times the content value, and, when the cache says, at least one recent trade. The one place for both bounds.
+ */
+export function obtainableAsk(item: Gear, q: MarketAsks[number]): number | null {
+    if (!item.tradeable || !q?.ask || q.sell <= 0 || q.trades === 0) return null;
+    const value = Math.max(item.cost, 1);
+    return q.ask >= GEAR_ASK_FLOOR * value && q.ask <= GEAR_ASK_LIMIT * value ? q.ask : null;
+}
 export interface SourceContext {
     /** Lower-case skill name to level. A skill that is absent is unknown. */
     skills: Partial<Record<string, number>>;
@@ -133,8 +145,8 @@ export function gearSources(item: Gear, ctx: SourceContext): GearSource[] {
     if (drop) out.push({ kind: 'drop', npc: drop.npc.replace(/^_/, ''), chance: drop.chance });
     const clue = t.sources.clue.find(c => c.id === item.id);
     if (clue) out.push({ kind: 'clue', tier: clue.tier, src: clue.src });
-    const q = ctx.market?.[item.id];
-    if (item.tradeable && q?.ask && q.sell > 0 && q.ask <= GEAR_ASK_LIMIT * Math.max(item.cost, 1)) out.push({ kind: 'ge', ask: q.ask, sell: q.sell });
+    const q = ctx.market?.[item.id], ask = obtainableAsk(item, q);
+    if (ask !== null) out.push({ kind: 'ge', ask, sell: q!.sell });
     return out.sort((a, b) => sourceCost(item, a) - sourceCost(item, b) || KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
 }
 

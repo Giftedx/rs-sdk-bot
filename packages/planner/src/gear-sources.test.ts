@@ -40,6 +40,16 @@ test('a market ask over GEAR_ASK_LIMIT times the content value is not a source',
     expect(body?.goal?.sources.some(s => s.kind === 'ge')).toBe(false);
 });
 
+test('a market ask far under the item value, or an item with no recent trade, is not a source', () => {
+    const staff = item(1389), cost = staff.cost; // Magic staff: a 1-coin ask never fills
+    const ge = (market: SourceContext['market']) => gearSources(staff, ctx({ market })).some(s => s.kind === 'ge');
+    expect(ge({ [staff.id]: { ask: 1, sell: 510 } })).toBe(false);
+    expect(ge({ [staff.id]: { ask: Math.ceil(0.2 * cost) - 1, sell: 5 } })).toBe(false);
+    expect(ge({ [staff.id]: { ask: Math.ceil(0.2 * cost), sell: 5 } })).toBe(true);
+    expect(ge({ [staff.id]: { ask: cost, sell: 5, trades: 0 } })).toBe(false);
+    expect(ge({ [staff.id]: { ask: cost, sell: 5, trades: 4 } })).toBe(true);
+});
+
 test('the Magic shortbow is a ge want with the market ask', () => {
     const levels = { ranged: 99, defence: 99 };
     const weapon = selectProgressiveLoadout('ranged', [], levels, [], { market: { [MAGIC_SHORTBOW]: { ask: 1500, sell: 2 } } }).upgrades.weapon;
