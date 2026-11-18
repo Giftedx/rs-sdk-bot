@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795003084613-ballspinner-moneyshot-staffoffire",
  "account": "Moneyshot",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "29f882c1-7288-479a-b359-d8ff2210d8c1",
- "count": 0,
- "ok": false,
- "at": 1795003180987,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795003206382,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795003205596
+ },
+ "logout": {
+  "attemptId": "1795003180995-0000018140-0000000001",
+  "at": 1795003206369,
+  "sha256": "ece5c9f13463c398db3f73e2e2547efb340a3c3583d30bdb24af52692b29fe2f"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795003114625-swordinhand-knightrider-cookedmeat",
  "account": "KnightRider",
  "partner": "Swordinhand",
@@ -12,6 +12,12 @@
  "claim": "0409129f-1770-42ae-96ec-51930cba4f42",
  "count": 0,
  "ok": false,
- "at": 1795003171531,
- "detail": "trade claimed"
+ "at": 1795003208079,
+ "detail": "fled at low hitpoints: flee_guard id=925 at=3277,3214 ticks=5",
+ "logout": {
+  "attemptId": "1795003171539-0000011252-0000000001",
+  "at": 1795003207938,
+  "sha256": "7a2263051c90632d35d50c343f32af72cdd5728ec254596d0cd67ed18883ebd0"
+ },
+ "screen": false
 }
