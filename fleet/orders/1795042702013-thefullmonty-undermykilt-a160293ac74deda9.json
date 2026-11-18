@@ -1,0 +1,23 @@
+{
+ "id": "1795042702013-thefullmonty-undermykilt-a160293ac74deda9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "UnderMyKilt",
+ "item": "Shark",
+ "count": 4,
+ "start": 1795042702013,
+ "end": 1795045102013,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

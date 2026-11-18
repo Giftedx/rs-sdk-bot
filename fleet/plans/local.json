@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795042360060,
+ "at": 1795042434501,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -236,23 +236,29 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "3000",
+    "cow"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "template": "army-cow-defence-45",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "Woodpecker",
