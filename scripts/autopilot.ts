@@ -891,7 +891,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const goalOf = (n: string) => String(swarm.jobs.find((j: any) => j?.autopilot !== side && !j?.script && [j?.account, ...(j?.accounts ?? [])].some((x: any) => String(x).toLowerCase() === n.toLowerCase()))?.goal ?? 'reserved by a swarm.json reservation');
     for (const n of listedNames.filter(n => reserved.has(n.toLowerCase())).sort()) if (!out.some(x => x.account.toLowerCase() === n.toLowerCase())) log.push(`AUTOPILOT vacant ${n}: ${goalOf(n)}`);
 
-    const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, keep);
+    const finishedNow = new Set(finishedTrainers(swarm.jobs, side, state.assigned, templates, (acct, offset, job) => readJobResultLines(join(prac, 'swarm-logs', `${acct}.log`), offset, job)).map(a => a.toLowerCase()));
+    const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, keep, finishedNow);
     for (const x of out) {
         // An account that leaves a kit buy (for its band, another job or none) starts a new order key next time.
         const was = state.assigned[x.account]?.template;
