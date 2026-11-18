@@ -140,6 +140,15 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "live-walker-iron-life": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "live-walker-iron-p": {
    "Attack": 99,
    "Strength": 99,
@@ -149,7 +158,25 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "live-walker-iron-pray": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "live-walker-iron-psuper": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "live-walker-iron-recoil": {
    "Attack": 99,
    "Strength": 99,
    "Defence": 99,
@@ -177,6 +204,15 @@
    "Hitpoints": 99
   },
   "live-walker-iron-rune-chain-bind": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "live-walker-iron-rune-chain-bind-axe": {
    "Attack": 99,
    "Strength": 99,
    "Defence": 99,
@@ -89843,6 +89879,24 @@
    "practiceOnly": true
   },
   {
+   "script": "packages/practice/src/quest-order-proof.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "packages/practice/src/register-proof-account.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "packages/practice/src/wine-stock-order-proof.ts",
    "intents": [
     "service"
@@ -92065,6 +92119,15 @@
   },
   {
    "script": "scripts/measure/catalog-integration-proof.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/combat-end-case.ts",
    "intents": [
     "observe"
    ],

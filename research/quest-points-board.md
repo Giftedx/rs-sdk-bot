@@ -2079,3 +2079,18 @@ A ring shatters at 40 reflected damage
 ([charge rule](../vendor/rs-sdk/server/content/scripts/general/scripts/enchanted_jewellry/ring_of_recoil.rs2#L1)).
 Entry with these supplies, ring replacement, food use, the victory and the connected full quest route need native
 proof before this candidate can support a live assignment.
+
+### Planner demand for the quests no owned account has done
+
+Claim: the planner gives an army account one sweep job for each of 18 of the 22 quests that no observed account has completed
+(`QUEST_DEMAND_ROWS` in `packages/planner/src/autopilot.ts`). Conditions: the job is a `pilot` (it runs only while the plan's
+`aio` list names `quest-<slug>`), its band is 5 plus 0.01 for each quest in order of practice ticks (after the build bands,
+before the open-ended fields), and a quest stops being a candidate once any account of any side lists it complete
+(`Inputs.questsDone`, from `questsDoneIn`). A shared place `quest:demand` allows 3 quest jobs at once. No template gives
+a kit: an account that holds the practice pack (`presetFor` in `scripts/quest-sweep.ts`) gets the job, and an account that
+lacks an item shows it as its vacant reason. Hitpoints 90 stands on the 6 quests where the saved practice run fell under 70
+Hitpoints with 99 in every skill. Left out: Shield of Arrav, Hero's Quest and Legends Quest open companion accounts (`scripts/generated/quest-<slug>.ts` read a helper name from `process.argv[3]`), the sweep refuses Hero's Quest (`scripts/quest-sweep.ts`), and Throne of Miscellania needs Hero's Quest. They wait for an owned-pair path. Evidence: the bench cases `quester:quest:<slug>` and their saved output in
+`.practice/aio-bench/output/quester_quest_<slug>.log`; `scripts/autopilot.test.ts` checks each row against the journal
+data (`packages/dashboard/client-assets/quest-reqs.json`) and the practice pack. Gap: the practice runs start at 99 in
+every skill with a full pack, so a lower account is a first live pilot, not a proved run; no account holds the pack of most
+quests yet.

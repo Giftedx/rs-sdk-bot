@@ -20,9 +20,12 @@ export function itemId(name: string): number {
 let costs: Map<number, number> | undefined;
 const costOf = (id: number) => (costs ??= new Map((JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 0]))).get(id) ?? 0;
 
-// Worn slots (vendor wearpos): 0 hat, 1 cape, 2 amulet, 3 weapon, 4 torso, 5 shield, 7 legs, 9 hands, 10 feet, 13 ammo.
-type Worn = Partial<Record<'hat' | 'cape' | 'amulet' | 'weapon' | 'torso' | 'shield' | 'legs' | 'hands' | 'feet', string>> & { ammo?: [string, number]; weaponCount?: number };
-const SLOT = { hat: 0, cape: 1, amulet: 2, weapon: 3, torso: 4, shield: 5, legs: 7, hands: 9, feet: 10 } as const;
+// Worn slots (vendor wearpos): 0 hat, 1 cape, 2 amulet, 3 weapon, 4 torso, 5 shield, 7 legs, 9 hands, 10 feet, 12 ring, 13 ammo.
+// A ring of life (ring_of_life.rs2) teleports the account to Lumbridge at 10 percent of its Hitpoints or less, up to Wilderness
+// level 30, and is used up. A ring of recoil (pvp_combat.rs2) hits a player attacker back for 10 percent of each hit plus 1 and
+// breaks after 40 damage. Both work only on a members world (map_members).
+type Worn = Partial<Record<'hat' | 'cape' | 'amulet' | 'weapon' | 'torso' | 'shield' | 'legs' | 'hands' | 'feet' | 'ring', string>> & { ammo?: [string, number]; weaponCount?: number };
+const SLOT = { hat: 0, cape: 1, amulet: 2, weapon: 3, torso: 4, shield: 5, legs: 7, hands: 9, feet: 10, ring: 12 } as const;
 export type KitSpec = {
     worn: Worn;
     // Carried besides food: a name, or a name and a count.
@@ -229,6 +232,18 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'live-walker-iron': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // live-walker-iron with the three prayer potions that the live pilot takes from its bank (scripts/pk-live/live-pilot.ts, up to 3
+    // of POTIONS), in place of the defence potion and two sharks: the bench kit has no prayer potion.
+    'live-walker-iron-pray': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3doseantipoison', ...PRAYER_POTS, '4doseprayerrestore', ['lawrune', 2], ['airrune', 10]], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // live-walker-iron with a ring of life and with a ring of recoil in the ring slot (research/pvp-fight-loop.md, "Rings").
+    'live-walker-iron-life': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ring: 'ring_of_life', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    'live-walker-iron-recoil': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ring: 'ring_of_recoil', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     // live-walker-iron with the runes of 10 Entangles (5 earth, 5 water, 4 nature a cast) for 3 sharks: the freeze holds
     // a gang account that walks out of the Wilderness (FightOptions freeze 'flee'; the cast keeps the weapon in hand).
     'live-walker-iron-snare': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
@@ -311,6 +326,11 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['magic_shortbow', '3doseantipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 30], ['waterrune', 30], ['naturerune', 20]], food: 20,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     // The live pilot's kit as it ran: no antipoison either (only junglestore sells it).
+    // The bind kit with rune throwing axes for their special (scripts/pk.ts defaultSpec): the pack gives one food slot to
+    // the axe stack, which chains the special onto up to 4 more players in multi-way combat.
+    'live-walker-iron-rune-chain-bind-axe': { worn: { hat: 'rune_full_helm', torso: 'rune_chainbody', legs: 'rune_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '3doseantipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 30], ['waterrune', 30], ['naturerune', 20], ['rune_thrownaxe', 40]], food: 19,
+        switches: { ranged: ['magic_shortbow', 'rune_thrownaxe'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     'live-walker-iron-rune-chain-bare': { worn: { hat: 'rune_full_helm', torso: 'rune_chainbody', legs: 'rune_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', ['lawrune', 2], ['airrune', 10]], food: 24,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
@@ -506,7 +526,7 @@ export const kitSkills = (name: string): Record<string, number> => ({ ...(kitOf(
 // back on after a two-handed bow is checked, so a kit whose quest was not set fought with no dragon mace or square
 // shield after its first bow turn (finding 72).
 export const QUEST_VARP: Readonly<Record<string, readonly [number, number]>> = {
-    'Lost City': [147, 6], 'Dragon Slayer': [176, 10], "Heroes' Quest": [188, 15], "Legends' Quest": [139, 75], Regicide: [328, 15],
+    'Lost City': [147, 6], 'Dragon Slayer': [176, 10], "Hero's Quest": [188, 15], "Legends Quest": [139, 75], Regicide: [328, 15],
     'The Fremennik Trials': [347, 10], 'Underground Pass': [161, 10],
 };
 export const kitVarps = (name: string): Record<number, number> => {
@@ -520,12 +540,12 @@ const carried = (k: KitSpec) => k.carried.map(c => (typeof c === 'string' ? { id
 // The quest that an item of a kit needs to be worn (levelrequire/scripts/tier*.rs2) and the quest that a varp of a
 // kit stands for.
 const ITEM_QUEST: Readonly<Record<string, string>> = {
-    dragon_dagger: 'Lost City', dragon_dagger_p: 'Lost City', dragon_longsword: 'Lost City', dragon_mace: "Heroes' Quest", dragon_battleaxe: "Heroes' Quest",
-    dragon_halberd: 'Regicide', dragon_sq_shield: "Legends' Quest", rune_platebody: 'Dragon Slayer', dragonhide_body: 'Dragon Slayer',
+    dragon_dagger: 'Lost City', dragon_dagger_p: 'Lost City', dragon_longsword: 'Lost City', dragon_mace: "Hero's Quest", dragon_battleaxe: "Hero's Quest",
+    dragon_halberd: 'Regicide', dragon_sq_shield: "Legends Quest", rune_platebody: 'Dragon Slayer', dragonhide_body: 'Dragon Slayer',
     viking_helmet_crush: 'The Fremennik Trials', viking_helmet_range: 'The Fremennik Trials', viking_helmet_slash: 'The Fremennik Trials', viking_helmet_magic: 'The Fremennik Trials',
     ibanstaff: 'Underground Pass', zamorak_staff: 'Mage Arena', zamorak_cape: 'Mage Arena',
 };
-const VARP_QUEST: Readonly<Record<number, string>> = { 139: "Legends' Quest", 267: 'Mage Arena', 288: 'Underground Pass', 328: 'Regicide', 347: 'The Fremennik Trials' };
+const VARP_QUEST: Readonly<Record<number, string>> = { 139: "Legends Quest", 267: 'Mage Arena', 288: 'Underground Pass', 328: 'Regicide', 347: 'The Fremennik Trials' };
 // Each quest with the quests that it needs, as content folders (vendor/rs-sdk/server/content/scripts/quests). Lost
 // City stands with the two quests of the planner's chain, which give its Woodcutting and Crafting. The Mage Arena is
 // a minigame with no XP reward: its folder is under areas. Sources: quest_hero.rs2:2-4, legends_guard.rs2:50-53.
@@ -533,8 +553,8 @@ const LOST_CITY = ['quest_drunkmonk', 'quest_murder', 'quest_zanaris'], UPASS = 
 const HEROES = [...LOST_CITY, 'quest_dragon', 'quest_arthur', 'quest_blackarmgang', 'quest_hero'];
 export const QUEST_CHAIN: Readonly<Record<string, readonly string[]>> = {
     'Lost City': LOST_CITY, 'Dragon Slayer': ['quest_dragon'], 'The Fremennik Trials': ['quest_viking'], 'Mage Arena': ['area_mage_arena'], 'Underground Pass': UPASS,
-    Regicide: [...UPASS, 'quest_regicide'], "Heroes' Quest": HEROES,
-    "Legends' Quest": [...HEROES, 'quest_crest', 'quest_junglepotion', 'quest_zombiequeen', ...UPASS, 'quest_waterfall', 'quest_legends'],
+    Regicide: [...UPASS, 'quest_regicide'], "Hero's Quest": HEROES,
+    "Legends Quest": [...HEROES, 'quest_crest', 'quest_junglepotion', 'quest_zombiequeen', ...UPASS, 'quest_waterfall', 'quest_legends'],
 };
 // The server's XP rate (WorldConfig.ts xpRate), and the rewards that knowledge/quests.json does not hold, in whole XP
 // (quest_waterfall.rs2:491-492).

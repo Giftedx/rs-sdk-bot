@@ -53,7 +53,7 @@ test('autopilot keeps coin acquisition useful for a priced army kit and stops at
     const market = { 'mind rune': { id: 558, name: 'Mind rune', limit: 4 } };
     const run = (coin: number) => plan(inputs([account('Soldier', { Magic: 1 }, { coin })], { templates: [farmer, band], army, market }))[0]!;
     expect(run(0).template!.id).toBe('coin-farm');
-    expect(run(1040).template!.id).toBe('kit-buy:army-magic');
+    expect(run(1540).template!.id).toBe('kit-buy:army-magic');
     const complete = plan(inputs([account('Soldier', { Magic: 99 }, { coin: 1000 })], { templates: [farmer, band], army, market }))[0]!;
     expect(complete.template).toBeUndefined();
 });
@@ -81,13 +81,13 @@ test('autopilot uses a free compatible donor for an army kit without earning ext
     const farmer = supply('coin-farm', 'coins', 1);
     const band: Template = { id: 'army-magic', family: 'combat', script: 'scripts/train.ts', role: 'combat', goal: 'train Magic to 99',
         tier: 'goal', band: 1, trains: { skill: 'Magic', to: 99, unlocks: [] }, needs: { items: { 'mind rune': 10 } }, yields: () => [] };
-    const out = plan(inputs([account('Soldier'), account('Donor', {}, { coin: 51_040 })], {
+    const out = plan(inputs([account('Soldier'), account('Donor', {}, { coin: 51_540 })], {
         templates: [farmer, band], army: new Set(['soldier']), market: { 'mind rune': { id: 558, name: 'Mind rune', limit: 4 } },
-        donors: [{ name: 'Donor', coins: 51_040 }],
+        donors: [{ name: 'Donor', coins: 51_540 }],
     }));
     const soldier = out.find(x => x.account === 'Soldier')!;
     expect(soldier.template?.id).toBe('kit-buy:army-magic');
-    expect(soldier.fund).toMatchObject({ from: 'Donor', to: 'Soldier', coins: 1040 });
+    expect(soldier.fund).toMatchObject({ from: 'Donor', to: 'Soldier', coins: 1540 });
     expect(out.some(x => x.template?.id === 'coin-farm')).toBe(false);
 });
 
@@ -97,7 +97,7 @@ test('autopilot does not credit a coin donor that cannot fund the recipients mee
         tier: 'goal', band: 1, trains: { skill: 'Magic', to: 99, unlocks: [] }, needs: { items: { 'mind rune': 10 } }, yields: () => [] };
     const [out] = plan(inputs([{ ...account('Soldier'), pos: { x: 2920, z: 3160, level: 0 } }], {
         templates: [farmer, band], army: new Set(['soldier']), market: { 'mind rune': { id: 558, name: 'Mind rune', limit: 4 } },
-        donors: [{ name: 'Donor', coins: 51_040 }],
+        donors: [{ name: 'Donor', coins: 51_540 }],
     }));
     expect(out!.template?.id).toBe('coin-farm');
     expect(out!.fund).toBeUndefined();
@@ -116,12 +116,12 @@ test('autopilot assigns one qualified helper to earn a transferable army kit fun
     expect(farms[0]!.account).toBe('HelperA');
     expect(farms[0]!.value).toBeGreaterThan(0);
     expect(first.find(x => x.account === 'Soldier')!.template).toBeUndefined();
-    const almost = run(50_900).find(x => x.account === 'HelperA')!;
+    const almost = run(51_400).find(x => x.account === 'HelperA')!;
     expect(almost.template?.id).toBe('coin-farm');
     expect(almost.value).toBeCloseTo(140 / 1000);
-    expect(run(51_040).some(x => x.template?.id === 'coin-farm')).toBe(false);
-    const funded = run(51_040, { donors: [{ name: 'HelperA', coins: 51_040 }] });
-    expect(funded.find(x => x.account === 'Soldier')!.fund).toMatchObject({ from: 'HelperA', coins: 1040 });
+    expect(run(51_540).some(x => x.template?.id === 'coin-farm')).toBe(false);
+    const funded = run(51_540, { donors: [{ name: 'HelperA', coins: 51_540 }] });
+    expect(funded.find(x => x.account === 'Soldier')!.fund).toMatchObject({ from: 'HelperA', coins: 1540 });
     expect(funded.some(x => x.template?.id === 'coin-farm')).toBe(false);
 });
 

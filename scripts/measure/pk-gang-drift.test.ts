@@ -1,4 +1,10 @@
 import { expect, test } from 'bun:test';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { SQUAD_OPTS } from '../pk-squad';
+import { benchCases } from './aio-bench-cases';
+import { hiscoreLevels } from './pk-gang-record';
 import { driftChecks, squadDrift, squadRuns } from './pk-gang-drift';
 import { benchMeetings, fidelityRows, liveMeeting, type Meeting } from './pk-gang-fidelity';
 
@@ -46,6 +52,39 @@ test('the bench runs of the squad check come from the RESULT lines that scripts/
     // 151 Hitpoints for 9 kills is 17 a kill: a live run at 60 a kill drifts, one at 20 does not.
     expect(squadDrift({ kills: 5, hpLost: 300 }, three)[0]).toMatchObject({ record: 17, now: 60, drift: true });
     expect(squadDrift({ kills: 5, hpLost: 100 }, three)[0]!.drift).toBe(false);
+});
+
+test('a live squad that kills nothing drifts when the bench runs killed', () => {
+    const bench = [{ kills: 3, hpLost: 300 }, { kills: 3, hpLost: 360 }, { kills: 2, hpLost: 240 }];
+    expect(squadDrift({ kills: 0, hpLost: 200 }, bench).map(c => [c.measure, c.drift])).toEqual([['kills of the live run', true], ['Hitpoints lost a kill (clone prediction against the live run)', false]]);
+    expect(squadDrift({ kills: 0, hpLost: 200 }, [{ kills: 0, hpLost: 10 }, { kills: 0, hpLost: 10 }, { kills: 0, hpLost: 10 }])[0]!.drift).toBe(false);
+});
+
+test('no hiscore page is a stated gap in the level check', () => {
+    const none = file({ four: 180, other: 20, specials: 30, attacks: 200, maxHit: 19, eat: { 73: 4 }, hit: 30, miss: 10, post: 60 }) as any;
+    none.levels = { skills: { value: undefined } };
+    const c = driftChecks(RECORD, none).find(x => x.measure === 'combat levels that changed')!;
+    expect(c).toMatchObject({ drift: false, n: 0, now: 'no hiscore page' });
+});
+
+test('hiscoreLevels reads the newest page of the collector folder, and gives no rows when none exists', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gang-hs-'));
+    expect(hiscoreLevels(dir, 'sugma').rows).toBeUndefined();
+    mkdirSync(join(dir, '.practice', 'gang-record'), { recursive: true });
+    const page = (attack: string) => `<table><tr><td>Time</td></tr><tr><td>1</td><td>x</td><td>Attack</td><td>${attack}</td></tr></table>`;
+    writeFileSync(join(dir, '.practice', 'gang-record', 'hs-sugma-2026-11-17.html'), page('98'));
+    writeFileSync(join(dir, '.practice', 'gang-record', 'hs-sugma-2026-11-18.html'), page('99'));
+    expect(hiscoreLevels(dir, 'sugma').file).toContain('hs-sugma-2026-11-18.html');
+});
+
+test('the one-change squad cases start from the exported SQUAD_OPTS of the squad script', () => {
+    const keys = ['nofreeze', 'spec1', 'eat70'];
+    for (const tag of keys) {
+        const c = benchCases().find(x => x.key === `extra:clone-squad-4-chainbind-${tag}-x1`)!;
+        const opts = JSON.parse(c.scriptArgs!.find(a => a.startsWith('SQUAD_OPTS='))!.slice('SQUAD_OPTS='.length));
+        const changed = Object.keys(opts).filter(k => JSON.stringify(opts[k]) !== JSON.stringify((SQUAD_OPTS as Record<string, unknown>)[k] ?? null) && !(opts[k] === null && (SQUAD_OPTS as Record<string, unknown>)[k] === null));
+        expect(changed.length).toBe(1);
+    }
 });
 
 test('the fidelity rows give the error of the bench in percent of the live value', () => {

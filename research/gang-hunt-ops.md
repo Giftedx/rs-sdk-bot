@@ -22,7 +22,7 @@ piece widened to its class. Each check is a fault of a live pilot.
 | Bow and arrows | a strung bow and 100 or more arrows that it fires (arrow tier at or under the bow's tier) | two accounts shot bronze arrows |
 | Escape | Camelot Teleport or Varrock Teleport castable at the post with the runes held (`squadEscapeSpell`) | an account clicked Camelot Teleport with no law runes |
 | Freeze | Bind castable with the runes held (`castableFreeze`, Magic capped at 49 by `SQUAD_OPTS`) | a gang account at low HP walked away |
-| Antipoison | one antipoison of any dose count | poison did 139 of 455 damage |
+| Antipoison | one antipoison of any dose count on each of the first two accounts of the list; the others need none and carry the extra food (2 lobsters or 1 shark a kill) | poison did 139 of 455 damage; the gang clone bench killed 9 of 9 with a potion on 5, 2, 1 and 0 of five accounts, none died (hosted run 44262314889) |
 | Food | a shark or a lobster for each free slot of the pack (20 with the bench pack) | - |
 | Bank read | the status file's bank read is 6 hours old or less (`--max-age`) | a plan from stock that is gone |
 | Place | not inside West Ardougne, not in the Wilderness | the walker has no route across the West Ardougne wall |
@@ -63,6 +63,12 @@ Order of sources for a missing piece: an owned account's spare stock, then a sho
    holds. A squad account gives only gear over its own kit and keeps its food, runes and arrows. An order's window
    starts when the command runs, so the commands run after the pause is lifted. `--orders <dir>` writes the same
    orders as files for review. The tool refuses the fleet's own orders folder.
+   Place the orders of one account one at a time, each after the order before has both receipts. The fleet agent
+   gives an account its earliest open order with no receipt from the account (`scripts/fleet-trade.ts` `pickOrder`),
+   and an account takes an order role one time (`packages/core/src/fleet-trade-claim.ts` `acquireFleetTradeClaim`).
+   An order whose role the account has used with no receipt holds each later order of that account until its window
+   ends: the login ends `fleet trade order role already claimed`. A released claim does not free the order. Place a
+   new order after the window.
 2. **Shops** (`scripts/shop-buyer.ts`, through `bun scripts/aio-market.ts <account> shop-buy <profile> <cap>
    ITEMS=<pattern> STOCK_TARGET=<count> STOP_AT_TARGET=1`. A run with no `ITEMS` and no stock target is refused as
    no finite order):
@@ -213,9 +219,11 @@ hour, the high number the pilot cost at 33 kills an hour (estimates).
   that rate. Recipe (`brew_potion.struct`): marrentill and a vial of water give an unfinished potion, a unicorn horn
   ground with a pestle and mortar gives the dust, and the two give antipoison(3) at Herblore 5 (Druidic Ritual).
   Conditions: the two unicorns south of Edgeville (npc 89 at 3084,3454 and 3090,3450, 45 tiles from the Edgeville
-  bank), an account with Attack and Strength 60 and a rune scimitar; a unicorn always drops one horn, comes back 180 ticks after its death (`respawnrate=180`), does not
-  attack first and runs at 6 Hitpoints or less (`retreat,6`). The two tiles are outside the Wilderness and inside a
-  multi-way zone (`scripts/pk.ts` `isMulti`), where no player can attack. Evidence, seeds
+  bank). The bench account has Attack and Strength 60 and a rune scimitar; the code asks for no level and no weapon
+  for the unicorn target. A unicorn always drops one horn, comes back 180 ticks after its death
+  (`respawnrate=180`), does not attack first and runs at 6 Hitpoints or less (`retreat,6`). The two tiles are
+  outside the Wilderness (z under 3520), so no player can attack there. The zone is multi-way (`scripts/pk.ts`
+  `isMulti`), which gives no protection. Evidence, seeds
   7 to 9: `fighter:unicorn` (`scripts/gather-combat.ts` `TARGET=unicorn MAX_KILLS=4`) makes 4 kills and banks 4 horns
   in 293, 297 and 301 ticks, with one wait of 138 ticks for the two to come back; `extra:antipoison-grind`, `-unf` and
   `-brew` (`scripts/microbot-production.ts` recipes `grind:unicorn_horn`, `brew:unf_marrentill_potion`,
@@ -241,8 +249,8 @@ From "fixes merged, pause lifted" to "the squad repeats". Each step names its ch
    (`bun scripts/fleet-inspect.ts <account>` makes one). Check: `bun scripts/squad-ready.ts <a1> <a2> <a3> <a4>`
    prints no `bank read ... old` line.
 3. **Stage.** Run the transfer commands that the tool prints, then the shop trips and the Grand Exchange buys for
-   each `no owned spare` line. Antipoison first: the fleet holds 2, and one `jiminua` trip buys 10. Check: the tool
-   prints `READY` for all four.
+   each `no owned spare` line. Antipoison first for the first two accounts of the list: the fleet holds 2, and one
+   `jiminua` trip buys 10. Check: the tool prints `READY` for all accounts.
 4. **Kit.** Each account stands at its bank. `bun scripts/squad-ready.ts <a1> <a2> <a3> <a4> --loadouts <dir>`,
    then `bun scripts/aio-logistics.ts <account> loadout <dir>/<account>.json` for each. Check:
    `OWNED_LOADOUT_RESULT` has `"ok":true` for each, and the tool still prints `READY`.

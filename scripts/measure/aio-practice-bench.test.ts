@@ -171,6 +171,25 @@ describe('kept bench results', () => {
   });
 });
 
+test('the end step case passes only when the account left its tile, the logout window opened and the server confirmed the logout', () => {
+    const pass = byKey('extra:trooper-end-under-attack').pass;
+    const leave = 'COMBAT_END leave {"tick":262,"at":{"x":2525,"z":3242,"level":0},"squares":14,"to":{"x":2563,"z":3238,"level":0}}';
+    const result = 'RESULT fail mode=combat-end-case stop=cap creditedKills=0 runFailure="bank retreat failed" endTicks=71 endUnderAttack=true endLeft=true endQuiet=true endTiles=38 endEats=1 logout=confirmed logoutTries=1';
+    const run = [leave, 'LOGOUT logged-out', result].join('\n');
+    expect(pass(run)).toBe(true);
+    // A step with no ground to leave, or with its own tile as the answer, is no proof.
+    expect(pass(run.replace('"squares":14', '"squares":0'))).toBe(false);
+    expect(pass(run.replace('"to":{"x":2563,"z":3238,"level":0}', '"to":{"x":2525,"z":3242,"level":0}'))).toBe(false);
+    expect(pass(run.replace('"to":{"x":2563,"z":3238,"level":0}', '"to":null'))).toBe(false);
+    expect(pass([result, 'LOGOUT logged-out'].join('\n'))).toBe(false);
+    expect(pass(run.replace('endTiles=38', 'endTiles=0'))).toBe(false);
+    // No fight before the step, no open logout window after it, or no confirmed logout.
+    expect(pass(run.replace('endUnderAttack=true', 'endUnderAttack=false'))).toBe(false);
+    expect(pass(run.replace('endQuiet=true', 'endQuiet=false'))).toBe(false);
+    expect(pass(run.replace('logout=confirmed', 'logout=timeout'))).toBe(false);
+    expect(pass(run.replace('LOGOUT logged-out', 'LOGOUT timeout'))).toBe(false);
+});
+
 describe('kill receipt pass rules', () => {
   test('the fight case passes only with the practice receipt of its kill', () => {
     const pass = byKey('pvp:fight').pass, tail = '{"outcome":"kill","ticks":40}';

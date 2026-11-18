@@ -5,12 +5,19 @@
 // Hook points for a worker: the job start and each bank trip (bankOpen: true), and each crossing of an unlock level
 // (gearLevelWatch): wear from the pack at once, and go to the bank at the next safe point when `bankBetter` is true.
 //
-// When the best item that has a source is not owned, one line is printed for each such item:
-//   GEAR_WANT {"account","style","slot","wearpos","id","name","current","source"}
-// source is {"kind":"shop","shop","cost"} for the cheapest shop the account can use, or {"kind":"trade"}.
+// When an item that the account can obtain now would improve a slot, one line is printed for it (again only when the
+// want of that slot changes):
+//   GEAR_WANT {"account","style","slot","wearpos","id","name","current","source","goal"}
+// source is the cheapest way to get the item (packages/planner/src/gear-sources.ts GearSource): shop (with the shop's
+// tile), npc (a dialogue sale or hand-out with its gate), quest, craft, drop, clue, or ge (with the market ask).
+// goal is the best wearable item whatever its source, or null when it is the want.
 import type {Session} from '../packages/core/src/inprocess';
 import {questFlags} from '../packages/core/src/quest-status';
 import {waitUntil} from '../packages/core/src/ticks';
+import {existsSync,mkdirSync,readFileSync,renameSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {MARKET_FILE,marketQuotes} from './market-cache';
+import type {GearSource,MarketAsks} from '../packages/planner/src/gear-sources';
 import {
     selectProgressiveLoadout,
     bestElementalStaffForRunes,
@@ -30,7 +37,7 @@ import {
 type Count={id:number;count:number};
 export type GearTarget={slot:RangedLoadoutSlotName;wearpos:number;id:number;stack:boolean};
 export type GearWant={account:string;style:CombatFocus;slot:RangedLoadoutSlotName;wearpos:number;id:number;name:string;current:number|null;
-    source:{kind:'shop';shop:string;cost:number}|{kind:'trade'}};
+    source:GearSource;goal:{id:number;name:string;sources:GearSource['kind'][]}|null};
 export interface ReconcileOptions{
     style:CombatFocus;
     trainSkill?:string;
@@ -50,6 +57,8 @@ export interface ReconcileOptions{
     levels?:GearSkillLevels;
     quests?:QuestInput;
     questPoints?:number;
+    /** Market asks for the Grand Exchange source. Default: the market cache file (marketAsks). */
+    market?:MarketAsks;
     loadout?:Pick<ProgressiveLoadoutOptions,'requireWeapon'|'requireShield'|'minWeaponStrength'|'minShieldDefence'|'reserved'|'godAlign'>;
     /** Throw when a withdrawal, an equip or a deposit has no observed effect. Without it the item is skipped. */
     strict?:boolean;
@@ -79,6 +88,7 @@ export interface ReconcileResult{
     want:GearWant[];
 }
 
+const CRAFT_SKILLS=['Smithing','Crafting','Fletching','Runecraft','Herblore','Cooking','Firemaking','Thieving'] as const;
 const count=(items:readonly Count[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const STYLE_SKILLS:Readonly<Record<GearUnlockKind,readonly string[]>>={
     melee:['attack','strength','defence'],ranged:['ranged','defence'],magic:['magic','attack','defence'],
@@ -109,25 +119,61 @@ export function loadoutTargets(loadout:ProgressiveLoadout,pin:ReconcileOptions['
     return out.sort((a,b)=>Number(b.slot==='weapon')-Number(a.slot==='weapon'));
 }
 
-/** The GEAR_WANT rows of a loadout: for each slot, the best unowned item that has a source. */
+/** The loadout choice of an account: the one call that the reconcile and the planner's gear pass (scripts/gear-wants.ts) share. */
+export function loadoutFor(style:CombatFocus,stock:readonly Count[],levels:GearSkillLevels,quests:QuestInput,options:ProgressiveLoadoutOptions):ProgressiveLoadout{
+    return selectProgressiveLoadout(style,stock,levels,quests,options);
+}
+
+/** The GEAR_WANT rows of a loadout: for each slot, the best item that the account can obtain now (selectProgressiveLoadout), with its source. */
 export function gearWants(account:string,loadout:ProgressiveLoadout):GearWant[]{
     const out:GearWant[]=[];
     for(const [slot,upgrade] of Object.entries(loadout.upgrades)){
         const wanted=upgrade?.acquirableUpgrade;if(!wanted)continue;
-        const shop=[...wanted.shops].sort((a,b)=>a.cost-b.cost)[0];
+        const goal=upgrade.goal&&upgrade.goal.item.id!==wanted.item.id?{id:upgrade.goal.item.id,name:upgrade.goal.item.name,sources:upgrade.goal.sources.map(s=>s.kind)}:null;
         out.push({account,style:loadout.style,slot:slot as RangedLoadoutSlotName,wearpos:upgrade.wearpos,id:wanted.item.id,name:wanted.item.name,
-            current:upgrade.current?.id??null,source:shop?{kind:'shop',shop:shop.shop,cost:shop.cost}:{kind:'trade'}});
+            current:upgrade.current?.id??null,source:wanted.source,goal});
     }
     return out;
 }
 
-const printed=new Set<string>();
-function printWants(wants:readonly GearWant[]){
+/** The last want printed for each account, style and slot: one line for each change, across processes. */
+export type WantLog={get(key:string):string|undefined;set(key:string,value:string):void};
+const WANT_LOG_FILE=resolve(import.meta.dir,'..','.practice','gear-wants','printed.json');
+function fileWantLog():WantLog{
+    let seen:Record<string,string>={};
+    try{if(existsSync(WANT_LOG_FILE))seen=JSON.parse(readFileSync(WANT_LOG_FILE,'utf8'));}catch{seen={};}
+    return{get:k=>seen[k],set(k,v){
+        seen[k]=v;
+        try{
+            mkdirSync(resolve(WANT_LOG_FILE,'..'),{recursive:true});
+            const tmp=`${WANT_LOG_FILE}.${process.pid}.tmp`;writeFileSync(tmp,JSON.stringify(seen));renameSync(tmp,WANT_LOG_FILE);
+        }catch{/* a log that cannot be saved prints the line again next time */}
+    }};
+}
+let wantLog:WantLog|undefined;
+function memoryWantLog():WantLog{const m=new Map<string,string>();return{get:k=>m.get(k),set:(k,v)=>void m.set(k,v)};}
+/** Prints each want whose item or source differs from the last printed one of its account, style and slot. */
+export function printWants(wants:readonly GearWant[],log:WantLog=wantLog??=(process.env.NODE_ENV==="test"?memoryWantLog():fileWantLog())){
     for(const want of wants){
-        const key=`${want.account}:${want.style}:${want.slot}:${want.id}`;
-        if(printed.has(key))continue;
-        printed.add(key);console.log('GEAR_WANT '+JSON.stringify(want));
+        const key=`${want.account}:${want.style}:${want.slot}`,value=`${want.id}:${JSON.stringify(want.source)}`;
+        if(log.get(key)===value)continue;
+        log.set(key,value);console.log('GEAR_WANT '+JSON.stringify(want));
     }
+}
+
+let marketRead:{at:number;asks:MarketAsks}|undefined;
+/** The market asks of the cache file (scripts/market-cache.ts), read at most once a minute. A missing or stale file gives none. */
+export function marketAsks(root=resolve(import.meta.dir,'..'),now=Date.now()):MarketAsks{
+    if(marketRead&&now-marketRead.at<60_000)return marketRead.asks;
+    let asks:MarketAsks={};
+    try{asks=marketQuotes(JSON.parse(readFileSync(resolve(root,MARKET_FILE),'utf8')),now);}catch{asks={};}
+    marketRead={at:now,asks};return asks;
+}
+
+/** The quest points of the account: the QP varp when the client has received it (guild-observation.ts), else the count of completed quests. */
+export function questPointsOf(s:Pick<Session,'client'>,floor:number):number{
+    const qp=(s.client as any)?.varServ?.[101];
+    return Number.isInteger(qp)&&qp>floor?qp:floor;
 }
 
 /** True once for each observation in which a skill of the kind passed an unlock level (gearUnlockLevels). */
@@ -156,11 +202,14 @@ export async function reconcileLoadout(s:Session,o:ReconcileOptions):Promise<Rec
     };
     const fail=(text:string)=>{if(o.strict)throw new Error(text);return false;};
     const levels=()=>o.levels??readSkillLevels(n=>s.sdk.getSkill(n));
+    // The skills that a craft source (a smith's or a crafter's action) asks for; a skill not synced yet is left out, so it is unknown.
+    const craftLevels=()=>Object.fromEntries(CRAFT_SKILLS.flatMap(n=>{const k=s.sdk.getSkill(n),v=k?.baseLevel??k?.level;return typeof v==='number'&&v>=1?[[n.toLowerCase(),v]]:[];}));
     const quests=()=>o.quests??(s.client?questFlags(s.client):null);
     const choose=(stock:readonly Count[])=>{
-        const done=quests();
-        const loadout=selectProgressiveLoadout(o.style,stock,levels(),done,{...o.loadout,trainSkill:o.trainSkill,thrown:o.thrown,
-            questPoints:o.questPoints??questPointsFloor(done),...o.ammoMin===undefined?{}:{arrowMinCount:o.ammoMin}});
+        const done=quests(),player=state()?.player;
+        const loadout=loadoutFor(o.style,stock,{...levels(),...craftLevels()},done,{...o.loadout,trainSkill:o.trainSkill,thrown:o.thrown,
+            questPoints:o.questPoints??questPointsOf(s,questPointsFloor(done)),market:o.market??marketAsks(),
+            position:player&&Number.isInteger(player.worldX)&&Number.isInteger(player.worldZ)?{x:player.worldX,z:player.worldZ}:null,...o.ammoMin===undefined?{}:{arrowMinCount:o.ammoMin}});
         const pin={...o.pin};
         if(o.style==='magic'&&o.runeIds?.length&&pin.weapon===undefined){
             const staff=bestElementalStaffForRunes(stock,levels(),done,{runeIds:o.runeIds}).current;

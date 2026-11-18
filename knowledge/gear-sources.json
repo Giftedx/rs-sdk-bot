@@ -1,0 +1,3040 @@
+{
+ "npc": [
+  {
+   "npc": "duke_of_lumbridge",
+   "item": "antidragonbreathshield",
+   "id": 1540,
+   "cost": 0,
+   "gate": {
+    "text": "(%dragon_shield = ^quest_dragon_knows_about_shield | %dragonquest >= ^dragon_complete) & inv_total(inv, antidragonbreathshield) < 1 & inv_total(worn, antidragonbreathshield) < 1",
+    "src": "scripts/areas/area_lumbridge/scripts/duke_horacio.rs2:4",
+    "quest": "Dragon Slayer"
+   },
+   "src": "scripts/areas/area_lumbridge/scripts/duke_horacio.rs2:63",
+   "at": [
+    {
+     "x": 3212,
+     "z": 3220,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "npc": "father_urhney",
+   "item": "amulet_of_ghostspeak",
+   "id": 552,
+   "cost": 0,
+   "gate": {
+    "text": "%prieststart = ^priest_started",
+    "src": "scripts/areas/area_lumbridge/scripts/father_urhney.rs2:3",
+    "quest": "The Restless Ghost"
+   },
+   "src": "scripts/areas/area_lumbridge/scripts/father_urhney.rs2:51",
+   "at": [
+    {
+     "x": 3235,
+     "z": 3153,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "father_urhney",
+   "item": "amulet_of_ghostspeak",
+   "id": 552,
+   "cost": 0,
+   "gate": {
+    "text": "%prieststart = ^priest_started",
+    "src": "scripts/areas/area_lumbridge/scripts/father_urhney.rs2:3",
+    "quest": "The Restless Ghost"
+   },
+   "src": "scripts/areas/area_lumbridge/scripts/father_urhney.rs2:63",
+   "at": [
+    {
+     "x": 3235,
+     "z": 3153,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "priestperiltrappedmonk2",
+   "item": "dagger_wolfbane",
+   "id": 2952,
+   "cost": 0,
+   "gate": {
+    "text": "%priestperil = ^priestperil_meet_in_mausoleum",
+    "src": "scripts/areas/area_mausoleum/scripts/drezel.rs2:2",
+    "quest": "Priest in Peril"
+   },
+   "src": "scripts/areas/area_mausoleum/scripts/drezel.rs2:155",
+   "at": [
+    {
+     "x": 3440,
+     "z": 9895,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "misc_gardener",
+   "item": "iron_sickle",
+   "id": 3899,
+   "cost": 15,
+   "gate": {
+    "text": "%misc_quest = ^misc_complete",
+    "src": "scripts/areas/area_miscellania/scripts/gardener_gunnhild.rs2:5",
+    "quest": "Throne of Miscellania"
+   },
+   "src": "scripts/areas/area_miscellania/scripts/gardener_gunnhild.rs2:54",
+   "at": [
+    {
+     "x": 2526,
+     "z": 3852,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "ladyofthelake",
+   "item": "excalibur",
+   "id": 35,
+   "cost": 500,
+   "gate": {
+    "text": "%arthur >= ^arthur_spoken_morgan_lefaye & ~obj_gettotal(excalibur) = 0",
+    "src": "scripts/areas/area_taverly/scripts/lady_of_the_lake.rs2:4",
+    "quest": "Merlin's Crystal"
+   },
+   "src": "scripts/areas/area_taverly/scripts/lady_of_the_lake.rs2:34",
+   "at": [
+    {
+     "x": 2924,
+     "z": 3405,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "death_sherpa",
+   "item": "death_climbingboots",
+   "id": 3105,
+   "cost": 12,
+   "gate": {
+    "text": "%death_equiproom = ^death_complete",
+    "src": "scripts/quests/quest_death/scripts/death_sherpa.rs2:2",
+    "quest": "Death Plateau"
+   },
+   "src": "scripts/quests/quest_death/scripts/death_sherpa.rs2:22",
+   "at": [
+    {
+     "x": 2820,
+     "z": 3556,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "horror_lighthousekeeeper_injured",
+   "item": "unfinished_saradominbook",
+   "id": 3839,
+   "cost": 5000,
+   "gate": {
+    "text": "quest folder",
+    "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:205",
+    "quest": "Horror from the Deep"
+   },
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:205",
+   "at": [
+    {
+     "x": 2518,
+     "z": 4633,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "horror_lighthousekeeeper_injured",
+   "item": "unfinished_zamorakbook",
+   "id": 3841,
+   "cost": 5000,
+   "gate": {
+    "text": "quest folder",
+    "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:208",
+    "quest": "Horror from the Deep"
+   },
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:208",
+   "at": [
+    {
+     "x": 2518,
+     "z": 4633,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "horror_lighthousekeeeper_injured",
+   "item": "unfinished_guthixbook",
+   "id": 3843,
+   "cost": 5000,
+   "gate": {
+    "text": "quest folder",
+    "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:211",
+    "quest": "Horror from the Deep"
+   },
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:211",
+   "at": [
+    {
+     "x": 2518,
+     "z": 4633,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "doctor_orbon",
+   "item": "plague_jacket",
+   "id": 284,
+   "cost": 100,
+   "gate": {
+    "text": "quest folder",
+    "src": "scripts/quests/quest_sheepherder/scripts/npcs/doctor_orbon.rs2:53",
+    "quest": "Sheep Herder"
+   },
+   "src": "scripts/quests/quest_sheepherder/scripts/npcs/doctor_orbon.rs2:53",
+   "at": [
+    {
+     "x": 2614,
+     "z": 3306,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "doctor_orbon",
+   "item": "plague_trousers",
+   "id": 285,
+   "cost": 100,
+   "gate": {
+    "text": "quest folder",
+    "src": "scripts/quests/quest_sheepherder/scripts/npcs/doctor_orbon.rs2:54",
+    "quest": "Sheep Herder"
+   },
+   "src": "scripts/quests/quest_sheepherder/scripts/npcs/doctor_orbon.rs2:54",
+   "at": [
+    {
+     "x": 2614,
+     "z": 3306,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "npc": "upassdwarf2",
+   "item": "klanks_gauntlets",
+   "id": 1495,
+   "cost": 5000,
+   "gate": {
+    "text": "inv_total(inv, tinderbox) = 0",
+    "src": "scripts/quests/quest_upass/scripts/klank.rs2:25",
+    "quest": "Underground Pass"
+   },
+   "src": "scripts/quests/quest_upass/scripts/klank.rs2:80",
+   "at": [
+    {
+     "x": 2323,
+     "z": 9804,
+     "level": 0
+    }
+   ]
+  }
+ ],
+ "quest": [
+  {
+   "quest": "Fight Arena",
+   "item": "khazard_helmet",
+   "id": 74,
+   "src": "scripts/quests/quest_arena/scripts/quest_arena.rs2:14"
+  },
+  {
+   "quest": "Fight Arena",
+   "item": "khazard_platemail",
+   "id": 75,
+   "src": "scripts/quests/quest_arena/scripts/quest_arena.rs2:20"
+  },
+  {
+   "quest": "Fight Arena",
+   "item": "khazard_platemail",
+   "id": 75,
+   "src": "scripts/quests/quest_arena/scripts/quest_arena.rs2:27"
+  },
+  {
+   "quest": "Fight Arena",
+   "item": "khazard_helmet",
+   "id": 74,
+   "src": "scripts/quests/quest_arena/scripts/quest_arena.rs2:28"
+  },
+  {
+   "quest": "Merlin's Crystal",
+   "item": "excalibur",
+   "id": 35,
+   "src": "scripts/quests/quest_arthur/scripts/beggar.rs2:45"
+  },
+  {
+   "quest": "Biohazard",
+   "item": "doctor_gown",
+   "id": 430,
+   "src": "scripts/quests/quest_biohazard/scripts/quest_biohazard.rs2:113"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "ogre_bow",
+   "id": 2883,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:14"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "ogre_bow",
+   "id": 2883,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:102"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat1",
+   "id": 2978,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:583"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat2",
+   "id": 2979,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:593"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat3",
+   "id": 2980,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:603"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat4",
+   "id": 2981,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:613"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat5",
+   "id": 2982,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:623"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat6",
+   "id": 2983,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:633"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat7",
+   "id": 2984,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:643"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat8",
+   "id": 2985,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:653"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat9",
+   "id": 2986,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:663"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat10",
+   "id": 2987,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:673"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat11",
+   "id": 2988,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:683"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat12",
+   "id": 2989,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:693"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat13",
+   "id": 2990,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:703"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat14",
+   "id": 2991,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:713"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat15",
+   "id": 2992,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:723"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat16",
+   "id": 2993,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:733"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat17",
+   "id": 2994,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:743"
+  },
+  {
+   "quest": "Big Chompy Bird Hunting",
+   "item": "cbhat18",
+   "id": 2995,
+   "src": "scripts/quests/quest_chompybird/scripts/rantz.rs2:753"
+  },
+  {
+   "quest": "Family Crest",
+   "item": "gauntlets_of_cooking",
+   "id": 775,
+   "src": "scripts/quests/quest_crest/scripts/crest_caleb.rs2:153"
+  },
+  {
+   "quest": "Family Crest",
+   "item": "gauntlets_of_chaos",
+   "id": 777,
+   "src": "scripts/quests/quest_crest/scripts/crest_johnathon.rs2:114"
+  },
+  {
+   "quest": "Family Crest",
+   "item": "gauntlets_of_goldsmithing",
+   "id": 776,
+   "src": "scripts/quests/quest_crest/scripts/crest_man.rs2:118"
+  },
+  {
+   "quest": "Family Crest",
+   "item": "steel_gauntlets",
+   "id": 778,
+   "src": "scripts/quests/quest_crest/scripts/quest_crest.rs2:9"
+  },
+  {
+   "quest": "Death Plateau",
+   "item": "death_climbingboots",
+   "id": 3105,
+   "src": "scripts/quests/quest_death/scripts/death_sherpa.rs2:117"
+  },
+  {
+   "quest": "Death Plateau",
+   "item": "death_climbingboots",
+   "id": 3105,
+   "src": "scripts/quests/quest_death/scripts/death_sherpa.rs2:171"
+  },
+  {
+   "quest": "Death Plateau",
+   "item": "death_spikedboots",
+   "id": 3107,
+   "src": "scripts/quests/quest_death/scripts/death_smithy.rs2:132"
+  },
+  {
+   "quest": "Death Plateau",
+   "item": "death_spikedboots",
+   "id": 3107,
+   "src": "scripts/quests/quest_death/scripts/death_smithy.rs2:204"
+  },
+  {
+   "quest": "Death Plateau",
+   "item": "trollromance_toboggon",
+   "id": 4083,
+   "src": "scripts/quests/quest_death/scripts/death_smithy.rs2:257"
+  },
+  {
+   "quest": "Death Plateau",
+   "item": "steel_claws",
+   "id": 3097,
+   "src": "scripts/quests/quest_death/scripts/quest_death.rs2:220"
+  },
+  {
+   "quest": "The Tourist Trap",
+   "item": "bronze_dart",
+   "id": 806,
+   "src": "scripts/quests/quest_desertrescue/scripts/al_shabim.rs2:62"
+  },
+  {
+   "quest": "The Tourist Trap",
+   "item": "slave_robe",
+   "id": 1845,
+   "src": "scripts/quests/quest_desertrescue/scripts/mining_slave.rs2:175"
+  },
+  {
+   "quest": "The Tourist Trap",
+   "item": "slave_shirt",
+   "id": 1844,
+   "src": "scripts/quests/quest_desertrescue/scripts/mining_slave.rs2:180"
+  },
+  {
+   "quest": "The Tourist Trap",
+   "item": "slave_boots",
+   "id": 1846,
+   "src": "scripts/quests/quest_desertrescue/scripts/mining_slave.rs2:185"
+  },
+  {
+   "quest": "Nature Spirit",
+   "item": "silver_sickle_blessed",
+   "id": 2963,
+   "src": "scripts/quests/quest_druidspirit/scripts/filliman.rs2:187"
+  },
+  {
+   "quest": "Elemental Workshop",
+   "item": "elemental_shield",
+   "id": 2890,
+   "src": "scripts/quests/quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:265"
+  },
+  {
+   "quest": "Plague City",
+   "item": "gasmask",
+   "id": 1506,
+   "src": "scripts/quests/quest_elena/scripts/alrena.rs2:25"
+  },
+  {
+   "quest": "Plague City",
+   "item": "gasmask",
+   "id": 1506,
+   "src": "scripts/quests/quest_elena/scripts/cupboard.rs2:7"
+  },
+  {
+   "quest": "Haunted Mine",
+   "item": "crystalshard_necklace",
+   "id": 4081,
+   "src": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:69"
+  },
+  {
+   "quest": "Hazeel Cult",
+   "item": "mark_of_hazeel",
+   "id": 2406,
+   "src": "scripts/quests/quest_hazeelcult/scripts/clivet.rs2:49"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "blessedsnake",
+   "id": 1724,
+   "src": "scripts/quests/quest_horror/scripts/horror_godbook.rs2:266"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "blessedstar",
+   "id": 1718,
+   "src": "scripts/quests/quest_horror/scripts/horror_godbook.rs2:285"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "zamorakbook_complete",
+   "id": 3842,
+   "src": "scripts/quests/quest_horror/scripts/horror_godbook.rs2:294"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "saradominbook_complete",
+   "id": 3840,
+   "src": "scripts/quests/quest_horror/scripts/horror_godbook.rs2:302"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "guthixbook_complete",
+   "id": 3844,
+   "src": "scripts/quests/quest_horror/scripts/horror_godbook.rs2:310"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "saradominbook_complete",
+   "id": 3840,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:97"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "unfinished_saradominbook",
+   "id": 3839,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:98"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "zamorakbook_complete",
+   "id": 3842,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:101"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "unfinished_zamorakbook",
+   "id": 3841,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:102"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "guthixbook_complete",
+   "id": 3844,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:105"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "unfinished_guthixbook",
+   "id": 3843,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:106"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "unfinished_saradominbook",
+   "id": 3839,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:236"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "unfinished_zamorakbook",
+   "id": 3841,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:244"
+  },
+  {
+   "quest": "Horror from the Deep",
+   "item": "unfinished_guthixbook",
+   "id": 3843,
+   "src": "scripts/quests/quest_horror/scripts/horror_lighthousekeeper.rs2:252"
+  },
+  {
+   "quest": "Pirate's Treasure",
+   "item": "gold_ring",
+   "id": 1635,
+   "src": "scripts/quests/quest_hunt/scripts/dig.rs2:21"
+  },
+  {
+   "quest": "Temple of Ikov",
+   "item": "ikov_pendantofarmardyl",
+   "id": 87,
+   "src": "scripts/quests/quest_ikov/scripts/guardian_of_armadyl.rs2:7"
+  },
+  {
+   "quest": "Temple of Ikov",
+   "item": "ikov_pendantofarmardyl",
+   "id": 87,
+   "src": "scripts/quests/quest_ikov/scripts/guardian_of_armadyl.rs2:118"
+  },
+  {
+   "quest": "Temple of Ikov",
+   "item": "ice_arrow",
+   "id": 78,
+   "src": "scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2:121"
+  },
+  {
+   "quest": "Temple of Ikov",
+   "item": "ikov_pendantoflucien",
+   "id": 86,
+   "src": "scripts/quests/quest_ikov/scripts/lucien.rs2:10"
+  },
+  {
+   "quest": "Temple of Ikov",
+   "item": "ikov_pendantoflucien",
+   "id": 86,
+   "src": "scripts/quests/quest_ikov/scripts/lucien.rs2:69"
+  },
+  {
+   "quest": "Temple of Ikov",
+   "item": "ikov_pendantoflucien",
+   "id": 86,
+   "src": "scripts/quests/quest_ikov/scripts/lucien.rs2:93"
+  },
+  {
+   "quest": "Imp Catcher",
+   "item": "amulet_of_accuracy",
+   "id": 1478,
+   "src": "scripts/quests/quest_imp/scripts/quest_imp.rs2:3"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "leather_boots",
+   "id": 1061,
+   "src": "scripts/quests/quest_itexam/scripts/area_digsite.rs2:297"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "leather_boots",
+   "id": 1061,
+   "src": "scripts/quests/quest_itexam/scripts/area_digsite.rs2:362"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "black_med_helm",
+   "id": 1151,
+   "src": "scripts/quests/quest_itexam/scripts/area_digsite.rs2:459"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "bronze_spear",
+   "id": 1237,
+   "src": "scripts/quests/quest_itexam/scripts/area_digsite.rs2:474"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "iron_knife",
+   "id": 863,
+   "src": "scripts/quests/quest_itexam/scripts/area_digsite.rs2:489"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "leather_boots",
+   "id": 1061,
+   "src": "scripts/quests/quest_itexam/scripts/area_digsite.rs2:492"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "iron_dagger",
+   "id": 1203,
+   "src": "scripts/quests/quest_itexam/scripts/area_digsite.rs2:543"
+  },
+  {
+   "quest": "Digsite Quest",
+   "item": "leather_gloves",
+   "id": 1059,
+   "src": "scripts/quests/quest_itexam/scripts/digsite_workman.rs2:101"
+  },
+  {
+   "quest": "Observatory Quest",
+   "item": "maple_longbow",
+   "id": 851,
+   "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:247"
+  },
+  {
+   "quest": "Observatory Quest",
+   "item": "black_2h_sword",
+   "id": 1313,
+   "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:250"
+  },
+  {
+   "quest": "Observatory Quest",
+   "item": "amulet_of_defence",
+   "id": 1729,
+   "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:259"
+  },
+  {
+   "quest": "Observatory Quest",
+   "item": "blessedsnake",
+   "id": 1724,
+   "src": "scripts/quests/quest_itgronigen/scripts/spirit_of_scorpius.rs2:30"
+  },
+  {
+   "quest": "Legends Quest",
+   "item": "deathdagger",
+   "id": 746,
+   "src": "scripts/quests/quest_legends/scripts/echned_zekin.rs2:143"
+  },
+  {
+   "quest": "Legends Quest",
+   "item": "holy_water",
+   "id": 732,
+   "src": "scripts/quests/quest_legends/scripts/legends_boulder.rs2:54"
+  },
+  {
+   "quest": "Legends Quest",
+   "item": "machette",
+   "id": 975,
+   "src": "scripts/quests/quest_legends/scripts/quest_legends.rs2:147"
+  },
+  {
+   "quest": "Legends Quest",
+   "item": "bronze_pickaxe",
+   "id": 1265,
+   "src": "scripts/quests/quest_legends/scripts/quest_legends.rs2:949"
+  },
+  {
+   "quest": "Legends Quest",
+   "item": "holy_water",
+   "id": 732,
+   "src": "scripts/quests/quest_legends/scripts/quest_legends.rs2:1011"
+  },
+  {
+   "quest": "Legends Quest",
+   "item": "holy_water",
+   "id": 732,
+   "src": "scripts/quests/quest_legends/scripts/quest_legends.rs2:1377"
+  },
+  {
+   "quest": "Legends Quest",
+   "item": "deathdaggerdone",
+   "id": 747,
+   "src": "scripts/quests/quest_legends/scripts/viyeldi.rs2:32"
+  },
+  {
+   "quest": "Monkey Madness",
+   "item": "mm_sigil",
+   "id": 4035,
+   "src": "scripts/quests/quest_mm/scripts/mm_garkor.rs2:40"
+  },
+  {
+   "quest": "Monkey Madness",
+   "item": "mm_monkey_talisman",
+   "id": 4023,
+   "src": "scripts/quests/quest_mm/scripts/mm_monkey_child.rs2:54"
+  },
+  {
+   "quest": "Monkey Madness",
+   "item": "mm_monkey_talisman",
+   "id": 4023,
+   "src": "scripts/quests/quest_mm/scripts/mm_monkey_child.rs2:98"
+  },
+  {
+   "quest": "Monkey Madness",
+   "item": "mm_sigil",
+   "id": 4035,
+   "src": "scripts/quests/quest_mm/scripts/mm_zooknock.rs2:408"
+  },
+  {
+   "quest": "Monkey Madness",
+   "item": "iron_scimitar",
+   "id": 1323,
+   "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:873"
+  },
+  {
+   "quest": "Monkey Madness",
+   "item": "bronze_scimitar",
+   "id": 1321,
+   "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:883"
+  },
+  {
+   "quest": "Monkey Madness",
+   "item": "mm_amulet_of_monkey_speak",
+   "id": 4021,
+   "src": "scripts/quests/quest_mm/scripts/quest_mm.rs2:1098"
+  },
+  {
+   "quest": "Murder Mystery",
+   "item": "murdernecklace",
+   "id": 1796,
+   "src": "scripts/quests/quest_murder/scripts/quest_murder.rs2:115"
+  },
+  {
+   "quest": "Priest in Peril",
+   "item": "dagger_wolfbane",
+   "id": 2952,
+   "src": "scripts/quests/quest_priestperil/scripts/priestperil.rs2:8"
+  },
+  {
+   "quest": "Regicide",
+   "item": "regicide_crystal_pendant",
+   "id": 3208,
+   "src": "scripts/quests/quest_regicide/scripts/lord_iorwerth.rs2:106"
+  },
+  {
+   "quest": "The Knight's Sword",
+   "item": "faladian_sword",
+   "id": 667,
+   "src": "scripts/quests/quest_squire/scripts/quest_squire.rs2:195"
+  },
+  {
+   "quest": "Tai Bwo Wannai Trio",
+   "item": "tbwt_karambwan_vessel",
+   "id": 3157,
+   "src": "scripts/quests/quest_tbwt/scripts/tbwt_lubufu.rs2:364"
+  },
+  {
+   "quest": "Tai Bwo Wannai Trio",
+   "item": "tbwt_karambwan_vessel",
+   "id": 3157,
+   "src": "scripts/quests/quest_tbwt/scripts/tbwt_lubufu.rs2:422"
+  },
+  {
+   "quest": "Tai Bwo Wannai Trio",
+   "item": "tbwt_karambwan_vessel",
+   "id": 3157,
+   "src": "scripts/quests/quest_tbwt/scripts/tbwt_tiadeche.rs2:63"
+  },
+  {
+   "quest": "Tree Gnome Village",
+   "item": "gnome_amulet",
+   "id": 589,
+   "src": "scripts/quests/quest_tree/scripts/quest_tree.rs2:97"
+  },
+  {
+   "quest": "Troll Romance",
+   "item": "trollromance_rare_flower",
+   "id": 4086,
+   "src": "scripts/quests/quest_troll_love/scripts/quest_troll_love.rs2:57"
+  },
+  {
+   "quest": "Troll Romance",
+   "item": "trollromance_wax",
+   "id": 4085,
+   "src": "scripts/quests/quest_troll_love/scripts/quest_troll_love.rs2:82"
+  },
+  {
+   "quest": "Troll Romance",
+   "item": "trollromance_toboggon_waxed",
+   "id": 4084,
+   "src": "scripts/quests/quest_troll_love/scripts/quest_troll_love.rs2:96"
+  },
+  {
+   "quest": "Underground Pass",
+   "item": "klanks_gauntlets",
+   "id": 1495,
+   "src": "scripts/quests/quest_upass/scripts/klank.rs2:35"
+  },
+  {
+   "quest": "Underground Pass",
+   "item": "ibanstaff",
+   "id": 1409,
+   "src": "scripts/quests/quest_upass/scripts/quest_upass.rs2:676"
+  },
+  {
+   "quest": "The Fremennik Trials",
+   "item": "viking_unstrung_lyre",
+   "id": 3688,
+   "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:183"
+  },
+  {
+   "quest": "The Fremennik Trials",
+   "item": "viking_strung_lyre",
+   "id": 3689,
+   "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:237"
+  },
+  {
+   "quest": "The Fremennik Trials",
+   "item": "viking_strung_lyre",
+   "id": 3689,
+   "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:478"
+  },
+  {
+   "quest": "The Fremennik Trials",
+   "item": "viking_sword",
+   "id": 3757,
+   "src": "scripts/quests/quest_viking/scripts/viking_thorvald.rs2:330"
+  },
+  {
+   "quest": "Waterfall Quest",
+   "item": "glarials_amulet_waterfall_quest",
+   "id": 295,
+   "src": "scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2:150"
+  },
+  {
+   "quest": "Lost City",
+   "item": "dramen_staff",
+   "id": 772,
+   "src": "scripts/quests/quest_zanaris/scripts/quest_zanaris.rs2:87"
+  },
+  {
+   "quest": "Shilo Village",
+   "item": "zqdeadbeads",
+   "id": 616,
+   "src": "scripts/quests/quest_zombiequeen/scripts/quest_zombiequeen.rs2:1276"
+  }
+ ],
+ "clue": [
+  {
+   "tier": "easy",
+   "item": "black_platebody",
+   "id": 1125,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:48"
+  },
+  {
+   "tier": "easy",
+   "item": "black_longsword",
+   "id": 1297,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:49"
+  },
+  {
+   "tier": "easy",
+   "item": "black_full_helm",
+   "id": 1165,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:50"
+  },
+  {
+   "tier": "easy",
+   "item": "black_platelegs",
+   "id": 1077,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:51"
+  },
+  {
+   "tier": "easy",
+   "item": "black_battleaxe",
+   "id": 1367,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:52"
+  },
+  {
+   "tier": "easy",
+   "item": "black_axe",
+   "id": 1361,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:53"
+  },
+  {
+   "tier": "easy",
+   "item": "black_dagger",
+   "id": 1217,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:54"
+  },
+  {
+   "tier": "easy",
+   "item": "steel_pickaxe",
+   "id": 1269,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:55"
+  },
+  {
+   "tier": "easy",
+   "item": "staff_of_air",
+   "id": 1381,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:56"
+  },
+  {
+   "tier": "easy",
+   "item": "studded_chaps",
+   "id": 1097,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:57"
+  },
+  {
+   "tier": "easy",
+   "item": "studded_body",
+   "id": 1133,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:58"
+  },
+  {
+   "tier": "easy",
+   "item": "willow_shortbow",
+   "id": 849,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:59"
+  },
+  {
+   "tier": "easy",
+   "item": "coif",
+   "id": 1169,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:60"
+  },
+  {
+   "tier": "easy",
+   "item": "amulet_of_magic",
+   "id": 1727,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:61"
+  },
+  {
+   "tier": "easy",
+   "item": "willow_longbow",
+   "id": 847,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:62"
+  },
+  {
+   "tier": "easy",
+   "item": "black_platebody_trim",
+   "id": 2583,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:70"
+  },
+  {
+   "tier": "easy",
+   "item": "black_platelegs_trim",
+   "id": 2585,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:71"
+  },
+  {
+   "tier": "easy",
+   "item": "black_full_helm_trim",
+   "id": 2587,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:72"
+  },
+  {
+   "tier": "easy",
+   "item": "black_kiteshield_trim",
+   "id": 2589,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:73"
+  },
+  {
+   "tier": "easy",
+   "item": "black_platebody_gold",
+   "id": 2591,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:74"
+  },
+  {
+   "tier": "easy",
+   "item": "black_platelegs_gold",
+   "id": 2593,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:75"
+  },
+  {
+   "tier": "easy",
+   "item": "black_full_helm_gold",
+   "id": 2595,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:76"
+  },
+  {
+   "tier": "easy",
+   "item": "black_kiteshield_gold",
+   "id": 2597,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:77"
+  },
+  {
+   "tier": "easy",
+   "item": "highwaymanmask",
+   "id": 2631,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:78"
+  },
+  {
+   "tier": "easy",
+   "item": "berret_blue",
+   "id": 2633,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:79"
+  },
+  {
+   "tier": "easy",
+   "item": "berret_black",
+   "id": 2635,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:80"
+  },
+  {
+   "tier": "easy",
+   "item": "berret_white",
+   "id": 2637,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:81"
+  },
+  {
+   "tier": "easy",
+   "item": "boots_wizard",
+   "id": 2579,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:82"
+  },
+  {
+   "tier": "easy",
+   "item": "black_plateskirt_trim",
+   "id": 3472,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:83"
+  },
+  {
+   "tier": "easy",
+   "item": "black_plateskirt_gold",
+   "id": 3473,
+   "src": "scripts/minigames/game_trail/scripts/easy/trail_clue_easy_reward.rs2:84"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_full_helm",
+   "id": 1163,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:35"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platebody",
+   "id": 1127,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:36"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platelegs",
+   "id": 1079,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:37"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_plateskirt",
+   "id": 1093,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:38"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_kiteshield",
+   "id": 1201,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:39"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_longsword",
+   "id": 1303,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:40"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_dagger",
+   "id": 1213,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:41"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_battleaxe",
+   "id": 1373,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:42"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_axe",
+   "id": 1359,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:43"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_pickaxe",
+   "id": 1275,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:44"
+  },
+  {
+   "tier": "hard",
+   "item": "black_dragonhide_body",
+   "id": 2503,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:45"
+  },
+  {
+   "tier": "hard",
+   "item": "black_dragonhide_chaps",
+   "id": 2497,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:46"
+  },
+  {
+   "tier": "hard",
+   "item": "magic_shortbow",
+   "id": 861,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:47"
+  },
+  {
+   "tier": "hard",
+   "item": "magic_longbow",
+   "id": 859,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:48"
+  },
+  {
+   "tier": "hard",
+   "item": "robinhoodhat",
+   "id": 2581,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:56"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_full_helm_trim",
+   "id": 2627,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:57"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platebody_trim",
+   "id": 2623,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:58"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platelegs_trim",
+   "id": 2625,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:59"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_kiteshield_trim",
+   "id": 2629,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:60"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_full_helm_gold",
+   "id": 2619,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:61"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platebody_gold",
+   "id": 2615,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:62"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platelegs_gold",
+   "id": 2617,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:63"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_kiteshield_gold",
+   "id": 2621,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:64"
+  },
+  {
+   "tier": "hard",
+   "item": "piratehat",
+   "id": 2651,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:65"
+  },
+  {
+   "tier": "hard",
+   "item": "cavalier_brown",
+   "id": 2639,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:66"
+  },
+  {
+   "tier": "hard",
+   "item": "cavalier_dark",
+   "id": 2641,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:67"
+  },
+  {
+   "tier": "hard",
+   "item": "cavalier_black",
+   "id": 2643,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:68"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_full_helm_zamorak",
+   "id": 2657,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:69"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platebody_zamorak",
+   "id": 2653,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:70"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platelegs_zamorak",
+   "id": 2655,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:71"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_kiteshield_zamorak",
+   "id": 2659,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:72"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_full_helm_guthix",
+   "id": 2673,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:73"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platebody_guthix",
+   "id": 2669,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:74"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platelegs_guthix",
+   "id": 2671,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:75"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_kiteshield_guthix",
+   "id": 2675,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:76"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_full_helm_saradomin",
+   "id": 2665,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:77"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platebody_saradomin",
+   "id": 2661,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:78"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platelegs_saradomin",
+   "id": 2663,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:79"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_kiteshield_saradomin",
+   "id": 2667,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:80"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_plateskirt_guthix",
+   "id": 3480,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:82"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_plateskirt_saradomin",
+   "id": 3479,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:83"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_plateskirt_zamorak",
+   "id": 3478,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:84"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_plateskirt_trim",
+   "id": 3477,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:85"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_plateskirt_gold",
+   "id": 3476,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:86"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platebody_goldplate",
+   "id": 3481,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:107"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_platelegs_goldplate",
+   "id": 3483,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:108"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_full_helm_goldplate",
+   "id": 3486,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:109"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_plateskirt_goldplate",
+   "id": 3485,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:110"
+  },
+  {
+   "tier": "hard",
+   "item": "rune_kiteshield_goldplate",
+   "id": 3488,
+   "src": "scripts/minigames/game_trail/scripts/hard/trail_clue_hard_reward.rs2:111"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_full_helm",
+   "id": 1161,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:42"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_platebody",
+   "id": 1123,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:43"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_platelegs",
+   "id": 1073,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:44"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_longsword",
+   "id": 1301,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:45"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_battleaxe",
+   "id": 1371,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:46"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_axe",
+   "id": 1357,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:47"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_dagger",
+   "id": 1211,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:48"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_pickaxe",
+   "id": 1271,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:49"
+  },
+  {
+   "tier": "medium",
+   "item": "dragonhide_body",
+   "id": 1135,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:50"
+  },
+  {
+   "tier": "medium",
+   "item": "dragonhide_chaps",
+   "id": 1099,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:51"
+  },
+  {
+   "tier": "medium",
+   "item": "yew_shortbow",
+   "id": 857,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:52"
+  },
+  {
+   "tier": "medium",
+   "item": "fire_battlestaff",
+   "id": 1393,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:53"
+  },
+  {
+   "tier": "medium",
+   "item": "yew_longbow",
+   "id": 855,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:54"
+  },
+  {
+   "tier": "medium",
+   "item": "amulet_of_power",
+   "id": 1731,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:55"
+  },
+  {
+   "tier": "medium",
+   "item": "boots_ranger",
+   "id": 2577,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:63"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_full_helm_trim",
+   "id": 2605,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:64"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_platebody_trim",
+   "id": 2599,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:65"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_platelegs_trim",
+   "id": 2601,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:66"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_kiteshield_trim",
+   "id": 2603,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:67"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_platebody_gold",
+   "id": 2607,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:68"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_platelegs_gold",
+   "id": 2609,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:69"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_full_helm_gold",
+   "id": 2613,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:70"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_kiteshield_gold",
+   "id": 2611,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:71"
+  },
+  {
+   "tier": "medium",
+   "item": "headband_red",
+   "id": 2645,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:72"
+  },
+  {
+   "tier": "medium",
+   "item": "headband_black",
+   "id": 2647,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:73"
+  },
+  {
+   "tier": "medium",
+   "item": "headband_brown",
+   "id": 2649,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:74"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_plateskirt_trim",
+   "id": 3474,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:75"
+  },
+  {
+   "tier": "medium",
+   "item": "adamant_plateskirt_gold",
+   "id": 3475,
+   "src": "scripts/minigames/game_trail/scripts/medium/trail_clue_medium_reward.rs2:76"
+  }
+ ],
+ "shopNpcs": [
+  {
+   "shop": "2handedshop",
+   "npc": "gaius",
+   "spawns": [
+    {
+     "x": 2885,
+     "z": 3449,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "adventurershop",
+   "npc": "aemad",
+   "spawns": [
+    {
+     "x": 2613,
+     "z": 3294,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "adventurershop",
+   "npc": "kortan",
+   "spawns": [
+    {
+     "x": 2615,
+     "z": 3292,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "amuletshop",
+   "npc": "davon",
+   "spawns": [
+    {
+     "x": 2803,
+     "z": 3152,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "aprilfoolshorseshop",
+   "npc": "aprilfoolshorsesalesman",
+   "spawns": [
+    {
+     "x": 3079,
+     "z": 3250,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "archeryshop",
+   "npc": "lowe",
+   "spawns": [
+    {
+     "x": 3232,
+     "z": 3423,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "archeryshop2",
+   "npc": "hickton",
+   "spawns": [
+    {
+     "x": 2822,
+     "z": 3442,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "ardougnegemstall",
+   "npc": "gem_merchant",
+   "spawns": [
+    {
+     "x": 2669,
+     "z": 3303,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "arheinstore",
+   "npc": "arhein",
+   "spawns": [
+    {
+     "x": 2803,
+     "z": 3430,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "armourshop",
+   "npc": "horvik_the_armourer",
+   "spawns": [
+    {
+     "x": 3229,
+     "z": 3438,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "axeshop",
+   "npc": "bob",
+   "spawns": [
+    {
+     "x": 3232,
+     "z": 3203,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "bakery",
+   "npc": "baker_merchant",
+   "spawns": [
+    {
+     "x": 2654,
+     "z": 3311,
+     "level": 0
+    },
+    {
+     "x": 2669,
+     "z": 3310,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "battleaxeshop",
+   "npc": "brian",
+   "spawns": [
+    {
+     "x": 3028,
+     "z": 3250,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "bedabincampshop",
+   "npc": "bedabin",
+   "spawns": [
+    {
+     "x": 3159,
+     "z": 3042,
+     "level": 0
+    },
+    {
+     "x": 3160,
+     "z": 3039,
+     "level": 0
+    },
+    {
+     "x": 3163,
+     "z": 3035,
+     "level": 0
+    },
+    {
+     "x": 3169,
+     "z": 3030,
+     "level": 0
+    },
+    {
+     "x": 3172,
+     "z": 3031,
+     "level": 0
+    },
+    {
+     "x": 3173,
+     "z": 3035,
+     "level": 0
+    },
+    {
+     "x": 3176,
+     "z": 3038,
+     "level": 0
+    },
+    {
+     "x": 3176,
+     "z": 3043,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "blurberrybar",
+   "npc": "blurberrybarmen",
+   "spawns": [
+    {
+     "x": 2417,
+     "z": 3498,
+     "level": 1
+    },
+    {
+     "x": 2482,
+     "z": 3487,
+     "level": 1
+    },
+    {
+     "x": 2482,
+     "z": 3489,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "boozeshop",
+   "npc": "zambo",
+   "spawns": [
+    {
+     "x": 2925,
+     "z": 3143,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "candleshop",
+   "npc": "candle_maker",
+   "spawns": [
+    {
+     "x": 2800,
+     "z": 3439,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "chainmailshop",
+   "npc": "wayne",
+   "spawns": [
+    {
+     "x": 2973,
+     "z": 3312,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "championshop",
+   "npc": "valaine",
+   "spawns": [
+    {
+     "x": 3193,
+     "z": 3361,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "cheapringshop",
+   "npc": "irksol",
+   "spawns": [
+    {
+     "x": 3247,
+     "z": 9589,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "clotheshop",
+   "npc": "thessalia",
+   "spawns": [
+    {
+     "x": 3204,
+     "z": 3417,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "cookeryshop",
+   "npc": "frenita",
+   "spawns": [
+    {
+     "x": 2566,
+     "z": 3098,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "craftingshop",
+   "npc": "rommik",
+   "spawns": [
+    {
+     "x": 2946,
+     "z": 3205,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "craftingshop2",
+   "npc": "dommik",
+   "spawns": [
+    {
+     "x": 3322,
+     "z": 3194,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "death_generalshop",
+   "npc": "death_shopkeeper",
+   "spawns": [
+    {
+     "x": 2928,
+     "z": 3546,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "death_pub",
+   "npc": "boardgames_barmaid",
+   "spawns": [
+    {
+     "x": 2201,
+     "z": 4942,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "death_pub",
+   "npc": "boardgames_barmaid2",
+   "spawns": [
+    {
+     "x": 2207,
+     "z": 4958,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "death_pub",
+   "npc": "death_barman",
+   "spawns": [
+    {
+     "x": 2906,
+     "z": 3537,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "dragonaxeshop",
+   "npc": "helemos",
+   "spawns": [
+    {
+     "x": 2894,
+     "z": 3510,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "dragonswordshop",
+   "npc": "jakut",
+   "spawns": [
+    {
+     "x": 3252,
+     "z": 9572,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "duel_rottenfruitshop",
+   "npc": "duel_fadli",
+   "spawns": [
+    {
+     "x": 3383,
+     "z": 3269,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "etc_fishmonger",
+   "npc": "etc_fish_monger",
+   "spawns": [
+    {
+     "x": 2605,
+     "z": 3876,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "etc_greengrocer",
+   "npc": "etc_veg_monger",
+   "spawns": [
+    {
+     "x": 2602,
+     "z": 3876,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "fancyclothesstore",
+   "npc": "tailorp",
+   "spawns": [
+    {
+     "x": 3281,
+     "z": 3398,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "fishingguild",
+   "npc": "fishguildshop",
+   "spawns": [
+    {
+     "x": 2596,
+     "z": 3400,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "fishingshop",
+   "npc": "gerrant",
+   "spawns": [
+    {
+     "x": 3013,
+     "z": 3225,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "fishingshop2",
+   "npc": "harry",
+   "spawns": [
+    {
+     "x": 2834,
+     "z": 3445,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "furshop",
+   "npc": "fur_merchant",
+   "spawns": [
+    {
+     "x": 2666,
+     "z": 3295,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "gemshop",
+   "npc": "herquin",
+   "spawns": [
+    {
+     "x": 2944,
+     "z": 3334,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "gemshop2",
+   "npc": "gem_trader",
+   "spawns": [
+    {
+     "x": 3288,
+     "z": 3212,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generaldwarf",
+   "npc": "dwarven_shopkeeper",
+   "spawns": [
+    {
+     "x": 2993,
+     "z": 9828,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generallegends",
+   "npc": "fionella",
+   "spawns": [
+    {
+     "x": 2725,
+     "z": 3378,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "generalshop1",
+   "npc": "generalassistant1",
+   "spawns": [
+    {
+     "x": 3212,
+     "z": 3247,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop1",
+   "npc": "generalshopkeeper1",
+   "spawns": [
+    {
+     "x": 3209,
+     "z": 3247,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop2",
+   "npc": "generalassistant2",
+   "spawns": [
+    {
+     "x": 3217,
+     "z": 3411,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop2",
+   "npc": "generalshopkeeper2",
+   "spawns": [
+    {
+     "x": 3218,
+     "z": 3415,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop3",
+   "npc": "generalassistant3",
+   "spawns": [
+    {
+     "x": 3316,
+     "z": 3182,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop3",
+   "npc": "generalshopkeeper3",
+   "spawns": [
+    {
+     "x": 3316,
+     "z": 3184,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop4",
+   "npc": "generalassistant4",
+   "spawns": [
+    {
+     "x": 2955,
+     "z": 3389,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop4",
+   "npc": "generalshopkeeper4",
+   "spawns": [
+    {
+     "x": 2957,
+     "z": 3386,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop5",
+   "npc": "generalassistant5",
+   "spawns": [
+    {
+     "x": 3081,
+     "z": 3511,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop5",
+   "npc": "generalshopkeeper5",
+   "spawns": [
+    {
+     "x": 3080,
+     "z": 3511,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop6",
+   "npc": "generalassistant6",
+   "spawns": [
+    {
+     "x": 2948,
+     "z": 3216,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop6",
+   "npc": "generalshopkeeper6",
+   "spawns": [
+    {
+     "x": 2947,
+     "z": 3216,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop7",
+   "npc": "generalassistant7",
+   "spawns": [
+    {
+     "x": 2902,
+     "z": 3150,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop7",
+   "npc": "generalshopkeeper7",
+   "spawns": [
+    {
+     "x": 2902,
+     "z": 3146,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop8",
+   "npc": "generalassistant8",
+   "spawns": [
+    {
+     "x": 3144,
+     "z": 9567,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshop8",
+   "npc": "generalshopkeeper8",
+   "spawns": [
+    {
+     "x": 3146,
+     "z": 9567,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "generalshopogre",
+   "npc": "ogre_trader1",
+   "spawns": [
+    {
+     "x": 2518,
+     "z": 3035,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "giannerestaurant",
+   "npc": "gnome_waiter",
+   "spawns": [
+    {
+     "x": 2448,
+     "z": 3503,
+     "level": 1
+    },
+    {
+     "x": 2450,
+     "z": 3503,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "gnomeshop",
+   "npc": "treevillage_shopkeeper1",
+   "spawns": [
+    {
+     "x": 2527,
+     "z": 3161,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "gnomeshop_gulluck",
+   "npc": "gnome_gulluck",
+   "spawns": [
+    {
+     "x": 2468,
+     "z": 3487,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "shop": "gnomeshop_heck",
+   "npc": "gnome_heckelfunch",
+   "spawns": [
+    {
+     "x": 2493,
+     "z": 3488,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "gnomeshop_hudo",
+   "npc": "gnome_hudo",
+   "spawns": [
+    {
+     "x": 2448,
+     "z": 3509,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "gnomeshop_rometti",
+   "npc": "gnome_rometti",
+   "spawns": [
+    {
+     "x": 2482,
+     "z": 3510,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "goldshop",
+   "npc": "grum",
+   "spawns": [
+    {
+     "x": 3013,
+     "z": 3248,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "helmetshop",
+   "npc": "peksa",
+   "spawns": [
+    {
+     "x": 3076,
+     "z": 3429,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "herbloreshop",
+   "npc": "jatix",
+   "spawns": [
+    {
+     "x": 2899,
+     "z": 3427,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "herbloreshop2",
+   "npc": "frincos",
+   "spawns": [
+    {
+     "x": 2808,
+     "z": 3342,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "herbloreshopogre",
+   "npc": "ogre_merchant",
+   "spawns": [
+    {
+     "x": 2528,
+     "z": 3048,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "junglestore",
+   "npc": "jiminua",
+   "spawns": [
+    {
+     "x": 2767,
+     "z": 3122,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "karamja_fishrestaurant",
+   "npc": "alfonse_the_waiter",
+   "spawns": [
+    {
+     "x": 2793,
+     "z": 3188,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "khazardshop",
+   "npc": "khazard_shopkeeper",
+   "spawns": [
+    {
+     "x": 2641,
+     "z": 3171,
+     "level": 0
+    },
+    {
+     "x": 2655,
+     "z": 3152,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "lathastrainingstore",
+   "npc": "lathas_shopkeeper",
+   "spawns": [
+    {
+     "x": 2514,
+     "z": 3385,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "legendsguildshop",
+   "npc": "siegfried_erkle",
+   "spawns": [
+    {
+     "x": 2725,
+     "z": 3381,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "shop": "legsshop",
+   "npc": "louie_legs",
+   "spawns": [
+    {
+     "x": 3316,
+     "z": 3175,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "lighthouseshop",
+   "npc": "horror_lighthousekeeeper_well",
+   "spawns": [
+    {
+     "x": 2509,
+     "z": 3639,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "maceshop",
+   "npc": "flynn",
+   "spawns": [
+    {
+     "x": 2951,
+     "z": 3386,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "magearena_runeshop",
+   "npc": "magearena_runeshop",
+   "spawns": [
+    {
+     "x": 2534,
+     "z": 4719,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "magearena_staffshop",
+   "npc": "magearena_guardian",
+   "spawns": [
+    {
+     "x": 2508,
+     "z": 4696,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "magicguildshop",
+   "npc": "magic_store_owner",
+   "spawns": [
+    {
+     "x": 2595,
+     "z": 3087,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "magicshop",
+   "npc": "betty",
+   "spawns": [
+    {
+     "x": 3012,
+     "z": 3259,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "mcannonshop",
+   "npc": "nulodion",
+   "spawns": [
+    {
+     "x": 3011,
+     "z": 3453,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "miningstore",
+   "npc": "drogo",
+   "spawns": [
+    {
+     "x": 3036,
+     "z": 9846,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "misc_fishmonger",
+   "npc": "misc_fish_monger",
+   "spawns": [
+    {
+     "x": 2518,
+     "z": 3866,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "misc_greengrocer",
+   "npc": "misc_veg_monger",
+   "spawns": [
+    {
+     "x": 2516,
+     "z": 3864,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "mm_crafting_shop",
+   "npc": "mm_hamab",
+   "spawns": [
+    {
+     "x": 2781,
+     "z": 2793,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "mm_food_shop",
+   "npc": "mm_solihib",
+   "spawns": [
+    {
+     "x": 2769,
+     "z": 2789,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "mm_general_shop",
+   "npc": "mm_ifaba",
+   "spawns": [
+    {
+     "x": 2754,
+     "z": 2775,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "mm_magic_shop",
+   "npc": "mm_tutab",
+   "spawns": [
+    {
+     "x": 2757,
+     "z": 2770,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "mm_scimitar_shop",
+   "npc": "mm_daga",
+   "spawns": [
+    {
+     "x": 2759,
+     "z": 2775,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "pickaxeshop",
+   "npc": "nurmof",
+   "spawns": [
+    {
+     "x": 2998,
+     "z": 9844,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "pizzabaseshop",
+   "npc": "fat_tony",
+   "spawns": [
+    {
+     "x": 3036,
+     "z": 3707,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "ranging_guild_armourshop",
+   "npc": "ranging_guild_armour_salesman",
+   "spawns": [
+    {
+     "x": 2667,
+     "z": 3436,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "ranging_guild_bowshop",
+   "npc": "ranging_guild_bow_salesman",
+   "spawns": [
+    {
+     "x": 2673,
+     "z": 3434,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "ranging_guild_tribalshop",
+   "npc": "ranging_guild_tribal_salesman",
+   "spawns": [
+    {
+     "x": 2661,
+     "z": 3419,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "regicide_general_shop",
+   "npc": "regicidegeneralshopkeeper",
+   "spawns": [
+    {
+     "x": 2194,
+     "z": 3140,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "regicide_general_shop_2",
+   "npc": "regicidegeneralshopkeeper",
+   "spawns": [
+    {
+     "x": 2194,
+     "z": 3140,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "runeplateshop",
+   "npc": "oziach",
+   "spawns": [
+    {
+     "x": 3069,
+     "z": 3517,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "runeshop",
+   "npc": "aubury",
+   "spawns": [
+    {
+     "x": 3253,
+     "z": 3402,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "runiteshop",
+   "npc": "scavvo",
+   "spawns": [
+    {
+     "x": 3191,
+     "z": 3351,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "shop": "scimitarshop",
+   "npc": "zeke",
+   "spawns": [
+    {
+     "x": 3288,
+     "z": 3190,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "shantayshop",
+   "npc": "shantay",
+   "spawns": [
+    {
+     "x": 3304,
+     "z": 3123,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "shieldshop",
+   "npc": "cassie",
+   "spawns": [
+    {
+     "x": 2979,
+     "z": 3383,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "shilofishingshop",
+   "npc": "shilofishowner",
+   "spawns": [
+    {
+     "x": 2870,
+     "z": 2972,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "shilojunglestore",
+   "npc": "shilogeneralstore",
+   "spawns": [
+    {
+     "x": 2824,
+     "z": 2959,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "silverstall",
+   "npc": "silver_merchant",
+   "spawns": [
+    {
+     "x": 2658,
+     "z": 3316,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "skirtshop",
+   "npc": "ranael",
+   "spawns": [
+    {
+     "x": 3316,
+     "z": 3164,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "spicestall",
+   "npc": "spice_merchant",
+   "spawns": [
+    {
+     "x": 2658,
+     "z": 3296,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "swordshop",
+   "npc": "swordshop1",
+   "spawns": [
+    {
+     "x": 3203,
+     "z": 3397,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "swordshop",
+   "npc": "swordshop2",
+   "spawns": [
+    {
+     "x": 3205,
+     "z": 3399,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "taxfree",
+   "npc": "noterazzo",
+   "spawns": [
+    {
+     "x": 3025,
+     "z": 3701,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "tbwt_tamayu_final_inventory",
+   "npc": "tbwt_tamayu_final",
+   "spawns": [
+    {
+     "x": 2800,
+     "z": 3057,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "tbwt_tiadeche_final_inventory",
+   "npc": "tbwt_tiadeche_final",
+   "spawns": [
+    {
+     "x": 2781,
+     "z": 3057,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "teashop",
+   "npc": "tea_seller",
+   "spawns": [
+    {
+     "x": 3271,
+     "z": 3411,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "topshop",
+   "npc": "zenesha",
+   "spawns": [
+    {
+     "x": 2653,
+     "z": 3295,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "upassgeneralshop",
+   "npc": "chadwell",
+   "spawns": [
+    {
+     "x": 2464,
+     "z": 3287,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "viking_bar",
+   "npc": "viking_longhall_barkeep",
+   "spawns": [
+    {
+     "x": 2662,
+     "z": 3673,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "viking_clothes_shop",
+   "npc": "viking_clothing_shopkeeper",
+   "spawns": [
+    {
+     "x": 2625,
+     "z": 3675,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "viking_fishmonger",
+   "npc": "viking_fish_monger",
+   "spawns": [
+    {
+     "x": 2646,
+     "z": 3675,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "viking_furshop",
+   "npc": "viking_fur_monger",
+   "spawns": [
+    {
+     "x": 2640,
+     "z": 3675,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "viking_general_store",
+   "npc": "viking_sigmund",
+   "spawns": [
+    {
+     "x": 2641,
+     "z": 3680,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "viking_weapons_shop",
+   "npc": "viking_weapons_salesman",
+   "spawns": [
+    {
+     "x": 2663,
+     "z": 3694,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "werewolfgeneralstore",
+   "npc": "werewolfshopkeeper3",
+   "spawns": [
+    {
+     "x": 3475,
+     "z": 3497,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "werewolfstore1",
+   "npc": "werewolfshopkeeper1",
+   "spawns": [
+    {
+     "x": 3507,
+     "z": 3496,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "werewolfstore2",
+   "npc": "werewolfshopkeeper2",
+   "spawns": [
+    {
+     "x": 3499,
+     "z": 3506,
+     "level": 0
+    }
+   ]
+  },
+  {
+   "shop": "wydinstore",
+   "npc": "wydin",
+   "spawns": [
+    {
+     "x": 3014,
+     "z": 3204,
+     "level": 0
+    }
+   ]
+  }
+ ]
+}
