@@ -1572,6 +1572,30 @@ Gaps:
   account must meet the gang on single-way tiles only.
 - `ganker-max` has no antipoison and casts no spell (Magic 37 allows Bind). A gang that cures our poison lives longer.
 
+## Live pilot restock
+
+Source -> local consumer -> adapt -> check: the market cache (`scripts/market-cache.ts`, `.practice/market-all.json`) and the
+GE engine tests (`vendor/rs-sdk/server/engine/test/market.test.ts`: a buy fills at the resting sell price and the rest of
+its escrow returns) -> `restockPlan` in `scripts/pk-roam.ts` and `scripts/pk-live/live-pilot.ts` -> reuse `marketQuotes`,
+adapt the price rule -> `scripts/pk-roam.test.ts`, `scripts/pk-hunt.test.ts`, `scripts/pk-live/live-pilot.test.ts`.
+
+The limit of a restock buy is the lowest ask of the market cache plus `RESTOCK_MARGIN_PERCENT` (10). The margin covers a thin
+book that moves between the snapshot and the order, and costs nothing when the order fills at the lower ask. The plan counts
+each step at its limit, because the escrow of an order is its quantity times its limit. An item with no ask, with no unit for
+sale or with no fresh quote has no step: an offer with no seller waits and holds its escrow. A cache older than 30 minutes gives no
+quote, so the plan then has no GE step and the pilot logs `restock-market` with the gap.
+
+The market that the planner recorded asks more than the old fixed limits for the same items: the prayer potion(4) 322,603 against
+3,500, the nature rune 634 against 300, the shark 885 against 700, the super attack and the super strength 100,000 against
+2,500. The glory(4) asks 4,250,000 against 50,000. The superantipoison and the antipoison have no seller.
+
+The antipoison test matches `Antipoison(1-4)` and `Superantipoison(1-4)`. Item 2448 is `Superantipoison(4)`, the item that the
+restock buys, and the old test did not match it, so each run bought one more. The prayer potion count sums the potions of
+each bank row. This revision has no dragon scimitar: the melee list names the dragon dagger, longsword and mace.
+
+Gap: practice and unit proof only. No live restock ran after this change. The market file needs a refresh within 30 minutes
+before a pilot run (`bun scripts/market-cache.ts`), which the fleet agent does while it runs.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

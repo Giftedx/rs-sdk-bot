@@ -9,12 +9,13 @@ import { waitUntil } from '../../packages/core/src/ticks';
 import { GOD_LOADOUTS, godCapeStaffConflict, type GodLoadoutSpec } from '../pk-kits';
 import { huntOnce, restockPlan } from './pk-hunt';
 import {
-    EDGEVILLE_BANK_TILE, escapeStep, hasVarrockTeleport, wearGlory, wildLevel,
+    EDGEVILLE_BANK_TILE, escapeStep, hasVarrockTeleport, restockMarket, wearGlory, wildLevel,
 } from '../pk-roam';
 
-// Best first. Attack level each needs (content levelrequire); dragon weapons also need Lost City.
+// Best first. Attack level each needs (content levelrequire); dragon weapons also need Lost City. This revision has no
+// dragon scimitar (bun scripts/gear.ts find scimitar: bronze to rune).
 export const MELEE: [RegExp, number][] = [
-    [/^dragon dagger(\(p\+*\))?$/i, 60], [/^dragon (scimitar|longsword|mace)$/i, 60], [/^rune scimitar$/i, 40],
+    [/^dragon dagger(\(p\+*\))?$/i, 60], [/^dragon (longsword|mace)$/i, 60], [/^rune scimitar$/i, 40],
     [/^rune (longsword|sword|mace|battleaxe)$/i, 40], [/^adamant scimitar$/i, 30], [/^adamant (longsword|sword|mace)$/i, 30],
     [/^mithril scimitar$/i, 20], [/^black scimitar$/i, 10], [/^steel scimitar$/i, 5],
 ];
@@ -32,7 +33,8 @@ export const RUNES = /^(air|fire|earth|water|mind|chaos|death|blood|nature|law) 
 export const GLORY = [/^amulet of glory\(4\)$/i, /^amulet of glory\(3\)$/i, /^amulet of glory\(2\)$/i, /^amulet of glory\(1\)$/i];
 export const POTIONS = [/^prayer potion\(4\)$/i, /^prayer potion\(3\)$/i, /^super restore\(4\)$/i, /^prayer potion\(2\)$/i];
 export const STAFF = /^(staff of fire|fire battlestaff|mystic fire staff)$/i;
-export const ANTIPOISON = /^antipoison\([1-4]\)$/i;
+// Antipoison(1-4) and Superantipoison(1-4). The restock buys the super one (item 2448, knowledge/items.json).
+export const ANTIPOISON = /^(super)?antipoison\([1-4]\)$/i;
 
 // Best armour per slot by Defence level (content levelrequire). The server refuses a quest item the account lacks
 // (rune platebody needs Dragon Slayer); the next tier is tried then.
@@ -96,7 +98,8 @@ export function buildPilotRestockInput(
 ) {
     const held = (re: RegExp) => stock.filter(i => re.test(i.name)).reduce((n, i) => n + i.count, 0);
     const hasGlory = GLORY.some(re => stock.some(i => re.test(i.name)) || worn.some(i => re.test(i.name)));
-    const prayerPots = POTIONS.reduce((n, re) => n + stock.filter(i => re.test(i.name)).length, 0);
+    // Potions, not stacks: a bank holds the potions of one kind in one row with a count.
+    const prayerPots = POTIONS.reduce((n, re) => n + held(re), 0);
     const hasSuperSet = held(/^super attack\([1-4]\)$/i) > 0 && held(/^super strength\([1-4]\)$/i) > 0;
     const hasAntipoison = held(ANTIPOISON) > 0;
     return {
@@ -203,11 +206,14 @@ export async function runLivePilot(name: string, minutes = '10', maxWild = '30')
         }
         if (!poisoned) {
             const all: PilotItem[] = [...(s.bankObservation?.()?.items ?? []), ...inv()];
+            // The limits of a buy come from the market cache (at most 30 minutes old). With no fresh cache the plan has no GE step.
+            const { market, at: marketAt } = restockMarket();
+            log({ e: 'restock-market', quotes: Object.keys(market).length, at: marketAt, ...(marketAt === null ? { gap: 'market cache missing or older than 30 minutes: no GE step' } : {}) });
             const plan = restockPlan(buildPilotRestockInput(
                 all, worn(),
                 { magic: level('Magic'), ranged: level('Ranged'), defence: level('Defence'), attack: level('Attack') },
                 poisoned,
-            ));
+            ), market);
             if (plan.length && process.env.PK_NO_RESTOCK !== '1') {
                 log({ e: 'restock', plan });
                 await s.bot.closeBank();
