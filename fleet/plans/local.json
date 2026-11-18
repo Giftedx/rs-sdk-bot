@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795036834607,
+ "at": 1795037001529,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -242,8 +242,7 @@
     "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":600}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
@@ -255,29 +254,6 @@
    "resources": [
     "shop:magic_guild"
    ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "23",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Woodpecker",

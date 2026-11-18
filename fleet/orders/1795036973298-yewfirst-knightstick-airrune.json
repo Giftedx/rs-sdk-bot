@@ -1,0 +1,22 @@
+{
+ "id": "1795036973298-yewfirst-knightstick-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Knightstick",
+ "item": "Air rune",
+ "count": 50,
+ "start": 1795036973298,
+ "end": 1795039373298,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

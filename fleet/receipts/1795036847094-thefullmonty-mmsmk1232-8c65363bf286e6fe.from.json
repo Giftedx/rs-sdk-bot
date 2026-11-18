@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795036847094-thefullmonty-mmsmk1232-8c65363bf286e6fe",
+ "account": "TheFullMonty",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 11,
+ "claim": "a38d56a1-2b7d-4daa-b64d-607d6bf325a9",
+ "count": 11,
+ "ok": true,
+ "at": 1795036995011,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 9
+ },
+ "logout": {
+  "attemptId": "1795036960389-0000019248-0000000001",
+  "at": 1795036995001,
+  "sha256": "6f573d3bc2ab6071524b582b0f0b7cc5f47db58d02c5b9d8d7b2c2d91fdecfe9"
+ },
+ "screen": true
+}
