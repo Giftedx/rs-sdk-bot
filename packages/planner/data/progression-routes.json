@@ -92690,6 +92690,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/route-key-parity.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/route-memory.ts",
    "intents": [
     "observe"
