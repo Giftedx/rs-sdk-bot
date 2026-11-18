@@ -105,8 +105,9 @@
    "server": "rs-sdk-demo.fly.dev"
   },
   "Swordswallow": {
-   "side": "cloud-kit",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud-kit"
   },
   "Unsheathed": {
    "side": "cloud",
