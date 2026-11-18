@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795007736314-bigchopper-moneyshot-naturerune",
+ "account": "Moneyshot",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 48,
+ "claim": "3cefaf59-a633-4e67-985b-708c652fdfc4",
+ "count": 0,
+ "ok": false,
+ "at": 1795007797123,
+ "detail": "trade claimed"
+}
