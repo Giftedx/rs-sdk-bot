@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFile
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from './fleet';
+import { maskUrlCredentials } from './url-mask';
 
 export const FLEET_LEASE_TTL_MS = 10 * 60_000;
 export const FLEET_LEASE_RENEW_MS = 3 * 60_000;
@@ -26,7 +27,19 @@ type RemoteLease = { side: string; host: string; holder: string; epoch: string; 
 export const TRANSIENT_GIT = /Could not resolve host|Failed to connect|Connection (?:reset|refused|timed out)|Operation timed out|early EOF|unexpected disconnect|RPC failed|The requested URL returned error: 5\d\d|gnutls|SSL|TLS|schannel/i;
 export const NETWORK_RETRIES = 2;
 const REF_REJECTION = /\b(?:non-fast-forward|fetch first|stale info|cannot lock ref|cannot update ref|reference already exists)\b/i;
-const sanitizeGitError = (text: string) => text.replace(/(https?:\/\/)[^\s/@]+@/gi, '$1');
+// True for a failure that says nothing about the ref: the time budget ended, the Git process timed out or the network
+// failed. A rejected push is never one, so a caller that tries again keeps exactly one winner.
+export const fleetGitRetryable = (error: unknown): boolean => {
+    const text = String((error as Error)?.message ?? error);
+    return !REF_REJECTION.test(text) && (/ timed out$|\bETIMEDOUT\b/.test(text) || TRANSIENT_GIT.test(text));
+};
+// A push that the remote did not take for a reason of its own: its ref was locked or the update failed. That is not
+// final for the ref. The remote gives "[remote rejected] ... (failed)" while an earlier push of the same ref, one that
+// timed out for its client, is still in work. Only a push of the same commit may use this rule: that push is no
+// change if the commit is the head, and the fast-forward rule refuses it if the commit of another writer is.
+const REMOTE_BUSY = /\[remote rejected\][^\n]*\((?:failed|failed to lock|failed to update ref)\)/i;
+export const fleetPushRetryable = (error: unknown): boolean => fleetGitRetryable(error) || REMOTE_BUSY.test(String((error as Error)?.message ?? error));
+const sanitizeGitError = maskUrlCredentials;
 // Keep the first cause and bounded tail after removing URL credentials. Classification uses the complete text.
 export function gitErrorDetail(text: string): string {
     const clean = sanitizeGitError(text), flat = clean.replace(/\s+/g, ' ').trim();
