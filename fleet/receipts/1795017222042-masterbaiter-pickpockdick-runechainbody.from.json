@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795017222042-masterbaiter-pickpockdick-runechainbody",
+ "account": "Masterbaiter",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "243c0398-ab77-4480-910a-d0038071e47f",
+ "count": 1,
+ "ok": true,
+ "at": 1795017330198,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795017319843
+ },
+ "logout": {
+  "attemptId": "1795017313101-0000020696-0000000001",
+  "at": 1795017330187,
+  "sha256": "ab1bcc2012ca18299a99815cf3263daf0f97f18d31dfa4d08499e46874d5c3f1"
+ },
+ "screen": true
+}
