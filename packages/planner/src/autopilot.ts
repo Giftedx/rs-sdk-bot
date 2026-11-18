@@ -97,6 +97,9 @@ export type Template = {
     // Proved on practice only. The planner gives it only while the plan's `aio` list names its id (Inputs.pilots), so
     // each first live run is a bounded pilot the owner starts.
     pilot?: true;
+    // A quest that one account of the fleet does once (QUEST_DEMAND): a candidate only while Inputs.questsDone lists no
+    // account that completed it. With no list there is no candidate.
+    once?: true;
     // A goal band whose missing kit is bought as a candidate of the band itself, as the weapon buy is: an account that
     // can start a later band still gets it. Without the flag a kit is bought only when no band can start.
     kitFirst?: true;
@@ -186,6 +189,8 @@ export type Inputs = {
     noSend?: ReadonlySet<string>;
     // The ids of the `pilot` templates this plan admits (its `aio` list). Absent: none.
     pilots?: ReadonlySet<string>;
+    // The quests (lower case journal names) that some observed account of any side completed. A `once` template needs it.
+    questsDone?: ReadonlySet<string>;
     // Whether the walker lets the account walk over White Wolf Mountain (scripts/autopilot.ts mountainWalk). Absent:
     // every account walks it.
     mountain?: (a: Acct) => boolean;
@@ -472,7 +477,8 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string, 
 }
 // The most of each item any goal band needs to start, by norm() name: a donor keeps that many, so it never gives away
 // its own kit. For `own`, also the batch a band works out for that account (the runes its Magic still casts). A band
-// for build accounts only is left out: its kit (310 arrow shafts and feathers) is not a kit of the donors.
+// for build accounts only is left out: its kit (310 arrow shafts and feathers) is not a kit of the donors. So is a `once`
+// quest: its pack (700 fire runes for Hero's Quest) is one account's single run, not a stock every donor keeps.
 export function kitReserve(templates: readonly Template[], own?: Acct): Record<string, number> {
     const reserve: Record<string, number> = {};
     const count = (needs: Template['needs']) => {
@@ -480,7 +486,7 @@ export function kitReserve(templates: readonly Template[], own?: Acct): Record<s
         for (const i of needs?.pieces?.of ?? []) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, needs!.pieces!.count);
         for (const alt of needs?.anyOf ?? []) count(alt);
     };
-    for (const t of templates) if (t.tier === 'goal' && !t.buildOnly) {
+    for (const t of templates) if (t.tier === 'goal' && !t.buildOnly && !t.once) {
         count(t.needs);
         if (own && t.batchFor) for (const [i, n] of Object.entries(t.batchFor(own))) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
         // A band that needs a melee weapon keeps the cheap weapon an account holds: giving away its only one ends the band at once. An
@@ -583,7 +589,7 @@ function toolUpgradeNeed(a: Acct, routeDemand: ReadonlySet<string>): string | nu
 type GoalNeed = { names: string[]; short: number; consumer: string; account?: string; bought?: number; budget?: () => number };
 // Route shortages and the missing kits of eligible army bands are the consumers. Army purchase budgets retain
 // their recipient, so wealth that account cannot spend or receive cannot hide its funding gap.
-function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
+export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
     const route: GoalNeed[] = inp.bill.filter(r => r.short > 0).map(r => ({ names: [r.item, ...(r.aliases ?? [])].map(norm), short: r.short, consumer: `Overall route: ${r.item}` }));
     const routeDemand = new Set(route.flatMap(r => r.names));
     const needs = [...route];
@@ -592,14 +598,25 @@ function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         if (coins > 0) needs.push({ names: ['coin'], short: coins, consumer, budget: cost, account });
     };
     const price = (item: string) => inp.market?.[item]?.limit ?? KIT_PRICE_CAPS[item] ?? inp.prices[item] ?? 0;
+    const startable = (a: Acct, listed: Template) => {
+        const lower = a.name.toLowerCase(), t = buildBand(listed, a, inp.builds?.get(lower), inp.buildQuests?.get(lower), inp.buildBefore?.get(lower));
+        return !t || t.tier !== 'goal' || bandLeft(t, a) <= 0 || (t.pilot && !inp.pilots?.has(t.id)) || inp.retired?.has(pairKey(a.name, t.id)) ? undefined : t;
+    };
+    // A `once` quest is one account's run: only the first army account (by name, as the kit tier takes them) that can
+    // start it asks for its pack, so 21 accounts that meet the Temple of Ikov journal do not ask for 21 packs.
+    const onceOwner = new Map<string, string>();
+    for (const listed of inp.templates) if (listed.once) {
+        const owner = [...mine].sort((x, y) => x.name.localeCompare(y.name)).find(a => inp.army?.has(a.name.toLowerCase()) && !!startable(a, listed) && kitLacks(a, listed.needs, item => !!inp.market?.[item]) !== null);
+        if (owner) onceOwner.set(listed.id, owner.name.toLowerCase());
+    }
     for (const a of mine) {
         const lower = a.name.toLowerCase();
         if (!inp.army?.has(lower)) continue;
         const kit = new Map<string, { count: number; bands: Set<string> }>();
         let cash = 0, keep = 0;
         for (const listed of inp.templates) {
-            const t = buildBand(listed, a, inp.builds?.get(lower), inp.buildQuests?.get(lower), inp.buildBefore?.get(lower));
-            if (!t || t.tier !== 'goal' || bandLeft(t, a) <= 0 || (t.pilot && !inp.pilots?.has(t.id)) || inp.retired?.has(pairKey(a.name, t.id))) continue;
+            const t = startable(a, listed);
+            if (!t || (t.once && onceOwner.get(t.id) !== lower)) continue;
             const lacks = kitLacks(a, t.needs, item => !!inp.market?.[item]);
             if (lacks === null) continue;
             cash = Math.max(cash, ...Object.entries(t.needs?.items ?? {}).filter(([item]) => norm(item) === 'coin').map(([, count]) => count));
@@ -702,7 +719,8 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
     return t.trains.to <= level ? t : null;
 }
 
-export function plan(inp: Inputs): Assignment[] {
+export function plan(input: Inputs): Assignment[] {
+    let inp: Inputs = { ...input, templates: input.templates.filter(t => !t.once || (!!input.questsDone && !!t.quest && !input.questsDone.has(norm(t.quest.name)))) };
     // An active squad's members never give their kit or supplies to another account's order: they leave the donor stock
     // and the coin donors, and only the squad's own restock (below) reads their stock, above their squad reserve.
     const squadNames = new Set(inp.squad?.active ? (inp.squad.all ?? inp.squad.members.map(m => m.name)).map(n => n.toLowerCase()) : []);
@@ -1126,7 +1144,9 @@ export function plan(inp: Inputs): Assignment[] {
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + room - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
-            const purchaseResources=c.template.id===WEAPON.id||c.template.id.startsWith('army-weapon-')||c.template.id.startsWith('army-armour-')||frailFood?c.resources:[];
+            // A `once` quest buys its kit for one account at a time, and for QUEST_DEMAND_PLACES quests at a time: the buy holds
+            // the places of the quest, and the run that follows holds them too.
+            const purchaseResources=c.template.id===WEAPON.id||c.template.id.startsWith('army-weapon-')||c.template.id.startsWith('army-armour-')||c.template.once||frailFood?c.resources:[];
             const reservePurchase=()=>{for(const r of purchaseResources)used.set(r,(used.get(r)??0)+1);reserveKit(c.account,lines);if(c.supply)reserveOutput(c.supply.template,c.supply.account);};
             const buyReason=`${c.goal&&c.template.kitFirst?`army band ${c.goal.band}: `:''}buys ${what} for ${c.template.id}, at most ${cost} coins`;
             if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason:buyReason, resources:purchaseResources });reservePurchase();return; }
@@ -1516,8 +1536,42 @@ export function splashKit(magic: number): Record<string, number> {
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
+// The quests that no owned account has done, as sweep jobs for army accounts with time left (QUEST_DEMAND_BAND: after the
+// build bands, before the open-ended fields). One account does each quest once: `once` stops the demand when any
+// observed account has it done (Inputs.questsDone). `ticks`: the game ticks of the saved practice run (the bench case
+// `quester:quest:<slug>`), which orders the bands, the cheapest first. `skills` and `quests` are the journal's asks
+// (packages/dashboard/client-assets/quest-reqs.json) and `items` is the pack of the practice run
+// (scripts/quest-sweep.ts presetFor), with `meals` of food; Hitpoints 90 stands where the practice run fell under 70
+// Hitpoints with 99 in every skill (the saved `hpMin`). No template gives a kit: an account that holds the pack gets the
+// job, and one that lacks it shows the missing item as the vacant reason. The table leaves out the quests that no one-account sweep can run: Shield of Arrav, Hero's Quest and
+// Legends Quest open companion accounts (scripts/generated/quest-<slug>.ts take a helper name), the sweep refuses Hero's
+// Quest (scripts/quest-sweep.ts), and Throne of Miscellania needs Hero's Quest. They wait for an owned-pair path. QUEST_DEMAND_PLACES: quest jobs at once.
+export const QUEST_DEMAND_BAND = 5, QUEST_DEMAND = 'quest:demand', QUEST_DEMAND_PLACES = 3;
+export type QuestDemandRow = { slug: string; name: string; ticks: number; skills: Record<string, number>; quests: string[]; questPoints?: number; items: Record<string, number>; meals: number };
+export const QUEST_DEMAND_ROWS: readonly QuestDemandRow[] = [
+    { slug: 'elemental', name: 'Elemental Workshop', ticks: 188, skills: { Crafting: 20, Mining: 20, Smithing: 20 }, quests: [], items: { knife: 1, needle: 1, leather: 1, thread: 1, hammer: 1, 'rune pickaxe': 1, coal: 4 }, meals: 6 },
+    { slug: 'chompybird', name: 'Big Chompy Bird Hunting', ticks: 387, skills: { Cooking: 30, Ranged: 30, Fletching: 5 }, quests: [], items: { knife: 1, chisel: 1, 'achey tree logs': 1, 'wolf bones': 1, feather: 8, 'ogre arrow': 6, potato: 1, onion: 1, 'equa leaves': 1, cabbage: 1, tomato: 1, 'doogle leaves': 1 }, meals: 2 },
+    { slug: 'horror', name: 'Horror from the Deep', ticks: 655, skills: { Agility: 35 }, quests: [], items: { plank: 2, nails: 8, hammer: 1, 'swamp tar': 1, 'molten glass': 1, tinderbox: 1, 'bronze dagger': 1, 'bronze arrow': 1, 'air rune': 200, 'water rune': 100, 'earth rune': 100, 'fire rune': 100, 'blood rune': 40 }, meals: 12 },
+    { slug: 'druidspirit', name: 'Nature Spirit', ticks: 665, skills: { Crafting: 18 }, quests: ['Priest in Peril', 'The Restless Ghost'], items: { wolfbane: 1, 'silver sickle': 1 }, meals: 4 },
+    { slug: 'routequest', name: 'In Search of the Myreque', ticks: 696, skills: { Agility: 25 }, quests: ['Nature Spirit'], items: { 'silver sickle(b)': 1, 'druid pouch': 6, 'steel longsword': 1, 'steel sword': 2, 'steel dagger': 1, 'steel mace': 1, 'steel warhammer': 1, plank: 6, nails: 30, hammer: 1 }, meals: 6 },
+    { slug: 'ikov', name: 'Temple of Ikov', ticks: 984, skills: { Thieving: 42, Ranged: 40 }, quests: [], items: { 'lit candle': 1, knife: 1, 'limpwurt root': 20, 'law rune': 1, 'air rune': 3, 'fire rune': 1 }, meals: 2 },
+    { slug: 'trolllove', name: 'Troll Romance', ticks: 1004, skills: { Agility: 28 }, quests: ['Death Plateau', 'Troll Stronghold'], items: { 'maple logs': 1, 'iron bar': 1, rope: 1, 'bucket of wax': 1, 'swamp tar': 1, 'cake tin': 1, 'law rune': 6, 'fire rune': 6 }, meals: 14 },
+    { slug: 'crest', name: 'Family Crest', ticks: 1030, skills: { Magic: 59, Crafting: 40, Mining: 40, Smithing: 40, Hitpoints: 90 }, quests: [], items: { shrimps: 1, "'perfect' gold bar": 2, ruby: 2, 'ring mould': 1, 'necklace mould': 1, 'antipoison(4)': 2, 'air rune': 100, 'water rune': 12, 'earth rune': 15, 'fire rune': 70, 'death rune': 24, 'law rune': 6 }, meals: 12 },
+    { slug: 'mortton', name: 'Shades of Mortton', ticks: 1115, skills: { Crafting: 20, Herblore: 15, Firemaking: 5 }, quests: ['Priest in Peril'], items: { hammer: 1, tinderbox: 1, logs: 1, tarromin: 1, 'vial of water': 1, ashes: 1, 'serum 207 (3)': 2 }, meals: 2 },
+    { slug: 'desertrescue', name: 'The Tourist Trap', ticks: 1217, skills: { Smithing: 20, Fletching: 10 }, quests: [], items: { hammer: 1, 'bronze bar': 5, feather: 40, 'waterskin(4)': 2 }, meals: 6 },
+    { slug: 'biohazard', name: 'Biohazard', ticks: 1285, skills: {}, quests: ['Plague City'], items: { 'priest gown': 2, 'law rune': 4, 'water rune': 4 }, meals: 2 },
+    { slug: 'dig', name: 'Digsite Quest', ticks: 1486, skills: { Thieving: 25, Agility: 10, Herblore: 10 }, quests: [], items: { 'law rune': 1, 'air rune': 3, 'fire rune': 1, 'cup of tea': 1, opal: 1, rope: 2, vial: 1, charcoal: 1, 'pestle and mortar': 1, tinderbox: 1 }, meals: 2 },
+    { slug: 'tbwt', name: 'Tai Bwo Wannai Trio', ticks: 1488, skills: { Cooking: 30, Firemaking: 30, Agility: 15, Fishing: 5 }, quests: ['Jungle Potion'], items: { 'raw karambwan': 4, 'pestle and mortar': 1, 'iron spear': 1, 'agility potion(4)': 1, 'small fishing net': 1, 'jogre bones': 1, seaweed: 1, 'sliced banana': 1, 'karambwan vessel': 1, 'fire rune': 31, 'nature rune': 1, 'air rune': 18, 'mind rune': 9, 'amulet of glory(4)': 1 }, meals: 0 },
+    { slug: 'itwatchtower', name: 'Watch Tower', ticks: 1951, skills: { Mining: 40, Agility: 25, Thieving: 15, Herblore: 14, Magic: 14, Hitpoints: 90 }, quests: [], items: { rope: 2, 'dragon bones': 1, 'gold bar': 1, 'death rune': 1, 'lit candle': 1, 'guam leaf': 1, 'vial of water': 1, 'ground bat bones': 1, jangerberries: 1, 'rune pickaxe': 1 }, meals: 8 },
+    { slug: 'upass', name: 'Underground Pass', ticks: 2645, skills: { Thieving: 50, Ranged: 25, Hitpoints: 90 }, quests: ['Biohazard'], items: { shortbow: 1, 'iron arrow': 5, tinderbox: 1, rope: 1, bucket: 1, spade: 1 }, meals: 14 },
+    { slug: 'viking', name: 'The Fremennik Trials', ticks: 2784, skills: { Crafting: 40, Woodcutting: 40, Fletching: 25, Hitpoints: 90 }, quests: [], items: { coins: 5300, beer: 1, tinderbox: 1, 'rune axe': 1, knife: 1, cabbage: 1, potato: 1, onion: 1, 'raw shark': 1 }, meals: 4 },
+    { slug: 'zombiequeen', name: 'Shilo Village', ticks: 2977, skills: { Agility: 32, Crafting: 20, Prayer: 10, Hitpoints: 90 }, quests: ['Jungle Potion'], items: { spade: 1, 'lit candle': 1, rope: 1, chisel: 1, 'bronze wire': 1, bones: 3 }, meals: 14 },
+    { slug: 'regicide', name: 'Regicide', ticks: 3195, skills: { Agility: 56, Crafting: 10, Hitpoints: 90 }, quests: ['Underground Pass'], items: { "king's message": 1, 'iron fire arrows': 2, rope: 2, shortbow: 1, tinderbox: 1, spade: 1, 'pestle and mortar': 1, pot: 1, limestone: 1, 'ball of wool': 4, 'law rune': 5, 'air rune': 3, 'water rune': 5, coal: 8, 'cooked rabbit': 1 }, meals: 30 },
+];
+// The Fremennik Trials and the Underground Pass share the place of their build templates, so one account does each.
+export const questResource = (slug: string) => slug === 'viking' ? FREMENNIK : slug === 'upass' || slug === 'regicide' ? UPASS : `quest:${slug}`;
 // CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
 // side and Kandarin runs for more than 30 s (research/walking.md, Planner reach rule), so the planner asks none. It
@@ -1821,6 +1875,27 @@ export const UNF_POTIONS: readonly (readonly [herb: string, item: string, level:
     ['cadantine', 'cadantine', 66], ['lantadyme', 'lantadyme', 69], ['dwarf weed', 'dwarf weed', 72], ['torstol', 'torstol', 78]];
 // The gem rings of the route bill: the gem and the Crafting level (jewellery.struct).
 export const GEM_RINGS: readonly (readonly [gem: string, level: number])[] = [['sapphire', 20], ['emerald', 27], ['ruby', 34], ['diamond', 43]];
+// The quests (lower case journal names) that some status row lists complete: a name as a string, or a journal entry whose
+// state is "complete" (the rows of scripts/autopilot.ts: this side's status files and every side's published snapshots).
+export function questsDoneIn(rows: readonly unknown[]): Set<string> {
+    const done = new Set<string>();
+    for (const row of rows as any[]) {
+        const journal = Array.isArray(row?.questJournal) ? row.questJournal : Array.isArray(row?.quests) ? row.quests : [];
+        for (const q of journal) { const name = typeof q === 'string' ? q : q?.state === 'complete' ? q?.name : undefined; if (typeof name === 'string') done.add(norm(name)); }
+    }
+    return done;
+}
+// One sweep job for each quest of QUEST_DEMAND_ROWS, run through the AIO route `quester:quest:<slug>`.
+export function questDemand(): Template[] {
+    return QUEST_DEMAND_ROWS.map((q, i): Template => ({
+        id: `quest-${q.slug}`, family: `aio:quester:quest:${q.slug}`, script: 'scripts/aio.ts', args: ['quester', 'sweep', q.slug], aio: `quester:quest:${q.slug}`,
+        worker: 'scripts/quest-sweep.ts', pilot: true, once: true, role: 'quest', goal: `complete ${q.name} once for the quest board`, tier: 'goal',
+        band: QUEST_DEMAND_BAND + i / 100, quest: { name: q.name, unlocks: [] }, resources: [questResource(q.slug), QUEST_DEMAND], yields: () => [],
+        needs: { ...(Object.keys(q.skills).length ? { skills: q.skills } : {}), ...(q.quests.length ? { quests: q.quests } : {}), ...(q.questPoints ? { questPoints: q.questPoints } : {}),
+            ...(Object.keys(q.items).length ? { items: q.items } : {}), ...(q.meals ? { pieces: { of: SWEEP_MEALS, count: q.meals } } : {}) },
+    }));
+}
+
 export function aioTemplates(): Template[] {
     const aio = (id: string, key: string, worker: string, args: string[], rest: Omit<Template, 'id' | 'family' | 'script' | 'args' | 'aio' | 'worker' | 'pilot'>): Template =>
         ({ id, family: `aio:${key}`, script: 'scripts/aio.ts', args: [key.split(':')[0]!, ...args], aio: key, worker, pilot: true, ...rest });
@@ -2451,6 +2526,7 @@ export function catalogue(): Template[] {
         arrowsLowe,
         ranged,
         lostCity,
+        ...questDemand(),
         fletch,
         fremennik,
         upassThieve,

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
@@ -3042,6 +3042,107 @@ test('a claim authority timeout is a drain, like an unavailable authority', () =
         expect(assess([line, line])).toMatchObject({ retire: false, drains: 2, fail: 0 });
     }
     expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
+});
+
+import { goalNeeds, QUEST_DEMAND, QUEST_DEMAND_BAND, QUEST_DEMAND_PLACES, QUEST_DEMAND_ROWS, questDemand, questResource, questsDoneIn } from '../src/autopilot';
+describe('quest demand: the quests no owned account has done', () => {
+    const MAXED = { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99, Thieving: 99, Agility: 99, Cooking: 99, Fletching: 99, Crafting: 99, Mining: 99, Smithing: 99 };
+    const row = (slug: string) => QUEST_DEMAND_ROWS.find(q => q.slug === slug)!;
+    // The pack of one quest: its items and its meals as sharks.
+    const packOf = (...slugs: string[]) => { const pack: Record<string, number> = {}; for (const s of slugs) { for (const [i, n] of Object.entries(row(s).items)) pack[norm(i)] = Math.max(pack[norm(i)] ?? 0, n); pack.shark = Math.max(pack.shark ?? 0, row(s).meals); } return pack; };
+    const soldier = (name: string, slugs: string[], done: string[] = ['lost city'], items: Record<string, number> = {}): Acct =>
+        ({ ...acct(name, { ...MAXED, Ranged: 99 }, { ...packOf(...slugs), coin: 100_000, ...items }), quests: new Set(done) });
+    const names = (slugs: string[]) => new Set(slugs.map(s => `quest-${s}`));
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY,
+        pilots: names(QUEST_DEMAND_ROWS.map(q => q.slug)), questsDone: new Set(), templateFor: qualifiedTrooperTemplate, ...extra }));
+    const quest = (x: { template?: Template }) => x.template?.id.startsWith('quest-') ? x.template.id : undefined;
+    const id = (accounts: Acct[], extra: Partial<Inputs> = {}) => quest(run(accounts, extra)[0]!);
+
+    test('an army account that holds the pack of a quest nobody has done takes it as a pilot, behind its own place', () => {
+        const [x] = run([soldier('Kilt', ['elemental'])]);
+        expect(x!.template!.id).toBe('quest-elemental');
+        expect(x!.reason).toBe(`army band ${QUEST_DEMAND_BAND}: Elemental Workshop`);
+        expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'sweep', 'elemental'], repeat: false, resources: [questResource('elemental'), QUEST_DEMAND] });
+        // The cheapest quest of the practice runs first.
+        expect(id([soldier('Kilt', ['elemental', 'chompybird'])])).toBe('quest-elemental');
+        expect(id([soldier('Kilt', ['chompybird'])])).toBe('quest-chompybird');
+    });
+
+    test('there is no job without the proof, the list, the roster, the pack or a quest left to do', () => {
+        const kilt = soldier('Kilt', ['elemental']);
+        // Not a pilot the plan names; no list of done quests; a quest that an observed account has done; one this account has done.
+        expect(id([kilt], { pilots: new Set() })).toBeUndefined();
+        expect(id([kilt], { questsDone: undefined })).toBeUndefined();
+        expect(id([kilt], { questsDone: new Set(['elemental workshop']) })).toBeUndefined();
+        expect(id([soldier('Kilt', ['elemental'], ['lost city', 'elemental workshop'])])).toBeUndefined();
+        // An account whose status lists no quests, a pack short of one knife, no roster seat.
+        expect(id([{ ...kilt, quests: undefined }])).toBeUndefined();
+        expect(id([{ ...kilt, items: { ...kilt.items, knife: 0 } }])).toBeUndefined();
+        expect(id([kilt], { army: new Set() })).toBeUndefined();
+        // Skills the journal asks for: Ikov wants Thieving 42 and Ranged 40.
+        const ikov = soldier('Kilt', ['ikov']);
+        expect(id([ikov])).toBe('quest-ikov');
+        expect(id([{ ...ikov, skills: { ...ikov.skills, Thieving: 41 } }])).toBeUndefined();
+        // A quest that wants another quest first: Biohazard wants Plague City.
+        expect(id([soldier('Kilt', ['biohazard'])])).toBeUndefined();
+        expect(id([soldier('Kilt', ['biohazard'], ['lost city', 'plague city'])])).toBe('quest-biohazard');
+    });
+
+    test('one account does a quest once and at most QUEST_DEMAND_PLACES quest jobs run at a time', () => {
+        const slugs = ['elemental', 'chompybird', 'horror', 'ikov'];
+        const four = ['A', 'B', 'C', 'D'].map(n => soldier(n, slugs));
+        const out = run(four).map(quest);
+        expect(out.filter(Boolean).length).toBe(QUEST_DEMAND_PLACES);
+        expect(new Set(out.filter(Boolean)).size).toBe(QUEST_DEMAND_PLACES);
+        // The Fremennik Trials and the Underground Pass use the place of their build templates.
+        expect(questResource('viking')).toBe(catalogue().find(t => t.id === 'army-quest-fremennik')!.resources![0]);
+        expect(questResource('upass')).toBe(catalogue().find(t => t.id === 'army-quest-upass')!.resources![0]);
+        expect(questResource('regicide')).toBe(questResource('upass'));
+    });
+
+    test('a kit buy for a quest goes to one account for each quest, and never for more quests than the shared place holds', () => {
+        const market: Market = { 'law rune': { id: 563, name: 'Law rune', limit: KIT_PRICE_CAPS['law rune'] ?? 400 } };
+        const lacking = (name: string) => { const a = soldier(name, ['ikov', 'dig']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
+        const out = run(['A', 'B', 'C', 'D', 'E'].map(lacking), { market });
+        const buys = out.map(x => x.template?.id).filter((t): t is string => !!t && t.startsWith(KIT_BUY + 'quest-'));
+        expect(buys.length).toBeGreaterThan(0);
+        expect(new Set(buys).size).toBe(buys.length);
+        expect(buys.length).toBeLessThanOrEqual(QUEST_DEMAND_PLACES);
+    });
+
+    test('the bill asks for the pack of a quest once, however many accounts could run it', () => {
+        const market: Market = { 'law rune': { id: 563, name: 'Law rune', limit: KIT_PRICE_CAPS['law rune'] ?? 400 } };
+        const lacking = (name: string) => { const a = soldier(name, ['ikov']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
+        const rows = (n: number) => goalNeeds(inputs(Array.from({ length: n }, (_, i) => lacking(`Soldier${i}`)), { army: new Set(Array.from({ length: n }, (_, i) => `soldier${i}`)), market,
+            pilots: names(['ikov']), questsDone: new Set() }), Array.from({ length: n }, (_, i) => lacking(`Soldier${i}`))).filter(r => /quest-ikov/.test(r.consumer));
+        expect(rows(1).length).toBe(1);
+        expect(rows(5).length).toBe(1);
+        expect(rows(5)[0]).toMatchObject({ names: ['law rune'], short: 1, account: 'soldier0' });
+    });
+
+    test('the table gives each quest one template with the AIO route of its bench case, in order of practice ticks', () => {
+        const ts = questDemand();
+        expect(ts.map(t => t.id)).toEqual(QUEST_DEMAND_ROWS.map(q => `quest-${q.slug}`));
+        expect(new Set(QUEST_DEMAND_ROWS.map(q => q.slug)).size).toBe(QUEST_DEMAND_ROWS.length);
+        expect(QUEST_DEMAND_ROWS.map(q => q.ticks)).toEqual([...QUEST_DEMAND_ROWS.map(q => q.ticks)].sort((a, b) => a - b));
+        for (const t of ts) expect([t.id, t.pilot, t.once, t.tier, t.worker, t.aio, t.args!.slice(0, 2)]).toEqual([t.id, true, true, 'goal', 'scripts/quest-sweep.ts', `quester:quest:${t.id.slice(6)}`, ['quester', 'sweep']]);
+        expect(ts.map(t => t.band)).toEqual([...ts.map(t => t.band)].sort((a, b) => a! - b!));
+        expect(CAPACITY[QUEST_DEMAND]).toBe(QUEST_DEMAND_PLACES);
+        for (const t of ts) expect([t.id, CAPACITY[t.resources![0]!]]).toEqual([t.id, 1]);
+        // A donor keeps nothing for a quest pack.
+        expect(kitReserve(ts)).toEqual({});
+        // The ids are in the catalogue.
+        const all = new Set(catalogue().map(t => t.id));
+        for (const t of ts) expect(all.has(t.id)).toBe(true);
+    });
+
+    test('questsDoneIn reads the complete quests of the rows, in the two journal forms, and no other', () => {
+        const done = questsDoneIn([
+            { quests: ['Cook\'s Assistant', { name: 'Biohazard', state: 'complete' }, { name: 'Plague City', state: 'started' }] },
+            { questJournal: [{ name: 'Lost City', state: 'complete' }, 'Shield of Arrav'] }, null, {}, { quests: 'x' },
+        ]);
+        expect([...done].sort()).toEqual(["biohazard", "cook's assistant", 'lost city', 'shield of arrav']);
+    });
 });
 
 test('a held squad member is no restock donor: only free members send each other stock', () => {
