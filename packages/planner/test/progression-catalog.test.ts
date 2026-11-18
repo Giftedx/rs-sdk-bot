@@ -45,6 +45,22 @@ test('an explicit item or quest consumer outranks incidental training targets',(
  expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{TRAIN_SKILL:'Ranged',TARGET_LEVEL:'90'})).toEqual({kind:'train',skill:'ranged',targetLevel:90});
 });
 
+test('the finite Prayer trainer keeps its matching skill goal above retained bone postconditions',()=>{
+ const env={BONE_ID:'536',MAX_BURY:'105',BONE_RESERVE:'6',CAP:'1500'};
+ const accept={skills:{Prayer:99},bank:{536:6}};
+ expect(intentForEntry('scripts/train-prayer.ts',['99'],env,accept)).toEqual({kind:'train',skill:'prayer',targetLevel:99});
+ expect(intentForEntry('scripts/train-prayer.ts',['96'],{...env,BONE_ID:'526',MAX_BURY:'469'},{skills:{Prayer:96},bank:{526:44,536:6}})).toEqual({kind:'train',skill:'prayer',targetLevel:96});
+ expect(intentForEntry('scripts/train-prayer.ts',[],{TARGET_LEVEL:'60',BONE_RESERVE:'384'},{skills:{prayer:60},bank:{526:384}})).toEqual({kind:'train',skill:'prayer',targetLevel:60});
+ for(const [args,changed,goal] of [
+  [['98'],{},accept], [['99'],{BONE_ID:'999'},accept], [['99'],{BONE_RESERVE:'5'},accept],
+  [['99'],{BONE_RESERVE:'7'},accept], [['99'],{BURY_HELD:'1'},accept], [['99'],{CAP:'0'},accept],
+  [['99'],{MAX_BURY:'0'},accept], [['99','extra'],{},accept], [['99'],{},{skills:{Ranged:99},bank:{536:6}}],
+  [['99'],{},{skills:{Prayer:99,prayer:99},bank:{536:6}}], [['99'],{},{skills:{Prayer:99},bank:{526:6}}],
+ ] as const)expect(intentForEntry('scripts/train-prayer.ts',args,{...env,...changed},goal)).toMatchObject({kind:'acquire'});
+ expect(intentForEntry('scripts/train-prayer.ts',['99'],env,{bank:{536:6}})).toMatchObject({kind:'acquire'});
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','giant'],{TRAIN_SKILL:'Prayer',TARGET_LEVEL:'99'},accept)).toMatchObject({kind:'acquire',items:{536:6}});
+});
+
 test('unknown scripts and missing finite goals remain explicit',()=>{
  expect(intentForEntry('scripts/not-a-route.ts',[],{})).toBeNull();
  expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{})).toBeNull();
