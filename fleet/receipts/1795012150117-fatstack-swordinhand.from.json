@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795012150117-fatstack-swordinhand",
+ "account": "Fatstack",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 68697,
+ "claim": "ca756515-bb83-4191-bdb9-c9a06fdcd0e5",
+ "count": 68697,
+ "ok": true,
+ "at": 1795012205613,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 68697,
+  "after": 0
+ },
+ "bank": {
+  "count": 68697,
+  "at": 1795012195666
+ },
+ "logout": {
+  "attemptId": "1795012187545-0000006580-0000000001",
+  "at": 1795012205603,
+  "sha256": "f37b3be012c0ceafa97210a285dc861c6a10aa866206832696d7a8ee371873b2"
+ },
+ "screen": true
+}
