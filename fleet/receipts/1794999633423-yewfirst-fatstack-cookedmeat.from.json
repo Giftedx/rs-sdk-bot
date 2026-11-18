@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794999633423-yewfirst-fatstack-cookedmeat",
+ "account": "YewFirst",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "7aaa49b0-fed1-45c4-82d1-bd7ea941d70c",
+ "count": 3,
+ "ok": true,
+ "at": 1794999751415,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 17,
+  "after": 14
+ },
+ "logout": {
+  "attemptId": "1794999735752-0000019848-0000000001",
+  "at": 1794999751331,
+  "sha256": "f84fe3cf6b5953c23606070d59f2f9ebeeb0bbe8621beddb055e933aedb2083a"
+ },
+ "screen": true
+}

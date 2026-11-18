@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794999633423-pocketrocket-pickpockdick-firerune",
+ "account": "Pocketrocket",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "5b4a8bc3-20cf-4acd-a3c0-d5913a0d636b",
+ "count": 250,
+ "ok": true,
+ "at": 1794999748084,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1794999732931
+ },
+ "logout": {
+  "attemptId": "1794999719997-0000026116-0000000001",
+  "at": 1794999748074,
+  "sha256": "fc2724edf36e5a3ff653573226d084970ce9d55232dc68b3b28cc4277bc450c2"
+ },
+ "screen": true
+}
