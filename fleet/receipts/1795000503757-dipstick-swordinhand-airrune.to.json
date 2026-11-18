@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795000503757-dipstick-swordinhand-airrune",
+ "account": "Swordinhand",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "b37dcd97-911c-481f-8502-33ab877a48e1",
+ "count": 3,
+ "ok": true,
+ "at": 1795000717671,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795000716896
+ },
+ "logout": {
+  "attemptId": "1795000697842-0000004320-0000000001",
+  "at": 1795000717654,
+  "sha256": "ca59e540520254e8fbefd40b9eb67decd032867cdd4be7ce7b20889e3eea5091"
+ },
+ "screen": true
+}
