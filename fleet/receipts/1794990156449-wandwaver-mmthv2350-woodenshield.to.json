@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794990156449-wandwaver-mmthv2350-woodenshield",
+ "account": "mmthv2350",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Wooden shield",
+ "requested": 1,
+ "claim": "6084e33b-0387-4521-b3f9-90e41866671c",
+ "count": 0,
+ "ok": false,
+ "at": 1794990288713,
+ "detail": "trade claimed"
+}
