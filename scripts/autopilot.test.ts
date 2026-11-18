@@ -501,11 +501,17 @@ test('the limit of a worn item follows the lowest ask up to five times its shop 
     expect(gearLimit(561, KIT_PRICE_CAPS['nature rune']!, { ask: 900, sell: 500 })).toBe(KIT_PRICE_CAPS['nature rune']!);
     const items = [{ id: 1079, name: 'Rune platelegs', debugname: 'rune_platelegs' }, { id: 1163, name: 'Rune full helm', debugname: 'rune_full_helm' }];
     const asks = { 1079: { ask: 105_375, sell: 4 }, 1163: { ask: 349_982, sell: 40 } }, hour = FOLLOWED_RETRY_MS, now = 10 * UNSOLD_RETRY_MS;
-    expect(kitMarket(items, {}, now, asks)).toEqual({ 'rune plateleg': { id: 1079, name: 'Rune platelegs', limit: 110_644 }, 'rune full helm': { id: 1163, name: 'Rune full helm', limit: helm } });
+    // The helm's lowest ask is over its limit, so no buy is planned for it.
+    expect(kitMarket(items, {}, now, asks)).toEqual({ 'rune plateleg': { id: 1079, name: 'Rune platelegs', limit: 110_644 } });
     // A buy that got none: the followed item is back after an hour, the capped one after a day.
     const failed = { '1079': now - hour + 1, '1163': now - hour - 1 };
     expect(Object.keys(kitMarket(items, failed, now, asks))).toEqual([]);
-    expect(Object.keys(kitMarket(items, { '1079': now - hour - 1, '1163': now - UNSOLD_RETRY_MS - 1 }, now, asks))).toEqual(['rune plateleg', 'rune full helm']);
+    expect(Object.keys(kitMarket(items, { '1079': now - hour - 1, '1163': now - UNSOLD_RETRY_MS - 1 }, now, asks))).toEqual(['rune plateleg']);
+    expect(Object.keys(kitMarket(items, { '1163': now - UNSOLD_RETRY_MS - 1 }, now))).toEqual(['rune plateleg', 'rune full helm']);
+    // A read with no seller, or with the lowest ask over the limit, plans no buy; an item with no read stays.
+    const blades = [{ id: 1333, name: 'Rune scimitar', debugname: 'rune_scimitar' }, { id: 1331, name: 'Adamant scimitar', debugname: 'adamant_scimitar' }, { id: 1215, name: 'Dragon dagger', debugname: 'dragon_dagger' }, { id: 1303, name: 'Rune longsword', debugname: 'rune_longsword' }];
+    expect(Object.keys(kitMarket(blades, {}, now, { 1333: { ask: null, sell: 0 }, 1331: { ask: 36_948, sell: 439 }, 1215: { ask: 266_203, sell: 2 } }))).toEqual(['adamant scimitar', 'rune longsword']);
+    expect(Object.keys(kitMarket(blades, {}, now))).toEqual(['rune scimitar', 'adamant scimitar', 'dragon dagger', 'rune longsword']);
     // With no quote the platelegs wait the day too.
     expect(Object.keys(kitMarket(items, { '1079': now - hour - 1 }, now))).toEqual(['rune full helm']);
 });

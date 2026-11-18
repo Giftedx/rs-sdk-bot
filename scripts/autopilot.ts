@@ -213,10 +213,18 @@ export function gearLimit(id: number, cap: number, quote: Asks[number] | undefin
 // at the hand cap, or the seller left, and the next read of the market shows which.
 export function kitMarket(items: readonly { id: number; name?: string; debugname?: string }[], unsold: Readonly<Record<string, number>> = {}, now = Date.now(), asks: Asks = {}): Market {
     const market: Record<string, { id: number; name: string; limit: number }> = {};
-    for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
+    // The first item of a name is the one a buy orders. When the market read leaves it out, a later item of the same
+    // name (a trimmed or quest copy with no read) must not take its place.
+    const decided = new Set<string>();
+    for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !decided.has(norm(i.name))
         && (!(norm(i.name) in BOW_IDS) || BOW_IDS[norm(i.name)] === i.id)
         && (!(norm(i.name) in ARMOUR_IDS) || ARMOUR_IDS[norm(i.name)] === i.id)) {
-        const cap = KIT_PRICE_CAPS[norm(i.name)]!, limit = gearLimit(i.id, cap, asks[i.id]);
+        decided.add(norm(i.name));
+        const cap = KIT_PRICE_CAPS[norm(i.name)]!, quote = asks[i.id], limit = gearLimit(i.id, cap, quote);
+        // A market read that shows no seller, or a lowest ask over the limit: an offer would get none, so no buy is
+        // planned and the account takes the next source at once (owned stock, a shop job, the next weapon stage).
+        // With no read of the item the buy is planned as before.
+        if (quote && (quote.sell <= 0 || quote.ask === null || quote.ask > limit)) continue;
         if (now - (unsold[i.id] ?? -Infinity) < (limit > cap ? FOLLOWED_RETRY_MS : UNSOLD_RETRY_MS)) continue;
         market[norm(i.name)] = { id: i.id, name: i.name, limit };
     }
