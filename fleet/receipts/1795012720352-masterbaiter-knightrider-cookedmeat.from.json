@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795012720352-masterbaiter-knightrider-cookedmeat",
  "account": "Masterbaiter",
  "partner": "KnightRider",
@@ -12,6 +12,16 @@
  "claim": "853d497f-03fa-4189-b17c-ae9a275b71c1",
  "count": 0,
  "ok": false,
- "at": 1795012793651,
- "detail": "trade claimed"
+ "at": 1795012944363,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795012804025
+ },
+ "logout": {
+  "attemptId": "1795012793659-0000002636-0000000001",
+  "at": 1795012944354,
+  "sha256": "e1d6fc08ce6e10e3a635a61264aae9cec9ffae4cc93f00257a50180d149b4462"
+ },
+ "screen": false
 }
