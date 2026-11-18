@@ -16,7 +16,7 @@ import { ammoTier, boneXp, castRunes, objId, spellFact, toolLevel, wearLevel } f
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
-import { ownsWearableMeleeWeapon } from './gear-progression';
+import { ownsWearableMeleeWeapon, type CombatFocus } from './gear-progression';
 import { GEAR_GE_ID, gearJobFor, gearShopId, type GearWantRow } from './gear-want-jobs';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
 import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
@@ -368,6 +368,16 @@ export const questDone = (a: Acct, quest: string) => !!a.quests?.has(norm(quest)
 // complete (0 with no quest list), or the items short of a stock target.
 export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1)
     : t.quest ? (a.quests && !questDone(a, t.quest.name) ? 1 : 0) : t.stock ? Math.max(0, t.stock.to - (a.items[norm(t.stock.item)] ?? 0)) : 0;
+// The combat style an account trains, for its gear wants: the style of the band it runs now, else of the next army band it has levels
+// left in (the lowest band number first). An account off the army with no such job, or with no band left, has none.
+const SKILL_STYLE: Readonly<Record<string, CombatFocus>> = { Attack: 'melee', Strength: 'melee', Defence: 'melee', Hitpoints: 'melee', Ranged: 'ranged', Magic: 'magic' };
+export function accountStyle(a: Acct, templates: readonly Template[], currentId: string | undefined, army: boolean): CombatFocus | null {
+    const own = templates.find(t => t.id === currentId)?.trains?.skill;
+    if (own && SKILL_STYLE[own]) return SKILL_STYLE[own]!;
+    if (!army) return null;
+    const next = templates.filter(t => t.tier === 'goal' && !t.filler && t.trains && SKILL_STYLE[t.trains.skill] && bandLeft(t, a) > 0).sort((x, y) => (x.band ?? 0) - (y.band ?? 0) || x.id.localeCompare(y.id))[0];
+    return next?.trains ? SKILL_STYLE[next.trains.skill]! : null;
+}
 const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n))
     && Object.entries(needs?.holds ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
 // The items a frail account is short of for these needs: 0 for an account with the Hitpoints, or with no such need.

@@ -6,6 +6,7 @@ import {readSkillLevels,type CombatFocus} from '../packages/planner/src/gear-pro
 import type {MarketAsks} from '../packages/planner/src/gear-sources';
 import type {GearWantRow} from '../packages/planner/src/gear-want-jobs';
 import {PROFILES} from './shop-buyer';
+import {dataKey,derivedProfile} from './shop-profiles';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
@@ -15,7 +16,7 @@ const CRAFT_SKILLS=['Smithing','Crafting','Fletching','Runecraft','Herblore','Co
 let shopSpawns:Map<string,{x:number;z:number}[]>|undefined;
 /**
  * The shop-buyer profile (scripts/shop-buyer.ts PROFILES) that serves a shop want: its NPC stands on a spawn of the content shop
- * (knowledge/gear-sources.json shopNpcs) and one of its items matches the wanted name. A shop with no such profile has none, and so has a shop behind a door that needs items (`realm`: its own template carries the setup).
+ * (knowledge/gear-sources.json shopNpcs) and one of its items matches the wanted name. Else the profile that scripts/shop-profiles.ts derives from the content (`data:<shop>`). A shop behind a door that needs items (`realm`, `HAND_ONLY_SHOPS`) has none: its own template carries the setup.
  */
 export function shopProfileFor(shop:string,itemName:string):string|undefined{
     if(!shopSpawns){
@@ -24,7 +25,9 @@ export function shopProfileFor(shop:string,itemName:string):string|undefined{
         for(const r of rows)shopSpawns.set(r.shop,[...(shopSpawns.get(r.shop)??[]),...r.spawns]);
     }
     const spawns=shopSpawns.get(shop)??[];
-    return Object.entries(PROFILES).find(([,p])=>!p.realm&&spawns.some(t=>t.x===p.npcSpot.x&&t.z===p.npcSpot.z)&&p.items.some(i=>i.re.test(itemName)))?.[0];
+    const hand=Object.entries(PROFILES).find(([,p])=>!p.realm&&spawns.some(t=>t.x===p.npcSpot.x&&t.z===p.npcSpot.z)&&p.items.some(i=>i.re.test(itemName)))?.[0];
+    if(hand)return hand;
+    return derivedProfile(shop)?.items.some(i=>i.re.test(itemName))?dataKey(shop):undefined;
 }
 
 /** The wants of the account for its training style, from a status file, with the profile of each shop want. A status with no skills gives none. */
