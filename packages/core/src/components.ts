@@ -2,7 +2,7 @@
 // pathfinder masks them). A route search asks "same area?" before it runs findLongPath: a leg between two areas
 // cannot be walked, and searching it scans the whole 2048x2048 grid. Ardougne to Varrock took 180 s of search that
 // way. Labelling the map takes about 5 s for 7.7M tiles in 20,763 areas.
-import { closeSync, fstatSync, mkdirSync, openSync, readSync, renameSync, writeFileSync } from 'node:fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathfindingSourceKey } from './pathcache';
