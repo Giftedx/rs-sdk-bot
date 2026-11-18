@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794996143412,
+ "at": 1794996461191,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -226,24 +226,6 @@
    ]
   },
   {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=127 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit4-536-0to127 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 127 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
@@ -318,7 +300,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -328,39 +310,53 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
    ]
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/gather-combat.ts",
+   "account": "OreElse",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "5"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-bury-dragon-99",
    "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit7-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Swordinhand",
@@ -416,29 +412,22 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit6-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit6-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "repeat": false,
+   "goal": "buy 50 Nature rune, 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "Ballspinner",
@@ -474,8 +463,8 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
@@ -484,9 +473,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
