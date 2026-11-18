@@ -1,0 +1,22 @@
+{
+ "id": "1794984902595-fingerblastr-bonetopick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "BoneToPick",
+ "item": "coins",
+ "count": 39919,
+ "start": 1794984902595,
+ "end": 1794987302595,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
