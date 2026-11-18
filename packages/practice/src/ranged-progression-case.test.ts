@@ -5,9 +5,21 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {xpForLevel} from '../../planner/src/curve';
 import fixture from './ranged-progression-entry.json';
-import {parseRangedEntry,rangedComparisonPreset,rangedComparisonChecks,rangedEntryProofChecks,rangedSupportedMethods,RANGED_COMPARISON_PRESET} from './ranged-progression-case';
+import {parseRangedEntry,rangedComparisonPreset,rangedComparisonChecks,rangedEntryProofChecks,rangedSupportedMethods,RANGED_COMPARISON_PRESET,pointRangedComparisonBot} from './ranged-progression-case';
 import * as rangedCase from './ranged-progression-case';
 import type {RangedComparisonEntry} from './ranged-progression-case';
+
+test('the case points its bot env at IPv4 127.0.0.1, not localhost',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ranged-case-env-')),envPath=join(dir,'bot.env');
+ try{
+  writeFileSync(envPath,'BOT_USERNAME=x\nSERVER=localhost:1\nGATEWAY_URL=ws://localhost:2\n');
+  pointRangedComparisonBot(envPath,21000);
+  const env=readFileSync(envPath,'utf8');
+  expect(env).toMatch(/^SERVER=127\.0\.0\.1:21000$/m);
+  expect(env).toMatch(/^GATEWAY_URL=ws:\/\/127\.0\.0\.1:21001$/m);
+  expect(env).not.toContain('localhost');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 
 const bytes=(value:unknown)=>Buffer.from(JSON.stringify(value));
 const fresh=():RangedComparisonEntry=>{const entry=structuredClone(fixture);entry.skills[5]={...entry.skills[5]!,level:96,currentLevel:53,xp:xpForLevel(96)};return entry;};

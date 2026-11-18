@@ -104,6 +104,9 @@ export function rangedStackOptions(bind=canBind):IsolatedOptions{
  }
  throw Error('no bindable isolated ranged-train port set (8 candidates)');
 }
+// The web transport binds 0.0.0.0 only. "localhost" can resolve to ::1, and /crc then fails with ECONNRESET.
+export const RANGED_BOT_HOST='127.0.0.1';
+export function pointRangedBot(envPath:string,ports:{engine:number;gateway:number}){pointBotAt(envPath,ports.engine,ports.gateway,RANGED_BOT_HOST);}
 async function run(directory:string){
  if(!existsSync(join(root,'.practice/delivery-native.lock')))throw Error('practice turn required: run through delivery');
  rangedMemoryFloor(freeGiB(),'before stack');
@@ -119,7 +122,7 @@ async function run(directory:string){
   const options=rangedStackOptions();
   stack=await startStack(options);
   const {envPath}=await createBot(name);
-  pointBotAt(envPath,options.ports.engine,options.ports.gateway);
+  pointRangedBot(envPath,options.ports);
   const path=await applyPreset(name,RANGED_FIXTURE);
   setPracticeSkills(path,readPracticeSave(path).skills.map(k=>k.index===4?{level:70,xp:RANGED_SEED_XP}:{level:k.level,xp:k.xp}));
   copyFileSync(path,join(directory,'before.sav'));

@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {pointBotAt} from './rehearse';
+import {RANGED_BOT_HOST} from './ranged-train-proof';
 import {runBotName} from './prove';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {serverFromEnv} from '../../core/src/bot';
@@ -140,6 +141,8 @@ export function verifyRangedComparison(folder:string){
  const output={ok:Object.values(checks).every(Boolean),checks,evidence:folder};
  console.log('RANGED_SAVED_PROOF '+JSON.stringify(output));return output.ok;
 }
+// 'localhost' resolves to ::1 on Windows, but the web transport binds 0.0.0.0 only.
+export function pointRangedComparisonBot(envPath:string,port:number){pointBotAt(envPath,port,port+1,RANGED_BOT_HOST);}
 async function run(template:string,mode:string,target=RANGED_COMPARISON_TARGET){
  if(!['adaptive','chickens','troopers'].includes(mode))throw Error('comparison method must be adaptive, chickens or troopers');
  if(![83,85].includes(target))throw Error('fixed comparison target must be83 or85');
@@ -156,7 +159,7 @@ async function run(template:string,mode:string,target=RANGED_COMPARISON_TARGET){
  mkdirSync(folder,{recursive:true});
  writeFileSync(join(folder,'entry.json'),loaded.bytes,{flag:'wx'});
  try{
-  const {envPath}=await createBot(name);pointBotAt(envPath,port,port+1);
+  const {envPath}=await createBot(name);pointRangedComparisonBot(envPath,port);
   const path=await applyPreset(name,rangedComparisonPreset(entry));
   setPracticeSkills(path,entry.skills.map(s=>({level:s.currentLevel,xp:s.xp})));
   copyFileSync(path,join(folder,'before.sav'));

@@ -6,7 +6,8 @@ import * as bot from '../packages/core/src/bot';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
 import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
-import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions,rangedLevelXp,RANGED_SEED_XP} from '../packages/practice/src/ranged-train-proof';
+import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions,rangedLevelXp,RANGED_SEED_XP,pointRangedBot} from '../packages/practice/src/ranged-train-proof';
+import {readFileSync} from 'node:fs';
 import {capabilityRevision} from '../packages/core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
 import {xpForLevel} from '../packages/planner/src/curve';
@@ -146,6 +147,18 @@ test('proof selects a whole isolated endpoint set and refuses eight exhausted ca
  expect(()=>rangedStackOptions(port=>{checked.push(port);return port%10!==3;})).toThrow('no bindable isolated ranged-train port set (8 candidates)');
  expect(checked).toHaveLength(56);
  expect(new Set(checked).size).toBe(56);
+});
+test('native Ranged proof points its bot at IPv4 loopback, not localhost',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ranged-env-')),env=join(dir,'bot.env');
+ try{
+  writeFileSync(env,'BOT_USERNAME=flrng\r\nSERVER=localhost:8888\r\nGATEWAY_URL=ws://localhost:7780\r\n');
+  const {ports}=rangedStackOptions(()=>true);pointRangedBot(env,ports);
+  const text=readFileSync(env,'utf8');
+  expect(text).toMatch(/^SERVER=127\.0\.0\.1:19100$/m);
+  expect(text).toMatch(/^GATEWAY_URL=ws:\/\/127\.0\.0\.1:19101$/m);
+  expect(text).not.toContain('localhost');
+  expect(readFileSync(new URL('../packages/practice/src/ranged-train-proof.ts',import.meta.url),'utf8')).toContain('pointRangedBot(envPath,options.ports)');
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });
 test('proof holds the free-memory floor, not the start reserve that delivery admits',()=>{
  for(const free of [FREE_FLOOR_GB,PRACTICE_STARTUP_GB-0.1,PRACTICE_STARTUP_GB])expect(()=>rangedMemoryFloor(free,'before stack')).not.toThrow();
