@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794984902595-fingerblastr-bonetopick",
  "account": "BoneToPick",
  "partner": "Fingerblastr",
@@ -12,6 +12,12 @@
  "claim": "62f914bc-3442-4198-956a-6cdb653950eb",
  "count": 0,
  "ok": false,
- "at": 1794985730982,
- "detail": "trade claimed"
+ "at": 1794986315447,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794985731054-0000005744-0000000001",
+  "at": 1794986315432,
+  "sha256": "e6efeabe0e9dc46ed19f83e283d2c66cd452dbfcf6d4345a71f83b6e916c8b35"
+ },
+ "screen": false
 }
