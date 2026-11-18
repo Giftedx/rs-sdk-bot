@@ -2820,25 +2820,25 @@ describe('quest demand: the quests no owned account has done', () => {
     const id = (accounts: Acct[], extra: Partial<Inputs> = {}) => quest(run(accounts, extra)[0]!);
 
     test('an army account that holds the pack of a quest nobody has done takes it as a pilot, behind its own place', () => {
-        const [x] = run([soldier('Kilt', ['arrav'])]);
-        expect(x!.template!.id).toBe('quest-arrav');
-        expect(x!.reason).toBe(`army band ${QUEST_DEMAND_BAND}: Shield of Arrav`);
-        expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'sweep', 'arrav'], repeat: false, resources: [questResource('arrav'), QUEST_DEMAND] });
+        const [x] = run([soldier('Kilt', ['elemental'])]);
+        expect(x!.template!.id).toBe('quest-elemental');
+        expect(x!.reason).toBe(`army band ${QUEST_DEMAND_BAND}: Elemental Workshop`);
+        expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'sweep', 'elemental'], repeat: false, resources: [questResource('elemental'), QUEST_DEMAND] });
         // The cheapest quest of the practice runs first.
-        expect(id([soldier('Kilt', ['arrav', 'elemental'])])).toBe('quest-arrav');
-        expect(id([soldier('Kilt', ['elemental'])])).toBe('quest-elemental');
+        expect(id([soldier('Kilt', ['elemental', 'chompybird'])])).toBe('quest-elemental');
+        expect(id([soldier('Kilt', ['chompybird'])])).toBe('quest-chompybird');
     });
 
     test('there is no job without the proof, the list, the roster, the pack or a quest left to do', () => {
-        const kilt = soldier('Kilt', ['arrav']);
+        const kilt = soldier('Kilt', ['elemental']);
         // Not a pilot the plan names; no list of done quests; a quest that an observed account has done; one this account has done.
         expect(id([kilt], { pilots: new Set() })).toBeUndefined();
         expect(id([kilt], { questsDone: undefined })).toBeUndefined();
-        expect(id([kilt], { questsDone: new Set(['shield of arrav']) })).toBeUndefined();
-        expect(id([soldier('Kilt', ['arrav'], ['lost city', 'shield of arrav'])])).toBeUndefined();
-        // An account whose status lists no quests, a pack short of one rune, no roster seat.
+        expect(id([kilt], { questsDone: new Set(['elemental workshop']) })).toBeUndefined();
+        expect(id([soldier('Kilt', ['elemental'], ['lost city', 'elemental workshop'])])).toBeUndefined();
+        // An account whose status lists no quests, a pack short of one knife, no roster seat.
         expect(id([{ ...kilt, quests: undefined }])).toBeUndefined();
-        expect(id([{ ...kilt, items: { ...kilt.items, 'law rune': 0 } }])).toBeUndefined();
+        expect(id([{ ...kilt, items: { ...kilt.items, knife: 0 } }])).toBeUndefined();
         expect(id([kilt], { army: new Set() })).toBeUndefined();
         // Skills the journal asks for: Ikov wants Thieving 42 and Ranged 40.
         const ikov = soldier('Kilt', ['ikov']);
@@ -2850,7 +2850,7 @@ describe('quest demand: the quests no owned account has done', () => {
     });
 
     test('one account does a quest once and at most QUEST_DEMAND_PLACES quest jobs run at a time', () => {
-        const slugs = ['arrav', 'elemental', 'chompybird', 'horror'];
+        const slugs = ['elemental', 'chompybird', 'horror', 'ikov'];
         const four = ['A', 'B', 'C', 'D'].map(n => soldier(n, slugs));
         const out = run(four).map(quest);
         expect(out.filter(Boolean).length).toBe(QUEST_DEMAND_PLACES);
@@ -2863,7 +2863,7 @@ describe('quest demand: the quests no owned account has done', () => {
 
     test('a kit buy for a quest goes to one account for each quest, and never for more quests than the shared place holds', () => {
         const market: Market = { 'law rune': { id: 563, name: 'Law rune', limit: KIT_PRICE_CAPS['law rune'] ?? 400 } };
-        const lacking = (name: string) => { const a = soldier(name, ['arrav', 'ikov', 'dig']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
+        const lacking = (name: string) => { const a = soldier(name, ['ikov', 'dig']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
         const out = run(['A', 'B', 'C', 'D', 'E'].map(lacking), { market });
         const buys = out.map(x => x.template?.id).filter((t): t is string => !!t && t.startsWith(KIT_BUY + 'quest-'));
         expect(buys.length).toBeGreaterThan(0);
@@ -2873,9 +2873,9 @@ describe('quest demand: the quests no owned account has done', () => {
 
     test('the bill asks for the pack of a quest once, however many accounts could run it', () => {
         const market: Market = { 'law rune': { id: 563, name: 'Law rune', limit: KIT_PRICE_CAPS['law rune'] ?? 400 } };
-        const lacking = (name: string) => { const a = soldier(name, ['arrav']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
+        const lacking = (name: string) => { const a = soldier(name, ['ikov']); return { ...a, items: { ...a.items, 'law rune': 0 } }; };
         const rows = (n: number) => goalNeeds(inputs(Array.from({ length: n }, (_, i) => lacking(`Soldier${i}`)), { army: new Set(Array.from({ length: n }, (_, i) => `soldier${i}`)), market,
-            pilots: names(['arrav']), questsDone: new Set() }), Array.from({ length: n }, (_, i) => lacking(`Soldier${i}`))).filter(r => /quest-arrav/.test(r.consumer));
+            pilots: names(['ikov']), questsDone: new Set() }), Array.from({ length: n }, (_, i) => lacking(`Soldier${i}`))).filter(r => /quest-ikov/.test(r.consumer));
         expect(rows(1).length).toBe(1);
         expect(rows(5).length).toBe(1);
         expect(rows(5)[0]).toMatchObject({ names: ['law rune'], short: 1, account: 'soldier0' });

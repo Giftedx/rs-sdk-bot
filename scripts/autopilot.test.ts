@@ -1416,11 +1416,14 @@ test('each quest demand row dispatches to the sweep, has a bench case that can p
     const templates = new Map(questDemand().map(t => [t.id, t]));
     expect(templates.size).toBe(QUEST_DEMAND_ROWS.length);
     // Hitpoints 90 stands only where the saved practice run fell under 70 Hitpoints with 99 in every skill.
-    expect(QUEST_DEMAND_ROWS.filter(r => r.skills.Hitpoints).map(r => r.slug).sort()).toEqual(['crest', 'hero', 'itwatchtower', 'legends', 'regicide', 'upass', 'viking', 'zombiequeen']);
+    expect(QUEST_DEMAND_ROWS.filter(r => r.skills.Hitpoints).map(r => r.slug).sort()).toEqual(['crest', 'itwatchtower', 'regicide', 'upass', 'viking', 'zombiequeen']);
     for (const row of QUEST_DEMAND_ROWS) {
         const t = templates.get(`quest-${row.slug}`)!, step = resolveAioStep('quester', t.args!.slice(1));
         expect(`${row.slug} ${step.script} ${step.args}`).toBe(`${row.slug} scripts/quest-sweep.ts ${row.slug}`);
         expect(existsSync(resolve(import.meta.dir, '..', t.worker!))).toBe(true);
+        // A one-account sweep: the generated script takes no helper account (Arrav, Hero's Quest and Legends Quest do), and the sweep does not refuse the quest.
+        expect(`${row.slug} ${readFileSync(resolve(import.meta.dir, `generated/quest-${row.slug}.ts`), 'utf8').includes('process.argv[3]')}`).toBe(`${row.slug} false`);
+        expect(`${row.slug} ${['hero', 'arrav', 'legends', 'misc'].includes(row.slug)}`).toBe(`${row.slug} false`);
         expect(`${row.slug} ${cases.has(t.aio!)}`).toBe(`${row.slug} true`);
         expect(cases.get(t.aio!)!.known).toBeUndefined();
         // The journal's own asks: its skills (and Hitpoints 90 where the practice run fell low), its quests and quest points.
