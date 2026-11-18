@@ -97,6 +97,7 @@ export const FIGHTER_PROFILES: readonly FighterProfileSpec[] = [
  {target:'chicken',script:'scripts/train-chickens.ts',defaultEnv:{TRAIN_BANK:'draynor',TRAIN_SKILL:'Strength',TARGET_LEVEL:'30',CAP:'3000'},description:'Train melee or CombatUnlock on Lumbridge/Ardougne chickens and return kit to bank'},
  {target:'cow',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'cow',CAP:'3000',TRAIN_SKILL:'Defence',TARGET_LEVEL:'40'},description:'Fight Ardougne cows (north/south profile) for melee levels and cowhides/beef'},
  {target:'druid',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'druid',CAP:'6000'},description:'Fight Chaos Druids and bank herbs, law/nature/air runes, and vials'},
+ {target:'unicorn',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'unicorn',CAP:'1500',MAX_KILLS:'10'},description:'Kill the unicorns south of Edgeville and bank each unicorn horn, the second input of an antipoison'},
  {target:'giant',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'giant',CAP:'6000'},description:'Fight Hill Giants in Edgeville dungeon for melee XP, big bones, and limpwurt roots'},
  {target:'trooper',script:'scripts/gather-combat.ts',defaultEnv:{TARGET:'trooper',CAP:'1500',TRAIN_SKILL:'Strength',TARGET_LEVEL:'99',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1'},description:'Train melee, Ranged or Hitpoints on Khazard troopers with bank staging, food and bone burial'},
  {target:'fire-giant',script:'scripts/gather-fire-giants.ts',description:'Fight Fire Giants (Baxtorian Falls / Waterfall) with food/potion sustain and loot banking'},

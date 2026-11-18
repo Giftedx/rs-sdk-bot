@@ -1333,6 +1333,34 @@
    }
   },
   {
+   "id": "fighter:unicorn",
+   "category": "fighter",
+   "name": "unicorn",
+   "script": "scripts/gather-combat.ts",
+   "args": [],
+   "env": {
+    "TARGET": "unicorn",
+    "CAP": "1500",
+    "MAX_KILLS": "10"
+   },
+   "intents": [
+    "acquire"
+   ],
+   "skills": [
+    "attack",
+    "strength",
+    "defence",
+    "hitpoints",
+    "ranged"
+   ],
+   "description": "Kill the unicorns south of Edgeville and bank each unicorn horn, the second input of an antipoison",
+   "discriminator": {
+    "env": {
+     "TARGET": "unicorn"
+    }
+   }
+  },
+  {
    "id": "logistics:arrive-draynor",
    "category": "logistics",
    "name": "arrive-draynor",
@@ -89867,6 +89895,7 @@
     "fighter:chicken",
     "fighter:cow",
     "fighter:druid",
+    "fighter:unicorn",
     "fighter:giant",
     "fighter:trooper",
     "fighter:fire-giant",
@@ -90288,6 +90317,7 @@
     "fighter:chicken",
     "fighter:cow",
     "fighter:druid",
+    "fighter:unicorn",
     "fighter:giant",
     "fighter:trooper",
     "fighter:fire-giant",
@@ -90839,6 +90869,7 @@
    "routeIds": [
     "fighter:cow",
     "fighter:druid",
+    "fighter:unicorn",
     "fighter:giant",
     "fighter:trooper"
    ]

@@ -338,7 +338,8 @@ function recommendAuthoredAioJob(
    step: troopers ? resolveFighterStep('trooper', ['TRAIN_SKILL=Ranged', `TARGET_LEVEL=${goalLvl}`]) : resolveFighterStep('ranged', [`TARGET_LEVEL=${goalLvl}`]),
   };
  }
- const band = planProgressiveSkiller(lowest.name.toLowerCase(), lowest.level, Math.min(99, lowest.level + 15))[0]!;
+ const band = planProgressiveSkiller(lowest.name.toLowerCase(), lowest.level, Math.min(99, lowest.level + 15), 25, account.ownedItems)[0]!;
+ if (band.unitsNeeded < 1) return {category: null, step: null, status: 'blocked', reason: `Lowest skill ${lowest.name} (${lowest.level}) has no tier with owned inputs: ${band.shortfall}`};
  return {
   category: 'skiller',
   reason: `Lowest skill ${lowest.name} (${lowest.level}); run ${band.method} to ${band.toLevel}`,

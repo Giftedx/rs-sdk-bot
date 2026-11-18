@@ -1,8 +1,16 @@
 import { expect, spyOn, test } from 'bun:test';
-import { BOW_TRIP, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { BOW_TRIP, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
+import marketRows from './measure/pk-restock-market.json';
+import type { RestockMarket } from './pk-roam';
+// Rows of the market cache (.practice/market-all.json) for the items of the PK restock: the lowest ask and the units offered
+// (scripts/measure/pk-restock-market.json). The prayer potion, the glory and the super potions are dear, the superantipoison and
+// the antipoison have no seller, and the nature rune asks more than twice the hand limit that the plan once used. The limit of
+// each item is the ask plus RESTOCK_MARGIN_PERCENT (10).
+const RESTOCK_MARKET: RestockMarket = marketRows;
+const RESTOCK_LIMITS = { 563: 770, 561: 698, 385: 974, 2434: 354_864, 1712: 4_675_000, 2440: 110_000, 2436: 110_000, 861: 104_500, 1113: 231_404 } as const;
 import * as walking from '../packages/core/src/walk';
 
 const me = { z: 3556, combatLevel: 126 };
@@ -318,16 +326,26 @@ test('planWildernessEscape, wildernessCombatMargin, and assessWildernessThreat h
 });
 
 test('restockPlan and restockPlanFromStock restock glory(4), prayer potions, super pots, and antipoison alongside runes and sharks', () => {
-    const withPots = restockPlan({ law: 5, nature: 10, water: 20, magic: 80, coins: 120_000, food: 18, glory: false, prayerPots: 1, superPots: true, antipoison: true });
-    expect(withPots).toEqual(expect.arrayContaining([
-        { kind: 'ge', item: 1712, quantity: 1, limit: 50_000, owned: 0 },
-        { kind: 'ge', item: 2434, quantity: 3, limit: 3500, owned: 1 },
-        { kind: 'ge', item: 2440, quantity: 1, limit: 2500, owned: 0 },
-        { kind: 'ge', item: 2436, quantity: 1, limit: 2500, owned: 0 },
-        { kind: 'ge', item: 2448, quantity: 1, limit: 2500, owned: 0 },
-    ]));
-    const stockSteps = restockPlanFromStock([{ id: 563, count: 5 }, { id: 561, count: 10 }, { id: 555, count: 20 }, { id: 385, count: 20 }, { id: 139, count: 1 }], { magic: 85 }, 100_000);
-    expect(stockSteps.map(s => (s.kind === 'ge' ? s.item : 0))).toEqual([1712, 2434]);
+    const M = RESTOCK_MARKET, L = RESTOCK_LIMITS;
+    const rich = { law: 5, nature: 10, water: 20, magic: 80, coins: 20_000_000, food: 18, glory: false, prayerPots: 1, superPots: true, antipoison: true };
+    // No superantipoison and no antipoison is for sale, so the plan has no step for it.
+    expect(restockPlan(rich, M)).toEqual([
+        { kind: 'ge', item: 1712, quantity: 1, limit: L[1712], owned: 0 },
+        { kind: 'ge', item: 2434, quantity: 3, limit: L[2434], owned: 1 },
+        { kind: 'ge', item: 2440, quantity: 1, limit: L[2440], owned: 0 },
+        { kind: 'ge', item: 2436, quantity: 1, limit: L[2436], owned: 0 },
+    ]);
+    // The super antipoison comes first. The plain one is the fallback. Each is bought at its ask plus 10 percent.
+    expect(restockPlan(rich, { ...M, 2448: { ask: 2500, sell: 40 }, 2446: { ask: 14_000, sell: 5 } }).at(-1)).toEqual({ kind: 'ge', item: 2448, quantity: 1, limit: 2750, owned: 0 });
+    expect(restockPlan(rich, { ...M, 2446: { ask: 14_000, sell: 5 } }).at(-1)).toEqual({ kind: 'ge', item: 2446, quantity: 1, limit: 15_400, owned: 0 });
+    // With the coins of a small bank the dear items drop out and the rest stays within the coins.
+    const small = restockPlan({ ...rich, coins: 120_000 }, M);
+    expect(small).toEqual([{ kind: 'ge', item: 2440, quantity: 1, limit: L[2440], owned: 0 }]);
+    const spent = small.reduce((n, s) => n + (s.kind === 'ge' ? s.quantity * s.limit : 0), 0);
+    expect(spent).toBeLessThanOrEqual(120_000 - 1000);
+    const stock = [{ id: 563, count: 5 }, { id: 561, count: 10 }, { id: 555, count: 20 }, { id: 385, count: 20 }, { id: 139, count: 1 }];
+    expect(restockPlanFromStock(stock, { magic: 85 }, 100_000, M)).toEqual([]);
+    expect(restockPlanFromStock(stock, { magic: 85 }, 20_000_000, M).map(s => (s.kind === 'ge' ? s.item : 0))).toEqual([1712, 2434]);
 });
 
 test('wildernessDepth treats Mage Bank cellar as level 0, slashWebThrough retries 50%-fail webs, and hunt uses Varrock tele fallback', async () => {
@@ -379,4 +397,38 @@ test('wildernessDepth treats Mage Bank cellar as level 0, slashWebThrough retrie
         expect(clickedSpells).toEqual([pk.SPELLS.varrockTeleport]);
         expect(res.end).toBe('bank did not open');
     } finally { for (const m of mocks) m.mockRestore(); }
+});
+
+// The food of a trip: sharks first (heal 20), then lobsters (heal 12), from the bank.
+test('planFood takes sharks first and fills the rest with lobsters, and names a shortfall as sharks', () => {
+    const have = (sharks: number, lobsters: number) => (id: number) => (id === 385 ? sharks : id === 379 ? lobsters : 0);
+    expect(planFood(have(30, 99), 18)).toEqual([{ id: 385, count: 18 }]);
+    expect(planFood(have(5, 99), 18)).toEqual([{ id: 385, count: 5 }, { id: 379, count: 13 }]);
+    expect(planFood(have(0, 99), 18)).toEqual([{ id: 379, count: 18 }]);
+    expect(planFood(have(2, 3), 18)).toEqual([{ id: 385, count: 15 }, { id: 379, count: 3 }]);
+    expect(planFood(have(0, 0), 4)).toEqual([{ id: 385, count: 4 }]);
+    expect(FOOD_LIST.map(f => [f.id, f.heal])).toEqual([[385, 20], [379, 12]]);
+    expect(healOf(385)).toBe(20);
+    expect(healOf(379)).toBe(12);
+});
+
+test('restock withdraws sharks first and lobsters for the rest, and counts both as food', async () => {
+    const mixed = supplyBank([{ id: 385, count: 2 }, { id: 379, count: 20 }]);
+    expect(await restock(mixed.s, 5, [])).toBeNull();
+    expect([...mixed.withdrawals].sort((x, y) => x.id - y.id)).toEqual([{ id: 379, count: 3 }, { id: 385, count: 2 }]);
+    const lobsters = supplyBank([{ id: 379, count: 20 }]);
+    expect(await restock(lobsters.s, 6, [])).toBeNull();
+    expect(lobsters.withdrawals).toEqual([{ id: 379, count: 6 }]);
+    expect(foodHeld(lobsters.s)).toBe(6);
+    const sharks = supplyBank([{ id: 385, count: 30 }, { id: 379, count: 20 }]);
+    expect(await restock(sharks.s, 4, [])).toBeNull();
+    expect(sharks.withdrawals).toEqual([{ id: 385, count: 4 }]);
+});
+
+test('restock with too little food in the bank fails and names the sharks that are lacking', async () => {
+    const f = supplyBank([{ id: 385, count: 2 }, { id: 379, count: 3 }]);
+    const err = await restock(f.s, 10, []);
+    expect(err).toContain('lacks');
+    expect(err).toContain('385');
+    expect(f.withdrawals).toEqual([]);
 });

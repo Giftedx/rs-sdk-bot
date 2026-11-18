@@ -476,6 +476,18 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('foraging', 'grapes', 'grapes_cooksguild'),
   {key: 'fighter:chicken', script: 'scripts/aio-fighter.ts', preset: 'bank_draynor', presetConfig: CHICKEN_FIXTURE, scriptArgs: ['chicken', 'TARGET_LEVEL=25', 'CAP=1500'], pass: s => ok(s) && s.includes('chicken-qualification'), timeoutMs: 300_000},
   {key: 'fighter:druid', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['druid', '1500', 'druid'], pass: ok, output: /kills=(\d+)/},
+  // The horn of an antipoison: four kills of the two unicorns south of Edgeville (so two wait for a respawn), each horn
+  // picked up, then the bank.
+  {key: 'fighter:unicorn', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['unicorn', '1200', 'unicorn', 'MAX_KILLS=4'], output: /kills=(\d+)/,
+    pass: s => ok(s) && /kills=4 looted=4 /.test(s) && /targetMet=true/.test(s),
+    presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 3087, z: 3452, level: 0}}},
+  // The antipoison from its inputs, one recipe of the bank-standing worker a case (scripts/microbot-production.ts):
+  // unicorn horns ground to dust, marrentill and vials of water mixed, and the two brewed into antipoison(3).
+  ...([['grind', 'grind:unicorn_horn', [{id: 233, count: 1}], [{id: 237, count: 3}]], ['unf', 'brew:unf_marrentill_potion', [], [{id: 251, count: 3}, {id: 227, count: 3}]],
+    ['brew', 'brew:3doseantipoison', [], [{id: 93, count: 3}, {id: 235, count: 3}]]] as const).map(([step, recipe, inventory, bank]): BenchCase =>
+    ({key: `extra:antipoison-${step}`, script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', recipe, 'MAX_MAKE=3', 'CAP=600', 'MEMBERS=1'],
+      presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Herblore: 5}, inventory: [...inventory], bank: [...bank]},
+      pass: s => ok(s) && /"made":3,"banked":3\b/.test(s) && s.includes('LOGOUT logged-out')})),
   // packages/practice/src/cow-progress-order-proof.ts
   {key: 'fighter:cow', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['cow', '1500', 'cow', 'MAX_KILLS=5', 'TRAIN_SKILL=Attack', 'TARGET_LEVEL=20', 'COW_BANK_PROFILE=south', 'COW_FOOD_MODE=held'], pass: ok,
     presetConfig: {position: {x: 2655, z: 3283, level: 0}, skills: {Attack: 9, Defence: 20, Strength: 20, Hitpoints: 20},
@@ -1416,6 +1428,11 @@ const EXTRA_CASES: BenchCase[] = [
   // and the float from the bank, the ship to Brimhaven, the shelf of 10 at Jiminua's Jungle Store, the ship back, the bank.
   {key: 'extra:shop-jiminua', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'ITEMS=antipoison', 'STOCK_TARGET=10', 'STOP_AT_TARGET=1', 'MAX_ITEMS=10', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=40'],
     pass: s => ok(s) && /boughtTotal=10 bankedTotal=10 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, bank: [{id: 995, count: 20000}]}},
+  // The same trip for a shelf that other players empty: 12 potions from a shelf of 10, so the account waits at the
+  // shelf for two units that come back (one each 150 ticks) and sends a buy request each tick (BLIND_BUY=1).
+  {key: 'extra:shop-jiminua-restock', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'ITEMS=antipoison', 'STOCK_TARGET=12', 'STOP_AT_TARGET=1', 'MAX_ITEMS=12', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=400', 'STALL_TICKS=0', 'BLIND_BUY=1'],
+    pass: s => ok(s) && /boughtTotal=12 bankedTotal=12 /.test(s), timeoutMs: 600_000,
     presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, bank: [{id: 995, count: 20000}]}},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the

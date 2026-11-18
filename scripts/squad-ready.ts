@@ -8,7 +8,8 @@
 //   body and leg armour (an account with no leg armour died), a melee weapon with a special attack or a rune blade,
 //   a bow with arrows that it can fire, the runes of an escape teleport that the account can cast (pk-squad.ts
 //   squadEscapeSpell: an account clicked Camelot Teleport with no law runes), the runes of Bind, an antipoison
-//   (poison did 139 of 455 damage), sharks for a full pack, a bank read of a stated age, and a place the walker leaves.
+//   (poison did 139 of 455 damage), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
+//   sharks first, then lobsters), a bank read of a stated age, and a place the walker leaves.
 // Usage: bun scripts/squad-ready.ts [<account> ...] [--root <checkout>] [--max-age <hours>] [--json]
 //          [--loadouts <dir>] [--orders <dir>]
 //   No account named: every account of this fleet side with 99 in the seven combat skills.
@@ -24,6 +25,7 @@ import { BANK_MEETS } from './coin-courier';
 import { makeOrder, writeFleetOrder } from './fleet-order';
 import { castableFreeze, defaultSpec, ITEMS, wildernessLevel } from './pk';
 import { packOf } from './pk-gang';
+import { FOOD_LIST } from './pk-hunt';
 import { kitItems } from './pk-kits';
 import { kitFrom } from './pk-roam';
 import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell } from './pk-squad';
@@ -43,7 +45,9 @@ export const RULES: Readonly<Record<string, Rule>> = {
 const SLOT: Readonly<Record<string, number>> = { hat: 0, back: 1, front: 2, righthand: 3, torso: 4, lefthand: 5, legs: 7, hands: 9, feet: 10, ring: 12, quiver: 13 };
 const COMBAT = ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic', 'Prayer', 'Hitpoints'] as const;
 const MELEE_BLADE = /dagger|scimitar|longsword|sword|mace|battleaxe|warhammer|spear|halberd/i, BOW = /bow$/i, CROSSBOW = /crossbow/i;
-const FOOD_ID = ITEMS.shark as number, PACK_SLOTS = 27;
+// The food that a bank trip takes, in its order (scripts/pk-hunt.ts restock).
+const FOOD_IDS: readonly number[] = FOOD_LIST.map(f => f.id), PACK_SLOTS = 27;
+const isFood = (id: number) => FOOD_IDS.includes(id);
 const armour = (g: Gear) => (g.bonuses.stabDefence ?? 0) + (g.bonuses.slashDefence ?? 0) + (g.bonuses.crushDefence ?? 0);
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 // West Ardougne behind its wall (x 2558): the city doors stay shut until Biohazard is complete, and the walker has no
@@ -66,7 +70,7 @@ export function wearable(g: Gear, a: Account): boolean {
 // verdict is "not ready" without it. `id`: the item to buy when no account has a spare one (the bench kit's piece
 // for a class of items).
 export type Need = { what: string; count: number; blocking: boolean; id?: number; accept: (item: Item) => boolean };
-export type Pick = { account: string; ready: boolean; reasons: string[]; notes: string[]; worn: Worn[]; carried: Item[]; food: number; foodSlots: number; foodHeld: number;
+export type Pick = { account: string; ready: boolean; reasons: string[]; notes: string[]; worn: Worn[]; carried: Item[]; food: number; foodRows: Item[]; foodSlots: number; foodHeld: number; foodStock: Item[];
     styles: string[]; special: string | null; escape: string | null; freeze: string | null; needs: Need[]; pack: ReturnType<typeof packOf> };
 
 const SPELL_NAME: Readonly<Record<number, string>> = { 1174: 'Camelot Teleport', 1164: 'Varrock Teleport' };
@@ -138,7 +142,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const antipoison = owned.filter(isAntipoison).sort((x, y) => antipoisons.indexOf(x.id) % 4 - antipoisons.indexOf(y.id) % 4)[0];
     if (antipoison) carried.push({ id: antipoison.id, name: antipoison.name, count: 1 });
     else needs.push({ what: 'antipoison', count: 1, blocking: true, ...(kit.inventory.find(i => antipoisons.includes(i.id)) ? { id: kit.inventory.find(i => antipoisons.includes(i.id))!.id } : {}), accept: isAntipoison });
-    const supplies = kit.inventory.filter(i => i.id !== FOOD_ID && !antipoisons.includes(i.id) && !gear.has(i.id));
+    const supplies = kit.inventory.filter(i => !isFood(i.id) && !antipoisons.includes(i.id) && !gear.has(i.id));
     const short = new Map<number, number>();
     for (const s of supplies) {
         const have = own.get(s.id), take = Math.min(have?.count ?? 0, s.count);
@@ -154,13 +158,17 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
         const blocking = freezeRunes.includes(s.id) ? freezeSpell === null : escapeSpell === null;
         needs.push({ what: own.get(s.id)?.name ?? nameOf(s.id) ?? `item ${s.id}`, id: s.id, count: n, blocking, accept: i => i.id === s.id });
     }
-    const foodSlots = PACK_SLOTS - carried.length, foodHeld = own.get(FOOD_ID)?.count ?? 0, food = Math.min(foodHeld, foodSlots);
-    if (foodHeld < foodSlots) needs.push({ what: 'Shark', id: FOOD_ID, count: foodSlots - foodHeld, blocking: true, accept: i => i.id === FOOD_ID });
+    // Food: each kind of the food list that the account holds, the first kind first, up to the free slots of the pack.
+    const foodSlots = PACK_SLOTS - carried.length, foodStock = FOOD_IDS.flatMap(id => (own.get(id)?.count ?? 0) > 0 ? [{ ...own.get(id)! }] : []);
+    const foodHeld = foodStock.reduce((n, f) => n + f.count, 0), foodRows: Item[] = [];
+    for (const f of foodStock) { const take = Math.min(f.count, foodSlots - foodRows.reduce((n, r) => n + r.count, 0)); if (take > 0) foodRows.push({ id: f.id, name: f.name, count: take }); }
+    const food = foodRows.reduce((n, r) => n + r.count, 0);
+    if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: true, accept: i => isFood(i.id) });
     // The fight kit, the pack of a bank trip, the escape and the freeze, each from the code that the squad runs.
     // The special of the fight kit: the melee weapon's, else the bow's (scripts/pk.ts defaultSpec).
     const fight = kitFrom(worn, carried), special = defaultSpec(fight)?.style ?? null;
     const eat = [{ text: 'Eat' }], none: { text: string }[] = [];
-    const pack = packOf([...carried.map(c => ({ id: c.id, count: c.count, optionsWithIndex: none })), ...Array.from({ length: food }, () => ({ id: FOOD_ID, count: 1, optionsWithIndex: eat }))], worn);
+    const pack = packOf([...carried.map(c => ({ id: c.id, count: c.count, optionsWithIndex: none })), ...foodRows.flatMap(r => Array.from({ length: r.count }, () => ({ id: r.id, count: 1, optionsWithIndex: eat })))], worn);
     for (const n of needs) if (n.blocking) reasons.push(`no ${n.what}${n.count > 1 ? ` (${n.count} short)` : ''}`);
     if (!fight.melee?.length && weapon) reasons.push('the fight kit holds no melee weapon');
     if (escapeSpell === null && !reasons.some(r => /Law rune|Air rune/.test(r))) reasons.push(`no escape teleport that Magic ${magic} can cast with the runes held`);
@@ -170,7 +178,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
     if (wildernessLevel(a.pos.z) > 0) reasons.push(`stands in the Wilderness at level ${wildernessLevel(a.pos.z)}`);
     if (!maxed(a)) notes.push(`not 99 in ${COMBAT.filter(s => (a.levels[s.toLowerCase()] ?? 1) < 99).join(', ')}`);
-    return { account: a.name, ready: reasons.length === 0, reasons, notes, worn, carried, food, foodSlots, foodHeld, styles: Object.keys(fight), special,
+    return { account: a.name, ready: reasons.length === 0, reasons, notes, worn, carried, food, foodRows, foodSlots, foodHeld, foodStock, styles: Object.keys(fight), special,
         escape: escapeSpell === null ? null : SPELL_NAME[escapeSpell] ?? `spell ${escapeSpell}`, freeze: freezeSpell === null ? null : 'Bind', needs, pack };
 }
 
@@ -261,7 +269,7 @@ export function shopSource(name: string, debugname: string, shops: readonly Shop
 // The input of scripts/microbot-owned-loadout.ts for an account that holds its kit: the bank tile, the worn pieces
 // and the pack. The script needs the account within 3 tiles of the bank tile.
 export function loadoutOf(pick: Pick, bank: { x: number; z: number }): { bank: { x: number; z: number; level: number }; pack: { id: number; count: number }[]; wear: { id: number; count: number; slot: number }[]; cap: number; maximumMoves: number } {
-    return { bank: { ...bank, level: 0 }, pack: [...pick.carried.map(c => ({ id: c.id, count: c.count })), ...(pick.food ? [{ id: FOOD_ID, count: pick.food }] : [])],
+    return { bank: { ...bank, level: 0 }, pack: [...pick.carried.map(c => ({ id: c.id, count: c.count })), ...pick.foodRows.map(r => ({ id: r.id, count: r.count }))],
         wear: pick.worn.map(w => ({ id: w.id, count: w.count, slot: w.slot })), cap: 600, maximumMoves: 128 };
 }
 
@@ -282,7 +290,7 @@ export function report(plan: Plan, accounts: readonly Account[], rule: Rule, now
         const a = byName.get(p.account)!, slot = (n: number) => p.worn.find(w => w.slot === n);
         out.push(`${p.ready ? 'READY    ' : 'NOT READY'} ${p.account}  at ${a.pos.x},${a.pos.z}  bank read ${a.bankAt === null ? 'never' : hours(now - a.bankAt) + ' ago'}${a.reservation ? '  (coordinator reservation)' : ''}`);
         out.push(`  wears    ${[['helm', 0], ['body', 4], ['legs', 7], ['shield', 5], ['amulet', 2], ['weapon', 3]].map(([label, n]) => `${label} ${slot(n as number)?.name ?? '-'}`).join(' | ')} | quiver ${slot(13) ? `${slot(13)!.count} ${slot(13)!.name}` : '-'}`);
-        out.push(`  carries  ${p.carried.map(c => (c.count > 1 ? `${c.count} ` : '') + c.name).join(', ') || '-'} | ${p.food} of ${p.foodSlots} sharks (holds ${p.foodHeld}: ${Math.floor(p.foodHeld / Math.max(1, p.foodSlots))} full packs)`);
+        out.push(`  carries  ${p.carried.map(c => (c.count > 1 ? `${c.count} ` : '') + c.name).join(', ') || '-'} | food ${p.food} of ${p.foodSlots}${p.foodRows.length ? ` (${p.foodRows.map(r => `${r.count} ${r.name}`).join(', ')})` : ''}; holds ${p.foodStock.map(f => `${f.count} ${f.name}`).join(', ') || 'none'}: ${Math.floor(p.foodHeld / Math.max(1, p.foodSlots))} full packs`);
         out.push(`  fights   ${p.styles.join('+') || 'no style'}${p.special ? ` with a ${p.special} special attack` : ''} | escape ${p.escape ?? 'none'} | freeze ${p.freeze ?? 'none'}`);
         for (const r of p.reasons) out.push(`  blocked  ${r}`);
         for (const n of p.notes) out.push(`  note     ${n}`);

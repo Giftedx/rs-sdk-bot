@@ -1504,7 +1504,7 @@ export const PRAYER_FIELD_BAND = 9;
 // out of arrows it ends stop=ammo, ok after kills. It takes its fired arrows back after each kill. Practice 3/3
 // RESULT ok with bronze arrows: Ranged 1 to 59-62 in about 1,600 ticks, 41.1-46.7 XP a tick, 0.67-2.02 arrows lost
 // per 1,000 XP (research/combat-measure.md). It shares the battlefield with the melee trooper bands.
-export const RANGED_BAND = 4, GUILD_BAND = 3.9;
+export const RANGED_BAND = 4, GUILD_BAND = 3.9, RANGED_TROOPER_DEFENCE = 60;
 const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
     ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
 // Native bows and their unstrung inputs share display names. Only the strung base ID supplies a combat kit.
@@ -2141,7 +2141,10 @@ export function catalogue(): Template[] {
         id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1', LOOT_WATCH: '0' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
-        needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
+        // RANGED_TROOPER_DEFENCE: the troopers reach an archer and hit it. Live, accounts with Defence 99 trained Ranged
+        // 1 to 45-55 in a run with 0 to 1 food eaten and lowest HP 49 to 92; accounts with Defence 9, 10 and 43 ate 26 to
+        // 36 food a run and fell to 16, 8 and 14 HP. An account under the floor takes its Defence bands first.
+        needs: { skills: { Hitpoints: 40, Defence: RANGED_TROOPER_DEFENCE }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
     };
     // The Ranged band's arrows, band 4. The market lists no arrow under the kit caps (live claude-cloud: every arrow
@@ -2224,7 +2227,7 @@ export function catalogue(): Template[] {
     });
     const ardyIronAxe: Template = {
         id: 'tool-axe-iron', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '1200'],
-        env: { ITEMS: '^iron axe$', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
+        env: { ITEMS: 'iron axe', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
         role: 'woodcutting', goal: "buy iron axe from Aemad in East Ardougne (Bob's Axes has no profile)", repeats: false,
         resources: ['shop:ardy'], yields: () => [{ item: 'iron axe', perTick: 0.01 }],
         needs: { items: { coins: 300 }, holdsUnder: holdsUnderKeys(['iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe']) },

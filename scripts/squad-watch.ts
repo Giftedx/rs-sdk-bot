@@ -52,6 +52,8 @@ export function readLine(w: Watch, line: string, now: number, cfg: Pick<Config, 
     if (/^SQUAD no trips left/.test(text)) return { kind: 'bank-trip', account, detail: 'no trips left' };
     if ((m = text.match(/^SQUAD session ended: (.*)$/))) return { kind: 'session-dropped', account, detail: m[1]! };
     if ((m = line.match(/^LOGOUT (.*)$/)) && m[1]!.trim().split(/\s+/).some(word => word !== 'logged-out')) return { kind: 'logout-unconfirmed', account: '-', detail: m[1]!.trim() };
+    // A squad with a death ends as `RESULT fail died squad ... died=N` (scripts/pk-squad.ts).
+    if ((m = line.match(/^RESULT fail died (.*)$/))) { w.deaths = Math.max(w.deaths, Number(m[1]!.match(/\bdied=(\d+)/)?.[1] ?? 1)); return { kind: 'death', account: '-', detail: m[1]! }; }
     if ((m = line.match(/^RESULT fail (.*)$/))) return { kind: 'fail-result', account: '-', detail: m[1]! };
     if ((m = line.match(/^RESULT ok (.*)$/))) {
         const died = Number(m[1]!.match(/\bdied=(\d+)/)?.[1] ?? 0);

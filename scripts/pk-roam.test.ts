@@ -1,8 +1,16 @@
 import { test, expect } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { rmSync } from 'node:fs';
-import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockLimit, restockMarket, restockPlan, RESTOCK_MARGIN_PERCENT, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import marketRows from './measure/pk-restock-market.json';
+import type { RestockMarket } from './pk-roam';
+// Rows of the market cache (.practice/market-all.json) for the items of the PK restock: the lowest ask and the units offered
+// (scripts/measure/pk-restock-market.json). The prayer potion, the glory and the super potions are dear, the superantipoison and
+// the antipoison have no seller, and the nature rune asks more than twice the hand limit that the plan once used. The limit of
+// each item is the ask plus RESTOCK_MARGIN_PERCENT (10).
+const RESTOCK_MARKET: RestockMarket = marketRows;
+const RESTOCK_LIMITS = { 563: 770, 561: 698, 385: 974, 2434: 354_864, 1712: 4_675_000, 2440: 110_000, 2436: 110_000, 861: 104_500, 1113: 231_404 } as const;
 
 test('roam pickup joins one native stack without eating combat food',async()=>{
  const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;
@@ -248,26 +256,52 @@ test('pickTrack skips a target at our level whose weapon is worth over twice our
     expect(pickTrack(me, [{ ...goondelf, combatLevel: 110 }], new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Goondelf');
 });
 
-test('restockPlan: law runes first, then freeze runes, within the coins', () => {
-    // Live Mightyrod after its first trip: 9 law, 0 nature, 1 water, about 4,900 coins: nothing for law; 11 nature, 500 gp kept for water.
-    expect(restockPlan({ law: 9, nature: 0, water: 1, coins: 4943, magic: 91 })).toEqual([
-        { kind: 'ge', item: 561, quantity: 11, limit: 300, owned: 0 },
+test('restockPlan: law runes first, then freeze runes, within the coins, at the market ask plus the margin', () => {
+    const M = RESTOCK_MARKET, L = RESTOCK_LIMITS;
+    // 9 law, 0 nature, 1 water, about 4,900 coins: nothing for law; 4 nature runes at 698 each, and 500 gp kept for water.
+    expect(restockPlan({ law: 9, nature: 0, water: 1, coins: 4943, magic: 91 }, M)).toEqual([
+        { kind: 'ge', item: 561, quantity: 4, limit: L[561], owned: 0 },
         { kind: 'shop', profile: 'betty', maxSpend: 500 },
     ]);
-    expect(restockPlan({ law: 1, nature: 20, water: 50, coins: 20000, magic: 72 })).toEqual([{ kind: 'ge', item: 563, quantity: 10, limit: 1600, owned: 1 }]);
-    expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 3000, magic: 40 })).toEqual([{ kind: 'ge', item: 563, quantity: 1, limit: 1600, owned: 0 }]);
-    expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 2000, magic: 91 })).toEqual([]);
-    expect(restockPlan({ law: 5, nature: 10, water: 20, coins: 99999, magic: 91 })).toEqual([]);
+    expect(restockPlan({ law: 1, nature: 20, water: 50, coins: 20000, magic: 72 }, M)).toEqual([{ kind: 'ge', item: 563, quantity: 10, limit: L[563], owned: 1 }]);
+    expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 3000, magic: 40 }, M)).toEqual([{ kind: 'ge', item: 563, quantity: 2, limit: L[563], owned: 0 }]);
+    // 1,000 coins stay: 1,000 left buys one law rune at 770, and no nature rune is left to buy.
+    expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 2000, magic: 91 }, M)).toEqual([{ kind: 'ge', item: 563, quantity: 1, limit: L[563], owned: 0 }]);
+    expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 1769, magic: 91 }, M)).toEqual([]);
+    expect(restockPlan({ law: 5, nature: 10, water: 20, coins: 99999, magic: 91 }, M)).toEqual([]);
+});
+
+test('restockPlan limits are the ask plus 10 percent, and an item with no ask, no seller or no market has no step', () => {
+    const base = { law: 0, nature: 8, water: 20, coins: 1_000_000, magic: 40 };
+    expect(RESTOCK_MARGIN_PERCENT).toBe(10);
+    // The limit never falls below the ask, and a fractional limit rounds up: 634 x 1.1 = 697.4.
+    for (const [id, quote] of Object.entries(RESTOCK_MARKET)) if (quote.ask !== null) expect(restockLimit(RESTOCK_MARKET, Number(id))).toBe(Math.ceil(quote.ask * 1.1 - 1e-9));
+    expect(restockLimit(RESTOCK_MARKET, 561)).toBe(698);
+    // A rising ask moves the limit and the quantity with it; the hand limit of 1,600 is gone.
+    expect(restockPlan(base, { 563: { ask: 1000, sell: 50 } })).toEqual([{ kind: 'ge', item: 563, quantity: 10, limit: 1100, owned: 0 }]);
+    expect(restockPlan({ ...base, coins: 3000 }, { 563: { ask: 1000, sell: 50 } })).toEqual([{ kind: 'ge', item: 563, quantity: 1, limit: 1100, owned: 0 }]);
+    // Few units for sale cap the quantity. No ask, no seller, a zero ask or no row gives no step.
+    expect(restockPlan(base, { 563: { ask: 1000, sell: 3 } })).toEqual([{ kind: 'ge', item: 563, quantity: 3, limit: 1100, owned: 0 }]);
+    expect(restockPlan(base, { 563: { ask: null, sell: 50 } })).toEqual([]);
+    expect(restockPlan(base, { 563: { ask: 1000, sell: 0 } })).toEqual([]);
+    expect(restockPlan(base, { 563: { ask: 0, sell: 50 } })).toEqual([]);
+    expect(restockPlan(base, {})).toEqual([]);
+    // With no market only the shop step can remain.
+    expect(restockPlan({ law: 9, nature: 8, water: 1, coins: 100_000, magic: 91, food: 0, glory: false, prayerPots: 0, superPots: true, antipoison: true }, {})).toEqual([{ kind: 'shop', profile: 'betty', maxSpend: 500 }]);
+    expect(restockPlan({ law: 9, nature: 0, water: 1, coins: 100_000, magic: 91 }, { 561: { ask: 100, sell: 100 } })).toEqual([
+        { kind: 'ge', item: 561, quantity: 20, limit: 110, owned: 0 }, { kind: 'shop', profile: 'betty', maxSpend: 500 }]);
 });
 
 test('restockPlan adds sharks, a magic shortbow and a rune chainbody when coins allow', () => {
-    const base = { law: 5, nature: 10, water: 20, magic: 91 };
-    expect(restockPlan({ ...base, coins: 20000, food: 4, sharks: 3 })).toEqual([{ kind: 'ge', item: 385, quantity: 16, limit: 700, owned: 3 }]);
-    expect(restockPlan({ ...base, coins: 20000, food: 15 })).toEqual([]);
-    expect(restockPlan({ ...base, coins: 200000, food: 20, ranged: 99, magicShortbow: false })).toEqual([{ kind: 'ge', item: 861, quantity: 1, limit: 110000, owned: 0 }]);
-    expect(restockPlan({ ...base, coins: 100000, food: 20, ranged: 99, magicShortbow: false })).toEqual([]);
-    expect(restockPlan({ ...base, coins: 5000000, food: 20, defence: 99, runeBody: false })).toEqual([{ kind: 'ge', item: 1113, quantity: 1, limit: 300000, owned: 0 }]);
-    expect(restockPlan({ ...base, coins: 5000000, food: 20, defence: 30, runeBody: false })).toEqual([]);
+    const M = RESTOCK_MARKET, L = RESTOCK_LIMITS, base = { law: 5, nature: 10, water: 20, magic: 91 };
+    expect(restockPlan({ ...base, coins: 20000, food: 4, sharks: 3 }, M)).toEqual([{ kind: 'ge', item: 385, quantity: 16, limit: L[385], owned: 3 }]);
+    expect(restockPlan({ ...base, coins: 20000, food: 15 }, M)).toEqual([]);
+    expect(restockPlan({ ...base, coins: 200000, food: 20, ranged: 99, magicShortbow: false }, M)).toEqual([{ kind: 'ge', item: 861, quantity: 1, limit: L[861], owned: 0 }]);
+    // The shortbow and 20,000 coins for the next restock: 124,499 does not cover them, 125,501 does.
+    expect(restockPlan({ ...base, coins: 124_499, food: 20, ranged: 99, magicShortbow: false }, M)).toEqual([]);
+    expect(restockPlan({ ...base, coins: 125_501, food: 20, ranged: 99, magicShortbow: false }, M)).toEqual([{ kind: 'ge', item: 861, quantity: 1, limit: L[861], owned: 0 }]);
+    expect(restockPlan({ ...base, coins: 5000000, food: 20, defence: 99, runeBody: false }, M)).toEqual([{ kind: 'ge', item: 1113, quantity: 1, limit: L[1113], owned: 0 }]);
+    expect(restockPlan({ ...base, coins: 5000000, food: 20, defence: 30, runeBody: false }, M)).toEqual([]);
 });
 
 test('sectorStart spreads hunters round the sweep, the same each run', () => {
@@ -360,4 +394,28 @@ test('shared scout intel publishes, filters by TTL/bracket/maxWild, prioritizes 
     } finally {
         rmSync(file, { force: true });
     }
+});
+
+test('restockMarket reads the fresh quotes of the market cache and nothing from a missing or old file', () => {
+    const root = mkdtempSync(join(tmpdir(), 'restock-market-')), now = 1_800_000_000_000;
+    try {
+        expect(restockMarket(root, now)).toEqual({ market: {}, at: null });
+        mkdirSync(join(root, '.practice'));
+        const write = (at: number) => writeFileSync(join(root, '.practice/market-all.json'), JSON.stringify({ at, items: {
+            563: { name: 'Law rune', price: 760, bid: 240, ask: 700, trades: 297, sell: 105_042 },
+            2448: { name: 'Superantipoison(4)', price: null, bid: null, ask: null, trades: 0, sell: 0 },
+        } }));
+        write(now - 60_000);
+        const fresh = restockMarket(root, now);
+        expect(fresh.at).toBe(now - 60_000);
+        expect(fresh.market[563]).toMatchObject({ ask: 700, sell: 105_042 });
+        expect(restockPlan({ law: 0, nature: 8, water: 20, coins: 100_000, magic: 40 }, fresh.market)).toEqual([{ kind: 'ge', item: 563, quantity: 10, limit: 770, owned: 0 }]);
+        // A cache older than 30 minutes gives no quote, so the plan has no GE step.
+        write(now - 31 * 60_000);
+        const old = restockMarket(root, now);
+        expect(old).toEqual({ market: {}, at: null });
+        expect(restockPlan({ law: 0, nature: 8, water: 20, coins: 100_000, magic: 40 }, old.market)).toEqual([]);
+        writeFileSync(join(root, '.practice/market-all.json'), '{');
+        expect(restockMarket(root, now)).toEqual({ market: {}, at: null });
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });
